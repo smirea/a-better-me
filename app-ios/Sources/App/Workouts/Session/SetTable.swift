@@ -112,7 +112,8 @@ extension SessionEditor {
         let weight = log.weightKg.map { "\(unit.format(kg: $0)) \(unit.rawValue)" }
         let reps = log.reps.map(String.init)
         let duration = log.durationSeconds.map { Duration.seconds($0).formatted(.time(pattern: .minuteSecond)) }
-        return [weight, reps ?? duration].compactMap { $0 }.joined(separator: " x ")
+        let distance = log.distanceMeters.map { Measurement(value: $0, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated)) }
+        return [weight, reps ?? duration, distance].compactMap { $0 }.joined(separator: " x ")
     }
 
     private func cell(_ path: RowPath, field: SetField, value: SetEntry) -> some View {
@@ -150,7 +151,7 @@ extension SessionEditor {
     /// What a row shows and logs: its log once checked, else what was typed, else the prefill.
     func entry(_ path: RowPath, previous: [WorkoutSet]) -> SetEntry {
         if let log = blocks.log(at: path) { return SetEntry(log) }
-        if let draft = store.drafts[blocks.rowID(at: path)] { return draft }
+        if let draft = drafts[blocks.rowID(at: path)] { return draft }
         return SetEntry.prefill(target: blocks.target(at: path), previous: SessionFlow.previousLog(for: path, in: blocks, previous: previous))
     }
 
@@ -162,7 +163,7 @@ extension SessionEditor {
         if let log = blocks.log(at: path) {
             blocks.setLog(value.log(at: log.completedAt), at: path)
         } else {
-            store.drafts[blocks.rowID(at: path)] = value
+            drafts[blocks.rowID(at: path)] = value
         }
     }
 
@@ -171,12 +172,12 @@ extension SessionEditor {
     private func toggle(_ path: RowPath, previous: [WorkoutSet]) {
         let id = blocks.rowID(at: path)
         if let log = blocks.log(at: path) {
-            store.drafts[id] = SetEntry(log)
+            drafts[id] = SetEntry(log)
             blocks.setLog(nil, at: path)
             return
         }
         blocks.setLog(entry(path, previous: previous).log(at: .now), at: path)
-        store.drafts[id] = nil
+        drafts[id] = nil
         guard mode == .live else { return }
         let step = SessionFlow.afterCompleting(path, in: blocks, rest: restSeconds)
         if let seconds = step.restSeconds { store.startRest(seconds: seconds) }
@@ -197,7 +198,7 @@ extension SessionEditor {
         let now = Date.now
         for path in rows where blocks.log(at: path) == nil {
             blocks.setLog(entry(path, previous: previous).log(at: now), at: path)
-            store.drafts[blocks.rowID(at: path)] = nil
+            drafts[blocks.rowID(at: path)] = nil
         }
         let partner = blocks[block].exercises.first { !$0.isDone }
         if mode == .live, let next = partner?.id ?? SessionFlow.nextIncomplete(after: block, in: blocks) {

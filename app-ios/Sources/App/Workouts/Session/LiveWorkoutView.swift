@@ -40,7 +40,15 @@ struct SessionEditor: View {
     @State private var isShowingSummary = false
     @State private var discardOnDisappear = false
 
+    /// Unlogged values typed while editing a past session stay in the editor, apart from the live session's store.
+    @State private var pastDrafts: [UUID: SetEntry] = [:]
+
     var store: LiveSessionStore { .shared }
+
+    var drafts: [UUID: SetEntry] {
+        get { mode == .live ? store.drafts : pastDrafts }
+        nonmutating set { if mode == .live { store.drafts = newValue } else { pastDrafts = newValue } }
+    }
 
     init(session: WorkoutSession, mode: Mode) {
         self.session = session
@@ -331,7 +339,7 @@ struct SessionEditor: View {
         focus = nil
         if logAll {
             let prefills = SessionFlow.prefills(for: blocks, history: history)
-            blocks = SessionFlow.logAll(blocks, at: .now) { store.drafts[$0] ?? prefills[$0] ?? SetEntry() }
+            blocks = SessionFlow.logAll(blocks, at: .now) { drafts[$0] ?? prefills[$0] ?? SetEntry() }
         }
         session.blocks = blocks
         // The session ends on the summary's Done; saving now keeps the logged sets if the app dies before that.
