@@ -135,6 +135,30 @@ for (const [id, entry] of Object.entries(source.uuidIndex)) {
 	});
 }
 
+// Muscle tiles are drawn for a light theme with the target muscle in blue. Their grays are swapped for the dark theme's,
+// and Xcode keeps them as vectors through an asset catalog. The owner's MF account uses the male figure.
+const muscleDir = join(assets, 'assets/muscle_groups/male');
+const muscleAssets = join(out, 'Muscles.xcassets');
+const contents = (value: unknown) => `${JSON.stringify(value, null, '\t')}\n`;
+await Bun.write(join(muscleAssets, 'Contents.json'), contents({ info: { author: 'xcode', version: 1 } }));
+const muscles = readdirSync(muscleDir).filter(f => f.endsWith('.svg'));
+for (const file of muscles) {
+	const name = `muscle-${file.replace('.svg', '')}`;
+	const svg = (await Bun.file(join(muscleDir, file)).text())
+		.replaceAll('#EEEEEE', '#4A4A4A')
+		.replaceAll('#DCDCDC', '#2E2E2E')
+		.replaceAll('fill="white"', 'fill="#252525"');
+	await Bun.write(join(muscleAssets, `${name}.imageset`, file), svg);
+	await Bun.write(
+		join(muscleAssets, `${name}.imageset`, 'Contents.json'),
+		contents({
+			images: [{ filename: file, idiom: 'universal' }],
+			info: { author: 'xcode', version: 1 },
+			properties: { 'preserves-vector-representation': true },
+		}),
+	);
+}
+
 const write = (name: string, value: unknown) => Bun.write(join(out, name), `${JSON.stringify(value, null, '\t')}\n`);
 await write('exercises.json', exercises);
 await write('equipment.json', equipment);
@@ -142,5 +166,5 @@ await write('articles.json', articles);
 console.log(
 	`${exercises.length} exercises (${exercises.filter(e => e.images.length).length} with images, ` +
 		`${exercises.filter(e => e.hasInstructions).length} with instructions), ${equipment.length} equipment, ` +
-		`${articles.length} articles from the catalog generated ${source.generatedAt}`,
+		`${articles.length} articles, ${muscles.length} muscle tiles from the catalog generated ${source.generatedAt}`,
 );

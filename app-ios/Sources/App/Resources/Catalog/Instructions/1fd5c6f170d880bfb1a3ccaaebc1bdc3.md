@@ -1,39 +1,34 @@
 ## Setting up
-
 1. Pick up a kettlebell or dumbbell and hold it right next to your chest with bent elbows, as your upper arms are slightly in front of your sides (i.e., in the goblet position).
-   1. You can use either a kettlebell or a dumbbell, but some people find holding a kettlebell in the goblet position to feel more stable and comfortable, especially with a fairly heavy weight.
-   2. Based on your preference and the load you use, you can transfer your kettlebell or dumbbell into the goblet position through a couple of different approaches.
-   3. An effective approach is initially to pick up the weight by the handle through a deadlift motion and set it on an elevated surface (like a bench or plyometric box) with the handle facing up if you use a kettlebell or the handle directed vertically if using a dumbbell (as only one end of the dumbbell is on the surface). Then squat down until the weight is right in front of your chest, firmly grasp it in the goblet position, and squat up with the weight. If you use a kettlebell, grasp it by its horns (i.e., side handles). If you use a dumbbell, cup your hands around the top end of the weight with the base of your palms by the handle, and your fingers wrapped around the rest of that end of the weight.
-   4. With a lighter kettlebell, you can tilt it onto its side with the weight base directed toward you, squat down to grasp its horns, stand upright with it, and curl it into the goblet position.
-   5. With a lighter dumbbell, you can also pick it up with one hand and curl it up across your body to be in front of your chest. Then cup your free hand around the top end of the dumbbell with the base of its palm by the handle and fingers wrapped around the top end of the weight before repositioning your other hand to cup the other side of the weight in the same manner.
+    1. You can use either a kettlebell or a dumbbell, but some people find holding a kettlebell in the goblet position to feel more stable and comfortable, especially with a fairly heavy weight.
+    2. Based on your preference and the load you use, you can transfer your kettlebell or dumbbell into the goblet position through a couple of different approaches.
+    3. An effective approach is initially to pick up the weight by the handle through a deadlift motion and set it on an elevated surface (like a bench or plyometric box) with the handle facing up if you use a kettlebell or the handle directed vertically if using a dumbbell (as only one end of the dumbbell is on the surface). Then squat down until the weight is right in front of your chest, firmly grasp it in the goblet position, and squat up with the weight. If you use a kettlebell, grasp it by its horns (i.e., side handles). If you use a dumbbell, cup your hands around the top end of the weight with the base of your palms by the handle, and your fingers wrapped around the rest of that end of the weight.
+    4. With a lighter kettlebell, you can tilt it onto its side with the weight base directed toward you, squat down to grasp its horns, stand upright with it, and curl it into the goblet position.
+    5. With a lighter dumbbell, you can also pick it up with one hand and curl it up across your body to be in front of your chest. Then cup your free hand around the top end of the dumbbell with the base of its palm by the handle and fingers wrapped around the top end of the weight before repositioning your other hand to cup the other side of the weight in the same manner.
 2. While keeping your chest up, position your feet approximately hip-width apart, with your toes pointing straight ahead.
-   1. Positioning yourself into a hip-width stance rather than a narrower stance can help you maintain your balance during this exercise.
-   2. While holding the weight in the goblet position throughout your set, your upper back muscles will have to work to prevent the weight from rounding your upper back, which would prompt your chest to cave.
-
+    1. Positioning yourself into a hip-width stance rather than a narrower stance can help you maintain your balance during this exercise.
+    2. While holding the weight in the goblet position throughout your set, your upper back muscles will have to work to prevent the weight from rounding your upper back, which would prompt your chest to cave.
 ## Exercise technique
-
 1. While keeping the entire sole of one foot firmly planted on the ground, step backward with the other leg before contacting the ground with your forefoot (ball of your foot and bottom of your toes).
-   1. Step far enough backward that you will be able to contact the ground with your rear knee, which may initially require trying out different step lengths if you are new to backward lunges.
-   2. Strive to step backward in a straight line rather than stepping closer in toward the midline of your body, which would position your feet horizontally closer together and narrow your base of support.
-   3. Keep your torso in an upright position and the top of your hip bones level with each other to the best of your ability, rather than letting the hip bone on the side of your back leg drop down.
-   4. As a cue for keeping your hip bones level, you can imagine that you have a basin of water filled to the brim on top of your hip bones, and you are trying not to spill any water by tipping it to either side.
+    1. Step far enough backward that you will be able to contact the ground with your rear knee, which may initially require trying out different step lengths if you are new to backward lunges.
+    2. Strive to step backward in a straight line rather than stepping closer in toward the midline of your body, which would position your feet horizontally closer together and narrow your base of support.
+    3. Keep your torso in an upright position and the top of your hip bones level with each other to the best of your ability, rather than letting the hip bone on the side of your back leg drop down.
+    4. As a cue for keeping your hip bones level, you can imagine that you have a basin of water filled to the brim on top of your hip bones, and you are trying not to spill any water by tipping it to either side.
 2. After contacting the ground with your rear foot, allow your knees to bend as you lower your body in a controlled manner until you are able to tap the ground gently with the kneecap of your rear leg.
-   1. Continue keeping your torso upright and the entirety (heel, inside of forefoot, and outside of forefoot) of your front foot in contact with the ground.
-   2. Keep your knees aligned with your feet rather than letting either knee cave inward relative to that side’s foot (when viewed from the front or the back).
-   3. As a cue for the appropriately controlled descent, you can imagine that a weight scale is underneath your rear knee, and gently tapping it will not cause the scale to read more than about two pounds (one kilogram).
-   4. While the forefoot of your rear leg will be in contact with the ground, the rest of the foot’s sole will be off the ground as it is directed backward.
-   5. At the end of the lowering phase, your front leg’s thigh should be close to parallel to the ground.
-   6. You should perform steps 1 and 2 as a smooth and continuous movement.
-   7. If you initially took an excessively short step backward, you may not be able to tap the ground with your rear knee unless you also lift the heel of your front foot up off the ground.
-   8. If you find that you have to lift your front heel up to tap the ground, simply descend as much as you can without lifting up your front heel, and take a longer step backward during your next rep.
+    1. Continue keeping your torso upright and the entirety (heel, inside of forefoot, and outside of forefoot) of your front foot in contact with the ground.
+    2. Keep your knees aligned with your feet rather than letting either knee cave inward relative to that side’s foot (when viewed from the front or the back).
+    3. As a cue for the appropriately controlled descent, you can imagine that a weight scale is underneath your rear knee, and gently tapping it will not cause the scale to read more than about two pounds (one kilogram).
+    4. While the forefoot of your rear leg will be in contact with the ground, the rest of the foot’s sole will be off the ground as it is directed backward.
+    5. At the end of the lowering phase, your front leg’s thigh should be close to parallel to the ground.
+    6. You should perform steps 1 and 2 as a smooth and continuous movement.
+    7. If you initially took an excessively short step backward, you may not be able to tap the ground with your rear knee unless you also lift the heel of your front foot up off the ground.
+    8. If you find that you have to lift your front heel up to tap the ground, simply descend as much as you can without lifting up your front heel, and take a longer step backward during your next rep.
 3. Reverse the movement by progressively extending (straightening) your knees as you step forward with your rear leg to lift your body up until you have returned to the starting position with your feet symmetrically hip-width apart and your torso fully upright.
-   1. Like during the descent, keep your torso upright and knees aligned with your feet while doing so.
+    1. Like during the descent, keep your torso upright and knees aligned with your feet while doing so.
 4. Repeat steps 1-3 while lunging backward with your opposite side.
 5. Alternate between steps 1-4 until you have completed your set and are ready to set the weight down.
-   1. When setting the weight down, you can just perform the reverse of whichever technique you initially used to place it into the goblet position.
-
+    1. When setting the weight down, you can just perform the reverse of whichever technique you initially used to place it into the goblet position.
 ## Description
-
 This exercise primarily trains your gluteus maximus, adductor magnus, and three of your four quad muscles.
 
 ### **Can you make your lunge more glute-dominant or quad-dominant?**

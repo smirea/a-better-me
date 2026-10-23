@@ -12,7 +12,8 @@
 		"**/*.generated.ts",
 		"**/*.gen.ts",
 		"app-web/src/env.ts",
-		"server/src/env.ts"
+		"server/src/env.ts",
+		"app-ios/Sources/App/Resources/Catalog"
 	],
 	"printWidth": 120,
 	"useTabs": true,
