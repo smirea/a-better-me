@@ -31,20 +31,22 @@ function isMainCheckout(checkout: string): boolean {
 	return git('--git-dir') === git('--git-common-dir');
 }
 
-/** The container suffix and database name: the worktree directory, which outlives a branch rename, or `main`. */
+/**
+ * The container suffix and database name: `main` for the main checkout, `wt-<directory>` for a worktree, whose
+ * directory outlives a branch rename. The prefix keeps a worktree named `main` off the main checkout's database. A
+ * worktree directory deleted by hand still names its own, so teardown can clean up after it.
+ */
 export function checkoutKey(checkout: string): string {
-	return isMainCheckout(checkout) ? 'main' : basename(checkout).replaceAll(/[^A-Za-z0-9_.-]/g, '-');
+	if (existsSync(checkout) && isMainCheckout(checkout)) return 'main';
+	return `wt-${basename(checkout).replaceAll(/[^A-Za-z0-9_.-]/g, '-')}`;
 }
 
 /** Postgres identifiers are 63 bytes, and the `_powersync` suffix needs room. */
 export function databaseName(checkout: string): string {
-	const key = checkoutKey(checkout);
-	return key === 'main'
-		? 'main'
-		: `wt_${key
-				.toLowerCase()
-				.replaceAll(/[^a-z0-9]+/g, '_')
-				.slice(0, 45)}`;
+	return checkoutKey(checkout)
+		.toLowerCase()
+		.replaceAll(/[^a-z0-9]+/g, '_')
+		.slice(0, 48);
 }
 
 const containerName = (checkout: string) => `${CONTAINER_PREFIX}${checkoutKey(checkout)}`;
@@ -188,6 +190,11 @@ if (import.meta.main) {
 	const checkout = runCommand(['git', 'rev-parse', '--show-toplevel']);
 	if (command === 'down') {
 		stopPowerSync(checkout);
+		// An inactive slot pins WAL for every checkout sharing the cluster; `up` makes a new one.
+		await withAdmin(
+			sql =>
+				sql`SELECT pg_drop_replication_slot(slot_name) FROM pg_replication_slots WHERE database = ${databaseName(checkout)} AND NOT active`,
+		);
 		console.log(`Stopped ${containerName(checkout)}. The databases stay; \`up --reset-db\` recreates them.`);
 	} else if (command === 'up') {
 		const values = (file: string) => (existsSync(file) ? parseDotenv(readFileSync(file, 'utf8')) : {});

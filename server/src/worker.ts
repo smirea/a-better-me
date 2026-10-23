@@ -31,10 +31,10 @@ function migrateOnce(db: Db) {
 }
 
 async function fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-	// Before routing, so a misconfigured deploy fails every request with the missing setting named.
-	const config = configOf(env);
 	const { db, end } = connect(env.HYPERDRIVE.connectionString);
 	try {
+		// Before routing, so a misconfigured deploy fails every request and logs the missing setting.
+		const config = configOf(env);
 		await migrateOnce(db);
 		return await handle(request, { config, db });
 	} catch (error) {

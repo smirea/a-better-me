@@ -38,8 +38,8 @@ if (!Number.isInteger(mainPort)) throw new Error('The root .env has no numeric C
 const STEP = 1000;
 const FIRST_BLOCK = mainPort + 10_000;
 const LAST_BLOCK = FIRST_BLOCK + Math.floor((49_152 - 10 - FIRST_BLOCK) / STEP) * STEP;
-// Web, API, and PowerSync.
-const OFFSETS = [0, 1, 2];
+// Web, API, PowerSync, and `scripts/wrangler-dev.ts`.
+const OFFSETS = [0, 1, 2, 3];
 
 function readPort(worktree: string): number | undefined {
 	const port = Number(readOverride(worktree)?.CLIENT_PORT);
