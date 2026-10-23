@@ -102,15 +102,6 @@ extension BlockExercise {
         BlockExercise(exerciseID: exerciseID, sets: sets.map { $0.copyingTargets() }, restSeconds: restSeconds, note: note)
     }
 
-    /// Rest after one of this exercise's sets, through the four levels in docs/decisions/workouts.md.
-    func restSeconds(after set: WorkoutSet, exercise: Exercise?, settings: ExerciseSettings?) -> Int {
-        set.restSeconds ?? defaultRestSeconds(exercise: exercise, settings: settings)
-    }
-
-    /// What a set rests when it has no rest of its own: the value "Set Rest Timers" starts from.
-    func defaultRestSeconds(exercise: Exercise?, settings: ExerciseSettings?) -> Int {
-        restSeconds ?? settings?.restSeconds ?? (exercise?.restCategory ?? .upperIsolation).seconds
-    }
 }
 
 extension WorkoutSet {

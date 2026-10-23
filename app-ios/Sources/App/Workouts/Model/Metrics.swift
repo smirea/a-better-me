@@ -18,7 +18,9 @@ enum WorkoutMetrics {
     }
 
     /// Weight x reps over a set and its sub-rows, doubled for per-side metrics. Warm-ups count, as in MF's summary.
+    /// Assistance weight is help, not load, so assisted exercises have no volume rather than one that grows as they get easier.
     static func volumeKg(of set: WorkoutSet, exercise: Exercise) -> Double {
+        guard !exercise.metrics.contains(.assistanceWeight) else { return 0 }
         let logs = [set.log] + set.subSets.map(\.log)
         let total = logs.compactMap { $0 }.reduce(0) { $0 + ($1.weightKg ?? 0) * Double($1.reps ?? 0) }
         return exercise.countsBothSides ? total * 2 : total
