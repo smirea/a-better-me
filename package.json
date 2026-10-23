@@ -46,7 +46,7 @@
 		"zod": "^4.6.7"
 	},
 	"devDependencies": {
-		"env-manager": "github:smirea/env-manager#ca081851d169f215ef530b9d303a3fbac1c289eb"
+		"env-manager": "github:smirea/env-manager#d21803f46cb7f0056990855198d25f182a4e839f"
 	},
 	"packageManager": "bun@1.4.4"
 }
