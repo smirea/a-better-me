@@ -51,13 +51,13 @@ private struct SwapSubstitutions: View {
         let current = catalog.exercise(exerciseID)
         List {
             if let current {
-                ExerciseRow(exercise: current) { EmptyView() }
+                LibraryExerciseRow(exercise: current) { EmptyView() }
                     .listRowBackground(Theme.surface)
             }
             Section {
                 ForEach(substitutes(for: current)) { exercise in
                     Button { detail = ExerciseRef(id: exercise.id) } label: {
-                        ExerciseRow(exercise: exercise) { SwapButton { pick(exercise.id) } }
+                        LibraryExerciseRow(exercise: exercise) { SwapButton { pick(exercise.id) } }
                     }
                     .buttonStyle(.plain)
                 }
@@ -87,7 +87,6 @@ private struct SwapSubstitutions: View {
         }
     }
 
-    /// Exercises with exactly the same primary muscles, best-ranked first.
     private func substitutes(for current: Exercise?) -> [Exercise] {
         guard let current else { return [] }
         let muscles = Set(current.primaryMuscles)
@@ -102,7 +101,6 @@ private struct SwapSubstitutions: View {
     }
 }
 
-/// The full picker: filters, muscles, the grouped list, bottom search, and in add mode the selection tray.
 private struct ExercisePickerList: View {
     let mode: ExercisePickerMode
     let onPick: (ExercisePick) -> Void
@@ -200,7 +198,7 @@ private struct ExercisePickerList: View {
             Button { showingTray.toggle() } label: {
                 HStack(spacing: -8) {
                     ForEach(selection.compactMap(catalog.exercise)) { exercise in
-                        ExerciseThumbnail(exercise: exercise, width: 22)
+                        ExerciseTile(exercise: exercise, width: 22)
                             .frame(width: 28, height: 28)
                             .clipShape(.circle)
                             .overlay { Circle().strokeBorder(Theme.background, lineWidth: 1.5) }
@@ -215,7 +213,7 @@ private struct ExercisePickerList: View {
         List {
             Section {
                 ForEach(selection.compactMap(catalog.exercise)) { exercise in
-                    ExerciseRow(exercise: exercise) {
+                    LibraryExerciseRow(exercise: exercise) {
                         Button("Remove", systemImage: "trash") { toggle(exercise.id) }
                             .labelStyle(.iconOnly)
                             .foregroundStyle(Theme.textPrimary)
@@ -233,6 +231,7 @@ private struct ExercisePickerList: View {
                 Section {
                     Toggle(selection.count > 2 ? "Add as a circuit?" : "Add as a superset?", isOn: $asGroup)
                         .font(AppFont.medium(15))
+                        .tint(Theme.accent)
                         .listRowBackground(Theme.surface)
                 }
             }
@@ -283,7 +282,6 @@ private struct SwapButton: View {
     }
 }
 
-/// Lets an exercise ID drive `.sheet(item:)`.
 struct ExerciseRef: Identifiable, Hashable {
     let id: ExerciseID
 }

@@ -30,7 +30,7 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
                 Section {
                     ForEach(isExpanded ? group.exercises : Array(group.exercises.prefix(Self.collapsedCount))) { exercise in
                         Button { onSelect(exercise) } label: {
-                            ExerciseRow(exercise: exercise, search: search, subtitle: subtitle(exercise)) { trailing(exercise) }
+                            LibraryExerciseRow(exercise: exercise, search: search, subtitle: subtitle(exercise)) { trailing(exercise) }
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("exercise-\(exercise.name)")
@@ -189,8 +189,6 @@ enum EquipmentRole: String, CaseIterable, Identifiable {
     }
 }
 
-/// The equipment list grouped by category with "Filter equipment by name". Tapping a row picks it and closes the sheet;
-/// tapping the picked row clears it.
 struct EquipmentPickerSheet: View {
     let title: String
     let equipmentIDs: Set<String>
@@ -244,11 +242,10 @@ struct EquipmentPickerSheet: View {
     }
 }
 
-/// The horizontally scrolling mini figures. Tapping one filters to exercises that train it; tapping it again clears it.
 struct MuscleFilterRow: View {
     @Binding var selection: Muscle?
 
-    /// The reference app's order, most-trained first. Hip flexors have no figure, so they are not offered.
+    /// Hip flexors have no figure in the reference app, so they are not offered.
     static let order: [Muscle] = [
         .chest, .quads, .upperBack, .glutes, .lats, .hamstrings, .biceps, .triceps, .frontDelts, .sideDelts, .rearDelts,
         .abs, .calves, .forearms, .upperTraps, .lowerBack, .obliques, .adductors, .abductors, .tibs, .serratus, .neck,

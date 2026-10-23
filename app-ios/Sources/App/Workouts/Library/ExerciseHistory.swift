@@ -1,7 +1,6 @@
 import SwiftData
 import SwiftUI
 
-/// One finished session's sets of an exercise, with the records it set.
 struct ExerciseHistoryEntry: Identifiable {
     let id: UUID
     let date: Date
@@ -26,7 +25,6 @@ enum HistoryMetric: String, CaseIterable, Identifiable {
 
     var id: Self { self }
 
-    /// The three records MF badges on a history row.
     static let recordKinds: [HistoryMetric] = [.totalVolume, .bestSetReps, .oneRepMax]
 
     var recordIcon: String {

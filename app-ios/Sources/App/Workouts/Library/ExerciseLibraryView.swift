@@ -56,7 +56,6 @@ struct ExerciseLibraryView: View {
         .sheet(isPresented: $creating) { CustomExerciseWizard() }
     }
 
-    /// Finished sessions with at least one logged set of each exercise.
     private var performedCounts: [ExerciseID: Int] {
         var counts: [ExerciseID: Int] = [:]
         for session in sessions {

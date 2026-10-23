@@ -34,7 +34,6 @@ extension ExerciseMetric {
         }
     }
 
-    /// The custom exercise wizard's order.
     static let wizardOrder: [ExerciseMetric] = [
         .reps, .repsPerSide, .weight, .weightPerSide, .weightPerSidePersistent, .assistanceWeight,
         .duration, .durationPerSide, .distanceShort, .distanceShortPerSide, .distanceLong,
@@ -67,8 +66,7 @@ extension Exercise {
     }
 }
 
-/// One exercise in the picker and library lists: thumbnail, name with search matches in bold, and muscles.
-struct ExerciseRow<Trailing: View>: View {
+struct LibraryExerciseRow<Trailing: View>: View {
     let exercise: Exercise
     var search = ExerciseSearch("")
     var subtitle: String?
@@ -76,7 +74,7 @@ struct ExerciseRow<Trailing: View>: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ExerciseThumbnail(exercise: exercise)
+            ExerciseTile(exercise: exercise)
             VStack(alignment: .leading, spacing: 2) {
                 Text(search.highlighted(exercise.name))
                     .font(AppFont.medium(15))
@@ -96,7 +94,7 @@ struct ExerciseRow<Trailing: View>: View {
 }
 
 /// The 2:3 studio photo tile. Custom exercises have no media, so they show their initials stacked, as in the reference.
-struct ExerciseThumbnail: View {
+struct ExerciseTile: View {
     let exercise: Exercise
     var width: CGFloat = 30
 
@@ -121,7 +119,6 @@ struct ExerciseThumbnail: View {
     }
 }
 
-/// A bundled equipment photo, drawn as a light glyph on the dark theme.
 struct EquipmentImage: View {
     let equipmentID: String
 
@@ -144,7 +141,7 @@ struct EquipmentImage: View {
     }
 }
 
-/// The rounded filter pills above the list. An active filter turns white, like the reference's selected gym chip.
+/// An active filter turns white, like the reference's selected gym chip.
 struct FilterChipLabel: View {
     let title: String
     let systemImage: String
@@ -165,7 +162,6 @@ struct FilterChipLabel: View {
 }
 
 extension View {
-    /// The reference app's full-width white pill (Next, Done, Create, Add Exercise).
     func primaryPill() -> some View {
         buttonStyle(.glassProminent)
             .buttonSizing(.flexible)
@@ -175,7 +171,6 @@ extension View {
             .font(AppFont.headline())
     }
 
-    /// The dark-gray pill for secondary actions ("Create & Add", "Find Other Replacements").
     func secondaryPill() -> some View {
         buttonStyle(.glass)
             .buttonSizing(.flexible)
@@ -185,7 +180,6 @@ extension View {
     }
 }
 
-/// The section title style inside sheets ("Target Muscles", "Smart Substitutions").
 struct SectionTitle: View {
     let title: String
 

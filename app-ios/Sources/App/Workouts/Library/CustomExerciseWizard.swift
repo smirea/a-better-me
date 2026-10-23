@@ -21,7 +21,6 @@ struct CustomExerciseDraft {
     var primaryMuscles: [Muscle] { Muscle.allCases.filter { muscles[$0] == .primary } }
     var secondaryMuscles: [Muscle] { Muscle.allCases.filter { muscles[$0] == .secondary } }
 
-    /// Tapping a muscle tile cycles none, primary, secondary.
     mutating func cycle(_ muscle: Muscle) {
         muscles[muscle] = switch muscles[muscle] {
         case nil: .primary
@@ -157,7 +156,6 @@ private struct FieldLabel: View {
     }
 }
 
-/// A full-width gray dropdown cell, as in the reference's wizard.
 private struct DropdownLabel: View {
     let text: String
 
@@ -215,7 +213,6 @@ private struct BuildStep: View {
     }
 }
 
-/// A dropdown whose options carry a description line, like the reference's metric and laterality sheets.
 private struct DescribedMenu<Option: Hashable>: View {
     let options: [Option]
     @Binding var selection: Option

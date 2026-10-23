@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The picker's and library's filter chips and muscle tile. `nil` means "Any".
 struct ExerciseFilter: Equatable {
     var type: RestCategory?
     var laterality: Laterality?
@@ -50,7 +49,6 @@ struct ExerciseSearch {
         }
     }
 
-    /// The name with each matched word in bold, as the reference app shows search results.
     func highlighted(_ name: String) -> AttributedString {
         var text = AttributedString(name)
         for word in words {
@@ -70,7 +68,6 @@ struct ExerciseGroup: Identifiable {
 
     var id: ExerciseCategory { category }
 
-    /// Groups in the reference app's order, each ranked by MF's search boost and then by name.
     static func grouping(_ exercises: [Exercise]) -> [ExerciseGroup] {
         let byCategory = Dictionary(grouping: ranked(exercises), by: \.category)
         return ExerciseCategory.allCases.compactMap { category in
@@ -102,7 +99,6 @@ extension ExerciseCategory {
     }
 }
 
-/// Equipment filter sections in the reference app's order.
 enum EquipmentCategoryOrder {
     static let names = [
         "Bodyweight", "Free Weights", "Loadable Bars", "Fixed Weight Bars", "Loadable Accessories", "Bands & Ropes",

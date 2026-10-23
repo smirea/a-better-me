@@ -207,7 +207,6 @@ struct TargetMuscleCard: View {
     }
 }
 
-/// MF's 1-5 property rating, drawn as five short segments.
 private struct RatingRow: View {
     let title: String
     let value: Int
@@ -229,7 +228,6 @@ private struct RatingRow: View {
     }
 }
 
-/// One bordered card per alternative, with each piece of equipment's photo above the option's name.
 struct EquipmentOptions: View {
     let title: String
     let names: [String]
