@@ -2,6 +2,7 @@
 	{
 		"id": "19e5c6f170d8801cac93cf6853bd86b8",
 		"name": "Barbell",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -10,6 +11,7 @@
 	{
 		"id": "19e5c6f170d8808593d8ecf408c4f749",
 		"name": "Dumbbells",
+		"pluralOf": "25a5c6f170d880589ffdf4f627a75b44",
 		"category": "Free Weights",
 		"weightKg": null,
 		"incrementKg": null,
@@ -18,6 +20,7 @@
 	{
 		"id": "19e5c6f170d880e791c3da3a74828f0e",
 		"name": "Kettlebell",
+		"pluralOf": null,
 		"category": "Free Weights",
 		"weightKg": null,
 		"incrementKg": null,
@@ -25,7 +28,8 @@
 	},
 	{
 		"id": "19e5c6f170d8802b9d8ed6e425798f6b",
-		"name": "Flat bench",
+		"name": "Flat Bench",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -33,15 +37,17 @@
 	},
 	{
 		"id": "19e5c6f170d880ec8238f837c5284019",
-		"name": "Bodyweight only",
-		"category": "Other",
+		"name": "Bodyweight Only",
+		"pluralOf": null,
+		"category": "Bodyweight",
 		"weightKg": null,
 		"incrementKg": null,
 		"hasImage": false
 	},
 	{
 		"id": "19e5c6f170d880d5bf4ae225c061f55d",
-		"name": "Long resistance band",
+		"name": "Long Resistance Band",
+		"pluralOf": null,
 		"category": "Bands & Ropes",
 		"weightKg": null,
 		"incrementKg": null,
@@ -50,6 +56,7 @@
 	{
 		"id": "19e5c6f170d880b398fdd9757e5186f4",
 		"name": "Ankle Weights",
+		"pluralOf": "27d5c6f170d88080824fd33a69c6300b",
 		"category": "Body Weights",
 		"weightKg": null,
 		"incrementKg": null,
@@ -57,7 +64,8 @@
 	},
 	{
 		"id": "19e5c6f170d88018a872fe18a35ae8aa",
-		"name": "Straight pull-up bar",
+		"name": "Straight Pull-Up Bar",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -65,7 +73,8 @@
 	},
 	{
 		"id": "19e5c6f170d880119a7ec9fe338f8fea",
-		"name": "Power rack",
+		"name": "Power Rack",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -73,7 +82,8 @@
 	},
 	{
 		"id": "19e5c6f170d880d28b46e9ccddcfba1a",
-		"name": "Pin-loaded single cable machine",
+		"name": "Pin-Loaded Single Cable Machine",
+		"pluralOf": null,
 		"category": "Cable Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -81,7 +91,8 @@
 	},
 	{
 		"id": "19e5c6f170d880bba9c9d309f541198d",
-		"name": "Roman chair",
+		"name": "Roman Chair",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -89,7 +100,8 @@
 	},
 	{
 		"id": "19e5c6f170d880149b59e93abb37a378",
-		"name": "Center pendulum reverse hyperextension",
+		"name": "Center Pendulum Reverse Hyperextension",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -97,7 +109,8 @@
 	},
 	{
 		"id": "19e5c6f170d8806ab6a6cf2efc3266c8",
-		"name": "Glute ham developer",
+		"name": "Glute Ham Developer",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -105,7 +118,8 @@
 	},
 	{
 		"id": "19e5c6f170d880038662ee8145175f92",
-		"name": "45° leg press",
+		"name": "45° Leg Press",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 53.5,
 		"incrementKg": null,
@@ -113,7 +127,8 @@
 	},
 	{
 		"id": "19e5c6f170d880d3914cc4c2631393cd",
-		"name": "Hack squat",
+		"name": "Hack Squat",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 45.4,
 		"incrementKg": null,
@@ -121,7 +136,8 @@
 	},
 	{
 		"id": "19e5c6f170d880698de5f4e4df7781a9",
-		"name": "Plate-loaded leg extension",
+		"name": "Plate-Loaded Leg Extension",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 9.1,
 		"incrementKg": null,
@@ -129,7 +145,8 @@
 	},
 	{
 		"id": "19e5c6f170d8809584ffea2b5b9f1eb2",
-		"name": "V-squat",
+		"name": "V-Squat",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 24.5,
 		"incrementKg": null,
@@ -137,7 +154,8 @@
 	},
 	{
 		"id": "19e5c6f170d880348277fddad52b52b0",
-		"name": "Plate-loaded hip thrust (starting from the top)",
+		"name": "Plate-Loaded Hip Thrust (Starting From The Top)",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 7,
 		"incrementKg": null,
@@ -145,7 +163,8 @@
 	},
 	{
 		"id": "19e5c6f170d8804781f8f6869059bba0",
-		"name": "Standing plate-loaded calf raise",
+		"name": "Standing Plate-Loaded Calf Raise",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 30.4,
 		"incrementKg": null,
@@ -153,7 +172,8 @@
 	},
 	{
 		"id": "19e5c6f170d8808e888ceb1867c89c02",
-		"name": "Seated plate-loaded calf raise",
+		"name": "Seated Plate-Loaded Calf Raise",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 22.7,
 		"incrementKg": null,
@@ -161,7 +181,8 @@
 	},
 	{
 		"id": "19e5c6f170d880fba77bca5ee5eccb63",
-		"name": "Standing pin-loaded glute kickback",
+		"name": "Standing Pin-Loaded Glute Kickback",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -169,7 +190,8 @@
 	},
 	{
 		"id": "19e5c6f170d880eabe60fdd5f6cdc3df",
-		"name": "Multi-hip machine",
+		"name": "Multi-Hip Machine",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -177,7 +199,8 @@
 	},
 	{
 		"id": "19e5c6f170d88099b164ca21463037d3",
-		"name": "Pin-loaded hip abductor/adductor combo machine",
+		"name": "Pin-Loaded Hip Abductor/Adductor Combo Machine",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -185,7 +208,8 @@
 	},
 	{
 		"id": "19e5c6f170d880588002d0b33085acfb",
-		"name": "Pin-loaded crunch (with overhead handles)",
+		"name": "Pin-Loaded Crunch (With Overhead Handles)",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -194,6 +218,7 @@
 	{
 		"id": "19e5c6f170d880ee9089e447b5f8f9e6",
 		"name": "Gymnastics Rings",
+		"pluralOf": "27d5c6f170d880138553d4c610c9ddc8",
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -201,7 +226,8 @@
 	},
 	{
 		"id": "19e5c6f170d880018ac7fbba68e74a58",
-		"name": "Upper torso rotation with arm or shoulder pads",
+		"name": "Upper Torso Rotation With Arm Or Shoulder Pads",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -210,6 +236,7 @@
 	{
 		"id": "19e5c6f170d8802a89e5c8d58b54c757",
 		"name": "Medicine Ball",
+		"pluralOf": null,
 		"category": "Free Weights",
 		"weightKg": null,
 		"incrementKg": null,
@@ -218,6 +245,7 @@
 	{
 		"id": "19e5c6f170d880c391f7e87ab1a231e2",
 		"name": "Slant Board",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -225,7 +253,8 @@
 	},
 	{
 		"id": "19e5c6f170d880409921fedcd08c091b",
-		"name": "Another human",
+		"name": "Another Human",
+		"pluralOf": null,
 		"category": "Other",
 		"weightKg": null,
 		"incrementKg": null,
@@ -233,7 +262,8 @@
 	},
 	{
 		"id": "19e5c6f170d880919dfae5a78a8f54d4",
-		"name": "Seated pin-loaded chest press",
+		"name": "Seated Pin-Loaded Chest Press",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -241,7 +271,8 @@
 	},
 	{
 		"id": "19e5c6f170d8804dbcdcc184be8003fb",
-		"name": "Pin-loaded shoulder press",
+		"name": "Pin-Loaded Shoulder Press",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -249,7 +280,8 @@
 	},
 	{
 		"id": "19e5c6f170d880d29affc687810a9a8a",
-		"name": "Smith machine",
+		"name": "Smith Machine",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 20,
 		"incrementKg": null,
@@ -257,7 +289,8 @@
 	},
 	{
 		"id": "19e5c6f170d880d2a77feb7bbe48974f",
-		"name": "Landmine attachment/wall corner",
+		"name": "Landmine Attachment/Wall Corner",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -265,7 +298,8 @@
 	},
 	{
 		"id": "19e5c6f170d8803d843fec1ad71d3acb",
-		"name": "Lever-arm belt squat",
+		"name": "Lever-Arm Belt Squat",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 20.4,
 		"incrementKg": null,
@@ -273,7 +307,8 @@
 	},
 	{
 		"id": "19e5c6f170d88087aac8c3228279ff3a",
-		"name": "Dip/pull-up/belt squat belt",
+		"name": "Dip/Pull-Up/Belt Squat Belt",
+		"pluralOf": null,
 		"category": "Loadable Accessories",
 		"weightKg": 1.5,
 		"incrementKg": null,
@@ -281,7 +316,8 @@
 	},
 	{
 		"id": "19e5c6f170d880eaa88fd25d0a1adf58",
-		"name": "Stability ball",
+		"name": "Stability Ball",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -290,6 +326,7 @@
 	{
 		"id": "19e5c6f170d88066aafbfbb26a40b48d",
 		"name": "Ab Wheel",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -298,6 +335,7 @@
 	{
 		"id": "19e5c6f170d880adb2cac693d9eceb51",
 		"name": "Fat Grip Attachments",
+		"pluralOf": "27d5c6f170d880a1ba5dc4c39d525c0a",
 		"category": "Loadable Accessories",
 		"weightKg": 0.9,
 		"incrementKg": null,
@@ -305,7 +343,8 @@
 	},
 	{
 		"id": "19e5c6f170d880bb9c7ec99dd18e7bd3",
-		"name": "Hand gripper",
+		"name": "Hand Gripper",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -313,7 +352,8 @@
 	},
 	{
 		"id": "19e5c6f170d8801b933cdb1b550c038c",
-		"name": "Pec deck",
+		"name": "Pec Deck",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -321,7 +361,8 @@
 	},
 	{
 		"id": "19e5c6f170d88050bdbefcbb91c01f16",
-		"name": "Dip bars",
+		"name": "Dip Bars",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -330,6 +371,7 @@
 	{
 		"id": "19e5c6f170d880b1a9f1e87cad9330d1",
 		"name": "Slingshot",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -337,7 +379,8 @@
 	},
 	{
 		"id": "19e5c6f170d88030a20edfabb6d824c4",
-		"name": "Captain’s chair",
+		"name": "Captain’s Chair",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -346,6 +389,7 @@
 	{
 		"id": "19e5c6f170d8805fb0e7f5c558a33e76",
 		"name": "Chains",
+		"pluralOf": "27d5c6f170d880f4adfad9bb8e209cf0",
 		"category": "Free Weights",
 		"weightKg": null,
 		"incrementKg": null,
@@ -353,7 +397,8 @@
 	},
 	{
 		"id": "19e5c6f170d88074bf1af2264ccaf192",
-		"name": "EZ bar",
+		"name": "EZ Bar",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -361,7 +406,8 @@
 	},
 	{
 		"id": "19e5c6f170d88007ba63e3e18e4933f8",
-		"name": "Pin-loaded cable lat pulldown",
+		"name": "Pin-Loaded Cable Lat Pulldown",
+		"pluralOf": null,
 		"category": "Cable Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -369,7 +415,8 @@
 	},
 	{
 		"id": "19e5c6f170d880c7b6ddfac365a5ddf6",
-		"name": "Standing plate-loaded lateral raise",
+		"name": "Standing Plate-Loaded Lateral Raise",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 2.5,
 		"incrementKg": null,
@@ -377,7 +424,8 @@
 	},
 	{
 		"id": "19e5c6f170d880399eb6e5aeadc4ff8c",
-		"name": "Seated pin-loaded dip",
+		"name": "Seated Pin-Loaded Dip",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -385,7 +433,8 @@
 	},
 	{
 		"id": "19e5c6f170d880089831e9c1bb4a92d0",
-		"name": "Pin-loaded assisted pull-up/dip",
+		"name": "Pin-Loaded Assisted Pull-Up/Dip",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -393,7 +442,8 @@
 	},
 	{
 		"id": "19e5c6f170d880fd9d24d7f1a2bd9ad1",
-		"name": "Wrist roller",
+		"name": "Wrist Roller",
+		"pluralOf": null,
 		"category": "Loadable Accessories",
 		"weightKg": null,
 		"incrementKg": null,
@@ -402,6 +452,7 @@
 	{
 		"id": "19e5c6f170d88013aacef00e7b0303b6",
 		"name": "Furniture Slider",
+		"pluralOf": null,
 		"category": "Other",
 		"weightKg": null,
 		"incrementKg": null,
@@ -409,7 +460,8 @@
 	},
 	{
 		"id": "19f5c6f170d880eea412c7ca7d833844",
-		"name": "Suspension trainer",
+		"name": "Suspension Trainer",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -418,6 +470,7 @@
 	{
 		"id": "19f5c6f170d880e4844df905ecfc5c3a",
 		"name": "Sled",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 36.3,
 		"incrementKg": null,
@@ -425,7 +478,8 @@
 	},
 	{
 		"id": "1a05c6f170d880d8a7efe4721e964f2d",
-		"name": "Adjustable bench",
+		"name": "Adjustable Bench",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -433,7 +487,8 @@
 	},
 	{
 		"id": "1a05c6f170d88000a11ac56d284582a9",
-		"name": "Decline bench",
+		"name": "Decline Bench",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -441,7 +496,8 @@
 	},
 	{
 		"id": "1a05c6f170d880f3888bf7d48719321f",
-		"name": "Seated bench",
+		"name": "Seated Bench",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -449,7 +505,8 @@
 	},
 	{
 		"id": "1a45c6f170d880629cdcc99a2ff615cf",
-		"name": "Weight plate",
+		"name": "Weight Plate",
+		"pluralOf": null,
 		"category": "Free Weights",
 		"weightKg": null,
 		"incrementKg": null,
@@ -457,7 +514,8 @@
 	},
 	{
 		"id": "1a45c6f170d880b08d92f50c0ff2bb76",
-		"name": "Sissy squat machine",
+		"name": "Sissy Squat Machine",
+		"pluralOf": null,
 		"category": "Other",
 		"weightKg": null,
 		"incrementKg": null,
@@ -465,7 +523,8 @@
 	},
 	{
 		"id": "1a45c6f170d88022ab7bcf17649e3d7c",
-		"name": "Pendulum squat",
+		"name": "Pendulum Squat",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 40.8,
 		"incrementKg": null,
@@ -473,7 +532,8 @@
 	},
 	{
 		"id": "1b85c6f170d880359c75c07ec198c05c",
-		"name": "Pin-loaded shrug",
+		"name": "Pin-Loaded Shrug",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -481,7 +541,8 @@
 	},
 	{
 		"id": "25a5c6f170d880c1a55ac08cf52671ab",
-		"name": "Weight plates",
+		"name": "Weight Plates",
+		"pluralOf": "1a45c6f170d880629cdcc99a2ff615cf",
 		"category": "Free Weights",
 		"weightKg": null,
 		"incrementKg": null,
@@ -490,6 +551,7 @@
 	{
 		"id": "25a5c6f170d880589ffdf4f627a75b44",
 		"name": "Dumbbell",
+		"pluralOf": null,
 		"category": "Free Weights",
 		"weightKg": null,
 		"incrementKg": null,
@@ -498,6 +560,7 @@
 	{
 		"id": "25a5c6f170d880478d81c880d6ee06a0",
 		"name": "Kettlebells",
+		"pluralOf": "19e5c6f170d880e791c3da3a74828f0e",
 		"category": "Free Weights",
 		"weightKg": null,
 		"incrementKg": null,
@@ -505,7 +568,8 @@
 	},
 	{
 		"id": "25a5c6f170d880c2be66d2f10537c1c1",
-		"name": "Short resistance band",
+		"name": "Short Resistance Band",
+		"pluralOf": null,
 		"category": "Bands & Ropes",
 		"weightKg": null,
 		"incrementKg": null,
@@ -513,7 +577,8 @@
 	},
 	{
 		"id": "25a5c6f170d8805cb60bd3ee71311ad1",
-		"name": "Pin-loaded cable crossover",
+		"name": "Pin-Loaded Cable Crossover",
+		"pluralOf": null,
 		"category": "Cable Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -521,7 +586,8 @@
 	},
 	{
 		"id": "25a5c6f170d880dc87b4ceacf1c4ebac",
-		"name": "Seated pin-loaded leg curl",
+		"name": "Seated Pin-Loaded Leg Curl",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -529,7 +595,8 @@
 	},
 	{
 		"id": "25a5c6f170d880358d45db535ec7dde7",
-		"name": "Lying pin-loaded leg curl",
+		"name": "Lying Pin-Loaded Leg Curl",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -537,7 +604,8 @@
 	},
 	{
 		"id": "25a5c6f170d880adb79afbd373c30d6c",
-		"name": "Standing pin-loaded leg curl",
+		"name": "Standing Pin-Loaded Leg Curl",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -545,7 +613,8 @@
 	},
 	{
 		"id": "25a5c6f170d8801c97d2da626ba64553",
-		"name": "Seated plate-loaded leg curl",
+		"name": "Seated Plate-Loaded Leg Curl",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 2.7,
 		"incrementKg": null,
@@ -553,7 +622,8 @@
 	},
 	{
 		"id": "25a5c6f170d880b4af58db6178249ca1",
-		"name": "Lying plate-loaded leg curl",
+		"name": "Lying Plate-Loaded Leg Curl",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 1.8,
 		"incrementKg": null,
@@ -561,7 +631,8 @@
 	},
 	{
 		"id": "25a5c6f170d880dd8002d5ad9670ad2c",
-		"name": "Standing plate-loaded leg curl",
+		"name": "Standing Plate-Loaded Leg Curl",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 3.6,
 		"incrementKg": null,
@@ -569,7 +640,8 @@
 	},
 	{
 		"id": "25a5c6f170d8805b8c95e7e5b4e8a989",
-		"name": "Bumper plates",
+		"name": "Bumper Plates",
+		"pluralOf": "25d5c6f170d880eba241c26f8f426024",
 		"category": "Free Weights",
 		"weightKg": null,
 		"incrementKg": null,
@@ -578,6 +650,7 @@
 	{
 		"id": "25a5c6f170d88070960ec16cf3b0083e",
 		"name": "Axle",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -585,7 +658,8 @@
 	},
 	{
 		"id": "25a5c6f170d88036b550f25411d5e811",
-		"name": "Trap bar",
+		"name": "Trap Bar",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -593,7 +667,8 @@
 	},
 	{
 		"id": "25a5c6f170d8804894dddc6a13865035",
-		"name": "Swiss bar",
+		"name": "Swiss Bar",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -601,7 +676,8 @@
 	},
 	{
 		"id": "25a5c6f170d88016bae1fef84faef0f8",
-		"name": "Strongman log",
+		"name": "Strongman Log",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -610,6 +686,7 @@
 	{
 		"id": "25a5c6f170d880f596abc08924a614f9",
 		"name": "Safety Squat Bar (SSB)",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -617,7 +694,8 @@
 	},
 	{
 		"id": "25a5c6f170d880fd8cf7fe6ce4b39aec",
-		"name": "Cambered squat bar",
+		"name": "Cambered Squat Bar",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -625,7 +703,8 @@
 	},
 	{
 		"id": "25a5c6f170d8802e877ffd049e87dc5a",
-		"name": "Cambered bench press bar",
+		"name": "Cambered Bench Press Bar",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -633,7 +712,8 @@
 	},
 	{
 		"id": "25a5c6f170d88099ad14f2ed1dc1110d",
-		"name": "Plyometric box",
+		"name": "Plyometric Box",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -641,7 +721,8 @@
 	},
 	{
 		"id": "25a5c6f170d8806cbce3cdb9f00dbfc1",
-		"name": "Squat box",
+		"name": "Squat Box",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -649,7 +730,8 @@
 	},
 	{
 		"id": "25a5c6f170d8801c90d8eb731e97ebac",
-		"name": "Aerobic step",
+		"name": "Aerobic Step",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -657,7 +739,8 @@
 	},
 	{
 		"id": "25a5c6f170d88015858ecc00db4c9e02",
-		"name": "Aerobic steps",
+		"name": "Aerobic Steps",
+		"pluralOf": "25a5c6f170d8801c90d8eb731e97ebac",
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -665,7 +748,8 @@
 	},
 	{
 		"id": "25a5c6f170d8806bab5fc4e4a9f0b0c4",
-		"name": "Seated pin-loaded lateral raise",
+		"name": "Seated Pin-Loaded Lateral Raise",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -673,7 +757,8 @@
 	},
 	{
 		"id": "25a5c6f170d880abb2c0cc6cd225c6a8",
-		"name": "Shrug/deadlift machine",
+		"name": "Shrug/Deadlift Machine",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 11.4,
 		"incrementKg": null,
@@ -681,7 +766,8 @@
 	},
 	{
 		"id": "25a5c6f170d88094bd63d078c1a8bb00",
-		"name": "Plate-loaded shoulder press",
+		"name": "Plate-Loaded Shoulder Press",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 4.5,
 		"incrementKg": null,
@@ -689,7 +775,8 @@
 	},
 	{
 		"id": "25a5c6f170d880e49dddca4c658fa51c",
-		"name": "Plate-loaded lat pulldown",
+		"name": "Plate-Loaded Lat Pulldown",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 0.9,
 		"incrementKg": null,
@@ -697,7 +784,8 @@
 	},
 	{
 		"id": "25a5c6f170d880df850bc81bb535117d",
-		"name": "Pin-loaded fixed lat pulldown",
+		"name": "Pin-Loaded Fixed Lat Pulldown",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -705,7 +793,8 @@
 	},
 	{
 		"id": "25a5c6f170d880a08163d89c0f571db4",
-		"name": "Seated plate-loaded chest press",
+		"name": "Seated Plate-Loaded Chest Press",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 3.2,
 		"incrementKg": null,
@@ -713,7 +802,8 @@
 	},
 	{
 		"id": "25a5c6f170d880a190dac9cd24968c46",
-		"name": "Seated plate-loaded dip",
+		"name": "Seated Plate-Loaded Dip",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 3.6,
 		"incrementKg": null,
@@ -721,7 +811,8 @@
 	},
 	{
 		"id": "25a5c6f170d8805cb5d2e965003ea174",
-		"name": "Pin-loaded row (no chest support)",
+		"name": "Pin-Loaded Row (No Chest Support)",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -729,7 +820,8 @@
 	},
 	{
 		"id": "25a5c6f170d88008aa1effea3e248448",
-		"name": "Chest-supported T-bar row",
+		"name": "Chest-Supported T-Bar Row",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 18.1,
 		"incrementKg": null,
@@ -737,7 +829,8 @@
 	},
 	{
 		"id": "25a5c6f170d8801faa32cf26ee16c248",
-		"name": "Standing T-bar row (without chest support)",
+		"name": "Standing T-Bar Row (Without Chest Support)",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 18,
 		"incrementKg": null,
@@ -745,7 +838,8 @@
 	},
 	{
 		"id": "25a5c6f170d880d89494eedb31bcb223",
-		"name": "Bench press board/block",
+		"name": "Bench Press Board/Block",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -753,7 +847,8 @@
 	},
 	{
 		"id": "25b5c6f170d8804dbf93f097481f14e3",
-		"name": "Flat bench press station",
+		"name": "Flat Bench Press Station",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -761,7 +856,8 @@
 	},
 	{
 		"id": "25b5c6f170d8805db24ce3ad378a4739",
-		"name": "Incline bench press station",
+		"name": "Incline Bench Press Station",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -769,7 +865,8 @@
 	},
 	{
 		"id": "25b5c6f170d880288aebd865cb540804",
-		"name": "Decline bench press station",
+		"name": "Decline Bench Press Station",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -777,7 +874,8 @@
 	},
 	{
 		"id": "25b5c6f170d880619592ca5ba65fc1b3",
-		"name": "Long resistance bands",
+		"name": "Long Resistance Bands",
+		"pluralOf": "19e5c6f170d880d5bf4ae225c061f55d",
 		"category": "Bands & Ropes",
 		"weightKg": null,
 		"incrementKg": null,
@@ -785,7 +883,8 @@
 	},
 	{
 		"id": "25c5c6f170d880f4b452cfe6feed2d3d",
-		"name": "Pin-loaded leg extension",
+		"name": "Pin-Loaded Leg Extension",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -793,7 +892,8 @@
 	},
 	{
 		"id": "25c5c6f170d880b0a509d9d5c13748d0",
-		"name": "Pin-loaded leg press",
+		"name": "Pin-Loaded Leg Press",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -801,7 +901,8 @@
 	},
 	{
 		"id": "25c5c6f170d88024ac71dfa51cae3bc0",
-		"name": "Cuff cable attachment",
+		"name": "Cuff Cable Attachment",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -809,7 +910,8 @@
 	},
 	{
 		"id": "25c5c6f170d88064b8d6e03f2a66cbcf",
-		"name": "Plate-loaded crunch (with overhead handles)",
+		"name": "Plate-Loaded Crunch (With Overhead Handles)",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 11.3,
 		"incrementKg": null,
@@ -817,7 +919,8 @@
 	},
 	{
 		"id": "25c5c6f170d8808e9f87fc4a815d8ba5",
-		"name": "Pin-loaded crunch (with chest pad)",
+		"name": "Pin-Loaded Crunch (With Chest Pad)",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -825,7 +928,8 @@
 	},
 	{
 		"id": "25c5c6f170d88078a9acf581484a67c0",
-		"name": "Ab coaster machine",
+		"name": "Ab Coaster Machine",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 9,
 		"incrementKg": null,
@@ -833,7 +937,8 @@
 	},
 	{
 		"id": "25c5c6f170d880e88a88e19b0209324c",
-		"name": "Kneeling torso rotation",
+		"name": "Kneeling Torso Rotation",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -841,7 +946,8 @@
 	},
 	{
 		"id": "25c5c6f170d880f28855f3b2e31ed739",
-		"name": "Seated pin-loaded back extension",
+		"name": "Seated Pin-Loaded Back Extension",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -849,7 +955,8 @@
 	},
 	{
 		"id": "25c5c6f170d880f6bd7ecb941663f615",
-		"name": "Push-up handles",
+		"name": "Push-Up Handles",
+		"pluralOf": "27d5c6f170d88038bfd6c19bad6929de",
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -857,7 +964,8 @@
 	},
 	{
 		"id": "25c5c6f170d8803a9288c01c665db7f2",
-		"name": "Weighted vest",
+		"name": "Weighted Vest",
+		"pluralOf": null,
 		"category": "Body Weights",
 		"weightKg": null,
 		"incrementKg": null,
@@ -865,7 +973,8 @@
 	},
 	{
 		"id": "25c5c6f170d880a5bafdeaf2cec1a53c",
-		"name": "Seated pin-loaded incline press",
+		"name": "Seated Pin-Loaded Incline Press",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -873,7 +982,8 @@
 	},
 	{
 		"id": "25c5c6f170d880ad8010e45cf9e63579",
-		"name": "Seated plate-loaded incline press",
+		"name": "Seated Plate-Loaded Incline Press",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 3.6,
 		"incrementKg": null,
@@ -881,7 +991,8 @@
 	},
 	{
 		"id": "25c5c6f170d880899ce8c47d498c8d9b",
-		"name": "Fixed-weight straight bar",
+		"name": "Fixed-Weight Straight Bar",
+		"pluralOf": null,
 		"category": "Fixed Weight Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -889,7 +1000,8 @@
 	},
 	{
 		"id": "25c5c6f170d88096bb47f121d44f241e",
-		"name": "Seated plate-loaded lateral raise",
+		"name": "Seated Plate-Loaded Lateral Raise",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 0.5,
 		"incrementKg": null,
@@ -897,7 +1009,8 @@
 	},
 	{
 		"id": "25c5c6f170d880088415f31db00a6e55",
-		"name": "Standing pin-loaded lateral raise",
+		"name": "Standing Pin-Loaded Lateral Raise",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -905,7 +1018,8 @@
 	},
 	{
 		"id": "25c5c6f170d88050a23fcf770c34074a",
-		"name": "Fixed-weight EZ bar",
+		"name": "Fixed-Weight EZ Bar",
+		"pluralOf": null,
 		"category": "Fixed Weight Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -913,7 +1027,8 @@
 	},
 	{
 		"id": "25c5c6f170d880eaac9ffb6ffdf335f2",
-		"name": "Preacher curl bench",
+		"name": "Preacher Curl Bench",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -921,7 +1036,8 @@
 	},
 	{
 		"id": "25c5c6f170d880c68c25c5b49f6d0c84",
-		"name": "Pin-loaded preacher curl",
+		"name": "Pin-Loaded Preacher Curl",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -929,7 +1045,8 @@
 	},
 	{
 		"id": "25c5c6f170d8800da116eb279df1e8e9",
-		"name": "Plate-loaded preacher curl",
+		"name": "Plate-Loaded Preacher Curl",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 3.6,
 		"incrementKg": null,
@@ -937,7 +1054,8 @@
 	},
 	{
 		"id": "25c5c6f170d880b98fa0c006c2ac489d",
-		"name": "Pin-loaded biceps curl with arms at side",
+		"name": "Pin-Loaded Biceps Curl With Arms At Side",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -945,7 +1063,8 @@
 	},
 	{
 		"id": "25c5c6f170d880dbaa7cf68aed332e18",
-		"name": "Pin-loaded overhead triceps extension",
+		"name": "Pin-Loaded Overhead Triceps Extension",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -953,7 +1072,8 @@
 	},
 	{
 		"id": "25c5c6f170d8808ba5d6db95f0fa3ba6",
-		"name": "Plate-loaded overhead triceps extension",
+		"name": "Plate-Loaded Overhead Triceps Extension",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 6.8,
 		"incrementKg": null,
@@ -961,7 +1081,8 @@
 	},
 	{
 		"id": "25d5c6f170d880e681e3c818577f8603",
-		"name": "Plate-loaded assisted pull-up/dip",
+		"name": "Plate-Loaded Assisted Pull-Up/Dip",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -969,7 +1090,8 @@
 	},
 	{
 		"id": "25d5c6f170d880a286ead7979054a9c0",
-		"name": "V-bar row grip attachment",
+		"name": "V-Bar Row Grip Attachment",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": 1.9,
 		"incrementKg": null,
@@ -977,7 +1099,8 @@
 	},
 	{
 		"id": "25d5c6f170d88043bc4cd1dbbd52db51",
-		"name": "Straight handle landmine attachment",
+		"name": "Straight Handle Landmine Attachment",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -985,7 +1108,8 @@
 	},
 	{
 		"id": "25d5c6f170d8803292b1cef9e5e3637c",
-		"name": "Standing pin-loaded calf raise",
+		"name": "Standing Pin-Loaded Calf Raise",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -993,7 +1117,8 @@
 	},
 	{
 		"id": "25d5c6f170d880b793cef90680f4df4c",
-		"name": "Seated pin-loaded calf raise",
+		"name": "Seated Pin-Loaded Calf Raise",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1001,7 +1126,8 @@
 	},
 	{
 		"id": "25d5c6f170d880a6977afc47422a6cf7",
-		"name": "Pin-loaded donkey calf raise",
+		"name": "Pin-Loaded Donkey Calf Raise",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1009,7 +1135,8 @@
 	},
 	{
 		"id": "25d5c6f170d8802392cee06116c0c1a5",
-		"name": "Plate-loaded donkey calf raise",
+		"name": "Plate-Loaded Donkey Calf Raise",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 22.7,
 		"incrementKg": null,
@@ -1017,7 +1144,8 @@
 	},
 	{
 		"id": "25d5c6f170d8804497e6f73ddb189528",
-		"name": "Seated plate-loaded shrug",
+		"name": "Seated Plate-Loaded Shrug",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 11.4,
 		"incrementKg": null,
@@ -1025,7 +1153,8 @@
 	},
 	{
 		"id": "25d5c6f170d8809bb07bf9a9c6f331eb",
-		"name": "Pin-loaded pullover",
+		"name": "Pin-Loaded Pullover",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1033,7 +1162,8 @@
 	},
 	{
 		"id": "25d5c6f170d8800e9a3df1f9e9d9cfb7",
-		"name": "Plate-loaded pullover",
+		"name": "Plate-Loaded Pullover",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 8.2,
 		"incrementKg": null,
@@ -1041,7 +1171,8 @@
 	},
 	{
 		"id": "25d5c6f170d880d183d3d48e4b7f106e",
-		"name": "Seal row bench",
+		"name": "Seal Row Bench",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1049,7 +1180,8 @@
 	},
 	{
 		"id": "25d5c6f170d88040a3cce7d9aaef353c",
-		"name": "Seated cable row",
+		"name": "Seated Cable Row",
+		"pluralOf": null,
 		"category": "Cable Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1057,7 +1189,8 @@
 	},
 	{
 		"id": "25d5c6f170d8803ab92be54326c5f6be",
-		"name": "Chest-supported pin-loaded row",
+		"name": "Chest-Supported Pin-Loaded Row",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1065,7 +1198,8 @@
 	},
 	{
 		"id": "25d5c6f170d880b6974fe98ac99f24f1",
-		"name": "Chest-supported plate-loaded row",
+		"name": "Chest-Supported Plate-Loaded Row",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 4.5,
 		"incrementKg": null,
@@ -1074,6 +1208,7 @@
 	{
 		"id": "25d5c6f170d8803398e5da18a015f6c3",
 		"name": "Couch",
+		"pluralOf": null,
 		"category": "Other",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1081,7 +1216,8 @@
 	},
 	{
 		"id": "25d5c6f170d88049899df888a3a24c2c",
-		"name": "Deadlift blocks",
+		"name": "Deadlift Blocks",
+		"pluralOf": "25d5c6f170d8802b9040cbb72e8db6d3",
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1089,7 +1225,8 @@
 	},
 	{
 		"id": "25d5c6f170d880ab94bafb6d8142ce57",
-		"name": "Yoga blocks",
+		"name": "Yoga Blocks",
+		"pluralOf": "27d5c6f170d880fe8252ef81ddca8307",
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1097,7 +1234,8 @@
 	},
 	{
 		"id": "25d5c6f170d880b19945cc719226fd3d",
-		"name": "Seated overhead press station",
+		"name": "Seated Overhead Press Station",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1105,7 +1243,8 @@
 	},
 	{
 		"id": "25d5c6f170d8801bb8daf6e122331357",
-		"name": "Plyometric boxes",
+		"name": "Plyometric Boxes",
+		"pluralOf": "25a5c6f170d88099ad14f2ed1dc1110d",
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1113,7 +1252,8 @@
 	},
 	{
 		"id": "25d5c6f170d8807796e8dc918e0e77a7",
-		"name": "Plate-loaded adjustable dumbbell",
+		"name": "Plate-Loaded Adjustable Dumbbell",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1122,6 +1262,7 @@
 	{
 		"id": "25d5c6f170d880aeaf82ce2327d9ca95",
 		"name": "Hammer",
+		"pluralOf": null,
 		"category": "Other",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1129,7 +1270,8 @@
 	},
 	{
 		"id": "25d5c6f170d880919aa2d47327d4af34",
-		"name": "End-loaded baseball bat",
+		"name": "End-Loaded Baseball Bat",
+		"pluralOf": null,
 		"category": "Other",
 		"weightKg": 0.9,
 		"incrementKg": null,
@@ -1138,6 +1280,7 @@
 	{
 		"id": "25d5c6f170d8808aba23e002b00ce700",
 		"name": "Staircase",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1145,7 +1288,8 @@
 	},
 	{
 		"id": "25d5c6f170d8802b9040cbb72e8db6d3",
-		"name": "Deadlift block",
+		"name": "Deadlift Block",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1153,7 +1297,8 @@
 	},
 	{
 		"id": "25d5c6f170d880b9a6faec1e7e4b9f5e",
-		"name": "Calf raise block",
+		"name": "Calf Raise Block",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1161,7 +1306,8 @@
 	},
 	{
 		"id": "25d5c6f170d880eba241c26f8f426024",
-		"name": "Bumper plate",
+		"name": "Bumper Plate",
+		"pluralOf": null,
 		"category": "Free Weights",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1169,7 +1315,8 @@
 	},
 	{
 		"id": "25e5c6f170d880ce83f4c60b3f512a17",
-		"name": "Split squat roller stand",
+		"name": "Split Squat Roller Stand",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1177,7 +1324,8 @@
 	},
 	{
 		"id": "25e5c6f170d880f5a8a8dedd9e550c40",
-		"name": "Nordic hamstring curl bench",
+		"name": "Nordic Hamstring Curl Bench",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1185,7 +1333,8 @@
 	},
 	{
 		"id": "25e5c6f170d88024bcb8c5a4f2d78842",
-		"name": "Nordic hamstring curl strap",
+		"name": "Nordic Hamstring Curl Strap",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1193,7 +1342,8 @@
 	},
 	{
 		"id": "25e5c6f170d88093a05dd2c58983b8f4",
-		"name": "Hip thrust bench",
+		"name": "Hip Thrust Bench",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1202,6 +1352,7 @@
 	{
 		"id": "25e5c6f170d880498ea9caa3ae8b0eda",
 		"name": "Bed",
+		"pluralOf": null,
 		"category": "Other",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1209,7 +1360,8 @@
 	},
 	{
 		"id": "25e5c6f170d880748060de3a655c7b18",
-		"name": "Parallel handle landmine attachment",
+		"name": "Parallel Handle Landmine Attachment",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": 3.6,
 		"incrementKg": null,
@@ -1217,7 +1369,8 @@
 	},
 	{
 		"id": "25e5c6f170d8808e8276fa6902887bff",
-		"name": "Multi-grip pull-up bar",
+		"name": "Multi-Grip Pull-Up Bar",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1225,7 +1378,8 @@
 	},
 	{
 		"id": "2605c6f170d880cf825feab5ae68d7a4",
-		"name": "Anchor point for suspension trainer",
+		"name": "Anchor Point For Suspension Trainer",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1233,7 +1387,8 @@
 	},
 	{
 		"id": "2605c6f170d8804bb8e0ca7c86ed38d9",
-		"name": "Anchor point for resistance band",
+		"name": "Anchor Point For Resistance Band",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1241,7 +1396,8 @@
 	},
 	{
 		"id": "2625c6f170d880788ea1cb74ceda4648",
-		"name": "Squat stand",
+		"name": "Squat Stand",
+		"pluralOf": null,
 		"category": "Benches & Racks",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1249,7 +1405,8 @@
 	},
 	{
 		"id": "2685c6f170d880648f67d1ece3a70bb2",
-		"name": "Pulley belt squat",
+		"name": "Pulley Belt Squat",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 12.5,
 		"incrementKg": null,
@@ -1257,7 +1414,8 @@
 	},
 	{
 		"id": "2695c6f170d8802d82f1c198701b01b3",
-		"name": "Horizontal plate-loaded chest press",
+		"name": "Horizontal Plate-Loaded Chest Press",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 8.2,
 		"incrementKg": null,
@@ -1265,7 +1423,8 @@
 	},
 	{
 		"id": "2695c6f170d88065af07cbb8c9f26d73",
-		"name": "Horizontal pin-loaded chest press",
+		"name": "Horizontal Pin-Loaded Chest Press",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1273,7 +1432,8 @@
 	},
 	{
 		"id": "26a5c6f170d8808387e7ee831c3dfa97",
-		"name": "Plate-loaded incline bench press",
+		"name": "Plate-Loaded Incline Bench Press",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 9.1,
 		"incrementKg": null,
@@ -1281,7 +1441,8 @@
 	},
 	{
 		"id": "26a5c6f170d880ba9239dd418aa3578c",
-		"name": "Reclined pin-loaded incline press",
+		"name": "Reclined Pin-Loaded Incline Press",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1289,7 +1450,8 @@
 	},
 	{
 		"id": "2705c6f170d880429bddd8a58b4d3e8f",
-		"name": "Seated pin-loaded hip abductor",
+		"name": "Seated Pin-Loaded Hip Abductor",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1297,7 +1459,8 @@
 	},
 	{
 		"id": "2705c6f170d88022be5ace8690f76858",
-		"name": "Seated pin-loaded hip adductor",
+		"name": "Seated Pin-Loaded Hip Adductor",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1305,7 +1468,8 @@
 	},
 	{
 		"id": "2705c6f170d88045ba68f87bff516399",
-		"name": "Plate-loaded hip abductor/adductor combo machine",
+		"name": "Plate-Loaded Hip Abductor/Adductor Combo Machine",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1313,7 +1477,8 @@
 	},
 	{
 		"id": "2705c6f170d880b3a3ffd8e87f127077",
-		"name": "Seated plate-loaded hip abductor",
+		"name": "Seated Plate-Loaded Hip Abductor",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 5,
 		"incrementKg": null,
@@ -1321,7 +1486,8 @@
 	},
 	{
 		"id": "2705c6f170d88056950affcfc6e72475",
-		"name": "Seated plate-loaded hip adductor",
+		"name": "Seated Plate-Loaded Hip Adductor",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1329,7 +1495,8 @@
 	},
 	{
 		"id": "2725c6f170d8800ea9b4ca6d54b70862",
-		"name": "Side-plate-loaded reverse hyperextension",
+		"name": "Side-Plate-Loaded Reverse Hyperextension",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 9,
 		"incrementKg": null,
@@ -1337,7 +1504,8 @@
 	},
 	{
 		"id": "2725c6f170d88049aa6bccdfef0f341f",
-		"name": "Pin-loaded reverse hyperextension",
+		"name": "Pin-Loaded Reverse Hyperextension",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1345,7 +1513,8 @@
 	},
 	{
 		"id": "27d5c6f170d880fe8252ef81ddca8307",
-		"name": "Yoga block",
+		"name": "Yoga Block",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1353,7 +1522,8 @@
 	},
 	{
 		"id": "27d5c6f170d88038bfd6c19bad6929de",
-		"name": "Push-up handle",
+		"name": "Push-Up Handle",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1362,6 +1532,7 @@
 	{
 		"id": "27d5c6f170d88080824fd33a69c6300b",
 		"name": "Ankle Weight",
+		"pluralOf": null,
 		"category": "Body Weights",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1370,6 +1541,7 @@
 	{
 		"id": "27d5c6f170d880f4adfad9bb8e209cf0",
 		"name": "Chain",
+		"pluralOf": null,
 		"category": "Free Weights",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1378,6 +1550,7 @@
 	{
 		"id": "27d5c6f170d880a1ba5dc4c39d525c0a",
 		"name": "Fat Grip Attachment",
+		"pluralOf": null,
 		"category": "Loadable Accessories",
 		"weightKg": 0.45,
 		"incrementKg": null,
@@ -1386,6 +1559,7 @@
 	{
 		"id": "27d5c6f170d880138553d4c610c9ddc8",
 		"name": "Gymnastics Ring",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1393,7 +1567,8 @@
 	},
 	{
 		"id": "2855c6f170d880f0b296c789944c1250",
-		"name": "Pin-loaded crunch (with front handles)",
+		"name": "Pin-Loaded Crunch (With Front Handles)",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1401,7 +1576,8 @@
 	},
 	{
 		"id": "2855c6f170d880d58346f130edb1cb13",
-		"name": "Plate-loaded crunch (with chest pad)",
+		"name": "Plate-Loaded Crunch (With Chest Pad)",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1409,7 +1585,8 @@
 	},
 	{
 		"id": "28a5c6f170d880dcbd8ad6a43b56a31c",
-		"name": "Plate-loaded back extension",
+		"name": "Plate-Loaded Back Extension",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1417,7 +1594,8 @@
 	},
 	{
 		"id": "28a5c6f170d880a4a660d9f4be43d3f4",
-		"name": "Plate-loaded crunch/back extension combo",
+		"name": "Plate-Loaded Crunch/Back Extension Combo",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1425,7 +1603,8 @@
 	},
 	{
 		"id": "28b5c6f170d880319249e0b7e5d8423c",
-		"name": "Seated lower torso rotation",
+		"name": "Seated Lower Torso Rotation",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1433,7 +1612,8 @@
 	},
 	{
 		"id": "28c5c6f170d88079a2c1e6f85986c2c3",
-		"name": "Upper torso rotation with chest pad",
+		"name": "Upper Torso Rotation With Chest Pad",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1441,7 +1621,8 @@
 	},
 	{
 		"id": "2905c6f170d88081bcbff94b66fef25e",
-		"name": "Standing plate-loaded glute kickback",
+		"name": "Standing Plate-Loaded Glute Kickback",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 23,
 		"incrementKg": null,
@@ -1449,7 +1630,8 @@
 	},
 	{
 		"id": "2905c6f170d880bc9e8ce4b473f9f4cd",
-		"name": "Kneeling pin-loaded glute kickback",
+		"name": "Kneeling Pin-Loaded Glute Kickback",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1457,7 +1639,8 @@
 	},
 	{
 		"id": "2905c6f170d88088bca4cbac466a8903",
-		"name": "Kneeling plate-loaded glute kickback",
+		"name": "Kneeling Plate-Loaded Glute Kickback",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 4.4,
 		"incrementKg": null,
@@ -1465,7 +1648,8 @@
 	},
 	{
 		"id": "2935c6f170d880988f4adef8637e6add",
-		"name": "Plate-loaded hip thrust (starting from the bottom)",
+		"name": "Plate-Loaded Hip Thrust (Starting From The Bottom)",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 7,
 		"incrementKg": null,
@@ -1473,7 +1657,8 @@
 	},
 	{
 		"id": "2935c6f170d88021a233ffed036154f3",
-		"name": "Pin-loaded hip thrust",
+		"name": "Pin-Loaded Hip Thrust",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1481,7 +1666,8 @@
 	},
 	{
 		"id": "2985c6f170d880c194acfcbd47b89cd8",
-		"name": "Furniture sliders",
+		"name": "Furniture Sliders",
+		"pluralOf": "19e5c6f170d88013aacef00e7b0303b6",
 		"category": "Other",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1489,7 +1675,8 @@
 	},
 	{
 		"id": "2985c6f170d88091b56ec5457cde1321",
-		"name": "Pin-loaded triceps extension (with angled arm pad)",
+		"name": "Pin-Loaded Triceps Extension (With Angled Arm Pad)",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1497,7 +1684,8 @@
 	},
 	{
 		"id": "2985c6f170d880aca70ac2eac7aa460e",
-		"name": "Plate-loaded triceps extension (with angled arm pad)",
+		"name": "Plate-Loaded Triceps Extension (With Angled Arm Pad)",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 3.6,
 		"incrementKg": null,
@@ -1505,7 +1693,8 @@
 	},
 	{
 		"id": "2985c6f170d88090a434efdbdab506ca",
-		"name": "Pin-loaded preacher curl/triceps extension combo",
+		"name": "Pin-Loaded Preacher Curl/Triceps Extension Combo",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1513,7 +1702,8 @@
 	},
 	{
 		"id": "2985c6f170d8808a8580c289a9844905",
-		"name": "Plate-loaded preacher curl/triceps extension combo",
+		"name": "Plate-Loaded Preacher Curl/Triceps Extension Combo",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 3.6,
 		"incrementKg": null,
@@ -1521,7 +1711,8 @@
 	},
 	{
 		"id": "29a5c6f170d880a98b36f624790cc5f8",
-		"name": "Standing chest press",
+		"name": "Standing Chest Press",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 9.1,
 		"incrementKg": null,
@@ -1529,7 +1720,8 @@
 	},
 	{
 		"id": "29a5c6f170d880b5911cc71b399e7ff3",
-		"name": "Standing plate-loaded gripper",
+		"name": "Standing Plate-Loaded Gripper",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 6.3,
 		"incrementKg": null,
@@ -1537,7 +1729,8 @@
 	},
 	{
 		"id": "2a45c6f170d880d7a3f8f4b12c3b2e85",
-		"name": "Seated plate-loaded decline press",
+		"name": "Seated Plate-Loaded Decline Press",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 2.7,
 		"incrementKg": null,
@@ -1545,7 +1738,8 @@
 	},
 	{
 		"id": "2a45c6f170d880b597d5da0f28326105",
-		"name": "Lying decline press machine",
+		"name": "Lying Decline Press Machine",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 9.1,
 		"incrementKg": null,
@@ -1553,7 +1747,8 @@
 	},
 	{
 		"id": "2b25c6f170d880548e61e0d03ea6ce1d",
-		"name": "Plate-loaded low row",
+		"name": "Plate-Loaded Low Row",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 4.5,
 		"incrementKg": null,
@@ -1561,7 +1756,8 @@
 	},
 	{
 		"id": "2b25c6f170d880149addda11de15db13",
-		"name": "Chest fly with arm pads",
+		"name": "Chest Fly With Arm Pads",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1569,7 +1765,8 @@
 	},
 	{
 		"id": "2b25c6f170d880edbbdadcfb8841bfd1",
-		"name": "Cuff cable attachments",
+		"name": "Cuff Cable Attachments",
+		"pluralOf": "25c5c6f170d88024ac71dfa51cae3bc0",
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1577,7 +1774,8 @@
 	},
 	{
 		"id": "2b25c6f170d8808c902ad0bc95551783",
-		"name": "Neck harness",
+		"name": "Neck Harness",
+		"pluralOf": null,
 		"category": "Loadable Accessories",
 		"weightKg": 0.7,
 		"incrementKg": null,
@@ -1585,7 +1783,8 @@
 	},
 	{
 		"id": "2b25c6f170d8809e8304ed80a0eb7a3b",
-		"name": "Plate-loaded single cable machine (dual sleeve)",
+		"name": "Plate-Loaded Single Cable Machine (Dual Sleeve)",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1593,7 +1792,8 @@
 	},
 	{
 		"id": "2b25c6f170d8801a96ffd0ed372d7422",
-		"name": "Plate-loaded cable crossover",
+		"name": "Plate-Loaded Cable Crossover",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1601,7 +1801,8 @@
 	},
 	{
 		"id": "2e75c6f170d8801eb717e217d7e3d3cf",
-		"name": "Plate-loaded high row",
+		"name": "Plate-Loaded High Row",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 0.9,
 		"incrementKg": null,
@@ -1609,7 +1810,8 @@
 	},
 	{
 		"id": "2e85c6f170d880ae91eae077d2f1cf56",
-		"name": "Plate-loaded cable lat pulldown",
+		"name": "Plate-Loaded Cable Lat Pulldown",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1618,6 +1820,7 @@
 	{
 		"id": "2ed5c6f170d88039b833d0a45eec64f5",
 		"name": "Treadmill",
+		"pluralOf": null,
 		"category": "Cardio",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1626,6 +1829,7 @@
 	{
 		"id": "2ed5c6f170d88076bfe7ecbf57ff522d",
 		"name": "Bike",
+		"pluralOf": null,
 		"category": "Cardio",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1634,6 +1838,7 @@
 	{
 		"id": "2ed5c6f170d880558198cc60df067a7d",
 		"name": "Elliptical",
+		"pluralOf": null,
 		"category": "Cardio",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1641,7 +1846,8 @@
 	},
 	{
 		"id": "2ed5c6f170d88075a734c1593b8e537c",
-		"name": "Stair climber",
+		"name": "Stair Climber",
+		"pluralOf": null,
 		"category": "Cardio",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1649,7 +1855,8 @@
 	},
 	{
 		"id": "2ed5c6f170d8801ebb3cea98cb763b8d",
-		"name": "Rowing machine",
+		"name": "Rowing Machine",
+		"pluralOf": null,
 		"category": "Cardio",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1658,6 +1865,7 @@
 	{
 		"id": "2ed5c6f170d880a5a49adf20b7f3d4d3",
 		"name": "SkiErg",
+		"pluralOf": null,
 		"category": "Cardio",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1665,7 +1873,8 @@
 	},
 	{
 		"id": "2ed5c6f170d88060814def480dc910bc",
-		"name": "Air bike",
+		"name": "Air Bike",
+		"pluralOf": null,
 		"category": "Cardio",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1674,6 +1883,7 @@
 	{
 		"id": "2ed5c6f170d880c8a531c3d2bb5109be",
 		"name": "Pool",
+		"pluralOf": null,
 		"category": "Cardio",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1682,6 +1892,7 @@
 	{
 		"id": "2ed5c6f170d880ef91b2c245173f4b34",
 		"name": "Jacobs Ladder",
+		"pluralOf": null,
 		"category": "Cardio",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1690,6 +1901,7 @@
 	{
 		"id": "2ed5c6f170d88074a547ca38be809028",
 		"name": "VersaClimber",
+		"pluralOf": null,
 		"category": "Cardio",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1697,7 +1909,8 @@
 	},
 	{
 		"id": "2ee5c6f170d880f283aece89085e93fb",
-		"name": "Plate-loaded incline fly",
+		"name": "Plate-Loaded Incline Fly",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 6.4,
 		"incrementKg": null,
@@ -1705,7 +1918,8 @@
 	},
 	{
 		"id": "2ee5c6f170d880f68e5de7923fefb119",
-		"name": "Tibialis dorsiflexion machine",
+		"name": "Tibialis Dorsiflexion Machine",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 4.5,
 		"incrementKg": null,
@@ -1713,7 +1927,8 @@
 	},
 	{
 		"id": "2ee5c6f170d8804a8163f267355cbabc",
-		"name": "Tib bar trainer",
+		"name": "Tib Bar Trainer",
+		"pluralOf": null,
 		"category": "Loadable Accessories",
 		"weightKg": 1.8,
 		"incrementKg": null,
@@ -1721,7 +1936,8 @@
 	},
 	{
 		"id": "2ee5c6f170d880b89669d75f3798c8d4",
-		"name": "Horizontal calf extension",
+		"name": "Horizontal Calf Extension",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1729,7 +1945,8 @@
 	},
 	{
 		"id": "2ee5c6f170d880df845dc73c75874a9e",
-		"name": "Incline plate-loaded calf press",
+		"name": "Incline Plate-Loaded Calf Press",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 6.8,
 		"incrementKg": null,
@@ -1737,7 +1954,8 @@
 	},
 	{
 		"id": "2ee5c6f170d8801491a7cd798db7026c",
-		"name": "Pin-loaded horizontal biceps curl",
+		"name": "Pin-Loaded Horizontal Biceps Curl",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1745,7 +1963,8 @@
 	},
 	{
 		"id": "2ee5c6f170d88040b9f1c9b8b177720d",
-		"name": "Plate-loaded pec deck",
+		"name": "Plate-Loaded Pec Deck",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1753,7 +1972,8 @@
 	},
 	{
 		"id": "2ee5c6f170d880569c93e73554858b41",
-		"name": "Marrs bar",
+		"name": "Marrs Bar",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1761,7 +1981,8 @@
 	},
 	{
 		"id": "2f25c6f170d88090aacaf8e0641dd1e4",
-		"name": "Seated pin-loaded decline press",
+		"name": "Seated Pin-Loaded Decline Press",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1769,7 +1990,8 @@
 	},
 	{
 		"id": "2f25c6f170d880db9805f9f55974b934",
-		"name": "Motorized dual cable machine",
+		"name": "Motorized Dual Cable Machine",
+		"pluralOf": null,
 		"category": "Cable Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1777,7 +1999,8 @@
 	},
 	{
 		"id": "2f65c6f170d880b4ba50fbd9b02ab069",
-		"name": "Seated hack squat",
+		"name": "Seated Hack Squat",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 40.8,
 		"incrementKg": null,
@@ -1785,7 +2008,8 @@
 	},
 	{
 		"id": "2fc5c6f170d880a7bbc3cc77def946fa",
-		"name": "Assisted Nordic hamstring curl machine",
+		"name": "Assisted Nordic Hamstring Curl Machine",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 8,
 		"incrementKg": null,
@@ -1793,7 +2017,8 @@
 	},
 	{
 		"id": "2fc5c6f170d8809a90dddd5c9867f948",
-		"name": "Leverage squat",
+		"name": "Leverage Squat",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 50.7,
 		"incrementKg": null,
@@ -1801,7 +2026,8 @@
 	},
 	{
 		"id": "2fc5c6f170d880019a9aec8a1cb0e27d",
-		"name": "Power squat pro",
+		"name": "Power Squat Pro",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 32.7,
 		"incrementKg": null,
@@ -1809,7 +2035,8 @@
 	},
 	{
 		"id": "2fc5c6f170d88066aff2e9dff490027f",
-		"name": "Bent-over plate-loaded row",
+		"name": "Bent-Over Plate-Loaded Row",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 13,
 		"incrementKg": null,
@@ -1817,7 +2044,8 @@
 	},
 	{
 		"id": "2fc5c6f170d880c2a855f5ed07dd6f69",
-		"name": "Pin-loaded iso-lateral high biceps curl",
+		"name": "Pin-Loaded Iso-Lateral High Biceps Curl",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1825,7 +2053,8 @@
 	},
 	{
 		"id": "2fc5c6f170d880d2bbd1ce7b08188263",
-		"name": "Vertical leg press",
+		"name": "Vertical Leg Press",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 49.9,
 		"incrementKg": null,
@@ -1833,7 +2062,8 @@
 	},
 	{
 		"id": "2fc5c6f170d88042ad10f07041c0e59e",
-		"name": "Seated plate-loaded gripper",
+		"name": "Seated Plate-Loaded Gripper",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 12.6,
 		"incrementKg": null,
@@ -1841,7 +2071,8 @@
 	},
 	{
 		"id": "2fc5c6f170d88022a25ad0d11aa5773a",
-		"name": "Plate-loaded iso-lateral high biceps curl",
+		"name": "Plate-Loaded Iso-Lateral High Biceps Curl",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1849,7 +2080,8 @@
 	},
 	{
 		"id": "2fc5c6f170d88025a61ed09ee1f0dd33",
-		"name": "Plate-loaded biceps curl with arms at side",
+		"name": "Plate-Loaded Biceps Curl With Arms At Side",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1857,7 +2089,8 @@
 	},
 	{
 		"id": "2fc5c6f170d880979fc1dc126ba6c0e3",
-		"name": "Plate-loaded super incline press",
+		"name": "Plate-Loaded Super Incline Press",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 5,
 		"incrementKg": null,
@@ -1865,7 +2098,8 @@
 	},
 	{
 		"id": "2fc5c6f170d8800aab3dc82c3d1ee2a6",
-		"name": "Viking press landmine attachment",
+		"name": "Viking Press Landmine Attachment",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": 7.7,
 		"incrementKg": null,
@@ -1873,7 +2107,8 @@
 	},
 	{
 		"id": "2fc5c6f170d880568f58fd84db9df35a",
-		"name": "Viking press machine",
+		"name": "Viking Press Machine",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 6.8,
 		"incrementKg": null,
@@ -1881,7 +2116,8 @@
 	},
 	{
 		"id": "2ff5c6f170d8805ca484e89fa08036de",
-		"name": "Jump rope",
+		"name": "Jump Rope",
+		"pluralOf": null,
 		"category": "Cardio",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1889,7 +2125,8 @@
 	},
 	{
 		"id": "3005c6f170d880988e12ec71e2944617",
-		"name": "Buffalo bar",
+		"name": "Buffalo Bar",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1897,7 +2134,8 @@
 	},
 	{
 		"id": "3015c6f170d880ad90d6d9d47bb2bcf7",
-		"name": "Dual cable lat pulldown",
+		"name": "Dual Cable Lat Pulldown",
+		"pluralOf": null,
 		"category": "Cable Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1905,7 +2143,8 @@
 	},
 	{
 		"id": "3015c6f170d88072b097fc12332bb1d7",
-		"name": "Open trap bar",
+		"name": "Open Trap Bar",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1913,7 +2152,8 @@
 	},
 	{
 		"id": "3015c6f170d88020ad9de62440fa9ec6",
-		"name": "Bosu ball",
+		"name": "Bosu Ball",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1921,7 +2161,8 @@
 	},
 	{
 		"id": "3015c6f170d880c4adb2c52d9cc264a2",
-		"name": "Battle ropes",
+		"name": "Battle Ropes",
+		"pluralOf": null,
 		"category": "Bands & Ropes",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1929,7 +2170,8 @@
 	},
 	{
 		"id": "3015c6f170d880f48659f82e1916d07d",
-		"name": "Plate-loaded dual handle cable tower",
+		"name": "Plate-Loaded Dual Handle Cable Tower",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1937,7 +2179,8 @@
 	},
 	{
 		"id": "3015c6f170d880dd9ee2d2147a73e83c",
-		"name": "Pin-loaded dual handle cable tower",
+		"name": "Pin-Loaded Dual Handle Cable Tower",
+		"pluralOf": null,
 		"category": "Cable Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1945,7 +2188,8 @@
 	},
 	{
 		"id": "3015c6f170d880089a6df68ceb841661",
-		"name": "Pin-loaded 45° back extension",
+		"name": "Pin-Loaded 45° Back Extension",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1953,7 +2197,8 @@
 	},
 	{
 		"id": "3015c6f170d88011af55d6b175d3e731",
-		"name": "Total quad/hip dual cable machine",
+		"name": "Total Quad/Hip Dual Cable Machine",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1961,7 +2206,8 @@
 	},
 	{
 		"id": "3015c6f170d88054b676e6fd25ba8963",
-		"name": "Step-up machine",
+		"name": "Step-Up Machine",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1969,7 +2215,8 @@
 	},
 	{
 		"id": "3015c6f170d8802789d3dd32e0f727a8",
-		"name": "T-bell",
+		"name": "T-Bell",
+		"pluralOf": null,
 		"category": "Loadable Accessories",
 		"weightKg": 2.3,
 		"incrementKg": null,
@@ -1977,7 +2224,8 @@
 	},
 	{
 		"id": "3015c6f170d880488b95ebe6162b5ae5",
-		"name": "Farmer’s handles",
+		"name": "Farmer’s Handles",
+		"pluralOf": "3015c6f170d8808bbfd6e673460a8c02",
 		"category": "Loadable Accessories",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1985,7 +2233,8 @@
 	},
 	{
 		"id": "3015c6f170d8808bbfd6e673460a8c02",
-		"name": "Farmer’s handle",
+		"name": "Farmer’s Handle",
+		"pluralOf": null,
 		"category": "Loadable Accessories",
 		"weightKg": null,
 		"incrementKg": null,
@@ -1993,7 +2242,8 @@
 	},
 	{
 		"id": "3015c6f170d8808e8420c9b5983f8b93",
-		"name": "Plate-loaded wrist bar",
+		"name": "Plate-Loaded Wrist Bar",
+		"pluralOf": null,
 		"category": "Loadable Accessories",
 		"weightKg": 1.8,
 		"incrementKg": null,
@@ -2001,7 +2251,8 @@
 	},
 	{
 		"id": "3015c6f170d8807f870bdfd09e184669",
-		"name": "Plate-loaded 4-way neck",
+		"name": "Plate-Loaded 4-Way Neck",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 0.9,
 		"incrementKg": null,
@@ -2009,7 +2260,8 @@
 	},
 	{
 		"id": "3015c6f170d880edbfb7c3ea503092c3",
-		"name": "Pin-loaded 4-way neck",
+		"name": "Pin-Loaded 4-Way Neck",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2018,6 +2270,7 @@
 	{
 		"id": "3025c6f170d880a49711ec89f330281b",
 		"name": "Yoke",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2025,7 +2278,8 @@
 	},
 	{
 		"id": "3045c6f170d880419e36c403dd814b1d",
-		"name": "Plate-loaded adjustable dumbbells",
+		"name": "Plate-Loaded Adjustable Dumbbells",
+		"pluralOf": "25d5c6f170d8807796e8dc918e0e77a7",
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2033,7 +2287,8 @@
 	},
 	{
 		"id": "3065c6f170d880b9a838d409e2e025cd",
-		"name": "Kneeling plate-loaded leg curl",
+		"name": "Kneeling Plate-Loaded Leg Curl",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 3.6,
 		"incrementKg": null,
@@ -2041,7 +2296,8 @@
 	},
 	{
 		"id": "3065c6f170d88098bed9d683b7898904",
-		"name": "Kneeling pin-loaded leg curl",
+		"name": "Kneeling Pin-Loaded Leg Curl",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2049,7 +2305,8 @@
 	},
 	{
 		"id": "3065c6f170d8805bb9c6c914293299ad",
-		"name": "Pin-loaded Smith machine functional trainer",
+		"name": "Pin-Loaded Smith Machine Functional Trainer",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": 9,
 		"incrementKg": null,
@@ -2057,7 +2314,8 @@
 	},
 	{
 		"id": "3065c6f170d8804d8dc9e290ea24a163",
-		"name": "Multi-forearm",
+		"name": "Multi-Forearm",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2065,7 +2323,8 @@
 	},
 	{
 		"id": "3065c6f170d880cbb928c775b7e83e7b",
-		"name": "Wrist curl machine",
+		"name": "Wrist Curl Machine",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2073,7 +2332,8 @@
 	},
 	{
 		"id": "3085c6f170d880059bd8ce0d6443923d",
-		"name": "Plate-loaded high pulley cable system (single loading pin)",
+		"name": "Plate-Loaded High Pulley Cable System (Single Loading Pin)",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2081,7 +2341,8 @@
 	},
 	{
 		"id": "3085c6f170d8803995c1f86533d5e056",
-		"name": "Plate-loaded high/low pulley cable system (single loading pin)",
+		"name": "Plate-Loaded High/Low Pulley Cable System (Single Loading Pin)",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2089,7 +2350,8 @@
 	},
 	{
 		"id": "3095c6f170d8801888bad1e928aaf7f0",
-		"name": "Incline sliding core trainer",
+		"name": "Incline Sliding Core Trainer",
+		"pluralOf": null,
 		"category": "Other",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2097,7 +2359,8 @@
 	},
 	{
 		"id": "30f5c6f170d880f28056fbc9bd7cd39a",
-		"name": "Pin-loaded high row",
+		"name": "Pin-Loaded High Row",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2105,7 +2368,8 @@
 	},
 	{
 		"id": "3105c6f170d880578cb1eb08794ed431",
-		"name": "Plate-loaded leverage leg press",
+		"name": "Plate-Loaded Leverage Leg Press",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 36.3,
 		"incrementKg": null,
@@ -2113,7 +2377,8 @@
 	},
 	{
 		"id": "3105c6f170d88053b1b5c30248b0f8ce",
-		"name": "Plate-loaded front lat pulldown (chest-supported)",
+		"name": "Plate-Loaded Front Lat Pulldown (Chest-Supported)",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 0.5,
 		"incrementKg": null,
@@ -2121,7 +2386,8 @@
 	},
 	{
 		"id": "3135c6f170d880eba97efbd2e6404952",
-		"name": "Sled pulling belt/harness",
+		"name": "Sled Pulling Belt/Harness",
+		"pluralOf": null,
 		"category": "Accessories & Functional",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2129,7 +2395,8 @@
 	},
 	{
 		"id": "31b5c6f170d88091a456e644d8784fcd",
-		"name": "Triceps bar",
+		"name": "Triceps Bar",
+		"pluralOf": null,
 		"category": "Loadable Bars",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2138,6 +2405,7 @@
 	{
 		"id": "3295c6f170d880278ff9c4097a5a1ef6",
 		"name": "Chair",
+		"pluralOf": null,
 		"category": "Other",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2145,7 +2413,8 @@
 	},
 	{
 		"id": "3365c6f170d880f9ab88cc27da6c9264",
-		"name": "Pin-loaded front lat pulldown (chest-supported)",
+		"name": "Pin-Loaded Front Lat Pulldown (Chest-Supported)",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2153,7 +2422,8 @@
 	},
 	{
 		"id": "33c5c6f170d880aa9517dfe69841168c",
-		"name": "Plate-loaded D.Y. row",
+		"name": "Plate-Loaded D.Y. Row",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 1.4,
 		"incrementKg": null,
@@ -2161,7 +2431,8 @@
 	},
 	{
 		"id": "33c5c6f170d880429cf7dc8ed70c0eb1",
-		"name": "Seated dual cable row",
+		"name": "Seated Dual Cable Row",
+		"pluralOf": null,
 		"category": "Cable Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2169,7 +2440,8 @@
 	},
 	{
 		"id": "33e5c6f170d88066a0edf4b69ce40da3",
-		"name": "Standing pec fly",
+		"name": "Standing Pec Fly",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2178,6 +2450,7 @@
 	{
 		"id": "33e5c6f170d8804199e9d31d3e0ab70e",
 		"name": "Jammer",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 3.6,
 		"incrementKg": null,
@@ -2185,7 +2458,8 @@
 	},
 	{
 		"id": "3495c6f170d880a79105ea27422f799b",
-		"name": "Plate-loaded 45° back extension",
+		"name": "Plate-Loaded 45° Back Extension",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 11,
 		"incrementKg": null,
@@ -2193,7 +2467,8 @@
 	},
 	{
 		"id": "3495c6f170d880b2b208f61b950fdddc",
-		"name": "Standing hip thrust machine",
+		"name": "Standing Hip Thrust Machine",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 20,
 		"incrementKg": null,
@@ -2201,7 +2476,8 @@
 	},
 	{
 		"id": "34a5c6f170d8807f91f8eddea409aedb",
-		"name": "Standing plate-loaded hip abductor",
+		"name": "Standing Plate-Loaded Hip Abductor",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 20,
 		"incrementKg": null,
@@ -2209,7 +2485,8 @@
 	},
 	{
 		"id": "34a5c6f170d880a09946fe774e6acf3c",
-		"name": "Standing pin-loaded hip abductor",
+		"name": "Standing Pin-Loaded Hip Abductor",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2217,7 +2494,8 @@
 	},
 	{
 		"id": "3505c6f170d880bbac98e7bbcf8804fd",
-		"name": "Plate-loaded lat pulldown/low row rack attachment",
+		"name": "Plate-Loaded Lat Pulldown/Low Row Rack Attachment",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2225,7 +2503,8 @@
 	},
 	{
 		"id": "3515c6f170d8801b85bfd50776753abe",
-		"name": "Rotator cuff machine",
+		"name": "Rotator Cuff Machine",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2233,7 +2512,8 @@
 	},
 	{
 		"id": "3545c6f170d880429b21e015e7c273b1",
-		"name": "Standing multi flight",
+		"name": "Standing Multi Flight",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2241,7 +2521,8 @@
 	},
 	{
 		"id": "3555c6f170d880ebb7f7f1c7005f91bb",
-		"name": "Pin-loaded leg extension/leg curl combo machine",
+		"name": "Pin-Loaded Leg Extension/Leg Curl Combo Machine",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2249,7 +2530,8 @@
 	},
 	{
 		"id": "3575c6f170d880d9bbd6f988ea55aba3",
-		"name": "Horizontal pin-loaded hack squat",
+		"name": "Horizontal Pin-Loaded Hack Squat",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2257,7 +2539,8 @@
 	},
 	{
 		"id": "3635c6f170d880caba49e3a6f9f58f0f",
-		"name": "Plate-loaded horizontal leg press",
+		"name": "Plate-Loaded Horizontal Leg Press",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 9.5,
 		"incrementKg": null,
@@ -2265,7 +2548,8 @@
 	},
 	{
 		"id": "3865c6f170d88002b3dfcea0dfb8bc12",
-		"name": "Seated plate-loaded leg curl/leg extension combo machine",
+		"name": "Seated Plate-Loaded Leg Curl/Leg Extension Combo Machine",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2273,7 +2557,8 @@
 	},
 	{
 		"id": "3a65c6f170d880439875d0ff20895169",
-		"name": "Combo twist",
+		"name": "Combo Twist",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 3.6,
 		"incrementKg": null,
@@ -2281,7 +2566,8 @@
 	},
 	{
 		"id": "3aa5c6f170d880ffa2bac5fa3c9a684f",
-		"name": "Plate-loaded wide chest press",
+		"name": "Plate-Loaded Wide Chest Press",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 0.9,
 		"incrementKg": null,
@@ -2289,7 +2575,8 @@
 	},
 	{
 		"id": "3aa5c6f170d880539a0fef486e9143e0",
-		"name": "Power runner",
+		"name": "Power Runner",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 13,
 		"incrementKg": null,
@@ -2297,7 +2584,8 @@
 	},
 	{
 		"id": "3aa5c6f170d88041afb0fd81d2c0f5ce",
-		"name": "Lunge machine",
+		"name": "Lunge Machine",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 9,
 		"incrementKg": null,
@@ -2305,7 +2593,8 @@
 	},
 	{
 		"id": "3aa5c6f170d880c79d4de59b689a38f9",
-		"name": "Plate-loaded ab crunch bench",
+		"name": "Plate-Loaded Ab Crunch Bench",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 25,
 		"incrementKg": null,
@@ -2313,7 +2602,8 @@
 	},
 	{
 		"id": "3aa5c6f170d88099b124e340d90d2b87",
-		"name": "Pin-loaded incline row",
+		"name": "Pin-Loaded Incline Row",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2321,7 +2611,8 @@
 	},
 	{
 		"id": "3aa5c6f170d880a78cefd23c6423b171",
-		"name": "Plate-loaded triceps pushdown",
+		"name": "Plate-Loaded Triceps Pushdown",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2329,7 +2620,8 @@
 	},
 	{
 		"id": "3ab5c6f170d880988e71d981cb7deb5c",
-		"name": "Single digital cable trainer",
+		"name": "Single Digital Cable Trainer",
+		"pluralOf": null,
 		"category": "Cable Machines",
 		"weightKg": null,
 		"incrementKg": 0.45,
@@ -2337,7 +2629,8 @@
 	},
 	{
 		"id": "3b55c6f170d88018a889d1f86591249d",
-		"name": "Pin-loaded triceps pushdown",
+		"name": "Pin-Loaded Triceps Pushdown",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2345,7 +2638,8 @@
 	},
 	{
 		"id": "3b95c6f170d880de9298ce5f86a2dbc2",
-		"name": "Pin-loaded functional trainer",
+		"name": "Pin-Loaded Functional Trainer",
+		"pluralOf": null,
 		"category": "Cable Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2353,7 +2647,8 @@
 	},
 	{
 		"id": "3b95c6f170d88009b836ce23810ce8b7",
-		"name": "Plate-loaded functional trainer",
+		"name": "Plate-Loaded Functional Trainer",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2361,7 +2656,8 @@
 	},
 	{
 		"id": "3c85c6f170d8808f88fde7aabc5fa9af",
-		"name": "Pin-loaded squat",
+		"name": "Pin-Loaded Squat",
+		"pluralOf": null,
 		"category": "Pin Loaded Machines",
 		"weightKg": null,
 		"incrementKg": null,
@@ -2369,7 +2665,8 @@
 	},
 	{
 		"id": "3c85c6f170d88019b3f6d3179a46d379",
-		"name": "3D hip abductor",
+		"name": "3D Hip Abductor",
+		"pluralOf": null,
 		"category": "Plate Loaded Machines",
 		"weightKg": 5,
 		"incrementKg": null,
