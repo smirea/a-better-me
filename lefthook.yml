@@ -2,11 +2,9 @@ pre-commit:
   parallel: true
   commands:
     # One command: both fixers rewrite the same staged files, and in parallel one would overwrite the other's edit.
-    # oxlint exits 1 when none of the files it is given is a script, so it only runs when one is staged.
     fix:
       run: >-
-        scripts=$(printf '%s\n' {staged_files} | grep -E '\.(js|mjs|cjs|mts|ts|jsx|tsx)$' | tr '\n' ' ');
-        { [ -z "$scripts" ] || bunx oxlint --fix $scripts; }
+        bunx oxlint --fix --no-error-on-unmatched-pattern {staged_files}
         && bunx oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     typecheck:
