@@ -10,23 +10,21 @@ struct WorkoutHistoryView: View {
 
     var body: some View {
         let days = Dictionary(grouping: sessions) { Calendar.current.startOfDay(for: $0.startedAt) }
-        List {
-            ForEach(days.keys.sorted(by: >), id: \.self) { day in
-                Section {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                ForEach(days.keys.sorted(by: >), id: \.self) { day in
+                    Text(day.formatted(date: .abbreviated, time: .omitted))
+                        .font(AppFont.title(18))
+                        .padding(.top, 20)
+                        .padding(.bottom, 4)
                     ForEach(days[day] ?? []) { session in
                         Button { selected = session } label: { HistoryRow(session: session) }
                             .foregroundStyle(Theme.textPrimary)
                     }
-                } header: {
-                    Text(day.formatted(date: .abbreviated, time: .omitted))
-                        .font(AppFont.title(18))
-                        .foregroundStyle(Theme.textPrimary)
-                        .textCase(nil)
                 }
             }
+            .padding(.horizontal, 20)
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
         .background(Theme.background)
         .overlay {
             if sessions.isEmpty {

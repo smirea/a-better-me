@@ -101,6 +101,12 @@ struct WorkoutSummaryView: View {
         }
     }
 
+    /// "Today 3:01 PM" as in the reference, the date otherwise.
+    private static func startText(_ date: Date) -> String {
+        let time = date.formatted(date: .omitted, time: .shortened)
+        return Calendar.current.isDateInToday(date) ? "Today \(time)" : "\(date.formatted(date: .numeric, time: .omitted)) \(time)"
+    }
+
     private var endedAt: Date { session.endedAt ?? finishedAt }
 
     private func setEnd(_ date: Date) {
@@ -125,6 +131,7 @@ struct WorkoutSummaryView: View {
         case .delete:
             context.delete(session)
         }
+        try? context.save()
         if isFinishing { LiveSessionStore.shared.reset() }
     }
 
@@ -145,7 +152,10 @@ struct WorkoutSummaryView: View {
                                     .foregroundStyle(Theme.textSecondary)
                             }
                         }
-                        Text(catalog.name(record.exerciseID)).font(AppFont.headline(15)).lineLimit(2)
+                        Text(catalog.name(record.exerciseID))
+                            .font(AppFont.headline(15))
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 0)
                         Text(record.kind.title).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
                     }
@@ -173,7 +183,7 @@ struct WorkoutSummaryView: View {
             Text("Workout Details").font(AppFont.title()).padding(.bottom, 8)
             detailRow("Volume", icon: "scalemass.fill", value: weight(volumeKg))
             Divider().overlay(Theme.separator)
-            detailRow("Start Time", icon: "arrow.right.to.line", subtitle: session.startedAt.formatted(date: .numeric, time: .shortened)) {
+            detailRow("Start Time", icon: "arrow.right.to.line", subtitle: Self.startText(session.startedAt)) {
                 isEditingStart = true
             }
             Divider().overlay(Theme.separator)
@@ -245,7 +255,10 @@ struct WorkoutSummaryView: View {
                     .frame(width: 48, height: 64)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(catalog.name(item.exerciseID)).font(AppFont.headline(15))
+                        Text(catalog.name(item.exerciseID))
+                            .font(AppFont.headline(15))
+                            .foregroundStyle(Theme.textPrimary)
+                            .multilineTextAlignment(.leading)
                         Text("\(weight(stats.volumeKg)) volume").font(AppFont.caption())
                         Text(stats.loggedSets == 1 ? "1 set" : "\(stats.loggedSets) sets").font(AppFont.caption())
                         if !records.isEmpty {
@@ -410,6 +423,14 @@ private struct WorkoutChangesSheet: View {
                                 plan(change.before, title: "\(catalog.name(change.before.exerciseID)) (Before)")
                                 plan(change.after, title: "\(catalog.name(change.after.exerciseID)) (After)")
                             }
+                        }
+                    }
+                }
+                if !changes.regrouped.isEmpty {
+                    Section("Supersets") {
+                        ForEach(changes.regrouped) { block in
+                            Text(block.exercises.map { catalog.name($0.exerciseID) }.joined(separator: " + "))
+                                .font(AppFont.medium(15))
                         }
                     }
                 }

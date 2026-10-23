@@ -59,9 +59,9 @@ struct RestTimerSheet: View {
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
                         pill("(0:00)", icon: "stop.fill", label: "Stop timer") { store.stopRest() }
-                        if let rest = store.rest {
-                            pill("(\(clock(TimeInterval(rest.defaultSeconds))))", icon: "arrow.counterclockwise", label: "Restart timer") {
-                                store.restartRest(seconds: rest.defaultSeconds)
+                        if let seconds = store.setRestSeconds {
+                            pill("(\(clock(TimeInterval(seconds))))", icon: "arrow.counterclockwise", label: "Restart timer") {
+                                store.restartRest(seconds: seconds)
                             }
                         }
                         ForEach(Self.restartOptions, id: \.self) { seconds in
@@ -102,10 +102,9 @@ struct RestTimerSheet: View {
                 Text(title)
             }
             .font(AppFont.medium(14))
-            .padding(.horizontal, 14)
-            .frame(height: 36)
-            .background(Theme.surfaceRaised, in: Capsule())
+            .frame(height: 28)
         }
+        .buttonStyle(.glass)
         .foregroundStyle(Theme.textPrimary)
         .accessibilityLabel(label)
     }

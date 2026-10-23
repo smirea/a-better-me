@@ -98,8 +98,10 @@ struct WorkoutChanges {
     var added: [BlockExercise] = []
     var modified: [(before: BlockExercise, after: BlockExercise)] = []
     var removed: [BlockExercise] = []
+    /// Supersets and circuits whose membership the session changed.
+    var regrouped: [WorkoutBlock] = []
 
-    var isEmpty: Bool { added.isEmpty && modified.isEmpty && removed.isEmpty }
+    var isEmpty: Bool { added.isEmpty && modified.isEmpty && removed.isEmpty && regrouped.isEmpty }
 
     init(before: [WorkoutBlock], after: [WorkoutBlock]) {
         let old = before.flatMap(\.exercises)
@@ -114,5 +116,7 @@ struct WorkoutChanges {
             }
         }
         removed = old.filter { !newIDs.contains($0.id) }
+        let oldGroups = Set(before.map { $0.exercises.map(\.id) })
+        regrouped = after.filter { $0.isSuperset && !oldGroups.contains($0.exercises.map(\.id)) }
     }
 }

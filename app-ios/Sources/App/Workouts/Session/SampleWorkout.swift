@@ -17,11 +17,11 @@ enum SampleWorkout {
         else { return }
         let session = WorkoutSession(startingFrom: template)
         var blocks = session.blocks
-        if let last = blocks.indices.last, last > 0 {
+        if !blocks.contains(where: \.isSuperset), let last = blocks.indices.last, last > 0 {
             blocks[last - 1].exercises += blocks[last].exercises
             blocks.remove(at: last)
         }
-        if var bench = blocks.first?.exercises.first, let lastSet = bench.sets.indices.last {
+        if var bench = blocks.first?.exercises.first, let lastSet = bench.sets.indices.last, bench.sets[lastSet].type != .drop {
             bench.sets[lastSet].type = .drop
             bench.sets[lastSet].subSets = [SubSet()]
             blocks[0].exercises[0] = bench

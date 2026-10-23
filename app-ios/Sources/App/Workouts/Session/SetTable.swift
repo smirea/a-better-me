@@ -199,7 +199,10 @@ extension SessionEditor {
             blocks.setLog(entry(path, previous: previous).log(at: now), at: path)
             store.drafts[blocks.rowID(at: path)] = nil
         }
-        if mode == .live, let next = SessionFlow.nextIncomplete(after: block, in: blocks) { withAnimation { current = next } }
+        let partner = blocks[block].exercises.first { !$0.isDone }
+        if mode == .live, let next = partner?.id ?? SessionFlow.nextIncomplete(after: block, in: blocks) {
+            withAnimation { current = next }
+        }
     }
 
     // MARK: Structure

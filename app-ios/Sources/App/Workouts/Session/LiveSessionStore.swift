@@ -5,8 +5,6 @@ import UserNotifications
 struct RestTimer: Equatable {
     var startedAt: Date
     var duration: TimeInterval
-    /// What the restart pill "↺" goes back to: the rest the checked set resolved to.
-    var defaultSeconds: Int
 
     var endsAt: Date { startedAt.addingTimeInterval(duration) }
 
@@ -24,18 +22,20 @@ final class LiveSessionStore {
     var drafts: [UUID: SetEntry] = [:]
     var currentExercise: BlockExercise.ID?
     private(set) var rest: RestTimer?
+    /// What the restart pill "↺" goes back to: the rest the last checked set resolved to. It outlives Stop.
+    private(set) var setRestSeconds: Int?
     private var restEndTask: Task<Void, Never>?
 
     private static let notificationID = "rest-timer"
 
     func startRest(seconds: Int) {
-        guard seconds > 0 else { return stopRest() }
-        setRest(RestTimer(startedAt: .now, duration: TimeInterval(seconds), defaultSeconds: seconds))
+        setRestSeconds = seconds
+        restartRest(seconds: seconds)
     }
 
     func restartRest(seconds: Int) {
         guard seconds > 0 else { return stopRest() }
-        setRest(RestTimer(startedAt: .now, duration: TimeInterval(seconds), defaultSeconds: rest?.defaultSeconds ?? seconds))
+        setRest(RestTimer(startedAt: .now, duration: TimeInterval(seconds)))
     }
 
     /// The Rest Timer sheet's −15 and +15. Running out stops the timer.
@@ -55,6 +55,7 @@ final class LiveSessionStore {
     /// Forgets everything when the session ends or is discarded.
     func reset() {
         stopRest()
+        setRestSeconds = nil
         drafts = [:]
         currentExercise = nil
     }

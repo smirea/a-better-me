@@ -98,6 +98,7 @@ struct SessionEditor: View {
             guard discardOnDisappear else { return }
             store.reset()
             context.delete(session)
+            try? context.save()
         }
         .sheet(item: $sheet) { sheetContent($0) }
         .alert("Finish this workout?", isPresented: $confirmingFinish) {
@@ -333,6 +334,8 @@ struct SessionEditor: View {
             blocks = SessionFlow.logAll(blocks, at: .now) { store.drafts[$0] ?? prefills[$0] ?? SetEntry() }
         }
         session.blocks = blocks
+        // The session ends on the summary's Done; saving now keeps the logged sets if the app dies before that.
+        try? context.save()
         store.stopRest()
         isShowingSummary = true
     }
