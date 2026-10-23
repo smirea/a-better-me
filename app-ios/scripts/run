@@ -1,0 +1,212 @@
+#!/usr/bin/env bun
+import { createHash } from "node:crypto";
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
+import { parseArgs } from "node:util";
+
+const root = resolve(import.meta.dir, "..");
+const runCommand = "./scripts/run";
+const children = new Set<Bun.Subprocess>();
+const { values } = parseArgs({
+    options: {
+        target: { type: "string", short: "t" },
+        targets: { type: "boolean" },
+        watch: { type: "boolean", short: "w", default: true },
+        "no-watch": { type: "boolean" },
+        team: { type: "string", default: process.env.SWIFT_RUN_DEVELOPMENT_TEAM },
+        help: { type: "boolean", short: "h" },
+    },
+});
+
+type Target = {
+    kind: "device" | "simulator" | "mac";
+    name: string;
+    id: string;
+    destination: string;
+    state: string;
+    runtime?: string;
+};
+
+async function command(args: string[], capture = false, log?: number) {
+    const child = Bun.spawn(args, {
+        cwd: root,
+        stdin: "ignore",
+        stdout: log ?? (capture ? "pipe" : "inherit"),
+        stderr: log ?? (capture ? "pipe" : "inherit"),
+    });
+    children.add(child);
+    try {
+        const [code, output, error] = await Promise.all([
+            child.exited,
+            capture ? new Response(child.stdout).text() : "",
+            capture ? new Response(child.stderr).text() : "",
+        ]);
+        if (code !== 0) throw new Error(`${args[0]} failed (${code}).${error ? `\n${error}` : ""}`);
+        return output;
+    } finally {
+        children.delete(child);
+    }
+}
+
+async function targets(): Promise<Target[]> {
+    const [devices, simulators] = await Promise.all([
+        command(["xcrun", "devicectl", "list", "devices", "--json-output", "-"], true),
+        command(["xcrun", "simctl", "list", "devices", "available", "--json"], true),
+    ]);
+    const result: Target[] = [];
+    for (const device of JSON.parse(devices).result.devices) {
+        const hardware = device.properties?.hardware ?? device.hardwareProperties;
+        const state = device.properties?.state ?? device.deviceProperties;
+        const connection = device.properties?.connection ?? device.connectionProperties;
+        if (hardware.reality !== "physical" || hardware.platform !== "iOS") continue;
+        result.push({
+            kind: "device", name: state.name, id: device.identifier,
+            destination: `platform=iOS,id=${hardware.udid}`,
+            state: connection.state ?? connection.tunnelState,
+        });
+    }
+    for (const [runtime, devices] of Object.entries(JSON.parse(simulators).devices) as [string, any[]][]) {
+        const version = runtime.match(/\.iOS-(\d+.*)$/)?.[1];
+        if (!version || Number(version.split("-")[0]) < 17) continue;
+        for (const device of devices) {
+            result.push({
+                kind: "simulator", name: device.name, id: device.udid,
+                destination: `platform=iOS Simulator,id=${device.udid}`,
+                state: device.state.toLowerCase(), runtime: `iOS ${version.replaceAll("-", ".")}`,
+            });
+        }
+    }
+    result.push({ kind: "mac", name: "My Mac", id: "mac", destination: "platform=macOS", state: "connected" });
+    return result;
+}
+
+function selectTarget(all: Target[]): Target {
+    const requested = values.target ?? (process.env.SWIFT_RUN_DEFAULT_TARGET?.trim() || undefined);
+    const ranked = [...all].sort((a, b) => {
+        const score = (target: Target) => target.kind === "device" ? (target.state === "connected" ? 0 : 4)
+            : target.kind === "simulator" ? (target.state === "booted" ? 1 : 2) : 3;
+        return score(a) - score(b) || (b.runtime ?? "").localeCompare(a.runtime ?? "", undefined, { numeric: true });
+    });
+    if (!requested) return ranked[0];
+    const matches = ranked.filter(target => requested === "simulator" ? target.kind === "simulator"
+        : target.id.toLowerCase() === requested.toLowerCase() || target.name.toLowerCase() === requested.toLowerCase());
+    if (!matches.length) throw new Error(`No matching target: ${requested}. Use ${runCommand} --targets.`);
+    if (matches.length > 1 && requested !== "simulator" && matches.some(target => target.kind === "device")) {
+        throw new Error(`Multiple targets named ${requested}. Use an identifier from ${runCommand} --targets.`);
+    }
+    return matches[0];
+}
+
+function snapshot(project: string) {
+    const hash = createHash("sha256");
+    for (const directory of ["Sources", "Config", "Configuration", project]) {
+        if (!existsSync(join(root, directory))) continue;
+        for (const file of readdirSync(join(root, directory), { recursive: true }).map(String).sort()) {
+            if (file.split("/").includes("xcuserdata") || basename(file) === ".DS_Store") continue;
+            try {
+                const data = readFileSync(join(root, directory, file));
+                hash.update(join(directory, file)).update("\0").update(data).update("\0");
+            } catch (error: any) {
+                if (!["EISDIR", "ENOENT"].includes(error.code)) throw error;
+            }
+        }
+    }
+    return hash.digest("hex");
+}
+
+async function deploy(target: Target, project: string) {
+    console.log(`Building for ${target.name}${target.runtime ? ` (${target.runtime})` : ""}…`);
+    const build = join(root, "DerivedData", target.kind);
+    mkdirSync(build, { recursive: true });
+    const log = join(build, "build.log");
+    const fd = openSync(log, "w");
+    try {
+        await command([
+            "xcodebuild", "-quiet", "-project", project, "-scheme", basename(project, ".xcodeproj"),
+            "-configuration", "Debug", "-destination", target.destination, "-derivedDataPath", build,
+            ...(target.kind === "device" ? ["-allowProvisioningUpdates", "-allowProvisioningDeviceRegistration"] : ["CODE_SIGNING_ALLOWED=NO"]),
+            ...(values.team ? [`DEVELOPMENT_TEAM=${values.team}`] : []), "build",
+        ], false, fd);
+    } catch {
+        console.error(readFileSync(log, "utf8"));
+        throw new Error(`Build failed. See ${log}. For a physical device, check signing in Xcode or use --team.`);
+    } finally { closeSync(fd); }
+    const products = join(build, "Build/Products", { device: "Debug-iphoneos", simulator: "Debug-iphonesimulator", mac: "Debug" }[target.kind]);
+    const apps = readdirSync(products).filter(file => file.endsWith(".app"));
+    if (apps.length !== 1) throw new Error(`Expected one app in ${products}; found ${apps.length}.`);
+    const app = join(products, apps[0]);
+    const plist = join(app, target.kind === "mac" ? "Contents/Info.plist" : "Info.plist");
+    const bundle = (await command(["plutil", "-extract", "CFBundleIdentifier", "raw", plist], true)).trim();
+    if (target.kind === "simulator") {
+        await command(["xcrun", "simctl", "bootstatus", target.id, "-b"]);
+        target.state = "booted";
+        const developer = process.env.DEVELOPER_DIR ?? (await command(["xcode-select", "-p"], true)).trim();
+        const simulator = join(developer, "Applications/Simulator.app");
+        await command(existsSync(simulator) ? ["open", "-a", simulator, "--args", "-CurrentDeviceUDID", target.id]
+            : ["open", "-a", join(dirname(developer), "Applications/DeviceHub.app"), `devices://device/open?id=${target.id}`]);
+        await command(["xcrun", "simctl", "install", target.id, app]);
+        await command(["xcrun", "simctl", "launch", "--terminate-running-process", target.id, bundle]);
+    } else if (target.kind === "device") {
+        await command(["xcrun", "devicectl", "device", "install", "app", "--device", target.id, app]);
+        await command(["xcrun", "devicectl", "device", "process", "launch", "--device", target.id, "--terminate-existing", bundle]);
+    } else {
+        await command(["osascript", "-e", `if application ${JSON.stringify(app)} is running then tell application ${JSON.stringify(app)} to quit`]);
+        await command(["open", "-n", app]);
+    }
+    console.log(`App is running on ${target.name}.`);
+}
+
+async function main() {
+    if (values.help) {
+        console.log(`Usage: ${runCommand} [-t simulator|mac|<target-name-or-id>] [--targets] [--watch|-w] [--no-watch] [--team TEAM_ID]
+
+Defaults to a connected iOS device, then a booted simulator, then an available simulator, then My Mac.
+SWIFT_RUN_DEFAULT_TARGET overrides this choice when -t/--target is omitted. --targets marks the effective default with *.
+Watching is enabled by default. Saves rebuild and restart the app. Ctrl-C stops watching.`);
+        return;
+    }
+    const all = await targets();
+    const target = selectTarget(all);
+    if (values.targets) {
+        console.table(all.map(({ kind, name, state, runtime, id }) => ({ default: id === target.id ? "*" : "", target: name, kind, state, runtime: runtime ?? "", id })));
+        return;
+    }
+    console.log(`Selected ${target.name} (${target.kind}${target.runtime ? `, ${target.runtime}` : ""}).`);
+    const projects = readdirSync(root).filter(file => file.endsWith(".xcodeproj"));
+    if (projects.length !== 1) throw new Error("Expected one Xcode project in the repository root.");
+    const project = projects[0];
+    mkdirSync(join(root, "DerivedData"), { recursive: true });
+    const watch = values.watch && !values["no-watch"];
+    let previous = snapshot(project);
+    const launch = async () => {
+        try { await deploy(target, project); }
+        catch (error: any) {
+            if (!watch) throw error;
+            console.error(`${error.message}\nStill watching; save a change to retry.`);
+        }
+    };
+    await launch();
+    if (!watch) return;
+    console.log("Watching app source and configuration. Ctrl-C stops watching.");
+    while (true) {
+        await Bun.sleep(750);
+        const current = snapshot(project);
+        if (current === previous) continue;
+        await Bun.sleep(750);
+        if (snapshot(project) !== current) continue;
+        previous = current;
+        await launch();
+    }
+}
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.on(signal, () => {
+        for (const child of children) child.kill(signal);
+        console.log("\nStopped.");
+        process.exit(0);
+    });
+}
+await main().catch(error => {
+    console.error(error.message);
+    process.exitCode = 1;
+});

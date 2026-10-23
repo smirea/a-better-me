@@ -1,0 +1,20 @@
+node_modules
+
+# output
+out
+dist
+*.tgz
+
+# dotenv environment variable files
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
+
+# other
+.DS_Store
