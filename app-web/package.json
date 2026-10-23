@@ -3,8 +3,8 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "bunx --bun vite build",
-		"start": "bunx --bun vite",
+		"build": "bun --env-file=.env.local --bun run vite build",
+		"start": "bun --env-file=.env.local --bun run vite",
 		"dev": "bun run start"
 	}
 }
