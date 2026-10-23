@@ -4,6 +4,7 @@ import SwiftUI
 @main
 struct BetterMeApp: App {
     @State private var catalog: ExerciseCatalog
+    @State private var presenter = LiveWorkoutPresenter()
     private let container: ModelContainer
 
     init() {
@@ -20,6 +21,7 @@ struct BetterMeApp: App {
         WindowGroup {
             RootView()
                 .environment(catalog)
+                .environment(presenter)
                 .font(AppFont.body())
                 .preferredColorScheme(.dark)
                 .tint(Theme.accent)
