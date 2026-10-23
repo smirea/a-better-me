@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 /// One muscle's average weekly sets and the lifts that contributed them, pushed from a Levels row.
@@ -6,7 +5,7 @@ struct MuscleLevelsView: View {
     let muscle: Muscle
 
     @Environment(ExerciseCatalog.self) private var catalog
-    @Query(filter: #Predicate<WorkoutSession> { $0.endedAt != nil }) private var sessions: [WorkoutSession]
+    @Observe(WorkoutSession.finished) private var sessions
     @AppStorage(LevelsPeriod.storageKey) private var period = LevelsPeriod.oneWeek
     @State private var shownExercise: ShownExercise?
 

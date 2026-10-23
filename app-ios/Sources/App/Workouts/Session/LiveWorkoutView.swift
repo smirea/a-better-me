@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 /// The full-screen live workout. The root view presents it over the tab bar while `LiveWorkoutPresenter.isExpanded`.
@@ -23,10 +22,10 @@ struct SessionEditor: View {
 
     @Environment(ExerciseCatalog.self) var catalog
     @Environment(LiveWorkoutPresenter.self) var presenter
-    @Environment(\.modelContext) var context
+    @Environment(LocalStore.self) var localStore
     @Environment(\.dismiss) var dismiss
-    @Query var exerciseSettings: [ExerciseSettings]
-    @AppStorage(WeightUnit.storageKey) var unit = WeightUnit.kg
+    @Observe(ExerciseSettings.all) var exerciseSettings
+    @Observe(AppSettings.current) var defaults
 
     @State var blocks: [WorkoutBlock]
     @State var current: BlockExercise.ID?
@@ -44,6 +43,7 @@ struct SessionEditor: View {
     @State private var pastDrafts: [UUID: SetEntry] = [:]
 
     var store: LiveSessionStore { .shared }
+    var unit: WeightUnit { defaults.weightUnit }
 
     var drafts: [UUID: SetEntry] {
         get { mode == .live ? store.drafts : pastDrafts }
@@ -87,16 +87,11 @@ struct SessionEditor: View {
         .background(Theme.background)
         .animation(.snappy(duration: 0.2), value: focus == nil)
         .task {
-            let start = session.startedAt
-            let id = session.id
-            let descriptor = FetchDescriptor<WorkoutSession>(
-                predicate: #Predicate { $0.endedAt != nil && $0.startedAt < start && $0.id != id },
-                sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
-            )
-            history = ((try? context.fetch(descriptor)) ?? []).map(\.blocks)
+            let session = session
+            history = ((try? localStore.read { try WorkoutSession.earlier(than: session, $0) }) ?? []).map(\.blocks)
         }
         .onChange(of: blocks) { _, blocks in
-            if mode == .live { session.blocks = blocks }
+            if mode == .live { saveBlocks(blocks) }
         }
         .onChange(of: current) { _, current in
             if mode == .live { store.currentExercise = current }
@@ -105,8 +100,7 @@ struct SessionEditor: View {
         .onDisappear {
             guard discardOnDisappear else { return }
             store.reset()
-            context.delete(session)
-            try? context.save()
+            localStore.delete(WorkoutSession.self, id: session.id)
         }
         .sheet(item: $sheet) { sheetContent($0) }
         .alert("Finish this workout?", isPresented: $confirmingFinish) {
@@ -168,7 +162,7 @@ struct SessionEditor: View {
                 Text("Edit Workout").font(AppFont.headline())
                 Spacer()
                 Button("Save") {
-                    session.blocks = blocks
+                    saveBlocks(blocks)
                     dismiss()
                 }
                 .font(AppFont.headline())
@@ -341,10 +335,13 @@ struct SessionEditor: View {
             let prefills = SessionFlow.prefills(for: blocks, history: history)
             blocks = SessionFlow.logAll(blocks, at: .now) { drafts[$0] ?? prefills[$0] ?? SetEntry() }
         }
-        session.blocks = blocks
         // The session ends on the summary's Done; saving now keeps the logged sets if the app dies before that.
-        try? context.save()
+        saveBlocks(blocks)
         store.stopRest()
         isShowingSummary = true
+    }
+
+    private func saveBlocks(_ blocks: [WorkoutBlock]) {
+        localStore.modify(WorkoutSession.self, id: session.id) { $0.blocks = blocks }
     }
 }

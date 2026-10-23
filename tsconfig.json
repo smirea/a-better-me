@@ -27,5 +27,7 @@
 		"paths": {
 			"shared/*": ["./shared/*"]
 		}
-	}
+	},
+	// The iOS build checks out its Swift packages under DerivedData, which ship JavaScript that allowJs would otherwise check.
+	"exclude": ["node_modules", "app-ios/DerivedData", "app-ios/.build"]
 }

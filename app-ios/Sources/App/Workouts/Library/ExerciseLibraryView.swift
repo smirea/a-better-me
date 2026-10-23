@@ -1,12 +1,11 @@
-import SwiftData
 import SwiftUI
 
 /// More > Exercises: the picker's list and filters with All, Performed, and Archived tabs. A row opens Exercise Settings.
 /// MF's Deprioritized and Modified tabs are cut with the settings that fill them (Do Not Recommend, equipment overrides).
 struct ExerciseLibraryView: View {
     @Environment(ExerciseCatalog.self) private var catalog
-    @Query(filter: #Predicate<WorkoutSession> { $0.endedAt != nil }) private var sessions: [WorkoutSession]
-    @Query private var customExercises: [CustomExercise]
+    @Observe(WorkoutSession.finished) private var sessions
+    @Observe(CustomExercise.all) private var customExercises
     @State private var tab = LibraryTab.all
     @State private var filter = ExerciseFilter()
     @State private var query = ""
@@ -72,10 +71,11 @@ struct ExerciseLibraryView: View {
 struct ExerciseSettingsView: View {
     let exerciseID: ExerciseID
     @Environment(ExerciseCatalog.self) private var catalog
-    @Environment(\.modelContext) private var context
+    @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @Query private var settings: [ExerciseSettings]
-    @Query private var custom: [CustomExercise]
+    @Observe private var current: ExerciseSettings?
+    @Observe(AppSettings.current) private var defaults
+    @Observe private var customExercise: CustomExercise?
     @State private var showingInfo = false
     @State private var editingNote = false
     @State private var noteDraft = ""
@@ -83,14 +83,13 @@ struct ExerciseSettingsView: View {
 
     init(exerciseID: ExerciseID) {
         self.exerciseID = exerciseID
-        _settings = Query(filter: #Predicate<ExerciseSettings> { $0.id == exerciseID })
-        _custom = Query(filter: #Predicate<CustomExercise> { $0.id == exerciseID })
+        _current = Observe(ExerciseSettings.one(exerciseID))
+        _customExercise = Observe(CustomExercise.one(exerciseID))
     }
 
     private static let noteLimit = 300
 
     var body: some View {
-        let current = settings.first
         let exercise = catalog.exercise(exerciseID)
         Form {
             Section {
@@ -110,13 +109,15 @@ struct ExerciseSettingsView: View {
                         editingNote = true
                     }
                 }
-                if let customExercise = custom.first {
+                if let customExercise {
                     SettingsRow(
                         title: customExercise.isArchived ? "Unarchive Exercise" : "Archive Exercise",
                         subtitle: "This will hide the exercise in your custom library, but will not impact your history",
                         systemImage: "archivebox.fill"
                     ) {
-                        Button(customExercise.isArchived ? "Unarchive" : "Archive") { customExercise.isArchived.toggle() }
+                        Button(customExercise.isArchived ? "Unarchive" : "Archive") {
+                            store.modify(CustomExercise.self, id: exerciseID) { $0.isArchived.toggle() }
+                        }
                     }
                     SettingsRow(
                         title: "Delete Exercise",
@@ -134,14 +135,13 @@ struct ExerciseSettingsView: View {
                 SettingsRow(title: "Rest Timer", subtitle: current?.restSeconds.map(Self.format) ?? "Default", systemImage: "timer") {
                     Menu("Edit") {
                         Picker("Rest Timer", selection: restBinding(current)) {
-                            Text("Default (\(Self.format(exercise?.restCategory.seconds ?? 0)))").tag(Int?.none)
+                            Text("Default (\(Self.format(defaults.restSeconds(exercise?.restCategory ?? .upperIsolation))))").tag(Int?.none)
                             ForEach(Array(stride(from: 15, through: 600, by: 15)), id: \.self) { Text(Self.format($0)).tag(Optional($0)) }
                         }
                     }
                 }
                 Button(role: .destructive) {
-                    current?.pinnedNote = ""
-                    current?.restSeconds = nil
+                    store.delete(ExerciseSettings.self, id: exerciseID)
                 } label: {
                     Label("Reset Defaults", systemImage: "arrow.counterclockwise")
                 }
@@ -158,29 +158,29 @@ struct ExerciseSettingsView: View {
         .sheet(isPresented: $showingInfo) { ExerciseDetailSheet(exerciseID: exerciseID) }
         .alert("Exercise Note", isPresented: $editingNote) {
             TextField("Note", text: $noteDraft, axis: .vertical)
-            Button("Save") { upsert(current).pinnedNote = String(noteDraft.prefix(Self.noteLimit)) }
+            Button("Save") {
+                let note = String(noteDraft.prefix(Self.noteLimit))
+                change { $0.pinnedNote = note }
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Pinned to this exercise and shown every time you work out.")
         }
         .confirmationDialog("Delete this exercise?", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("Delete Exercise", role: .destructive) {
-                custom.first.map(context.delete)
-                current.map(context.delete)
+                store.delete(CustomExercise.self, id: exerciseID)
+                store.delete(ExerciseSettings.self, id: exerciseID)
                 dismiss()
             }
         }
     }
 
     private func restBinding(_ current: ExerciseSettings?) -> Binding<Int?> {
-        Binding { current?.restSeconds } set: { upsert(current).restSeconds = $0 }
+        Binding { current?.restSeconds } set: { seconds in change { $0.restSeconds = seconds } }
     }
 
-    private func upsert(_ current: ExerciseSettings?) -> ExerciseSettings {
-        if let current { return current }
-        let created = ExerciseSettings(id: exerciseID)
-        context.insert(created)
-        return created
+    private func change(_ edit: @escaping @Sendable (inout ExerciseSettings) -> Void) {
+        store.modify(ExerciseSettings.self, id: exerciseID, orInsert: { ExerciseSettings(id: exerciseID) }, edit)
     }
 
     private static func format(_ seconds: Int) -> String {

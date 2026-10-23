@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 /// The workout detail body that a library workout and Create Workout share: Target Muscles, the exercise list, and every
@@ -7,7 +6,8 @@ struct WorkoutEditor: View {
     @Binding var blocks: [WorkoutBlock]
 
     @Environment(ExerciseCatalog.self) private var catalog
-    @Query private var settings: [ExerciseSettings]
+    @Observe(ExerciseSettings.all) private var settings
+    @Observe(AppSettings.current) private var defaults
     @State private var sheet: EditorSheet?
 
     var body: some View {
@@ -61,7 +61,7 @@ struct WorkoutEditor: View {
     private func exercisesHeader(_ current: [WorkoutBlock]) -> some View {
         let count = current.exerciseCount
         let minutes = WorkoutEstimate.minutes(current) { item, set in
-            item.restSeconds(after: set, exercise: catalog.exercise(item.exerciseID), settings: settings.first { $0.id == item.exerciseID })
+            item.restSeconds(after: set, exercise: catalog.exercise(item.exerciseID), settings: .of(item.exerciseID, in: settings), defaults: defaults)
         }
         return HStack {
             VStack(alignment: .leading, spacing: 2) {

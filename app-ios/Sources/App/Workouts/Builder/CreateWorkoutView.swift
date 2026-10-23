@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 /// Create Workout, cut to the reference's name step and editor. The method step (build or import .xlsx) and the gym step
@@ -6,7 +5,7 @@ import SwiftUI
 struct CreateWorkoutView: View {
     var onSave: (WorkoutTemplate) -> Void = { _ in }
 
-    @Environment(\.modelContext) private var context
+    @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var name = Date.now.formatted(.dateTime.month(.abbreviated).day().year())
     @State private var blocks: [WorkoutBlock] = []
@@ -63,7 +62,7 @@ struct CreateWorkoutView: View {
             .safeAreaInset(edge: .bottom) {
                 PinnedActionButton("Save to Library") {
                     let template = WorkoutTemplate(name: trimmedName, blocks: blocks)
-                    context.insert(template)
+                    store.insert(template)
                     onSave(template)
                     dismiss()
                 }

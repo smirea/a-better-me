@@ -181,7 +181,7 @@ extension SessionEditor {
     }
 
     private func restSeconds(_ item: BlockExercise, _ set: WorkoutSet) -> Int {
-        item.restSeconds(after: set, exercise: catalog.exercise(item.exerciseID), settings: exerciseSettings.first { $0.id == item.exerciseID })
+        item.restSeconds(after: set, exercise: catalog.exercise(item.exerciseID), settings: .of(item.exerciseID, in: exerciseSettings), defaults: defaults)
     }
 
     /// The header checkbox logs every open row with its values, or reopens all of them when everything is logged.

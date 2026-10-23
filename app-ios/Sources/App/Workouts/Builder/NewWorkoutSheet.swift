@@ -1,10 +1,9 @@
-import SwiftData
 import SwiftUI
 
 /// Presented by the tab bar's "+" button. The reference's Shortcuts sheet, cut to Empty Workout and New Workout: its
 /// Weight, Photos, Metrics, and History shortcuts belong to the nutrition half, and Up Next and New Program to programs.
 struct NewWorkoutSheet: View {
-    @Environment(\.modelContext) private var context
+    @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @Environment(LiveWorkoutPresenter.self) private var presenter
     @State private var creating = false
@@ -36,7 +35,7 @@ struct NewWorkoutSheet: View {
         .tint(Theme.textPrimary)
         .onDisappear {
             // The root view can't present the live workout's cover while this sheet is still on screen.
-            if startingEmpty { presenter.startOrResume({ .empty }, in: context) }
+            if startingEmpty { presenter.startOrResume({ .empty }, in: store) }
         }
         .presentationDetents([.height(240)])
         .fullScreenCover(isPresented: $creating) {

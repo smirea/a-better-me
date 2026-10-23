@@ -1,19 +1,20 @@
-import SwiftData
 import SwiftUI
 
 /// "Workout Complete" right after finishing, or a past session's summary from history and the calendar.
 /// `isFinishing` adds the bottom bar with Update Workout Plan and Done.
 struct WorkoutSummaryView: View {
-    let session: WorkoutSession
-    var isFinishing = false
+    /// The session as handed over. Edits here change the row, so the body reads the observed row while it exists.
+    private let initial: WorkoutSession
+    let isFinishing: Bool
 
     private enum Exit { case none, finish, delete }
 
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(LiveWorkoutPresenter.self) private var presenter
-    @Environment(\.modelContext) private var context
+    @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @AppStorage(WeightUnit.storageKey) private var unit = WeightUnit.kg
+    @Observe(AppSettings.current) private var settings
+    @Observe private var live: WorkoutSession?
 
     /// A finishing session ends when Done is tapped, but its duration stops at the moment Finish was chosen.
     @State private var finishedAt = Date.now
@@ -27,6 +28,15 @@ struct WorkoutSummaryView: View {
     @State private var isShowingChanges = false
     @State private var confirmingDelete = false
     @State private var exit = Exit.none
+
+    init(session: WorkoutSession, isFinishing: Bool = false) {
+        initial = session
+        self.isFinishing = isFinishing
+        _live = Observe(WorkoutSession.one(session.id))
+    }
+
+    private var session: WorkoutSession { live ?? initial }
+    private var unit: WeightUnit { settings.weightUnit }
 
     var body: some View {
         let blocks = session.blocks
@@ -66,12 +76,10 @@ struct WorkoutSummaryView: View {
             .safeAreaInset(edge: .bottom) { if isFinishing { finishBar(blocks) } }
         }
         .task {
-            let start = session.startedAt
-            let id = session.id
-            let descriptor = FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.endedAt != nil && $0.startedAt < start && $0.id != id })
-            earlier = ((try? context.fetch(descriptor)) ?? []).map(\.blocks)
+            let session = session
+            earlier = ((try? store.read { try WorkoutSession.earlier(than: session, $0) }) ?? []).map(\.blocks)
             if let templateID = session.templateID {
-                template = try? context.fetch(FetchDescriptor<WorkoutTemplate>(predicate: #Predicate { $0.id == templateID })).first
+                template = try? store.read { try WorkoutTemplate.fetchOne($0, key: WorkoutTemplate.key(templateID)) }
             }
         }
         // Ending or deleting the session while the screen is still up would empty it mid-dismissal, so it waits until gone.
@@ -89,7 +97,7 @@ struct WorkoutSummaryView: View {
         .sheet(isPresented: $isEditingStart) {
             StartTimeSheet(start: session.startedAt) { start in
                 let duration = endedAt.timeIntervalSince(session.startedAt)
-                session.startedAt = start
+                store.modify(WorkoutSession.self, id: session.id) { $0.startedAt = start }
                 setEnd(start.addingTimeInterval(duration))
             }
         }
@@ -110,7 +118,7 @@ struct WorkoutSummaryView: View {
     private var endedAt: Date { session.endedAt ?? finishedAt }
 
     private func setEnd(_ date: Date) {
-        if isFinishing { finishedAt = date } else { session.endedAt = date }
+        if isFinishing { finishedAt = date } else { store.modify(WorkoutSession.self, id: session.id) { $0.endedAt = date } }
     }
 
     private func close() {
@@ -126,12 +134,15 @@ struct WorkoutSummaryView: View {
         switch exit {
         case .none: return
         case .finish:
-            session.endedAt = finishedAt
-            if updatePlan, let template { template.blocks = SessionFlow.plan(from: session.blocks) }
+            let finishedAt = finishedAt
+            store.modify(WorkoutSession.self, id: session.id) { $0.endedAt = finishedAt }
+            if updatePlan, let template {
+                let plan = SessionFlow.plan(from: session.blocks)
+                store.editTemplate(template.id) { $0.blocks = plan }
+            }
         case .delete:
-            context.delete(session)
+            store.delete(WorkoutSession.self, id: session.id)
         }
-        try? context.save()
         if isFinishing { LiveSessionStore.shared.reset() }
     }
 

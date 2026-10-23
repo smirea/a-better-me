@@ -1,14 +1,23 @@
 import SwiftUI
 
 struct MoreTab: View {
-    @AppStorage(WeightUnit.storageKey) private var weightUnit = WeightUnit.kg
+    @Environment(LocalStore.self) private var store
+    @Observe(AppSettings.current) private var settings
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("General") {
-                    Picker("Weight Unit", systemImage: "scalemass", selection: $weightUnit) {
+                    Picker(
+                        "Weight Unit", systemImage: "scalemass",
+                        selection: Binding(get: { settings.weightUnit }, set: { unit in store.updateSettings { $0.weightUnit = unit } })
+                    ) {
                         ForEach(WeightUnit.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    NavigationLink { SyncSettingsView() } label: {
+                        LabeledContent { Text(store.syncState.title).foregroundStyle(Theme.textSecondary) } label: {
+                            Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                        }
                     }
                 }
                 Section("Feature Settings") {
@@ -26,28 +35,25 @@ struct MoreTab: View {
 }
 
 private struct RestTimerSettings: View {
+    @Environment(LocalStore.self) private var store
+    @Observe(AppSettings.current) private var settings
+
     var body: some View {
         Form {
             Section("Timer Duration") {
-                ForEach(RestCategory.allCases) { RestDurationRow(category: $0) }
+                ForEach(RestCategory.allCases) { category in
+                    Stepper(
+                        value: Binding(
+                            get: { settings.restSeconds(category) },
+                            set: { seconds in store.updateSettings { $0.setRestSeconds(seconds, for: category) } }
+                        ),
+                        in: 0...600, step: 15
+                    ) {
+                        LabeledContent(category.displayName, value: Duration.seconds(settings.restSeconds(category)).formatted(.time(pattern: .minuteSecond)))
+                    }
+                }
             }
         }
         .navigationTitle("Rest Timer")
-    }
-}
-
-private struct RestDurationRow: View {
-    let category: RestCategory
-    @AppStorage private var seconds: Int
-
-    init(category: RestCategory) {
-        self.category = category
-        _seconds = AppStorage(wrappedValue: category.defaultSeconds, category.storageKey)
-    }
-
-    var body: some View {
-        Stepper(value: $seconds, in: 0...600, step: 15) {
-            LabeledContent(category.displayName, value: Duration.seconds(seconds).formatted(.time(pattern: .minuteSecond)))
-        }
     }
 }

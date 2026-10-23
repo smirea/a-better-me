@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 private func clock(_ seconds: TimeInterval) -> String {
@@ -194,9 +193,9 @@ struct NoteSheet: View {
 
     enum Tab { case session, exercise }
 
-    @Environment(\.modelContext) private var context
+    @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @Query private var settings: [ExerciseSettings]
+    @Observe private var settings: ExerciseSettings?
     @State private var tab = Tab.session
     @State private var sessionText = ""
     @State private var pinnedText = ""
@@ -206,7 +205,7 @@ struct NoteSheet: View {
     init(sessionNote: Binding<String?>, exerciseID: ExerciseID) {
         _sessionNote = sessionNote
         self.exerciseID = exerciseID
-        _settings = Query(filter: #Predicate<ExerciseSettings> { $0.id == exerciseID })
+        _settings = Observe(ExerciseSettings.one(exerciseID))
     }
 
     var body: some View {
@@ -244,7 +243,7 @@ struct NoteSheet: View {
         }
         .onAppear {
             sessionText = sessionNote ?? ""
-            pinnedText = settings.first?.pinnedNote ?? ""
+            pinnedText = settings?.pinnedNote ?? ""
         }
     }
 
@@ -268,10 +267,9 @@ struct NoteSheet: View {
 
     private func save() {
         sessionNote = sessionText.isEmpty ? nil : sessionText
-        if let setting = settings.first {
-            setting.pinnedNote = pinnedText
-        } else if !pinnedText.isEmpty {
-            context.insert(ExerciseSettings(id: exerciseID, pinnedNote: pinnedText))
+        if settings != nil || !pinnedText.isEmpty {
+            let note = pinnedText
+            store.modify(ExerciseSettings.self, id: exerciseID, orInsert: { ExerciseSettings(id: exerciseID) }) { $0.pinnedNote = note }
         }
         dismiss()
     }

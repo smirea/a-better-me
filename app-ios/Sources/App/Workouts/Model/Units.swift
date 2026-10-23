@@ -3,7 +3,6 @@ import Foundation
 enum WeightUnit: String, CaseIterable, Identifiable {
     case kg, lb
 
-    static let storageKey = "weightUnit"
     static let kgPerLb = 0.45359237
 
     var id: String { rawValue }
@@ -17,12 +16,11 @@ enum WeightUnit: String, CaseIterable, Identifiable {
     }
 }
 
-/// MF's rest-timer groups, each with its own default in Workout settings.
+/// MF's rest-timer groups, each with its own default in Workout settings (`AppSettings`).
 enum RestCategory: String, CaseIterable, Identifiable {
     case compoundUpper, compoundLower, upperIsolation, lowerIsolation, core
 
     var id: String { rawValue }
-    var storageKey: String { "restSeconds.\(rawValue)" }
 
     var defaultSeconds: Int {
         switch self {
@@ -41,10 +39,5 @@ enum RestCategory: String, CaseIterable, Identifiable {
         case .lowerIsolation: "Lower Isolation"
         case .core: "Core"
         }
-    }
-
-    /// The owner's default for this category, read from `UserDefaults` the way `@AppStorage(storageKey)` writes it.
-    var seconds: Int {
-        (UserDefaults.standard.object(forKey: storageKey) as? Int) ?? defaultSeconds
     }
 }

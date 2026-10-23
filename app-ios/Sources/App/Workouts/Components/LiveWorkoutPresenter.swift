@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 /// Whether the in-progress workout fills the screen. The builder starts workouts, the live session minimizes and
@@ -12,8 +11,23 @@ final class LiveWorkoutPresenter {
 
     /// Starts `session` and shows it. At most one session is in progress, so callers resolve an existing one first
     /// (the live session thread owns that prompt).
-    func start(_ session: WorkoutSession, in context: ModelContext) {
-        context.insert(session)
+    func start(_ session: WorkoutSession, in store: LocalStore) {
+        store.insert(session)
         isExpanded = true
+    }
+
+    /// Only one session is in progress at a time. When one is, the root view's prompt (`resolvingWorkoutStart`) lets the
+    /// owner resume it or discard it and start the new one. The check and the insert share one transaction, so two
+    /// quick taps cannot start two.
+    func startOrResume(_ makeSession: () -> WorkoutSession, in store: LocalStore) {
+        let session = makeSession()
+        let started = store.write { db in
+            guard try WorkoutSession.inProgress.fetch(db) == nil else { return false }
+            try session.insert(db)
+            return true
+        }
+        Task {
+            if try await started.value { isExpanded = true } else { pendingStart = session }
+        }
     }
 }

@@ -1,11 +1,9 @@
-import SwiftData
 import SwiftUI
 
 /// Every finished workout, newest first and grouped by day. A row opens its summary.
 struct WorkoutHistoryView: View {
     @Environment(ExerciseCatalog.self) private var catalog
-    @Query(filter: #Predicate<WorkoutSession> { $0.endedAt != nil }, sort: \WorkoutSession.startedAt, order: .reverse)
-    private var sessions: [WorkoutSession]
+    @Observe(WorkoutSession.finished) private var sessions
     @State private var selected: WorkoutSession?
 
     var body: some View {

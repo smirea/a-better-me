@@ -1,47 +1,45 @@
-import SwiftData
 import SwiftUI
 
 @main
 struct BetterMeApp: App {
     @State private var catalog: ExerciseCatalog
     @State private var presenter = LiveWorkoutPresenter()
-    private let container: ModelContainer
+    @State private var store: LocalStore
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         AppFont.register()
         NavigationAppearance.apply()
         _catalog = State(initialValue: ExerciseCatalog())
-        container = Self.makeContainer()
         #if DEBUG
-        SampleData.seedIfRequested(container.mainContext)
-        SampleWorkout.startIfRequested(container.mainContext)
+        OwnerToken.applyLaunchArgument()
+        #endif
+        let store = LocalStore()
+        _store = State(initialValue: store)
+        #if DEBUG
+        SampleData.seedIfRequested(store)
+        SampleWorkout.startIfRequested(store)
         #endif
     }
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environment(catalog)
-                .environment(presenter)
-                .font(AppFont.body())
-                .preferredColorScheme(.dark)
-                .tint(Theme.accent)
+            Group {
+                if store.isReady {
+                    RootView()
+                } else {
+                    Theme.background.ignoresSafeArea()
+                }
+            }
+            .environment(catalog)
+            .environment(presenter)
+            .environment(store)
+            .font(AppFont.body())
+            .preferredColorScheme(.dark)
+            .tint(Theme.accent)
         }
-        .modelContainer(container)
-    }
-
-    /// While the schema is young a store that no longer opens is wiped instead of migrated (see docs/decisions/ios.md).
-    private static func makeContainer() -> ModelContainer {
-        let schema = Schema(WorkoutSchema.models)
-        let config = ModelConfiguration(schema: schema)
-        if let container = try? ModelContainer(for: schema, configurations: config) { return container }
-        for suffix in ["", "-shm", "-wal"] {
-            try? FileManager.default.removeItem(at: URL(filePath: config.url.path() + suffix))
-        }
-        do {
-            return try ModelContainer(for: schema, configurations: config)
-        } catch {
-            fatalError("Cannot open the SwiftData store: \(error)")
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { store.resume() }
         }
     }
 }

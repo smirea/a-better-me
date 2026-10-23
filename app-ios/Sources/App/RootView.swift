@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 enum AppTab: Hashable {
@@ -8,8 +7,8 @@ enum AppTab: Hashable {
 struct RootView: View {
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(LiveWorkoutPresenter.self) private var presenter
-    @Query private var customExercises: [CustomExercise]
-    @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }) private var activeSessions: [WorkoutSession]
+    @Observe(CustomExercise.all) private var customExercises
+    @Observe(WorkoutSession.inProgress) private var activeSession
     @State private var tab = AppTab.workout
     @State private var showingNewWorkout = false
 
@@ -21,7 +20,7 @@ struct RootView: View {
             Tab("Levels", systemImage: "trophy", value: .levels) { LevelsTab() }
             Tab("More", systemImage: "ellipsis.circle", value: .more) { MoreTab() }
         }
-        .tabViewBottomAccessory(isEnabled: !activeSessions.isEmpty) { ActiveSessionBar() }
+        .tabViewBottomAccessory(isEnabled: activeSession != nil) { ActiveSessionBar() }
         .resolvingWorkoutStart()
         .onChange(of: tab) { previous, current in
             // "+" acts as a button, like the reference app's center tab: it presents a sheet and keeps the tab.
@@ -30,8 +29,9 @@ struct RootView: View {
             showingNewWorkout = true
         }
         .sheet(isPresented: $showingNewWorkout) { NewWorkoutSheet() }
-        .fullScreenCover(isPresented: Bindable(presenter).isExpanded) {
-            if let session = activeSessions.first { LiveWorkoutView(session: session) }
+        // A session's insert and the observation that shows it land a moment apart, so the cover waits for both.
+        .fullScreenCover(isPresented: Binding(get: { presenter.isExpanded && activeSession != nil }, set: { presenter.isExpanded = $0 })) {
+            if let activeSession { LiveWorkoutView(session: activeSession) }
         }
         .onChange(of: customExercises.map(\.exercise), initial: true) { _, exercises in
             catalog.setCustom(exercises)

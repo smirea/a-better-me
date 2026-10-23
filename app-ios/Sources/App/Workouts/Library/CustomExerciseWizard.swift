@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 /// What the owner fills in before a custom exercise exists. MF's Final details step (range of motion, stability,
@@ -59,7 +58,7 @@ struct CustomExerciseDraft {
 /// `CustomExercise`; `onCreateAndAdd` adds the "Create & Add" button for the picker.
 struct CustomExerciseWizard: View {
     var onCreateAndAdd: ((ExerciseID) -> Void)?
-    @Environment(\.modelContext) private var context
+    @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var draft = CustomExerciseDraft()
     @State private var path: [Step] = []
@@ -137,7 +136,7 @@ struct CustomExerciseWizard: View {
 
     private func create() -> ExerciseID {
         let exercise = draft.exercise()
-        context.insert(CustomExercise(exercise))
+        store.insert(CustomExercise(exercise))
         dismiss()
         return exercise.id
     }
