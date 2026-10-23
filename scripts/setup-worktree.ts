@@ -1,12 +1,14 @@
 /**
- * Prepares a linked git worktree for an agent: `bun scripts/setup-worktree.ts [branch]`.
+ * Prepares a linked git worktree for an agent: `bun scripts/setup-worktree.ts [branch] [--reset-db]`.
  * `branch` renames the worktree's branch first, so the PR and teardown share the final name. Installs, gives the
- * worktree its own ports through a git-ignored `.env.override`, and writes offline env files. Safe to rerun.
+ * worktree its own ports and local database through a git-ignored `.env.override`, writes offline env files, and
+ * starts its PowerSync. `--reset-db` drops and recreates the worktree's databases. Safe to rerun.
  */
 import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { parseDotenv, readOverride, run as runCommand, worktrees } from './lib';
+import { databaseName, databaseUrl, requireDocker, stackUp } from './local-stack';
 
 const run = (cmd: string[]) => runCommand(cmd, { stdio: 'inherit-stderr' });
 const git = (...args: string[]) => runCommand(['git', ...args]);
@@ -17,11 +19,15 @@ if (git('rev-parse', '--git-dir') === git('rev-parse', '--git-common-dir')) {
 	throw new Error('This is the main checkout. Run this inside a linked worktree.');
 }
 
-const wanted = process.argv.slice(2).find(arg => !arg.startsWith('--'));
+const args = process.argv.slice(2);
+const wanted = args.find(arg => !arg.startsWith('--'));
 if (wanted && wanted !== git('branch', '--show-current')) {
 	if (git('branch', '--show-current')) git('branch', '-m', wanted);
 	else git('switch', '-c', wanted);
 }
+
+// Before anything slow, so a Mac without Docker fails in a second with the fix named.
+requireDocker();
 
 run(['bun', 'install', '--frozen-lockfile']);
 
@@ -32,7 +38,8 @@ if (!Number.isInteger(mainPort)) throw new Error('The root .env has no numeric C
 const STEP = 1000;
 const FIRST_BLOCK = mainPort + 10_000;
 const LAST_BLOCK = FIRST_BLOCK + Math.floor((49_152 - 10 - FIRST_BLOCK) / STEP) * STEP;
-const OFFSETS = [0, 1];
+// Web, API, PowerSync, and `scripts/wrangler-dev.ts`.
+const OFFSETS = [0, 1, 2, 3];
 
 function readPort(worktree: string): number | undefined {
 	const port = Number(readOverride(worktree)?.CLIENT_PORT);
@@ -76,7 +83,14 @@ try {
 	base = await pickBlock();
 	writeFileSync(
 		join(root, '.env.override'),
-		[`CLIENT_PORT=${base}`, `API_PORT=${base + 1}`, `API_URL=http://127.0.0.1:${base + 1}`, ''].join('\n'),
+		[
+			`CLIENT_PORT=${base}`,
+			`API_PORT=${base + 1}`,
+			`API_URL=http://127.0.0.1:${base + 1}`,
+			`DATABASE_URL=${databaseUrl(databaseName(root))}`,
+			`POWERSYNC_URL=http://127.0.0.1:${base + 2}`,
+			'',
+		].join('\n'),
 	);
 } finally {
 	rmSync(lock, { recursive: true, force: true });
@@ -85,7 +99,11 @@ try {
 // Offline from the schema defaults: a worktree never pulls cloud values, so agents without AWS access work the same.
 run(['bunx', 'env-manager', 'gen', '--local']);
 
+const stack = await stackUp(root, base, args.includes('--reset-db'));
+
 console.log(`
 Worktree ready on ${git('branch', '--show-current') || '(detached HEAD)'}.
-  web  http://127.0.0.1:${base}  (bun run start)
-  api  http://127.0.0.1:${base + 1}`);
+  web        http://127.0.0.1:${base}  (bun run start)
+  api        http://127.0.0.1:${base + 1}
+  powersync  ${stack.POWERSYNC_URL}
+  database   ${stack.DATABASE_URL}`);

@@ -1,0 +1,56 @@
+# Local Postgres and PowerSync. `scripts/local-stack.ts` runs it, never `docker compose` by hand:
+#   postgres   one container for every checkout, project `a-better-me`, each checkout in its own database
+#   powersync  one container per checkout, project `a-better-me-<checkout>`, on the checkout's base port + 2
+# Both join the `a-better-me` network, so PowerSync reaches Postgres as `a-better-me-postgres`. Every name differs from
+# procrastimate's containers, which run on the same machine.
+name: a-better-me
+services:
+  postgres:
+    image: postgres:17
+    container_name: a-better-me-postgres
+    # Logical replication for PowerSync, one slot and sender per checkout.
+    command:
+      [
+        'postgres',
+        '-c',
+        'wal_level=logical',
+        '-c',
+        'max_replication_slots=32',
+        '-c',
+        'max_wal_senders=32',
+        '-c',
+        'max_connections=400',
+      ]
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports: ['127.0.0.1:6159:5432']
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [a-better-me]
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'postgres']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  powersync:
+    image: journeyapps/powersync-service:1.27.0
+    container_name: a-better-me-powersync-${CHECKOUT:-unset}
+    labels:
+      a-better-me.checkout: ${CHECKOUT_PATH:-unset}
+    command: ['start', '-r', 'unified']
+    # PowerSync exits when Postgres restarts and never reconnects on its own.
+    restart: unless-stopped
+    ports: ['127.0.0.1:${POWERSYNC_PORT:-0}:8080']
+    environment:
+      POWERSYNC_CONFIG_PATH: /config/service.yaml
+    volumes:
+      - ${POWERSYNC_SERVICE_CONFIG:-/dev/null}:/config/service.yaml:ro
+      - ../powersync/sync-config.yaml:/config/sync-config.yaml:ro
+    networks: [a-better-me]
+networks:
+  a-better-me:
+    name: a-better-me
+volumes:
+  pgdata:
+    name: a-better-me-pgdata

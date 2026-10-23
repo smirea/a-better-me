@@ -1,0 +1,24 @@
+# One PowerSync service per checkout, written to the checkout's git-ignored `.powersync/service.yaml` by
+# `scripts/local-stack.ts`, which fills in the checkout's database. The public key is the committed
+# `INSECURE-dev-jwt-key.json`'s; production lists its own in `powersync/prod/service.yaml`.
+replication:
+  connections:
+    - type: postgresql
+      uri: postgresql://postgres:postgres@a-better-me-postgres:5432/{{DATABASE}}
+      sslmode: disable
+storage:
+  type: postgresql
+  uri: postgresql://postgres:postgres@a-better-me-postgres:5432/{{DATABASE}}_powersync
+  sslmode: disable
+port: 8080
+sync_config:
+  path: /config/sync-config.yaml
+client_auth:
+  jwks:
+    keys:
+      - kty: OKP
+        kid: insecure-local-dev-336f5ac3
+        crv: Ed25519
+        x: c6mCLI8mSxKTQCy0h30PcpHXfqCzlZEy3IQsIIShfQs
+        alg: EdDSA
+  audience: ['powersync']

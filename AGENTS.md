@@ -25,6 +25,7 @@ Full rules in [`docs/decisions/workflow.md`](docs/decisions/workflow.md).
 
 - `app-web/` owns React, routes, styles, and Vite. `server/` owns the Bun API. `shared/` holds environment-independent types and contracts. Read each folder's `AGENTS.md` before changing it.
 - `bun run start` runs client and server; `start:client` and `start:server` run them separately. Browser API calls use the client-relative `/api` proxy.
+- The server needs the local Postgres and PowerSync in Docker: worktree setup starts them, and the main checkout runs `bun run stack`. `bun run sync:smoke` proves the sync loop against a running server. See [`docs/decisions/sync.md`](docs/decisions/sync.md) and [`docs/decisions/hosting.md`](docs/decisions/hosting.md).
 - A `monorepo-swift` scaffold also has `app-ios/` with native instructions and its own launcher. See that folder's docs.
 
 # Environment

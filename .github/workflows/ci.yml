@@ -11,7 +11,8 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # A push to master deploys, and a newer push must not cancel a deploy halfway.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
@@ -85,6 +86,17 @@ jobs:
       - name: Checks
         if: needs.changes.outputs.bun == 'true' && matrix.task == 'checks'
         run: bun run lint:ci && bun run typecheck
+      # drizzle-kit writes a new migration when the schema changed without one, and the bundle must match server/drizzle.
+      - name: Migrations match the schema
+        if: needs.changes.outputs.bun == 'true' && matrix.task == 'checks'
+        run: |
+          bun run db:generate
+          stale=$(git status --porcelain server/drizzle server/src/db/migrations.generated.ts)
+          if [ -n "$stale" ]; then
+            echo "$stale"
+            echo "::error::server/drizzle or its bundle is stale. Run 'bun run db:generate' and commit the result."
+            exit 1
+          fi
       - name: Tests
         if: needs.changes.outputs.bun == 'true' && matrix.task == 'tests'
         run: bun run test
@@ -158,3 +170,33 @@ jobs:
       - name: Run Swift task
         if: needs.changes.outputs.swift == 'true'
         run: bun .github/scripts/swift.ts "${{ matrix.task }}"
+
+  deploy:
+    name: Deploy the Worker
+    needs: [bun, swift]
+    if: ${{ github.event_name == 'push' && !cancelled() && needs.bun.result == 'success' && needs.swift.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      LEFTHOOK: '0'
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Cloudflare credentials
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Add the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets with 'bun run secrets:github'."
+            exit 1
+          fi
+      - name: Required Worker secrets
+        run: bun scripts/secrets.ts verify
+      - name: Deploy
+        run: bunx wrangler deploy
