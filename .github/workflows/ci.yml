@@ -95,7 +95,7 @@ jobs:
     name: ${{ matrix.task }} (Swift)
     needs: changes
     if: ${{ !cancelled() }}
-    runs-on: ${{ needs.changes.outputs.swift == 'true' && 'macos-26' || 'ubuntu-latest' }}
+    runs-on: ${{ needs.changes.outputs.swift == 'true' && 'xcode-27' || 'ubuntu-latest' }}
     timeout-minutes: 25
     strategy:
       fail-fast: false
