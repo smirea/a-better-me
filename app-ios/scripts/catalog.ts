@@ -39,6 +39,37 @@ function equipmentOption(id: string, groupType: string): { name: string; equipme
 const camel = (name: string) =>
 	name.toLowerCase().replace(/[^a-z]+([a-z])/g, (_, letter: string) => letter.toUpperCase());
 const snake = (name: string) => name.toLowerCase().replace(/[^a-z]+/g, '_');
+// The export stores names in sentence case ("45° cable rear delt fly"); the app shows every word capitalized.
+const titleCase = (name: string) =>
+	name.replace(/(^|[\s\-(/])(\p{Ll})/gu, (_, gap: string, letter: string) => gap + letter.toUpperCase());
+
+// The picker groups exercises by what loads them. Machines win over the plates that load them, and an exercise
+// without resistance equipment, or with only the uncategorized "Bodyweight only", is bodyweight.
+const pickerCategories: [string, string[]][] = [
+	['machines', ['Cable Machines', 'Plate Loaded Machines', 'Pin Loaded Machines']],
+	['cardio', ['Cardio']],
+	['freeWeights', ['Free Weights', 'Loadable Bars', 'Fixed Weight Bars', 'Loadable Accessories']],
+	['bodyweight', ['Body Weights', 'Bands & Ropes', 'Accessories & Functional', 'Benches & Racks', 'Bodyweight']],
+	['other', ['Other']],
+];
+function pickerCategory(equipment: string[]): string {
+	const categories = equipment.map(id => {
+		const category = ref(id, 'equipment').category as string | undefined;
+		return category ? ref(category, 'appEquipmentCategory').name : 'Bodyweight';
+	});
+	return pickerCategories.find(([, names]) => categories.some(c => names.includes(c)))?.[0] ?? 'other';
+}
+/** The first resistance option decides, unless it is uncategorized. Distance-tracked exercises such as running are cardio. */
+function listCategory(resistance: { equipment: string[] }[], support: { equipment: string[] }[], metrics: string[]) {
+	if (metrics.includes('Distance long') || support.some(o => pickerCategory(o.equipment) === 'cardio')) return 'cardio';
+	return resistance.map(o => pickerCategory(o.equipment)).find(c => c !== 'other') ?? 'other';
+}
+const region = (id: unknown) => {
+	if (!id) return null;
+	const name = ref(id as string, 'regionTrained').name;
+	return name === 'Full body' ? 'fullBody' : camel(name.replace(' body', ''));
+};
+const level = (id: unknown, type: string) => (id ? Number(ref(id as string, type).name) : null);
 
 // Exercise Markdown links to the authors' Notion workspace, which the app never opens. Keep the link text only.
 const stripLinks = (markdown: string) => markdown.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').trim();
@@ -81,8 +112,8 @@ for (const e of source.exercises) {
 	const type = e.exerciseType ? ref(e.exerciseType as string, 'exerciseType').name : 'Other';
 	exercises.push({
 		id,
-		name: e.name,
-		alternativeNames: names(e.alternativeName, 'alternativeName'),
+		name: titleCase(e.name as string),
+		alternativeNames: names(e.alternativeName, 'alternativeName').map(titleCase),
 		type: type.startsWith('Multi')
 			? 'compound'
 			: type.startsWith('Single')
@@ -95,10 +126,18 @@ for (const e of source.exercises) {
 		primaryMuscleDetails: names(e.primaryMuscle, 'muscle'),
 		secondaryMuscleDetails: names(e.secondaryMuscle, 'muscle'),
 		movementPatterns: names(e.movementPattern, 'movementPattern'),
+		region: region(e.regionTrained),
 		laterality: names(e.laterality, 'laterality').map(camel)[0] ?? 'bilateral',
 		metrics: names(e.exerciseMetrics, 'exerciseMetric').map(camel),
 		resistanceEquipment: resistance.map(g => g.name),
 		supportEquipment: support.map(g => g.name),
+		resistanceEquipmentIDs: resistance.map(g => g.equipment),
+		supportEquipmentIDs: support.map(g => g.equipment),
+		category: listCategory(resistance, support, names(e.exerciseMetrics, 'exerciseMetric')),
+		rangeOfMotion: level(e.rom, 'rom'),
+		stability: level(e.stability, 'stability'),
+		primaryJointActions: names(e.primaryJointAction, 'jointAction'),
+		secondaryJointActions: names(e.secondaryJointAction, 'jointAction'),
 		equipmentIDs: equipment,
 		bodyweightFraction: (e.bodyweight as number | null) ?? 0,
 		searchBoost: (e.searchBoostValue as number | undefined) ?? 0,
@@ -127,8 +166,9 @@ for (const [id, entry] of Object.entries(source.uuidIndex)) {
 	const kg = (value: unknown) => (typeof value === 'number' && value > 0 ? value : null);
 	equipment.push({
 		id,
-		name: entry.name,
-		category: entry.category ? ref(entry.category as string, 'appEquipmentCategory').name : 'Other',
+		name: titleCase(entry.name),
+		pluralOf: (entry.pluralOf as string | null) ?? null,
+		category: entry.category ? ref(entry.category as string, 'appEquipmentCategory').name : 'Bodyweight',
 		weightKg: kg(entry.weightKg),
 		incrementKg: kg(entry.weightIncrementKg),
 		hasImage,
@@ -166,5 +206,9 @@ await write('articles.json', articles);
 console.log(
 	`${exercises.length} exercises (${exercises.filter(e => e.images.length).length} with images, ` +
 		`${exercises.filter(e => e.hasInstructions).length} with instructions), ${equipment.length} equipment, ` +
-		`${articles.length} articles, ${muscles.length} muscle tiles from the catalog generated ${source.generatedAt}`,
+		`${articles.length} articles, ${muscles.length} muscle tiles from the catalog generated ${source.generatedAt}. ` +
+		`Picker groups: ${JSON.stringify(
+			Object.groupBy(exercises, e => e.category),
+			(k, v) => (Array.isArray(v) ? v.length : v),
+		)}`,
 );

@@ -1,0 +1,221 @@
+import SwiftData
+import SwiftUI
+
+/// One finished session's sets of an exercise, with the records it set.
+struct ExerciseHistoryEntry: Identifiable {
+    let id: UUID
+    let date: Date
+    let workoutName: String
+    /// Completed sets, warm-ups included, in workout order.
+    let sets: [WorkoutSet]
+    var records: [HistoryMetric: Double] = [:]
+
+    var workingSets: [WorkoutSet] { sets.filter { $0.type != .warmUp } }
+}
+
+/// The "Exercise Display" dropdown. MF also offers 3-RM and 10-RM, which need a rep-max curve beyond
+/// `WorkoutMetrics`' single 1-RM estimate, so they wait until that formula is settled.
+enum HistoryMetric: String, CaseIterable, Identifiable {
+    case oneRepMax = "1-RM"
+    case heaviestWeight = "Heaviest Weight"
+    case totalVolume = "Total Volume"
+    case bestSetVolume = "Best Set Volume"
+    case totalReps = "Total Reps"
+    case bestSetReps = "Best Set Reps"
+    case totalSets = "Total Sets"
+
+    var id: Self { self }
+
+    /// The three records MF badges on a history row.
+    static let recordKinds: [HistoryMetric] = [.totalVolume, .bestSetReps, .oneRepMax]
+
+    var recordIcon: String {
+        switch self {
+        case .totalVolume: "trophy.fill"
+        case .bestSetReps: "asterisk"
+        default: "medal.fill"
+        }
+    }
+
+    func value(of entry: ExerciseHistoryEntry, exercise: Exercise) -> Double? {
+        let sets = entry.workingSets
+        let logs = sets.flatMap { [$0.log] + $0.subSets.map(\.log) }.compactMap { $0 }
+        let setReps = sets.map { ([$0.log] + $0.subSets.map(\.log)).compactMap { $0?.reps }.reduce(0, +) }
+        let result: Double? = switch self {
+        case .oneRepMax:
+            logs.compactMap { log in
+                guard let weight = log.weightKg, weight > 0, let reps = log.reps, reps > 0 else { return nil }
+                return WorkoutMetrics.estimatedOneRepMaxKg(weightKg: weight, reps: reps, rir: log.rir)
+            }.max()
+        case .heaviestWeight: logs.compactMap(\.weightKg).max()
+        case .totalVolume: entry.sets.map { WorkoutMetrics.volumeKg(of: $0, exercise: exercise) }.reduce(0, +)
+        case .bestSetVolume: sets.map { WorkoutMetrics.volumeKg(of: $0, exercise: exercise) }.max()
+        case .totalReps: Double(setReps.reduce(0, +))
+        case .bestSetReps: setReps.max().map(Double.init)
+        case .totalSets: Double(sets.count)
+        }
+        return result.flatMap { $0 > 0 ? $0 : nil }
+    }
+
+    func format(_ value: Double, unit: WeightUnit) -> String {
+        switch self {
+        case .oneRepMax, .heaviestWeight, .totalVolume, .bestSetVolume: "\(unit.format(kg: value)) \(unit.rawValue)"
+        case .totalReps, .bestSetReps: "\(Int(value)) reps"
+        case .totalSets: "\(Int(value)) sets"
+        }
+    }
+}
+
+enum ExerciseHistory {
+    /// Newest first. A record is a value that beats every earlier session's.
+    static func entries(of exercise: Exercise, in sessions: [WorkoutSession]) -> [ExerciseHistoryEntry] {
+        var best: [HistoryMetric: Double] = [:]
+        var entries: [ExerciseHistoryEntry] = []
+        for session in sessions.sorted(by: { $0.startedAt < $1.startedAt }) where !session.isInProgress {
+            let sets = session.blocks.flatMap(\.exercises).filter { $0.exerciseID == exercise.id }.flatMap(\.sets).filter(\.isCompleted)
+            guard !sets.isEmpty else { continue }
+            var entry = ExerciseHistoryEntry(id: session.id, date: session.startedAt, workoutName: session.name, sets: sets)
+            for kind in HistoryMetric.recordKinds {
+                guard let value = kind.value(of: entry, exercise: exercise) else { continue }
+                if let previous = best[kind], value > previous { entry.records[kind] = value }
+                best[kind] = max(value, best[kind] ?? 0)
+            }
+            entries.append(entry)
+        }
+        return entries.reversed()
+    }
+
+    /// "50 lb (per side) x 9 (per side)": the logged values in the exercise's metrics, load first.
+    static func describe(_ log: SetLog, exercise: Exercise, unit: WeightUnit) -> String {
+        let metrics = exercise.metrics.sorted { $0.isWeight && !$1.isWeight }
+        return metrics.compactMap { metric -> String? in
+            let side = metric.isPerSide ? " (per side)" : ""
+            switch metric {
+            case .weight, .weightPerSide, .weightPerSidePersistent:
+                return log.weightKg.map { "\(unit.format(kg: $0)) \(unit.rawValue)\(side)" }
+            case .assistanceWeight:
+                return log.weightKg.map { "\(unit.format(kg: $0)) \(unit.rawValue) assist" }
+            case .reps, .repsPerSide:
+                return log.reps.map { "\($0)\(side)" }
+            case .duration, .durationPerSide:
+                return log.durationSeconds.map { Duration.seconds($0).formatted(.time(pattern: .minuteSecond)) + side }
+            case .distanceShort, .distanceShortPerSide, .distanceLong:
+                return log.distanceMeters.map {
+                    Measurement(value: $0, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated, usage: .road)) + side
+                }
+            }
+        }.joined(separator: " x ")
+    }
+}
+
+struct ExerciseHistoryTab: View {
+    let exercise: Exercise
+    @Query(filter: #Predicate<WorkoutSession> { $0.endedAt != nil }) private var sessions: [WorkoutSession]
+    @AppStorage(WeightUnit.storageKey) private var unit = WeightUnit.kg
+    @State private var metric = HistoryMetric.oneRepMax
+    @State private var newestFirst = true
+    @State private var expanded: Set<UUID> = []
+
+    var body: some View {
+        let entries = ExerciseHistory.entries(of: exercise, in: sessions)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                Menu {
+                    Picker("Exercise Display", selection: $metric) {
+                        ForEach(HistoryMetric.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                } label: {
+                    FilterChipLabel(title: metric.rawValue, systemImage: "medal")
+                }
+                Menu {
+                    Picker("Sort", selection: $newestFirst) {
+                        Text("Most Recent").tag(true)
+                        Text("Oldest").tag(false)
+                    }
+                } label: {
+                    FilterChipLabel(title: newestFirst ? "Most Recent" : "Oldest", systemImage: "line.3.horizontal.decrease")
+                }
+            }
+            .padding()
+            if entries.isEmpty {
+                ContentUnavailableView(
+                    "No History",
+                    systemImage: "clock.arrow.circlepath",
+                    description: Text("Log this exercise in a workout to see it here.")
+                )
+            }
+            ForEach(newestFirst ? entries : entries.reversed()) { entry in
+                HistoryRow(
+                    entry: entry,
+                    exercise: exercise,
+                    metric: metric,
+                    unit: unit,
+                    isExpanded: Binding {
+                        expanded.contains(entry.id)
+                    } set: { open in
+                        if open { expanded.insert(entry.id) } else { expanded.remove(entry.id) }
+                    }
+                )
+                Divider().overlay(Theme.separator)
+            }
+        }
+    }
+}
+
+private struct HistoryRow: View {
+    let entry: ExerciseHistoryEntry
+    let exercise: Exercise
+    let metric: HistoryMetric
+    let unit: WeightUnit
+    @Binding var isExpanded: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button { withAnimation { isExpanded.toggle() } } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "dumbbell.fill")
+                        .foregroundStyle(.white)
+                        .frame(width: 40, height: 40)
+                        .background(Theme.accent, in: .rect(cornerRadius: Theme.smallCornerRadius))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(entry.date.formatted(date: .long, time: .omitted)).font(AppFont.medium(15))
+                        Text(entry.workoutName).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                        if let value = metric.value(of: entry, exercise: exercise) {
+                            Text(metric.format(value, unit: unit)).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                        }
+                        if !entry.records.isEmpty {
+                            HStack(spacing: 10) {
+                                ForEach(HistoryMetric.recordKinds.filter { entry.records[$0] != nil }) { kind in
+                                    Label(kind.format(entry.records[kind]!, unit: unit), systemImage: kind.recordIcon)
+                                        .labelStyle(.titleAndIcon)
+                                }
+                            }
+                            .font(AppFont.caption(12))
+                            .foregroundStyle(Theme.textPrimary)
+                        }
+                    }
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down").foregroundStyle(Theme.textSecondary)
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            if isExpanded {
+                ForEach(Array(entry.sets.enumerated()), id: \.element.id) { index, set in
+                    HStack(spacing: 12) {
+                        Text(set.type.badge ?? "\(entry.sets[...index].count { $0.type != .warmUp })")
+                            .font(AppFont.headline(11))
+                            .frame(width: 22, height: 22)
+                            .background(Theme.surfaceRaised, in: .circle)
+                        Text(set.log.map { ExerciseHistory.describe($0, exercise: exercise, unit: unit) } ?? "")
+                            .font(AppFont.body(14))
+                        Spacer()
+                        if exercise.tracksReps { RIRBadge(rir: set.log?.rir) }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 12)
+    }
+}

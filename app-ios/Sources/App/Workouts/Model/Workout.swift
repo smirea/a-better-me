@@ -142,6 +142,8 @@ final class WorkoutSession {
 final class CustomExercise {
     @Attribute(.unique) var id: ExerciseID
     private var exerciseData: Data
+    /// Hidden from the picker and the library's All tab, but still resolved for history.
+    var isArchived = false
 
     init(_ exercise: Exercise) {
         precondition(exercise.isCustom, "Custom exercise IDs start with custom-")

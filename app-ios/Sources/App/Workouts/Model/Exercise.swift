@@ -15,6 +15,8 @@ struct Exercise: Codable, Hashable, Identifiable {
     var primaryMuscleDetails: [String] = []
     var secondaryMuscleDetails: [String] = []
     var movementPatterns: [String] = []
+    /// `nil` only for the few catalog exercises MF leaves unclassified.
+    var region: BodyRegion?
     var laterality: Laterality = .bilateral
     /// What each set records, in display order.
     var metrics: [ExerciseMetric]
@@ -22,7 +24,17 @@ struct Exercise: Codable, Hashable, Identifiable {
     var resistanceEquipment: [String] = []
     /// Alternative setups, e.g. "Flat bench and power rack".
     var supportEquipment: [String] = []
+    /// Equipment IDs of each `resistanceEquipment` and `supportEquipment` option, in the same order.
+    var resistanceEquipmentIDs: [[String]] = []
+    var supportEquipmentIDs: [[String]] = []
     var equipmentIDs: [String] = []
+    /// The picker's list group, decided by the first resistance option.
+    var category: ExerciseCategory = .other
+    /// MF's 1-5 ratings. Unrated exercises have neither.
+    var rangeOfMotion: Int?
+    var stability: Int?
+    var primaryJointActions: [String] = []
+    var secondaryJointActions: [String] = []
     /// Share of body weight moved, which MF adds to the logged load for bodyweight exercises.
     var bodyweightFraction: Double = 0
     var searchBoost: Int = 0
@@ -38,10 +50,14 @@ struct Exercise: Codable, Hashable, Identifiable {
     /// Per-side metrics count both sides in volume: 25 kg/side x 10/side is 500 kg.
     var countsBothSides: Bool { metrics.contains { $0.isPerSide } }
 
-    /// MF splits compound and isolation by body half. The catalog only says compound or isolation, so the half comes from
+    /// MF splits compound and isolation by body half: the region it trains, or for full-body and unclassified exercises
     /// the primary muscles.
     var restCategory: RestCategory {
-        let lower = primaryMuscles.contains { $0.isLowerBody }
+        let lower = switch region {
+        case .lower: true
+        case .upper: false
+        case .core, .fullBody, nil: primaryMuscles.contains { $0.isLowerBody }
+        }
         switch type {
         case .compound: return lower ? .compoundLower : .compoundUpper
         case .isolation, .other: return lower ? .lowerIsolation : .upperIsolation
@@ -52,6 +68,26 @@ struct Exercise: Codable, Hashable, Identifiable {
 
 enum ExerciseType: String, Codable, CaseIterable {
     case compound, isolation, core, other
+}
+
+enum BodyRegion: String, Codable, CaseIterable {
+    case upper, lower, core, fullBody
+}
+
+enum ExerciseCategory: String, Codable, CaseIterable, Identifiable {
+    case freeWeights, machines, bodyweight, cardio, other
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .freeWeights: "Free Weights"
+        case .machines: "Machines"
+        case .bodyweight: "Bodyweight & Personal"
+        case .cardio: "Cardio"
+        case .other: "Other"
+        }
+    }
 }
 
 enum Laterality: String, Codable, CaseIterable {
@@ -98,6 +134,8 @@ struct Equipment: Codable, Hashable, Identifiable {
     var name: String
     /// "Free Weights", "Cable Machines", and the other equipment filter groups.
     var category: String
+    /// The singular this is the plural of ("Dumbbells" of "Dumbbell"). Filters list only the plural and match both.
+    var pluralOf: String?
     var weightKg: Double?
     var incrementKg: Double?
     var hasImage: Bool
