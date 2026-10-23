@@ -1,14 +1,23 @@
 pre-commit:
   parallel: true
   commands:
-    oxlint:
-      glob: '*.{js,ts,jsx,tsx}'
-      run: bunx oxlint --fix {staged_files}
-      stage_fixed: true
-    oxfmt:
-      run: bunx oxfmt --no-error-on-unmatched-pattern {staged_files}
+    # One command: both fixers rewrite the same staged files, and in parallel one would overwrite the other's edit.
+    # oxlint exits 1 when none of the files it is given is a script, so it only runs when one is staged.
+    fix:
+      run: >-
+        scripts=$(printf '%s\n' {staged_files} | grep -E '\.(js|mjs|cjs|mts|ts|jsx|tsx)$' | tr '\n' ' ');
+        { [ -z "$scripts" ] || bunx oxlint --fix $scripts; }
+        && bunx oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     typecheck:
+      glob: '*.{js,mjs,mts,ts,tsx,json,jsonc}'
       run: bunx --bun tsc --noEmit
     test:
-      run: bun test --pass-with-no-tests
+      glob: '*.{js,mjs,mts,ts,tsx}'
+      run: bun --no-env-file scripts/test-changed.ts {staged_files}
+
+pre-push:
+  commands:
+    test:
+      glob: '*.{js,mjs,mts,ts,tsx}'
+      run: bun --no-env-file scripts/test-changed.ts {push_files}

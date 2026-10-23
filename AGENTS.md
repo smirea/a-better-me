@@ -1,3 +1,18 @@
+# Decisions
+
+- Read [`docs/decisions/README.md`](docs/decisions/README.md) and the area files your work touches before starting.
+- Whenever a new concept, goal, paradigm, or high-level system decision comes up, record it in the matching area file under `docs/decisions/` in the same PR as the work. Add a new file and list it in the index when no area fits.
+
+# Workflow
+
+Full rules in [`docs/decisions/workflow.md`](docs/decisions/workflow.md).
+
+- One PR per thread, never stacked. Rebase only when GitHub reports a real conflict.
+- In a fresh git worktree, run `bun scripts/setup-worktree.ts [branch]` first. T3 Code threads already ran it, so check for `node_modules` and `.env.override` first, and never pass `[branch]` there: T3 owns the branch name. `bun scripts/teardown-worktree.ts <worktree | branch>` removes it from the main checkout once the PR is merged.
+- After opening a PR, run `bun scripts/pr-ship.ts [--merge]` in the foreground until it exits 0. Its exit code names the next step.
+- Never skip git hooks. Fix the failure instead.
+- Run only the relevant tests locally; CI runs the full suite.
+
 # Stack
 
 - Tooling: Bun + TypeScript
@@ -14,10 +29,12 @@
 
 # Environment
 
-- Use env-manager's root `.env` schema and named directory targets. Edit values only in the root `.env.local`, then run `env-manager gen --local`. Child values and readers are generated projections, not independent configs.
-- `local:true` keeps generation offline and disables automatic Git updates. Use `env-manager --help` for target selection, schema types, and remote storage.
-- Read application settings through generated `src/env.ts` in each TypeScript target. The client's reader runs only in Vite's Node context; browser code must not import it.
-- Keep schema and readers tracked, values files ignored, and secrets scoped to the server target. Native and browser settings are public.
+Full rules in [`docs/decisions/environment.md`](docs/decisions/environment.md).
+
+- Use env-manager's root `.env` schema and named directory targets. Values live in AWS, project `a-better-me`, environments `dev` and `prod`. Edit them in the root `.env.local` after `env-manager down`, then `env-manager up`. Child values and readers are generated projections, not independent configs.
+- Use the global `env-manager` for `down` and `up`; it has the AWS credentials. Agents without AWS access run `env-manager gen --local`, which uses the schema defaults. Never run `up` from a worktree: `.env.override` is local, but the values you edited are not.
+- Read application settings through generated `src/env.ts` in each TypeScript target. The server reads them through `server/src/config.ts`, which fails at startup when production lacks a setting. The client's reader runs only in Vite's Node context; browser code must not import it.
+- Keep schema and readers tracked, values files and `.env.override` ignored, and secrets scoped to the server target. Native and browser settings are public.
 
 # Native app
 

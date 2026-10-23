@@ -1,9 +1,9 @@
-import env from './env';
+import { config } from './config';
 
 const server = Bun.serve({
-	development: true,
+	development: config.environment === 'development',
 	idleTimeout: 120,
-	port: env.API_PORT,
+	port: config.port,
 	routes: {
 		'/status': Response.json({ ok: true }),
 		'/*': Response.json({ ok: false, error: 'Not found' }, { status: 404 }),
