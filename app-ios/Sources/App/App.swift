@@ -11,6 +11,9 @@ struct BetterMeApp: App {
         NavigationAppearance.apply()
         _catalog = State(initialValue: ExerciseCatalog())
         container = Self.makeContainer()
+        #if DEBUG
+        SampleData.seedIfRequested(container.mainContext)
+        #endif
     }
 
     var body: some Scene {
@@ -29,7 +32,9 @@ struct BetterMeApp: App {
         let schema = Schema(WorkoutSchema.models)
         let config = ModelConfiguration(schema: schema)
         if let container = try? ModelContainer(for: schema, configurations: config) { return container }
-        try? FileManager.default.removeItem(at: config.url)
+        for suffix in ["", "-shm", "-wal"] {
+            try? FileManager.default.removeItem(at: URL(filePath: config.url.path() + suffix))
+        }
         do {
             return try ModelContainer(for: schema, configurations: config)
         } catch {
