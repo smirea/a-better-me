@@ -3,6 +3,7 @@
  * A worktree on a detached HEAD has no branch: pass its path or directory name with --force instead.
  * Run it from the main checkout. Stops its servers, deletes the worktree and its branches, and updates master.
  */
+import { existsSync, realpathSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { readOverride, run, worktrees } from './lib';
 
@@ -17,8 +18,10 @@ if (run(['git', 'rev-parse', '--git-dir']) !== run(['git', 'rev-parse', '--git-c
 }
 
 const known = worktrees(root);
+// git lists real paths, and a path through a symlink such as macOS's /tmp would otherwise match nothing.
+const path = existsSync(target) ? realpathSync(target) : resolve(target);
 const entry =
-	known.find(entry => entry.path === resolve(target)) ??
+	known.find(entry => entry.path === path) ??
 	known.find(entry => entry.branch === target) ??
 	known.find(entry => basename(entry.path) === target);
 const worktree = entry?.path;
