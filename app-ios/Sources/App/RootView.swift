@@ -7,6 +7,7 @@ enum AppTab: Hashable {
 
 struct RootView: View {
     @Environment(ExerciseCatalog.self) private var catalog
+    @Environment(LiveWorkoutPresenter.self) private var presenter
     @Query private var customExercises: [CustomExercise]
     @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }) private var activeSessions: [WorkoutSession]
     @State private var tab = AppTab.workout
@@ -28,6 +29,9 @@ struct RootView: View {
             showingNewWorkout = true
         }
         .sheet(isPresented: $showingNewWorkout) { NewWorkoutSheet() }
+        .fullScreenCover(isPresented: Bindable(presenter).isExpanded) {
+            if let session = activeSessions.first { LiveWorkoutView(session: session) }
+        }
         .onChange(of: customExercises.map(\.exercise), initial: true) { _, exercises in
             catalog.setCustom(exercises)
         }
