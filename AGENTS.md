@@ -31,7 +31,7 @@ Full rules in [`docs/decisions/workflow.md`](docs/decisions/workflow.md).
 
 Full rules in [`docs/decisions/environment.md`](docs/decisions/environment.md).
 
-- Use env-manager's root `.env` schema and named directory targets. Values live in AWS, project `a-better-me`, environments `dev` and `prod`. Edit them in the root `.env.local` after `env-manager down`, then `env-manager up`. Child values and readers are generated projections, not independent configs.
+- Use env-manager's root `.env` schema and named directory targets. Values live in AWS, project `a-better-me`, environments `dev` and `prod`. Switch with `env-manager env set <env>` (it downloads that environment), edit the root `.env.local`, then `env-manager up`. Child values and readers are generated projections, not independent configs.
 - Use the global `env-manager` for `down` and `up`; it has the AWS credentials. Agents without AWS access run `env-manager gen --local`, which uses the schema defaults. Never run `up` from a worktree: `.env.override` is local, but the values you edited are not.
 - Read application settings through generated `src/env.ts` in each TypeScript target. The server reads them through `server/src/config.ts`, which fails at startup when production lacks a setting. The client's reader runs only in Vite's Node context; browser code must not import it.
 - Keep schema and readers tracked, values files and `.env.override` ignored, and secrets scoped to the server target. Native and browser settings are public.

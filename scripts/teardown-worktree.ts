@@ -1,7 +1,7 @@
 /**
  * Removes an agent's worktree once its PR is merged: `bun scripts/teardown-worktree.ts <worktree path | branch> [--force]`.
  * A worktree on a detached HEAD has no branch: pass its path or directory name with --force instead.
- * Run it from the main checkout. Stops its servers, deletes the worktree and its branches, and updates master.
+ * Run it from the main checkout. Stops its servers, deletes the worktree and its branches, and updates the default branch.
  */
 import { existsSync, realpathSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
@@ -38,7 +38,7 @@ if (!pr.startsWith('MERGED') && !force) {
 if (worktree) {
 	const base = Number(readOverride(worktree)?.CLIENT_PORT) || undefined;
 	if (base) {
-		const ports = [base, base + 1, base + 10, base + 11].map(port => `-iTCP:${port}`);
+		const ports = [base, base + 1].map(port => `-iTCP:${port}`);
 		const pids = run(['lsof', '-t', '-sTCP:LISTEN', ...ports], { allowFail: true })
 			.split('\n')
 			.filter(Boolean);
@@ -54,11 +54,14 @@ if (branch && !detached) {
 }
 run(['git', 'worktree', 'prune']);
 
-if (run(['git', 'branch', '--show-current']) === 'master') {
-	run(['git', 'pull', '--ff-only', 'origin', 'master'], { allowFail: true });
-} else {
-	run(['git', 'fetch', 'origin', 'master:master'], { allowFail: true });
+const main = run(['gh', 'repo', 'view', '--json', 'defaultBranchRef', '-q', '.defaultBranchRef.name'], {
+	allowFail: true,
+});
+if (main && run(['git', 'branch', '--show-current']) === main) {
+	run(['git', 'pull', '--ff-only', 'origin', main], { allowFail: true });
+} else if (main) {
+	run(['git', 'fetch', 'origin', `${main}:${main}`], { allowFail: true });
 }
 console.log(
-	`Tore down ${worktree ?? branch}${pr ? ` (${pr})` : ''}. ${root} master is at ${run(['git', 'rev-parse', '--short', 'master'])}.`,
+	`Tore down ${worktree ?? branch}${pr ? ` (${pr})` : ''}.${main ? ` ${root} ${main} is at ${run(['git', 'rev-parse', '--short', main])}.` : ''}`,
 );

@@ -3,10 +3,10 @@
  * `branch` renames the worktree's branch first, so the PR and teardown share the final name. Installs, gives the
  * worktree its own ports through a git-ignored `.env.override`, and writes offline env files. Safe to rerun.
  */
-import { mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
-import { readOverride, run as runCommand, worktrees } from './lib';
+import { parseDotenv, readOverride, run as runCommand, worktrees } from './lib';
 
 const run = (cmd: string[]) => runCommand(cmd, { stdio: 'inherit-stderr' });
 const git = (...args: string[]) => runCommand(['git', ...args]);
@@ -25,15 +25,18 @@ if (wanted && wanted !== git('branch', '--show-current')) {
 
 run(['bun', 'install', '--frozen-lockfile']);
 
-// Away from the main checkout's 6150 and other apps' worktree ranges, such as procrastimate's 6200-6980.
-const FIRST_BLOCK = 7200;
-const LAST_BLOCK = 7980;
-// Web and API at +0/+1; +10/+11 stay free for e2e servers.
-const OFFSETS = [0, 1, 10, 11];
+// Each app's main CLIENT_PORT comes from setup-new-app's localias sequence (6000, 6010, ...), so slot
+// (port / 10) % 75 gives every app its own 300 ports from 10000, apart from other apps' worktrees and main ports
+// and below the OS ephemeral range (32768+).
+const mainPort = Number(parseDotenv(readFileSync(join(root, '.env'), 'utf8')).CLIENT_PORT);
+if (!Number.isInteger(mainPort)) throw new Error('The root .env has no numeric CLIENT_PORT default.');
+const FIRST_BLOCK = 10_000 + (Math.floor(mainPort / 10) % 75) * 300;
+const LAST_BLOCK = FIRST_BLOCK + 290;
+const OFFSETS = [0, 1];
 
 function readPort(worktree: string): number | undefined {
 	const port = Number(readOverride(worktree)?.CLIENT_PORT);
-	return port >= FIRST_BLOCK ? port : undefined;
+	return port >= FIRST_BLOCK && port <= LAST_BLOCK ? port : undefined;
 }
 
 function portFree(port: number): Promise<boolean> {
@@ -48,7 +51,7 @@ async function pickBlock(): Promise<number> {
 	const previous = readPort(root);
 	if (previous) return previous;
 	const claimed = new Set(worktrees(root).map(entry => readPort(entry.path)));
-	for (let base = FIRST_BLOCK; base <= LAST_BLOCK; base += 20) {
+	for (let base = FIRST_BLOCK; base <= LAST_BLOCK; base += 10) {
 		if (claimed.has(base)) continue;
 		const free = await Promise.all(OFFSETS.map(offset => portFree(base + offset)));
 		if (free.every(Boolean)) return base;

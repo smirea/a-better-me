@@ -53,7 +53,7 @@ export function parseDotenv(text: string): Values {
 	return values;
 }
 
-/** A worktree's `.env.override`, which `setup-worktree` writes with its ports and database, or null without one. */
+/** A worktree's `.env.override`, which `setup-worktree` writes with its ports, or null without one. */
 export function readOverride(worktree: string): Values | null {
 	const file = join(worktree, '.env.override');
 	return existsSync(file) ? parseDotenv(readFileSync(file, 'utf8')) : null;

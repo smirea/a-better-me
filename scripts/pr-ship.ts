@@ -5,7 +5,7 @@
  *
  *   0  ready, or merged with --merge
  *   1  something to fix: failing checks or unresolved review threads (printed)
- *   2  conflicts with master: rebase onto origin/master, push, rerun
+ *   2  conflicts with the base branch: rebase onto it, push, rerun
  *   3  budget spent while checks still run: rerun
  */
 import { parseArgs } from 'node:util';
@@ -35,6 +35,7 @@ type Pr = {
 	url: string;
 	state: string;
 	headRefOid: string;
+	baseRefName: string;
 	mergeable: string;
 	statusCheckRollup: Check[];
 };
@@ -50,7 +51,9 @@ const [owner, repo] = run(['gh', 'repo', 'view', '--json', 'nameWithOwner', '-q'
 
 function view(): Pr {
 	try {
-		return JSON.parse(run(['gh', 'pr', 'view', '--json', 'number,url,state,headRefOid,mergeable,statusCheckRollup']));
+		return JSON.parse(
+			run(['gh', 'pr', 'view', '--json', 'number,url,state,headRefOid,baseRefName,mergeable,statusCheckRollup']),
+		);
 	} catch (error) {
 		if (error instanceof Error && error.message.includes('no pull requests found')) {
 			exit(1, 'This branch has no PR. Push it and open one with `gh pr create`, then rerun.');
@@ -107,7 +110,10 @@ while (true) {
 	if (pr.headRefOid !== head)
 		exit(1, `The PR head is ${pr.headRefOid.slice(0, 7)} but HEAD is ${head.slice(0, 7)}. Push, then rerun.`);
 	if (pr.mergeable === 'CONFLICTING') {
-		exit(2, `${pr.url} conflicts with master, so CI will not run. Rebase onto origin/master, push, rerun.`);
+		exit(
+			2,
+			`${pr.url} conflicts with ${pr.baseRefName}, so CI will not run. Rebase onto origin/${pr.baseRefName}, push, rerun.`,
+		);
 	}
 
 	const { all, failed, pending } = checks(pr);
