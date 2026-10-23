@@ -3,14 +3,26 @@ import SwiftUI
 /// The small 4 pt tags under exercise rows: filled for primary muscles, outlined for secondary ones.
 /// `highlight` draws one muscle in white, as on the Levels muscle detail.
 struct MuscleTags: View {
-    let exercise: Exercise
+    let primary: [Muscle]
+    let secondary: [Muscle]
     var highlight: Muscle?
+
+    init(exercise: Exercise, highlight: Muscle? = nil) {
+        self.init(primary: exercise.primaryMuscles, secondary: exercise.secondaryMuscles, highlight: highlight)
+    }
+
+    /// A workout's tags: every muscle its exercises train, as the Workout Library rows show them.
+    init(primary: [Muscle], secondary: [Muscle], highlight: Muscle? = nil) {
+        self.primary = primary
+        self.secondary = secondary
+        self.highlight = highlight
+    }
 
     var body: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 4) {
-                ForEach(exercise.primaryMuscles) { tag($0, primary: true) }
-                ForEach(exercise.secondaryMuscles) { tag($0, primary: false) }
+                ForEach(primary) { tag($0, primary: true) }
+                ForEach(secondary) { tag($0, primary: false) }
             }
         }
         .scrollIndicators(.hidden)
