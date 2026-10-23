@@ -1,6 +1,6 @@
 # a-better-me
 
-SwiftUI app for iOS 17+ and macOS 14+. Requires Bun and Xcode 16 or newer.
+SwiftUI iPhone app for iOS 27+. Requires Bun and Xcode 16 or newer.
 
 ## Run
 
@@ -18,10 +18,9 @@ The launcher selects a target and watches for changes. Edit `Sources/App` to reb
 ./scripts/run --targets
 ./scripts/run -t simulator
 ./scripts/run -t "iPhone 17"
-./scripts/run -t mac
 ```
 
-`--targets` lists names and identifiers; `*` marks the default. Selection prefers a connected iOS device, then a booted simulator, an available simulator, or My Mac.
+`--targets` lists names and identifiers; `*` marks the default. Selection prefers a connected iOS device, then a booted simulator, or an available simulator.
 
 Set `SWIFT_RUN_DEFAULT_TARGET` to choose a default; `-t` overrides it. For duplicate simulator names, use an identifier to select exactly. Install simulator runtimes in Xcode's settings.
 
@@ -37,9 +36,9 @@ You can also set `SWIFT_RUN_DEVELOPMENT_TEAM`.
 
 ## Debug and build
 
-Open `App.xcodeproj` and select the shared `App` scheme to debug. `swift build` checks the package on macOS; use the launcher for simulator builds and bundled resources.
+Open `App.xcodeproj` and select the shared `App` scheme to debug. Use the launcher for simulator builds.
 
-Build logs are in `DerivedData/<target>/build.log`, where `<target>` is `device`, `simulator`, or `mac`. Temporary app state resets after relaunch.
+Build logs are in `DerivedData/<target>/build.log`, where `<target>` is `device` or `simulator`. Temporary app state resets after relaunch.
 
 ## Environment
 

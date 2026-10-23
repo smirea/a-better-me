@@ -95,7 +95,7 @@ jobs:
     name: ${{ matrix.task }} (Swift)
     needs: changes
     if: ${{ !cancelled() }}
-    runs-on: ${{ needs.changes.outputs.swift == 'true' && 'macos-15' || 'ubuntu-latest' }}
+    runs-on: ${{ needs.changes.outputs.swift == 'true' && 'macos-26' || 'ubuntu-latest' }}
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -138,6 +138,9 @@ jobs:
         if: needs.changes.outputs.swift == 'true'
         id: toolchain
         run: |
+          xcode=$(ls -d /Applications/Xcode_27*.app | sort -V | tail -1)
+          test -n "$xcode" || { echo 'The app targets iOS 27 and needs Xcode 27 on the runner.'; exit 1; }
+          sudo xcode-select -s "$xcode"
           xcodebuild -version
           swift --version
           echo "key=$( { xcodebuild -version; swift --version; } | shasum -a 256 | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"

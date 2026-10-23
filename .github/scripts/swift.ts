@@ -18,15 +18,11 @@ const xcodeArgs = [
 
 switch (Bun.argv[2]) {
 	case 'checks':
-		await $`swift build`.cwd(directory);
+		await $`xcodebuild build ${xcodeArgs} -configuration Debug -destination ${'generic/platform=iOS Simulator'}`.cwd(
+			directory,
+		);
 		break;
 	case 'tests': {
-		const pkg: { targets: { type: string }[] } = await $`swift package describe --type json`.cwd(directory).json();
-		if (pkg.targets.some(target => target.type === 'test')) {
-			await $`swift test`.cwd(directory);
-		} else {
-			console.log('No Swift package tests configured.');
-		}
 		const testables =
 			await $`xmllint --xpath ${'boolean(//TestableReference | //TestPlanReference)'} App.xcodeproj/xcshareddata/xcschemes/App.xcscheme`
 				.cwd(directory)
