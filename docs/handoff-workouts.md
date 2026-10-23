@@ -15,9 +15,18 @@ The owner's request: re-create MacroFactor Workouts on iOS (creating workouts, t
 - `scripts/sim` drives a simulator through Device Hub with a mouse lock. It is the fallback now that T3 device tools are back on.
 - Placeholder roots that workers replace: `Dashboard/DashboardTab`, `Builder/WorkoutTab`, `Builder/NewWorkoutSheet`, `Session/ActiveSessionBar`, `Levels/LevelsTab`, `Library/ExerciseLibraryView`.
 
-## In flight
+## Research (committed)
 
-- A research subagent explored the MF Workouts UI and was asked to write `docs/research/mf-workouts/README.md` from its screenshots in `screens/` (uncommitted when this note was written). If README.md is missing or has a "Not yet explored" section, launch one research agent to finish it before the workers start. Use `/tmp/mfw-tools/ax` and `/tmp/mfw-tools/shot` (Runner window capture), rebuilding from `ax.swift` if `/tmp` was cleared. Only one agent may drive the Runner app at a time.
+`docs/research/mf-workouts/README.md` (546 lines, 168 screenshots in `screens/`, plus `equipment.md`) covers the visual language, navigation, Workout tab, exercise picker, detail sheet, library, live workout, Levels, settings, Dashboard, the implied data model, open questions, and a "Not yet explored" list (periodization settings, Exercise Assessment, pause/minimize, gym profile sub-editors). Findings that change the groundwork:
+
+- Set types are Standard, Warm-Up, Drop, Myo, and Failure. Drop and myo sets have sub-rows. `SetType` lacks `myo` and the sub-row shape.
+- Targets are reps min/max, RIR, and optional per-set rest. Supersets form "with previous" or "with next", and superset auto-scroll skips rest between exercises.
+- **Levels is weekly sets per muscle, not strength levels.** Primary muscle = 1 set, secondary = 0.5, with a body heat map, a 1-week / 1-month / 3-month picker, and per-muscle "Contributing Lifts". The bundled `muscle_groups/{male,female}/*.svg` and `body/avatar_*.svg` drive the heat map.
+- The live workout uses a custom keypad with RIR chips and a plate calculator, a reference column toggling "Auto" (Smart Progression suggestion) and "Previous", a rest timer in the header, and a warm-up calculator. Finishing shows body maps, record cards, and an "Update Workout Plan" diff.
+- The exercise detail has Instructions, Details, and History tabs. In-app videos have three camera angles, which is still out of reach (App Check).
+- The Workout tab has a week strip and month calendar, an Active Program, and the Workout Library. Creating a workout is a 4-step wizard. Programs and Smart Generation are milestone-2 candidates.
+
+Test data the research agent left in the owner's MF account: the workout "ZZ Research Test", one logged session of it dated 2026-10-23, and the custom exercise "ZZ Test Curl". The README explains how to delete them.
 
 ## Next steps
 
