@@ -4,7 +4,7 @@
  * worktree its own ports and local database through a git-ignored `.env.override`, writes offline env files, and
  * starts its PowerSync. `--reset-db` drops and recreates the worktree's databases. Safe to rerun.
  */
-import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { parseDotenv, readOverride, run as runCommand, worktrees } from './lib';
@@ -29,7 +29,12 @@ if (wanted && wanted !== git('branch', '--show-current')) {
 // Before anything slow, so a Mac without Docker fails in a second with the fix named.
 requireDocker();
 
+const installed = existsSync(join(root, 'node_modules'));
 run(['bun', 'install', '--frozen-lockfile']);
+// A process that started before node_modules existed can't import packages installed since, so the first setup of a
+// new worktree hands the rest to a fresh process.
+if (!installed)
+	process.exit(Bun.spawnSync(['bun', ...process.argv.slice(1)], { stdio: ['inherit', 'inherit', 'inherit'] }).exitCode);
 
 // Worktree n's ports are the main checkout's plus 10000 + (n - 1) * 1000, each keeping its offset. setup-new-app
 // hands out main ports 10 apart, so apps never collide, and 49152 is where macOS's ephemeral ports begin.
