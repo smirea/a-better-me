@@ -11,7 +11,7 @@ pre-commit:
       stage_fixed: true
     typecheck:
       glob: '*.{js,mjs,mts,ts,tsx,json,jsonc}'
-      run: bunx --bun tsc --noEmit
+      run: bun check
     test:
       glob: '*.{js,mjs,mts,ts,tsx}'
       run: bun --no-env-file scripts/test-changed.ts {staged_files}

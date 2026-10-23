@@ -9,7 +9,7 @@
 		"postinstall": "lefthook install",
 		"lint": "oxlint --fix && oxfmt",
 		"lint:ci": "oxlint && oxfmt --check",
-		"typecheck": "bun run --cwd app-web build && tsc --noEmit",
+		"typecheck": "bun run --cwd app-web build && bun check",
 		"test": "bun test --pass-with-no-tests",
 		"build": "bun run --cwd app-web build && bun build server/src/index.ts --target bun --outdir server/dist",
 		"start": "concurrently --raw -k -s first \"bun run start:server\" \"bun run start:client\"",
@@ -48,5 +48,5 @@
 	"devDependencies": {
 		"env-manager": "github:smirea/env-manager#ca081851d169f215ef530b9d303a3fbac1c289eb"
 	},
-	"packageManager": "bun@1.4.0"
+	"packageManager": "bun@1.4.4"
 }
