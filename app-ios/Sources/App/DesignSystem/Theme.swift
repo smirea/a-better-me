@@ -15,6 +15,8 @@ enum Theme {
     static let accent = Color(hex: 0xF28969)
     static let lavender = Color(hex: 0xACA0D2)
     static let green = Color(hex: 0x7FC48B)
+    /// Logged days in the workout calendar, and the 2-3 RIR badge.
+    static let amber = Color(hex: 0xF0A830)
     static let destructive = Color(hex: 0xE5534B)
     /// Trained muscles on body maps and progress bars.
     static let muscle = Color(hex: 0x276EF1)
@@ -24,7 +26,7 @@ enum Theme {
         guard let rir else { return Color(hex: 0x6E6E6E) }
         return switch rir {
         case ...1: Color(hex: 0xD63A3A)
-        case 2...3: Color(hex: 0xF0A830)
+        case 2...3: amber
         case 4...5: Color(hex: 0x4E9A5E)
         default: Color(hex: 0x3A6FE0)
         }

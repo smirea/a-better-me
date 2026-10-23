@@ -39,3 +39,13 @@ Milestone 1 is split so that parallel agents never edit the same files.
 - **Workout builder.** `Sources/App/Workouts/Builder/`: the Workout tab (week strip, Workout Library), the workout detail editor, the Targets sheet, supersets, and the "+" sheet with Empty Workout and New Workout.
 - **Live session and history.** `Sources/App/Workouts/Session/` and `Sources/App/Workouts/History/`: the live workout and its keypad, rest timer, warm-up scheme, finishing, the Workout Complete summary, Update Workout Plan, the in-progress bottom accessory, and Workout History.
 - **Levels.** `Sources/App/Workouts/Levels/`: the Levels tab, the muscle detail with Contributing Lifts, and the front and back body heat map. The summary's body figures reuse that heat map once both land, and the coordinator wires them together.
+
+## Workout builder
+
+- **Menus are native, not the reference's option sheets.** Exercise Options, Superset Options, Workout Options, and the Workout tab's ⋮ are SwiftUI `Menu`s with the reference's titles and subtitles. The "+" Shortcuts sheet, Set Type, RIR Targets, and Rest Timer stay sheets, as in the reference.
+- **Cut for milestone 1.** The Workout tab's Active Program, Your Sections, Archive, and Customize Sections, and Workout Options' Swap Gym, Reset, Export, and Archive wait for programs, gyms, and export. The tab header's "+" opens Create Workout directly, because New Section and New Program were its other choices. Create Workout keeps the name step and the editor; the method (import .xlsx) and gym steps are cut. The "+" sheet keeps Empty Workout and New Workout.
+- **Reordering is a long-press drag on a block.** The reference shows no handle, so the editor uses `List` move. A superset moves as one row.
+- **Supersets join neighbors.** "Superset with previous or next" merges a standalone exercise into the adjacent block. An exercise already in a superset offers "Remove from superset" instead. Blocks of three or more exercises are labelled "Circuit".
+- **Targets edit a draft.** The sheet saves on Save and discards on close. A drop or myo set's sub-rows target reps only, share their set's RIR, and rest 0:00; the set's own Rest cell is the rest after its last sub-row. That last part departs from the reference, which shows 0:00 on the drop set's main row too.
+- **The time estimate is our own formula.** Two minutes of setup per exercise, 45 seconds per set, 20 per sub-row, and the resolved rest after each set, taken once per round in a superset. It lands within two minutes of the reference's three examples.
+- **Starting a workout reopens one in progress.** Until the live session adds its replace-or-resume prompt, `startOrResume` expands the existing session instead of starting a second one.
