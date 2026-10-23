@@ -28,7 +28,7 @@ enum SampleData {
             WorkoutTemplate(name: name, blocks: lifts.map { id, _, reps in
                 WorkoutBlock(exercises: [BlockExercise(
                     exerciseID: id,
-                    sets: [WorkoutSet(type: .warmUp)] + Array(repeating: WorkoutSet(target: SetTarget(repsMin: reps, repsMax: reps + 2, rir: 2)), count: 3),
+                    sets: [WorkoutSet(type: .warmUp)] + (0..<3).map { _ in WorkoutSet(target: SetTarget(repsMin: reps, repsMax: reps + 2, rir: 2)) },
                     restSeconds: 150
                 )])
             })

@@ -199,7 +199,87 @@ for (const file of muscles) {
 	);
 }
 
+// The Levels heat map and the summary fill each muscle of the whole-body figures separately. The SVG paths use only
+// absolute M, L, H, V, C, and Z, so they are flattened here into a start point and line ([x, y]) or cubic
+// ([x1, y1, x2, y2, x, y]) segments that Swift turns into a Path without parsing SVG.
+const muscleNames = new Set(
+	Object.values(source.uuidIndex)
+		.filter(entry => entry.type === 'featureMuscleGroup')
+		.map(entry => snake(entry.name)),
+);
+const bodyRegion = (id: string) => {
+	if (id === 'body' || id === 'bone') return id;
+	const muscle = id.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+	if (!muscleNames.has(muscle)) throw new Error(`Body figure path ${id} names no feature muscle group`);
+	return muscle;
+};
+const round = (value: number) => Math.round(value * 100) / 100;
+function bodyPath(id: string, d: string) {
+	const tokens = d.match(/[A-Za-z]|-?\d*\.?\d+(?:e-?\d+)?/g) ?? [];
+	let start: number[] | undefined;
+	const segments: number[][] = [];
+	let point = [0, 0];
+	let command = '';
+	for (let i = 0; i < tokens.length;) {
+		if (/[A-Za-z]/.test(tokens[i]!)) command = tokens[i++]!;
+		const take = (count: number) => tokens.slice(i, (i += count)).map(Number);
+		switch (command) {
+			case 'M':
+				if (start) throw new Error(`Body figure path ${id} has several subpaths`);
+				point = take(2);
+				start = point.map(round);
+				command = 'L';
+				break;
+			case 'L':
+				point = take(2);
+				segments.push(point.map(round));
+				break;
+			case 'H':
+				point = [take(1)[0]!, point[1]!];
+				segments.push(point.map(round));
+				break;
+			case 'V':
+				point = [point[0]!, take(1)[0]!];
+				segments.push(point.map(round));
+				break;
+			case 'C': {
+				const curve = take(6);
+				point = curve.slice(4);
+				segments.push(curve.map(round));
+				break;
+			}
+			case 'Z':
+				if (i !== tokens.length) throw new Error(`Body figure path ${id} continues after Z`);
+				break;
+			default:
+				throw new Error(`Body figure path ${id} uses unsupported command ${command}`);
+		}
+	}
+	if (!start) throw new Error(`Body figure path ${id} has no start point`);
+	return { region: bodyRegion(id), start, segments };
+}
+async function bodyFigure(side: 'front' | 'back') {
+	const svg = await Bun.file(join(assets, `assets/body/avatar_male_${side}.svg`)).text();
+	const paths = [...svg.matchAll(/<path id="([^"]+)" d="([^"]+)"/g)];
+	if (paths.length !== (svg.match(/<path/g) ?? []).length)
+		throw new Error(`avatar_male_${side}.svg has paths without an id before d`);
+	return paths.map(([, id, d]) => bodyPath(id!, d!));
+}
+const figureSize = (await Bun.file(join(assets, 'assets/body/avatar_male_front.svg')).text()).match(
+	/viewBox="0 0 (\d+) (\d+)"/,
+);
+if (!figureSize) throw new Error('avatar_male_front.svg has no viewBox');
+
 const write = (name: string, value: unknown) => Bun.write(join(out, name), `${JSON.stringify(value, null, '\t')}\n`);
+await Bun.write(
+	join(out, 'body.json'),
+	`${JSON.stringify({
+		width: Number(figureSize[1]),
+		height: Number(figureSize[2]),
+		front: await bodyFigure('front'),
+		back: await bodyFigure('back'),
+	})}\n`,
+);
 await write('exercises.json', exercises);
 await write('equipment.json', equipment);
 await write('articles.json', articles);
