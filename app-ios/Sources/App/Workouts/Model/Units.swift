@@ -17,6 +17,34 @@ enum WeightUnit: String, CaseIterable, Identifiable {
     }
 }
 
-enum WorkoutSettingsKey {
-    static let defaultRestSeconds = "defaultRestSeconds"
+/// MF's rest-timer groups, each with its own default in Workout settings.
+enum RestCategory: String, CaseIterable, Identifiable {
+    case compoundUpper, compoundLower, upperIsolation, lowerIsolation, core
+
+    var id: String { rawValue }
+    var storageKey: String { "restSeconds.\(rawValue)" }
+
+    var defaultSeconds: Int {
+        switch self {
+        case .compoundUpper: 120
+        case .compoundLower: 180
+        case .upperIsolation, .lowerIsolation: 90
+        case .core: 60
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .compoundUpper: "Compound Upper"
+        case .compoundLower: "Compound Lower"
+        case .upperIsolation: "Upper Isolation"
+        case .lowerIsolation: "Lower Isolation"
+        case .core: "Core"
+        }
+    }
+
+    /// The owner's default for this category, read from `UserDefaults` the way `@AppStorage(storageKey)` writes it.
+    var seconds: Int {
+        (UserDefaults.standard.object(forKey: storageKey) as? Int) ?? defaultSeconds
+    }
 }

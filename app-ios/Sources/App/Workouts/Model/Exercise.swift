@@ -35,6 +35,19 @@ struct Exercise: Codable, Hashable, Identifiable {
     var isCustom: Bool { id.hasPrefix("custom-") }
     var tracksWeight: Bool { metrics.contains { $0.isWeight } }
     var tracksReps: Bool { metrics.contains { $0 == .reps || $0 == .repsPerSide } }
+    /// Per-side metrics count both sides in volume: 25 kg/side x 10/side is 500 kg.
+    var countsBothSides: Bool { metrics.contains { $0.isPerSide } }
+
+    /// MF splits compound and isolation by body half. The catalog only says compound or isolation, so the half comes from
+    /// the primary muscles.
+    var restCategory: RestCategory {
+        let lower = primaryMuscles.contains { $0.isLowerBody }
+        switch type {
+        case .compound: return lower ? .compoundLower : .compoundUpper
+        case .isolation, .other: return lower ? .lowerIsolation : .upperIsolation
+        case .core: return .core
+        }
+    }
 }
 
 enum ExerciseType: String, Codable, CaseIterable {
@@ -67,6 +80,13 @@ enum Muscle: String, Codable, CaseIterable, Identifiable {
     case glutes, quads, hamstrings, adductors, abductors, hipFlexors = "hip_flexors", calves, tibs
 
     var id: String { rawValue }
+
+    var isLowerBody: Bool { Self.lowerBody.contains(self) }
+    static let lowerBody: [Muscle] = [.quads, .glutes, .hamstrings, .calves, .abductors, .adductors, .tibs, .hipFlexors]
+    static let upperBody: [Muscle] = allCases.filter { !$0.isLowerBody }
+
+    /// Asset name of the mini figure with this muscle highlighted. Hip flexors have no art in the reference app.
+    var tileImage: String? { self == .hipFlexors ? nil : "muscle-\(rawValue)" }
 
     var displayName: String {
         rawValue.split(separator: "_").map(\.capitalized).joined(separator: " ")

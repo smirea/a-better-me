@@ -16,6 +16,19 @@ enum Theme {
     static let lavender = Color(hex: 0xACA0D2)
     static let green = Color(hex: 0x7FC48B)
     static let destructive = Color(hex: 0xE5534B)
+    /// Trained muscles on body maps and progress bars.
+    static let muscle = Color(hex: 0x276EF1)
+
+    /// MF's RIR badge colors: 0-1 red, 2-3 amber, 4-5 green, 6+ blue, unknown gray.
+    static func rir(_ rir: Int?) -> Color {
+        guard let rir else { return Color(hex: 0x6E6E6E) }
+        return switch rir {
+        case ...1: Color(hex: 0xD63A3A)
+        case 2...3: Color(hex: 0xF0A830)
+        case 4...5: Color(hex: 0x4E9A5E)
+        default: Color(hex: 0x3A6FE0)
+        }
+    }
 
     static let cornerRadius: CGFloat = 16
     static let smallCornerRadius: CGFloat = 10
