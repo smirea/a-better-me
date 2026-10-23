@@ -1,0 +1,40 @@
+# Workouts
+
+The Workouts half re-creates MacroFactor Workouts (MF Workouts) on iOS. The reference app's behavior is captured in [`docs/research/mf-workouts/`](../research/mf-workouts/README.md). Read that spec and its screenshots before building a screen. Implementation agents can't drive the reference app themselves, because only one agent can control its window at a time.
+
+## Milestone 1 scope
+
+- **Exercise catalog.** Every exercise from MF Workouts' "add exercise" list, with name, muscles, equipment, instructions, and the start and end position frames where the app has them. The library, filters, picker, detail sheet, and custom exercises.
+- **Creating workouts.** Building reusable workouts (templates) from catalog exercises: set types, reps and RIR targets, per-set rest, supersets and circuits, and notes, laid out like the reference's workout detail.
+- **Tracking workouts.** Running a workout live: the set table with its custom keypad, the rest timer, finishing, the Workout Complete summary, and history.
+- **Levels.** MF's Levels tab is weekly training volume per muscle, not strength levels. It shows a body heat map and per-muscle average weekly sets over 1 week, 1 month, or 3 months, with the lifts that contributed.
+- **Cut from milestone 1.** Programs, Smart Generation, gym profiles and equipment availability, the Dashboard, Smart Progression's "Auto" column (the reference column shows "Previous" only), smart warm-ups (a scheme warm-up calculator stays in scope), xlsx import and export, and the plate calculator. Programs and Smart Progression are the first milestone-2 candidates.
+
+## Exercise catalog source
+
+- **The catalog is the reference app's own export.** MF Workouts bundles its full exercise database as `flutter_assets/packages/macrofactor/assets/import/app_file.json`: 1,345 exercises with alternative names, compound or isolation type, the 23 feature muscle groups, anatomical muscles, movement patterns, laterality, tracking metrics, equipment options, and linked articles, plus a `uuidIndex` that names every referenced entity. Next to it sit the instruction Markdown (`assets/markdown/<id>.md`, 1,213 exercises plus 277 articles), two or three poster frames for 619 exercises (`assets/exercises/<id>_{a,b,c}.webp`), and equipment photos (`assets/equipment/<id>.png`).
+- **`app-ios/scripts/catalog.ts` regenerates it.** It reads the installed app and writes `Sources/App/Resources/Catalog/`: `exercises.json`, `equipment.json`, `articles.json`, per-exercise `Instructions/` and `Articles/` Markdown with Notion links reduced to their text, the exercise frames as-is, and equipment photos shrunk to 240px WebP (the originals total 81 MB), and the 22 muscle tiles as a vector asset catalog recolored for the dark theme. It uses the male figure, the one the owner's MF account shows. The script fails on any reference it can't resolve. Rerun it when MF Workouts updates and commit the result. The formatter ignores its output, so a rerun with unchanged input leaves git clean.
+- **Prefer the bundle to the UI.** Data and assets come from analyzing the app bundle wherever possible. Driving the reference app is for behavior and layout only, because a scrape is slower and less complete than the data the app ships.
+- **Videos are dropped.** MF Workouts streams them from Firebase Storage (`sbs-diet-app.appspot.com`, `videos/`), which enforces Firebase App Check. Unauthenticated requests fail with `401 Firebase App Check token is invalid`, and a valid token means attesting as the real app. The bundled poster frames are each video's start and end positions, and the exercise detail page shows them instead. The app's sandbox cache might hold videos it has played, but it is closed to tools without Full Disk Access, so that path waits until it is worth the setup.
+
+## Domain model
+
+- **Catalog exercises are read-only bundle data. Everything the owner creates is persisted.** The catalog JSON loads into memory at launch and Markdown loads on demand. Workouts, sessions, custom exercises, and per-exercise settings (the pinned note and rest override) live in SwiftData and refer to catalog exercises by their MF ID string, so a regenerated catalog never orphans history.
+- **A workout and a session share one shape.** A template is an ordered list of blocks. A block is one exercise, or several run as a superset (two) or circuit (three or more), with as many rounds as its longest exercise has sets. Each exercise holds ordered sets with a set type and targets. A session copies a template's blocks and records what was actually lifted against each set. Logged sets are history and are never rewritten by later template edits; "Update Workout Plan" on finishing copies a session's changes back into its template.
+- **Set types are MF's five.** Standard, warm-up, drop, myo, and failure. Drop and myo sets carry sub-rows, each with its own target and log. The type owns that invariant: changing a set away from drop or myo clears its sub-rows.
+- **Rest falls through four levels.** The set's own rest, then the workout exercise's, then the owner's per-exercise setting, then the settings default for the exercise's rest category (compound upper 2:00, compound lower 3:00, isolation 1:30, core 1:00). The catalog only says compound or isolation, so upper or lower comes from the primary muscles.
+- **Exercises record what MF records.** An exercise's `metrics` list (weight, assistance weight, reps, duration, distance, each optionally per side) decides which fields a set row shows and logs, instead of a coarser exercise kind.
+- **Derived numbers have one definition.** `WorkoutMetrics` holds muscle sets (primary 1, secondary 0.5, warm-ups excluded, a drop or myo set counts once), volume (per-side metrics count both sides), and the estimated 1-RM. MF never states its 1-RM formula and its values match no standard one, so the estimate is Epley on reps plus RIR until a better fit is found.
+- **Weights are stored in kilograms.** Display units come from settings, the way the reference app does it.
+- Field-level detail lives in the code (`app-ios/Sources/App/Workouts/Model/`) and is mirrored in the research spec's "Data model implied" section. Do not copy it here.
+
+## Feature ownership
+
+Milestone 1 is split so that parallel agents never edit the same files.
+
+- **Coordinator (groundwork, merged first).** The app shell and tab bar, the design system (`Sources/App/DesignSystem/`), the domain model, persistence, and derived metrics (`Sources/App/Workouts/Model/`), shared row parts (`Sources/App/Workouts/Components/`: muscle tags and tiles, RIR and set badges), the catalog loader and data, and More's settings. Shared types change only through the coordinator, or through a worker PR that says so in its description.
+- **Cross-feature views have a fixed signature and one owner.** The groundwork ships each as a placeholder with its final signature, so callers build against it before the owner lands it. The exercise picker and detail sheet (`Library/ExercisePicker.swift`) belong to the library. The Targets sheet (`Builder/SetTargetsSheet.swift`) belongs to the builder; the live session presents it with warm-ups allowed.
+- **Exercise library.** `Sources/App/Workouts/Library/`: More > Exercises, search, filters, the picker, the detail sheet with its Instructions, Details, and History tabs, Exercise Settings, and creating custom exercises.
+- **Workout builder.** `Sources/App/Workouts/Builder/`: the Workout tab (week strip, Workout Library), the workout detail editor, the Targets sheet, supersets, and the "+" sheet with Empty Workout and New Workout.
+- **Live session and history.** `Sources/App/Workouts/Session/` and `Sources/App/Workouts/History/`: the live workout and its keypad, rest timer, warm-up scheme, finishing, the Workout Complete summary, Update Workout Plan, the in-progress bottom accessory, and Workout History.
+- **Levels.** `Sources/App/Workouts/Levels/`: the Levels tab, the muscle detail with Contributing Lifts, and the front and back body heat map. The summary's body figures reuse that heat map once both land, and the coordinator wires them together.

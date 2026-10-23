@@ -1,0 +1,24 @@
+## Setting up
+1. Approach a step or a sturdy object that can function as a step. You should be by a surface (e.g., handrail, wall, power rack) where you can place one hand to assist with maintaining your balance.
+    1. Based on the equipment at your disposal, a variety of objects can serve as your step. Make sure the object can support your weight, will not move once you are on it, and allows you to lower your heel through the full range of motion your ankle mobility permits.
+    2. As an alternative to a staircase’s bottom step, you may select a power rack’s bottom beam if the beam is sufficiently tall.
+    3. Additionally, a calf raise block, aerobic step, deadlift block, or thick bumper plate can each be positioned near a wall or power rack for stability. Depending on your bodyweight, anchoring an aerobic step with weight on top of it may be required to prevent the step from tipping.
+2. Place one free hand onto the nearby surface for balance assistance, and maintain this hand contact throughout the set.
+    1. If you are using a surface that you can grasp (like a power rack) rather than a wall, do not grip it tightly.
+    2. Keep your other hand wherever you prefer throughout your set.
+3. Step onto the step with the balls of your feet on the step while the back halves of your feet are hanging off the step.
+## Exercise technique
+1. Push through the balls of your feet to raise your heels upward while keeping your knees straight and your trunk upright.
+    1. Only use your free hand for balance assistance as you avoid pushing down in a manner that can help you lift yourself upward.
+    2. Once you have lifted your heels as high upward as your ankle mobility permits, you have finished the lifting phase.
+2. Mildly bend one knee, and lift that side’s foot off the step while keeping your other foot firmly planted on the step.
+3. In a controlled manner, allow your working side’s heel to descend toward the ground through the full range of motion your calf flexibility permits.
+    1. Continue keeping your free leg’s foot not in contact with the step while maintaining a straight knee position with your working leg.
+    2. Strive to lower your heel as far as you can below the ball of your foot to stretch your calf and train it the most effectively.
+    3. If you do not feel a stretching sensation in your calf at the bottom, you likely are not descending through your full range of motion.
+    4. While you do not have to perform an extremely slow lowering phase, avoid quickly dropping down and trying to bounce out of the bottom into the next rep.
+4. Once you have fully lowered your working leg’s heel, return your free leg’s foot to the step to have both feet symmetrically on the step.
+5. Repeatedly perform steps 1-4 until you have completed your set. Each rep, alternate which foot you keep in contact with the step during steps 2 and 3.
+    1. If you wish to do so, you can alternatively complete one set where you perform the lowering phase of each rep exclusively with one side, rest, and then complete another set where you perform the lowering phase of every rep with your opposite side.
+## Description
+This exercise can effectively develop both your gastrocnemius and soleus while simultaneously improving calf flexibility through loaded stretching.

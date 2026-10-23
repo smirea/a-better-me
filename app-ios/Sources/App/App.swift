@@ -1,25 +1,44 @@
+import SwiftData
 import SwiftUI
 
 @main
-struct StarterApp: App {
+struct BetterMeApp: App {
+    @State private var catalog: ExerciseCatalog
+    private let container: ModelContainer
+
+    init() {
+        AppFont.register()
+        NavigationAppearance.apply()
+        _catalog = State(initialValue: ExerciseCatalog())
+        container = Self.makeContainer()
+        #if DEBUG
+        SampleData.seedIfRequested(container.mainContext)
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environment(catalog)
+                .font(AppFont.body())
+                .preferredColorScheme(.dark)
+                .tint(Theme.accent)
         }
+        .modelContainer(container)
     }
-}
 
-struct ContentView: View {
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "swift")
-                .font(.system(size: 48))
-                .foregroundStyle(.orange)
-            Text("Hello!")
-                .font(.largeTitle)
-            Text("Your app is ready to build.")
-                .foregroundStyle(.secondary)
+    /// While the schema is young a store that no longer opens is wiped instead of migrated (see docs/decisions/ios.md).
+    private static func makeContainer() -> ModelContainer {
+        let schema = Schema(WorkoutSchema.models)
+        let config = ModelConfiguration(schema: schema)
+        if let container = try? ModelContainer(for: schema, configurations: config) { return container }
+        for suffix in ["", "-shm", "-wal"] {
+            try? FileManager.default.removeItem(at: URL(filePath: config.url.path() + suffix))
         }
-        .padding()
+        do {
+            return try ModelContainer(for: schema, configurations: config)
+        } catch {
+            fatalError("Cannot open the SwiftData store: \(error)")
+        }
     }
 }

@@ -6,3 +6,5 @@ A Better Me's concepts, goals, paradigms, and high-level system decisions, one f
 - [Stack](stack.md): tooling, client and server frameworks, and shared code.
 - [Environment](environment.md): env-manager, the `dev` and `prod` environments, worktree overrides, and failing early on missing settings.
 - [Workflow](workflow.md): threads, PRs, worktrees, git hooks, and which tests run where.
+- [Workouts](workouts.md): milestone scope, the exercise catalog source, the workout domain model, and feature ownership.
+- [iOS](ios.md): platform targets, SwiftData persistence, the design system, code layout, and verification.
