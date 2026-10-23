@@ -39,7 +39,10 @@ enum HistoryMetric: String, CaseIterable, Identifiable {
         let sets = entry.workingSets
         let logs = sets.flatMap { [$0.log] + $0.subSets.map(\.log) }.compactMap { $0 }
         let setReps = sets.map { ([$0.log] + $0.subSets.map(\.log)).compactMap { $0?.reps }.reduce(0, +) }
+        // An assistance weight lightens the lift, so a bigger one is not a stronger set.
+        let isAssisted = exercise.metrics.contains(.assistanceWeight)
         let result: Double? = switch self {
+        case .oneRepMax where isAssisted, .heaviestWeight where isAssisted: nil
         case .oneRepMax:
             logs.compactMap { log in
                 guard let weight = log.weightKg, weight > 0, let reps = log.reps, reps > 0 else { return nil }
@@ -209,6 +212,18 @@ private struct HistoryRow: View {
                             .font(AppFont.body(14))
                         Spacer()
                         if exercise.tracksReps { RIRBadge(rir: set.log?.rir) }
+                    }
+                    ForEach(set.subSets.filter { $0.log != nil }) { sub in
+                        HStack(spacing: 12) {
+                            Image(systemName: "plus")
+                                .font(AppFont.headline(9))
+                                .frame(width: 22, height: 22)
+                            Text(sub.log.map { ExerciseHistory.describe($0, exercise: exercise, unit: unit) } ?? "")
+                                .font(AppFont.body(14))
+                            Spacer()
+                            if exercise.tracksReps { RIRBadge(rir: sub.log?.rir) }
+                        }
+                        .padding(.leading, 22)
                     }
                 }
             }
