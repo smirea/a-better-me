@@ -46,15 +46,19 @@ if (worktree) {
 			.filter(Boolean);
 		if (pids.length) run(['kill', ...new Set(pids)], { allowFail: true });
 	}
-	if (dockerRunning()) {
-		stopPowerSync(worktree);
-		await dropDatabases(databaseName(worktree));
-		console.log(`Removed the PowerSync container and the ${databaseName(worktree)} databases.`);
-	} else {
-		console.warn('Docker is not running; the PowerSync container and databases stay.');
-	}
 	run(['git', 'worktree', 'remove', '--force', worktree]);
 	console.log(`Removed worktree ${worktree}.`);
+}
+
+// T3 Code can delete a settled thread's worktree before teardown runs. Its container and databases are named after the
+// directory, which is the branch name for T3 worktrees, so they are still found and removed.
+const checkout = worktree ?? target;
+if (dockerRunning()) {
+	stopPowerSync(checkout);
+	await dropDatabases(databaseName(checkout));
+	console.log(`Removed the PowerSync container and the ${databaseName(checkout)} databases.`);
+} else {
+	console.warn('Docker is not running; the PowerSync container and databases stay.');
 }
 
 if (branch && !detached) {
