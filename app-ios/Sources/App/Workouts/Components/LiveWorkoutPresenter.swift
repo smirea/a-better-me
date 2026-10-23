@@ -6,6 +6,9 @@ import SwiftUI
 @MainActor @Observable
 final class LiveWorkoutPresenter {
     var isExpanded = false
+    /// A session asked to start while another is in progress. The root view asks the owner to resume the current one
+    /// or discard it and start this one.
+    var pendingStart: WorkoutSession?
 
     /// Starts `session` and shows it. At most one session is in progress, so callers resolve an existing one first
     /// (the live session thread owns that prompt).

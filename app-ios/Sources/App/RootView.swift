@@ -22,6 +22,7 @@ struct RootView: View {
             Tab("More", systemImage: "ellipsis.circle", value: .more) { MoreTab() }
         }
         .tabViewBottomAccessory(isEnabled: !activeSessions.isEmpty) { ActiveSessionBar() }
+        .resolvingWorkoutStart()
         .onChange(of: tab) { previous, current in
             // "+" acts as a button, like the reference app's center tab: it presents a sheet and keeps the tab.
             guard current == .add else { return }

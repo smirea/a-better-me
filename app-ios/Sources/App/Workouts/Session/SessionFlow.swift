@@ -73,12 +73,6 @@ struct RowPath: Hashable {
 enum SessionFlow {
     static let warmUpRestScale = 0.75
 
-    /// The four-level fallback from `docs/decisions/workouts.md`: the set, the workout exercise, the owner's exercise
-    /// setting, then the settings default for the exercise's rest category.
-    static func restSeconds(set: WorkoutSet, in item: BlockExercise, exerciseSetting: Int?, category: RestCategory) -> Int {
-        set.restSeconds ?? item.restSeconds ?? exerciseSetting ?? category.seconds
-    }
-
     struct Step: Equatable {
         var restSeconds: Int?
         /// The exercise the screen moves to, or `nil` to stay.
@@ -242,13 +236,6 @@ extension [WorkoutBlock] {
         } else {
             self[path.block].exercises[path.exercise].sets[path.set].log = log
         }
-    }
-
-    func position(of id: BlockExercise.ID) -> (block: Int, exercise: Int)? {
-        for (b, block) in enumerated() {
-            if let e = block.exercises.firstIndex(where: { $0.id == id }) { return (b, e) }
-        }
-        return nil
     }
 
     /// Every row of one exercise in table order: each set's main row followed by its sub-rows.

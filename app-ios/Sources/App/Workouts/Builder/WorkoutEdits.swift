@@ -187,12 +187,12 @@ struct MuscleTarget: Identifiable {
 }
 
 extension LiveWorkoutPresenter {
-    /// Only one session is in progress at a time. Until the live session thread adds its replace-or-resume prompt, an
-    /// existing session is reopened instead of starting a second one.
+    /// Only one session is in progress at a time. When one is, the root view's prompt (`resolvingWorkoutStart`) lets the
+    /// owner resume it or discard it and start the new one.
     func startOrResume(_ makeSession: () -> WorkoutSession, in context: ModelContext) {
         let inProgress = FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.endedAt == nil })
         if (try? context.fetchCount(inProgress)) ?? 0 > 0 {
-            isExpanded = true
+            pendingStart = makeSession()
         } else {
             start(makeSession(), in: context)
         }

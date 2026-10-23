@@ -126,7 +126,8 @@ struct SessionEditor: View {
     }
 
     var currentPosition: (block: Int, exercise: Int)? {
-        current.flatMap { blocks.position(of: $0) }
+        guard let current, let at = blocks.locate(current) else { return nil }
+        return (at.block, at.item)
     }
 
     // MARK: Header
@@ -258,7 +259,7 @@ struct SessionEditor: View {
                 chip("Note", "note.text") { sheet = .note }
                 if isSuperset {
                     Menu {
-                        Button("Detach from Superset", systemImage: "link.badge.minus") { detach(item.id) }
+                        Button("Detach from Superset", systemImage: "link.badge.minus") { blocks.detach(item.id) }
                     } label: { chipLabel("Superset", "arrow.triangle.2.circlepath") }
                 }
                 Menu {

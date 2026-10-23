@@ -35,7 +35,13 @@ struct WorkoutSummaryView: View {
         return NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    BodyFiguresSlot(muscleSets: WorkoutMetrics.muscleSets(in: blocks, catalog: catalog.exercise, loggedOnly: true))
+                    let muscleSets = WorkoutMetrics.muscleSets(in: blocks, catalog: catalog.exercise, loggedOnly: true)
+                    HStack(spacing: 24) {
+                        BodyMap(values: muscleSets, side: .front, fullAt: 3)
+                        BodyMap(values: muscleSets, side: .back, fullAt: 3)
+                    }
+                    .frame(height: 280)
+                    .padding(.horizontal, 20)
                     if !records.isEmpty { recordCards(records) }
                     details(volumeKg: stats.values.reduce(0) { $0 + $1.volumeKg })
                     exerciseDetails(blocks, stats: stats, records: records)
@@ -317,29 +323,6 @@ struct WorkoutSummaryView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .background(Theme.background)
-    }
-}
-
-/// Reserved for the Levels worker's front and back body heat map, which the coordinator wires in once both land.
-/// Until then it lists the trained muscles with their set counts.
-private struct BodyFiguresSlot: View {
-    let muscleSets: [Muscle: Double]
-
-    var body: some View {
-        let muscles = muscleSets.sorted { $0.value > $1.value }
-        ScrollView(.horizontal) {
-            HStack(spacing: 6) {
-                ForEach(muscles, id: \.key) { muscle, sets in
-                    Text("\(muscle.displayName) \(sets.formatted())")
-                        .font(AppFont.caption(12))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Theme.muscle.opacity(0.35), in: RoundedRectangle(cornerRadius: 4))
-                }
-            }
-            .padding(.horizontal, 20)
-        }
-        .scrollIndicators(.hidden)
     }
 }
 

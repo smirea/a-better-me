@@ -37,7 +37,7 @@ struct WorkoutTab: View {
             .screenTitle("Workout")
             .toolbar { toolbar }
             .navigationDestination(for: WorkoutTemplate.self) { WorkoutDetailView(template: $0) }
-            .navigationDestination(isPresented: $showingHistory) { WorkoutHistoryPlaceholder() }
+            .navigationDestination(isPresented: $showingHistory) { WorkoutHistoryView() }
         }
         .tint(Theme.textPrimary)
         .sheet(item: $summary) { WorkoutSummaryView(session: $0) }
@@ -119,13 +119,5 @@ private struct TemplateCard: View {
         .padding()
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
         .contentShape(Rectangle())
-    }
-}
-
-/// Workout History belongs to the live session thread. The coordinator points this link at its screen once both land.
-private struct WorkoutHistoryPlaceholder: View {
-    var body: some View {
-        ContentUnavailableView("Workout History", systemImage: "list.bullet.rectangle", description: Text("Not built yet"))
-            .navigationTitle("Workout History")
     }
 }

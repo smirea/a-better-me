@@ -184,9 +184,7 @@ extension SessionEditor {
     }
 
     private func restSeconds(_ item: BlockExercise, _ set: WorkoutSet) -> Int {
-        let category = catalog.exercise(item.exerciseID)?.restCategory ?? .upperIsolation
-        let setting = exerciseSettings.first { $0.id == item.exerciseID }?.restSeconds
-        return SessionFlow.restSeconds(set: set, in: item, exerciseSetting: setting, category: category)
+        item.restSeconds(after: set, exercise: catalog.exercise(item.exerciseID), settings: exerciseSettings.first { $0.id == item.exerciseID })
     }
 
     /// The header checkbox logs every open row with its values, or reopens all of them when everything is logged.
@@ -255,38 +253,22 @@ extension SessionEditor {
         return entry(RowPath(block: block, exercise: index, set: set), previous: previous).weightKg
     }
 
-    func detach(_ id: BlockExercise.ID) {
-        guard let position = blocks.position(of: id) else { return }
-        let item = blocks[position.block].exercises.remove(at: position.exercise)
-        blocks.insert(WorkoutBlock(exercises: [item]), at: position.block + 1)
-    }
-
     func remove(_ id: BlockExercise.ID) {
-        guard let position = blocks.position(of: id) else { return }
-        blocks[position.block].exercises.remove(at: position.exercise)
-        if blocks[position.block].exercises.isEmpty { blocks.remove(at: position.block) }
+        blocks.remove(id)
         current = SessionFlow.initialExercise(in: blocks)
     }
 
-    /// Swapping keeps the planned sets and drops what was logged against the old exercise.
+    /// The builder's swap keeps sets and targets; mid-session it also drops what was logged against the old exercise.
     func swap(_ id: BlockExercise.ID, to exerciseID: ExerciseID) {
-        guard let position = blocks.position(of: id) else { return }
-        var item = blocks[position.block].exercises[position.exercise]
-        item.exerciseID = exerciseID
-        item.sets = item.sets.map(\.planned)
-        item.note = nil
-        blocks[position.block].exercises[position.exercise] = item
+        blocks.swap(id, to: exerciseID)
+        guard let at = blocks.locate(id) else { return }
+        blocks[at.block].exercises[at.item].sets = blocks[at.block].exercises[at.item].sets.map(\.planned)
     }
 
     func add(_ pick: ExercisePick) {
-        let items = pick.exerciseIDs.map { BlockExercise(exerciseID: $0, sets: (0..<3).map { _ in WorkoutSet() }) }
-        guard let first = items.first else { return }
-        if pick.asSuperset {
-            blocks.append(WorkoutBlock(exercises: items))
-        } else {
-            blocks += items.map { WorkoutBlock(exercises: [$0]) }
-        }
-        current = first.id
+        let existing = Set(blocks.flatMap(\.exercises).map(\.id))
+        blocks.add(pick)
+        current = blocks.flatMap(\.exercises).first { !existing.contains($0.id) }?.id ?? current
     }
 
     // MARK: Keypad
