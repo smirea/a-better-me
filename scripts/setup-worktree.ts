@@ -25,18 +25,18 @@ if (wanted && wanted !== git('branch', '--show-current')) {
 
 run(['bun', 'install', '--frozen-lockfile']);
 
-// Each app's main CLIENT_PORT comes from setup-new-app's localias sequence (6000, 6010, ...), so slot
-// (port / 10) % 75 gives every app its own 300 ports from 10000, apart from other apps' worktrees and main ports
-// and below the OS ephemeral range (32768+).
+// Worktree n's ports are the main checkout's plus 10000 + (n - 1) * 1000, each keeping its offset. setup-new-app
+// hands out main ports 10 apart, so apps never collide, and 49152 is where macOS's ephemeral ports begin.
 const mainPort = Number(parseDotenv(readFileSync(join(root, '.env'), 'utf8')).CLIENT_PORT);
 if (!Number.isInteger(mainPort)) throw new Error('The root .env has no numeric CLIENT_PORT default.');
-const FIRST_BLOCK = 10_000 + (Math.floor(mainPort / 10) % 75) * 300;
-const LAST_BLOCK = FIRST_BLOCK + 290;
+const STEP = 1000;
+const FIRST_BLOCK = mainPort + 10_000;
+const LAST_BLOCK = FIRST_BLOCK + Math.floor((49_152 - 10 - FIRST_BLOCK) / STEP) * STEP;
 const OFFSETS = [0, 1];
 
 function readPort(worktree: string): number | undefined {
 	const port = Number(readOverride(worktree)?.CLIENT_PORT);
-	return port >= FIRST_BLOCK && port <= LAST_BLOCK ? port : undefined;
+	return port >= FIRST_BLOCK && port <= LAST_BLOCK && (port - FIRST_BLOCK) % STEP === 0 ? port : undefined;
 }
 
 function portFree(port: number): Promise<boolean> {
@@ -51,12 +51,12 @@ async function pickBlock(): Promise<number> {
 	const previous = readPort(root);
 	if (previous) return previous;
 	const claimed = new Set(worktrees(root).map(entry => readPort(entry.path)));
-	for (let base = FIRST_BLOCK; base <= LAST_BLOCK; base += 10) {
+	for (let base = FIRST_BLOCK; base <= LAST_BLOCK; base += STEP) {
 		if (claimed.has(base)) continue;
 		const free = await Promise.all(OFFSETS.map(offset => portFree(base + offset)));
 		if (free.every(Boolean)) return base;
 	}
-	throw new Error(`No free port block between ${FIRST_BLOCK} and ${LAST_BLOCK}.`);
+	throw new Error(`No free worktree slot: ${FIRST_BLOCK} to ${LAST_BLOCK} in steps of ${STEP} are all taken.`);
 }
 
 // Parallel setups would otherwise pick the same unclaimed block; mkdir is atomic, so it serves as the lock.
