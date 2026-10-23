@@ -14,6 +14,7 @@ struct BetterMeApp: App {
         container = Self.makeContainer()
         #if DEBUG
         SampleData.seedIfRequested(container.mainContext)
+        SampleWorkout.startIfRequested(container.mainContext)
         #endif
     }
 
