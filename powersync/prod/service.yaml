@@ -1,0 +1,27 @@
+# PowerSync Cloud instance a-better-me-prod, not created yet: the PowerSync organization's free plan has no instance
+# left (docs/decisions/sync.md). Deploy it with the PowerSync CLI once there is room, add its `cli.yaml` beside this
+# file, and set the Worker's POWERSYNC_URL var to the instance URL. The streams are the shared `../sync-config.yaml`.
+# The database password comes from env-manager's `POWERSYNC_DATABASE_PASSWORD` (prod). The key below is
+# `token-public-key.json`, the public half of the Worker's POWERSYNC_JWT_PRIVATE_KEY (`bun scripts/secrets.ts public-key`).
+_type: cloud
+name: a-better-me-prod
+region: us
+replication:
+  connections:
+    - type: postgresql
+      hostname: db.pbfeblbuzsijooytrzxy.supabase.co
+      port: 5432
+      database: a_better_me
+      username: a_better_me_powersync
+      password:
+        secret: !env POWERSYNC_DATABASE_PASSWORD
+      sslmode: verify-full
+client_auth:
+  jwks:
+    keys:
+      - kty: OKP
+        kid: abm-prod-0ed52e53
+        crv: Ed25519
+        x: mWPcaYImaHHPX9KtcZQ5wC-1IVR26MfEmmYCMnkOS54
+        alg: EdDSA
+  additional_audiences: ['powersync']

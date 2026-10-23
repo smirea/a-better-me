@@ -1,11 +1,13 @@
 /**
  * Removes an agent's worktree once its PR is merged: `bun scripts/teardown-worktree.ts <worktree path | branch> [--force]`.
  * A worktree on a detached HEAD has no branch: pass its path or directory name with --force instead.
- * Run it from the main checkout. Stops its servers, deletes the worktree and its branches, and updates the default branch.
+ * Run it from the main checkout. Stops its servers, removes its PowerSync container and databases, deletes the worktree
+ * and its branches, and updates the default branch.
  */
 import { existsSync, realpathSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { readOverride, run, worktrees } from './lib';
+import { databaseName, dockerRunning, dropDatabases, stopPowerSync } from './local-stack';
 
 const args = process.argv.slice(2);
 const force = args.includes('--force');
@@ -43,6 +45,13 @@ if (worktree) {
 			.split('\n')
 			.filter(Boolean);
 		if (pids.length) run(['kill', ...new Set(pids)], { allowFail: true });
+	}
+	if (dockerRunning()) {
+		stopPowerSync(worktree);
+		await dropDatabases(databaseName(worktree));
+		console.log(`Removed the PowerSync container and the ${databaseName(worktree)} databases.`);
+	} else {
+		console.warn('Docker is not running; the PowerSync container and databases stay.');
 	}
 	run(['git', 'worktree', 'remove', '--force', worktree]);
 	console.log(`Removed worktree ${worktree}.`);

@@ -1,0 +1,289 @@
+{
+	"id": "1cf80449-df55-4772-983a-b574f6ef0077",
+	"prevId": "00000000-0000-0000-0000-000000000000",
+	"version": "7",
+	"dialect": "postgresql",
+	"tables": {
+		"public.custom_exercises": {
+			"name": "custom_exercises",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"exercise": {
+					"name": "exercise",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"is_archived": {
+					"name": "is_archived",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {
+				"custom_exercises_id_prefix": {
+					"name": "custom_exercises_id_prefix",
+					"value": "\"custom_exercises\".\"id\" LIKE 'custom-%'"
+				},
+				"custom_exercises_exercise_object": {
+					"name": "custom_exercises_exercise_object",
+					"value": "jsonb_typeof(\"custom_exercises\".\"exercise\") = 'object'"
+				}
+			},
+			"isRLSEnabled": false
+		},
+		"public.exercise_settings": {
+			"name": "exercise_settings",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"pinned_note": {
+					"name": "pinned_note",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "''"
+				},
+				"rest_seconds": {
+					"name": "rest_seconds",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {
+				"exercise_settings_rest_seconds": {
+					"name": "exercise_settings_rest_seconds",
+					"value": "\"exercise_settings\".\"rest_seconds\" >= 0"
+				}
+			},
+			"isRLSEnabled": false
+		},
+		"public.settings": {
+			"name": "settings",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"weight_unit": {
+					"name": "weight_unit",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'kg'"
+				},
+				"rest_compound_upper": {
+					"name": "rest_compound_upper",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 120
+				},
+				"rest_compound_lower": {
+					"name": "rest_compound_lower",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 180
+				},
+				"rest_upper_isolation": {
+					"name": "rest_upper_isolation",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 90
+				},
+				"rest_lower_isolation": {
+					"name": "rest_lower_isolation",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 90
+				},
+				"rest_core": {
+					"name": "rest_core",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 60
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {
+				"settings_id": {
+					"name": "settings_id",
+					"value": "\"settings\".\"id\" = 'settings'"
+				},
+				"settings_weight_unit": {
+					"name": "settings_weight_unit",
+					"value": "\"settings\".\"weight_unit\" IN ('kg', 'lb')"
+				},
+				"settings_rest_seconds": {
+					"name": "settings_rest_seconds",
+					"value": "LEAST(\"settings\".\"rest_compound_upper\", \"settings\".\"rest_compound_lower\", \"settings\".\"rest_upper_isolation\", \"settings\".\"rest_lower_isolation\", \"settings\".\"rest_core\") >= 0"
+				}
+			},
+			"isRLSEnabled": false
+		},
+		"public.workout_sessions": {
+			"name": "workout_sessions",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"template_id": {
+					"name": "template_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"started_at": {
+					"name": "started_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"ended_at": {
+					"name": "ended_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"notes": {
+					"name": "notes",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "''"
+				},
+				"blocks": {
+					"name": "blocks",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'[]'::jsonb"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {
+				"workout_sessions_blocks_array": {
+					"name": "workout_sessions_blocks_array",
+					"value": "jsonb_typeof(\"workout_sessions\".\"blocks\") = 'array'"
+				}
+			},
+			"isRLSEnabled": false
+		},
+		"public.workout_templates": {
+			"name": "workout_templates",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"notes": {
+					"name": "notes",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "''"
+				},
+				"blocks": {
+					"name": "blocks",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'[]'::jsonb"
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {
+				"workout_templates_blocks_array": {
+					"name": "workout_templates_blocks_array",
+					"value": "jsonb_typeof(\"workout_templates\".\"blocks\") = 'array'"
+				}
+			},
+			"isRLSEnabled": false
+		}
+	},
+	"enums": {},
+	"schemas": {},
+	"sequences": {},
+	"roles": {},
+	"policies": {},
+	"views": {},
+	"_meta": {
+		"columns": {},
+		"schemas": {},
+		"tables": {}
+	}
+}

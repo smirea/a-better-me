@@ -21,3 +21,10 @@ dist
 
 # per-worktree ports written by scripts/setup-worktree.ts
 .env.override
+
+# local PowerSync config written by scripts/local-stack.ts
+.powersync
+
+# wrangler
+.wrangler
+.dev.vars
