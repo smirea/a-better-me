@@ -26,6 +26,8 @@ struct SessionEditor: View {
     @Environment(\.dismiss) var dismiss
     @Observe(ExerciseSettings.all) var exerciseSettings
     @Observe(AppSettings.current) var defaults
+    /// The session's row as it changes under the editor, which `session` cannot show once the cover is up.
+    @Observe private var live: WorkoutSession?
 
     @State var blocks: [WorkoutBlock]
     @State var current: BlockExercise.ID?
@@ -53,6 +55,7 @@ struct SessionEditor: View {
     init(session: WorkoutSession, mode: Mode) {
         self.session = session
         self.mode = mode
+        _live = Observe(WorkoutSession.one(session.id))
         let blocks = session.blocks
         _blocks = State(initialValue: blocks)
         let remembered = mode == .live ? LiveSessionStore.shared.currentExercise : nil
@@ -92,6 +95,10 @@ struct SessionEditor: View {
         }
         .onChange(of: blocks) { _, blocks in
             if mode == .live { saveBlocks(blocks) }
+        }
+        // A set logged on another device replaces the live copy while no write of this device's is still on its way.
+        .onChange(of: live?.blocks) { _, remote in
+            if mode == .live, let remote, localStore.pendingWrites == 0, remote != blocks { blocks = remote }
         }
         .onChange(of: current) { _, current in
             if mode == .live { store.currentExercise = current }

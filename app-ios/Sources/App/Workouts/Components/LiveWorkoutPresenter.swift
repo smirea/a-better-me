@@ -1,3 +1,4 @@
+import GRDB
 import SwiftUI
 
 /// Whether the in-progress workout fills the screen. The builder starts workouts, the live session minimizes and
@@ -13,6 +14,16 @@ final class LiveWorkoutPresenter {
     /// (the live session thread owns that prompt).
     func start(_ session: WorkoutSession, in store: LocalStore) {
         store.insert(session)
+        isExpanded = true
+    }
+
+    /// "Discard and Start New": every unfinished session goes, in the same transaction as the insert, since two devices
+    /// that started workouts offline can both have one.
+    func replaceInProgress(with session: WorkoutSession, in store: LocalStore) {
+        store.write { db in
+            _ = try WorkoutSession.filter(Column("ended_at") == nil).deleteAll(db)
+            try session.insert(db)
+        }
         isExpanded = true
     }
 

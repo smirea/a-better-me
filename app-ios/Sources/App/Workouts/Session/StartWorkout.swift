@@ -25,9 +25,8 @@ private struct ResolveWorkoutStart: ViewModifier {
             Button("Discard and Start New", role: .destructive) {
                 guard let pending = presenter.pendingStart else { return }
                 presenter.pendingStart = nil
-                if let active { store.delete(WorkoutSession.self, id: active.id) }
                 LiveSessionStore.shared.reset()
-                presenter.start(pending, in: store)
+                presenter.replaceInProgress(with: pending, in: store)
             }
             Button("Cancel", role: .cancel) { presenter.pendingStart = nil }
         } message: {
