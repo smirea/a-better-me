@@ -10,7 +10,9 @@
 		"generated",
 		"**/generated",
 		"**/*.generated.ts",
-		"**/*.gen.ts"
+		"**/*.gen.ts",
+		"app-web/src/env.ts",
+		"server/src/env.ts"
 	],
 	"printWidth": 120,
 	"useTabs": true,

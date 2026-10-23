@@ -6,6 +6,7 @@
 		"app-web"
 	],
 	"scripts": {
+		"postinstall": "lefthook install",
 		"lint": "oxlint --fix && oxfmt",
 		"lint:ci": "oxlint && oxfmt --check",
 		"typecheck": "bun run --cwd app-web build && tsc --noEmit",
@@ -18,7 +19,7 @@
 		"dev": "bun run start",
 		"client:dev": "bun run start:client",
 		"server:dev": "bun run start:server",
-		"env:generate": "env-manager gen --local && oxfmt app-web/src/env.ts server/src/env.ts",
+		"env:generate": "env-manager gen --local",
 		"pr:ship": "bun scripts/pr-ship.ts"
 	},
 	"dependencies": {

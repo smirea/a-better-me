@@ -24,5 +24,15 @@
 			}
 		}
 	],
-	"ignorePatterns": ["node_modules", "dist", "build", "generated", "**/generated", "**/*.generated.ts", "**/*.gen.ts"]
+	"ignorePatterns": [
+		"node_modules",
+		"dist",
+		"build",
+		"generated",
+		"**/generated",
+		"**/*.generated.ts",
+		"**/*.gen.ts",
+		"app-web/src/env.ts",
+		"server/src/env.ts"
+	]
 }
