@@ -1,5 +1,4 @@
 import Foundation
-import SwiftData
 
 enum Neighbor {
     case previous, next
@@ -174,18 +173,5 @@ struct MuscleTarget: Identifiable {
             return MuscleTarget(muscle: muscle, exercises: trained, sets: count)
         }
         .sorted { ($0.sets, $1.muscle.displayName) > ($1.sets, $0.muscle.displayName) }
-    }
-}
-
-extension LiveWorkoutPresenter {
-    /// Only one session is in progress at a time. When one is, the root view's prompt (`resolvingWorkoutStart`) lets the
-    /// owner resume it or discard it and start the new one.
-    func startOrResume(_ makeSession: () -> WorkoutSession, in context: ModelContext) {
-        let inProgress = FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.endedAt == nil })
-        if (try? context.fetchCount(inProgress)) ?? 0 > 0 {
-            pendingStart = makeSession()
-        } else {
-            start(makeSession(), in: context)
-        }
     }
 }

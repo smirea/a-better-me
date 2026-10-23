@@ -124,7 +124,8 @@ async function deploy(target: Target, project: string) {
         await command([
             "xcodebuild", "-quiet", "-project", project, "-scheme", basename(project, ".xcodeproj"),
             "-configuration", "Debug", "-destination", target.destination, "-derivedDataPath", build,
-            ...(target.kind === "device" ? ["-allowProvisioningUpdates", "-allowProvisioningDeviceRegistration"] : ["CODE_SIGNING_ALLOWED=NO"]),
+            // Ad hoc signing still embeds the entitlements, so the simulator honors the Keychain access group.
+            ...(target.kind === "device" ? ["-allowProvisioningUpdates", "-allowProvisioningDeviceRegistration"] : ["CODE_SIGN_IDENTITY=-"]),
             ...(values.team ? [`DEVELOPMENT_TEAM=${values.team}`] : []), "build",
         ], false, fd);
     } catch {

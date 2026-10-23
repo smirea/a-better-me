@@ -1,13 +1,12 @@
-import SwiftData
 import SwiftUI
 
 /// Sits above the tab bar while a session is in progress and reopens it. Empty otherwise.
 struct ActiveSessionBar: View {
     @Environment(LiveWorkoutPresenter.self) private var presenter
-    @Query(filter: #Predicate<WorkoutSession> { $0.endedAt == nil }) private var sessions: [WorkoutSession]
+    @Observe(WorkoutSession.inProgress) private var session
 
     var body: some View {
-        if let session = sessions.first {
+        if let session {
             Button { presenter.isExpanded = true } label: {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     HStack(spacing: 12) {

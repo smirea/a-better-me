@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 /// What the picker returns: the chosen exercises in selection order, and whether to group them ("Add as a superset?").
@@ -44,7 +43,7 @@ private struct SwapSubstitutions: View {
     let findOther: () -> Void
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(\.dismiss) private var dismiss
-    @Query(filter: #Predicate<CustomExercise> { $0.isArchived }) private var archived: [CustomExercise]
+    @Observe(CustomExercise.all) private var customExercises
     @State private var detail: ExerciseRef?
 
     var body: some View {
@@ -90,7 +89,7 @@ private struct SwapSubstitutions: View {
     private func substitutes(for current: Exercise?) -> [Exercise] {
         guard let current else { return [] }
         let muscles = Set(current.primaryMuscles)
-        let hidden = Set(archived.map(\.id))
+        let hidden = Set(customExercises.filter(\.isArchived).map(\.id))
         let matches = catalog.all.filter { $0.id != current.id && !hidden.contains($0.id) && Set($0.primaryMuscles) == muscles }
         return ExerciseGroup.ranked(matches)
     }
@@ -106,7 +105,7 @@ private struct ExercisePickerList: View {
     let onPick: (ExercisePick) -> Void
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(\.dismiss) private var dismiss
-    @Query(filter: #Predicate<CustomExercise> { $0.isArchived }) private var archived: [CustomExercise]
+    @Observe(CustomExercise.all) private var customExercises
     @State private var selection: [ExerciseID] = []
     @State private var asGroup = false
     @State private var showingTray = false
@@ -124,7 +123,7 @@ private struct ExercisePickerList: View {
             if showingTray {
                 tray
             } else {
-                let hidden = Set(archived.map(\.id))
+                let hidden = Set(customExercises.filter(\.isArchived).map(\.id))
                 ExerciseBrowser(
                     exercises: catalog.all.filter { !hidden.contains($0.id) && $0.id != swapping },
                     filter: $filter,

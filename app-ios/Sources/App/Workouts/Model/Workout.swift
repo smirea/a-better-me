@@ -1,5 +1,5 @@
 import Foundation
-import SwiftData
+import GRDB
 
 /// A template and a session share this tree. A block with several exercises is a superset.
 struct WorkoutBlock: Codable, Hashable, Identifiable {
@@ -21,13 +21,13 @@ struct BlockExercise: Codable, Hashable, Identifiable {
 
 extension BlockExercise {
     /// Rest after one of this exercise's sets, through the four levels in docs/decisions/workouts.md.
-    func restSeconds(after set: WorkoutSet, exercise: Exercise?, settings: ExerciseSettings?) -> Int {
-        set.restSeconds ?? defaultRestSeconds(exercise: exercise, settings: settings)
+    func restSeconds(after set: WorkoutSet, exercise: Exercise?, settings: ExerciseSettings?, defaults: AppSettings) -> Int {
+        set.restSeconds ?? defaultRestSeconds(exercise: exercise, settings: settings, defaults: defaults)
     }
 
     /// What a set rests when it has no rest of its own: the value "Set Rest Timers" starts from.
-    func defaultRestSeconds(exercise: Exercise?, settings: ExerciseSettings?) -> Int {
-        restSeconds ?? settings?.restSeconds ?? (exercise?.restCategory ?? .upperIsolation).seconds
+    func defaultRestSeconds(exercise: Exercise?, settings: ExerciseSettings?, defaults: AppSettings) -> Int {
+        restSeconds ?? settings?.restSeconds ?? defaults.restSeconds(exercise?.restCategory ?? .upperIsolation)
     }
 }
 
@@ -94,16 +94,16 @@ struct SetLog: Codable, Hashable {
     var completedAt: Date
 }
 
-@Model
-final class WorkoutTemplate {
-    @Attribute(.unique) var id: UUID
+/// A row of the synced `workout_templates` table (docs/decisions/sync.md). Edits go through `LocalStore`.
+struct WorkoutTemplate: SyncedRecord {
+    static let table = "workout_templates"
+
+    var id: UUID
     var name: String
     var notes: String
     var createdAt: Date
     var updatedAt: Date
-    /// JSON-encoded `[WorkoutBlock]`. SwiftData relationships are unordered and its Codable composites are fragile,
-    /// so the ordered tree is stored as one value and edited through `blocks`.
-    private var blocksData: Data
+    var blocks: [WorkoutBlock]
 
     init(name: String, notes: String = "", blocks: [WorkoutBlock] = []) {
         id = UUID()
@@ -111,28 +111,39 @@ final class WorkoutTemplate {
         self.notes = notes
         createdAt = .now
         updatedAt = .now
-        blocksData = BlockCoding.encode(blocks)
+        self.blocks = blocks
     }
 
-    var blocks: [WorkoutBlock] {
-        get { BlockCoding.decode(blocksData) }
-        set {
-            blocksData = BlockCoding.encode(newValue)
-            updatedAt = .now
-        }
+    init(row: Row) throws {
+        id = try row.uuid("id")
+        name = row["name"]
+        notes = row["notes"] ?? ""
+        createdAt = try row.instant("created_at")
+        updatedAt = try row.instant("updated_at")
+        blocks = try row.json("blocks")
+    }
+
+    func encode(to container: inout PersistenceContainer) throws {
+        container["id"] = key
+        container["name"] = name
+        container["notes"] = notes
+        container["created_at"] = Instant.text(createdAt)
+        container["updated_at"] = Instant.text(updatedAt)
+        container["blocks"] = try RowJSON.text(blocks)
     }
 }
 
-@Model
-final class WorkoutSession {
-    @Attribute(.unique) var id: UUID
+/// A row of the synced `workout_sessions` table. `endedAt` is `nil` while the workout is in progress, and at most one is.
+struct WorkoutSession: SyncedRecord {
+    static let table = "workout_sessions"
+
+    var id: UUID
     var name: String
     var templateID: UUID?
     var startedAt: Date
-    /// `nil` while the workout is in progress. At most one session is in progress.
     var endedAt: Date?
     var notes: String
-    private var blocksData: Data
+    var blocks: [WorkoutBlock]
 
     init(name: String, templateID: UUID? = nil, blocks: [WorkoutBlock] = [], startedAt: Date = .now) {
         id = UUID()
@@ -140,44 +151,70 @@ final class WorkoutSession {
         self.templateID = templateID
         self.startedAt = startedAt
         notes = ""
-        blocksData = BlockCoding.encode(blocks)
+        self.blocks = blocks
     }
 
-    convenience init(startingFrom template: WorkoutTemplate) {
+    init(startingFrom template: WorkoutTemplate) {
         self.init(name: template.name, templateID: template.id, blocks: template.blocks)
     }
 
-    var blocks: [WorkoutBlock] {
-        get { BlockCoding.decode(blocksData) }
-        set { blocksData = BlockCoding.encode(newValue) }
+    init(row: Row) throws {
+        id = try row.uuid("id")
+        name = row["name"]
+        templateID = (row["template_id"] as String?).flatMap(UUID.init(uuidString:))
+        startedAt = try row.instant("started_at")
+        endedAt = try row.instant("ended_at", optional: true)
+        notes = row["notes"] ?? ""
+        blocks = try row.json("blocks")
+    }
+
+    func encode(to container: inout PersistenceContainer) throws {
+        container["id"] = key
+        container["name"] = name
+        container["template_id"] = templateID.map(Self.key)
+        container["started_at"] = Instant.text(startedAt)
+        container["ended_at"] = endedAt.map(Instant.text)
+        container["notes"] = notes
+        container["blocks"] = try RowJSON.text(blocks)
     }
 
     var isInProgress: Bool { endedAt == nil }
 }
 
-@Model
-final class CustomExercise {
-    @Attribute(.unique) var id: ExerciseID
-    private var exerciseData: Data
+/// A row of the synced `custom_exercises` table: the whole `Exercise` as JSON, keyed by its `custom-` id.
+struct CustomExercise: SyncedRecord {
+    static let table = "custom_exercises"
+
+    var id: ExerciseID
+    var exercise: Exercise
     /// Hidden from the picker and the library's All tab, but still resolved for history.
     var isArchived = false
 
     init(_ exercise: Exercise) {
         precondition(exercise.isCustom, "Custom exercise IDs start with custom-")
         id = exercise.id
-        exerciseData = try! JSONEncoder().encode(exercise)
+        self.exercise = exercise
     }
 
-    var exercise: Exercise {
-        get { try! JSONDecoder().decode(Exercise.self, from: exerciseData) }
-        set { exerciseData = try! JSONEncoder().encode(newValue) }
+    init(row: Row) throws {
+        id = row["id"]
+        exercise = try row.json("exercise")
+        isArchived = row.flag("is_archived")
+    }
+
+    func encode(to container: inout PersistenceContainer) throws {
+        container["id"] = id
+        container["exercise"] = try RowJSON.text(exercise)
+        container["is_archived"] = isArchived ? 1 : 0
     }
 }
 
 /// The owner's per-exercise settings from Exercise Settings: the pinned note shown every workout and the rest override.
-@Model
-final class ExerciseSettings {
-    @Attribute(.unique) var id: ExerciseID
+/// Keyed by the exercise id, so two devices editing one exercise offline converge on one row.
+struct ExerciseSettings: SyncedRecord {
+    static let table = "exercise_settings"
+
+    var id: ExerciseID
     var pinnedNote: String
     var restSeconds: Int?
 
@@ -186,13 +223,22 @@ final class ExerciseSettings {
         self.pinnedNote = pinnedNote
         self.restSeconds = restSeconds
     }
+
+    init(row: Row) throws {
+        id = row["id"]
+        pinnedNote = row["pinned_note"] ?? ""
+        restSeconds = row["rest_seconds"]
+    }
+
+    func encode(to container: inout PersistenceContainer) throws {
+        container["id"] = id
+        container["pinned_note"] = pinnedNote
+        container["rest_seconds"] = restSeconds
+    }
 }
 
-enum BlockCoding {
-    static func encode(_ blocks: [WorkoutBlock]) -> Data { try! JSONEncoder().encode(blocks) }
-    static func decode(_ data: Data) -> [WorkoutBlock] { try! JSONDecoder().decode([WorkoutBlock].self, from: data) }
-}
-
-enum WorkoutSchema {
-    static let models: [any PersistentModel.Type] = [WorkoutTemplate.self, WorkoutSession.self, CustomExercise.self, ExerciseSettings.self]
+extension ExerciseSettings {
+    static func of(_ exerciseID: ExerciseID, in settings: [ExerciseSettings]) -> ExerciseSettings? {
+        settings.first { $0.id == exerciseID }
+    }
 }

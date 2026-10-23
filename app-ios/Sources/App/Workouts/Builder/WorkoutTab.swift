@@ -1,13 +1,11 @@
-import SwiftData
 import SwiftUI
 
 /// The Workout tab: the week strip (or the full calendar) and the Workout Library. The reference's Active Program,
 /// Your Sections, Archive, and Customize Sections wait for programs.
 struct WorkoutTab: View {
-    @Query(sort: \WorkoutTemplate.createdAt) private var templates: [WorkoutTemplate]
-    @Query(filter: #Predicate<WorkoutSession> { $0.endedAt != nil }, sort: \WorkoutSession.startedAt)
-    private var sessions: [WorkoutSession]
-    @Environment(\.modelContext) private var context
+    @Observe(WorkoutTemplate.all) private var templates
+    @Observe(WorkoutSession.finished) private var sessions
+    @Environment(LocalStore.self) private var store
     @Environment(LiveWorkoutPresenter.self) private var presenter
     @State private var showingCalendar = false
     @State private var creating = false
@@ -35,13 +33,13 @@ struct WorkoutTab: View {
             .background(Theme.background)
             .screenTitle("Workout")
             .toolbar { toolbar }
-            .navigationDestination(for: WorkoutTemplate.self) { WorkoutDetailView(template: $0) }
+            .navigationDestination(for: WorkoutTemplate.ID.self) { WorkoutDetailView(templateID: $0) }
             .navigationDestination(for: WorkoutHistoryRoute.self) { _ in WorkoutHistoryView() }
         }
         .tint(Theme.textPrimary)
         .sheet(item: $summary) { WorkoutSummaryView(session: $0) }
         .fullScreenCover(isPresented: $creating) {
-            CreateWorkoutView { path.append($0) }
+            CreateWorkoutView { path.append($0.id) }
         }
     }
 
@@ -59,7 +57,7 @@ struct WorkoutTab: View {
         ToolbarItem {
             Menu("More", systemImage: "ellipsis") {
                 Button("Start Empty Workout", systemImage: "arrow.right.to.line") {
-                    presenter.startOrResume({ .empty }, in: context)
+                    presenter.startOrResume({ .empty }, in: store)
                 }
                 Button("Workout History", systemImage: "list.bullet.rectangle") { path.append(WorkoutHistoryRoute()) }
             }
@@ -84,7 +82,7 @@ struct WorkoutTab: View {
                     .foregroundStyle(Theme.textSecondary)
             } else if !libraryCollapsed {
                 ForEach(templates) { template in
-                    NavigationLink(value: template) { TemplateCard(template: template) }
+                    NavigationLink(value: template.id) { TemplateCard(template: template) }
                         .buttonStyle(.plain)
                 }
             }

@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 struct ExerciseHistoryEntry: Identifiable {
@@ -111,8 +110,8 @@ enum ExerciseHistory {
 
 struct ExerciseHistoryTab: View {
     let exercise: Exercise
-    @Query(filter: #Predicate<WorkoutSession> { $0.endedAt != nil }) private var sessions: [WorkoutSession]
-    @AppStorage(WeightUnit.storageKey) private var unit = WeightUnit.kg
+    @Observe(WorkoutSession.finished) private var sessions
+    @Observe(AppSettings.current) private var settings
     @State private var metric = HistoryMetric.oneRepMax
     @State private var newestFirst = true
     @State private var expanded: Set<UUID> = []
@@ -150,7 +149,7 @@ struct ExerciseHistoryTab: View {
                     entry: entry,
                     exercise: exercise,
                     metric: metric,
-                    unit: unit,
+                    unit: settings.weightUnit,
                     isExpanded: Binding {
                         expanded.contains(entry.id)
                     } set: { open in

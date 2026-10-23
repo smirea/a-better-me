@@ -1,6 +1,6 @@
 #if DEBUG
 import Foundation
-import SwiftData
+import GRDB
 
 /// Launch with `-seedSampleData` to fill an empty store with two templates and ten weeks of progressing history,
 /// so history, progression, and Levels can be checked in the simulator.
@@ -21,9 +21,15 @@ enum SampleData {
     ]
 
     @MainActor
-    static func seedIfRequested(_ context: ModelContext) {
-        guard ProcessInfo.processInfo.arguments.contains(launchArgument),
-              (try? context.fetchCount(FetchDescriptor<WorkoutTemplate>())) == 0 else { return }
+    static func seedIfRequested(_ store: LocalStore) {
+        guard ProcessInfo.processInfo.arguments.contains(launchArgument) else { return }
+        store.write { db in
+            guard try WorkoutTemplate.fetchCount(db) == 0 else { return }
+            for record in records() { try record.insert(db) }
+        }
+    }
+
+    private static func records() -> [any SyncedRecord] {
         let templates = [("Upper", upper), ("Lower", lower)].map { name, lifts in
             WorkoutTemplate(name: name, blocks: lifts.map { id, _, reps in
                 WorkoutBlock(exercises: [BlockExercise(
@@ -33,13 +39,13 @@ enum SampleData {
                 )])
             })
         }
-        templates.forEach(context.insert)
+        var sessions: [WorkoutSession] = []
         let calendar = Calendar.current
         let start = calendar.date(byAdding: .weekOfYear, value: -10, to: .now)!
         for week in 0..<10 {
             for (day, (template, lifts)) in [(0, (templates[0], upper)), (2, (templates[1], lower)), (4, (templates[0], upper))] {
                 let startedAt = calendar.date(byAdding: .day, value: week * 7 + day, to: start)!.addingTimeInterval(18 * 3600)
-                let session = WorkoutSession(startingFrom: template)
+                var session = WorkoutSession(startingFrom: template)
                 session.startedAt = startedAt
                 session.blocks = zip(session.blocks, lifts).map { block, lift in
                     var block = block
@@ -56,10 +62,10 @@ enum SampleData {
                     return block
                 }
                 session.endedAt = startedAt.addingTimeInterval(55 * 60)
-                context.insert(session)
+                sessions.append(session)
             }
         }
-        try? context.save()
+        return templates + sessions
     }
 }
 #endif

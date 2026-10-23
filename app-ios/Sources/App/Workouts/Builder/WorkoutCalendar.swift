@@ -15,7 +15,7 @@ struct LoggedDays {
     }
 
     /// The day's last session. The reference opens one summary per day.
-    func session(on day: Date) -> WorkoutSession? { byDay[day]?.last }
+    func session(on day: Date) -> WorkoutSession? { byDay[day]?.max { $0.startedAt < $1.startedAt } }
 
     /// Week starts from the first logged week (at least `minimumBack` weeks ago) to `ahead` weeks from now.
     func weeks(minimumBack: Int, ahead: Int) -> [Date] {

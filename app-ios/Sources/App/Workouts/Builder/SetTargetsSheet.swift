@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 /// The Targets sheet: set types, reps min and max, RIR, and per-set rest. The template editor and the live session's
@@ -10,7 +9,8 @@ struct SetTargetsSheet: View {
 
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(\.dismiss) private var dismiss
-    @Query private var settings: [ExerciseSettings]
+    @Observe(ExerciseSettings.all) private var settings
+    @Observe(AppSettings.current) private var defaults
     @State private var draft: BlockExercise
     @State private var restTimers: Bool
     @State private var editing: Editing?
@@ -33,7 +33,7 @@ struct SetTargetsSheet: View {
     }
 
     private var defaultRest: Int {
-        draft.defaultRestSeconds(exercise: catalog.exercise(draft.exerciseID), settings: settings.first { $0.id == draft.exerciseID })
+        draft.defaultRestSeconds(exercise: catalog.exercise(draft.exerciseID), settings: .of(draft.exerciseID, in: settings), defaults: defaults)
     }
 
     var body: some View {

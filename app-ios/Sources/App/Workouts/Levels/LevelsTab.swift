@@ -1,10 +1,9 @@
-import SwiftData
 import SwiftUI
 
 /// MF's Levels tab: average weekly sets per muscle as a body heat map and two ranked lists.
 struct LevelsTab: View {
     @Environment(ExerciseCatalog.self) private var catalog
-    @Query(filter: #Predicate<WorkoutSession> { $0.endedAt != nil }) private var sessions: [WorkoutSession]
+    @Observe(WorkoutSession.finished) private var sessions
     @AppStorage(LevelsPeriod.storageKey) private var period = LevelsPeriod.oneWeek
     @State private var side = BodySide.front
 
