@@ -11,7 +11,6 @@ struct WorkoutTab: View {
     @Environment(LiveWorkoutPresenter.self) private var presenter
     @State private var showingCalendar = false
     @State private var creating = false
-    @State private var showingHistory = false
     @State private var libraryCollapsed = false
     @State private var summary: WorkoutSession?
     @State private var path = NavigationPath()
@@ -37,7 +36,7 @@ struct WorkoutTab: View {
             .screenTitle("Workout")
             .toolbar { toolbar }
             .navigationDestination(for: WorkoutTemplate.self) { WorkoutDetailView(template: $0) }
-            .navigationDestination(isPresented: $showingHistory) { WorkoutHistoryPlaceholder() }
+            .navigationDestination(for: WorkoutHistoryRoute.self) { _ in WorkoutHistoryView() }
         }
         .tint(Theme.textPrimary)
         .sheet(item: $summary) { WorkoutSummaryView(session: $0) }
@@ -62,7 +61,7 @@ struct WorkoutTab: View {
                 Button("Start Empty Workout", systemImage: "arrow.right.to.line") {
                     presenter.startOrResume({ .empty }, in: context)
                 }
-                Button("Workout History", systemImage: "list.bullet.rectangle") { showingHistory = true }
+                Button("Workout History", systemImage: "list.bullet.rectangle") { path.append(WorkoutHistoryRoute()) }
             }
         }
     }
@@ -93,6 +92,9 @@ struct WorkoutTab: View {
     }
 }
 
+/// `navigationDestination(isPresented:)` on this path-driven stack spun the layout forever, so history is a path value.
+private struct WorkoutHistoryRoute: Hashable {}
+
 private struct TemplateCard: View {
     let template: WorkoutTemplate
     @Environment(ExerciseCatalog.self) private var catalog
@@ -119,13 +121,5 @@ private struct TemplateCard: View {
         .padding()
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
         .contentShape(Rectangle())
-    }
-}
-
-/// Workout History belongs to the live session thread. The coordinator points this link at its screen once both land.
-private struct WorkoutHistoryPlaceholder: View {
-    var body: some View {
-        ContentUnavailableView("Workout History", systemImage: "list.bullet.rectangle", description: Text("Not built yet"))
-            .navigationTitle("Workout History")
     }
 }
