@@ -127,7 +127,7 @@ struct SetTargetsSheet: View {
 
     private func setRow(_ set: Binding<WorkoutSet>) -> some View {
         let value = set.wrappedValue
-        let number = (draft.sets.firstIndex { $0.id == value.id } ?? 0) + 1
+        let number = draft.sets.number(at: draft.sets.firstIndex { $0.id == value.id } ?? 0)
         let isDrop = value.type == .drop
         return HStack(spacing: 8) {
             Button { editing = .type(value.id) } label: { SetBadge(type: value.type, number: number) }

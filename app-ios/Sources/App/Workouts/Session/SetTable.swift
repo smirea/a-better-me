@@ -25,7 +25,7 @@ extension SessionEditor {
                 Text("No sets yet").font(AppFont.caption()).foregroundStyle(Theme.textTertiary).padding(.vertical, 8)
             }
             ForEach(rows, id: \.self) { path in
-                row(path, number: setNumber(path.set, in: item), fields: fields, previous: previous)
+                row(path, number: item.sets.number(at: path.set), fields: fields, previous: previous)
             }
             HStack {
                 Button { addSet(block: block, exercise: index) } label: {
@@ -42,10 +42,6 @@ extension SessionEditor {
     }
 
     /// Warm-ups have no number; every other set counts from 1, so "W, D, +, 2, 3" as in the reference.
-    private func setNumber(_ index: Int, in item: BlockExercise) -> Int {
-        item.sets.prefix(index + 1).count { $0.type != .warmUp }
-    }
-
     private func row(_ path: RowPath, number: Int, fields: [SetField], previous: [WorkoutSet]) -> some View {
         let isLogged = blocks.log(at: path) != nil
         let value = entry(path, previous: previous)

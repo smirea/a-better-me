@@ -182,7 +182,7 @@ private struct ExerciseRow: View {
                 Text(catalog.name(item.exerciseID)).font(AppFont.headline(15))
                 if hasTargets {
                     ForEach(Array(item.sets.enumerated()), id: \.element.id) { index, set in
-                        TargetLine(set: set, number: index + 1)
+                        TargetLine(set: set, number: item.sets.number(at: index))
                     }
                 } else {
                     Text("No target set").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
