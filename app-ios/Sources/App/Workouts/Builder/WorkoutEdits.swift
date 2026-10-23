@@ -43,10 +43,15 @@ extension [WorkoutBlock] {
         if self[at.block].exercises.isEmpty { remove(at: at.block) }
     }
 
-    /// The copy lands right after the original, inside the same superset if it has one.
+    /// The copy lands right after the original: inside its superset, or as its own block when it stands alone.
     mutating func duplicate(_ id: BlockExercise.ID) {
         guard let at = locate(id) else { return }
-        self[at.block].exercises.insert(self[at.block].exercises[at.item].copy(), at: at.item + 1)
+        let copy = self[at.block].exercises[at.item].copy()
+        if self[at.block].isSuperset {
+            self[at.block].exercises.insert(copy, at: at.item + 1)
+        } else {
+            insert(WorkoutBlock(exercises: [copy]), at: at.block + 1)
+        }
     }
 
     /// Only a standalone exercise next to another block can join it.

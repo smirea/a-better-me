@@ -147,7 +147,12 @@ struct SetTargetsSheet: View {
         .listRowSeparator(.hidden)
         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
         .swipeActions {
-            Button("Delete", systemImage: "trash", role: .destructive) { draft.sets.removeAll { $0.id == value.id } }
+            if draft.sets.count > 1 {
+                Button("Delete", systemImage: "trash", role: .destructive) {
+                    focus = nil
+                    draft.sets.removeAll { $0.id == value.id }
+                }
+            }
         }
     }
 
@@ -193,6 +198,7 @@ struct SetTargetsSheet: View {
     }
 
     private func updateSubSets(of id: WorkoutSet.ID, _ change: (inout [SubSet]) -> Void) {
+        focus = nil
         update(id) { change(&$0.subSets) }
     }
 

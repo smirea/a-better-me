@@ -13,7 +13,8 @@ struct WorkoutDetailView: View {
     @State private var confirmingDelete = false
 
     var body: some View {
-        if template.isDeleted {
+        // After an autosave a deleted model reports a nil context rather than `isDeleted`, and the pop is still animating.
+        if template.isDeleted || template.modelContext == nil {
             Color.clear
         } else {
             editor
