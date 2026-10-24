@@ -9,7 +9,7 @@ struct AppSettings: SyncedRecord {
     static let rowID = "settings"
 
     var id = rowID
-    var weightUnit = WeightUnit.kg
+    var weightUnit = WeightUnit.lb
     private var rest: [RestCategory: Int] = [:]
     var workout = WorkoutSettings()
     var profile = ProfileSettings()
@@ -20,7 +20,7 @@ struct AppSettings: SyncedRecord {
 
     init(row: Row) throws {
         id = row["id"]
-        weightUnit = (row["weight_unit"] as String?).flatMap(WeightUnit.init(rawValue:)) ?? .kg
+        weightUnit = (row["weight_unit"] as String?).flatMap(WeightUnit.init(rawValue:)) ?? .lb
         for category in RestCategory.allCases {
             if let seconds: Int = row[category.column] { rest[category] = seconds }
         }
