@@ -1,11 +1,19 @@
 import SwiftUI
 
 /// The weight keypad's plate calculator: one sleeve of the bar with its plates, the legend, and MF's sentence. The
-/// context key switches the expanded view, which draws the sleeve larger with each plate's weight on it.
+/// context key switches the expanded view, which draws the sleeve larger with each plate's weight on it. Bumper plates
+/// are drawn full height and wider, as they are on a bar. A bar the gym lists in several weights gets a menu, and a
+/// gym with Offset Weight on gets the offset chip.
 struct PlateCalculatorView: View {
     let plan: PlatePlan
     let unit: WeightUnit
     let isExpanded: Bool
+    /// The typed weight, named in the sentence when an offset moved it.
+    var requested: Double? = nil
+    var offset: PlateOffset? = nil
+    var showsOffset = false
+    var onBar: ((Double) -> Void)? = nil
+    var onOffset: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -14,8 +22,8 @@ struct PlateCalculatorView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(Array(plan.legend.enumerated()), id: \.offset) { _, line in
                         HStack(spacing: 6) {
-                            RoundedRectangle(cornerRadius: 2).fill(Self.color(line.weight, unit: unit)).frame(width: 10, height: 10)
-                            Text("\(line.count) x \(SetField.plain(line.weight))")
+                            swatch(line.weight, isBumper: line.isBumper)
+                            Text("\(line.count) x \(SetField.plain(line.weight))\(line.isBumper ? " bumper" : "")")
                         }
                     }
                 }
@@ -24,18 +32,62 @@ struct PlateCalculatorView: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Plate calculator")
+            .accessibilityValue(sentence)
             Divider().overlay(Theme.separator)
-            Text(plan.sentence(unit: unit.rawValue))
-                .font(AppFont.caption(12))
-                .foregroundStyle(Theme.textSecondary)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 8)
+            HStack(spacing: 8) {
+                Text(sentence)
+                    .font(AppFont.caption(12))
+                    .foregroundStyle(Theme.textSecondary)
+                Spacer(minLength: 0)
+                if plan.loading.baseWeights.count > 1, let onBar { barMenu(onBar) }
+                if showsOffset, let onOffset {
+                    Button(action: onOffset) { chip(offset?.label(unit: unit) ?? "Offset", systemImage: "plusminus") }
+                        .accessibilityLabel(offset.map { "Offset weight, \($0.label(unit: unit))" } ?? "Offset weight, none")
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 6)
         }
         .foregroundStyle(Theme.textPrimary)
         .background(Theme.header)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Plate calculator")
-        .accessibilityValue(plan.sentence(unit: unit.rawValue))
+    }
+
+    private var sentence: String {
+        let base = plan.sentence(unit: unit.rawValue)
+        guard let offset, let requested else { return base }
+        return "\(base) (\(SetField.plain(requested)) \(unit.rawValue) \(offset.label(unit: unit)))"
+    }
+
+    private func barMenu(_ onBar: @escaping (Double) -> Void) -> some View {
+        Menu {
+            Picker("Bar Weight", selection: Binding(get: { plan.loading.baseWeight }, set: onBar)) {
+                ForEach(plan.loading.baseWeights, id: \.self) { Text("\(SetField.plain($0)) \(unit.rawValue)").tag($0) }
+            }
+        } label: {
+            chip("\(SetField.plain(plan.loading.baseWeight)) \(unit.rawValue) bar", systemImage: "chevron.up.chevron.down")
+        }
+        .accessibilityLabel("Bar weight, \(SetField.plain(plan.loading.baseWeight)) \(unit.rawValue)")
+    }
+
+    private func chip(_ title: String, systemImage: String) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(AppFont.medium(12))
+            .foregroundStyle(Theme.textPrimary)
+            .padding(.horizontal, 10)
+            .frame(height: 26)
+            .background(Theme.surfaceRaised, in: .capsule)
+    }
+
+    @ViewBuilder
+    private func swatch(_ weight: Double, isBumper: Bool) -> some View {
+        if isBumper {
+            Circle().fill(Self.color(weight, unit: unit)).frame(width: 10, height: 10)
+                .overlay { Circle().strokeBorder(.black.opacity(0.6), lineWidth: 2).padding(2) }
+        } else {
+            RoundedRectangle(cornerRadius: 2).fill(Self.color(weight, unit: unit)).frame(width: 10, height: 10)
+        }
     }
 
     private var sleeve: some View {
@@ -45,13 +97,19 @@ struct PlateCalculatorView: View {
         return HStack(spacing: isExpanded ? 2 : 1) {
             Rectangle().fill(Theme.textTertiary).frame(width: isExpanded ? 28 : 16, height: isExpanded ? 6 : 3)
             RoundedRectangle(cornerRadius: 1).fill(Theme.textTertiary).frame(width: isExpanded ? 6 : 3, height: height * 0.3)
-            ForEach(Array(plan.perSide.enumerated()), id: \.offset) { _, weight in
+            ForEach(Array(plan.loaded.enumerated()), id: \.offset) { _, plate in
                 RoundedRectangle(cornerRadius: isExpanded ? 3 : 1)
-                    .fill(Self.color(weight, unit: unit))
-                    .frame(width: thickness, height: height * (0.35 + 0.65 * weight / heaviest))
+                    .fill(Self.color(plate.weight, unit: unit))
+                    .frame(
+                        width: plate.isBumper ? thickness * 1.6 : thickness,
+                        height: plate.isBumper ? height : height * (0.35 + 0.65 * plate.weight / heaviest)
+                    )
                     .overlay {
+                        if plate.isBumper {
+                            RoundedRectangle(cornerRadius: isExpanded ? 3 : 1).strokeBorder(.black.opacity(0.5), lineWidth: isExpanded ? 2 : 1)
+                        }
                         if isExpanded {
-                            Text(SetField.plain(weight))
+                            Text(SetField.plain(plate.weight))
                                 .font(AppFont.headline(10))
                                 .foregroundStyle(.black)
                                 .fixedSize()

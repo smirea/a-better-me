@@ -13,7 +13,7 @@ struct SessionEditor: View {
     enum Mode { case live, editPast }
 
     enum Sheet: Identifiable {
-        case info(ExerciseID), progression, warmUp, targets, swap(ExerciseID), add, note, restTimer, settings, gym, equipment
+        case info(ExerciseID), progression, warmUp, targets, swap(ExerciseID), add, note, restTimer, settings, gym, equipment, equipmentSettings
         var id: String { String(describing: self) }
     }
 
@@ -426,6 +426,8 @@ struct SessionEditor: View {
             }
         case .equipment:
             equipmentSheet()
+        case .equipmentSettings:
+            closableSheet { equipmentSettingsView() }
         }
     }
 
