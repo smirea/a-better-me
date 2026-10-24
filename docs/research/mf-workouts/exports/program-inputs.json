@@ -1,0 +1,206 @@
+{
+	"program-p1-hyp-3x-fullbody-40-60": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 3,
+		"split": "fullBody",
+		"sessionMinutes": "40-60",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p2-str-3x-fullbody-40-60": {
+		"goal": "strength",
+		"daysPerWeek": 3,
+		"split": "fullBody",
+		"sessionMinutes": "40-60",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p3-hyp-5x-ppl-60-90": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 5,
+		"split": "pushPullHingeSquatAccessories",
+		"sessionMinutes": "60-90",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p4-hyp-4x-ulf-20-40-focus": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 4,
+		"split": "upperLowerUpperLower",
+		"sessionMinutes": "20-40",
+		"repProgression": "noPreference",
+		"muscleFocus": {
+			"biceps": "more",
+			"sideDelts": "more",
+			"chest": "less"
+		},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p5-hyp-4x-ul-90-120": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 4,
+		"split": "upperLowerUpperLower",
+		"sessionMinutes": "90-120",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p6-both-5x-nopref-40-60-linear": {
+		"goal": "both",
+		"daysPerWeek": 5,
+		"split": "noPreference",
+		"sessionMinutes": "40-60",
+		"repProgression": "linear",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p7-hyp-3x-fb-40-60-static": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 3,
+		"split": "fullBody",
+		"sessionMinutes": "40-60",
+		"repProgression": "static",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p8-hyp-3x-fb-40-60-repeat": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 3,
+		"split": "fullBody",
+		"sessionMinutes": "40-60",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p9-hyp-3x-fb-40-60-undulating": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 3,
+		"split": "fullBody",
+		"sessionMinutes": "40-60",
+		"repProgression": "undulating",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p10-hyp-3x-fb-40-60-reverse": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 3,
+		"split": "fullBody",
+		"sessionMinutes": "40-60",
+		"repProgression": "reverseLinear",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p11-hyp-3x-fb-under20": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 3,
+		"split": "fullBody",
+		"sessionMinutes": "0-20",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p12-hyp-3x-fb-over120": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 3,
+		"split": "fullBody",
+		"sessionMinutes": "120+",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p13-str-5x-pplul-60-90": {
+		"goal": "strength",
+		"daysPerWeek": 5,
+		"split": "pushPullLegsUpperLower",
+		"sessionMinutes": "60-90",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p14-hyp-6x-nopref-60-90": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 6,
+		"split": "noPreference",
+		"sessionMinutes": "60-90",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p15-hyp-2x-nopref-40-60": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 2,
+		"split": "noPreference",
+		"sessionMinutes": "40-60",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p19-hyp-6x-pplppl-60-90": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 6,
+		"split": "pushPullLegsPushPullLegs",
+		"sessionMinutes": "60-90",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p20-hyp-3x-ppl-60-90": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 3,
+		"split": "pushPullLegs",
+		"sessionMinutes": "60-90",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p16-hyp-3x-fb-40-60-beginner": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 3,
+		"split": "fullBody",
+		"sessionMinutes": "40-60",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "beginner"
+	},
+	"program-p17-hyp-3x-fb-40-60-advanced": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 3,
+		"split": "fullBody",
+		"sessionMinutes": "40-60",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "advanced"
+	},
+	"program-p18-hyp-3x-fb-40-60-nodeload": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 3,
+		"split": "fullBody",
+		"sessionMinutes": "40-60",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": false,
+		"experience": "intermediate"
+	}
+}
