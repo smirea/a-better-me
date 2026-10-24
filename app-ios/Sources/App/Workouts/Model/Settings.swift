@@ -34,7 +34,7 @@ struct AppSettings: SyncedRecord {
         container["id"] = id
         container["weight_unit"] = weightUnit.rawValue
         for category in RestCategory.allCases {
-            container[category.column] = rest[category]
+            container[category.column] = rest[category] ?? category.defaultSeconds
         }
         container["workout"] = try RowJSON.text(workout)
         container["profile"] = try RowJSON.text(profile)

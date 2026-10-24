@@ -81,14 +81,14 @@
             buildSettings = { CLANG_ENABLE_MODULES = YES; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; SWIFT_COMPILATION_MODE = wholemodule; };
             name = Release;
         };
-        /* The one dependency: PowerSync with GRDB, pinned exactly (see docs/decisions/sync.md). */
+        /* The one dependency: the sync engine, which brings GRDB (see docs/decisions/sync.md). */
         A00000000000000000000020 = {
             isa = XCRemoteSwiftPackageReference;
-            repositoryURL = "https://github.com/powersync-ja/powersync-swift";
-            requirement = { kind = exactVersion; version = 1.16.4; };
+            repositoryURL = "https://github.com/smirea/sync-engine";
+            requirement = { kind = branch; branch = master; };
         };
-        A00000000000000000000021 = { isa = XCSwiftPackageProductDependency; package = A00000000000000000000020; productName = PowerSync; };
-        A00000000000000000000022 = { isa = XCSwiftPackageProductDependency; package = A00000000000000000000020; productName = PowerSyncGRDB; };
+        A00000000000000000000021 = { isa = XCSwiftPackageProductDependency; package = A00000000000000000000020; productName = SyncEngine; };
+        A00000000000000000000022 = { isa = XCSwiftPackageProductDependency; package = A00000000000000000000020; productName = GRDB; };
         A00000000000000000000023 = { isa = PBXBuildFile; productRef = A00000000000000000000021; };
         A00000000000000000000024 = { isa = PBXBuildFile; productRef = A00000000000000000000022; };
         A00000000000000000000016 = { isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Base.xcconfig; sourceTree = "<group>"; };

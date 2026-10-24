@@ -5,7 +5,6 @@ struct BetterMeApp: App {
     @State private var catalog: ExerciseCatalog
     @State private var presenter = LiveWorkoutPresenter()
     @State private var store: LocalStore
-    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         AppFont.register()
@@ -25,22 +24,13 @@ struct BetterMeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if store.isReady {
-                    RootView()
-                } else {
-                    Theme.background.ignoresSafeArea()
-                }
-            }
-            .environment(catalog)
-            .environment(presenter)
-            .environment(store)
-            .font(AppFont.body())
-            .preferredColorScheme(.dark)
-            .tint(Theme.accent)
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { store.resume() }
+            RootView()
+                .environment(catalog)
+                .environment(presenter)
+                .environment(store)
+                .font(AppFont.body())
+                .preferredColorScheme(.dark)
+                .tint(Theme.accent)
         }
     }
 }
