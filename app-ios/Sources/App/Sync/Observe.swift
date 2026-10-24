@@ -54,6 +54,14 @@ extension WorkoutTemplate {
         try WorkoutTemplate.fetchAll(db).sorted { $0.createdAt < $1.createdAt }
     }
 
+    static let library = DatabaseQuery([WorkoutTemplate]()) { db in
+        try all.fetch(db).filter { $0.programID == nil && !$0.isArchived }
+    }
+
+    static let archived = DatabaseQuery([WorkoutTemplate]()) { db in
+        try all.fetch(db).filter(\.isArchived)
+    }
+
     static func one(_ id: UUID) -> DatabaseQuery<WorkoutTemplate?> {
         DatabaseQuery(nil) { try WorkoutTemplate.fetchOne($0, key: key(id)) }
     }
@@ -97,4 +105,50 @@ extension ExerciseSettings {
 
 extension AppSettings {
     static let current = DatabaseQuery(AppSettings()) { try AppSettings.fetchOne($0, key: rowID) ?? AppSettings() }
+}
+
+extension Program {
+    static let all = DatabaseQuery([Program]()) { db in
+        try Program.fetchAll(db).sorted { $0.createdAt < $1.createdAt }
+    }
+
+    static let library = DatabaseQuery([Program]()) { db in
+        try all.fetch(db).filter { !$0.isArchived }
+    }
+
+    static let archived = DatabaseQuery([Program]()) { db in
+        try Program.fetchAll(db).filter(\.isArchived).sorted { $0.createdAt < $1.createdAt }
+    }
+
+    /// The active, unarchived program. If two are active (two devices activated offline), the one updated last.
+    static let active = DatabaseQuery(Program?.none) { db in
+        try library.fetch(db).filter(\.isActive).max { $0.updatedAt < $1.updatedAt }
+    }
+
+    static func one(_ id: UUID) -> DatabaseQuery<Program?> {
+        DatabaseQuery(nil) { try Program.fetchOne($0, key: key(id)) }
+    }
+}
+
+extension GymProfile {
+    static let all = DatabaseQuery([GymProfile]()) { db in
+        try GymProfile.fetchAll(db).sorted { $0.createdAt < $1.createdAt }
+    }
+
+    static let defaultGym = DatabaseQuery(GymProfile?.none) { db in
+        let gyms = try all.fetch(db)
+        return gyms.filter(\.isDefault).max { $0.updatedAt < $1.updatedAt } ?? gyms.first
+    }
+
+    static func one(_ id: UUID) -> DatabaseQuery<GymProfile?> {
+        DatabaseQuery(nil) { try GymProfile.fetchOne($0, key: key(id)) }
+    }
+}
+
+extension BodyWeight {
+    static let all = DatabaseQuery([BodyWeight]()) { db in
+        try BodyWeight.fetchAll(db).sorted { $0.measuredAt > $1.measuredAt }
+    }
+
+    static let latest = DatabaseQuery(BodyWeight?.none) { db in try all.fetch(db).first }
 }

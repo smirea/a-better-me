@@ -16,7 +16,9 @@ beforeAll(async () => {
 });
 afterAll(() => client.close());
 beforeEach(async () => {
-	await db.execute(sql`TRUNCATE workout_templates, workout_sessions, custom_exercises, exercise_settings, settings`);
+	await db.execute(
+		sql`TRUNCATE workout_templates, workout_sessions, custom_exercises, exercise_settings, settings, programs, gym_profiles, body_weights`,
+	);
 });
 
 const send = (writes: unknown[], token: string | null = DEV_OWNER_TOKEN) =>
@@ -183,6 +185,89 @@ describe('POST /api/upload', () => {
 		]);
 		expect(await rows('SELECT exercise, is_archived FROM custom_exercises')).toEqual([
 			{ exercise: { name: 'Sled push' }, is_archived: true },
+		]);
+	});
+
+	test('a program put that leaves out its defaulted columns reads back their defaults', async () => {
+		expect(
+			await upload([
+				{
+					op: 'put',
+					table: 'programs',
+					id: 'p1',
+					values: {
+						name: 'Hypertrophy',
+						color: 'blue',
+						icon: 'dumbbell',
+						cycles: 4,
+						created_at: '2026-10-23T09:00:00.000Z',
+						updated_at: '2026-10-23T09:00:00.000Z',
+					},
+				},
+			]),
+		).toEqual([]);
+		expect(await rows('SELECT config, days, current_cycle, active, archived FROM programs')).toEqual([
+			{ config: {}, days: [], current_cycle: 1, active: false, archived: false },
+		]);
+	});
+
+	test('a program whose days is not an array is refused by the database', async () => {
+		const rejected = await upload([
+			{
+				op: 'put',
+				table: 'programs',
+				id: 'p1',
+				values: {
+					name: 'Hypertrophy',
+					color: 'blue',
+					icon: 'dumbbell',
+					cycles: 4,
+					days: '{}',
+					created_at: '2026-10-23T09:00:00.000Z',
+					updated_at: '2026-10-23T09:00:00.000Z',
+				},
+			},
+		]);
+		expect(rejected.map(({ table, id }) => `${table}/${id}`)).toEqual(['programs/p1']);
+		expect(rejected[0]!.reason).toStartWith('The database refused the write: ');
+		expect(rejected[0]!.reason).toContain('programs_days_array');
+		expect(await rows('SELECT id FROM programs')).toEqual([]);
+	});
+
+	test('a body weight keeps its fractional kilograms, sent as a number or as text', async () => {
+		const weight = (id: string, weightKg: unknown) => ({
+			op: 'put',
+			table: 'body_weights',
+			id,
+			values: { measured_at: '2026-10-23T07:00:00.000Z', weight_kg: weightKg },
+		});
+		expect(await upload([weight('w1', 82.35), weight('w2', '82.35')])).toEqual([]);
+		expect(await rows('SELECT id, weight_kg, source FROM body_weights ORDER BY id')).toEqual([
+			{ id: 'w1', weight_kg: 82.35, source: 'manual' },
+			{ id: 'w2', weight_kg: 82.35, source: 'manual' },
+		]);
+	});
+
+	test('a settings put with one JSON column leaves the others as empty objects', async () => {
+		expect(
+			await upload([
+				{ op: 'put', table: 'settings', id: 'settings', values: { workout: '{"rest":{"enabled":false}}' } },
+			]),
+		).toEqual([]);
+		expect(await rows('SELECT workout, profile, dashboard, shortcuts FROM settings')).toEqual([
+			{ workout: { rest: { enabled: false } }, profile: {}, dashboard: {}, shortcuts: {} },
+		]);
+	});
+
+	test('do_not_recommend patches onto exercise settings put without it', async () => {
+		expect(
+			await upload([
+				{ op: 'put', table: 'exercise_settings', id: 'bench-press', values: { pinned_note: 'Arch' } },
+				{ op: 'patch', table: 'exercise_settings', id: 'bench-press', values: { do_not_recommend: 1 } },
+			]),
+		).toEqual([]);
+		expect(await rows('SELECT pinned_note, do_not_recommend, overrides FROM exercise_settings')).toEqual([
+			{ pinned_note: 'Arch', do_not_recommend: true, overrides: {} },
 		]);
 	});
 

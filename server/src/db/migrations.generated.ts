@@ -18,5 +18,35 @@ export const migrations: { tag: string; when: number; statements: string[] }[] =
 			"-- PowerSync replicates exactly the synced tables (`SYNCED_TABLES`). A new synced table needs its own\n-- `ALTER PUBLICATION powersync ADD TABLE` and grant.\nCREATE PUBLICATION powersync FOR TABLE \"workout_templates\", \"workout_sessions\", \"custom_exercises\", \"exercise_settings\", \"settings\";",
 			"-- Supabase's replication role. Local Docker PowerSync connects as `postgres` and has no such role.\nDO $$\nBEGIN\n\tIF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'a_better_me_powersync') THEN\n\t\tGRANT SELECT ON \"workout_templates\", \"workout_sessions\", \"custom_exercises\", \"exercise_settings\", \"settings\" TO a_better_me_powersync;\n\tEND IF;\nEND $$;"
 		]
+	},
+	{
+		"tag": "0002_fresh_silver_surfer",
+		"when": 1792808337070,
+		"statements": [
+			"CREATE TABLE \"body_weights\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"measured_at\" timestamp with time zone NOT NULL,\n\t\"weight_kg\" double precision NOT NULL,\n\t\"source\" text DEFAULT 'manual' NOT NULL,\n\tCONSTRAINT \"body_weights_weight_kg\" CHECK (\"body_weights\".\"weight_kg\" > 0),\n\tCONSTRAINT \"body_weights_source\" CHECK (\"body_weights\".\"source\" IN ('manual', 'healthkit'))\n);",
+			"CREATE TABLE \"gym_profiles\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"name\" text NOT NULL,\n\t\"icon\" text NOT NULL,\n\t\"is_default\" boolean DEFAULT false NOT NULL,\n\t\"equipment\" jsonb DEFAULT '{}'::jsonb NOT NULL,\n\t\"created_at\" timestamp with time zone NOT NULL,\n\t\"updated_at\" timestamp with time zone NOT NULL,\n\tCONSTRAINT \"gym_profiles_equipment_object\" CHECK (jsonb_typeof(\"gym_profiles\".\"equipment\") = 'object')\n);",
+			"CREATE TABLE \"programs\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"name\" text NOT NULL,\n\t\"color\" text NOT NULL,\n\t\"icon\" text NOT NULL,\n\t\"cycles\" integer NOT NULL,\n\t\"current_cycle\" integer DEFAULT 1 NOT NULL,\n\t\"active\" boolean DEFAULT false NOT NULL,\n\t\"archived\" boolean DEFAULT false NOT NULL,\n\t\"config\" jsonb DEFAULT '{}'::jsonb NOT NULL,\n\t\"days\" jsonb DEFAULT '[]'::jsonb NOT NULL,\n\t\"created_at\" timestamp with time zone NOT NULL,\n\t\"updated_at\" timestamp with time zone NOT NULL,\n\tCONSTRAINT \"programs_cycles\" CHECK (\"programs\".\"cycles\" >= 1 AND \"programs\".\"current_cycle\" >= 1),\n\tCONSTRAINT \"programs_config_object\" CHECK (jsonb_typeof(\"programs\".\"config\") = 'object'),\n\tCONSTRAINT \"programs_days_array\" CHECK (jsonb_typeof(\"programs\".\"days\") = 'array')\n);",
+			"ALTER TABLE \"exercise_settings\" ADD COLUMN \"do_not_recommend\" boolean DEFAULT false NOT NULL;",
+			"ALTER TABLE \"exercise_settings\" ADD COLUMN \"overrides\" jsonb DEFAULT '{}'::jsonb NOT NULL;",
+			"ALTER TABLE \"settings\" ADD COLUMN \"workout\" jsonb DEFAULT '{}'::jsonb NOT NULL;",
+			"ALTER TABLE \"settings\" ADD COLUMN \"profile\" jsonb DEFAULT '{}'::jsonb NOT NULL;",
+			"ALTER TABLE \"settings\" ADD COLUMN \"dashboard\" jsonb DEFAULT '{}'::jsonb NOT NULL;",
+			"ALTER TABLE \"settings\" ADD COLUMN \"shortcuts\" jsonb DEFAULT '{}'::jsonb NOT NULL;",
+			"ALTER TABLE \"workout_sessions\" ADD COLUMN \"program_id\" text;",
+			"ALTER TABLE \"workout_sessions\" ADD COLUMN \"program_day_id\" text;",
+			"ALTER TABLE \"workout_sessions\" ADD COLUMN \"cycle\" integer;",
+			"ALTER TABLE \"workout_sessions\" ADD COLUMN \"gym_id\" text;",
+			"ALTER TABLE \"workout_sessions\" ADD COLUMN \"paused_seconds\" integer DEFAULT 0 NOT NULL;",
+			"ALTER TABLE \"workout_templates\" ADD COLUMN \"program_id\" text;",
+			"ALTER TABLE \"workout_templates\" ADD COLUMN \"gym_id\" text;",
+			"ALTER TABLE \"workout_templates\" ADD COLUMN \"archived\" boolean DEFAULT false NOT NULL;",
+			"ALTER TABLE \"exercise_settings\" ADD CONSTRAINT \"exercise_settings_overrides_object\" CHECK (jsonb_typeof(\"exercise_settings\".\"overrides\") = 'object');",
+			"ALTER TABLE \"settings\" ADD CONSTRAINT \"settings_json_objects\" CHECK (jsonb_typeof(\"settings\".\"workout\") = 'object' AND jsonb_typeof(\"settings\".\"profile\") = 'object' AND jsonb_typeof(\"settings\".\"dashboard\") = 'object' AND jsonb_typeof(\"settings\".\"shortcuts\") = 'object');",
+			"ALTER TABLE \"workout_sessions\" ADD CONSTRAINT \"workout_sessions_program\" CHECK ((\"workout_sessions\".\"program_id\" IS NULL) = (\"workout_sessions\".\"program_day_id\" IS NULL) AND (\"workout_sessions\".\"program_day_id\" IS NULL) = (\"workout_sessions\".\"cycle\" IS NULL));",
+			"ALTER TABLE \"workout_sessions\" ADD CONSTRAINT \"workout_sessions_cycle\" CHECK (\"workout_sessions\".\"cycle\" >= 1);",
+			"ALTER TABLE \"workout_sessions\" ADD CONSTRAINT \"workout_sessions_paused_seconds\" CHECK (\"workout_sessions\".\"paused_seconds\" >= 0);",
+			"ALTER PUBLICATION powersync ADD TABLE \"programs\", \"gym_profiles\", \"body_weights\";",
+			"DO $$\nBEGIN\n\tIF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'a_better_me_powersync') THEN\n\t\tGRANT SELECT ON \"programs\", \"gym_profiles\", \"body_weights\" TO a_better_me_powersync;\n\tEND IF;\nEND $$;"
+		]
 	}
 ];

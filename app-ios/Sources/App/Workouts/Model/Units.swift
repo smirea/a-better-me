@@ -16,8 +16,9 @@ enum WeightUnit: String, CaseIterable, Identifiable {
     }
 }
 
-/// MF's rest-timer groups, each with its own default in Workout settings (`AppSettings`).
-enum RestCategory: String, CaseIterable, Identifiable {
+/// MF's rest-timer groups, each with its own default in Workout settings (`AppSettings`). `CodingKeyRepresentable`
+/// makes a dictionary keyed by it encode as a JSON object instead of a flat key-value array.
+enum RestCategory: String, CaseIterable, Identifiable, Codable, CodingKeyRepresentable {
     case compoundUpper, compoundLower, upperIsolation, lowerIsolation, core
 
     var id: String { rawValue }

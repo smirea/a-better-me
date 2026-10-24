@@ -1,9 +1,9 @@
 import Foundation
 import GRDB
 
-/// The one row of the synced `settings` table, id `settings`: the weight unit and the rest default per category. A
-/// column the row lacks (another device created it with one change) reads as the category's default, so the row is
-/// only ever patched, never rewritten whole.
+/// The one row of the synced `settings` table, id `settings`: the weight unit, the rest default per category, and the
+/// four JSON settings trees. A column the row lacks (another device created it with one change) reads as its default,
+/// so the row is only ever patched, never rewritten whole.
 struct AppSettings: SyncedRecord {
     static let table = "settings"
     static let rowID = "settings"
@@ -11,6 +11,10 @@ struct AppSettings: SyncedRecord {
     var id = rowID
     var weightUnit = WeightUnit.kg
     private var rest: [RestCategory: Int] = [:]
+    var workout = WorkoutSettings()
+    var profile = ProfileSettings()
+    var dashboard = DashboardLayout()
+    var shortcuts = ShortcutsLayout()
 
     init() {}
 
@@ -20,6 +24,10 @@ struct AppSettings: SyncedRecord {
         for category in RestCategory.allCases {
             if let seconds: Int = row[category.column] { rest[category] = seconds }
         }
+        workout = row.json("workout", over: WorkoutSettings())
+        profile = row.json("profile", over: ProfileSettings())
+        dashboard = row.json("dashboard", over: DashboardLayout())
+        shortcuts = row.json("shortcuts", over: ShortcutsLayout())
     }
 
     func encode(to container: inout PersistenceContainer) throws {
@@ -28,11 +36,24 @@ struct AppSettings: SyncedRecord {
         for category in RestCategory.allCases {
             container[category.column] = rest[category]
         }
+        container["workout"] = try RowJSON.text(workout)
+        container["profile"] = try RowJSON.text(profile)
+        container["dashboard"] = try RowJSON.text(dashboard)
+        container["shortcuts"] = try RowJSON.text(shortcuts)
     }
 
     func restSeconds(_ category: RestCategory) -> Int { rest[category] ?? category.defaultSeconds }
 
     mutating func setRestSeconds(_ seconds: Int, for category: RestCategory) { rest[category] = seconds }
+
+    /// Rest Timer's Reset Defaults: the five durations and every other rest-timer setting. Each duration is written
+    /// explicitly, because clearing the dictionary would patch NULL into the NOT NULL rest columns.
+    mutating func resetRestTimer() {
+        for category in RestCategory.allCases {
+            rest[category] = category.defaultSeconds
+        }
+        workout.rest = RestSettings()
+    }
 }
 
 extension RestCategory {
@@ -45,4 +66,25 @@ extension RestCategory {
         case .core: "rest_core"
         }
     }
+}
+
+/// The owner's profile: what the body figure, the generator, and exercise access read. Encoded whole into
+/// `settings.profile`.
+struct ProfileSettings: Codable, Hashable {
+    var sex = BodySex.male
+    var liftingExperience = LiftingExperience.intermediate
+    /// Exercise Assessment answers by question id. The question and answer ids come from the research thread.
+    var assessment: [String: String] = [:]
+    var assessmentCompletedAt: Date?
+    /// The manual fallback the live workout's Bodyweight Contribution uses when no `BodyWeight` row and no HealthKit
+    /// sample exist. `currentBodyWeightKg` ranks it last.
+    var bodyWeightKg: Double?
+}
+
+enum BodySex: String, Codable {
+    case male, female
+}
+
+enum LiftingExperience: String, Codable, CaseIterable {
+    case beginner, intermediate, advanced
 }

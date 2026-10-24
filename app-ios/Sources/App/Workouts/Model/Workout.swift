@@ -17,6 +17,15 @@ struct BlockExercise: Codable, Hashable, Identifiable {
     var restSeconds: Int?
     /// The session note in a session, the template note in a template. The pinned note lives in `ExerciseSettings`.
     var note: String?
+    /// Per-cycle targets in a program's template: index 0 is cycle 1, and a cycle past the end uses `sets`. `nil`
+    /// outside programs. Optional, like every field added to the block tree, because synthesized `Decodable` requires
+    /// every non-optional key and every stored tree predates it.
+    var cycleTargets: [CycleTargets]?
+}
+
+struct CycleTargets: Codable, Hashable {
+    var sets: [WorkoutSet]
+    var skip = false
 }
 
 extension BlockExercise {
@@ -28,6 +37,22 @@ extension BlockExercise {
     /// What a set rests when it has no rest of its own: the value "Set Rest Timers" starts from.
     func defaultRestSeconds(exercise: Exercise?, settings: ExerciseSettings?, defaults: AppSettings) -> Int {
         restSeconds ?? settings?.restSeconds ?? defaults.restSeconds(exercise?.restCategory ?? .upperIsolation)
+    }
+}
+
+extension [WorkoutBlock] {
+    func targets(forCycle cycle: Int) -> [WorkoutBlock] {
+        compactMap { block in
+            var block = block
+            block.exercises = block.exercises.compactMap { exercise in
+                guard let targets = exercise.cycleTargets, targets.indices.contains(cycle - 1) else { return exercise }
+                if targets[cycle - 1].skip { return nil }
+                var exercise = exercise
+                exercise.sets = targets[cycle - 1].sets
+                return exercise
+            }
+            return block.exercises.isEmpty ? nil : block
+        }
     }
 }
 
@@ -104,6 +129,9 @@ struct WorkoutTemplate: SyncedRecord {
     var createdAt: Date
     var updatedAt: Date
     var blocks: [WorkoutBlock]
+    var programID: UUID?
+    var gymID: UUID?
+    var isArchived = false
 
     init(name: String, notes: String = "", blocks: [WorkoutBlock] = []) {
         id = UUID()
@@ -121,6 +149,9 @@ struct WorkoutTemplate: SyncedRecord {
         createdAt = try row.instant("created_at")
         updatedAt = try row.instant("updated_at")
         blocks = try row.json("blocks")
+        programID = (row["program_id"] as String?).flatMap(UUID.init(uuidString:))
+        gymID = (row["gym_id"] as String?).flatMap(UUID.init(uuidString:))
+        isArchived = row.flag("archived")
     }
 
     func encode(to container: inout PersistenceContainer) throws {
@@ -130,6 +161,9 @@ struct WorkoutTemplate: SyncedRecord {
         container["created_at"] = Instant.text(createdAt)
         container["updated_at"] = Instant.text(updatedAt)
         container["blocks"] = try RowJSON.text(blocks)
+        container["program_id"] = programID.map(Self.key)
+        container["gym_id"] = gymID.map(Self.key)
+        container["archived"] = isArchived ? 1 : 0
     }
 }
 
@@ -144,6 +178,9 @@ struct WorkoutSession: SyncedRecord {
     var endedAt: Date?
     var notes: String
     var blocks: [WorkoutBlock]
+    var program: ProgramPosition?
+    var gymID: UUID?
+    var pausedSeconds = 0
 
     init(name: String, templateID: UUID? = nil, blocks: [WorkoutBlock] = [], startedAt: Date = .now) {
         id = UUID()
@@ -158,6 +195,12 @@ struct WorkoutSession: SyncedRecord {
         self.init(name: template.name, templateID: template.id, blocks: template.blocks)
     }
 
+    init(startingFrom template: WorkoutTemplate, at position: ProgramPosition, gymID: UUID?) {
+        self.init(name: template.name, templateID: template.id, blocks: template.blocks.targets(forCycle: position.cycle))
+        program = position
+        self.gymID = gymID
+    }
+
     init(row: Row) throws {
         id = try row.uuid("id")
         name = row["name"]
@@ -166,6 +209,13 @@ struct WorkoutSession: SyncedRecord {
         endedAt = try row.instant("ended_at", optional: true)
         notes = row["notes"] ?? ""
         blocks = try row.json("blocks")
+        if let programID = (row["program_id"] as String?).flatMap(UUID.init(uuidString:)),
+           let dayID = (row["program_day_id"] as String?).flatMap(UUID.init(uuidString:)),
+           let cycle: Int = row["cycle"] {
+            program = ProgramPosition(programID: programID, dayID: dayID, cycle: cycle)
+        }
+        gymID = (row["gym_id"] as String?).flatMap(UUID.init(uuidString:))
+        pausedSeconds = row["paused_seconds"] ?? 0
     }
 
     func encode(to container: inout PersistenceContainer) throws {
@@ -176,6 +226,11 @@ struct WorkoutSession: SyncedRecord {
         container["ended_at"] = endedAt.map(Instant.text)
         container["notes"] = notes
         container["blocks"] = try RowJSON.text(blocks)
+        container["program_id"] = program.map { Self.key($0.programID) }
+        container["program_day_id"] = program.map { Self.key($0.dayID) }
+        container["cycle"] = program?.cycle
+        container["gym_id"] = gymID.map(Self.key)
+        container["paused_seconds"] = pausedSeconds
     }
 
     var isInProgress: Bool { endedAt == nil }
@@ -209,14 +264,17 @@ struct CustomExercise: SyncedRecord {
     }
 }
 
-/// The owner's per-exercise settings from Exercise Settings: the pinned note shown every workout and the rest override.
-/// Keyed by the exercise id, so two devices editing one exercise offline converge on one row.
+/// The owner's per-exercise settings from Exercise Settings: the pinned note shown every workout, the rest override,
+/// Do Not Recommend, and the Exercise Overrides. Keyed by the exercise id, so two devices editing one exercise offline
+/// converge on one row.
 struct ExerciseSettings: SyncedRecord {
     static let table = "exercise_settings"
 
     var id: ExerciseID
     var pinnedNote: String
     var restSeconds: Int?
+    var doNotRecommend = false
+    var overrides = ExerciseOverrides()
 
     init(id: ExerciseID, pinnedNote: String = "", restSeconds: Int? = nil) {
         self.id = id
@@ -228,12 +286,16 @@ struct ExerciseSettings: SyncedRecord {
         id = row["id"]
         pinnedNote = row["pinned_note"] ?? ""
         restSeconds = row["rest_seconds"]
+        doNotRecommend = row.flag("do_not_recommend")
+        overrides = row.json("overrides", over: ExerciseOverrides())
     }
 
     func encode(to container: inout PersistenceContainer) throws {
         container["id"] = id
         container["pinned_note"] = pinnedNote
         container["rest_seconds"] = restSeconds
+        container["do_not_recommend"] = doNotRecommend ? 1 : 0
+        container["overrides"] = try RowJSON.text(overrides)
     }
 }
 
