@@ -4,26 +4,29 @@ import Foundation
 struct SetEntry: Hashable {
     var weightKg: Double?
     var reps: Int?
+    /// The F | P keypad's second count; volume and records ignore it.
+    var partialReps: Int?
     var rir: Int?
     var durationSeconds: Int?
     var distanceMeters: Double?
 
-    init(weightKg: Double? = nil, reps: Int? = nil, rir: Int? = nil, durationSeconds: Int? = nil, distanceMeters: Double? = nil) {
+    init(weightKg: Double? = nil, reps: Int? = nil, partialReps: Int? = nil, rir: Int? = nil, durationSeconds: Int? = nil, distanceMeters: Double? = nil) {
         self.weightKg = weightKg
         self.reps = reps
+        self.partialReps = partialReps
         self.rir = rir
         self.durationSeconds = durationSeconds
         self.distanceMeters = distanceMeters
     }
 
     init(_ log: SetLog) {
-        self.init(weightKg: log.weightKg, reps: log.reps, rir: log.rir, durationSeconds: log.durationSeconds, distanceMeters: log.distanceMeters)
+        self.init(weightKg: log.weightKg, reps: log.reps, partialReps: log.partialReps, rir: log.rir, durationSeconds: log.durationSeconds, distanceMeters: log.distanceMeters)
     }
 
     var isEmpty: Bool { weightKg == nil && reps == nil && durationSeconds == nil && distanceMeters == nil }
 
     func log(at date: Date) -> SetLog {
-        SetLog(weightKg: weightKg, reps: reps, rir: rir, durationSeconds: durationSeconds, distanceMeters: distanceMeters, completedAt: date)
+        SetLog(weightKg: weightKg, reps: reps, partialReps: partialReps, rir: rir, durationSeconds: durationSeconds, distanceMeters: distanceMeters, completedAt: date)
     }
 
     /// "Previous values" initial fill: last time's numbers for this row, else its targets. RIR comes from the target
@@ -233,6 +236,14 @@ extension [WorkoutBlock] {
 }
 
 extension SessionFlow {
+    /// Propagate Changes: the rows after `path` of its kind (main rows for a main row, sub-rows for a sub-row) that are
+    /// still open and showed the value `path` had before the edit, so one typed weight or rep count carries forward.
+    static func propagationTargets<Value: Equatable>(from path: RowPath, rows: [RowPath], isOpen: (RowPath) -> Bool, value: (RowPath) -> Value) -> [RowPath] {
+        guard let index = rows.firstIndex(of: path) else { return [] }
+        let edited = value(path)
+        return rows[(index + 1)...].filter { (($0.sub == nil) == (path.sub == nil)) && isOpen($0) && value($0) == edited }
+    }
+
     /// The log of the matching row in the last performance.
     static func previousLog(for path: RowPath, in blocks: [WorkoutBlock], previous: [WorkoutSet]) -> SetLog? {
         guard let set = blocks[path.block].exercises[path.exercise].sets.previousSet(at: path.set, in: previous) else { return nil }

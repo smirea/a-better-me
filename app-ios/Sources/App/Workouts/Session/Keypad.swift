@@ -45,6 +45,12 @@ enum SetField: Hashable {
         }
     }
 
+    /// What the cell shows: the field's text, with "8 + 2" for reps done with partials.
+    func display(_ entry: SetEntry, unit: WeightUnit) -> String {
+        if isReps, let partial = entry.partialReps, partial > 0 { return "\(text(entry, unit: unit)) + \(partial)" }
+        return text(entry, unit: unit)
+    }
+
     /// The keypad types "." and `apply` parses with `Double(_:)`, so field text never uses locale separators or grouping.
     func text(_ entry: SetEntry, unit: WeightUnit) -> String {
         switch self {
@@ -77,6 +83,24 @@ struct KeypadFocus: Equatable {
     var field: SetField
     var text: String
     var replacesOnType = true
+    /// The reps keypad's P: the digits go to `SetEntry.partialReps`.
+    var partial = false
+
+    init(row: RowPath, field: SetField, entry: SetEntry, unit: WeightUnit, partial: Bool = false) {
+        self.row = row
+        self.field = field
+        self.partial = partial
+        text = partial ? entry.partialReps.map(String.init) ?? "" : field.text(entry, unit: unit)
+    }
+
+    /// Writes the typed text into `entry`.
+    func apply(to entry: inout SetEntry, unit: WeightUnit) {
+        if partial {
+            entry.partialReps = Double(text).map { Int($0) }
+        } else {
+            field.apply(text, to: &entry, unit: unit)
+        }
+    }
 
     mutating func type(_ key: Character) {
         if replacesOnType { text = "" }
@@ -104,6 +128,7 @@ struct KeypadFocus: Equatable {
 enum KeypadKey {
     case character(Character), backspace, dismiss, decrement, increment, next, done
     case rir(Int?)
+    case partial(Bool)
 }
 
 /// The custom keypad from the reference: digits on the left, then dismiss and the field's own keys on the right.
@@ -111,6 +136,7 @@ enum KeypadKey {
 struct Keypad: View {
     let field: SetField
     let rir: Int?
+    let partial: Bool
     let onKey: (KeypadKey) -> Void
 
     private static let keyHeight: CGFloat = 50
@@ -140,6 +166,7 @@ struct Keypad: View {
                             sideKey(.increment, accessibility: "Increase weight") { Image(systemName: "plus") }
                         }
                     }
+                    if field.isReps { partialToggle }
                     confirmKey
                 }
                 .frame(width: 120)
@@ -170,6 +197,30 @@ struct Keypad: View {
         .accessibilityLabel(value.map { "RIR \($0 >= 6 ? "6+" : "\($0)")" } ?? "RIR unknown")
     }
 
+    /// F | P: full reps or partial reps.
+    private var partialToggle: some View {
+        HStack(spacing: 0) {
+            partialHalf(false, "F")
+            partialHalf(true, "P")
+        }
+        .frame(height: Self.keyHeight)
+        .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Partial reps")
+    }
+
+    private func partialHalf(_ value: Bool, _ title: String) -> some View {
+        Button { onKey(.partial(value)) } label: {
+            Text(title)
+                .font(AppFont.headline(17))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .foregroundStyle(partial == value ? .black : Theme.textPrimary)
+                .background(partial == value ? Theme.textPrimary : .clear, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+        }
+        .accessibilityLabel(value ? "Partial reps" : "Full reps")
+        .accessibilityAddTraits(partial == value ? .isSelected : [])
+    }
+
     private var confirmKey: some View {
         let isNext = !field.isReps
         return Button { onKey(isNext ? .next : .done) } label: {
@@ -178,7 +229,7 @@ struct Keypad: View {
                 .foregroundStyle(.black)
                 .background(Theme.textPrimary, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
         }
-        .frame(height: isNext ? Self.keyHeight * 2 + 4 : Self.keyHeight * 3 + 8)
+        .frame(height: Self.keyHeight * 2 + 4)
         .accessibilityLabel(isNext ? "Next field" : "Log set")
     }
 

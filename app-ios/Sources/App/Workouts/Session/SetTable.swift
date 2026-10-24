@@ -132,10 +132,12 @@ extension SessionEditor {
         .minimumScaleFactor(0.8)
     }
 
-    /// "40 kg x 8", the weight or the reps alone when only one was logged.
+    /// "40 kg x 8", "40 kg x 8 + 2" with partials, or the weight or the reps alone when only one was logged.
     static func summary(of log: SetLog, unit: WeightUnit) -> String {
         let weight = log.weightKg.map { "\(unit.format(kg: $0)) \(unit.rawValue)" }
-        let reps = log.reps.map(String.init)
+        let reps = log.reps.map { full in
+            if let partial = log.partialReps, partial > 0 { "\(full) + \(partial)" } else { String(full) }
+        }
         let duration = log.durationSeconds.map { Duration.seconds($0).formatted(.time(pattern: .minuteSecond)) }
         let distance = log.distanceMeters.map { Measurement(value: $0, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated)) }
         return [weight, reps ?? duration, distance].compactMap { $0 }.joined(separator: " x ")
@@ -143,9 +145,9 @@ extension SessionEditor {
 
     private func cell(_ path: RowPath, field: SetField, value: SetEntry) -> some View {
         let isFocused = focus?.row == path && focus?.field == field
-        let text = isFocused ? focus?.text ?? "" : field.text(value, unit: unit)
+        let text = isFocused ? focusText(focus!, value: value) : field.display(value, unit: unit)
         return Button {
-            focus = KeypadFocus(row: path, field: field, text: field.text(value, unit: unit))
+            focus = KeypadFocus(row: path, field: field, entry: value, unit: unit)
         } label: {
             Text(text)
                 .font(AppFont.medium(16))
@@ -162,6 +164,11 @@ extension SessionEditor {
                 }
         }
         .accessibilityLabel("\(field.header(unit: unit)) \(text)")
+    }
+
+    /// While typing partials the full count stays visible: "8 + 2|".
+    private func focusText(_ focus: KeypadFocus, value: SetEntry) -> String {
+        focus.partial ? "\(value.reps.map(String.init) ?? "") + \(focus.text)" : focus.text
     }
 
     private func checkbox(_ isOn: Bool) -> some View {
@@ -370,7 +377,7 @@ extension SessionEditor {
 
     func keypad(for focus: KeypadFocus) -> some View {
         let rir = blocks.contains(focus.row) ? entry(focus.row, previous: previousSets(for: focus.row)).rir : nil
-        return Keypad(field: focus.field, rir: rir) { handle($0) }
+        return Keypad(field: focus.field, rir: rir, partial: focus.partial) { handle($0) }
             .transition(.move(edge: .bottom))
     }
 
@@ -389,6 +396,9 @@ extension SessionEditor {
         case let .rir(value):
             update(state.row) { $0.rir = value }
             return
+        case let .partial(partial):
+            focus = KeypadFocus(row: state.row, field: state.field, entry: entry(state.row, previous: previousSets(for: state.row)), unit: unit, partial: partial)
+            return
         case .dismiss:
             focus = nil
             return
@@ -400,8 +410,24 @@ extension SessionEditor {
             if blocks.log(at: state.row) == nil { toggle(state.row, previous: previousSets(for: state.row)) }
             return
         }
-        update(state.row) { state.field.apply(state.text, to: &$0, unit: unit) }
+        let before = entry(state.row, previous: previousSets(for: state.row))
+        update(state.row) { state.apply(to: &$0, unit: unit) }
         focus = state
+        if !state.partial { propagate(state.field, from: state.row, before: before) }
+    }
+
+    /// Propagate Changes: the edited weight or reps also lands in the later open rows that showed the same value.
+    private func propagate(_ field: SetField, from path: RowPath, before: SetEntry) {
+        guard defaults.workout.propagateChanges, field.isWeight || field.isReps, blocks.log(at: path) == nil else { return }
+        let previous = previousSets(for: path)
+        let after = field.text(entry(path, previous: previous), unit: unit)
+        let rows = blocks.rows(block: path.block, exercise: path.exercise)
+        let targets = SessionFlow.propagationTargets(from: path, rows: rows, isOpen: { blocks.log(at: $0) == nil }) {
+            $0 == path ? field.text(before, unit: unit) : field.text(entry($0, previous: previous), unit: unit)
+        }
+        for target in targets {
+            update(target) { field.apply(after, to: &$0, unit: unit) }
+        }
     }
 
     /// → moves to the next field in the row, then to the first field of the next row.
@@ -416,8 +442,7 @@ extension SessionEditor {
             path = next
             fieldIndex = 0
         }
-        let field = fields[fieldIndex]
-        return KeypadFocus(row: path, field: field, text: field.text(entry(path, previous: previousSets(for: path)), unit: unit))
+        return KeypadFocus(row: path, field: fields[fieldIndex], entry: entry(path, previous: previousSets(for: path)), unit: unit)
     }
 }
 
