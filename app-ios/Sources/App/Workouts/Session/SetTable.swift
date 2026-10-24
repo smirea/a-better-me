@@ -11,7 +11,7 @@ extension SessionEditor {
         return VStack(spacing: 8) {
             HStack(spacing: 8) {
                 Text("Set").frame(width: 36)
-                Text("Previous").frame(maxWidth: .infinity)
+                referenceHeader.frame(maxWidth: .infinity)
                 ForEach(fields, id: \.self) { Text($0.header(unit: unit)).frame(maxWidth: .infinity) }
                 Button { toggleAll(block: block, exercise: index, previous: previous) } label: {
                     checkbox(item.isDone)
@@ -47,7 +47,7 @@ extension SessionEditor {
         let value = entry(path, previous: previous)
         return HStack(spacing: 8) {
             badge(path, number: number)
-            previousText(SessionFlow.previousLog(for: path, in: blocks, previous: previous))
+            referenceText(path, previous: previous)
                 .frame(maxWidth: .infinity)
             ForEach(fields, id: \.self) { field in
                 cell(path, field: field, value: value)
@@ -89,13 +89,42 @@ extension SessionEditor {
         }
     }
 
-    private func previousText(_ log: SetLog?) -> some View {
-        VStack(spacing: 0) {
-            if let log {
-                Text(Self.summary(of: log, unit: unit))
-                if let rir = log.rir { Text("\(rir >= 6 ? "6+" : "\(rir)") RIR").foregroundStyle(Theme.textSecondary) }
+    /// "Auto ⇄" or "Previous ⇄"; tapping switches. A past session has no suggestions, so its header is plain.
+    @ViewBuilder
+    private var referenceHeader: some View {
+        if mode == .live {
+            Button {
+                store.referenceColumn = reference == .auto ? .previous : .auto
+            } label: {
+                HStack(spacing: 4) {
+                    Text(reference == .auto ? "Auto" : "Previous")
+                    Image(systemName: "arrow.left.arrow.right").font(.system(size: 10))
+                }
+            }
+            .accessibilityLabel("Reference column")
+            .accessibilityValue(reference == .auto ? "Auto" : "Previous")
+        } else {
+            Text("Previous")
+        }
+    }
+
+    private func referenceText(_ path: RowPath, previous: [WorkoutSet]) -> some View {
+        let lines: (main: String?, rir: Int?, empty: String) = switch reference {
+        case .auto:
+            suggestion(for: path).map { suggestion in
+                var values = suggestion
+                values.rir = nil
+                return (values.autoText(unit: unit), suggestion.rir, "No Target")
+            } ?? (nil, nil, "No Target")
+        case .previous:
+            SessionFlow.previousLog(for: path, in: blocks, previous: previous).map { (Self.summary(of: $0, unit: unit), $0.rir, "") } ?? (nil, nil, "No Previous")
+        }
+        return VStack(spacing: 0) {
+            if let main = lines.main {
+                Text(main)
+                if let rir = lines.rir { Text("\(rir >= 6 ? "6+" : "\(rir)") RIR").foregroundStyle(Theme.textSecondary) }
             } else {
-                Text("No Previous").foregroundStyle(Theme.textTertiary)
+                Text(lines.empty).foregroundStyle(Theme.textTertiary)
             }
         }
         .font(AppFont.caption(12))
@@ -148,7 +177,14 @@ extension SessionEditor {
     func entry(_ path: RowPath, previous: [WorkoutSet]) -> SetEntry {
         if let log = blocks.log(at: path) { return SetEntry(log) }
         if let draft = drafts[blocks.rowID(at: path)] { return draft }
-        return SetEntry.prefill(target: blocks.target(at: path), previous: SessionFlow.previousLog(for: path, in: blocks, previous: previous))
+        let suggestion = defaults.workout.progression.initialFill == .smartProgression ? suggestion(for: path) : nil
+        return SessionFlow.prefill(for: path, in: blocks, previous: previous, suggestion: suggestion, rirTracking: defaults.workout.rirTracking, unit: unit)
+    }
+
+    /// The live session's Smart Progression row for `path`, if the exercise has been suggested yet.
+    func suggestion(for path: RowPath) -> SetSuggestion? {
+        guard mode == .live else { return nil }
+        return store.suggestions[blocks[path.block].exercises[path.exercise].id]?[blocks.rowID(at: path)]
     }
 
     private func update(_ path: RowPath, _ change: (inout SetEntry) -> Void) {
@@ -175,6 +211,7 @@ extension SessionEditor {
         blocks.setLog(entry(path, previous: previous).log(at: .now), at: path)
         drafts[id] = nil
         guard mode == .live else { return }
+        applyProgression(to: blocks[path.block].exercises[path.exercise].id)
         let step = SessionFlow.afterCompleting(path, in: blocks, settings: defaults.workout, rest: restSeconds)
         if let seconds = step.restSeconds { store.startRest(seconds: seconds, alerts: defaults.workout.rest) }
         if let next = step.next, next != current { withAnimation { current = next } }
@@ -266,6 +303,8 @@ extension SessionEditor {
 
     /// The builder's swap keeps sets and targets; mid-session it also drops what was logged against the old exercise.
     func swap(_ id: BlockExercise.ID, to exerciseID: ExerciseID) {
+        store.suggestions[id] = nil
+        store.events[id] = nil
         blocks.swap(id, to: exerciseID)
         guard let at = blocks.locate(id) else { return }
         blocks[at.block].exercises[at.item].sets = blocks[at.block].exercises[at.item].sets.map(\.planned)

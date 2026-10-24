@@ -26,17 +26,18 @@ struct SetEntry: Hashable {
         SetLog(weightKg: weightKg, reps: reps, rir: rir, durationSeconds: durationSeconds, distanceMeters: distanceMeters, completedAt: date)
     }
 
-    /// "Previous values" initial fill: last time's numbers for this row, else its targets. RIR comes from the target first
-    /// ("RIR Tracking" populates it from the plan). A target weight is a planned load, such as a calculated warm-up, so
-    /// it beats the previous log.
-    static func prefill(target: SetTarget?, previous: SetLog?) -> SetEntry {
+    /// "Previous values" initial fill: last time's numbers for this row, else its targets. RIR comes from the target
+    /// first while RIR Tracking populates it from the plan, else from the previous log. A target weight is a planned
+    /// load, such as a calculated warm-up, so it beats the previous log.
+    static func prefill(target: SetTarget?, previous: SetLog?, rirTracking: Bool) -> SetEntry {
+        let rir = rirTracking ? (target?.rir ?? previous?.rir) : (previous?.rir ?? target?.rir)
         if let weightKg = target?.weightKg {
-            return SetEntry(weightKg: weightKg, reps: target?.repsMax ?? target?.repsMin, rir: target?.rir)
+            return SetEntry(weightKg: weightKg, reps: target?.repsMax ?? target?.repsMin, rir: rir)
         }
         return SetEntry(
             weightKg: previous?.weightKg ?? target?.weightKg,
             reps: previous?.reps ?? target?.repsMax ?? target?.repsMin,
-            rir: target?.rir ?? previous?.rir,
+            rir: rir,
             durationSeconds: previous?.durationSeconds ?? target?.durationSeconds,
             distanceMeters: previous?.distanceMeters
         )
@@ -239,14 +240,26 @@ extension SessionFlow {
         return set.subSets[safe: sub]?.log
     }
 
+    /// The initial fill of one row: the Smart Progression suggestion when there is one, else Previous values.
+    static func prefill(for path: RowPath, in blocks: [WorkoutBlock], previous: [WorkoutSet], suggestion: SetSuggestion?, rirTracking: Bool, unit: WeightUnit) -> SetEntry {
+        var entry = SetEntry.prefill(target: blocks.target(at: path), previous: previousLog(for: path, in: blocks, previous: previous), rirTracking: rirTracking)
+        if let suggestion {
+            entry.weightKg = suggestion.prefill.weight.map(unit.toKg)
+            entry.reps = suggestion.prefill.reps
+            entry.rir = suggestion.prefill.rir
+        }
+        return entry
+    }
+
     /// The prefilled values of every row, for "Log All Sets".
-    static func prefills(for blocks: [WorkoutBlock], history: [[WorkoutBlock]]) -> [UUID: SetEntry] {
+    static func prefills(for blocks: [WorkoutBlock], history: [[WorkoutBlock]], suggestions: [BlockExercise.ID: [UUID: SetSuggestion]], rirTracking: Bool, unit: WeightUnit) -> [UUID: SetEntry] {
         var values: [UUID: SetEntry] = [:]
         for (b, block) in blocks.enumerated() {
             for (e, item) in block.exercises.enumerated() {
                 let previous = previousSets(of: item.exerciseID, in: history)
                 for path in blocks.rows(block: b, exercise: e) {
-                    values[blocks.rowID(at: path)] = SetEntry.prefill(target: blocks.target(at: path), previous: previousLog(for: path, in: blocks, previous: previous))
+                    let id = blocks.rowID(at: path)
+                    values[id] = prefill(for: path, in: blocks, previous: previous, suggestion: suggestions[item.id]?[id], rirTracking: rirTracking, unit: unit)
                 }
             }
         }

@@ -13,7 +13,7 @@ struct SessionEditor: View {
     enum Mode { case live, editPast }
 
     enum Sheet: Identifiable {
-        case info(ExerciseID), warmUp, targets, swap(ExerciseID), add, note, restTimer
+        case info(ExerciseID), progression, warmUp, targets, swap(ExerciseID), add, note, restTimer
         var id: String { String(describing: self) }
     }
 
@@ -35,6 +35,7 @@ struct SessionEditor: View {
     @State var sheet: Sheet?
     /// Earlier sessions' blocks, newest first, for the Previous column. Decoded once, since history can't change here.
     @State var history: [[WorkoutBlock]] = []
+    @State private var historyLoaded = false
     @State private var confirmingFinish = false
     @State private var confirmingDiscard = false
     @State private var confirmingExit = false
@@ -46,6 +47,11 @@ struct SessionEditor: View {
 
     var store: LiveSessionStore { .shared }
     var unit: WeightUnit { defaults.weightUnit }
+
+    var reference: ReferenceColumn {
+        guard mode == .live else { return .previous }
+        return store.referenceColumn ?? (defaults.workout.progression.initialFill == .smartProgression ? .auto : .previous)
+    }
 
     var drafts: [UUID: SetEntry] {
         get { mode == .live ? store.drafts : pastDrafts }
@@ -91,10 +97,18 @@ struct SessionEditor: View {
         .animation(.snappy(duration: 0.2), value: focus == nil)
         .task {
             let session = session
-            history = ((try? localStore.read { try WorkoutSession.earlier(than: session, $0) }) ?? []).map(\.blocks)
+            var earlier = (try? localStore.read { try WorkoutSession.earlier(than: session, $0) }) ?? []
+            if defaults.workout.previousReference == .withinProgram, let programID = session.program?.programID {
+                earlier = earlier.filter { $0.program?.programID == programID }
+            }
+            history = earlier.map(\.blocks)
+            historyLoaded = true
+            ensureSuggestions()
         }
         .onChange(of: blocks) { _, blocks in
-            if mode == .live { saveBlocks(blocks) }
+            guard mode == .live else { return }
+            saveBlocks(blocks)
+            ensureSuggestions()
         }
         // A set logged on another device replaces the live copy while no write of this device's is still on its way.
         .onChange(of: live?.blocks) { _, remote in
@@ -262,6 +276,7 @@ struct SessionEditor: View {
     private func chips(item: BlockExercise, isSuperset: Bool) -> some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
+                if mode == .live { progressionChip(item) }
                 chip("Info", "chart.bar.fill") { sheet = .info(item.exerciseID) }
                 chip("Warm Up", "flame.fill") { sheet = .warmUp }
                 chip("Targets", "scope") { sheet = .targets }
@@ -279,6 +294,22 @@ struct SessionEditor: View {
             .padding(.horizontal, 20)
         }
         .scrollIndicators(.hidden)
+    }
+
+    /// The wand: a blue dot marks an exercise whose target rep range Expand Rep Range widened.
+    private func progressionChip(_ item: BlockExercise) -> some View {
+        let adjusted = store.suggestions[item.id]?.values.contains { $0.adjustedReps != nil } ?? false
+        return Button { sheet = .progression } label: {
+            Image(systemName: "wand.and.stars")
+                .font(AppFont.medium(14))
+                .foregroundStyle(Theme.textPrimary)
+                .frame(width: 44, height: 32)
+                .background(Theme.surfaceRaised, in: Capsule())
+                .overlay(alignment: .bottomTrailing) {
+                    if adjusted { Circle().fill(Theme.muscle).frame(width: 7, height: 7).offset(x: -3, y: -3) }
+                }
+        }
+        .accessibilityLabel("Smart Progression")
     }
 
     private func chip(_ title: String, _ icon: String, action: @escaping () -> Void) -> some View {
@@ -301,6 +332,14 @@ struct SessionEditor: View {
         switch sheet {
         case let .info(id):
             ExerciseDetailSheet(exerciseID: id)
+        case .progression:
+            if let position = currentPosition {
+                let item = blocks[position.block].exercises[position.exercise]
+                SmartProgressionSheet(
+                    exerciseName: catalog.name(item.exerciseID), sets: item.sets,
+                    suggestions: store.suggestions[item.id] ?? [:], events: store.events[item.id] ?? [], unit: unit
+                )
+            }
         case .warmUp:
             if let position = currentPosition {
                 WarmUpSheet(workingWeightKg: firstWorkingWeight(block: position.block, exercise: position.exercise), unit: unit) { warmUps in
@@ -339,7 +378,8 @@ struct SessionEditor: View {
     private func finish(logAll: Bool) {
         focus = nil
         if logAll {
-            let prefills = SessionFlow.prefills(for: blocks, history: history)
+            let suggestions = defaults.workout.progression.initialFill == .smartProgression ? store.suggestions : [:]
+            let prefills = SessionFlow.prefills(for: blocks, history: history, suggestions: suggestions, rirTracking: defaults.workout.rirTracking, unit: unit)
             blocks = SessionFlow.logAll(blocks, at: .now) { drafts[$0] ?? prefills[$0] ?? SetEntry() }
         }
         // The session ends on the summary's Done; saving now keeps the logged sets if the app dies before that.
@@ -350,5 +390,44 @@ struct SessionEditor: View {
 
     private func saveBlocks(_ blocks: [WorkoutBlock]) {
         localStore.modify(WorkoutSession.self, id: session.id) { $0.blocks = blocks }
+    }
+
+    // MARK: Smart Progression
+
+    /// The global Smart Progression settings with the exercise's overrides on top.
+    func progressionSettings(for exerciseID: ExerciseID) -> ProgressionSettings {
+        var settings = defaults.workout.progression
+        let overrides = ExerciseSettings.of(exerciseID, in: exerciseSettings)?.overrides
+        if let expand = overrides?.expandRepRange { settings.expandRepRange = expand }
+        if let match = overrides?.weightMatch { settings.weightMatch = match }
+        return settings
+    }
+
+    /// Suggests every exercise that has no suggestions yet, so an exercise added mid-session gets its own fill.
+    func ensureSuggestions() {
+        guard mode == .live, historyLoaded else { return }
+        for item in blocks.flatMap(\.exercises) where store.suggestions[item.id] == nil {
+            let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
+            let suggestions = SmartProgression.suggest(
+                sets: item.sets, previous: previous, settings: progressionSettings(for: item.exerciseID),
+                increment: WarmUpScheme.increment(for: unit), rirTracking: defaults.workout.rirTracking, unit: unit
+            )
+            store.suggestions[item.id] = suggestions
+            store.events[item.id] = [SmartProgression.event(at: .now, sets: item.sets, suggestions: suggestions)]
+        }
+    }
+
+    /// Apply in session: the exercise's open rows take the fill its latest logged set predicts.
+    func applyProgression(to id: BlockExercise.ID) {
+        guard defaults.workout.progression.applyInSession, let at = blocks.locate(id), let current = store.suggestions[id] else { return }
+        let item = blocks[at.block].exercises[at.item]
+        let changed = SmartProgression.applyInSession(
+            sets: item.sets, current: current, settings: progressionSettings(for: item.exerciseID),
+            increment: WarmUpScheme.increment(for: unit), rirTracking: defaults.workout.rirTracking, unit: unit
+        )
+        guard !changed.isEmpty else { return }
+        store.suggestions[id] = current.merging(changed) { $1 }
+        for rowID in changed.keys { store.drafts[rowID] = nil }
+        store.events[id, default: []].append(SmartProgression.event(at: .now, sets: item.sets, suggestions: changed))
     }
 }

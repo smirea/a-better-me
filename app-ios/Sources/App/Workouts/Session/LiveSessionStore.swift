@@ -11,9 +11,14 @@ struct RestTimer: Equatable {
     func remaining(at date: Date) -> TimeInterval { max(0, endsAt.timeIntervalSince(date)) }
 }
 
-/// State of the in-progress workout that isn't history: typed values not yet logged, the rest timer, and the exercise
-/// on screen. It outlives the full-screen view, so minimizing and reopening keeps it. At most one session is in
-/// progress, so one shared instance holds it.
+/// The set table's reference column: the Smart Progression suggestion, or last time's log.
+enum ReferenceColumn {
+    case auto, previous
+}
+
+/// State of the in-progress workout that isn't history: typed values not yet logged, the rest timer, the exercise
+/// on screen, and Smart Progression's suggestions and log. It outlives the full-screen view, so minimizing and
+/// reopening keeps it. At most one session is in progress, so one shared instance holds it.
 @MainActor @Observable
 final class LiveSessionStore {
     static let shared = LiveSessionStore()
@@ -21,6 +26,11 @@ final class LiveSessionStore {
     /// Values typed into rows that aren't logged yet, by set or sub-row ID. A logged row edits its log instead.
     var drafts: [UUID: SetEntry] = [:]
     var currentExercise: BlockExercise.ID?
+    /// `nil` until the header toggle is used; the editor then falls back to the Initial log fill setting.
+    var referenceColumn: ReferenceColumn?
+    /// Smart Progression per exercise, keyed by set or sub-row ID, and the Event Log of its fills.
+    var suggestions: [BlockExercise.ID: [UUID: SetSuggestion]] = [:]
+    var events: [BlockExercise.ID: [ProgressionEvent]] = [:]
     private(set) var rest: RestTimer?
     /// What the restart pill "↺" goes back to: the rest the last checked set resolved to. It outlives Stop.
     private(set) var setRestSeconds: Int?
@@ -61,6 +71,9 @@ final class LiveSessionStore {
         setRestSeconds = nil
         drafts = [:]
         currentExercise = nil
+        referenceColumn = nil
+        suggestions = [:]
+        events = [:]
     }
 
     private func setRest(_ timer: RestTimer) {
