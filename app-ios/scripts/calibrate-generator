@@ -1,0 +1,45 @@
+#!/usr/bin/env bun
+// Runs the Smart Generation calibration suite and prints the generator's error against every MF program in
+// docs/research/mf-workouts/generated-programs.json. Usage: ./scripts/calibrate-generator [simulator name or udid]
+import { resolve } from "node:path";
+
+const root = resolve(import.meta.dir, "..");
+const showDays = process.argv.includes("--days");
+const wanted = process.argv.slice(2).find((a) => !a.startsWith("--"));
+
+async function run(args: string[]) {
+    const child = Bun.spawn(args, { cwd: root, stdout: "pipe", stderr: "pipe" });
+    const [code, out, err] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
+    return { code, out, err };
+}
+
+const list = JSON.parse((await run(["xcrun", "simctl", "list", "devices", "available", "--json"])).out);
+const devices: { name: string; udid: string; state: string }[] = Object.values(list.devices).flat() as never;
+const iphones = devices.filter((d) => d.name.startsWith("iPhone"));
+const device = wanted
+    ? devices.find((d) => d.udid === wanted || d.name === wanted)
+    : (devices.find((d) => d.state === "Booted") ?? iphones.at(-1));
+if (!device) throw new Error(`No simulator matches ${wanted ?? "any iPhone"}`);
+console.log(`Simulator: ${device.name} (${device.udid})`);
+
+const result = await run([
+    "xcodebuild", "test", "-project", "App.xcodeproj", "-scheme", "App",
+    "-destination", `platform=iOS Simulator,id=${device.udid}`,
+    "-derivedDataPath", "DerivedData/tests", "-only-testing:AppTests/GeneratorCalibrationTests",
+    "CODE_SIGN_IDENTITY=-",
+]);
+const lines = (result.out + result.err).split("\n");
+const table = lines.filter((l) => l.includes("CAL|")).map((l) => l.slice(l.indexOf("CAL|") + 4));
+if (table.length === 0) {
+    console.error(lines.filter((l) => /error|failed/i.test(l)).slice(-30).join("\n"));
+    process.exit(result.code || 1);
+}
+console.log("\nerror per MF program (slots: compound slot-class mismatches; Ksets: compound set difference; accN: accessory count difference;");
+console.log("accSets: accessory set difference; accMuscle: accessory muscle mismatches; reps/rir: scheme mismatches; muscleSets: sum |weekly sets| difference)\n");
+for (const line of table) console.log(line);
+if (showDays) {
+    console.log("\nper day (pattern + P/S + sets, then accessory muscle + sets):\n");
+    for (const l of lines.filter((l) => l.includes("DAY|"))) console.log(l.slice(l.indexOf("DAY|") + 4));
+}
+console.log(result.code === 0 ? "\nTESTS PASSED" : `\nTESTS FAILED (${result.code})`);
+process.exit(result.code);

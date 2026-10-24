@@ -18,6 +18,7 @@ struct BetterMeApp: App {
         _store = State(initialValue: store)
         #if DEBUG
         SampleData.seedIfRequested(store)
+        store.seedGeneratedProgramIfRequested(catalog: _catalog.wrappedValue)
         SampleWorkout.startIfRequested(store)
         #endif
     }

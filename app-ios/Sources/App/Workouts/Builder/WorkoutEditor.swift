@@ -1,9 +1,11 @@
 import SwiftUI
 
 /// The workout detail body that a library workout and Create Workout share: Target Muscles, the exercise list, and every
-/// edit menu. The caller adds the title, the toolbar, and the pinned button.
+/// edit menu. The caller adds the title, the toolbar, and the pinned button. A program day passes `program`, which
+/// swaps each exercise's target lines for its week cards and adds the program's options.
 struct WorkoutEditor: View {
     @Binding var blocks: [WorkoutBlock]
+    var program: ProgramDayContext?
 
     @Environment(ExerciseCatalog.self) private var catalog
     @Observe(ExerciseSettings.all) private var settings
@@ -13,14 +15,14 @@ struct WorkoutEditor: View {
     var body: some View {
         // `blocks` decodes the template's JSON on every read, so one render reads it once.
         let current = blocks
-        let targets = MuscleTarget.of(current, catalog: catalog)
+        let targets = program?.targets(current) ?? MuscleTarget.of(current, catalog: catalog)
         List {
-            if !targets.isEmpty {
+            if !targets.isEmpty || program != nil {
                 targetMuscles(targets).plainRow()
             }
             exercisesHeader(current).plainRow()
             ForEach(current) { block in
-                BlockView(block: block, blocks: $blocks, sheet: $sheet).plainRow(background: block.isSuperset ? Theme.surface : .clear)
+                BlockView(block: block, blocks: $blocks, sheet: $sheet, program: program).plainRow(background: block.isSuperset ? Theme.surface : .clear)
             }
             .onMove { blocks.move(fromOffsets: $0, toOffset: $1) }
             if current.isEmpty {
@@ -45,7 +47,18 @@ struct WorkoutEditor: View {
 
     private func targetMuscles(_ targets: [MuscleTarget]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Target Muscles").font(AppFont.title())
+            HStack {
+                Text("Target Muscles").font(AppFont.title())
+                Spacer()
+                if let program {
+                    Picker("Target Muscles span", selection: program.span) {
+                        Text("Day").tag(TargetSpan.day)
+                        Text(program.program.cycleNoun).tag(TargetSpan.week)
+                    }
+                    .pickerStyle(.segmented)
+                    .fixedSize()
+                }
+            }
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
                     ForEach(targets) { MuscleTargetCard(target: $0) }
@@ -66,16 +79,25 @@ struct WorkoutEditor: View {
         return HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(count == 1 ? "1 Exercise" : "\(count) Exercises").font(AppFont.title())
-                Text("Estimated workout time is \(minutes) min")
-                    .font(AppFont.caption())
-                    .foregroundStyle(Theme.textSecondary)
+                if program == nil {
+                    Text("Estimated workout time is \(minutes) min")
+                        .font(AppFont.caption())
+                        .foregroundStyle(Theme.textSecondary)
+                }
             }
             Spacer()
-            Button("Add Exercise", systemImage: "plus") { sheet = .picker(.add) }
-                .labelStyle(.iconOnly)
-                .buttonStyle(.glass)
-                .buttonBorderShape(.circle)
-                .controlSize(.large)
+            if program != nil {
+                Button("Add Exercises") { sheet = .picker(.add) }
+                    .font(AppFont.headline(15))
+                    .underline()
+                    .buttonStyle(.plain)
+            } else {
+                Button("Add Exercise", systemImage: "plus") { sheet = .picker(.add) }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
+                    .controlSize(.large)
+            }
         }
         .padding(.top, 12)
     }
@@ -124,6 +146,7 @@ private struct BlockView: View {
     let block: WorkoutBlock
     @Binding var blocks: [WorkoutBlock]
     @Binding var sheet: EditorSheet?
+    let program: ProgramDayContext?
 
     var body: some View {
         if block.isSuperset {
@@ -131,11 +154,11 @@ private struct BlockView: View {
                 supersetHeader
                 ForEach(block.exercises) { item in
                     if item.id != block.exercises.first?.id { Divider().padding(.leading, 62) }
-                    ExerciseRow(item: item, inSuperset: true, blocks: $blocks, sheet: $sheet)
+                    ExerciseRow(item: item, inSuperset: true, blocks: $blocks, sheet: $sheet, program: program)
                 }
             }
         } else if let item = block.exercises.first {
-            ExerciseRow(item: item, inSuperset: false, blocks: $blocks, sheet: $sheet)
+            ExerciseRow(item: item, inSuperset: false, blocks: $blocks, sheet: $sheet, program: program)
         }
     }
 
@@ -171,12 +194,38 @@ private struct ExerciseRow: View {
     let inSuperset: Bool
     @Binding var blocks: [WorkoutBlock]
     @Binding var sheet: EditorSheet?
+    let program: ProgramDayContext?
     @Environment(ExerciseCatalog.self) private var catalog
 
     var body: some View {
+        if let program {
+            programRow(program)
+        } else {
+            workoutRow
+        }
+    }
+
+    private func programRow(_ program: ProgramDayContext) -> some View {
+        let exercise = catalog.exercise(item.exerciseID)
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 16) {
+                ExerciseThumbnail(exercise: exercise, inSuperset: inSuperset)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(catalog.name(item.exerciseID)).font(AppFont.headline(15))
+                    if let exercise { MuscleTags(exercise: exercise) }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                optionsMenu(hasTargets: true, program: program)
+            }
+            WeekCardsRow(item: item, program: program)
+        }
+        .padding(.vertical, 12)
+    }
+
+    private var workoutRow: some View {
         let exercise = catalog.exercise(item.exerciseID)
         let hasTargets = item.sets.contains { $0.target != nil }
-        HStack(alignment: .top, spacing: 16) {
+        return HStack(alignment: .top, spacing: 16) {
             ExerciseThumbnail(exercise: exercise, inSuperset: inSuperset)
             VStack(alignment: .leading, spacing: 4) {
                 Text(catalog.name(item.exerciseID)).font(AppFont.headline(15))
@@ -192,21 +241,23 @@ private struct ExerciseRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture { sheet = .targets(item.id) }
-            optionsMenu(hasTargets: hasTargets)
+            optionsMenu(hasTargets: hasTargets, program: nil)
         }
         .padding(.vertical, 12)
     }
 
-    private func optionsMenu(hasTargets: Bool) -> some View {
+    private func optionsMenu(hasTargets: Bool, program: ProgramDayContext?) -> some View {
         Menu {
             Section(catalog.name(item.exerciseID)) {
                 Button { sheet = .info(item.exerciseID) } label: {
                     Label("Info", systemImage: "chart.bar.fill")
                     Text("Learn about the exercise")
                 }
-                Button { sheet = .targets(item.id) } label: {
-                    Label("Targets", systemImage: "scope")
-                    Text(hasTargets ? "Edit targets" : "No target set")
+                if program == nil {
+                    Button { sheet = .targets(item.id) } label: {
+                        Label("Targets", systemImage: "scope")
+                        Text(hasTargets ? "Edit targets" : "No target set")
+                    }
                 }
                 Menu {
                     Button("Superset with previous", systemImage: "circle.lefthalf.filled") { blocks.superset(item.id, with: .previous) }
@@ -224,6 +275,16 @@ private struct ExerciseRow: View {
                     Label("Swap", systemImage: "arrow.triangle.2.circlepath")
                     Text("Replace with an alternate")
                 }
+                if let program {
+                    Button { program.move(item.id) } label: {
+                        Label("Move to a different day", systemImage: "arrow.up.and.down.and.arrow.left.and.right")
+                        Text("Relocate the exercise in your program")
+                    }
+                    Button { program.editNote(item.id) } label: {
+                        Label("Program Note", systemImage: "pin")
+                        Text("Note will display on this exercise every time you work out")
+                    }
+                }
                 Button("Duplicate Exercise", systemImage: "plus.square.on.square") { blocks.duplicate(item.id) }
                 Button("Remove from workout", systemImage: "minus.circle", role: .destructive) { blocks.remove(item.id) }
             }
@@ -234,7 +295,7 @@ private struct ExerciseRow: View {
 }
 
 /// "② 8-12 reps" with the RIR badge at the trailing edge.
-private struct TargetLine: View {
+struct TargetLine: View {
     let set: WorkoutSet
     let number: Int
 

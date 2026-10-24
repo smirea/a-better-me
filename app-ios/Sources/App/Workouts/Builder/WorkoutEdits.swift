@@ -42,10 +42,13 @@ extension [WorkoutBlock] {
         if self[at.block].exercises.isEmpty { remove(at: at.block) }
     }
 
-    /// The copy lands right after the original: inside its superset, or as its own block when it stands alone.
+    /// The copy lands right after the original: inside its superset, or as its own block when it stands alone. A
+    /// program exercise's copy keeps its week targets.
     mutating func duplicate(_ id: BlockExercise.ID) {
         guard let at = locate(id) else { return }
-        let copy = self[at.block].exercises[at.item].copy()
+        let original = self[at.block].exercises[at.item]
+        var copy = original.copy()
+        copy.cycleTargets = original.cycleTargets?.map { CycleTargets(sets: $0.sets.map { $0.copyingTargets() }, skip: $0.skip) }
         if self[at.block].isSuperset {
             self[at.block].exercises.insert(copy, at: at.item + 1)
         } else {
@@ -168,7 +171,12 @@ struct MuscleTarget: Identifiable {
     @MainActor static func of(_ blocks: [WorkoutBlock], catalog: ExerciseCatalog) -> [MuscleTarget] {
         let sets = WorkoutMetrics.muscleSets(in: blocks, catalog: { catalog.exercise($0) }, loggedOnly: false)
         let exercises = blocks.flatMap(\.exercises).compactMap { catalog.exercise($0.exerciseID) }
-        return sets.map { muscle, count in
+        return of(sets: sets, exercises: exercises)
+    }
+
+    /// Cards for set counts worked out elsewhere, such as a program's averages over its cycles.
+    static func of(sets: [Muscle: Double], exercises: [Exercise]) -> [MuscleTarget] {
+        sets.map { muscle, count in
             let trained = exercises.count { $0.primaryMuscles.contains(muscle) || $0.secondaryMuscles.contains(muscle) }
             return MuscleTarget(muscle: muscle, exercises: trained, sets: count)
         }
