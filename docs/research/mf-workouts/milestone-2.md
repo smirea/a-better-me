@@ -458,10 +458,178 @@ The "+" Shortcuts sheet shows "Up Next • <day name>" for the active program's 
 - **Periodization**, a toggle with "Organize your training into phases that vary intensity and volume to support continuous progress and effective recovery". There are no sub-options in Program Settings. The style (linear, reverse linear, undulating, static) is chosen only in the generation wizard. Turning it off asks "Turn off periodization?" / "Periodization is what allows cycle-to-cycle variation. When disabled, all weeks for an exercise will use identical sets and targets. The impact of turning this off is not reversible." with Turn Off and Go Back (`m2-program-periodization-off-dialog.jpg`). After Turn Off, every week took Week 1's targets, and the cards collapsed to one "7 Weeks" card plus the Deload card. **Observed.**
 - **Duplicate Program**, which opens "Program Name". The name defaults to today's date ("October 23, 2026"), with "Save & Go to Duplicate" (`m2-program-duplicate-name.jpg`).
 - **Export Program** opens the system share sheet with an `.xlsx` named `MacroFactor-<yyyyMMddHHmmss>`. See §5 for the format.
-- **Activate Program** on an inactive program, or **Deactivate Program** on the active one. Deactivate asks "Are you sure you want to deactivate this program?" / "Your active program will be moved to your Workout Library and its progress will be reset." with OK and Go Back (`m2-program-deactivate-dialog.jpg`). Activate swaps immediately, with no dialog.
+- **Activate Program** on an inactive program, or **Deactivate Program** on the active one. Deactivate asks "Are you sure you want to deactivate this program?" / "Your active program will be moved to your Workout Library and its progress will be reset." with OK and Go Back (`m2-program-deactivate-dialog.jpg`). With no program active, Activate took effect immediately, with no dialog. Activating while another program is active was not observed from Program Settings; the generation wizard's Activate Program replaced the active one without asking.
 - **Archive Program** acts immediately. The row then reads **Unarchive Program**.
 - **Delete Program** (red) asks "Are you sure you want to delete this program?" / "The program and workouts within the program will be deleted." with Delete Program and Go Back (`m2-program-delete-dialog.jpg`).
 
 ### 2.6 Archive
 
 The Workout tab's ⋮ > Archive shows "N programs, M workouts" and opens "Workout Archive" (`m2-archive-list.jpg`). It uses the Workout Library's row style. A program is a card with its icon tile, name, "N workouts", a collapse chevron, and its day rows. Tapping the program name opens the program editor, whose settings offer Unarchive Program and Delete Program. Archiving moved P23 out of the library. The ⋮ count went from "1 program" (milestone 1) to "2 programs". **Observed.**
+
+---
+
+## 3. Smart Progression and warm-ups
+
+### 3.1 Test setup
+
+The test workout "ZZ SP Test" used three exercises the owner had never logged, at the owner's default gym. Four sessions were logged on 2026-10-23, and a fifth was opened and discarded. All settings were the defaults (§3.4) unless a row says otherwise. Weights are lb.
+
+| Exercise                             | MF id                              | Targets               | Equipment steps in this gym   |
+| ------------------------------------ | ---------------------------------- | --------------------- | ----------------------------- |
+| Barbell Floor Press                  | `1a05c6f170d8802a950df7b6c710ffb4` | 3 x 8-12 reps, RIR 2  | barbell plates, 5 lb steps    |
+| Dumbbell Preacher Curl               | `29f5c6f170d8800f9577c4c1d85c2900` | 3 x 10-15 reps, RIR 1 | dumbbells, 25 then 30 then 35 |
+| Seated Pin-Loaded Machine Calf Raise | `25d5c6f170d880c887a2fa457044342e` | 3 x 10 reps, RIR 1    | pin stack, 10 lb steps        |
+
+### 3.2 Prefill and the Auto column
+
+With no history, the Auto column shows only the target ("8-12 reps · 2 RIR"). The weight input is empty, and reps prefill to the middle of the range, rounded up: 8-12 gives 10, 10-15 gives 13, and 10 gives 10. The RIR badge prefills from the target (RIR Tracking). **Observed** (`m2-sp-s1-start.jpg`).
+
+With history, every set row prefills a weight and reps. The Auto column shows "<weight> x <target range> · <RIR>". Prefill per session, before any set was checked, with each session's own targets. **Observed.**
+
+| Session             | Floor press sets 1, 2, 3 | Preacher curl sets 1, 2, 3 | Calf raise sets 1, 2, 3 | Previous session logged (weight x reps @ RIR)                                                                         |
+| ------------------- | ------------------------ | -------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| S1                  | -x10, -x10, -x10         | -x13, -x13, -x13           | -x10, -x10, -x10        | none                                                                                                                  |
+| S2                  | 140x10, 135x10, 135x10   | 30x13, 25x16, 25x14        | 100x11, 90x12, 90x10    | S1. Floor 135x10@2, 135x10@2, 135x9@1. Curl 30x12@1, 30x11@1, 30x10@0. Calf 100x10@1 x3                               |
+| S3                  | 150x10, 145x10, 145x9    | 35x10, 30x13, 30x12        | 110x9, 100x10, 100x8    | S2. Floor 140x12@2, 140x11@2, 140x10@1. Curl 30x15@1, 30x14@1, 30x13@1. Calf 100x12@1, 100x12@1, 100x11@1             |
+| S4                  | 145x10, 140x10, 140x9    | 30x15, 30x12, 30x11        | 110x9, 100x10, 100x8    | S3 (deliberately weak). Floor 150x7@0, 145x8@1, 145x8@1. Curl 35x8@0, 30x10@0, 30x9@0. Calf 110x8@0, 100x9@0, 100x9@0 |
+| S4, Weight Match on | 145x10, 145x8, 145x8     | 30x15, 30x12, 30x11        | 110x9, 110x6, 110x5     | same                                                                                                                  |
+| S5, Weight Match on | 150x10, 150x8, 150x8     | not read                   | 110x11, 110x7, 110x6    | S4. Floor 145x10@2, 145x9@2, 145x8@1. Curl 30x15@1, 30x13@1, 30x12@1. Calf 110x10@1, 110x8@1, 110x7@1                 |
+
+What the rows show. **Inferred** from the table.
+
+- Set 1 gets the heaviest load. Later sets usually drop one equipment step and keep the reps near the middle of the range, which models fatigue.
+- Reps can leave the target range: 25x16 against 10-15. When they do, Expand Rep Range widens the target (§3.3).
+- A strong session raises the load. Floor press S2 (12, 11, 10 reps at RIR 2, 2, 1) led to +10 lb on every set. A weak session lowers it. S3's 150x7@0 led to 145, 140, 140.
+- Prescriptions snap to the gym's equipment steps (5 lb plates, the 25 to 30 lb dumbbell gap, the 10 lb pin stack).
+- **Weight Match** keeps set 1's weight on every set and lowers the reps instead: calf 110x9, 110x6, 110x5 against 110x9, 100x10, 100x8.
+
+### 3.3 In-session adjustments and the event log
+
+With Apply in session on, checking a set recomputes the unchecked sets. The wand chip gets a blue dot, and its sheet logs each change (`m2-sp-wand-calf-s1.jpg`). **Observed.**
+
+- The sheet is titled "Smart Progression" with a sliders button that opens its settings.
+- When ranges were widened, a blue banner reads "Target rep ranges were adjusted · Smart Progression has widened the target rep range of N sets without making permanent changes to this workout", with an **Info** button. Info opens "Workout Targets": Current Targets and Adjusted Targets, each as numbered rows with an RIR badge (`m2-sp-adjusted-targets.jpg`).
+- **Event Log** is a vertical timeline, newest first. Each entry has a time, then one line per affected set: "<n> Set n <before> → <after> <RIR badge>". The first entry, at the session start, lists the initial prefill without arrows. A wand icon marks the newest entry.
+
+Literal event logs. Each row is one entry, oldest first. The event is the set just checked, and each change is shown as before → after.
+
+| Session, exercise | Event                  | Changes                                        |
+| ----------------- | ---------------------- | ---------------------------------------------- |
+| S1 floor          | start                  | 10 reps (all three)                            |
+| S1 floor          | set 1 checked 135x10@2 | set 2 10 reps → 130x10; set 3 10 reps → 130x10 |
+| S1 floor          | set 2 checked 135x10@2 | set 3 130x10 → 135x10                          |
+| S1 curl           | set 1 checked 30x12@1  | set 2 13 reps → 25x16; set 3 13 reps → 25x14   |
+| S1 curl           | set 2 checked 30x11@1  | set 3 25x14 → 25x16                            |
+| S1 calf           | set 1 checked 100x10@1 | set 2 10 reps → 90x11; set 3 10 reps → 90x9    |
+| S1 calf           | set 2 checked 100x10@1 | set 3 90x9 → 100x9                             |
+| S2 floor          | set 1 checked 140x12@2 | set 2 135x10 → 140x10; set 3 135x10 → 140x10   |
+| S2 curl           | set 1 checked 30x15@1  | set 2 25x16 → 30x12; set 3 25x14 → 30x11       |
+| S2 curl           | set 2 checked 30x14@1  | set 3 30x11 → 30x13                            |
+| S2 calf           | set 1 checked 100x12@1 | set 2 90x12 → 100x8; set 3 90x10 → 90x11       |
+| S2 calf           | set 2 checked 100x12@1 | set 3 90x11 → 100x10                           |
+| S3 floor          | set 1 checked 150x7@0  | set 2 145x10 → 135x10; set 3 145x9 → 135x9     |
+| S3 floor          | set 2 checked 145x8@1  | set 3 135x9 → 135x10                           |
+| S3 curl           | set 1 checked 35x8@0   | set 2 30x13 → 30x12; set 3 30x12 → 30x11       |
+| S3 curl           | set 2 checked 30x10@0  | set 3 30x11 → 25x15                            |
+| S3 calf           | set 1 checked 110x8@0  | set 2 100x10 → 100x9; set 3 100x8 → 90x12      |
+| S4 floor          | Weight Match turned on | set 2 140x10 → 145x8; set 3 140x9 → 145x8      |
+| S4 curl           | set 2 checked 30x13@1  | set 3 30x11 → 30x12                            |
+| S4 calf           | Weight Match turned on | set 2 100x10 → 110x6; set 3 100x8 → 110x5      |
+| S4 calf           | set 1 checked 110x10@1 | set 2 110x6 → 110x7; set 3 110x5 → 110x6       |
+| S4 calf           | set 2 checked 110x8@1  | set 3 110x6 → 110x7                            |
+
+**Expand Rep Range.** The calf target was a fixed 10 reps on a 10 lb pin stack. MF widened set 2 to 10-11 and set 3 to 9-10 in S1, and widened all three at the start of S3 and S4 (banner "3 sets"). The curl's 10-15 became 10-16 when the suggestion was 25x16. With Expand Rep Range off, the banner disappeared, and the suggestions still left the range (100x12 against 10). So the setting controls only whether the displayed target widens. **Observed.**
+
+The app's strings name other events that were not triggered: "Linear progression applied", "Progression unavailable within target rep range", "Progression Fix", "Prior Weight Exceeds Initial", "Your available equipment doesn’t allow for the exact load Smart Progression would recommend for these sets." ([`app-strings.md`](app-strings.md)).
+
+### 3.4 Settings
+
+More > Workout > Smart Progression, also reachable from the live workout's Workout Options > Workout settings (`m2-settings-smart-progression.jpg`). Defaults are in bold. **Observed.**
+
+- **Initial log fill**: **Smart Progression values** ("When you start a workout, Smart Progression will pre-fill your weight and rep logs based on your workout history and goals") or Previous values ("When you start a workout, weight and rep logs will default to Previous workout values") (`m2-settings-initial-log-fill.jpg`). The effect of Previous values was not observed, because it applies only when a workout starts.
+- **Apply in session** (**on**).
+- **Expand Rep Range** (**on**).
+- **Weight Match** (**off**).
+
+All four were back at their defaults when the research ended.
+
+### 3.5 Estimated 1-RM
+
+MF's 1-RM is not a fixed formula of weight, reps, and RIR. The same reps plus RIR give different multipliers on different exercises, and on the same exercise in different sessions. **Measured.** One rule did hold. **Body weight counts toward the load:**
+
+`1RM_shown = (weight + bodyweight x share) x f(reps) − bodyweight x share`
+
+Here `share` is the exercise's `bodyweight` field in `app_file.json`, and body weight was 196.76 lb. Four fresh exercises logged at 100 x 5 (no RIR recorded) all give f(5) = 1.083: hip abduction (share 0) 108.3, donkey calf raise (0.75) 120.7, glute kickback (0.176) 111.2, and pulley belt squat (0.759) 120.8. **Measured.** The summary and history show the same body-weight term on volume: "500 lb volume (+737.8 lb BW)" for 5 reps at 0.75 x 196.76.
+
+Single-set points on exercises with no prior history, each the only set of its exercise in one session (`m2-1rm-calibration-summary.jpg`). The RIR taps did not register, so these sets have no RIR. **Measured.**
+
+| Exercise                                                   | Body weight share | Logged                                                               | 1-RM shown | f solved with the body-weight rule |
+| ---------------------------------------------------------- | ----------------- | -------------------------------------------------------------------- | ---------- | ---------------------------------- |
+| Pin-Loaded Machine Overhead Triceps Extension              | 0.046             | 100 x 3                                                              | 115.4      | 1.141                              |
+| Seated Machine Hip Abduction                               | 0                 | 100 x 5                                                              | 108.3      | 1.083                              |
+| Pin-Loaded Machine Donkey Calf Raise                       | 0.75              | 100 x 5                                                              | 120.7      | 1.083                              |
+| Standing Pin-Loaded Machine Glute Kickback (reps per side) | 0.176             | 100 x 5                                                              | 111.2      | 1.083                              |
+| Pulley Machine Belt Squat                                  | 0.759             | 100 x 5 (RIR 3 tapped, not recorded)                                 | 120.8      | 1.083                              |
+| Pin-Loaded Row Machine Kelso Shrug                         | 0                 | 100 x 8                                                              | 121.4      | 1.214                              |
+| Seated Pin-Loaded Machine Shrug                            | 0.107             | 100 x 8                                                              | 147.0      | 1.388                              |
+| Seated Pin-Loaded Machine Chest Dip                        | 0                 | 100 x 10                                                             | 128.1      | 1.281                              |
+| Standing Pin-Loaded Hamstring Curl (reps per side)         | 0.064             | 100 x 10                                                             | 134.5      | 1.306                              |
+| Lever-Arm Machine Belt Squat                               | 0.759             | 100 x 15, volume 2175 so 145 per rep (a 45 lb base weight is likely) | 237.3      | 1.314 with the base, 1.551 without |
+
+Multi-set sessions, where the shown 1-RM is the session's value in History (1-RM metric). **Measured.**
+
+| Exercise                                     | Session sets (weight x reps @ RIR) | 1-RM  |
+| -------------------------------------------- | ---------------------------------- | ----- |
+| Barbell Floor Press (share 0.076)            | 135x10@2, 135x10@2, 135x9@1        | 202.5 |
+|                                              | 140x12@2, 140x11@2, 140x10@1       | 214.6 |
+|                                              | 150x7@0, 145x8@1, 145x8@1          | 204.5 |
+|                                              | 145x10@2, 145x9@2, 145x8@1         | 205.6 |
+| Dumbbell Preacher Curl (0.023)               | 30x12@1, 30x11@1, 30x10@0          | 47.8  |
+|                                              | 30x15@1, 30x14@1, 30x13@1          | 50.0  |
+|                                              | 35x8@0, 30x10@0, 30x9@0            | 48.7  |
+|                                              | 30x15@1, 30x13@1, 30x12@1          | 48.9  |
+| Seated Pin-Loaded Machine Calf Raise (0.129) | 100x10@1 x3                        | 152.7 |
+|                                              | 100x12@1, 100x12@1, 100x11@1       | 156.6 |
+|                                              | 110x8@0, 100x9@0, 100x9@0          | 157.5 |
+|                                              | 110x10@1, 110x8@1, 110x7@1         | 161.0 |
+| Barbell Bench Press (owner's history)        | 140x12, RIR 3, 2, 1                | 226.6 |
+
+The milestone 1 points still stand: 185x5 (no RIR) 224.9, 135x10@2 202.4, 40x9@0 then a 20x6 drop 66.1, and 50/side x9@4 75.9.
+
+- Floor press at reps plus RIR 12 gives f = 1.450 in S1 (135x10@2) but 1.379 in S4 (145x10@2), using the body-weight rule. The estimate depends on history or on all sets of a session, not only on the best set. **Measured.**
+- The binary says Smart Progression learns "your strength profile" and "your individual rate of progress, strength/endurance relationship", which fits a per-exercise, per-user curve. **Inferred.**
+- For our app, keep `WorkoutMetrics`' Epley on reps plus RIR, add the body-weight term above, and treat the per-exercise curve as out of reach. The table above is enough to test that the body-weight term matches MF at 5 reps.
+
+### 3.6 Smart Warm-Up
+
+The live workout's Warm Up chip opens "Warm Up · Set Calculator" with a **Smart | Scheme** toggle (`m2-warmup-smart-150.jpg`). Smart rows read "W · 40% of 1-RM · 65 lb · 40 % · 10" (the badge, the label, the load, the editable percent, and the reps), each with a + to add it. "More Options · Add empty warm-up set · Add a warm-up set to your workout" follows. Smart needs a completed session of the exercise: "Smart warm-ups will appear after you’ve completed a workout that includes this exercise." **Observed.**
+
+Barbell Floor Press, history 1-RM 202.5 to 214.6, with set 1's working weight changed in place. Each warm-up set is shown as the label's percent, then load x reps. **Observed.**
+
+| Working weight | Simplify Warm-Up Plates on (default) | Simplify off                                   |
+| -------------- | ------------------------------------ | ---------------------------------------------- |
+| 45             | none                                 | not read                                       |
+| 95             | 40%: 65x10                           | 40%: 65x10                                     |
+| 135            | 40%: 65x10; 60%: 95x7                | 40%: 65x10; 60%: 110x5                         |
+| 150            | 40%: 65x10; 64%: 115x5; 74%: 135x3   | the same                                       |
+| 185            | 40%: 65x10; 74%: 135x3               | 40%: 65x10; 74%: 140x3; 88%: 165x1; 94%: 175x1 |
+| 225            | 40%: 65x10; 83%: 135x4; 101%: 185x1  | 40%: 70x10; 83%: 165x2                         |
+| 275            | 40%: 85x10; 83%: 185x3; 100%: 225x1  | 40%: 90x10; 83%: 200x2                         |
+| 315            | 40%: 95x10; 82%: 225x2               | 40%: 105x10; 82%: 230x2                        |
+
+- The first warm-up is always "40% of 1-RM x 10". The rest climb toward the working weight in steps labelled 60 to 64% (x5 to x7), 74% (x3), 82 to 83% (x2 to x4), and 88% to 101% (x1). More sets appear as the working weight nears the 1-RM. **Observed.**
+- The "1-RM" behind the labels is not the history 1-RM. At working weights of 135 to 185 it is about 180 to 190, and above 225 it grows with the working weight (40% is 70, 90, 105 at 225, 275, 315). **Measured** from the loads; the rule is unknown.
+- Simplify Warm-Up Plates moves loads to plate-friendly totals, the bar plus 10s, 25s, 35s, or 45s. It also changes reps to compensate: at 135, 110x5 became 95x7. It can merge or add sets: at 225, 70x10 and 165x2 became 65x10, 135x4, and 185x1. **Observed.**
+- The string "Your first working weight is too low relative to your 1RM to generate smart warmups." explains the empty result at 45 lb. **Observed** with the string.
+
+**Scheme.** The Scheme tab applies the Warm-Up Scheme setting to the working weight exactly: "40% of 150 lb · 60 lb x 5", "60% of 150 lb · 90 lb x 5", "80% of 150 lb · 120 lb x 3", with editable percent and reps fields (`m2-warmup-scheme-150.jpg`). **Observed** with Simplify off.
+
+Warm-Up settings (More > Workout > Warm-Up): Warm-Up Automation (**None** for the owner), Warm-Up Scheme, Hide Completed Sets (**on**), Simplify Warm-Up Plates (**on**). Simplify was turned off for the table above and turned back on.
+
+### 3.7 History sort and records filter
+
+The exercise detail's History tab has three dropdown chips. **Observed.**
+
+- The metric chip ("1-RM" and the rest listed in the milestone 1 spec).
+- **Sort Order**: Most Recent or Least Recent (`m2-history-sort.jpg`).
+- **Records**: Records Only, Records On, Records Off (`m2-history-records-filter.jpg`).
