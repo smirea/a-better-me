@@ -120,24 +120,15 @@ struct ExerciseTile: View {
 }
 
 struct EquipmentImage: View {
+    @Environment(ExerciseCatalog.self) private var catalog
     let equipmentID: String
 
     var body: some View {
-        if let image = Self.load(equipmentID) {
+        if let image = ExerciseCatalog.image(catalog.equipment[equipmentID]?.image) {
             Image(uiImage: image).resizable().scaledToFit()
         } else {
             Image(systemName: "dumbbell").resizable().scaledToFit().foregroundStyle(Theme.textTertiary).padding(4)
         }
-    }
-
-    private static let cache = NSCache<NSString, UIImage>()
-
-    private static func load(_ id: String) -> UIImage? {
-        if let hit = cache.object(forKey: id as NSString) { return hit }
-        guard let url = Bundle.main.url(forResource: id, withExtension: "webp"),
-              let image = UIImage(contentsOfFile: url.path) else { return nil }
-        cache.setObject(image, forKey: id as NSString)
-        return image
     }
 }
 

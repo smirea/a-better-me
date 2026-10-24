@@ -14,7 +14,8 @@
 		"app-web/src/env.ts",
 		"server/src/env.ts",
 		"scripts/env.ts",
-		"app-ios/Sources/App/Resources/Catalog"
+		"shared/catalog",
+		"app-ios/Sources/App/Resources/Muscles.xcassets"
 	],
 	"printWidth": 120,
 	"useTabs": true,

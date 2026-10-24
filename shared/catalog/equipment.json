@@ -18,7 +18,7 @@
 			"local",
 			"garage"
 		],
-		"hasImage": true
+		"image": "images/equipment/barbell--19e5c6f170d8801cac93cf6853bd86b8.webp"
 	},
 	{
 		"id": "19e5c6f170d8808593d8ecf408c4f749",
@@ -36,7 +36,7 @@
 			"garage",
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/dumbbells--19e5c6f170d8808593d8ecf408c4f749.webp"
 	},
 	{
 		"id": "19e5c6f170d880e791c3da3a74828f0e",
@@ -54,7 +54,7 @@
 			"garage",
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/kettlebell--19e5c6f170d880e791c3da3a74828f0e.webp"
 	},
 	{
 		"id": "19e5c6f170d8802b9d8ed6e425798f6b",
@@ -69,7 +69,7 @@
 			"commercial",
 			"warehouse"
 		],
-		"hasImage": true
+		"image": "images/equipment/flat-bench--19e5c6f170d8802b9d8ed6e425798f6b.webp"
 	},
 	{
 		"id": "19e5c6f170d880ec8238f837c5284019",
@@ -87,7 +87,7 @@
 			"garage",
 			"home"
 		],
-		"hasImage": false
+		"image": null
 	},
 	{
 		"id": "19e5c6f170d880d5bf4ae225c061f55d",
@@ -105,7 +105,7 @@
 			"garage",
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/long-resistance-band--19e5c6f170d880d5bf4ae225c061f55d.webp"
 	},
 	{
 		"id": "19e5c6f170d880b398fdd9757e5186f4",
@@ -119,7 +119,7 @@
 		"gymPresets": [
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/ankle-weights--19e5c6f170d880b398fdd9757e5186f4.webp"
 	},
 	{
 		"id": "19e5c6f170d88018a872fe18a35ae8aa",
@@ -136,7 +136,7 @@
 			"local",
 			"garage"
 		],
-		"hasImage": true
+		"image": "images/equipment/straight-pull-up-bar--19e5c6f170d88018a872fe18a35ae8aa.webp"
 	},
 	{
 		"id": "19e5c6f170d880119a7ec9fe338f8fea",
@@ -153,7 +153,7 @@
 			"local",
 			"garage"
 		],
-		"hasImage": true
+		"image": "images/equipment/power-rack--19e5c6f170d880119a7ec9fe338f8fea.webp"
 	},
 	{
 		"id": "19e5c6f170d880d28b46e9ccddcfba1a",
@@ -168,7 +168,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-single-cable-machine--19e5c6f170d880d28b46e9ccddcfba1a.webp"
 	},
 	{
 		"id": "19e5c6f170d880bba9c9d309f541198d",
@@ -182,7 +182,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/roman-chair--19e5c6f170d880bba9c9d309f541198d.webp"
 	},
 	{
 		"id": "19e5c6f170d880149b59e93abb37a378",
@@ -194,7 +194,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/center-pendulum-reverse-hyperextension--19e5c6f170d880149b59e93abb37a378.webp"
 	},
 	{
 		"id": "19e5c6f170d8806ab6a6cf2efc3266c8",
@@ -209,7 +209,7 @@
 			"commercial",
 			"warehouse"
 		],
-		"hasImage": true
+		"image": "images/equipment/glute-ham-developer--19e5c6f170d8806ab6a6cf2efc3266c8.webp"
 	},
 	{
 		"id": "19e5c6f170d880038662ee8145175f92",
@@ -223,7 +223,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/45-leg-press--19e5c6f170d880038662ee8145175f92.webp"
 	},
 	{
 		"id": "19e5c6f170d880d3914cc4c2631393cd",
@@ -237,7 +237,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/hack-squat--19e5c6f170d880d3914cc4c2631393cd.webp"
 	},
 	{
 		"id": "19e5c6f170d880698de5f4e4df7781a9",
@@ -249,7 +249,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-leg-extension--19e5c6f170d880698de5f4e4df7781a9.webp"
 	},
 	{
 		"id": "19e5c6f170d8809584ffea2b5b9f1eb2",
@@ -261,7 +261,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/v-squat--19e5c6f170d8809584ffea2b5b9f1eb2.webp"
 	},
 	{
 		"id": "19e5c6f170d880348277fddad52b52b0",
@@ -273,7 +273,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-hip-thrust-starting-from-the-top--19e5c6f170d880348277fddad52b52b0.webp"
 	},
 	{
 		"id": "19e5c6f170d8804781f8f6869059bba0",
@@ -285,7 +285,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/standing-plate-loaded-calf-raise--19e5c6f170d8804781f8f6869059bba0.webp"
 	},
 	{
 		"id": "19e5c6f170d8808e888ceb1867c89c02",
@@ -299,7 +299,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/seated-plate-loaded-calf-raise--19e5c6f170d8808e888ceb1867c89c02.webp"
 	},
 	{
 		"id": "19e5c6f170d880fba77bca5ee5eccb63",
@@ -313,7 +313,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/standing-pin-loaded-glute-kickback--19e5c6f170d880fba77bca5ee5eccb63.webp"
 	},
 	{
 		"id": "19e5c6f170d880eabe60fdd5f6cdc3df",
@@ -325,7 +325,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/multi-hip-machine--19e5c6f170d880eabe60fdd5f6cdc3df.webp"
 	},
 	{
 		"id": "19e5c6f170d88099b164ca21463037d3",
@@ -339,7 +339,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-hip-abductor-adductor-combo-machine--19e5c6f170d88099b164ca21463037d3.webp"
 	},
 	{
 		"id": "19e5c6f170d880588002d0b33085acfb",
@@ -354,7 +354,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-crunch-with-overhead-handles--19e5c6f170d880588002d0b33085acfb.webp"
 	},
 	{
 		"id": "19e5c6f170d880ee9089e447b5f8f9e6",
@@ -368,7 +368,7 @@
 		"gymPresets": [
 			"warehouse"
 		],
-		"hasImage": true
+		"image": "images/equipment/gymnastics-rings--19e5c6f170d880ee9089e447b5f8f9e6.webp"
 	},
 	{
 		"id": "19e5c6f170d880018ac7fbba68e74a58",
@@ -382,7 +382,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/upper-torso-rotation-with-arm-or-shoulder-pads--19e5c6f170d880018ac7fbba68e74a58.webp"
 	},
 	{
 		"id": "19e5c6f170d8802a89e5c8d58b54c757",
@@ -398,7 +398,7 @@
 			"warehouse",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/medicine-ball--19e5c6f170d8802a89e5c8d58b54c757.webp"
 	},
 	{
 		"id": "19e5c6f170d880c391f7e87ab1a231e2",
@@ -410,7 +410,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/slant-board--19e5c6f170d880c391f7e87ab1a231e2.webp"
 	},
 	{
 		"id": "19e5c6f170d880409921fedcd08c091b",
@@ -422,7 +422,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/another-human--19e5c6f170d880409921fedcd08c091b.webp"
 	},
 	{
 		"id": "19e5c6f170d880919dfae5a78a8f54d4",
@@ -437,7 +437,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/seated-pin-loaded-chest-press--19e5c6f170d880919dfae5a78a8f54d4.webp"
 	},
 	{
 		"id": "19e5c6f170d8804dbcdcc184be8003fb",
@@ -452,7 +452,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-shoulder-press--19e5c6f170d8804dbcdcc184be8003fb.webp"
 	},
 	{
 		"id": "19e5c6f170d880d29affc687810a9a8a",
@@ -466,7 +466,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/smith-machine--19e5c6f170d880d29affc687810a9a8a.webp"
 	},
 	{
 		"id": "19e5c6f170d880d2a77feb7bbe48974f",
@@ -483,7 +483,7 @@
 			"local",
 			"garage"
 		],
-		"hasImage": true
+		"image": "images/equipment/landmine-attachment-wall-corner--19e5c6f170d880d2a77feb7bbe48974f.webp"
 	},
 	{
 		"id": "19e5c6f170d8803d843fec1ad71d3acb",
@@ -495,7 +495,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/lever-arm-belt-squat--19e5c6f170d8803d843fec1ad71d3acb.webp"
 	},
 	{
 		"id": "19e5c6f170d88087aac8c3228279ff3a",
@@ -512,7 +512,7 @@
 			"local",
 			"garage"
 		],
-		"hasImage": true
+		"image": "images/equipment/dip-pull-up-belt-squat-belt--19e5c6f170d88087aac8c3228279ff3a.webp"
 	},
 	{
 		"id": "19e5c6f170d880eaa88fd25d0a1adf58",
@@ -529,7 +529,7 @@
 			"garage",
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/stability-ball--19e5c6f170d880eaa88fd25d0a1adf58.webp"
 	},
 	{
 		"id": "19e5c6f170d88066aafbfbb26a40b48d",
@@ -547,7 +547,7 @@
 			"garage",
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/ab-wheel--19e5c6f170d88066aafbfbb26a40b48d.webp"
 	},
 	{
 		"id": "19e5c6f170d880adb2cac693d9eceb51",
@@ -559,7 +559,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/fat-grip-attachments--19e5c6f170d880adb2cac693d9eceb51.webp"
 	},
 	{
 		"id": "19e5c6f170d880bb9c7ec99dd18e7bd3",
@@ -586,7 +586,7 @@
 		"gymPresets": [
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/hand-gripper--19e5c6f170d880bb9c7ec99dd18e7bd3.webp"
 	},
 	{
 		"id": "19e5c6f170d8801b933cdb1b550c038c",
@@ -600,7 +600,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/pec-deck--19e5c6f170d8801b933cdb1b550c038c.webp"
 	},
 	{
 		"id": "19e5c6f170d88050bdbefcbb91c01f16",
@@ -615,7 +615,7 @@
 			"commercial",
 			"warehouse"
 		],
-		"hasImage": true
+		"image": "images/equipment/dip-bars--19e5c6f170d88050bdbefcbb91c01f16.webp"
 	},
 	{
 		"id": "19e5c6f170d880b1a9f1e87cad9330d1",
@@ -627,7 +627,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/slingshot--19e5c6f170d880b1a9f1e87cad9330d1.webp"
 	},
 	{
 		"id": "19e5c6f170d88030a20edfabb6d824c4",
@@ -641,7 +641,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/captain-s-chair--19e5c6f170d88030a20edfabb6d824c4.webp"
 	},
 	{
 		"id": "19e5c6f170d8805fb0e7f5c558a33e76",
@@ -655,7 +655,7 @@
 		"gymPresets": [
 			"warehouse"
 		],
-		"hasImage": true
+		"image": "images/equipment/chains--19e5c6f170d8805fb0e7f5c558a33e76.webp"
 	},
 	{
 		"id": "19e5c6f170d88074bf1af2264ccaf192",
@@ -672,7 +672,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/ez-bar--19e5c6f170d88074bf1af2264ccaf192.webp"
 	},
 	{
 		"id": "19e5c6f170d88007ba63e3e18e4933f8",
@@ -686,7 +686,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-cable-lat-pulldown--19e5c6f170d88007ba63e3e18e4933f8.webp"
 	},
 	{
 		"id": "19e5c6f170d880c7b6ddfac365a5ddf6",
@@ -698,7 +698,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/standing-plate-loaded-lateral-raise--19e5c6f170d880c7b6ddfac365a5ddf6.webp"
 	},
 	{
 		"id": "19e5c6f170d880399eb6e5aeadc4ff8c",
@@ -712,7 +712,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/seated-pin-loaded-dip--19e5c6f170d880399eb6e5aeadc4ff8c.webp"
 	},
 	{
 		"id": "19e5c6f170d880089831e9c1bb4a92d0",
@@ -726,7 +726,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-assisted-pull-up-dip--19e5c6f170d880089831e9c1bb4a92d0.webp"
 	},
 	{
 		"id": "19e5c6f170d880fd9d24d7f1a2bd9ad1",
@@ -746,7 +746,7 @@
 			"garage",
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/wrist-roller--19e5c6f170d880fd9d24d7f1a2bd9ad1.webp"
 	},
 	{
 		"id": "19e5c6f170d88013aacef00e7b0303b6",
@@ -758,7 +758,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/furniture-slider--19e5c6f170d88013aacef00e7b0303b6.webp"
 	},
 	{
 		"id": "19f5c6f170d880eea412c7ca7d833844",
@@ -774,7 +774,7 @@
 			"warehouse",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/suspension-trainer--19f5c6f170d880eea412c7ca7d833844.webp"
 	},
 	{
 		"id": "19f5c6f170d880e4844df905ecfc5c3a",
@@ -788,7 +788,7 @@
 		"gymPresets": [
 			"warehouse"
 		],
-		"hasImage": true
+		"image": "images/equipment/sled--19f5c6f170d880e4844df905ecfc5c3a.webp"
 	},
 	{
 		"id": "1a05c6f170d880d8a7efe4721e964f2d",
@@ -805,7 +805,7 @@
 			"local",
 			"garage"
 		],
-		"hasImage": true
+		"image": "images/equipment/adjustable-bench--1a05c6f170d880d8a7efe4721e964f2d.webp"
 	},
 	{
 		"id": "1a05c6f170d88000a11ac56d284582a9",
@@ -819,7 +819,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/decline-bench--1a05c6f170d88000a11ac56d284582a9.webp"
 	},
 	{
 		"id": "1a05c6f170d880f3888bf7d48719321f",
@@ -833,7 +833,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/seated-bench--1a05c6f170d880f3888bf7d48719321f.webp"
 	},
 	{
 		"id": "1a45c6f170d880629cdcc99a2ff615cf",
@@ -850,7 +850,7 @@
 			"local",
 			"garage"
 		],
-		"hasImage": true
+		"image": "images/equipment/weight-plate--1a45c6f170d880629cdcc99a2ff615cf.webp"
 	},
 	{
 		"id": "1a45c6f170d880b08d92f50c0ff2bb76",
@@ -864,7 +864,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/sissy-squat-machine--1a45c6f170d880b08d92f50c0ff2bb76.webp"
 	},
 	{
 		"id": "1a45c6f170d88022ab7bcf17649e3d7c",
@@ -876,7 +876,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pendulum-squat--1a45c6f170d88022ab7bcf17649e3d7c.webp"
 	},
 	{
 		"id": "1b85c6f170d880359c75c07ec198c05c",
@@ -888,7 +888,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-shrug--1b85c6f170d880359c75c07ec198c05c.webp"
 	},
 	{
 		"id": "25a5c6f170d880c1a55ac08cf52671ab",
@@ -905,7 +905,7 @@
 			"local",
 			"garage"
 		],
-		"hasImage": true
+		"image": "images/equipment/weight-plates--25a5c6f170d880c1a55ac08cf52671ab.webp"
 	},
 	{
 		"id": "25a5c6f170d880589ffdf4f627a75b44",
@@ -923,7 +923,7 @@
 			"garage",
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/dumbbell--25a5c6f170d880589ffdf4f627a75b44.webp"
 	},
 	{
 		"id": "25a5c6f170d880478d81c880d6ee06a0",
@@ -941,7 +941,7 @@
 			"garage",
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/kettlebells--25a5c6f170d880478d81c880d6ee06a0.webp"
 	},
 	{
 		"id": "25a5c6f170d880c2be66d2f10537c1c1",
@@ -959,7 +959,7 @@
 			"garage",
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/short-resistance-band--25a5c6f170d880c2be66d2f10537c1c1.webp"
 	},
 	{
 		"id": "25a5c6f170d8805cb60bd3ee71311ad1",
@@ -974,7 +974,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-cable-crossover--25a5c6f170d8805cb60bd3ee71311ad1.webp"
 	},
 	{
 		"id": "25a5c6f170d880dc87b4ceacf1c4ebac",
@@ -989,7 +989,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/seated-pin-loaded-leg-curl--25a5c6f170d880dc87b4ceacf1c4ebac.webp"
 	},
 	{
 		"id": "25a5c6f170d880358d45db535ec7dde7",
@@ -1003,7 +1003,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/lying-pin-loaded-leg-curl--25a5c6f170d880358d45db535ec7dde7.webp"
 	},
 	{
 		"id": "25a5c6f170d880adb79afbd373c30d6c",
@@ -1015,7 +1015,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/standing-pin-loaded-leg-curl--25a5c6f170d880adb79afbd373c30d6c.webp"
 	},
 	{
 		"id": "25a5c6f170d8801c97d2da626ba64553",
@@ -1027,7 +1027,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-plate-loaded-leg-curl--25a5c6f170d8801c97d2da626ba64553.webp"
 	},
 	{
 		"id": "25a5c6f170d880b4af58db6178249ca1",
@@ -1039,7 +1039,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/lying-plate-loaded-leg-curl--25a5c6f170d880b4af58db6178249ca1.webp"
 	},
 	{
 		"id": "25a5c6f170d880dd8002d5ad9670ad2c",
@@ -1051,7 +1051,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/standing-plate-loaded-leg-curl--25a5c6f170d880dd8002d5ad9670ad2c.webp"
 	},
 	{
 		"id": "25a5c6f170d8805b8c95e7e5b4e8a989",
@@ -1065,7 +1065,7 @@
 		"gymPresets": [
 			"warehouse"
 		],
-		"hasImage": true
+		"image": "images/equipment/bumper-plates--25a5c6f170d8805b8c95e7e5b4e8a989.webp"
 	},
 	{
 		"id": "25a5c6f170d88070960ec16cf3b0083e",
@@ -1081,7 +1081,7 @@
 		],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/axle--25a5c6f170d88070960ec16cf3b0083e.webp"
 	},
 	{
 		"id": "25a5c6f170d88036b550f25411d5e811",
@@ -1101,7 +1101,7 @@
 			"warehouse",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/trap-bar--25a5c6f170d88036b550f25411d5e811.webp"
 	},
 	{
 		"id": "25a5c6f170d8804894dddc6a13865035",
@@ -1116,7 +1116,7 @@
 		],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/swiss-bar--25a5c6f170d8804894dddc6a13865035.webp"
 	},
 	{
 		"id": "25a5c6f170d88016bae1fef84faef0f8",
@@ -1132,7 +1132,7 @@
 		],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/strongman-log--25a5c6f170d88016bae1fef84faef0f8.webp"
 	},
 	{
 		"id": "25a5c6f170d880f596abc08924a614f9",
@@ -1149,7 +1149,7 @@
 		],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/safety-squat-bar-ssb--25a5c6f170d880f596abc08924a614f9.webp"
 	},
 	{
 		"id": "25a5c6f170d880fd8cf7fe6ce4b39aec",
@@ -1165,7 +1165,7 @@
 		],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/cambered-squat-bar--25a5c6f170d880fd8cf7fe6ce4b39aec.webp"
 	},
 	{
 		"id": "25a5c6f170d8802e877ffd049e87dc5a",
@@ -1179,7 +1179,7 @@
 		],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/cambered-bench-press-bar--25a5c6f170d8802e877ffd049e87dc5a.webp"
 	},
 	{
 		"id": "25a5c6f170d88099ad14f2ed1dc1110d",
@@ -1195,7 +1195,7 @@
 			"warehouse",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/plyometric-box--25a5c6f170d88099ad14f2ed1dc1110d.webp"
 	},
 	{
 		"id": "25a5c6f170d8806cbce3cdb9f00dbfc1",
@@ -1207,7 +1207,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/squat-box--25a5c6f170d8806cbce3cdb9f00dbfc1.webp"
 	},
 	{
 		"id": "25a5c6f170d8801c90d8eb731e97ebac",
@@ -1223,7 +1223,7 @@
 			"warehouse",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/aerobic-step--25a5c6f170d8801c90d8eb731e97ebac.webp"
 	},
 	{
 		"id": "25a5c6f170d88015858ecc00db4c9e02",
@@ -1239,7 +1239,7 @@
 			"warehouse",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/aerobic-steps--25a5c6f170d88015858ecc00db4c9e02.webp"
 	},
 	{
 		"id": "25a5c6f170d8806bab5fc4e4a9f0b0c4",
@@ -1253,7 +1253,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/seated-pin-loaded-lateral-raise--25a5c6f170d8806bab5fc4e4a9f0b0c4.webp"
 	},
 	{
 		"id": "25a5c6f170d880abb2c0cc6cd225c6a8",
@@ -1265,7 +1265,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/shrug-deadlift-machine--25a5c6f170d880abb2c0cc6cd225c6a8.webp"
 	},
 	{
 		"id": "25a5c6f170d88094bd63d078c1a8bb00",
@@ -1279,7 +1279,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-shoulder-press--25a5c6f170d88094bd63d078c1a8bb00.webp"
 	},
 	{
 		"id": "25a5c6f170d880e49dddca4c658fa51c",
@@ -1293,7 +1293,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-lat-pulldown--25a5c6f170d880e49dddca4c658fa51c.webp"
 	},
 	{
 		"id": "25a5c6f170d880df850bc81bb535117d",
@@ -1308,7 +1308,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-fixed-lat-pulldown--25a5c6f170d880df850bc81bb535117d.webp"
 	},
 	{
 		"id": "25a5c6f170d880a08163d89c0f571db4",
@@ -1322,7 +1322,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/seated-plate-loaded-chest-press--25a5c6f170d880a08163d89c0f571db4.webp"
 	},
 	{
 		"id": "25a5c6f170d880a190dac9cd24968c46",
@@ -1334,7 +1334,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-plate-loaded-dip--25a5c6f170d880a190dac9cd24968c46.webp"
 	},
 	{
 		"id": "25a5c6f170d8805cb5d2e965003ea174",
@@ -1346,7 +1346,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-row-no-chest-support--25a5c6f170d8805cb5d2e965003ea174.webp"
 	},
 	{
 		"id": "25a5c6f170d88008aa1effea3e248448",
@@ -1360,7 +1360,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/chest-supported-t-bar-row--25a5c6f170d88008aa1effea3e248448.webp"
 	},
 	{
 		"id": "25a5c6f170d8801faa32cf26ee16c248",
@@ -1372,7 +1372,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/standing-t-bar-row-without-chest-support--25a5c6f170d8801faa32cf26ee16c248.webp"
 	},
 	{
 		"id": "25a5c6f170d880d89494eedb31bcb223",
@@ -1384,7 +1384,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/bench-press-board-block--25a5c6f170d880d89494eedb31bcb223.webp"
 	},
 	{
 		"id": "25b5c6f170d8804dbf93f097481f14e3",
@@ -1399,7 +1399,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/flat-bench-press-station--25b5c6f170d8804dbf93f097481f14e3.webp"
 	},
 	{
 		"id": "25b5c6f170d8805db24ce3ad378a4739",
@@ -1414,7 +1414,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/incline-bench-press-station--25b5c6f170d8805db24ce3ad378a4739.webp"
 	},
 	{
 		"id": "25b5c6f170d880288aebd865cb540804",
@@ -1428,7 +1428,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/decline-bench-press-station--25b5c6f170d880288aebd865cb540804.webp"
 	},
 	{
 		"id": "25b5c6f170d880619592ca5ba65fc1b3",
@@ -1446,7 +1446,7 @@
 			"garage",
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/long-resistance-bands--25b5c6f170d880619592ca5ba65fc1b3.webp"
 	},
 	{
 		"id": "25c5c6f170d880f4b452cfe6feed2d3d",
@@ -1461,7 +1461,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-leg-extension--25c5c6f170d880f4b452cfe6feed2d3d.webp"
 	},
 	{
 		"id": "25c5c6f170d880b0a509d9d5c13748d0",
@@ -1476,7 +1476,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-leg-press--25c5c6f170d880b0a509d9d5c13748d0.webp"
 	},
 	{
 		"id": "25c5c6f170d88024ac71dfa51cae3bc0",
@@ -1491,7 +1491,7 @@
 			"commercial",
 			"garage"
 		],
-		"hasImage": true
+		"image": "images/equipment/cuff-cable-attachment--25c5c6f170d88024ac71dfa51cae3bc0.webp"
 	},
 	{
 		"id": "25c5c6f170d88064b8d6e03f2a66cbcf",
@@ -1503,7 +1503,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-crunch-with-overhead-handles--25c5c6f170d88064b8d6e03f2a66cbcf.webp"
 	},
 	{
 		"id": "25c5c6f170d8808e9f87fc4a815d8ba5",
@@ -1515,7 +1515,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-crunch-with-chest-pad--25c5c6f170d8808e9f87fc4a815d8ba5.webp"
 	},
 	{
 		"id": "25c5c6f170d88078a9acf581484a67c0",
@@ -1527,7 +1527,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/ab-coaster-machine--25c5c6f170d88078a9acf581484a67c0.webp"
 	},
 	{
 		"id": "25c5c6f170d880e88a88e19b0209324c",
@@ -1539,7 +1539,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/kneeling-torso-rotation--25c5c6f170d880e88a88e19b0209324c.webp"
 	},
 	{
 		"id": "25c5c6f170d880f28855f3b2e31ed739",
@@ -1553,7 +1553,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/seated-pin-loaded-back-extension--25c5c6f170d880f28855f3b2e31ed739.webp"
 	},
 	{
 		"id": "25c5c6f170d880f6bd7ecb941663f615",
@@ -1567,7 +1567,7 @@
 		"gymPresets": [
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/push-up-handles--25c5c6f170d880f6bd7ecb941663f615.webp"
 	},
 	{
 		"id": "25c5c6f170d8803a9288c01c665db7f2",
@@ -1579,7 +1579,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/weighted-vest--25c5c6f170d8803a9288c01c665db7f2.webp"
 	},
 	{
 		"id": "25c5c6f170d880a5bafdeaf2cec1a53c",
@@ -1591,7 +1591,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-pin-loaded-incline-press--25c5c6f170d880a5bafdeaf2cec1a53c.webp"
 	},
 	{
 		"id": "25c5c6f170d880ad8010e45cf9e63579",
@@ -1603,7 +1603,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-plate-loaded-incline-press--25c5c6f170d880ad8010e45cf9e63579.webp"
 	},
 	{
 		"id": "25c5c6f170d880899ce8c47d498c8d9b",
@@ -1617,7 +1617,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/fixed-weight-straight-bar--25c5c6f170d880899ce8c47d498c8d9b.webp"
 	},
 	{
 		"id": "25c5c6f170d88096bb47f121d44f241e",
@@ -1629,7 +1629,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-plate-loaded-lateral-raise--25c5c6f170d88096bb47f121d44f241e.webp"
 	},
 	{
 		"id": "25c5c6f170d880088415f31db00a6e55",
@@ -1641,7 +1641,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/standing-pin-loaded-lateral-raise--25c5c6f170d880088415f31db00a6e55.webp"
 	},
 	{
 		"id": "25c5c6f170d88050a23fcf770c34074a",
@@ -1655,7 +1655,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/fixed-weight-ez-bar--25c5c6f170d88050a23fcf770c34074a.webp"
 	},
 	{
 		"id": "25c5c6f170d880eaac9ffb6ffdf335f2",
@@ -1669,7 +1669,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/preacher-curl-bench--25c5c6f170d880eaac9ffb6ffdf335f2.webp"
 	},
 	{
 		"id": "25c5c6f170d880c68c25c5b49f6d0c84",
@@ -1684,7 +1684,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-preacher-curl--25c5c6f170d880c68c25c5b49f6d0c84.webp"
 	},
 	{
 		"id": "25c5c6f170d8800da116eb279df1e8e9",
@@ -1696,7 +1696,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-preacher-curl--25c5c6f170d8800da116eb279df1e8e9.webp"
 	},
 	{
 		"id": "25c5c6f170d880b98fa0c006c2ac489d",
@@ -1710,7 +1710,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-biceps-curl-with-arms-at-side--25c5c6f170d880b98fa0c006c2ac489d.webp"
 	},
 	{
 		"id": "25c5c6f170d880dbaa7cf68aed332e18",
@@ -1725,7 +1725,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-overhead-triceps-extension--25c5c6f170d880dbaa7cf68aed332e18.webp"
 	},
 	{
 		"id": "25c5c6f170d8808ba5d6db95f0fa3ba6",
@@ -1737,7 +1737,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-overhead-triceps-extension--25c5c6f170d8808ba5d6db95f0fa3ba6.webp"
 	},
 	{
 		"id": "25d5c6f170d880e681e3c818577f8603",
@@ -1749,7 +1749,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-assisted-pull-up-dip--25d5c6f170d880e681e3c818577f8603.webp"
 	},
 	{
 		"id": "25d5c6f170d880a286ead7979054a9c0",
@@ -1764,7 +1764,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/v-bar-row-grip-attachment--25d5c6f170d880a286ead7979054a9c0.webp"
 	},
 	{
 		"id": "25d5c6f170d88043bc4cd1dbbd52db51",
@@ -1776,7 +1776,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/straight-handle-landmine-attachment--25d5c6f170d88043bc4cd1dbbd52db51.webp"
 	},
 	{
 		"id": "25d5c6f170d8803292b1cef9e5e3637c",
@@ -1790,7 +1790,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/standing-pin-loaded-calf-raise--25d5c6f170d8803292b1cef9e5e3637c.webp"
 	},
 	{
 		"id": "25d5c6f170d880b793cef90680f4df4c",
@@ -1802,7 +1802,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-pin-loaded-calf-raise--25d5c6f170d880b793cef90680f4df4c.webp"
 	},
 	{
 		"id": "25d5c6f170d880a6977afc47422a6cf7",
@@ -1814,7 +1814,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-donkey-calf-raise--25d5c6f170d880a6977afc47422a6cf7.webp"
 	},
 	{
 		"id": "25d5c6f170d8802392cee06116c0c1a5",
@@ -1826,7 +1826,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-donkey-calf-raise--25d5c6f170d8802392cee06116c0c1a5.webp"
 	},
 	{
 		"id": "25d5c6f170d8804497e6f73ddb189528",
@@ -1838,7 +1838,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-plate-loaded-shrug--25d5c6f170d8804497e6f73ddb189528.webp"
 	},
 	{
 		"id": "25d5c6f170d8809bb07bf9a9c6f331eb",
@@ -1850,7 +1850,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-pullover--25d5c6f170d8809bb07bf9a9c6f331eb.webp"
 	},
 	{
 		"id": "25d5c6f170d8800e9a3df1f9e9d9cfb7",
@@ -1862,7 +1862,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-pullover--25d5c6f170d8800e9a3df1f9e9d9cfb7.webp"
 	},
 	{
 		"id": "25d5c6f170d880d183d3d48e4b7f106e",
@@ -1874,7 +1874,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seal-row-bench--25d5c6f170d880d183d3d48e4b7f106e.webp"
 	},
 	{
 		"id": "25d5c6f170d88040a3cce7d9aaef353c",
@@ -1888,7 +1888,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/seated-cable-row--25d5c6f170d88040a3cce7d9aaef353c.webp"
 	},
 	{
 		"id": "25d5c6f170d8803ab92be54326c5f6be",
@@ -1903,7 +1903,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/chest-supported-pin-loaded-row--25d5c6f170d8803ab92be54326c5f6be.webp"
 	},
 	{
 		"id": "25d5c6f170d880b6974fe98ac99f24f1",
@@ -1915,7 +1915,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/chest-supported-plate-loaded-row--25d5c6f170d880b6974fe98ac99f24f1.webp"
 	},
 	{
 		"id": "25d5c6f170d8803398e5da18a015f6c3",
@@ -1929,7 +1929,7 @@
 		"gymPresets": [
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/couch--25d5c6f170d8803398e5da18a015f6c3.webp"
 	},
 	{
 		"id": "25d5c6f170d88049899df888a3a24c2c",
@@ -1941,7 +1941,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/deadlift-blocks--25d5c6f170d88049899df888a3a24c2c.webp"
 	},
 	{
 		"id": "25d5c6f170d880ab94bafb6d8142ce57",
@@ -1953,7 +1953,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/yoga-blocks--25d5c6f170d880ab94bafb6d8142ce57.webp"
 	},
 	{
 		"id": "25d5c6f170d880b19945cc719226fd3d",
@@ -1965,7 +1965,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-overhead-press-station--25d5c6f170d880b19945cc719226fd3d.webp"
 	},
 	{
 		"id": "25d5c6f170d8801bb8daf6e122331357",
@@ -1981,7 +1981,7 @@
 			"warehouse",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/plyometric-boxes--25d5c6f170d8801bb8daf6e122331357.webp"
 	},
 	{
 		"id": "25d5c6f170d8807796e8dc918e0e77a7",
@@ -1997,7 +1997,7 @@
 		],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-adjustable-dumbbell--25d5c6f170d8807796e8dc918e0e77a7.webp"
 	},
 	{
 		"id": "25d5c6f170d880aeaf82ce2327d9ca95",
@@ -2011,7 +2011,7 @@
 		"gymPresets": [
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/hammer--25d5c6f170d880aeaf82ce2327d9ca95.webp"
 	},
 	{
 		"id": "25d5c6f170d880919aa2d47327d4af34",
@@ -2023,7 +2023,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/end-loaded-baseball-bat--25d5c6f170d880919aa2d47327d4af34.webp"
 	},
 	{
 		"id": "25d5c6f170d8808aba23e002b00ce700",
@@ -2038,7 +2038,7 @@
 			"commercial",
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/staircase--25d5c6f170d8808aba23e002b00ce700.webp"
 	},
 	{
 		"id": "25d5c6f170d8802b9040cbb72e8db6d3",
@@ -2050,7 +2050,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/deadlift-block--25d5c6f170d8802b9040cbb72e8db6d3.webp"
 	},
 	{
 		"id": "25d5c6f170d880b9a6faec1e7e4b9f5e",
@@ -2062,7 +2062,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/calf-raise-block--25d5c6f170d880b9a6faec1e7e4b9f5e.webp"
 	},
 	{
 		"id": "25d5c6f170d880eba241c26f8f426024",
@@ -2076,7 +2076,7 @@
 		"gymPresets": [
 			"warehouse"
 		],
-		"hasImage": true
+		"image": "images/equipment/bumper-plate--25d5c6f170d880eba241c26f8f426024.webp"
 	},
 	{
 		"id": "25e5c6f170d880ce83f4c60b3f512a17",
@@ -2088,7 +2088,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/split-squat-roller-stand--25e5c6f170d880ce83f4c60b3f512a17.webp"
 	},
 	{
 		"id": "25e5c6f170d880f5a8a8dedd9e550c40",
@@ -2100,7 +2100,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/nordic-hamstring-curl-bench--25e5c6f170d880f5a8a8dedd9e550c40.webp"
 	},
 	{
 		"id": "25e5c6f170d88024bcb8c5a4f2d78842",
@@ -2112,7 +2112,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/nordic-hamstring-curl-strap--25e5c6f170d88024bcb8c5a4f2d78842.webp"
 	},
 	{
 		"id": "25e5c6f170d88093a05dd2c58983b8f4",
@@ -2124,7 +2124,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/hip-thrust-bench--25e5c6f170d88093a05dd2c58983b8f4.webp"
 	},
 	{
 		"id": "25e5c6f170d880498ea9caa3ae8b0eda",
@@ -2138,7 +2138,7 @@
 		"gymPresets": [
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/bed--25e5c6f170d880498ea9caa3ae8b0eda.webp"
 	},
 	{
 		"id": "25e5c6f170d880748060de3a655c7b18",
@@ -2150,7 +2150,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/parallel-handle-landmine-attachment--25e5c6f170d880748060de3a655c7b18.webp"
 	},
 	{
 		"id": "25e5c6f170d8808e8276fa6902887bff",
@@ -2168,7 +2168,7 @@
 			"garage",
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/multi-grip-pull-up-bar--25e5c6f170d8808e8276fa6902887bff.webp"
 	},
 	{
 		"id": "2605c6f170d880cf825feab5ae68d7a4",
@@ -2185,7 +2185,7 @@
 			"local",
 			"garage"
 		],
-		"hasImage": true
+		"image": "images/equipment/anchor-point-for-suspension-trainer--2605c6f170d880cf825feab5ae68d7a4.webp"
 	},
 	{
 		"id": "2605c6f170d8804bb8e0ca7c86ed38d9",
@@ -2202,7 +2202,7 @@
 			"local",
 			"garage"
 		],
-		"hasImage": true
+		"image": "images/equipment/anchor-point-for-resistance-band--2605c6f170d8804bb8e0ca7c86ed38d9.webp"
 	},
 	{
 		"id": "2625c6f170d880788ea1cb74ceda4648",
@@ -2214,7 +2214,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/squat-stand--2625c6f170d880788ea1cb74ceda4648.webp"
 	},
 	{
 		"id": "2685c6f170d880648f67d1ece3a70bb2",
@@ -2226,7 +2226,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pulley-belt-squat--2685c6f170d880648f67d1ece3a70bb2.webp"
 	},
 	{
 		"id": "2695c6f170d8802d82f1c198701b01b3",
@@ -2238,7 +2238,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/horizontal-plate-loaded-chest-press--2695c6f170d8802d82f1c198701b01b3.webp"
 	},
 	{
 		"id": "2695c6f170d88065af07cbb8c9f26d73",
@@ -2250,7 +2250,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/horizontal-pin-loaded-chest-press--2695c6f170d88065af07cbb8c9f26d73.webp"
 	},
 	{
 		"id": "26a5c6f170d8808387e7ee831c3dfa97",
@@ -2262,7 +2262,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-incline-bench-press--26a5c6f170d8808387e7ee831c3dfa97.webp"
 	},
 	{
 		"id": "26a5c6f170d880ba9239dd418aa3578c",
@@ -2274,7 +2274,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/reclined-pin-loaded-incline-press--26a5c6f170d880ba9239dd418aa3578c.webp"
 	},
 	{
 		"id": "2705c6f170d880429bddd8a58b4d3e8f",
@@ -2286,7 +2286,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-pin-loaded-hip-abductor--2705c6f170d880429bddd8a58b4d3e8f.webp"
 	},
 	{
 		"id": "2705c6f170d88022be5ace8690f76858",
@@ -2298,7 +2298,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-pin-loaded-hip-adductor--2705c6f170d88022be5ace8690f76858.webp"
 	},
 	{
 		"id": "2705c6f170d88045ba68f87bff516399",
@@ -2310,7 +2310,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-hip-abductor-adductor-combo-machine--2705c6f170d88045ba68f87bff516399.webp"
 	},
 	{
 		"id": "2705c6f170d880b3a3ffd8e87f127077",
@@ -2322,7 +2322,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-plate-loaded-hip-abductor--2705c6f170d880b3a3ffd8e87f127077.webp"
 	},
 	{
 		"id": "2705c6f170d88056950affcfc6e72475",
@@ -2334,7 +2334,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-plate-loaded-hip-adductor--2705c6f170d88056950affcfc6e72475.webp"
 	},
 	{
 		"id": "2725c6f170d8800ea9b4ca6d54b70862",
@@ -2346,7 +2346,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/side-plate-loaded-reverse-hyperextension--2725c6f170d8800ea9b4ca6d54b70862.webp"
 	},
 	{
 		"id": "2725c6f170d88049aa6bccdfef0f341f",
@@ -2358,7 +2358,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-reverse-hyperextension--2725c6f170d88049aa6bccdfef0f341f.webp"
 	},
 	{
 		"id": "27d5c6f170d880fe8252ef81ddca8307",
@@ -2370,7 +2370,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/yoga-block--27d5c6f170d880fe8252ef81ddca8307.webp"
 	},
 	{
 		"id": "27d5c6f170d88038bfd6c19bad6929de",
@@ -2382,7 +2382,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/push-up-handle--27d5c6f170d88038bfd6c19bad6929de.webp"
 	},
 	{
 		"id": "27d5c6f170d88080824fd33a69c6300b",
@@ -2396,7 +2396,7 @@
 		"gymPresets": [
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/ankle-weight--27d5c6f170d88080824fd33a69c6300b.webp"
 	},
 	{
 		"id": "27d5c6f170d880f4adfad9bb8e209cf0",
@@ -2410,7 +2410,7 @@
 		"gymPresets": [
 			"warehouse"
 		],
-		"hasImage": true
+		"image": "images/equipment/chain--27d5c6f170d880f4adfad9bb8e209cf0.webp"
 	},
 	{
 		"id": "27d5c6f170d880a1ba5dc4c39d525c0a",
@@ -2422,7 +2422,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/fat-grip-attachment--27d5c6f170d880a1ba5dc4c39d525c0a.webp"
 	},
 	{
 		"id": "27d5c6f170d880138553d4c610c9ddc8",
@@ -2436,7 +2436,7 @@
 		"gymPresets": [
 			"warehouse"
 		],
-		"hasImage": true
+		"image": "images/equipment/gymnastics-ring--27d5c6f170d880138553d4c610c9ddc8.webp"
 	},
 	{
 		"id": "2855c6f170d880f0b296c789944c1250",
@@ -2448,7 +2448,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-crunch-with-front-handles--2855c6f170d880f0b296c789944c1250.webp"
 	},
 	{
 		"id": "2855c6f170d880d58346f130edb1cb13",
@@ -2460,7 +2460,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-crunch-with-chest-pad--2855c6f170d880d58346f130edb1cb13.webp"
 	},
 	{
 		"id": "28a5c6f170d880dcbd8ad6a43b56a31c",
@@ -2472,7 +2472,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-back-extension--28a5c6f170d880dcbd8ad6a43b56a31c.webp"
 	},
 	{
 		"id": "28a5c6f170d880a4a660d9f4be43d3f4",
@@ -2484,7 +2484,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-crunch-back-extension-combo--28a5c6f170d880a4a660d9f4be43d3f4.webp"
 	},
 	{
 		"id": "28b5c6f170d880319249e0b7e5d8423c",
@@ -2496,7 +2496,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-lower-torso-rotation--28b5c6f170d880319249e0b7e5d8423c.webp"
 	},
 	{
 		"id": "28c5c6f170d88079a2c1e6f85986c2c3",
@@ -2508,7 +2508,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/upper-torso-rotation-with-chest-pad--28c5c6f170d88079a2c1e6f85986c2c3.webp"
 	},
 	{
 		"id": "2905c6f170d88081bcbff94b66fef25e",
@@ -2520,7 +2520,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/standing-plate-loaded-glute-kickback--2905c6f170d88081bcbff94b66fef25e.webp"
 	},
 	{
 		"id": "2905c6f170d880bc9e8ce4b473f9f4cd",
@@ -2532,7 +2532,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/kneeling-pin-loaded-glute-kickback--2905c6f170d880bc9e8ce4b473f9f4cd.webp"
 	},
 	{
 		"id": "2905c6f170d88088bca4cbac466a8903",
@@ -2544,7 +2544,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/kneeling-plate-loaded-glute-kickback--2905c6f170d88088bca4cbac466a8903.webp"
 	},
 	{
 		"id": "2935c6f170d880988f4adef8637e6add",
@@ -2558,7 +2558,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-hip-thrust-starting-from-the-bottom--2935c6f170d880988f4adef8637e6add.webp"
 	},
 	{
 		"id": "2935c6f170d88021a233ffed036154f3",
@@ -2570,7 +2570,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-hip-thrust--2935c6f170d88021a233ffed036154f3.webp"
 	},
 	{
 		"id": "2985c6f170d880c194acfcbd47b89cd8",
@@ -2585,7 +2585,7 @@
 			"garage",
 			"home"
 		],
-		"hasImage": false
+		"image": null
 	},
 	{
 		"id": "2985c6f170d88091b56ec5457cde1321",
@@ -2599,7 +2599,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-triceps-extension-with-angled-arm-pad--2985c6f170d88091b56ec5457cde1321.webp"
 	},
 	{
 		"id": "2985c6f170d880aca70ac2eac7aa460e",
@@ -2611,7 +2611,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-triceps-extension-with-angled-arm-pad--2985c6f170d880aca70ac2eac7aa460e.webp"
 	},
 	{
 		"id": "2985c6f170d88090a434efdbdab506ca",
@@ -2623,7 +2623,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-preacher-curl-triceps-extension-combo--2985c6f170d88090a434efdbdab506ca.webp"
 	},
 	{
 		"id": "2985c6f170d8808a8580c289a9844905",
@@ -2635,7 +2635,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-preacher-curl-triceps-extension-combo--2985c6f170d8808a8580c289a9844905.webp"
 	},
 	{
 		"id": "29a5c6f170d880a98b36f624790cc5f8",
@@ -2647,7 +2647,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/standing-chest-press--29a5c6f170d880a98b36f624790cc5f8.webp"
 	},
 	{
 		"id": "29a5c6f170d880b5911cc71b399e7ff3",
@@ -2659,7 +2659,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/standing-plate-loaded-gripper--29a5c6f170d880b5911cc71b399e7ff3.webp"
 	},
 	{
 		"id": "2a45c6f170d880d7a3f8f4b12c3b2e85",
@@ -2671,7 +2671,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-plate-loaded-decline-press--2a45c6f170d880d7a3f8f4b12c3b2e85.webp"
 	},
 	{
 		"id": "2a45c6f170d880b597d5da0f28326105",
@@ -2683,7 +2683,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/lying-decline-press-machine--2a45c6f170d880b597d5da0f28326105.webp"
 	},
 	{
 		"id": "2b25c6f170d880548e61e0d03ea6ce1d",
@@ -2695,7 +2695,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-low-row--2b25c6f170d880548e61e0d03ea6ce1d.webp"
 	},
 	{
 		"id": "2b25c6f170d880149addda11de15db13",
@@ -2707,7 +2707,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/chest-fly-with-arm-pads--2b25c6f170d880149addda11de15db13.webp"
 	},
 	{
 		"id": "2b25c6f170d880edbbdadcfb8841bfd1",
@@ -2722,7 +2722,7 @@
 			"commercial",
 			"garage"
 		],
-		"hasImage": false
+		"image": null
 	},
 	{
 		"id": "2b25c6f170d8808c902ad0bc95551783",
@@ -2734,7 +2734,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/neck-harness--2b25c6f170d8808c902ad0bc95551783.webp"
 	},
 	{
 		"id": "2b25c6f170d8809e8304ed80a0eb7a3b",
@@ -2746,7 +2746,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-single-cable-machine-dual-sleeve--2b25c6f170d8809e8304ed80a0eb7a3b.webp"
 	},
 	{
 		"id": "2b25c6f170d8801a96ffd0ed372d7422",
@@ -2758,7 +2758,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-cable-crossover--2b25c6f170d8801a96ffd0ed372d7422.webp"
 	},
 	{
 		"id": "2e75c6f170d8801eb717e217d7e3d3cf",
@@ -2770,7 +2770,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-high-row--2e75c6f170d8801eb717e217d7e3d3cf.webp"
 	},
 	{
 		"id": "2e85c6f170d880ae91eae077d2f1cf56",
@@ -2782,7 +2782,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-cable-lat-pulldown--2e85c6f170d880ae91eae077d2f1cf56.webp"
 	},
 	{
 		"id": "2ed5c6f170d88039b833d0a45eec64f5",
@@ -2798,7 +2798,7 @@
 			"warehouse",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/treadmill--2ed5c6f170d88039b833d0a45eec64f5.webp"
 	},
 	{
 		"id": "2ed5c6f170d88076bfe7ecbf57ff522d",
@@ -2813,7 +2813,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/bike--2ed5c6f170d88076bfe7ecbf57ff522d.webp"
 	},
 	{
 		"id": "2ed5c6f170d880558198cc60df067a7d",
@@ -2828,7 +2828,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/elliptical--2ed5c6f170d880558198cc60df067a7d.webp"
 	},
 	{
 		"id": "2ed5c6f170d88075a734c1593b8e537c",
@@ -2842,7 +2842,7 @@
 		"gymPresets": [
 			"commercial"
 		],
-		"hasImage": true
+		"image": "images/equipment/stair-climber--2ed5c6f170d88075a734c1593b8e537c.webp"
 	},
 	{
 		"id": "2ed5c6f170d8801ebb3cea98cb763b8d",
@@ -2858,7 +2858,7 @@
 			"warehouse",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/rowing-machine--2ed5c6f170d8801ebb3cea98cb763b8d.webp"
 	},
 	{
 		"id": "2ed5c6f170d880a5a49adf20b7f3d4d3",
@@ -2872,7 +2872,7 @@
 		"gymPresets": [
 			"warehouse"
 		],
-		"hasImage": true
+		"image": "images/equipment/skierg--2ed5c6f170d880a5a49adf20b7f3d4d3.webp"
 	},
 	{
 		"id": "2ed5c6f170d88060814def480dc910bc",
@@ -2886,7 +2886,7 @@
 		"gymPresets": [
 			"warehouse"
 		],
-		"hasImage": true
+		"image": "images/equipment/air-bike--2ed5c6f170d88060814def480dc910bc.webp"
 	},
 	{
 		"id": "2ed5c6f170d880c8a531c3d2bb5109be",
@@ -2898,7 +2898,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pool--2ed5c6f170d880c8a531c3d2bb5109be.webp"
 	},
 	{
 		"id": "2ed5c6f170d880ef91b2c245173f4b34",
@@ -2910,7 +2910,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/jacobs-ladder--2ed5c6f170d880ef91b2c245173f4b34.webp"
 	},
 	{
 		"id": "2ed5c6f170d88074a547ca38be809028",
@@ -2922,7 +2922,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/versaclimber--2ed5c6f170d88074a547ca38be809028.webp"
 	},
 	{
 		"id": "2ee5c6f170d880f283aece89085e93fb",
@@ -2934,7 +2934,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-incline-fly--2ee5c6f170d880f283aece89085e93fb.webp"
 	},
 	{
 		"id": "2ee5c6f170d880f68e5de7923fefb119",
@@ -2946,7 +2946,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/tibialis-dorsiflexion-machine--2ee5c6f170d880f68e5de7923fefb119.webp"
 	},
 	{
 		"id": "2ee5c6f170d8804a8163f267355cbabc",
@@ -2958,7 +2958,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/tib-bar-trainer--2ee5c6f170d8804a8163f267355cbabc.webp"
 	},
 	{
 		"id": "2ee5c6f170d880b89669d75f3798c8d4",
@@ -2970,7 +2970,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/horizontal-calf-extension--2ee5c6f170d880b89669d75f3798c8d4.webp"
 	},
 	{
 		"id": "2ee5c6f170d880df845dc73c75874a9e",
@@ -2982,7 +2982,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/incline-plate-loaded-calf-press--2ee5c6f170d880df845dc73c75874a9e.webp"
 	},
 	{
 		"id": "2ee5c6f170d8801491a7cd798db7026c",
@@ -2994,7 +2994,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-horizontal-biceps-curl--2ee5c6f170d8801491a7cd798db7026c.webp"
 	},
 	{
 		"id": "2ee5c6f170d88040b9f1c9b8b177720d",
@@ -3006,7 +3006,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-pec-deck--2ee5c6f170d88040b9f1c9b8b177720d.webp"
 	},
 	{
 		"id": "2ee5c6f170d880569c93e73554858b41",
@@ -3021,7 +3021,7 @@
 		],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/marrs-bar--2ee5c6f170d880569c93e73554858b41.webp"
 	},
 	{
 		"id": "2f25c6f170d88090aacaf8e0641dd1e4",
@@ -3033,7 +3033,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-pin-loaded-decline-press--2f25c6f170d88090aacaf8e0641dd1e4.webp"
 	},
 	{
 		"id": "2f25c6f170d880db9805f9f55974b934",
@@ -3045,7 +3045,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/motorized-dual-cable-machine--2f25c6f170d880db9805f9f55974b934.webp"
 	},
 	{
 		"id": "2f65c6f170d880b4ba50fbd9b02ab069",
@@ -3057,7 +3057,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-hack-squat--2f65c6f170d880b4ba50fbd9b02ab069.webp"
 	},
 	{
 		"id": "2fc5c6f170d880a7bbc3cc77def946fa",
@@ -3069,7 +3069,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/assisted-nordic-hamstring-curl-machine--2fc5c6f170d880a7bbc3cc77def946fa.webp"
 	},
 	{
 		"id": "2fc5c6f170d8809a90dddd5c9867f948",
@@ -3081,7 +3081,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/leverage-squat--2fc5c6f170d8809a90dddd5c9867f948.webp"
 	},
 	{
 		"id": "2fc5c6f170d880019a9aec8a1cb0e27d",
@@ -3093,7 +3093,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/power-squat-pro--2fc5c6f170d880019a9aec8a1cb0e27d.webp"
 	},
 	{
 		"id": "2fc5c6f170d88066aff2e9dff490027f",
@@ -3105,7 +3105,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/bent-over-plate-loaded-row--2fc5c6f170d88066aff2e9dff490027f.webp"
 	},
 	{
 		"id": "2fc5c6f170d880c2a855f5ed07dd6f69",
@@ -3117,7 +3117,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-iso-lateral-high-biceps-curl--2fc5c6f170d880c2a855f5ed07dd6f69.webp"
 	},
 	{
 		"id": "2fc5c6f170d880d2bbd1ce7b08188263",
@@ -3129,7 +3129,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/vertical-leg-press--2fc5c6f170d880d2bbd1ce7b08188263.webp"
 	},
 	{
 		"id": "2fc5c6f170d88042ad10f07041c0e59e",
@@ -3141,7 +3141,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-plate-loaded-gripper--2fc5c6f170d88042ad10f07041c0e59e.webp"
 	},
 	{
 		"id": "2fc5c6f170d88022a25ad0d11aa5773a",
@@ -3153,7 +3153,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-iso-lateral-high-biceps-curl--2fc5c6f170d88022a25ad0d11aa5773a.webp"
 	},
 	{
 		"id": "2fc5c6f170d88025a61ed09ee1f0dd33",
@@ -3165,7 +3165,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-biceps-curl-with-arms-at-side--2fc5c6f170d88025a61ed09ee1f0dd33.webp"
 	},
 	{
 		"id": "2fc5c6f170d880979fc1dc126ba6c0e3",
@@ -3177,7 +3177,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-super-incline-press--2fc5c6f170d880979fc1dc126ba6c0e3.webp"
 	},
 	{
 		"id": "2fc5c6f170d8800aab3dc82c3d1ee2a6",
@@ -3189,7 +3189,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/viking-press-landmine-attachment--2fc5c6f170d8800aab3dc82c3d1ee2a6.webp"
 	},
 	{
 		"id": "2fc5c6f170d880568f58fd84db9df35a",
@@ -3201,7 +3201,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/viking-press-machine--2fc5c6f170d880568f58fd84db9df35a.webp"
 	},
 	{
 		"id": "2ff5c6f170d8805ca484e89fa08036de",
@@ -3213,7 +3213,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/jump-rope--2ff5c6f170d8805ca484e89fa08036de.webp"
 	},
 	{
 		"id": "3005c6f170d880988e12ec71e2944617",
@@ -3228,7 +3228,7 @@
 		],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/buffalo-bar--3005c6f170d880988e12ec71e2944617.webp"
 	},
 	{
 		"id": "3015c6f170d880ad90d6d9d47bb2bcf7",
@@ -3240,7 +3240,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/dual-cable-lat-pulldown--3015c6f170d880ad90d6d9d47bb2bcf7.webp"
 	},
 	{
 		"id": "3015c6f170d88072b097fc12332bb1d7",
@@ -3255,7 +3255,7 @@
 		],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/open-trap-bar--3015c6f170d88072b097fc12332bb1d7.webp"
 	},
 	{
 		"id": "3015c6f170d88020ad9de62440fa9ec6",
@@ -3267,7 +3267,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/bosu-ball--3015c6f170d88020ad9de62440fa9ec6.webp"
 	},
 	{
 		"id": "3015c6f170d880c4adb2c52d9cc264a2",
@@ -3286,7 +3286,7 @@
 		"gymPresets": [
 			"warehouse"
 		],
-		"hasImage": true
+		"image": "images/equipment/battle-ropes--3015c6f170d880c4adb2c52d9cc264a2.webp"
 	},
 	{
 		"id": "3015c6f170d880f48659f82e1916d07d",
@@ -3298,7 +3298,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-dual-handle-cable-tower--3015c6f170d880f48659f82e1916d07d.webp"
 	},
 	{
 		"id": "3015c6f170d880dd9ee2d2147a73e83c",
@@ -3310,7 +3310,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-dual-handle-cable-tower--3015c6f170d880dd9ee2d2147a73e83c.webp"
 	},
 	{
 		"id": "3015c6f170d880089a6df68ceb841661",
@@ -3322,7 +3322,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-45-back-extension--3015c6f170d880089a6df68ceb841661.webp"
 	},
 	{
 		"id": "3015c6f170d88011af55d6b175d3e731",
@@ -3334,7 +3334,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/total-quad-hip-dual-cable-machine--3015c6f170d88011af55d6b175d3e731.webp"
 	},
 	{
 		"id": "3015c6f170d88054b676e6fd25ba8963",
@@ -3346,7 +3346,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/step-up-machine--3015c6f170d88054b676e6fd25ba8963.webp"
 	},
 	{
 		"id": "3015c6f170d8802789d3dd32e0f727a8",
@@ -3358,7 +3358,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/t-bell--3015c6f170d8802789d3dd32e0f727a8.webp"
 	},
 	{
 		"id": "3015c6f170d880488b95ebe6162b5ae5",
@@ -3370,7 +3370,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": false
+		"image": null
 	},
 	{
 		"id": "3015c6f170d8808bbfd6e673460a8c02",
@@ -3382,7 +3382,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/farmer-s-handle--3015c6f170d8808bbfd6e673460a8c02.webp"
 	},
 	{
 		"id": "3015c6f170d8808e8420c9b5983f8b93",
@@ -3394,7 +3394,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-wrist-bar--3015c6f170d8808e8420c9b5983f8b93.webp"
 	},
 	{
 		"id": "3015c6f170d8807f870bdfd09e184669",
@@ -3406,7 +3406,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-4-way-neck--3015c6f170d8807f870bdfd09e184669.webp"
 	},
 	{
 		"id": "3015c6f170d880edbfb7c3ea503092c3",
@@ -3418,7 +3418,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-4-way-neck--3015c6f170d880edbfb7c3ea503092c3.webp"
 	},
 	{
 		"id": "3025c6f170d880a49711ec89f330281b",
@@ -3434,7 +3434,7 @@
 		],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/yoke--3025c6f170d880a49711ec89f330281b.webp"
 	},
 	{
 		"id": "3045c6f170d880419e36c403dd814b1d",
@@ -3450,7 +3450,7 @@
 		],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": false
+		"image": null
 	},
 	{
 		"id": "3065c6f170d880b9a838d409e2e025cd",
@@ -3462,7 +3462,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/kneeling-plate-loaded-leg-curl--3065c6f170d880b9a838d409e2e025cd.webp"
 	},
 	{
 		"id": "3065c6f170d88098bed9d683b7898904",
@@ -3474,7 +3474,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/kneeling-pin-loaded-leg-curl--3065c6f170d88098bed9d683b7898904.webp"
 	},
 	{
 		"id": "3065c6f170d8805bb9c6c914293299ad",
@@ -3486,7 +3486,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-smith-machine-functional-trainer--3065c6f170d8805bb9c6c914293299ad.webp"
 	},
 	{
 		"id": "3065c6f170d8804d8dc9e290ea24a163",
@@ -3498,7 +3498,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/multi-forearm--3065c6f170d8804d8dc9e290ea24a163.webp"
 	},
 	{
 		"id": "3065c6f170d880cbb928c775b7e83e7b",
@@ -3510,7 +3510,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/wrist-curl-machine--3065c6f170d880cbb928c775b7e83e7b.webp"
 	},
 	{
 		"id": "3085c6f170d880059bd8ce0d6443923d",
@@ -3522,7 +3522,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-high-pulley-cable-system-single-loading-pin--3085c6f170d880059bd8ce0d6443923d.webp"
 	},
 	{
 		"id": "3085c6f170d8803995c1f86533d5e056",
@@ -3534,7 +3534,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-high-low-pulley-cable-system-single-loading-pin--3085c6f170d8803995c1f86533d5e056.webp"
 	},
 	{
 		"id": "3095c6f170d8801888bad1e928aaf7f0",
@@ -3546,7 +3546,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/incline-sliding-core-trainer--3095c6f170d8801888bad1e928aaf7f0.webp"
 	},
 	{
 		"id": "30f5c6f170d880f28056fbc9bd7cd39a",
@@ -3558,7 +3558,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-high-row--30f5c6f170d880f28056fbc9bd7cd39a.webp"
 	},
 	{
 		"id": "3105c6f170d880578cb1eb08794ed431",
@@ -3570,7 +3570,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-leverage-leg-press--3105c6f170d880578cb1eb08794ed431.webp"
 	},
 	{
 		"id": "3105c6f170d88053b1b5c30248b0f8ce",
@@ -3582,7 +3582,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-front-lat-pulldown-chest-supported--3105c6f170d88053b1b5c30248b0f8ce.webp"
 	},
 	{
 		"id": "3135c6f170d880eba97efbd2e6404952",
@@ -3594,7 +3594,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/sled-pulling-belt-harness--3135c6f170d880eba97efbd2e6404952.webp"
 	},
 	{
 		"id": "31b5c6f170d88091a456e644d8784fcd",
@@ -3608,7 +3608,7 @@
 		],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/triceps-bar--31b5c6f170d88091a456e644d8784fcd.webp"
 	},
 	{
 		"id": "3295c6f170d880278ff9c4097a5a1ef6",
@@ -3623,7 +3623,7 @@
 			"garage",
 			"home"
 		],
-		"hasImage": true
+		"image": "images/equipment/chair--3295c6f170d880278ff9c4097a5a1ef6.webp"
 	},
 	{
 		"id": "3365c6f170d880f9ab88cc27da6c9264",
@@ -3635,7 +3635,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-front-lat-pulldown-chest-supported--3365c6f170d880f9ab88cc27da6c9264.webp"
 	},
 	{
 		"id": "33c5c6f170d880aa9517dfe69841168c",
@@ -3647,7 +3647,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-d-y-row--33c5c6f170d880aa9517dfe69841168c.webp"
 	},
 	{
 		"id": "33c5c6f170d880429cf7dc8ed70c0eb1",
@@ -3659,7 +3659,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-dual-cable-row--33c5c6f170d880429cf7dc8ed70c0eb1.webp"
 	},
 	{
 		"id": "33e5c6f170d88066a0edf4b69ce40da3",
@@ -3671,7 +3671,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/standing-pec-fly--33e5c6f170d88066a0edf4b69ce40da3.webp"
 	},
 	{
 		"id": "33e5c6f170d8804199e9d31d3e0ab70e",
@@ -3683,7 +3683,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/jammer--33e5c6f170d8804199e9d31d3e0ab70e.webp"
 	},
 	{
 		"id": "3495c6f170d880a79105ea27422f799b",
@@ -3695,7 +3695,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-45-back-extension--3495c6f170d880a79105ea27422f799b.webp"
 	},
 	{
 		"id": "3495c6f170d880b2b208f61b950fdddc",
@@ -3707,7 +3707,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/standing-hip-thrust-machine--3495c6f170d880b2b208f61b950fdddc.webp"
 	},
 	{
 		"id": "34a5c6f170d8807f91f8eddea409aedb",
@@ -3719,7 +3719,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/standing-plate-loaded-hip-abductor--34a5c6f170d8807f91f8eddea409aedb.webp"
 	},
 	{
 		"id": "34a5c6f170d880a09946fe774e6acf3c",
@@ -3731,7 +3731,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/standing-pin-loaded-hip-abductor--34a5c6f170d880a09946fe774e6acf3c.webp"
 	},
 	{
 		"id": "3505c6f170d880bbac98e7bbcf8804fd",
@@ -3745,7 +3745,7 @@
 		"gymPresets": [
 			"warehouse"
 		],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-lat-pulldown-low-row-rack-attachment--3505c6f170d880bbac98e7bbcf8804fd.webp"
 	},
 	{
 		"id": "3515c6f170d8801b85bfd50776753abe",
@@ -3757,7 +3757,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/rotator-cuff-machine--3515c6f170d8801b85bfd50776753abe.webp"
 	},
 	{
 		"id": "3545c6f170d880429b21e015e7c273b1",
@@ -3769,7 +3769,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/standing-multi-flight--3545c6f170d880429b21e015e7c273b1.webp"
 	},
 	{
 		"id": "3555c6f170d880ebb7f7f1c7005f91bb",
@@ -3781,7 +3781,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-leg-extension-leg-curl-combo-machine--3555c6f170d880ebb7f7f1c7005f91bb.webp"
 	},
 	{
 		"id": "3575c6f170d880d9bbd6f988ea55aba3",
@@ -3793,7 +3793,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/horizontal-pin-loaded-hack-squat--3575c6f170d880d9bbd6f988ea55aba3.webp"
 	},
 	{
 		"id": "3635c6f170d880caba49e3a6f9f58f0f",
@@ -3805,7 +3805,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-horizontal-leg-press--3635c6f170d880caba49e3a6f9f58f0f.webp"
 	},
 	{
 		"id": "3865c6f170d88002b3dfcea0dfb8bc12",
@@ -3817,7 +3817,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/seated-plate-loaded-leg-curl-leg-extension-combo-machine--3865c6f170d88002b3dfcea0dfb8bc12.webp"
 	},
 	{
 		"id": "3a65c6f170d880439875d0ff20895169",
@@ -3829,7 +3829,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/combo-twist--3a65c6f170d880439875d0ff20895169.webp"
 	},
 	{
 		"id": "3aa5c6f170d880ffa2bac5fa3c9a684f",
@@ -3841,7 +3841,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-wide-chest-press--3aa5c6f170d880ffa2bac5fa3c9a684f.webp"
 	},
 	{
 		"id": "3aa5c6f170d880539a0fef486e9143e0",
@@ -3853,7 +3853,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/power-runner--3aa5c6f170d880539a0fef486e9143e0.webp"
 	},
 	{
 		"id": "3aa5c6f170d88041afb0fd81d2c0f5ce",
@@ -3865,7 +3865,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/lunge-machine--3aa5c6f170d88041afb0fd81d2c0f5ce.webp"
 	},
 	{
 		"id": "3aa5c6f170d880c79d4de59b689a38f9",
@@ -3877,7 +3877,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "singleSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-ab-crunch-bench--3aa5c6f170d880c79d4de59b689a38f9.webp"
 	},
 	{
 		"id": "3aa5c6f170d88099b124e340d90d2b87",
@@ -3889,7 +3889,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-incline-row--3aa5c6f170d88099b124e340d90d2b87.webp"
 	},
 	{
 		"id": "3aa5c6f170d880a78cefd23c6423b171",
@@ -3901,7 +3901,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-triceps-pushdown--3aa5c6f170d880a78cefd23c6423b171.webp"
 	},
 	{
 		"id": "3ab5c6f170d880988e71d981cb7deb5c",
@@ -3913,7 +3913,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/single-digital-cable-trainer--3ab5c6f170d880988e71d981cb7deb5c.webp"
 	},
 	{
 		"id": "3b55c6f170d88018a889d1f86591249d",
@@ -3925,7 +3925,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-triceps-pushdown--3b55c6f170d88018a889d1f86591249d.webp"
 	},
 	{
 		"id": "3b95c6f170d880de9298ce5f86a2dbc2",
@@ -3940,7 +3940,7 @@
 			"commercial",
 			"local"
 		],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-functional-trainer--3b95c6f170d880de9298ce5f86a2dbc2.webp"
 	},
 	{
 		"id": "3b95c6f170d88009b836ce23810ce8b7",
@@ -3952,7 +3952,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/plate-loaded-functional-trainer--3b95c6f170d88009b836ce23810ce8b7.webp"
 	},
 	{
 		"id": "3c85c6f170d8808f88fde7aabc5fa9af",
@@ -3964,7 +3964,7 @@
 		"weightOptionsKg": [],
 		"plateLaterality": null,
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/pin-loaded-squat--3c85c6f170d8808f88fde7aabc5fa9af.webp"
 	},
 	{
 		"id": "3c85c6f170d88019b3f6d3179a46d379",
@@ -3976,6 +3976,6 @@
 		"weightOptionsKg": [],
 		"plateLaterality": "perSide",
 		"gymPresets": [],
-		"hasImage": true
+		"image": "images/equipment/3d-hip-abductor--3c85c6f170d88019b3f6d3179a46d379.webp"
 	}
 ]

@@ -1,9 +1,10 @@
 #!/usr/bin/env bun
 /**
- * Regenerates the bundled exercise catalog from the installed MacroFactor Workouts app:
- * `bun app-ios/scripts/catalog.ts [path/to/Runner.app]`.
+ * Regenerates the exercise catalog from the installed MacroFactor Workouts app:
+ * `bun scripts/catalog.ts [path/to/Runner.app]`.
  * Reads the app's own catalog export (`packages/macrofactor/assets/import/app_file.json`), its instruction and
- * article Markdown, and its exercise and equipment images, and writes `Sources/App/Resources/Catalog/`.
+ * article Markdown, and its exercise and equipment images, and writes the client-independent `shared/catalog/`
+ * plus the iOS-only muscle tile asset catalog.
  * The default weight lists MF shows per equipment item (dumbbells 2.5 to 165 lb and so on) are not in the bundle;
  * they come from docs/research/mf-workouts/equipment.md.
  */
@@ -13,7 +14,8 @@ import { join, resolve } from 'node:path';
 
 const app = resolve(process.argv[2] ?? '/Applications/Runner.app');
 const assets = join(app, 'Wrapper/Runner.app/Frameworks/App.framework/flutter_assets');
-const out = resolve(import.meta.dir, '../Sources/App/Resources/Catalog');
+const out = resolve(import.meta.dir, '../shared/catalog');
+const muscleAssets = resolve(import.meta.dir, '../app-ios/Sources/App/Resources/Muscles.xcassets');
 if (!existsSync(assets)) throw new Error(`No Flutter assets at ${assets}. Is MacroFactor Workouts installed?`);
 
 type Ref = { type: string; name: string; [key: string]: unknown };
@@ -118,9 +120,18 @@ const gymPresets = [
 
 // Exercise Markdown links to the authors' Notion workspace, which the app never opens. Keep the link text only.
 const stripLinks = (markdown: string) => markdown.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').trim();
+// Files are named for people browsing the folder; the ID suffix keeps them unique and greppable. Clients read the
+// paths from the JSON (relative to `shared/catalog/`) instead of rebuilding this rule.
+const fileStem = (name: string, id: string) =>
+	`${name
+		.normalize('NFKD')
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-|-$/g, '')}--${id}`;
 
 rmSync(out, { recursive: true, force: true });
-for (const dir of ['Instructions', 'Articles', 'ExerciseImages', 'EquipmentImages'])
+rmSync(muscleAssets, { recursive: true, force: true });
+for (const dir of ['instructions', 'articles', 'images/exercises', 'images/equipment'])
 	mkdirSync(join(out, dir), { recursive: true });
 
 const imageFiles = readdirSync(join(assets, 'assets/exercises'));
@@ -137,18 +148,17 @@ for (const e of source.exercises) {
 	const support = (e.supportEquipmentGroupIds as string[]).map(g => equipmentOption(g, 'supportEquipmentGroup'));
 	const equipment = [...new Set([...resistance, ...support].flatMap(g => g.equipment))];
 	equipment.forEach(eq => ref(eq, 'equipment'));
-	const images = imageFiles
-		.filter(f => f.startsWith(`${id}_`))
-		.sort()
-		.map(f => f.replace('.webp', ''));
-	for (const image of images)
-		await Bun.write(
-			join(out, 'ExerciseImages', `${image}.webp`),
-			Bun.file(join(assets, 'assets/exercises', `${image}.webp`)),
-		);
-	const instructions = Bun.file(join(markdownDir, `${id}.md`));
-	const hasInstructions = await instructions.exists();
-	if (hasInstructions) await Bun.write(join(out, 'Instructions', `${id}.md`), stripLinks(await instructions.text()));
+	const name = titleCase(e.name as string);
+	const stem = fileStem(name, id);
+	const images = [];
+	for (const file of imageFiles.filter(f => f.startsWith(`${id}_`)).sort()) {
+		const image = `images/exercises/${stem}${file.slice(id.length)}`;
+		await Bun.write(join(out, image), Bun.file(join(assets, 'assets/exercises', file)));
+		images.push(image);
+	}
+	const markdown = Bun.file(join(markdownDir, `${id}.md`));
+	const instructionsFile = (await markdown.exists()) ? `instructions/${stem}.md` : null;
+	if (instructionsFile) await Bun.write(join(out, instructionsFile), stripLinks(await markdown.text()));
 	const articles = e.exerciseNote as string[];
 	articles.forEach(a => {
 		ref(a, 'exerciseNote');
@@ -157,7 +167,7 @@ for (const e of source.exercises) {
 	const type = e.exerciseType ? ref(e.exerciseType as string, 'exerciseType').name : 'Other';
 	exercises.push({
 		id,
-		name: titleCase(e.name as string),
+		name,
 		alternativeNames: names(e.alternativeName, 'alternativeName').map(titleCase),
 		type: type.startsWith('Multi')
 			? 'compound'
@@ -187,7 +197,7 @@ for (const e of source.exercises) {
 		equipmentIDs: equipment,
 		bodyweightFraction: (e.bodyweight as number | null) ?? 0,
 		searchBoost: (e.searchBoostValue as number | undefined) ?? 0,
-		hasInstructions,
+		instructionsFile,
 		articleIDs: articles,
 		images,
 	});
@@ -195,20 +205,22 @@ for (const e of source.exercises) {
 
 const articles = [];
 for (const id of articleIDs) {
-	const file = Bun.file(join(markdownDir, `${id}.md`));
-	if (!(await file.exists())) continue;
-	await Bun.write(join(out, 'Articles', `${id}.md`), stripLinks(await file.text()));
-	articles.push({ id, title: ref(id, 'exerciseNote').name });
+	const markdown = Bun.file(join(markdownDir, `${id}.md`));
+	if (!(await markdown.exists())) continue;
+	const title = ref(id, 'exerciseNote').name;
+	const file = `articles/${fileStem(title, id)}.md`;
+	await Bun.write(join(out, file), stripLinks(await markdown.text()));
+	articles.push({ id, title, file });
 }
 
 const equipment = [];
 for (const [id, entry] of Object.entries(source.uuidIndex)) {
 	if (entry.type !== 'equipment') continue;
+	const name = titleCase(entry.name);
 	const png = join(equipmentDir, `${id}.png`);
-	const hasImage = existsSync(png);
+	const image = existsSync(png) ? `images/equipment/${fileStem(name, id)}.webp` : null;
 	// The app ships 1000px PNGs (81 MB in total). Thumbnails are all the library and filters need.
-	if (hasImage)
-		await $`magick ${png} -resize 240x240 -quality 80 ${join(out, 'EquipmentImages', `${id}.webp`)}`.quiet();
+	if (image) await $`magick ${png} -resize 240x240 -quality 80 ${join(out, image)}`.quiet();
 	const kg = (value: unknown) => (typeof value === 'number' && value > 0 ? value : null);
 	const weightOptionsKg = ((entry.weightSelectKg as string | null) ?? '').split(',').flatMap(option => {
 		if (!option.trim()) return [];
@@ -224,7 +236,7 @@ for (const [id, entry] of Object.entries(source.uuidIndex)) {
 	}
 	equipment.push({
 		id,
-		name: titleCase(entry.name),
+		name,
 		pluralOf: (entry.pluralOf as string | null) ?? null,
 		category: entry.category ? ref(entry.category as string, 'appEquipmentCategory').name : 'Bodyweight',
 		weightKg: kg(entry.weightKg),
@@ -232,14 +244,13 @@ for (const [id, entry] of Object.entries(source.uuidIndex)) {
 		weightOptionsKg,
 		plateLaterality: laterality,
 		gymPresets: gymPresets.filter(([flag]) => entry[flag] === 1).map(([, preset]) => preset),
-		hasImage,
+		image,
 	});
 }
 
 // Muscle tiles are drawn for a light theme with the target muscle in blue. Their grays are swapped for the dark theme's,
 // and Xcode keeps them as vectors through an asset catalog. The owner's MF account uses the male figure.
 const muscleDir = join(assets, 'assets/muscle_groups/male');
-const muscleAssets = join(out, 'Muscles.xcassets');
 const contents = (value: unknown) => `${JSON.stringify(value, null, '\t')}\n`;
 await Bun.write(join(muscleAssets, 'Contents.json'), contents({ info: { author: 'xcode', version: 1 } }));
 const muscles = readdirSync(muscleDir).filter(f => f.endsWith('.svg'));
@@ -346,7 +357,7 @@ await write('equipment.json', equipment);
 await write('articles.json', articles);
 console.log(
 	`${exercises.length} exercises (${exercises.filter(e => e.images.length).length} with images, ` +
-		`${exercises.filter(e => e.hasInstructions).length} with instructions), ${equipment.length} equipment, ` +
+		`${exercises.filter(e => e.instructionsFile).length} with instructions), ${equipment.length} equipment, ` +
 		`${articles.length} articles, ${muscles.length} muscle tiles from the catalog generated ${source.generatedAt}. ` +
 		`Picker groups: ${JSON.stringify(
 			Object.groupBy(exercises, e => e.category),

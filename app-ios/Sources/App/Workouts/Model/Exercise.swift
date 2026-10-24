@@ -43,10 +43,10 @@ struct Exercise: Codable, Hashable, Identifiable {
     /// MF's Description from the custom exercise wizard, as Markdown. Catalog exercises keep theirs in the bundle's
     /// instructions, so this is `nil` for them and for custom rows written before it existed.
     var about: String?
-    /// Instructions live in `Instructions/<id>.md`, loaded on demand through `ExerciseCatalog.instructions(for:)`.
-    var hasInstructions = false
+    /// Catalog-relative path of the instructions Markdown, loaded on demand through `ExerciseCatalog.instructions(for:)`.
+    var instructionsFile: String?
     var articleIDs: [String] = []
-    /// Bundle resource names of the video's poster frames (start and end positions), without extension.
+    /// Catalog-relative paths of the video's poster frames (start and end positions).
     var images: [String] = []
 
     var isCustom: Bool { id.hasPrefix("custom-") }
@@ -170,7 +170,8 @@ struct Equipment: Codable, Hashable, Identifiable {
     var weightOptionsKg: [Double]
     var plateLaterality: PlateLaterality?
     var gymPresets: [GymPreset]
-    var hasImage: Bool
+    /// Catalog-relative path of the thumbnail.
+    var image: String?
 }
 
 enum PlateLaterality: String, Codable {
@@ -185,4 +186,6 @@ enum GymPreset: String, Codable, CaseIterable {
 struct Article: Codable, Hashable, Identifiable {
     let id: String
     var title: String
+    /// Catalog-relative path of the Markdown.
+    var file: String
 }
