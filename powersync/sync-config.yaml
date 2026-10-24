@@ -13,3 +13,6 @@ streams:
       - SELECT * FROM custom_exercises
       - SELECT * FROM exercise_settings
       - SELECT * FROM settings
+      - SELECT * FROM programs
+      - SELECT * FROM gym_profiles
+      - SELECT * FROM body_weights

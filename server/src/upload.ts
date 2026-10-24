@@ -18,12 +18,13 @@ export type Write =
 	| { op: 'delete'; table: SyncedTable; id: string };
 export type Rejected = { table: string; id: string; reason: string };
 
-type Kind = 'text' | 'integer' | 'boolean' | 'json' | 'timestamp';
+type Kind = 'text' | 'integer' | 'number' | 'boolean' | 'json' | 'timestamp';
 type Column = { key: string; name: string; kind: Kind; notNull: boolean; required: boolean };
 
 const KINDS: Record<string, Kind> = {
 	PgText: 'text',
 	PgInteger: 'integer',
+	PgDoublePrecision: 'number',
 	PgBoolean: 'boolean',
 	PgJsonb: 'json',
 	PgTimestampString: 'timestamp',
@@ -63,6 +64,12 @@ function coerce(column: Column, value: unknown): { value: unknown } | { problem:
 		case 'integer': {
 			const number = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
 			return Number.isSafeInteger(number) ? { value: number } : { problem: 'expected an integer' };
+		}
+		case 'number': {
+			const number = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
+			return typeof number === 'number' && Number.isFinite(number)
+				? { value: number }
+				: { problem: 'expected a number' };
 		}
 		case 'boolean':
 			if (value === true || value === 1 || value === '1') return { value: true };
