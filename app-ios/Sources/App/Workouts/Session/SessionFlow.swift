@@ -4,39 +4,43 @@ import Foundation
 struct SetEntry: Hashable {
     var weightKg: Double?
     var reps: Int?
+    /// The F | P keypad's second count; volume and records ignore it.
+    var partialReps: Int?
     var rir: Int?
     var durationSeconds: Int?
     var distanceMeters: Double?
 
-    init(weightKg: Double? = nil, reps: Int? = nil, rir: Int? = nil, durationSeconds: Int? = nil, distanceMeters: Double? = nil) {
+    init(weightKg: Double? = nil, reps: Int? = nil, partialReps: Int? = nil, rir: Int? = nil, durationSeconds: Int? = nil, distanceMeters: Double? = nil) {
         self.weightKg = weightKg
         self.reps = reps
+        self.partialReps = partialReps
         self.rir = rir
         self.durationSeconds = durationSeconds
         self.distanceMeters = distanceMeters
     }
 
     init(_ log: SetLog) {
-        self.init(weightKg: log.weightKg, reps: log.reps, rir: log.rir, durationSeconds: log.durationSeconds, distanceMeters: log.distanceMeters)
+        self.init(weightKg: log.weightKg, reps: log.reps, partialReps: log.partialReps, rir: log.rir, durationSeconds: log.durationSeconds, distanceMeters: log.distanceMeters)
     }
 
     var isEmpty: Bool { weightKg == nil && reps == nil && durationSeconds == nil && distanceMeters == nil }
 
     func log(at date: Date) -> SetLog {
-        SetLog(weightKg: weightKg, reps: reps, rir: rir, durationSeconds: durationSeconds, distanceMeters: distanceMeters, completedAt: date)
+        SetLog(weightKg: weightKg, reps: reps, partialReps: partialReps, rir: rir, durationSeconds: durationSeconds, distanceMeters: distanceMeters, completedAt: date)
     }
 
-    /// "Previous values" initial fill: last time's numbers for this row, else its targets. RIR comes from the target first
-    /// ("RIR Tracking" populates it from the plan). A target weight is a planned load, such as a calculated warm-up, so
-    /// it beats the previous log.
-    static func prefill(target: SetTarget?, previous: SetLog?) -> SetEntry {
+    /// "Previous values" initial fill: last time's numbers for this row, else its targets. RIR comes from the target
+    /// first while RIR Tracking populates it from the plan, else from the previous log. A target weight is a planned
+    /// load, such as a calculated warm-up, so it beats the previous log.
+    static func prefill(target: SetTarget?, previous: SetLog?, rirTracking: Bool) -> SetEntry {
+        let rir = rirTracking ? (target?.rir ?? previous?.rir) : (previous?.rir ?? target?.rir)
         if let weightKg = target?.weightKg {
-            return SetEntry(weightKg: weightKg, reps: target?.repsMax ?? target?.repsMin, rir: target?.rir)
+            return SetEntry(weightKg: weightKg, reps: target?.repsMax ?? target?.repsMin, rir: rir)
         }
         return SetEntry(
             weightKg: previous?.weightKg ?? target?.weightKg,
             reps: previous?.reps ?? target?.repsMax ?? target?.repsMin,
-            rir: target?.rir ?? previous?.rir,
+            rir: rir,
             durationSeconds: previous?.durationSeconds ?? target?.durationSeconds,
             distanceMeters: previous?.distanceMeters
         )
@@ -71,8 +75,6 @@ struct RowPath: Hashable {
 
 /// The live workout's rules for rest and moving between exercises, apart from the views.
 enum SessionFlow {
-    static let warmUpRestScale = 0.75
-
     struct Step: Equatable {
         var restSeconds: Int?
         /// The exercise the screen moves to, or `nil` to stay.
@@ -80,36 +82,43 @@ enum SessionFlow {
     }
 
     /// What follows checking the row at `path` in `blocks`, which already holds the new log. `rest` resolves the full
-    /// rest for a set before scaling.
-    static func afterCompleting(_ path: RowPath, in blocks: [WorkoutBlock], rest: (BlockExercise, WorkoutSet) -> Int) -> Step {
+    /// rest for a set before scaling; `settings` decides whether and how much of it runs, and where the screen goes.
+    static func afterCompleting(_ path: RowPath, in blocks: [WorkoutBlock], settings: WorkoutSettings, rest: (BlockExercise, WorkoutSet) -> Int) -> Step {
         let block = blocks[path.block]
         let item = block.exercises[path.exercise]
         let set = item.sets[path.set]
         // A drop or myo set rests only after its last sub-row, so the drops follow the main row without a timer.
         if set.type.hasSubSets, (path.sub ?? -1) < set.subSets.count - 1 { return Step() }
 
+        func timer(_ seconds: Int?) -> Int? { settings.rest.enabled ? seconds : nil }
+
         if block.isSuperset {
             let laterMember = block.exercises.dropFirst(path.exercise + 1).first {
                 $0.sets.indices.contains(path.set) && !$0.sets[path.set].isDone
             }
-            if let laterMember { return Step(next: laterMember.id) }
+            if let laterMember { return Step(next: settings.supersetAutoScroll ? laterMember.id : nil) }
             if let first = block.exercises.first(where: { !$0.isDone }) {
-                return Step(restSeconds: scaledRest(after: path.set, in: item, rest: rest), next: first.id)
+                let seconds = scaledRest(after: path.set, in: item, settings: settings.rest, rest: rest)
+                return Step(restSeconds: timer(seconds), next: settings.supersetAutoScroll ? first.id : nil)
             }
         } else if !item.isDone {
-            return Step(restSeconds: scaledRest(after: path.set, in: item, rest: rest))
+            return Step(restSeconds: timer(scaledRest(after: path.set, in: item, settings: settings.rest, rest: rest)))
         }
-        // The exercise is finished. Rest Between Exercises is off by default in MF, so Auto-Next moves on without rest.
-        return Step(next: nextIncomplete(after: path.block, in: blocks))
+        let between = settings.rest.betweenExercises ? scaled(rest(item, set), percent: settings.rest.scaling.betweenExercises) : nil
+        return Step(restSeconds: timer(between), next: settings.exerciseAutoNext ? nextIncomplete(after: path.block, in: blocks) : nil)
     }
 
-    /// Warm-ups run back to back; the last one rests 75% of the working rest.
-    private static func scaledRest(after index: Int, in item: BlockExercise, rest: (BlockExercise, WorkoutSet) -> Int) -> Int? {
+    /// Warm-ups run back to back; the last one rests its scaled share of the working rest, or not at all.
+    private static func scaledRest(after index: Int, in item: BlockExercise, settings: RestSettings, rest: (BlockExercise, WorkoutSet) -> Int) -> Int? {
         let set = item.sets[index]
         let seconds = rest(item, set)
         guard set.type == .warmUp else { return seconds }
         if item.sets[safe: index + 1]?.type == .warmUp { return nil }
-        return Int((Double(seconds) * warmUpRestScale).rounded(.down))
+        return settings.afterLastWarmUp ? scaled(seconds, percent: settings.scaling.afterLastWarmUp) : nil
+    }
+
+    private static func scaled(_ seconds: Int, percent: Int) -> Int {
+        Int((Double(seconds) * Double(percent) / 100).rounded(.down))
     }
 
     /// The first unfinished exercise after `block`, wrapping around to the start.
@@ -182,31 +191,60 @@ enum SessionFlow {
         }
     }
 
+    /// "Update Workout Plan" with View Changes' Undo: the undone kinds of change revert to `template`, so an undone
+    /// modified exercise keeps the template's sets, an undone added one is dropped, an undone removed one comes back
+    /// where the template had it, and an undone superset returns to the template's grouping. Logs are never touched.
+    static func plan(from blocks: [WorkoutBlock], template: [WorkoutBlock], undoing undone: Set<WorkoutChanges.Kind>) -> [WorkoutBlock] {
+        var plan = plan(from: blocks)
+        guard !undone.isEmpty else { return plan }
+        let changes = WorkoutChanges(before: template, after: plan)
+        let templateItems = template.flatMap(\.exercises)
+        let templateByID = Dictionary(uniqueKeysWithValues: templateItems.map { ($0.id, $0) })
+        let templateOrder = Dictionary(uniqueKeysWithValues: templateItems.enumerated().map { ($1.id, $0) })
+
+        if undone.contains(.modified) {
+            let ids = Set(changes.modified.map(\.after.id))
+            for b in plan.indices {
+                for e in plan[b].exercises.indices where ids.contains(plan[b].exercises[e].id) {
+                    plan[b].exercises[e] = templateByID[plan[b].exercises[e].id]!
+                }
+            }
+        }
+        var displaced: [BlockExercise] = []
+        if undone.contains(.added) {
+            let ids = Set(changes.added.map(\.id))
+            for b in plan.indices { plan[b].exercises.removeAll { ids.contains($0.id) } }
+        }
+        if undone.contains(.regrouped) {
+            let ids = Set(changes.regrouped.flatMap(\.exercises).map(\.id))
+            for b in plan.indices {
+                displaced += plan[b].exercises.filter { ids.contains($0.id) }
+                plan[b].exercises.removeAll { ids.contains($0.id) }
+            }
+        }
+        if undone.contains(.removed) { displaced += changes.removed }
+        plan.removeAll { $0.exercises.isEmpty }
+
+        for item in displaced.sorted(by: { templateOrder[$0.id] ?? .max < templateOrder[$1.id] ?? .max }) {
+            guard let templateIndex = template.firstIndex(where: { $0.exercises.contains { $0.id == item.id } }) else {
+                plan.append(WorkoutBlock(exercises: [item]))
+                continue
+            }
+            let siblings = Set(template[templateIndex].exercises.map(\.id))
+            if let b = plan.firstIndex(where: { $0.exercises.contains { siblings.contains($0.id) } }) {
+                plan[b].exercises.append(item)
+                plan[b].exercises.sort { templateOrder[$0.id] ?? .max < templateOrder[$1.id] ?? .max }
+            } else {
+                plan.insert(WorkoutBlock(id: template[templateIndex].id, exercises: [item]), at: min(templateIndex, plan.count))
+            }
+        }
+        return plan
+    }
+
     static func loggedExerciseCount(in blocks: [WorkoutBlock]) -> (logged: Int, total: Int) {
         let items = blocks.flatMap(\.exercises)
         return (items.count(where: \.hasLoggedSets), items.count)
     }
-}
-
-/// The Scheme warm-up from Workout settings: 40% x 5, 60% x 5, 80% x 3 of the first working weight.
-enum WarmUpScheme {
-    struct Step: Hashable {
-        var percent: Int
-        var reps: Int
-        var weight: Double
-    }
-
-    static let steps: [(percent: Int, reps: Int)] = [(40, 5), (60, 5), (80, 3)]
-
-    /// `workingWeight` and `increment` share one display unit, so warm-ups land on loadable weights in that unit.
-    static func sets(workingWeight: Double, increment: Double) -> [Step] {
-        steps.map { step in
-            let raw = workingWeight * Double(step.percent) / 100
-            return Step(percent: step.percent, reps: step.reps, weight: max(increment, (raw / increment).rounded() * increment))
-        }
-    }
-
-    static func increment(for unit: WeightUnit) -> Double { unit == .kg ? 2.5 : 5 }
 }
 
 extension [WorkoutBlock] {
@@ -248,28 +286,85 @@ extension [WorkoutBlock] {
 }
 
 extension SessionFlow {
-    /// The log of the matching row in the last performance. Warm-ups match warm-ups and working sets match working
-    /// sets by their order, so adding warm-ups doesn't shift every row's Previous.
+    /// Propagate Changes: the rows after `path` of its kind (main rows for a main row, sub-rows for a sub-row) that are
+    /// still open and showed the value `path` had before the edit, so one typed weight or rep count carries forward.
+    static func propagationTargets<Value: Equatable>(from path: RowPath, rows: [RowPath], isOpen: (RowPath) -> Bool, value: (RowPath) -> Value) -> [RowPath] {
+        guard let index = rows.firstIndex(of: path) else { return [] }
+        let edited = value(path)
+        return rows[(index + 1)...].filter { (($0.sub == nil) == (path.sub == nil)) && isOpen($0) && value($0) == edited }
+    }
+
     static func previousLog(for path: RowPath, in blocks: [WorkoutBlock], previous: [WorkoutSet]) -> SetLog? {
-        let sets = blocks[path.block].exercises[path.exercise].sets
-        let isWarmUp = sets[path.set].type == .warmUp
-        let ordinal = sets[..<path.set].count { ($0.type == .warmUp) == isWarmUp }
-        guard let set = previous.filter({ ($0.type == .warmUp) == isWarmUp })[safe: ordinal] else { return nil }
+        guard let set = blocks[path.block].exercises[path.exercise].sets.previousSet(at: path.set, in: previous) else { return nil }
         guard let sub = path.sub else { return set.log }
         return set.subSets[safe: sub]?.log
     }
 
+    /// The initial fill of one row: the Smart Progression suggestion when there is one, else Previous values.
+    static func prefill(for path: RowPath, in blocks: [WorkoutBlock], previous: [WorkoutSet], suggestion: SetSuggestion?, rirTracking: Bool, unit: WeightUnit) -> SetEntry {
+        var entry = SetEntry.prefill(target: blocks.target(at: path), previous: previousLog(for: path, in: blocks, previous: previous), rirTracking: rirTracking)
+        if let suggestion {
+            entry.weightKg = suggestion.prefill.weight.map(unit.toKg)
+            entry.reps = suggestion.prefill.reps
+            entry.rir = suggestion.prefill.rir
+        }
+        return entry
+    }
+
     /// The prefilled values of every row, for "Log All Sets".
-    static func prefills(for blocks: [WorkoutBlock], history: [[WorkoutBlock]]) -> [UUID: SetEntry] {
+    static func prefills(for blocks: [WorkoutBlock], history: [[WorkoutBlock]], suggestions: [BlockExercise.ID: [UUID: SetSuggestion]], rirTracking: Bool, unit: WeightUnit) -> [UUID: SetEntry] {
         var values: [UUID: SetEntry] = [:]
         for (b, block) in blocks.enumerated() {
             for (e, item) in block.exercises.enumerated() {
                 let previous = previousSets(of: item.exerciseID, in: history)
                 for path in blocks.rows(block: b, exercise: e) {
-                    values[blocks.rowID(at: path)] = SetEntry.prefill(target: blocks.target(at: path), previous: previousLog(for: path, in: blocks, previous: previous))
+                    let id = blocks.rowID(at: path)
+                    values[id] = prefill(for: path, in: blocks, previous: previous, suggestion: suggestions[item.id]?[id], rirTracking: rirTracking, unit: unit)
                 }
             }
         }
         return values
+    }
+}
+
+/// What the Warm Up sheet and Warm-Up Automation calculate from: the first working set as it would be logged, the
+/// exercise's scheme and automation (override else global), and whether its muscles are still fresh this session.
+struct WarmUpContext: Hashable {
+    var workingWeightKg: Double?
+    var reps: Int?
+    var rir: Int?
+    var isFresh = true
+    var scheme = WarmUpStep.standard
+    var automation = WarmUpAutomation.smart
+    var simplifyPlates = true
+}
+
+enum WarmUpMode: Hashable {
+    case smart, scheme
+}
+
+/// One calculated warm-up: "40% of 1-RM" or "40% of working weight", in kilograms like the model.
+struct WarmUpRow: Hashable {
+    var label: String
+    var weightKg: Double
+    var reps: Int
+}
+
+extension SessionFlow {
+    static func warmUps(_ context: WarmUpContext, mode: WarmUpMode, unit: WeightUnit) -> [WarmUpRow] {
+        guard let workingWeightKg = context.workingWeightKg, workingWeightKg > 0 else { return [] }
+        let working = unit.fromKg(workingWeightKg)
+        let increment = WarmUpScheme.increment(for: unit)
+        switch mode {
+        case .smart:
+            let steps = SmartWarmUp.steps(
+                workingWeight: working, reps: context.reps ?? 1, rir: context.rir, increment: increment, unit: unit,
+                isFresh: context.isFresh, simplifyPlates: context.simplifyPlates
+            )
+            return steps.map { WarmUpRow(label: "\($0.percent)% of 1-RM", weightKg: unit.toKg($0.weight), reps: $0.reps) }
+        case .scheme:
+            let steps = WarmUpScheme.sets(workingWeight: working, increment: increment, steps: context.scheme)
+            return steps.map { WarmUpRow(label: "\($0.percent)% of working weight", weightKg: unit.toKg($0.weight), reps: $0.reps) }
+        }
     }
 }

@@ -12,7 +12,8 @@ struct ActiveSessionBar: View {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 0) {
                             Text(session.name).font(AppFont.headline(15)).lineLimit(1)
-                            Text(Duration.seconds(context.date.timeIntervalSince(session.startedAt)).formatted(.time(pattern: .hourMinuteSecond)))
+                            let store = LiveSessionStore.shared
+                            Text(store.pausedAt != nil ? "Paused" : Duration.seconds(session.elapsed(at: context.date, pausedAt: nil)).formatted(.time(pattern: .hourMinuteSecond)))
                                 .font(AppFont.caption())
                                 .monospacedDigit()
                                 .foregroundStyle(Theme.textSecondary)

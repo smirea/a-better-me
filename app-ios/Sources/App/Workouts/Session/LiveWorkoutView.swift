@@ -13,7 +13,7 @@ struct SessionEditor: View {
     enum Mode { case live, editPast }
 
     enum Sheet: Identifiable {
-        case info(ExerciseID), warmUp, targets, swap(ExerciseID), add, note, restTimer
+        case info(ExerciseID), progression, warmUp, targets, swap(ExerciseID), add, note, restTimer, settings, gym
         var id: String { String(describing: self) }
     }
 
@@ -26,6 +26,7 @@ struct SessionEditor: View {
     @Environment(\.dismiss) var dismiss
     @Observe(ExerciseSettings.all) var exerciseSettings
     @Observe(AppSettings.current) var defaults
+    @Observe(BodyWeight.all) private var bodyWeights
     /// The session's row as it changes under the editor, which `session` cannot show once the cover is up.
     @Observe private var live: WorkoutSession?
 
@@ -35,6 +36,7 @@ struct SessionEditor: View {
     @State var sheet: Sheet?
     /// Earlier sessions' blocks, newest first, for the Previous column. Decoded once, since history can't change here.
     @State var history: [[WorkoutBlock]] = []
+    @State private var historyLoaded = false
     @State private var confirmingFinish = false
     @State private var confirmingDiscard = false
     @State private var confirmingExit = false
@@ -46,6 +48,11 @@ struct SessionEditor: View {
 
     var store: LiveSessionStore { .shared }
     var unit: WeightUnit { defaults.weightUnit }
+
+    var reference: ReferenceColumn {
+        guard mode == .live else { return .previous }
+        return store.referenceColumn ?? (defaults.workout.progression.initialFill == .smartProgression ? .auto : .previous)
+    }
 
     var drafts: [UUID: SetEntry] {
         get { mode == .live ? store.drafts : pastDrafts }
@@ -91,10 +98,19 @@ struct SessionEditor: View {
         .animation(.snappy(duration: 0.2), value: focus == nil)
         .task {
             let session = session
-            history = ((try? localStore.read { try WorkoutSession.earlier(than: session, $0) }) ?? []).map(\.blocks)
+            var earlier = (try? localStore.read { try WorkoutSession.earlier(than: session, $0) }) ?? []
+            if defaults.workout.previousReference == .withinProgram, let programID = session.program?.programID {
+                earlier = earlier.filter { $0.program?.programID == programID }
+            }
+            history = earlier.map(\.blocks)
+            historyLoaded = true
+            ensureSuggestions()
+            automateWarmUps()
         }
         .onChange(of: blocks) { _, blocks in
-            if mode == .live { saveBlocks(blocks) }
+            guard mode == .live else { return }
+            saveBlocks(blocks)
+            ensureSuggestions()
         }
         // A set logged on another device replaces the live copy while no write of this device's is still on its way.
         .onChange(of: live?.blocks) { _, remote in
@@ -104,7 +120,12 @@ struct SessionEditor: View {
             if mode == .live { store.currentExercise = current }
             focus = nil
         }
+        .onAppear { UIApplication.shared.isIdleTimerDisabled = mode == .live && defaults.workout.display.keepAlive }
+        .onChange(of: defaults.workout.display.keepAlive) { _, keepAlive in
+            UIApplication.shared.isIdleTimerDisabled = mode == .live && keepAlive
+        }
         .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
             guard discardOnDisappear else { return }
             store.reset()
             localStore.delete(WorkoutSession.self, id: session.id)
@@ -147,16 +168,32 @@ struct SessionEditor: View {
             switch mode {
             case .live:
                 Menu {
+                    if store.pausedAt == nil {
+                        Button("Pause Workout", systemImage: "pause.fill") { store.pause() }
+                    } else {
+                        Button("Resume Workout", systemImage: "play.fill") { resumeWorkout() }
+                    }
                     Button("Minimize Workout", systemImage: "rectangle.bottomhalf.inset.filled") { presenter.isExpanded = false }
                     Button("Finish Workout", systemImage: "flag.checkered") { requestFinish() }
+                    Button("Workout Settings", systemImage: "dumbbell.fill") { sheet = .settings }
+                    Button("Gym Settings", systemImage: "house.fill") { sheet = .gym }
                     Button("Discard Workout", systemImage: "trash", role: .destructive) { confirmingDiscard = true }
                 } label: {
                     Image(systemName: "line.3.horizontal").font(.title3).frame(width: 32, height: 32)
                 }
                 .accessibilityLabel("Workout Options")
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    Text(Duration.seconds(context.date.timeIntervalSince(session.startedAt)).formatted(.time(pattern: .hourMinuteSecond)))
-                        .font(AppFont.number(17))
+                if store.pausedAt != nil {
+                    Text("Paused")
+                        .font(AppFont.headline(13))
+                        .padding(.horizontal, 10)
+                        .frame(height: 26)
+                        .background(Theme.surfaceRaised, in: Capsule())
+                        .accessibilityLabel("Workout paused")
+                } else if defaults.workout.display.workoutTimer {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Text(Duration.seconds((live ?? session).elapsed(at: context.date, pausedAt: nil)).formatted(.time(pattern: .hourMinuteSecond)))
+                            .font(AppFont.number(17))
+                    }
                 }
                 Spacer()
                 RestTimerPill { sheet = .restTimer }
@@ -240,12 +277,23 @@ struct SessionEditor: View {
                     .foregroundStyle(Theme.textSecondary)
             }
             .padding(.horizontal, 20)
-            chips(item: item, isSuperset: blocks[block].isSuperset)
+            chips(item: item, isSuperset: blocks[block].isSuperset, hiddenWarmUps: hiddenWarmUpCount(block: block, exercise: index))
             setTable(block: block, exercise: index, fields: SetField.fields(for: exercise))
                 .padding(.horizontal, 20)
+            if let caption = bodyweightCaption(exercise) {
+                Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary).padding(.horizontal, 20)
+            }
             if let note = item.note, !note.isEmpty { noteCard("Session Note", note) }
             if !pinned.isEmpty { noteCard("Pinned Note", pinned) }
         }
+    }
+
+    /// Bodyweight Contribution: "Body weight 80 kg · 65% counted (52 kg)", for exercises that lift part of the body.
+    private func bodyweightCaption(_ exercise: Exercise?) -> String? {
+        guard mode == .live, defaults.workout.display.bodyweightContribution, let fraction = exercise?.bodyweightFraction, fraction > 0,
+              let kg = currentBodyWeightKg(logged: bodyWeights, health: nil, manual: defaults.profile.bodyWeightKg) else { return nil }
+        let percent = (fraction * 100).formatted(.number.precision(.fractionLength(0)))
+        return "Body weight \(unit.format(kg: kg)) \(unit.rawValue) · \(percent)% counted (\(unit.format(kg: kg * fraction)) \(unit.rawValue))"
     }
 
     private func noteCard(_ title: String, _ text: String) -> some View {
@@ -259,11 +307,13 @@ struct SessionEditor: View {
         .padding(.horizontal, 20)
     }
 
-    private func chips(item: BlockExercise, isSuperset: Bool) -> some View {
+    private func chips(item: BlockExercise, isSuperset: Bool, hiddenWarmUps: Int) -> some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
+                if mode == .live { progressionChip(item) }
                 chip("Info", "chart.bar.fill") { sheet = .info(item.exerciseID) }
-                chip("Warm Up", "flame.fill") { sheet = .warmUp }
+                Button { sheet = .warmUp } label: { chipLabel("Warm Up", "flame.fill", badge: hiddenWarmUps) }
+                    .accessibilityLabel(hiddenWarmUps > 0 ? "Warm Up, \(hiddenWarmUps) completed hidden" : "Warm Up")
                 chip("Targets", "scope") { sheet = .targets }
                 chip("Swap", "arrow.left.arrow.right") { sheet = .swap(item.exerciseID) }
                 chip("Note", "note.text") { sheet = .note }
@@ -281,17 +331,43 @@ struct SessionEditor: View {
         .scrollIndicators(.hidden)
     }
 
+    /// The wand: a blue dot marks an exercise whose target rep range Expand Rep Range widened.
+    private func progressionChip(_ item: BlockExercise) -> some View {
+        let adjusted = store.suggestions[item.id]?.values.contains { $0.adjustedReps != nil } ?? false
+        return Button { sheet = .progression } label: {
+            Image(systemName: "wand.and.stars")
+                .font(AppFont.medium(14))
+                .foregroundStyle(Theme.textPrimary)
+                .frame(width: 44, height: 32)
+                .background(Theme.surfaceRaised, in: Capsule())
+                .overlay(alignment: .bottomTrailing) {
+                    if adjusted { Circle().fill(Theme.muscle).frame(width: 7, height: 7).offset(x: -3, y: -3) }
+                }
+        }
+        .accessibilityLabel("Smart Progression")
+    }
+
     private func chip(_ title: String, _ icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) { chipLabel(title, icon) }
     }
 
-    private func chipLabel(_ title: String, _ icon: String) -> some View {
+    private func chipLabel(_ title: String, _ icon: String, badge: Int = 0) -> some View {
         Label(title, systemImage: icon)
             .font(AppFont.medium(14))
             .foregroundStyle(Theme.textPrimary)
             .padding(.horizontal, 12)
             .frame(height: 32)
             .background(Theme.surfaceRaised, in: Capsule())
+            .overlay(alignment: .topTrailing) {
+                if badge > 0 {
+                    Text("\(badge)")
+                        .font(AppFont.headline(11))
+                        .foregroundStyle(.white)
+                        .frame(minWidth: 18, minHeight: 18)
+                        .background(Theme.muscle, in: Circle())
+                        .offset(x: 4, y: -4)
+                }
+            }
     }
 
     // MARK: Sheets
@@ -301,9 +377,17 @@ struct SessionEditor: View {
         switch sheet {
         case let .info(id):
             ExerciseDetailSheet(exerciseID: id)
+        case .progression:
+            if let position = currentPosition {
+                let item = blocks[position.block].exercises[position.exercise]
+                SmartProgressionSheet(
+                    exerciseName: catalog.name(item.exerciseID), sets: item.sets,
+                    suggestions: store.suggestions[item.id] ?? [:], events: store.events[item.id] ?? [], unit: unit
+                )
+            }
         case .warmUp:
             if let position = currentPosition {
-                WarmUpSheet(workingWeightKg: firstWorkingWeight(block: position.block, exercise: position.exercise), unit: unit) { warmUps in
+                WarmUpSheet(context: warmUpContext(block: position.block, exercise: position.exercise), unit: unit) { warmUps in
                     addWarmUps(warmUps, block: position.block, exercise: position.exercise)
                 }
             }
@@ -326,6 +410,23 @@ struct SessionEditor: View {
             }
         case .restTimer:
             RestTimerSheet()
+        case .settings:
+            closableSheet { WorkoutSettingsView() }
+        case .gym:
+            closableSheet {
+                if let gymID = session.gymID { GymProfileEditor(gymID: gymID) } else { GymProfilesView() }
+            }
+        }
+    }
+
+    /// The More tab's screens, presented over the live workout with a Close button they don't need when pushed.
+    private func closableSheet(@ViewBuilder content: () -> some View) -> some View {
+        NavigationStack {
+            content().toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", systemImage: "xmark") { sheet = nil }
+                }
+            }
         }
     }
 
@@ -338,8 +439,10 @@ struct SessionEditor: View {
 
     private func finish(logAll: Bool) {
         focus = nil
+        if store.pausedAt != nil { resumeWorkout() }
         if logAll {
-            let prefills = SessionFlow.prefills(for: blocks, history: history)
+            let suggestions = defaults.workout.progression.initialFill == .smartProgression ? store.suggestions : [:]
+            let prefills = SessionFlow.prefills(for: blocks, history: history, suggestions: suggestions, rirTracking: defaults.workout.rirTracking, unit: unit)
             blocks = SessionFlow.logAll(blocks, at: .now) { drafts[$0] ?? prefills[$0] ?? SetEntry() }
         }
         // The session ends on the summary's Done; saving now keeps the logged sets if the app dies before that.
@@ -350,5 +453,54 @@ struct SessionEditor: View {
 
     private func saveBlocks(_ blocks: [WorkoutBlock]) {
         localStore.modify(WorkoutSession.self, id: session.id) { $0.blocks = blocks }
+    }
+
+    private func resumeWorkout() {
+        let paused = store.resume()
+        localStore.modify(WorkoutSession.self, id: session.id) { $0.pausedSeconds += paused }
+    }
+
+    // MARK: Smart Progression
+
+    func progressionSettings(for exerciseID: ExerciseID) -> ProgressionSettings {
+        var settings = defaults.workout.progression
+        let overrides = ExerciseSettings.of(exerciseID, in: exerciseSettings)?.overrides
+        if let expand = overrides?.expandRepRange { settings.expandRepRange = expand }
+        if let match = overrides?.weightMatch { settings.weightMatch = match }
+        return settings
+    }
+
+    /// Suggests every exercise whose planned rows changed since its last fill: a new exercise, a Targets edit, or an
+    /// added set. The Event Log keeps earlier fills.
+    func ensureSuggestions() {
+        guard mode == .live, historyLoaded else { return }
+        for item in blocks.flatMap(\.exercises) {
+            let planned = item.sets.map(\.planned)
+            guard store.suggestionBasis[item.id] != planned else { continue }
+            let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
+            let suggestions = SmartProgression.suggest(
+                sets: item.sets, previous: previous, settings: progressionSettings(for: item.exerciseID),
+                increment: WarmUpScheme.increment(for: unit), rirTracking: defaults.workout.rirTracking, unit: unit
+            )
+            store.suggestions[item.id] = suggestions
+            store.suggestionBasis[item.id] = planned
+            store.events[item.id, default: []].append(SmartProgression.event(at: .now, sets: item.sets, suggestions: suggestions))
+            applyProgression(to: item.id)
+        }
+    }
+
+    /// Apply in session: the exercise's open rows take the fill its latest logged set predicts.
+    func applyProgression(to id: BlockExercise.ID) {
+        guard defaults.workout.progression.applyInSession, let at = blocks.locate(id), let current = store.suggestions[id] else { return }
+        let item = blocks[at.block].exercises[at.item]
+        let changed = SmartProgression.applyInSession(
+            sets: item.sets, current: current, settings: progressionSettings(for: item.exerciseID),
+            increment: WarmUpScheme.increment(for: unit), rirTracking: defaults.workout.rirTracking, unit: unit
+        )
+        guard !changed.isEmpty else { return }
+        store.suggestions[id] = current.merging(changed) { $1 }
+        for rowID in changed.keys { store.drafts[rowID] = nil }
+        store.appliedRows.formUnion(changed.keys)
+        store.events[id, default: []].append(SmartProgression.event(at: .now, sets: item.sets, suggestions: changed))
     }
 }
