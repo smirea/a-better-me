@@ -23,6 +23,8 @@ struct BlockExercise: Codable, Hashable, Identifiable {
     var cycleTargets: [CycleTargets]?
     /// The resistance option the Equipment chip picked, as its equipment ids. `nil` uses the first one the gym has.
     var equipment: [EquipmentID]?
+    /// The support option the Equipment sheet picked, the same way.
+    var support: [EquipmentID]?
 }
 
 struct CycleTargets: Codable, Hashable {

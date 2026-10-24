@@ -13,7 +13,7 @@ struct SessionEditor: View {
     enum Mode { case live, editPast }
 
     enum Sheet: Identifiable {
-        case info(ExerciseID), progression, warmUp, targets, swap(ExerciseID), add, note, restTimer, settings, gym, equipment
+        case info(ExerciseID), progression, warmUp, targets, swap(ExerciseID), add, note, restTimer, settings, gym, equipment, equipmentSettings
         var id: String { String(describing: self) }
     }
 
@@ -327,7 +327,7 @@ struct SessionEditor: View {
                         Button("Detach from Superset", systemImage: "link.badge.minus") { blocks.detach(item.id) }
                     } label: { chipLabel("Superset", "arrow.triangle.2.circlepath") }
                 }
-                if (catalog.exercise(item.exerciseID)?.resistanceEquipmentIDs.count ?? 0) > 1 {
+                if catalog.exercise(item.exerciseID)?.hasEquipmentChoice == true {
                     chip("Equipment", "dumbbell.fill") { sheet = .equipment }
                 }
                 Menu {
@@ -426,6 +426,8 @@ struct SessionEditor: View {
             }
         case .equipment:
             equipmentSheet()
+        case .equipmentSettings:
+            closableSheet { equipmentSettingsView() }
         }
     }
 
