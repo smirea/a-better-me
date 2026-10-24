@@ -3,7 +3,8 @@ import SwiftUI
 /// The Workout tab: the week strip (or the full calendar) and the Workout Library. The reference's Active Program,
 /// Your Sections, Archive, and Customize Sections wait for programs.
 struct WorkoutTab: View {
-    @Observe(WorkoutTemplate.all) private var templates
+    @Observe(WorkoutTemplate.library) private var templates
+    @Observe(Program.library) private var programs
     @Observe(WorkoutSession.finished) private var sessions
     @Environment(LocalStore.self) private var store
     @Environment(LiveWorkoutPresenter.self) private var presenter
@@ -34,6 +35,7 @@ struct WorkoutTab: View {
             .screenTitle("Workout")
             .toolbar { toolbar }
             .navigationDestination(for: WorkoutTemplate.ID.self) { WorkoutDetailView(templateID: $0) }
+            .navigationDestination(for: Program.ID.self) { ProgramEditorView(programID: $0) }
             .navigationDestination(for: WorkoutHistoryRoute.self) { _ in WorkoutHistoryView() }
         }
         .tint(Theme.textPrimary)
@@ -76,7 +78,7 @@ struct WorkoutTab: View {
                         .foregroundStyle(Theme.textPrimary)
                 }
             }
-            if templates.isEmpty {
+            if templates.isEmpty, programs.isEmpty {
                 Text("Workouts you create appear here. Tap + to build one.")
                     .font(AppFont.caption())
                     .foregroundStyle(Theme.textSecondary)
@@ -84,6 +86,16 @@ struct WorkoutTab: View {
                 ForEach(templates) { template in
                     NavigationLink(value: template.id) { TemplateCard(template: template) }
                         .buttonStyle(.plain)
+                }
+                ForEach(programs) { program in
+                    NavigationLink(value: program.id) {
+                        Label(program.name, systemImage: program.icon)
+                            .font(AppFont.headline())
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }

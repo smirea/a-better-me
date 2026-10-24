@@ -38,11 +38,12 @@ struct Program: SyncedRecord {
         color = (row["color"] as String?).flatMap(ProgramColor.init(rawValue:)) ?? .blue
         icon = row["icon"] ?? ProgramColor.defaultIcon
         cycles = max(row["cycles"] ?? 1, 1)
+        config = row.json("config", over: ProgramConfig())
         // Two devices patch `cycles` and `current_cycle` independently, so the reader clamps instead of a server check.
-        currentCycle = min(max(row["current_cycle"] ?? 1, 1), cycles)
+        // A deload adds one cycle on top of `cycles`.
+        currentCycle = min(max(row["current_cycle"] ?? 1, 1), cycles + (config.deload == .none ? 0 : 1))
         isActive = row.flag("active")
         isArchived = row.flag("archived")
-        config = row.json("config", over: ProgramConfig())
         days = row.json("days", over: [ProgramDay]())
         createdAt = try row.instant("created_at")
         updatedAt = try row.instant("updated_at")
@@ -81,6 +82,9 @@ struct Program: SyncedRecord {
 struct ProgramDay: Codable, Hashable, Identifiable {
     var id = UUID()
     var templateID: UUID?
+    /// The cycle in which the owner ticked this rest day on the Workout tab. Optional, like every field added to a
+    /// stored tree.
+    var restDoneInCycle: Int?
 }
 
 /// Program Settings and how the program was made. Encoded whole into `programs.config`.
@@ -117,8 +121,15 @@ enum TrainingGoal: String, Codable {
     case hypertrophy, strength, both
 }
 
-enum ProgramSplit: String, Codable {
-    case noPreference, fullBody, upperLowerFull, pushPullLegs
+/// Every split the wizard offers, across the 2 to 6 day counts. `noPreference` resolves to one of the others when the
+/// program is generated.
+enum ProgramSplit: String, Codable, CaseIterable {
+    case noPreference, fullBody
+    case upperLower, pushPull
+    case upperLowerFull, pushPullLegs
+    case upperLowerUpperLower, pushPullHingeSquat, pushPullLegsAccessories
+    case upperLowerUpperLowerUpper, pushPullHingeSquatAccessories, pushPullLegsUpperLower
+    case pushPullHingeSquatUpperLower, pushPullLegsPushPullLegs
 }
 
 enum SessionLength: String, Codable {
