@@ -35,6 +35,8 @@ final class LiveSessionStore {
     var suggestionBasis: [BlockExercise.ID: [WorkoutSet]] = [:]
     /// Rows Apply in session refilled, which show their suggestion even under the Previous values initial fill.
     var appliedRows: Set<UUID> = []
+    /// The plate calculator's expanded view, kept while the keypad moves between rows.
+    var platesExpanded = false
     /// Warm-Up Automation runs once per session, when its live editor first opens.
     var didAutomateWarmUps: Set<WorkoutSession.ID> = []
     /// Set while Pause workout holds both clocks. Resume folds it into `WorkoutSession.pausedSeconds`.
