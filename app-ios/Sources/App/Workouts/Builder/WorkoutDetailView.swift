@@ -11,11 +11,13 @@ struct WorkoutDetailView: View {
     @Environment(LiveWorkoutPresenter.self) private var presenter
     @Environment(ExerciseCatalog.self) private var catalog
     @Observe(GymProfile.all) private var gyms
+    @Observe(WorkoutSession.inProgress) private var inProgress
     @Observe private var template: WorkoutTemplate?
     @State private var blocks: [WorkoutBlock]?
     @State private var renaming = false
     @State private var newName = ""
     @State private var confirmingDelete = false
+    @State private var confirmingReset = false
 
     init(templateID: WorkoutTemplate.ID) {
         self.templateID = templateID
@@ -52,11 +54,21 @@ struct WorkoutDetailView: View {
                         Text(template.name)
                     }
                     SwapGymMenu(templateID: templateID, gymID: template.gymID)
+                    Button { confirmingReset = true } label: {
+                        Label("Reset Workout", systemImage: "arrow.uturn.backward")
+                        Text("Reset workout time, sets, weights, and any other modifications you made")
+                    }
+                    .disabled(inProgress?.templateID != templateID)
                     Button("Duplicate Workout", systemImage: "plus.square.on.square") {
                         store.insert(WorkoutTemplate(name: "\(template.name) Copy", notes: template.notes, blocks: template.blocks.copy()))
                     }
                     ShareLink(item: exportFile(template), preview: SharePreview(template.name)) {
                         Label("Export Workout", systemImage: "square.and.arrow.up")
+                    }
+                    if template.isArchived {
+                        Button("Unarchive Workout", systemImage: "arrow.up.bin") { store.editTemplate(templateID) { $0.isArchived = false } }
+                    } else {
+                        Button("Archive Workout", systemImage: "archivebox") { store.editTemplate(templateID) { $0.isArchived = true } }
                     }
                     Button("Delete Workout", systemImage: "trash", role: .destructive) { confirmingDelete = true }
                 }
@@ -80,6 +92,14 @@ struct WorkoutDetailView: View {
                     if !trimmed.isEmpty { store.editTemplate(templateID) { $0.name = trimmed } }
                 }
                 Button("Cancel", role: .cancel) {}
+            }
+            .confirmationDialog("Reset \(template.name)?", isPresented: $confirmingReset, titleVisibility: .visible) {
+                Button("Reset Workout", role: .destructive) {
+                    LiveSessionStore.shared.reset()
+                    presenter.replaceInProgress(with: WorkoutSession(startingFrom: template), in: store)
+                }
+            } message: {
+                Text("The workout in progress starts over from this plan. Its time, logged sets, and changes are discarded.")
             }
             .confirmationDialog("Delete \(template.name)?", isPresented: $confirmingDelete, titleVisibility: .visible) {
                 Button("Delete Workout", role: .destructive) {
