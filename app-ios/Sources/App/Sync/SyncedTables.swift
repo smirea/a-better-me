@@ -61,7 +61,7 @@ let syncSchema = Schema(
         .text("created_at"),
         .text("updated_at"),
     ], ignoreEmptyUpdates: true),
-    Table(name: "gym_profiles", columns: [
+    Table(name: GymProfile.table, columns: [
         .text("name"),
         .text("icon"),
         .integer("is_default"),
@@ -69,7 +69,7 @@ let syncSchema = Schema(
         .text("created_at"),
         .text("updated_at"),
     ], ignoreEmptyUpdates: true),
-    Table(name: "body_weights", columns: [
+    Table(name: BodyWeight.table, columns: [
         .text("measured_at"),
         .real("weight_kg"),
         .text("source"),

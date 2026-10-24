@@ -268,14 +268,17 @@ struct CustomExercise: SyncedRecord {
     }
 }
 
-/// The owner's per-exercise settings from Exercise Settings: the pinned note shown every workout and the rest override.
-/// Keyed by the exercise id, so two devices editing one exercise offline converge on one row.
+/// The owner's per-exercise settings from Exercise Settings: the pinned note shown every workout, the rest override,
+/// Do Not Recommend, and the Exercise Overrides. Keyed by the exercise id, so two devices editing one exercise offline
+/// converge on one row.
 struct ExerciseSettings: SyncedRecord {
     static let table = "exercise_settings"
 
     var id: ExerciseID
     var pinnedNote: String
     var restSeconds: Int?
+    var doNotRecommend = false
+    var overrides = ExerciseOverrides()
 
     init(id: ExerciseID, pinnedNote: String = "", restSeconds: Int? = nil) {
         self.id = id
@@ -287,12 +290,16 @@ struct ExerciseSettings: SyncedRecord {
         id = row["id"]
         pinnedNote = row["pinned_note"] ?? ""
         restSeconds = row["rest_seconds"]
+        doNotRecommend = row.flag("do_not_recommend")
+        overrides = row.json("overrides", over: ExerciseOverrides())
     }
 
     func encode(to container: inout PersistenceContainer) throws {
         container["id"] = id
         container["pinned_note"] = pinnedNote
         container["rest_seconds"] = restSeconds
+        container["do_not_recommend"] = doNotRecommend ? 1 : 0
+        container["overrides"] = try RowJSON.text(overrides)
     }
 }
 
