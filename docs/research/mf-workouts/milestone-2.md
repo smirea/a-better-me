@@ -65,11 +65,11 @@ The "+" sheet's New Program, or the Workout tab's "+" > New Program, opens "Crea
 13. "Generating your program based on the latest science", a checklist that ticks off: Experience, Muscle prioritization, Equipment availability, Exercise selection, Muscle strength focus, Time efficiency, Periodization, Smart progression.
 14. The generated program in the program editor, with **Save to Library** and **Activate Program** at the bottom (`m2-gen-12-editor-save.jpg`). Activate Program sits exactly where Next was. Activating replaces the active program, which moves to the Workout Library.
 
-**Observed gotcha.** The first research generation pressed Next once too often and activated the test program, which moved the owner's "Recomp v3 (6-day)" into the library. It was reactivated during cleanup (§6).
+**Observed gotcha.** The first research generation pressed Next once too often and activated the test program, which moved the owner's "Recomp v3 (6-day)" into the library. It was reactivated during cleanup at Cycle 1 with no day ticked, as found (§6).
 
 ### 1.2 Calibration data
 
-MF generated 20 programs on 2026-10-23 against the owner's default gym "Aquasol 6770" (192 pieces of equipment). [`generated-programs.json`](generated-programs.json) holds them. [`tools/programs-analysis.py`](tools/programs-analysis.py) computes every number below (`python3 -I docs/research/mf-workouts/tools/programs-analysis.py`).
+MF generated 20 programs (P1 to P20) on 2026-10-23 against the owner's default gym "Aquasol 6770" (192 pieces of equipment). [`generated-programs.json`](generated-programs.json) holds them. [`tools/programs-analysis.py`](tools/programs-analysis.py) computes every number below (`python3 -I docs/research/mf-workouts/tools/programs-analysis.py`). Four follow-ups are in the JSON too and are discussed where they apply: P21 and P22 (no-preference split at 3 and 4 days, §1.3), P23 ("less" focus, §1.8.1), and P25 (an Exercise Assessment change, §5.2). P24 only restored the wizard's remembered deload setting and was not exported.
 
 The inputs isolate one variable at a time against P1 (hypertrophy, 3x Full Body, 40 to 60 minutes, no rep preference, intermediate, deload on).
 
@@ -832,3 +832,46 @@ A granular export of the workout items (Muscle Groups, Exercises, Training Progr
 - **Gym Profiles**: `Name`, `Icon`, `Created Date`, `Equipment`, `Equipment Weights`, `Allow Exercises`, `Disallow Exercises`, `Include Bumper Plates`, `Utilize Mixed Unit Plates`, `Offset Weight`. A gym's first row holds its own fields, and the following rows list one equipment item each with its weights ("45° Leg Press", "118 lb").
 
 **The rep-max curve is per exercise.** The 3-RM and 10-RM columns are fixed fractions of the 1-RM within an exercise, but the fractions differ across exercises. 3-RM / 1-RM runs from 0.944 to 0.961, and 10-RM / 1-RM from 0.780 to 0.837. The most common pair is 0.945 and 0.781. 1 / 0.781 = 1.280 matches the f(10) = 1.281 measured on a fresh exercise in §3.5. So a new exercise starts on a default curve, and MF refits it per exercise from the owner's sets. **Measured** ratios, the fitting **inferred**.
+
+---
+
+## 6. Research data created and deleted
+
+Everything below was created in MF on 2026-10-23 and 2026-10-24 (the session crossed midnight), and removed before the research ended. "Confirmed" means it was checked afterwards in the app or in a fresh Granular Export diffed against one taken earlier.
+
+**Milestone 1 leftovers.**
+
+| Item                           | Action                                                                                                       | Confirmed                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| Workout "ZZ Research Test"     | Deleted from the library                                                                                     | Not in the Workout Library or the export's Workouts sheet |
+| Its session dated 2026-10-23   | Deleted from Workout History                                                                                 | History starts at Sep 27, 2026                            |
+| Custom exercise "ZZ Test Curl" | Archived (to see the Archived tab), then deleted. MF also removed it from "ZZ Research Test" and its history | No search result in any library tab                       |
+
+**Created by this research.**
+
+| Item                                                                                                                                        | Action                                                                                       | Confirmed                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 25 generated programs, "ZZ P1" to "ZZ P25". P23 was archived along the way                                                                  | All deleted                                                                                  | Library holds only the owner's programs. Archive reads "1 program, 0 workouts", as in milestone 1. The export's Training Programs sheet is unchanged |
+| Workout "ZZ SP Test"                                                                                                                        | Deleted                                                                                      | Not in the library or the export                                                                                                                     |
+| 4 logged sessions of "ZZ SP Test", an "Ad Hoc Workout" session (the 1-RM calibration), and the P1 "Workout A" session, all dated 2026-10-23 | Deleted                                                                                      | History starts at Sep 27, 2026                                                                                                                       |
+| 2 sessions of "ZZ SP Test" opened and discarded                                                                                             | Discarded, never saved                                                                       |                                                                                                                                                      |
+| Gym profile "New Gym" (Home Gym template)                                                                                                   | Removed                                                                                      | "6 Gyms", and the export's Gym Profiles sheet lost only that gym                                                                                     |
+| Custom exercise draft "ZZ Final Details"                                                                                                    | Abandoned at step 5, never created                                                           | No search result                                                                                                                                     |
+| Files saved to `~/Documents` by the share sheet                                                                                             | Moved into `exports/` or deleted. The owner data export was deleted from disk, not committed | `~/Documents` has no `.xlsx`                                                                                                                         |
+
+**Settings changed and restored.**
+
+| Setting                                                          | Changed to                                  | Restored                           | Confirmed                                                     |
+| ---------------------------------------------------------------- | ------------------------------------------- | ---------------------------------- | ------------------------------------------------------------- |
+| Active program                                                   | Test programs P1 (by the wizard), then none | "Recomp v3 (6-day)" reactivated    | Workout tab shows it at Cycle 1, every day unticked, as found |
+| Generation wizard's remembered Deload                            | On (P1 to P23, P25)                         | Off, by generating P24 with it off | Export `Deload: No`, the value the wizard first showed        |
+| Generation wizard's remembered Lifting Experience                | Beginner, then Advanced (P16, P17)          | Intermediate                       | Wizard                                                        |
+| Smart Progression > Weight Match                                 | On                                          | Off                                | Settings page and export                                      |
+| Smart Progression > Expand Rep Range                             | Off                                         | On                                 | Settings page and export                                      |
+| Warm-Up > Simplify Warm-Up Plates                                | Off                                         | On                                 | Settings page                                                 |
+| Exercise Assessment "5 pull-ups"                                 | Yes                                         | No                                 | Assessment page and export                                    |
+| Barbell Floor Press: Do Not Recommend, Expand Rep Range override | On, Off                                     | Off, Default (Reset Defaults)      | Export row is all defaults                                    |
+| Library Gym filter                                               | "New Gym"                                   | Cleared                            | Chip reads "Gym"                                              |
+| Data Export checkboxes                                           | Several                                     | All unchecked                      | Page                                                          |
+
+**Residue that can't be removed.** The export's Exercise Settings sheet keeps a "Barbell Floor Press" row with every value at its default, created when its settings were edited. MF offers no way to delete such a row. The owner never used the exercise, and the row changes nothing.
