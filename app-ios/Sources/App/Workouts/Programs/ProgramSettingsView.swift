@@ -8,7 +8,9 @@ struct ProgramSettingsView: View {
     let onDelete: () -> Void
 
     @Environment(LocalStore.self) private var store
+    @Environment(ExerciseCatalog.self) private var catalog
     @Environment(\.dismiss) private var dismiss
+    @Observe(GymProfile.all) private var gyms
     @State private var page: Page?
     @State private var confirming: Confirmation?
     @State private var renaming = false
@@ -44,8 +46,11 @@ struct ProgramSettingsView: View {
                 }
                 periodizationRow
                 actionRow("Duplicate Program", systemImage: "rectangle.on.rectangle", chevron: true) { page = .duplicate }
-                actionRow("Export Program", systemImage: "square.and.arrow.down") {}
-                    .disabled(true)
+                ShareLink(item: exportFile, preview: SharePreview(program.name)) {
+                    actionLabel("Export Program", systemImage: "square.and.arrow.down")
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Export Program")
                 if program.isActive {
                     actionRow("Deactivate Program", systemImage: "flag.fill") { confirming = .deactivate }
                 } else {
@@ -198,19 +203,28 @@ struct ProgramSettingsView: View {
             .buttonBorderShape(.circle)
     }
 
+    private var exportFile: TransferFile {
+        let (program, templates, exercises, gyms) = (program, templates, catalog.all, gyms)
+        return TransferFile { try MFTransfer.export(program, templates: templates, exercises: exercises, gyms: gyms, at: $0) }
+    }
+
     private func actionRow(_ title: String, systemImage: String, tint: Color = Theme.textPrimary, chevron: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 16) {
-                Image(systemName: systemImage).settingIcon().frame(width: 24)
-                Text(title).font(AppFont.headline(15))
-                Spacer()
-                if chevron { Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary) }
-            }
-            .foregroundStyle(tint)
-            .padding(.vertical, 10)
-            .contentShape(Rectangle())
+            actionLabel(title, systemImage: systemImage, tint: tint, chevron: chevron)
         }
         .buttonStyle(.plain)
+    }
+
+    private func actionLabel(_ title: String, systemImage: String, tint: Color = Theme.textPrimary, chevron: Bool = false) -> some View {
+        HStack(spacing: 16) {
+            Image(systemName: systemImage).settingIcon().frame(width: 24)
+            Text(title).font(AppFont.headline(15))
+            Spacer()
+            if chevron { Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary) }
+        }
+        .foregroundStyle(tint)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
     }
 }
 
@@ -246,7 +260,7 @@ private extension Deload {
 }
 
 /// The Color & Icon picker's glyphs. MF offers about fifty; these are SF Symbols close to its set.
-private enum ProgramIcon {
+enum ProgramIcon {
     static let all: [(symbol: String, title: String)] = [
         ("dumbbell.fill", "Dumbbell"), ("figure.strengthtraining.traditional", "Lifter"), ("figure.strengthtraining.functional", "Functional"),
         ("figure.run", "Runner"), ("figure.walk", "Walker"), ("figure.hiking", "Hiker"), ("figure.outdoor.cycle", "Cyclist"),

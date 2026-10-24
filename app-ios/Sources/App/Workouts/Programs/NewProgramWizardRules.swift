@@ -47,8 +47,10 @@ enum NewProgramWizardRules {
         case .smartGeneration:
             [.splash, .method, .goal, .days, .split, .sessionLength, .repProgression, .muscleFocus]
                 + (hasGyms ? [.gym] : []) + [.keep, .name, .color, .generating]
-        case .fromScratch, .importFile:
+        case .fromScratch:
             [.splash, .method, .name, .color]
+        case .importFile:
+            [.splash, .method]
         }
     }
 

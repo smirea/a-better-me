@@ -9,6 +9,8 @@ struct WorkoutDetailView: View {
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @Environment(LiveWorkoutPresenter.self) private var presenter
+    @Environment(ExerciseCatalog.self) private var catalog
+    @Observe(GymProfile.all) private var gyms
     @Observe private var template: WorkoutTemplate?
     @State private var blocks: [WorkoutBlock]?
     @State private var renaming = false
@@ -29,6 +31,11 @@ struct WorkoutDetailView: View {
         }
     }
 
+    private func exportFile(_ template: WorkoutTemplate) -> TransferFile {
+        let (exercises, gyms) = (catalog.all, gyms)
+        return TransferFile { try MFTransfer.export(template, exercises: exercises, gyms: gyms, at: $0) }
+    }
+
     private func editor(_ template: WorkoutTemplate) -> some View {
         let shown = Binding<[WorkoutBlock]>(
             get: { blocks ?? template.blocks },
@@ -47,6 +54,9 @@ struct WorkoutDetailView: View {
                     SwapGymMenu(templateID: templateID, gymID: template.gymID)
                     Button("Duplicate Workout", systemImage: "plus.square.on.square") {
                         store.insert(WorkoutTemplate(name: "\(template.name) Copy", notes: template.notes, blocks: template.blocks.copy()))
+                    }
+                    ShareLink(item: exportFile(template), preview: SharePreview(template.name)) {
+                        Label("Export Workout", systemImage: "square.and.arrow.up")
                     }
                     Button("Delete Workout", systemImage: "trash", role: .destructive) { confirmingDelete = true }
                 }
