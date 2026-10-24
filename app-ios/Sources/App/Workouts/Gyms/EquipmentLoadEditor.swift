@@ -24,6 +24,7 @@ struct EquipmentLoadEditor: View {
                     WeightOptionsEditor(options: options, unit: unit) { draft = .weights(options: $0) }
                 case .ranges(let options, let micro):
                     WeightRangesEditor(ranges: options, unit: unit) { draft = .ranges(options: $0, micro: micro) }
+                    MicroAdjustmentEditor(micro: micro, unit: unit) { draft = .ranges(options: options, micro: $0) }
                 case .base(let kg):
                     Section("Base Weight") {
                         WeightField(title: "Base weight", kg: kg, unit: unit) { draft = .base(kg: $0) }
@@ -74,7 +75,7 @@ private struct WeightOptionsEditor: View {
                     .keyboardType(.decimalPad)
                 Button("Add", systemImage: "plus") {
                     guard let weight = WeightField.parse(newWeight) else { return }
-                    onChange((options + [WeightOption(kg: unit.toKg(weight))]).sorted { $0.kg < $1.kg })
+                    onChange((options + [WeightOption(kg: unit.toKg(weight), unit: unit)]).sorted { $0.kg < $1.kg })
                     newWeight = ""
                 }
                 .labelStyle(.iconOnly)
@@ -138,6 +139,71 @@ private struct WeightRangesEditor: View {
             var changed = ranges
             change(&changed[index], kg)
             onChange(changed)
+        }
+    }
+}
+
+/// MF's Add Micro-Adjustments on the Edit Machine sheet: the kind and the small weights it adds to a pin position.
+private struct MicroAdjustmentEditor: View {
+    let micro: MicroAdjustment?
+    let unit: WeightUnit
+    let onChange: (MicroAdjustment?) -> Void
+    @State private var newWeight = ""
+
+    var body: some View {
+        Section {
+            Picker("Add Micro-Adjustments", selection: Binding(get: { micro?.kind }, set: { kind in
+                onChange(kind.map { MicroAdjustment(kind: $0, weightsKg: micro?.weightsKg ?? []) })
+            })) {
+                Text("None").tag(MicroAdjustment.Kind?.none)
+                ForEach(MicroAdjustment.Kind.allCases, id: \.self) { Text(Self.title($0)).tag(Optional($0)) }
+            }
+            .accessibilityLabel("Add Micro-Adjustments")
+            if let micro {
+                HStack {
+                    TextField("Add a weight (\(unit.rawValue))", text: $newWeight)
+                        .keyboardType(.decimalPad)
+                        .accessibilityLabel("Add a micro-adjustment weight")
+                    Button("Add", systemImage: "plus") {
+                        guard let weight = WeightField.parse(newWeight) else { return }
+                        onChange(MicroAdjustment(kind: micro.kind, weightsKg: (micro.weightsKg + [unit.toKg(weight)]).sorted()))
+                        newWeight = ""
+                    }
+                    .labelStyle(.iconOnly)
+                    .disabled(WeightField.parse(newWeight) == nil)
+                    .accessibilityLabel("Add micro-adjustment weight")
+                }
+                ForEach(Array(micro.weightsKg.enumerated()), id: \.offset) { _, kg in
+                    Text(unit.label(kg: kg))
+                }
+                .onDelete { offsets in
+                    var weights = micro.weightsKg
+                    weights.remove(atOffsets: offsets)
+                    onChange(MicroAdjustment(kind: micro.kind, weightsKg: weights))
+                }
+            }
+        } header: {
+            Text("Micro-Adjustments")
+        } footer: {
+            if let micro { Text(Self.summary(micro.kind)) }
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    static func title(_ kind: MicroAdjustment.Kind) -> String {
+        switch kind {
+        case .dial: "Dial"
+        case .pin: "Pin"
+        case .plates: "Plates"
+        }
+    }
+
+    /// MF's descriptions of the three types.
+    static func summary(_ kind: MicroAdjustment.Kind) -> String {
+        switch kind {
+        case .dial: "Fine-tunes the weight using a small adjustment dial on top of the selected load. Allows one adjustment at a time."
+        case .pin: "Lets you select a single incremental weight by inserting a pin into the micro-adjustment stack."
+        case .plates: "Loads additional plates directly onto the machine. Allows more than one adjustment at a time."
         }
     }
 }
