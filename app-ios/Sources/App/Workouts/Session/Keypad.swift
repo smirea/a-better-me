@@ -93,7 +93,6 @@ struct KeypadFocus: Equatable {
         text = partial ? entry.partialReps.map(String.init) ?? "" : field.text(entry, unit: unit)
     }
 
-    /// Writes the typed text into `entry`.
     func apply(to entry: inout SetEntry, unit: WeightUnit) {
         if partial {
             entry.partialReps = Double(text).map { Int($0) }

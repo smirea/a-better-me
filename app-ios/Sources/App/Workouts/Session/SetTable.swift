@@ -98,7 +98,7 @@ extension SessionEditor {
             } label: {
                 HStack(spacing: 4) {
                     Text(reference == .auto ? "Auto" : "Previous")
-                    Image(systemName: "arrow.left.arrow.right").font(.system(size: 10))
+                    Image(systemName: "arrow.left.arrow.right").imageScale(.small)
                 }
             }
             .accessibilityLabel("Reference column")
@@ -145,7 +145,7 @@ extension SessionEditor {
 
     private func cell(_ path: RowPath, field: SetField, value: SetEntry) -> some View {
         let isFocused = focus?.row == path && focus?.field == field
-        let text = isFocused ? focusText(focus!, value: value) : field.display(value, unit: unit)
+        let text = if let focus, isFocused { focusText(focus, value: value) } else { field.display(value, unit: unit) }
         return Button {
             focus = KeypadFocus(row: path, field: field, entry: value, unit: unit)
         } label: {
