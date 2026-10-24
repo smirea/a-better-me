@@ -1,7 +1,0 @@
-{
-	"kty": "OKP",
-	"crv": "Ed25519",
-	"x": "mWPcaYImaHHPX9KtcZQ5wC-1IVR26MfEmmYCMnkOS54",
-	"kid": "abm-prod-0ed52e53",
-	"alg": "EdDSA"
-}

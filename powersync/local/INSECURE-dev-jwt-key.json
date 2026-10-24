@@ -1,7 +1,0 @@
-{
-	"kty": "OKP",
-	"crv": "Ed25519",
-	"kid": "insecure-local-dev-336f5ac3",
-	"x": "c6mCLI8mSxKTQCy0h30PcpHXfqCzlZEy3IQsIIShfQs",
-	"d": "pLg7XIefISUZF9BexyxKMfIENJcbL4IHHREwoz-bbH8"
-}

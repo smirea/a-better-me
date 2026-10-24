@@ -31,3 +31,6 @@ dist
 
 # python bytecode from docs tooling
 __pycache__
+
+# the Bun server's SQLite file, one per checkout
+.data

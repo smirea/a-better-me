@@ -86,17 +86,6 @@ jobs:
       - name: Checks
         if: needs.changes.outputs.bun == 'true' && matrix.task == 'checks'
         run: bun run lint:ci && bun run typecheck
-      # drizzle-kit writes a new migration when the schema changed without one, and the bundle must match server/drizzle.
-      - name: Migrations match the schema
-        if: needs.changes.outputs.bun == 'true' && matrix.task == 'checks'
-        run: |
-          bun run db:generate
-          stale=$(git status --porcelain server/drizzle server/src/db/migrations.generated.ts)
-          if [ -n "$stale" ]; then
-            echo "$stale"
-            echo "::error::server/drizzle or its bundle is stale. Run 'bun run db:generate' and commit the result."
-            exit 1
-          fi
       - name: Tests
         if: needs.changes.outputs.bun == 'true' && matrix.task == 'tests'
         run: bun run test

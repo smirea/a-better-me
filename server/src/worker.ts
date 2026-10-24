@@ -1,13 +1,31 @@
-import type { ExecutionContext, Hyperdrive, R2Bucket, ScheduledController } from '@cloudflare/workers-types';
+import type {
+	DurableObjectNamespace,
+	DurableObjectState,
+	ExecutionContext,
+	R2Bucket,
+	ScheduledController,
+} from '@cloudflare/workers-types';
+import { SpaceObject } from 'sync-engine/cloudflare';
+import { schema } from '../../shared/db/schema';
 import { handle } from './api';
+import { BACKUP_CRON, backup } from './backup';
 import { parseConfig, type Config, type Settings } from './config';
-import { BACKUP_CRON, backupDatabase } from './db/backup';
-import { migrate } from './db/migrate';
-import { connect, type Db } from './db/postgres';
 
 /** The Cloudflare entry `wrangler.jsonc` names. The Bun server in `index.ts` serves the same `handle`. */
 
-type Env = Settings & { HYPERDRIVE: Hyperdrive; BACKUPS: R2Bucket };
+type Env = Settings & { SPACE: DurableObjectNamespace; BACKUPS: R2Bucket };
+
+/** The owner's one space. `/dump` is reachable only through the stub, which the Worker calls from the cron alone. */
+export class Space extends SpaceObject<Env> {
+	constructor(ctx: DurableObjectState, env: Env) {
+		super(ctx, env, schema);
+	}
+
+	override fetch(request: Request): Promise<Response> {
+		if (new URL(request.url).pathname === '/dump') return Promise.resolve(Response.json(this.space.dump()));
+		return super.fetch(request);
+	}
+}
 
 const configs = new WeakMap<Env, Config>();
 /** Parsed once per bindings object, which the runtime keeps for the isolate's life. */
@@ -20,41 +38,33 @@ function configOf(env: Env): Config {
 	return config;
 }
 
-let migrated: Promise<unknown> | null = null;
-/** Once per isolate, under the migrator's advisory lock, so a deploy's first requests race nobody. */
-function migrateOnce(db: Db) {
-	migrated ??= migrate(db).catch(error => {
-		migrated = null;
-		throw error;
-	});
-	return migrated;
-}
+/** The stub speaks the Workers Request and Response types, which this tsconfig's Bun globals do not know. */
+const owner = (env: Env) =>
+	env.SPACE.get(env.SPACE.idFromName('owner')) as unknown as { fetch(input: Request | string): Promise<Response> };
 
-async function fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-	const { db, end } = connect(env.HYPERDRIVE.connectionString);
+async function fetch(request: Request, env: Env): Promise<Response> {
 	try {
 		// Before routing, so a misconfigured deploy fails every request and logs the missing setting.
 		const config = configOf(env);
-		await migrateOnce(db);
-		return await handle(request, { config, db });
+		return await handle(request, {
+			config,
+			engine(request) {
+				const url = new URL(request.url);
+				url.pathname = url.pathname.slice('/api'.length);
+				return owner(env).fetch(new Request(url, request));
+			},
+		});
 	} catch (error) {
 		console.error(error);
 		return Response.json({ ok: false, error: 'Internal error' }, { status: 500 });
-	} finally {
-		ctx.waitUntil(end());
 	}
 }
 
 /** The daily dump to R2. A throw marks the cron run failed in the Cloudflare dashboard. */
-async function scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+async function scheduled(controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
 	if (controller.cron !== BACKUP_CRON) throw new Error(`No job for cron ${controller.cron}`);
-	const { db, end } = connect(env.HYPERDRIVE.connectionString);
-	try {
-		await migrateOnce(db);
-		console.log(`Backed up Postgres to ${await backupDatabase(db, env.BACKUPS, new Date(controller.scheduledTime))}`);
-	} finally {
-		ctx.waitUntil(end());
-	}
+	const tables = (await (await owner(env).fetch('https://space/dump')).json()) as Record<string, unknown[]>;
+	console.log(`Backed up the space to ${await backup(tables, env.BACKUPS, new Date(controller.scheduledTime))}`);
 }
 
 export default { fetch, scheduled };

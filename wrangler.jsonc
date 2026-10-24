@@ -3,22 +3,16 @@
 	"name": "a-better-me",
 	"main": "server/src/worker.ts",
 	"compatibility_date": "2026-10-01",
-	// postgres.js reaches Hyperdrive through Node's Buffer and streams.
-	"compatibility_flags": ["nodejs_compat"],
 	"routes": [{ "pattern": "a-better-me.stf.lol", "custom_domain": true }],
 	"workers_dev": false,
 	"preview_urls": false,
-	// Pinned next to Supabase in us-east-1: an upload is a run of sequential queries, and each one crosses the distance
-	// between the Worker and the database. Smart placement only moves a Worker after analysing its traffic.
-	"placement": { "region": "aws:us-east-1" },
-	// `server/src/db/backup.ts` names it: the daily JSON dump to R2.
+	// `server/src/backup.ts` names it: the daily JSON dump of the space to R2.
 	"triggers": { "crons": ["0 9 * * *"] },
-	// Sync is off until PowerSync Cloud has an instance for A Better Me (docs/decisions/sync.md). OWNER_TOKEN and
-	// POWERSYNC_JWT_PRIVATE_KEY are Worker secrets, pushed with `bun run secrets:push`.
-	"vars": { "APP_ENV": "production", "POWERSYNC_URL": "" },
-	// `scripts/wrangler-dev.ts` points a local run at the checkout's database through
-	// CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE.
-	"hyperdrive": [{ "binding": "HYPERDRIVE", "id": "7d04f2790d4d4dc799760630c557cc32" }],
+	// OWNER_TOKEN is a Worker secret, pushed with `bun run secrets:push`.
+	"vars": { "APP_ENV": "production" },
+	// The owner's one space: a SQLite-backed Durable Object holding every synced table.
+	"durable_objects": { "bindings": [{ "name": "SPACE", "class_name": "Space" }] },
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["Space"] }],
 	"r2_buckets": [{ "binding": "BACKUPS", "bucket_name": "a-better-me-backups" }],
 	"observability": { "enabled": true },
 }
