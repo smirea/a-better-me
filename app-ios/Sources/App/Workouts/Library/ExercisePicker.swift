@@ -16,22 +16,35 @@ enum ExercisePickerMode: Equatable {
 /// Present it in a sheet; it dismisses itself after calling `onPick`.
 struct ExercisePicker: View {
     let mode: ExercisePickerMode
+    /// The gym the list starts on. A missing or deleted gym falls back to the default gym.
+    var gymID: UUID? = nil
     let onPick: (ExercisePick) -> Void
+    @Observe(GymProfile.all) private var gyms
+    @Observe(GymProfile.defaultGym) private var defaultGym
     @State private var showingAllReplacements = false
+    @State private var filter = ExerciseFilter()
+    @State private var choseGym = false
 
     var body: some View {
         NavigationStack {
             switch mode {
-            case .add: ExercisePickerList(mode: mode, onPick: onPick)
+            case .add: ExercisePickerList(mode: mode, filter: $filter, onPick: onPick)
             case .swap(let id):
                 if showingAllReplacements {
-                    ExercisePickerList(mode: mode, onPick: onPick)
+                    ExercisePickerList(mode: mode, filter: $filter, onPick: onPick)
                 } else {
-                    SwapSubstitutions(exerciseID: id, onPick: onPick) { showingAllReplacements = true }
+                    SwapSubstitutions(exerciseID: id, gym: gyms.first { $0.id == filter.gymID }, onPick: onPick) {
+                        showingAllReplacements = true
+                    }
                 }
             }
         }
         .tint(Theme.textPrimary)
+        .onAppear {
+            guard !choseGym else { return }
+            choseGym = true
+            filter.gymID = gyms.first { $0.id == gymID }?.id ?? defaultGym?.id
+        }
     }
 }
 
@@ -39,6 +52,7 @@ struct ExercisePicker: View {
 /// "Find Other Replacements", which opens the full picker in swap mode.
 private struct SwapSubstitutions: View {
     let exerciseID: ExerciseID
+    let gym: GymProfile?
     let onPick: (ExercisePick) -> Void
     let findOther: () -> Void
     @Environment(ExerciseCatalog.self) private var catalog
@@ -90,7 +104,10 @@ private struct SwapSubstitutions: View {
         guard let current else { return [] }
         let muscles = Set(current.primaryMuscles)
         let hidden = Set(customExercises.filter(\.isArchived).map(\.id))
-        let matches = catalog.all.filter { $0.id != current.id && !hidden.contains($0.id) && Set($0.primaryMuscles) == muscles }
+        let availability = gym.map { GymAvailability(gym: $0, equipment: catalog.equipment) }
+        let matches = catalog.all.filter {
+            $0.id != current.id && !hidden.contains($0.id) && Set($0.primaryMuscles) == muscles && availability?.isAvailable($0) != false
+        }
         return ExerciseGroup.ranked(matches)
     }
 
@@ -102,6 +119,7 @@ private struct SwapSubstitutions: View {
 
 private struct ExercisePickerList: View {
     let mode: ExercisePickerMode
+    @Binding var filter: ExerciseFilter
     let onPick: (ExercisePick) -> Void
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(\.dismiss) private var dismiss
@@ -109,7 +127,6 @@ private struct ExercisePickerList: View {
     @State private var selection: [ExerciseID] = []
     @State private var asGroup = false
     @State private var showingTray = false
-    @State private var filter = ExerciseFilter()
     @State private var query = ""
     @State private var detail: ExerciseRef?
     @State private var creating = false

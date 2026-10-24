@@ -1,11 +1,12 @@
 import SwiftUI
 
-/// More > Exercises: the picker's list and filters with All, Performed, and Archived tabs. A row opens Exercise Settings.
-/// MF's Deprioritized and Modified tabs are cut with the settings that fill them (Do Not Recommend, equipment overrides).
+/// More > Exercises: the picker's list and filters with MF's All, Performed, Deprioritized (Do Not Recommend),
+/// Modified (any Exercise Override), and Archived tabs. A row opens Exercise Settings.
 struct ExerciseLibraryView: View {
     @Environment(ExerciseCatalog.self) private var catalog
     @Observe(WorkoutSession.finished) private var sessions
     @Observe(CustomExercise.all) private var customExercises
+    @Observe(ExerciseSettings.all) private var exerciseSettings
     @State private var tab = LibraryTab.all
     @State private var filter = ExerciseFilter()
     @State private var query = ""
@@ -13,17 +14,20 @@ struct ExerciseLibraryView: View {
     @State private var opened: ExerciseRef?
 
     enum LibraryTab: String, CaseIterable, Identifiable {
-        case all = "All", performed = "Performed", archived = "Archived"
+        case all = "All", performed = "Performed", deprioritized = "Deprioritized", modified = "Modified", archived = "Archived"
         var id: Self { self }
     }
 
     var body: some View {
         let counts = performedCounts
         let archived = Set(customExercises.filter(\.isArchived).map(\.id))
+        let settings = Dictionary(exerciseSettings.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let exercises = catalog.all.filter { exercise in
             switch tab {
             case .all: !archived.contains(exercise.id)
             case .performed: counts[exercise.id] != nil
+            case .deprioritized: settings[exercise.id]?.doNotRecommend == true
+            case .modified: settings[exercise.id]?.isModified == true
             case .archived: archived.contains(exercise.id)
             }
         }
@@ -33,13 +37,7 @@ struct ExerciseLibraryView: View {
             query: query,
             subtitle: { counts[$0.id].map { "Performed \($0) \($0 == 1 ? "time" : "times")" } },
             onSelect: { opened = ExerciseRef(id: $0.id) },
-            header: {
-                Picker("Exercises", selection: $tab) {
-                    ForEach(LibraryTab.allCases) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-            },
+            header: { LibraryTabBar(selection: $tab) },
             trailing: { _ in Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary) }
         )
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search for an exercise")
@@ -65,9 +63,43 @@ struct ExerciseLibraryView: View {
     }
 }
 
-/// Exercise Settings: Info, the pinned note, the rest override, and for custom exercises Archive and Delete.
-/// MF's other overrides (equipment weights, left/right rest, rep range, weight match, warm-ups) and Do Not Recommend
-/// belong to features cut from milestone 1.
+/// MF's underlined text tabs. Five labels overflow a segmented control on iPhone, so the row scrolls.
+private struct LibraryTabBar: View {
+    @Binding var selection: ExerciseLibraryView.LibraryTab
+    @Namespace private var underline
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 22) {
+                ForEach(ExerciseLibraryView.LibraryTab.allCases) { tab in
+                    let isSelected = tab == selection
+                    Button { withAnimation(.snappy) { selection = tab } } label: {
+                        Text(tab.rawValue)
+                            .font(AppFont.medium(15))
+                            .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textSecondary)
+                            .padding(.vertical, 8)
+                            .overlay(alignment: .bottom) {
+                                if isSelected {
+                                    Capsule()
+                                        .fill(Theme.textPrimary)
+                                        .frame(height: 3)
+                                        .matchedGeometryEffect(id: "underline", in: underline)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal)
+        }
+        .scrollIndicators(.hidden)
+        .overlay(alignment: .bottom) { Rectangle().fill(Theme.separator).frame(height: 1) }
+    }
+}
+
+/// Exercise Settings: Info, the pinned note, Do Not Recommend, Archive and Delete for custom exercises, and the
+/// Exercise Overrides that fall back to the gym profile and Workout settings.
 struct ExerciseSettingsView: View {
     let exerciseID: ExerciseID
     @Environment(ExerciseCatalog.self) private var catalog
@@ -80,6 +112,7 @@ struct ExerciseSettingsView: View {
     @State private var editingNote = false
     @State private var noteDraft = ""
     @State private var confirmingDelete = false
+    @State private var duplicating = false
 
     init(exerciseID: ExerciseID) {
         self.exerciseID = exerciseID
@@ -91,6 +124,7 @@ struct ExerciseSettingsView: View {
 
     var body: some View {
         let exercise = catalog.exercise(exerciseID)
+        let category = exercise?.restCategory ?? .upperIsolation
         Form {
             Section {
                 Button { showingInfo = true } label: {
@@ -108,6 +142,31 @@ struct ExerciseSettingsView: View {
                         noteDraft = current?.pinnedNote ?? ""
                         editingNote = true
                     }
+                }
+                SettingsRow(
+                    title: "Do Not Recommend",
+                    subtitle: "This exercise will not be recommended when creating programs",
+                    systemImage: "hand.thumbsdown.fill"
+                ) {
+                    Toggle("Do Not Recommend", isOn: Binding {
+                        current?.doNotRecommend ?? false
+                    } set: { on in
+                        change { $0.doNotRecommend = on }
+                    })
+                    .labelsHidden()
+                    .tint(Theme.accent)
+                }
+                if exercise != nil {
+                    Button { duplicating = true } label: {
+                        SettingsRow(
+                            title: "Edit Duplicate",
+                            subtitle: "To edit all available exercise properties, create a duplicate",
+                            systemImage: "plus.square.on.square"
+                        ) {
+                            Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
+                        }
+                    }
+                    .buttonStyle(.plain)
                 }
                 if let customExercise {
                     SettingsRow(
@@ -132,20 +191,24 @@ struct ExerciseSettingsView: View {
                 SectionTitle("General").textCase(nil)
             }
             Section {
-                SettingsRow(title: "Rest Timer", subtitle: current?.restSeconds.map(Self.format) ?? "Default", systemImage: "timer") {
-                    Menu("Edit") {
-                        Picker("Rest Timer", selection: restBinding(current)) {
-                            Text("Default (\(Self.format(defaults.restSeconds(exercise?.restCategory ?? .upperIsolation))))").tag(Int?.none)
-                            ForEach(Array(stride(from: 15, through: 600, by: 15)), id: \.self) { Text(Self.format($0)).tag(Optional($0)) }
-                        }
+                ForEach(ExerciseOverrideRow.allCases) { row in
+                    overrideRow(row, category: category)
+                }
+                Button {
+                    change {
+                        $0.overrides = ExerciseOverrides()
+                        $0.restSeconds = nil
                     }
-                }
-                Button(role: .destructive) {
-                    store.delete(ExerciseSettings.self, id: exerciseID)
                 } label: {
-                    Label("Reset Defaults", systemImage: "arrow.counterclockwise")
+                    SettingsRow(
+                        title: "Reset Defaults",
+                        subtitle: "Remove all exercise level overrides",
+                        systemImage: "arrow.counterclockwise",
+                        tint: Theme.destructive
+                    ) { EmptyView() }
                 }
-                .disabled(current == nil || current?.pinnedNote.isEmpty == true && current?.restSeconds == nil)
+                .buttonStyle(.plain)
+                .disabled(current?.isModified != true)
             } header: {
                 SectionTitle("Exercise Overrides").textCase(nil)
             }
@@ -156,6 +219,11 @@ struct ExerciseSettingsView: View {
         .navigationTitle(exercise?.name ?? "Exercise")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingInfo) { ExerciseDetailSheet(exerciseID: exerciseID) }
+        .sheet(isPresented: $duplicating) {
+            if let exercise {
+                CustomExerciseWizard(draft: CustomExerciseDraft(duplicating: exercise, instructions: catalog.instructions(for: exercise)))
+            }
+        }
         .alert("Exercise Note", isPresented: $editingNote) {
             TextField("Note", text: $noteDraft, axis: .vertical)
             Button("Save") {
@@ -175,16 +243,168 @@ struct ExerciseSettingsView: View {
         }
     }
 
-    private func restBinding(_ current: ExerciseSettings?) -> Binding<Int?> {
+    @ViewBuilder
+    private func overrideRow(_ row: ExerciseOverrideRow, category: RestCategory) -> some View {
+        let workout = defaults.workout
+        let summary = row.summary(current)
+        switch row {
+        case .equipmentWeights:
+            NavigationLink {
+                EquipmentWeightsOverrideView(exerciseID: exerciseID)
+            } label: {
+                SettingsRow(title: row.title, subtitle: summary, systemImage: row.systemImage) { EmptyView() }
+            }
+        case .restTimer:
+            SettingsRow(title: row.title, subtitle: summary, systemImage: row.systemImage) {
+                Menu("Edit") {
+                    Picker(row.title, selection: restBinding) {
+                        Text("Default (\(ExerciseOverrideRow.formatRest(defaults.restSeconds(category))))").tag(Int?.none)
+                        ForEach(Array(stride(from: 15, through: 600, by: 15)), id: \.self) {
+                            Text(ExerciseOverrideRow.formatRest($0)).tag(Optional($0))
+                        }
+                    }
+                }
+            }
+        case .restBetweenSides:
+            toggleRow(row, summary: summary, path: \.restBetweenSides, fallback: workout.rest.betweenSides)
+        case .expandRepRange:
+            toggleRow(row, summary: summary, path: \.expandRepRange, fallback: workout.progression.expandRepRange)
+        case .weightMatch:
+            toggleRow(row, summary: summary, path: \.weightMatch, fallback: workout.progression.weightMatch)
+        case .warmUpAutomation:
+            SettingsRow(title: row.title, subtitle: summary, systemImage: row.systemImage) {
+                Menu("Edit") {
+                    Picker(row.title, selection: overrideBinding(\.warmUpAutomation)) {
+                        Text("Default (\(ExerciseOverrideRow.name(workout.warmUp.automation)))").tag(WarmUpAutomation?.none)
+                        ForEach([WarmUpAutomation.none, .smart, .scheme], id: \.self) {
+                            Text(ExerciseOverrideRow.name($0)).tag(Optional($0))
+                        }
+                    }
+                }
+            }
+        case .warmUpScheme:
+            NavigationLink {
+                WarmUpSchemeEditor(
+                    exerciseID: exerciseID,
+                    scheme: current?.overrides.warmUpScheme,
+                    defaultScheme: workout.warmUp.schemes[category] ?? WarmUpStep.standard
+                )
+            } label: {
+                SettingsRow(title: row.title, subtitle: summary, systemImage: row.systemImage) { EmptyView() }
+            }
+        }
+    }
+
+    private func toggleRow(
+        _ row: ExerciseOverrideRow, summary: String, path: WritableKeyPath<ExerciseOverrides, Bool?> & Sendable, fallback: Bool
+    ) -> some View {
+        SettingsRow(title: row.title, subtitle: summary, systemImage: row.systemImage) {
+            Menu("Edit") {
+                Picker(row.title, selection: overrideBinding(path)) {
+                    Text("Default (\(ExerciseOverrideRow.onOff(fallback)))").tag(Bool?.none)
+                    Text("On").tag(Optional(true))
+                    Text("Off").tag(Optional(false))
+                }
+            }
+        }
+    }
+
+    private var restBinding: Binding<Int?> {
         Binding { current?.restSeconds } set: { seconds in change { $0.restSeconds = seconds } }
+    }
+
+    private func overrideBinding<Value: Sendable>(_ path: WritableKeyPath<ExerciseOverrides, Value?> & Sendable) -> Binding<Value?> {
+        Binding { current?.overrides[keyPath: path] } set: { value in change { $0.overrides[keyPath: path] = value } }
     }
 
     private func change(_ edit: @escaping @Sendable (inout ExerciseSettings) -> Void) {
         store.modify(ExerciseSettings.self, id: exerciseID, orInsert: { ExerciseSettings(id: exerciseID) }, edit)
     }
+}
 
-    private static func format(_ seconds: Int) -> String {
-        Duration.seconds(seconds).formatted(.time(pattern: .minuteSecond))
+/// The W rows of one exercise's warm-up, as percent of the first working set's target weight and reps. Reset drops
+/// the override so the exercise follows its category's scheme in Workout settings again.
+private struct WarmUpSchemeEditor: View {
+    let exerciseID: ExerciseID
+    let defaultScheme: [WarmUpStep]
+    let isOverridden: Bool
+    @Environment(LocalStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var steps: [WarmUpStep]
+
+    init(exerciseID: ExerciseID, scheme: [WarmUpStep]?, defaultScheme: [WarmUpStep]) {
+        self.exerciseID = exerciseID
+        self.defaultScheme = defaultScheme
+        isOverridden = scheme != nil
+        _steps = State(initialValue: scheme ?? defaultScheme)
+    }
+
+    /// Swipe-delete can re-evaluate a removed row's binding, so reads and writes past the end are ignored.
+    private func step(at index: Int) -> Binding<WarmUpStep> {
+        Binding {
+            steps[safe: index] ?? WarmUpStep(percent: 0, reps: 0)
+        } set: { step in
+            if steps.indices.contains(index) { steps[index] = step }
+        }
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(steps.indices, id: \.self) { index in
+                    let step = step(at: index)
+                    HStack(spacing: 12) {
+                        Text("W")
+                            .font(AppFont.headline(11))
+                            .frame(width: 22, height: 22)
+                            .background(Theme.surfaceRaised, in: .circle)
+                        Text("\(step.wrappedValue.percent)%").frame(width: 44, alignment: .leading)
+                        Stepper("Percent", value: step.percent, in: 5...100, step: 5)
+                            .labelsHidden()
+                            .accessibilityValue("\(step.wrappedValue.percent)%")
+                        Spacer()
+                        Text("x \(step.wrappedValue.reps)").frame(width: 36, alignment: .leading)
+                        Stepper("Reps", value: step.reps, in: 1...30)
+                            .labelsHidden()
+                            .accessibilityValue("\(step.wrappedValue.reps) reps")
+                    }
+                    .font(AppFont.medium(15))
+                    .listRowBackground(Theme.surface)
+                }
+                .onDelete { steps.remove(atOffsets: $0) }
+                Button("Add Warm-Up Set", systemImage: "plus") {
+                    let last = steps.last ?? WarmUpStep(percent: 30, reps: 5)
+                    steps.append(WarmUpStep(percent: min(last.percent + 10, 100), reps: last.reps))
+                }
+                .listRowBackground(Theme.surface)
+            } footer: {
+                Text("Percent of the first working set's target weight.").font(AppFont.caption(12))
+            }
+            Section {
+                Button("Reset to Default", role: .destructive) {
+                    save(nil)
+                }
+                .disabled(!isOverridden)
+                .listRowBackground(Theme.surface)
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(Theme.background)
+        .tint(Theme.textPrimary)
+        .navigationTitle("Warm-Up Scheme")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") { save(steps) }
+            }
+        }
+    }
+
+    private func save(_ scheme: [WarmUpStep]?) {
+        store.modify(ExerciseSettings.self, id: exerciseID, orInsert: { ExerciseSettings(id: exerciseID) }) {
+            $0.overrides.warmUpScheme = scheme
+        }
+        dismiss()
     }
 }
 
@@ -209,6 +429,7 @@ private struct SettingsRow<Accessory: View>: View {
                 .controlSize(.small)
                 .tint(Theme.textPrimary)
         }
+        .contentShape(.rect)
         .listRowBackground(Theme.surface)
     }
 }

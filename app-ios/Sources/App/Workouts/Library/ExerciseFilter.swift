@@ -7,10 +7,13 @@ struct ExerciseFilter: Equatable {
     var support: EquipmentChoice?
     var rangeOfMotion = ExerciseFilter.fullRange
     var muscle: Muscle?
+    /// Narrows the list to what this gym's equipment allows. It is a context rather than a filter, so it never counts
+    /// as active and Reset keeps it.
+    var gymID: UUID?
 
     static let fullRange = 0...5
 
-    var isActive: Bool { self != ExerciseFilter() }
+    var isActive: Bool { self != ExerciseFilter(gymID: gymID) }
 
     func matches(_ exercise: Exercise) -> Bool {
         if let type, exercise.restCategory != type { return false }
