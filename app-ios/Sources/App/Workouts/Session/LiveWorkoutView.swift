@@ -117,6 +117,10 @@ struct SessionEditor: View {
             saveBlocks(blocks)
             ensureSuggestions()
         }
+        .onChange(of: blocks.flatMap(\.exercises).map { LoadableWeights(loading: loading(for: $0), unit: unit) }) {
+            guard mode == .live else { return }
+            ensureSuggestions()
+        }
         // A set logged on another device replaces the live copy while no write of this device's is still on its way.
         .onChange(of: live?.blocks) { _, remote in
             if mode == .live, let remote, localStore.pendingWrites == 0, remote != blocks { blocks = remote }
@@ -482,20 +486,20 @@ struct SessionEditor: View {
         return settings
     }
 
-    /// Suggests every exercise whose planned rows changed since its last fill: a new exercise, a Targets edit, or an
-    /// added set. The Event Log keeps earlier fills.
+    /// Suggests every exercise whose basis changed since its last fill: a new exercise, a Targets edit, an added set, or
+    /// equipment that loads different weights. The Event Log keeps earlier fills.
     func ensureSuggestions() {
         guard mode == .live, historyLoaded else { return }
         for item in blocks.flatMap(\.exercises) {
-            let planned = item.sets.map(\.planned)
-            guard store.suggestionBasis[item.id] != planned else { continue }
+            let basis = SuggestionBasis(planned: item.sets.map(\.planned), loadable: LoadableWeights(loading: loading(for: item), unit: unit))
+            guard store.suggestionBasis[item.id] != basis else { continue }
             let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
             let suggestions = SmartProgression.suggest(
                 sets: item.sets, previous: previous, settings: progressionSettings(for: item.exerciseID),
-                loadable: LoadableWeights(loading: loading(for: item), unit: unit), rirTracking: defaults.workout.rirTracking, unit: unit
+                loadable: basis.loadable, rirTracking: defaults.workout.rirTracking, unit: unit
             )
             store.suggestions[item.id] = suggestions
-            store.suggestionBasis[item.id] = planned
+            store.suggestionBasis[item.id] = basis
             store.events[item.id, default: []].append(SmartProgression.event(at: .now, sets: item.sets, suggestions: suggestions))
             applyProgression(to: item.id)
         }
