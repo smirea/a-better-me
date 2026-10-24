@@ -11,10 +11,11 @@ struct ExerciseHistoryEntry: Identifiable {
     var workingSets: [WorkoutSet] { sets.filter { $0.type != .warmUp } }
 }
 
-/// The "Exercise Display" dropdown. MF also offers 3-RM and 10-RM, which need a rep-max curve beyond
-/// `WorkoutMetrics`' single 1-RM estimate, so they wait until that formula is settled.
+/// The "Exercise Display" dropdown.
 enum HistoryMetric: String, CaseIterable, Identifiable {
     case oneRepMax = "1-RM"
+    case threeRepMax = "3-RM"
+    case tenRepMax = "10-RM"
     case heaviestWeight = "Heaviest Weight"
     case totalVolume = "Total Volume"
     case bestSetVolume = "Best Set Volume"
@@ -41,12 +42,10 @@ enum HistoryMetric: String, CaseIterable, Identifiable {
         // An assistance weight lightens the lift, so a bigger one is not a stronger set.
         let isAssisted = exercise.metrics.contains(.assistanceWeight)
         let result: Double? = switch self {
-        case .oneRepMax where isAssisted, .heaviestWeight where isAssisted: nil
-        case .oneRepMax:
-            logs.compactMap { log in
-                guard let weight = log.weightKg, weight > 0, let reps = log.reps, reps > 0 else { return nil }
-                return WorkoutMetrics.estimatedOneRepMaxKg(weightKg: weight, reps: reps, rir: log.rir)
-            }.max()
+        case .oneRepMax where isAssisted, .threeRepMax where isAssisted, .tenRepMax where isAssisted, .heaviestWeight where isAssisted: nil
+        case .oneRepMax: Self.bestRepMax(logs, reps: 1)
+        case .threeRepMax: Self.bestRepMax(logs, reps: 3)
+        case .tenRepMax: Self.bestRepMax(logs, reps: 10)
         case .heaviestWeight: logs.compactMap(\.weightKg).max()
         case .totalVolume: entry.sets.map { WorkoutMetrics.volumeKg(of: $0, exercise: exercise) }.reduce(0, +)
         case .bestSetVolume: sets.map { WorkoutMetrics.volumeKg(of: $0, exercise: exercise) }.max()
@@ -57,13 +56,32 @@ enum HistoryMetric: String, CaseIterable, Identifiable {
         return result.flatMap { $0 > 0 ? $0 : nil }
     }
 
+    private static func bestRepMax(_ logs: [SetLog], reps: Int) -> Double? {
+        logs.compactMap { log in
+            guard let weight = log.weightKg, weight > 0, let logged = log.reps, logged > 0 else { return nil }
+            let oneRepMax = WorkoutMetrics.estimatedOneRepMaxKg(weightKg: weight, reps: logged, rir: log.rir)
+            return WorkoutMetrics.estimatedRepMaxKg(oneRepMaxKg: oneRepMax, reps: reps)
+        }.max()
+    }
+
     func format(_ value: Double, unit: WeightUnit) -> String {
         switch self {
-        case .oneRepMax, .heaviestWeight, .totalVolume, .bestSetVolume: "\(unit.format(kg: value)) \(unit.rawValue)"
+        case .oneRepMax, .threeRepMax, .tenRepMax, .heaviestWeight, .totalVolume, .bestSetVolume: "\(unit.format(kg: value)) \(unit.rawValue)"
         case .totalReps, .bestSetReps: "\(Int(value)) reps"
         case .totalSets: "\(Int(value)) sets"
         }
     }
+}
+
+enum HistorySort: String, CaseIterable, Identifiable {
+    case mostRecent = "Most Recent", oldest = "Oldest", highest = "Highest", lowest = "Lowest"
+    var id: Self { self }
+}
+
+/// On shows record badges, Only also hides sessions without a record, and Off hides the badges.
+enum RecordsFilter: String, CaseIterable, Identifiable {
+    case on = "Records On", only = "Records Only", off = "Records Off"
+    var id: Self { self }
 }
 
 enum ExerciseHistory {
@@ -83,6 +101,27 @@ enum ExerciseHistory {
             entries.append(entry)
         }
         return entries.reversed()
+    }
+
+    /// Sessions without a value go last, and ties fall back to newest first.
+    static func arranged(
+        _ entries: [ExerciseHistoryEntry], sort: HistorySort, records: RecordsFilter, metric: HistoryMetric, exercise: Exercise
+    ) -> [ExerciseHistoryEntry] {
+        let shown = records == .only ? entries.filter { !$0.records.isEmpty } : entries
+        switch sort {
+        case .mostRecent: return shown.sorted { $0.date > $1.date }
+        case .oldest: return shown.sorted { $0.date < $1.date }
+        case .highest, .lowest:
+            let values = Dictionary(uniqueKeysWithValues: shown.map { ($0.id, metric.value(of: $0, exercise: exercise)) })
+            return shown.sorted { a, b in
+                switch (values[a.id] ?? nil, values[b.id] ?? nil) {
+                case let (x?, y?) where x != y: sort == .highest ? x > y : x < y
+                case (_?, nil): true
+                case (nil, _?): false
+                default: a.date > b.date
+                }
+            }
+        }
     }
 
     /// "50 lb (per side) x 9 (per side)": the logged values in the exercise's metrics, load first.
@@ -113,42 +152,56 @@ struct ExerciseHistoryTab: View {
     @Observe(WorkoutSession.finished) private var sessions
     @Observe(AppSettings.current) private var settings
     @State private var metric = HistoryMetric.oneRepMax
-    @State private var newestFirst = true
+    @State private var sort = HistorySort.mostRecent
+    @State private var records = RecordsFilter.on
     @State private var expanded: Set<UUID> = []
 
     var body: some View {
         let entries = ExerciseHistory.entries(of: exercise, in: sessions)
+        let shown = ExerciseHistory.arranged(entries, sort: sort, records: records, metric: metric, exercise: exercise)
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Menu {
-                    Picker("Exercise Display", selection: $metric) {
-                        ForEach(HistoryMetric.allCases) { Text($0.rawValue).tag($0) }
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    Menu {
+                        Picker("Exercise Display", selection: $metric) {
+                            ForEach(HistoryMetric.allCases) { Text($0.rawValue).tag($0) }
+                        }
+                    } label: {
+                        FilterChipLabel(title: metric.rawValue, systemImage: "medal")
                     }
-                } label: {
-                    FilterChipLabel(title: metric.rawValue, systemImage: "medal")
-                }
-                Menu {
-                    Picker("Sort", selection: $newestFirst) {
-                        Text("Most Recent").tag(true)
-                        Text("Oldest").tag(false)
+                    Menu {
+                        Picker("Sort", selection: $sort) {
+                            ForEach(HistorySort.allCases) { Text($0.rawValue).tag($0) }
+                        }
+                    } label: {
+                        FilterChipLabel(title: sort.rawValue, systemImage: "line.3.horizontal.decrease")
                     }
-                } label: {
-                    FilterChipLabel(title: newestFirst ? "Most Recent" : "Oldest", systemImage: "line.3.horizontal.decrease")
+                    Menu {
+                        Picker("Records", selection: $records) {
+                            ForEach(RecordsFilter.allCases) { Text($0.rawValue).tag($0) }
+                        }
+                    } label: {
+                        FilterChipLabel(title: records.rawValue, systemImage: "trophy")
+                    }
                 }
+                .padding()
             }
-            .padding()
+            .scrollIndicators(.hidden)
             if entries.isEmpty {
                 ContentUnavailableView(
                     "No History",
                     systemImage: "clock.arrow.circlepath",
                     description: Text("Log this exercise in a workout to see it here.")
                 )
+            } else if shown.isEmpty {
+                ContentUnavailableView("No Records", systemImage: "trophy", description: Text("No session of this exercise set a record yet."))
             }
-            ForEach(newestFirst ? entries : entries.reversed()) { entry in
+            ForEach(shown) { entry in
                 HistoryRow(
                     entry: entry,
                     exercise: exercise,
                     metric: metric,
+                    showsRecords: records != .off,
                     unit: settings.weightUnit,
                     isExpanded: Binding {
                         expanded.contains(entry.id)
@@ -166,6 +219,7 @@ private struct HistoryRow: View {
     let entry: ExerciseHistoryEntry
     let exercise: Exercise
     let metric: HistoryMetric
+    let showsRecords: Bool
     let unit: WeightUnit
     @Binding var isExpanded: Bool
 
@@ -183,7 +237,7 @@ private struct HistoryRow: View {
                         if let value = metric.value(of: entry, exercise: exercise) {
                             Text(metric.format(value, unit: unit)).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
                         }
-                        if !entry.records.isEmpty {
+                        if showsRecords && !entry.records.isEmpty {
                             HStack(spacing: 10) {
                                 ForEach(HistoryMetric.recordKinds.filter { entry.records[$0] != nil }) { kind in
                                     Label(kind.format(entry.records[kind]!, unit: unit), systemImage: kind.recordIcon)

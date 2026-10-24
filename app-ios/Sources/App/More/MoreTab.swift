@@ -27,6 +27,9 @@ struct MoreTab: View {
                     NavigationLink { ExerciseLibraryView() } label: {
                         Label("Exercises", systemImage: "list.bullet.rectangle")
                     }
+                    NavigationLink { GymProfilesView() } label: {
+                        Label("Gym Profiles", systemImage: "building.2")
+                    }
                 }
             }
             .screenTitle("More")
