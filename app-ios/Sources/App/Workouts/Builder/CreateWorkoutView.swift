@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Create Workout: the method step (build or import .xlsx), the name step, and the editor. The gym step is cut. An import
-/// skips the name step, because the file carries the name; its unmatched exercises are inserted as customs right away,
+/// Create Workout: the method step (build or import .xlsx), the name step, the gym step, and the editor. An import skips
+/// the name and gym steps, because the file carries both; its unmatched exercises are inserted as customs right away,
 /// while the template waits for Save to Library as a built one does.
 struct CreateWorkoutView: View {
     var onSave: (WorkoutTemplate) -> Void = { _ in }
@@ -10,10 +10,12 @@ struct CreateWorkoutView: View {
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(\.dismiss) private var dismiss
     @Observe(GymProfile.all) private var gyms
+    @Observe(GymProfile.defaultGym) private var defaultGym
     @State private var method = Method.fromScratch
     @State private var path: [Route] = []
     @State private var name = Date.now.formatted(.dateTime.month(.abbreviated).day().year())
     @State private var blocks: [WorkoutBlock] = []
+    @State private var gymID: UUID?
     @State private var imported: WorkoutTemplate?
     @State private var confirmingExit = false
     @State private var importing = false
@@ -21,7 +23,7 @@ struct CreateWorkoutView: View {
     @State private var unmatched: [String] = []
 
     private enum Method { case fromScratch, importFile }
-    private enum Route { case name, editor }
+    private enum Route { case name, gym, editor }
 
     private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -38,6 +40,7 @@ struct CreateWorkoutView: View {
                 .navigationDestination(for: Route.self) { route in
                     switch route {
                     case .name: nameStep
+                    case .gym: gymStep
                     case .editor: editor
                     }
                 }
@@ -59,7 +62,7 @@ struct CreateWorkoutView: View {
     }
 
     private var methodStep: some View {
-        step(progress: 1.0 / 3, title: "How would you like to create your workout?") {
+        step(progress: 1.0 / 4, title: "How would you like to create your workout?") {
             WizardOption(icon: "wrench.fill", title: "Build From Scratch", subtitle: "Start with a fully blank slate and no guidance", selected: method == .fromScratch) { method = .fromScratch }
             WizardOption(icon: "icloud.and.arrow.up.fill", title: "Import Workout From File", subtitle: "You can upload .xlsx files from previously exported workouts", selected: method == .importFile) { method = .importFile }
         } next: {
@@ -75,17 +78,28 @@ struct CreateWorkoutView: View {
     }
 
     private var nameStep: some View {
-        step(progress: 2.0 / 3, title: "What would you like to name this workout?") {
+        step(progress: 2.0 / 4, title: "What would you like to name this workout?") {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Name").font(AppFont.headline(14))
                 TextField("Name", text: $name)
                     .padding(12)
                     .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
                     .submitLabel(.next)
-                    .onSubmit { if !trimmedName.isEmpty { path.append(.editor) } }
+                    .onSubmit { if !trimmedName.isEmpty { path.append(.gym) } }
             }
         } next: {
-            PinnedActionButton("Next") { path.append(.editor) }.disabled(trimmedName.isEmpty)
+            PinnedActionButton("Next") { path.append(.gym) }.disabled(trimmedName.isEmpty)
+        }
+    }
+
+    private var gymStep: some View {
+        let chosen = gymID ?? defaultGym?.id
+        return step(progress: 3.0 / 4, title: "Where will you work out?") {
+            ForEach(gyms) { gym in
+                WizardOption(icon: gym.icon, title: gym.name, subtitle: "\(gym.equipment.count) pieces of equipment", selected: gym.id == chosen) { gymID = gym.id }
+            }
+        } next: {
+            PinnedActionButton("Next") { path.append(.editor) }
         }
     }
 
@@ -127,6 +141,7 @@ struct CreateWorkoutView: View {
                     var template = imported ?? WorkoutTemplate(name: trimmedName)
                     template.name = trimmedName
                     template.blocks = blocks
+                    if imported == nil { template.gymID = gymID ?? defaultGym?.id }
                     store.insert(template)
                     onSave(template)
                     dismiss()
