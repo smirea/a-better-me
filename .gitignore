@@ -28,3 +28,6 @@ dist
 # wrangler
 .wrangler
 .dev.vars
+
+# python bytecode from docs tooling
+__pycache__
