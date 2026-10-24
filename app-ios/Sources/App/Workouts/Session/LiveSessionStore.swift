@@ -31,6 +31,8 @@ final class LiveSessionStore {
     /// Smart Progression per exercise, keyed by set or sub-row ID, and the Event Log of its fills.
     var suggestions: [BlockExercise.ID: [UUID: SetSuggestion]] = [:]
     var events: [BlockExercise.ID: [ProgressionEvent]] = [:]
+    /// Warm-Up Automation runs once per session, when its live editor first opens.
+    var didAutomateWarmUps: Set<WorkoutSession.ID> = []
     private(set) var rest: RestTimer?
     /// What the restart pill "↺" goes back to: the rest the last checked set resolved to. It outlives Stop.
     private(set) var setRestSeconds: Int?
@@ -74,6 +76,7 @@ final class LiveSessionStore {
         referenceColumn = nil
         suggestions = [:]
         events = [:]
+        didAutomateWarmUps = []
     }
 
     private func setRest(_ timer: RestTimer) {

@@ -104,6 +104,7 @@ struct SessionEditor: View {
             history = earlier.map(\.blocks)
             historyLoaded = true
             ensureSuggestions()
+            automateWarmUps()
         }
         .onChange(of: blocks) { _, blocks in
             guard mode == .live else { return }
@@ -254,7 +255,7 @@ struct SessionEditor: View {
                     .foregroundStyle(Theme.textSecondary)
             }
             .padding(.horizontal, 20)
-            chips(item: item, isSuperset: blocks[block].isSuperset)
+            chips(item: item, isSuperset: blocks[block].isSuperset, hiddenWarmUps: hiddenWarmUpCount(block: block, exercise: index))
             setTable(block: block, exercise: index, fields: SetField.fields(for: exercise))
                 .padding(.horizontal, 20)
             if let note = item.note, !note.isEmpty { noteCard("Session Note", note) }
@@ -273,12 +274,13 @@ struct SessionEditor: View {
         .padding(.horizontal, 20)
     }
 
-    private func chips(item: BlockExercise, isSuperset: Bool) -> some View {
+    private func chips(item: BlockExercise, isSuperset: Bool, hiddenWarmUps: Int) -> some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
                 if mode == .live { progressionChip(item) }
                 chip("Info", "chart.bar.fill") { sheet = .info(item.exerciseID) }
-                chip("Warm Up", "flame.fill") { sheet = .warmUp }
+                Button { sheet = .warmUp } label: { chipLabel("Warm Up", "flame.fill", badge: hiddenWarmUps) }
+                    .accessibilityLabel(hiddenWarmUps > 0 ? "Warm Up, \(hiddenWarmUps) completed hidden" : "Warm Up")
                 chip("Targets", "scope") { sheet = .targets }
                 chip("Swap", "arrow.left.arrow.right") { sheet = .swap(item.exerciseID) }
                 chip("Note", "note.text") { sheet = .note }
@@ -316,13 +318,23 @@ struct SessionEditor: View {
         Button(action: action) { chipLabel(title, icon) }
     }
 
-    private func chipLabel(_ title: String, _ icon: String) -> some View {
+    private func chipLabel(_ title: String, _ icon: String, badge: Int = 0) -> some View {
         Label(title, systemImage: icon)
             .font(AppFont.medium(14))
             .foregroundStyle(Theme.textPrimary)
             .padding(.horizontal, 12)
             .frame(height: 32)
             .background(Theme.surfaceRaised, in: Capsule())
+            .overlay(alignment: .topTrailing) {
+                if badge > 0 {
+                    Text("\(badge)")
+                        .font(AppFont.headline(11))
+                        .foregroundStyle(.white)
+                        .frame(minWidth: 18, minHeight: 18)
+                        .background(Theme.muscle, in: Circle())
+                        .offset(x: 4, y: -4)
+                }
+            }
     }
 
     // MARK: Sheets
@@ -342,7 +354,7 @@ struct SessionEditor: View {
             }
         case .warmUp:
             if let position = currentPosition {
-                WarmUpSheet(workingWeightKg: firstWorkingWeight(block: position.block, exercise: position.exercise), unit: unit) { warmUps in
+                WarmUpSheet(context: warmUpContext(block: position.block, exercise: position.exercise), unit: unit) { warmUps in
                     addWarmUps(warmUps, block: position.block, exercise: position.exercise)
                 }
             }

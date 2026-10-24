@@ -7,7 +7,7 @@ extension SessionEditor {
     func setTable(block: Int, exercise index: Int, fields: [SetField]) -> some View {
         let item = blocks[block].exercises[index]
         let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
-        let rows = blocks.rows(block: block, exercise: index)
+        let rows = blocks.rows(block: block, exercise: index).filter { !isHidden($0) }
         return VStack(spacing: 8) {
             HStack(spacing: 8) {
                 Text("Set").frame(width: 36)
@@ -171,6 +171,17 @@ extension SessionEditor {
             .frame(width: Self.checkboxWidth, height: 36)
     }
 
+    /// Hide Completed Sets folds checked warm-ups behind the Warm Up chip's badge.
+    func isHidden(_ path: RowPath) -> Bool {
+        guard mode == .live, defaults.workout.warmUp.hideCompletedSets else { return false }
+        let set = blocks[path.block].exercises[path.exercise].sets[path.set]
+        return set.type == .warmUp && set.isCompleted
+    }
+
+    func hiddenWarmUpCount(block: Int, exercise index: Int) -> Int {
+        blocks.rows(block: block, exercise: index).count(where: isHidden)
+    }
+
     // MARK: Values
 
     /// What a row shows and logs: its log once checked, else what was typed, else the prefill.
@@ -288,12 +299,51 @@ extension SessionEditor {
         blocks[block].exercises[index].sets = sets
     }
 
-    /// The weight the first working set would log, which the warm-up scheme scales.
-    func firstWorkingWeight(block: Int, exercise index: Int) -> Double? {
+    /// What the first working set would log, with the exercise's warm-up settings; the calculator scales from it.
+    func warmUpContext(block: Int, exercise index: Int) -> WarmUpContext {
         let item = blocks[block].exercises[index]
-        guard let set = item.sets.firstIndex(where: { $0.type != .warmUp }) else { return nil }
-        let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
-        return entry(RowPath(block: block, exercise: index, set: set), previous: previous).weightKg
+        let exercise = catalog.exercise(item.exerciseID)
+        let overrides = ExerciseSettings.of(item.exerciseID, in: exerciseSettings)?.overrides
+        let settings = defaults.workout.warmUp
+        var context = WarmUpContext(
+            scheme: overrides?.warmUpScheme ?? settings.schemes[exercise?.restCategory ?? .upperIsolation] ?? WarmUpStep.standard,
+            automation: overrides?.warmUpAutomation ?? settings.automation,
+            simplifyPlates: settings.simplifyPlates
+        )
+        if let set = item.sets.firstIndex(where: { $0.type != .warmUp }) {
+            let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
+            let value = entry(RowPath(block: block, exercise: index, set: set), previous: previous)
+            context.workingWeightKg = value.weightKg
+            context.reps = value.reps ?? item.sets[set].target?.repsMax
+            context.rir = value.rir
+        }
+        let muscles = Set(exercise?.primaryMuscles ?? [])
+        let earlier = blocks.flatMap(\.exercises).prefix { $0.id != item.id }
+        context.isFresh = !earlier.contains { other in
+            other.sets.contains { $0.type != .warmUp && $0.isCompleted }
+                && !muscles.isDisjoint(with: catalog.exercise(other.exerciseID)?.primaryMuscles ?? [])
+        }
+        return context
+    }
+
+    /// Warm-Up Automation: exercises that track weight and have no warm-ups yet get their calculated rows.
+    func automateWarmUps() {
+        guard mode == .live, !store.didAutomateWarmUps.contains(session.id) else { return }
+        store.didAutomateWarmUps.insert(session.id)
+        for (b, block) in blocks.enumerated() {
+            for (e, item) in block.exercises.enumerated() {
+                guard SetField.fields(for: catalog.exercise(item.exerciseID)).contains(where: \.isWeight),
+                      !item.sets.contains(where: { $0.type == .warmUp }) else { continue }
+                let context = warmUpContext(block: b, exercise: e)
+                guard context.automation != .none else { continue }
+                let rows = SessionFlow.warmUps(context, mode: context.automation == .smart ? .smart : .scheme, unit: unit)
+                guard !rows.isEmpty else { continue }
+                addWarmUps(rows.map { ($0.weightKg, $0.reps) }, block: b, exercise: e)
+                // The new rows need suggestions of their own; the blocks change recomputes the exercise.
+                store.suggestions[item.id] = nil
+                store.events[item.id] = nil
+            }
+        }
     }
 
     func remove(_ id: BlockExercise.ID) {

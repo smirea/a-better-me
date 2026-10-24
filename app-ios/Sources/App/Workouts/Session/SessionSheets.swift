@@ -109,50 +109,66 @@ struct RestTimerSheet: View {
     }
 }
 
-/// The Warm Up chip's Set Calculator in Scheme mode, plus "Add empty warm-up set". Smart warm-ups are cut from
-/// milestone 1.
+/// The Warm Up chip's Set Calculator: Smart (percentages of the estimated 1-RM) or the exercise's Scheme, plus "Add
+/// empty warm-up set".
 struct WarmUpSheet: View {
-    let workingWeightKg: Double?
+    let context: WarmUpContext
     let unit: WeightUnit
     let onAdd: ([(weightKg: Double?, reps: Int?)]) -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var mode: WarmUpMode
 
-    private var steps: [WarmUpScheme.Step] {
-        guard let workingWeightKg, workingWeightKg > 0 else { return [] }
-        return WarmUpScheme.sets(workingWeight: unit.fromKg(workingWeightKg), increment: WarmUpScheme.increment(for: unit), steps: WarmUpStep.standard)
+    init(context: WarmUpContext, unit: WeightUnit, onAdd: @escaping ([(weightKg: Double?, reps: Int?)]) -> Void) {
+        self.context = context
+        self.unit = unit
+        self.onAdd = onAdd
+        _mode = State(initialValue: context.automation == .scheme ? .scheme : .smart)
     }
+
+    private var rows: [WarmUpRow] { SessionFlow.warmUps(context, mode: mode, unit: unit) }
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    if steps.isEmpty {
-                        Text("Enter a weight for the first working set to calculate warm-ups.")
+                    if rows.isEmpty {
+                        Text(context.workingWeightKg == nil ? "Enter a weight for the first working set to calculate warm-ups." : "No warm-up lands below the working weight.")
                             .foregroundStyle(Theme.textSecondary)
                     }
-                    ForEach(steps, id: \.self) { step in
+                    ForEach(rows, id: \.self) { row in
                         HStack(spacing: 12) {
                             SetBadge(type: .warmUp, number: 0)
                             VStack(alignment: .leading) {
-                                Text("\(step.percent)% of working weight").font(AppFont.medium(15))
-                                Text("\(step.weight.formatted()) \(unit.rawValue) × \(step.reps)")
+                                Text(row.label).font(AppFont.medium(15))
+                                Text("\(unit.format(kg: row.weightKg)) \(unit.rawValue)")
                                     .font(AppFont.caption())
                                     .foregroundStyle(Theme.textSecondary)
                             }
                             Spacer()
-                            Button("Add", systemImage: "plus.circle.fill") { add([step]) }
+                            Text("\(row.reps)")
+                                .font(AppFont.medium(15))
+                                .frame(width: 44, height: 32)
+                                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 8))
+                            Button("Add", systemImage: "plus") { add([row]) }
                                 .labelStyle(.iconOnly)
-                                .font(.title2)
+                                .buttonStyle(.glass)
+                                .accessibilityLabel("Add \(row.label) warm-up")
                         }
                     }
-                    if !steps.isEmpty {
-                        Button("Add All Warm-Up Sets") { add(steps) }
+                    if !rows.isEmpty {
+                        Button("Add All Warm-Up Sets") { add(rows) }
                     }
                 } header: {
                     HStack {
                         Text("Set Calculator")
                         Spacer()
-                        Text("Scheme")
+                        Picker("Calculator", selection: $mode) {
+                            Text("Smart").tag(WarmUpMode.smart)
+                            Text("Scheme").tag(WarmUpMode.scheme)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 160)
+                        .accessibilityLabel("Warm-up calculator")
                     }
                 }
                 Section("More Options") {
@@ -180,8 +196,8 @@ struct WarmUpSheet: View {
         .presentationDetents([.medium, .large])
     }
 
-    private func add(_ steps: [WarmUpScheme.Step]) {
-        onAdd(steps.map { (unit.toKg($0.weight), $0.reps) })
+    private func add(_ rows: [WarmUpRow]) {
+        onAdd(rows.map { ($0.weightKg, $0.reps) })
         dismiss()
     }
 }
