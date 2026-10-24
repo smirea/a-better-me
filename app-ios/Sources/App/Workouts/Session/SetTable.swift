@@ -199,7 +199,6 @@ extension SessionEditor {
         return SessionFlow.prefill(for: path, in: blocks, previous: previous, suggestion: suggestion, rirTracking: defaults.workout.rirTracking, unit: unit)
     }
 
-    /// The live session's Smart Progression row for `path`, if the exercise has been suggested yet.
     func suggestion(for path: RowPath) -> SetSuggestion? {
         guard mode == .live else { return nil }
         return store.suggestions[blocks[path.block].exercises[path.exercise].id]?[blocks.rowID(at: path)]
@@ -346,9 +345,7 @@ extension SessionEditor {
                 let rows = SessionFlow.warmUps(context, mode: context.automation == .smart ? .smart : .scheme, unit: unit)
                 guard !rows.isEmpty else { continue }
                 addWarmUps(rows.map { ($0.weightKg, $0.reps) }, block: b, exercise: e)
-                // The new rows need suggestions of their own; the blocks change recomputes the exercise.
-                store.suggestions[item.id] = nil
-                store.events[item.id] = nil
+                store.invalidateSuggestions(for: item.id)
             }
         }
     }
@@ -360,8 +357,7 @@ extension SessionEditor {
 
     /// The builder's swap keeps sets and targets; mid-session it also drops what was logged against the old exercise.
     func swap(_ id: BlockExercise.ID, to exerciseID: ExerciseID) {
-        store.suggestions[id] = nil
-        store.events[id] = nil
+        store.invalidateSuggestions(for: id)
         blocks.swap(id, to: exerciseID)
         guard let at = blocks.locate(id) else { return }
         blocks[at.block].exercises[at.item].sets = blocks[at.block].exercises[at.item].sets.map(\.planned)

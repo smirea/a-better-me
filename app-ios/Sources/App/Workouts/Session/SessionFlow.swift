@@ -225,7 +225,6 @@ enum SessionFlow {
         if undone.contains(.removed) { displaced += changes.removed }
         plan.removeAll { $0.exercises.isEmpty }
 
-        // Each displaced exercise rejoins the template block it came from, or stands alone where that block was.
         for item in displaced.sorted(by: { templateOrder[$0.id] ?? .max < templateOrder[$1.id] ?? .max }) {
             guard let templateIndex = template.firstIndex(where: { $0.exercises.contains { $0.id == item.id } }) else {
                 plan.append(WorkoutBlock(exercises: [item]))
@@ -295,7 +294,6 @@ extension SessionFlow {
         return rows[(index + 1)...].filter { (($0.sub == nil) == (path.sub == nil)) && isOpen($0) && value($0) == edited }
     }
 
-    /// The log of the matching row in the last performance.
     static func previousLog(for path: RowPath, in blocks: [WorkoutBlock], previous: [WorkoutSet]) -> SetLog? {
         guard let set = blocks[path.block].exercises[path.exercise].sets.previousSet(at: path.set, in: previous) else { return nil }
         guard let sub = path.sub else { return set.log }

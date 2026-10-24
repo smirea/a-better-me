@@ -196,7 +196,6 @@ struct Keypad: View {
         .accessibilityLabel(value.map { "RIR \($0 >= 6 ? "6+" : "\($0)")" } ?? "RIR unknown")
     }
 
-    /// F | P: full reps or partial reps.
     private var partialToggle: some View {
         HStack(spacing: 0) {
             partialHalf(false, "F")

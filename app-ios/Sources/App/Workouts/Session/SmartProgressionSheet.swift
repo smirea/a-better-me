@@ -42,6 +42,7 @@ struct SmartProgressionSheet: View {
                 }
             }
         }
+        .tint(Theme.textPrimary)
         .presentationDetents([.medium, .large])
     }
 

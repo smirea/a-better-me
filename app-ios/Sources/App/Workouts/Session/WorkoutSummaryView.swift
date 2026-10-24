@@ -119,7 +119,6 @@ struct WorkoutSummaryView: View {
     }
 
     private var endedAt: Date { session.endedAt ?? finishedAt }
-    /// Paused time is not time under the bar.
     private var duration: TimeInterval { endedAt.timeIntervalSince(session.startedAt) - TimeInterval(session.pausedSeconds) }
 
     private func setEnd(_ date: Date) {

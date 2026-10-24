@@ -108,4 +108,16 @@ struct SmartProgressionTests {
         #expect(changed[sets[1].id]!.prefill == SetSuggestion.Values(weight: 40, reps: 12, rir: 2))
         #expect(changed[sets[1].id]!.adjustedReps == nil)
     }
+
+    @Test func applyInSessionLeavesWarmUpsAlone() {
+        var sets = [WorkoutSet(type: .warmUp)] + CurlFixture.sets
+        let previous = [WorkoutSet(type: .warmUp, log: CurlFixture.logged(20, 8, nil))] + CurlFixture.previous
+        let current = CurlFixture.suggest(sets: sets, previous: previous)
+        #expect(current[sets[0].id]!.prefill == SetSuggestion.Values(weight: 20, reps: 8, rir: nil))
+        sets[1].log = CurlFixture.logged(40, 12, 1, at: 10)
+        let changed = SmartProgression.applyInSession(sets: sets, current: current, settings: ProgressionSettings(), increment: 5, rirTracking: true, unit: CurlFixture.lb)
+        #expect(Set(changed.keys) == [sets[2].id, sets[3].id])
+        let event = SmartProgression.event(at: .now, sets: sets, suggestions: current)
+        #expect(event.rows.map(\.label) == ["D Set 1", "2 Set 2", "3 Set 3"])
+    }
 }

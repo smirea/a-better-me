@@ -193,6 +193,7 @@ struct WarmUpSheet: View {
                 }
             }
         }
+        .tint(Theme.textPrimary)
         .presentationDetents([.medium, .large])
     }
 

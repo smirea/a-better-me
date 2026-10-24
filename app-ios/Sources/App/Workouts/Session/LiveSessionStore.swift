@@ -86,6 +86,12 @@ final class LiveSessionStore {
         return Int(now.timeIntervalSince(pausedAt))
     }
 
+    /// Drops an exercise's suggestions and log so the editor's next `blocks` change recomputes them over its new rows.
+    func invalidateSuggestions(for id: BlockExercise.ID) {
+        suggestions[id] = nil
+        events[id] = nil
+    }
+
     /// Forgets everything when the session ends or is discarded.
     func reset() {
         stopRest()

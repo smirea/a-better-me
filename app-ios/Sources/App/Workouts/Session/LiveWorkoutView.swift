@@ -411,7 +411,13 @@ struct SessionEditor: View {
         case .restTimer:
             RestTimerSheet()
         case .settings:
-            NavigationStack { WorkoutSettingsView() }
+            NavigationStack {
+                WorkoutSettingsView().toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close", systemImage: "xmark") { self.sheet = nil }
+                    }
+                }
+            }
         }
     }
 
@@ -447,7 +453,6 @@ struct SessionEditor: View {
 
     // MARK: Smart Progression
 
-    /// The global Smart Progression settings with the exercise's overrides on top.
     func progressionSettings(for exerciseID: ExerciseID) -> ProgressionSettings {
         var settings = defaults.workout.progression
         let overrides = ExerciseSettings.of(exerciseID, in: exerciseSettings)?.overrides
@@ -467,6 +472,7 @@ struct SessionEditor: View {
             )
             store.suggestions[item.id] = suggestions
             store.events[item.id] = [SmartProgression.event(at: .now, sets: item.sets, suggestions: suggestions)]
+            applyProgression(to: item.id)
         }
     }
 

@@ -88,20 +88,22 @@ enum SmartProgression {
         }
     }
 
-    /// Apply in session: the unlogged rows of an exercise, recomputed from its most recently logged set. Returns only
-    /// the rows whose suggestion differs from `current`, so the caller can merge them and log the change.
+    /// Apply in session: the unlogged working rows of an exercise, recomputed from its most recently logged working
+    /// set. Warm-ups keep their fill, since a working set says nothing about how to warm up. Returns only the rows
+    /// whose suggestion differs from `current`, so the caller can merge them and log the change.
     static func applyInSession(sets: [WorkoutSet], current: [UUID: SetSuggestion], settings: ProgressionSettings, increment: Double, rirTracking: Bool, unit: WeightUnit) -> [UUID: SetSuggestion] {
-        guard let latest = sets.compactMap(\.log).max(by: { $0.completedAt < $1.completedAt }) else { return [:] }
+        let working = sets.filter { $0.type != .warmUp }
+        guard let latest = working.compactMap(\.log).max(by: { $0.completedAt < $1.completedAt }) else { return [:] }
         let fresh = compute(sets: sets, settings: settings, increment: increment, rirTracking: rirTracking, unit: unit) { _ in latest }
-        let openRows = Set(sets.filter { !$0.isCompleted }.flatMap { [$0.id] + $0.subSets.filter { $0.log == nil }.map(\.id) })
+        let openRows = Set(working.filter { !$0.isCompleted }.flatMap { [$0.id] + $0.subSets.filter { $0.log == nil }.map(\.id) })
         return fresh.filter { openRows.contains($0.key) && current[$0.key] != $0.value }
     }
 
-    /// The Event Log rows for the main rows of `sets` that have a suggestion, in set order.
+    /// The Event Log rows for the working sets of `sets` that have a suggestion, in set order.
     static func event(at date: Date, sets: [WorkoutSet], suggestions: [UUID: SetSuggestion]) -> ProgressionEvent {
         let rows = sets.indices.compactMap { index -> ProgressionEvent.Row? in
             let set = sets[index]
-            guard let suggestion = suggestions[set.id], !suggestion.isEmpty else { return nil }
+            guard set.type != .warmUp, let suggestion = suggestions[set.id], !suggestion.isEmpty else { return nil }
             let number = sets.number(at: index)
             return ProgressionEvent.Row(
                 label: "\(set.type.badge ?? String(number)) Set \(number)",
