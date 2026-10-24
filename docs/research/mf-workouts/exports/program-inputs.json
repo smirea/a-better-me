@@ -235,5 +235,16 @@
 		},
 		"deload": true,
 		"experience": "intermediate"
+	},
+	"program-p25-str-3x-fb-40-60-pullups-yes": {
+		"goal": "strength",
+		"daysPerWeek": 3,
+		"split": "fullBody",
+		"sessionMinutes": "40-60",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": false,
+		"experience": "intermediate",
+		"exerciseAssessment": "owner answers plus \"5 pull-ups\" yes"
 	}
 }

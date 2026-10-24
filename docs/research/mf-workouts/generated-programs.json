@@ -127323,6 +127323,3951 @@
 					}
 				]
 			}
+		},
+		{
+			"export": "exports/program-p25-str-3x-fb-40-60-pullups-yes.xlsx",
+			"inputs": {
+				"goal": "strength",
+				"daysPerWeek": 3,
+				"split": "fullBody",
+				"sessionMinutes": "40-60",
+				"repProgression": "noPreference",
+				"muscleFocus": {},
+				"deload": false,
+				"experience": "intermediate",
+				"exerciseAssessment": "owner answers plus \"5 pull-ups\" yes"
+			},
+			"output": {
+				"name": "ZZ P25 Str assess pullups",
+				"cycles": 7,
+				"deload": "None",
+				"color": "Red",
+				"icon": "Rocket",
+				"blocks": [1],
+				"cycleBlocks": [1, 1, 1, 1, 1, 1, 1],
+				"days": [
+					{
+						"name": "Workout A",
+						"gym": "Aquasol 6770",
+						"exercises": [
+							{
+								"id": "19f5c6f170d88013ae78cc9e6c967813",
+								"name": "Pause Barbell Bench Press",
+								"type": "Multi-joint (compound)",
+								"primary": ["Chest"],
+								"secondary": ["Triceps", "Front Delts"],
+								"movementPattern": ["Horizontal Push"],
+								"classification": {
+									"hypertrophy": ["Primary Compound"],
+									"strength": ["Primary Compound"]
+								},
+								"levels": {
+									"hypertrophyPrimary": 1.0,
+									"strengthPrimary": 1.0
+								},
+								"exclusionGroupings": ["Paused bench press", "Primary Barbell Bench press"],
+								"exerciseGroup": ["Flat barbell bench presses", "Barbell bench presses"],
+								"preconditions": ["Barbell bench press preconditions"],
+								"searchBoost": 7.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 1,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1eb5c6f170d8801a8641c62efb545970",
+								"name": "Overhand Grip Plate-Loaded Machine-Assisted Pull-Up",
+								"type": "Multi-joint (compound)",
+								"primary": ["Biceps", "Lats"],
+								"secondary": ["Forearms", "Rear Delts", "Upper Back"],
+								"movementPattern": ["Vertical Pull"],
+								"classification": {
+									"hypertrophy": ["Secondary Compound", "Primary Compound"],
+									"strength": ["Secondary Compound", "Primary Compound"]
+								},
+								"levels": {
+									"hypertrophyPrimary": 2.0,
+									"hypertrophySecondary": 2.5,
+									"strengthPrimary": 2.0,
+									"strengthSecondary": 2.5
+								},
+								"exclusionGroupings": ["Assisted overhand grip pull-ups/regressions"],
+								"exerciseGroup": [
+									"Machine assisted pull-ups",
+									"Assisted pull-ups",
+									"Overhand medium grip pull-ups",
+									"Overhand grip pull-ups"
+								],
+								"preconditions": [],
+								"searchBoost": 6.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 11,
+											"repsMax": 13,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 11,
+											"repsMax": 13,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 11,
+											"repsMax": 13,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 11,
+											"repsMax": 13,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 11,
+											"repsMax": 13,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 11,
+											"repsMax": 13,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 8,
+											"repsMax": 10,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 8,
+											"repsMax": 10,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 8,
+											"repsMax": 10,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a05c6f170d88000945dfdee74e96234",
+								"name": "Seated Neutral Grip Dumbbell Overhead Press",
+								"type": "Multi-joint (compound)",
+								"primary": ["Front Delts"],
+								"secondary": ["Side Delts", "Triceps", "Upper Traps", "Serratus"],
+								"movementPattern": ["Vertical Push"],
+								"classification": {
+									"hypertrophy": ["Secondary Compound", "Primary Compound"],
+									"strength": ["Secondary Compound", "Primary Compound"]
+								},
+								"levels": {
+									"hypertrophyPrimary": 2.0,
+									"hypertrophySecondary": 2.0,
+									"strengthPrimary": 2.0,
+									"strengthSecondary": 1.0
+								},
+								"exclusionGroupings": ["Seated dumbbell overhead press", "Neutral-grip dumbbell overhead press"],
+								"exerciseGroup": ["Dumbbell overhead presses"],
+								"preconditions": [],
+								"searchBoost": 8.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "2175c6f170d88016a63deff6b692c180",
+								"name": "Pause Front Squat",
+								"type": "Multi-joint (compound)",
+								"primary": ["Glutes", "Quads", "Adductors"],
+								"secondary": ["Lower Back", "Upper Back"],
+								"movementPattern": ["Squat"],
+								"classification": {
+									"hypertrophy": ["Secondary Compound"],
+									"strength": ["Secondary Compound"]
+								},
+								"levels": {
+									"hypertrophySecondary": 3.0,
+									"strengthSecondary": 1.0
+								},
+								"exclusionGroupings": ["Primary front squats", "Pause/tempo squat"],
+								"exerciseGroup": ["Front squats"],
+								"preconditions": [],
+								"searchBoost": 6.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a15c6f170d88055bfbcf0b2e871a481",
+								"name": "Standing Machine Lateral Raise",
+								"type": "Single joint (isolation)",
+								"primary": ["Side Delts"],
+								"secondary": ["Front Delts", "Upper Traps"],
+								"movementPattern": ["Lateral Delt Accessory"],
+								"classification": {
+									"hypertrophy": ["Isolation/Accessory"],
+									"strength": ["Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyAccessory": 1.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Standing machine lateral raises"],
+								"exerciseGroup": ["Machine lateral raises"],
+								"preconditions": [],
+								"searchBoost": 7.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a05c6f170d8806ab70ee93a5c79d733",
+								"name": "Dumbbell Fly",
+								"type": "Single joint (isolation)",
+								"primary": ["Chest"],
+								"secondary": ["Front Delts"],
+								"movementPattern": ["Chest Accessory"],
+								"classification": {
+									"hypertrophy": ["Isolation/Accessory"],
+									"strength": ["Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyAccessory": 1.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Flat/low incline dumbbell flies"],
+								"exerciseGroup": ["Dumbbell flies"],
+								"preconditions": [],
+								"searchBoost": 10.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a15c6f170d880caa8cfd43365a39d67",
+								"name": "Pin-Loaded Machine Donkey Calf Raise",
+								"type": "Single joint (isolation)",
+								"primary": ["Calves"],
+								"secondary": [],
+								"movementPattern": ["Calf Accessory"],
+								"classification": {
+									"hypertrophy": ["Isolation/Accessory"],
+									"strength": ["Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyAccessory": 1.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Donkey calf raises"],
+								"exerciseGroup": ["Donkey calf raises", "Machine calf raises"],
+								"preconditions": [],
+								"searchBoost": 6.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a15c6f170d88061b074caacc5a76081",
+								"name": "Barbell Shrug",
+								"type": "Single joint (isolation)",
+								"primary": ["Upper Traps"],
+								"secondary": ["Forearms", "Upper Back"],
+								"movementPattern": ["Upper Trap Accessory"],
+								"classification": {
+									"hypertrophy": ["Isolation/Accessory"],
+									"strength": ["Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyAccessory": 1.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Barbell shrugs"],
+								"exerciseGroup": [],
+								"preconditions": [],
+								"searchBoost": 8.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "2a05c6f170d880f99f47e1aed3f5f87c",
+								"name": "Head Harness Neck Extension",
+								"type": "Core",
+								"primary": ["Neck"],
+								"secondary": [],
+								"movementPattern": ["Neck Extensor Accessory"],
+								"classification": {
+									"hypertrophy": ["Isolation/Accessory"],
+									"strength": ["Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyAccessory": 1.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Neck extension"],
+								"exerciseGroup": ["Neck flexions/extensions"],
+								"preconditions": [],
+								"searchBoost": 5.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							}
+						]
+					},
+					{
+						"rest": true
+					},
+					{
+						"name": "Workout B",
+						"gym": "Aquasol 6770",
+						"exercises": [
+							{
+								"id": "1a05c6f170d880c5ad11c99b302b1bf9",
+								"name": "Barbell Overhead Press",
+								"type": "Multi-joint (compound)",
+								"primary": ["Front Delts"],
+								"secondary": ["Side Delts", "Triceps", "Upper Traps", "Upper Back", "Serratus"],
+								"movementPattern": ["Vertical Push"],
+								"classification": {
+									"hypertrophy": ["Secondary Compound", "Primary Compound"],
+									"strength": ["Secondary Compound", "Primary Compound"]
+								},
+								"levels": {
+									"hypertrophyPrimary": 1.0,
+									"hypertrophySecondary": 1.0,
+									"strengthPrimary": 1.0,
+									"strengthSecondary": 1.0
+								},
+								"exclusionGroupings": ["Standing barbell overhead presses"],
+								"exerciseGroup": ["Barbell overhead presses"],
+								"preconditions": ["Barbell overhead press preconditions"],
+								"searchBoost": 10.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 1,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a25c6f170d8803d8231d083fdd65458",
+								"name": "Barbell Back Squat",
+								"type": "Multi-joint (compound)",
+								"primary": ["Glutes", "Quads", "Adductors"],
+								"secondary": ["Lower Back"],
+								"movementPattern": ["Squat"],
+								"classification": {
+									"hypertrophy": ["Secondary Compound", "Primary Compound"],
+									"strength": ["Secondary Compound", "Primary Compound"]
+								},
+								"levels": {
+									"hypertrophyPrimary": 1.0,
+									"hypertrophySecondary": 1.0,
+									"strengthPrimary": 1.0,
+									"strengthSecondary": 1.0
+								},
+								"exclusionGroupings": ["Back squats", "General back squats"],
+								"exerciseGroup": ["Back squats", "Min-Max program squat variations"],
+								"preconditions": [],
+								"searchBoost": 10.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 3,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 1,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1cf5c6f170d880b0b8dbf1af3f1cd45c",
+								"name": "Bent-Over Overhand Grip T-Bar Row",
+								"type": "Multi-joint (compound)",
+								"primary": ["Lats", "Rear Delts", "Upper Back"],
+								"secondary": ["Forearms", "Biceps", "Lower Back", "Upper Traps"],
+								"movementPattern": ["Horizontal Pull"],
+								"classification": {
+									"hypertrophy": ["Secondary Compound", "Primary Compound"],
+									"strength": ["Secondary Compound", "Primary Compound"]
+								},
+								"levels": {
+									"hypertrophyPrimary": 1.0,
+									"hypertrophySecondary": 1.0,
+									"strengthPrimary": 2.0,
+									"strengthSecondary": 1.0
+								},
+								"exclusionGroupings": ["Bent-over T-bar rows", "Overhand grip T-bar rows"],
+								"exerciseGroup": ["T-bar rows"],
+								"preconditions": [],
+								"searchBoost": 5.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "30b5c6f170d880f5a655d2a1e9799364",
+								"name": "Shrug Machine Romanian Deadlift",
+								"type": "Multi-joint (compound)",
+								"primary": ["Hamstrings", "Glutes", "Adductors"],
+								"secondary": ["Forearms", "Lower Back", "Upper Back"],
+								"movementPattern": ["Hip Hinge", "Hamstring Accessory"],
+								"classification": {
+									"hypertrophy": ["Secondary Compound", "Primary Compound"],
+									"strength": ["Secondary Compound"]
+								},
+								"levels": {
+									"hypertrophyPrimary": 1.0,
+									"hypertrophySecondary": 1.0,
+									"strengthSecondary": 1.0
+								},
+								"exclusionGroupings": ["Bilateral Romanian deadlifts"],
+								"exerciseGroup": [],
+								"preconditions": [],
+								"searchBoost": 6.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a15c6f170d880f1ba5ef781b583618a",
+								"name": "Standing Dumbbell Biceps Curl",
+								"type": "Single joint (isolation)",
+								"primary": ["Biceps"],
+								"secondary": [],
+								"movementPattern": ["Biceps Accessory"],
+								"classification": {
+									"hypertrophy": ["Isolation/Accessory"],
+									"strength": ["Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyAccessory": 1.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Basic dumbbell biceps curls", "Standing free weight biceps curl"],
+								"exerciseGroup": ["Dumbbell biceps curls"],
+								"preconditions": [],
+								"searchBoost": 10.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a15c6f170d880db8633e3bec8b7e8fe",
+								"name": "Neutral Grip Machine Rear Delt Fly",
+								"type": "Single joint (isolation)",
+								"primary": ["Rear Delts"],
+								"secondary": ["Side Delts", "Upper Traps", "Upper Back"],
+								"movementPattern": ["Rear Delt Accessory"],
+								"classification": {
+									"hypertrophy": ["Isolation/Accessory"],
+									"strength": ["Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyAccessory": 1.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Pec deck rear delt flies"],
+								"exerciseGroup": ["Machine reverse flies"],
+								"preconditions": [],
+								"searchBoost": 9.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a35c6f170d88029bc9ff9ded538758c",
+								"name": "Seated Hamstring Curl",
+								"type": "Single joint (isolation)",
+								"primary": ["Hamstrings"],
+								"secondary": ["Calves"],
+								"movementPattern": ["Hamstring Accessory"],
+								"classification": {
+									"hypertrophy": ["Isolation/Accessory"],
+									"strength": ["Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyAccessory": 1.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Seated leg curls", "Seated machine hamstring curls"],
+								"exerciseGroup": ["Seated leg curls"],
+								"preconditions": [],
+								"searchBoost": 9.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1d15c6f170d880a886e3e2426f08d7eb",
+								"name": "Wide Grip Cable Row",
+								"type": "Multi-joint (compound)",
+								"primary": ["Rear Delts", "Upper Back"],
+								"secondary": ["Forearms", "Biceps", "Lats", "Upper Traps"],
+								"movementPattern": ["Horizontal Pull", "Upper Back Accessory"],
+								"classification": {
+									"hypertrophy": ["Secondary Compound", "Isolation/Accessory"],
+									"strength": ["Secondary Compound", "Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophySecondary": 3.0,
+									"hypertrophyAccessory": 1.0,
+									"strengthSecondary": 3.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Seated cable rows"],
+								"exerciseGroup": ["Seated cable rows"],
+								"preconditions": [],
+								"searchBoost": 6.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a35c6f170d88097ba78ff6255530f23",
+								"name": "Center-Pendulum Reverse Hyperextension",
+								"type": "Single joint (isolation)",
+								"primary": ["Glutes"],
+								"secondary": ["Hamstrings", "Lower Back", "Adductors"],
+								"movementPattern": ["Glute Max Accessory"],
+								"classification": {
+									"hypertrophy": ["Isolation/Accessory"],
+									"strength": ["Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyAccessory": 1.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Reverse hypers"],
+								"exerciseGroup": ["Reverse hypers"],
+								"preconditions": [],
+								"searchBoost": 6.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							}
+						]
+					},
+					{
+						"rest": true
+					},
+					{
+						"name": "Workout C",
+						"gym": "Aquasol 6770",
+						"exercises": [
+							{
+								"id": "1a15c6f170d880e9bd65f120ac4908a0",
+								"name": "Pendlay Row",
+								"type": "Multi-joint (compound)",
+								"primary": ["Lats", "Rear Delts", "Upper Back"],
+								"secondary": ["Forearms", "Biceps", "Lower Back", "Upper Traps"],
+								"movementPattern": ["Horizontal Pull"],
+								"classification": {
+									"hypertrophy": ["Secondary Compound"],
+									"strength": ["Primary Compound"]
+								},
+								"levels": {
+									"hypertrophySecondary": 3.0,
+									"strengthPrimary": 1.0
+								},
+								"exclusionGroupings": ["Pendlay rows", "Barbell rows"],
+								"exerciseGroup": ["Pendlay rows", "Barbell rows"],
+								"preconditions": [],
+								"searchBoost": 8.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 11,
+											"repsMax": 13,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 11,
+											"repsMax": 13,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 11,
+											"repsMax": 13,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 11,
+											"repsMax": 13,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 11,
+											"repsMax": 13,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 11,
+											"repsMax": 13,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 8,
+											"repsMax": 10,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 8,
+											"repsMax": 10,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 8,
+											"repsMax": 10,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a35c6f170d8807aae84e2c6eb136395",
+								"name": "Sumo Deadlift",
+								"type": "Multi-joint (compound)",
+								"primary": ["Glutes", "Adductors"],
+								"secondary": ["Hamstrings", "Forearms", "Lower Back", "Quads", "Upper Back"],
+								"movementPattern": ["Hip Hinge"],
+								"classification": {
+									"hypertrophy": ["Secondary Compound"],
+									"strength": ["Primary Compound"]
+								},
+								"levels": {
+									"hypertrophySecondary": 3.0,
+									"strengthPrimary": 1.0
+								},
+								"exclusionGroupings": ["Sumo deadlifts"],
+								"exerciseGroup": ["Deadlifts", "Sumo deadlifts"],
+								"preconditions": [],
+								"searchBoost": 9.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 5,
+											"repsMax": 7,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 2,
+											"repsMax": 4,
+											"rir": 1,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a05c6f170d880ccbf5aeb7f1b3fcee5",
+								"name": "45° Incline Smith Machine Press",
+								"type": "Multi-joint (compound)",
+								"primary": ["Chest", "Front Delts"],
+								"secondary": ["Triceps"],
+								"movementPattern": ["Horizontal Push"],
+								"classification": {
+									"hypertrophy": ["Secondary Compound"],
+									"strength": ["Secondary Compound"]
+								},
+								"levels": {
+									"hypertrophySecondary": 1.0,
+									"strengthSecondary": 1.0
+								},
+								"exclusionGroupings": [
+									"45° incline barbell presses",
+									"Low to 45° incline Smith machine presses",
+									"45° to high incline barbell presses",
+									"High to 45° incline Smith machine presses"
+								],
+								"exerciseGroup": ["Machine incline presses", "Smith machine bench presses"],
+								"preconditions": [],
+								"searchBoost": 6.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 6,
+											"repsMax": 8,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 2,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 4,
+											"repsMax": 6,
+											"rir": 1,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "2ae5c6f170d88069bb1dc458458a3a78",
+								"name": "Overhand Grip Pin-Loaded Machine Lat Pulldown",
+								"type": "Multi-joint (compound)",
+								"primary": ["Biceps", "Lats"],
+								"secondary": ["Forearms", "Rear Delts", "Upper Back"],
+								"movementPattern": ["Vertical Pull", "Lat Accessory"],
+								"classification": {
+									"hypertrophy": ["Secondary Compound", "Primary Compound", "Isolation/Accessory"],
+									"strength": ["Secondary Compound", "Primary Compound", "Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyPrimary": 1.0,
+									"hypertrophySecondary": 1.0,
+									"hypertrophyAccessory": 1.0,
+									"strengthPrimary": 2.5,
+									"strengthSecondary": 1.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Overhand pulldowns"],
+								"exerciseGroup": ["Overhand grip lat pulldowns", "Lat pulldowns", "Machine lat pulldowns"],
+								"preconditions": [],
+								"searchBoost": 9.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 1,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a15c6f170d88003bf5cd77bef6a5034",
+								"name": "EZ Bar Skull Crusher",
+								"type": "Single joint (isolation)",
+								"primary": ["Triceps"],
+								"secondary": [],
+								"movementPattern": ["Triceps Accessory"],
+								"classification": {
+									"hypertrophy": ["Isolation/Accessory"],
+									"strength": ["Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyAccessory": 1.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Lying bar triceps extensions"],
+								"exerciseGroup": ["Lying triceps extensions", "Lying bar triceps extensions"],
+								"preconditions": [],
+								"searchBoost": 8.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a15c6f170d8803a8018d7745dd7b6ce",
+								"name": "Plate-Loaded Machine Pullover",
+								"type": "Single joint (isolation)",
+								"primary": ["Lats"],
+								"secondary": ["Chest", "Rear Delts"],
+								"movementPattern": ["Lat Accessory"],
+								"classification": {
+									"hypertrophy": ["Isolation/Accessory"],
+									"strength": ["Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyAccessory": 1.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Machine pullovers"],
+								"exerciseGroup": ["Machine pullovers", "Lat pullovers"],
+								"preconditions": [],
+								"searchBoost": 5.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a25c6f170d880b2a727d44db1872fd0",
+								"name": "Single Leg Plate-Loaded Leg Extension",
+								"type": "Single joint (isolation)",
+								"primary": ["Quads"],
+								"secondary": [],
+								"movementPattern": ["Quad Accessory"],
+								"classification": {
+									"hypertrophy": ["Isolation/Accessory"],
+									"strength": ["Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyAccessory": 1.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Single leg leg extensions", "Unilateral leg extensions", "Leg extensions"],
+								"exerciseGroup": ["Single leg leg extensions"],
+								"preconditions": [],
+								"searchBoost": 7.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "29a5c6f170d880e7bc9afc9bfa7e57be",
+								"name": "Standing Plate-Loaded Machine Finger Curl",
+								"type": "Single joint (isolation)",
+								"primary": ["Forearms"],
+								"secondary": [],
+								"movementPattern": ["Anterior Forearm Accessory"],
+								"classification": {
+									"hypertrophy": ["Isolation/Accessory"],
+									"strength": ["Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyAccessory": 3.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Machine finger curls"],
+								"exerciseGroup": [],
+								"preconditions": [],
+								"searchBoost": 3.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							},
+							{
+								"id": "1a35c6f170d8807c8999d24ee4aaf939",
+								"name": "Kneeling Cable Crunch",
+								"type": "Core",
+								"primary": ["Abs"],
+								"secondary": ["Obliques"],
+								"movementPattern": ["Ab Accessory"],
+								"classification": {
+									"hypertrophy": ["Core", "Isolation/Accessory"],
+									"strength": ["Core", "Isolation/Accessory"]
+								},
+								"levels": {
+									"hypertrophyAccessory": 1.0,
+									"strengthAccessory": 1.0
+								},
+								"exclusionGroupings": ["Cable crunches"],
+								"exerciseGroup": ["Cable crunches"],
+								"preconditions": [],
+								"searchBoost": 8.0,
+								"setsPerCycle": [
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 14,
+											"repsMax": 16,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 12,
+											"repsMax": 14,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 10,
+											"repsMax": 12,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 9,
+											"repsMax": 11,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									],
+									[
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										},
+										{
+											"type": "standard",
+											"repsMin": 7,
+											"repsMax": 9,
+											"rir": 0,
+											"restSeconds": null
+										}
+									]
+								]
+							}
+						]
+					},
+					{
+						"rest": true
+					},
+					{
+						"rest": true
+					}
+				]
+			}
 		}
 	]
 }
