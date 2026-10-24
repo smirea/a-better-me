@@ -188,27 +188,6 @@ enum SessionFlow {
     }
 }
 
-/// The Scheme warm-up from Workout settings: 40% x 5, 60% x 5, 80% x 3 of the first working weight.
-enum WarmUpScheme {
-    struct Step: Hashable {
-        var percent: Int
-        var reps: Int
-        var weight: Double
-    }
-
-    static let steps: [(percent: Int, reps: Int)] = [(40, 5), (60, 5), (80, 3)]
-
-    /// `workingWeight` and `increment` share one display unit, so warm-ups land on loadable weights in that unit.
-    static func sets(workingWeight: Double, increment: Double) -> [Step] {
-        steps.map { step in
-            let raw = workingWeight * Double(step.percent) / 100
-            return Step(percent: step.percent, reps: step.reps, weight: max(increment, (raw / increment).rounded() * increment))
-        }
-    }
-
-    static func increment(for unit: WeightUnit) -> Double { unit == .kg ? 2.5 : 5 }
-}
-
 extension [WorkoutBlock] {
     func contains(_ path: RowPath) -> Bool {
         guard let item = self[safe: path.block]?.exercises[safe: path.exercise], let set = item.sets[safe: path.set] else { return false }
@@ -248,13 +227,9 @@ extension [WorkoutBlock] {
 }
 
 extension SessionFlow {
-    /// The log of the matching row in the last performance. Warm-ups match warm-ups and working sets match working
-    /// sets by their order, so adding warm-ups doesn't shift every row's Previous.
+    /// The log of the matching row in the last performance.
     static func previousLog(for path: RowPath, in blocks: [WorkoutBlock], previous: [WorkoutSet]) -> SetLog? {
-        let sets = blocks[path.block].exercises[path.exercise].sets
-        let isWarmUp = sets[path.set].type == .warmUp
-        let ordinal = sets[..<path.set].count { ($0.type == .warmUp) == isWarmUp }
-        guard let set = previous.filter({ ($0.type == .warmUp) == isWarmUp })[safe: ordinal] else { return nil }
+        guard let set = blocks[path.block].exercises[path.exercise].sets.previousSet(at: path.set, in: previous) else { return nil }
         guard let sub = path.sub else { return set.log }
         return set.subSets[safe: sub]?.log
     }
