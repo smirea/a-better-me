@@ -114,14 +114,15 @@ Day names per split. **Measured.**
 | pushPullLegsUpperLower        | Push, Pull, Legs, Upper, Lower                 |
 | pushPullLegsPushPullLegs      | Push A, Pull A, Legs A, Push B, Pull B, Legs B |
 
-"No preference" picks these splits. **Measured** for 2, 5, and 6 days only.
+"No preference" picks these splits. **Measured.**
 
 | Days | No-preference result                                                      | Evidence                                                                                                               |
 | ---- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | 2    | Full Body (Workout A, B; each day has a push, a pull, and a leg compound) | P15                                                                                                                    |
 | 5    | Push/Pull/Legs/Upper/Lower                                                | P6, same names and skeleton as P13                                                                                     |
 | 6    | Push/Pull/Legs/Push/Pull/Legs                                             | P14 has the same skeleton, sets, and RIR as P19. They share 25 of 93 exercise ids, the same overlap as two random runs |
-| 3, 4 | Not generated                                                             |                                                                                                                        |
+| 3    | Upper/Lower/Full Body (days Upper, Lower, Full)                           | P21                                                                                                                    |
+| 4    | Upper/Lower/Upper/Lower                                                   | P22, same names as P5                                                                                                  |
 
 ### 1.4 Slots, day skeletons, and volume
 
@@ -297,6 +298,14 @@ Weighted weekly sets in cycle 1, with a primary feature muscle counting 1 and a 
 - **Goal (P1, P2).** Strength has slightly more compound sets (3 sets on more primaries) and 2-set accessories, five per day instead of four. Total 157 against 146.5. **Measured.**
 - **Muscle focus (P4).** No same-input control exists. Against P5 (same split, no focus) and P1, focus shows in three places. **Measured.** The two accessory slots on each upper day both go to biceps and side delts (P5 spreads them over side delts, triceps, biceps, chest). Biceps is 9.5% of weighted sets in P4 against 6.1% (P5) and 6.5% (P1). Side delts is 6.8% against 3.6% and 3.8%. The upper compounds lean to biceps and away from chest. They are a close-grip bench (triceps and chest), an underhand cable row, and an underhand pulldown (biceps primary). Chest is 2.7% against 4.8% and 7.2%, with no chest accessory. **Measured.** Focus reorders accessory priority and biases compound choice through primary and emphasized muscles. **Inferred.**
 
+### 1.8.1 "Less" focus alone
+
+P23 repeats P1's inputs with Triceps and Lats set to less. **Measured.**
+
+- The skeleton, set counts, reps, and RIR equal P1's.
+- The triceps accessory (skull crusher in P1 Workout C) and the lats accessory (machine pullover) are gone. Their slots went to a rear delt fly, a wrist curl, and a neck extension. Workout C now opens its accessories with a pec deck.
+- The lat pulldown compound slots stay, so Lats still get 9 weighted sets against 12 in P1. Triceps drop from 7.5 to 4.5.
+
 ### 1.9 Deload
 
 The `.xlsx` export carries no deload targets. P18 (deload off) and P1 (deload on) differ only in the header field `Deload: Last Cycle`, and in both, cycle 7 is the ladder's last value repeated. **Measured.**
@@ -331,7 +340,7 @@ Each rule reproduces the 20 programs. "Obs" marks observed rules and "inf" marks
 
 1. Program length is 7 cycles. With deload on, add a deload week after cycle 7, derived from cycle 7 by the §1.9 rule. Obs.
 2. Lay out the week by day count with the rest pattern table in §1.3. Obs.
-3. The no-preference split is 2 days Full Body, 5 days PPLUL, 6 days PPLPPL. Obs. 3 and 4 days are unknown; choose Full Body and Upper/Lower. Inf.
+3. The no-preference split is 2 days Full Body, 3 days Upper/Lower/Full, 4 days Upper/Lower/Upper/Lower, 5 days PPLUL, 6 days PPLPPL. Obs.
 4. Give each of the six compound patterns (HPush, VPush, HPull, VPull, Squat, Hinge) exactly one primary per week, on a day whose split admits it. Obs. On full-body days use the sliding window in §1.4. Obs.
 5. Add secondaries per pattern from the session budget (§1.4 table). Obs. Fill one per pattern before adding a second. Inf.
 6. Order each day as primaries, then secondaries, then accessories. Obs.
@@ -343,17 +352,17 @@ Each rule reproduces the 20 programs. "Obs" marks observed rules and "inf" marks
 12. RIR from the track and set count table in §1.6, constant across cycles. Obs.
 13. Leave rest unset and use standard set type. Obs.
 14. For each slot, take candidates whose primary feature muscle matches and whose goal level for the slot is non-null. Drop exercises the gym cannot equip and those whose precondition the assessment fails. Drop any that share an exclusion grouping with an exercise already in the program. Take the lowest level and break ties uniformly at random. Obs for level 1 (97% to 100%) and random ties. Exclusion is Inf (5 leaks, all pulldowns).
-15. Muscle focus "more" moves the muscle to the front of the accessory list, can double its accessories, and prefers compounds where it is a primary. "Less" removes its accessories and prefers compounds that deemphasize it. Inf from one program.
+15. Muscle focus "more" moves the muscle to the front of the accessory list, can double its accessories, and prefers compounds where it is a primary. Inf from one program. "Less" removes the muscle's accessories and gives their slots to the next muscles in the priority list, while the compound slots stay. Obs (P23).
 16. Experience changes nothing visible. Obs for beginner, intermediate, and advanced at 3x Full Body.
 
 These 20 programs cannot determine the following.
 
-- No-preference split for 3 and 4 days, and the splits never generated (2x Upper/Lower and Push/Pull, 3x Upper/Lower/Full, 4x PPHS and PPL+Accessories, 5x ULULU, 6x PPHSUL).
+- The splits never generated (2x Upper/Lower and Push/Pull, 3x Upper/Lower/Full, 4x PPHS and PPL+Accessories, 5x ULULU, 6x PPHSUL).
 - Strength and "both" tiers under static, undulating, and reverse progressions.
 - Hypertrophy pull tiers under linear, where primary and secondary are both 14-16. Static shows they are different slots.
 - The deload of a one-set exercise, and of a "First Cycle" deload.
 - The exact per-exercise set allocator and the exact accessory priority list. Both are fitted, not observed.
-- How "less" focus works alone, how focus on lower-body muscles works, and how strong the effect is.
+- How focus on lower-body muscles works, and how strong the effect is.
 - Whether experience "None" or beginner changes anything at other splits or session lengths.
 - Exclusion scope (program or day), since all leaks are pulldowns.
 - The owner's Exercise Assessment answers, and how 7 answers map to 43 preconditions.

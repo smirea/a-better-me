@@ -202,5 +202,38 @@
 		"muscleFocus": {},
 		"deload": false,
 		"experience": "intermediate"
+	},
+	"program-p21-hyp-3x-nopref-40-60": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 3,
+		"split": "noPreference",
+		"sessionMinutes": "40-60",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p22-hyp-4x-nopref-40-60": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 4,
+		"split": "noPreference",
+		"sessionMinutes": "40-60",
+		"repProgression": "noPreference",
+		"muscleFocus": {},
+		"deload": true,
+		"experience": "intermediate"
+	},
+	"program-p23-hyp-3x-fb-40-60-less": {
+		"goal": "hypertrophy",
+		"daysPerWeek": 3,
+		"split": "fullBody",
+		"sessionMinutes": "40-60",
+		"repProgression": "noPreference",
+		"muscleFocus": {
+			"triceps": "less",
+			"lats": "less"
+		},
+		"deload": true,
+		"experience": "intermediate"
 	}
 }
