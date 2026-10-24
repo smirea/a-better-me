@@ -1,7 +1,8 @@
 /**
  * Proves the sync loop against a running server: `bun scripts/sync-smoke.ts [--api http://127.0.0.1:16151]
  * [--token <owner token>]`. Gets a token, opens the stream through the proxy, uploads a put, a patch, and a delete of a
- * template and sees each stream back, then sees a bad write rejected alone. Exits non-zero on the first failure. The
+ * template and sees each stream back, then sees a bad write rejected alone, and that a program's defaults and a
+ * fractional body weight stream back in their wire shape. Exits non-zero on the first failure. The
  * API defaults to this checkout's `.env.override`, the token to the local development one.
  */
 import { join } from 'node:path';
@@ -154,6 +155,41 @@ const archived = await row(stream, exercise, 'PUT', row => row.is_archived === 1
 check(archived, `a boolean streams back as 1: ${JSON.stringify(archived)}`);
 await upload([{ op: 'delete', table: 'custom_exercises', id: exercise }]);
 check(await row(stream, exercise, 'REMOVE', undefined, 'custom_exercises'), 'custom exercise delete streamed back');
+
+const program = crypto.randomUUID().toUpperCase();
+result = await upload([
+	{
+		op: 'put',
+		table: 'programs',
+		id: program,
+		values: { name: 'Smoke program', color: 'blue', icon: 'dumbbell', cycles: 4, created_at: now, updated_at: now },
+	},
+]);
+check(result.rejected.length === 0, `program put accepted: ${JSON.stringify(result.rejected)}`);
+const programRow = await row(stream, program, 'PUT', undefined, 'programs');
+check(programRow, 'program streamed back');
+console.log(`     wire row: ${JSON.stringify(programRow)}`);
+check(
+	programRow.active === 0 && programRow.config === '{}',
+	'program defaults streamed back as active 0 and config {}',
+);
+
+const weight = crypto.randomUUID().toUpperCase();
+result = await upload([
+	{ op: 'put', table: 'body_weights', id: weight, values: { measured_at: now, weight_kg: 82.35 } },
+]);
+check(result.rejected.length === 0, `body weight put accepted: ${JSON.stringify(result.rejected)}`);
+const weightRow = await row(stream, weight, 'PUT', undefined, 'body_weights');
+check(weightRow, 'body weight streamed back');
+console.log(`     wire row: ${JSON.stringify(weightRow)}`);
+check(weightRow.weight_kg === 82.35, `weight_kg streamed back as the number 82.35: ${typeof weightRow.weight_kg}`);
+
+await upload([
+	{ op: 'delete', table: 'programs', id: program },
+	{ op: 'delete', table: 'body_weights', id: weight },
+]);
+check(await row(stream, program, 'REMOVE', undefined, 'programs'), 'program delete streamed back');
+check(await row(stream, weight, 'REMOVE', undefined, 'body_weights'), 'body weight delete streamed back');
 
 await stream.close();
 console.log(`\nSync smoke passed in ${Math.round(performance.now() - started)} ms against ${api}`);
