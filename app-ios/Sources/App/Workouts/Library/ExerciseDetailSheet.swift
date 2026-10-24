@@ -94,7 +94,8 @@ private struct InstructionsTab: View {
                     }
                     .clipShape(.rect(cornerRadius: Theme.smallCornerRadius))
             }
-            let sections = MarkdownSection.parse(catalog.instructions(for: exercise) ?? "")
+            let markdown = exercise.isCustom ? exercise.about ?? "" : catalog.instructions(for: exercise) ?? ""
+            let sections = MarkdownSection.parse(markdown).map { $0.title.isEmpty ? MarkdownSection(title: "Description", body: $0.body) : $0 }
             if sections.isEmpty && exercise.articleIDs.isEmpty {
                 Text("No instructions for this exercise.").foregroundStyle(Theme.textSecondary)
             }
@@ -218,11 +219,7 @@ private struct RatingRow: View {
                 Text("\(value)/5").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
-            HStack(spacing: 3) {
-                ForEach(1...5, id: \.self) { segment in
-                    Capsule().fill(segment <= value ? Theme.textPrimary : Theme.surfaceRaised).frame(width: 16, height: 4)
-                }
-            }
+            RatingBar(value: value)
         }
         .padding(.vertical, 8)
     }

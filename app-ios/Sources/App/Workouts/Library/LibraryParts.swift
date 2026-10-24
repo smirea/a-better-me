@@ -189,3 +189,17 @@ struct SectionTitle: View {
         Text(title).font(AppFont.title(18)).foregroundStyle(Theme.textPrimary)
     }
 }
+
+/// MF's 5-segment bar for Range of Motion and Stability.
+struct RatingBar: View {
+    let value: Int
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(1...5, id: \.self) { segment in
+                Capsule().fill(segment <= value ? Theme.textPrimary : Theme.surfaceRaised).frame(width: 16, height: 4)
+            }
+        }
+        .accessibilityHidden(true)
+    }
+}

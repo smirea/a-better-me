@@ -1,24 +1,67 @@
 import SwiftUI
 
-/// What the owner fills in before a custom exercise exists. MF's Final details step (range of motion, stability,
-/// body weight contribution, joint actions, description) and support equipment are cut: nothing in milestone 1 reads them.
+/// One way to load or set up an exercise: its name and the equipment it takes, like `Exercise.resistanceEquipment`
+/// and `resistanceEquipmentIDs` at one index.
+struct EquipmentOption: Hashable {
+    var name: String
+    var ids: [String]
+}
+
+/// What the owner fills in before a custom exercise exists. A fresh draft picks one resistance and at most one
+/// support item; a duplicate starts with every option of its source and keeps them until the owner picks another.
 struct CustomExerciseDraft {
     var name = ""
     var metrics: [ExerciseMetric?] = [nil, nil]
     var type = RestCategory.compoundUpper
     var laterality = Laterality.bilateral
     var muscles: [Muscle: MuscleRole] = [:]
-    var resistance: Equipment?
+    var resistance: [EquipmentOption] = []
+    var support: [EquipmentOption] = []
+    var category = ExerciseCategory.other
+    /// 0 is unrated, MF's "None".
+    var rangeOfMotion = 0
+    var stability = 0
+    var bodyWeightPercent: Double?
+    var primaryJointActions: [String] = []
+    var secondaryJointActions: [String] = []
     var alternativeNames = ""
+    var about = ""
+    /// What a duplicate keeps that the wizard has no field for: movement patterns, and the anatomical muscle names
+    /// and body region while the muscles and type stay the source's.
+    private var source: Exercise?
 
     enum MuscleRole { case primary, secondary }
 
     static let alternativeNamesLimit = 300
 
+    init() {}
+
+    /// Edit Duplicate. `instructions` is a catalog exercise's bundled Markdown, which becomes the copy's description.
+    init(duplicating exercise: Exercise, instructions: String?) {
+        name = "\(exercise.name) (Copy)"
+        metrics = Array(exercise.metrics.prefix(2)) + Array(repeating: nil, count: max(0, 2 - exercise.metrics.count))
+        type = exercise.restCategory
+        laterality = exercise.laterality
+        for muscle in exercise.secondaryMuscles { muscles[muscle] = .secondary }
+        for muscle in exercise.primaryMuscles { muscles[muscle] = .primary }
+        resistance = exercise.resistanceEquipment.enumerated().map { EquipmentOption(name: $1, ids: exercise.resistanceEquipmentIDs[safe: $0] ?? []) }
+        support = exercise.supportEquipment.enumerated().map { EquipmentOption(name: $1, ids: exercise.supportEquipmentIDs[safe: $0] ?? []) }
+        category = exercise.category
+        rangeOfMotion = exercise.rangeOfMotion ?? 0
+        stability = exercise.stability ?? 0
+        bodyWeightPercent = (exercise.bodyweightFraction * 1000).rounded() / 10
+        primaryJointActions = exercise.primaryJointActions
+        secondaryJointActions = exercise.secondaryJointActions
+        alternativeNames = String(exercise.alternativeNames.joined(separator: ", ").prefix(Self.alternativeNamesLimit))
+        about = exercise.about ?? instructions ?? ""
+        source = exercise
+    }
+
     var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
     var isBuilt: Bool { !trimmedName.isEmpty && metrics.contains { $0 != nil } }
     var primaryMuscles: [Muscle] { Muscle.allCases.filter { muscles[$0] == .primary } }
     var secondaryMuscles: [Muscle] { Muscle.allCases.filter { muscles[$0] == .secondary } }
+    var hasFinalDetails: Bool { bodyWeightPercent.map { (0...100).contains($0) } ?? false }
 
     mutating func cycle(_ muscle: Muscle) {
         muscles[muscle] = switch muscles[muscle] {
@@ -29,13 +72,21 @@ struct CustomExerciseDraft {
     }
 
     func exercise() -> Exercise {
-        let (type, region): (ExerciseType, BodyRegion) = switch self.type {
-        case .compoundUpper: (.compound, .upper)
-        case .compoundLower: (.compound, .lower)
-        case .upperIsolation: (.isolation, .upper)
-        case .lowerIsolation: (.isolation, .lower)
-        case .core: (.core, .core)
+        let keepsMuscles = source.map { Set($0.primaryMuscles) == Set(primaryMuscles) && Set($0.secondaryMuscles) == Set(secondaryMuscles) } ?? false
+        let (type, region): (ExerciseType, BodyRegion?) = if let source, source.restCategory == self.type {
+            (source.type, source.region)
+        } else {
+            switch self.type {
+            case .compoundUpper: (.compound, .upper)
+            case .compoundLower: (.compound, .lower)
+            case .upperIsolation: (.isolation, .upper)
+            case .lowerIsolation: (.isolation, .lower)
+            case .core: (.core, .core)
+            }
         }
+        var equipmentIDs: [String] = []
+        for id in (resistance + support).flatMap(\.ids) where !equipmentIDs.contains(id) { equipmentIDs.append(id) }
+        let about = about.trimmingCharacters(in: .whitespacesAndNewlines)
         return Exercise(
             id: "custom-\(UUID().uuidString.lowercased())",
             name: trimmedName,
@@ -43,27 +94,44 @@ struct CustomExerciseDraft {
             type: type,
             primaryMuscles: primaryMuscles,
             secondaryMuscles: secondaryMuscles,
+            primaryMuscleDetails: keepsMuscles ? source?.primaryMuscleDetails ?? [] : [],
+            secondaryMuscleDetails: keepsMuscles ? source?.secondaryMuscleDetails ?? [] : [],
+            movementPatterns: source?.movementPatterns ?? [],
             region: region,
             laterality: laterality,
             metrics: Array(Set(metrics.compactMap { $0 })).sorted { ExerciseMetric.wizardOrder.firstIndex(of: $0)! < ExerciseMetric.wizardOrder.firstIndex(of: $1)! },
-            resistanceEquipment: resistance.map { [$0.name] } ?? [],
-            resistanceEquipmentIDs: resistance.map { [[$0.id]] } ?? [],
-            equipmentIDs: resistance.map { [$0.id] } ?? [],
-            category: resistance.map { ExerciseCategory(equipmentCategory: $0.category) } ?? .other
+            resistanceEquipment: resistance.map(\.name),
+            supportEquipment: support.map(\.name),
+            resistanceEquipmentIDs: resistance.map(\.ids),
+            supportEquipmentIDs: support.map(\.ids),
+            equipmentIDs: equipmentIDs,
+            category: category,
+            rangeOfMotion: rangeOfMotion == 0 ? nil : rangeOfMotion,
+            stability: stability == 0 ? nil : stability,
+            primaryJointActions: primaryJointActions,
+            secondaryJointActions: secondaryJointActions,
+            bodyweightFraction: (bodyWeightPercent ?? 0) / 100,
+            about: about.isEmpty ? nil : about
         )
     }
 }
 
-/// Create Custom Exercise: Build your exercise, Select muscles, Select equipment, and the review. It saves a
-/// `CustomExercise`; `onCreateAndAdd` adds the "Create & Add" button for the picker.
+/// Create Custom Exercise: Build your exercise, Select muscles, Select equipment, Final details, and the review. It
+/// saves a new `CustomExercise`, also when `draft` duplicates an existing exercise; `onCreateAndAdd` adds the
+/// "Create & Add" button for the picker.
 struct CustomExerciseWizard: View {
     var onCreateAndAdd: ((ExerciseID) -> Void)?
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @State private var draft = CustomExerciseDraft()
+    @State private var draft: CustomExerciseDraft
     @State private var path: [Step] = []
 
-    enum Step: Int, CaseIterable { case build, muscles, equipment, review }
+    init(draft: CustomExerciseDraft = CustomExerciseDraft(), onCreateAndAdd: ((ExerciseID) -> Void)? = nil) {
+        self.onCreateAndAdd = onCreateAndAdd
+        _draft = State(initialValue: draft)
+    }
+
+    enum Step: Int, CaseIterable { case build, muscles, equipment, finalDetails, review }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -86,11 +154,13 @@ struct CustomExerciseWizard: View {
                 case .build: BuildStep(draft: $draft)
                 case .muscles: MuscleStep(draft: $draft)
                 case .equipment: EquipmentStep(draft: $draft)
+                case .finalDetails: FinalDetailsStep(draft: $draft)
                 case .review: ReviewStep(draft: draft)
                 }
             }
             .padding()
         }
+        .scrollDismissesKeyboard(.interactively)
         .background(Theme.background)
         .navigationTitle("Create Custom Exercise")
         .navigationBarTitleDisplayMode(.inline)
@@ -121,6 +191,7 @@ struct CustomExerciseWizard: View {
         case .build: "Build your exercise"
         case .muscles: "Select muscles"
         case .equipment: "Select equipment"
+        case .finalDetails: "Final details"
         case .review: "Does everything look correct?"
         }
     }
@@ -129,7 +200,8 @@ struct CustomExerciseWizard: View {
         switch step {
         case .build: draft.isBuilt
         case .muscles: !draft.primaryMuscles.isEmpty
-        case .equipment: draft.resistance != nil
+        case .equipment: !draft.resistance.isEmpty
+        case .finalDetails: draft.hasFinalDetails
         case .review: true
         }
     }
@@ -293,29 +365,112 @@ private struct MuscleStep: View {
 private struct EquipmentStep: View {
     @Binding var draft: CustomExerciseDraft
     @Environment(ExerciseCatalog.self) private var catalog
-    @State private var picking = false
+    @State private var picking: EquipmentRole?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
+            section(.resistance, options: draft.resistance)
+            Divider().overlay(Theme.separator)
+            section(.support, options: draft.support)
+        }
+        .sheet(item: $picking) { role in
+            EquipmentPickerSheet(
+                title: role.title,
+                equipmentIDs: Set(catalog.bundled.flatMap { (role == .resistance ? $0.resistanceEquipmentIDs : $0.supportEquipmentIDs).joined() }),
+                selection: Binding {
+                    let options = role == .resistance ? draft.resistance : draft.support
+                    guard options.count == 1, let id = options[0].ids.first, options[0].ids.count == 1 else { return nil }
+                    return EquipmentChoice(id: id, matching: [id])
+                } set: { choice in
+                    let equipment = choice.flatMap { catalog.equipment[$0.id] }
+                    let options = equipment.map { [EquipmentOption(name: $0.name, ids: [$0.id])] } ?? []
+                    switch role {
+                    case .resistance:
+                        draft.resistance = options
+                        if let equipment { draft.category = ExerciseCategory(equipmentCategory: equipment.category) }
+                    case .support:
+                        draft.support = options
+                    }
+                }
+            )
+        }
+    }
+
+    private func section(_ role: EquipmentRole, options: [EquipmentOption]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Resistance").font(AppFont.medium(15))
-                    Text("Equipment that adds load to the exercise").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-                    Text("Required").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                    Text(role.title).font(AppFont.medium(15))
+                    Text(role.summary).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                    Text(role == .resistance ? "Required" : "Optional").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
                 }
                 Spacer()
-                Button(draft.resistance == nil ? "Add" : "Change") { picking = true }
+                Button(options.isEmpty ? "Add" : "Change") { picking = role }
                     .buttonStyle(.bordered)
                     .buttonBorderShape(.capsule)
                     .tint(Theme.textPrimary)
+                    .accessibilityLabel(options.isEmpty ? "Add \(role.title)" : "Change \(role.title)")
             }
-            if let resistance = draft.resistance {
-                EquipmentOptions(title: "", names: [resistance.name], ids: [[resistance.id]])
+            EquipmentOptions(title: "", names: options.map(\.name), ids: options.map(\.ids))
+        }
+    }
+
+    enum EquipmentRole: Identifiable {
+        case resistance, support
+
+        var id: Self { self }
+        var title: String { self == .resistance ? "Resistance" : "Support" }
+        var summary: String {
+            switch self {
+            case .resistance: "Equipment that adds load to the exercise"
+            case .support: "Equipment that assists, stabilizes, or makes the movement possible, without adding resistance"
             }
-            Divider().overlay(Theme.separator)
+        }
+    }
+}
+
+private struct FinalDetailsStep: View {
+    @Binding var draft: CustomExerciseDraft
+    @Observe(BodyWeight.all) private var weighIns
+    @Observe(AppSettings.current) private var settings
+    @State private var percentText: String
+    @State private var choosing: JointActionRole?
+    @State private var editingDescription = false
+    @FocusState private var editingPercent: Bool
+
+    init(draft: Binding<CustomExerciseDraft>) {
+        _draft = draft
+        _percentText = State(initialValue: draft.wrappedValue.bodyWeightPercent.map { $0.formatted(.number.precision(.fractionLength(0...1))) } ?? "")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            RatingStepper(title: "Range of Motion", value: $draft.rangeOfMotion)
+            RatingStepper(title: "Stability", value: $draft.stability).padding(.bottom, 12)
+            FieldLabel(title: "Body Weight Contribution", trailing: "Required")
             HStack {
-                FieldLabel(title: "Alternate Names", trailing: "\(draft.alternativeNames.count)/\(CustomExerciseDraft.alternativeNamesLimit)")
+                TextField("", text: $percentText)
+                    .keyboardType(.decimalPad)
+                    .focused($editingPercent)
+                    .accessibilityLabel("Body Weight Contribution")
+                Text("%").foregroundStyle(Theme.textSecondary)
             }
+            .padding(.horizontal, 12)
+            .frame(height: 44)
+            .background(Theme.surfaceRaised, in: .rect(cornerRadius: Theme.smallCornerRadius))
+            .onChange(of: percentText) { _, text in
+                draft.bodyWeightPercent = text.isEmpty ? nil : try? Double(text, format: .number)
+            }
+            Text(contributionLine).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+            ForEach(JointActionRole.allCases) { role in
+                FieldLabel(title: role.title).padding(.top, 12)
+                Button { choosing = role } label: {
+                    DropdownLabel(text: draft[keyPath: role.path].joined(separator: ", "))
+                }
+                .accessibilityLabel(role.title)
+            }
+            FieldLabel(title: "Alternate Names", trailing: "\(draft.alternativeNames.count)/\(CustomExerciseDraft.alternativeNamesLimit)")
+                .padding(.top, 12)
             TextField("Optionally add other names", text: $draft.alternativeNames, axis: .vertical)
                 .lineLimit(3...6)
                 .padding(12)
@@ -326,18 +481,161 @@ private struct EquipmentStep: View {
                     }
                 }
             Text("Separate names with a comma").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-        }
-        .sheet(isPresented: $picking) {
-            EquipmentPickerSheet(
-                title: "Resistance",
-                equipmentIDs: Set(catalog.bundled.flatMap { $0.resistanceEquipmentIDs.joined() }),
-                selection: Binding {
-                    draft.resistance.map { EquipmentChoice(id: $0.id, matching: [$0.id]) }
-                } set: {
-                    draft.resistance = $0.flatMap { catalog.equipment[$0.id] }
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Description").font(AppFont.medium(15))
+                    Text(draft.about.isEmpty ? "Empty" : draft.about)
+                        .font(AppFont.caption(12))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(3)
                 }
-            )
+                Spacer()
+                Button("Edit") { editingDescription = true }
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.capsule)
+                    .tint(Theme.textPrimary)
+                    .accessibilityLabel("Edit Description")
+            }
+            .padding(.top, 16)
         }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                if editingPercent {
+                    Spacer()
+                    Button("Done") { editingPercent = false }
+                }
+            }
+        }
+        .sheet(item: $choosing) { role in
+            JointActionPicker(title: role.title, selection: Binding {
+                draft[keyPath: role.path]
+            } set: {
+                draft[keyPath: role.path] = $0
+            })
+        }
+        .sheet(isPresented: $editingDescription) {
+            DescriptionEditor(text: $draft.about)
+        }
+    }
+
+    /// "18 lb at your current weight", from the newest weigh-in or the profile's weight.
+    private var contributionLine: String {
+        guard let percent = draft.bodyWeightPercent else { return "Enter the share of body weight the exercise moves" }
+        guard (0...100).contains(percent) else { return "Enter a percentage from 0 to 100" }
+        let unit = settings.weightUnit
+        guard let bodyKg = currentBodyWeightKg(logged: weighIns, health: nil, manual: settings.profile.bodyWeightKg) else {
+            return "Log your body weight to see the load this adds"
+        }
+        return "\(unit.format(kg: bodyKg * percent / 100)) \(unit.rawValue) at your current weight"
+    }
+
+    enum JointActionRole: CaseIterable, Identifiable {
+        case primary, secondary
+
+        var id: Self { self }
+        var title: String { self == .primary ? "Primary Joint Action" : "Secondary Joint Action" }
+        var path: WritableKeyPath<CustomExerciseDraft, [String]> {
+            self == .primary ? \.primaryJointActions : \.secondaryJointActions
+        }
+    }
+}
+
+private struct RatingStepper: View {
+    let title: String
+    @Binding var value: Int
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title).font(AppFont.medium(15))
+                RatingBar(value: value)
+            }
+            Spacer()
+            Button("Decrease \(title)", systemImage: "minus") { value -= 1 }
+                .disabled(value == 0)
+            Text("\(value)").font(AppFont.headline(16)).monospacedDigit().frame(minWidth: 20)
+            Button("Increase \(title)", systemImage: "plus") { value += 1 }
+                .disabled(value == 5)
+        }
+        .labelStyle(.iconOnly)
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.circle)
+        .tint(Theme.textPrimary)
+        .padding(.vertical, 6)
+    }
+}
+
+/// "Choose all that apply" over every joint action the catalog names.
+private struct JointActionPicker: View {
+    let title: String
+    @Binding var selection: [String]
+    @Environment(ExerciseCatalog.self) private var catalog
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+
+    var body: some View {
+        let vocabulary = Set(catalog.bundled.flatMap { $0.primaryJointActions + $0.secondaryJointActions }).sorted()
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(vocabulary.filter { query.isEmpty || $0.localizedStandardContains(query) }, id: \.self) { action in
+                        let isSelected = selection.contains(action)
+                        Button {
+                            if isSelected { selection.removeAll { $0 == action } } else { selection = (selection + [action]).sorted() }
+                        } label: {
+                            HStack {
+                                Text(action).font(AppFont.body(15)).foregroundStyle(Theme.textPrimary)
+                                Spacer()
+                                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textTertiary)
+                            }
+                        }
+                        .accessibilityAddTraits(isSelected ? .isSelected : [])
+                        .listRowBackground(Theme.surface)
+                    }
+                } header: {
+                    Text("Choose all that apply").font(AppFont.caption(12)).textCase(nil)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Theme.background)
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search joint actions")
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .tint(Theme.textPrimary)
+    }
+}
+
+private struct DescriptionEditor: View {
+    @Binding var text: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            TextEditor(text: $text)
+                .font(AppFont.body(15))
+                .scrollContentBackground(.hidden)
+                .padding(12)
+                .background(Theme.surfaceRaised, in: .rect(cornerRadius: Theme.smallCornerRadius))
+                .padding()
+                .frame(maxHeight: .infinity, alignment: .top)
+                .background(Theme.background)
+                .accessibilityLabel("Description")
+                .navigationTitle("Description")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
+                }
+        }
+        .tint(Theme.textPrimary)
     }
 }
 
@@ -371,10 +669,34 @@ private struct ReviewStep: View {
                 }
             }
             .scrollIndicators(.hidden)
+            rating("Range of Motion", exercise.rangeOfMotion)
+            rating("Stability", exercise.stability)
             EquipmentOptions(title: "Resistance Equipment", names: exercise.resistanceEquipment, ids: exercise.resistanceEquipmentIDs)
+            EquipmentOptions(title: "Support Equipment", names: exercise.supportEquipment, ids: exercise.supportEquipmentIDs)
+            summary("Body Weight Contribution", exercise.bodyweightFraction.formatted(.percent.precision(.fractionLength(0...1))))
+            if !exercise.primaryJointActions.isEmpty {
+                summary("Primary Joint Action", exercise.primaryJointActions.joined(separator: ", "))
+            }
+            if !exercise.secondaryJointActions.isEmpty {
+                summary("Secondary Joint Action", exercise.secondaryJointActions.joined(separator: ", "))
+            }
             if !exercise.alternativeNames.isEmpty {
                 summary("Alternate Names", exercise.alternativeNames.joined(separator: ", "))
             }
+            if let about = exercise.about {
+                summary("Description", about)
+            }
+        }
+    }
+
+    private func rating(_ title: String, _ value: Int?) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(AppFont.medium(14))
+                Text(value.map { "\($0)/5" } ?? "None").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+            }
+            Spacer()
+            RatingBar(value: value ?? 0)
         }
     }
 
@@ -383,7 +705,9 @@ private struct ReviewStep: View {
             Text(title).font(AppFont.medium(14))
             Text(value)
                 .font(AppFont.body(15))
+                .lineLimit(6)
                 .padding(.horizontal, 12)
+                .padding(.vertical, 10)
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.surfaceRaised) }
         }
