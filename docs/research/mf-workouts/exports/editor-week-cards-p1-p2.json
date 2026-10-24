@@ -1,0 +1,528 @@
+{
+	"ZZ P1 Hyp 3x FB 40-60": {
+		"Workout A (tab 1)": {
+			"Barbell Bench Press": [
+				"Week 1 | 1 | 11-13 reps | 3 | 2 | 11-13 reps | 2 | 3 | 11-13 reps | 1",
+				"Week 2 | 1 | 11-13 reps | 3 | 2 | 11-13 reps | 2 | 3 | 11-13 reps | 1",
+				"Week 3 | 1 | 9-11 reps | 3 | 2 | 9-11 reps | 2 | 3 | 9-11 reps | 1",
+				"Week 4 | 1 | 8-10 reps | 3 | 2 | 8-10 reps | 2 | 3 | 8-10 reps | 1",
+				"Week 5 | 1 | 7-9 reps | 3 | 2 | 7-9 reps | 2 | 3 | 7-9 reps | 1",
+				"Week 6 | 1 | 5-7 reps | 3 | 2 | 5-7 reps | 2 | 3 | 5-7 reps | 1",
+				"Week 7 | 1 | 5-7 reps | 3 | 2 | 5-7 reps | 2 | 3 | 5-7 reps | 1",
+				"Deload | 1 | 4-6 reps | 6+ | 2 | 4-6 reps | 5"
+			],
+			"Overhand Grip Pin-Loaded Machine Lat Pulldown": [
+				"Week 1 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 1 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 1 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 1 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 4"
+			],
+			"High Incline Smith Machine Press": [
+				"Week 1 | 1 | 14-16 reps | 2 | 2 | 14-16 reps | 1",
+				"Week 2 | 1 | 14-16 reps | 2 | 2 | 14-16 reps | 1",
+				"Week 3 | 1 | 12-14 reps | 2 | 2 | 12-14 reps | 1",
+				"Week 4 | 1 | 10-12 reps | 2 | 2 | 10-12 reps | 1",
+				"Week 5 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 6 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Week 7 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Deload | 1 | 6-7 reps | 5"
+			],
+			"45° Leg Press": [
+				"Week 1 | 1 | 14-16 reps | 2 | 2 | 14-16 reps | 1",
+				"Week 2 | 1 | 14-16 reps | 2 | 2 | 14-16 reps | 1",
+				"Week 3 | 1 | 12-14 reps | 2 | 2 | 12-14 reps | 1",
+				"Week 4 | 1 | 10-12 reps | 2 | 2 | 10-12 reps | 1",
+				"Week 5 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 6 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Week 7 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Deload | 1 | 6-7 reps | 5"
+			],
+			"Standing Plate-Loaded Machine Lateral Raise": [
+				"Week 1 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 2 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 3 | 1 | 16-18 reps | 1 | 2 | 16-18 reps | 0 | 3 | 16-18 reps | 0",
+				"Week 4 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0 | 3 | 14-16 reps | 0",
+				"Week 5 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0 | 3 | 12-14 reps | 0",
+				"Week 6 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Week 7 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Deload | 1 | 7-9 reps | 4 | 2 | 7-9 reps | 3"
+			],
+			"Dumbbell Fly": [
+				"Week 1 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 2 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 3 | 1 | 16-18 reps | 1 | 2 | 16-18 reps | 0 | 3 | 16-18 reps | 0",
+				"Week 4 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0 | 3 | 14-16 reps | 0",
+				"Week 5 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0 | 3 | 12-14 reps | 0",
+				"Week 6 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Week 7 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Deload | 1 | 7-9 reps | 4 | 2 | 7-9 reps | 3"
+			],
+			"Pin-Loaded Leg Press Calf Raise": [
+				"Week 1 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 2 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 3 | 1 | 16-18 reps | 1 | 2 | 16-18 reps | 0 | 3 | 16-18 reps | 0",
+				"Week 4 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0 | 3 | 14-16 reps | 0",
+				"Week 5 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0 | 3 | 12-14 reps | 0",
+				"Week 6 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Week 7 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Deload | 1 | 7-9 reps | 4 | 2 | 7-9 reps | 3"
+			],
+			"Snatch Grip Shrug": [
+				"Week 1 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 2 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 3 | 1 | 16-18 reps | 1 | 2 | 16-18 reps | 0 | 3 | 16-18 reps | 0",
+				"Week 4 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0 | 3 | 14-16 reps | 0",
+				"Week 5 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0 | 3 | 12-14 reps | 0",
+				"Week 6 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Week 7 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Deload | 1 | 7-9 reps | 4 | 2 | 7-9 reps | 3"
+			]
+		},
+		"Workout B (tab 3)": {
+			"Barbell Overhead Press": [
+				"Week 1 | 1 | 11-13 reps | 2 | 2 | 11-13 reps | 1",
+				"Week 2 | 1 | 11-13 reps | 2 | 2 | 11-13 reps | 1",
+				"Week 3 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 4 | 1 | 8-10 reps | 2 | 2 | 8-10 reps | 1",
+				"Week 5 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Week 6 | 1 | 5-7 reps | 2 | 2 | 5-7 reps | 1",
+				"Week 7 | 1 | 5-7 reps | 2 | 2 | 5-7 reps | 1",
+				"Deload | 1 | 4-6 reps | 5"
+			],
+			"Smith Machine Back Squat": [
+				"Week 1 | 1 | 11-13 reps | 2 | 2 | 11-13 reps | 1",
+				"Week 2 | 1 | 11-13 reps | 2 | 2 | 11-13 reps | 1",
+				"Week 3 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 4 | 1 | 8-10 reps | 2 | 2 | 8-10 reps | 1",
+				"Week 5 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Week 6 | 1 | 5-7 reps | 2 | 2 | 5-7 reps | 1",
+				"Week 7 | 1 | 5-7 reps | 2 | 2 | 5-7 reps | 1",
+				"Deload | 1 | 4-6 reps | 5"
+			],
+			"Neutral Grip Plate-Loaded Machine Row": [
+				"Week 1 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 1 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 1 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 1 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 4"
+			],
+			"Wide Stance Smith Machine Good Morning": [
+				"Week 1 | 1 | 14-16 reps | 2 | 2 | 14-16 reps | 1",
+				"Week 2 | 1 | 14-16 reps | 2 | 2 | 14-16 reps | 1",
+				"Week 3 | 1 | 12-14 reps | 2 | 2 | 12-14 reps | 1",
+				"Week 4 | 1 | 10-12 reps | 2 | 2 | 10-12 reps | 1",
+				"Week 5 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 6 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Week 7 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Deload | 1 | 6-7 reps | 5"
+			],
+			"Standing Dumbbell Biceps Curl": [
+				"Week 1 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 2 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 3 | 1 | 16-18 reps | 1 | 2 | 16-18 reps | 0 | 3 | 16-18 reps | 0",
+				"Week 4 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0 | 3 | 14-16 reps | 0",
+				"Week 5 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0 | 3 | 12-14 reps | 0",
+				"Week 6 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Week 7 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Deload | 1 | 7-9 reps | 4 | 2 | 7-9 reps | 3"
+			],
+			"Overhand Grip Machine Rear Delt Fly": [
+				"Week 1 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 2 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 3 | 1 | 16-18 reps | 1 | 2 | 16-18 reps | 0 | 3 | 16-18 reps | 0",
+				"Week 4 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0 | 3 | 14-16 reps | 0",
+				"Week 5 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0 | 3 | 12-14 reps | 0",
+				"Week 6 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Week 7 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Deload | 1 | 7-9 reps | 4 | 2 | 7-9 reps | 3"
+			],
+			"Seated Single Leg Plate-Loaded Hamstring Curl": [
+				"Week 1 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 2 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 3 | 1 | 16-18 reps | 1 | 2 | 16-18 reps | 0 | 3 | 16-18 reps | 0",
+				"Week 4 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0 | 3 | 14-16 reps | 0",
+				"Week 5 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0 | 3 | 12-14 reps | 0",
+				"Week 6 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Week 7 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Deload | 1 | 7-9 reps | 4 | 2 | 7-9 reps | 3"
+			],
+			"Plate-Loaded Row Machine Kelso Shrug": [
+				"Week 1 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 2 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 3 | 1 | 16-18 reps | 1 | 2 | 16-18 reps | 0 | 3 | 16-18 reps | 0",
+				"Week 4 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0 | 3 | 14-16 reps | 0",
+				"Week 5 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0 | 3 | 12-14 reps | 0",
+				"Week 6 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Week 7 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Deload | 1 | 7-9 reps | 4 | 2 | 7-9 reps | 3"
+			]
+		},
+		"Workout C (tab 5)": {
+			"Bent-Over Overhand Grip T-Bar Row": [
+				"Week 1 | 1 | 14-16 reps | 2 | 2 | 14-16 reps | 1 | 3 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 2 | 2 | 14-16 reps | 1 | 3 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 2 | 2 | 12-14 reps | 1 | 3 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 2 | 2 | 10-12 reps | 1 | 3 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1 | 3 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1 | 3 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1 | 3 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 5 | 2 | 6-7 reps | 4"
+			],
+			"Barbell Romanian Deadlift": [
+				"Week 1 | 1 | 11-13 reps | 2 | 2 | 11-13 reps | 1",
+				"Week 2 | 1 | 11-13 reps | 2 | 2 | 11-13 reps | 1",
+				"Week 3 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 4 | 1 | 8-10 reps | 2 | 2 | 8-10 reps | 1",
+				"Week 5 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Week 6 | 1 | 5-7 reps | 2 | 2 | 5-7 reps | 1",
+				"Week 7 | 1 | 5-7 reps | 2 | 2 | 5-7 reps | 1",
+				"Deload | 1 | 4-6 reps | 5"
+			],
+			"Lying Pin-Loaded Machine Chest Press": [
+				"Week 1 | 1 | 14-16 reps | 2 | 2 | 14-16 reps | 1",
+				"Week 2 | 1 | 14-16 reps | 2 | 2 | 14-16 reps | 1",
+				"Week 3 | 1 | 12-14 reps | 2 | 2 | 12-14 reps | 1",
+				"Week 4 | 1 | 10-12 reps | 2 | 2 | 10-12 reps | 1",
+				"Week 5 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 6 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Week 7 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Deload | 1 | 6-7 reps | 5"
+			],
+			"Neutral Shoulder Width Grip Cable Lat Pulldown": [
+				"Week 1 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 1 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 1 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 1 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 4"
+			],
+			"EZ Bar Skull Crusher": [
+				"Week 1 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 2 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 3 | 1 | 16-18 reps | 1 | 2 | 16-18 reps | 0 | 3 | 16-18 reps | 0",
+				"Week 4 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0 | 3 | 14-16 reps | 0",
+				"Week 5 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0 | 3 | 12-14 reps | 0",
+				"Week 6 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Week 7 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Deload | 1 | 7-9 reps | 4 | 2 | 7-9 reps | 3"
+			],
+			"Pin-Loaded Machine Pullover": [
+				"Week 1 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 2 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 3 | 1 | 16-18 reps | 1 | 2 | 16-18 reps | 0 | 3 | 16-18 reps | 0",
+				"Week 4 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0 | 3 | 14-16 reps | 0",
+				"Week 5 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0 | 3 | 12-14 reps | 0",
+				"Week 6 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Week 7 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Deload | 1 | 7-9 reps | 4 | 2 | 7-9 reps | 3"
+			],
+			"Leg Extension": [
+				"Week 1 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 2 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 3 | 1 | 16-18 reps | 1 | 2 | 16-18 reps | 0 | 3 | 16-18 reps | 0",
+				"Week 4 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0 | 3 | 14-16 reps | 0",
+				"Week 5 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0 | 3 | 12-14 reps | 0",
+				"Week 6 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Week 7 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Deload | 1 | 7-9 reps | 4 | 2 | 7-9 reps | 3"
+			],
+			"Machine Crunch (With Overhead Handles)": [
+				"Week 1 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 2 | 1 | 19-21 reps | 1 | 2 | 19-21 reps | 0 | 3 | 19-21 reps | 0",
+				"Week 3 | 1 | 16-18 reps | 1 | 2 | 16-18 reps | 0 | 3 | 16-18 reps | 0",
+				"Week 4 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0 | 3 | 14-16 reps | 0",
+				"Week 5 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0 | 3 | 12-14 reps | 0",
+				"Week 6 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Week 7 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0 | 3 | 9-11 reps | 0",
+				"Deload | 1 | 7-9 reps | 4 | 2 | 7-9 reps | 3"
+			]
+		}
+	},
+	"ZZ P2 Str 3x FB 40-60": {
+		"Workout A (tab 1)": {
+			"Pause Barbell Bench Press": [
+				"Week 1 | 1 | 7-9 reps | 3 | 2 | 7-9 reps | 2 | 3 | 7-9 reps | 1",
+				"Week 2 | 1 | 7-9 reps | 3 | 2 | 7-9 reps | 2 | 3 | 7-9 reps | 1",
+				"Week 3 | 1 | 5-7 reps | 3 | 2 | 5-7 reps | 2 | 3 | 5-7 reps | 1",
+				"Week 4 | 1 | 4-6 reps | 3 | 2 | 4-6 reps | 2 | 3 | 4-6 reps | 1",
+				"Week 5 | 1 | 4-6 reps | 3 | 2 | 4-6 reps | 2 | 3 | 4-6 reps | 1",
+				"Week 6 | 1 | 2-4 reps | 3 | 2 | 2-4 reps | 2 | 3 | 2-4 reps | 1",
+				"Week 7 | 1 | 2-4 reps | 3 | 2 | 2-4 reps | 2 | 3 | 2-4 reps | 1",
+				"Deload | 1 | 2-3 reps | 6+ | 2 | 2-3 reps | 5"
+			],
+			"Overhand Grip Plate-Loaded Machine-Assisted Pull-Up": [
+				"Week 1 | 1 | 11-13 reps | 2 | 2 | 11-13 reps | 1 | 3 | 11-13 reps | 0",
+				"Week 2 | 1 | 11-13 reps | 2 | 2 | 11-13 reps | 1 | 3 | 11-13 reps | 0",
+				"Week 3 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1 | 3 | 9-11 reps | 0",
+				"Week 4 | 1 | 8-10 reps | 2 | 2 | 8-10 reps | 1 | 3 | 8-10 reps | 0",
+				"Week 5 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1 | 3 | 7-9 reps | 0",
+				"Week 6 | 1 | 5-7 reps | 2 | 2 | 5-7 reps | 1 | 3 | 5-7 reps | 0",
+				"Week 7 | 1 | 5-7 reps | 2 | 2 | 5-7 reps | 1 | 3 | 5-7 reps | 0",
+				"Deload | 1 | 4-6 reps | 5 | 2 | 4-6 reps | 4"
+			],
+			"Seated Neutral Grip Dumbbell Overhead Press": [
+				"Week 1 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 2 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 3 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Week 4 | 1 | 6-8 reps | 2 | 2 | 6-8 reps | 1",
+				"Week 5 | 1 | 6-8 reps | 2 | 2 | 6-8 reps | 1",
+				"Week 6 | 1 | 4-6 reps | 2 | 2 | 4-6 reps | 1",
+				"Week 7 | 1 | 4-6 reps | 2 | 2 | 4-6 reps | 1",
+				"Deload | 1 | 3-5 reps | 5"
+			],
+			"Pause Back Squat": [
+				"Week 1 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 2 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 3 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Week 4 | 1 | 6-8 reps | 2 | 2 | 6-8 reps | 1",
+				"Week 5 | 1 | 6-8 reps | 2 | 2 | 6-8 reps | 1",
+				"Week 6 | 1 | 4-6 reps | 2 | 2 | 4-6 reps | 1",
+				"Week 7 | 1 | 4-6 reps | 2 | 2 | 4-6 reps | 1",
+				"Deload | 1 | 3-5 reps | 5"
+			],
+			"Standing Dumbbell Lateral Raise": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			],
+			"Low-To-High Cable Fly": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			],
+			"Pin-Loaded Leg Press Calf Raise": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			],
+			"Seated Machine Shrug": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			],
+			"Head Harness Neck Extension": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			]
+		},
+		"Workout B (tab 3)": {
+			"Pause Barbell Overhead Press": [
+				"Week 1 | 1 | 7-9 reps | 3 | 2 | 7-9 reps | 2 | 3 | 7-9 reps | 1",
+				"Week 2 | 1 | 7-9 reps | 3 | 2 | 7-9 reps | 2 | 3 | 7-9 reps | 1",
+				"Week 3 | 1 | 5-7 reps | 3 | 2 | 5-7 reps | 2 | 3 | 5-7 reps | 1",
+				"Week 4 | 1 | 4-6 reps | 3 | 2 | 4-6 reps | 2 | 3 | 4-6 reps | 1",
+				"Week 5 | 1 | 4-6 reps | 3 | 2 | 4-6 reps | 2 | 3 | 4-6 reps | 1",
+				"Week 6 | 1 | 2-4 reps | 3 | 2 | 2-4 reps | 2 | 3 | 2-4 reps | 1",
+				"Week 7 | 1 | 2-4 reps | 3 | 2 | 2-4 reps | 2 | 3 | 2-4 reps | 1",
+				"Deload | 1 | 2-3 reps | 6+ | 2 | 2-3 reps | 5"
+			],
+			"Front Squat": [
+				"Week 1 | 1 | 7-9 reps | 3 | 2 | 7-9 reps | 2 | 3 | 7-9 reps | 1",
+				"Week 2 | 1 | 7-9 reps | 3 | 2 | 7-9 reps | 2 | 3 | 7-9 reps | 1",
+				"Week 3 | 1 | 5-7 reps | 3 | 2 | 5-7 reps | 2 | 3 | 5-7 reps | 1",
+				"Week 4 | 1 | 4-6 reps | 3 | 2 | 4-6 reps | 2 | 3 | 4-6 reps | 1",
+				"Week 5 | 1 | 4-6 reps | 3 | 2 | 4-6 reps | 2 | 3 | 4-6 reps | 1",
+				"Week 6 | 1 | 2-4 reps | 3 | 2 | 2-4 reps | 2 | 3 | 2-4 reps | 1",
+				"Week 7 | 1 | 2-4 reps | 3 | 2 | 2-4 reps | 2 | 3 | 2-4 reps | 1",
+				"Deload | 1 | 2-3 reps | 6+ | 2 | 2-3 reps | 5"
+			],
+			"Diverging Pin-Loaded Machine Row (Without Chest Support)": [
+				"Week 1 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 1 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 1 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 1 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 4"
+			],
+			"Wide Stance Safety Squat Bar Good Morning": [
+				"Week 1 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 2 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 3 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Week 4 | 1 | 6-8 reps | 2 | 2 | 6-8 reps | 1",
+				"Week 5 | 1 | 6-8 reps | 2 | 2 | 6-8 reps | 1",
+				"Week 6 | 1 | 4-6 reps | 2 | 2 | 4-6 reps | 1",
+				"Week 7 | 1 | 4-6 reps | 2 | 2 | 4-6 reps | 1",
+				"Deload | 1 | 3-5 reps | 5"
+			],
+			"Plate-Loaded Machine Preacher Curl": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			],
+			"Single Arm Machine Rear Delt Fly": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			],
+			"Seated Single Leg Plate-Loaded Hamstring Curl": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			],
+			"Wide Grip Cable Row": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			],
+			"Side-Plate-Loaded Reverse Hyperextension": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			]
+		},
+		"Workout C (tab 5)": {
+			"Bent-Over Barbell Row": [
+				"Week 1 | 1 | 11-13 reps | 2 | 2 | 11-13 reps | 1 | 3 | 11-13 reps | 0",
+				"Week 2 | 1 | 11-13 reps | 2 | 2 | 11-13 reps | 1 | 3 | 11-13 reps | 0",
+				"Week 3 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1 | 3 | 9-11 reps | 0",
+				"Week 4 | 1 | 8-10 reps | 2 | 2 | 8-10 reps | 1 | 3 | 8-10 reps | 0",
+				"Week 5 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1 | 3 | 7-9 reps | 0",
+				"Week 6 | 1 | 5-7 reps | 2 | 2 | 5-7 reps | 1 | 3 | 5-7 reps | 0",
+				"Week 7 | 1 | 5-7 reps | 2 | 2 | 5-7 reps | 1 | 3 | 5-7 reps | 0",
+				"Deload | 1 | 4-6 reps | 5 | 2 | 4-6 reps | 4"
+			],
+			"Low Handle Trap Bar Deadlift": [
+				"Week 1 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Week 2 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Week 3 | 1 | 5-7 reps | 2 | 2 | 5-7 reps | 1",
+				"Week 4 | 1 | 4-6 reps | 2 | 2 | 4-6 reps | 1",
+				"Week 5 | 1 | 4-6 reps | 2 | 2 | 4-6 reps | 1",
+				"Week 6 | 1 | 2-4 reps | 2 | 2 | 2-4 reps | 1",
+				"Week 7 | 1 | 2-4 reps | 2 | 2 | 2-4 reps | 1",
+				"Deload | 1 | 2-3 reps | 5"
+			],
+			"Low Incline Dumbbell Press": [
+				"Week 1 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 2 | 1 | 9-11 reps | 2 | 2 | 9-11 reps | 1",
+				"Week 3 | 1 | 7-9 reps | 2 | 2 | 7-9 reps | 1",
+				"Week 4 | 1 | 6-8 reps | 2 | 2 | 6-8 reps | 1",
+				"Week 5 | 1 | 6-8 reps | 2 | 2 | 6-8 reps | 1",
+				"Week 6 | 1 | 4-6 reps | 2 | 2 | 4-6 reps | 1",
+				"Week 7 | 1 | 4-6 reps | 2 | 2 | 4-6 reps | 1",
+				"Deload | 1 | 3-5 reps | 5"
+			],
+			"Overhand Grip Cable Lat Pulldown": [
+				"Week 1 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 1 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 1 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 1 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 1 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 1 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 1 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 4"
+			],
+			"Cable Rope Overhead Triceps Extension": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			],
+			"Pin-Loaded Machine Pullover": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			],
+			"Single Leg Leg Extension": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			],
+			"Standing Single Arm Plate-Loaded Machine Finger Curl": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			],
+			"Weighted Glute Ham Developer Sit-Up": [
+				"Week 1 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 2 | 1 | 14-16 reps | 0 | 2 | 14-16 reps | 0",
+				"Week 3 | 1 | 12-14 reps | 0 | 2 | 12-14 reps | 0",
+				"Week 4 | 1 | 10-12 reps | 0 | 2 | 10-12 reps | 0",
+				"Week 5 | 1 | 9-11 reps | 0 | 2 | 9-11 reps | 0",
+				"Week 6 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Week 7 | 1 | 7-9 reps | 0 | 2 | 7-9 reps | 0",
+				"Deload | 1 | 6-7 reps | 3"
+			]
+		}
+	}
+}

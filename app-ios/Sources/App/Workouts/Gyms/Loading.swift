@@ -42,40 +42,57 @@ struct PlateLoading: Equatable {
         self.sides = sides
     }
 
-    /// MF's calculator: the lightest load that reaches `target`, with the heaviest plates first. A target below the
-    /// base loads nothing and reports the base as extra; a target past the heaviest load shows the heaviest load.
+    /// MF's calculator (research milestone-2 §4.4): plates go on greedily from the heaviest down while the total stays
+    /// at or under `target`, at most `sidePlates` a side. A miss shows what fits; a target below the base loads nothing.
     func plan(for target: Double) -> PlatePlan {
-        let goal = Hundredths(of: target).value
-        let sides = reachableSides(upTo: max(0, (goal - Hundredths(of: baseWeight).value) / self.sides) + heaviestPlate)
-        let reached = sides.first { Hundredths(of: total($0)).value >= goal } ?? sides.last ?? 0
-        return PlatePlan(loading: self, target: target, perSide: decompose(reached) ?? [])
+        PlatePlan(loading: self, target: target, perSide: greedy(upTo: Hundredths(of: target).value))
     }
 
+    /// The − / + stepper moves through totals the calculator loads exactly, so it never lands on a "missing" weight.
     func step(from value: Double, up: Bool) -> Double? {
         let current = Hundredths(of: value).value
         let sides = reachableSides(upTo: max(0, (current - Hundredths(of: baseWeight).value) / self.sides) + heaviestPlate)
-        let totals = sides.map { Hundredths(of: total($0)).value }
+        let totals = sides.map { Hundredths(of: total($0)).value }.filter { total in
+            Hundredths(of: self.total(greedy(upTo: total).reduce(0, +))).value == total
+        }
         let next = up ? totals.first { $0 > current } : totals.last { $0 < current }
         return next.map { Double($0) / 100 }
     }
 
-    /// No calculator is asked for more than this on one side, so a typed 999999 can't allocate a knapsack that size.
-    private static let sideLimit = 100_000
+    /// MF loaded a 4,955 lb entry as 10 x 45 a side and nothing else, so a sleeve holds 10 plates.
+    static let sidePlates = 10
 
     private var heaviestPlate: Int { plates.map { Hundredths(of: $0.weight).value }.max() ?? 0 }
 
     private func total(_ side: Double) -> Double { baseWeight + side * Double(sides) }
 
-    /// Every one-side sum the plates can make up to `limit` hundredths, ascending, as a bounded knapsack. Sums are kept
-    /// exact and only indexed by hundredths: rounding each plate first lets three 20.41 kg plates miss 315 lb.
+    private func greedy(upTo goal: Int) -> [Double] {
+        var loaded: [Double] = []
+        var side = 0.0
+        for plate in plates {
+            var count = 0
+            while count < plate.perSide ?? .max, loaded.count < Self.sidePlates,
+                  Hundredths(of: total(side + plate.weight)).value <= goal {
+                loaded.append(plate.weight)
+                side += plate.weight
+                count += 1
+            }
+        }
+        return loaded
+    }
+
+    /// Every one-side sum the plates can make up to `limit` hundredths, ascending, as a bounded knapsack: the stepper's
+    /// candidates before the greedy check. Sums are kept exact and only indexed by hundredths, since rounding each
+    /// converted plate first drifts. Plates mixing kg and lb can lose a candidate that shares a slot with another.
     private func reachableSides(upTo limit: Int) -> [Double] {
-        let limit = min(limit, Self.sideLimit)
+        let limit = min(limit, heaviestPlate * Self.sidePlates)
+        guard limit >= 0 else { return [0] }
         var exact = [Double?](repeating: nil, count: limit + 1)
         exact[0] = 0
         var used = [Int](repeating: 0, count: limit + 1)
         for plate in plates {
             for index in used.indices { used[index] = 0 }
-            let available = plate.perSide ?? .max
+            let available = min(plate.perSide ?? .max, Self.sidePlates)
             for index in 0...limit {
                 guard let sum = exact[index], used[index] < available else { continue }
                 let next = Hundredths(of: sum + plate.weight).value
@@ -85,26 +102,6 @@ struct PlateLoading: Equatable {
             }
         }
         return exact.compactMap(\.self)
-    }
-
-    /// The plates for one side summing to `side`, trying the most of each heavier plate first, the way a lifter loads a
-    /// bar. `nil` when no combination makes it.
-    private func decompose(_ side: Double) -> [Double]? {
-        var failed = Set<[Int]>()
-        func search(_ index: Int, _ remaining: Double) -> [Int]? {
-            if abs(remaining) < 1e-6 { return [] }
-            let key = [index, Int((remaining * 1e6).rounded())]
-            guard index < plates.count, remaining > 0, !failed.contains(key) else { return nil }
-            let most = min(Int((remaining + 1e-6) / plates[index].weight), plates[index].perSide ?? .max)
-            for count in stride(from: most, through: 0, by: -1) {
-                if let rest = search(index + 1, remaining - Double(count) * plates[index].weight) {
-                    return Array(repeating: index, count: count) + rest
-                }
-            }
-            failed.insert(key)
-            return nil
-        }
-        return search(0, side).map { $0.map { plates[$0].weight } }
     }
 }
 
@@ -125,9 +122,8 @@ struct PlatePlan: Equatable {
         return lines
     }
 
-    /// "70 lb on both sides + 45 lb bar weight = 185 lb", or for a load that misses the target, "0 lb on both sides +
-    /// 45 lb bar weight = 0 lb + extra 45 lb". Below the heaviest load the miss is always extra, since the plan rounds
-    /// up; past it the sentence says what is missing.
+    /// "70 lb on both sides + 45 lb bar weight = 185 lb". A target the plates can't reach ends "- missing 5 lb"; one
+    /// below the base ends "+ extra 45 lb", as MF showed for 0 lb.
     func sentence(unit: String) -> String {
         func label(_ value: Double) -> String { "\(SetField.plain(value)) \(unit)" }
         let sides = loading.sides == 2 ? "on both sides" : "on one side"

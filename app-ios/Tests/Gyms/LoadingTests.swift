@@ -23,17 +23,23 @@ struct PlateCalculatorTests {
         #expect(plan.sentence(unit: "lb") == "0 lb on both sides + 45 lb bar weight = 0 lb + extra 45 lb")
     }
 
-    @Test func unloadableTargetRoundsUpToTheNextLoad() {
-        let plan = bar([45, 25]).plan(for: 190)
-        #expect(plan.perSide == [25, 25, 25])
-        #expect(plan.total == 195)
-        #expect(plan.sentence(unit: "lb") == "75 lb on both sides + 45 lb bar weight = 190 lb + extra 5 lb")
+    @Test func researchExamplesOnTheDefaultPlates() {
+        let plates = bar([2.5, 5, 10, 25, 35, 45])
+        #expect(plates.plan(for: 150).perSide == [45, 5, 2.5])
+        #expect(plates.plan(for: 135).perSide == [45])
+        #expect(plates.plan(for: 45).sentence(unit: "lb") == "0 lb on both sides + 45 lb bar weight = 45 lb")
+        #expect(plates.plan(for: 4955).sentence(unit: "lb") == "450 lb on both sides + 45 lb bar weight = 4955 lb - missing 4010 lb")
+        #expect(plates.plan(for: 4955).legend.map(\.count) == [10])
     }
 
-    @Test func heaviestFirstBacktracksWhenTheBigPlateLeavesAGap() {
-        #expect(bar([45, 35, 25]).plan(for: 165).perSide == [35, 25])
-        #expect(bar([45, 35, 25, 10, 5, 2.5]).plan(for: 315).perSide == [45, 45, 45])
-        #expect(bar([45, 35, 25, 10, 5, 2.5]).plan(for: 230).perSide == [45, 45, 2.5])
+    @Test func unloadableTargetShowsWhatFits() {
+        let plan = bar([45, 25]).plan(for: 190)
+        #expect(plan.perSide == [45, 25])
+        #expect(plan.sentence(unit: "lb") == "70 lb on both sides + 45 lb bar weight = 190 lb - missing 5 lb")
+    }
+
+    @Test func greedyNeverBacktracks() {
+        #expect(bar([45, 35, 25]).plan(for: 165).sentence(unit: "lb") == "45 lb on both sides + 45 lb bar weight = 165 lb - missing 30 lb")
     }
 
     @Test func plateCountsSplitAcrossSidesAndCapTheLoad() {
@@ -76,18 +82,19 @@ struct MixedUnitPlateTests {
 
     @Test func absurdTargetStaysBoundedAndSaysWhatIsMissing() {
         let plan = bar([45]).plan(for: 999_999)
-        #expect(plan.total == 45 + 2 * 45 * 22)
-        #expect(bar([45]).step(from: 2025, up: true) == nil)
+        #expect(plan.total == 945)
+        #expect(bar([45]).step(from: 945, up: true) == nil)
     }
 }
 
 struct LoadableStepTests {
     @Test func plateStepperMovesBetweenLoadableTotals() {
         let loading = Loading.plates(bar([45, 25]))
-        #expect(loading.step(from: 185, up: true) == 195)
-        #expect(loading.step(from: 185, up: false) == 145)
-        #expect(loading.step(from: 187, up: true) == 195)
+        #expect(loading.step(from: 185, up: true) == 225)
+        #expect(loading.step(from: 185, up: false) == 135)
+        #expect(loading.step(from: 187, up: true) == 225)
         #expect(loading.step(from: 187, up: false) == 185)
+        #expect(Loading.plates(bar([2.5, 5, 10, 25, 35, 45])).step(from: 185, up: true) == 190)
         #expect(loading.step(from: 45, up: false) == nil)
         #expect(loading.step(from: 0, up: true) == 45)
     }
@@ -149,7 +156,7 @@ struct EquipmentResolutionTests {
         let loads = GymLoads(gym: gym, overrides: [:], catalog: catalog)
         let plates = Loading.resolve(option: ["calf-raise"], catalog: catalog, unit: .kg, load: loads.load)?.plates
         #expect(plates?.sides == 1)
-        #expect(plates?.plan(for: 50).sentence(unit: "kg") == "40.82 kg on one side + 22.7 kg base weight = 50 kg + extra 13.52 kg")
+        #expect(plates?.plan(for: 50).sentence(unit: "kg") == "20.41 kg on one side + 22.7 kg base weight = 50 kg - missing 6.89 kg")
     }
 
     @Test func gymWithoutPlatesLoadsOnlyTheBar() {
