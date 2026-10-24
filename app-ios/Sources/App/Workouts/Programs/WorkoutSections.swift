@@ -1,6 +1,7 @@
 import Foundation
 
-/// The Workout tab's built-in sections. Custom sections are cut, so "Your Sections" only ever shows its empty state.
+/// The Workout tab's built-in sections. `yourSections` is the slot the custom sections draw in, or its empty state when
+/// there are none.
 enum WorkoutSection: String, Codable, CaseIterable, Identifiable {
     case activeProgram, library, yourSections
 
@@ -23,29 +24,36 @@ enum WorkoutSection: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// Customize Sections: the order of the three sections and whether Active Program shows. No synced table holds it, so
-/// it lives in `@AppStorage` under `storageKey` as JSON.
-struct WorkoutSectionsLayout: Codable, Hashable {
-    static let storageKey = "workoutTab.sections"
+/// A section the owner added with New Section: a name and the library workouts filed under it. A workout sits in at
+/// most one section and leaves the Workout Library list while it does.
+struct CustomWorkoutSection: Codable, Hashable, Identifiable {
+    var id = UUID()
+    var name: String
+    var templateIDs: [UUID] = []
+    var collapsed = false
+}
 
+/// Customize Sections and the custom sections, encoded whole into `settings.workout.sections`. `order` is always every
+/// built-in exactly once: decoding normalizes it, so a layout saved by another build still draws.
+struct WorkoutSectionsLayout: Codable, Hashable {
     var order = WorkoutSection.allCases
     var showsActiveProgram = true
+    var custom: [CustomWorkoutSection] = []
 
     init() {}
 
-    /// Reads the stored JSON. Unknown or repeated sections are dropped and missing ones appended, so a layout saved by
-    /// another build still names every section exactly once.
-    init(storage: String) {
-        guard let stored = try? JSONDecoder().decode(Stored.self, from: Data(storage.utf8)) else { return }
-        var seen = Set<WorkoutSection>()
-        let known = stored.order.compactMap(WorkoutSection.init(rawValue:)).filter { seen.insert($0).inserted }
-        order = known + WorkoutSection.allCases.filter { !seen.contains($0) }
-        showsActiveProgram = stored.showsActiveProgram ?? true
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        order = Self.normalized(try container.decode([String].self, forKey: .order))
+        showsActiveProgram = try container.decode(Bool.self, forKey: .showsActiveProgram)
+        custom = try container.decode([CustomWorkoutSection].self, forKey: .custom)
     }
 
-    var storage: String {
-        let stored = Stored(order: order.map(\.rawValue), showsActiveProgram: showsActiveProgram)
-        return (try? JSONEncoder().encode(stored)).map { String(decoding: $0, as: UTF8.self) } ?? ""
+    /// Unknown or repeated sections are dropped and missing ones appended in their default order.
+    static func normalized(_ stored: [String]) -> [WorkoutSection] {
+        var seen = Set<WorkoutSection>()
+        let known = stored.compactMap(WorkoutSection.init(rawValue:)).filter { seen.insert($0).inserted }
+        return known + WorkoutSection.allCases.filter { !seen.contains($0) }
     }
 
     /// The sections the tab draws, in order.
@@ -53,8 +61,37 @@ struct WorkoutSectionsLayout: Codable, Hashable {
         order.filter { $0 != .activeProgram || showsActiveProgram }
     }
 
-    private struct Stored: Codable {
-        var order: [String]
-        var showsActiveProgram: Bool?
+    /// Every template filed under a custom section, which the Workout Library list leaves out.
+    var filedTemplateIDs: Set<UUID> { Set(custom.flatMap(\.templateIDs)) }
+
+    @discardableResult
+    mutating func addSection(named name: String) -> CustomWorkoutSection.ID {
+        let section = CustomWorkoutSection(name: name.trimmingCharacters(in: .whitespacesAndNewlines))
+        custom.append(section)
+        return section.id
+    }
+
+    mutating func rename(_ id: CustomWorkoutSection.ID, to name: String) {
+        guard let index = custom.firstIndex(where: { $0.id == id }) else { return }
+        custom[index].name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The section's workouts go back to the Workout Library, because filing is only ever the section's own list.
+    mutating func deleteSection(_ id: CustomWorkoutSection.ID) {
+        custom.removeAll { $0.id == id }
+    }
+
+    /// Files `templateID` under `sectionID`, taking it out of any other section first, or takes it out of `sectionID`.
+    mutating func file(_ templateID: UUID, in sectionID: CustomWorkoutSection.ID, _ filed: Bool) {
+        guard let index = custom.firstIndex(where: { $0.id == sectionID }) else { return }
+        for other in custom.indices {
+            custom[other].templateIDs.removeAll { $0 == templateID }
+        }
+        if filed { custom[index].templateIDs.append(templateID) }
+    }
+
+    mutating func toggleCollapsed(_ id: CustomWorkoutSection.ID) {
+        guard let index = custom.firstIndex(where: { $0.id == id }) else { return }
+        custom[index].collapsed.toggle()
     }
 }

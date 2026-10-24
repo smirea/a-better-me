@@ -3,24 +3,56 @@ import Testing
 @testable import App
 
 struct WorkoutSectionsLayoutTests {
-    @Test func emptyOrBrokenStorageReadsTheDefaultOrder() {
-        #expect(WorkoutSectionsLayout(storage: "").visible == [.activeProgram, .library, .yourSections])
-        #expect(WorkoutSectionsLayout(storage: "{not json").visible == [.activeProgram, .library, .yourSections])
-    }
+    private static let sectionA = UUID(uuidString: "00000000-0000-0000-0000-00000000000A")!
+    private static let sectionB = UUID(uuidString: "00000000-0000-0000-0000-00000000000B")!
+    private static let push = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+    private static let pull = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
 
-    @Test func storedOrderAndToggleSurviveARoundTrip() {
+    private static func twoSections() -> WorkoutSectionsLayout {
         var layout = WorkoutSectionsLayout()
-        layout.order = [.yourSections, .library, .activeProgram]
-        layout.showsActiveProgram = false
-        let read = WorkoutSectionsLayout(storage: layout.storage)
-        #expect(read.order == [.yourSections, .library, .activeProgram])
-        #expect(read.visible == [.yourSections, .library])
+        layout.custom = [
+            CustomWorkoutSection(id: sectionA, name: "Travel", templateIDs: [push]),
+            CustomWorkoutSection(id: sectionB, name: "Home", templateIDs: [pull]),
+        ]
+        return layout
     }
 
     @Test func unknownAndRepeatedSectionsAreDroppedAndMissingOnesAppended() {
-        let read = WorkoutSectionsLayout(storage: #"{"order":["library","custom","library"]}"#)
-        #expect(read.order == [.library, .activeProgram, .yourSections])
-        #expect(read.showsActiveProgram)
+        #expect(WorkoutSectionsLayout.normalized(["library", "custom", "library"]) == [.library, .activeProgram, .yourSections])
+        #expect(WorkoutSectionsLayout.normalized([]) == [.activeProgram, .library, .yourSections])
+        #expect(WorkoutSectionsLayout.normalized(["yourSections", "activeProgram", "library"]) == [.yourSections, .activeProgram, .library])
+    }
+
+    @Test func decodingNormalizesTheOrderAndKeepsTheCustomSections() throws {
+        let json = #"{"order":["yourSections","bogus","yourSections"],"showsActiveProgram":false,"custom":[{"id":"00000000-0000-0000-0000-00000000000A","name":"Travel","templateIDs":["00000000-0000-0000-0000-000000000001"],"collapsed":true}]}"#
+        let read = try JSONDecoder().decode(WorkoutSectionsLayout.self, from: Data(json.utf8))
+        #expect(read.order == [.yourSections, .activeProgram, .library])
+        #expect(read.visible == [.yourSections, .library])
+        #expect(read.custom == [CustomWorkoutSection(id: Self.sectionA, name: "Travel", templateIDs: [Self.push], collapsed: true)])
+    }
+
+    @Test func filingAWorkoutMovesItOutOfItsOtherSection() {
+        var layout = Self.twoSections()
+        layout.file(Self.push, in: Self.sectionB, true)
+        #expect(layout.custom.map(\.templateIDs) == [[], [Self.pull, Self.push]])
+        layout.file(Self.pull, in: Self.sectionB, false)
+        #expect(layout.custom.map(\.templateIDs) == [[], [Self.push]])
+    }
+
+    @Test func deletingASectionReturnsItsWorkoutsToTheLibrary() {
+        var layout = Self.twoSections()
+        #expect(layout.filedTemplateIDs == [Self.push, Self.pull])
+        layout.deleteSection(Self.sectionA)
+        #expect(layout.custom.map(\.name) == ["Home"])
+        #expect(layout.filedTemplateIDs == [Self.pull])
+    }
+
+    @Test func namesAreTrimmedOnAddAndRename() {
+        var layout = WorkoutSectionsLayout()
+        let id = layout.addSection(named: "  Deload Week ")
+        #expect(layout.custom.map(\.name) == ["Deload Week"])
+        layout.rename(id, to: " Travel\n")
+        #expect(layout.custom.map(\.name) == ["Travel"])
     }
 }
 

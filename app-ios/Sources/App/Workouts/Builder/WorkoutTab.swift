@@ -12,10 +12,11 @@ struct WorkoutTab: View {
     @Observe(WorkoutSession.finished) private var sessions
     @Environment(LocalStore.self) private var store
     @Environment(LiveWorkoutPresenter.self) private var presenter
-    @AppStorage(WorkoutSectionsLayout.storageKey) private var sectionsStorage = ""
+    @Observe(AppSettings.current) private var settings
     @State private var showingCalendar = false
     @State private var creatingWorkout = false
     @State private var creatingProgram = false
+    @State private var creatingSection = false
     @State private var libraryCollapsed = false
     @State private var summary: WorkoutSession?
     @State private var path = NavigationPath()
@@ -30,7 +31,7 @@ struct WorkoutTab: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 28) {
                             WeekStrip(days: days) { summary = $0 }
-                            ForEach(WorkoutSectionsLayout(storage: sectionsStorage).visible) { section($0) }
+                            ForEach(settings.workout.sections.visible) { section($0) }
                         }
                         .padding(.horizontal)
                         .padding(.bottom)
@@ -58,6 +59,7 @@ struct WorkoutTab: View {
         .fullScreenCover(isPresented: $creatingProgram) {
             NewProgramWizard()
         }
+        .newSectionAlert(isPresented: $creatingSection)
     }
 
     @ToolbarContentBuilder
@@ -69,6 +71,7 @@ struct WorkoutTab: View {
         ToolbarSpacer(.fixed)
         ToolbarItem {
             Menu("Create", systemImage: "plus") {
+                Button("New Section", systemImage: "rectangle.split.1x2") { creatingSection = true }
                 Button("New Program", systemImage: "point.topleft.down.to.point.bottomright.curvepath") { creatingProgram = true }
                 Button("New Workout", systemImage: "dumbbell") { creatingWorkout = true }
             }
@@ -98,19 +101,28 @@ struct WorkoutTab: View {
         case .library:
             library(templates: byID)
         case .yourSections:
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Your Sections").font(AppFont.title())
-                Label("You haven’t added new sections yet. You can add one by tapping + on this page", systemImage: "rectangle.split.1x2")
-                    .font(AppFont.caption())
-                    .foregroundStyle(Theme.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+            let custom = settings.workout.sections.custom
+            if custom.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Your Sections").font(AppFont.title())
+                    Label("You haven’t added new sections yet. You can add one by tapping + on this page", systemImage: "rectangle.split.1x2")
+                        .font(AppFont.caption())
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 28) {
+                    ForEach(custom) { CustomSectionView(section: $0, library: templates) }
+                }
             }
         }
     }
 
     private func library(templates byID: [UUID: WorkoutTemplate]) -> some View {
+        let filed = settings.workout.sections.filedTemplateIDs
+        let templates = templates.filter { !filed.contains($0.id) }
         let libraryPrograms = programs.filter { $0.id != activeProgram?.id }
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
