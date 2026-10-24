@@ -33,6 +33,9 @@ final class LiveSessionStore {
     var events: [BlockExercise.ID: [ProgressionEvent]] = [:]
     /// Warm-Up Automation runs once per session, when its live editor first opens.
     var didAutomateWarmUps: Set<WorkoutSession.ID> = []
+    /// Set while Pause workout holds both clocks. Resume folds it into `WorkoutSession.pausedSeconds`.
+    private(set) var pausedAt: Date?
+    private var frozenRestRemaining: TimeInterval?
     private(set) var rest: RestTimer?
     /// What the restart pill "↺" goes back to: the rest the last checked set resolved to. It outlives Stop.
     private(set) var setRestSeconds: Int?
@@ -67,9 +70,27 @@ final class LiveSessionStore {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Self.notificationID])
     }
 
+    func pause(at now: Date = .now) {
+        guard pausedAt == nil else { return }
+        pausedAt = now
+        frozenRestRemaining = rest?.remaining(at: now)
+        stopRest()
+    }
+
+    /// Ends the pause and returns its whole seconds, for the session's `pausedSeconds`. A frozen rest picks up where it stopped.
+    func resume(at now: Date = .now) -> Int {
+        guard let pausedAt else { return 0 }
+        self.pausedAt = nil
+        if let remaining = frozenRestRemaining, remaining > 0 { setRest(RestTimer(startedAt: now, duration: remaining)) }
+        frozenRestRemaining = nil
+        return Int(now.timeIntervalSince(pausedAt))
+    }
+
     /// Forgets everything when the session ends or is discarded.
     func reset() {
         stopRest()
+        pausedAt = nil
+        frozenRestRemaining = nil
         setRestSeconds = nil
         drafts = [:]
         currentExercise = nil
@@ -104,5 +125,12 @@ final class LiveSessionStore {
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
             try? await center.add(UNNotificationRequest(identifier: Self.notificationID, content: content, trigger: trigger))
         }
+    }
+}
+
+extension WorkoutSession {
+    /// Time on the workout clock: wall time minus every pause, including one still running.
+    func elapsed(at now: Date, pausedAt: Date?) -> TimeInterval {
+        max(0, now.timeIntervalSince(startedAt) - TimeInterval(pausedSeconds) - (pausedAt.map { now.timeIntervalSince($0) } ?? 0))
     }
 }

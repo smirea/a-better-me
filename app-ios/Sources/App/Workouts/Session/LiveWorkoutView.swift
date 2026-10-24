@@ -13,7 +13,7 @@ struct SessionEditor: View {
     enum Mode { case live, editPast }
 
     enum Sheet: Identifiable {
-        case info(ExerciseID), progression, warmUp, targets, swap(ExerciseID), add, note, restTimer
+        case info(ExerciseID), progression, warmUp, targets, swap(ExerciseID), add, note, restTimer, settings
         var id: String { String(describing: self) }
     }
 
@@ -119,7 +119,12 @@ struct SessionEditor: View {
             if mode == .live { store.currentExercise = current }
             focus = nil
         }
+        .onAppear { UIApplication.shared.isIdleTimerDisabled = mode == .live && defaults.workout.display.keepAlive }
+        .onChange(of: defaults.workout.display.keepAlive) { _, keepAlive in
+            UIApplication.shared.isIdleTimerDisabled = mode == .live && keepAlive
+        }
         .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
             guard discardOnDisappear else { return }
             store.reset()
             localStore.delete(WorkoutSession.self, id: session.id)
@@ -162,16 +167,32 @@ struct SessionEditor: View {
             switch mode {
             case .live:
                 Menu {
+                    if store.pausedAt == nil {
+                        Button("Pause Workout", systemImage: "pause.fill") { store.pause() }
+                    } else {
+                        Button("Resume Workout", systemImage: "play.fill") { resumeWorkout() }
+                    }
                     Button("Minimize Workout", systemImage: "rectangle.bottomhalf.inset.filled") { presenter.isExpanded = false }
                     Button("Finish Workout", systemImage: "flag.checkered") { requestFinish() }
+                    Button("Workout Settings", systemImage: "dumbbell.fill") { sheet = .settings }
+                    Button("Gym Settings", systemImage: "house.fill") {}.disabled(true)
                     Button("Discard Workout", systemImage: "trash", role: .destructive) { confirmingDiscard = true }
                 } label: {
                     Image(systemName: "line.3.horizontal").font(.title3).frame(width: 32, height: 32)
                 }
                 .accessibilityLabel("Workout Options")
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    Text(Duration.seconds(context.date.timeIntervalSince(session.startedAt)).formatted(.time(pattern: .hourMinuteSecond)))
-                        .font(AppFont.number(17))
+                if store.pausedAt != nil {
+                    Text("Paused")
+                        .font(AppFont.headline(13))
+                        .padding(.horizontal, 10)
+                        .frame(height: 26)
+                        .background(Theme.surfaceRaised, in: Capsule())
+                        .accessibilityLabel("Workout paused")
+                } else if defaults.workout.display.workoutTimer {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Text(Duration.seconds((live ?? session).elapsed(at: context.date, pausedAt: nil)).formatted(.time(pattern: .hourMinuteSecond)))
+                            .font(AppFont.number(17))
+                    }
                 }
                 Spacer()
                 RestTimerPill { sheet = .restTimer }
@@ -377,6 +398,8 @@ struct SessionEditor: View {
             }
         case .restTimer:
             RestTimerSheet()
+        case .settings:
+            NavigationStack { WorkoutSettingsView() }
         }
     }
 
@@ -389,6 +412,7 @@ struct SessionEditor: View {
 
     private func finish(logAll: Bool) {
         focus = nil
+        if store.pausedAt != nil { resumeWorkout() }
         if logAll {
             let suggestions = defaults.workout.progression.initialFill == .smartProgression ? store.suggestions : [:]
             let prefills = SessionFlow.prefills(for: blocks, history: history, suggestions: suggestions, rirTracking: defaults.workout.rirTracking, unit: unit)
@@ -402,6 +426,11 @@ struct SessionEditor: View {
 
     private func saveBlocks(_ blocks: [WorkoutBlock]) {
         localStore.modify(WorkoutSession.self, id: session.id) { $0.blocks = blocks }
+    }
+
+    private func resumeWorkout() {
+        let paused = store.resume()
+        localStore.modify(WorkoutSession.self, id: session.id) { $0.pausedSeconds += paused }
     }
 
     // MARK: Smart Progression

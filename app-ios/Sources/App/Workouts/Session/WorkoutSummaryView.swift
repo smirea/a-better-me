@@ -102,7 +102,7 @@ struct WorkoutSummaryView: View {
             }
         }
         .sheet(isPresented: $isEditingDuration) {
-            DurationSheet(duration: endedAt.timeIntervalSince(session.startedAt)) { setEnd(session.startedAt.addingTimeInterval($0)) }
+            DurationSheet(duration: duration) { setEnd(session.startedAt.addingTimeInterval($0 + TimeInterval(session.pausedSeconds))) }
         }
         .sheet(isPresented: $isShowingChanges) {
             if let template { WorkoutChangesSheet(changes: WorkoutChanges(before: template.blocks, after: SessionFlow.plan(from: blocks))) }
@@ -116,6 +116,8 @@ struct WorkoutSummaryView: View {
     }
 
     private var endedAt: Date { session.endedAt ?? finishedAt }
+    /// Paused time is not time under the bar.
+    private var duration: TimeInterval { endedAt.timeIntervalSince(session.startedAt) - TimeInterval(session.pausedSeconds) }
 
     private func setEnd(_ date: Date) {
         if isFinishing { finishedAt = date } else { store.modify(WorkoutSession.self, id: session.id) { $0.endedAt = date } }
@@ -198,7 +200,7 @@ struct WorkoutSummaryView: View {
                 isEditingStart = true
             }
             Divider().overlay(Theme.separator)
-            detailRow("Duration", icon: "clock.fill", subtitle: Duration.seconds(endedAt.timeIntervalSince(session.startedAt)).formatted(.time(pattern: .hourMinuteSecond))) {
+            detailRow("Duration", icon: "clock.fill", subtitle: Duration.seconds(duration).formatted(.time(pattern: .hourMinuteSecond))) {
                 isEditingDuration = true
             }
             if !isFinishing {
