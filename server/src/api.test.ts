@@ -102,4 +102,22 @@ describe('handle', () => {
 			},
 		]);
 	});
+
+	test('ids are validated: a custom exercise needs the custom- prefix and settings has one id', async () => {
+		const response = await synced('ids', 0, [
+			{ seq: 1, table: 'custom_exercises', id: 'x1', op: 'put', values: { exercise: '{}' } },
+			{ seq: 2, table: 'custom_exercises', id: 'custom-x1', op: 'put', values: { exercise: '{}' } },
+			{ seq: 3, table: 'settings', id: 'other', op: 'put', values: { weight_unit: 'kg' } },
+		]);
+		expect(response.rejected.map(r => [r.id, r.reason])).toEqual([
+			['x1', 'id: Invalid string: must start with "custom-"'],
+			['other', 'id: Invalid input: expected "settings"'],
+		]);
+		const mine = new Set(['custom-x1', 'x1', 'other']);
+		expect(response.rows.filter(r => mine.has(r.id)).map(r => [r.table, r.id, r.deleted])).toEqual([
+			['custom_exercises', 'custom-x1', 0],
+			['custom_exercises', 'x1', 1],
+			['settings', 'other', 1],
+		]);
+	});
 });

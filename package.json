@@ -45,7 +45,7 @@
 		"oxlint": "^1.89.0",
 		"react": "^19.3.1",
 		"react-dom": "^19.3.1",
-		"sync-engine": "github:smirea/sync-engine#8b83e4b4427453ea8d8f0f6a6e75604ae270b1a9",
+		"sync-engine": "github:smirea/sync-engine#f4ffc1ffbb6cf50e07f398882a596c46cb8bb74c",
 		"tailwindcss": "^4.3.3",
 		"typescript": "^7.0.2",
 		"vite": "^8.3.5",
