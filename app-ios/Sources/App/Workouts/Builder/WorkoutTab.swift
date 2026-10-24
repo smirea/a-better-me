@@ -23,14 +23,15 @@ struct WorkoutTab: View {
 
     var body: some View {
         let days = LoggedDays(sessions)
+        let progress = activeProgram.map { DayPillProgress(fraction: $0.cycleProgress(finished: sessions), color: $0.color.swatch) }
         NavigationStack(path: $path) {
             Group {
                 if showingCalendar {
-                    MonthCalendar(days: days) { summary = $0 }
+                    MonthCalendar(days: days, progress: progress, target: { pillTarget($0, days: days) }, onOpen: open)
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 28) {
-                            WeekStrip(days: days) { summary = $0 }
+                            WeekStrip(days: days, progress: progress, target: { pillTarget($0, days: days) }, onOpen: open)
                             ForEach(settings.workout.sections.visible) { section($0) }
                         }
                         .padding(.horizontal)
@@ -60,6 +61,17 @@ struct WorkoutTab: View {
             NewProgramWizard()
         }
         .newSectionAlert(isPresented: $creatingSection)
+    }
+
+    private func pillTarget(_ day: Date, days: LoggedDays) -> DayPillTarget? {
+        DayPillTarget.of(day, session: days.session(on: day), program: activeProgram, now: .now, calendar: LoggedDays.calendar)
+    }
+
+    private func open(_ target: DayPillTarget) {
+        switch target {
+        case let .summary(session): summary = session
+        case let .programDay(route): path.append(route)
+        }
     }
 
     @ToolbarContentBuilder

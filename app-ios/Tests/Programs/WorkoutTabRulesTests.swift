@@ -159,3 +159,87 @@ struct ShortcutsLayoutTests {
         #expect(layout.rows == [.newProgram, .newWorkout, .emptyWorkout])
     }
 }
+
+struct WeekStripProgramTests {
+    private static let calendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        calendar.firstWeekday = 2
+        return calendar
+    }()
+
+    private static func date(_ day: Int, hour: Int = 12) -> Date {
+        calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour))!
+    }
+
+    /// Workout A, rest, B, rest, C, rest, rest; the run started on Friday, October 23, 2026.
+    private static func weekly() -> Program {
+        let days = [UUID(), nil, UUID(), nil, UUID(), nil, nil].map { ProgramDay(templateID: $0) }
+        var program = Program(name: "P1", color: .red, cycles: 7, days: days)
+        program.config.runStartedAt = date(23, hour: 18)
+        return program
+    }
+
+    private static func finished(_ program: Program, day: Int, cycle: Int) -> WorkoutSession {
+        var session = WorkoutSession(name: "Day \(day + 1)")
+        session.program = ProgramPosition(programID: program.id, dayID: program.days[day].id, cycle: cycle)
+        session.startedAt = date(24)
+        session.endedAt = date(24, hour: 13)
+        return session
+    }
+
+    @Test func weekdaysCountFromTheDayTheRunStarted() {
+        let program = Self.weekly()
+        let index = { (day: Int) in program.weekdayDay(on: Self.date(day), calendar: Self.calendar).flatMap { day in program.days.firstIndex(of: day) } }
+        #expect(index(23) == 0)
+        #expect(index(26) == 3)
+        #expect(index(22) == 6)
+        #expect(index(30) == 0)
+    }
+
+    @Test func withoutARunTheCreationDateIsDayOneAndOtherLengthsHaveNoWeekday() {
+        var program = Self.weekly()
+        program.config.runStartedAt = nil
+        program.createdAt = Self.date(21)
+        #expect(program.weekdayDay(on: Self.date(23), calendar: Self.calendar) == program.days[2])
+        let rolling = Program(name: "Rolling", color: .blue, cycles: 4, days: [ProgramDay(templateID: UUID()), ProgramDay()])
+        #expect(rolling.weekdayDay(on: Self.date(23), calendar: Self.calendar) == nil)
+    }
+
+    @Test func progressCountsWorkoutDaysOfTheCurrentCycle() {
+        let program = Self.weekly()
+        #expect(program.cycleProgress(finished: []) == 0)
+        #expect(program.cycleProgress(finished: [Self.finished(program, day: 0, cycle: 1)]) == 1.0 / 3.0)
+        #expect(program.cycleProgress(finished: [Self.finished(program, day: 0, cycle: 1), Self.finished(program, day: 2, cycle: 1)]) == 2.0 / 3.0)
+        #expect(program.cycleProgress(finished: [Self.finished(program, day: 0, cycle: 2)]) == 0)
+        let restOnly = Program(name: "Rest", color: .blue, cycles: 1, days: [ProgramDay()])
+        #expect(restOnly.cycleProgress(finished: []) == 0)
+    }
+
+    @Test func unloggedDaysFromTodayToSundayOpenTheirProgramDay() {
+        let program = Self.weekly()
+        let now = Self.date(27, hour: 9)
+        let target = { (month: Int, day: Int) in
+            DayPillTarget.of(Self.calendar.date(from: DateComponents(year: 2026, month: month, day: day))!, session: nil, program: program, now: now, calendar: Self.calendar)
+        }
+        #expect(target(10, 27) == .programDay(ProgramRoute(programID: program.id, dayID: program.days[4].id)))
+        #expect(target(10, 30) == .programDay(ProgramRoute(programID: program.id, dayID: program.days[0].id)))
+        #expect(target(11, 1) == .programDay(ProgramRoute(programID: program.id, dayID: program.days[2].id)))
+        #expect(target(10, 31) == nil)
+        #expect(target(11, 6) == nil)
+        let fromWednesday = { (day: Int) in
+            DayPillTarget.of(Self.date(day, hour: 0), session: nil, program: program, now: Self.date(28, hour: 9), calendar: Self.calendar)
+        }
+        #expect(fromWednesday(27) == nil)
+        #expect(DayPillTarget.of(Self.date(27, hour: 0), session: nil, program: nil, now: now, calendar: Self.calendar) == nil)
+    }
+
+    @Test func aLoggedDayOpensItsSummaryAndRollingProgramsOpenNothing() {
+        let program = Self.weekly()
+        let now = Self.date(27, hour: 9)
+        let session = Self.finished(program, day: 0, cycle: 1)
+        #expect(DayPillTarget.of(Self.date(26, hour: 0), session: session, program: program, now: now, calendar: Self.calendar) == .summary(session))
+        let rolling = Program(name: "Rolling", color: .blue, cycles: 4, days: [ProgramDay(templateID: UUID()), ProgramDay()])
+        #expect(DayPillTarget.of(Self.date(27, hour: 0), session: nil, program: rolling, now: now, calendar: Self.calendar) == nil)
+    }
+}

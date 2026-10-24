@@ -92,6 +92,23 @@ extension Program {
 
     var workoutDays: [ProgramDay] { days.filter { $0.templateID != nil } }
 
+    /// The week strip's progress arc: the workout days done in the current cycle and run over the cycle's workout days.
+    /// Rest days count for nothing, as they do for the advance.
+    func cycleProgress(finished: [WorkoutSession]) -> Double {
+        let workoutDays = workoutDays
+        guard !workoutDays.isEmpty else { return 0 }
+        return Double(workoutDays.count { isDone($0, finished: finished) }) / Double(workoutDays.count)
+    }
+
+    /// For a seven-day program, the program day `date` falls on: Day 1 on the weekday the current run started, the
+    /// program's creation when it has no run yet. `nil` for any other length, which keeps rolling by day order.
+    func weekdayDay(on date: Date, calendar: Calendar) -> ProgramDay? {
+        guard isWeekly else { return nil }
+        let start = calendar.startOfDay(for: config.runStartedAt ?? createdAt)
+        let offset = calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: date)).day ?? 0
+        return days[(offset % 7 + 7) % 7]
+    }
+
     func day(for templateID: UUID) -> ProgramDay? { days.first { $0.templateID == templateID } }
 }
 
