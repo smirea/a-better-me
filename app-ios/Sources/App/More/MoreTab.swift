@@ -21,8 +21,8 @@ struct MoreTab: View {
                     }
                 }
                 Section("Feature Settings") {
-                    NavigationLink { RestTimerSettings() } label: {
-                        Label("Rest Timer", systemImage: "timer")
+                    NavigationLink { WorkoutSettingsView() } label: {
+                        Label("Workout", systemImage: "dumbbell")
                     }
                     NavigationLink { ExerciseLibraryView() } label: {
                         Label("Exercises", systemImage: "list.bullet.rectangle")
@@ -31,29 +31,5 @@ struct MoreTab: View {
             }
             .screenTitle("More")
         }
-    }
-}
-
-private struct RestTimerSettings: View {
-    @Environment(LocalStore.self) private var store
-    @Observe(AppSettings.current) private var settings
-
-    var body: some View {
-        Form {
-            Section("Timer Duration") {
-                ForEach(RestCategory.allCases) { category in
-                    Stepper(
-                        value: Binding(
-                            get: { settings.restSeconds(category) },
-                            set: { seconds in store.updateSettings { $0.setRestSeconds(seconds, for: category) } }
-                        ),
-                        in: 0...600, step: 15
-                    ) {
-                        LabeledContent(category.displayName, value: Duration.seconds(settings.restSeconds(category)).formatted(.time(pattern: .minuteSecond)))
-                    }
-                }
-            }
-        }
-        .navigationTitle("Rest Timer")
     }
 }
