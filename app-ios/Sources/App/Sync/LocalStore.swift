@@ -3,6 +3,7 @@ import GRDB
 import Observation
 import os
 import PowerSync
+import SwiftUI
 
 /// The app's one database and its sync connection. Every screen reads it through `@Observe` and writes through the
 /// methods here, which run one after another in the order they were called, each in one transaction.
@@ -139,9 +140,49 @@ final class LocalStore {
         }
     }
 
+    func editProgram(_ id: UUID, _ change: @escaping @Sendable (inout Program) -> Void) {
+        modify(Program.self, id: id) {
+            change(&$0)
+            $0.updatedAt = .now
+        }
+    }
+
+    /// Activates `id` and deactivates every other program in one transaction, so at most one is active. Archiving a
+    /// program goes through `editProgram` and clears `isActive` in the same patch.
+    func activateProgram(_ id: UUID) {
+        write { db in
+            for program in try Program.fetchAll(db) where program.isActive != (program.id == id) {
+                var changed = program
+                changed.isActive = program.id == id
+                changed.updatedAt = .now
+                try changed.updateChanges(db, from: program)
+            }
+        }
+    }
+
+    /// Makes `id` the default gym and clears the flag on every other one in one transaction.
+    func setDefaultGym(_ id: UUID) {
+        write { db in
+            for gym in try GymProfile.fetchAll(db) where gym.isDefault != (gym.id == id) {
+                var changed = gym
+                changed.isDefault = gym.id == id
+                changed.updatedAt = .now
+                try changed.updateChanges(db, from: gym)
+            }
+        }
+    }
+
     /// The settings row is patched, never put whole, except the first time a device creates it.
     func updateSettings(_ change: @escaping @Sendable (inout AppSettings) -> Void) {
         modify(AppSettings.self, id: AppSettings.rowID, orInsert: { AppSettings() }, change)
+    }
+
+    /// A control's binding to one setting, read from the observed `settings` and written through `updateSettings`.
+    func binding<Value: Sendable>(_ settings: AppSettings, _ path: WritableKeyPath<AppSettings, Value> & Sendable) -> Binding<Value> {
+        Binding(
+            get: { settings[keyPath: path] },
+            set: { value in self.updateSettings { $0[keyPath: path] = value } }
+        )
     }
 
     /// Reads outside an observation, after the store is ready.
