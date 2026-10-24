@@ -29,6 +29,6 @@ extension EquipmentLoad {
 }
 
 extension WeightUnit {
-    /// "102.5 lb".
-    func label(kg: Double) -> String { "\(format(kg: kg)) \(rawValue)" }
+    /// "102.5 lb", with a no-break space so a list never wraps between number and unit.
+    func label(kg: Double) -> String { "\(format(kg: kg))\u{00A0}\(rawValue)" }
 }

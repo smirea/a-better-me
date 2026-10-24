@@ -85,7 +85,7 @@ struct GymDefaultsTests {
         #expect(GymDefaults.load(for: "19e5c6f170d88007ba63e3e18e4933f8") == .ranges(options: [WeightRange(minKg: 0, maxKg: 500 * lb, incrementKg: 10 * lb)]))
         #expect(GymDefaults.load(for: "19e5c6f170d880d3914cc4c2631393cd") == .base(kg: 100 * lb))
         #expect(GymDefaults.load(for: "25b5c6f170d880619592ca5ba65fc1b3")?.summary(in: .lb) == "Orange, Red, Blue, Green, Black, Purple, Red, Silver")
-        #expect(GymDefaults.load(for: "19e5c6f170d880d3914cc4c2631393cd")?.summary(in: .lb) == "100 lb")
+        #expect(GymDefaults.load(for: "19e5c6f170d880d3914cc4c2631393cd")?.summary(in: .lb) == "100\u{00A0}lb")
     }
 
     @Test func aGymLoadOverridesTheDefault() {
