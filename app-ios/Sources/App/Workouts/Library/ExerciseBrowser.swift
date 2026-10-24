@@ -11,12 +11,18 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
     @ViewBuilder var header: Header
     @ViewBuilder var trailing: (Exercise) -> Trailing
 
+    @Environment(ExerciseCatalog.self) private var catalog
+    @Observe(GymProfile.all) private var gyms
     @State private var expanded: Set<ExerciseCategory> = []
     private static var collapsedCount: Int { 5 }
 
     var body: some View {
         let search = ExerciseSearch(query)
-        let groups = ExerciseGroup.grouping(exercises.filter { filter.matches($0) && search.matches($0) })
+        let gym = filter.gymID.flatMap { id in gyms.first { $0.id == id } }
+        let availability = gym.map { GymAvailability(gym: $0, equipment: catalog.equipment) }
+        let groups = ExerciseGroup.grouping(exercises.filter {
+            filter.matches($0) && search.matches($0) && availability?.isAvailable($0) != false
+        })
         List {
             if groups.isEmpty {
                 Text("No Results")
@@ -60,7 +66,7 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
         .safeAreaBar(edge: .top) {
             VStack(alignment: .leading, spacing: 10) {
                 header
-                ExerciseFilterBar(filter: $filter, exercises: exercises)
+                ExerciseFilterBar(filter: $filter, exercises: exercises, gyms: gyms, availability: availability)
                 MuscleFilterRow(selection: $filter.muscle)
             }
             .padding(.bottom, 6)
@@ -84,24 +90,29 @@ extension ExerciseBrowser where Header == EmptyView {
     }
 }
 
-/// Reset, Type, Laterality, Resistance, Support, and Range of Motion. Gym is cut with gym profiles (milestone 2).
+/// Reset, Gym, Type, Laterality, Resistance, Support, and Range of Motion.
 struct ExerciseFilterBar: View {
     @Binding var filter: ExerciseFilter
     let exercises: [Exercise]
+    let gyms: [GymProfile]
+    /// The chosen gym's, when it still exists.
+    let availability: GymAvailability?
     @Environment(ExerciseCatalog.self) private var catalog
     @State private var equipmentSheet: EquipmentRole?
+    @State private var managingGyms = false
 
     var body: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
                 if filter.isActive {
-                    Button("Reset Filters", systemImage: "arrow.counterclockwise") { filter = ExerciseFilter() }
+                    Button("Reset Filters", systemImage: "arrow.counterclockwise") { filter = ExerciseFilter(gymID: filter.gymID) }
                         .labelStyle(.iconOnly)
                         .font(AppFont.medium(13))
                         .foregroundStyle(Theme.textPrimary)
                         .frame(width: 32, height: 32)
                         .background(Theme.surfaceRaised, in: .circle)
                 }
+                gymMenu
                 Menu {
                     Picker("Type", selection: $filter.type) {
                         Text("Any").tag(RestCategory?.none)
@@ -155,9 +166,44 @@ struct ExerciseFilterBar: View {
             EquipmentPickerSheet(
                 title: role.title,
                 equipmentIDs: Set(exercises.flatMap { $0[keyPath: role.optionsKey].joined() }),
-                selection: $filter[dynamicMember: role.filterKey]
+                selection: $filter[dynamicMember: role.filterKey],
+                availability: availability
             )
         }
+        .sheet(isPresented: $managingGyms) {
+            NavigationStack {
+                GymProfilesView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close", systemImage: "xmark") { managingGyms = false }
+                        }
+                    }
+            }
+            .tint(Theme.textPrimary)
+        }
+    }
+
+    private var gymMenu: some View {
+        let gym = availability == nil ? nil : gyms.first { $0.id == filter.gymID }
+        return Menu {
+            Section {
+                gymToggle(nil) { Text("Any Gym") }
+                ForEach(gyms) { gym in
+                    gymToggle(gym.id) { Label(gym.name, systemImage: gym.icon) }
+                }
+            } header: {
+                Text("Gym Options")
+                Text("Impacts exercise selection")
+            }
+            Button("Manage Gym Profiles", systemImage: "gearshape") { managingGyms = true }
+        } label: {
+            FilterChipLabel(title: gym?.name ?? "Gym", systemImage: "building.2", isActive: gym != nil)
+        }
+    }
+
+    /// A menu toggle rather than an inline picker, because a picker drops the section's title.
+    private func gymToggle(_ id: UUID?, @ViewBuilder label: () -> some View) -> some View {
+        Toggle(isOn: Binding(get: { filter.gymID == id }, set: { if $0 { filter.gymID = id } }), label: label)
     }
 
     /// Moving one end past the other drags the other along, so the range never inverts.
@@ -193,6 +239,8 @@ struct EquipmentPickerSheet: View {
     let title: String
     let equipmentIDs: Set<String>
     @Binding var selection: EquipmentChoice?
+    /// Marks items the filter's gym lacks, which can still be chosen.
+    var availability: GymAvailability? = nil
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
@@ -216,7 +264,12 @@ struct EquipmentPickerSheet: View {
                             } label: {
                                 HStack(spacing: 14) {
                                     EquipmentImage(equipmentID: item.id).frame(width: 32, height: 32)
-                                    Text(item.name).font(AppFont.medium(15)).foregroundStyle(Theme.textPrimary)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(item.name).font(AppFont.medium(15)).foregroundStyle(Theme.textPrimary)
+                                        if availability?.provides(item.id) == false {
+                                            Text("Not available in this gym").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                                        }
+                                    }
                                     Spacer()
                                     Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
                                         .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textTertiary)
