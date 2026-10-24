@@ -245,23 +245,6 @@ private extension Deload {
     }
 }
 
-extension ProgramColor {
-    /// Program Settings' swatch. The hex values are ours, matched by eye to MF's seven.
-    fileprivate var swatch: Color {
-        switch self {
-        case .red: Color(hex: 0xE5534B)
-        case .orange: Color(hex: 0xF28C38)
-        case .yellow: Color(hex: 0xE8C547)
-        case .green: Color(hex: 0x5FB36B)
-        case .teal: Color(hex: 0x3FB6AE)
-        case .blue: Color(hex: 0x4A86E8)
-        case .purple: Color(hex: 0x9B7FE0)
-        }
-    }
-
-    fileprivate var title: String { rawValue.capitalized }
-}
-
 /// The Color & Icon picker's glyphs. MF offers about fifty; these are SF Symbols close to its set.
 private enum ProgramIcon {
     static let all: [(symbol: String, title: String)] = [
