@@ -145,9 +145,10 @@ export const schema = defineSchema({
 	values: {
 		workout_templates: { blocks: array },
 		workout_sessions: { blocks: array, cycle: atLeastOne, pausedSeconds: count },
-		custom_exercises: { exercise: object },
+		custom_exercises: { id: z.string().startsWith('custom-'), exercise: object },
 		exercise_settings: { restSeconds: count, overrides: object },
 		settings: {
+			id: z.literal('settings'),
 			weightUnit: z.enum(WEIGHT_UNITS),
 			restCompoundUpper: count,
 			restCompoundLower: count,
