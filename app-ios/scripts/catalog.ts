@@ -4,6 +4,8 @@
  * `bun app-ios/scripts/catalog.ts [path/to/Runner.app]`.
  * Reads the app's own catalog export (`packages/macrofactor/assets/import/app_file.json`), its instruction and
  * article Markdown, and its exercise and equipment images, and writes `Sources/App/Resources/Catalog/`.
+ * The default weight lists MF shows per equipment item (dumbbells 2.5 to 165 lb and so on) are not in the bundle;
+ * they come from docs/research/mf-workouts/equipment.md.
  */
 import { $ } from 'bun';
 import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
@@ -70,6 +72,49 @@ const region = (id: unknown) => {
 	return name === 'Full body' ? 'fullBody' : camel(name.replace(' body', ''));
 };
 const level = (id: unknown, type: string) => (id ? Number(ref(id as string, type).name) : null);
+
+const classifications: Record<string, string> = {
+	'Primary Compound': 'primaryCompound',
+	'Secondary Compound': 'secondaryCompound',
+	'Isolation/Accessory': 'accessory',
+	Core: 'core',
+};
+const classification = (ids: unknown) =>
+	names(ids, 'exerciseDescriptor').map(name => {
+		const value = classifications[name];
+		if (!value) throw new Error(`Unknown exercise classification ${name}`);
+		return value;
+	});
+const recommendation = (value: unknown) => {
+	if (value !== null && typeof value !== 'number') throw new Error(`Recommendation level ${value} is not a number`);
+	return value;
+};
+const recommendationLevels = (e: Record<string, unknown>, goal: 'strength' | 'hypertrophy') => ({
+	primaryCompound: recommendation(e[`${goal}PrimaryCompoundRecommendationLevel`]),
+	secondaryCompound: recommendation(e[`${goal}SecondaryCompoundRecommendationLevel`]),
+	accessory: recommendation(e[`${goal}AccessoryRecommendationLevel`]),
+});
+const selection = (e: Record<string, unknown>) => ({
+	hypertrophy: recommendationLevels(e, 'hypertrophy'),
+	strength: recommendationLevels(e, 'strength'),
+	hypertrophyClassification: classification(e.exerciseClassificationHypertrophy),
+	strengthClassification: classification(e.exerciseClassificationStrength),
+	exerciseGroups: names(e.exerciseGroup, 'exerciseGroup'),
+	exclusionGroupings: names(e.exclusionGroupings, 'exclusionGroupings'),
+	preconditions: names(e.preconditions, 'preconditions'),
+	stretchedMuscles: names(e.stretchedMuscle, 'muscle'),
+	emphasizedAgonists: names(e.emphasizedAgonist, 'featureMuscleGroup').map(snake),
+	deemphasizedAgonists: names(e.deemphasizedAgonist, 'featureMuscleGroup').map(snake),
+});
+
+const plateLaterality: Record<string, string> = { 'Per side': 'perSide', 'Single side': 'singleSide' };
+const gymPresets = [
+	['commercialGym', 'commercial'],
+	['warehouseGym', 'warehouse'],
+	['localGym', 'local'],
+	['garageGym', 'garage'],
+	['homeGym', 'home'],
+] as const;
 
 // Exercise Markdown links to the authors' Notion workspace, which the app never opens. Keep the link text only.
 const stripLinks = (markdown: string) => markdown.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').trim();
@@ -138,6 +183,7 @@ for (const e of source.exercises) {
 		stability: level(e.stability, 'stability'),
 		primaryJointActions: names(e.primaryJointAction, 'jointAction'),
 		secondaryJointActions: names(e.secondaryJointAction, 'jointAction'),
+		selection: selection(e),
 		equipmentIDs: equipment,
 		bodyweightFraction: (e.bodyweight as number | null) ?? 0,
 		searchBoost: (e.searchBoostValue as number | undefined) ?? 0,
@@ -164,6 +210,18 @@ for (const [id, entry] of Object.entries(source.uuidIndex)) {
 	if (hasImage)
 		await $`magick ${png} -resize 240x240 -quality 80 ${join(out, 'EquipmentImages', `${id}.webp`)}`.quiet();
 	const kg = (value: unknown) => (typeof value === 'number' && value > 0 ? value : null);
+	const weightOptionsKg = ((entry.weightSelectKg as string | null) ?? '').split(',').flatMap(option => {
+		if (!option.trim()) return [];
+		const value = Number(option);
+		if (!Number.isFinite(value)) throw new Error(`${entry.name} has a non-numeric weight option "${option}"`);
+		return [value];
+	});
+	let laterality: string | null = null;
+	if (entry.plateCalculatorLaterality) {
+		const name = ref(entry.plateCalculatorLaterality as string, 'plateCalculatorLaterality').name;
+		laterality = plateLaterality[name] ?? null;
+		if (!laterality) throw new Error(`Unknown plate calculator laterality ${name}`);
+	}
 	equipment.push({
 		id,
 		name: titleCase(entry.name),
@@ -171,6 +229,9 @@ for (const [id, entry] of Object.entries(source.uuidIndex)) {
 		category: entry.category ? ref(entry.category as string, 'appEquipmentCategory').name : 'Bodyweight',
 		weightKg: kg(entry.weightKg),
 		incrementKg: kg(entry.weightIncrementKg),
+		weightOptionsKg,
+		plateLaterality: laterality,
+		gymPresets: gymPresets.filter(([flag]) => entry[flag] === 1).map(([, preset]) => preset),
 		hasImage,
 	});
 }

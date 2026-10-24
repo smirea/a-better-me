@@ -35,6 +35,8 @@ struct Exercise: Codable, Hashable, Identifiable {
     var stability: Int?
     var primaryJointActions: [String] = []
     var secondaryJointActions: [String] = []
+    /// Smart Generation inputs from the catalog. `nil` for custom exercises, including stored rows that predate it.
+    var selection: ExerciseSelection?
     /// Share of body weight moved, which MF adds to the logged load for bodyweight exercises.
     var bodyweightFraction: Double = 0
     var searchBoost: Int = 0
@@ -64,6 +66,32 @@ struct Exercise: Codable, Hashable, Identifiable {
         case .core: return .core
         }
     }
+}
+
+struct ExerciseSelection: Codable, Hashable {
+    var hypertrophy: RecommendationLevels
+    var strength: RecommendationLevels
+    var hypertrophyClassification: [ExerciseClassification]
+    var strengthClassification: [ExerciseClassification]
+    /// Names such as "Machine incline presses".
+    var exerciseGroups: [String]
+    var exclusionGroupings: [String]
+    /// Names such as "Barbell bench press preconditions".
+    var preconditions: [String]
+    /// Anatomical names, the same vocabulary as `Exercise.primaryMuscleDetails`.
+    var stretchedMuscles: [String]
+    var emphasizedAgonists: [Muscle]
+    var deemphasizedAgonists: [Muscle]
+}
+
+struct RecommendationLevels: Codable, Hashable {
+    var primaryCompound: Double?
+    var secondaryCompound: Double?
+    var accessory: Double?
+}
+
+enum ExerciseClassification: String, Codable {
+    case primaryCompound, secondaryCompound, accessory, core
 }
 
 enum ExerciseType: String, Codable, CaseIterable {
@@ -138,7 +166,20 @@ struct Equipment: Codable, Hashable, Identifiable {
     var pluralOf: String?
     var weightKg: Double?
     var incrementKg: Double?
+    /// Selectable fixed weights, such as a barbell's 20, 15, and 7 kg. Empty for most equipment.
+    var weightOptionsKg: [Double]
+    var plateLaterality: PlateLaterality?
+    /// The gym setups that include this equipment by default.
+    var gymPresets: [GymPreset]
     var hasImage: Bool
+}
+
+enum PlateLaterality: String, Codable {
+    case perSide, singleSide
+}
+
+enum GymPreset: String, Codable, CaseIterable {
+    case commercial, warehouse, local, garage, home
 }
 
 /// The reference app's long-form exercise notes, such as "Flat versus incline variations for chest development".
