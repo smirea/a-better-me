@@ -17,6 +17,7 @@ struct NewWorkoutSheet: View {
     @State private var loggingWeight = false
     @State private var customizing = false
     @State private var startingEmpty = false
+    @State private var expandsOnDismiss = false
     @State private var contentHeight: CGFloat = 320
     @State private var detent = PresentationDetent.large
 
@@ -65,9 +66,17 @@ struct NewWorkoutSheet: View {
             .navigationDestination(for: ShortcutsRoute.self) { _ in WorkoutHistoryView() }
         }
         .tint(Theme.textPrimary)
+        .onChange(of: presenter.isExpanded) { _, expanded in
+            guard expanded else { return }
+            presenter.isExpanded = false
+            expandsOnDismiss = true
+            dismiss()
+        }
         .onDisappear {
-            // The root view can't present the live workout's cover while this sheet is still on screen.
+            // The root view can't present the live workout's cover while this sheet is still on screen, so a workout
+            // started here (Empty Workout, or Up Next's day) shows once the sheet is gone.
             if startingEmpty { presenter.startOrResume({ .empty }, in: store) }
+            if expandsOnDismiss { presenter.isExpanded = true }
         }
         .presentationDetents([fitted, .large], selection: $detent)
         .onChange(of: path.isEmpty, initial: true) { detent = path.isEmpty ? fitted : .large }
