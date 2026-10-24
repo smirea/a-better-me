@@ -48,6 +48,36 @@ extension Row {
         return try RowJSON.decoder.decode(T.self, from: Data(text.utf8))
     }
 
+    /// A settings-like JSON column read over `defaults`, so a key the stored text lacks takes the default and a row
+    /// written before a key existed needs no migration. The stored tree is deep-merged over the encoded default:
+    /// objects merge key by key, everything else replaces, and a root of another JSON kind is discarded. A NULL
+    /// column, text that is not JSON, or a merged tree that does not decode reads as `defaults`, and the last two log.
+    func json<T: Codable>(_ column: String, over defaults: T) -> T {
+        guard let text: String = self[column] else { return defaults }
+        do {
+            let stored = try JSONSerialization.jsonObject(with: Data(text.utf8), options: .fragmentsAllowed)
+            let base = try JSONSerialization.jsonObject(with: RowJSON.encoder.encode(defaults), options: .fragmentsAllowed)
+            let merged = switch (stored, base) {
+            case (is [String: Any], is [String: Any]), (is [Any], is [Any]): Self.merge(stored, over: base)
+            default: base
+            }
+            let data = try JSONSerialization.data(withJSONObject: merged, options: .fragmentsAllowed)
+            return try RowJSON.decoder.decode(T.self, from: data)
+        } catch {
+            LocalStore.log.error("\(column) did not decode, reading defaults: \(String(describing: error))")
+            return defaults
+        }
+    }
+
+    private static func merge(_ stored: Any, over base: Any) -> Any {
+        guard let stored = stored as? [String: Any], let base = base as? [String: Any] else { return stored }
+        var merged = base
+        for (key, value) in stored {
+            merged[key] = base[key].map { merge(value, over: $0) } ?? value
+        }
+        return merged
+    }
+
     /// PowerSync stores a boolean as 0 or 1; Postgres may stream it back as text.
     func flag(_ column: String) -> Bool {
         let value: DatabaseValue = self[column]
