@@ -80,6 +80,13 @@ struct MixedUnitPlateTests {
         #expect(loading.plan(for: stepped).sentence(unit: "lb") == "2.76 lb on both sides + 44.09 lb bar weight = 49.6 lb")
     }
 
+    @Test func stepperReachesTheFullSleeveInKg() {
+        let platesInKg = PlateLoading(base: .bar, baseWeight: kg.fromKg(lb.toKg(45)), plates: [45.0, 25].map { .init(weight: kg.fromKg(lb.toKg($0)), perSide: nil) }, sides: 2)
+        #expect(platesInKg.step(from: 420, up: true).map(SetField.plain) == "428.64")
+        let only45 = PlateLoading(base: .bar, baseWeight: kg.fromKg(lb.toKg(45)), plates: [.init(weight: kg.fromKg(lb.toKg(45)), perSide: nil)], sides: 2)
+        #expect(only45.step(from: 142.88, up: true).map(SetField.plain) == "183.7")
+    }
+
     @Test func absurdTargetStaysBoundedAndSaysWhatIsMissing() {
         let plan = bar([45]).plan(for: 999_999)
         #expect(plan.total == 945)

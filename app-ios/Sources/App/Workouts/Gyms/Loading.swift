@@ -51,7 +51,8 @@ struct PlateLoading: Equatable {
     /// The − / + stepper moves through totals the calculator loads exactly, so it never lands on a "missing" weight.
     func step(from value: Double, up: Bool) -> Double? {
         let current = Hundredths(of: value).value
-        let sides = reachableSides(upTo: max(0, (current - Hundredths(of: baseWeight).value) / self.sides) + heaviestPlate)
+        let window = max(0, (value - baseWeight) / Double(self.sides)) + (plates.first?.weight ?? 0)
+        let sides = reachableSides(upTo: Hundredths(of: window).value + 1)
         let totals = sides.map { Hundredths(of: total($0)).value }.filter { total in
             Hundredths(of: self.total(greedy(upTo: total).reduce(0, +))).value == total
         }
@@ -61,8 +62,6 @@ struct PlateLoading: Equatable {
 
     /// MF loaded a 4,955 lb entry as 10 x 45 a side and nothing else, so a sleeve holds 10 plates.
     static let sidePlates = 10
-
-    private var heaviestPlate: Int { plates.map { Hundredths(of: $0.weight).value }.max() ?? 0 }
 
     private func total(_ side: Double) -> Double { baseWeight + side * Double(sides) }
 
@@ -85,7 +84,7 @@ struct PlateLoading: Equatable {
     /// candidates before the greedy check. Sums are kept exact and only indexed by hundredths, since rounding each
     /// converted plate first drifts. Plates mixing kg and lb can lose a candidate that shares a slot with another.
     private func reachableSides(upTo limit: Int) -> [Double] {
-        let limit = min(limit, heaviestPlate * Self.sidePlates)
+        let limit = min(limit, Hundredths(of: (plates.first?.weight ?? 0) * Double(Self.sidePlates)).value)
         guard limit >= 0 else { return [0] }
         var exact = [Double?](repeating: nil, count: limit + 1)
         exact[0] = 0
