@@ -3,7 +3,7 @@ import Testing
 @testable import App
 
 private func item(_ id: String, _ category: String, pluralOf: String? = nil, presets: [GymPreset] = []) -> Equipment {
-    Equipment(id: id, name: id, category: category, pluralOf: pluralOf, weightOptionsKg: [], gymPresets: presets, hasImage: false)
+    Equipment(id: id, name: id, category: category, pluralOf: pluralOf, weightOptionsKg: [], gymPresets: presets)
 }
 
 private let catalog: [EquipmentID: Equipment] = Dictionary(uniqueKeysWithValues: [

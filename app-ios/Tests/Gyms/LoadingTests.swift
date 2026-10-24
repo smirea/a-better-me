@@ -330,7 +330,7 @@ struct PlateCalculatorOptionTests {
 }
 
 private func item(_ id: String, _ category: String, weightKg: Double? = nil, laterality: PlateLaterality? = nil) -> Equipment {
-    Equipment(id: id, name: id, category: category, weightKg: weightKg, weightOptionsKg: [], plateLaterality: laterality, gymPresets: [], hasImage: false)
+    Equipment(id: id, name: id, category: category, weightKg: weightKg, weightOptionsKg: [], plateLaterality: laterality, gymPresets: [])
 }
 
 private extension [Equipment] {

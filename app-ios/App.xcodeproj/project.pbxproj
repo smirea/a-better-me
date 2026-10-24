@@ -22,7 +22,7 @@
         };
         A00000000000000000000002 = {
             isa = PBXGroup;
-            children = (A00000000000000000000016, A00000000000000000000004, A00000000000000000000030, A00000000000000000000003);
+            children = (A00000000000000000000016, A00000000000000000000040, A00000000000000000000004, A00000000000000000000030, A00000000000000000000003);
             sourceTree = "<group>";
         };
         A00000000000000000000003 = {
@@ -58,7 +58,7 @@
         };
         A00000000000000000000007 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
         A00000000000000000000008 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000023, A00000000000000000000024); runOnlyForDeploymentPostprocessing = 0; };
-        A00000000000000000000009 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        A00000000000000000000009 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000041); runOnlyForDeploymentPostprocessing = 0; };
         A00000000000000000000010 = {
             isa = XCConfigurationList;
             buildConfigurations = (A00000000000000000000012, A00000000000000000000013);
@@ -91,6 +91,9 @@
         A00000000000000000000022 = { isa = XCSwiftPackageProductDependency; package = A00000000000000000000020; productName = PowerSyncGRDB; };
         A00000000000000000000023 = { isa = PBXBuildFile; productRef = A00000000000000000000021; };
         A00000000000000000000024 = { isa = PBXBuildFile; productRef = A00000000000000000000022; };
+        /* shared/catalog as a folder reference, so its subfolders and the JSON's relative paths survive in the bundle. */
+        A00000000000000000000040 = { isa = PBXFileReference; lastKnownFileType = folder; name = catalog; path = ../shared/catalog; sourceTree = SOURCE_ROOT; };
+        A00000000000000000000041 = { isa = PBXBuildFile; fileRef = A00000000000000000000040; };
         A00000000000000000000016 = { isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Base.xcconfig; sourceTree = "<group>"; };
         A00000000000000000000014 = {
             isa = XCBuildConfiguration;

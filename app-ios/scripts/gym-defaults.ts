@@ -33,7 +33,7 @@ type Load =
 	| { base: { kg: number } }
 	| { bands: { options: { color: string }[] } };
 
-const catalog: Equipment[] = await Bun.file(join(root, 'Sources/App/Resources/Catalog/equipment.json')).json();
+const catalog: Equipment[] = await Bun.file(resolve(root, '../shared/catalog/equipment.json')).json();
 const markdown = await Bun.file(markdownPath).text();
 
 const normalize = (name: string) =>

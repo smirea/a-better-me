@@ -84,15 +84,7 @@ private struct BodyFigure {
     }
 
     private static func load() -> BodyFigure {
-        guard let url = Bundle.main.url(forResource: "body", withExtension: "json") else {
-            fatalError("Missing body.json. Regenerate it with `bun app-ios/scripts/catalog.ts`.")
-        }
-        let file: File
-        do {
-            file = try JSONDecoder().decode(File.self, from: Data(contentsOf: url))
-        } catch {
-            fatalError("body.json does not match its Swift type: \(error)")
-        }
+        let file: File = ExerciseCatalog.load("body")
         return BodyFigure(
             size: CGSize(width: file.width, height: file.height),
             front: file.front.map(part),
