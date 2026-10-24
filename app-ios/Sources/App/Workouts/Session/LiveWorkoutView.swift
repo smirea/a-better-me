@@ -26,6 +26,7 @@ struct SessionEditor: View {
     @Environment(\.dismiss) var dismiss
     @Observe(ExerciseSettings.all) var exerciseSettings
     @Observe(AppSettings.current) var defaults
+    @Observe(BodyWeight.all) private var bodyWeights
     /// The session's row as it changes under the editor, which `session` cannot show once the cover is up.
     @Observe private var live: WorkoutSession?
 
@@ -279,9 +280,20 @@ struct SessionEditor: View {
             chips(item: item, isSuperset: blocks[block].isSuperset, hiddenWarmUps: hiddenWarmUpCount(block: block, exercise: index))
             setTable(block: block, exercise: index, fields: SetField.fields(for: exercise))
                 .padding(.horizontal, 20)
+            if let caption = bodyweightCaption(exercise) {
+                Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary).padding(.horizontal, 20)
+            }
             if let note = item.note, !note.isEmpty { noteCard("Session Note", note) }
             if !pinned.isEmpty { noteCard("Pinned Note", pinned) }
         }
+    }
+
+    /// Bodyweight Contribution: "Body weight 80 kg · 65% counted (52 kg)", for exercises that lift part of the body.
+    private func bodyweightCaption(_ exercise: Exercise?) -> String? {
+        guard mode == .live, defaults.workout.display.bodyweightContribution, let fraction = exercise?.bodyweightFraction, fraction > 0,
+              let kg = currentBodyWeightKg(logged: bodyWeights, health: nil, manual: defaults.profile.bodyWeightKg) else { return nil }
+        let percent = (fraction * 100).formatted(.number.precision(.fractionLength(0)))
+        return "Body weight \(unit.format(kg: kg)) \(unit.rawValue) · \(percent)% counted (\(unit.format(kg: kg * fraction)) \(unit.rawValue))"
     }
 
     private func noteCard(_ title: String, _ text: String) -> some View {
