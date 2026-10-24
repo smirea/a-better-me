@@ -82,8 +82,8 @@ enum SmartProgression {
 
     /// Initial fill: a suggestion for every row of `sets`, keyed by set or sub-row id. `previous` is the exercise's last
     /// performance, matched row by row like the Previous column. Weights in the result are in `unit`.
-    static func suggest(sets: [WorkoutSet], previous: [WorkoutSet], settings: ProgressionSettings, increment: Double, rirTracking: Bool, unit: WeightUnit) -> [UUID: SetSuggestion] {
-        compute(sets: sets, settings: settings, increment: increment, rirTracking: rirTracking, unit: unit) { index in
+    static func suggest(sets: [WorkoutSet], previous: [WorkoutSet], settings: ProgressionSettings, loadable: LoadableWeights, rirTracking: Bool, unit: WeightUnit) -> [UUID: SetSuggestion] {
+        compute(sets: sets, settings: settings, loadable: loadable, rirTracking: rirTracking, unit: unit) { index in
             sets.previousSet(at: index, in: previous)?.log
         }
     }
@@ -91,10 +91,10 @@ enum SmartProgression {
     /// Apply in session: the unlogged working rows of an exercise, recomputed from its most recently logged working
     /// set. Warm-ups keep their fill, since a working set says nothing about how to warm up. Returns only the rows
     /// whose suggestion differs from `current`, so the caller can merge them and log the change.
-    static func applyInSession(sets: [WorkoutSet], current: [UUID: SetSuggestion], settings: ProgressionSettings, increment: Double, rirTracking: Bool, unit: WeightUnit) -> [UUID: SetSuggestion] {
+    static func applyInSession(sets: [WorkoutSet], current: [UUID: SetSuggestion], settings: ProgressionSettings, loadable: LoadableWeights, rirTracking: Bool, unit: WeightUnit) -> [UUID: SetSuggestion] {
         let working = sets.filter { $0.type != .warmUp }
         guard let latest = working.compactMap(\.log).max(by: { $0.completedAt < $1.completedAt }) else { return [:] }
-        let fresh = compute(sets: sets, settings: settings, increment: increment, rirTracking: rirTracking, unit: unit) { _ in latest }
+        let fresh = compute(sets: sets, settings: settings, loadable: loadable, rirTracking: rirTracking, unit: unit) { _ in latest }
         let openRows = Set(working.filter { !$0.isCompleted }.flatMap { [$0.id] + $0.subSets.filter { $0.log == nil }.map(\.id) })
         return fresh.filter { openRows.contains($0.key) && current[$0.key] != $0.value }
     }
@@ -118,7 +118,7 @@ enum SmartProgression {
         var repsToFailure: Double
     }
 
-    private static func compute(sets: [WorkoutSet], settings: ProgressionSettings, increment: Double, rirTracking: Bool, unit: WeightUnit, previousLog: (Int) -> SetLog?) -> [UUID: SetSuggestion] {
+    private static func compute(sets: [WorkoutSet], settings: ProgressionSettings, loadable: LoadableWeights, rirTracking: Bool, unit: WeightUnit, previousLog: (Int) -> SetLog?) -> [UUID: SetSuggestion] {
         var result: [UUID: SetSuggestion] = [:]
         var prior: SetSuggestion?
         for (index, set) in sets.enumerated() {
@@ -127,12 +127,12 @@ enum SmartProgression {
             if let log = set.log {
                 suggestion = SetSuggestion(weight: log.weightKg.map(unit.fromKg), repsMin: log.reps, repsMax: log.reps, rir: log.rir)
             } else {
-                suggestion = suggest(set: set, previous: previous, prior: prior, settings: settings, increment: increment, rirTracking: rirTracking, unit: unit)
+                suggestion = suggest(set: set, previous: previous, prior: prior, settings: settings, loadable: loadable, rirTracking: rirTracking, unit: unit)
             }
             result[set.id] = suggestion
             for sub in set.subSets {
                 var row = SetSuggestion(rir: suggestion.prefill.rir)
-                row.weight = suggestion.weight.map { set.type == .drop ? (($0 / 2) / increment).rounded() * increment : $0 }
+                row.weight = suggestion.weight.map { set.type == .drop ? loadable.nearest($0 / 2) : $0 }
                 row.prefill = SetSuggestion.Values(weight: row.weight, reps: nil, rir: row.rir)
                 result[sub.id] = row
             }
@@ -141,7 +141,7 @@ enum SmartProgression {
         return result
     }
 
-    private static func suggest(set: WorkoutSet, previous: SetLog?, prior: SetSuggestion?, settings: ProgressionSettings, increment: Double, rirTracking: Bool, unit: WeightUnit) -> SetSuggestion {
+    private static func suggest(set: WorkoutSet, previous: SetLog?, prior: SetSuggestion?, settings: ProgressionSettings, loadable: LoadableWeights, rirTracking: Bool, unit: WeightUnit) -> SetSuggestion {
         let target = set.target
         let targetRir = target?.rir
         let repsMin = target?.repsMin ?? target?.repsMax
@@ -155,7 +155,7 @@ enum SmartProgression {
         } else if let repsMin, let repsMax, let previous, let previousWeight = previous.weightKg.map(unit.fromKg), previousWeight > 0, let rtf0 = repsToFailure(previous) {
             let performance = Performance(weight: previousWeight, repsToFailure: rtf0)
             let range = Double(repsMin + (targetRir ?? 0))...Double(repsMax + (targetRir ?? 0))
-            var weight = heaviestWeight(reaching: (range.lowerBound + range.upperBound) / 2, from: performance, increment: increment)
+            var weight = heaviestWeight(reaching: (range.lowerBound + range.upperBound) / 2, from: performance, loadable: loadable)
             if settings.weightMatch, let matched = prior?.weight,
                range.contains(predictedRepsToFailure(at: matched, previousWeight: performance.weight, previousRepsToFailure: performance.repsToFailure)) {
                 weight = matched
@@ -183,10 +183,10 @@ enum SmartProgression {
         return suggestion
     }
 
-    /// The heaviest multiple of `increment` whose predicted reps to failure still reach `aim`; at least one increment.
-    private static func heaviestWeight(reaching aim: Double, from performance: Performance, increment: Double) -> Double {
+    /// The heaviest loadable weight whose predicted reps to failure still reach `aim`; at least the lightest.
+    private static func heaviestWeight(reaching aim: Double, from performance: Performance, loadable: LoadableWeights) -> Double {
         let ceiling = performance.weight * (1 + (performance.repsToFailure - aim) / repsPerWeightFraction)
-        return max(increment, (ceiling / increment + 1e-9).rounded(.down) * increment)
+        return loadable.floor(ceiling) ?? loadable.lightest
     }
 }
 

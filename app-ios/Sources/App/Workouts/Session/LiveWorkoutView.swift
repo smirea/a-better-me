@@ -490,7 +490,7 @@ struct SessionEditor: View {
             let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
             let suggestions = SmartProgression.suggest(
                 sets: item.sets, previous: previous, settings: progressionSettings(for: item.exerciseID),
-                increment: WarmUpScheme.increment(for: unit), rirTracking: defaults.workout.rirTracking, unit: unit
+                loadable: LoadableWeights(loading: loading(for: item), unit: unit), rirTracking: defaults.workout.rirTracking, unit: unit
             )
             store.suggestions[item.id] = suggestions
             store.suggestionBasis[item.id] = planned
@@ -505,7 +505,7 @@ struct SessionEditor: View {
         let item = blocks[at.block].exercises[at.item]
         let changed = SmartProgression.applyInSession(
             sets: item.sets, current: current, settings: progressionSettings(for: item.exerciseID),
-            increment: WarmUpScheme.increment(for: unit), rirTracking: defaults.workout.rirTracking, unit: unit
+            loadable: LoadableWeights(loading: loading(for: item), unit: unit), rirTracking: defaults.workout.rirTracking, unit: unit
         )
         guard !changed.isEmpty else { return }
         store.suggestions[id] = current.merging(changed) { $1 }

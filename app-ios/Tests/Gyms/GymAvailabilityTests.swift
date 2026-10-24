@@ -65,9 +65,9 @@ struct GymAvailabilityTests {
     }
 
     @Test func templatesSelectTheListedPluralOfAFlaggedSingular() {
-        #expect(Set(GymTemplate.garage.equipment(from: catalog).keys) == ["ankle-weights", "barbell", "plates", "flat-bench", "power-rack"])
-        #expect(Set(GymTemplate.home.equipment(from: catalog).keys) == ["dumbbells", "flat-bench"])
-        #expect(Set(GymTemplate.everything.equipment(from: catalog).keys) == ["dumbbells", "ankle-weights", "barbell", "plates", "flat-bench", "power-rack"])
+        #expect(Set(GymTemplate.garage.equipment(from: catalog, unit: .lb).keys) == ["ankle-weights", "barbell", "plates", "flat-bench", "power-rack"])
+        #expect(Set(GymTemplate.home.equipment(from: catalog, unit: .lb).keys) == ["dumbbells", "flat-bench"])
+        #expect(Set(GymTemplate.everything.equipment(from: catalog, unit: .lb).keys) == ["dumbbells", "ankle-weights", "barbell", "plates", "flat-bench", "power-rack"])
     }
 }
 

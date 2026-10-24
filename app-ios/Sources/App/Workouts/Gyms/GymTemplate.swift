@@ -49,8 +49,9 @@ enum GymTemplate: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Selected items with the catalog's default loads. A flag on a singular selects the plural the gym lists.
-    func equipment(from catalog: [EquipmentID: Equipment]) -> [EquipmentID: GymEquipment] {
+    /// Selected items. In lb they keep MF's default loads unstored; in kg each stores its kg default. A flag on a
+    /// singular selects the plural the gym lists.
+    func equipment(from catalog: [EquipmentID: Equipment], unit: WeightUnit) -> [EquipmentID: GymEquipment] {
         let gymCatalog = GymCatalog(catalog)
         let listed = Set(gymCatalog.items.map(\.id))
         let ids: Set<EquipmentID> = if let preset {
@@ -58,6 +59,6 @@ enum GymTemplate: String, CaseIterable, Identifiable {
         } else {
             listed
         }
-        return Dictionary(uniqueKeysWithValues: ids.map { ($0, GymEquipment(load: nil)) })
+        return Dictionary(uniqueKeysWithValues: ids.map { ($0, GymEquipment(load: unit == .kg ? GymDefaults.kgLoads[$0] : nil)) })
     }
 }
