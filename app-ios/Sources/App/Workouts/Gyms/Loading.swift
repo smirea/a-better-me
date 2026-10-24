@@ -29,23 +29,30 @@ struct PlateLoading: Equatable {
     var plates: [Plate]
     /// 2 for bars and machines loaded on both sides, 1 for single-sleeve machines.
     var sides: Int
+    /// The bar or machine, with every weight it comes in (ascending) when the gym lists several, so the calculator can
+    /// offer the choice `ExerciseOverrides.barWeightKg` stores.
+    var baseID: EquipmentID?
+    var baseWeights: [Double]
 
     struct Plate: Equatable {
         var weight: Double
         var perSide: Int?
+        var isBumper = false
     }
 
-    init(base: Base, baseWeight: Double, plates: [Plate], sides: Int) {
+    init(base: Base, baseWeight: Double, plates: [Plate], sides: Int, baseID: EquipmentID? = nil, baseWeights: [Double] = []) {
         self.base = base
         self.baseWeight = baseWeight
         self.plates = plates.filter { $0.weight > 0 && $0.perSide != 0 }.sorted { $0.weight > $1.weight }
         self.sides = sides
+        self.baseID = baseID
+        self.baseWeights = baseWeights
     }
 
     /// MF's calculator (research milestone-2 §4.4): plates go on greedily from the heaviest down while the total stays
     /// at or under `target`, at most `sidePlates` a side. A miss shows what fits; a target below the base loads nothing.
     func plan(for target: Double) -> PlatePlan {
-        PlatePlan(loading: self, target: target, perSide: greedy(upTo: Hundredths(of: target).value))
+        PlatePlan(loading: self, target: target, loaded: greedyPlates(upTo: Hundredths(of: target).value))
     }
 
     /// The − / + stepper moves through totals the calculator loads exactly, so it never lands on a "missing" weight.
@@ -66,13 +73,17 @@ struct PlateLoading: Equatable {
     private func total(_ side: Double) -> Double { baseWeight + side * Double(sides) }
 
     private func greedy(upTo goal: Int) -> [Double] {
-        var loaded: [Double] = []
+        greedyPlates(upTo: goal).map(\.weight)
+    }
+
+    private func greedyPlates(upTo goal: Int) -> [Plate] {
+        var loaded: [Plate] = []
         var side = 0.0
         for plate in plates {
             var count = 0
             while count < plate.perSide ?? .max, loaded.count < Self.sidePlates,
                   Hundredths(of: total(side + plate.weight)).value <= goal {
-                loaded.append(plate.weight)
+                loaded.append(plate)
                 side += plate.weight
                 count += 1
             }
@@ -108,15 +119,23 @@ struct PlateLoading: Equatable {
 struct PlatePlan: Equatable {
     var loading: PlateLoading
     var target: Double
-    var perSide: [Double]
+    /// One side's plates, heaviest first.
+    var loaded: [PlateLoading.Plate]
+
+    var perSide: [Double] { loaded.map(\.weight) }
 
     var total: Double { loading.baseWeight + perSide.reduce(0, +) * Double(loading.sides) }
 
-    /// "1 x 45", "2 x 25": one line per plate weight on a side, heaviest first.
-    var legend: [(count: Int, weight: Double)] {
-        var lines: [(count: Int, weight: Double)] = []
-        for weight in perSide {
-            if let last = lines.last, last.weight == weight { lines[lines.count - 1].count += 1 } else { lines.append((1, weight)) }
+    /// "1 x 45", "2 x 25": one line per plate weight on a side, heaviest first, bumpers apart from steel of the same
+    /// weight.
+    var legend: [(count: Int, weight: Double, isBumper: Bool)] {
+        var lines: [(count: Int, weight: Double, isBumper: Bool)] = []
+        for plate in loaded {
+            if let last = lines.last, last.weight == plate.weight, last.isBumper == plate.isBumper {
+                lines[lines.count - 1].count += 1
+            } else {
+                lines.append((1, plate.weight, plate.isBumper))
+            }
         }
         return lines
     }

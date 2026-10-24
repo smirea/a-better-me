@@ -6,9 +6,9 @@ extension EquipmentLoad {
         switch self {
         case .weights(let options):
             options.map { unit.label(kg: $0.kg) + Self.quantity($0.count) }.joined(separator: ", ")
-        case .ranges(let options):
+        case .ranges(let options, let micro):
             options.map { "\(unit.format(kg: $0.minKg)) - \(unit.label(kg: $0.maxKg)), \(unit.label(kg: $0.incrementKg)) increments" }
-                .joined(separator: "; ")
+                .joined(separator: "; ") + (micro.map { "; \($0.weightsKg.map(unit.label).joined(separator: ", ")) \($0.kind.rawValue)" } ?? "")
         case .base(let kg):
             unit.label(kg: kg)
         case .bands(let options):

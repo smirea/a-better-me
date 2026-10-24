@@ -2,11 +2,11 @@ import Foundation
 import Testing
 @testable import App
 
-/// The generator against the 20 programs MF generated (research spec §1.2). Exercise identity is random in MF, so the
+/// The generator against every program MF generated (research spec §1.2). Exercise identity is random in MF, so the
 /// comparison is structural: day layout, slot classes, set counts, reps, RIR, and weekly sets per muscle.
 /// `scripts/calibrate-generator` runs this suite and prints the `CAL|` lines as a table.
 @MainActor
-@Suite(.enabled(if: Calibration.isAvailable, "needs docs/research/mf-workouts/generated-programs.json from the research PR"))
+@Suite
 struct GeneratorCalibrationTests {
     static let catalog = ExerciseCatalog()
     static let gym = Calibration.gym(catalog.equipment)

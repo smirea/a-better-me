@@ -13,6 +13,32 @@ struct WorkoutSettings: Codable, Hashable {
     var supersetAutoScroll = true
     var exerciseAutoNext = true
     var display = DisplaySettings()
+    var sections = WorkoutSectionsLayout()
+    /// Per gym, keyed by the gym's id. A gym without an entry has every option off.
+    var plateCalculator: [String: PlateCalculatorOptions] = [:]
+
+    func plateCalculator(for gymID: UUID) -> PlateCalculatorOptions {
+        plateCalculator[gymID.uuidString] ?? PlateCalculatorOptions()
+    }
+}
+
+/// MF's gym-level plate calculator switches (`useBumperPlatesInPlateCalculator`, `allowMixedUnitsInPlateCalculator`,
+/// `offsetWeightInPlateCalculator`). `gym_profiles` has no column for them, so they live in the synced settings.
+struct PlateCalculatorOptions: Codable, Hashable {
+    var includeBumperPlates = false
+    var allowMixedUnits = false
+    var offsetWeight = false
+}
+
+extension PlateCalculatorOptions {
+    /// `row.json(_:over:)` fills missing keys only where the default tree has them, and it has no entry per gym, so an
+    /// entry written before a new option existed decodes that option's default here instead of failing the column.
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        includeBumperPlates = try container.decodeIfPresent(Bool.self, forKey: .includeBumperPlates) ?? false
+        allowMixedUnits = try container.decodeIfPresent(Bool.self, forKey: .allowMixedUnits) ?? false
+        offsetWeight = try container.decodeIfPresent(Bool.self, forKey: .offsetWeight) ?? false
+    }
 }
 
 struct RestSettings: Codable, Hashable {

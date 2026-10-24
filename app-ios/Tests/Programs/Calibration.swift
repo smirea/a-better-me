@@ -16,7 +16,7 @@ struct SeededGenerator: RandomNumberGenerator {
     }
 }
 
-/// The 20 programs MF generated for the research thread, `docs/research/mf-workouts/generated-programs.json`.
+/// One program MF generated for the research thread, `docs/research/mf-workouts/generated-programs.json`.
 struct MFProgram: Decodable {
     let export: String
     let inputs: MFInputs
@@ -90,12 +90,9 @@ enum Calibration {
 
     static let fixture = root.appending(path: "docs/research/mf-workouts/generated-programs.json")
 
-    /// The fixture lands with the research PR; until it is on the branch the calibration suite is skipped, not passed.
-    static var isAvailable: Bool { FileManager.default.fileExists(atPath: fixture.path) }
-
     static let programs: [MFProgram] = {
         struct File: Decodable { let programs: [MFProgram] }
-        guard let data = try? Data(contentsOf: fixture) else { fatalError("Missing \(fixture.path). Fetch it from the m2-research branch.") }
+        guard let data = try? Data(contentsOf: fixture) else { fatalError("Missing \(fixture.path), the research spec's calibration fixture.") }
         return try! JSONDecoder().decode(File.self, from: data).programs
     }()
 

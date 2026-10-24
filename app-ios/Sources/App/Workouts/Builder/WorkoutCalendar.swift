@@ -36,10 +36,35 @@ struct LoggedDays {
     }
 }
 
+/// What tapping a day pill opens.
+enum DayPillTarget: Hashable {
+    case summary(WorkoutSession)
+    case programDay(ProgramRoute)
+
+    /// A logged day opens its summary. Today and the rest of this week, unlogged, open the day a seven-day `program`
+    /// trains on that weekday, when it is a workout day. Anything else opens nothing.
+    static func of(_ day: Date, session: WorkoutSession?, program: Program?, now: Date, calendar: Calendar) -> DayPillTarget? {
+        if let session { return .summary(session) }
+        guard let program, day >= calendar.startOfDay(for: now),
+              let week = calendar.dateInterval(of: .weekOfYear, for: now), day < week.end,
+              let programDay = program.weekdayDay(on: day, calendar: calendar), programDay.templateID != nil
+        else { return nil }
+        return .programDay(ProgramRoute(programID: program.id, dayID: programDay.id))
+    }
+}
+
+/// The active program's ring on today's pill: the cycle's completion in the program color.
+struct DayPillProgress {
+    var fraction: Double
+    var color: Color
+}
+
 /// Seven day pills, Monday to Sunday, swiped a week at a page. Off the current week, a round chevron jumps back.
 struct WeekStrip: View {
     let days: LoggedDays
-    let onOpen: (WorkoutSession) -> Void
+    var progress: DayPillProgress?
+    let target: (Date) -> DayPillTarget?
+    let onOpen: (DayPillTarget) -> Void
 
     @State private var visibleWeek: Date? = LoggedDays.weekStart(of: .now)
     private let thisWeek = LoggedDays.weekStart(of: .now)
@@ -50,7 +75,8 @@ struct WeekStrip: View {
                 ForEach(days.weeks(minimumBack: 12, ahead: 12), id: \.self) { start in
                     HStack(spacing: 0) {
                         ForEach(LoggedDays.days(from: start), id: \.self) { day in
-                            DayPill(day: day, session: days.session(on: day), onOpen: onOpen).frame(maxWidth: .infinity)
+                            DayPill(day: day, session: days.session(on: day), progress: progress, target: target(day), onOpen: onOpen)
+                                .frame(maxWidth: .infinity)
                         }
                     }
                     .containerRelativeFrame(.horizontal)
@@ -77,7 +103,9 @@ struct WeekStrip: View {
 /// The calendar button's scrolling month grid. Months alternate shades and their first day carries a month chip.
 struct MonthCalendar: View {
     let days: LoggedDays
-    let onOpen: (WorkoutSession) -> Void
+    var progress: DayPillProgress?
+    let target: (Date) -> DayPillTarget?
+    let onOpen: (DayPillTarget) -> Void
 
     @State private var position: Date? = LoggedDays.weekStart(of: .now)
 
@@ -87,7 +115,7 @@ struct MonthCalendar: View {
                 ForEach(days.weeks(minimumBack: 26, ahead: 26), id: \.self) { start in
                     HStack(spacing: 0) {
                         ForEach(LoggedDays.days(from: start), id: \.self) { day in
-                            DayPill(day: day, session: days.session(on: day), onOpen: onOpen)
+                            DayPill(day: day, session: days.session(on: day), progress: progress, target: target(day), onOpen: onOpen)
                                 .padding(.vertical, 10)
                                 .frame(maxWidth: .infinity)
                                 .background(Self.shade(day))
@@ -123,15 +151,19 @@ private struct MonthChip: View {
     }
 }
 
-/// A day number over its weekday initials. Logged days get an amber outline, today a dot.
+/// A day number over its weekday initials. Logged days get an amber outline, today a dot and the program's progress
+/// ring.
 private struct DayPill: View {
     let day: Date
     let session: WorkoutSession?
-    let onOpen: (WorkoutSession) -> Void
+    let progress: DayPillProgress?
+    let target: DayPillTarget?
+    let onOpen: (DayPillTarget) -> Void
 
     var body: some View {
+        let isToday = LoggedDays.calendar.isDateInToday(day)
         Button {
-            if let session { onOpen(session) }
+            if let target { onOpen(target) }
         } label: {
             VStack(spacing: 0) {
                 Text(day.formatted(.dateTime.day())).font(AppFont.headline(14))
@@ -139,7 +171,7 @@ private struct DayPill: View {
                     .font(AppFont.caption(11))
                     .foregroundStyle(Theme.textSecondary)
                 Circle()
-                    .fill(LoggedDays.calendar.isDateInToday(day) ? Theme.textPrimary : .clear)
+                    .fill(isToday ? Theme.textPrimary : .clear)
                     .frame(width: 4, height: 4)
                     .padding(.top, 2)
             }
@@ -147,8 +179,26 @@ private struct DayPill: View {
             .overlay {
                 Capsule().strokeBorder(session == nil ? Theme.textTertiary : Theme.amber, lineWidth: session == nil ? 1 : 2)
             }
+            .overlay {
+                if isToday, let progress, progress.fraction > 0 {
+                    Capsule()
+                        .inset(by: 1)
+                        .trim(from: 0, to: progress.fraction)
+                        .stroke(progress.color, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                }
+            }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(day.formatted(date: .abbreviated, time: .omitted))
+        .accessibilityValue(isToday ? progress.map { "Program \(Int(($0.fraction * 100).rounded())) percent done" } ?? "" : "")
+        .accessibilityHint(hint)
+    }
+
+    private var hint: String {
+        switch target {
+        case .summary: "Opens the workout summary"
+        case .programDay: "Opens the program day"
+        case nil: ""
+        }
     }
 }

@@ -65,8 +65,9 @@ struct GymEquipment: Codable, Hashable {
 enum EquipmentLoad: Codable, Hashable {
     /// Dumbbells, kettlebells, plates, bars of several weights.
     case weights(options: [WeightOption])
-    /// Pin-stack machines: "0 - 500 lb, 10 lb increments", one or more ranges.
-    case ranges(options: [WeightRange])
+    /// Pin-stack machines: "0 - 500 lb, 10 lb increments", one or more ranges, plus the micro-adjustments the stack
+    /// takes on top of a pin position.
+    case ranges(options: [WeightRange], micro: MicroAdjustment? = nil)
     /// A plate-loaded machine's or loadable accessory's own weight.
     case base(kg: Double)
     /// Band inventory by color.
@@ -77,6 +78,36 @@ struct WeightOption: Codable, Hashable {
     var kg: Double
     /// `nil` means unlimited (plates' Set Qty).
     var count: Int?
+    /// The unit the weight was entered in. Without one, the unit it reads as a whole quarter in decides.
+    var unit: WeightUnit?
+
+    init(kg: Double, count: Int? = nil, unit: WeightUnit? = nil) {
+        self.kg = kg
+        self.count = count
+        self.unit = unit
+    }
+
+    var nativeUnit: WeightUnit? { unit ?? WeightUnit.native(toKg: kg) }
+}
+
+/// MF's Add Micro-Adjustments on a pin-loaded machine: the small weights that fine-tune a pin position.
+struct MicroAdjustment: Codable, Hashable {
+    enum Kind: String, Codable, CaseIterable {
+        case dial, pin, plates
+    }
+
+    var kind: Kind
+    var weightsKg: [Double]
+
+    /// Every extra the adjustment adds to a pin position, 0 first: one weight at a time for a dial or a pin stack,
+    /// any combination of the listed plates for plates.
+    var extrasKg: [Double] {
+        let weights = weightsKg.filter { $0 > 0 }
+        switch kind {
+        case .dial, .pin: return [0] + weights
+        case .plates: return weights.reduce([0.0]) { sums, weight in sums + sums.map { $0 + weight } }
+        }
+    }
 }
 
 struct WeightRange: Codable, Hashable {

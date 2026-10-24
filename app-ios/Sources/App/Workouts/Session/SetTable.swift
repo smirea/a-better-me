@@ -313,6 +313,7 @@ extension SessionEditor {
         let overrides = ExerciseSettings.of(item.exerciseID, in: exerciseSettings)?.overrides
         let settings = defaults.workout.warmUp
         var context = WarmUpContext(
+            loadable: LoadableWeights(loading: loading(for: item), unit: unit),
             scheme: overrides?.warmUpScheme ?? settings.schemes[exercise?.restCategory ?? .upperIsolation] ?? WarmUpStep.standard,
             automation: overrides?.warmUpAutomation ?? settings.automation,
             simplifyPlates: settings.simplifyPlates

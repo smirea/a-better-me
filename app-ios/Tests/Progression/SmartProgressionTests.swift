@@ -93,7 +93,7 @@ struct SmartProgressionTests {
         sets[0].log = CurlFixture.logged(40, 9, 0, at: 10)
         var expected = current
         expected[sets[1].id]!.prefill.weight = 25
-        let changed = SmartProgression.applyInSession(sets: sets, current: expected, settings: ProgressionSettings(), increment: 5, rirTracking: true, unit: lb)
+        let changed = SmartProgression.applyInSession(sets: sets, current: expected, settings: ProgressionSettings(), loadable: CurlFixture.loadable, rirTracking: true, unit: lb)
         #expect(Set(changed.keys) == [sets[1].id])
         #expect(changed[sets[1].id]!.autoText(unit: lb) == "30 lb x 8-12 / 2 RIR")
         #expect(changed[sets[1].id]!.prefill == SetSuggestion.Values(weight: 30, reps: 12, rir: 2))
@@ -103,7 +103,7 @@ struct SmartProgressionTests {
         var sets = CurlFixture.sets
         let current = CurlFixture.suggest(sets: sets)
         sets[0].log = CurlFixture.logged(40, 12, 1, at: 10)
-        let changed = SmartProgression.applyInSession(sets: sets, current: current, settings: ProgressionSettings(), increment: 5, rirTracking: true, unit: lb)
+        let changed = SmartProgression.applyInSession(sets: sets, current: current, settings: ProgressionSettings(), loadable: CurlFixture.loadable, rirTracking: true, unit: lb)
         #expect(Set(changed.keys) == [sets[1].id, sets[2].id])
         #expect(changed[sets[1].id]!.prefill == SetSuggestion.Values(weight: 40, reps: 12, rir: 2))
         #expect(changed[sets[1].id]!.adjustedReps == nil)
@@ -115,7 +115,7 @@ struct SmartProgressionTests {
         let current = CurlFixture.suggest(sets: sets, previous: previous)
         #expect(current[sets[0].id]!.prefill == SetSuggestion.Values(weight: 20, reps: 8, rir: nil))
         sets[1].log = CurlFixture.logged(40, 12, 1, at: 10)
-        let changed = SmartProgression.applyInSession(sets: sets, current: current, settings: ProgressionSettings(), increment: 5, rirTracking: true, unit: CurlFixture.lb)
+        let changed = SmartProgression.applyInSession(sets: sets, current: current, settings: ProgressionSettings(), loadable: CurlFixture.loadable, rirTracking: true, unit: CurlFixture.lb)
         #expect(Set(changed.keys) == [sets[2].id, sets[3].id])
         let event = SmartProgression.event(at: .now, sets: sets, suggestions: current)
         #expect(event.rows.map(\.label) == ["D Set 1", "2 Set 2", "3 Set 3"])

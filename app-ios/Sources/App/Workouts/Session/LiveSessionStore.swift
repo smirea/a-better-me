@@ -11,6 +11,13 @@ struct RestTimer: Equatable {
     func remaining(at date: Date) -> TimeInterval { max(0, endsAt.timeIntervalSince(date)) }
 }
 
+/// What an exercise's suggestions were computed over: its planned sets and the weights its equipment can load. A
+/// Targets edit, an added set, an Equipment or gym change, or a new bar choice changes it and refills.
+struct SuggestionBasis: Equatable {
+    var planned: [WorkoutSet]
+    var loadable: LoadableWeights
+}
+
 /// The set table's reference column: the Smart Progression suggestion, or last time's log.
 enum ReferenceColumn {
     case auto, previous
@@ -32,7 +39,7 @@ final class LiveSessionStore {
     var suggestions: [BlockExercise.ID: [UUID: SetSuggestion]] = [:]
     var events: [BlockExercise.ID: [ProgressionEvent]] = [:]
     /// The planned sets each exercise's suggestions were computed over; a Targets edit or a new set changes it.
-    var suggestionBasis: [BlockExercise.ID: [WorkoutSet]] = [:]
+    var suggestionBasis: [BlockExercise.ID: SuggestionBasis] = [:]
     /// Rows Apply in session refilled, which show their suggestion even under the Previous values initial fill.
     var appliedRows: Set<UUID> = []
     /// The plate calculator's expanded view, kept while the keypad moves between rows.

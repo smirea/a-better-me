@@ -53,6 +53,23 @@ struct GymProfileEditor: View {
                 .listRowSeparator(.hidden)
             }
             Section {
+                SettingToggle(
+                    title: "Include Bumper Plates", detail: bumperDetail(gym), systemImage: "circle.circle",
+                    isOn: calculatorBinding(gym, \.includeBumperPlates)
+                )
+                SettingToggle(
+                    title: "Utilize Mixed Unit Plates", detail: "Loads kg and lb plates together instead of only the plates in your unit",
+                    systemImage: "scalemass", isOn: calculatorBinding(gym, \.allowMixedUnits)
+                )
+                SettingToggle(
+                    title: "Offset Weight", detail: "Adds the ability to optionally offset the total weight targeted by the weight calculator",
+                    systemImage: "plusminus", isOn: calculatorBinding(gym, \.offsetWeight)
+                )
+            } header: {
+                SectionTitle("Plate Calculator").textCase(nil)
+            }
+            .listRowBackground(Theme.background)
+            Section {
                 EmptyView()
             } header: {
                 HStack {
@@ -134,9 +151,9 @@ struct GymProfileEditor: View {
         .sheet(item: $editingLoad) { item in
             if let load = GymDefaults.effectiveLoad(item.id, in: gym) {
                 EquipmentLoadEditor(equipment: item, load: load, unit: settings.weightUnit) { saved in
-                    let id = item.id
+                    let (id, unit) = (item.id, settings.weightUnit)
                     edit { gym in
-                        if saved != nil || gym.equipment[id] != nil { gym.equipment[id] = GymEquipment(load: saved) }
+                        if saved != nil || gym.equipment[id] != nil { gym.equipment[id] = GymEquipment(load: saved ?? GymDefaults.storedLoad(for: id, unit: unit)) }
                     }
                 }
             }
@@ -173,19 +190,39 @@ struct GymProfileEditor: View {
 
     /// Selecting keeps an item's custom load; deselecting drops it with the key.
     private func setSelected(_ ids: [EquipmentID], _ selected: Bool) {
+        let unit = settings.weightUnit
         edit { gym in
             for id in ids {
                 if !selected {
                     gym.equipment[id] = nil
                 } else if gym.equipment[id] == nil {
-                    gym.equipment[id] = GymEquipment(load: nil)
+                    gym.equipment[id] = GymEquipment(load: GymDefaults.storedLoad(for: id, unit: unit))
                 }
             }
         }
     }
 
+    private func calculatorBinding(_ gym: GymProfile, _ path: WritableKeyPath<PlateCalculatorOptions, Bool> & Sendable) -> Binding<Bool> {
+        let gymID = gym.id
+        return Binding(
+            get: { settings.workout.plateCalculator(for: gymID)[keyPath: path] },
+            set: { value in store.updateSettings { $0.workout.plateCalculator[gymID.uuidString, default: PlateCalculatorOptions()][keyPath: path] = value } }
+        )
+    }
+
+    private func bumperDetail(_ gym: GymProfile) -> String {
+        guard gym.equipment[Loading.bumperPlatesID] != nil, let load = GymDefaults.effectiveLoad(Loading.bumperPlatesID, in: gym) else {
+            return "No bumper plate weights available in this gym"
+        }
+        return "Available Bumper Plates: \(load.summary(in: settings.weightUnit))"
+    }
+
     private func duplicate(_ gym: GymProfile) {
-        store.insert(GymProfile(name: "\(gym.name) Copy", icon: gym.icon, equipment: gym.equipment))
+        let copy = GymProfile(name: "\(gym.name) Copy", icon: gym.icon, equipment: gym.equipment)
+        store.insert(copy)
+        if let options = settings.workout.plateCalculator[gym.id.uuidString] {
+            store.updateSettings { $0.workout.plateCalculator[copy.id.uuidString] = options }
+        }
     }
 
     private func remove(_ gym: GymProfile, wasDefault: Bool) {

@@ -14,13 +14,14 @@ enum GymSeed {
             break
         }
         guard !Task.isCancelled else { return }
-        var gym = GymProfile(name: "Your Gym", icon: GymTemplate.commercial.icon, equipment: GymTemplate.commercial.equipment(from: equipment))
-        if store.hasToken { gym.id = gymID }
-        gym.isDefault = true
-        let seed = gym
+        let id = store.hasToken ? gymID : UUID()
         store.write { db in
             guard try GymProfile.fetchCount(db) == 0 else { return }
-            try seed.insert(db)
+            let unit = try AppSettings.fetchOne(db, key: AppSettings.rowID)?.weightUnit ?? .lb
+            var gym = GymProfile(name: "Your Gym", icon: GymTemplate.commercial.icon, equipment: GymTemplate.commercial.equipment(from: equipment, unit: unit))
+            gym.id = id
+            gym.isDefault = true
+            try gym.insert(db)
         }
     }
 }

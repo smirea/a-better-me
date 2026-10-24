@@ -21,6 +21,7 @@ final class LiveWorkoutPresenter {
     /// that started workouts offline can both have one.
     func replaceInProgress(with session: WorkoutSession, in store: LocalStore) {
         store.write { db in
+            let session = try session.atStartingGym(db)
             _ = try WorkoutSession.filter(Column("ended_at") == nil).deleteAll(db)
             try session.insert(db)
         }

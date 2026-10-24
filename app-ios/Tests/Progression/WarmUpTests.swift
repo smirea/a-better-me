@@ -3,38 +3,38 @@ import Testing
 
 struct SmartWarmUpTests {
     @Test func curlAt40x8GetsTwoStepsBelowTheWorkingWeight() {
-        let steps = SmartWarmUp.steps(workingWeight: 40, reps: 8, rir: 0, increment: 5, unit: .lb, isFresh: true, simplifyPlates: false)
+        let steps = SmartWarmUp.steps(workingWeight: 40, reps: 8, rir: 0, loadable: LoadableWeights(loading: nil, unit: .lb), isFresh: true)
         #expect(steps == [SmartWarmUp.Step(percent: 40, weight: 20, reps: 8), SmartWarmUp.Step(percent: 63, weight: 30, reps: 5)])
     }
 
     @Test func simplifiedPlatesLandOnTheSameCurlWeights() {
-        let steps = SmartWarmUp.steps(workingWeight: 40, reps: 8, rir: 0, increment: 5, unit: .lb, isFresh: true, simplifyPlates: true)
+        let steps = SmartWarmUp.steps(workingWeight: 40, reps: 8, rir: 0, loadable: LoadableWeights(loading: nil, unit: .lb).simplified, isFresh: true)
         #expect(steps.map(\.weight) == [20, 30])
     }
 
     @Test func heavyDoubleGetsTheFullLadderAndNotFreshDropsTheLightest() {
-        let fresh = SmartWarmUp.steps(workingWeight: 100, reps: 2, rir: 0, increment: 2.5, unit: .kg, isFresh: true, simplifyPlates: false)
+        let fresh = SmartWarmUp.steps(workingWeight: 100, reps: 2, rir: 0, loadable: LoadableWeights(loading: nil, unit: .kg), isFresh: true)
         #expect(fresh.map(\.weight) == [42.5, 67.5, 85, 95])
         #expect(fresh.map(\.reps) == [8, 5, 3, 1])
-        let warm = SmartWarmUp.steps(workingWeight: 100, reps: 2, rir: 0, increment: 2.5, unit: .kg, isFresh: false, simplifyPlates: false)
+        let warm = SmartWarmUp.steps(workingWeight: 100, reps: 2, rir: 0, loadable: LoadableWeights(loading: nil, unit: .kg), isFresh: false)
         #expect(warm.map(\.weight) == [67.5, 85, 95])
     }
 
     @Test func fiveAtTwoRIRStopsBeforeTheNinetyPercentStep() {
-        let steps = SmartWarmUp.steps(workingWeight: 100, reps: 5, rir: 2, increment: 2.5, unit: .kg, isFresh: true, simplifyPlates: false)
+        let steps = SmartWarmUp.steps(workingWeight: 100, reps: 5, rir: 2, loadable: LoadableWeights(loading: nil, unit: .kg), isFresh: true)
         #expect(steps.map(\.weight) == [50, 77.5, 97.5])
     }
 }
 
 struct WarmUpSchemeTests {
     @Test func standardSchemeAt100kg() {
-        let steps = WarmUpScheme.sets(workingWeight: 100, increment: 2.5, steps: WarmUpStep.standard)
+        let steps = WarmUpScheme.sets(workingWeight: 100, loadable: LoadableWeights(loading: nil, unit: .kg), steps: WarmUpStep.standard)
         #expect(steps.map(\.weight) == [40, 60, 80])
         #expect(steps.map(\.reps) == [5, 5, 3])
     }
 
     @Test func standardSchemeRoundsToTheIncrement() {
-        let steps = WarmUpScheme.sets(workingWeight: 102.5, increment: 2.5, steps: WarmUpStep.standard)
+        let steps = WarmUpScheme.sets(workingWeight: 102.5, loadable: LoadableWeights(loading: nil, unit: .kg), steps: WarmUpStep.standard)
         #expect(steps.map(\.weight) == [40, 62.5, 82.5])
     }
 
