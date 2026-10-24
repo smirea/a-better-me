@@ -51,7 +51,8 @@ struct EquipmentSettingsView: View {
             if offsetEnabled {
                 Section {
                     Picker("Offset", selection: Binding(get: { OffsetKind(overrides.plateOffset) }, set: { kind in
-                        edit { $0.overrides.plateOffset = kind.offset(value: Self.parse(offsetText) ?? 0, unit: unit) }
+                        offsetText = ""
+                        edit { $0.overrides.plateOffset = kind.offset(value: 0, unit: unit) }
                     })) {
                         ForEach(OffsetKind.allCases, id: \.self) { Text($0.title(unit: unit)).tag($0) }
                     }
@@ -64,7 +65,8 @@ struct EquipmentSettingsView: View {
                                 .multilineTextAlignment(.trailing)
                                 .accessibilityLabel("Offset amount")
                                 .onChange(of: offsetText) { _, text in
-                                    guard let value = Self.parse(text) else { return }
+                                    let cleared = text.trimmingCharacters(in: .whitespaces).isEmpty
+                                    guard let value = cleared ? 0 : Self.parse(text) else { return }
                                     edit { $0.overrides.plateOffset = OffsetKind(offset).offset(value: value, unit: unit) }
                                 }
                         }

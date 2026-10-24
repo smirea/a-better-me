@@ -26,6 +26,22 @@ struct PlateCalculatorShapesTests {
         #expect(options.map(\.count) == [nil, 2, nil])
     }
 
+    @Test func entriesInsideTheSettingsTreeDefaultTheirMissingKeys() throws {
+        let options: [String: PlateCalculatorOptions] = try decode(#"{"gym":{"includeBumperPlates":true}}"#)
+        #expect(options["gym"] == { var expected = PlateCalculatorOptions(); expected.includeBumperPlates = true; return expected }())
+        let section: CustomWorkoutSection = try decode(#"{"id":"3B3E8D9A-5E7B-4F4E-9E8C-2B0B7E2F9D11","name":"Travel"}"#)
+        #expect(section == CustomWorkoutSection(id: UUID(uuidString: "3B3E8D9A-5E7B-4F4E-9E8C-2B0B7E2F9D11")!, name: "Travel"))
+    }
+
+    @Test func aKgOwnerSelectingOrResettingAnItemStoresTheKgList() {
+        guard case let .weights(plates)? = GymDefaults.storedLoad(for: Loading.weightPlatesID, unit: .kg) else {
+            Issue.record("no kg plates")
+            return
+        }
+        #expect(plates.map(\.kg) == [1.25, 2.5, 5, 10, 15, 20, 25])
+        #expect(GymDefaults.storedLoad(for: Loading.weightPlatesID, unit: .lb) == nil)
+    }
+
     @Test func overridesAndBlocksWithoutTheNewKeysDecode() throws {
         let overrides: ExerciseOverrides = try decode(#"{"weightMatch":true}"#)
         #expect(overrides == { var expected = ExerciseOverrides(); expected.weightMatch = true; return expected }())

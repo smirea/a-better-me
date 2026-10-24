@@ -59,6 +59,6 @@ enum GymTemplate: String, CaseIterable, Identifiable {
         } else {
             listed
         }
-        return Dictionary(uniqueKeysWithValues: ids.map { ($0, GymEquipment(load: unit == .kg ? GymDefaults.kgLoads[$0] : nil)) })
+        return Dictionary(uniqueKeysWithValues: ids.map { ($0, GymEquipment(load: GymDefaults.storedLoad(for: $0, unit: unit))) })
     }
 }

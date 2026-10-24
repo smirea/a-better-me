@@ -33,6 +33,17 @@ struct CustomWorkoutSection: Codable, Hashable, Identifiable {
     var collapsed = false
 }
 
+extension CustomWorkoutSection {
+    /// The settings merge supplies no defaults inside the custom list, so optional keys default here.
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        templateIDs = try container.decodeIfPresent([UUID].self, forKey: .templateIDs) ?? []
+        collapsed = try container.decodeIfPresent(Bool.self, forKey: .collapsed) ?? false
+    }
+}
+
 /// Customize Sections and the custom sections, encoded whole into `settings.workout.sections`. `order` is always every
 /// built-in exactly once: decoding normalizes it, so a layout saved by another build still draws.
 struct WorkoutSectionsLayout: Codable, Hashable {

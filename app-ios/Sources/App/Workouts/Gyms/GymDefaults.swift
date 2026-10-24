@@ -22,6 +22,12 @@ enum GymDefaults {
 
     static func load(for id: EquipmentID) -> EquipmentLoad? { loads[id] }
 
+    /// What a gym stores for an item it selects or resets while the unit is `unit`: the kg list for a kg owner, nothing
+    /// (MF's lb defaults) for a lb owner.
+    static func storedLoad(for id: EquipmentID, unit: WeightUnit) -> EquipmentLoad? {
+        unit == .kg ? kgLoads[id] : nil
+    }
+
     static func effectiveLoad(_ id: EquipmentID, in gym: GymProfile) -> EquipmentLoad? {
         gym.equipment[id]?.load ?? load(for: id)
     }

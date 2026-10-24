@@ -151,9 +151,9 @@ struct GymProfileEditor: View {
         .sheet(item: $editingLoad) { item in
             if let load = GymDefaults.effectiveLoad(item.id, in: gym) {
                 EquipmentLoadEditor(equipment: item, load: load, unit: settings.weightUnit) { saved in
-                    let id = item.id
+                    let (id, unit) = (item.id, settings.weightUnit)
                     edit { gym in
-                        if saved != nil || gym.equipment[id] != nil { gym.equipment[id] = GymEquipment(load: saved) }
+                        if saved != nil || gym.equipment[id] != nil { gym.equipment[id] = GymEquipment(load: saved ?? GymDefaults.storedLoad(for: id, unit: unit)) }
                     }
                 }
             }
@@ -190,12 +190,13 @@ struct GymProfileEditor: View {
 
     /// Selecting keeps an item's custom load; deselecting drops it with the key.
     private func setSelected(_ ids: [EquipmentID], _ selected: Bool) {
+        let unit = settings.weightUnit
         edit { gym in
             for id in ids {
                 if !selected {
                     gym.equipment[id] = nil
                 } else if gym.equipment[id] == nil {
-                    gym.equipment[id] = GymEquipment(load: nil)
+                    gym.equipment[id] = GymEquipment(load: GymDefaults.storedLoad(for: id, unit: unit))
                 }
             }
         }

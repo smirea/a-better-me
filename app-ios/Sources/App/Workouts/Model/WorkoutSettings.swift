@@ -30,6 +30,17 @@ struct PlateCalculatorOptions: Codable, Hashable {
     var offsetWeight = false
 }
 
+extension PlateCalculatorOptions {
+    /// `row.json(_:over:)` fills missing keys only where the default tree has them, and it has no entry per gym, so an
+    /// entry written before a new option existed decodes that option's default here instead of failing the column.
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        includeBumperPlates = try container.decodeIfPresent(Bool.self, forKey: .includeBumperPlates) ?? false
+        allowMixedUnits = try container.decodeIfPresent(Bool.self, forKey: .allowMixedUnits) ?? false
+        offsetWeight = try container.decodeIfPresent(Bool.self, forKey: .offsetWeight) ?? false
+    }
+}
+
 struct RestSettings: Codable, Hashable {
     var enabled = true
     var playSound = true
