@@ -99,8 +99,8 @@ enum NewProgramWizardRules {
     }
 
     /// Build From Scratch: one empty workout day named "Day 1" in a ten-cycle program.
-    static func scratchProgram(name: String, color: ProgramColor) -> GeneratedProgram {
-        var program = Program(name: name, color: color, cycles: 10)
+    static func scratchProgram(name: String, color: ProgramColor, icon: String) -> GeneratedProgram {
+        var program = Program(name: name, color: color, icon: icon, cycles: 10)
         var template = WorkoutTemplate(name: "Day 1")
         template.programID = program.id
         program.days = [ProgramDay(templateID: template.id)]

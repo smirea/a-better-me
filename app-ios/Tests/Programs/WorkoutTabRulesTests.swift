@@ -91,9 +91,10 @@ struct NewProgramWizardRulesTests {
     }
 
     @Test func fromScratchIsOneEmptyDayInTenCycles() {
-        let scratch = NewProgramWizardRules.scratchProgram(name: "Mine", color: .teal)
+        let scratch = NewProgramWizardRules.scratchProgram(name: "Mine", color: .teal, icon: "flame.fill")
         #expect(scratch.program.name == "Mine")
         #expect(scratch.program.color == .teal)
+        #expect(scratch.program.icon == "flame.fill")
         #expect(scratch.program.cycles == 10)
         #expect(scratch.templates.map(\.name) == ["Day 1"])
         #expect(scratch.templates.map(\.programID) == [scratch.program.id])

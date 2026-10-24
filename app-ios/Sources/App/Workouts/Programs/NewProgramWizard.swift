@@ -21,6 +21,7 @@ struct NewProgramWizard: View {
     @State private var method = CreationMethod.smartGeneration
     @State private var name: String?
     @State private var color = ProgramColor.red
+    @State private var icon = ProgramColor.defaultIcon
     @State private var path: [WizardRoute] = []
     @State private var draftID: Program.ID?
     @State private var confirmingExit = false
@@ -126,7 +127,7 @@ struct NewProgramWizard: View {
         if index + 1 < steps.count {
             path.append(.step(steps[index + 1]))
         } else if method == .fromScratch {
-            open(NewProgramWizardRules.scratchProgram(name: programName.trimmingCharacters(in: .whitespacesAndNewlines), color: color))
+            open(NewProgramWizardRules.scratchProgram(name: programName.trimmingCharacters(in: .whitespacesAndNewlines), color: color, icon: icon))
         } else if method == .importFile {
             importing = true
         }
@@ -194,7 +195,9 @@ struct NewProgramWizard: View {
                     .onSubmit { if canAdvance(.name) { advance(from: .name) } }
             }
         case .color:
-            ColorPickerRow(selection: $color)
+            ColorPickerRow(selection: $color, icon: icon)
+            Divider().overlay(Theme.separator).padding(.bottom, 8)
+            ProgramIconGrid(selection: icon, color: color) { icon = $0 }
         case .generating:
             GeneratingChecklist(work: generate) { generated in
                 if path.last == .step(.generating) { path.removeLast() }
@@ -213,11 +216,11 @@ struct NewProgramWizard: View {
         let gym = NewProgramWizardRules.gym(answers.gymID, among: gyms)
         answers.gymID = gym?.id
         lastInputs = NewProgramWizardRules.storage(of: answers)
-        let (profile, exercises, equipment, name, color) = (settings.profile, catalog.bundled, catalog.equipment, programName, color)
+        let (profile, exercises, equipment, name, color, icon) = (settings.profile, catalog.bundled, catalog.equipment, programName, color, icon)
         let doNotRecommend = Set(exerciseSettings.filter(\.doNotRecommend).map(\.id))
         return await Task.detached {
             var rng = SystemRandomNumberGenerator()
-            return ProgramGenerator.generate(answers, profile: profile, catalog: exercises, equipment: equipment, gym: gym, doNotRecommend: doNotRecommend, name: name, color: color, using: &rng)
+            return ProgramGenerator.generate(answers, profile: profile, catalog: exercises, equipment: equipment, gym: gym, doNotRecommend: doNotRecommend, name: name, color: color, icon: icon, using: &rng)
         }.value
     }
 
@@ -578,11 +581,12 @@ private struct ExperienceSheet: View {
 
 private struct ColorPickerRow: View {
     @Binding var selection: ProgramColor
+    let icon: String
 
     var body: some View {
         HStack {
             ForEach(ProgramColor.allCases, id: \.self) { color in
-                Button(color.title, systemImage: ProgramColor.defaultIcon) { selection = color }
+                Button(color.title, systemImage: icon) { selection = color }
                     .labelStyle(.iconOnly)
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(Theme.background)
