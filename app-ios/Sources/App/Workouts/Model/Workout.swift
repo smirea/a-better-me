@@ -21,6 +21,8 @@ struct BlockExercise: Codable, Hashable, Identifiable {
     /// outside programs. Optional, like every field added to the block tree, because synthesized `Decodable` requires
     /// every non-optional key and every stored tree predates it.
     var cycleTargets: [CycleTargets]?
+    /// The resistance option the Equipment chip picked, as its equipment ids. `nil` uses the first one the gym has.
+    var equipment: [EquipmentID]?
 }
 
 struct CycleTargets: Codable, Hashable {
@@ -193,6 +195,7 @@ struct WorkoutSession: SyncedRecord {
 
     init(startingFrom template: WorkoutTemplate) {
         self.init(name: template.name, templateID: template.id, blocks: template.blocks)
+        gymID = template.gymID
     }
 
     init(startingFrom template: WorkoutTemplate, at position: ProgramPosition, gymID: UUID?) {

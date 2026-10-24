@@ -117,25 +117,28 @@ struct KeypadFocus: Equatable {
         replacesOnType = false
     }
 
-    mutating func step(by delta: Double) {
-        let value = max(0, (Double(text) ?? 0) + delta)
-        text = SetField.plain(value)
+    mutating func set(_ value: Double) {
+        text = SetField.plain(max(0, value))
         replacesOnType = true
     }
 }
 
 enum KeypadKey {
     case character(Character), backspace, dismiss, decrement, increment, next, done
+    /// The weight keypad's context key: the plate calculator's expanded view.
+    case plates
     case rir(Int?)
     case partial(Bool)
 }
 
 /// The custom keypad from the reference: digits on the left, then dismiss and the field's own keys on the right.
-/// Weight gets − / + and →; reps get the RIR chips and ✓. The plate calculator is cut from milestone 1.
+/// Weight gets the plate calculator key, − / + and →; reps get the RIR chips and ✓.
 struct Keypad: View {
     let field: SetField
     let rir: Int?
     let partial: Bool
+    /// Whether the plate calculator is expanded; `nil` disables its key for equipment that isn't plate-loaded.
+    var plates: Bool? = nil
     let onKey: (KeypadKey) -> Void
 
     private static let keyHeight: CGFloat = 50
@@ -160,6 +163,11 @@ struct Keypad: View {
                 VStack(spacing: 4) {
                     sideKey(.dismiss, accessibility: "Hide keypad") { Image(systemName: "keyboard.chevron.compact.down") }
                     if field.isWeight {
+                        sideKey(.plates, accessibility: plates == true ? "Collapse plate calculator" : "Expand plate calculator") {
+                            Image(systemName: plates == true ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                        }
+                        .disabled(plates == nil)
+                        .opacity(plates == nil ? 0.4 : 1)
                         HStack(spacing: 4) {
                             sideKey(.decrement, accessibility: "Decrease weight") { Image(systemName: "minus") }
                             sideKey(.increment, accessibility: "Increase weight") { Image(systemName: "plus") }
@@ -227,7 +235,7 @@ struct Keypad: View {
                 .foregroundStyle(.black)
                 .background(Theme.textPrimary, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
         }
-        .frame(height: Self.keyHeight * 2 + 4)
+        .frame(height: isNext ? Self.keyHeight : Self.keyHeight * 2 + 4)
         .accessibilityLabel(isNext ? "Next field" : "Log set")
     }
 

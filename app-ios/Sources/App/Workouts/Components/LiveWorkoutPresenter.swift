@@ -33,12 +33,14 @@ final class LiveWorkoutPresenter {
     func startOrResume(_ makeSession: () -> WorkoutSession, in store: LocalStore) {
         let session = makeSession()
         let started = store.write { db in
-            guard try WorkoutSession.inProgress.fetch(db) == nil else { return false }
+            let session = try session.atStartingGym(db)
+            guard try WorkoutSession.inProgress.fetch(db) == nil else { return (false, session) }
             try session.insert(db)
-            return true
+            return (true, session)
         }
         Task {
-            if try await started.value { isExpanded = true } else { pendingStart = session }
+            let (didStart, session) = try await started.value
+            if didStart { isExpanded = true } else { pendingStart = session }
         }
     }
 }

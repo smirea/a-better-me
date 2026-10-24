@@ -13,7 +13,7 @@ struct SessionEditor: View {
     enum Mode { case live, editPast }
 
     enum Sheet: Identifiable {
-        case info(ExerciseID), progression, warmUp, targets, swap(ExerciseID), add, note, restTimer, settings, gym
+        case info(ExerciseID), progression, warmUp, targets, swap(ExerciseID), add, note, restTimer, settings, gym, equipment
         var id: String { String(describing: self) }
     }
 
@@ -27,6 +27,8 @@ struct SessionEditor: View {
     @Observe(ExerciseSettings.all) var exerciseSettings
     @Observe(AppSettings.current) var defaults
     @Observe(BodyWeight.all) private var bodyWeights
+    @Observe(GymProfile.all) var gyms
+    @Observe(GymProfile.defaultGym) var defaultGym
     /// The session's row as it changes under the editor, which `session` cannot show once the cover is up.
     @Observe private var live: WorkoutSession?
 
@@ -92,7 +94,10 @@ struct SessionEditor: View {
                 .padding(.vertical, 12)
             }
             .scrollDismissesKeyboard(.never)
-            if let focus { keypad(for: focus) }
+            if let focus {
+                plateCalculator(for: focus)
+                keypad(for: focus)
+            }
         }
         .background(Theme.background)
         .animation(.snappy(duration: 0.2), value: focus == nil)
@@ -322,6 +327,9 @@ struct SessionEditor: View {
                         Button("Detach from Superset", systemImage: "link.badge.minus") { blocks.detach(item.id) }
                     } label: { chipLabel("Superset", "arrow.triangle.2.circlepath") }
                 }
+                if (catalog.exercise(item.exerciseID)?.resistanceEquipmentIDs.count ?? 0) > 1 {
+                    chip("Equipment", "dumbbell.fill") { sheet = .equipment }
+                }
                 Menu {
                     Button("Remove from Workout", systemImage: "trash", role: .destructive) { remove(item.id) }
                 } label: { chipLabel("More", "ellipsis") }
@@ -396,11 +404,11 @@ struct SessionEditor: View {
                 SetTargetsSheet(exercise: $blocks[position.block].exercises[position.exercise], allowsWarmUp: true)
             }
         case let .swap(id):
-            ExercisePicker(mode: .swap(id)) { pick in
+            ExercisePicker(mode: .swap(id), gymID: sessionGym?.id) { pick in
                 if let replacement = pick.exerciseIDs.first, let current { swap(current, to: replacement) }
             }
         case .add:
-            ExercisePicker(mode: .add) { add($0) }
+            ExercisePicker(mode: .add, gymID: sessionGym?.id) { add($0) }
         case .note:
             if let position = currentPosition {
                 NoteSheet(
@@ -414,8 +422,10 @@ struct SessionEditor: View {
             closableSheet { WorkoutSettingsView() }
         case .gym:
             closableSheet {
-                if let gymID = session.gymID { GymProfileEditor(gymID: gymID) } else { GymProfilesView() }
+                if let gymID = sessionGym?.id { GymProfileEditor(gymID: gymID) } else { GymProfilesView() }
             }
+        case .equipment:
+            equipmentSheet()
         }
     }
 

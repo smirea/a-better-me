@@ -374,7 +374,8 @@ extension SessionEditor {
 
     func keypad(for focus: KeypadFocus) -> some View {
         let rir = blocks.contains(focus.row) ? entry(focus.row, previous: previousSets(for: focus.row)).rir : nil
-        return Keypad(field: focus.field, rir: rir, partial: focus.partial) { handle($0) }
+        let hasPlates = focus.field.isWeight && blocks.contains(focus.row) && loading(at: focus.row)?.plates != nil
+        return Keypad(field: focus.field, rir: rir, partial: focus.partial, plates: hasPlates ? store.platesExpanded : nil) { handle($0) }
             .transition(.move(edge: .bottom))
     }
 
@@ -388,8 +389,16 @@ extension SessionEditor {
         case let .character(character): state.type(character)
         case .backspace: state.backspace()
         case .decrement, .increment:
-            let increment = WarmUpScheme.increment(for: unit)
-            state.step(by: key.isIncrement ? increment : -increment)
+            if let loading = loading(at: state.row) {
+                guard let next = loading.step(from: Double(state.text) ?? 0, up: key.isIncrement) else { return }
+                state.set(next)
+            } else {
+                let increment = WarmUpScheme.increment(for: unit)
+                state.set((Double(state.text) ?? 0) + (key.isIncrement ? increment : -increment))
+            }
+        case .plates:
+            store.platesExpanded.toggle()
+            return
         case let .rir(value):
             update(state.row) { $0.rir = value }
             return

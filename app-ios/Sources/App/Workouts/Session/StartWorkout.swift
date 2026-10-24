@@ -1,4 +1,15 @@
+import GRDB
 import SwiftUI
+
+extension WorkoutSession {
+    /// Starting a workout picks the workout's gym, then the default gym. The gym stays the session's for its lifetime.
+    func atStartingGym(_ db: Database) throws -> WorkoutSession {
+        guard gymID == nil else { return self }
+        var session = self
+        session.gymID = try GymProfile.defaultGym.fetch(db)?.id
+        return session
+    }
+}
 
 extension View {
     /// The at-most-one-session prompt. `LiveWorkoutPresenter.startOrResume` parks a new session in `pendingStart` when

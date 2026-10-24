@@ -44,6 +44,7 @@ struct WorkoutDetailView: View {
                         Label("Name", systemImage: "textformat")
                         Text(template.name)
                     }
+                    SwapGymMenu(templateID: templateID, gymID: template.gymID)
                     Button("Duplicate Workout", systemImage: "plus.square.on.square") {
                         store.insert(WorkoutTemplate(name: "\(template.name) Copy", notes: template.notes, blocks: template.blocks.copy()))
                     }
