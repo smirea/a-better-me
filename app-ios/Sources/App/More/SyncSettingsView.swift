@@ -36,12 +36,19 @@ struct SyncSettingsView: View {
                 }
             }
             if !store.rejected.isEmpty {
-                Section("Refused by the server") {
+                Section {
                     ForEach(store.rejected.indices, id: \.self) { index in
                         let rejection = store.rejected[index]
                         Text("\(rejection.table) \(rejection.id): \(rejection.reason)").font(AppFont.caption())
                     }
+                    Button("Dismiss") { store.dismissRejections() }
+                } header: {
+                    Text("Some rows were refused by the server")
+                        .foregroundStyle(Theme.destructive)
+                } footer: {
+                    Text("The server refused \(store.rejected.count) write(s) and this phone now matches the server. The pre-sync backup file keeps the original rows.")
                 }
+                .listRowBackground(Theme.destructive.opacity(0.18))
             }
         }
         .navigationTitle("Sync")
