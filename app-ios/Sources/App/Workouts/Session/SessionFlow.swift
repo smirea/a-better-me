@@ -191,6 +191,57 @@ enum SessionFlow {
         }
     }
 
+    /// "Update Workout Plan" with View Changes' Undo: the undone kinds of change revert to `template`, so an undone
+    /// modified exercise keeps the template's sets, an undone added one is dropped, an undone removed one comes back
+    /// where the template had it, and an undone superset returns to the template's grouping. Logs are never touched.
+    static func plan(from blocks: [WorkoutBlock], template: [WorkoutBlock], undoing undone: Set<WorkoutChanges.Kind>) -> [WorkoutBlock] {
+        var plan = plan(from: blocks)
+        guard !undone.isEmpty else { return plan }
+        let changes = WorkoutChanges(before: template, after: plan)
+        let templateItems = template.flatMap(\.exercises)
+        let templateByID = Dictionary(uniqueKeysWithValues: templateItems.map { ($0.id, $0) })
+        let templateOrder = Dictionary(uniqueKeysWithValues: templateItems.enumerated().map { ($1.id, $0) })
+
+        if undone.contains(.modified) {
+            let ids = Set(changes.modified.map(\.after.id))
+            for b in plan.indices {
+                for e in plan[b].exercises.indices where ids.contains(plan[b].exercises[e].id) {
+                    plan[b].exercises[e] = templateByID[plan[b].exercises[e].id]!
+                }
+            }
+        }
+        var displaced: [BlockExercise] = []
+        if undone.contains(.added) {
+            let ids = Set(changes.added.map(\.id))
+            for b in plan.indices { plan[b].exercises.removeAll { ids.contains($0.id) } }
+        }
+        if undone.contains(.regrouped) {
+            let ids = Set(changes.regrouped.flatMap(\.exercises).map(\.id))
+            for b in plan.indices {
+                displaced += plan[b].exercises.filter { ids.contains($0.id) }
+                plan[b].exercises.removeAll { ids.contains($0.id) }
+            }
+        }
+        if undone.contains(.removed) { displaced += changes.removed }
+        plan.removeAll { $0.exercises.isEmpty }
+
+        // Each displaced exercise rejoins the template block it came from, or stands alone where that block was.
+        for item in displaced.sorted(by: { templateOrder[$0.id] ?? .max < templateOrder[$1.id] ?? .max }) {
+            guard let templateIndex = template.firstIndex(where: { $0.exercises.contains { $0.id == item.id } }) else {
+                plan.append(WorkoutBlock(exercises: [item]))
+                continue
+            }
+            let siblings = Set(template[templateIndex].exercises.map(\.id))
+            if let b = plan.firstIndex(where: { $0.exercises.contains { siblings.contains($0.id) } }) {
+                plan[b].exercises.append(item)
+                plan[b].exercises.sort { templateOrder[$0.id] ?? .max < templateOrder[$1.id] ?? .max }
+            } else {
+                plan.insert(WorkoutBlock(id: template[templateIndex].id, exercises: [item]), at: min(templateIndex, plan.count))
+            }
+        }
+        return plan
+    }
+
     static func loggedExerciseCount(in blocks: [WorkoutBlock]) -> (logged: Int, total: Int) {
         let items = blocks.flatMap(\.exercises)
         return (items.count(where: \.hasLoggedSets), items.count)
