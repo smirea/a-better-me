@@ -633,3 +633,202 @@ The exercise detail's History tab has three dropdown chips. **Observed.**
 - The metric chip ("1-RM" and the rest listed in the milestone 1 spec).
 - **Sort Order**: Most Recent or Least Recent (`m2-history-sort.jpg`).
 - **Records**: Records Only, Records On, Records Off (`m2-history-records-filter.jpg`).
+
+---
+
+## 4. Gym profiles and the plate calculator
+
+The milestone 1 spec and [`equipment.md`](equipment.md) cover the profile list, the editor's equipment list, and the default weights. This section covers the rest. A test profile ("New Gym") was created for it and deleted afterwards (§6).
+
+### 4.1 Add New Gym Profile
+
+More > Gym Profiles lists "N Gyms". Each row has the icon, the name, "N pieces of equipment", "Default" on the default gym, and a pencil (`m2-gym-list.jpg`). **Add New Gym Profile** opens a "New Gym Profile" sheet (`m2-gym-new-sheet.jpg`). **Observed.**
+
+- **Icon**, a tile that opens "Gym Icon": a 6 x 4 grid of 24 Material Symbols building glyphs (`m2-gym-icons.jpg`). The data export names them, for example "Home", "Cottage", "Holiday Village".
+- **Name**, defaulting to "New Gym".
+- **Pre-fill Equipment?**, which opens a list of templates with their equipment counts (`m2-gym-prefill.jpg`): Everything Gym (292), Commercial Gym (89), Warehouse Gym (41), Local Gym (48), Garage Gym (26), Home Gym (21), and Start From Blank Slate (0). Choosing Home Gym also switched the icon to a house.
+- **Save.**
+
+The templates come from the bundle. Each equipment entry in `app_file.json`'s `uuidIndex` carries `commercialGym`, `warehouseGym`, `localGym`, `garageGym`, and `homeGym` flags ([`app-strings.md`](app-strings.md) has the template descriptions). Everything Gym is every item. **Inferred** from the flags and the matching counts.
+
+### 4.2 The gym editor
+
+`m2-gym-editor.jpg`
+
+- **Chips**: Edit Icon, Rename Gym, Duplicate, Remove.
+- **⋮** opens "More Gym Options" (`m2-gym-menu.jpg`):
+  - Allow Exercises ("Allows exercises even if equipment is not available", Add)
+  - Disallow Exercises ("Disallows exercise even if equipment is available", Add)
+- **Equipment**, with a **Selected | All** toggle, grouped by category. Each group has "Select All" or "Deselect All". Each item has a photo, the name, its weights or "Default", a checkbox, and an edit link that depends on the kind:
+  - **Edit Weights**, for plates, dumbbells, kettlebells, bars, ankle weights, and similar (`m2-gym-edit-weights-barbell.jpg`). The sheet is titled with the item ("Barbell") and has a Weights header with a **kg | lb** toggle, one checkbox row per weight (15 lb, 33 lb, 45 lb), a + to add one, and Done.
+  - **Edit Inventory**, for bands (`m2-gym-edit-inventory-bands.jpg`). Each band row has a color dot, a name, "Up to N lb", and a checkbox. Long Resistance Bands: Extra Light (up to 9 lb), Light (18), Medium (30), Medium-Heavy (40), Heavy (65), Extra Heavy (95), Super Heavy (115), Heaviest (225). The + opens "Add" with Plate Color swatches, Label, and Weight (`m2-gym-add-band.jpg`).
+  - **Edit Base Weight**, for plate-loaded machines and loadable accessories (`m2-gym-edit-base-weight.jpg`). It is one number field in lb with Save: 45° Leg Press 118 lb, Plate-Loaded Horizontal Leg Press 21, Plate-Loaded Leverage Leg Press 80, Seated Hack Squat 90, Vertical Leg Press 110, Wrist Roller 0.
+  - **Edit Machine**, for pin-loaded and cable machines (`m2-gym-edit-machine.jpg`). It lists ranges ("Range 1 · 0 - 500 lb, 10 lb increments") with a kg | lb toggle, checkboxes, and **Edit Range**. Edit Range has Range Start, Range End, and Increment, with "Highest generated stack weight: 500 lb" (`m2-gym-edit-range.jpg`). **Scan with AI** sits at the bottom and was not tried.
+- **Filter equipment by name** is pinned at the bottom.
+
+The milestone 1 spec has Exercise Settings > Equipment Weights, the per-exercise override of these weights.
+
+### 4.3 How availability changes the app
+
+- **Picker and library.** With a gym chosen in the Gym chip, exercises whose equipment the gym lacks disappear from the list. Under the Home Gym template, the query "bench press" returned only two dumbbell triceps extensions and a bench dip, with no bench press (`m2-library-gym-filter-home.jpg`). In More > Exercises the chip starts unset ("Gym"), and the reset chip clears it. The Resistance filter labels absent items "Not available in this gym" (milestone 1). **Observed.**
+- **Generation.** Picks never needed missing equipment (§1.7). **Measured.**
+- **Live Equipment chip.** It opens "Equipment" with a Resistance section and a Support section. Each option is a card with equipment photos and names, and the chosen one has a radio (`m2-live-equipment-chip.jpg`). For the barbell floor press: Resistance "Barbell, Weight Plates", Support "Power Rack" (selected) or "Squat Stand". Options the gym lacks read "Option N not available in your gym" (milestone 1). A sliders button sits in the header. **Observed.**
+- **Body weight.** An exercise with a `bodyweight` share shows a chip next to the title in the live workout, "196.76 lb · +147.6 lb (75%)" on a donkey calf raise. The summary adds it to volume as "500 lb volume (+737.8 lb BW)". **Observed.**
+- **Base weight.** Lever-Arm Machine Belt Squat logged as 100 lb x 15 showed "2175 lb volume", which is 145 lb per rep. The machine's base weight appears to be added to the logged load. **Inferred.**
+
+### 4.4 Plate calculator
+
+Tapping a barbell exercise's weight field opens the custom keypad. The plate panel sits above it (`m2-live-weight-keypad.jpg`). **Observed.**
+
+- The panel has a small barbell drawing with colored plates, a legend of "count x plate" chips, and the sentence "<per side> lb on both sides + <bar> lb bar weight = <total> lb".
+- The keypad's right column holds a keyboard-dismiss key, an expand key (⤢), − and +, and → (next field).
+- Plates are chosen greedily from the largest down, per side, from the gym's Weight Plates list. 150 lb on the 45 lb bar is 52.5 a side, loaded as 1 x 45, 1 x 5, 1 x 2.5. 135 lb is 1 x 45, and 45 lb is "0 lb on both sides". 185 lb is 1 x 45 plus 1 x 25 (milestone 1). **Observed.**
+- When the target can't be loaded exactly, the sentence ends in "- missing <x> lb", and the chips show what fits. A 4,955 lb entry loaded "10 x 45" per side, "450 lb on both sides + 45 lb bar weight = 4955 lb - missing 4010 lb". So the plate inventory caps each plate at 10 per side. **Observed.** Milestone 1 saw "+ extra 45 lb" for an unloadable weight.
+- Colors: 45 lb and 5 lb chips are blue, 2.5 lb green (25 lb green in milestone 1). The binary has "Plate Color", "Include Bumper Plates", "Utilize Mixed Unit Plates", and "Offset Weight" settings, and the data export's Gym Profiles sheet has matching columns.
+- **Not observed.** Bar selection and the expanded view. Any click on the custom keypad, including a raw click without mouse movement, dismissed it under automation, as in milestone 1. Values had to be typed with the keyboard.
+
+---
+
+## 5. Everything else
+
+### 5.1 Pause and Minimize
+
+`m2-live-paused.jpg`, `m2-live-minimized.jpg`, `m2-live-minimized-dashboard.jpg`, `m2-live-end-workout-sheet.jpg`. **Observed.**
+
+- **Pause workout** (Workout Options) freezes the elapsed timer and grays it ("0:00:17" stayed for 4 seconds). The menu item becomes **Resume workout**. The set table stays editable.
+- **Minimize workout** returns to the tab the workout was started from. A floating bar sits above the rail at the bottom of every tab. It holds the elapsed timer, a strip of exercise thumbnails (initials tiles for exercises without photos), a round **pause** button, and a round **stop** button. Tapping the bar reopens the workout.
+- The bar's pause button pauses the timer the same way.
+- The stop button opens "End Workout" with the workout's name ("ZZ P1 Hyp 3x FB 40-60: Workout A") and two rows, Finish workout and Discard workout. Finish leads to the usual "Finish this workout?" dialog.
+- **Discard** asks "Discard this workout?" / "Your progress will be lost and this workout will not be saved." with Discard and Go Back.
+- The summary's **Start Time** Edit opens a wheel with day ("Today"), hour, minute, and AM/PM, plus Save (`m2-summary-start-time-picker.jpg`). **Duration** Edit opens "Edit Duration" with hours, minutes, and seconds wheels (`m2-summary-duration-picker.jpg`).
+
+**"Log All Sets" logs only rows with values.** P1 Workout A was finished from the minimized bar without checking any set. Its 8 exercises included 5 with no history, whose weight inputs were empty. The summary and the dashboard counted 3 exercises and 8 sets, the rows Smart Progression had prefilled. **Observed** counts, cause **inferred**.
+
+### 5.2 Exercise Assessment
+
+More > Workout > Other > Exercise Assessment opens a single page of seven toggles, with no steps or Save (`m2-exercise-assessment.jpg`). The owner's answers are shown in bold; they were left as found. **Observed.**
+
+| Question                                                                | Owner   |
+| ----------------------------------------------------------------------- | ------- |
+| Can you do at least 5 strict, unassisted pull-ups or chin-ups?          | no      |
+| Can you do at least 10 strict, unassisted pull-ups or chin-ups?         | no      |
+| Can you perform at least 10 body weight dips?                           | no      |
+| Can you do at least 15 strict, bodyweight push-ups?                     | **yes** |
+| Can you bench press a barbell for at least 10 reps?                     | **yes** |
+| Can you incline press a barbell for at least 10 reps?                   | **yes** |
+| Can you overhead press (shoulder press) a barbell for at least 10 reps? | **yes** |
+
+How the answers gate `preconditions`:
+
+- Generated programs picked exercises with the barbell bench, barbell overhead press, and 45° incline barbell press preconditions, all "yes" answers. They never picked a bodyweight or weighted pull-up or dip, all "no" answers (§1.7). **Measured.**
+- Turning on "5 pull-ups" and regenerating P2's inputs (P25, `exports/program-p25-str-3x-fb-40-60-pullups-yes.xlsx`) still picked the machine-assisted pull-up. One sample cannot separate gating from chance, or from the gym lacking the pull-up's equipment. **Observed**, inconclusive. The answer was turned back off.
+- Proposed mapping for our generator, **inferred** from the precondition names in `app_file.json`:
+
+  | Precondition entries (exercises)                                                                                                                                              | Unlocked by                                                 |
+  | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+  | Barbell bench press (28), Banded barbell bench press (1)                                                                                                                      | bench 10 reps                                               |
+  | 45° incline barbell press (5), High incline barbell press (1)                                                                                                                 | incline 10 reps                                             |
+  | Barbell overhead press (11), Behind the neck overhead press (4), Barbell Z press (1)                                                                                          | overhead press 10 reps                                      |
+  | Bodyweight vertical pulls (12), Sternum chin-up (1), Wide grip pull-up (1), Single arm dead hang (1)                                                                          | 5 pull-ups                                                  |
+  | Weighted vertical pulls (3), Wide grip weighted pull-up (1), L-sit pull-up (1), Muscle-up (1)                                                                                 | 10 pull-ups                                                 |
+  | Bodyweight dip (8), Weighted dip (7)                                                                                                                                          | 10 dips                                                     |
+  | Basic push-up (3), Intermediate push-up (5), Advanced bodyweight push-up (5), Weighted push-up (1), Banded push-up (1), Plyometric (1), Single arm (1), Handstand push-up (1) | 15 push-ups; the harder ones are probably never auto-picked |
+  | Single-leg squats, lunges and split squats, Nordic curl, Copenhagen plank, Jefferson curls, seal row, and the rest (21 entries)                                               | no question covers them, so treat them as never auto-picked |
+
+### 5.3 Shortcuts
+
+More > Shortcuts (`m2-shortcuts-settings.jpg`) has **Save** in the header. **Observed.**
+
+- **Up Next Banner**, a toggle on a preview of the Up Next card.
+- **Shortcuts**, with an **Order | Color** toggle:
+  - **Order** lists "Add or Remove Shortcuts" rows: Weight, Photos, Metrics, and History (each "Top Shortcut", the round buttons), then Empty Workout, New Program, and New Workout (the sheet rows).
+  - **Color** gives each shortcut a paint-bucket button (`m2-shortcuts-color-mode.jpg`). It opens "Choose Color · Shortcut Color" with 7 swatches (red, orange, yellow, green, teal, blue, purple) and a trash button to clear (`m2-shortcuts-color-picker.jpg`).
+- **Reset to App Defaults**, in red.
+
+The round shortcuts each open a dated entry sheet. They belong to body tracking. **Observed.**
+
+- **Weight** opens "10/24/2026 · Scale Weight" with Weight (lb) and Body Fat (%) fields and Save (`m2-shortcut-472.jpg`).
+- **Photos** opens "Progress Photos" with Front and Side slots and Save (`m2-shortcut-587.jpg`).
+- **Metrics** opens "Full Body" with Body Fat and Visual Body Fat (%) fields, a Reference button, and Save (`m2-shortcut-702.jpg`).
+- **History** opens Workout History (milestone 1).
+
+### 5.4 Dashboard values
+
+The milestone 1 spec has the layout, the detail screens, and Customize Dashboard. These are the computations, checked against what the test sessions changed. **Observed** values, rules **inferred** from them.
+
+- **Primary Focus rings.** The title is "Weekly Workouts" for a weekly active program and "Cycle Workouts" otherwise. **Active Program** targets are the current week's totals: distinct muscles (primary or secondary), sets, and exercises. P1 Week 1 gave 19, 62, and 24, which match its export. "Left" counts down as program-day sessions are logged. After P1's Workout A was logged with 3 exercises and 8 sets, the rings read 6 muscles done (13 left), 8 sets (54 left), and 3 exercises (21 left). The 6 muscles are those of the logged exercises.
+- **Workouts · Last 7 Workouts.** The bars are sets per workout for the last 7 workouts, and the value is the latest workout's set count ("11 sets" after the 11-exercise calibration session).
+- **Habits · Workouts · Last 30 Days.** "N this week" counts distinct days with a workout. Six sessions on one day still read "1 this week".
+- **Muscle Groups card · Last 7 Days.** The value is the total weighted sets over the last 7 days (primary 1, secondary 0.5). Upper Back read 1.5 from a Kelso shrug (1) and a seated shrug (0.5). The detail screen shows "Average Sets" and "Total Sets" for the chosen range ("Oct 18 - 24, 2026"), with 1W to All ranges, a D/W/M bucket, and a per-day list (`m2-dashboard-muscle-detail.jpg`).
+- **Exercises card · Last 7 Workouts.** The latest estimated 1-RM (§3.5).
+
+### 5.5 Library tabs
+
+More > Exercises has the tabs All, Performed, Deprioritized, Modified, Archived. **Observed.**
+
+- **Performed**: exercises with at least one logged set, grouped and ranked like All. The subtitle is "Performed N times".
+- **Deprioritized**: exercises with Do Not Recommend on (`m2-library-tab-624.jpg`). The owner had none, so a test exercise was flagged and then unflagged.
+- **Modified**: exercises with any Exercise Override. The subtitle names it, "Edited Expand Rep Range" (`m2-library-tab-712.jpg`). Overrides use "Default / On / Off" sheets (`m2-override-expand.jpg`). Warm-Up Automation offers Default ("Warm-up automation will default to app-level settings"), Smart Warm-Up, Scheme Warm-Up (Edit Scheme), and None (`m2-override-warmup-automation.jpg`). **Reset Defaults** ("Remove all exercise level overrides") clears all of them without asking.
+- **Archived**: archived custom exercises (`m2-library-archived.jpg`). An archived exercise's settings page shows only Unarchive Exercise ("This will make the exercise available in your custom library and search again") and Delete Exercise. Delete asks "Delete Exercise · Deleting this exercise will remove it from 1 workout and History and Dashboard."
+
+### 5.6 Custom exercise: Final details
+
+Step 4 of 5, "Final details" (`m2-custom-final-details.jpg`). **Observed.**
+
+- Range of Motion and Stability: − / + steppers from 0, each with a 5-segment bar.
+- Body Weight Contribution (Required) in %, with the live conversion "19.68 lb at your current weight" for 10%.
+- Primary Joint Action and Secondary Joint Action: dropdowns that open "Choose all that apply". This is a checklist of every joint action in the bundle's `uuidIndex`, alphabetical, from "1st Carpometacarpal Joint Abduction" to the toe and finger joints.
+- Alternate Names: a 300-character field ("Separate names with a comma").
+- Description: Edit opens a rich-text editor with a paragraph-style dropdown ("Normal") and Save (`m2-custom-description.jpg`).
+
+Step 3's Resistance picker asks for a quantity on dumbbells and kettlebells ("1 Dumbbell", "2 Dumbbells"), and offers "Add Alternate Resistance". Step 5 marks Trackable Metric and Laterality "Final" and summarizes the rest (`m2-custom-review.jpg`). Backing out from any step discards the draft without a dialog.
+
+### 5.7 Workout and program export (.xlsx)
+
+Real files are in [`exports/`](exports/). [`tools/xlsx.py`](tools/xlsx.py) reads them with the standard library. Both exports open the system share sheet with a file named `MacroFactor-<yyyyMMddHHmmss>.xlsx`. **Observed.**
+
+**Export Workout** writes one sheet, "Workouts" ([`workout-zz-sp-test.xlsx`](exports/workout-zz-sp-test.xlsx), [`workout-zz-sp-test-superset-drop-failure-rest.xlsx`](exports/workout-zz-sp-test-superset-drop-failure-rest.xlsx)).
+
+- The header row is an empty first cell, then `Exercise`, `Notes`, and four columns per set: `Set N Type`, `Set N Rep Range`, `Set N RIR`, `Set N Rest`.
+- The first exercise row starts with `<workout name> @ <gym name>`.
+- Set Type is one of "Standard Set", "Drop Set", "Myo Set", "Failure Set".
+- Rep Range is "8 - 12". A single target is "10 - 10". A failure set is "8+". A drop set lists its drops in parentheses, "8 - 8 (6 - 6)", and its RIR the same way, "0 (0)".
+- RIR is a decimal ("2.0"). Rest is seconds as a decimal, or empty when unset.
+- A superset member's name ends with " ∈ SS1" (SS2 and so on for further groups).
+- Logged sessions are not exported. The file is the template.
+
+**Export Program** writes one sheet, "Training Programs" ([`exports/program-p*.xlsx`](exports/)).
+
+- Row 1: `Program: <name>`, `Cycles: <n>`, `Deload: None|First Cycle|Last Cycle`, `Color: <name>`, `Icon: <name>`.
+- Then `Block 1`, then per cycle a header row `Cycle N`, `Exercise`, `Skipped`, `Notes`, and the set columns as above.
+- Each day is a run of rows whose first cell is `<day name> @ <gym>`, or a single `Rest` row.
+- `Skipped` is "Yes" or "No".
+- The deload week is not written (§1.9).
+
+The binary's importer matches set columns with `^Set\s+(\d+)\s+(Type|Rep Range|RIR|Rest|Duration|Distance)$`, so duration and distance exercises use `Set N Duration` and `Set N Distance` columns. None of the test exercises used them.
+
+### 5.8 Data Export
+
+More > Data Management > Data Export has two tabs (`m2-data-export.jpg`, `m2-data-export-granular.jpg`). **Observed.**
+
+- **Quick Export**:
+  - Choose Time Frame: Last 7 Days, Last 14 Days, Last 30 Days, This Month (October), Last Month (September)
+  - Include MacroFactor Workouts Data ("Muscle groups, active training program, and workout log.")
+  - Include MacroFactor Data ("Expenditure, weight trend, scale weight, calories, macros, micros, primary nutrition targets, and food log.")
+  - Export
+- **Granular Export**: checkboxes with Select All per group.
+  - Metrics & Analytics: Calories & Macros, Micronutrients, Scale Weight, Body Metrics, Weight Trend, Expenditure, Steps, Muscle Groups, Exercises
+  - Library: Recipes, Custom Foods, Favorites, History Foods, Training Programs, Workouts
+  - Other: User Profile, Micronutrient Goals, Nutrition Program Settings, Weight Goals, Exercise Settings, Gym Profiles, Workout Settings
+
+A granular export of the workout items (Muscle Groups, Exercises, Training Programs, Workouts, Exercise Settings, Gym Profiles, Workout Settings) produced one 237 KB `.xlsx`. It is not committed, because this repository is public and the file holds the owner's history. Its sheets:
+
+- **Muscle Groups - Sets** and **- Volume**: `Date` (an Excel serial day), then one column per muscle with its unit, such as `Chest (sets)` or `Chest (lb)`. One row per day with data, from the first logged day.
+- **Exercises - 1-RM**, **- 3-RM**, **- 10-RM**, **- Total Volume**, **- Best Set Volume**, **- Heaviest Weight**, **- Total Reps**, **- Best Set Reps**, **- Total Duration**, **- Best Set Duration**, **- Total Sets**: `Date`, then one column per exercise with its unit, such as `Barbell Bench Press (lb)`.
+- **Training Programs**: every program in the account, in the Export Program layout.
+- **Workouts**: every library workout, in the Export Workout layout.
+- **Exercise Settings**: `Exercises`, `Weight Unit`, `Distance Unit`, `Split L/R?`, `Selected Resistance Equipment`, `Selected Support Equipment`, `Weights`, `Bar Weight`, `Additional Weight`, `Rest Timer (sec)`, `Rest Between Left/Right Sets`, `Expand Rep Range`, `Weight Match`, `Warm-Up Automation`, `Warm-Up Scheme`, `Exercise Note`, `Do Not Recommend`. One row per exercise with any setting.
+- **Workout Settings**: one row with `Previous Reference`, `Propagate Changes`, `RIR Tracking`, `Superset Auto-Scroll`, `Exercise Auto-Next`, `Keep Alive`, `Workout Timer`, `Bodyweight Contribution`, `Calendar Scrolling`, `Use Rest Timers`, `Rest Between Exercises`, `Rest Between Left/Right Sets`, `Play Sound`, `Vibrate`, `Initial log fill`, `Apply in session`, `Expand Rep Range`, `Weight Match`, `Deload`, `Exercise Assessment`, `Warm-Up Automation`, `Hide Completed Sets`, `Rest After Last Warm-up Set`, the three rest-scaling percentages, and `Rest Timer (<category>) (sec)` and `Warm-Up Scheme (<category>)` for each of the five categories. Booleans are "Yes"/"No". `Exercise Assessment` is the comma-separated list of questions answered yes. `Deload` is the generation wizard's remembered toggle.
+- **Gym Profiles**: `Name`, `Icon`, `Created Date`, `Equipment`, `Equipment Weights`, `Allow Exercises`, `Disallow Exercises`, `Include Bumper Plates`, `Utilize Mixed Unit Plates`, `Offset Weight`. A gym's first row holds its own fields, and the following rows list one equipment item each with its weights ("45° Leg Press", "118 lb").
+
+**The rep-max curve is per exercise.** The 3-RM and 10-RM columns are fixed fractions of the 1-RM within an exercise, but the fractions differ across exercises. 3-RM / 1-RM runs from 0.944 to 0.961, and 10-RM / 1-RM from 0.780 to 0.837. The most common pair is 0.945 and 0.781. 1 / 0.781 = 1.280 matches the f(10) = 1.281 measured on a fresh exercise in §3.5. So a new exercise starts on a default curve, and MF refits it per exercise from the owner's sets. **Measured** ratios, the fitting **inferred**.
