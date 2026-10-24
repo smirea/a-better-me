@@ -80,13 +80,14 @@ extension LocalStore {
     func seedGeneratedProgramIfRequested(catalog: ExerciseCatalog) {
         guard ProcessInfo.processInfo.arguments.contains(Self.seedGeneratedProgramArgument) else { return }
         let exercises = catalog.bundled
+        let equipment = catalog.equipment
         write { db in
             guard try Program.fetchCount(db) == 0 else { return }
             let inputs = GeneratorInputs(goal: .hypertrophy, daysPerWeek: 3, split: .fullBody, sessionLength: .from40To60, repProgression: .noPreference, deload: true, experience: .intermediate)
             var profile = ProfileSettings()
             profile.assessment = ["benchPress10": AssessmentQuestion.yes, "overheadPress10": AssessmentQuestion.yes, "inclinePress10": AssessmentQuestion.yes]
             var rng = SystemRandomNumberGenerator()
-            let generated = ProgramGenerator.generate(inputs, profile: profile, catalog: exercises, gym: nil, using: &rng)
+            let generated = ProgramGenerator.generate(inputs, profile: profile, catalog: exercises, equipment: equipment, gym: nil, using: &rng)
             var program = generated.program
             program.isActive = true
             try program.insert(db)

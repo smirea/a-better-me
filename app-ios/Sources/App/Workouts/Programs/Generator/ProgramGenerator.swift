@@ -33,6 +33,7 @@ enum ProgramGenerator {
         _ inputs: GeneratorInputs,
         profile: ProfileSettings,
         catalog: [Exercise],
+        equipment: [EquipmentID: Equipment],
         gym: GymProfile?,
         doNotRecommend: Set<ExerciseID> = [],
         name: String? = nil,
@@ -40,7 +41,7 @@ enum ProgramGenerator {
         icon: String = ProgramColor.defaultIcon,
         using rng: inout some RandomNumberGenerator
     ) -> GeneratedProgram {
-        let days = plan(inputs, profile: profile, catalog: catalog, gym: gym, doNotRecommend: doNotRecommend, using: &rng)
+        let days = plan(inputs, profile: profile, catalog: catalog, equipment: equipment, gym: gym, doNotRecommend: doNotRecommend, using: &rng)
         let split = SplitPlan.resolve(inputs.split, daysPerWeek: inputs.daysPerWeek)
         // MF's generated programs are weekly, call their cycles weeks, and switch Periodization on (the week cards).
         var config = ProgramConfig()
@@ -70,6 +71,7 @@ enum ProgramGenerator {
         _ inputs: GeneratorInputs,
         profile: ProfileSettings,
         catalog: [Exercise],
+        equipment: [EquipmentID: Equipment],
         gym: GymProfile?,
         doNotRecommend: Set<ExerciseID> = [],
         using rng: inout some RandomNumberGenerator
@@ -110,7 +112,8 @@ enum ProgramGenerator {
             setsFor: { allowance.accessorySets(for: $0) }
         )
 
-        var picker = SlotPicker(goal: inputs.goal, focus: inputs.muscleFocus, profile: profile, catalog: catalog, gym: gym, doNotRecommend: doNotRecommend)
+        let availability = gym.map { GymAvailability(gym: $0, equipment: equipment) }
+        var picker = SlotPicker(goal: inputs.goal, focus: inputs.muscleFocus, profile: profile, catalog: catalog, gym: availability, doNotRecommend: doNotRecommend)
         return skeletons.enumerated().map { index, skeleton in
             var slots: [GeneratedSlot] = []
             for ((pattern, role), sets) in zip(compounds[index], compoundSets[index]) {
@@ -323,12 +326,12 @@ struct SlotPicker {
     let focus: [Muscle: Emphasis]
     let profile: ProfileSettings
     let catalog: [Exercise]
-    let gym: GymProfile?
+    let gym: GymAvailability?
     let doNotRecommend: Set<ExerciseID>
     private(set) var used: Set<ExerciseID> = []
     private(set) var usedGroupings: Set<String> = []
 
-    init(goal: TrainingGoal, focus: [Muscle: Emphasis], profile: ProfileSettings, catalog: [Exercise], gym: GymProfile?, doNotRecommend: Set<ExerciseID>) {
+    init(goal: TrainingGoal, focus: [Muscle: Emphasis], profile: ProfileSettings, catalog: [Exercise], gym: GymAvailability?, doNotRecommend: Set<ExerciseID>) {
         self.goal = goal
         self.focus = focus
         self.profile = profile
@@ -370,12 +373,12 @@ struct SlotPicker {
             !self.used.contains(exercise.id)
                 && !self.doNotRecommend.contains(exercise.id)
                 && ExerciseAssessment.allows(exercise, profile: self.profile)
-                && (self.gym?.hasEquipment(for: exercise) ?? true)
+                && (self.gym?.isAvailable(exercise) ?? true)
                 && exercise.selection.map { $0.exclusionGroupings.allSatisfy { !self.usedGroupings.contains($0) } } ?? true
         }
         let withoutGrouping = { (exercise: Exercise) -> Bool in
             !self.used.contains(exercise.id) && !self.doNotRecommend.contains(exercise.id)
-                && ExerciseAssessment.allows(exercise, profile: self.profile) && (self.gym?.hasEquipment(for: exercise) ?? true)
+                && ExerciseAssessment.allows(exercise, profile: self.profile) && (self.gym?.isAvailable(exercise) ?? true)
         }
         let candidates = [preferred.filter(strict), pool.filter(strict), pool.filter(withoutGrouping)].first { !$0.isEmpty } ?? []
         guard let best = candidates.compactMap({ $0.level(goal: goal, slot: slot) }).min() else { return nil }

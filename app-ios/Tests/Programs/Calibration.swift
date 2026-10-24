@@ -263,9 +263,9 @@ extension Calibration {
     static func measure(_ mf: MFProgram, catalog: ExerciseCatalog, gym: GymProfile, seed: UInt64 = 1) -> (CalibrationError, GeneratedProgram, [ProgramGenerator.Day]) {
         var rng = SeededGenerator(seed: seed)
         let inputs = inputs(mf.inputs)
-        let days = ProgramGenerator.plan(inputs, profile: profile, catalog: catalog.bundled, gym: gym, using: &rng)
+        let days = ProgramGenerator.plan(inputs, profile: profile, catalog: catalog.bundled, equipment: catalog.equipment, gym: gym, using: &rng)
         var rng2 = SeededGenerator(seed: seed)
-        let generated = ProgramGenerator.generate(inputs, profile: profile, catalog: catalog.bundled, gym: gym, using: &rng2)
+        let generated = ProgramGenerator.generate(inputs, profile: profile, catalog: catalog.bundled, equipment: catalog.equipment, gym: gym, using: &rng2)
         var error = CalibrationError()
         error.id = mf.id
         error.label = "\(mf.inputs.goal) \(mf.inputs.daysPerWeek)x \(mf.inputs.split) \(mf.inputs.sessionMinutes) \(mf.inputs.repProgression)"
