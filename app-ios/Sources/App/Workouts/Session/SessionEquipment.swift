@@ -67,7 +67,13 @@ extension SessionEditor {
     func equipmentSheet() -> some View {
         if let position = currentPosition,
            let exercise = catalog.exercise(blocks[position.block].exercises[position.exercise].exerciseID) {
-            EquipmentSheet(exercise: exercise, availability: availability, choice: $blocks[position.block].exercises[position.exercise].equipment)
+            EquipmentSheet(
+                exercise: exercise, availability: availability,
+                choice: $blocks[position.block].exercises[position.exercise].equipment,
+                support: $blocks[position.block].exercises[position.exercise].support
+            ) {
+                equipmentSettingsView()
+            }
         }
     }
 

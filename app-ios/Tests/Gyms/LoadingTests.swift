@@ -217,6 +217,21 @@ struct EquipmentResolutionTests {
         #expect(exercise.chosenEquipment(["leg-press"], in: availability) == ["leg-press"])
         #expect(exercise.chosenEquipment(["dumbbells"], in: availability) == ["cable"])
     }
+
+    @Test func supportOptionsFollowTheSameRule() {
+        let catalog = [item("rack", "Benches & Racks"), item("stand", "Benches & Racks"), item("barbell", "Loadable Bars")].keyed
+        let exercise = Exercise(
+            id: "floor-press", name: "Barbell Floor Press", type: .compound, primaryMuscles: [.chest], metrics: [.weight, .reps],
+            resistanceEquipmentIDs: [["barbell"]], supportEquipmentIDs: [["rack"], ["stand"]]
+        )
+        let availability = GymAvailability(gym: GymProfile(name: "Gym", equipment: ["stand": GymEquipment(load: nil)]), equipment: catalog)
+        #expect(exercise.supportOptions(in: availability).map(\.isAvailable) == [false, true])
+        #expect(exercise.supportOptions(in: availability)[0].unavailableLabel == "Option 1 not available in your gym")
+        #expect(exercise.chosenSupport(nil, in: availability) == ["stand"])
+        #expect(exercise.chosenSupport(["rack"], in: availability) == ["rack"])
+        #expect(exercise.hasEquipmentChoice == true)
+        #expect(Exercise(id: "x", name: "x", type: .other, primaryMuscles: [], metrics: [.reps], resistanceEquipmentIDs: [["barbell"]]).hasEquipmentChoice == false)
+    }
 }
 
 struct PlateCalculatorOptionTests {

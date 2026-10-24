@@ -327,7 +327,7 @@ struct SessionEditor: View {
                         Button("Detach from Superset", systemImage: "link.badge.minus") { blocks.detach(item.id) }
                     } label: { chipLabel("Superset", "arrow.triangle.2.circlepath") }
                 }
-                if (catalog.exercise(item.exerciseID)?.resistanceEquipmentIDs.count ?? 0) > 1 {
+                if catalog.exercise(item.exerciseID)?.hasEquipmentChoice == true {
                     chip("Equipment", "dumbbell.fill") { sheet = .equipment }
                 }
                 Menu {

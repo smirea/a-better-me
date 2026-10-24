@@ -1,32 +1,50 @@
 import Foundation
 
-/// One of an exercise's resistance options as the live workout's Equipment chip lists it, numbered from 1 the way MF
-/// labels a missing one ("Option 5 not available in your gym").
-struct ResistanceOption: Identifiable, Equatable {
+/// One of an exercise's resistance or support options as the live workout's Equipment sheet lists it, numbered from 1
+/// the way MF labels a missing one ("Option 5 not available in your gym").
+struct EquipmentChoiceOption: Identifiable, Equatable {
     var number: Int
     var ids: [EquipmentID]
     var isAvailable: Bool
 
     var id: Int { number }
     var unavailableLabel: String { "Option \(number) not available in your gym" }
-}
 
-extension Exercise {
-    /// Every resistance option, each marked by whether `availability` provides all of its items. Without a gym every
-    /// option is available.
-    func resistanceOptions(in availability: GymAvailability?) -> [ResistanceOption] {
-        resistanceEquipmentIDs.enumerated().map { index, ids in
-            ResistanceOption(number: index + 1, ids: ids, isAvailable: availability.map { ids.allSatisfy($0.provides) } ?? true)
+    /// Each alternative marked by whether `availability` provides all of its items. Without a gym every option is
+    /// available.
+    static func list(_ alternatives: [[EquipmentID]], in availability: GymAvailability?) -> [EquipmentChoiceOption] {
+        alternatives.enumerated().map { index, ids in
+            EquipmentChoiceOption(number: index + 1, ids: ids, isAvailable: availability.map { ids.allSatisfy($0.provides) } ?? true)
         }
     }
 
     /// The option in use: the stored choice while the exercise still offers it, else the first the gym provides,
     /// else the first. A choice outlives a swap only when the new exercise has the same option.
-    func chosenEquipment(_ choice: [EquipmentID]?, in availability: GymAvailability?) -> [EquipmentID]? {
-        let options = resistanceOptions(in: availability)
+    static func chosen(_ choice: [EquipmentID]?, among options: [EquipmentChoiceOption]) -> [EquipmentID]? {
         if let choice, options.contains(where: { $0.ids == choice }) { return choice }
         return (options.first(where: \.isAvailable) ?? options.first)?.ids
     }
+}
+
+extension Exercise {
+    func resistanceOptions(in availability: GymAvailability?) -> [EquipmentChoiceOption] {
+        EquipmentChoiceOption.list(resistanceEquipmentIDs, in: availability)
+    }
+
+    func supportOptions(in availability: GymAvailability?) -> [EquipmentChoiceOption] {
+        EquipmentChoiceOption.list(supportEquipmentIDs, in: availability)
+    }
+
+    func chosenEquipment(_ choice: [EquipmentID]?, in availability: GymAvailability?) -> [EquipmentID]? {
+        EquipmentChoiceOption.chosen(choice, among: resistanceOptions(in: availability))
+    }
+
+    func chosenSupport(_ choice: [EquipmentID]?, in availability: GymAvailability?) -> [EquipmentID]? {
+        EquipmentChoiceOption.chosen(choice, among: supportOptions(in: availability))
+    }
+
+    /// Whether the Equipment chip has anything to pick: more than one resistance or support option.
+    var hasEquipmentChoice: Bool { resistanceEquipmentIDs.count > 1 || supportEquipmentIDs.count > 1 }
 }
 
 /// The load each item has for one exercise: its Equipment Weights override, else the gym's load, else MF's default.
