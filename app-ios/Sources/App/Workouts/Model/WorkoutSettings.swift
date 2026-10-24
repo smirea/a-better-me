@@ -13,6 +13,7 @@ struct WorkoutSettings: Codable, Hashable {
     var supersetAutoScroll = true
     var exerciseAutoNext = true
     var display = DisplaySettings()
+    var sections = WorkoutSectionsLayout()
 }
 
 struct RestSettings: Codable, Hashable {

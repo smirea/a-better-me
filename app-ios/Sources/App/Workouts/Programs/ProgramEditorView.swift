@@ -365,6 +365,21 @@ private struct ProgramEditorGymOptions: View {
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(gym.id == selected ? .isSelected : [])
                 }
+                NavigationLink {
+                    GymProfilesView()
+                } label: {
+                    HStack(spacing: 16) {
+                        Image(systemName: "house.lodge").frame(width: 24)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Manage Gym Profiles").font(AppFont.headline(15))
+                            Text("Add, edit, and remove gyms")
+                                .font(AppFont.caption())
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                }
+                .accessibilityLabel("Manage Gym Profiles")
+                .accessibilityHint("Add, edit, and remove gyms")
                 Toggle(isOn: $applyToAll) {
                     Label("Apply to All Days", systemImage: "checklist").font(AppFont.headline(15))
                 }

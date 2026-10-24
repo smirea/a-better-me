@@ -12,25 +12,27 @@ struct WorkoutTab: View {
     @Observe(WorkoutSession.finished) private var sessions
     @Environment(LocalStore.self) private var store
     @Environment(LiveWorkoutPresenter.self) private var presenter
-    @AppStorage(WorkoutSectionsLayout.storageKey) private var sectionsStorage = ""
+    @Observe(AppSettings.current) private var settings
     @State private var showingCalendar = false
     @State private var creatingWorkout = false
     @State private var creatingProgram = false
+    @State private var creatingSection = false
     @State private var libraryCollapsed = false
     @State private var summary: WorkoutSession?
     @State private var path = NavigationPath()
 
     var body: some View {
         let days = LoggedDays(sessions)
+        let progress = activeProgram.map { DayPillProgress(fraction: $0.cycleProgress(finished: sessions), color: $0.color.swatch) }
         NavigationStack(path: $path) {
             Group {
                 if showingCalendar {
-                    MonthCalendar(days: days) { summary = $0 }
+                    MonthCalendar(days: days, progress: progress, target: { pillTarget($0, days: days) }, onOpen: open)
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 28) {
-                            WeekStrip(days: days) { summary = $0 }
-                            ForEach(WorkoutSectionsLayout(storage: sectionsStorage).visible) { section($0) }
+                            WeekStrip(days: days, progress: progress, target: { pillTarget($0, days: days) }, onOpen: open)
+                            ForEach(settings.workout.sections.visible) { section($0) }
                         }
                         .padding(.horizontal)
                         .padding(.bottom)
@@ -58,6 +60,18 @@ struct WorkoutTab: View {
         .fullScreenCover(isPresented: $creatingProgram) {
             NewProgramWizard()
         }
+        .newSectionAlert(isPresented: $creatingSection)
+    }
+
+    private func pillTarget(_ day: Date, days: LoggedDays) -> DayPillTarget? {
+        DayPillTarget.of(day, session: days.session(on: day), program: activeProgram, now: .now, calendar: LoggedDays.calendar)
+    }
+
+    private func open(_ target: DayPillTarget) {
+        switch target {
+        case let .summary(session): summary = session
+        case let .programDay(route): path.append(route)
+        }
     }
 
     @ToolbarContentBuilder
@@ -69,6 +83,7 @@ struct WorkoutTab: View {
         ToolbarSpacer(.fixed)
         ToolbarItem {
             Menu("Create", systemImage: "plus") {
+                Button("New Section", systemImage: "rectangle.split.1x2") { creatingSection = true }
                 Button("New Program", systemImage: "point.topleft.down.to.point.bottomright.curvepath") { creatingProgram = true }
                 Button("New Workout", systemImage: "dumbbell") { creatingWorkout = true }
             }
@@ -98,19 +113,28 @@ struct WorkoutTab: View {
         case .library:
             library(templates: byID)
         case .yourSections:
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Your Sections").font(AppFont.title())
-                Label("You haven’t added new sections yet. You can add one by tapping + on this page", systemImage: "rectangle.split.1x2")
-                    .font(AppFont.caption())
-                    .foregroundStyle(Theme.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+            let custom = settings.workout.sections.custom
+            if custom.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Your Sections").font(AppFont.title())
+                    Label("You haven’t added new sections yet. You can add one by tapping + on this page", systemImage: "rectangle.split.1x2")
+                        .font(AppFont.caption())
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 28) {
+                    ForEach(custom) { CustomSectionView(section: $0, library: templates) }
+                }
             }
         }
     }
 
     private func library(templates byID: [UUID: WorkoutTemplate]) -> some View {
+        let filed = settings.workout.sections.filedTemplateIDs
+        let templates = templates.filter { !filed.contains($0.id) }
         let libraryPrograms = programs.filter { $0.id != activeProgram?.id }
         return VStack(alignment: .leading, spacing: 12) {
             HStack {

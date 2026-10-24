@@ -282,6 +282,31 @@ enum ProgramIcon {
     }
 }
 
+/// The icon glyphs as a six-column grid, the selected one on the program color. Program Settings' Color & Icon and the
+/// New Program wizard's color step share it.
+struct ProgramIconGrid: View {
+    let selection: String
+    let color: ProgramColor
+    let onPick: (String) -> Void
+
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 12) {
+            ForEach(ProgramIcon.all, id: \.symbol) { icon in
+                Button { onPick(icon.symbol) } label: {
+                    Image(systemName: icon.symbol)
+                        .font(AppFont.title(18))
+                        .foregroundStyle(icon.symbol == selection ? .white : Theme.textSecondary)
+                        .frame(width: 48, height: 48)
+                        .background(icon.symbol == selection ? color.swatch : Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(icon.title)
+                .accessibilityAddTraits(icon.symbol == selection ? .isSelected : [])
+            }
+        }
+    }
+}
+
 private struct ProgramSettingsColorIcon: View {
     let program: Program
 
@@ -308,19 +333,8 @@ private struct ProgramSettingsColorIcon: View {
                         }
                     }
                     Text("Icon").font(AppFont.title(18))
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 12) {
-                        ForEach(ProgramIcon.all, id: \.symbol) { icon in
-                            Button { store.editProgram(program.id) { $0.icon = icon.symbol } } label: {
-                                Image(systemName: icon.symbol)
-                                    .font(AppFont.title(18))
-                                    .foregroundStyle(icon.symbol == program.icon ? .white : Theme.textSecondary)
-                                    .frame(width: 48, height: 48)
-                                    .background(icon.symbol == program.icon ? program.color.swatch : Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(icon.title)
-                            .accessibilityAddTraits(icon.symbol == program.icon ? .isSelected : [])
-                        }
+                    ProgramIconGrid(selection: program.icon, color: program.color) { symbol in
+                        store.editProgram(program.id) { $0.icon = symbol }
                     }
                 }
                 .padding()
