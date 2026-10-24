@@ -17,41 +17,51 @@ struct PlateCalculatorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 16) {
-                sleeve
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(Array(plan.legend.enumerated()), id: \.offset) { _, line in
-                        HStack(spacing: 6) {
-                            swatch(line.weight, isBumper: line.isBumper)
-                            Text("\(line.count) x \(SetField.plain(line.weight))\(line.isBumper ? " bumper" : "")")
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 16) {
+                    sleeve
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(Array(plan.legend.enumerated()), id: \.offset) { _, line in
+                            HStack(spacing: 6) {
+                                swatch(line.weight, isBumper: line.isBumper)
+                                Text("\(line.count) x \(SetField.plain(line.weight))\(line.isBumper ? " bumper" : "")")
+                            }
                         }
                     }
+                    .font(AppFont.medium(isExpanded ? 15 : 13))
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Plate calculator")
+                    .accessibilityValue(sentence)
+                    Spacer(minLength: 0)
+                    // The expanded sleeve leaves no room beside the legend, so the chips go under it.
+                    if !isExpanded { controls }
                 }
-                .font(AppFont.medium(isExpanded ? 15 : 13))
-                Spacer(minLength: 0)
+                if isExpanded { controls }
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Plate calculator")
-            .accessibilityValue(sentence)
             Divider().overlay(Theme.separator)
-            HStack(spacing: 8) {
-                Text(sentence)
-                    .font(AppFont.caption(12))
-                    .foregroundStyle(Theme.textSecondary)
-                Spacer(minLength: 0)
-                if plan.loading.baseWeights.count > 1, let onBar { barMenu(onBar) }
-                if showsOffset, let onOffset {
-                    Button(action: onOffset) { chip(offset?.label(unit: unit) ?? "Offset", systemImage: "plusminus") }
-                        .accessibilityLabel(offset.map { "Offset weight, \($0.label(unit: unit))" } ?? "Offset weight, none")
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 6)
+            Text(sentence)
+                .font(AppFont.caption(12))
+                .foregroundStyle(Theme.textSecondary)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
         }
         .foregroundStyle(Theme.textPrimary)
         .background(Theme.header)
+    }
+
+    @ViewBuilder
+    private var controls: some View {
+        let layout = isExpanded ? AnyLayout(HStackLayout(spacing: 8)) : AnyLayout(VStackLayout(alignment: .trailing, spacing: 6))
+        layout {
+            if plan.loading.baseWeights.count > 1, let onBar { barMenu(onBar) }
+            if showsOffset, let onOffset {
+                Button(action: onOffset) { chip(offset?.label(unit: unit) ?? "Offset", systemImage: "plusminus") }
+                    .accessibilityLabel(offset.map { "Offset weight, \($0.label(unit: unit))" } ?? "Offset weight, none")
+            }
+        }
+        .fixedSize()
     }
 
     private var sentence: String {
