@@ -219,6 +219,101 @@ struct EquipmentResolutionTests {
     }
 }
 
+struct PlateCalculatorOptionTests {
+    private let catalog = [
+        item("barbell", "Loadable Bars"),
+        item(Loading.weightPlatesID, "Free Weights"),
+        item(Loading.bumperPlatesID, "Free Weights"),
+        item("stack", "Pin Loaded Machines"),
+    ].keyed
+    private let barbell = EquipmentLoad.weights(options: [45.0, 33, 15].map { WeightOption(kg: lb.toKg($0)) })
+    private let plates = EquipmentLoad.weights(options: [45.0, 25, 10, 5, 2.5].map { WeightOption(kg: lb.toKg($0)) })
+
+    private func resolve(calculator: PlateCalculatorOptions = PlateCalculatorOptions(), barWeightKg: [EquipmentID: Double] = [:], loads: [EquipmentID: EquipmentLoad]) -> PlateLoading? {
+        Loading.resolve(option: ["barbell"], catalog: catalog, unit: lb, calculator: calculator, barWeightKg: barWeightKg) { loads[$0] }?.plates
+    }
+
+    @Test func theChosenBarWeightLoadsWhileTheBarStillListsIt() throws {
+        let loads: [EquipmentID: EquipmentLoad] = ["barbell": barbell, Loading.weightPlatesID: plates]
+        let heaviest = try #require(resolve(loads: loads))
+        #expect(heaviest.baseWeights == [15, 33, 45])
+        #expect(heaviest.baseID == "barbell")
+        #expect(heaviest.plan(for: 135).sentence(unit: "lb") == "45 lb on both sides + 45 lb bar weight = 135 lb")
+        let chosen = try #require(resolve(barWeightKg: ["barbell": lb.toKg(33)], loads: loads))
+        #expect(chosen.plan(for: 123).sentence(unit: "lb") == "45 lb on both sides + 33 lb bar weight = 123 lb")
+        let unlisted = try #require(resolve(barWeightKg: ["barbell": lb.toKg(20)], loads: loads))
+        #expect(unlisted.baseWeight == 45)
+    }
+
+    @Test func bumperPlatesJoinThePlatesOnlyWhenIncluded() throws {
+        let loads: [EquipmentID: EquipmentLoad] = [
+            "barbell": barbell,
+            Loading.weightPlatesID: .weights(options: [45.0, 25].map { WeightOption(kg: lb.toKg($0)) }),
+            Loading.bumperPlatesID: .weights(options: [55.0, 10].map { WeightOption(kg: lb.toKg($0)) }),
+        ]
+        let steel = try #require(resolve(loads: loads))
+        #expect(steel.plan(for: 205).sentence(unit: "lb") == "70 lb on both sides + 45 lb bar weight = 205 lb - missing 20 lb")
+        let bumpers = try #require(resolve(calculator: PlateCalculatorOptions(includeBumperPlates: true), loads: loads))
+        let plan = bumpers.plan(for: 205)
+        #expect(plan.sentence(unit: "lb") == "80 lb on both sides + 45 lb bar weight = 205 lb")
+        #expect(plan.loaded.map { ($0.weight, $0.isBumper) }.map { "\($0.0) \($0.1)" } == ["55.0 true", "25.0 false"])
+        #expect(plan.legend.map { "\($0.count) x \(SetField.plain($0.weight))\($0.isBumper ? " bumper" : "")" } == ["1 x 55 bumper", "1 x 25"])
+    }
+
+    @Test func noBumperPlatesInTheGymAddsNothing() throws {
+        let loads: [EquipmentID: EquipmentLoad] = ["barbell": barbell, Loading.weightPlatesID: plates]
+        let loading = try #require(resolve(calculator: PlateCalculatorOptions(includeBumperPlates: true), loads: loads))
+        #expect(loading.plates.map(\.weight) == [45, 25, 10, 5, 2.5])
+    }
+
+    @Test func aTenPercentOffsetOn200LbLoads220() throws {
+        let loads: [EquipmentID: EquipmentLoad] = ["barbell": barbell, Loading.weightPlatesID: plates]
+        let loading = try #require(resolve(loads: loads))
+        let target = PlateOffset.percent(10).applied(to: 200, unit: lb)
+        #expect(target == 220)
+        #expect(loading.plan(for: target).sentence(unit: "lb") == "87.5 lb on both sides + 45 lb bar weight = 220 lb")
+        #expect(loading.plan(for: PlateOffset.percent(-10).applied(to: 200, unit: lb)).perSide == [45, 10, 10, 2.5])
+    }
+
+    @Test func mixedUnitsOffKeepsTheDisplayUnitsPlates() throws {
+        let mixed = EquipmentLoad.weights(options: [
+            WeightOption(kg: lb.toKg(45)), WeightOption(kg: lb.toKg(25)), WeightOption(kg: 20), WeightOption(kg: 1.25),
+            WeightOption(kg: lb.toKg(10), unit: .kg),
+        ])
+        let loads: [EquipmentID: EquipmentLoad] = ["barbell": barbell, Loading.weightPlatesID: mixed]
+        let lbOnly = try #require(resolve(loads: loads))
+        #expect(lbOnly.plates.map(\.weight) == [45, 25])
+        let all = try #require(resolve(calculator: PlateCalculatorOptions(allowMixedUnits: true), loads: loads))
+        #expect(all.plates.map { SetField.plain($0.weight) } == ["45", "44.09", "25", "10", "2.76"])
+        let kgOnly = try #require(Loading.resolve(option: ["barbell"], catalog: catalog, unit: .kg) { loads[$0] }?.plates)
+        #expect(kgOnly.plates.map { SetField.plain($0.weight) } == ["20", "4.54", "1.25"])
+    }
+
+    @Test func pinMicroStackStepsThroughEachWeightThenTheNextPin() throws {
+        let stack = EquipmentLoad.ranges(
+            options: [WeightRange(minKg: 0, maxKg: lb.toKg(500), incrementKg: lb.toKg(10))],
+            micro: MicroAdjustment(kind: .pin, weightsKg: [lb.toKg(2.5), lb.toKg(5)])
+        )
+        let loading = try #require(Loading.resolve(option: ["stack"], catalog: catalog, unit: lb) { _ in stack })
+        var steps: [Double] = [100]
+        for _ in 0..<4 { steps.append(try #require(loading.step(from: steps.last!, up: true))) }
+        #expect(steps.map(SetField.plain) == ["100", "102.5", "105", "110", "112.5"])
+        #expect(loading.step(from: 505, up: true) == nil)
+        #expect(loading.step(from: 102.5, up: false).map(SetField.plain) == "100")
+    }
+
+    @Test func microPlatesCombine() throws {
+        let stack = EquipmentLoad.ranges(
+            options: [WeightRange(minKg: 0, maxKg: lb.toKg(500), incrementKg: lb.toKg(10))],
+            micro: MicroAdjustment(kind: .plates, weightsKg: [lb.toKg(2.5), lb.toKg(5)])
+        )
+        let loading = try #require(Loading.resolve(option: ["stack"], catalog: catalog, unit: lb) { _ in stack })
+        var steps: [Double] = [100]
+        for _ in 0..<4 { steps.append(try #require(loading.step(from: steps.last!, up: true))) }
+        #expect(steps.map(SetField.plain) == ["100", "102.5", "105", "107.5", "110"])
+    }
+}
+
 private func item(_ id: String, _ category: String, weightKg: Double? = nil, laterality: PlateLaterality? = nil) -> Equipment {
     Equipment(id: id, name: id, category: category, weightKg: weightKg, weightOptionsKg: [], plateLaterality: laterality, gymPresets: [], hasImage: false)
 }

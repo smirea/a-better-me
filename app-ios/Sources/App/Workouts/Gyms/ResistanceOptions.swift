@@ -65,10 +65,15 @@ extension Loading {
     /// stack decides the steps, before a loadable accessory, which in "Dumbbells, Fat Grip Attachments" only changes the
     /// grip but in "Dip Belt, Weight Plates" carries the plates. Bands and items without a load give `nil`, and the
     /// stepper falls back to the increment. A `perSide` weight field logs one side, so it loads one side of the base.
-    static func resolve(option ids: [EquipmentID], catalog: [EquipmentID: Equipment], unit: WeightUnit, perSide: Bool = false, load: (EquipmentID) -> EquipmentLoad?) -> Loading? {
+    static func resolve(
+        option ids: [EquipmentID], catalog: [EquipmentID: Equipment], unit: WeightUnit, perSide: Bool = false,
+        calculator: PlateCalculatorOptions = PlateCalculatorOptions(), barWeightKg: [EquipmentID: Double] = [:],
+        load: (EquipmentID) -> EquipmentLoad?
+    ) -> Loading? {
         let items = ids.compactMap { catalog[$0] }
+        let context = PlateContext(unit: unit, perSide: perSide, calculator: calculator, barWeightKg: barWeightKg)
         if let base = items.first(where: { $0.category == barCategory || $0.category == machineCategory }) {
-            return plates(on: base, unit: unit, perSide: perSide, load: load)
+            return plates(on: base, context, load: load)
         }
         func firstSteps(_ candidates: [Equipment]) -> Loading? {
             for item in candidates {
@@ -78,26 +83,55 @@ extension Loading {
         }
         if let fixed = firstSteps(items.filter { $0.id != weightPlatesID && $0.category != accessoryCategory }) { return fixed }
         if let accessory = items.first(where: { $0.category == accessoryCategory }) {
-            return plates(on: accessory, unit: unit, perSide: perSide, load: load)
+            return plates(on: accessory, context, load: load)
         }
         return firstSteps(items)
     }
 
-    private static func plates(on base: Equipment, unit: WeightUnit, perSide: Bool, load: (EquipmentID) -> EquipmentLoad?) -> Loading {
+    private struct PlateContext {
+        var unit: WeightUnit
+        var perSide: Bool
+        var calculator: PlateCalculatorOptions
+        var barWeightKg: [EquipmentID: Double]
+    }
+
+    /// The gym's Bumper Plates, which join the Weight Plates when the gym's Include Bumper Plates is on.
+    static let bumperPlatesID: EquipmentID = "25a5c6f170d8805b8c95e7e5b4e8a989"
+
+    private static func plates(on base: Equipment, _ context: PlateContext, load: (EquipmentID) -> EquipmentLoad?) -> Loading {
+        let unit = context.unit
         let isBar = base.category == barCategory
         let sides = isBar || base.plateLaterality == .perSide ? 2 : 1
-        let baseKg: Double? = switch load(base.id) {
-        case let .weights(options)?: options.map(\.kg).max()
-        case let .base(kg)?: kg
-        default: base.weightKg
+        var baseWeights: [Double] = []
+        let baseKg: Double?
+        switch load(base.id) {
+        case let .weights(options)?:
+            baseWeights = Set(options.map(\.kg)).sorted().map(unit.fromKg)
+            let chosen = context.barWeightKg[base.id].flatMap { choice in options.first { abs($0.kg - choice) < 0.005 }?.kg }
+            baseKg = chosen ?? options.map(\.kg).max()
+        case let .base(kg)?:
+            baseKg = kg
+        default:
+            baseKg = base.weightKg
         }
-        let loaded = perSide ? 1 : sides
-        var plates: [PlateLoading.Plate] = []
-        if case let .weights(options)? = load(weightPlatesID) {
-            plates = options.map { PlateLoading.Plate(weight: unit.fromKg($0.kg), perSide: $0.count.map { $0 / sides }) }
+        let loaded = context.perSide ? 1 : sides
+        func options(_ id: EquipmentID, isBumper: Bool) -> [(WeightOption, Bool)] {
+            guard case let .weights(options)? = load(id) else { return [] }
+            return options.map { ($0, isBumper) }
+        }
+        var listed = options(weightPlatesID, isBumper: false)
+        if context.calculator.includeBumperPlates { listed += options(bumperPlatesID, isBumper: true) }
+        if !context.calculator.allowMixedUnits {
+            // Without Utilize Mixed Unit Plates only plates native to the display unit go on. A list with none of them
+            // (the generated defaults are lb, so a kg owner's untouched gym) keeps every plate, since none would be worse.
+            let native = listed.filter { $0.0.nativeUnit == nil || $0.0.nativeUnit == unit }
+            if !native.isEmpty { listed = native }
+        }
+        let plates = listed.map { option, isBumper in
+            PlateLoading.Plate(weight: unit.fromKg(option.kg), perSide: option.count.map { $0 / sides }, isBumper: isBumper)
         }
         let baseWeight = unit.fromKg(baseKg ?? 0) * Double(loaded) / Double(sides)
-        return .plates(PlateLoading(base: isBar ? .bar : .machine, baseWeight: baseWeight, plates: plates, sides: loaded))
+        return .plates(PlateLoading(base: isBar ? .bar : .machine, baseWeight: baseWeight, plates: plates, sides: loaded, baseID: base.id, baseWeights: baseWeights))
     }
 
     /// The loads a rack or pin stack offers, ascending. `nil` for an empty list, so the stepper keeps its increment.
