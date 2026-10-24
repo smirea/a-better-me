@@ -10,6 +10,35 @@ The Workouts half re-creates MacroFactor Workouts (MF Workouts) on iOS. The refe
 - **Levels.** MF's Levels tab is weekly training volume per muscle, not strength levels. It shows a body heat map and per-muscle average weekly sets over 1 week, 1 month, or 3 months, with the lifts that contributed.
 - **Cut from milestone 1.** Programs, Smart Generation, gym profiles and equipment availability, the Dashboard, Smart Progression's "Auto" column (the reference column shows "Previous" only), smart warm-ups (a scheme warm-up calculator stays in scope), xlsx import and export, and the plate calculator. Programs and Smart Progression are the first milestone-2 candidates.
 
+## Milestone 2: feature parity
+
+Milestone 2 builds what milestone 1 cut, so the app does everything the owner uses MF Workouts for. Only video stays out, because App Check guards it ([Exercise catalog source](#exercise-catalog-source)).
+
+- **Programs.** The Active Program on the Workout tab, the program editor (days, rest days, cycles, per-cycle targets), Program Settings (cycles, color and icon, day order, deload, periodization), archiving, the "+" sheet's Up Next card, and the New Program wizard with Smart Generation. MF generates programs inside its compiled app, so the generator is our own. It is built on the selection data MF bundles with every exercise: the hypertrophy and strength recommendation levels per slot, exclusion groupings, exercise groups, preconditions, and the stretched and emphasized muscles. It is calibrated against programs the research thread generates in MF.
+- **Smart Progression.** The live workout's "Auto" reference column, prefill from progression, mid-session adjustments with the event log, Expand Rep Range and Weight Match, and Smart Warm-Ups. All of them are pure functions over history, apart from views, with tests on literal inputs.
+- **Workout settings.** Every toggle in the research spec's §9 Workout settings (rest timer, Smart Progression, warm-up, previous reference, propagate changes, RIR tracking, superset auto-scroll, auto-next, display) and the per-exercise overrides behind Exercise Settings.
+- **Gym profiles.** Profiles with their equipment and weights ([`equipment.md`](../research/mf-workouts/equipment.md)), the picker's Gym filter, availability labels, the live workout's Equipment chip, and the plate calculator.
+- **Dashboard.** The Primary Focus carousel, Insights & Analytics, Habits, Muscle Groups, Exercises, and their detail screens, plus Customize Dashboard. Body weight and steps are read from HealthKit, since the nutrition half that would own weigh-ins doesn't exist yet. Weigh-ins logged in the app go to the synced `body_weights` table.
+- **Smaller cuts.** Pause workout, F | P partial reps, 3-RM and 10-RM history with the Records filter, Do Not Recommend and the Deprioritized and Modified tabs, the custom exercise's Final details step, custom sections, the Shortcuts sheet's Weight and History shortcuts, Undo in View Changes, confetti, the Exercise Assessment, and xlsx import and export.
+
+**Sequencing.** Research and the schema land first. MF's unexplored screens and calibration data go into `docs/research/mf-workouts/milestone-2.md`, from one research thread, because only one agent can drive MF's window. Every new table and column goes in one groundwork migration, because drizzle-kit's journal is append-only and two parallel PRs that each add a migration conflict. Then the feature threads run with disjoint folders:
+
+- **Programs:** `Workouts/Programs/`, plus the Workout tab's program sections in `Builder/`.
+- **Progression and session:** `Workouts/Progression/` (pure logic), `Session/`, and `More/` workout settings.
+- **Gyms and library:** `Workouts/Gyms/` and `Library/`.
+- **Dashboard:** `Dashboard/`.
+- **Second wave:** the live workout's Equipment chip and plate calculator, after the progression and gym threads merge, and xlsx import and export.
+
+**New synced data.** All of it ships in that one groundwork migration:
+
+- `programs`, `gym_profiles`, and `body_weights` tables.
+- New columns on existing tables:
+  - `workout_templates`: `program_id`, `gym_id`, and `archived`.
+  - `workout_sessions`: `program_id`, `program_day_id`, `cycle`, `gym_id`, and `paused_seconds`.
+  - `exercise_settings`: `do_not_recommend` and `overrides`.
+  - `settings`: `workout`, `profile`, `dashboard`, and `shortcuts`.
+- **Nested settings are JSON.** Settings and overrides are JSON columns that decode into Swift structs with defaults, so a later setting needs no migration.
+
 ## Exercise catalog source
 
 - **The catalog is the reference app's own export.** MF Workouts bundles its full exercise database as `flutter_assets/packages/macrofactor/assets/import/app_file.json`: 1,345 exercises with alternative names, compound or isolation type, the 23 feature muscle groups, anatomical muscles, movement patterns, laterality, tracking metrics, equipment options, and linked articles, plus a `uuidIndex` that names every referenced entity. Next to it sit the instruction Markdown (`assets/markdown/<id>.md`, 1,213 exercises plus 277 articles), two or three poster frames for 619 exercises (`assets/exercises/<id>_{a,b,c}.webp`), and equipment photos (`assets/equipment/<id>.png`).
