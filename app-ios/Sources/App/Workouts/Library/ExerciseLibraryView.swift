@@ -112,6 +112,7 @@ struct ExerciseSettingsView: View {
     @State private var editingNote = false
     @State private var noteDraft = ""
     @State private var confirmingDelete = false
+    @State private var duplicating = false
 
     init(exerciseID: ExerciseID) {
         self.exerciseID = exerciseID
@@ -154,6 +155,18 @@ struct ExerciseSettingsView: View {
                     })
                     .labelsHidden()
                     .tint(Theme.accent)
+                }
+                if exercise != nil {
+                    Button { duplicating = true } label: {
+                        SettingsRow(
+                            title: "Edit Duplicate",
+                            subtitle: "To edit all available exercise properties, create a duplicate",
+                            systemImage: "plus.square.on.square"
+                        ) {
+                            Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
+                        }
+                    }
+                    .buttonStyle(.plain)
                 }
                 if let customExercise {
                     SettingsRow(
@@ -206,6 +219,11 @@ struct ExerciseSettingsView: View {
         .navigationTitle(exercise?.name ?? "Exercise")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingInfo) { ExerciseDetailSheet(exerciseID: exerciseID) }
+        .sheet(isPresented: $duplicating) {
+            if let exercise {
+                CustomExerciseWizard(draft: CustomExerciseDraft(duplicating: exercise, instructions: catalog.instructions(for: exercise)))
+            }
+        }
         .alert("Exercise Note", isPresented: $editingNote) {
             TextField("Note", text: $noteDraft, axis: .vertical)
             Button("Save") {
