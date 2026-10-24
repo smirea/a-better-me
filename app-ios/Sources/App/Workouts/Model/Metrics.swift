@@ -32,4 +32,9 @@ enum WorkoutMetrics {
         let toFailure = Double(reps + (rir ?? 0))
         return toFailure <= 1 ? weightKg : weightKg * (1 + toFailure / 30)
     }
+
+    /// Inverse Epley: the weight liftable for `reps` given a 1-RM, so 3-RM and 10-RM agree with `estimatedOneRepMaxKg`.
+    static func estimatedRepMaxKg(oneRepMaxKg: Double, reps: Int) -> Double {
+        reps <= 1 ? oneRepMaxKg : oneRepMaxKg / (1 + Double(reps) / 30)
+    }
 }
