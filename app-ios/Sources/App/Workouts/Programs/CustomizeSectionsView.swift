@@ -46,7 +46,7 @@ struct CustomizeSectionsView: View {
             } header: {
                 header("Your Sections")
             } footer: {
-                Text("Drag to reorder. Your Sections draw where the Your Sections row sits above.")
+                Text("Drag to reorder. Your sections appear on the Workout tab where the Your Sections row sits.")
             }
         }
         .environment(\.editMode, .constant(.active))

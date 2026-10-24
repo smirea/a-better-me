@@ -13,7 +13,6 @@ struct WorkoutSettings: Codable, Hashable {
     var supersetAutoScroll = true
     var exerciseAutoNext = true
     var display = DisplaySettings()
-    /// The Workout tab's section order and custom sections.
     var sections = WorkoutSectionsLayout()
 }
 
