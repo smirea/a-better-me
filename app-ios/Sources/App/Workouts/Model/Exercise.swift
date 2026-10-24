@@ -40,6 +40,9 @@ struct Exercise: Codable, Hashable, Identifiable {
     /// Share of body weight moved, which MF adds to the logged load for bodyweight exercises.
     var bodyweightFraction: Double = 0
     var searchBoost: Int = 0
+    /// MF's Description from the custom exercise wizard, as Markdown. Catalog exercises keep theirs in the bundle's
+    /// instructions, so this is `nil` for them and for custom rows written before it existed.
+    var about: String?
     /// Instructions live in `Instructions/<id>.md`, loaded on demand through `ExerciseCatalog.instructions(for:)`.
     var hasInstructions = false
     var articleIDs: [String] = []

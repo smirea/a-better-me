@@ -7,6 +7,7 @@ enum AppTab: Hashable {
 struct RootView: View {
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(LiveWorkoutPresenter.self) private var presenter
+    @Environment(LocalStore.self) private var store
     @Observe(CustomExercise.all) private var customExercises
     @Observe(WorkoutSession.inProgress) private var activeSession
     @State private var tab = AppTab.workout
@@ -36,5 +37,6 @@ struct RootView: View {
         .onChange(of: customExercises.map(\.exercise), initial: true) { _, exercises in
             catalog.setCustom(exercises)
         }
+        .task { await GymSeed.run(store, equipment: catalog.equipment) }
     }
 }
