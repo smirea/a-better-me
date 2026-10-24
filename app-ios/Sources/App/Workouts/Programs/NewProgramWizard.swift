@@ -24,6 +24,9 @@ struct NewProgramWizard: View {
     @State private var path: [WizardRoute] = []
     @State private var draftID: Program.ID?
     @State private var confirmingExit = false
+    @State private var importing = false
+    @State private var importFailed = false
+    @State private var unmatched: [String] = []
 
     private var steps: [WizardStep] { NewProgramWizardRules.steps(method: method, hasGyms: !gyms.isEmpty) }
 
@@ -54,6 +57,13 @@ struct NewProgramWizard: View {
         } message: {
             Text("This program has not been saved and will be discarded.")
         }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.xlsx]) { importProgram($0) }
+        .alert("Import failed", isPresented: $importFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("We only support select spreadsheet formats with a .xlsx extension. If the program spreadsheet wasn't exported from MacroFactor Workouts or explicitly advertised to work with MacroFactor Workouts, it will likely fail to import. Only upload content you have permission to use.")
+        }
+        .unmatchedExercisesAlert($unmatched)
     }
 
     private func page(_ step: WizardStep) -> some View {
@@ -106,7 +116,6 @@ struct NewProgramWizard: View {
 
     private func canAdvance(_ step: WizardStep) -> Bool {
         switch step {
-        case .method: method != .importFile
         case .name: !programName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         default: true
         }
@@ -118,6 +127,8 @@ struct NewProgramWizard: View {
             path.append(.step(steps[index + 1]))
         } else if method == .fromScratch {
             open(NewProgramWizardRules.scratchProgram(name: programName.trimmingCharacters(in: .whitespacesAndNewlines), color: color))
+        } else if method == .importFile {
+            importing = true
         }
     }
 
@@ -138,7 +149,6 @@ struct NewProgramWizard: View {
             WizardOption(icon: "sparkles", title: "Use Smart Generation", subtitle: "We will create a custom plan tailored to your goals, fitness level, and gym equipment", tag: "Recommended", selected: method == .smartGeneration) { method = .smartGeneration }
             WizardOption(icon: "wrench.fill", title: "Build From Scratch", subtitle: "Start with a fully blank slate and no guidance", selected: method == .fromScratch) { method = .fromScratch }
             WizardOption(icon: "icloud.and.arrow.up.fill", title: "Import From File", subtitle: "You can upload .xlsx files from previously exported programs", selected: method == .importFile) { method = .importFile }
-                .disabled(true)
         case .goal:
             option("Muscle Hypertrophy", "Workouts will focus on increasing muscle size using moderate weights and reps.", \.goal, .hypertrophy)
             option("Muscle Strength", "Workouts will focus on increasing maximal strength using heavier weights for fewer reps.", \.goal, .strength)
@@ -209,6 +219,17 @@ struct NewProgramWizard: View {
             var rng = SystemRandomNumberGenerator()
             return ProgramGenerator.generate(answers, profile: profile, catalog: exercises, equipment: equipment, gym: gym, doNotRecommend: doNotRecommend, name: name, color: color, using: &rng)
         }.value
+    }
+
+    private func importProgram(_ result: Result<URL, Error>) {
+        do {
+            let imported = try MFTransfer.importProgram(TransferFile.read(result.get()), exercises: catalog.all, gyms: gyms)
+            imported.insertNewExercises(into: store)
+            open(imported.value)
+            unmatched = imported.newExercises.map(\.name)
+        } catch {
+            importFailed = true
+        }
     }
 
     private func open(_ generated: GeneratedProgram) {

@@ -31,6 +31,7 @@ struct NewProgramWizardRulesTests {
         ])
         #expect(!NewProgramWizardRules.steps(method: .smartGeneration, hasGyms: false).contains(.gym))
         #expect(NewProgramWizardRules.steps(method: .fromScratch, hasGyms: true) == [.splash, .method, .name, .color])
+        #expect(NewProgramWizardRules.steps(method: .importFile, hasGyms: true) == [.splash, .method])
     }
 
     @Test func firstRunStartsFromMFsDefaults() {
