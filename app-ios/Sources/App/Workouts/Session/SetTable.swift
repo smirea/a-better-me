@@ -175,8 +175,8 @@ extension SessionEditor {
         blocks.setLog(entry(path, previous: previous).log(at: .now), at: path)
         drafts[id] = nil
         guard mode == .live else { return }
-        let step = SessionFlow.afterCompleting(path, in: blocks, rest: restSeconds)
-        if let seconds = step.restSeconds { store.startRest(seconds: seconds) }
+        let step = SessionFlow.afterCompleting(path, in: blocks, settings: defaults.workout, rest: restSeconds)
+        if let seconds = step.restSeconds { store.startRest(seconds: seconds, alerts: defaults.workout.rest) }
         if let next = step.next, next != current { withAnimation { current = next } }
     }
 
@@ -197,9 +197,15 @@ extension SessionEditor {
             drafts[blocks.rowID(at: path)] = nil
         }
         let partner = blocks[block].exercises.first { !$0.isDone }
-        if mode == .live, let next = partner?.id ?? SessionFlow.nextIncomplete(after: block, in: blocks) {
-            withAnimation { current = next }
+        guard mode == .live else { return }
+        let next: BlockExercise.ID? = if let partner {
+            defaults.workout.supersetAutoScroll ? partner.id : nil
+        } else if defaults.workout.exerciseAutoNext {
+            SessionFlow.nextIncomplete(after: block, in: blocks)
+        } else {
+            nil
         }
+        if let next { withAnimation { current = next } }
     }
 
     // MARK: Structure

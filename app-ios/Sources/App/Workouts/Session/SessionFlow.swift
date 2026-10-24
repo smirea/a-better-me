@@ -71,8 +71,6 @@ struct RowPath: Hashable {
 
 /// The live workout's rules for rest and moving between exercises, apart from the views.
 enum SessionFlow {
-    static let warmUpRestScale = 0.75
-
     struct Step: Equatable {
         var restSeconds: Int?
         /// The exercise the screen moves to, or `nil` to stay.
@@ -80,36 +78,43 @@ enum SessionFlow {
     }
 
     /// What follows checking the row at `path` in `blocks`, which already holds the new log. `rest` resolves the full
-    /// rest for a set before scaling.
-    static func afterCompleting(_ path: RowPath, in blocks: [WorkoutBlock], rest: (BlockExercise, WorkoutSet) -> Int) -> Step {
+    /// rest for a set before scaling; `settings` decides whether and how much of it runs, and where the screen goes.
+    static func afterCompleting(_ path: RowPath, in blocks: [WorkoutBlock], settings: WorkoutSettings, rest: (BlockExercise, WorkoutSet) -> Int) -> Step {
         let block = blocks[path.block]
         let item = block.exercises[path.exercise]
         let set = item.sets[path.set]
         // A drop or myo set rests only after its last sub-row, so the drops follow the main row without a timer.
         if set.type.hasSubSets, (path.sub ?? -1) < set.subSets.count - 1 { return Step() }
 
+        func timer(_ seconds: Int?) -> Int? { settings.rest.enabled ? seconds : nil }
+
         if block.isSuperset {
             let laterMember = block.exercises.dropFirst(path.exercise + 1).first {
                 $0.sets.indices.contains(path.set) && !$0.sets[path.set].isDone
             }
-            if let laterMember { return Step(next: laterMember.id) }
+            if let laterMember { return Step(next: settings.supersetAutoScroll ? laterMember.id : nil) }
             if let first = block.exercises.first(where: { !$0.isDone }) {
-                return Step(restSeconds: scaledRest(after: path.set, in: item, rest: rest), next: first.id)
+                let seconds = scaledRest(after: path.set, in: item, settings: settings.rest, rest: rest)
+                return Step(restSeconds: timer(seconds), next: settings.supersetAutoScroll ? first.id : nil)
             }
         } else if !item.isDone {
-            return Step(restSeconds: scaledRest(after: path.set, in: item, rest: rest))
+            return Step(restSeconds: timer(scaledRest(after: path.set, in: item, settings: settings.rest, rest: rest)))
         }
-        // The exercise is finished. Rest Between Exercises is off by default in MF, so Auto-Next moves on without rest.
-        return Step(next: nextIncomplete(after: path.block, in: blocks))
+        let between = settings.rest.betweenExercises ? scaled(rest(item, set), percent: settings.rest.scaling.betweenExercises) : nil
+        return Step(restSeconds: timer(between), next: settings.exerciseAutoNext ? nextIncomplete(after: path.block, in: blocks) : nil)
     }
 
-    /// Warm-ups run back to back; the last one rests 75% of the working rest.
-    private static func scaledRest(after index: Int, in item: BlockExercise, rest: (BlockExercise, WorkoutSet) -> Int) -> Int? {
+    /// Warm-ups run back to back; the last one rests its scaled share of the working rest, or not at all.
+    private static func scaledRest(after index: Int, in item: BlockExercise, settings: RestSettings, rest: (BlockExercise, WorkoutSet) -> Int) -> Int? {
         let set = item.sets[index]
         let seconds = rest(item, set)
         guard set.type == .warmUp else { return seconds }
         if item.sets[safe: index + 1]?.type == .warmUp { return nil }
-        return Int((Double(seconds) * warmUpRestScale).rounded(.down))
+        return settings.afterLastWarmUp ? scaled(seconds, percent: settings.scaling.afterLastWarmUp) : nil
+    }
+
+    private static func scaled(_ seconds: Int, percent: Int) -> Int {
+        Int((Double(seconds) * Double(percent) / 100).rounded(.down))
     }
 
     /// The first unfinished exercise after `block`, wrapping around to the start.

@@ -25,10 +25,13 @@ final class LiveSessionStore {
     /// What the restart pill "↺" goes back to: the rest the last checked set resolved to. It outlives Stop.
     private(set) var setRestSeconds: Int?
     private var restEndTask: Task<Void, Never>?
+    /// How the rest that is running should end: the Vibrate and Play Sound settings when it started.
+    private var alerts = RestSettings()
 
     private static let notificationID = "rest-timer"
 
-    func startRest(seconds: Int) {
+    func startRest(seconds: Int, alerts: RestSettings) {
+        self.alerts = alerts
         setRestSeconds = seconds
         restartRest(seconds: seconds)
     }
@@ -66,7 +69,7 @@ final class LiveSessionStore {
         restEndTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(timer.remaining(at: .now)))
             guard !Task.isCancelled, let self, self.rest == timer else { return }
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            if self.alerts.vibrate { UINotificationFeedbackGenerator().notificationOccurred(.success) }
             self.rest = nil
         }
         scheduleNotification(at: timer.endsAt)
@@ -80,7 +83,7 @@ final class LiveSessionStore {
             let content = UNMutableNotificationContent()
             content.title = "Rest is over"
             content.body = "Time for your next set."
-            content.sound = .default
+            content.sound = alerts.playSound ? .default : nil
             let interval = max(1, date.timeIntervalSinceNow)
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
             try? await center.add(UNNotificationRequest(identifier: Self.notificationID, content: content, trigger: trigger))
