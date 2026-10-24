@@ -48,7 +48,7 @@ let syncSchema = Schema(
         .text("dashboard"),
         .text("shortcuts"),
     ], ignoreEmptyUpdates: true),
-    Table(name: "programs", columns: [
+    Table(name: Program.table, columns: [
         .text("name"),
         .text("color"),
         .text("icon"),
