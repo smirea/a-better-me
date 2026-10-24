@@ -195,7 +195,8 @@ extension SessionEditor {
     func entry(_ path: RowPath, previous: [WorkoutSet]) -> SetEntry {
         if let log = blocks.log(at: path) { return SetEntry(log) }
         if let draft = drafts[blocks.rowID(at: path)] { return draft }
-        let suggestion = defaults.workout.progression.initialFill == .smartProgression ? suggestion(for: path) : nil
+        let smartFill = defaults.workout.progression.initialFill == .smartProgression || store.appliedRows.contains(blocks.rowID(at: path))
+        let suggestion = smartFill ? suggestion(for: path) : nil
         return SessionFlow.prefill(for: path, in: blocks, previous: previous, suggestion: suggestion, rirTracking: defaults.workout.rirTracking, unit: unit)
     }
 

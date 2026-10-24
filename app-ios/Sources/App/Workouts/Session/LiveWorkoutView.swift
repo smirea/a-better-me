@@ -470,17 +470,21 @@ struct SessionEditor: View {
         return settings
     }
 
-    /// Suggests every exercise that has no suggestions yet, so an exercise added mid-session gets its own fill.
+    /// Suggests every exercise whose planned rows changed since its last fill: a new exercise, a Targets edit, or an
+    /// added set. The Event Log keeps earlier fills.
     func ensureSuggestions() {
         guard mode == .live, historyLoaded else { return }
-        for item in blocks.flatMap(\.exercises) where store.suggestions[item.id] == nil {
+        for item in blocks.flatMap(\.exercises) {
+            let planned = item.sets.map(\.planned)
+            guard store.suggestionBasis[item.id] != planned else { continue }
             let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
             let suggestions = SmartProgression.suggest(
                 sets: item.sets, previous: previous, settings: progressionSettings(for: item.exerciseID),
                 increment: WarmUpScheme.increment(for: unit), rirTracking: defaults.workout.rirTracking, unit: unit
             )
             store.suggestions[item.id] = suggestions
-            store.events[item.id] = [SmartProgression.event(at: .now, sets: item.sets, suggestions: suggestions)]
+            store.suggestionBasis[item.id] = planned
+            store.events[item.id, default: []].append(SmartProgression.event(at: .now, sets: item.sets, suggestions: suggestions))
             applyProgression(to: item.id)
         }
     }
@@ -496,6 +500,7 @@ struct SessionEditor: View {
         guard !changed.isEmpty else { return }
         store.suggestions[id] = current.merging(changed) { $1 }
         for rowID in changed.keys { store.drafts[rowID] = nil }
+        store.appliedRows.formUnion(changed.keys)
         store.events[id, default: []].append(SmartProgression.event(at: .now, sets: item.sets, suggestions: changed))
     }
 }

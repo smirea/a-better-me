@@ -149,7 +149,10 @@ enum SmartProgression {
         var suggestion = SetSuggestion(repsMin: repsMin, repsMax: repsMax, rir: targetRir)
         let rir = rirTracking ? (targetRir ?? previous?.rir) : (previous?.rir ?? targetRir)
 
-        if let repsMin, let repsMax, let previous, let previousWeight = previous.weightKg.map(unit.fromKg), let rtf0 = repsToFailure(previous) {
+        if let weight = target?.weightKg.map(unit.fromKg) {
+            suggestion.weight = weight
+            suggestion.prefill = SetSuggestion.Values(weight: weight, reps: repsMax, rir: rir)
+        } else if let repsMin, let repsMax, let previous, let previousWeight = previous.weightKg.map(unit.fromKg), previousWeight > 0, let rtf0 = repsToFailure(previous) {
             let performance = Performance(weight: previousWeight, repsToFailure: rtf0)
             let range = Double(repsMin + (targetRir ?? 0))...Double(repsMax + (targetRir ?? 0))
             var weight = heaviestWeight(reaching: (range.lowerBound + range.upperBound) / 2, from: performance, increment: increment)
@@ -164,9 +167,6 @@ enum SmartProgression {
             }
             suggestion.weight = weight
             suggestion.prefill = SetSuggestion.Values(weight: weight, reps: suggestion.adjustedReps?.upperBound ?? repsMax, rir: rir)
-        } else if let weight = target?.weightKg.map(unit.fromKg) {
-            suggestion.weight = weight
-            suggestion.prefill = SetSuggestion.Values(weight: weight, reps: repsMax, rir: rir)
         } else if let previous, previous.weightKg != nil || previous.reps != nil {
             suggestion.weight = previous.weightKg.map(unit.fromKg)
             if repsMax == nil {

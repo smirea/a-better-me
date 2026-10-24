@@ -120,4 +120,19 @@ struct SmartProgressionTests {
         let event = SmartProgression.event(at: .now, sets: sets, suggestions: current)
         #expect(event.rows.map(\.label) == ["D Set 1", "2 Set 2", "3 Set 3"])
     }
+
+    @Test func calculatedWarmUpKeepsItsTargetWeight() {
+        let sets = [WorkoutSet(type: .warmUp, target: SetTarget(repsMin: 8, repsMax: 8, weightKg: CurlFixture.lb.toKg(10)))] + CurlFixture.sets
+        let previous = [WorkoutSet(type: .warmUp, log: CurlFixture.logged(20, 8, nil))] + CurlFixture.previous
+        let result = CurlFixture.suggest(sets: sets, previous: previous)
+        #expect(result[sets[0].id]!.prefill == SetSuggestion.Values(weight: 10, reps: 8, rir: nil))
+        #expect(result[sets[1].id]!.weight == 40)
+    }
+
+    @Test func zeroWeightHistoryFallsBackToThePreviousLog() {
+        let sets = [WorkoutSet(target: SetTarget(repsMin: 8, repsMax: 12, rir: 2))]
+        let result = CurlFixture.suggest(sets: sets, previous: [WorkoutSet(log: CurlFixture.logged(0, 10, 1))])
+        #expect(result[sets[0].id]!.prefill == SetSuggestion.Values(weight: 0, reps: 12, rir: 2))
+        #expect(result[sets[0].id]!.adjustedReps == nil)
+    }
 }

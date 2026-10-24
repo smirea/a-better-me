@@ -31,6 +31,10 @@ final class LiveSessionStore {
     /// Smart Progression per exercise, keyed by set or sub-row ID, and the Event Log of its fills.
     var suggestions: [BlockExercise.ID: [UUID: SetSuggestion]] = [:]
     var events: [BlockExercise.ID: [ProgressionEvent]] = [:]
+    /// The planned sets each exercise's suggestions were computed over; a Targets edit or a new set changes it.
+    var suggestionBasis: [BlockExercise.ID: [WorkoutSet]] = [:]
+    /// Rows Apply in session refilled, which show their suggestion even under the Previous values initial fill.
+    var appliedRows: Set<UUID> = []
     /// Warm-Up Automation runs once per session, when its live editor first opens.
     var didAutomateWarmUps: Set<WorkoutSession.ID> = []
     /// Set while Pause workout holds both clocks. Resume folds it into `WorkoutSession.pausedSeconds`.
@@ -90,6 +94,7 @@ final class LiveSessionStore {
     func invalidateSuggestions(for id: BlockExercise.ID) {
         suggestions[id] = nil
         events[id] = nil
+        suggestionBasis[id] = nil
     }
 
     /// Forgets everything when the session ends or is discarded.
@@ -103,6 +108,8 @@ final class LiveSessionStore {
         referenceColumn = nil
         suggestions = [:]
         events = [:]
+        suggestionBasis = [:]
+        appliedRows = []
         didAutomateWarmUps = []
     }
 
