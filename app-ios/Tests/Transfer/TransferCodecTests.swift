@@ -148,6 +148,32 @@ struct TransferCodecTests {
         #expect(flat.texts.map(\.[0]) == ["Program: Three Weeks", "Block 1", "Cycle 1", "Lower @ Aquasol 6770", "Rest"])
     }
 
+    @Test func daysNamedLikeSectionRowsStayDays() throws {
+        var templates = ["Cycle 2", "Block 1"].map { name in
+            WorkoutTemplate(name: name, blocks: [WorkoutBlock(exercises: [BlockExercise(exerciseID: Self.backSquat, sets: [Self.set(5, 5, rir: 2)])])])
+        }
+        var program = Program(name: "Odd Names", color: .red, cycles: 2, config: ProgramConfig(periodization: true))
+        program.days = templates.map { ProgramDay(templateID: $0.id) }
+        for index in templates.indices { templates[index].programID = program.id }
+        let file = try MFTransfer.export(program, templates: templates, exercises: Self.catalog, gyms: Self.gyms)
+
+        let back = try MFTransfer.importProgram(file, exercises: Self.catalog, gyms: Self.gyms).value
+        #expect(back.templates.map(\.name) == ["Cycle 2", "Block 1"])
+        #expect(back.templates.map { $0.exercises.first?.cycleTargets?.count } == [2, 2])
+    }
+
+    @Test func outOfRangeNumbersAreMalformedRowsNotTraps() throws {
+        let original = try Self.sheet(MFExports.data("workout-zz-sp-test.xlsx"))
+        for (column, cell) in [(5, Cell.number(1e300)), (6, .number(.nan)), (4, .text("99999999999999999999 - 1"))] {
+            var sheet = original
+            sheet.rows[1][column] = cell
+            var resolver = ExerciseResolver(exercises: Self.catalog)
+            #expect(throws: TransferError.self) {
+                try WorkoutSheet.template(from: sheet, resolver: &resolver) { _ in nil }
+            }
+        }
+    }
+
     @Test func cycleThatDropsAnExerciseIsMalformed() throws {
         var sheet = try Self.sheet(MFExports.data("program-p3-hyp-5x-ppl-60-90.xlsx"))
         let cycle2 = try #require(sheet.rows.firstIndex { $0.first?.value == .text("Cycle 2") })

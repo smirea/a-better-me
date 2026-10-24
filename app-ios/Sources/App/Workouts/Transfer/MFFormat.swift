@@ -173,11 +173,11 @@ enum ProgramSheet {
         for (index, row) in sheet.rows.enumerated().dropFirst() {
             let number = index + 1
             let first = Rows.string(row, 0)
-            if let match = first.wholeMatch(of: #/Block (\d+)/#) {
+            if let match = first.wholeMatch(of: #/Block (\d+)/#), Rows.string(row, 1).isEmpty {
                 guard match.1 == "1" else { throw TransferError.malformedRow(number, "Only a program with one block can be imported.") }
                 continue
             }
-            if let match = first.wholeMatch(of: #/Cycle (\d+)/#) {
+            if let match = first.wholeMatch(of: #/Cycle (\d+)/#), Rows.string(row, 1) == "Exercise" {
                 try finishCycle(row: number)
                 guard Int(match.1) == cycle + 1 else { throw TransferError.malformedRow(number, "Expected cycle \(cycle + 1), found “\(first)”.") }
                 cycle += 1
@@ -398,7 +398,7 @@ private enum Rows {
         }
         let reps = try parts(of: string(row, columns[.repRange])).map { try $0.isEmpty ? nil : repRange($0, row: number) }
         let rirs: [Int?] = switch cell(row, columns[.rir])?.value {
-        case .number(let value): [Int(value.rounded())]
+        case .number(let value): [try whole(value, row: number)]
         case .text(let text): try parts(of: text).map { try $0.isEmpty ? nil : integer($0.replacing("+", with: ""), row: number) }
         case nil: []
         }
@@ -430,25 +430,31 @@ private enum Rows {
     }
 
     private static func repRange(_ text: String, row: Int) throws -> (min: Int, max: Int?) {
-        if let match = text.wholeMatch(of: #/(\d+)\s*-\s*(\d+)/#) { return (Int(match.1)!, Int(match.2)!) }
-        if let match = text.wholeMatch(of: #/(\d+)\s*\+/#) { return (Int(match.1)!, nil) }
-        if let value = Int(text) { return (value, value) }
+        if let match = text.wholeMatch(of: #/(\d+)\s*-\s*(\d+)/#) { return (try integer(String(match.1), row: row), try integer(String(match.2), row: row)) }
+        if let match = text.wholeMatch(of: #/(\d+)\s*\+/#) { return (try integer(String(match.1), row: row), nil) }
+        if text.wholeMatch(of: #/\d+/#) != nil { let value = try integer(text, row: row); return (value, value) }
         throw TransferError.malformedRow(row, "“\(text)” is not a rep range.")
     }
 
     private static func integer(_ text: String, row: Int) throws -> Int {
         guard let value = Double(text.trimmingCharacters(in: .whitespaces)) else { throw TransferError.malformedRow(row, "“\(text)” is not a number.") }
+        return try whole(value, row: row)
+    }
+
+    /// Reps, RIR, and seconds from a file the owner may have edited: a huge or non-finite number would trap `Int(_:)`.
+    private static func whole(_ value: Double, row: Int) throws -> Int {
+        guard value.isFinite, (0...86_400).contains(value) else { throw TransferError.malformedRow(row, "\(value) is out of range.") }
         return Int(value.rounded())
     }
 
     /// A number cell of seconds, or text as seconds or "m:ss".
     private static func seconds(_ row: [Cell], _ column: Int?, row number: Int) throws -> Int? {
         switch cell(row, column)?.value {
-        case .number(let value): return Int(value.rounded())
+        case .number(let value): return try whole(value, row: number)
         case .text(let text):
             let text = text.trimmingCharacters(in: .whitespaces)
             if text.isEmpty { return nil }
-            if let match = text.wholeMatch(of: #/(\d+):(\d{2})/#) { return Int(match.1)! * 60 + Int(match.2)! }
+            if let match = text.wholeMatch(of: #/(\d+):(\d{2})/#) { return try integer(String(match.1), row: number) * 60 + integer(String(match.2), row: number) }
             return try integer(text, row: number)
         case nil: return nil
         }
