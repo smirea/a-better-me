@@ -18,16 +18,16 @@
             productRefGroup = A00000000000000000000003;
             projectDirPath = "";
             projectRoot = "";
-            targets = (A00000000000000000000005);
+            targets = (A00000000000000000000005, A00000000000000000000031);
         };
         A00000000000000000000002 = {
             isa = PBXGroup;
-            children = (A00000000000000000000016, A00000000000000000000004, A00000000000000000000003);
+            children = (A00000000000000000000016, A00000000000000000000004, A00000000000000000000030, A00000000000000000000003);
             sourceTree = "<group>";
         };
         A00000000000000000000003 = {
             isa = PBXGroup;
-            children = (A00000000000000000000006);
+            children = (A00000000000000000000006, A00000000000000000000032);
             name = Products;
             sourceTree = "<group>";
         };
@@ -144,6 +144,51 @@
                 INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
                 INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
             };
+            name = Release;
+        };
+        /* Hosted unit tests for pure logic: one subfolder of Tests/ per feature. */
+        A00000000000000000000030 = {
+            isa = PBXFileSystemSynchronizedRootGroup;
+            path = Tests;
+            sourceTree = "<group>";
+        };
+        A00000000000000000000031 = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = A00000000000000000000036;
+            buildPhases = (A00000000000000000000034, A00000000000000000000035);
+            buildRules = ();
+            dependencies = (A00000000000000000000033);
+            fileSystemSynchronizedGroups = (A00000000000000000000030);
+            name = AppTests;
+            productName = AppTests;
+            productReference = A00000000000000000000032;
+            productType = "com.apple.product-type.bundle.unit-test";
+        };
+        A00000000000000000000032 = {
+            isa = PBXFileReference;
+            explicitFileType = wrapper.cfbundle;
+            includeInIndex = 0;
+            path = AppTests.xctest;
+            sourceTree = BUILT_PRODUCTS_DIR;
+        };
+        A00000000000000000000033 = { isa = PBXTargetDependency; target = A00000000000000000000005; targetProxy = A00000000000000000000037; };
+        A00000000000000000000037 = { isa = PBXContainerItemProxy; containerPortal = A00000000000000000000001; proxyType = 1; remoteGlobalIDString = A00000000000000000000005; remoteInfo = App; };
+        A00000000000000000000034 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        A00000000000000000000035 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        A00000000000000000000036 = {
+            isa = XCConfigurationList;
+            buildConfigurations = (A00000000000000000000038, A00000000000000000000039);
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+        A00000000000000000000038 = {
+            isa = XCBuildConfiguration;
+            buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 27.0; PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me.tests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = 1; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App.app/App"; };
+            name = Debug;
+        };
+        A00000000000000000000039 = {
+            isa = XCBuildConfiguration;
+            buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 27.0; PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me.tests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = 1; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App.app/App"; };
             name = Release;
         };
     };
