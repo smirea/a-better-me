@@ -102,12 +102,19 @@ extension Loading {
 
     /// The loads a rack or pin stack offers, ascending. `nil` for an empty list, so the stepper keeps its increment.
     private static func steps(of load: EquipmentLoad, unit: WeightUnit) -> [Double]? {
-        let kilograms: [Double] = switch load {
-        case let .weights(options): options.map(\.kg)
-        case let .ranges(ranges):
-            ranges.filter { $0.incrementKg > 0 && $0.maxKg >= $0.minKg }.flatMap { stride(from: $0.minKg, through: $0.maxKg + 1e-9, by: $0.incrementKg) }
-        case .base, .bands: []
+        let kilograms: [Double]
+        switch load {
+        case let .weights(options):
+            kilograms = options.map(\.kg)
+        case let .ranges(ranges, micro):
+            let positions = ranges.filter { $0.incrementKg > 0 && $0.maxKg >= $0.minKg }.flatMap { stride(from: $0.minKg, through: $0.maxKg + 1e-9, by: $0.incrementKg) }
+            kilograms = (micro?.extrasKg ?? [0]).flatMap { extra in positions.map { $0 + extra } }
+        case .base, .bands:
+            kilograms = []
         }
-        return kilograms.isEmpty ? nil : Set(kilograms.map(unit.fromKg)).sorted()
+        guard !kilograms.isEmpty else { return nil }
+        // A pin position plus a micro weight can equal another position by a different sum, so steps dedupe in hundredths.
+        var seen = Set<Int>()
+        return kilograms.map(unit.fromKg).sorted().filter { seen.insert(Int(($0 * 100).rounded())).inserted }
     }
 }

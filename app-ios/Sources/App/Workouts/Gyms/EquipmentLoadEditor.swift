@@ -22,8 +22,8 @@ struct EquipmentLoadEditor: View {
                 switch draft {
                 case .weights(let options):
                     WeightOptionsEditor(options: options, unit: unit) { draft = .weights(options: $0) }
-                case .ranges(let options):
-                    WeightRangesEditor(ranges: options, unit: unit) { draft = .ranges(options: $0) }
+                case .ranges(let options, let micro):
+                    WeightRangesEditor(ranges: options, unit: unit) { draft = .ranges(options: $0, micro: micro) }
                 case .base(let kg):
                     Section("Base Weight") {
                         WeightField(title: "Base weight", kg: kg, unit: unit) { draft = .base(kg: $0) }
