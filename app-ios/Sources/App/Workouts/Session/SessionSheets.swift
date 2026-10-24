@@ -119,7 +119,7 @@ struct WarmUpSheet: View {
 
     private var steps: [WarmUpScheme.Step] {
         guard let workingWeightKg, workingWeightKg > 0 else { return [] }
-        return WarmUpScheme.sets(workingWeight: unit.fromKg(workingWeightKg), increment: WarmUpScheme.increment(for: unit))
+        return WarmUpScheme.sets(workingWeight: unit.fromKg(workingWeightKg), increment: WarmUpScheme.increment(for: unit), steps: WarmUpStep.standard)
     }
 
     var body: some View {
