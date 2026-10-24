@@ -164,7 +164,10 @@ final class LocalStore {
 
     var pendingUploads: Int { client.pending }
     var lastSyncedAt: Date? { client.lastSyncAt }
-    var rejected: [SyncRejection] { client.rejected }
+    var rejected: [SyncRejection] { client.rejected.filter { !dismissedRejections.contains($0) } }
+    private var dismissedRejections: [SyncRejection] = []
+
+    func dismissRejections() { dismissedRejections = client.rejected }
 
     func setToken(_ token: String?) {
         OwnerToken.write(token)

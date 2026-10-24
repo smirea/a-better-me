@@ -15,8 +15,18 @@ struct LegacyImportTests {
         END
         """
 
+    static func freshPool() throws -> DatabasePool {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "legacy-import-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return try DatabasePool(path: directory.appending(path: "a-better-me.sqlite").path)
+    }
+
+    static func backup(beside pool: DatabasePool) -> URL {
+        URL(filePath: pool.path).deletingLastPathComponent().appending(path: "a-better-me.before-sync-engine.sqlite")
+    }
+
     static func legacyPool() throws -> DatabasePool {
-        let pool = try DatabasePool(path: FileManager.default.temporaryDirectory.appending(path: "legacy-\(UUID().uuidString).sqlite").path)
+        let pool = try freshPool()
         try pool.write { db in
             try db.execute(sql: #"CREATE TABLE "ps_data__workout_templates"(id TEXT PRIMARY KEY NOT NULL, data TEXT)"#)
             try db.execute(sql: #"CREATE TABLE "ps_data__gym_profiles"(id TEXT PRIMARY KEY NOT NULL, data TEXT)"#)
@@ -47,7 +57,7 @@ struct LegacyImportTests {
         try LegacyImport.run(pool, tables: syncSchema.tables, migrate: client.migrate)
     }
 
-    @Test func copiesEveryRowAsAnInsertAndDropsTheOldLayout() throws {
+    @Test func copiesEveryRowAsAnInsertAndKeepsTheOldRowsAndABackup() throws {
         let pool = try Self.legacyPool()
         try Self.importLegacy(pool)
 
@@ -64,26 +74,41 @@ struct LegacyImportTests {
             "workout_templates \(Self.lower) insert -",
             "gym_profiles 6a7b1e5d-4c2f-4e1b-9b0d-5f3a2c8e7d10 insert -",
         ])
-        #expect(try pool.read { try String.fetchAll($0, sql: "SELECT name FROM sqlite_master WHERE name GLOB 'ps_*' OR type = 'view'") } == [])
+        #expect(try pool.read { try String.fetchAll($0, sql: "SELECT name FROM sqlite_master WHERE type = 'view'") } == [])
         #expect(try pool.read { try String.fetchAll($0, sql: "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name") } == [
-            "_meta", "_outbox", "body_weights", "custom_exercises", "exercise_settings", "gym_profiles", "programs", "settings",
-            "sqlite_sequence", "workout_sessions", "workout_templates",
+            "_meta", "_outbox", "body_weights", "custom_exercises", "exercise_settings", "gym_profiles", "programs",
+            "ps_data__gym_profiles", "ps_data__workout_templates", "settings", "sqlite_sequence", "workout_sessions", "workout_templates",
         ])
+        #expect(try pool.read { try Int.fetchOne($0, sql: #"SELECT count(*) FROM "ps_data__workout_templates""#) } == 2)
+        #expect(try pool.read { try String.fetchOne($0, sql: "SELECT value FROM _meta WHERE key = 'legacy_import'") }?.hasSuffix("Z") == true)
+
+        let backup = try DatabaseQueue(path: Self.backup(beside: pool).path)
+        #expect(try backup.read { try Int.fetchOne($0, sql: #"SELECT count(*) FROM "ps_data__workout_templates""#) } == 2)
+        #expect(try backup.read { try String.fetchAll($0, sql: "SELECT name FROM sqlite_master WHERE type = 'view'") } == ["workout_templates"])
+        #expect(try backup.read { try $0.tableExists("_meta") } == false)
     }
 
-    @Test func aSecondLaunchChangesNothing() throws {
+    @Test func aSecondLaunchChangesNothingAndKeepsTheBackup() throws {
         let pool = try Self.legacyPool()
         try Self.importLegacy(pool)
+        let importedAt = try pool.read { try String.fetchOne($0, sql: "SELECT value FROM _meta WHERE key = 'legacy_import'") }
+        try pool.write { try $0.execute(sql: #"DELETE FROM "ps_data__workout_templates" WHERE id = ?"#, arguments: [Self.lower]) }
         try Self.importLegacy(pool)
         #expect(try pool.read { try WorkoutTemplate.fetchCount($0) } == 2)
         #expect(try pool.read { try Int.fetchOne($0, sql: "SELECT count(*) FROM _outbox") } == 3)
+        #expect(try pool.read { try String.fetchOne($0, sql: "SELECT value FROM _meta WHERE key = 'legacy_import'") } == importedAt)
+
+        let backup = try DatabaseQueue(path: Self.backup(beside: pool).path)
+        #expect(try backup.read { try Int.fetchOne($0, sql: #"SELECT count(*) FROM "ps_data__workout_templates""#) } == 2)
+        #expect(try backup.read { try $0.tableExists("_meta") } == false)
     }
 
     @Test func aFreshDatabaseOnlyMigrates() throws {
-        let pool = try DatabasePool(path: FileManager.default.temporaryDirectory.appending(path: "fresh-\(UUID().uuidString).sqlite").path)
+        let pool = try Self.freshPool()
         try Self.importLegacy(pool)
         #expect(try pool.read { try WorkoutTemplate.fetchCount($0) } == 0)
         #expect(try pool.read { try Int.fetchOne($0, sql: "SELECT count(*) FROM _outbox") } == 0)
+        #expect(FileManager.default.fileExists(atPath: Self.backup(beside: pool).path) == false)
         #expect(try pool.read { try Int.fetchOne($0, sql: "SELECT count(*) FROM sqlite_master WHERE type = 'trigger'") } == 8 * 2 + syncSchema.tables.reduce(0) { $0 + $1.columns.count })
     }
 }
