@@ -328,8 +328,10 @@ extension SessionFlow {
 }
 
 /// What the Warm Up sheet and Warm-Up Automation calculate from: the first working set as it would be logged, the
-/// exercise's scheme and automation (override else global), and whether its muscles are still fresh this session.
-struct WarmUpContext: Hashable {
+/// exercise's scheme and automation (override else global), whether its muscles are still fresh this session, and
+/// what its equipment loads in the session's gym.
+struct WarmUpContext: Equatable {
+    var loadable: LoadableWeights
     var workingWeightKg: Double?
     var reps: Int?
     var rir: Int?
@@ -354,16 +356,13 @@ extension SessionFlow {
     static func warmUps(_ context: WarmUpContext, mode: WarmUpMode, unit: WeightUnit) -> [WarmUpRow] {
         guard let workingWeightKg = context.workingWeightKg, workingWeightKg > 0 else { return [] }
         let working = unit.fromKg(workingWeightKg)
-        let increment = WarmUpScheme.increment(for: unit)
+        let loadable = context.simplifyPlates ? context.loadable.simplified : context.loadable
         switch mode {
         case .smart:
-            let steps = SmartWarmUp.steps(
-                workingWeight: working, reps: context.reps ?? 1, rir: context.rir, increment: increment, unit: unit,
-                isFresh: context.isFresh, simplifyPlates: context.simplifyPlates
-            )
+            let steps = SmartWarmUp.steps(workingWeight: working, reps: context.reps ?? 1, rir: context.rir, loadable: loadable, isFresh: context.isFresh)
             return steps.map { WarmUpRow(label: "\($0.percent)% of 1-RM", weightKg: unit.toKg($0.weight), reps: $0.reps) }
         case .scheme:
-            let steps = WarmUpScheme.sets(workingWeight: working, increment: increment, steps: context.scheme)
+            let steps = WarmUpScheme.sets(workingWeight: working, loadable: loadable, steps: context.scheme)
             return steps.map { WarmUpRow(label: "\($0.percent)% of working weight", weightKg: unit.toKg($0.weight), reps: $0.reps) }
         }
     }

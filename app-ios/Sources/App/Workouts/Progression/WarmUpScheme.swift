@@ -8,11 +8,14 @@ enum WarmUpScheme {
         var weight: Double
     }
 
-    /// `workingWeight` and `increment` share one display unit, so warm-ups land on loadable weights in that unit.
-    static func sets(workingWeight: Double, increment: Double, steps: [WarmUpStep]) -> [Step] {
-        steps.map { step in
-            let raw = workingWeight * Double(step.percent) / 100
-            return Step(percent: step.percent, reps: step.reps, weight: max(increment, (raw / increment).rounded() * increment))
+    /// `workingWeight` and `loadable` share one display unit. Each step snaps to the nearest loadable weight; a step
+    /// that lands at or above the working weight, or on an earlier step's weight, is dropped.
+    static func sets(workingWeight: Double, loadable: LoadableWeights, steps: [WarmUpStep]) -> [Step] {
+        var seen = Set<Double>()
+        return steps.compactMap { step in
+            let weight = loadable.nearest(workingWeight * Double(step.percent) / 100)
+            guard weight < workingWeight - 0.005, seen.insert(weight).inserted else { return nil }
+            return Step(percent: step.percent, reps: step.reps, weight: weight)
         }
     }
 

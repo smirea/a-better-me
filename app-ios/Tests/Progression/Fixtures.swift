@@ -4,7 +4,7 @@ import Foundation
 /// MF's observed biceps curl in lb: a drop set targeting 8 @0 with one sub-row, then two sets targeting 8-12 @2.
 enum CurlFixture {
     static let lb = WeightUnit.lb
-    static let increment = 5.0
+    static let loadable = LoadableWeights(loading: nil, unit: .lb)
 
     static func logged(_ weightLb: Double?, _ reps: Int?, _ rir: Int?, at seconds: TimeInterval = 0) -> SetLog {
         SetLog(weightKg: weightLb.map(lb.toKg), reps: reps, rir: rir, completedAt: Date(timeIntervalSinceReferenceDate: seconds))
@@ -24,6 +24,6 @@ enum CurlFixture {
     }
 
     static func suggest(sets: [WorkoutSet] = sets, previous: [WorkoutSet] = previous, settings: ProgressionSettings = ProgressionSettings(), rirTracking: Bool = true) -> [UUID: SetSuggestion] {
-        SmartProgression.suggest(sets: sets, previous: previous, settings: settings, increment: increment, rirTracking: rirTracking, unit: lb)
+        SmartProgression.suggest(sets: sets, previous: previous, settings: settings, loadable: loadable, rirTracking: rirTracking, unit: lb)
     }
 }
