@@ -221,7 +221,7 @@ struct NewProgramWizard: View {
         ProgramEditorView(programID: id, draft: ProgramDraftActions(
             save: { finish() },
             activate: {
-                store.activateProgram(id)
+                store.activate(id)
                 finish()
             }
         ))

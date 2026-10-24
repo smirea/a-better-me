@@ -137,10 +137,7 @@ struct WorkoutSummaryView: View {
             let finishedAt = finishedAt
             store.modify(WorkoutSession.self, id: session.id) { $0.endedAt = finishedAt }
             store.advanceProgram(after: session)
-            if updatePlan, let template {
-                let plan = SessionFlow.plan(from: session.blocks)
-                store.editTemplate(template.id) { $0.blocks = plan }
-            }
+            if updatePlan, let template { store.updateWorkoutPlan(template.id, from: session) }
         case .delete:
             store.delete(WorkoutSession.self, id: session.id)
         }

@@ -31,11 +31,20 @@ extension Program {
         week(ofCycle: cycle).map { "\(cycleNoun) \($0)" } ?? "Deload"
     }
 
+    /// The finished sessions of this program's current run and cycle. Day and cycle ids repeat across runs, so the run
+    /// boundary is what keeps a reactivated or wrapped program from counting last run's sessions.
+    func sessions(ofCurrentCycle finished: [WorkoutSession]) -> [WorkoutSession] {
+        let since = config.runStartedAt ?? .distantPast
+        return finished.filter {
+            $0.endedAt != nil && $0.program?.programID == id && $0.program?.cycle == currentCycle && $0.startedAt >= since
+        }
+    }
+
     /// A workout day is done once a session of it in the current cycle has finished; a rest day once it was ticked
     /// this cycle. `finished` is the finished-session history.
     func isDone(_ day: ProgramDay, finished: [WorkoutSession]) -> Bool {
         guard day.templateID != nil else { return day.restDoneInCycle == currentCycle }
-        return finished.contains { $0.endedAt != nil && $0.program?.programID == id && $0.program?.cycle == currentCycle && $0.program?.dayID == day.id }
+        return sessions(ofCurrentCycle: finished).contains { $0.program?.dayID == day.id }
     }
 
     /// Up Next: the first day in order that is not done, rest days included (research spec milestone-2.md §2.3).
@@ -109,13 +118,45 @@ extension BlockExercise {
 enum ProgramAdvance {
     static func cycle(after session: WorkoutSession, program: Program, finished: [WorkoutSession]) -> Int? {
         guard let position = session.program, position.programID == program.id, position.cycle == program.currentCycle else { return nil }
-        let done = Set(
-            (finished + [session])
-                .filter { $0.endedAt != nil && $0.program?.programID == program.id && $0.program?.cycle == program.currentCycle }
-                .compactMap { $0.program?.dayID }
-        )
+        let done = Set(program.sessions(ofCurrentCycle: finished + [session]).compactMap { $0.program?.dayID })
         let required = Set(program.workoutDays.map(\.id))
         guard !required.isEmpty, required.isSubset(of: done) else { return nil }
         return program.currentCycle >= program.totalCycles ? 1 : program.currentCycle + 1
+    }
+}
+
+/// "Update Workout Plan" for a program session: the session's sets become that week's targets, an exercise the
+/// session dropped is skipped that week, and an exercise it added joins the template for every week. Other weeks
+/// stay as they were. A deload session changes nothing, because the deload derives from its neighbor week.
+enum ProgramPlanUpdate {
+    static func blocks(of template: WorkoutTemplate, updatedBy session: WorkoutSession, program: Program) -> [WorkoutBlock] {
+        guard let position = session.program, let week = program.week(ofCycle: position.cycle) else { return template.blocks }
+        let plan = SessionFlow.plan(from: session.blocks).flatMap(\.exercises)
+        let planned = Dictionary(plan.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let periodized = program.config.periodization
+        var blocks = template.blocks
+        for b in blocks.indices {
+            for e in blocks[b].exercises.indices {
+                let id = blocks[b].exercises[e].id
+                if let item = planned[id] {
+                    blocks[b].exercises[e].restSeconds = item.restSeconds
+                    if periodized {
+                        blocks[b].exercises[e].setWeekTargets(item.sets, week: week, weeks: program.cycles)
+                        blocks[b].exercises[e].setSkipped(false, week: week, weeks: program.cycles)
+                    } else {
+                        blocks[b].exercises[e].sets = item.sets
+                    }
+                } else if periodized {
+                    blocks[b].exercises[e].setSkipped(true, week: week, weeks: program.cycles)
+                }
+            }
+        }
+        let known = Set(blocks.flatMap(\.exercises).map(\.id))
+        for item in plan where !known.contains(item.id) {
+            var added = item
+            added.note = nil
+            blocks.append(WorkoutBlock(exercises: [added]))
+        }
+        return blocks
     }
 }

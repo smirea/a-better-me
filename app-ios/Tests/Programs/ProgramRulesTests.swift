@@ -169,6 +169,21 @@ struct ProgramAdvanceTests {
         #expect(ProgramAdvance.cycle(after: finished(program, day: 2, cycle: 2), program: program, finished: [finished(program, day: 0, cycle: 2)]) == nil)
     }
 
+    @Test func sessionsBeforeTheRunStartedCountForNothing() {
+        var program = program
+        program.config.runStartedAt = Date(timeIntervalSince1970: 1_000)
+        var old = finished(program, day: 0, cycle: 1)
+        old.startedAt = Date(timeIntervalSince1970: 500)
+        var fresh = finished(program, day: 2, cycle: 1)
+        fresh.startedAt = Date(timeIntervalSince1970: 2_000)
+        #expect(!program.isDone(program.days[0], finished: [old]))
+        #expect(program.isDone(program.days[2], finished: [fresh]))
+        #expect(ProgramAdvance.cycle(after: fresh, program: program, finished: [old]) == nil)
+        var redone = old
+        redone.startedAt = Date(timeIntervalSince1970: 1_500)
+        #expect(ProgramAdvance.cycle(after: fresh, program: program, finished: [redone]) == 2)
+    }
+
     @Test func wrapsToCycleOneAfterTheDeload() {
         var program = program
         program.currentCycle = 3
@@ -250,5 +265,57 @@ struct ProgramDayNameTests {
         #expect(ProgramDayName.duplicate(of: "Workout A", taken: ["Workout A", "Workout B"]) == "Workout A Copy")
         #expect(ProgramDayName.duplicate(of: "Push", taken: ["Push"]) == "Push Copy")
         #expect(ProgramDayName.duplicate(of: "Upper A", taken: ["Upper A", "Lower A"]) == "Upper B")
+    }
+}
+
+struct ProgramPlanUpdateTests {
+    private func set(_ reps: Int, rir: Int = 2) -> WorkoutSet { WorkoutSet(target: SetTarget(repsMin: reps, repsMax: reps + 2, rir: rir)) }
+
+    private func fixture() -> (Program, WorkoutTemplate) {
+        var config = ProgramConfig()
+        config.periodization = true
+        config.deload = .lastCycle
+        var program = Program(name: "P", color: .red, cycles: 3, config: config)
+        let bench = BlockExercise(exerciseID: "bench", sets: [set(11)], cycleTargets: [CycleTargets(sets: [set(11)]), CycleTargets(sets: [set(9)]), CycleTargets(sets: [set(7)])])
+        let row = BlockExercise(exerciseID: "row", sets: [set(14)], cycleTargets: [CycleTargets(sets: [set(14)]), CycleTargets(sets: [set(12)]), CycleTargets(sets: [set(10)])])
+        var template = WorkoutTemplate(name: "Day", blocks: [WorkoutBlock(exercises: [bench]), WorkoutBlock(exercises: [row])])
+        template.programID = program.id
+        program.days = [ProgramDay(templateID: template.id)]
+        return (program, template)
+    }
+
+    @Test func aWeeksSessionRewritesOnlyThatWeek() {
+        var (program, template) = fixture()
+        program.currentCycle = 2
+        var session = program.session(startingFrom: template, dayID: program.days[0].id, gymID: nil)
+        session.blocks[0].exercises[0].sets = [set(8), set(8)]
+        session.blocks.remove(at: 1)
+        session.blocks.append(WorkoutBlock(exercises: [BlockExercise(exerciseID: "curl", sets: [set(15)])]))
+        let blocks = ProgramPlanUpdate.blocks(of: template, updatedBy: session, program: program)
+        let bench = blocks[0].exercises[0]
+        #expect(bench.cycleTargets?.map { $0.sets.map { $0.target?.repsMin } } == [[11], [8, 8], [7]])
+        #expect(bench.sets.map { $0.target?.repsMin } == [11])
+        let row = blocks[1].exercises[0]
+        #expect(row.cycleTargets?.map(\.skip) == [false, true, false])
+        #expect(row.cycleTargets?.map { $0.sets.map { $0.target?.repsMin } } == [[14], [12], [10]])
+        #expect(blocks[2].exercises[0].exerciseID == "curl")
+        #expect(blocks[2].exercises[0].cycleTargets == nil)
+    }
+
+    @Test func aDeloadSessionChangesNothingAndAnUnperiodizedProgramTakesTheSets() {
+        var (program, template) = fixture()
+        program.currentCycle = 4
+        var session = program.session(startingFrom: template, dayID: program.days[0].id, gymID: nil)
+        session.blocks[0].exercises[0].sets = [set(3)]
+        #expect(ProgramPlanUpdate.blocks(of: template, updatedBy: session, program: program) == template.blocks)
+
+        program.config.periodization = false
+        program.currentCycle = 1
+        template.blocks[0].exercises[0].cycleTargets = nil
+        var plain = program.session(startingFrom: template, dayID: program.days[0].id, gymID: nil)
+        plain.blocks[0].exercises[0].sets = [set(6), set(6)]
+        let blocks = ProgramPlanUpdate.blocks(of: template, updatedBy: plain, program: program)
+        #expect(blocks[0].exercises[0].sets.map { $0.target?.repsMin } == [6, 6])
+        #expect(blocks[0].exercises[0].cycleTargets == nil)
     }
 }

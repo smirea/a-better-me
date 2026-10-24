@@ -51,7 +51,7 @@ struct ProgramSettingsView: View {
                 } else {
                     actionRow("Activate Program", systemImage: "flag.fill") {
                         if program.isArchived { store.setProgramArchived(program.id, false) }
-                        store.activateProgram(program.id)
+                        store.activate(program.id)
                     }
                 }
                 actionRow(program.isArchived ? "Unarchive Program" : "Archive Program", systemImage: "archivebox.fill") {

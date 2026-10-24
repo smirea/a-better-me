@@ -238,7 +238,7 @@ private struct ProgramEditorScreen: View {
         } else if !program.isActive {
             PinnedActionButton("Activate Program") {
                 if program.isArchived { store.setProgramArchived(program.id, false) }
-                store.activateProgram(program.id)
+                store.activate(program.id)
             }
         } else if let template {
             PinnedActionButton("Start Workout") { store.startProgramDay(program, template: template, presenter: presenter) }

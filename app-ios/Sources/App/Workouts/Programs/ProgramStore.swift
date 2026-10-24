@@ -9,6 +9,7 @@ extension LocalStore {
             var program = generated.program
             program.isActive = activate
             if activate {
+                program.config.runStartedAt = .now
                 for other in try Program.fetchAll(db) where other.isActive {
                     var changed = other
                     changed.isActive = false
@@ -49,6 +50,16 @@ extension LocalStore {
             $0.isArchived = archived
             if archived { $0.isActive = false }
         }
+    }
+
+    /// Activate Program: a fresh run from cycle 1, replacing the active program.
+    func activate(_ id: UUID) {
+        editProgram(id) {
+            $0.currentCycle = 1
+            $0.config.runStartedAt = .now
+            for index in $0.days.indices { $0.days[index].restDoneInCycle = nil }
+        }
+        activateProgram(id)
     }
 
     /// Deactivating moves the program to the library and resets its progress, as MF does.
@@ -177,6 +188,22 @@ extension LocalStore {
         presenter.startOrResume({ program.session(startingFrom: template, dayID: day.id, gymID: template.gymID) }, in: self)
     }
 
+    /// "Update Workout Plan" on finishing: a library workout takes the session's plan whole; a program day merges it
+    /// into its week (`ProgramPlanUpdate`).
+    func updateWorkoutPlan(_ templateID: UUID, from session: WorkoutSession) {
+        write { db in
+            guard let existing = try WorkoutTemplate.fetchOne(db, key: WorkoutTemplate.key(templateID)) else { return }
+            var template = existing
+            if let position = session.program, let program = try Program.fetchOne(db, key: Program.key(position.programID)) {
+                template.blocks = ProgramPlanUpdate.blocks(of: existing, updatedBy: session, program: program)
+            } else {
+                template.blocks = SessionFlow.plan(from: session.blocks)
+            }
+            template.updatedAt = .now
+            try template.updateChanges(db, from: existing)
+        }
+    }
+
     /// Called once when a session finishes. Moves its program to the next cycle when the session completed the current one.
     func advanceProgram(after session: WorkoutSession) {
         guard let position = session.program else { return }
@@ -188,6 +215,10 @@ extension LocalStore {
             guard let next = ProgramAdvance.cycle(after: finishedSession, program: program, finished: finished) else { return }
             var changed = program
             changed.currentCycle = next
+            if next == 1 {
+                changed.config.runStartedAt = .now
+                for index in changed.days.indices { changed.days[index].restDoneInCycle = nil }
+            }
             changed.updatedAt = .now
             try changed.updateChanges(db, from: program)
         }

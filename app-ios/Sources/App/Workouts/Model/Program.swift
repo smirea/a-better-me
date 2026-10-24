@@ -94,6 +94,9 @@ struct ProgramConfig: Codable, Hashable {
     var periodization = false
     /// The Smart Generation answers. `nil` for a program built from scratch or imported.
     var generator: GeneratorInputs?
+    /// When the current run began: activation, or the wrap after the last cycle. Sessions before it belong to an
+    /// earlier run and count for nothing, while staying in history.
+    var runStartedAt: Date?
 }
 
 /// `rolling`: an N-day cycle, the days numbered Day 1 to N. `weekly`: seven days, one per weekday from Monday.
