@@ -13,7 +13,7 @@ struct SessionEditor: View {
     enum Mode { case live, editPast }
 
     enum Sheet: Identifiable {
-        case info(ExerciseID), progression, warmUp, targets, swap(ExerciseID), add, note, restTimer, settings
+        case info(ExerciseID), progression, warmUp, targets, swap(ExerciseID), add, note, restTimer, settings, gym
         var id: String { String(describing: self) }
     }
 
@@ -176,7 +176,7 @@ struct SessionEditor: View {
                     Button("Minimize Workout", systemImage: "rectangle.bottomhalf.inset.filled") { presenter.isExpanded = false }
                     Button("Finish Workout", systemImage: "flag.checkered") { requestFinish() }
                     Button("Workout Settings", systemImage: "dumbbell.fill") { sheet = .settings }
-                    Button("Gym Settings", systemImage: "house.fill") {}.disabled(true)
+                    Button("Gym Settings", systemImage: "house.fill") { sheet = .gym }
                     Button("Discard Workout", systemImage: "trash", role: .destructive) { confirmingDiscard = true }
                 } label: {
                     Image(systemName: "line.3.horizontal").font(.title3).frame(width: 32, height: 32)
@@ -411,11 +411,20 @@ struct SessionEditor: View {
         case .restTimer:
             RestTimerSheet()
         case .settings:
-            NavigationStack {
-                WorkoutSettingsView().toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Close", systemImage: "xmark") { self.sheet = nil }
-                    }
+            closableSheet { WorkoutSettingsView() }
+        case .gym:
+            closableSheet {
+                if let gymID = session.gymID { GymProfileEditor(gymID: gymID) } else { GymProfilesView() }
+            }
+        }
+    }
+
+    /// The More tab's screens, presented over the live workout with a Close button they don't need when pushed.
+    private func closableSheet(@ViewBuilder content: () -> some View) -> some View {
+        NavigationStack {
+            content().toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", systemImage: "xmark") { sheet = nil }
                 }
             }
         }

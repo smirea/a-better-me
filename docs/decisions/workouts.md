@@ -119,7 +119,7 @@ Milestone 1 is split so that parallel agents never edit the same files.
 - **One session at a time, with a prompt.** `LiveWorkoutPresenter.startOrResume` parks a second session in `pendingStart`; the root view asks to resume the current one or discard it and start the new one.
 - **A finishing session ends on Done.** The summary freezes the duration when Finish is chosen and sets `endedAt`, and Update Workout Plan writes the session's planned sets (logs stripped) into its template, once the cover has gone. View Changes' Undo works per section (added, modified, removed, supersets), because a regrouped exercise can also be modified and one id set couldn't tell the two apart; an undone section reverts to the template's version in that write and never touches logged history. Confetti plays on Workout Complete when the session set a record. Finish saves the logged sets right away, so a crash on the summary loses nothing; the session just reopens in progress.
 - **Display settings.** Workout Timer hides the elapsed clock, Keep Alive disables the idle timer while the live workout is on screen, and Bodyweight Contribution shows the body weight share under the set table for exercises with a `bodyweightFraction`. Calendar Scrolling is stored for the Workout tab's calendar, which the builder reads.
-- **Second wave:** the Equipment chip and the plate calculator wait for gym profiles. Workout Options' Gym settings entry is disabled until the gym screen lands.
+- **Second wave:** the Equipment chip and the plate calculator wait for gym profiles. Workout Options' Gym settings opens the session's gym in `GymProfileEditor`, or the gym list when the session has none.
 
 ## Dashboard
 
