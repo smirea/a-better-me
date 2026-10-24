@@ -57,6 +57,30 @@ struct PlateCalculatorTests {
     }
 }
 
+struct MixedUnitPlateTests {
+    private let kg = WeightUnit.kg
+
+    @Test func threeLbPlatesShownInKgStillReach315Lb() {
+        let loading = PlateLoading(base: .bar, baseWeight: kg.fromKg(lb.toKg(45)), plates: [45.0, 25].map { .init(weight: kg.fromKg(lb.toKg($0)), perSide: nil) }, sides: 2)
+        let plan = loading.plan(for: 142.88)
+        #expect(plan.perSide.count == 3)
+        #expect(plan.sentence(unit: "kg") == "61.23 kg on both sides + 20.41 kg bar weight = 142.88 kg")
+    }
+
+    @Test func kgPlatesShownInLbLoadExactlyWhatTheStepperPicked() throws {
+        let loading = PlateLoading(base: .bar, baseWeight: lb.fromKg(20), plates: [.init(weight: lb.fromKg(1.25), perSide: nil)], sides: 2)
+        let stepped = try #require(loading.step(from: 44.09, up: true))
+        #expect(SetField.plain(stepped) == "49.6")
+        #expect(loading.plan(for: stepped).sentence(unit: "lb") == "2.76 lb on both sides + 44.09 lb bar weight = 49.6 lb")
+    }
+
+    @Test func absurdTargetStaysBoundedAndSaysWhatIsMissing() {
+        let plan = bar([45]).plan(for: 999_999)
+        #expect(plan.total == 45 + 2 * 45 * 22)
+        #expect(bar([45]).step(from: 2025, up: true) == nil)
+    }
+}
+
 struct LoadableStepTests {
     @Test func plateStepperMovesBetweenLoadableTotals() {
         let loading = Loading.plates(bar([45, 25]))
@@ -133,6 +157,34 @@ struct EquipmentResolutionTests {
         let plates = Loading.resolve(option: ["barbell", Loading.weightPlatesID], catalog: catalog, unit: lb, load: loads.load)?.plates
         #expect(plates?.plates == [])
         #expect(plates?.plan(for: 95).sentence(unit: "lb") == "0 lb on both sides + 45 lb bar weight = 95 lb - missing 50 lb")
+    }
+
+    @Test func perSideFieldLoadsOneSideOfTheMachine() {
+        let gym = GymProfile(name: "Gym", equipment: [
+            "leg-press": GymEquipment(load: .base(kg: lb.toKg(100))),
+            Loading.weightPlatesID: GymEquipment(load: .weights(options: [WeightOption(kg: lb.toKg(45)), WeightOption(kg: lb.toKg(25))])),
+        ])
+        let loads = GymLoads(gym: gym, overrides: [:], catalog: catalog)
+        let plates = Loading.resolve(option: ["leg-press"], catalog: catalog, unit: lb, perSide: true, load: loads.load)?.plates
+        #expect(plates?.plan(for: 140).sentence(unit: "lb") == "90 lb on one side + 50 lb base weight = 140 lb")
+    }
+
+    @Test func gripAttachmentDoesNotReplaceTheDumbbellRack() {
+        let catalog = [item("dumbbells", "Free Weights"), item("fat-grips", "Loadable Accessories"), item("belt", "Loadable Accessories"), item(Loading.weightPlatesID, "Free Weights")].keyed
+        let loads: [EquipmentID: EquipmentLoad] = [
+            "dumbbells": .weights(options: [25.0, 30].map { WeightOption(kg: lb.toKg($0)) }),
+            "fat-grips": .base(kg: 0), "belt": .base(kg: 0),
+            Loading.weightPlatesID: .weights(options: [WeightOption(kg: lb.toKg(45))]),
+        ]
+        let grips = Loading.resolve(option: ["dumbbells", "fat-grips"], catalog: catalog, unit: lb) { loads[$0] }
+        #expect(grips?.step(from: 25, up: true).map(SetField.plain) == "30")
+        let belt = Loading.resolve(option: ["belt", Loading.weightPlatesID], catalog: catalog, unit: lb) { loads[$0] }
+        #expect(belt?.plates?.plan(for: 90).sentence(unit: "lb") == "90 lb on one side + 0 lb base weight = 90 lb")
+    }
+
+    @Test func emptyRackOrZeroIncrementFallsBackToTheIncrement() {
+        #expect(Loading.resolve(option: ["cable"], catalog: catalog, unit: lb) { _ in .weights(options: []) } == nil)
+        #expect(Loading.resolve(option: ["cable"], catalog: catalog, unit: lb) { _ in .ranges(options: [WeightRange(minKg: 0, maxKg: 100, incrementKg: 0)]) } == nil)
     }
 
     @Test func bandsHaveNoLoading() {

@@ -45,54 +45,63 @@ struct PlateLoading: Equatable {
     /// MF's calculator: the lightest load that reaches `target`, with the heaviest plates first. A target below the
     /// base loads nothing and reports the base as extra; a target past the heaviest load shows the heaviest load.
     func plan(for target: Double) -> PlatePlan {
-        let beyondBase = max(0, Hundredths(of: target).value - Hundredths(of: baseWeight).value)
-        let need = (beyondBase + sides - 1) / sides
-        let reachable = reachableSides(upTo: need + (plates.map { Hundredths(of: $0.weight).value }.max() ?? 0))
-        let side = reachable.indices.first { $0 >= need && reachable[$0] } ?? reachable.lastIndex(of: true) ?? 0
-        return PlatePlan(loading: self, target: target, perSide: decompose(side) ?? [])
+        let goal = Hundredths(of: target).value
+        let sides = reachableSides(upTo: max(0, (goal - Hundredths(of: baseWeight).value) / self.sides) + heaviestPlate)
+        let reached = sides.first { Hundredths(of: total($0)).value >= goal } ?? sides.last ?? 0
+        return PlatePlan(loading: self, target: target, perSide: decompose(reached) ?? [])
     }
 
     func step(from value: Double, up: Bool) -> Double? {
-        let current = Hundredths(of: value)
-        let maxPlate = plates.map { Hundredths(of: $0.weight).value }.max() ?? 0
-        let reachable = reachableSides(upTo: max(0, (current.value - Hundredths(of: baseWeight).value) / sides) + maxPlate)
-        let totals = reachable.indices.filter { reachable[$0] }.map { Hundredths(of: baseWeight).value + $0 * sides }
-        let next = up ? totals.first { $0 > current.value } : totals.last { $0 < current.value }
+        let current = Hundredths(of: value).value
+        let sides = reachableSides(upTo: max(0, (current - Hundredths(of: baseWeight).value) / self.sides) + heaviestPlate)
+        let totals = sides.map { Hundredths(of: total($0)).value }
+        let next = up ? totals.first { $0 > current } : totals.last { $0 < current }
         return next.map { Double($0) / 100 }
     }
 
-    /// Which one-side sums, in hundredths, the plates can make, as a bounded knapsack up to `limit`.
-    private func reachableSides(upTo limit: Int) -> [Bool] {
-        var reachable = [Bool](repeating: false, count: limit + 1)
-        reachable[0] = true
+    /// No calculator is asked for more than this on one side, so a typed 999999 can't allocate a knapsack that size.
+    private static let sideLimit = 100_000
+
+    private var heaviestPlate: Int { plates.map { Hundredths(of: $0.weight).value }.max() ?? 0 }
+
+    private func total(_ side: Double) -> Double { baseWeight + side * Double(sides) }
+
+    /// Every one-side sum the plates can make up to `limit` hundredths, ascending, as a bounded knapsack. Sums are kept
+    /// exact and only indexed by hundredths: rounding each plate first lets three 20.41 kg plates miss 315 lb.
+    private func reachableSides(upTo limit: Int) -> [Double] {
+        let limit = min(limit, Self.sideLimit)
+        var exact = [Double?](repeating: nil, count: limit + 1)
+        exact[0] = 0
+        var used = [Int](repeating: 0, count: limit + 1)
         for plate in plates {
-            let weight = Hundredths(of: plate.weight).value
-            guard weight <= limit else { continue }
-            let available = plate.perSide ?? limit / weight
-            var used = [Int](repeating: 0, count: limit + 1)
-            for sum in weight...limit where !reachable[sum] && reachable[sum - weight] && used[sum - weight] < available {
-                reachable[sum] = true
-                used[sum] = used[sum - weight] + 1
+            for index in used.indices { used[index] = 0 }
+            let available = plate.perSide ?? .max
+            for index in 0...limit {
+                guard let sum = exact[index], used[index] < available else { continue }
+                let next = Hundredths(of: sum + plate.weight).value
+                guard next > index, next <= limit, exact[next] == nil else { continue }
+                exact[next] = sum + plate.weight
+                used[next] = used[index] + 1
             }
         }
-        return reachable
+        return exact.compactMap(\.self)
     }
 
-    /// The plates for one side summing to `side` hundredths, trying the most of each heavier plate first, the way a
-    /// lifter loads a bar. `nil` when no combination makes it.
-    private func decompose(_ side: Int) -> [Double]? {
-        let weights = plates.map { Hundredths(of: $0.weight).value }
+    /// The plates for one side summing to `side`, trying the most of each heavier plate first, the way a lifter loads a
+    /// bar. `nil` when no combination makes it.
+    private func decompose(_ side: Double) -> [Double]? {
         var failed = Set<[Int]>()
-        func search(_ index: Int, _ remaining: Int) -> [Int]? {
-            if remaining == 0 { return [] }
-            guard index < plates.count, !failed.contains([index, remaining]) else { return nil }
-            let most = min(remaining / weights[index], plates[index].perSide ?? .max)
+        func search(_ index: Int, _ remaining: Double) -> [Int]? {
+            if abs(remaining) < 1e-6 { return [] }
+            let key = [index, Int((remaining * 1e6).rounded())]
+            guard index < plates.count, remaining > 0, !failed.contains(key) else { return nil }
+            let most = min(Int((remaining + 1e-6) / plates[index].weight), plates[index].perSide ?? .max)
             for count in stride(from: most, through: 0, by: -1) {
-                if let rest = search(index + 1, remaining - count * weights[index]) {
+                if let rest = search(index + 1, remaining - Double(count) * plates[index].weight) {
                     return Array(repeating: index, count: count) + rest
                 }
             }
-            failed.insert([index, remaining])
+            failed.insert(key)
             return nil
         }
         return search(0, side).map { $0.map { plates[$0].weight } }

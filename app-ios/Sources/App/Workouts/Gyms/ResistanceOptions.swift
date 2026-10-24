@@ -50,7 +50,9 @@ extension Loading {
     /// MF's Weight Plates, which plate-loaded bars and machines take even when their option doesn't name them.
     static let weightPlatesID: EquipmentID = "25a5c6f170d880c1a55ac08cf52671ab"
     private static let barCategory = "Loadable Bars"
-    private static let plateLoadedCategories: Set<String> = [barCategory, "Plate Loaded Machines", "Loadable Accessories"]
+    private static let machineCategory = "Plate Loaded Machines"
+    private static let accessoryCategory = "Loadable Accessories"
+    private static let plateLoadedCategories: Set<String> = [barCategory, machineCategory, accessoryCategory]
 
     /// The option's items plus the Weight Plates a bar or plate-loaded machine takes, as MF names the option
     /// ("Plate-Loaded Cable Crossover, Weight Plates").
@@ -59,37 +61,53 @@ extension Loading {
         return takesPlates && !ids.contains(weightPlatesID) ? ids + [weightPlatesID] : ids
     }
 
-    /// A bar or plate-loaded machine loads plates on its base; otherwise the first item with weights or a pin stack
-    /// decides the steps. Bands and items without a load give `nil`, and the stepper falls back to the increment.
-    static func resolve(option ids: [EquipmentID], catalog: [EquipmentID: Equipment], unit: WeightUnit, load: (EquipmentID) -> EquipmentLoad?) -> Loading? {
+    /// A bar or plate-loaded machine loads plates on its base. Otherwise the first other item with weights or a pin
+    /// stack decides the steps, before a loadable accessory, which in "Dumbbells, Fat Grip Attachments" only changes the
+    /// grip but in "Dip Belt, Weight Plates" carries the plates. Bands and items without a load give `nil`, and the
+    /// stepper falls back to the increment. A `perSide` weight field logs one side, so it loads one side of the base.
+    static func resolve(option ids: [EquipmentID], catalog: [EquipmentID: Equipment], unit: WeightUnit, perSide: Bool = false, load: (EquipmentID) -> EquipmentLoad?) -> Loading? {
         let items = ids.compactMap { catalog[$0] }
-        if let base = items.first(where: { plateLoadedCategories.contains($0.category) }) {
-            let isBar = base.category == barCategory
-            let sides = isBar || base.plateLaterality == .perSide ? 2 : 1
-            let baseKg: Double? = switch load(base.id) {
-            case let .weights(options)?: options.map(\.kg).max()
-            case let .base(kg)?: kg
-            default: base.weightKg
-            }
-            var plates: [PlateLoading.Plate] = []
-            if case let .weights(options)? = load(weightPlatesID) {
-                plates = options.map { PlateLoading.Plate(weight: unit.fromKg($0.kg), perSide: $0.count.map { $0 / sides }) }
-            }
-            return .plates(PlateLoading(base: isBar ? .bar : .machine, baseWeight: unit.fromKg(baseKg ?? 0), plates: plates, sides: sides))
+        if let base = items.first(where: { $0.category == barCategory || $0.category == machineCategory }) {
+            return plates(on: base, unit: unit, perSide: perSide, load: load)
         }
-        for item in items {
-            switch load(item.id) {
-            case let .weights(options)?:
-                return .steps(Set(options.map { unit.fromKg($0.kg) }).sorted())
-            case let .ranges(ranges)?:
-                let positions = ranges.flatMap { range in
-                    stride(from: range.minKg, through: range.maxKg + 1e-9, by: max(range.incrementKg, 1e-3)).map(unit.fromKg)
-                }
-                return .steps(Set(positions).sorted())
-            default:
-                continue
+        func firstSteps(_ candidates: [Equipment]) -> Loading? {
+            for item in candidates {
+                if let fixed = load(item.id).flatMap({ steps(of: $0, unit: unit) }) { return .steps(fixed) }
             }
+            return nil
         }
-        return nil
+        if let fixed = firstSteps(items.filter { $0.id != weightPlatesID && $0.category != accessoryCategory }) { return fixed }
+        if let accessory = items.first(where: { $0.category == accessoryCategory }) {
+            return plates(on: accessory, unit: unit, perSide: perSide, load: load)
+        }
+        return firstSteps(items)
+    }
+
+    private static func plates(on base: Equipment, unit: WeightUnit, perSide: Bool, load: (EquipmentID) -> EquipmentLoad?) -> Loading {
+        let isBar = base.category == barCategory
+        let sides = isBar || base.plateLaterality == .perSide ? 2 : 1
+        let baseKg: Double? = switch load(base.id) {
+        case let .weights(options)?: options.map(\.kg).max()
+        case let .base(kg)?: kg
+        default: base.weightKg
+        }
+        let loaded = perSide ? 1 : sides
+        var plates: [PlateLoading.Plate] = []
+        if case let .weights(options)? = load(weightPlatesID) {
+            plates = options.map { PlateLoading.Plate(weight: unit.fromKg($0.kg), perSide: $0.count.map { $0 / sides }) }
+        }
+        let baseWeight = unit.fromKg(baseKg ?? 0) * Double(loaded) / Double(sides)
+        return .plates(PlateLoading(base: isBar ? .bar : .machine, baseWeight: baseWeight, plates: plates, sides: loaded))
+    }
+
+    /// The loads a rack or pin stack offers, ascending. `nil` for an empty list, so the stepper keeps its increment.
+    private static func steps(of load: EquipmentLoad, unit: WeightUnit) -> [Double]? {
+        let kilograms: [Double] = switch load {
+        case let .weights(options): options.map(\.kg)
+        case let .ranges(ranges):
+            ranges.filter { $0.incrementKg > 0 && $0.maxKg >= $0.minKg }.flatMap { stride(from: $0.minKg, through: $0.maxKg + 1e-9, by: $0.incrementKg) }
+        case .base, .bands: []
+        }
+        return kilograms.isEmpty ? nil : Set(kilograms.map(unit.fromKg)).sorted()
     }
 }
