@@ -6,6 +6,7 @@ import Testing
 /// comparison is structural: day layout, slot classes, set counts, reps, RIR, and weekly sets per muscle.
 /// `scripts/calibrate-generator` runs this suite and prints the `CAL|` lines as a table.
 @MainActor
+@Suite(.enabled(if: Calibration.isAvailable, "needs docs/research/mf-workouts/generated-programs.json from the research PR"))
 struct GeneratorCalibrationTests {
     static let catalog = ExerciseCatalog()
     static let gym = Calibration.gym(catalog.equipment)

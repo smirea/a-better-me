@@ -88,10 +88,14 @@ enum Calibration {
         return url
     }()
 
+    static let fixture = root.appending(path: "docs/research/mf-workouts/generated-programs.json")
+
+    /// The fixture lands with the research PR; until it is on the branch the calibration suite is skipped, not passed.
+    static var isAvailable: Bool { FileManager.default.fileExists(atPath: fixture.path) }
+
     static let programs: [MFProgram] = {
         struct File: Decodable { let programs: [MFProgram] }
-        let url = root.appending(path: "docs/research/mf-workouts/generated-programs.json")
-        guard let data = try? Data(contentsOf: url) else { fatalError("Missing \(url.path). Fetch it from the m2-research branch.") }
+        guard let data = try? Data(contentsOf: fixture) else { fatalError("Missing \(fixture.path). Fetch it from the m2-research branch.") }
         return try! JSONDecoder().decode(File.self, from: data).programs
     }()
 

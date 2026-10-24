@@ -177,7 +177,7 @@ private struct ProgramEditorScreen: View {
                     }
                     ProgramEditorChip("Re-order", systemImage: "arrow.up.arrow.down") { reordering = true }
                     ProgramEditorChip("Duplicate", systemImage: "plus.square.on.square") {
-                        pendingIndex = (program.days.firstIndex { $0.id == day.id } ?? program.days.count - 1) + 1
+                        pendingIndex = program.days.count
                         store.duplicateProgramDay(day.id, in: program.id)
                     }
                     ProgramEditorChip("Change to Rest", systemImage: "arrow.triangle.swap") { confirming = .changeToRest }

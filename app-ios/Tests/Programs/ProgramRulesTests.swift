@@ -243,3 +243,12 @@ struct SplitPlanTests {
         #expect(SplitPlan.options(daysPerWeek: 6).map(\.title) == ["No preference", "Full Body", "Push/Pull/Hinge/Squat/Upper/Lower Split", "Push/Pull/Legs/Push/Pull/Legs Split"])
     }
 }
+
+struct ProgramDayNameTests {
+    @Test func duplicateTakesTheNextLetterOrAddsCopy() {
+        #expect(ProgramDayName.duplicate(of: "Workout C", taken: ["Workout A", "Workout B", "Workout C"]) == "Workout D")
+        #expect(ProgramDayName.duplicate(of: "Workout A", taken: ["Workout A", "Workout B"]) == "Workout A Copy")
+        #expect(ProgramDayName.duplicate(of: "Push", taken: ["Push"]) == "Push Copy")
+        #expect(ProgramDayName.duplicate(of: "Upper A", taken: ["Upper A", "Lower A"]) == "Upper B")
+    }
+}

@@ -150,7 +150,7 @@ extension LocalStore {
         }
     }
 
-    /// Copies a workout day and its template right after the original.
+    /// Copies a day to the end of the cycle, as MF does: "Workout C" becomes "Workout D", any other name gets " Copy".
     func duplicateProgramDay(_ dayID: ProgramDay.ID, in programID: UUID) {
         write { db in
             guard let existing = try Program.fetchOne(db, key: Program.key(programID)),
@@ -158,13 +158,14 @@ extension LocalStore {
             var program = existing
             var day = ProgramDay()
             if let templateID = program.days[index].templateID, let source = try WorkoutTemplate.fetchOne(db, key: WorkoutTemplate.key(templateID)) {
-                var template = WorkoutTemplate(name: "\(source.name) Copy", notes: source.notes, blocks: source.blocks.copyingCycleTargets())
+                let taken = Set(try WorkoutTemplate.filter(Column("program_id") == Program.key(programID)).fetchAll(db).map(\.name))
+                var template = WorkoutTemplate(name: ProgramDayName.duplicate(of: source.name, taken: taken), notes: source.notes, blocks: source.blocks.copyingCycleTargets())
                 template.programID = programID
                 template.gymID = source.gymID
                 try template.insert(db)
                 day.templateID = template.id
             }
-            program.days.insert(day, at: index + 1)
+            program.days.append(day)
             program.updatedAt = .now
             try program.updateChanges(db, from: existing)
         }
@@ -203,5 +204,16 @@ extension [WorkoutBlock] {
                 return copy
             })
         }
+    }
+}
+
+enum ProgramDayName {
+    /// "Workout C" with "Workout D" free gives "Workout D"; anything else gets " Copy".
+    static func duplicate(of name: String, taken: Set<String>) -> String {
+        if let last = name.last, last.isLetter, last.isUppercase, name.dropLast().hasSuffix(" "), let next = last.unicodeScalars.first.map({ Unicode.Scalar($0.value + 1) }), let scalar = next, Character(scalar).isLetter {
+            let candidate = String(name.dropLast()) + String(Character(scalar))
+            if !taken.contains(candidate) { return candidate }
+        }
+        return "\(name) Copy"
     }
 }
