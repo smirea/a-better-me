@@ -46,7 +46,7 @@ struct GymProfileEditor: View {
                         renaming = true
                     },
                     onDuplicate: { duplicate(gym) },
-                    onRemove: { confirmingRemove = true }
+                    onRemove: gyms.count > 1 ? { confirmingRemove = true } : nil
                 )
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
@@ -135,7 +135,9 @@ struct GymProfileEditor: View {
             if let load = GymDefaults.effectiveLoad(item.id, in: gym) {
                 EquipmentLoadEditor(equipment: item, load: load, unit: settings.weightUnit) { saved in
                     let id = item.id
-                    edit { $0.equipment[id] = GymEquipment(load: saved) }
+                    edit { gym in
+                        if saved != nil || gym.equipment[id] != nil { gym.equipment[id] = GymEquipment(load: saved) }
+                    }
                 }
             }
         }
@@ -235,13 +237,13 @@ private struct EquipmentRow: View {
     }
 }
 
-/// Edit Icon, Rename Gym, Duplicate, and Remove.
 private struct GymActions: View {
     let icon: String
     let onIcon: (String) -> Void
     let onRename: () -> Void
     let onDuplicate: () -> Void
-    let onRemove: () -> Void
+    /// Nil for the last gym, because removing it would only bring the seeded gym back on the next launch.
+    let onRemove: (() -> Void)?
 
     static let icons: [(symbol: String, name: String)] = [
         ("house.fill", "House"), ("building.2.fill", "Buildings"), ("building.columns.fill", "Columns"),
@@ -262,7 +264,8 @@ private struct GymActions: View {
                 }
                 Button(action: onRename) { chip("Rename Gym", systemImage: "square.and.pencil") }
                 Button(action: onDuplicate) { chip("Duplicate", systemImage: "plus.square.on.square") }
-                Button(action: onRemove) { chip("Remove", systemImage: "minus.circle.fill") }
+                Button { onRemove?() } label: { chip("Remove", systemImage: "minus.circle.fill") }
+                    .disabled(onRemove == nil)
             }
             .padding(.horizontal)
             .padding(.vertical, 4)

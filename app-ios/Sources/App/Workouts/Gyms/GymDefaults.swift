@@ -16,7 +16,6 @@ enum GymDefaults {
 
     static func load(for id: EquipmentID) -> EquipmentLoad? { loads[id] }
 
-    /// The gym's own load for the item, or the default.
     static func effectiveLoad(_ id: EquipmentID, in gym: GymProfile) -> EquipmentLoad? {
         gym.equipment[id]?.load ?? load(for: id)
     }

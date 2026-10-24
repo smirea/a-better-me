@@ -37,7 +37,6 @@ struct GymAvailability {
 struct GymCatalog {
     static let alwaysAvailableCategory = "Bodyweight"
 
-    /// In `EquipmentCategoryOrder`, then by name.
     let items: [Equipment]
     private let pluralOfSingular: [EquipmentID: EquipmentID]
 
@@ -52,6 +51,5 @@ struct GymCatalog {
             }
     }
 
-    /// The item a gym lists for `id`: its plural when it has one.
     func listedID(_ id: EquipmentID) -> EquipmentID { pluralOfSingular[id] ?? id }
 }

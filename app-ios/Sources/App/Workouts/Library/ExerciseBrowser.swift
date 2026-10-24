@@ -193,7 +193,6 @@ struct ExerciseFilterBar: View {
                 }
             } header: {
                 Text("Gym Options")
-                Text("Impacts exercise selection")
             }
             Button("Manage Gym Profiles", systemImage: "gearshape") { managingGyms = true }
         } label: {

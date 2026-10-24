@@ -339,24 +339,34 @@ private struct WarmUpSchemeEditor: View {
         _steps = State(initialValue: scheme ?? defaultScheme)
     }
 
+    /// Swipe-delete can re-evaluate a removed row's binding, so reads and writes past the end are ignored.
+    private func step(at index: Int) -> Binding<WarmUpStep> {
+        Binding {
+            steps[safe: index] ?? WarmUpStep(percent: 0, reps: 0)
+        } set: { step in
+            if steps.indices.contains(index) { steps[index] = step }
+        }
+    }
+
     var body: some View {
         Form {
             Section {
                 ForEach(steps.indices, id: \.self) { index in
+                    let step = step(at: index)
                     HStack(spacing: 12) {
                         Text("W")
                             .font(AppFont.headline(11))
                             .frame(width: 22, height: 22)
                             .background(Theme.surfaceRaised, in: .circle)
-                        Text("\(steps[index].percent)%").frame(width: 44, alignment: .leading)
-                        Stepper("Percent", value: $steps[index].percent, in: 5...100, step: 5)
+                        Text("\(step.wrappedValue.percent)%").frame(width: 44, alignment: .leading)
+                        Stepper("Percent", value: step.percent, in: 5...100, step: 5)
                             .labelsHidden()
-                            .accessibilityValue("\(steps[index].percent)%")
+                            .accessibilityValue("\(step.wrappedValue.percent)%")
                         Spacer()
-                        Text("x \(steps[index].reps)").frame(width: 36, alignment: .leading)
-                        Stepper("Reps", value: $steps[index].reps, in: 1...30)
+                        Text("x \(step.wrappedValue.reps)").frame(width: 36, alignment: .leading)
+                        Stepper("Reps", value: step.reps, in: 1...30)
                             .labelsHidden()
-                            .accessibilityValue("\(steps[index].reps) reps")
+                            .accessibilityValue("\(step.wrappedValue.reps) reps")
                     }
                     .font(AppFont.medium(15))
                     .listRowBackground(Theme.surface)

@@ -103,8 +103,7 @@ enum ExerciseHistory {
         return entries.reversed()
     }
 
-    /// The History tab's list. Highest and Lowest rank by `metric`; sessions without a value go last, and ties
-    /// fall back to newest first.
+    /// Sessions without a value go last, and ties fall back to newest first.
     static func arranged(
         _ entries: [ExerciseHistoryEntry], sort: HistorySort, records: RecordsFilter, metric: HistoryMetric, exercise: Exercise
     ) -> [ExerciseHistoryEntry] {

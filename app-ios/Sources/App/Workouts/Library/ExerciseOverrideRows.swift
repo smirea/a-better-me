@@ -35,7 +35,6 @@ enum ExerciseOverrideRow: CaseIterable, Identifiable {
         }
     }
 
-    /// The row's subtitle: "Default", or the overridden value.
     func summary(_ settings: ExerciseSettings?) -> String {
         guard let settings else { return "Default" }
         let overrides = settings.overrides
