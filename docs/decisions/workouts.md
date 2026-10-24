@@ -29,7 +29,7 @@ Milestone 2 builds what milestone 1 cut, so the app does everything the owner us
 - **Dashboard:** `Dashboard/`.
 - **Second wave:** the live workout's Equipment chip and plate calculator, after the progression and gym threads merge, and xlsx import and export.
 
-**New synced data.** All of it ships in that one groundwork migration:
+**New synced data.** All of it shipped in the groundwork migration `0002`:
 
 - `programs`, `gym_profiles`, and `body_weights` tables.
 - New columns on existing tables:
@@ -37,7 +37,10 @@ Milestone 2 builds what milestone 1 cut, so the app does everything the owner us
   - `workout_sessions`: `program_id`, `program_day_id`, `cycle`, `gym_id`, and `paused_seconds`.
   - `exercise_settings`: `do_not_recommend` and `overrides`.
   - `settings`: `workout`, `profile`, `dashboard`, and `shortcuts`.
-- **Nested settings are JSON.** Settings and overrides are JSON columns that decode into Swift structs with defaults, so a later setting needs no migration.
+- **Nested settings are JSON.** Settings and overrides are JSON columns that decode into Swift structs with defaults, so a later setting needs no migration. Their keys are the Swift property names: `WorkoutSettings` (every §9 toggle and enum, nested as `rest`, `progression`, `warmUp`, `display`), `ProfileSettings` (`sex`, `liftingExperience`, `assessment`, `bodyWeightKg` as the fallback when no weigh-in exists), `DashboardLayout` (order and visibility are one array per section), `ShortcutsLayout`, `ExerciseOverrides` (every field optional, nil means Default; the Rest Timer override stays `ExerciseSettings.restSeconds`), `ProgramConfig` (`dayOrder`, `deload`, `periodization`, `generator`), `[ProgramDay]` (a rest day has no `templateID`), and `[EquipmentID: GymEquipment]` (a key present means selected, its `load` an `EquipmentLoad` of weights, ranges, a base weight, or bands). The five rest durations stay columns on `settings`, because they merge per category and the owner's values live on the phone while production sync is off.
+- **Programs point at templates.** A program day names a `WorkoutTemplate` whose `programID` is set, so program templates stay out of the Workout Library (`WorkoutTemplate.library`) while `all` still resolves them. A session records its `ProgramPosition` (program, day, cycle) and `gymID`. Per-cycle targets are the template exercise's optional `cycleTargets`, index 0 for cycle 1, and `WorkoutSession(startingFrom:at:gymID:)` swaps them in and drops skipped exercises.
+- **Body weight has one owner.** Weigh-ins are `BodyWeight` rows; HealthKit samples are read live and never copied, and `currentBodyWeightKg` picks the newest of the two with the profile's manual weight last. A HealthKit import that does copy should use the sample UUID as the row id so a re-import is an idempotent put.
+- **Smart Generation data is `Exercise.selection`.** The catalog carries MF's hypertrophy and strength recommendation levels, classifications, exercise groups, exclusion groupings, preconditions, stretched muscles, and emphasized and de-emphasized agonists in one optional struct, nil for custom exercises. `Equipment` carries the bar weight options, plate laterality, and the gym presets the bundle has; the per-item default weight lists MF shows are not in the bundle and come from `equipment.md`.
 
 ## Exercise catalog source
 
