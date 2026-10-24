@@ -368,3 +368,100 @@ These 20 programs cannot determine the following.
 - The owner's Exercise Assessment answers, and how 7 answers map to 43 preconditions.
 - Equipment effects beyond this gym. 23 catalog equipment names are missing from the gym list.
 - Rest times, which the export never sets.
+
+---
+
+## 2. Programs
+
+Everything here was observed on the test programs from §1, mainly P1 (3x Full Body, a 7-day weekly program). The owner's own program, "Recomp v3 (6-day)", was only read: 10 cycles, 6 workout days, deload None, periodization off.
+
+### 2.1 Weeks and cycles
+
+A program is a list of days, workout or rest, that repeats. **Observed.**
+
+- A program with exactly 7 days is **weekly**. The UI says "Week": "Number of Weeks", "Week 1" cards, the Day / Week toggle, and "Week 1" on the Workout tab.
+- Any other length is a **cycle**. Duplicating a day in P1 made it 8 days, and every label switched to "Cycle": "Cycle 1" cards, Day / Cycle, "Number of Cycles" (`m2-program-cycle-terms.jpg`). The owner's 6-day program says "Cycle 1".
+- Day Order shows the length as "7-Day Cycle" either way.
+
+### 2.2 Active Program on the Workout tab
+
+`m2-workout-tab-active-weekly.jpg`, `m2-workout-tab-day-done.jpg`, `m2-workout-tab-no-active.jpg`
+
+- The section header has "Active Program" on the left and the current position on the right, as an underlined link: "Week 1" or "Cycle 1". Tapping it opens a "Go to..." sheet listing Week 1 to Week 7 and then Deload (`m2-active-goto-week.jpg`). Picking one changes the label, and the day rows then open with that week's targets. For example, P1 Workout A under Deload showed 2 x 4-6 reps on the bench and an estimate of 28 minutes.
+- The program card has the icon tile, the name, "3 workouts", and a collapse chevron. One row per day follows, in order, rest days included. A workout row has the day name, the exercise list (2 lines), muscle tags, and a checkbox. A rest row is "Rest Day" and a checkbox.
+- **Completion.** Logging a session of a program day ticks its checkbox and dims the row. Rest days are ticked by tapping their checkbox. Tapping a workout day's checkbox did nothing, so a workout day completes only through a logged session.
+- After the first program session, today's pill in the week strip gained an arc in the program color (red for P1). It looks like a progress ring. **Inferred.**
+- Tapping a day row opens the workout detail for that day and the selected week. Its Target Muscles show that week's numbers (Chest "7 sets").
+- With no active program, the section reads "Drag a program block here". Activating a program from the library replaces it. Deactivating moves it back to the Workout Library and resets its progress.
+- What happens after the last day of a week was not observed. Strings in the binary describe the end of the block: "Program Block Complete", "Repeat Program Block", and "You could repeat this program block once or continue running this block until you activate a different program." ([`app-strings.md`](app-strings.md)).
+
+### 2.3 Up Next
+
+`m2-plus-up-next-weekly.jpg`, `m2-plus-up-next-rest-day.jpg`
+
+The "+" Shortcuts sheet shows "Up Next • <day name>" for the active program's first unticked day, in day order. **Observed.**
+
+- A workout day shows as a card with the exercise list and muscle tags. Tapping it opens that day's workout detail, with Start Workout.
+- After P1's Workout A was logged, Up Next became "Up Next • Rest Day", a plain row with a checkbox. Once that rest day was ticked on the Workout tab, Up Next became Workout B.
+- The day is chosen by order, not by weekday. P1 was activated on a Friday, and Up Next was still Workout A.
+
+### 2.4 Program editor
+
+`m2-program-editor-generated.jpg`, `m2-program-week-cards-deload.jpg`
+
+- **Header.** Back, the program name, and a sliders button for Program Settings.
+- **Day tabs.** A scrolling tab bar with one tab per day ("Workout A", "Rest", ...) and a final **Add Day** tab. Add Day appends a rest day and selects it.
+- **Chips for a workout day.** Gym ▾, Rename, Re-order, Duplicate, Change to Rest, Remove. A rest day puts Remove first.
+  - **Gym ▾** opens "Gym Options · Impacts exercise selection": the gym profiles with their equipment counts, "Manage Gym Profiles · Add, edit, and remove gyms", and an **Apply to All Days** toggle (`m2-program-gym-options.jpg`). The gym is per day.
+  - **Rename** opens "Rename Day" with a Name field and Save (`m2-program-rename-day.jpg`).
+  - **Re-order** opens a "Re-Order" sheet listing the day's exercises with ≡ handles and Done (`m2-program-reorder.jpg`). It reorders exercises inside the day. Days are reordered in Program Settings > Day Order.
+  - **Duplicate** appends a copy of the day at the end, named with the next letter ("Workout D"), and selects it (`m2-program-duplicated-day.jpg`).
+  - **Change to Rest** asks "All exercises will be cleared for this day" / "Exercises will be cleared and the day will be turned into a Rest day." with Change to Rest and Go Back (`m2-program-change-to-rest-dialog.jpg`).
+  - **Remove** asks "Remove Day?" / "This will remove the entire day from your program." with OK and Go Back.
+- **A rest day's body** reads "Rest Day · You can convert the rest day into a workout day by adding exercises below", then "0 Exercises" with Add Exercises (`m2-program-rest-day.jpg`).
+- **Target Muscles** with a Day / Week toggle (Day / Cycle for cycles). Each card is a muscle with "N exercises" and "N sets". In the editor the sets are averaged over every week including the deload. P1 Workout A's chest shows 6.7 sets, which is (7 x 7 weeks + 4.5 in the deload) / 8. Week mode sums the program's days the same way (Upper Back 14.3). **Observed** values, averaging **inferred** from them.
+- **"N Exercises" | Add Exercises.** Each exercise has its thumbnail, name, muscle tags, and ⋮, then a horizontal row of cards: Week 1 to Week N, then **Deload** when deload is on (First Week puts it first). A card lists its sets as a number, "11-13 reps", and a colored RIR badge. With periodization off there is a single "7 Weeks" card instead (`m2-program-periodization-off.jpg`).
+
+**Week targets sheet.** Tapping a card opens the targets sheet titled with the exercise, subtitled "Week 1" (`m2-program-week-targets.jpg`). Its columns are Set, Reps Min, Reps Max, RIR, with Skip Exercise ("Exercise will be skipped on Workout A, Week 1") and Set Rest Timers ("This will override default exercise settings") toggles. The buttons are:
+
+- **Save To All Weeks**
+- **Save** (this week only)
+- **More Options**, which opens "Saving Options · 3 sets" (`m2-program-saving-options.jpg`). It holds two radio groups and Save:
+  - Cycle Settings: "Week 1 only", "Week 1 and beyond", "All weeks"
+  - Exercise Settings: "Barbell Bench Press only", "All exercises for the day", "All exercises in the program"
+
+**Exercise Options (⋮)** (`m2-program-exercise-options.jpg`):
+
+- Info ("Learn about the exercise")
+- Swap ("Replace with an alternate")
+- Superset ("Manage superset settings")
+- Move to a different day ("Relocate the exercise in your program"). This opens "Move", listing every other day as "Day 2 | Rest", "Day 3 | Workout B", and so on. Rest days are valid targets.
+- Program Note ("Note will display on this exercise every time you work out", Add). The note pins to the exercise within this program.
+- Duplicate Exercise
+- Remove from workout
+
+### 2.5 Program Settings
+
+`m2-program-settings-weekly.jpg`. The sheet is titled "Program Settings" with the program name under it.
+
+- **Number of Weeks** (or Cycles), a − / + stepper with "7 Weeks" under the title. Adding a week copies the last week's targets into it, and the deload stays last: P1's Week 8 repeated Week 7's 5-7 reps. Removing a week drops the last one. **Observed.**
+- **Name**, Edit.
+- **Color & Icon**, Edit, shown as "Red, Rocket". The milestone 1 spec has the picker (7 colors, about 50 glyphs).
+- **Day Order**, Edit, shown as "W, R, W, R, W, R, R". The sheet is titled "Day Order" with "7-Day Cycle" under it. It lists "Day 1 | Workout A" through "Day 7 | Rest Day" as a reorderable list, with Save and Cancel (`m2-program-day-order.jpg`).
+- **Deload**, Edit, shown as "Last Week". The sheet has three choices:
+  - None ("Train continuously without scheduled reductions in intensity or volume.")
+  - First Week ("Start each training block with a lower-intensity week to ease into new workloads and reduce soreness.")
+  - Last Week ("Finish each training block with a lighter week to promote recovery and readiness for the next phase.")
+
+  The choice moves the Deload card. First Week derives the deload from Week 1 by the §1.9 rule: 3 x 11-13 at RIR 3, 2, 1 became 2 x 9-10 at RIR 6+, 5, and 2 x 14-16 at RIR 1, 0 became 1 x 11-13 at RIR 4. **Observed.**
+
+- **Periodization**, a toggle with "Organize your training into phases that vary intensity and volume to support continuous progress and effective recovery". There are no sub-options in Program Settings. The style (linear, reverse linear, undulating, static) is chosen only in the generation wizard. Turning it off asks "Turn off periodization?" / "Periodization is what allows cycle-to-cycle variation. When disabled, all weeks for an exercise will use identical sets and targets. The impact of turning this off is not reversible." with Turn Off and Go Back (`m2-program-periodization-off-dialog.jpg`). After Turn Off, every week took Week 1's targets, and the cards collapsed to one "7 Weeks" card plus the Deload card. **Observed.**
+- **Duplicate Program**, which opens "Program Name". The name defaults to today's date ("October 23, 2026"), with "Save & Go to Duplicate" (`m2-program-duplicate-name.jpg`).
+- **Export Program** opens the system share sheet with an `.xlsx` named `MacroFactor-<yyyyMMddHHmmss>`. See §5 for the format.
+- **Activate Program** on an inactive program, or **Deactivate Program** on the active one. Deactivate asks "Are you sure you want to deactivate this program?" / "Your active program will be moved to your Workout Library and its progress will be reset." with OK and Go Back (`m2-program-deactivate-dialog.jpg`). Activate swaps immediately, with no dialog.
+- **Archive Program** acts immediately. The row then reads **Unarchive Program**.
+- **Delete Program** (red) asks "Are you sure you want to delete this program?" / "The program and workouts within the program will be deleted." with Delete Program and Go Back (`m2-program-delete-dialog.jpg`).
+
+### 2.6 Archive
+
+The Workout tab's ⋮ > Archive shows "N programs, M workouts" and opens "Workout Archive" (`m2-archive-list.jpg`). It uses the Workout Library's row style. A program is a card with its icon tile, name, "N workouts", a collapse chevron, and its day rows. Tapping the program name opens the program editor, whose settings offer Unarchive Program and Delete Program. Archiving moved P23 out of the library. The ⋮ count went from "1 program" (milestone 1) to "2 programs". **Observed.**
