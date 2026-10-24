@@ -99,7 +99,7 @@ private struct LibraryTabBar: View {
 }
 
 /// Exercise Settings: Info, the pinned note, Do Not Recommend, Archive and Delete for custom exercises, and the
-/// Exercise Overrides that fall back to Workout settings. Equipment Weights waits for the gym load editor.
+/// Exercise Overrides that fall back to the gym profile and Workout settings.
 struct ExerciseSettingsView: View {
     let exerciseID: ExerciseID
     @Environment(ExerciseCatalog.self) private var catalog
@@ -248,6 +248,12 @@ struct ExerciseSettingsView: View {
         let workout = defaults.workout
         let summary = row.summary(current)
         switch row {
+        case .equipmentWeights:
+            NavigationLink {
+                EquipmentWeightsOverrideView(exerciseID: exerciseID)
+            } label: {
+                SettingsRow(title: row.title, subtitle: summary, systemImage: row.systemImage) { EmptyView() }
+            }
         case .restTimer:
             SettingsRow(title: row.title, subtitle: summary, systemImage: row.systemImage) {
                 Menu("Edit") {

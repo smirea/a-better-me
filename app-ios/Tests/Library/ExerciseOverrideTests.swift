@@ -23,8 +23,9 @@ struct ExerciseOverrideTests {
         settings.overrides.expandRepRange = false
         settings.overrides.warmUpAutomation = .scheme
         settings.overrides.warmUpScheme = [WarmUpStep(percent: 50, reps: 8), WarmUpStep(percent: 75, reps: 3)]
+        settings.overrides.equipment = ["dumbbells": .weights(options: [WeightOption(kg: 10)])]
         let summaries = ExerciseOverrideRow.allCases.map { $0.summary(settings) }
-        #expect(summaries == ["2:30", "Default", "Off", "Default", "Scheme Warm-Up", "50% x 8, 75% x 3"])
-        #expect(ExerciseOverrideRow.allCases.map { $0.summary(nil) } == Array(repeating: "Default", count: 6))
+        #expect(summaries == ["1 item overridden", "2:30", "Default", "Off", "Default", "Scheme Warm-Up", "50% x 8, 75% x 3"])
+        #expect(ExerciseOverrideRow.allCases.map { $0.summary(nil) } == Array(repeating: "Default", count: 7))
     }
 }

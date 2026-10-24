@@ -5,15 +5,15 @@ extension ExerciseSettings {
     var isModified: Bool { restSeconds != nil || overrides != ExerciseOverrides() }
 }
 
-/// The rows of Exercise Settings > Exercise Overrides, in MF's order. Equipment Weights joins once the gym load editor
-/// exists.
+/// The rows of Exercise Settings > Exercise Overrides, in MF's order.
 enum ExerciseOverrideRow: CaseIterable, Identifiable {
-    case restTimer, restBetweenSides, expandRepRange, weightMatch, warmUpAutomation, warmUpScheme
+    case equipmentWeights, restTimer, restBetweenSides, expandRepRange, weightMatch, warmUpAutomation, warmUpScheme
 
     var id: Self { self }
 
     var title: String {
         switch self {
+        case .equipmentWeights: "Equipment Weights"
         case .restTimer: "Rest Timer"
         case .restBetweenSides: "Rest Between Left/Right Sets"
         case .expandRepRange: "Expand Rep Range"
@@ -25,6 +25,7 @@ enum ExerciseOverrideRow: CaseIterable, Identifiable {
 
     var systemImage: String {
         switch self {
+        case .equipmentWeights: "scalemass.fill"
         case .restTimer: "timer"
         case .restBetweenSides: "arrow.left.arrow.right"
         case .expandRepRange: "arrow.left.and.right"
@@ -39,6 +40,7 @@ enum ExerciseOverrideRow: CaseIterable, Identifiable {
         guard let settings else { return "Default" }
         let overrides = settings.overrides
         let value: String? = switch self {
+        case .equipmentWeights: overrides.equipment.map { "\($0.count) \($0.count == 1 ? "item" : "items") overridden" }
         case .restTimer: settings.restSeconds.map(Self.formatRest)
         case .restBetweenSides: overrides.restBetweenSides.map(Self.onOff)
         case .expandRepRange: overrides.expandRepRange.map(Self.onOff)
