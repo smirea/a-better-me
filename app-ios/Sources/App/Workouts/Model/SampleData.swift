@@ -45,7 +45,7 @@ enum SampleData {
         if arguments.contains(dumpArgument) {
             store.write { db in
                 let dump = try [
-                    "programs": RowJSON.text(Program.all.fetch(db).map(\.name)),
+                    "programs": RowJSON.text(Program.library.fetch(db).map(\.name)),
                     "programDays": RowJSON.text(Program.all.fetch(db).map(\.days.count)),
                     "gyms": RowJSON.text(GymProfile.all.fetch(db).map(\.name)),
                     "gymBarbellKg": RowJSON.text(GymProfile.all.fetch(db).map { $0.equipment["19e5c6f170d8801cac93cf6853bd86b8"]?.load }),

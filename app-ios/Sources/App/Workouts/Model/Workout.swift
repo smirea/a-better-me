@@ -41,8 +41,6 @@ extension BlockExercise {
 }
 
 extension [WorkoutBlock] {
-    /// The blocks a program session starts from: each exercise's targets for `cycle`, without the exercises skipped in
-    /// it, and without the blocks that leaves empty.
     func targets(forCycle cycle: Int) -> [WorkoutBlock] {
         compactMap { block in
             var block = block
@@ -131,7 +129,6 @@ struct WorkoutTemplate: SyncedRecord {
     var createdAt: Date
     var updatedAt: Date
     var blocks: [WorkoutBlock]
-    /// Set for a template that is a program day. Such a template stays out of the Workout Library.
     var programID: UUID?
     var gymID: UUID?
     var isArchived = false
@@ -198,7 +195,6 @@ struct WorkoutSession: SyncedRecord {
         self.init(name: template.name, templateID: template.id, blocks: template.blocks)
     }
 
-    /// A program day's session: the template's blocks with that cycle's targets, minus the exercises skipped in it.
     init(startingFrom template: WorkoutTemplate, at position: ProgramPosition, gymID: UUID?) {
         self.init(name: template.name, templateID: template.id, blocks: template.blocks.targets(forCycle: position.cycle))
         program = position

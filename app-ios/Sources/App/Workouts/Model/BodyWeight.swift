@@ -37,8 +37,6 @@ enum BodyWeightSource: String {
     case manual, healthKit = "healthkit"
 }
 
-/// The scale weight the live workout's Bodyweight Contribution and the dashboard show: the newer of the latest logged
-/// weigh-in and HealthKit's latest sample, else the profile's manual weight.
 func currentBodyWeightKg(logged: [BodyWeight], health: (kg: Double, at: Date)?, manual: Double?) -> Double? {
     let newest = logged.max { $0.measuredAt < $1.measuredAt }
     switch (newest, health) {

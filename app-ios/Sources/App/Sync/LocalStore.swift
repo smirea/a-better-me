@@ -147,8 +147,6 @@ final class LocalStore {
         }
     }
 
-    /// Activates `id` and deactivates every other program in one transaction, so at most one is active. Archiving a
-    /// program goes through `editProgram` and clears `isActive` in the same patch.
     func activateProgram(_ id: UUID) {
         write { db in
             for program in try Program.fetchAll(db) where program.isActive != (program.id == id) {
@@ -160,7 +158,6 @@ final class LocalStore {
         }
     }
 
-    /// Makes `id` the default gym and clears the flag on every other one in one transaction.
     func setDefaultGym(_ id: UUID) {
         write { db in
             for gym in try GymProfile.fetchAll(db) where gym.isDefault != (gym.id == id) {
@@ -177,7 +174,6 @@ final class LocalStore {
         modify(AppSettings.self, id: AppSettings.rowID, orInsert: { AppSettings() }, change)
     }
 
-    /// A control's binding to one setting, read from the observed `settings` and written through `updateSettings`.
     func binding<Value: Sendable>(_ settings: AppSettings, _ path: WritableKeyPath<AppSettings, Value> & Sendable) -> Binding<Value> {
         Binding(
             get: { settings[keyPath: path] },

@@ -136,7 +136,6 @@ export const programs = pgTable(
 		/** At most one program is meant to be active. The app keeps it so (`LocalStore.activateProgram`); no index enforces it. */
 		active: boolean('active').notNull().default(false),
 		archived: boolean('archived').notNull().default(false),
-		/** `ProgramConfig`: day order, deload, periodization, generator inputs. */
 		config: jsonb('config').notNull().default({}),
 		/** `[ProgramDay]`, in cycle order: `{ id, templateID? }`, a rest day without `templateID`. */
 		days: jsonb('days').notNull().default([]),

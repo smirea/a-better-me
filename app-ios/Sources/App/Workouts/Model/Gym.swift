@@ -1,7 +1,6 @@
 import Foundation
 import GRDB
 
-/// A catalog equipment id (`Equipment.id`).
 typealias EquipmentID = String
 
 /// A row of the synced `gym_profiles` table: a place to train and the equipment it has. At most one profile is meant to
@@ -48,8 +47,6 @@ struct GymProfile: SyncedRecord {
         container["updated_at"] = Instant.text(updatedAt)
     }
 
-    /// Whether this gym has every item of one of the exercise's resistance options and, when it names any, every item
-    /// of one of its support options.
     func hasEquipment(for exercise: Exercise) -> Bool {
         func hasOption(among alternatives: [[EquipmentID]]) -> Bool {
             alternatives.isEmpty || alternatives.contains { $0.allSatisfy { equipment[$0] != nil } }
