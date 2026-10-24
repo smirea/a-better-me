@@ -3,9 +3,18 @@ import SwiftUI
 /// The Targets sheet: set types, reps min and max, RIR, and per-set rest. The template editor and the live session's
 /// Targets chip both present it; the builder thread owns it. Warm-up sets are offered only in the live session.
 /// Edits stay in a draft until Save, as in the reference.
+///
+/// The program editor's week targets add a subtitle (the exercise becomes the title), a footer under the sets, an
+/// `onSave` that replaces writing the binding, extra buttons around Save, and a read-only mode for the derived deload.
 struct SetTargetsSheet: View {
     @Binding var exercise: BlockExercise
     let allowsWarmUp: Bool
+    var subtitle: String?
+    /// Shown instead of the buttons when the sets cannot be edited.
+    var readOnlyNote: String?
+    var actions: [SetTargetsAction] = []
+    var onSave: (([WorkoutSet]) -> Void)?
+    var footer: AnyView?
 
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(\.dismiss) private var dismiss
@@ -21,6 +30,22 @@ struct SetTargetsSheet: View {
         self.allowsWarmUp = allowsWarmUp
         _draft = State(initialValue: exercise.wrappedValue)
         _restTimers = State(initialValue: exercise.wrappedValue.sets.contains { $0.restSeconds != nil })
+    }
+
+    init(
+        exercise: BlockExercise,
+        subtitle: String,
+        readOnlyNote: String? = nil,
+        actions: [SetTargetsAction] = [],
+        onSave: @escaping ([WorkoutSet]) -> Void,
+        @ViewBuilder footer: () -> some View = { EmptyView() }
+    ) {
+        self.init(exercise: .constant(exercise), allowsWarmUp: false)
+        self.subtitle = subtitle
+        self.readOnlyNote = readOnlyNote
+        self.actions = actions
+        self.onSave = onSave
+        self.footer = AnyView(footer())
     }
 
     private enum Editing: Hashable, Identifiable {
@@ -55,6 +80,7 @@ struct SetTargetsSheet: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Add Set")
                 .listRowSeparator(.hidden)
+                if let footer { footer }
                 Toggle(isOn: $restTimers) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Set Rest Timers").font(AppFont.headline(15))
@@ -66,6 +92,7 @@ struct SetTargetsSheet: View {
                 .padding(.vertical, 8)
                 .tint(Theme.accent)
             }
+            .disabled(readOnlyNote != nil)
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(Theme.surface)
@@ -78,8 +105,8 @@ struct SetTargetsSheet: View {
                 }
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 0) {
-                        Text("Targets").font(AppFont.title(17))
-                        Text(catalog.name(draft.exerciseID))
+                        Text(subtitle == nil ? "Targets" : catalog.name(draft.exerciseID)).font(AppFont.title(17))
+                        Text(subtitle ?? catalog.name(draft.exerciseID))
                             .font(AppFont.caption())
                             .foregroundStyle(Theme.textSecondary)
                     }
@@ -88,9 +115,7 @@ struct SetTargetsSheet: View {
                     Button("Done") { focus = nil }.frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
-            .safeAreaInset(edge: .bottom) {
-                PinnedActionButton("Save") { save() }
-            }
+            .safeAreaInset(edge: .bottom) { bottomButtons }
             .tint(Theme.textPrimary)
             .onChange(of: restTimers) { _, on in
                 for index in draft.sets.indices {
@@ -112,6 +137,41 @@ struct SetTargetsSheet: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder private var bottomButtons: some View {
+        if let readOnlyNote {
+            Text(readOnlyNote)
+                .font(AppFont.caption())
+                .foregroundStyle(Theme.textSecondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding()
+        } else {
+            VStack(spacing: 4) {
+                ForEach(actions.filter { $0.placement == .aboveSave }) { action in
+                    Button { perform(action) } label: {
+                        Text(action.title).font(AppFont.headline()).frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.glass)
+                    .controlSize(.large)
+                    .padding(.horizontal)
+                }
+                PinnedActionButton("Save") { save() }
+                ForEach(actions.filter { $0.placement == .belowSave }) { action in
+                    Button(action.title) { perform(action) }
+                        .font(AppFont.headline())
+                        .buttonStyle(.plain)
+                        .frame(minHeight: 44)
+                }
+            }
+        }
+    }
+
+    private func perform(_ action: SetTargetsAction) {
+        focus = nil
+        action.perform(draft.sets)
+        if action.dismisses { dismiss() }
     }
 
     private var columnHeader: some View {
@@ -203,9 +263,22 @@ struct SetTargetsSheet: View {
     }
 
     private func save() {
-        exercise = draft
+        if let onSave { onSave(draft.sets) } else { exercise = draft }
         dismiss()
     }
+}
+
+/// A button around the targets sheet's Save: the program editor's Save To All Weeks and More Options.
+struct SetTargetsAction: Identifiable {
+    enum Placement { case aboveSave, belowSave }
+
+    let title: String
+    var placement = Placement.aboveSave
+    /// More Options opens its own sheet over the targets instead of closing them.
+    var dismisses = true
+    let perform: ([WorkoutSet]) -> Void
+
+    var id: String { title }
 }
 
 private struct RepsField: View {
