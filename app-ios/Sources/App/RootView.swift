@@ -32,7 +32,7 @@ struct RootView: View {
         .sheet(isPresented: $showingNewWorkout) { NewWorkoutSheet() }
         // A session's insert and the observation that shows it land a moment apart, so the cover waits for both.
         .fullScreenCover(isPresented: Binding(get: { presenter.isExpanded && activeSession != nil }, set: { presenter.isExpanded = $0 })) {
-            if let activeSession { LiveWorkoutView(session: activeSession) }
+            if let activeSession { LiveWorkoutView(session: activeSession).id(activeSession.id) }
         }
         .onChange(of: customExercises.map(\.exercise), initial: true) { _, exercises in
             catalog.setCustom(exercises)
