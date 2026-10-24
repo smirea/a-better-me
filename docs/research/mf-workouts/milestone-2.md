@@ -69,7 +69,7 @@ The "+" sheet's New Program, or the Workout tab's "+" > New Program, opens "Crea
 
 ### 1.2 Calibration data
 
-MF generated 20 programs (P1 to P20) on 2026-10-23 against the owner's default gym "Aquasol 6770" (192 pieces of equipment). [`generated-programs.json`](generated-programs.json) holds them. [`tools/programs-analysis.py`](tools/programs-analysis.py) computes every number below (`python3 -I docs/research/mf-workouts/tools/programs-analysis.py`). Four follow-ups are in the JSON too and are discussed where they apply: P21 and P22 (no-preference split at 3 and 4 days, §1.3), P23 ("less" focus, §1.8.1), and P25 (an Exercise Assessment change, §5.2). P24 only restored the wizard's remembered deload setting and was not exported.
+MF generated 20 programs (P1 to P20) on 2026-10-23 against the owner's default gym "Aquasol 6770" (192 pieces of equipment). [`generated-programs.json`](generated-programs.json) holds them. [`tools/programs-analysis.py`](tools/programs-analysis.py) computes every number below (`python3 -I docs/research/mf-workouts/tools/programs-analysis.py`). The script reads every program in the JSON, follow-ups included, so its counts (days, picks, set rows) come out larger than the P1 to P20 counts quoted here. Filter the JSON to P1 to P20 to reproduce them. Four follow-ups are in the JSON too and are discussed where they apply: P21 and P22 (no-preference split at 3 and 4 days, §1.3), P23 ("less" focus, §1.8.1), and P25 (an Exercise Assessment change, §5.2). P24 only restored the wizard's remembered deload setting and was not exported.
 
 The inputs isolate one variable at a time against P1 (hypertrophy, 3x Full Body, 40 to 60 minutes, no rep preference, intermediate, deload on).
 
@@ -119,10 +119,10 @@ Day names per split. **Measured.**
 | Days | No-preference result                                                      | Evidence                                                                                                               |
 | ---- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | 2    | Full Body (Workout A, B; each day has a push, a pull, and a leg compound) | P15                                                                                                                    |
-| 5    | Push/Pull/Legs/Upper/Lower                                                | P6, same names and skeleton as P13                                                                                     |
-| 6    | Push/Pull/Legs/Push/Pull/Legs                                             | P14 has the same skeleton, sets, and RIR as P19. They share 25 of 93 exercise ids, the same overlap as two random runs |
 | 3    | Upper/Lower/Full Body (days Upper, Lower, Full)                           | P21                                                                                                                    |
 | 4    | Upper/Lower/Upper/Lower                                                   | P22, same names as P5                                                                                                  |
+| 5    | Push/Pull/Legs/Upper/Lower                                                | P6, same names and skeleton as P13                                                                                     |
+| 6    | Push/Pull/Legs/Push/Pull/Legs                                             | P14 has the same skeleton, sets, and RIR as P19. They share 25 of 93 exercise ids, the same overlap as two random runs |
 
 ### 1.4 Slots, day skeletons, and volume
 
@@ -227,7 +227,7 @@ Static (P7, hypertrophy) does not reuse a ladder value consistently. It has its 
 | ----------- | ------- | --------- | ------------ | -------------- | --------- |
 | hypertrophy | 7-9     | 9-11      | 9-11         | 11-13          | 14-16     |
 
-Cycle 7 always equals cycle 6, and cycle 1 always equals cycle 2 under linear. That holds with deload on and off. **Measured.** The deload week is not in the export (§1.9).
+Under linear and no-preference progression, cycle 7 always equals cycle 6, and cycle 1 always equals cycle 2. That holds with deload on and off. **Measured.** Reverse linear follows from its index list. Undulating does not repeat (cycle 6 is v1, cycle 7 is v4). The deload week is not in the export (§1.9).
 
 ### 1.6 RIR and rest
 
@@ -258,7 +258,7 @@ Level of each pick in its goal's level field for its slot. "Both" reads the stre
 - No pick is above level 2. **Measured.**
 - Only 11 of 581 slot-determinable picks had a strictly better-level candidate for the same primary muscle. **Measured.** The 99 skipped better candidates break down by likely cause as follows. Exclusion grouping already used in the program 38, equipment not in the gym 19, exercise already in the program 18, has a precondition 18, unexplained 4, equipment not on the gym list 2. **Measured** counts. Causes are **inferred**.
 - The gym model is consistent with the picks. No pick needs equipment the gym list marks absent (624 available, 29 need an item missing from the list). **Measured.** An exercise counts as available when some resistance group and some support group have all their equipment in the gym. **Inferred.**
-- The level-2 picks are P2's machine-assisted pull-up (over L1 and L1.5 pull-ups and chin-ups, all with preconditions), P5's dumbbell rear delt fly and GHD hip hinge, P12's half-kneeling single-arm pulldown, P13's pin-loaded leg press, and P14's seated dumbbell press. **Measured.**
+- The 11 level-2 picks are the machine-assisted pull-ups in P2, P6, and P13 (P2's over L1 and L1.5 pull-ups and chin-ups, all with preconditions), P5's dumbbell rear delt fly and GHD hip hinge, P12's half-kneeling single-arm pulldown, P13's pin-loaded leg press, P14's seated dumbbell press, cable rear delt fly, and plate-weighted neck curl, and P19's head harness neck curl. **Measured.**
 - Ties inside a level are broken at random. 25% of picks have the top `searchBoostValue` among equal-level, available, precondition-free candidates, against 22% expected from a uniform draw. **Measured.** No boost weighting is **inferred**.
 - Repeat runs barely overlap. P1 and P8 share 2 of 46 exercise ids and 2 of 24 day positions. Pairwise Jaccard across the eight same-skeleton programs (P1, P7 to P10, P16 to P18) is 0.02 to 0.23. **Measured.** Everything except exercise identity is deterministic. P1, P8, P16, P17, and P18 have identical skeletons, set counts, rep sequences, and RIR. **Measured.**
 - No exercise repeats on two days of one program. **Measured** (0 cases).
@@ -270,12 +270,12 @@ Level of each pick in its goal's level field for its slot. "Both" reads the stre
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | P11 0-20     | A: Side Delts, Calves. B: Biceps, Hamstrings. C: Triceps                                                                                                                                          |
 | P1 40-60     | A: Side Delts, Chest, Calves, Upper Traps. B: Biceps, Rear Delts, Hamstrings, Upper Traps+Upper Back. C: Triceps, Lats, Quads, Abs                                                                |
-| P2 40-60 str | The same order as P1, plus a fifth per day: Neck (A), Glutes (B), Forearms (C)                                                                                                                    |
+| P2 40-60 str | The same order as P1, plus one more per day: Neck (A, last), Glutes (B, last), Forearms (C, before Abs)                                                                                           |
 | P20 PPL      | Push: Side Delts, Triceps, Chest, Side Delts, Triceps, Neck. Pull: Biceps, Rear Delts, Lats, Biceps, Upper Traps, Upper Back, Forearms. Legs: Calves, Hamstrings, Quads, Abs, Abductors, Obliques |
 
 ### 1.8 Weekly sets per muscle
 
-Weighted weekly sets in cycle 1, with a primary feature muscle counting 1 and a secondary 0.5. **Measured.**
+Weighted weekly sets in cycle 1, with a primary feature muscle counting 1 and a secondary 0.5. Total sums every muscle, including the ones not listed (Rear Delts, Upper Traps, Adductors, Forearms, Lower Back, and smaller ones). **Measured.**
 
 | Muscle      | P1 int | P16 beg | P17 adv | P11 0-20 | P12 120+ | P2 str | P4 focus | P5 UL | P20 PPL | P14 6x |
 | ----------- | ------ | ------- | ------- | -------- | -------- | ------ | -------- | ----- | ------- | ------ |
@@ -303,7 +303,7 @@ Weighted weekly sets in cycle 1, with a primary feature muscle counting 1 and a 
 P23 repeats P1's inputs with Triceps and Lats set to less. **Measured.**
 
 - The skeleton, set counts, reps, and RIR equal P1's.
-- The triceps accessory (skull crusher in P1 Workout C) and the lats accessory (machine pullover) are gone. Their slots went to a rear delt fly, a wrist curl, and a neck extension. Workout C now opens its accessories with a pec deck.
+- The triceps accessory (skull crusher in P1 Workout C) and the lats accessory (machine pullover) are gone. A forearm wrist curl and a neck extension took their two slots, and the other ten accessory muscles moved between days. Workout C now opens its accessories with a pec deck.
 - The lat pulldown compound slots stay, so Lats still get 9 weighted sets against 12 in P1. Triceps drop from 7.5 to 4.5.
 
 ### 1.9 Deload
@@ -316,7 +316,7 @@ The deload card derives from the last week's sets by one rule, with no exception
 
 - Drop the last set. 3 sets become 2, and 2 become 1. One-set exercises were not seen.
 - Add 3 to each remaining set's RIR, capped at 6+.
-- Scale both ends of the rep range by 0.8 and round half up.
+- Scale both ends of the rep range by 0.8 and round to the nearest integer. 0.8 times an integer never ends in .5, so the tie rule is unknown.
 
 | Week 7 sets (reps, RIR) | Deload sets        | Seen on                                   |
 | ----------------------- | ------------------ | ----------------------------------------- |
@@ -332,7 +332,7 @@ The deload card derives from the last week's sets by one rule, with no exception
 | 2 x 4-6, RIR 2, 1       | 1 x 3-5, RIR 5     | P2 dumbbell press, pause squat            |
 | 2 x 7-9, RIR 0, 0       | 1 x 6-7, RIR 3     | P2 accessories                            |
 
-Deload "First Cycle" (Program Settings, §2) presumably puts the card before Week 1. That placement was not generated. **Inferred.**
+Program Settings' First Week deload puts the card before Week 1 and derives it from Week 1 by the same rule (§2.5). **Observed.** The generator never produced it, and its export value `First Cycle` was not seen in a file. **Inferred** from the Last Week mapping.
 
 ### 1.10 Generator recipe
 
@@ -341,12 +341,12 @@ Each rule reproduces the 20 programs. "Obs" marks observed rules and "inf" marks
 1. Program length is 7 cycles. With deload on, add a deload week after cycle 7, derived from cycle 7 by the §1.9 rule. Obs.
 2. Lay out the week by day count with the rest pattern table in §1.3. Obs.
 3. The no-preference split is 2 days Full Body, 3 days Upper/Lower/Full, 4 days Upper/Lower/Upper/Lower, 5 days PPLUL, 6 days PPLPPL. Obs.
-4. Give each of the six compound patterns (HPush, VPush, HPull, VPull, Squat, Hinge) exactly one primary per week, on a day whose split admits it. Obs. On full-body days use the sliding window in §1.4. Obs.
+4. Give each of the six compound patterns (HPush, VPush, HPull, VPull, Squat, Hinge) exactly one primary per week, on a day whose split admits it. Obs (inf for hypertrophy pulls, §1.4). On full-body days use the sliding window in §1.4. Obs.
 5. Add secondaries per pattern from the session budget (§1.4 table). Obs. Fill one per pattern before adding a second. Inf.
 6. Order each day as primaries, then secondaries, then accessories. Obs.
 7. Fill the remaining minutes with accessories, one muscle each, from a priority list that starts Side Delts, Biceps, Triceps, then chest and back isolation, then calves, hamstrings, quads, then traps, upper back, abs, then the rest. Rotate the list across days and filter by the day's region. Inf. Never repeat an exercise in a program. Obs.
 8. Budget time as 3 minutes per compound set and 2 per accessory set, and land inside the band. Inf (fits all 73 days).
-9. The first compound gets the day's highest compound set count. Primaries get 2 or 3 at 40 to 60 minutes and mostly 4 at 60 minutes or more. Secondaries get 2 to 4. Accessories get 3 for hypertrophy and 2 for strength at 40 to 60 minutes. Obs ranges. The exact allocator is unknown.
+9. The first compound gets the day's highest compound set count. Primaries get 2 or 3 at 40 to 60 minutes (4 twice) and mostly 4 at 60 minutes or more. Secondaries get 2 to 4. Accessories get 3 for hypertrophy and 2 for strength at 40 to 60 minutes. Obs ranges. The exact allocator is unknown.
 10. Rep tier from the goal and role table in §1.5, with "both" taking strength primaries and hypertrophy for the rest. Obs.
 11. Rep sequence from the ladder and the progression's index list in §1.5. noPreference means linear. Static uses its own tier table and one cycle. Obs for hypertrophy, and for strength under linear. Inf for strength or both under the other progressions.
 12. RIR from the track and set count table in §1.6, constant across cycles. Obs.
@@ -357,10 +357,10 @@ Each rule reproduces the 20 programs. "Obs" marks observed rules and "inf" marks
 
 These 20 programs cannot determine the following.
 
-- The splits never generated (2x Upper/Lower and Push/Pull, 3x Upper/Lower/Full, 4x PPHS and PPL+Accessories, 5x ULULU, 6x PPHSUL).
+- The splits never generated (2x Upper/Lower and Push/Pull, 4x PPHS and PPL+Accessories, 5x ULULU, 6x PPHSUL). 3x Upper/Lower/Full was reached only through no preference (P21), never picked explicitly.
 - Strength and "both" tiers under static, undulating, and reverse progressions.
 - Hypertrophy pull tiers under linear, where primary and secondary are both 14-16. Static shows they are different slots.
-- The deload of a one-set exercise, and of a "First Cycle" deload.
+- The deload of a one-set exercise, and whether the wizard can ever produce a First Week deload.
 - The exact per-exercise set allocator and the exact accessory priority list. Both are fitted, not observed.
 - How focus on lower-body muscles works, and how strong the effect is.
 - Whether experience "None" or beginner changes anything at other splits or session lengths.
@@ -373,7 +373,7 @@ These 20 programs cannot determine the following.
 
 ## 2. Programs
 
-Everything here was observed on the test programs from §1, mainly P1 (3x Full Body, a 7-day weekly program). The owner's own program, "Recomp v3 (6-day)", was only read: 10 cycles, 6 workout days, deload None, periodization off.
+Everything here was observed on the test programs from §1, mainly P1 (3x Full Body, a 7-day weekly program). The owner's own program, "Recomp v3 (6-day)", was only read. It has 10 cycles, 6 workout days, deload None, and periodization off.
 
 ### 2.1 Weeks and cycles
 
@@ -381,7 +381,7 @@ A program is a list of days, workout or rest, that repeats. **Observed.**
 
 - A program with exactly 7 days is **weekly**. The UI says "Week": "Number of Weeks", "Week 1" cards, the Day / Week toggle, and "Week 1" on the Workout tab.
 - Any other length is a **cycle**. Duplicating a day in P1 made it 8 days, and every label switched to "Cycle": "Cycle 1" cards, Day / Cycle, "Number of Cycles" (`m2-program-cycle-terms.jpg`). The owner's 6-day program says "Cycle 1".
-- Day Order shows the length as "7-Day Cycle" either way.
+- Day Order always says "Cycle" ("7-Day Cycle" for P1), even for a weekly program.
 
 ### 2.2 Active Program on the Workout tab
 
@@ -444,7 +444,7 @@ The "+" Shortcuts sheet shows "Up Next • <day name>" for the active program's 
 
 `m2-program-settings-weekly.jpg`. The sheet is titled "Program Settings" with the program name under it.
 
-- **Number of Weeks** (or Cycles), a − / + stepper with "7 Weeks" under the title. Adding a week copies the last week's targets into it, and the deload stays last: P1's Week 8 repeated Week 7's 5-7 reps. Removing a week drops the last one. **Observed.**
+- **Number of Weeks** (or Cycles), a − / + stepper with "7 Weeks" under the title. Adding a week copies the last week's targets into it, and the deload stays last. P1's Week 8 repeated Week 7's 5-7 reps. Removing a week drops the last one. **Observed.**
 - **Name**, Edit.
 - **Color & Icon**, Edit, shown as "Red, Rocket". The milestone 1 spec has the picker (7 colors, about 50 glyphs).
 - **Day Order**, Edit, shown as "W, R, W, R, W, R, R". The sheet is titled "Day Order" with "7-Day Cycle" under it. It lists "Day 1 | Workout A" through "Day 7 | Rest Day" as a reorderable list, with Save and Cancel (`m2-program-day-order.jpg`).
@@ -453,7 +453,7 @@ The "+" Shortcuts sheet shows "Up Next • <day name>" for the active program's 
   - First Week ("Start each training block with a lower-intensity week to ease into new workloads and reduce soreness.")
   - Last Week ("Finish each training block with a lighter week to promote recovery and readiness for the next phase.")
 
-  The choice moves the Deload card. First Week derives the deload from Week 1 by the §1.9 rule: 3 x 11-13 at RIR 3, 2, 1 became 2 x 9-10 at RIR 6+, 5, and 2 x 14-16 at RIR 1, 0 became 1 x 11-13 at RIR 4. **Observed.**
+  The choice moves the Deload card. First Week derives the deload from Week 1 by the §1.9 rule. 3 x 11-13 at RIR 3, 2, 1 became 2 x 9-10 at RIR 6+, 5, and 2 x 14-16 at RIR 1, 0 became 1 x 11-13 at RIR 4. **Observed.**
 
 - **Periodization**, a toggle with "Organize your training into phases that vary intensity and volume to support continuous progress and effective recovery". There are no sub-options in Program Settings. The style (linear, reverse linear, undulating, static) is chosen only in the generation wizard. Turning it off asks "Turn off periodization?" / "Periodization is what allows cycle-to-cycle variation. When disabled, all weeks for an exercise will use identical sets and targets. The impact of turning this off is not reversible." with Turn Off and Go Back (`m2-program-periodization-off-dialog.jpg`). After Turn Off, every week took Week 1's targets, and the cards collapsed to one "7 Weeks" card plus the Deload card. **Observed.**
 - **Duplicate Program**, which opens "Program Name". The name defaults to today's date ("October 23, 2026"), with "Save & Go to Duplicate" (`m2-program-duplicate-name.jpg`).
@@ -498,7 +498,7 @@ With history, every set row prefills a weight and reps. The Auto column shows "<
 What the rows show. **Inferred** from the table.
 
 - Set 1 gets the heaviest load. Later sets usually drop one equipment step and keep the reps near the middle of the range, which models fatigue.
-- Reps can leave the target range: 25x16 against 10-15. When they do, Expand Rep Range widens the target (§3.3).
+- Reps can leave the target range, as in 25x16 against 10-15. When they do, Expand Rep Range widens the target (§3.3).
 - A strong session raises the load. Floor press S2 (12, 11, 10 reps at RIR 2, 2, 1) led to +10 lb on every set. A weak session lowers it. S3's 150x7@0 led to 145, 140, 140.
 - Prescriptions snap to the gym's equipment steps (5 lb plates, the 25 to 30 lb dumbbell gap, the 10 lb pin stack).
 - **Weight Match** keeps set 1's weight on every set and lowers the reps instead: calf 110x9, 110x6, 110x5 against 110x9, 100x10, 100x8.
@@ -619,7 +619,7 @@ Barbell Floor Press, history 1-RM 202.5 to 214.6, with set 1's working weight ch
 
 - The first warm-up is always "40% of 1-RM x 10". The rest climb toward the working weight in steps labelled 60 to 64% (x5 to x7), 74% (x3), 82 to 83% (x2 to x4), and 88% to 101% (x1). More sets appear as the working weight nears the 1-RM. **Observed.**
 - The "1-RM" behind the labels is not the history 1-RM. At working weights of 135 to 185 it is about 180 to 190, and above 225 it grows with the working weight (40% is 70, 90, 105 at 225, 275, 315). **Measured** from the loads; the rule is unknown.
-- Simplify Warm-Up Plates moves loads to plate-friendly totals, the bar plus 10s, 25s, 35s, or 45s. It also changes reps to compensate: at 135, 110x5 became 95x7. It can merge or add sets: at 225, 70x10 and 165x2 became 65x10, 135x4, and 185x1. **Observed.**
+- Simplify Warm-Up Plates moves loads to plate-friendly totals, the bar plus 10s, 25s, 35s, or 45s. It also changes reps to compensate. At 135, 110x5 became 95x7. It can merge or add sets. At 225, 70x10 and 165x2 became 65x10, 135x4, and 185x1. **Observed.**
 - The string "Your first working weight is too low relative to your 1RM to generate smart warmups." explains the empty result at 45 lb. **Observed** with the string.
 
 **Scheme.** The Scheme tab applies the Warm-Up Scheme setting to the working weight exactly: "40% of 150 lb · 60 lb x 5", "60% of 150 lb · 90 lb x 5", "80% of 150 lb · 120 lb x 3", with editable percent and reps fields (`m2-warmup-scheme-150.jpg`). **Observed** with Simplify off.
@@ -721,7 +721,7 @@ More > Workout > Other > Exercise Assessment opens a single page of seven toggle
 How the answers gate `preconditions`:
 
 - Generated programs picked exercises with the barbell bench, barbell overhead press, and 45° incline barbell press preconditions, all "yes" answers. They never picked a bodyweight or weighted pull-up or dip, all "no" answers (§1.7). **Measured.**
-- Turning on "5 pull-ups" and regenerating P2's inputs (P25, `exports/program-p25-str-3x-fb-40-60-pullups-yes.xlsx`) still picked the machine-assisted pull-up. One sample cannot separate gating from chance, or from the gym lacking the pull-up's equipment. **Observed**, inconclusive. The answer was turned back off.
+- Turning on "5 pull-ups" and regenerating P2's inputs with deload off (P25, `exports/program-p25-str-3x-fb-40-60-pullups-yes.xlsx`) still picked the machine-assisted pull-up. One sample cannot separate gating from chance, or from the gym lacking the pull-up's equipment. **Observed**, inconclusive. The answer was turned back off.
 - Proposed mapping for our generator, **inferred** from the precondition names in `app_file.json`:
 
   | Precondition entries (exercises)                                                                                                                                              | Unlocked by                                                 |
@@ -791,7 +791,7 @@ Real files are in [`exports/`](exports/). [`tools/xlsx.py`](tools/xlsx.py) reads
 
 - The header row is an empty first cell, then `Exercise`, `Notes`, and four columns per set: `Set N Type`, `Set N Rep Range`, `Set N RIR`, `Set N Rest`.
 - The first exercise row starts with `<workout name> @ <gym name>`.
-- Set Type is one of "Standard Set", "Drop Set", "Myo Set", "Failure Set".
+- Set Type is one of "Standard Set", "Drop Set", "Myo Set", "Failure Set". The sample files hold all but Myo Set.
 - Rep Range is "8 - 12". A single target is "10 - 10". A failure set is "8+". A drop set lists its drops in parentheses, "8 - 8 (6 - 6)", and its RIR the same way, "0 (0)".
 - RIR is a decimal ("2.0"). Rest is seconds as a decimal, or empty when unset.
 - A superset member's name ends with " ∈ SS1" (SS2 and so on for further groups).
@@ -799,9 +799,9 @@ Real files are in [`exports/`](exports/). [`tools/xlsx.py`](tools/xlsx.py) reads
 
 **Export Program** writes one sheet, "Training Programs" ([`exports/program-p*.xlsx`](exports/)).
 
-- Row 1: `Program: <name>`, `Cycles: <n>`, `Deload: None|First Cycle|Last Cycle`, `Color: <name>`, `Icon: <name>`.
+- Row 1: `Program: <name>`, `Cycles: <n>`, `Deload: None|First Cycle|Last Cycle`, `Color: <name>`, `Icon: <name>`. `First Cycle` was not seen in a file.
 - Then `Block 1`, then per cycle a header row `Cycle N`, `Exercise`, `Skipped`, `Notes`, and the set columns as above.
-- Each day is a run of rows whose first cell is `<day name> @ <gym>`, or a single `Rest` row.
+- Each day is a run of exercise rows. Only the first row's first cell holds `<day name> @ <gym>`, and the rest leave it empty. A rest day is a single `Rest` row. **Observed.**
 - `Skipped` is "Yes" or "No".
 - The deload week is not written (§1.9).
 
@@ -861,17 +861,17 @@ Everything below was created in MF on 2026-10-23 and 2026-10-24 (the session cro
 
 **Settings changed and restored.**
 
-| Setting                                                          | Changed to                                  | Restored                           | Confirmed                                                     |
-| ---------------------------------------------------------------- | ------------------------------------------- | ---------------------------------- | ------------------------------------------------------------- |
-| Active program                                                   | Test programs P1 (by the wizard), then none | "Recomp v3 (6-day)" reactivated    | Workout tab shows it at Cycle 1, every day unticked, as found |
-| Generation wizard's remembered Deload                            | On (P1 to P23, P25)                         | Off, by generating P24 with it off | Export `Deload: No`, the value the wizard first showed        |
-| Generation wizard's remembered Lifting Experience                | Beginner, then Advanced (P16, P17)          | Intermediate                       | Wizard                                                        |
-| Smart Progression > Weight Match                                 | On                                          | Off                                | Settings page and export                                      |
-| Smart Progression > Expand Rep Range                             | Off                                         | On                                 | Settings page and export                                      |
-| Warm-Up > Simplify Warm-Up Plates                                | Off                                         | On                                 | Settings page                                                 |
-| Exercise Assessment "5 pull-ups"                                 | Yes                                         | No                                 | Assessment page and export                                    |
-| Barbell Floor Press: Do Not Recommend, Expand Rep Range override | On, Off                                     | Off, Default (Reset Defaults)      | Export row is all defaults                                    |
-| Library Gym filter                                               | "New Gym"                                   | Cleared                            | Chip reads "Gym"                                              |
-| Data Export checkboxes                                           | Several                                     | All unchecked                      | Page                                                          |
+| Setting                                                          | Changed to                                  | Restored                           | Confirmed                                                                           |
+| ---------------------------------------------------------------- | ------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------- |
+| Active program                                                   | Test programs P1 (by the wizard), then none | "Recomp v3 (6-day)" reactivated    | Workout tab shows it at Cycle 1, every day unticked, as found                       |
+| Generation wizard's remembered Deload                            | On for P1 to P23 except P18; off for P25    | Off, by generating P24 with it off | Data Export's Workout Settings `Deload` reads No, the value the wizard first showed |
+| Generation wizard's remembered Lifting Experience                | Beginner, then Advanced (P16, P17)          | Intermediate                       | Wizard                                                                              |
+| Smart Progression > Weight Match                                 | On                                          | Off                                | Settings page and export                                                            |
+| Smart Progression > Expand Rep Range                             | Off                                         | On                                 | Settings page and export                                                            |
+| Warm-Up > Simplify Warm-Up Plates                                | Off                                         | On                                 | Settings page                                                                       |
+| Exercise Assessment "5 pull-ups"                                 | Yes                                         | No                                 | Assessment page and export                                                          |
+| Barbell Floor Press: Do Not Recommend, Expand Rep Range override | On, Off                                     | Off, Default (Reset Defaults)      | Export row is all defaults                                                          |
+| Library Gym filter                                               | "New Gym"                                   | Cleared                            | Chip reads "Gym"                                                                    |
+| Data Export checkboxes                                           | Several                                     | All unchecked                      | Page                                                                                |
 
 **Residue that can't be removed.** The export's Exercise Settings sheet keeps a "Barbell Floor Press" row with every value at its default, created when its settings were edited. MF offers no way to delete such a row. The owner never used the exercise, and the row changes nothing.
