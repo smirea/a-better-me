@@ -27,6 +27,7 @@ Milestone 2 builds what milestone 1 cut, so the app does everything the owner us
 - **Progression and session:** `Workouts/Progression/` (pure logic), `Session/`, and `More/` workout settings.
 - **Gyms and library:** `Workouts/Gyms/` and `Library/`.
 - **Dashboard:** `Dashboard/`.
+- **Contracts between them.** `Dashboard/BodyWeightLogSheet.swift` is the weigh-in sheet the Shortcuts sheet's Weight shortcut presents (programs thread presents it, dashboard thread owns it). The Shortcuts sheet (`Builder/NewWorkoutSheet.swift`) belongs to the programs thread.
 - **Second wave:** the live workout's Equipment chip and plate calculator, after the progression and gym threads merge, and xlsx import and export.
 
 **New synced data.** All of it shipped in the groundwork migration `0002`:
