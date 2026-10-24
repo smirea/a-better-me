@@ -1,18 +1,15 @@
 /**
- * The one bridge from env-manager project `a-better-me` to the Worker, GitHub, and the committed PowerSync public key.
+ * The one bridge from env-manager project `a-better-me` to the Worker and GitHub.
  * Never prints a value: it logs key names only and hands values to child processes on stdin.
  *
  *   bun scripts/secrets.ts push        the Worker secrets from env-manager prod, once the Worker exists
  *   bun scripts/secrets.ts github      the Cloudflare deploy credentials as repository secrets
  *   bun scripts/secrets.ts check       drift between env-manager prod, the Worker, and GitHub
  *   bun scripts/secrets.ts verify      CI, before deploying: the Worker has every required secret (no AWS)
- *   bun scripts/secrets.ts public-key  writes powersync/prod/token-public-key.json from the prod signing key
  *
  * Every command but `verify` reads env-manager with `env-manager print`, which needs this Mac's AWS access.
  */
 import { spawnSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { REQUIRED_IN_PRODUCTION } from '../server/src/config';
 import { parseDotenv, type Values } from './lib';
 
@@ -20,7 +17,6 @@ const PROJECT = 'a-better-me';
 const REPO = 'smirea/a-better-me';
 const WORKER_SECRETS = REQUIRED_IN_PRODUCTION;
 const CLOUDFLARE_SECRETS = ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'] as const;
-const root = join(import.meta.dir, '..');
 
 /** One environment's values, from the `.env.local` section of `env-manager print`. */
 function readEnv(env: string): Values {
@@ -101,16 +97,7 @@ function verify() {
 	console.log(`The Worker has every required secret: ${WORKER_SECRETS.join(', ')}`);
 }
 
-/** The public half of the prod signing key, which `powersync/prod/service.yaml` lists for PowerSync Cloud. */
-function publicKey() {
-	const { POWERSYNC_JWT_PRIVATE_KEY } = require(readEnv('prod'), ['POWERSYNC_JWT_PRIVATE_KEY'], 'prod');
-	const { kty, crv, kid, x } = JSON.parse(POWERSYNC_JWT_PRIVATE_KEY!) as Record<string, string>;
-	const file = join(root, 'powersync/prod/token-public-key.json');
-	writeFileSync(file, `${JSON.stringify({ kty, crv, x, kid, alg: 'EdDSA' }, null, '\t')}\n`);
-	console.log(`Wrote powersync/prod/token-public-key.json (kid ${kid})`);
-}
-
-const commands: Record<string, () => void> = { push, github, check, verify, 'public-key': publicKey };
+const commands: Record<string, () => void> = { push, github, check, verify };
 const command = commands[process.argv[2] ?? ''];
 if (!command) {
 	console.error(`Usage: bun scripts/secrets.ts <${Object.keys(commands).join('|')}>`);

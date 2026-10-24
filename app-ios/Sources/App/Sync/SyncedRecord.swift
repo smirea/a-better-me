@@ -1,8 +1,8 @@
 import Foundation
 import GRDB
 
-/// A row of one synced table, read and written through GRDB over PowerSync's view of it. The id column is the record's
-/// `key`: a lowercase UUID for workouts and sessions, the exercise id for the rest.
+/// A row of one synced table, read and written through GRDB. The id column is the record's `key`: a lowercase UUID
+/// for workouts and sessions, the exercise id for the rest.
 protocol SyncedRecord: FetchableRecord, PersistableRecord, Identifiable, Hashable, Sendable where ID: Sendable {
     static var table: String { get }
     static func key(_ id: ID) -> String
@@ -78,21 +78,14 @@ extension Row {
         return merged
     }
 
-    /// PowerSync stores a boolean as 0 or 1; Postgres may stream it back as text.
     func flag(_ column: String) -> Bool {
-        let value: DatabaseValue = self[column]
-        switch value.storage {
-        case let .int64(number): return number != 0
-        case let .string(text): return text == "1" || text == "true"
-        case let .double(number): return number != 0
-        default: return false
-        }
+        (self[column] as Int64?).map { $0 != 0 } ?? false
     }
 }
 
 /// Timestamps on the wire and in SQLite: ISO 8601 in UTC with fractional seconds, which Postgres' `timestamptz`
-/// accepts and which sorts as text. Parsing also takes what Postgres and PowerSync emit: a space before the time,
-/// microseconds, and an offset with or without minutes.
+/// accepts and which sorts as text. Parsing also takes a space before the time, microseconds, and an offset with or
+/// without minutes.
 enum Instant {
     private static let calendar: Calendar = {
         var calendar = Calendar(identifier: .iso8601)

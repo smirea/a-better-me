@@ -1,15 +1,6 @@
 {
-  "originHash" : "ef5e40996a5450fa029062085e13fb96ebae504fccadba7793dc270b31d70410",
+  "originHash" : "a4169fd1b12968425c87bcecf1f18e30728c7a90369f08450a2f6f2bac6fbfd7",
   "pins" : [
-    {
-      "identity" : "csqlite",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/powersync-ja/CSQLite.git",
-      "state" : {
-        "revision" : "3e71dedbdeab0d797ead0e864adbc69b659543a1",
-        "version" : "3.53.4"
-      }
-    },
     {
       "identity" : "grdb.swift",
       "kind" : "remoteSourceControl",
@@ -20,39 +11,12 @@
       }
     },
     {
-      "identity" : "powersync-sqlite-core-swift",
+      "identity" : "sync-engine",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/powersync-ja/powersync-sqlite-core-swift.git",
+      "location" : "https://github.com/smirea/sync-engine",
       "state" : {
-        "revision" : "0302873677f07039d5e2fc4d1aefdf093e8e6292",
-        "version" : "0.5.3"
-      }
-    },
-    {
-      "identity" : "powersync-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/powersync-ja/powersync-swift",
-      "state" : {
-        "revision" : "e6d57d6acb76369b6cd3b459834615a8f90b544e",
-        "version" : "1.16.4"
-      }
-    },
-    {
-      "identity" : "swift-async-algorithms",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-async-algorithms.git",
-      "state" : {
-        "revision" : "13713a4ffdee8abd929f92568ee9462a46ae26e0",
-        "version" : "1.1.7"
-      }
-    },
-    {
-      "identity" : "swift-collections",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections.git",
-      "state" : {
-        "revision" : "844289ac455816e193f1dbbe014f3c4dbe429410",
-        "version" : "1.7.4"
+        "branch" : "master",
+        "revision" : "3cfa6de90a7543ec85a74943e165edb2178198e8"
       }
     }
   ],

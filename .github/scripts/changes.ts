@@ -12,7 +12,11 @@ const paths = (full ? [] : (await $`git diff --name-only -z ${comparison}`.text(
 	name => name && !['.md', '.rst'].includes(extname(name).toLowerCase()) && !name.startsWith('docs/'),
 );
 const common = full || paths.some(name => name.startsWith('.github/'));
-const bun = !['swift', 'empty'].includes(kind) && (common || paths.some(name => !name.startsWith('app-ios/')));
+// The committed Swift schema is checked by a Bun test against the generator, so a hand edit to it runs the Bun jobs.
+const generated = 'app-ios/Sources/App/Sync/Generated/';
+const bun =
+	!['swift', 'empty'].includes(kind) &&
+	(common || paths.some(name => !name.startsWith('app-ios/') || name.startsWith(generated)));
 const swift =
 	['swift', 'monorepo-swift'].includes(kind) &&
 	(common ||

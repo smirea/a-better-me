@@ -1,13 +1,12 @@
 /**
  * Removes an agent's worktree once its PR is merged: `bun scripts/teardown-worktree.ts <worktree path | branch> [--force]`.
  * A worktree on a detached HEAD has no branch: pass its path or directory name with --force instead.
- * Run it from the main checkout. Stops its servers, removes its PowerSync container and databases, deletes the worktree
- * and its branches, and updates the default branch.
+ * Run it from the main checkout. Stops its servers, deletes the worktree with its SQLite file and its branches, and
+ * updates the default branch.
  */
 import { existsSync, realpathSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { readOverride, run, worktrees } from './lib';
-import { databaseName, dockerRunning, dropDatabases, stopPowerSync } from './local-stack';
 
 const args = process.argv.slice(2);
 const force = args.includes('--force');
@@ -40,7 +39,7 @@ if (!pr.startsWith('MERGED') && !force) {
 if (worktree) {
 	const base = Number(readOverride(worktree)?.CLIENT_PORT) || undefined;
 	if (base) {
-		const ports = [base, base + 1].map(port => `-iTCP:${port}`);
+		const ports = [base, base + 1, base + 2].map(port => `-iTCP:${port}`);
 		const pids = run(['lsof', '-t', '-sTCP:LISTEN', ...ports], { allowFail: true })
 			.split('\n')
 			.filter(Boolean);
@@ -48,17 +47,6 @@ if (worktree) {
 	}
 	run(['git', 'worktree', 'remove', '--force', worktree]);
 	console.log(`Removed worktree ${worktree}.`);
-}
-
-// T3 Code can delete a settled thread's worktree before teardown runs. Its container and databases are named after the
-// directory, which is the branch name for T3 worktrees, so they are still found and removed.
-const checkout = worktree ?? target;
-if (dockerRunning()) {
-	stopPowerSync(checkout);
-	await dropDatabases(databaseName(checkout));
-	console.log(`Removed the PowerSync container and the ${databaseName(checkout)} databases.`);
-} else {
-	console.warn('Docker is not running; the PowerSync container and databases stay.');
 }
 
 if (branch && !detached) {

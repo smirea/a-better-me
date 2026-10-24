@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// More > Sync: the owner token and what the sync connection is doing. The token is entered once and kept in the Keychain.
+/// More > Sync: the owner token and what the sync client is doing. The token is entered once and kept in the Keychain.
 struct SyncSettingsView: View {
     @Environment(LocalStore.self) private var store
     @State private var token = ""
@@ -37,7 +37,10 @@ struct SyncSettingsView: View {
             }
             if !store.rejected.isEmpty {
                 Section("Refused by the server") {
-                    ForEach(store.rejected, id: \.self) { Text($0).font(AppFont.caption()) }
+                    ForEach(store.rejected.indices, id: \.self) { index in
+                        let rejection = store.rejected[index]
+                        Text("\(rejection.table) \(rejection.id): \(rejection.reason)").font(AppFont.caption())
+                    }
                 }
             }
         }
@@ -47,10 +50,10 @@ struct SyncSettingsView: View {
     private var footer: String {
         switch store.syncState {
         case .noToken: "Everything stays on this phone until an owner token is saved."
-        case .connecting: "Reaching the server."
+        case .syncing: "Exchanging changes with the server."
         case .connected: "Changes reach your other devices within a second."
         case .offline: "Changes wait on this phone and upload when the server is reachable."
-        case .syncOff: "This server runs without PowerSync. Everything stays on this phone, and the app asks again now and then."
+        case let .failed(reason): "The server answered with an error and the app will retry: \(reason)"
         case .badToken: "The server rejected the saved token. Save the right one to sync again."
         }
     }

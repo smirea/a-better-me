@@ -8,5 +8,5 @@ A Better Me's concepts, goals, paradigms, and high-level system decisions, one f
 - [Workflow](workflow.md): threads, PRs, worktrees, git hooks, and which tests run where.
 - [Workouts](workouts.md): milestone scope, the exercise catalog source, the workout domain model, and feature ownership.
 - [iOS](ios.md): platform targets, SwiftData persistence, the design system, code layout, and verification.
-- [Sync](sync.md): offline first, Postgres on Supabase, PowerSync, the owner token, the upload rules, the local stack, and the iOS local database.
-- [Hosting](hosting.md): the Cloudflare Worker, Hyperdrive, the R2 backups, secrets, and the CI deploy.
+- [Sync](sync.md): offline first, the sync engine's one space, the shared SQLite schema and its validators, the owner token, the write rules, local servers, and the iOS client.
+- [Hosting](hosting.md): the Cloudflare Worker, the Durable Object space, the R2 backups, secrets, and the CI deploy.

@@ -40,15 +40,3 @@ enum OwnerToken {
     }
     #endif
 }
-
-enum DeviceDefaults {
-    private static let databaseKey = "a-better-me-database"
-
-    /// Names this local database, so an upload's op ids (`<database>:<queue id>`) never repeat across reinstalls.
-    static var databaseID: String {
-        if let id = UserDefaults.standard.string(forKey: databaseKey) { return id }
-        let id = UUID().uuidString.lowercased()
-        UserDefaults.standard.set(id, forKey: databaseKey)
-        return id
-    }
-}
