@@ -26,6 +26,8 @@ struct WorkoutSummaryView: View {
     @State private var isEditingStart = false
     @State private var isEditingDuration = false
     @State private var isShowingChanges = false
+    /// View Changes' Undo per section. The plan write skips those changes; logged sets are untouched either way.
+    @State private var undone: Set<WorkoutChanges.Kind> = []
     @State private var confirmingDelete = false
     @State private var exit = Exit.none
 
@@ -74,6 +76,7 @@ struct WorkoutSummaryView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) { if isFinishing { finishBar(blocks) } }
+            .overlay { if isFinishing, !records.isEmpty { ConfettiOverlay() } }
         }
         .task {
             let session = session
@@ -102,10 +105,10 @@ struct WorkoutSummaryView: View {
             }
         }
         .sheet(isPresented: $isEditingDuration) {
-            DurationSheet(duration: endedAt.timeIntervalSince(session.startedAt)) { setEnd(session.startedAt.addingTimeInterval($0)) }
+            DurationSheet(duration: duration) { setEnd(session.startedAt.addingTimeInterval($0 + TimeInterval(session.pausedSeconds))) }
         }
         .sheet(isPresented: $isShowingChanges) {
-            if let template { WorkoutChangesSheet(changes: WorkoutChanges(before: template.blocks, after: SessionFlow.plan(from: blocks))) }
+            if let template { WorkoutChangesSheet(changes: WorkoutChanges(before: template.blocks, after: SessionFlow.plan(from: blocks)), undone: $undone) }
         }
     }
 
@@ -116,6 +119,7 @@ struct WorkoutSummaryView: View {
     }
 
     private var endedAt: Date { session.endedAt ?? finishedAt }
+    private var duration: TimeInterval { endedAt.timeIntervalSince(session.startedAt) - TimeInterval(session.pausedSeconds) }
 
     private func setEnd(_ date: Date) {
         if isFinishing { finishedAt = date } else { store.modify(WorkoutSession.self, id: session.id) { $0.endedAt = date } }
@@ -137,7 +141,10 @@ struct WorkoutSummaryView: View {
             let finishedAt = finishedAt
             store.modify(WorkoutSession.self, id: session.id) { $0.endedAt = finishedAt }
             store.advanceProgram(after: session)
-            if updatePlan, let template { store.updateWorkoutPlan(template.id, from: session) }
+            if updatePlan, let template {
+                let plan = SessionFlow.plan(from: session.blocks, template: template.blocks, undoing: undone)
+                store.updateWorkoutPlan(template.id, plan: plan, session: session)
+            }
         case .delete:
             store.delete(WorkoutSession.self, id: session.id)
         }
@@ -196,7 +203,7 @@ struct WorkoutSummaryView: View {
                 isEditingStart = true
             }
             Divider().overlay(Theme.separator)
-            detailRow("Duration", icon: "clock.fill", subtitle: Duration.seconds(endedAt.timeIntervalSince(session.startedAt)).formatted(.time(pattern: .hourMinuteSecond))) {
+            detailRow("Duration", icon: "clock.fill", subtitle: Duration.seconds(duration).formatted(.time(pattern: .hourMinuteSecond))) {
                 isEditingDuration = true
             }
             if !isFinishing {
@@ -410,9 +417,10 @@ private struct DurationSheet: View {
     }
 }
 
-/// "Workout Changes": Before and After for each exercise Update Workout Plan would change.
+/// "Workout Changes": Before and After for each exercise Update Workout Plan would change, with Undo per section.
 private struct WorkoutChangesSheet: View {
     let changes: WorkoutChanges
+    @Binding var undone: Set<WorkoutChanges.Kind>
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(\.dismiss) private var dismiss
 
@@ -423,10 +431,10 @@ private struct WorkoutChangesSheet: View {
                     Text("This workout matches its plan.").foregroundStyle(Theme.textSecondary)
                 }
                 if !changes.added.isEmpty {
-                    Section("Added Exercises") { ForEach(changes.added) { plan($0, title: catalog.name($0.exerciseID)) } }
+                    section(.added, "Added Exercises") { ForEach(changes.added) { plan($0, title: catalog.name($0.exerciseID)) } }
                 }
                 if !changes.modified.isEmpty {
-                    Section("Modified Exercises") {
+                    section(.modified, "Modified Exercises") {
                         ForEach(changes.modified, id: \.after.id) { change in
                             VStack(alignment: .leading, spacing: 12) {
                                 plan(change.before, title: "\(catalog.name(change.before.exerciseID)) (Before)")
@@ -436,7 +444,7 @@ private struct WorkoutChangesSheet: View {
                     }
                 }
                 if !changes.regrouped.isEmpty {
-                    Section("Supersets") {
+                    section(.regrouped, "Supersets") {
                         ForEach(changes.regrouped) { block in
                             Text(block.exercises.map { catalog.name($0.exerciseID) }.joined(separator: " + "))
                                 .font(AppFont.medium(15))
@@ -444,7 +452,7 @@ private struct WorkoutChangesSheet: View {
                     }
                 }
                 if !changes.removed.isEmpty {
-                    Section("Removed Exercises") { ForEach(changes.removed) { plan($0, title: catalog.name($0.exerciseID)) } }
+                    section(.removed, "Removed Exercises") { ForEach(changes.removed) { plan($0, title: catalog.name($0.exerciseID)) } }
                 }
             }
             .navigationTitle("Workout Changes")
@@ -453,6 +461,27 @@ private struct WorkoutChangesSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }
                 }
+            }
+        }
+    }
+
+    /// An undone section stays listed, struck through, with Redo in place of Undo.
+    private func section(_ kind: WorkoutChanges.Kind, _ title: String, @ViewBuilder rows: () -> some View) -> some View {
+        let isUndone = undone.contains(kind)
+        return Section {
+            rows().strikethrough(isUndone).opacity(isUndone ? 0.5 : 1)
+        } header: {
+            HStack {
+                Text(title)
+                if isUndone { Text("Undone").foregroundStyle(Theme.textSecondary) }
+                Spacer()
+                Button(isUndone ? "Redo" : "Undo") {
+                    if isUndone { undone.remove(kind) } else { undone.insert(kind) }
+                }
+                .font(AppFont.headline(13))
+                .underline()
+                .textCase(nil)
+                .accessibilityLabel("\(isUndone ? "Redo" : "Undo") \(title)")
             }
         }
     }

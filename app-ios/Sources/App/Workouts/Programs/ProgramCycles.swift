@@ -130,8 +130,14 @@ enum ProgramAdvance {
 /// stay as they were. A deload session changes nothing, because the deload derives from its neighbor week.
 enum ProgramPlanUpdate {
     static func blocks(of template: WorkoutTemplate, updatedBy session: WorkoutSession, program: Program) -> [WorkoutBlock] {
-        guard let position = session.program, let week = program.week(ofCycle: position.cycle) else { return template.blocks }
-        let plan = SessionFlow.plan(from: session.blocks).flatMap(\.exercises)
+        guard let position = session.program else { return template.blocks }
+        return blocks(of: template, plan: SessionFlow.plan(from: session.blocks), position: position, program: program)
+    }
+
+    /// `plan` is the session's blocks already reduced to a plan (logs stripped, undone changes reverted).
+    static func blocks(of template: WorkoutTemplate, plan: [WorkoutBlock], position: ProgramPosition, program: Program) -> [WorkoutBlock] {
+        guard let week = program.week(ofCycle: position.cycle) else { return template.blocks }
+        let plan = plan.flatMap(\.exercises)
         let planned = Dictionary(plan.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let periodized = program.config.periodization
         var blocks = template.blocks

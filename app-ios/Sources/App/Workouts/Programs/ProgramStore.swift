@@ -188,16 +188,16 @@ extension LocalStore {
         presenter.startOrResume({ program.session(startingFrom: template, dayID: day.id, gymID: template.gymID) }, in: self)
     }
 
-    /// "Update Workout Plan" on finishing: a library workout takes the session's plan whole; a program day merges it
-    /// into its week (`ProgramPlanUpdate`).
-    func updateWorkoutPlan(_ templateID: UUID, from session: WorkoutSession) {
+    /// "Update Workout Plan" on finishing: a library workout takes the session's `plan` whole; a program day merges it
+    /// into the session's week (`ProgramPlanUpdate`).
+    func updateWorkoutPlan(_ templateID: UUID, plan: [WorkoutBlock], session: WorkoutSession) {
         write { db in
             guard let existing = try WorkoutTemplate.fetchOne(db, key: WorkoutTemplate.key(templateID)) else { return }
             var template = existing
             if let position = session.program, let program = try Program.fetchOne(db, key: Program.key(position.programID)) {
-                template.blocks = ProgramPlanUpdate.blocks(of: existing, updatedBy: session, program: program)
+                template.blocks = ProgramPlanUpdate.blocks(of: existing, plan: plan, position: position, program: program)
             } else {
-                template.blocks = SessionFlow.plan(from: session.blocks)
+                template.blocks = plan
             }
             template.updatedAt = .now
             try template.updateChanges(db, from: existing)

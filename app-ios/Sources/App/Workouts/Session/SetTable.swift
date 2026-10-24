@@ -7,11 +7,11 @@ extension SessionEditor {
     func setTable(block: Int, exercise index: Int, fields: [SetField]) -> some View {
         let item = blocks[block].exercises[index]
         let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
-        let rows = blocks.rows(block: block, exercise: index)
+        let rows = blocks.rows(block: block, exercise: index).filter { !isHidden($0) }
         return VStack(spacing: 8) {
             HStack(spacing: 8) {
                 Text("Set").frame(width: 36)
-                Text("Previous").frame(maxWidth: .infinity)
+                referenceHeader.frame(maxWidth: .infinity)
                 ForEach(fields, id: \.self) { Text($0.header(unit: unit)).frame(maxWidth: .infinity) }
                 Button { toggleAll(block: block, exercise: index, previous: previous) } label: {
                     checkbox(item.isDone)
@@ -47,7 +47,7 @@ extension SessionEditor {
         let value = entry(path, previous: previous)
         return HStack(spacing: 8) {
             badge(path, number: number)
-            previousText(SessionFlow.previousLog(for: path, in: blocks, previous: previous))
+            referenceText(path, previous: previous)
                 .frame(maxWidth: .infinity)
             ForEach(fields, id: \.self) { field in
                 cell(path, field: field, value: value)
@@ -89,13 +89,42 @@ extension SessionEditor {
         }
     }
 
-    private func previousText(_ log: SetLog?) -> some View {
-        VStack(spacing: 0) {
-            if let log {
-                Text(Self.summary(of: log, unit: unit))
-                if let rir = log.rir { Text("\(rir >= 6 ? "6+" : "\(rir)") RIR").foregroundStyle(Theme.textSecondary) }
+    /// "Auto ⇄" or "Previous ⇄"; tapping switches. A past session has no suggestions, so its header is plain.
+    @ViewBuilder
+    private var referenceHeader: some View {
+        if mode == .live {
+            Button {
+                store.referenceColumn = reference == .auto ? .previous : .auto
+            } label: {
+                HStack(spacing: 4) {
+                    Text(reference == .auto ? "Auto" : "Previous")
+                    Image(systemName: "arrow.left.arrow.right").imageScale(.small)
+                }
+            }
+            .accessibilityLabel("Reference column")
+            .accessibilityValue(reference == .auto ? "Auto" : "Previous")
+        } else {
+            Text("Previous")
+        }
+    }
+
+    private func referenceText(_ path: RowPath, previous: [WorkoutSet]) -> some View {
+        let lines: (main: String?, rir: Int?, empty: String) = switch reference {
+        case .auto:
+            suggestion(for: path).map { suggestion in
+                var values = suggestion
+                values.rir = nil
+                return (values.autoText(unit: unit), suggestion.rir, "No Target")
+            } ?? (nil, nil, "No Target")
+        case .previous:
+            SessionFlow.previousLog(for: path, in: blocks, previous: previous).map { (Self.summary(of: $0, unit: unit), $0.rir, "") } ?? (nil, nil, "No Previous")
+        }
+        return VStack(spacing: 0) {
+            if let main = lines.main {
+                Text(main)
+                if let rir = lines.rir { Text("\(rir >= 6 ? "6+" : "\(rir)") RIR").foregroundStyle(Theme.textSecondary) }
             } else {
-                Text("No Previous").foregroundStyle(Theme.textTertiary)
+                Text(lines.empty).foregroundStyle(Theme.textTertiary)
             }
         }
         .font(AppFont.caption(12))
@@ -103,10 +132,12 @@ extension SessionEditor {
         .minimumScaleFactor(0.8)
     }
 
-    /// "40 kg x 8", the weight or the reps alone when only one was logged.
+    /// "40 kg x 8", "40 kg x 8 + 2" with partials, or the weight or the reps alone when only one was logged.
     static func summary(of log: SetLog, unit: WeightUnit) -> String {
         let weight = log.weightKg.map { "\(unit.format(kg: $0)) \(unit.rawValue)" }
-        let reps = log.reps.map(String.init)
+        let reps = log.reps.map { full in
+            if let partial = log.partialReps, partial > 0 { "\(full) + \(partial)" } else { String(full) }
+        }
         let duration = log.durationSeconds.map { Duration.seconds($0).formatted(.time(pattern: .minuteSecond)) }
         let distance = log.distanceMeters.map { Measurement(value: $0, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated)) }
         return [weight, reps ?? duration, distance].compactMap { $0 }.joined(separator: " x ")
@@ -114,9 +145,9 @@ extension SessionEditor {
 
     private func cell(_ path: RowPath, field: SetField, value: SetEntry) -> some View {
         let isFocused = focus?.row == path && focus?.field == field
-        let text = isFocused ? focus?.text ?? "" : field.text(value, unit: unit)
+        let text = if let focus, isFocused { focusText(focus, value: value) } else { field.display(value, unit: unit) }
         return Button {
-            focus = KeypadFocus(row: path, field: field, text: field.text(value, unit: unit))
+            focus = KeypadFocus(row: path, field: field, entry: value, unit: unit)
         } label: {
             Text(text)
                 .font(AppFont.medium(16))
@@ -135,11 +166,27 @@ extension SessionEditor {
         .accessibilityLabel("\(field.header(unit: unit)) \(text)")
     }
 
+    /// While typing partials the full count stays visible: "8 + 2|".
+    private func focusText(_ focus: KeypadFocus, value: SetEntry) -> String {
+        focus.partial ? "\(value.reps.map(String.init) ?? "") + \(focus.text)" : focus.text
+    }
+
     private func checkbox(_ isOn: Bool) -> some View {
         Image(systemName: isOn ? "checkmark.square.fill" : "square")
             .font(.title3)
             .foregroundStyle(isOn ? Theme.textPrimary : Theme.textSecondary)
             .frame(width: Self.checkboxWidth, height: 36)
+    }
+
+    /// Hide Completed Sets folds checked warm-ups behind the Warm Up chip's badge.
+    func isHidden(_ path: RowPath) -> Bool {
+        guard mode == .live, defaults.workout.warmUp.hideCompletedSets else { return false }
+        let set = blocks[path.block].exercises[path.exercise].sets[path.set]
+        return set.type == .warmUp && set.isCompleted
+    }
+
+    func hiddenWarmUpCount(block: Int, exercise index: Int) -> Int {
+        blocks.rows(block: block, exercise: index).count(where: isHidden)
     }
 
     // MARK: Values
@@ -148,7 +195,14 @@ extension SessionEditor {
     func entry(_ path: RowPath, previous: [WorkoutSet]) -> SetEntry {
         if let log = blocks.log(at: path) { return SetEntry(log) }
         if let draft = drafts[blocks.rowID(at: path)] { return draft }
-        return SetEntry.prefill(target: blocks.target(at: path), previous: SessionFlow.previousLog(for: path, in: blocks, previous: previous))
+        let smartFill = defaults.workout.progression.initialFill == .smartProgression || store.appliedRows.contains(blocks.rowID(at: path))
+        let suggestion = smartFill ? suggestion(for: path) : nil
+        return SessionFlow.prefill(for: path, in: blocks, previous: previous, suggestion: suggestion, rirTracking: defaults.workout.rirTracking, unit: unit)
+    }
+
+    func suggestion(for path: RowPath) -> SetSuggestion? {
+        guard mode == .live else { return nil }
+        return store.suggestions[blocks[path.block].exercises[path.exercise].id]?[blocks.rowID(at: path)]
     }
 
     private func update(_ path: RowPath, _ change: (inout SetEntry) -> Void) {
@@ -175,8 +229,9 @@ extension SessionEditor {
         blocks.setLog(entry(path, previous: previous).log(at: .now), at: path)
         drafts[id] = nil
         guard mode == .live else { return }
-        let step = SessionFlow.afterCompleting(path, in: blocks, rest: restSeconds)
-        if let seconds = step.restSeconds { store.startRest(seconds: seconds) }
+        applyProgression(to: blocks[path.block].exercises[path.exercise].id)
+        let step = SessionFlow.afterCompleting(path, in: blocks, settings: defaults.workout, rest: restSeconds)
+        if let seconds = step.restSeconds { store.startRest(seconds: seconds, alerts: defaults.workout.rest) }
         if let next = step.next, next != current { withAnimation { current = next } }
     }
 
@@ -197,9 +252,15 @@ extension SessionEditor {
             drafts[blocks.rowID(at: path)] = nil
         }
         let partner = blocks[block].exercises.first { !$0.isDone }
-        if mode == .live, let next = partner?.id ?? SessionFlow.nextIncomplete(after: block, in: blocks) {
-            withAnimation { current = next }
+        guard mode == .live else { return }
+        let next: BlockExercise.ID? = if let partner {
+            defaults.workout.supersetAutoScroll ? partner.id : nil
+        } else if defaults.workout.exerciseAutoNext {
+            SessionFlow.nextIncomplete(after: block, in: blocks)
+        } else {
+            nil
         }
+        if let next { withAnimation { current = next } }
     }
 
     // MARK: Structure
@@ -245,12 +306,49 @@ extension SessionEditor {
         blocks[block].exercises[index].sets = sets
     }
 
-    /// The weight the first working set would log, which the warm-up scheme scales.
-    func firstWorkingWeight(block: Int, exercise index: Int) -> Double? {
+    /// What the first working set would log, with the exercise's warm-up settings; the calculator scales from it.
+    func warmUpContext(block: Int, exercise index: Int) -> WarmUpContext {
         let item = blocks[block].exercises[index]
-        guard let set = item.sets.firstIndex(where: { $0.type != .warmUp }) else { return nil }
-        let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
-        return entry(RowPath(block: block, exercise: index, set: set), previous: previous).weightKg
+        let exercise = catalog.exercise(item.exerciseID)
+        let overrides = ExerciseSettings.of(item.exerciseID, in: exerciseSettings)?.overrides
+        let settings = defaults.workout.warmUp
+        var context = WarmUpContext(
+            scheme: overrides?.warmUpScheme ?? settings.schemes[exercise?.restCategory ?? .upperIsolation] ?? WarmUpStep.standard,
+            automation: overrides?.warmUpAutomation ?? settings.automation,
+            simplifyPlates: settings.simplifyPlates
+        )
+        if let set = item.sets.firstIndex(where: { $0.type != .warmUp }) {
+            let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
+            let value = entry(RowPath(block: block, exercise: index, set: set), previous: previous)
+            context.workingWeightKg = value.weightKg
+            context.reps = value.reps ?? item.sets[set].target?.repsMax
+            context.rir = value.rir
+        }
+        let muscles = Set(exercise?.primaryMuscles ?? [])
+        let earlier = blocks.flatMap(\.exercises).prefix { $0.id != item.id }
+        context.isFresh = !earlier.contains { other in
+            other.sets.contains { $0.type != .warmUp && $0.isCompleted }
+                && !muscles.isDisjoint(with: catalog.exercise(other.exerciseID)?.primaryMuscles ?? [])
+        }
+        return context
+    }
+
+    /// Warm-Up Automation: exercises that track weight and have no warm-ups yet get their calculated rows.
+    func automateWarmUps() {
+        guard mode == .live, !store.didAutomateWarmUps.contains(session.id) else { return }
+        store.didAutomateWarmUps.insert(session.id)
+        for (b, block) in blocks.enumerated() {
+            for (e, item) in block.exercises.enumerated() {
+                guard SetField.fields(for: catalog.exercise(item.exerciseID)).contains(where: \.isWeight),
+                      !item.sets.contains(where: { $0.type == .warmUp }) else { continue }
+                let context = warmUpContext(block: b, exercise: e)
+                guard context.automation != .none else { continue }
+                let rows = SessionFlow.warmUps(context, mode: context.automation == .smart ? .smart : .scheme, unit: unit)
+                guard !rows.isEmpty else { continue }
+                addWarmUps(rows.map { ($0.weightKg, $0.reps) }, block: b, exercise: e)
+                store.invalidateSuggestions(for: item.id)
+            }
+        }
     }
 
     func remove(_ id: BlockExercise.ID) {
@@ -260,6 +358,7 @@ extension SessionEditor {
 
     /// The builder's swap keeps sets and targets; mid-session it also drops what was logged against the old exercise.
     func swap(_ id: BlockExercise.ID, to exerciseID: ExerciseID) {
+        store.invalidateSuggestions(for: id)
         blocks.swap(id, to: exerciseID)
         guard let at = blocks.locate(id) else { return }
         blocks[at.block].exercises[at.item].sets = blocks[at.block].exercises[at.item].sets.map(\.planned)
@@ -275,7 +374,7 @@ extension SessionEditor {
 
     func keypad(for focus: KeypadFocus) -> some View {
         let rir = blocks.contains(focus.row) ? entry(focus.row, previous: previousSets(for: focus.row)).rir : nil
-        return Keypad(field: focus.field, rir: rir) { handle($0) }
+        return Keypad(field: focus.field, rir: rir, partial: focus.partial) { handle($0) }
             .transition(.move(edge: .bottom))
     }
 
@@ -294,6 +393,9 @@ extension SessionEditor {
         case let .rir(value):
             update(state.row) { $0.rir = value }
             return
+        case let .partial(partial):
+            focus = KeypadFocus(row: state.row, field: state.field, entry: entry(state.row, previous: previousSets(for: state.row)), unit: unit, partial: partial)
+            return
         case .dismiss:
             focus = nil
             return
@@ -305,8 +407,24 @@ extension SessionEditor {
             if blocks.log(at: state.row) == nil { toggle(state.row, previous: previousSets(for: state.row)) }
             return
         }
-        update(state.row) { state.field.apply(state.text, to: &$0, unit: unit) }
+        let before = entry(state.row, previous: previousSets(for: state.row))
+        update(state.row) { state.apply(to: &$0, unit: unit) }
         focus = state
+        if !state.partial { propagate(state.field, from: state.row, before: before) }
+    }
+
+    /// Propagate Changes: the edited weight or reps also lands in the later open rows that showed the same value.
+    private func propagate(_ field: SetField, from path: RowPath, before: SetEntry) {
+        guard defaults.workout.propagateChanges, field.isWeight || field.isReps, blocks.log(at: path) == nil else { return }
+        let previous = previousSets(for: path)
+        let after = field.text(entry(path, previous: previous), unit: unit)
+        let rows = blocks.rows(block: path.block, exercise: path.exercise)
+        let targets = SessionFlow.propagationTargets(from: path, rows: rows, isOpen: { blocks.log(at: $0) == nil }) {
+            $0 == path ? field.text(before, unit: unit) : field.text(entry($0, previous: previous), unit: unit)
+        }
+        for target in targets {
+            update(target) { field.apply(after, to: &$0, unit: unit) }
+        }
     }
 
     /// → moves to the next field in the row, then to the first field of the next row.
@@ -321,8 +439,7 @@ extension SessionEditor {
             path = next
             fieldIndex = 0
         }
-        let field = fields[fieldIndex]
-        return KeypadFocus(row: path, field: field, text: field.text(entry(path, previous: previousSets(for: path)), unit: unit))
+        return KeypadFocus(row: path, field: fields[fieldIndex], entry: entry(path, previous: previousSets(for: path)), unit: unit)
     }
 }
 

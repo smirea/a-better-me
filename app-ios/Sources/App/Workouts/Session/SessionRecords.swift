@@ -95,6 +95,11 @@ enum SessionRecords {
 /// "View Changes": what Update Workout Plan would change in the template, matched by the workout exercise's ID,
 /// which a session keeps from the template it started from.
 struct WorkoutChanges {
+    /// The sections of the Workout Changes sheet, each with its own Undo.
+    enum Kind: Hashable, CaseIterable {
+        case added, modified, removed, regrouped
+    }
+
     var added: [BlockExercise] = []
     var modified: [(before: BlockExercise, after: BlockExercise)] = []
     var removed: [BlockExercise] = []
