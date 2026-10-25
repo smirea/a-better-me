@@ -112,7 +112,6 @@ private struct MetricDetailContent: View {
             }
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
-            .tint(Theme.textPrimary)
             .accessibilityLabel(fitToData ? "Scale from zero" : "Fit to data")
         }
     }
@@ -189,7 +188,6 @@ private struct MetricDetailContent: View {
                 .padding(.vertical, 7)
             }
             .buttonStyle(.glass)
-            .tint(Theme.textPrimary)
             .accessibilityLabel("Chart Averaging")
             .accessibilityValue(averaging.title)
         }

@@ -44,7 +44,6 @@ struct RestTimerSheet: View {
                     let remaining = store.rest?.remaining(at: context.date) ?? 0
                     VStack(spacing: 16) {
                         ProgressView(value: store.rest.map { remaining / $0.duration } ?? 0)
-                            .tint(Theme.textPrimary)
                         HStack {
                             roundButton("gobackward.15", "Subtract 15 seconds") { store.adjustRest(by: -15) }
                             Spacer()
@@ -193,7 +192,6 @@ struct WarmUpSheet: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
         .presentationDetents([.medium, .large])
     }
 

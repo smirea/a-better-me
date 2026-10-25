@@ -50,8 +50,7 @@ struct CustomizeSectionsView: View {
             }
         }
         .environment(\.editMode, .constant(.active))
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
+        .themedList()
         .navigationTitle("Customize Sections")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

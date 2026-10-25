@@ -28,7 +28,6 @@ struct LevelsTab: View {
                             .font(.title3)
                             .buttonStyle(.glass)
                             .buttonBorderShape(.circle)
-                            .tint(Theme.textPrimary)
                         }
                         PeriodCaption(period: $period)
                     }
@@ -37,8 +36,7 @@ struct LevelsTab: View {
                 LevelsSection(title: "Upper Body Levels", muscles: Muscle.upperBody, weekly: weekly)
                 LevelsSection(title: "Lower Body Levels", muscles: Muscle.lowerBody, weekly: weekly)
             }
-            .scrollContentBackground(.hidden)
-            .background(Theme.background)
+            .themedList()
             .screenTitle("Levels")
             .navigationDestination(for: Muscle.self) { MuscleLevelsView(muscle: $0) }
         }

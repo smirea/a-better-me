@@ -70,6 +70,7 @@ struct WorkoutSettingsView: View {
                 SectionTitle("Display").textCase(nil)
             }
         }
+        .themedList()
         .navigationTitle("Workout")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -114,6 +115,7 @@ private struct SmartProgressionSettingsView: View {
                 SectionTitle("Behavior").textCase(nil)
             }
         }
+        .themedList()
         .navigationTitle("Smart Progression")
         .navigationBarTitleDisplayMode(.inline)
     }

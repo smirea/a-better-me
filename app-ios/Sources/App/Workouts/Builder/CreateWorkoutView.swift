@@ -51,7 +51,6 @@ struct CreateWorkoutView: View {
                     Text("Changes you made to your workout will be discarded.")
                 }
         }
-        .tint(Theme.textPrimary)
         .fileImporter(isPresented: $importing, allowedContentTypes: [.xlsx]) { importWorkout($0) }
         .alert("Import failed", isPresented: $importFailed) {
             Button("OK", role: .cancel) {}
@@ -105,7 +104,7 @@ struct CreateWorkoutView: View {
 
     private func step(progress: Double, title: String, @ViewBuilder content: () -> some View, @ViewBuilder next: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 24) {
-            ProgressView(value: progress).tint(Theme.textPrimary)
+            ProgressView(value: progress)
             Text(title).font(AppFont.title())
             VStack(alignment: .leading, spacing: 12) { content() }
             Spacer()
@@ -134,7 +133,7 @@ struct CreateWorkoutView: View {
     private var editor: some View {
         WorkoutEditor(blocks: $blocks)
             .safeAreaInset(edge: .top, spacing: 0) {
-                ProgressView(value: 1).tint(Theme.textPrimary).padding(.horizontal)
+                ProgressView(value: 1).padding(.horizontal)
             }
             .safeAreaInset(edge: .bottom) {
                 PinnedActionButton("Save to Library") {

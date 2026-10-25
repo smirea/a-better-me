@@ -33,8 +33,7 @@ struct MuscleLevelsView: View {
                 LevelsHeader(title: "Contributing Lifts")
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
+        .themedList()
         .navigationTitle(muscle.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $shownExercise) { ExerciseDetailSheet(exerciseID: $0.id) }

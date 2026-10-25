@@ -49,7 +49,6 @@ struct EquipmentSheet<Settings: View>: View {
                 PinnedActionButton("Done") { dismiss() }
             }
         }
-        .tint(Theme.textPrimary)
     }
 
     private func row(_ option: EquipmentChoiceOption, isSelected: Bool, select: @escaping () -> Void) -> some View {

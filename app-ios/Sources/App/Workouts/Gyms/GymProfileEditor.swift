@@ -121,8 +121,7 @@ struct GymProfileEditor: View {
             }
         }
         .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
+        .themedList()
         .scrollDismissesKeyboard(.immediately)
         .navigationTitle(gym.name)
         .toolbarVisibility(.hidden, for: .tabBar)
@@ -136,7 +135,6 @@ struct GymProfileEditor: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
         .alert("Rename Gym", isPresented: $renaming) {
             TextField("Gym name", text: $newName)
             Button("Save") {

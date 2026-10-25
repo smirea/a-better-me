@@ -7,26 +7,30 @@ struct MoreTab: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("General") {
-                    Picker(
-                        "Weight Unit", systemImage: "scalemass",
-                        selection: Binding(get: { settings.weightUnit }, set: { unit in store.updateSettings { $0.weightUnit = unit } })
-                    ) {
+                Section {
+                    Picker(selection: Binding(get: { settings.weightUnit }, set: { unit in store.updateSettings { $0.weightUnit = unit } })) {
                         ForEach(WeightUnit.allCases) { Text($0.rawValue).tag($0) }
+                    } label: {
+                        SettingLabel(title: "Weight Unit", detail: nil, systemImage: "scalemass")
                     }
+                } header: {
+                    SectionTitle("General").textCase(nil)
                 }
-                Section("Feature Settings") {
+                Section {
                     NavigationLink { WorkoutSettingsView() } label: {
-                        Label("Workout", systemImage: "dumbbell")
+                        SettingLabel(title: "Workout", detail: nil, systemImage: "dumbbell")
                     }
                     NavigationLink { ExerciseLibraryView() } label: {
-                        Label("Exercises", systemImage: "list.bullet.rectangle")
+                        SettingLabel(title: "Exercises", detail: nil, systemImage: "list.bullet.rectangle")
                     }
                     NavigationLink { GymProfilesView() } label: {
-                        Label("Gym Profiles", systemImage: "building.2")
+                        SettingLabel(title: "Gym Profiles", detail: nil, systemImage: "building.2")
                     }
+                } header: {
+                    SectionTitle("Feature Settings").textCase(nil)
                 }
             }
+            .themedList()
             .screenTitle("More")
         }
     }

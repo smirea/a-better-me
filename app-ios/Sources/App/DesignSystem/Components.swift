@@ -6,6 +6,11 @@ extension View {
     func screenTitle(_ title: String) -> some View {
         navigationTitle(title.uppercased()).navigationBarTitleDisplayMode(.large)
     }
+
+    /// Lists and forms draw on the app background instead of the system's black grouped background.
+    func themedList() -> some View {
+        scrollContentBackground(.hidden).background(Theme.background)
+    }
 }
 
 enum NavigationAppearance {

@@ -47,7 +47,6 @@ struct NewProgramWizard: View {
                     }
                 }
         }
-        .tint(Theme.textPrimary)
         .confirmationDialog("Exit the Program Builder?", isPresented: $confirmingExit, titleVisibility: .visible) {
             Button("Discard Program", role: .destructive) {
                 if let draftID { store.deleteProgram(draftID) }
@@ -294,7 +293,7 @@ private struct WizardPage<Content: View, Footer: View>: View {
         }
         .background(Theme.background)
         .safeAreaInset(edge: .top, spacing: 0) {
-            ProgressView(value: progress).tint(Theme.textPrimary).padding(.horizontal)
+            ProgressView(value: progress).padding(.horizontal)
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 12) {
@@ -468,7 +467,6 @@ private struct KeepSelections: View {
                         }
                     }
             }
-            .tint(Theme.textPrimary)
         }
     }
 
@@ -574,7 +572,6 @@ private struct ExperienceSheet: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
         .presentationDetents([.height(380)])
     }
 }

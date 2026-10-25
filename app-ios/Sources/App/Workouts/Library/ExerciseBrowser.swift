@@ -60,8 +60,7 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
             }
         }
         .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
+        .themedList()
         .scrollDismissesKeyboard(.immediately)
         .safeAreaBar(edge: .top) {
             VStack(alignment: .leading, spacing: 10) {
@@ -179,7 +178,6 @@ struct ExerciseFilterBar: View {
                         }
                     }
             }
-            .tint(Theme.textPrimary)
         }
     }
 
@@ -279,8 +277,7 @@ struct EquipmentPickerSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Theme.background)
+            .themedList()
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Filter equipment by name")
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
@@ -290,7 +287,6 @@ struct EquipmentPickerSheet: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
     }
 }
 

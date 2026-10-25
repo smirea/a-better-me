@@ -31,6 +31,7 @@ struct SettingToggle: View {
 
     var body: some View {
         Toggle(isOn: $isOn) { SettingLabel(title: title, detail: detail, systemImage: systemImage) }
+            .tint(Theme.accent)
             .accessibilityLabel(title)
     }
 }
@@ -77,7 +78,6 @@ struct SettingChoice<Value: Hashable>: View {
             }
             .buttonStyle(.bordered)
             .buttonBorderShape(.capsule)
-            .tint(Theme.textPrimary)
             .accessibilityLabel("Edit \(title)")
         } label: {
             SettingLabel(title: title, detail: options.first { $0.value == selection }?.title ?? "", systemImage: systemImage)

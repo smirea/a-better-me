@@ -79,7 +79,6 @@ private struct GoToCycleSheet: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
         .presentationDetents([.medium, .large])
     }
 }

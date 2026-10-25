@@ -122,7 +122,6 @@ struct ProgramSettingsView: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
     }
 
     private var confirmationTitle: String {
@@ -347,7 +346,6 @@ private struct ProgramSettingsColorIcon: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
     }
 }
 
@@ -397,7 +395,6 @@ private struct ProgramSettingsDayOrder: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
     }
 
     private func pill(_ day: ProgramDay) -> some View {
@@ -455,7 +452,6 @@ private struct ProgramSettingsDeload: View {
             }
         }
         .presentationDetents([.medium])
-        .tint(Theme.textPrimary)
     }
 }
 
@@ -496,6 +492,5 @@ private struct ProgramSettingsDuplicate: View {
             .onAppear { focused = true }
         }
         .presentationDetents([.medium])
-        .tint(Theme.textPrimary)
     }
 }

@@ -198,7 +198,6 @@ struct ProgramEditorReorderSheet: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
     }
 }
 
@@ -236,7 +235,6 @@ struct ProgramEditorMoveSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
-        .tint(Theme.textPrimary)
     }
 
     private func name(of day: ProgramDay) -> String {
