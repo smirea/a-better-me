@@ -1,6 +1,7 @@
 import Foundation
 import GRDB
 import Observation
+import Synchronization
 
 /// The in-progress workout for everything that isn't the phone's own screen. The Live Activity reads `status` and sends
 /// `LiveWorkoutCommand`s back through `perform`; the watch reads `watchWorkout` and sends `WatchEvent`s through
@@ -18,8 +19,9 @@ final class LiveWorkoutController {
     private(set) var acknowledgedWatchEvents = UserDefaults.standard.stringArray(forKey: acknowledgedKey)?.compactMap(UUID.init) ?? []
     @ObservationIgnored private var inFlightWatchEvents: Set<UUID> = []
     @ObservationIgnored private var finishedSessions: Set<UUID> = []
-    /// When each session that isn't the live one was paused from the watch, for its resume.
-    @ObservationIgnored private var storedPauses: [UUID: Date] = [:]
+    /// When each session that isn't the live one was paused from the watch, for its resume. The writes read and set it
+    /// in the order they run, which is the order the events arrived; a resume must see the pause queued before it.
+    @ObservationIgnored private let storedPauses = PauseLedger()
     /// Events for a session the watch started whose row hasn't reached the observation yet.
     @ObservationIgnored private var deferredWatchEvents: [WatchEvent] = []
     /// Applied events waiting for `watchWorkout` to show them. Acknowledging one before its write lands would let the
@@ -202,8 +204,8 @@ final class LiveWorkoutController {
     /// write lands. A session the phone doesn't have yet waits for the watch's start to be inserted.
     private func applyToStored(_ event: WatchEvent, in store: LocalStore) {
         inFlightWatchEvents.insert(event.id)
-        let pausedAt = storedPauses[event.sessionID]
-        let write = store.write { db -> StoredOutcome in
+        let pauses = storedPauses
+        let write = store.write { [pauses] db -> StoredOutcome in
             guard var session = try WorkoutSession.fetchOne(db, key: WorkoutSession.key(event.sessionID)) else { return .missing }
             let existing = session
             var outcome = StoredOutcome.applied
@@ -217,10 +219,11 @@ final class LiveWorkoutController {
             case .addSet(let exerciseID, let setID):
                 session.blocks.addSet(to: exerciseID, id: setID)
             case .pause:
-                outcome = .paused
+                pauses.started.withLock { $0[session.id] = event.at }
             case .resume:
-                if let pausedAt { session.pausedSeconds += Int(event.at.timeIntervalSince(pausedAt)) }
-                outcome = .resumed
+                if let pausedAt = pauses.started.withLock({ $0.removeValue(forKey: session.id) }) {
+                    session.pausedSeconds += Int(event.at.timeIntervalSince(pausedAt))
+                }
             case .finish:
                 if session.endedAt == nil {
                     session.endedAt = event.at
@@ -242,8 +245,6 @@ final class LiveWorkoutController {
             case .missing:
                 if !deferredWatchEvents.contains(where: { $0.id == event.id }) { deferredWatchEvents.append(event) }
                 return
-            case .paused: storedPauses[event.sessionID] = event.at
-            case .resumed: storedPauses[event.sessionID] = nil
             case .finished(let session): store.advanceProgram(after: session)
             case .applied: break
             }
@@ -252,7 +253,7 @@ final class LiveWorkoutController {
     }
 
     private enum StoredOutcome: Sendable {
-        case missing, applied, paused, resumed
+        case missing, applied
         case finished(WorkoutSession)
     }
 
@@ -530,4 +531,9 @@ extension Array {
             if isIncluded(element) { result.0.append(element) } else { result.1.append(element) }
         }
     }
+}
+
+/// When each stored session was paused, shared with the database writes that read and set it.
+private final class PauseLedger: Sendable {
+    let started = Mutex<[UUID: Date]>([:])
 }

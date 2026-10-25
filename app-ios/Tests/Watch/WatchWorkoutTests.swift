@@ -92,6 +92,23 @@ struct WatchWorkoutTests {
         #expect(workout.totalSets == 7)
     }
 
+    @Test func aLogOnAnAddedDropSurvivesReplay() {
+        var plan = Self.workout()
+        plan.blocks[0].exercises[0].sets[1].type = .drop
+        plan.blocks[0].exercises[0].sets[1].subSets = [SubSet(id: Self.id(221))]
+        let added = Self.event(.addSet(exerciseID: Self.id(2), setID: Self.id(29)), after: 10, id: 1)
+        let withSet = plan.applying([added])
+        let drop = withSet.blocks[0].exercises[0].sets[2].subSets[0].id
+        let log = Self.event(.log(rowID: drop, values: LiveValues(weightKg: 60, reps: 6)), after: 20, id: 2)
+
+        let replayed = plan.applying([added, log])
+        var phone = plan.blocks
+        phone.addSet(to: Self.id(2), id: Self.id(29))
+
+        #expect(replayed.blocks[0].exercises[0].sets[2].subSets[0].log?.reps == 6)
+        #expect(phone[0].exercises[0].sets[2].subSets[0].id == drop)
+    }
+
     @Test func finishingWhilePausedEndsAtTheFinishWithThePauseCounted() {
         var workout = Self.workout()
         workout.apply(Self.event(.pause, after: 600))

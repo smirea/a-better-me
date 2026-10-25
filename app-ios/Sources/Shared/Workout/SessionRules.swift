@@ -163,13 +163,14 @@ extension [WorkoutBlock] {
     }
 
     /// "Add Set": a copy of the exercise's last working set without its log, with `id`. Nothing changes once a set
-    /// with `id` exists, so adding twice adds once.
+    /// with `id` exists, so adding twice adds once. A copied drop or myo set's sub-rows get ids derived from `id`, so
+    /// the watch and the phone, replaying the same event, name the same rows.
     mutating func addSet(to exerciseID: BlockExercise.ID, id: UUID) {
         guard let at = locate(exerciseID), path(of: id) == nil else { return }
         let last = self[at.block].exercises[at.item].sets.last { $0.type != .warmUp }
         var set = last?.planned ?? WorkoutSet()
         set.id = id
-        set.subSets = set.subSets.map { SubSet(target: $0.target) }
+        set.subSets = set.subSets.enumerated().map { SubSet(id: id.derived($0.offset), target: $0.element.target) }
         self[at.block].exercises[at.item].sets.append(set)
     }
 
@@ -223,4 +224,14 @@ extension SetTarget {
 
 extension Array {
     subscript(safe index: Int) -> Element? { indices.contains(index) ? self[index] : nil }
+}
+
+extension UUID {
+    /// The `index`th id that belongs to this one, the same on every device.
+    func derived(_ index: Int) -> UUID {
+        var bytes = uuid
+        bytes.14 ^= 0xA5
+        bytes.15 ^= UInt8(truncatingIfNeeded: index + 1)
+        return UUID(uuid: bytes)
+    }
 }
