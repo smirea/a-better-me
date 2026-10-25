@@ -4,7 +4,7 @@ import Observation
 
 /// Records each workout in Apple Health on exactly one device. When the paired watch has the app, the watch runs the
 /// `HKWorkoutSession` and mirrors it here; otherwise this phone runs its own. It follows the in-progress session through
-/// `LiveWorkoutController.snapshot`, so nothing in the session code knows Health exists.
+/// `LiveWorkoutController.status`, so nothing in the session code knows Health exists.
 @MainActor @Observable
 final class WorkoutHealth {
     static let shared = WorkoutHealth()
@@ -28,6 +28,12 @@ final class WorkoutHealth {
     @ObservationIgnored private var store: LocalStore?
     @ObservationIgnored private var catalog: ExerciseCatalog?
     @ObservationIgnored private var isPaused = false
+    /// Sessions the watch started, which the watch records from their first second. Kept across launches, so a phone
+    /// relaunched mid-workout doesn't start a second recording.
+    @ObservationIgnored private var startedOnWatch = UserDefaults.standard.stringArray(forKey: startedOnWatchKey)?.compactMap(UUID.init) ?? []
+    private static let startedOnWatchKey = "sessionsStartedOnWatch"
+    /// When this phone's own recording started, so a watch that speaks up late doesn't throw away most of it.
+    @ObservationIgnored private var phoneRecordingStartedAt: Date?
 
     /// How long the phone waits to hear that the watch records before recording on its own.
     private static let watchStartTimeout: Duration = .seconds(10)
@@ -49,7 +55,7 @@ final class WorkoutHealth {
 
     private func track() {
         let status = withObservationTracking {
-            LiveWorkoutController.shared.snapshot.map { (id: $0.status.sessionID, paused: $0.status.pausedAt != nil) }
+            LiveWorkoutController.shared.status.map { (id: $0.sessionID, paused: $0.pausedAt != nil) }
         } onChange: {
             Task { @MainActor in WorkoutHealth.shared.track() }
         }
@@ -60,7 +66,7 @@ final class WorkoutHealth {
         let paused = status?.paused ?? false
         if paused != isPaused {
             isPaused = paused
-            // A watch reached only over WatchConnectivity follows the snapshot's pause itself.
+            // A watch reached only over WatchConnectivity follows the workout's pause itself.
             switch recorder {
             case .phone(let recording), .mirror(let recording): if paused { recording.pause() } else { recording.resume() }
             case .watch, nil: break
@@ -70,8 +76,19 @@ final class WorkoutHealth {
 
     // MARK: Starting
 
+    /// A workout started on the watch is recorded there; the phone only follows it, even when it hears of the
+    /// workout before the watch's word that it records.
+    func expectWatchRecording(_ id: UUID) {
+        if !startedOnWatch.contains(id) {
+            startedOnWatch = startedOnWatch.suffix(19) + [id]
+            UserDefaults.standard.set(startedOnWatch.map(\.uuidString), forKey: Self.startedOnWatchKey)
+        }
+        if sessionID == id, recorder == nil { recorder = .watch }
+    }
+
     private func begin(_ id: UUID) {
         sessionID = id
+        if startedOnWatch.contains(id) { return adopt(.watch) }
         Task {
             do {
                 try await WorkoutRecording.authorize(healthStore)
@@ -102,6 +119,7 @@ final class WorkoutHealth {
                 let recording = try await WorkoutRecording.start(in: healthStore)
                 guard sessionID == id, recorder == nil else { return recording.discard() }
                 adopt(.phone(recording))
+                phoneRecordingStartedAt = .now
                 if isPaused { recording.pause() }
             } catch {
                 WorkoutRecording.log.error("Starting the phone's workout session failed: \(String(describing: error))")
@@ -109,12 +127,19 @@ final class WorkoutHealth {
         }
     }
 
-    /// The watch says it records. If the phone already gave up on it and records itself, the watch's copy goes, so the
-    /// workout lands in Health once.
+    /// The watch says it records. If the phone already gave up on it and records itself, one copy goes so the workout
+    /// lands in Health once. Within the first minute the phone's goes: the watch measures heart rate and stays with the
+    /// owner when the phone is left behind. Later the watch's goes, since it only covers the rest of the workout.
     func watchStartedRecording() {
         switch recorder {
         case nil where sessionID != nil: recorder = .watch
-        case .phone: WatchBridge.shared.deliver(.discardRecording(sessionID: sessionID ?? UUID()))
+        case .phone(let recording):
+            if let started = phoneRecordingStartedAt, Date.now.timeIntervalSince(started) > 60 {
+                WatchBridge.shared.deliver(.discardRecording(sessionID: sessionID ?? UUID()))
+            } else {
+                recording.discard()
+                recorder = .watch
+            }
         default: break
         }
     }
@@ -126,10 +151,7 @@ final class WorkoutHealth {
 
     private func adoptMirror(_ session: HKWorkoutSession) {
         let mirror = WorkoutRecording.mirror(session, in: healthStore)
-        if case .phone = recorder {
-            Task { try? await mirror.send(.discardRecording(sessionID: sessionID ?? UUID())) }
-            return
-        }
+        if case .phone(let own) = recorder { own.discard() }
         adopt(.mirror(mirror))
         WatchBridge.shared.sendState()
     }
@@ -176,20 +198,14 @@ final class WorkoutHealth {
             }
             return
         }
-        let plan = HealthRecordingPlan.plan(for: session, endedAt: endedAt, name: catalog.name)
+        // The watch saves its own recording from the finished workout `WatchBridge` sends, and answers with `.recorded`.
+        guard case .phone(let recording) = recorder else { return }
+        let plan = HealthRecordingPlan.plan(sessionID: session.id, name: session.name, startedAt: session.startedAt, endedAt: endedAt, blocks: session.blocks, exerciseName: catalog.name)
         Task {
-            switch recorder {
-            case .phone(let recording):
-                do {
-                    save(try await recording.finish(plan, source: .phone), for: id)
-                } catch {
-                    WorkoutRecording.log.error("Saving the workout to Health failed: \(String(describing: error))")
-                }
-            // The watch saves the workout and answers with `.recorded`.
-            case .mirror(let recording):
-                do { try await recording.send(.record(plan)) } catch { WatchBridge.shared.deliver(.record(plan)) }
-            case .watch:
-                WatchBridge.shared.deliver(.record(plan))
+            do {
+                save(try await recording.finish(plan, source: .phone), for: id)
+            } catch {
+                WorkoutRecording.log.error("Saving the workout to Health failed: \(String(describing: error))")
             }
         }
     }
@@ -197,6 +213,5 @@ final class WorkoutHealth {
     func save(_ summary: WorkoutHealthSummary, for id: UUID) {
         stats = nil
         store?.modify(WorkoutSession.self, id: id) { $0.health = summary }
-        WatchBridge.shared.sendFinished(id, health: summary)
     }
 }

@@ -1,46 +1,83 @@
 import SwiftUI
 
-/// Pause or resume, and end, like the Workout app's controls page. The phone does both, so the watch only asks.
+/// The Workout app's controls page: pause or resume, end, undo the last set, add a set, and the exercise list.
 struct ControlsPage: View {
-    let status: LiveWorkoutStatus
+    let workout: WatchWorkout
+    @Binding var showingExercises: Bool
+    let done: () -> Void
     @State private var confirmingEnd = false
 
+    private var model: WatchModel { .shared }
+
     var body: some View {
-        let paused = status.pausedAt != nil
+        let paused = workout.pausedAt != nil
         NavigationStack {
-            VStack(spacing: 10) {
-                Text(status.name).font(AppFont.headline(15)).foregroundStyle(Theme.accent).lineLimit(1)
-                HStack(spacing: 10) {
-                    control(paused ? "Resume" : "Pause", icon: paused ? "play.fill" : "pause.fill", tint: Theme.amber) {
-                        WatchModel.shared.send(paused ? .resume : .pause)
+            VStack(spacing: 6) {
+                Button {
+                    showingExercises = true
+                } label: {
+                    HStack(spacing: 6) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(workout.name).font(AppFont.headline(14)).foregroundStyle(Theme.accent).lineLimit(1)
+                            WorkoutClock(workout: workout, size: 13).foregroundStyle(Theme.textSecondary)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "list.bullet").font(.system(size: 15, weight: .semibold))
                     }
-                    control("End", icon: "xmark", tint: Theme.destructive) { confirmingEnd = true }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Exercises")
+                Grid(horizontalSpacing: 6, verticalSpacing: 6) {
+                    GridRow {
+                        control(paused ? "Resume" : "Pause", icon: paused ? "play.fill" : "pause.fill", tint: Theme.amber) {
+                            model.act(paused ? .resume : .pause)
+                            done()
+                        }
+                        control("End", icon: "xmark", tint: Theme.destructive) { confirmingEnd = true }
+                    }
+                    GridRow {
+                        control("Undo Set", icon: "arrow.uturn.backward", tint: Theme.lavender, disabled: model.lastLoggedRow == nil) {
+                            if let row = model.lastLoggedRow { model.act(.unlog(rowID: row)) }
+                            done()
+                        }
+                        control("Add Set", icon: "plus", tint: Theme.green, disabled: addSetExercise == nil) {
+                            if let exercise = addSetExercise { model.act(.addSet(exerciseID: exercise, setID: UUID())) }
+                            done()
+                        }
+                    }
                 }
             }
-            .onDebugAction(.pause) { WatchModel.shared.send(.pause) }
-            .onDebugAction(.resume) { WatchModel.shared.send(.resume) }
-            .onDebugAction(.end) { WatchModel.shared.send(.finish) }
             .confirmationDialog("End workout?", isPresented: $confirmingEnd) {
-                Button("End Workout", role: .destructive) { WatchModel.shared.send(.finish) }
+                Button("Finish & Save") { model.act(.finish) }
+                Button("Discard", role: .destructive) { model.act(.discard) }
             } message: {
-                Text("Logged sets are kept. Open sets stay unlogged.")
+                Text("Finishing keeps the logged sets. Discarding deletes the workout.")
             }
             .watchGlow()
         }
     }
 
-    private func control(_ title: String, icon: String, tint: Color, action: @escaping () -> Void) -> some View {
-        VStack(spacing: 4) {
-            Button(action: action) {
-                Image(systemName: icon)
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(tint)
-                    .frame(maxWidth: .infinity, minHeight: 52)
-                    .background(tint.opacity(0.25), in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+    /// The exercise a new set goes to: the one on screen, else the last one logged.
+    private var addSetExercise: BlockExercise.ID? {
+        if let path = workout.currentRow { return workout.blocks[path.block].exercises[path.exercise].id }
+        return workout.current ?? workout.blocks.last?.exercises.last?.id
+    }
+
+    private func control(_ title: String, icon: String, tint: Color, disabled: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
+                Image(systemName: icon).font(.system(size: 19, weight: .semibold)).foregroundStyle(tint)
+                Text(title).font(AppFont.medium(11)).foregroundStyle(Theme.textPrimary)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(title)
-            Text(title).font(AppFont.caption(12))
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .background(tint.opacity(0.2), in: RoundedRectangle(cornerRadius: 16))
         }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .opacity(disabled ? 0.4 : 1)
+        .accessibilityLabel(title)
     }
 }

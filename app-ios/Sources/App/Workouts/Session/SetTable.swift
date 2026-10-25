@@ -218,37 +218,37 @@ extension SessionEditor {
 
     // MARK: Checking sets
 
-    private func toggle(_ path: RowPath, previous: [WorkoutSet]) {
+    /// `date` is when the set was done: now for a tap, earlier for a set the watch logged while the phone was away.
+    private func toggle(_ path: RowPath, previous: [WorkoutSet], at date: Date = .now) {
         let id = blocks.rowID(at: path)
         if let log = blocks.log(at: path) {
             drafts[id] = SetEntry(log)
             blocks.setLog(nil, at: path)
             return
         }
-        blocks.setLog(entry(path, previous: previous).log(at: .now), at: path)
+        blocks.setLog(entry(path, previous: previous).log(at: date), at: path)
         drafts[id] = nil
         guard mode == .live else { return }
         applyProgression(to: blocks[path.block].exercises[path.exercise].id)
         let step = SessionFlow.afterCompleting(path, in: blocks, settings: defaults.workout.flow, rest: restSeconds)
-        if let seconds = step.restSeconds { store.startRest(seconds: seconds, alerts: defaults.workout.rest) }
+        if let seconds = step.restSeconds { store.startRest(seconds: seconds, alerts: defaults.workout.rest, from: date) }
         if let next = step.next, next != current { withAnimation { current = next } }
     }
 
-    func perform(_ command: LiveWorkoutCommand) {
+    func perform(_ command: LiveWorkoutCommand, at date: Date) {
         switch command {
         case .log(let id, let values):
             guard let path = blocks.path(of: id), blocks.log(at: path) == nil else { return }
             let previous = previousSets(for: path)
             drafts[id] = SetEntry(values, keeping: entry(path, previous: previous))
-            toggle(path, previous: previous)
+            toggle(path, previous: previous, at: date)
         case .unlog(let id):
             guard let path = blocks.path(of: id), blocks.log(at: path) != nil else { return }
             toggle(path, previous: previousSets(for: path))
-        case .edit(let id, let values):
-            guard let path = blocks.path(of: id) else { return }
-            update(path) { $0 = SetEntry(values, keeping: $0) }
         case .select(let exerciseID):
             if blocks.locate(exerciseID) != nil { withAnimation { current = exerciseID } }
+        case .addSet(let exerciseID, let setID):
+            blocks.addSet(to: exerciseID, id: setID)
         case .adjustRest, .skipRest, .pause, .resume, .finish:
             return
         }
@@ -300,11 +300,7 @@ extension SessionEditor {
     }
 
     func addSet(block: Int, exercise index: Int) {
-        let last = blocks[block].exercises[index].sets.last { $0.type != .warmUp }
-        var set = last?.planned ?? WorkoutSet()
-        set.id = UUID()
-        set.subSets = set.subSets.map { SubSet(target: $0.target) }
-        blocks[block].exercises[index].sets.append(set)
+        blocks.addSet(to: blocks[block].exercises[index].id, id: UUID())
     }
 
     private func removeRow(_ path: RowPath) {

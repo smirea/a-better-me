@@ -14,6 +14,11 @@ final class WatchDriver: XCTestCase {
         let dir = URL(fileURLWithPath: ProcessInfo.processInfo.environment["WATCH_DRIVER_DIR"] ?? "/tmp/watch-driver")
         let app = XCUIApplication()
         app.launch()
+        // The driver installs its own build. A watch app launched right after an install comes up before the watch's
+        // WatchConnectivity daemon links it to the phone app and hears nothing until relaunched (see scripts/run).
+        RunLoop.current.run(until: .now.addingTimeInterval(3))
+        app.terminate()
+        app.launch()
         try Data("ready".utf8).write(to: dir.appending(path: "ready"))
         var index = 0
         while true {

@@ -2,11 +2,11 @@ import Foundation
 
 /// What the recording device saves alongside the workout, worked out from the session's logged sets.
 enum HealthRecordingPlan {
-    static func plan(for session: WorkoutSession, endedAt: Date, name: (ExerciseID) -> String) -> WorkoutRecordingPlan {
+    static func plan(sessionID: UUID, name: String, startedAt: Date, endedAt: Date, blocks: [WorkoutBlock], exerciseName: (ExerciseID) -> String) -> WorkoutRecordingPlan {
         WorkoutRecordingPlan(
-            sessionID: session.id, name: session.name, endedAt: endedAt,
-            segments: segments(in: session.blocks, startedAt: session.startedAt, name: name),
-            effort: effort(in: session.blocks)
+            sessionID: sessionID, name: name, endedAt: endedAt,
+            segments: segments(in: blocks, startedAt: startedAt, name: exerciseName),
+            effort: effort(in: blocks)
         )
     }
 

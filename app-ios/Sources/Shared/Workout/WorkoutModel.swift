@@ -96,3 +96,9 @@ struct SetLog: Codable, Hashable {
     var distanceMeters: Double?
     var completedAt: Date
 }
+
+struct ProgramPosition: Codable, Hashable, Sendable {
+    var programID: UUID
+    var dayID: UUID
+    var cycle: Int
+}

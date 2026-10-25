@@ -162,8 +162,62 @@ extension [WorkoutBlock] {
         allRows.first { rowID(at: $0) == id }
     }
 
+    /// "Add Set": a copy of the exercise's last working set without its log, with `id`. Nothing changes once a set
+    /// with `id` exists, so adding twice adds once.
+    mutating func addSet(to exerciseID: BlockExercise.ID, id: UUID) {
+        guard let at = locate(exerciseID), path(of: id) == nil else { return }
+        let last = self[at.block].exercises[at.item].sets.last { $0.type != .warmUp }
+        var set = last?.planned ?? WorkoutSet()
+        set.id = id
+        set.subSets = set.subSets.map { SubSet(target: $0.target) }
+        self[at.block].exercises[at.item].sets.append(set)
+    }
+
     func firstOpenRow(block: Int, exercise: Int) -> RowPath? {
         rows(block: block, exercise: exercise).first { log(at: $0) == nil }
+    }
+}
+
+extension SessionFlow {
+    /// The row to log next: the current exercise's first open row, else the next unfinished exercise's.
+    static func currentRow(in blocks: [WorkoutBlock], current: BlockExercise.ID?) -> RowPath? {
+        let currentID = current ?? initialExercise(in: blocks)
+        if let currentID, let at = blocks.locate(currentID), let row = blocks.firstOpenRow(block: at.block, exercise: at.item) {
+            return row
+        }
+        let start = currentID.flatMap { blocks.locate($0)?.block } ?? -1
+        guard let next = nextIncomplete(after: start, in: blocks), let at = blocks.locate(next) else { return nil }
+        return blocks.firstOpenRow(block: at.block, exercise: at.item)
+    }
+
+    /// The row after `path` once it is logged, following the same rest and auto-scroll rules as checking it.
+    static func upNext(after path: RowPath, in blocks: [WorkoutBlock], rules: FlowRules) -> RowPath? {
+        var logged = blocks
+        logged.setLog(SetLog(completedAt: .now), at: path)
+        let step = afterCompleting(path, in: logged, settings: rules) { _, _ in 0 }
+        let exerciseID = step.next ?? logged[path.block].exercises[path.exercise].id
+        guard let at = logged.locate(exerciseID) else { return nil }
+        return logged.firstOpenRow(block: at.block, exercise: at.item)
+            ?? nextIncomplete(after: at.block, in: logged).flatMap { logged.locate($0) }.flatMap { logged.firstOpenRow(block: $0.block, exercise: $0.item) }
+    }
+}
+
+extension SetTarget {
+    /// "8–10 reps · 2 RIR", or nil when the set has no target.
+    func summary(unit: WeightUnit) -> String? {
+        let reps: String? = switch (repsMin, repsMax) {
+        case let (min?, max?) where min != max: "\(min)–\(max) reps"
+        case let (min?, _): "\(min) reps"
+        case let (nil, max?): "\(max) reps"
+        default: nil
+        }
+        let parts = [
+            weightKg.map { "\(unit.format(kg: $0)) \(unit.rawValue)" },
+            reps,
+            durationSeconds.map { Duration.seconds($0).formatted(.time(pattern: .minuteSecond)) },
+            rir.map { "\($0 >= 6 ? "6+" : "\($0)") RIR" },
+        ].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
 

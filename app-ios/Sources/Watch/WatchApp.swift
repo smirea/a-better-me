@@ -21,9 +21,6 @@ struct BetterMeWatchApp: App {
 final class WatchAppDelegate: NSObject, WKApplicationDelegate {
     func applicationDidFinishLaunching() {
         WatchModel.shared.activate()
-        #if DEBUG
-        DebugAction.register()
-        #endif
     }
 
     func applicationDidBecomeActive() {
@@ -57,12 +54,36 @@ struct WatchRootView: View {
 
     var body: some View {
         Group {
-            if let summary = model.summary, model.snapshot.map({ $0.status.sessionID == summary.sessionID }) ?? true {
-                SummaryView(summary: summary)
-            } else if let snapshot = model.snapshot {
-                WorkoutView(snapshot: snapshot)
+            if let workout = model.workout {
+                if workout.isFinished {
+                    SummaryView(workout: workout)
+                } else {
+                    WorkoutView(workout: workout)
+                }
             } else {
                 HomeView()
+            }
+        }
+        .animation(.snappy, value: model.workout?.sessionID)
+    }
+}
+
+extension View {
+    /// Black, with the accent glowing up from the bottom edge like MF's watch app. Always On dims the glow.
+    func watchGlow(_ color: Color = Theme.accent) -> some View {
+        modifier(WatchGlow(color: color))
+    }
+}
+
+private struct WatchGlow: ViewModifier {
+    let color: Color
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
+
+    func body(content: Content) -> some View {
+        content.containerBackground(for: .navigation) {
+            ZStack {
+                Color.black
+                RadialGradient(colors: [color.opacity(isLuminanceReduced ? 0.12 : 0.45), .clear], center: .bottom, startRadius: 0, endRadius: 210)
             }
         }
     }
