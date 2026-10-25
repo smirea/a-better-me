@@ -67,7 +67,7 @@ final class WorkoutActivityController {
     /// Adopts the session's activity from an earlier launch, else asks for a new one.
     private func request(_ status: LiveWorkoutStatus) {
         let existing = Activity<WorkoutActivityAttributes>.activities.first {
-            $0.attributes.sessionID == status.sessionID && $0.activityState == .active
+            $0.attributes.sessionID == status.sessionID && Self.isLive($0)
         }
         endAll(except: existing?.id)
         if let existing {
@@ -104,9 +104,14 @@ final class WorkoutActivityController {
     }
 
     private func endAll(except keep: Activity<WorkoutActivityAttributes>.ID?) {
-        for stale in Activity<WorkoutActivityAttributes>.activities where stale.id != keep && stale.activityState == .active {
+        for stale in Activity<WorkoutActivityAttributes>.activities where stale.id != keep && Self.isLive(stale) {
             enqueue(stale) { await $0.end(nil, dismissalPolicy: .immediate) }
         }
+    }
+
+    /// A rest that ran out while the app was suspended leaves its activity `.stale`, which is still on screen.
+    private static func isLive(_ activity: Activity<WorkoutActivityAttributes>) -> Bool {
+        activity.activityState == .active || activity.activityState == .stale
     }
 
     /// A rest's content goes stale when the rest runs out, so the banner falls back to the set even if the app is

@@ -96,12 +96,11 @@ enum Phase {
         if case .rest(_, let rest) = self { rest } else { nil }
     }
 
-    /// The set whose values the banner shows: the one coming up after a rest, else the current one.
+    /// The set whose values the banner shows. During a rest `current` is already the set that follows it.
     var shownSet: LiveSet? {
         switch self {
-        case .rest(let status, _): status.upNext ?? status.current
         case .allDone, .finished: nil
-        case .set, .paused: status.current
+        case .set, .rest, .paused: status.current
         }
     }
 }
