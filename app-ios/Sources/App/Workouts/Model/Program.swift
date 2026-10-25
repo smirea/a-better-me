@@ -156,9 +156,3 @@ enum ProgramColor: String, Codable, CaseIterable {
     static let defaultIcon = "dumbbell.fill"
 }
 
-/// Where a session sits in a program. The three session columns are all set or all null, so this is one optional.
-struct ProgramPosition: Hashable {
-    var programID: UUID
-    var dayID: UUID
-    var cycle: Int
-}

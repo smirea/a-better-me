@@ -1,19 +1,8 @@
 import Foundation
 
-/// The in-progress workout as the watch and the Live Activity show it. The phone's `LiveWorkoutController` is the
-/// session's only writer: it publishes a snapshot after every change and applies the `LiveWorkoutCommand`s the watch
-/// and the Live Activity's buttons send back. Weights are kilograms, like the model; `unit` is how to show them.
-struct LiveWorkoutSnapshot: Codable, Hashable, Sendable {
-    var status: LiveWorkoutStatus
-    /// Every exercise in workout order, for the watch's exercise list.
-    var exercises: [LiveExercise]
-    /// The totals each exercise's equipment loads in the session's gym, ascending, for the current and next exercise,
-    /// keyed by `LiveSet.blockExerciseID`. The watch's Digital Crown steps through them.
-    var loadableWeightsKg: [UUID: [Double]]?
-}
-
-/// The part of the snapshot the Live Activity carries. ActivityKit caps a content state at 4 KB, so the exercise list
-/// stays out.
+/// The in-progress workout as the Live Activity shows it. `LiveWorkoutController` publishes it after every change and
+/// applies the `LiveWorkoutCommand`s the Live Activity's buttons send back. ActivityKit caps a content state at 4 KB.
+/// Weights are kilograms, like the model; `unit` is how to show them.
 struct LiveWorkoutStatus: Codable, Hashable, Sendable {
     var sessionID: UUID
     var name: String
@@ -60,16 +49,6 @@ struct LiveSet: Codable, Hashable, Sendable, Identifiable {
     var previous: String?
 }
 
-struct LiveExercise: Codable, Hashable, Sendable, Identifiable {
-    var id: UUID
-    var catalogID: String
-    var name: String
-    var completedSets: Int
-    var totalSets: Int
-    /// The block's index; superset and circuit members share it.
-    var block: Int
-}
-
 struct LiveValues: Codable, Hashable, Sendable {
     var weightKg: Double?
     var reps: Int?
@@ -88,16 +67,16 @@ struct LiveHealthMetrics: Codable, Hashable, Sendable {
     var activeEnergyKcal: Double?
 }
 
-/// What the watch and the Live Activity's buttons ask the phone to do. Each names the row it was shown, so a command
+/// What the Live Activity's buttons, and the watch's events, ask the phone to do. Each names the row it was shown, so a command
 /// that crosses a change on the phone acts on the row the owner saw, or does nothing once that row is gone.
 enum LiveWorkoutCommand: Codable, Hashable, Sendable {
     /// Checks a row with `values`, then runs rest and auto-next as on the phone.
     case log(rowID: UUID, values: LiveValues)
     case unlog(rowID: UUID)
-    /// Changes an open row's values without checking it, like typing on the keypad.
-    case edit(rowID: UUID, values: LiveValues)
     /// Moves the phone's current exercise.
     case select(exerciseID: UUID)
+    /// Appends a copy of the exercise's last working set with this id.
+    case addSet(exerciseID: UUID, setID: UUID)
     case adjustRest(seconds: Int)
     case skipRest
     case pause

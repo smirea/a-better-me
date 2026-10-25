@@ -131,7 +131,7 @@ struct SessionEditor: View {
         }
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = mode == .live && defaults.workout.display.keepAlive
-            if mode == .live { LiveWorkoutController.shared.editor = { perform($0) } }
+            if mode == .live { LiveWorkoutController.shared.editor = { perform($0, at: $1) } }
         }
         .onChange(of: defaults.workout.display.keepAlive) { _, keepAlive in
             UIApplication.shared.isIdleTimerDisabled = mode == .live && keepAlive

@@ -4,7 +4,7 @@ import Observation
 import os
 import UIKit
 
-/// Mirrors `LiveWorkoutController.shared.snapshot` into the workout's Live Activity: requests it when a session is in
+/// Mirrors `LiveWorkoutController.shared.status` into the workout's Live Activity: requests it when a session is in
 /// progress, updates it when the status changes, and ends it with the finished banner when the session ends. Its
 /// buttons come back through `LiveWorkoutIntent`, which this installs.
 @MainActor
@@ -19,8 +19,7 @@ final class WorkoutActivityController {
     private var store: LocalStore?
     private var catalog: ExerciseCatalog?
     private var activity: Activity<WorkoutActivityAttributes>?
-    /// The last status sent to ActivityKit, so a snapshot change outside the status (the exercise list) costs nothing.
-    private var shown: LiveWorkoutStatus?
+    private var lastSentStatus: LiveWorkoutStatus?
     /// ActivityKit's update and end are async; chaining them keeps a quick log-then-rest from landing out of order.
     private var queue: Task<Void, Never>?
 
@@ -36,14 +35,14 @@ final class WorkoutActivityController {
         NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated {
                 let controller = WorkoutActivityController.shared
-                if controller.activity == nil { controller.receive(LiveWorkoutController.shared.snapshot?.status) }
+                if controller.activity == nil { controller.receive(LiveWorkoutController.shared.status) }
             }
         }
         track()
     }
 
     private func track() {
-        let status = withObservationTracking { LiveWorkoutController.shared.snapshot?.status } onChange: { [weak self] in
+        let status = withObservationTracking { LiveWorkoutController.shared.status } onChange: { [weak self] in
             Task { @MainActor in self?.track() }
         }
         receive(status)
@@ -51,14 +50,14 @@ final class WorkoutActivityController {
 
     private func receive(_ status: LiveWorkoutStatus?) {
         guard let status else {
-            if let shown { end(after: shown) } else { endAll(except: nil) }
+            if let lastSentStatus { end(after: lastSentStatus) } else { endAll(except: nil) }
             return
         }
-        guard status != shown || activity == nil else { return }
+        guard status != lastSentStatus || activity == nil else { return }
         writeThumbnails(for: status)
         if let activity, activity.attributes.sessionID == status.sessionID {
             enqueue(activity) { await $0.update(Self.content(status)) }
-            shown = status
+            lastSentStatus = status
         } else {
             request(status)
         }
@@ -73,7 +72,7 @@ final class WorkoutActivityController {
         if let existing {
             activity = existing
             enqueue(existing) { await $0.update(Self.content(status)) }
-            shown = status
+            lastSentStatus = status
             return
         }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
@@ -82,7 +81,7 @@ final class WorkoutActivityController {
                 attributes: WorkoutActivityAttributes(sessionID: status.sessionID),
                 content: Self.content(status)
             )
-            shown = status
+            lastSentStatus = status
         } catch {
             Self.log.error("Live Activity request failed: \(String(describing: error))")
         }
@@ -90,7 +89,7 @@ final class WorkoutActivityController {
 
     /// A finished session leaves the finished banner up for a minute; a discarded one disappears at once.
     private func end(after last: LiveWorkoutStatus) {
-        shown = nil
+        lastSentStatus = nil
         guard let ending = activity else { return }
         activity = nil
         let session = try? store?.read { try WorkoutSession.fetchOne($0, key: WorkoutSession.key(last.sessionID)) }
@@ -136,9 +135,9 @@ final class WorkoutActivityController {
     /// The intent's process may be suspended as soon as `perform` returns, so it waits for the command to reach the
     /// activity. A command that changes nothing (a stale row, rest adjust with no rest) waits out the bound.
     private func perform(_ command: LiveWorkoutCommand) async {
-        let before = shown
+        let before = lastSentStatus
         LiveWorkoutController.shared.perform(command)
-        for _ in 0..<40 where shown == before {
+        for _ in 0..<40 where lastSentStatus == before {
             try? await Task.sleep(for: .milliseconds(25))
         }
         await queue?.value

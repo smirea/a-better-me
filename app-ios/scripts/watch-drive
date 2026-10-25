@@ -1,0 +1,100 @@
+#!/usr/bin/env bun
+// Taps, turns the crown, swipes, and screenshots the watch app in a watch simulator, which T3's device tools and
+// agent-device can't drive. `start` runs UITests/Watch/WatchDriver as a long-lived UI test; every other command is
+// written for it as a file and waits for its answer.
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+
+const root = resolve(import.meta.dir, "..");
+const usage = `Usage: scripts/watch-drive <watch-udid> <command> [args]
+
+  start                 build the driver, launch the watch app under it, wait until ready
+  tree                  the accessibility tree
+  tap <label|id>        tap a button (or any element) by identifier or label
+  longpress <label|id>
+  tapxy <x> <y>         tap at points from the top left
+  crown <delta>         rotate the Digital Crown (1.0 is about one full turn)
+  swipe left|right|up|down
+  shot [path]           screenshot, default DerivedData/watch-driver-<udid>/shot.png
+  launch [args...]      relaunch the watch app with launch arguments
+  wait <seconds> <label|id>
+  sleep <seconds>
+  systree <bundle-id>   the tree of another process, such as com.apple.Carousel (system sheets)
+  systap <bundle-id> <label|id>
+  stop                  end the driver`;
+
+const [udid, op, ...args] = Bun.argv.slice(2);
+if (!udid || !op) {
+    console.log(usage);
+    process.exit(udid ? 1 : 0);
+}
+const dir = join(root, "DerivedData", `watch-driver-${udid}`);
+const build = join(root, "DerivedData", "watchdriver");
+
+if (op === "start") await start();
+else console.log(await send(op, args));
+
+function alive(pid: number) {
+    try {
+        process.kill(pid, 0);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function start() {
+    if (existsSync(join(dir, "pid")) && existsSync(join(dir, "ready")) && alive(Number(readFileSync(join(dir, "pid"), "utf8")))) {
+        console.log("Driver already running.");
+        return;
+    }
+    rmSync(dir, { recursive: true, force: true });
+    mkdirSync(dir, { recursive: true });
+    const destination = `platform=watchOS Simulator,id=${udid}`;
+    const project = ["-project", join(root, "App.xcodeproj"), "-scheme", "WatchDriver", "-destination", destination, "-derivedDataPath", build];
+    console.log("Building the watch driver…");
+    const built = Bun.spawnSync(["xcodebuild", "build-for-testing", "-quiet", ...project, "CODE_SIGN_IDENTITY=-"], { stdout: "pipe", stderr: "pipe" });
+    if (built.exitCode !== 0) {
+        console.error(built.stdout.toString(), built.stderr.toString());
+        throw new Error("Building the watch driver failed.");
+    }
+    const runner = Bun.spawn(
+        ["xcodebuild", "test-without-building", ...project, "-only-testing:WatchUITests/WatchDriver/testDrive"],
+        {
+            env: { ...process.env, TEST_RUNNER_WATCH_DRIVER_DIR: dir },
+            stdout: Bun.file(join(dir, "xcodebuild.log")),
+            stderr: Bun.file(join(dir, "xcodebuild.err.log")),
+            stdin: "ignore",
+        },
+    );
+    runner.unref();
+    writeFileSync(join(dir, "pid"), String(runner.pid));
+    const deadline = Date.now() + 240_000;
+    while (!existsSync(join(dir, "ready"))) {
+        if (runner.exitCode !== null) throw new Error(`The driver exited early. See ${join(dir, "xcodebuild.log")}.`);
+        if (Date.now() > deadline) throw new Error(`The driver never became ready. See ${join(dir, "xcodebuild.log")}.`);
+        await Bun.sleep(250);
+    }
+    console.log(`Driver ready on ${udid}.`);
+}
+
+async function send(op: string, args: string[]) {
+    if (!existsSync(join(dir, "ready"))) throw new Error(`No driver for ${udid}. Run: scripts/watch-drive ${udid} start`);
+    if (op === "stop") op = "quit";
+    if (op === "shot" && args.length === 0) args = [join(dir, "shot.png")];
+    const index = readdirSync(dir).filter(file => file.startsWith("cmd-")).length;
+    writeFileSync(join(dir, `cmd-${index}.json`), JSON.stringify({ op, args }));
+    const output = join(dir, `out-${index}.txt`);
+    const deadline = Date.now() + 60_000;
+    const pid = Number(readFileSync(join(dir, "pid"), "utf8"));
+    while (!existsSync(output)) {
+        if (Date.now() > deadline || !alive(pid)) {
+            rmSync(join(dir, "ready"), { force: true });
+            throw new Error(`No answer to ${op}; the driver may have stopped. See ${join(dir, "xcodebuild.log")}.`);
+        }
+        await Bun.sleep(100);
+    }
+    await Bun.sleep(20);
+    if (op === "quit") rmSync(join(dir, "ready"), { force: true });
+    return readFileSync(output, "utf8");
+}

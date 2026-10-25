@@ -58,10 +58,13 @@ final class LiveSessionStore {
 
     private static let notificationID = "rest-timer"
 
-    func startRest(seconds: Int, alerts: RestSettings) {
+    /// A rest that started at `start`, which a set logged on the watch a while ago puts in the past; one already over
+    /// doesn't start.
+    func startRest(seconds: Int, alerts: RestSettings, from start: Date = .now) {
         self.alerts = alerts
         setRestSeconds = seconds
-        restartRest(seconds: seconds)
+        guard seconds > 0, start.addingTimeInterval(TimeInterval(seconds)) > .now else { return stopRest() }
+        setRest(RestTimer(startedAt: start, duration: TimeInterval(seconds)))
     }
 
     func restartRest(seconds: Int) {

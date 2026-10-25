@@ -7,13 +7,6 @@ enum Neighbor {
 /// Every structural edit the builder's menus make to a workout. Rows find their exercise by ID, because a reorder can
 /// land between opening a menu and choosing an item.
 extension [WorkoutBlock] {
-    func locate(_ id: BlockExercise.ID) -> (block: Int, item: Int)? {
-        for (blockIndex, block) in enumerated() {
-            if let item = block.exercises.firstIndex(where: { $0.id == id }) { return (blockIndex, item) }
-        }
-        return nil
-    }
-
     var exerciseCount: Int { reduce(0) { $0 + $1.exercises.count } }
 
     mutating func add(_ pick: ExercisePick) {

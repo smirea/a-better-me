@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The workouts the watch can start: the program's next workout, then the library, as the phone last sent them.
+/// The workouts the watch can start, with or without the phone: the program's next workout, then the library, as the
+/// phone last sent them.
 struct HomeView: View {
     private var model: WatchModel { .shared }
 
@@ -29,7 +30,6 @@ struct HomeView: View {
             }
             .navigationTitle("Workouts")
             .watchGlow()
-            .onDebugAction(.start) { if let first = model.home?.workouts.first { model.start(first) } }
         }
     }
 
@@ -56,36 +56,42 @@ private struct WorkoutPreview: View {
     private var model: WatchModel { .shared }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
+        List {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(option.name).font(AppFont.title(18)).foregroundStyle(Theme.accent)
-                if let program = option.program {
-                    Text(program).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                Text(option.program ?? "\(option.totalSets) sets").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+            }
+            .listRowBackground(Color.clear)
+            if let plan = option.plan {
+                ForEach(plan.blocks) { block in
+                    ForEach(Array(block.exercises.enumerated()), id: \.element.id) { index, item in
+                        HStack(spacing: 8) {
+                            if block.isSuperset { MemberBadge(member: index) }
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(plan.exercise(item.exerciseID).name).font(AppFont.medium(14)).lineLimit(2)
+                                Text("\(item.sets.count) sets").font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
+                            }
+                        }
+                    }
                 }
+            } else {
                 ForEach(Array(option.exercises.enumerated()), id: \.offset) { _, name in
-                    Text(name)
-                        .font(AppFont.medium(14))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+                    Text(name).font(AppFont.medium(14))
                 }
             }
         }
-        .safeAreaInset(edge: .bottom) {
-            Button {
-                model.start(option)
-            } label: {
-                if model.startingTemplate == option.id {
-                    ProgressView()
-                } else {
-                    Label("Start", systemImage: "play.fill").font(AppFont.headline(16))
+        .toolbar {
+            ToolbarItem(placement: .bottomBar) {
+                Button {
+                    model.start(option)
+                } label: {
+                    Label("Start", systemImage: "play.fill").font(AppFont.headline(16)).frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.glassProminent)
+                .tint(Theme.accent)
+                .disabled(option.plan == nil)
+                .accessibilityLabel("Start \(option.name)")
             }
-            .buttonStyle(.glassProminent)
-            .tint(Theme.accent)
-            .disabled(model.startingTemplate != nil)
-            .accessibilityLabel("Start \(option.name)")
         }
         .watchGlow()
     }

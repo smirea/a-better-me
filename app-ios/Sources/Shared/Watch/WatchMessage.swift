@@ -5,20 +5,17 @@ import Foundation
 /// run different builds for a moment, so like the live workout contract it only grows.
 enum WatchMessage: Codable, Sendable {
     // Phone to watch.
-    /// The in-progress workout, or nil once none is.
-    case snapshot(LiveWorkoutSnapshot?)
+    /// The workout in progress, or the one that just ended with `endedAt` set, and the watch events the phone has
+    /// applied to it so far. Nil once no workout is in progress.
+    case workout(WatchWorkout?, acknowledged: [UUID])
     case home(WatchHome)
-    /// Sent when the workout ends, and again once its Health summary is saved.
-    case finished(WatchWorkoutSummary)
-    /// Ends the watch's recording and saves it to Health with what only the phone knows.
-    case record(WorkoutRecordingPlan)
-    /// The workout was discarded on the phone, so the recording is thrown away.
+    /// The watch's recording is thrown away: the workout was discarded on the phone, or the phone already recorded
+    /// most of it.
     case discardRecording(sessionID: UUID)
 
     // Watch to phone.
-    case command(LiveWorkoutCommand)
-    /// Starts a workout from the watch's list. The phone starts it like a tap on its own Start button.
-    case start(templateID: UUID)
+    /// The watch's outbox, oldest first, resent until the phone acknowledges each event.
+    case events([WatchEvent])
     case recorded(sessionID: UUID, WorkoutHealthSummary)
     /// The watch records the workout. Sent over WatchConnectivity, since a mirrored session can fail to reach the phone.
     case recordingStarted
@@ -32,10 +29,10 @@ enum WatchMessage: Codable, Sendable {
     init(_ data: Data) throws { self = try JSONDecoder().decode(Self.self, from: data) }
 
     /// WatchConnectivity dictionary keys: a message or user info carries one encoded message, and the application
-    /// context the latest home list and snapshot.
+    /// context the latest home list and workout.
     static let messageKey = "message"
     static let homeKey = "home"
-    static let snapshotKey = "snapshot"
+    static let workoutKey = "workout"
 }
 
 /// The watch's home list: the active program's next workout first, then the library.
@@ -50,21 +47,12 @@ struct WatchWorkoutOption: Codable, Hashable, Sendable, Identifiable {
     var program: String?
     var exercises: [String]
     var totalSets: Int
-}
-
-/// The watch's finish screen.
-struct WatchWorkoutSummary: Codable, Hashable, Sendable {
-    var sessionID: UUID
-    var name: String
-    var duration: TimeInterval
-    var completedSets: Int
-    var volumeKg: Double
-    var unit: WeightUnit
-    var health: WorkoutHealthSummary?
+    /// The workout as it would start now, so the watch can start it with the phone out of reach.
+    var plan: WatchWorkout?
 }
 
 /// What the recording device needs to close the workout: its end, the name for the metadata, one segment per exercise,
-/// and an effort score. The phone builds it, since only the phone has the logged sets.
+/// and an effort score, worked out by `HealthRecordingPlan` from the logged sets.
 struct WorkoutRecordingPlan: Codable, Hashable, Sendable {
     struct Segment: Codable, Hashable, Sendable {
         var exercise: String

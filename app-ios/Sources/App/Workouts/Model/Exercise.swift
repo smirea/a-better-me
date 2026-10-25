@@ -1,7 +1,6 @@
 import Foundation
 
 /// MF Workouts' exercise ID for catalog exercises, `custom-<uuid>` for the owner's own.
-typealias ExerciseID = String
 
 /// Field names and values mirror `scripts/catalog.ts`, which generates them from the reference app's own export.
 struct Exercise: Codable, Hashable, Identifiable {

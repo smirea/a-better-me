@@ -1,39 +1,35 @@
 import SwiftUI
 import WatchKit
 
-/// The set to do next: set dots, the exercise, and a pill per value. The Digital Crown edits the focused pill, the check
-/// logs the set with those values, and the phone answers with the next snapshot.
+/// The set to do next: the exercise, its sets as dots, and a pill per value. Tap a pill and turn the Digital Crown to
+/// change it; the big button logs the set with those values.
 struct SetView: View {
-    let row: LiveSet
-    let snapshot: LiveWorkoutSnapshot
+    let workout: WatchWorkout
+    let path: RowPath
+    let showExercises: () -> Void
 
     @State private var rowID: UUID?
     @State private var values = LiveValues()
-    @State private var touched = false
     @State private var focus = LiveField.weight
     @State private var crown = 0.0
     /// The scale index the shown value sits nearest, so focusing a pill doesn't snap an untidy value.
     @State private var crownIndex = 0
-    @State private var editTask: Task<Void, Never>?
 
-    private var unit: WeightUnit { snapshot.status.unit }
+    private var row: LiveSet { workout.set(at: path) }
+    private var item: BlockExercise { workout.blocks[path.block].exercises[path.exercise] }
     private var fields: [LiveField] { row.pills }
-    private var scale: [Double] { MetricScale.values(for: focus, unit: unit, loadableKg: snapshot.loadableWeightsKg?[row.blockExerciseID]) }
+    private var scale: [Double] { MetricScale.values(for: focus, unit: workout.unit, loadableKg: workout.exercise(item.exerciseID).loadableWeightsKg) }
 
     var body: some View {
         VStack(spacing: 6) {
-            SetDots(set: row, exercise: snapshot.exercises.first { $0.id == row.blockExerciseID })
-            Text(row.exerciseName)
-                .font(AppFont.headline(16))
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
-            if let badge = row.setType.title {
-                Text(badge).font(AppFont.caption(11)).foregroundStyle(Theme.accent)
+            Button(action: showExercises) {
+                SetHeader(workout: workout, path: path, row: row)
             }
+            .buttonStyle(.plain)
+            .accessibilityHint("Shows the workout's exercises")
             HStack(spacing: 4) {
                 ForEach(fields, id: \.self) { field in
-                    MetricPill(field: field, values: values, unit: unit, isFocused: field == focus) { focus = field }
+                    MetricPill(field: field, values: values, unit: workout.unit, isFocused: field == focus) { focus = field }
                         .accessibilityAdjustableAction { direction in step(field, by: direction == .increment ? 1 : -1) }
                 }
             }
@@ -42,47 +38,60 @@ struct SetView: View {
                 $crown, from: 0, through: Double(max(scale.count - 1, 0)), by: 1,
                 sensitivity: .medium, isContinuous: false, isHapticFeedbackEnabled: true
             )
-            if let reference = row.target ?? row.previous {
-                Text(reference).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary).lineLimit(1)
+            if let reference = reference {
+                Text(reference)
+                    .font(AppFont.caption(11))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Log set", systemImage: "checkmark", action: logSet)
+            ToolbarItem(placement: .bottomBar) {
+                Button(action: logSet) {
+                    Label(logTitle, systemImage: "checkmark")
+                        .font(AppFont.headline(16))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.glassProminent)
                 .tint(Theme.accent)
-                .foregroundStyle(.black)
+                .accessibilityLabel("Log set")
             }
         }
-        .onDebugAction(.check, perform: logSet)
-        .onDebugAction(.crownUp) { step(focus, by: 1) }
-        .onDebugAction(.crownDown) { step(focus, by: -1) }
-        .onDebugAction(.nextField) { focus = fields[((fields.firstIndex(of: focus) ?? 0) + 1) % fields.count] }
-        .onAppear { load(row) }
-        .onChange(of: row) { _, row in
-            if row.id != rowID || !touched { load(row) }
-        }
+        .onAppear { load() }
+        .onChange(of: row.id) { load() }
         .onChange(of: focus) { syncCrown() }
         .onChange(of: crown) { _, crown in
             let index = min(max(Int(crown.rounded()), 0), scale.count - 1)
             guard index != crownIndex, scale.indices.contains(index) else { return }
             crownIndex = index
-            setValue(scale[index], for: focus)
+            MetricScale.set(scale[index], of: focus, in: &values)
         }
+    }
+
+    private var logTitle: String {
+        switch row.setType {
+        case .warmUp: "Log Warm-Up"
+        case .drop where row.isSubRow: "Log Drop"
+        default: "Log Set"
+        }
+    }
+
+    private var reference: String? {
+        if let previous = row.previous { return "Last \(previous)" }
+        return row.target.map { "Target \($0)" }
     }
 
     private func logSet() {
-        WKInterfaceDevice.current().play(.success)
-        editTask?.cancel()
-        WatchModel.shared.send(.log(rowID: row.id, values: values))
+        WatchModel.shared.act(.log(rowID: row.id, values: values))
     }
 
-    private func load(_ row: LiveSet) {
-        if row.id != rowID {
-            rowID = row.id
-            touched = false
-            focus = fields.first ?? .reps
-        }
+    private func load() {
+        guard row.id != rowID else { return }
+        let sameExercise = rowID.flatMap { workout.blocks.path(of: $0) }.map { workout.blocks[$0.block].exercises[$0.exercise].id == item.id } ?? false
+        rowID = row.id
         values = row.values
+        if !sameExercise || !fields.contains(focus) { focus = fields.first ?? .reps }
         syncCrown()
     }
 
@@ -95,28 +104,74 @@ struct SetView: View {
 
     private func step(_ field: LiveField, by delta: Int) {
         focus = field
-        let target = min(max(Int(crown.rounded()) + delta, 0), scale.count - 1)
-        crown = Double(target)
+        crown = Double(min(max(Int(crown.rounded()) + delta, 0), scale.count - 1))
     }
+}
 
-    private func setValue(_ value: Double, for field: LiveField) {
-        var next = values
-        MetricScale.set(value, of: field, in: &next)
-        guard next != values else { return }
-        values = next
-        touched = true
-        editTask?.cancel()
-        let rowID = row.id
-        editTask = Task {
-            try? await Task.sleep(for: .seconds(1))
-            guard !Task.isCancelled else { return }
-            WatchModel.shared.send(.edit(rowID: rowID, values: next))
+/// The exercise, then one row with a superset member's letter, the exercise's sets as dots, and the set type.
+struct SetHeader: View {
+    let workout: WatchWorkout
+    let path: RowPath
+    let row: LiveSet
+
+    var body: some View {
+        let block = workout.blocks[path.block]
+        let item = block.exercises[path.exercise]
+        VStack(spacing: 4) {
+            Text(row.exerciseName)
+                .font(AppFont.headline(15))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 5) {
+                if block.isSuperset { MemberBadge(member: path.exercise) }
+                SetDots(sets: item.sets, current: path.set)
+                if let title = row.setType.title(isSubRow: row.isSubRow) {
+                    Text(title).font(AppFont.headline(9)).foregroundStyle(row.setType.tint).lineLimit(1)
+                }
+            }
         }
     }
 }
 
+/// A superset or circuit member's letter, A for the first.
+struct MemberBadge: View {
+    let member: Int
+
+    var body: some View {
+        Text(String(UnicodeScalar(UInt8(65 + member))))
+            .font(AppFont.headline(10))
+            .foregroundStyle(.black)
+            .frame(width: 18, height: 18)
+            .background(Theme.lavender, in: RoundedRectangle(cornerRadius: 5))
+            .accessibilityLabel("Superset exercise \(String(UnicodeScalar(UInt8(65 + member))))")
+    }
+}
+
+/// One dot per set: logged ones filled, the current one white with its number, warm-ups marked W.
+struct SetDots: View {
+    let sets: [WorkoutSet]
+    let current: Int
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(Array(sets.prefix(8).enumerated()), id: \.element.id) { index, set in
+                let isCurrent = index == current
+                Text(set.type.badge ?? "\(sets.number(at: index))")
+                    .font(AppFont.headline(10))
+                    .foregroundStyle(isCurrent ? .black : set.isDone ? .black : Theme.textSecondary)
+                    .frame(width: 18, height: 18)
+                    .background(isCurrent ? Theme.textPrimary : set.isDone ? Theme.accent : Theme.surfaceRaised, in: Circle())
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Set \(current + 1) of \(sets.count)")
+    }
+}
+
 /// What the crown steps through for each value. Weight steps through what the exercise's equipment loads in the gym,
-/// else 2.5 lb or 1.25 kg at a time.
+/// else 2.5 lb or 1.25 kg at a time; RIR runs 0 to 6, where 6 means 6 or more.
 enum MetricScale {
     static func values(for field: LiveField, unit: WeightUnit, loadableKg: [Double]?) -> [Double] {
         switch field {
@@ -125,7 +180,7 @@ enum MetricScale {
             let step = unit == .kg ? 1.25 : 2.5
             return (0...400).map { unit.toKg(Double($0) * step) }
         case .reps: return (0...100).map(Double.init)
-        case .rir: return (0...10).map(Double.init)
+        case .rir: return (0...6).map(Double.init)
         case .duration: return (0...720).map { Double($0 * 5) }
         case .distance: return (0...1000).map { Double($0 * 10) }
         }
@@ -172,45 +227,20 @@ struct MetricPill: View {
 
     var body: some View {
         let text = MetricScale.text(field, in: values, unit: unit)
+        let tint = field == .rir && values.rir != nil ? Theme.rir(values.rir) : Theme.accent
         Button {
             action?()
         } label: {
             VStack(spacing: 0) {
-                Text(text.value).font(AppFont.number(20)).lineLimit(1).minimumScaleFactor(0.5)
-                Text(text.caption).font(AppFont.caption(10)).foregroundStyle(isFocused ? Theme.accent : Theme.textSecondary)
+                Text(text.value).font(AppFont.number(22)).lineLimit(1).minimumScaleFactor(0.5)
+                Text(text.caption).font(AppFont.headline(9)).foregroundStyle(isFocused ? tint : Theme.textSecondary)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 6)
-            .background(Theme.accent.opacity(isFocused ? 0.3 : 0.15), in: Capsule())
-            .overlay(Capsule().strokeBorder(isFocused ? Theme.accent : .clear, lineWidth: 2))
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .background(tint.opacity(isFocused ? 0.32 : 0.14), in: RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(isFocused ? tint : .clear, lineWidth: 2))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(text.caption.capitalized) \(text.value)")
-    }
-}
-
-/// One numbered dot per row of the exercise: logged ones in the accent, the current one white.
-private struct SetDots: View {
-    let set: LiveSet
-    let exercise: LiveExercise?
-
-    var body: some View {
-        if let exercise, exercise.totalSets <= 6 {
-            HStack(spacing: 5) {
-                ForEach(0..<exercise.totalSets, id: \.self) { index in
-                    let isCurrent = index == exercise.completedSets
-                    Text("\(index + 1)")
-                        .font(AppFont.headline(11))
-                        .foregroundStyle(isCurrent ? .black : Theme.textPrimary)
-                        .frame(width: 20, height: 20)
-                        .background(isCurrent ? Theme.textPrimary : index < exercise.completedSets ? Theme.accent.opacity(0.6) : Theme.surfaceRaised, in: Circle())
-                }
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(set.position)
-        } else {
-            Text(set.position.uppercased()).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
-        }
     }
 }
 
@@ -223,14 +253,22 @@ extension LiveSet {
 }
 
 extension SetType {
-    /// The caption above a set that isn't a standard one, as on MF's rest card.
-    var title: String? {
+    /// The caption beside a set that isn't a standard one, as on MF's rest card.
+    func title(isSubRow: Bool = false) -> String? {
         switch self {
         case .standard: nil
-        case .warmUp: "WARM-UP SET"
-        case .drop: "DROP SET"
-        case .myo: "MYO SET"
-        case .failure: "FAILURE SET"
+        case .warmUp: "WARM-UP"
+        case .drop: isSubRow ? "DROP" : "DROP SET"
+        case .myo: isSubRow ? "MYO REP" : "MYO SET"
+        case .failure: "TO FAILURE"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .warmUp: Theme.amber
+        case .failure: Theme.destructive
+        default: Theme.accent
         }
     }
 }
