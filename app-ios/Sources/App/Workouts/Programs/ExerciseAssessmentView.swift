@@ -31,8 +31,7 @@ struct ExerciseAssessmentView: View {
                     .padding(.bottom, 4)
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
+        .themedList()
         .navigationTitle("Exercise Assessment")
         .navigationBarTitleDisplayMode(.inline)
     }

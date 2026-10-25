@@ -31,8 +31,7 @@ struct WorkoutEditor: View {
             }
         }
         .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
+        .themedList()
         .sheet(item: $sheet) { sheet in
             switch sheet {
             case .picker(let request):

@@ -48,8 +48,7 @@ struct CustomizeDashboardView: View {
             .listRowBackground(Theme.surface)
         }
         .environment(\.editMode, .constant(.active))
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
+        .themedList()
         .navigationTitle("Customize Dashboard")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -256,6 +255,7 @@ private struct PrimaryFocusPicker: View {
                             }
                         ))
                         .font(AppFont.headline(12))
+                        .tint(Theme.accent)
                         preview(card)
                             .frame(maxWidth: .infinity, minHeight: 70)
                     }
@@ -308,8 +308,7 @@ private struct AddRemoveSheet: View {
             List {
                 content.listRowBackground(Theme.surface)
             }
-            .scrollContentBackground(.hidden)
-            .background(Theme.background)
+            .themedList()
             .navigationTitle(section.title)
             .navigationSubtitle("Add or remove tiles")
             .navigationBarTitleDisplayMode(.inline)
@@ -356,6 +355,7 @@ private struct AddRemoveSheet: View {
                         if on { layout.exercises.append(ExerciseCard(exerciseID: id)) } else { layout.exercises.removeAll { $0.exerciseID == id } }
                     }
                 )) { CardRow(title: catalog.exercise(id)?.name ?? "Unknown exercise", icon: .exercise) }
+                .tint(Theme.accent)
             }
         }
     }
@@ -368,6 +368,7 @@ private struct AddRemoveSheet: View {
                     if on { layout.muscles.append(MuscleCard(muscle: muscle)) } else { layout.muscles.removeAll { $0.muscle == muscle } }
                 }
             )) { CardRow(title: muscle.displayName, icon: .muscle) }
+            .tint(Theme.accent)
         }
     }
 
@@ -378,5 +379,6 @@ private struct AddRemoveSheet: View {
                 if on { layout[keyPath: path].append(card) } else { layout[keyPath: path].removeAll { $0 == card } }
             }
         )) { CardRow(title: title, icon: icon) }
+        .tint(Theme.accent)
     }
 }

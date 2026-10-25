@@ -41,7 +41,6 @@ struct ExerciseLibraryView: View {
             trailing: { _ in Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary) }
         )
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search for an exercise")
-        .tint(Theme.textPrimary)
         .navigationTitle("Exercises")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -213,9 +212,7 @@ struct ExerciseSettingsView: View {
                 SectionTitle("Exercise Overrides").textCase(nil)
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
-        .tint(Theme.textPrimary)
+        .themedList()
         .navigationTitle(exercise?.name ?? "Exercise")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingInfo) { ExerciseDetailSheet(exerciseID: exerciseID) }
@@ -388,9 +385,7 @@ private struct WarmUpSchemeEditor: View {
                 .listRowBackground(Theme.surface)
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
-        .tint(Theme.textPrimary)
+        .themedList()
         .navigationTitle("Warm-Up Scheme")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -427,7 +422,6 @@ private struct SettingsRow<Accessory: View>: View {
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.capsule)
                 .controlSize(.small)
-                .tint(Theme.textPrimary)
         }
         .contentShape(.rect)
         .listRowBackground(Theme.surface)

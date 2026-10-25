@@ -116,7 +116,6 @@ struct SetTargetsSheet: View {
                 }
             }
             .safeAreaInset(edge: .bottom) { bottomButtons }
-            .tint(Theme.textPrimary)
             .onChange(of: restTimers) { _, on in
                 for index in draft.sets.indices {
                     draft.sets[index].restSeconds = on ? (draft.sets[index].restSeconds ?? defaultRest) : nil

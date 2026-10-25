@@ -38,6 +38,7 @@ struct WarmUpSettingsView: View {
                 SectionTitle("Behavior").textCase(nil)
             }
         }
+        .themedList()
         .navigationTitle("Warm-Up")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -57,7 +58,6 @@ private struct WarmUpSchemeView: View {
                             .font(AppFont.medium(14))
                             .buttonStyle(.bordered)
                             .buttonBorderShape(.capsule)
-                            .tint(Theme.textPrimary)
                             .accessibilityLabel("Edit \(category.displayName) scheme")
                     } label: {
                         SettingLabel(title: category.displayName, detail: summary(steps(category)))
@@ -73,6 +73,7 @@ private struct WarmUpSchemeView: View {
                     .foregroundStyle(Theme.destructive)
             }
         }
+        .themedList()
         .navigationTitle("Warm-Up Scheme")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $editing) { category in
@@ -156,7 +157,6 @@ private struct WarmUpSchemeEditor: View {
             }
             .navigationBarTitleDisplayMode(.inline)
         }
-        .tint(Theme.textPrimary)
         .presentationDetents([.large])
     }
 

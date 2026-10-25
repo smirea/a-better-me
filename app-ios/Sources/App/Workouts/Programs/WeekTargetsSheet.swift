@@ -132,7 +132,6 @@ struct WeekTargetsSavingOptions: View {
             }
         }
         .presentationDetents([.large])
-        .tint(Theme.textPrimary)
     }
 
     private func radio(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {

@@ -78,7 +78,8 @@ struct DotGrid: View {
     let color: Color
 
     var body: some View {
-        Grid(horizontalSpacing: 7, verticalSpacing: 6) {
+        // Each dot centers in a flexible column, so ten fit a half-width card at any screen size.
+        Grid(horizontalSpacing: 0, verticalSpacing: 6) {
             ForEach(0..<3, id: \.self) { row in
                 GridRow {
                     ForEach(0..<10, id: \.self) { column in
@@ -86,6 +87,7 @@ struct DotGrid: View {
                         RoundedRectangle(cornerRadius: 2)
                             .fill(days.indices.contains(index) && days[index] ? color : Theme.surfaceRaised)
                             .frame(width: 9, height: 9)
+                            .frame(maxWidth: .infinity)
                     }
                 }
             }

@@ -41,8 +41,7 @@ struct EquipmentLoadEditor: View {
                 }
                 .listRowBackground(Theme.surface)
             }
-            .scrollContentBackground(.hidden)
-            .background(Theme.background)
+            .themedList()
             .font(AppFont.medium(15))
             .navigationTitle(equipment.name)
             .navigationBarTitleDisplayMode(.inline)
@@ -58,7 +57,6 @@ struct EquipmentLoadEditor: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
     }
 }
 

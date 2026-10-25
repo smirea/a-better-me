@@ -15,12 +15,14 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $tab) {
-            Tab("Dashboard", systemImage: "square.grid.2x2", value: .dashboard) { DashboardTab() }
-            Tab("Workout", systemImage: "dumbbell", value: .workout) { WorkoutTab() }
+            // The tab bar's selection keeps the accent, so each tab's content restores the app's white tint.
+            Tab("Dashboard", systemImage: "square.grid.2x2", value: .dashboard) { DashboardTab().tint(Theme.textPrimary) }
+            Tab("Workout", systemImage: "dumbbell", value: .workout) { WorkoutTab().tint(Theme.textPrimary) }
             Tab("New", systemImage: "plus", value: .add, role: .prominent) { Color.clear }
-            Tab("Levels", systemImage: "trophy", value: .levels) { LevelsTab() }
-            Tab("More", systemImage: "ellipsis.circle", value: .more) { MoreTab() }
+            Tab("Levels", systemImage: "trophy", value: .levels) { LevelsTab().tint(Theme.textPrimary) }
+            Tab("More", systemImage: "ellipsis.circle", value: .more) { MoreTab().tint(Theme.textPrimary) }
         }
+        .tint(Theme.accent)
         .tabViewBottomAccessory(isEnabled: activeSession != nil) { ActiveSessionBar() }
         .resolvingWorkoutStart()
         .onChange(of: tab) { previous, current in

@@ -29,7 +29,7 @@ struct BetterMeApp: App {
                 .environment(store)
                 .font(AppFont.body())
                 .preferredColorScheme(.dark)
-                .tint(Theme.accent)
+                .tint(Theme.textPrimary)
         }
     }
 }

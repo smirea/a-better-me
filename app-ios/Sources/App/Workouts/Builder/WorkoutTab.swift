@@ -34,7 +34,7 @@ struct WorkoutTab: View {
                             WeekStrip(days: days, progress: progress, target: { pillTarget($0, days: days) }, onOpen: open)
                             ForEach(settings.workout.sections.visible) { section($0) }
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, 20)
                         .padding(.bottom)
                     }
                 }
@@ -52,7 +52,6 @@ struct WorkoutTab: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
         .sheet(item: $summary) { WorkoutSummaryView(session: $0) }
         .fullScreenCover(isPresented: $creatingWorkout) {
             CreateWorkoutView { path.append($0.id) }

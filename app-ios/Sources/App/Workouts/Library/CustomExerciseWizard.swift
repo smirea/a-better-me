@@ -143,7 +143,6 @@ struct CustomExerciseWizard: View {
                 }
                 .navigationDestination(for: Step.self) { step($0) }
         }
-        .tint(Theme.textPrimary)
     }
 
     private func step(_ step: Step) -> some View {
@@ -166,7 +165,6 @@ struct CustomExerciseWizard: View {
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaBar(edge: .top) {
             ProgressView(value: Double(step.rawValue + 1), total: Double(Step.allCases.count))
-                .tint(Theme.textPrimary)
                 .padding(.horizontal)
         }
         .safeAreaInset(edge: .bottom) {
@@ -408,7 +406,6 @@ private struct EquipmentStep: View {
                 Button(options.isEmpty ? "Add" : "Change") { picking = role }
                     .buttonStyle(.bordered)
                     .buttonBorderShape(.capsule)
-                    .tint(Theme.textPrimary)
                     .accessibilityLabel(options.isEmpty ? "Add \(role.title)" : "Change \(role.title)")
             }
             EquipmentOptions(title: "", names: options.map(\.name), ids: options.map(\.ids))
@@ -493,7 +490,6 @@ private struct FinalDetailsStep: View {
                 Button("Edit") { editingDescription = true }
                     .buttonStyle(.bordered)
                     .buttonBorderShape(.capsule)
-                    .tint(Theme.textPrimary)
                     .accessibilityLabel("Edit Description")
             }
             .padding(.top, 16)
@@ -560,7 +556,6 @@ private struct RatingStepper: View {
         .labelStyle(.iconOnly)
         .buttonStyle(.bordered)
         .buttonBorderShape(.circle)
-        .tint(Theme.textPrimary)
         .padding(.vertical, 6)
     }
 }
@@ -597,8 +592,7 @@ private struct JointActionPicker: View {
                     Text("Choose all that apply").font(AppFont.caption(12)).textCase(nil)
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Theme.background)
+            .themedList()
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search joint actions")
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
@@ -608,7 +602,6 @@ private struct JointActionPicker: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
     }
 }
 
@@ -635,7 +628,6 @@ private struct DescriptionEditor: View {
                     }
                 }
         }
-        .tint(Theme.textPrimary)
     }
 }
 

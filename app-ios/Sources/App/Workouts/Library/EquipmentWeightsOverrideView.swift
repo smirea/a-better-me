@@ -57,9 +57,7 @@ struct EquipmentWeightsOverrideView: View {
                 SectionTitle("\(exercise?.name ?? "Exercise") Weights").textCase(nil)
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
-        .tint(Theme.textPrimary)
+        .themedList()
         .navigationTitle("Weights")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $editing) { item in

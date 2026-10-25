@@ -119,7 +119,7 @@ private struct DashboardHome: View {
             }
         }
         .tabViewStyle(.page(indexDisplayMode: layout.primaryFocus.count > 1 ? .always : .never))
-        .frame(height: 360)
+        .frame(height: 320)
     }
 
     private func recordLabel(_ value: Double) -> String {

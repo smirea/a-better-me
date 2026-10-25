@@ -32,8 +32,7 @@ struct BodyWeightLogSheet: View {
                 }
                 .listRowBackground(Theme.surface)
             }
-            .scrollContentBackground(.hidden)
-            .background(Theme.background)
+            .themedList()
             .navigationTitle("Log Weight")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

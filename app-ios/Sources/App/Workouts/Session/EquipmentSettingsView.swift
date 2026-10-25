@@ -88,10 +88,8 @@ struct EquipmentSettingsView: View {
             }
             .listRowBackground(Theme.surface)
         }
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
+        .themedList()
         .font(AppFont.medium(15))
-        .tint(Theme.textPrimary)
         .navigationTitle("Equipment Settings")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { offsetText = Self.text(of: overrides.plateOffset, unit: unit) }

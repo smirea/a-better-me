@@ -163,7 +163,6 @@ private struct SectionWorkoutsSheet: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
         .presentationDetents([.medium, .large])
     }
 }

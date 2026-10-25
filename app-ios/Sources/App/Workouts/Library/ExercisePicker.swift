@@ -39,7 +39,6 @@ struct ExercisePicker: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
         .onAppear {
             guard !choseGym else { return }
             choseGym = true
@@ -80,8 +79,7 @@ private struct SwapSubstitutions: View {
             }
         }
         .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
+        .themedList()
         .navigationTitle("Swap")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

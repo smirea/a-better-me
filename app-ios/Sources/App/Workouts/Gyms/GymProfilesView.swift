@@ -32,8 +32,7 @@ struct GymProfilesView: View {
             }
         }
         .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
+        .themedList()
         .navigationTitle("Gym Profiles")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
@@ -126,8 +125,7 @@ private struct NewGymSheet: View {
                     SectionTitle("Gym Type").textCase(nil)
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Theme.background)
+            .themedList()
             .navigationTitle("New Gym Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -141,7 +139,6 @@ private struct NewGymSheet: View {
                     .padding(.horizontal)
             }
         }
-        .tint(Theme.textPrimary)
     }
 
     private func create() {

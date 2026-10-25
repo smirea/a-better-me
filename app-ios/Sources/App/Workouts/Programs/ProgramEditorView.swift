@@ -399,6 +399,5 @@ private struct ProgramEditorGymOptions: View {
             }
         }
         .presentationDetents([.medium, .large])
-        .tint(Theme.textPrimary)
     }
 }

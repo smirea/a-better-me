@@ -65,7 +65,6 @@ struct NewWorkoutSheet: View {
             .navigationDestination(for: ProgramRoute.self) { ProgramEditorView(programID: $0.programID, initialDayID: $0.dayID) }
             .navigationDestination(for: ShortcutsRoute.self) { _ in WorkoutHistoryView() }
         }
-        .tint(Theme.textPrimary)
         .onChange(of: presenter.isExpanded) { _, expanded in
             guard expanded else { return }
             presenter.isExpanded = false
@@ -186,6 +185,7 @@ private struct CustomizeShortcutsSheet: View {
             List {
                 Section {
                     Toggle("Up Next", isOn: Binding(get: { layout.upNextBanner }, set: { on in store.updateSettings { $0.shortcuts.upNextBanner = on } }))
+                        .tint(Theme.accent)
                 } footer: {
                     Text("Shows the active program's next day.")
                 }
@@ -211,9 +211,7 @@ private struct CustomizeShortcutsSheet: View {
                 }
             }
             .environment(\.editMode, .constant(.active))
-            .tint(Theme.accent)
-            .scrollContentBackground(.hidden)
-            .background(Theme.background)
+            .themedList()
             .navigationTitle("Customize Shortcuts")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -222,13 +220,13 @@ private struct CustomizeShortcutsSheet: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
     }
 
     private func visibility(_ item: Shortcut, visible: Bool) -> some View {
         Toggle(isOn: Binding(get: { visible }, set: { show in store.updateSettings { $0.shortcuts.setVisible(item, show) } })) {
-            Label(item.title, systemImage: item.icon)
+            Label { Text(item.title) } icon: { Image(systemName: item.icon).foregroundStyle(Theme.textPrimary) }
         }
+        .tint(Theme.accent)
     }
 }
 

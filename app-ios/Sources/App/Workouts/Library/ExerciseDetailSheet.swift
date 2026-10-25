@@ -55,7 +55,6 @@ struct ExerciseDetailSheet: View {
                 }
             }
         }
-        .tint(Theme.textPrimary)
     }
 }
 
