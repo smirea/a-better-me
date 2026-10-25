@@ -137,4 +137,5 @@ final class LocalStore {
     // MARK: Sync
 
     var lastSyncedAt: Date? { client.lastSyncAt }
+    var snapshotRows: Int? { client.snapshotRows }
 }
