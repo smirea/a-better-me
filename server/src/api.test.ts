@@ -2,12 +2,19 @@ import { describe, expect, test } from 'bun:test';
 import { bunSqlite } from 'sync-engine/bun-sqlite';
 import { createSpace, handleSync, type SyncResponse } from 'sync-engine/core';
 import { schema } from '../../shared/db/schema';
+import { handleAgent } from './agent';
 import { handle, type App } from './api';
 import { DEV_OWNER_TOKEN, parseConfig } from './config';
 
-const space = createSpace(bunSqlite(':memory:'), schema);
+const driver = bunSqlite(':memory:');
+const space = createSpace(driver, schema);
 space.migrate();
-const app: App = { config: parseConfig({}), engine: request => handleSync(space, request) };
+const config = parseConfig({});
+const app: App = {
+	config,
+	engine: request => handleSync(space, request),
+	agent: request => handleAgent(request, { space, driver, ownerToken: config.ownerToken }),
+};
 
 const sync = (client: string, cursor: number, writes: unknown[], token: string | null = DEV_OWNER_TOKEN) =>
 	handle(
@@ -40,12 +47,13 @@ describe('handle', () => {
 		expect(await response.json()).toEqual({ ok: true });
 	});
 
-	test('the sync routes need the owner token, anything else is 404', async () => {
+	test('the sync routes need the owner token, anything outside /api is 404', async () => {
 		expect((await sync('a', 0, [], null)).status).toBe(401);
 		expect((await sync('a', 0, [], 'wrong')).status).toBe(401);
 		const live = new Request('http://api.test/api/live', { headers: { upgrade: 'websocket' } });
 		expect((await handle(live, app)).status).toBe(401);
-		expect((await handle(new Request('http://api.test/api/upload', { method: 'POST' }), app)).status).toBe(404);
+		expect((await handle(new Request('http://api.test/upload', { method: 'POST' }), app)).status).toBe(404);
+		expect((await handle(new Request('http://api.test/api/upload', { method: 'POST' }), app)).status).toBe(401);
 	});
 
 	test('a template put by one client reaches another client as a full row', async () => {

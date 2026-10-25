@@ -5,8 +5,13 @@ import type { Config } from './config';
  * `engine` is the sync engine behind `POST /api/sync` and `GET /api/live`, reached only after the owner check: the
  * Worker forwards to its Durable Object, the Bun server runs a space in-process. `Upgraded` is what a host answers
  * once it has taken over the socket (Bun returns nothing after `server.upgrade`); the Worker always has a Response.
+ * `agent` is every other `/api` route, run where the space lives, which checks its own tokens (`agent/index.ts`).
  */
-export type App<Upgraded = never> = { config: Config; engine(request: Request): Promise<Response | Upgraded> };
+export type App<Upgraded = never> = {
+	config: Config;
+	engine(request: Request): Promise<Response | Upgraded>;
+	agent(request: Request): Promise<Response>;
+};
 
 const error = (status: number, message: string) => Response.json({ ok: false, error: message }, { status });
 
@@ -25,14 +30,16 @@ export async function isOwner(request: Request, token: string): Promise<boolean>
 
 /**
  * Every route, as one fetch handler: `index.ts` serves it with Bun and `worker.ts` on Cloudflare, so it stays free of
- * Bun and Node APIs. Only `/status` is open. The engine sees the original request, which Bun needs for the upgrade;
+ * Bun and Node APIs. Only `/status` and the agent API's entry points are open. The engine sees the original request, which Bun needs for the upgrade;
  * `withBearer` only matters for a browser's `/live`, whose token rides in the subprotocol.
  */
 export async function handle<Upgraded = never>(request: Request, app: App<Upgraded>): Promise<Response | Upgraded> {
 	const url = new URL(request.url);
 	const route = `${request.method} ${url.pathname}`;
 	if (route === 'GET /status') return Response.json({ ok: true });
-	if (route !== 'POST /api/sync' && route !== 'GET /api/live') return error(404, 'Not found');
+	if (route !== 'POST /api/sync' && route !== 'GET /api/live') {
+		return url.pathname === '/api' || url.pathname.startsWith('/api/') ? app.agent(request) : error(404, 'Not found');
+	}
 	if (!(await isOwner(withBearer(request), app.config.ownerToken))) return error(401, 'Missing or wrong owner token');
 	return app.engine(request);
 }

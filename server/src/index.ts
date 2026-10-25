@@ -3,6 +3,7 @@ import { basename, join } from 'node:path';
 import { bunSqlite } from 'sync-engine/bun-sqlite';
 import { createSpace, handleSync, LIVE_PROTOCOL } from 'sync-engine/core';
 import { schema } from '../../shared/db/schema';
+import { handleAgent } from './agent';
 import { handle } from './api';
 import { parseConfig } from './config';
 import env from './env';
@@ -13,8 +14,18 @@ const config = parseConfig(env);
 const root = join(import.meta.dir, '../..');
 mkdirSync(join(root, '.data'), { recursive: true });
 const file = join(root, '.data', `${basename(root)}.sqlite`);
-const space = createSpace(bunSqlite(file), schema);
+const driver = bunSqlite(file);
+const space = createSpace(driver, schema);
 space.migrate();
+
+/** Tells every device to pull when the request advanced the head, whether a phone or an agent wrote. */
+async function nudging(run: () => Promise<Response>): Promise<Response> {
+	const before = space.head();
+	const response = await run();
+	const head = space.head();
+	if (head > before) server.publish('live', JSON.stringify({ head }));
+	return response;
+}
 
 const server = Bun.serve({
 	development: config.environment === 'development',
@@ -34,12 +45,9 @@ const server = Bun.serve({
 					if (server.upgrade(request, { headers })) return undefined;
 					return Response.json({ ok: false, error: 'Expected a WebSocket upgrade' }, { status: 400 });
 				}
-				const before = space.head();
-				const response = await handleSync(space, request);
-				const head = space.head();
-				if (head > before) server.publish('live', JSON.stringify({ head }));
-				return response;
+				return nudging(() => handleSync(space, request));
 			},
+			agent: request => nudging(() => handleAgent(request, { space, driver, ownerToken: config.ownerToken })),
 		}),
 	websocket: {
 		open: ws => void ws.subscribe('live'),

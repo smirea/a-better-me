@@ -5,7 +5,8 @@ import type {
 	R2Bucket,
 	ScheduledController,
 } from '@cloudflare/workers-types';
-import { SpaceObject } from 'sync-engine/cloudflare';
+import { durableDriver, SpaceObject } from 'sync-engine/cloudflare';
+import { handleAgent } from './agent';
 import { schema } from '../../shared/db/schema';
 import { handle } from './api';
 import { BACKUP_CRON, backup } from './backup';
@@ -15,15 +16,39 @@ import { parseConfig, type Config, type Settings } from './config';
 
 type Env = Settings & { SPACE: DurableObjectNamespace; BACKUPS: R2Bucket };
 
-/** The owner's one space. `/dump` is reachable only through the stub, which the Worker calls from the cron alone. */
+/**
+ * The owner's one space. `/dump` is reachable only through the stub, which the Worker calls from the cron alone. The
+ * agent API runs here, beside the rows and the bot tokens, on the request's original `/api` path.
+ */
 export class Space extends SpaceObject<Env> {
+	private readonly driver;
+
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env, schema);
+		this.driver = durableDriver(ctx.storage);
 	}
 
-	override fetch(request: Request): Promise<Response> {
-		if (new URL(request.url).pathname === '/dump') return Promise.resolve(Response.json(this.space.dump()));
-		return super.fetch(request);
+	override async fetch(request: Request): Promise<Response> {
+		const { pathname } = new URL(request.url);
+		if (pathname === '/dump') return Response.json(this.space.dump());
+		if (pathname !== '/api' && !pathname.startsWith('/api/')) return super.fetch(request);
+		const before = this.space.head();
+		const response = await handleAgent(request, {
+			space: this.space,
+			driver: this.driver,
+			ownerToken: configOf(this.env).ownerToken,
+		});
+		const head = this.space.head();
+		if (head > before) {
+			for (const socket of this.ctx.getWebSockets()) {
+				try {
+					socket.send(JSON.stringify({ head }));
+				} catch {
+					// A socket mid-close throws on send, and it has no one left to nudge.
+				}
+			}
+		}
+		return response;
 	}
 }
 
@@ -53,6 +78,7 @@ async function fetch(request: Request, env: Env): Promise<Response> {
 				url.pathname = url.pathname.slice('/api'.length);
 				return owner(env).fetch(new Request(url, request));
 			},
+			agent: request => owner(env).fetch(request),
 		});
 	} catch (error) {
 		console.error(error);

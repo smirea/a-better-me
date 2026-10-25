@@ -116,6 +116,20 @@ export const bodyWeights = sqliteTable('body_weights', {
 	source: text('source', { enum: BODY_WEIGHT_SOURCES }).notNull().default('manual'),
 });
 
+/**
+ * A bot token for the agent API (`/api`), made and revoked on a device. Only the SHA-256 of the token syncs, so the
+ * server and the backups never hold a usable token. Revoking deletes the row.
+ */
+export const apiTokens = sqliteTable('api_tokens', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	/** Lowercase hex SHA-256 of the whole token, `abm_` prefix included. */
+	tokenHash: text('token_hash').notNull(),
+	/** The token's first characters, so the owner can tell tokens apart. */
+	hint: text('hint').notNull().default(''),
+	createdAt: text('created_at').notNull(),
+});
+
 /** The order here is the order of the generated Swift schema and of a snapshot pull. */
 export const SYNCED_TABLES = {
 	workout_templates: workoutTemplates,
@@ -126,6 +140,7 @@ export const SYNCED_TABLES = {
 	programs,
 	gym_profiles: gymProfiles,
 	body_weights: bodyWeights,
+	api_tokens: apiTokens,
 } as const;
 
 export type SyncedTable = keyof typeof SYNCED_TABLES;
@@ -163,5 +178,6 @@ export const schema = defineSchema({
 		programs: { cycles: atLeastOne, currentCycle: atLeastOne, config: object, days: array },
 		gym_profiles: { equipment: object },
 		body_weights: { weightKg: z.number().positive(), source: z.enum(BODY_WEIGHT_SOURCES) },
+		api_tokens: { tokenHash: z.string().regex(/^[0-9a-f]{64}$/) },
 	},
 });
