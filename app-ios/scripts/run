@@ -13,6 +13,7 @@ const { values } = parseArgs({
         targets: { type: "boolean" },
         watch: { type: "boolean", short: "w", default: true },
         "no-watch": { type: "boolean" },
+        headless: { type: "boolean" },
         team: { type: "string", default: process.env.SWIFT_RUN_DEVELOPMENT_TEAM },
         help: { type: "boolean", short: "h" },
     },
@@ -143,7 +144,7 @@ async function deploy(target: Target, project: string) {
         target.state = "booted";
         const developer = process.env.DEVELOPER_DIR ?? (await command(["xcode-select", "-p"], true)).trim();
         const simulator = join(developer, "Applications/Simulator.app");
-        await command(existsSync(simulator) ? ["open", "-a", simulator, "--args", "-CurrentDeviceUDID", target.id]
+        if (!values.headless) await command(existsSync(simulator) ? ["open", "-a", simulator, "--args", "-CurrentDeviceUDID", target.id]
             : ["open", "-a", join(dirname(developer), "Applications/DeviceHub.app"), `devices://device/open?id=${target.id}`]);
         await command(["xcrun", "simctl", "install", target.id, app]);
         await command(["xcrun", "simctl", "launch", "--terminate-running-process", target.id, bundle]);
@@ -159,11 +160,12 @@ async function deploy(target: Target, project: string) {
 
 async function main() {
     if (values.help) {
-        console.log(`Usage: ${runCommand} [-t simulator|mac|<target-name-or-id>] [--targets] [--watch|-w] [--no-watch] [--team TEAM_ID]
+        console.log(`Usage: ${runCommand} [-t simulator|mac|<target-name-or-id>] [--targets] [--watch|-w] [--no-watch] [--headless] [--team TEAM_ID]
 
 Defaults to a connected iOS device, then a booted simulator, then an available simulator, then My Mac.
 SWIFT_RUN_DEFAULT_TARGET overrides this choice when -t/--target is omitted. --targets marks the effective default with *.
-Watching is enabled by default. Saves rebuild and restart the app. Ctrl-C stops watching.`);
+Watching is enabled by default. Saves rebuild and restart the app. Ctrl-C stops watching.
+--headless skips opening Simulator.app or Device Hub; the simulator still boots and runs the app.`);
         return;
     }
     const all = await targets();
