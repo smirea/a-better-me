@@ -139,8 +139,8 @@ final class WatchModel: NSObject {
         }
     }
 
-    /// A message for a phone app that may not be running goes as queued user info, which WatchConnectivity delivers
-    /// once it is.
+    /// A message that must arrive goes as queued user info when the phone is unreachable, which WatchConnectivity
+    /// delivers later. Workout controls don't: a late End or log could act on a workout started since.
     private func sendOverConnectivity(_ message: WatchMessage, queued: Bool) {
         let session = WCSession.default
         guard session.activationState == .activated, let data = try? message.encoded() else { return }
@@ -150,7 +150,7 @@ final class WatchModel: NSObject {
             session.sendMessage(payload, replyHandler: nil) { @Sendable _ in
                 if queued { WCSession.default.transferUserInfo(payload) }
             }
-        } else {
+        } else if queued {
             session.transferUserInfo(payload)
         }
     }

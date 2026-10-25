@@ -110,9 +110,12 @@ final class WorkoutRecording: NSObject {
         session.end()
         try await builder.endCollection(at: end)
         let events = plan.segments.compactMap { segment -> HKWorkoutEvent? in
-            let interval = DateInterval(start: max(segment.start, start), end: min(segment.end, end))
-            guard interval.duration > 0 else { return nil }
-            return HKWorkoutEvent(type: .segment, dateInterval: interval, metadata: [Self.exerciseKey: segment.exercise])
+            // A segment can end before the recording began, when Health started late; it has nothing to cover.
+            let clippedStart = max(segment.start, start), clippedEnd = min(segment.end, end)
+            guard clippedEnd > clippedStart else { return nil }
+            return HKWorkoutEvent(
+                type: .segment, dateInterval: DateInterval(start: clippedStart, end: clippedEnd), metadata: [Self.exerciseKey: segment.exercise]
+            )
         }
         if !events.isEmpty { try await builder.addWorkoutEvents(events) }
         try await builder.addMetadata([
