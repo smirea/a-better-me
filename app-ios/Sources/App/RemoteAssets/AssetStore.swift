@@ -4,8 +4,8 @@ import Network
 import Observation
 
 /// The catalog's images and Markdown, downloaded after install instead of bundled. Release downloads from the private
-/// bucket, Debug from the worktree's dev server. Downloads
-/// start on their own on Wi-Fi and never notify; the More tab's row shows progress and its tap downloads on any network.
+/// bucket, Debug from the worktree's dev server. Downloads start on their own on Wi-Fi and never notify; the More tab's
+/// row shows progress and its tap downloads on any network.
 @MainActor @Observable
 final class AssetStore {
     static let shared = AssetStore()
