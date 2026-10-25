@@ -27,7 +27,7 @@ const sync = (client: string, cursor: number, writes: unknown[], token: string |
 		new Request('http://api.test/api/sync', {
 			method: 'POST',
 			headers: token ? { authorization: `Bearer ${token}` } : {},
-			body: JSON.stringify({ protocol: 1, client, cursor, writes }),
+			body: JSON.stringify({ protocol: 2, client, cursor, writes }),
 		}),
 		app,
 	);
@@ -75,6 +75,7 @@ describe('handle', () => {
 			acked: 0,
 			rejected: [],
 			snapshot: true,
+			next: null,
 			rows: [
 				{
 					table: 'workout_templates',
