@@ -29,6 +29,9 @@ final class WatchModel: NSObject {
     @ObservationIgnored private var isMirrorConfirmed = false
     @ObservationIgnored private var lastStatsSent = Date.distantPast
     @ObservationIgnored private var connectivityTasks: [WKWatchConnectivityRefreshBackgroundTask] = []
+    @ObservationIgnored private var pendingContentObservation: NSKeyValueObservation?
+    /// A delivered plan's save outlives its delivery; the refresh task stays held until it lands.
+    @ObservationIgnored private var savesInFlight = 0
 
     /// Live numbers: this watch's own recording, else what the phone's snapshot carries.
     var metrics: LiveHealthMetrics? { stats?.live ?? snapshot?.status.metrics }
@@ -37,6 +40,9 @@ final class WatchModel: NSObject {
         Task { await loadMaxHeartRate() }
         guard WCSession.isSupported() else { return }
         WCSession.default.delegate = self
+        pendingContentObservation = WCSession.default.observe(\.hasContentPending) { _, _ in
+            Task { @MainActor in WatchModel.shared.completeConnectivityTasks() }
+        }
         WCSession.default.activate()
     }
 
@@ -52,7 +58,7 @@ final class WatchModel: NSObject {
     }
 
     private func completeConnectivityTasks() {
-        guard WCSession.default.activationState == .activated, !WCSession.default.hasContentPending else { return }
+        guard WCSession.default.activationState == .activated, !WCSession.default.hasContentPending, savesInFlight == 0 else { return }
         for task in connectivityTasks { task.setTaskCompletedWithSnapshot(false) }
         connectivityTasks = []
     }
@@ -138,7 +144,12 @@ final class WatchModel: NSObject {
     private func save(_ plan: WorkoutRecordingPlan) {
         guard let recording, !recording.isMirror else { return }
         self.recording = nil
+        savesInFlight += 1
         Task {
+            defer {
+                savesInFlight -= 1
+                completeConnectivityTasks()
+            }
             do {
                 let health = try await recording.finish(plan, source: .watch)
                 if summary?.sessionID == plan.sessionID { summary?.health = health }
