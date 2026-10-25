@@ -26,6 +26,10 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
         #endif
     }
 
+    func applicationDidBecomeActive() {
+        WatchModel.shared.requestState()
+    }
+
     /// The phone's `startWatchApp(toHandle:)`: a workout started on the phone, and this watch records it.
     func handle(_ workoutConfiguration: HKWorkoutConfiguration) {
         WatchModel.shared.startRecording()
@@ -61,6 +65,5 @@ struct WatchRootView: View {
                 HomeView()
             }
         }
-        .task { await model.authorize() }
     }
 }

@@ -34,9 +34,16 @@ final class WatchModel: NSObject {
     var metrics: LiveHealthMetrics? { stats?.live ?? snapshot?.status.metrics }
 
     func activate() {
+        Task { await loadMaxHeartRate() }
         guard WCSession.isSupported() else { return }
         WCSession.default.delegate = self
         WCSession.default.activate()
+    }
+
+    /// Asks the phone to resend its state. Messages sent while this app was suspended are dropped, and the phone may
+    /// have skipped a context update while it read the app as not installed.
+    func requestState() {
+        sendOverConnectivity(.hello, queued: false)
     }
 
     func hold(_ task: WKWatchConnectivityRefreshBackgroundTask) {
@@ -50,17 +57,30 @@ final class WatchModel: NSObject {
         connectivityTasks = []
     }
 
-    func authorize() async {
+    /// Health access is asked for only when the owner starts a workout here or the phone launches this app to record
+    /// one, never at launch. A sheet raised at launch sat unanswered on the watch; when a workout later relaunched the
+    /// app, HealthKit stored its dismissal as a newer decision that synced to the phone and revoked the phone's grant.
+    private func authorize() async {
         guard HKHealthStore.isHealthDataAvailable() else { return }
         do {
             try await WorkoutRecording.authorize(healthStore)
-            if let birth = try? healthStore.dateOfBirthComponents().date,
-               let age = Calendar.current.dateComponents([.year], from: birth, to: .now).year {
-                maxHeartRate = Double(220 - age)
-            }
+            readMaxHeartRate()
         } catch {
             WorkoutRecording.log.error("HealthKit authorization failed: \(String(describing: error))")
         }
+    }
+
+    private func loadMaxHeartRate() async {
+        guard HKHealthStore.isHealthDataAvailable(),
+              (try? await healthStore.statusForAuthorizationRequest(toShare: WorkoutRecording.shareTypes, read: WorkoutRecording.readTypes)) == .unnecessary
+        else { return }
+        readMaxHeartRate()
+    }
+
+    private func readMaxHeartRate() {
+        guard let birth = try? healthStore.dateOfBirthComponents().date,
+              let age = Calendar.current.dateComponents([.year], from: birth, to: .now).year else { return }
+        maxHeartRate = Double(220 - age)
     }
 
     // MARK: Recording
@@ -72,6 +92,8 @@ final class WatchModel: NSObject {
             return sendOverConnectivity(.recordingStarted, queued: true)
         }
         Task {
+            await authorize()
+            guard recording == nil else { return }
             do {
                 adopt(try await WorkoutRecording.start(in: healthStore))
             } catch {
@@ -137,8 +159,11 @@ final class WatchModel: NSObject {
 
     func start(_ option: WatchWorkoutOption) {
         startingTemplate = option.id
-        send(.start(templateID: option.id))
         Task {
+            // The owner is looking at the watch, so a first-time sheet shows here, and the phone's own request, made
+            // in the background when the workout starts, finds access already settled.
+            await authorize()
+            send(.start(templateID: option.id))
             try? await Task.sleep(for: .seconds(15))
             if startingTemplate == option.id { startingTemplate = nil }
         }
