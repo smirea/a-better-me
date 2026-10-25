@@ -56,6 +56,7 @@ struct WorkoutSummaryView: View {
                     .padding(.horizontal, 20)
                     if !records.isEmpty { recordCards(records) }
                     details(volumeKg: stats.values.reduce(0) { $0 + $1.volumeKg })
+                    HealthSummaryCard(session: session)
                     exerciseDetails(blocks, stats: stats, records: records)
                 }
                 .padding(.vertical, 16)

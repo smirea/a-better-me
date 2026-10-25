@@ -20,11 +20,14 @@ final class LiveWorkoutController {
     @ObservationIgnored private var store: LocalStore?
     @ObservationIgnored private var catalog: ExerciseCatalog?
     @ObservationIgnored private var cancellable: AnyDatabaseCancellable?
+    @ObservationIgnored private var loadableCache: [(loading: Loading, unit: WeightUnit, kg: [Double])] = []
 
     private struct Inputs: Equatable, Sendable {
         var session: WorkoutSession?
         var settings = AppSettings()
         var exerciseSettings: [ExerciseSettings] = []
+        /// The session's gym, else the default gym, as the editor resolves it.
+        var gym: GymProfile?
     }
 
     private var live: LiveSessionStore { .shared }
@@ -34,10 +37,13 @@ final class LiveWorkoutController {
         self.store = store
         self.catalog = catalog
         cancellable = ValueObservation.tracking { db in
-            try Inputs(
-                session: WorkoutSession.inProgress.fetch(db),
+            let session = try WorkoutSession.inProgress.fetch(db)
+            let gyms = try GymProfile.all.fetch(db)
+            return try Inputs(
+                session: session,
                 settings: AppSettings.current.fetch(db),
-                exerciseSettings: ExerciseSettings.all.fetch(db)
+                exerciseSettings: ExerciseSettings.all.fetch(db),
+                gym: gyms.first { $0.id == session?.gymID } ?? GymProfile.defaultGym.fetch(db)
             )
         }
         .removeDuplicates()
@@ -105,7 +111,30 @@ final class LiveWorkoutController {
                 ))
             }
         }
-        return LiveWorkoutSnapshot(status: status, exercises: exercises)
+        let shown = [status.current, status.upNext].compactMap { $0?.blockExerciseID }
+        var loadable: [UUID: [Double]] = [:]
+        for id in Set(shown) {
+            guard let at = blocks.locate(id), let weights = loadableWeights(for: blocks[at.block].exercises[at.item], catalog: catalog, unit: unit) else { continue }
+            loadable[id] = weights
+        }
+        return LiveWorkoutSnapshot(status: status, exercises: exercises, loadableWeightsKg: loadable.isEmpty ? nil : loadable)
+    }
+
+    /// Every total the exercise's equipment loads up to a ceiling no lift reaches, in kilograms. Plate math is slow next
+    /// to a rebuild, which runs on every heart rate sample, so lists are kept per loading.
+    private func loadableWeights(for item: BlockExercise, catalog: ExerciseCatalog, unit: WeightUnit) -> [Double]? {
+        guard let loading = Loading.of(item, gym: inputs.gym, catalog: catalog, settings: inputs.settings, exerciseSettings: inputs.exerciseSettings) else { return nil }
+        if let cached = loadableCache.first(where: { $0.loading == loading && $0.unit == unit }) { return cached.kg }
+        let ceiling = unit == .kg ? 500.0 : 1100.0
+        var weights: [Double] = []
+        var value = 0.0
+        while weights.count < 400, let next = loading.step(from: value, up: true), next <= ceiling {
+            weights.append(next)
+            value = next
+        }
+        let kg = weights.map(unit.toKg)
+        loadableCache.append((loading, unit, kg))
+        return kg
     }
 
     private func currentRow(in blocks: [WorkoutBlock]) -> RowPath? {

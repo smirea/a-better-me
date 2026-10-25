@@ -7,6 +7,9 @@ struct LiveWorkoutSnapshot: Codable, Hashable, Sendable {
     var status: LiveWorkoutStatus
     /// Every exercise in workout order, for the watch's exercise list.
     var exercises: [LiveExercise]
+    /// The totals each exercise's equipment loads in the session's gym, ascending, for the current and next exercise,
+    /// keyed by `LiveSet.blockExerciseID`. The watch's Digital Crown steps through them.
+    var loadableWeightsKg: [UUID: [Double]]?
 }
 
 /// The part of the snapshot the Live Activity carries. ActivityKit caps a content state at 4 KB, so the exercise list
