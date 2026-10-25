@@ -18,6 +18,17 @@
     <array>
         <string>workout-processing</string>
     </array>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.stefan.a-better-me</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>abetterme</string>
+            </array>
+        </dict>
+    </array>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsLocalNetworking</key>

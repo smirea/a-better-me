@@ -14,6 +14,7 @@ struct BetterMeApp: App {
         let store = LocalStore()
         _store = State(initialValue: store)
         LiveWorkoutController.shared.start(store: store, catalog: catalog)
+        WorkoutActivityController.shared.start(store: store, catalog: catalog)
         #if DEBUG
         SampleData.seedIfRequested(store)
         store.seedGeneratedProgramIfRequested(catalog: catalog)
