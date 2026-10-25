@@ -7,3 +7,9 @@
 
 // Matches DEV_OWNER_TOKEN in server/src/config.ts, which every local server accepts.
 OWNER_TOKEN[config=Debug] = insecure-local-dev-owner-token
+
+// Debug downloads assets from the worktree's dev server, which serves app-ios/Assets, and never from the bucket, so
+// env-manager values cannot route it there.
+ASSETS_URL[config=Debug] = $(API_URL)/assets
+ASSETS_ACCESS_KEY_ID[config=Debug] =
+ASSETS_SECRET_ACCESS_KEY[config=Debug] =

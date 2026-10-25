@@ -3,7 +3,8 @@ import Foundation
 import Network
 import Observation
 
-/// The catalog's images and Markdown, downloaded after install from the private bucket instead of bundled. Downloads
+/// The catalog's images and Markdown, downloaded after install instead of bundled. Release downloads from the private
+/// bucket, Debug from the worktree's dev server. Downloads
 /// start on their own on Wi-Fi and never notify; the More tab's row shows progress and its tap downloads on any network.
 @MainActor @Observable
 final class AssetStore {
@@ -61,7 +62,7 @@ final class AssetStore {
         begin(allowsCellular: false, isRefresh: false)
     }
 
-    /// The settings row's tap: re-checks the bucket and downloads now, on cellular too. A tap during a run is ignored.
+    /// The settings row's tap: re-checks the manifest and downloads now, on cellular too. A tap during a run is ignored.
     func refresh() {
         begin(allowsCellular: true, isRefresh: true)
     }
@@ -157,12 +158,10 @@ final class AssetStore {
     }
 
     private nonisolated static func get(_ key: String, source: AssetSource, session: URLSession) async throws -> Data {
-        let request = S3Signer.sign(
-            URLRequest(url: source.url.appending(path: key)),
-            credentials: source.credentials,
-            region: region,
-            date: .now
-        )
+        var request = URLRequest(url: source.url.appending(path: key))
+        if let credentials = source.credentials {
+            request = S3Signer.sign(request, credentials: credentials, region: region, date: .now)
+        }
         let (data, response) = try await session.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard status == 200 else { throw AssetError.http(status) }

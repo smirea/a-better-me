@@ -24,23 +24,26 @@ enum AppEnvironment {
         return dsn.isEmpty ? nil : dsn
     }
 
-    /// The private R2 bucket the app downloads its catalog images and Markdown from, with read-only credentials. Debug
-    /// takes env-manager dev's through `LocalSecrets.xcconfig`, Release prod's through `bun run env:ios`. Empty, as in
-    /// CI and fresh worktrees, turns downloads off and the catalog shows its placeholders.
+    /// Where the app downloads its catalog images and Markdown. Debug reads the worktree's dev server at
+    /// `$(API_URL)/assets` without credentials; Release reads the private R2 bucket with env-manager prod's read-only
+    /// credentials through `bun run env:ios`. An empty URL turns downloads off and the catalog shows its placeholders.
     static var assets: AssetSource? {
         let version = setting("ASSETS_VERSION")
         guard version.utf8.count == 16, version.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }) else {
             fatalError("ASSETS_VERSION is not 16 hex characters. Run bun run assets version.")
         }
         let (url, accessKeyID, secretAccessKey) = (setting("ASSETS_URL"), setting("ASSETS_ACCESS_KEY_ID"), setting("ASSETS_SECRET_ACCESS_KEY"))
-        if url.isEmpty || accessKeyID.isEmpty || secretAccessKey.isEmpty { return nil }
-        guard let bucket = URL(string: url), bucket.scheme == "https", bucket.host != nil else {
-            fatalError("ASSETS_URL is not an https URL. Run env-manager gen --local, and bun run env:ios before a Release build.")
+        if url.isEmpty { return nil }
+        guard let base = URL(string: url), let scheme = base.scheme, ["http", "https"].contains(scheme), base.host != nil else {
+            fatalError("ASSETS_URL is not an http(s) URL. Run env-manager gen --local, and bun run env:ios before a Release build.")
+        }
+        if accessKeyID.isEmpty != secretAccessKey.isEmpty {
+            fatalError("Set both ASSETS_ACCESS_KEY_ID and ASSETS_SECRET_ACCESS_KEY or neither. Run bun run env:ios before a Release build.")
         }
         return AssetSource(
-            url: bucket,
+            url: base,
             version: version,
-            credentials: S3Credentials(accessKeyID: accessKeyID, secretAccessKey: secretAccessKey)
+            credentials: accessKeyID.isEmpty ? nil : S3Credentials(accessKeyID: accessKeyID, secretAccessKey: secretAccessKey)
         )
     }
 
@@ -50,8 +53,10 @@ enum AppEnvironment {
 }
 
 struct AssetSource: Sendable {
-    /// The bucket's S3 URL, `https://<account>.r2.cloudflarestorage.com/a-better-me-assets`.
+    /// The bucket's S3 URL, `https://<account>.r2.cloudflarestorage.com/a-better-me-assets`, or the dev server's
+    /// `/assets`, which serves the same layout.
     let url: URL
     let version: String
-    let credentials: S3Credentials
+    /// Nil for the dev server, which takes unsigned requests.
+    let credentials: S3Credentials?
 }
