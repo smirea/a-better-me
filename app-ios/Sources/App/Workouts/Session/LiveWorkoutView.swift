@@ -129,12 +129,16 @@ struct SessionEditor: View {
             if mode == .live { store.currentExercise = current }
             focus = nil
         }
-        .onAppear { UIApplication.shared.isIdleTimerDisabled = mode == .live && defaults.workout.display.keepAlive }
+        .onAppear {
+            UIApplication.shared.isIdleTimerDisabled = mode == .live && defaults.workout.display.keepAlive
+            if mode == .live { LiveWorkoutController.shared.editor = { perform($0) } }
+        }
         .onChange(of: defaults.workout.display.keepAlive) { _, keepAlive in
             UIApplication.shared.isIdleTimerDisabled = mode == .live && keepAlive
         }
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
+            if mode == .live { LiveWorkoutController.shared.editor = nil }
             guard discardOnDisappear else { return }
             store.reset()
             localStore.delete(WorkoutSession.self, id: session.id)

@@ -46,6 +46,8 @@ export const workoutSessions = sqliteTable('workout_sessions', {
 	cycle: integer('cycle'),
 	gymId: text('gym_id'),
 	pausedSeconds: integer('paused_seconds').notNull().default(0),
+	/** What the workout recorded in Apple Health (`WorkoutHealthSummary`), null until it is saved there. */
+	health: json('health'),
 });
 
 export const customExercises = sqliteTable('custom_exercises', {

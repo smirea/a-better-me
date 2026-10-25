@@ -7,9 +7,17 @@
     <key>OWNER_TOKEN</key>
     <string>$(OWNER_TOKEN)</string>
     <key>NSHealthShareUsageDescription</key>
-    <string>The Dashboard charts your body weight and daily steps from Health.</string>
+    <string>The Dashboard charts your body weight and daily steps from Health, and workouts read your heart rate and energy while you train.</string>
     <key>NSHealthUpdateUsageDescription</key>
-    <string>Debug builds write sample weights and steps to test the Dashboard. The app never writes to Health otherwise.</string>
+    <string>Workouts are saved to Health with their heart rate and energy.</string>
+    <key>NSSupportsLiveActivities</key>
+    <true/>
+    <key>NSSupportsLiveActivitiesFrequentUpdates</key>
+    <true/>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>workout-processing</string>
+    </array>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsLocalNetworking</key>

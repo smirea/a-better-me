@@ -88,22 +88,6 @@ struct SubSet: Codable, Hashable, Identifiable {
     var log: SetLog?
 }
 
-enum SetType: String, Codable, CaseIterable {
-    case standard, warmUp, drop, myo, failure
-
-    var hasSubSets: Bool { self == .drop || self == .myo }
-    /// Shown in the set circle instead of the set number.
-    var badge: String? {
-        switch self {
-        case .standard: nil
-        case .warmUp: "W"
-        case .drop: "D"
-        case .myo: "M"
-        case .failure: "F"
-        }
-    }
-}
-
 struct SetTarget: Codable, Hashable {
     var repsMin: Int?
     var repsMax: Int?
@@ -185,6 +169,7 @@ struct WorkoutSession: SyncedRecord {
     var program: ProgramPosition?
     var gymID: UUID?
     var pausedSeconds = 0
+    var health: WorkoutHealthSummary?
 
     init(name: String, templateID: UUID? = nil, blocks: [WorkoutBlock] = [], startedAt: Date = .now) {
         id = UUID()
@@ -221,6 +206,7 @@ struct WorkoutSession: SyncedRecord {
         }
         gymID = (row["gym_id"] as String?).flatMap(UUID.init(uuidString:))
         pausedSeconds = row["paused_seconds"] ?? 0
+        health = (row["health"] as String?).flatMap { try? RowJSON.decoder.decode(WorkoutHealthSummary.self, from: Data($0.utf8)) }
     }
 
     func encode(to container: inout PersistenceContainer) throws {
@@ -236,6 +222,7 @@ struct WorkoutSession: SyncedRecord {
         container["cycle"] = program?.cycle
         container["gym_id"] = gymID.map(Self.key)
         container["paused_seconds"] = pausedSeconds
+        container["health"] = try health.map(RowJSON.text)
     }
 
     var isInProgress: Bool { endedAt == nil }

@@ -18,16 +18,16 @@
             productRefGroup = A00000000000000000000003;
             projectDirPath = "";
             projectRoot = "";
-            targets = (A00000000000000000000005, A00000000000000000000031);
+            targets = (A00000000000000000000005, A00000000000000000000031, B00000000000000000000002, C00000000000000000000002);
         };
         A00000000000000000000002 = {
             isa = PBXGroup;
-            children = (A00000000000000000000016, A00000000000000000000004, A00000000000000000000030, A00000000000000000000003);
+            children = (A00000000000000000000016, A00000000000000000000004, D00000000000000000000001, B00000000000000000000001, C00000000000000000000001, A00000000000000000000030, A00000000000000000000003);
             sourceTree = "<group>";
         };
         A00000000000000000000003 = {
             isa = PBXGroup;
-            children = (A00000000000000000000006, A00000000000000000000032);
+            children = (A00000000000000000000006, A00000000000000000000032, B00000000000000000000003, C00000000000000000000003);
             name = Products;
             sourceTree = "<group>";
         };
@@ -39,10 +39,10 @@
         A00000000000000000000005 = {
             isa = PBXNativeTarget;
             buildConfigurationList = A00000000000000000000011;
-            buildPhases = (A00000000000000000000007, A00000000000000000000008, A00000000000000000000009);
+            buildPhases = (A00000000000000000000007, A00000000000000000000008, A00000000000000000000009, B0000000000000000000000D, C0000000000000000000000D);
             buildRules = ();
-            dependencies = ();
-            fileSystemSynchronizedGroups = (A00000000000000000000004);
+            dependencies = (B0000000000000000000000A, C0000000000000000000000A);
+            fileSystemSynchronizedGroups = (A00000000000000000000004, D00000000000000000000001);
             name = App;
             packageProductDependencies = (A00000000000000000000021, A00000000000000000000022);
             productName = App;
@@ -190,6 +190,194 @@
             isa = XCBuildConfiguration;
             buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 27.0; PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me.tests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = 1; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App.app/App"; };
             name = Release;
+        };
+        /* Shared between the app, the watch app, and the widget extension: design tokens, fonts, and the live workout contract. */
+        D00000000000000000000001 = {
+            isa = PBXFileSystemSynchronizedRootGroup;
+            path = Sources/Shared;
+            sourceTree = "<group>";
+        };
+        /* The watchOS app, embedded in the iPhone app. */
+        B00000000000000000000001 = {
+            isa = PBXFileSystemSynchronizedRootGroup;
+            path = Sources/Watch;
+            sourceTree = "<group>";
+        };
+        B00000000000000000000002 = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = B00000000000000000000007;
+            buildPhases = (B00000000000000000000004, B00000000000000000000005, B00000000000000000000006);
+            buildRules = ();
+            dependencies = ();
+            fileSystemSynchronizedGroups = (B00000000000000000000001, D00000000000000000000001);
+            name = Watch;
+            productName = Watch;
+            productReference = B00000000000000000000003;
+            productType = "com.apple.product-type.application";
+        };
+        B00000000000000000000003 = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Watch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+        B00000000000000000000004 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        B00000000000000000000005 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        B00000000000000000000006 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        B00000000000000000000007 = {
+            isa = XCConfigurationList;
+            buildConfigurations = (B00000000000000000000008, B00000000000000000000009);
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+        B00000000000000000000008 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ASSETCATALOG_COMPILER_APPICON_NAME = "";
+                CODE_SIGN_ENTITLEMENTS = Config/Watch.entitlements;
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = Config/Watch-Info.plist;
+                INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+                INFOPLIST_KEY_NSHealthShareUsageDescription = "Workouts read your heart rate and energy while you train.";
+                INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
+                INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+                INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.stefan.a-better-me;
+                INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+                LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+                MARKETING_VERSION = 1.0;
+                PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me.watchkitapp;
+                PRODUCT_NAME = Watch;
+                SDKROOT = watchos;
+                SKIP_INSTALL = YES;
+                SUPPORTED_PLATFORMS = "watchos watchsimulator";
+                SWIFT_VERSION = 6.0;
+                TARGETED_DEVICE_FAMILY = 4;
+                WATCHOS_DEPLOYMENT_TARGET = 27.0;
+            };
+            name = Debug;
+        };
+        B00000000000000000000009 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ASSETCATALOG_COMPILER_APPICON_NAME = "";
+                CODE_SIGN_ENTITLEMENTS = Config/Watch.entitlements;
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = Config/Watch-Info.plist;
+                INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+                INFOPLIST_KEY_NSHealthShareUsageDescription = "Workouts read your heart rate and energy while you train.";
+                INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
+                INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+                INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.stefan.a-better-me;
+                INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+                LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+                MARKETING_VERSION = 1.0;
+                PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me.watchkitapp;
+                PRODUCT_NAME = Watch;
+                SDKROOT = watchos;
+                SKIP_INSTALL = YES;
+                SUPPORTED_PLATFORMS = "watchos watchsimulator";
+                SWIFT_VERSION = 6.0;
+                TARGETED_DEVICE_FAMILY = 4;
+                WATCHOS_DEPLOYMENT_TARGET = 27.0;
+            };
+            name = Release;
+        };
+        B0000000000000000000000A = { isa = PBXTargetDependency; target = B00000000000000000000002; targetProxy = B0000000000000000000000B; };
+        B0000000000000000000000B = { isa = PBXContainerItemProxy; containerPortal = A00000000000000000000001; proxyType = 1; remoteGlobalIDString = B00000000000000000000002; remoteInfo = Watch; };
+        B0000000000000000000000C = { isa = PBXBuildFile; fileRef = B00000000000000000000003; settings = { ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+        B0000000000000000000000D = {
+            isa = PBXCopyFilesBuildPhase;
+            buildActionMask = 2147483647;
+            dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+            dstSubfolderSpec = 16;
+            files = (B0000000000000000000000C);
+            name = "Embed Watch Content";
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+        /* The widget extension: the workout Live Activity on the Lock Screen and in the Dynamic Island. */
+        C00000000000000000000001 = {
+            isa = PBXFileSystemSynchronizedRootGroup;
+            path = Sources/Widgets;
+            sourceTree = "<group>";
+        };
+        C00000000000000000000002 = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = C00000000000000000000007;
+            buildPhases = (C00000000000000000000004, C00000000000000000000005, C00000000000000000000006);
+            buildRules = ();
+            dependencies = ();
+            fileSystemSynchronizedGroups = (C00000000000000000000001, D00000000000000000000001);
+            name = Widgets;
+            productName = Widgets;
+            productReference = C00000000000000000000003;
+            productType = "com.apple.product-type.app-extension";
+        };
+        C00000000000000000000003 = { isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Widgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+        C00000000000000000000004 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        C00000000000000000000005 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        C00000000000000000000006 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        C00000000000000000000007 = {
+            isa = XCConfigurationList;
+            buildConfigurations = (C00000000000000000000008, C00000000000000000000009);
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+        C00000000000000000000008 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CODE_SIGN_ENTITLEMENTS = Config/Widgets.entitlements;
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = Config/Widgets-Info.plist;
+                INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+                IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+                LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+                MARKETING_VERSION = 1.0;
+                PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me.widgets;
+                PRODUCT_NAME = Widgets;
+                SDKROOT = iphoneos;
+                SKIP_INSTALL = YES;
+                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+                SUPPORTS_MACCATALYST = NO;
+                SWIFT_VERSION = 6.0;
+                TARGETED_DEVICE_FAMILY = 1;
+            };
+            name = Debug;
+        };
+        C00000000000000000000009 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CODE_SIGN_ENTITLEMENTS = Config/Widgets.entitlements;
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = Config/Widgets-Info.plist;
+                INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+                IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+                LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+                MARKETING_VERSION = 1.0;
+                PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me.widgets;
+                PRODUCT_NAME = Widgets;
+                SDKROOT = iphoneos;
+                SKIP_INSTALL = YES;
+                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+                SUPPORTS_MACCATALYST = NO;
+                SWIFT_VERSION = 6.0;
+                TARGETED_DEVICE_FAMILY = 1;
+            };
+            name = Release;
+        };
+        C0000000000000000000000A = { isa = PBXTargetDependency; target = C00000000000000000000002; targetProxy = C0000000000000000000000B; };
+        C0000000000000000000000B = { isa = PBXContainerItemProxy; containerPortal = A00000000000000000000001; proxyType = 1; remoteGlobalIDString = C00000000000000000000002; remoteInfo = Widgets; };
+        C0000000000000000000000C = { isa = PBXBuildFile; fileRef = C00000000000000000000003; settings = { ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+        C0000000000000000000000D = {
+            isa = PBXCopyFilesBuildPhase;
+            buildActionMask = 2147483647;
+            dstPath = "";
+            dstSubfolderSpec = 13;
+            files = (C0000000000000000000000C);
+            name = "Embed Foundation Extensions";
+            runOnlyForDeploymentPostprocessing = 0;
         };
     };
     rootObject = A00000000000000000000001;
