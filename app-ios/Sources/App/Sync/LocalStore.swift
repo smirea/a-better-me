@@ -11,26 +11,10 @@ import SyncEngine
 final class LocalStore {
     nonisolated static let log = Logger(subsystem: "com.stefan.a-better-me", category: "store")
 
-    enum SyncState: Equatable {
-        case noToken, syncing, connected, offline, failed(String), badToken
-
-        var title: String {
-            switch self {
-            case .noToken: "Not set up"
-            case .syncing: "Syncing"
-            case .connected: "Connected"
-            case .offline: "Offline"
-            case .failed: "Sync failed"
-            case .badToken: "Invalid token"
-            }
-        }
-    }
-
     @ObservationIgnored let database: LocalDatabase
     @ObservationIgnored private let client: SyncClient
     /// Writes called but not yet committed. An editor adopts a change from another device only while this is zero.
     private(set) var pendingWrites = 0
-    private(set) var hasToken = OwnerToken.read() != nil
 
     @ObservationIgnored private var lastWrite: Task<Void, Never>?
 
@@ -39,13 +23,13 @@ final class LocalStore {
             database = try LocalDatabase()
             client = SyncClient(
                 database: database.pool, schema: syncSchema, endpoint: AppEnvironment.apiURL.appending(path: "api"),
-                token: { OwnerToken.read() }
+                token: { AppEnvironment.ownerToken }
             )
             try LegacyImport.run(database.pool, tables: syncSchema.tables, migrate: client.migrate)
         } catch {
             fatalError("Could not open the local database at \(LocalDatabase.url.path): \(error)")
         }
-        if hasToken { client.start() }
+        client.start()
     }
 
     // MARK: Writes
@@ -151,29 +135,5 @@ final class LocalStore {
 
     // MARK: Sync
 
-    var syncState: SyncState {
-        guard hasToken else { return .noToken }
-        return switch client.status {
-        case .idle: .connected
-        case .syncing: .syncing
-        case .offline: .offline
-        case .unauthorized: .badToken
-        case let .failed(reason): .failed(reason)
-        }
-    }
-
-    var pendingUploads: Int { client.pending }
     var lastSyncedAt: Date? { client.lastSyncAt }
-    var rejected: [SyncRejection] { client.rejected.filter { !dismissedRejections.contains($0) } }
-    private var dismissedRejections: [SyncRejection] = []
-
-    func dismissRejections() { dismissedRejections = client.rejected }
-
-    func setToken(_ token: String?) {
-        OwnerToken.write(token)
-        hasToken = OwnerToken.read() != nil
-        guard hasToken else { return client.stop() }
-        client.start()
-        Task { await client.sync() }
-    }
 }

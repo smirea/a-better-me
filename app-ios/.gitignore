@@ -3,5 +3,6 @@
 DerivedData
 xcuserdata/
 Config/LocalSecrets.xcconfig
+Config/Env.xcconfig
 
 .DS_Store

@@ -14,11 +14,6 @@ struct MoreTab: View {
                     ) {
                         ForEach(WeightUnit.allCases) { Text($0.rawValue).tag($0) }
                     }
-                    NavigationLink { SyncSettingsView() } label: {
-                        LabeledContent { Text(store.syncState.title).foregroundStyle(Theme.textSecondary) } label: {
-                            Label("Sync", systemImage: "arrow.triangle.2.circlepath")
-                        }
-                    }
                 }
                 Section("Feature Settings") {
                     NavigationLink { WorkoutSettingsView() } label: {

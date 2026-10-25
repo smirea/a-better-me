@@ -48,6 +48,6 @@ The parent `.env` declares this folder as an env-manager target. Edit local valu
 env-manager gen --local
 ```
 
-This creates `Config/LocalSecrets.xcconfig`. `Config/Base.xcconfig` includes it, and `Config/Info.plist` exposes `API_URL` through `AppEnvironment.apiURL`. Regeneration triggers a rebuild while the launcher is watching.
+This creates `Config/LocalSecrets.xcconfig`. `Config/Base.xcconfig` includes it, and `Config/Info.plist` exposes `API_URL` through `AppEnvironment.apiURL`. Before a Release build, run `bun run env:ios` from the repo root: it writes the production URL and owner token from env-manager `prod` into the git-ignored `Config/Env.xcconfig`. Regeneration triggers a rebuild while the launcher is watching.
 
-Native configuration is bundled into the app. Keep credentials in the server target. For physical devices, set `API_URL` to a reachable API host; `127.0.0.1` refers to the device itself.
+Native configuration is bundled into the app. The owner token is the one credential the app carries, and only Release builds get the production one. For physical devices, set `API_URL` to a reachable API host; `127.0.0.1` refers to the device itself.

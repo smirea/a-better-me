@@ -1,1 +1,7 @@
 #include "LocalSecrets.xcconfig"
+// Release values from env-manager prod, written by `bun run env:ios`. Debug keeps LocalSecrets' API_URL, which carries
+// the worktree's ports.
+#include? "Env.xcconfig"
+
+// Matches DEV_OWNER_TOKEN in server/src/config.ts, which every local server accepts.
+OWNER_TOKEN[config=Debug] = insecure-local-dev-owner-token

@@ -4,6 +4,8 @@
 <dict>
     <key>API_URL</key>
     <string>$(API_URL)</string>
+    <key>OWNER_TOKEN</key>
+    <string>$(OWNER_TOKEN)</string>
     <key>NSHealthShareUsageDescription</key>
     <string>The Dashboard charts your body weight and daily steps from Health.</string>
     <key>NSHealthUpdateUsageDescription</key>
