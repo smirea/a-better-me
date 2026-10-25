@@ -66,13 +66,44 @@ function stampLogs(blocks: M.Blocks, at: string): M.Blocks {
 	return blocks;
 }
 
-/** `[WorkoutBlock].targets(forCycle:)`: a program template's blocks as the given cycle trains them. */
-function targetsForCycle(blocks: M.Blocks, cycle: number): M.Blocks {
+/** Templates hold plans. The app decodes `SetLog.completedAt` strictly, so a log there would hide the template. */
+function assertNoLogs(blocks: M.Blocks | undefined) {
+	let logged = false;
+	forEachSet(blocks ?? [], set => {
+		logged ||= !!set.log;
+	});
+	if (logged) throw new ApiError(400, 'Template sets take `target`, not `log`. Log done sets on a session.');
+}
+
+/** `DeloadRule.apply`: one set fewer, 80% of the reps, three more RIR. */
+function deload(sets: z.output<typeof M.WorkoutSet>[]) {
+	return (sets.length > 1 ? sets.slice(0, -1) : sets).map(({ log: _, ...set }) => ({
+		...set,
+		...(set.target && {
+			target: {
+				...set.target,
+				...(set.target.repsMin !== undefined && { repsMin: Math.round(set.target.repsMin * 0.8) }),
+				...(set.target.repsMax !== undefined && { repsMax: Math.round(set.target.repsMax * 0.8) }),
+				...(set.target.rir !== undefined && { rir: Math.min(set.target.rir + 3, 6) }),
+			},
+		}),
+	}));
+}
+
+/**
+ * `Program.blocks(of:cycle:)`: a program template as `cycle` trains it. Cycle targets are training weeks; the deload
+ * cycle is derived from the week beside it, and skipped exercises drop out.
+ */
+function blocksForCycle(row: ReturnType<typeof program>, blocks: M.Blocks, cycle: number): M.Blocks {
+	const { deload: rule } = row.config;
+	const isDeload = (rule === 'firstCycle' && cycle === 1) || (rule === 'lastCycle' && cycle === row.cycles + 1);
+	const week = isDeload ? (rule === 'firstCycle' ? 1 : row.cycles) : rule === 'firstCycle' ? cycle - 1 : cycle;
 	return blocks.flatMap(block => {
-		const exercises = block.exercises.flatMap(exercise => {
-			const targets = exercise.cycleTargets?.[cycle - 1];
-			if (!targets) return [exercise];
-			return targets.skip ? [] : [{ ...exercise, sets: targets.sets }];
+		const exercises = block.exercises.flatMap(({ cycleTargets, ...exercise }) => {
+			const entry = cycleTargets?.[week - 1];
+			if (entry?.skip) return [];
+			const sets = entry?.sets ?? exercise.sets;
+			return [{ ...exercise, sets: isDeload ? deload(sets) : sets }];
 		});
 		return exercises.length ? [{ ...block, exercises }] : [];
 	});
@@ -136,15 +167,19 @@ function program(row: ProgramRow) {
 	return { ...row, days, config: row.config as Config };
 }
 
+/**
+ * `Program.nextDay`: the first day in order not done in the current cycle of the current run. A workout day is done
+ * by a finished session of it since `runStartedAt`, a rest day by its tick, so last run's sessions never count.
+ */
 function upNext(row: ReturnType<typeof program>, sessions: SessionRow[]) {
-	const workoutDays = row.days.flatMap((day, index) => (day.templateID ? [index] : []));
-	if (!workoutDays.length) return null;
-	const latest = sessions
-		.filter(s => s.endedAt && sameId(s.programId, row.id) && s.cycle === row.currentCycle)
-		.toSorted((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
-	const last = latest ? row.days.findIndex(day => sameId(day.id, latest.programDayId)) : -1;
-	const next = row.days[(last >= 0 ? workoutDays.find(index => index > last) : undefined) ?? workoutDays[0]!]!;
-	return { dayId: next.id, templateId: next.templateID!, cycle: row.currentCycle };
+	const since = row.config.runStartedAt ?? '';
+	const done = new Set(
+		sessions
+			.filter(s => s.endedAt && sameId(s.programId, row.id) && s.cycle === row.currentCycle && s.startedAt >= since)
+			.map(s => s.programDayId?.toLowerCase()),
+	);
+	const next = row.days.find(day => (day.templateID ? !done.has(day.id) : day.restDoneInCycle !== row.currentCycle));
+	return next ? { dayId: next.id, templateId: next.templateID ?? null, cycle: row.currentCycle } : null;
 }
 
 function programDetail(db: Db, row: ProgramRow) {
@@ -165,6 +200,7 @@ function resolveDays(db: Db, inputs: DayInput[], programId: string, previous: Pr
 		const restDone = kept?.restDoneInCycle === undefined ? {} : { restDoneInCycle: kept.restDoneInCycle };
 		if (input.template) {
 			assertExercises(db, input.template.blocks);
+			assertNoLogs(input.template.blocks);
 			assertGym(db, input.template.gymId);
 			const template: TemplateRow = {
 				id: M.newId(),
@@ -453,6 +489,7 @@ export const routes: Route[] = [
 		response: M.Template,
 		run({ db, body, now }) {
 			assertExercises(db, body.blocks);
+			assertNoLogs(body.blocks);
 			assertGym(db, body.gymId);
 			const row: TemplateRow = {
 				id: M.newId(),
@@ -477,6 +514,7 @@ export const routes: Route[] = [
 		run({ db, params, body, now }) {
 			db.find('workout_templates', params.id!, 'template');
 			assertExercises(db, body.blocks);
+			assertNoLogs(body.blocks);
 			assertGym(db, body.gymId);
 			db.commit(
 				db.patch('workout_templates', params.id!, {
@@ -558,11 +596,9 @@ export const routes: Route[] = [
 				: undefined;
 			const name = body.name ?? template?.name;
 			if (!name) throw new ApiError(400, 'name is required without a templateId');
-			if (body.program) {
-				const row = db.find('programs', body.program.programId.toLowerCase(), 'program');
-				if (!program(row).days.some(day => sameId(day.id, body.program!.dayId))) {
-					throw new ApiError(422, `Program ${row.id} has no day ${body.program.dayId}`);
-				}
+			const owner = body.program && program(db.find('programs', body.program.programId.toLowerCase(), 'program'));
+			if (owner && !owner.days.some(day => sameId(day.id, body.program!.dayId))) {
+				throw new ApiError(422, `Program ${owner.id} has no day ${body.program!.dayId}`);
 			}
 			if (body.endedAt && body.endedAt < body.startedAt) throw new ApiError(400, 'endedAt is before startedAt');
 			if (!body.endedAt && db.all('workout_sessions', 'ended_at IS NULL').length) {
@@ -570,7 +606,7 @@ export const routes: Route[] = [
 			}
 			const templateBlocks = (template?.blocks ?? []) as M.Blocks;
 			const blocks =
-				body.blocks ?? (body.program ? targetsForCycle(templateBlocks, body.program.cycle) : templateBlocks);
+				body.blocks ?? (owner ? blocksForCycle(owner, templateBlocks, body.program!.cycle) : templateBlocks);
 			assertExercises(db, blocks);
 			const gymId = body.gymId === undefined ? (template?.gymId ?? null) : (body.gymId?.toLowerCase() ?? null);
 			assertGym(db, gymId);

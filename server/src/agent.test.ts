@@ -170,6 +170,61 @@ describe('agent API', () => {
 		expect((await call('POST', '/sessions', { name: 'Again', startedAt: '2026-10-24T10:05:00Z' })).status).toBe(409);
 	});
 
+	test('program sessions follow the deload and the run, as the app does', async () => {
+		const sets = (reps: number, count: number) =>
+			Array.from({ length: count }, () => ({ target: { repsMin: reps, repsMax: reps, rir: 1 } }));
+		const created = await ok('POST', '/programs', {
+			name: 'Deload First',
+			cycles: 2,
+			config: { deload: 'firstCycle', periodization: true },
+			days: [
+				{
+					template: {
+						name: 'Day',
+						blocks: [
+							{
+								exercises: [
+									{ exerciseID: BENCH, sets: sets(10, 3), cycleTargets: [{ sets: sets(10, 3) }, { sets: sets(5, 3) }] },
+								],
+							},
+						],
+					},
+				},
+				{},
+			],
+		});
+		const start = (cycle: number) =>
+			ok('POST', '/sessions', {
+				templateId: created.templates[0].id,
+				program: { programId: created.id, dayId: created.days[0].id, cycle },
+				startedAt: '2026-10-20T08:00:00Z',
+				endedAt: '2026-10-20T09:00:00Z',
+			});
+		const deloaded = await start(1);
+		expect(deloaded.blocks[0].exercises[0].sets.map((set: any) => set.target)).toEqual([
+			{ repsMin: 8, repsMax: 8, rir: 4 },
+			{ repsMin: 8, repsMax: 8, rir: 4 },
+		]);
+		expect(deloaded.blocks[0].exercises[0].cycleTargets).toBeUndefined();
+		expect((await start(3)).blocks[0].exercises[0].sets[0].target).toEqual({ repsMin: 5, repsMax: 5, rir: 1 });
+
+		expect((await ok('GET', `/programs/${created.id}`)).upNext).toMatchObject({
+			dayId: created.days[1].id,
+			templateId: null,
+		});
+		const restarted = await ok('POST', `/programs/${created.id}/activate`);
+		expect(restarted.upNext).toEqual({ dayId: created.days[0].id, templateId: created.templates[0].id, cycle: 1 });
+	});
+
+	test('templates refuse logged sets', async () => {
+		const logged = [{ exercises: [{ exerciseID: BENCH, sets: [{ log: { reps: 8 } }] }] }];
+		expect((await call('POST', '/templates', { name: 'X', blocks: logged })).status).toBe(400);
+		expect(
+			(await call('POST', '/programs', { name: 'P', cycles: 1, days: [{ template: { name: 'X', blocks: logged } }] }))
+				.status,
+		).toBe(400);
+	});
+
 	test('settings patch the synced row the app reads', async () => {
 		const updated = await ok('PATCH', '/settings', {
 			weightUnit: 'kg',

@@ -119,7 +119,7 @@ export const BlockExercise = z
 		note: z.string().optional(),
 		cycleTargets: z.array(CycleTargets).optional().meta({
 			description:
-				'Program templates only: index 0 is cycle 1. A cycle past the end uses `sets`. Sessions started from the template copy the targets of their cycle.',
+				'Program templates only: the sets of each training week, index 0 for week 1. A week past the end uses `sets`. The deload cycle is never stored; it is derived from the week beside it. Sessions started from the template copy the targets of their cycle.',
 		}),
 		equipment: z.array(z.string()).optional().meta({ description: 'Equipment ids of the chosen resistance option.' }),
 		support: z.array(z.string()).optional().meta({ description: 'Equipment ids of the chosen support option.' }),
@@ -257,9 +257,16 @@ export const Program = z
 export const ProgramDetail = Program.extend({
 	templates: z.array(Template).meta({ description: "The days' templates." }),
 	upNext: z
-		.object({ dayId: z.string(), templateId: z.string(), cycle: z.int() })
+		.object({
+			dayId: z.string(),
+			templateId: z.string().nullable().meta({ description: 'Null for a rest day.' }),
+			cycle: z.int(),
+		})
 		.nullable()
-		.meta({ description: 'The next workout day: the one after the newest finished session of the current cycle.' }),
+		.meta({
+			description:
+				'The first day of the current cycle not done yet: a workout day without a finished session in this run, or an unticked rest day.',
+		}),
 }).meta({ id: 'ProgramDetail' });
 
 const DayInput = z
