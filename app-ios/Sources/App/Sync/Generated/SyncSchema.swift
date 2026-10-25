@@ -4,7 +4,7 @@ import SyncEngine
 let syncSchema = SyncSchema(
     tables: [
         SyncTable(name: "workout_templates", columns: ["name", "notes", "blocks", "created_at", "updated_at", "program_id", "gym_id", "archived"]),
-        SyncTable(name: "workout_sessions", columns: ["name", "template_id", "started_at", "ended_at", "notes", "blocks", "program_id", "program_day_id", "cycle", "gym_id", "paused_seconds"]),
+        SyncTable(name: "workout_sessions", columns: ["name", "template_id", "started_at", "ended_at", "notes", "blocks", "program_id", "program_day_id", "cycle", "gym_id", "paused_seconds", "health"]),
         SyncTable(name: "custom_exercises", columns: ["exercise", "is_archived"]),
         SyncTable(name: "exercise_settings", columns: ["pinned_note", "rest_seconds", "do_not_recommend", "overrides"]),
         SyncTable(name: "settings", columns: ["weight_unit", "rest_compound_upper", "rest_compound_lower", "rest_upper_isolation", "rest_lower_isolation", "rest_core", "workout", "profile", "dashboard", "shortcuts"]),
@@ -23,7 +23,7 @@ let syncSchema = SyncSchema(
         "ALTER TABLE workout_templates ADD COLUMN program_id TEXT",
         "ALTER TABLE workout_templates ADD COLUMN gym_id TEXT",
         "ALTER TABLE workout_templates ADD COLUMN archived INTEGER NOT NULL DEFAULT 0",
-        "CREATE TABLE IF NOT EXISTS workout_sessions (id TEXT PRIMARY KEY, name TEXT NOT NULL, template_id TEXT, started_at TEXT NOT NULL, ended_at TEXT, notes TEXT NOT NULL DEFAULT '', blocks TEXT NOT NULL DEFAULT '[]', program_id TEXT, program_day_id TEXT, cycle INTEGER, gym_id TEXT, paused_seconds INTEGER NOT NULL DEFAULT 0)",
+        "CREATE TABLE IF NOT EXISTS workout_sessions (id TEXT PRIMARY KEY, name TEXT NOT NULL, template_id TEXT, started_at TEXT NOT NULL, ended_at TEXT, notes TEXT NOT NULL DEFAULT '', blocks TEXT NOT NULL DEFAULT '[]', program_id TEXT, program_day_id TEXT, cycle INTEGER, gym_id TEXT, paused_seconds INTEGER NOT NULL DEFAULT 0, health TEXT)",
         "ALTER TABLE workout_sessions ADD COLUMN name TEXT NOT NULL",
         "ALTER TABLE workout_sessions ADD COLUMN template_id TEXT",
         "ALTER TABLE workout_sessions ADD COLUMN started_at TEXT NOT NULL",
@@ -35,6 +35,7 @@ let syncSchema = SyncSchema(
         "ALTER TABLE workout_sessions ADD COLUMN cycle INTEGER",
         "ALTER TABLE workout_sessions ADD COLUMN gym_id TEXT",
         "ALTER TABLE workout_sessions ADD COLUMN paused_seconds INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE workout_sessions ADD COLUMN health TEXT",
         "CREATE TABLE IF NOT EXISTS custom_exercises (id TEXT PRIMARY KEY, exercise TEXT NOT NULL, is_archived INTEGER NOT NULL DEFAULT 0)",
         "ALTER TABLE custom_exercises ADD COLUMN exercise TEXT NOT NULL",
         "ALTER TABLE custom_exercises ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0",
@@ -107,6 +108,7 @@ let syncSchema = SyncSchema(
         "CREATE TRIGGER IF NOT EXISTS _ob_u_workout_sessions_cycle AFTER UPDATE OF cycle ON workout_sessions\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.cycle IS NOT NEW.cycle\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('workout_sessions', NEW.id, 'update', 'cycle'); END",
         "CREATE TRIGGER IF NOT EXISTS _ob_u_workout_sessions_gym_id AFTER UPDATE OF gym_id ON workout_sessions\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.gym_id IS NOT NEW.gym_id\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('workout_sessions', NEW.id, 'update', 'gym_id'); END",
         "CREATE TRIGGER IF NOT EXISTS _ob_u_workout_sessions_paused_seconds AFTER UPDATE OF paused_seconds ON workout_sessions\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.paused_seconds IS NOT NEW.paused_seconds\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('workout_sessions', NEW.id, 'update', 'paused_seconds'); END",
+        "CREATE TRIGGER IF NOT EXISTS _ob_u_workout_sessions_health AFTER UPDATE OF health ON workout_sessions\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.health IS NOT NEW.health\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('workout_sessions', NEW.id, 'update', 'health'); END",
         "CREATE TRIGGER IF NOT EXISTS _ob_i_custom_exercises AFTER INSERT ON custom_exercises\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('custom_exercises', NEW.id, 'insert', NULL); END",
         "CREATE TRIGGER IF NOT EXISTS _ob_d_custom_exercises AFTER DELETE ON custom_exercises\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('custom_exercises', OLD.id, 'delete', NULL); END",
         "CREATE TRIGGER IF NOT EXISTS _ob_u_custom_exercises_exercise AFTER UPDATE OF exercise ON custom_exercises\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.exercise IS NOT NEW.exercise\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('custom_exercises', NEW.id, 'update', 'exercise'); END",

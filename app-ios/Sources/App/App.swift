@@ -9,12 +9,14 @@ struct BetterMeApp: App {
     init() {
         AppFont.register()
         NavigationAppearance.apply()
-        _catalog = State(initialValue: ExerciseCatalog())
+        let catalog = ExerciseCatalog()
+        _catalog = State(initialValue: catalog)
         let store = LocalStore()
         _store = State(initialValue: store)
+        LiveWorkoutController.shared.start(store: store, catalog: catalog)
         #if DEBUG
         SampleData.seedIfRequested(store)
-        store.seedGeneratedProgramIfRequested(catalog: _catalog.wrappedValue)
+        store.seedGeneratedProgramIfRequested(catalog: catalog)
         SampleWorkout.startIfRequested(store)
         #endif
     }

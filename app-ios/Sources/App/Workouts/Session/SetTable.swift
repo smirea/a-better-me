@@ -193,11 +193,10 @@ extension SessionEditor {
 
     /// What a row shows and logs: its log once checked, else what was typed, else the prefill.
     func entry(_ path: RowPath, previous: [WorkoutSet]) -> SetEntry {
-        if let log = blocks.log(at: path) { return SetEntry(log) }
-        if let draft = drafts[blocks.rowID(at: path)] { return draft }
-        let smartFill = defaults.workout.progression.initialFill == .smartProgression || store.appliedRows.contains(blocks.rowID(at: path))
-        let suggestion = smartFill ? suggestion(for: path) : nil
-        return SessionFlow.prefill(for: path, in: blocks, previous: previous, suggestion: suggestion, rirTracking: defaults.workout.rirTracking, unit: unit)
+        SessionFlow.entry(
+            for: path, in: blocks, drafts: drafts, previous: previous,
+            suggestions: mode == .live ? store.suggestions : [:], appliedRows: store.appliedRows, settings: defaults
+        )
     }
 
     func suggestion(for path: RowPath) -> SetSuggestion? {
@@ -233,6 +232,26 @@ extension SessionEditor {
         let step = SessionFlow.afterCompleting(path, in: blocks, settings: defaults.workout, rest: restSeconds)
         if let seconds = step.restSeconds { store.startRest(seconds: seconds, alerts: defaults.workout.rest) }
         if let next = step.next, next != current { withAnimation { current = next } }
+    }
+
+    func perform(_ command: LiveWorkoutCommand) {
+        switch command {
+        case .log(let id, let values):
+            guard let path = blocks.path(of: id), blocks.log(at: path) == nil else { return }
+            let previous = previousSets(for: path)
+            drafts[id] = SetEntry(values, keeping: entry(path, previous: previous))
+            toggle(path, previous: previous)
+        case .unlog(let id):
+            guard let path = blocks.path(of: id), blocks.log(at: path) != nil else { return }
+            toggle(path, previous: previousSets(for: path))
+        case .edit(let id, let values):
+            guard let path = blocks.path(of: id) else { return }
+            update(path) { $0 = SetEntry(values, keeping: $0) }
+        case .select(let exerciseID):
+            if blocks.locate(exerciseID) != nil { withAnimation { current = exerciseID } }
+        case .adjustRest, .skipRest, .pause, .resume, .finish:
+            return
+        }
     }
 
     private func restSeconds(_ item: BlockExercise, _ set: WorkoutSet) -> Int {
