@@ -186,3 +186,18 @@ describe('handle', () => {
 		]);
 	});
 });
+
+describe('parseConfig', () => {
+	test('space settings apply in development and stop production', () => {
+		expect(parseConfig({ SYNC_PAGE_SIZE: '3' }).space).toEqual({ pageSize: 3 });
+		const production = {
+			APP_ENV: 'production',
+			OWNER_TOKEN: 'secret',
+			SENTRY_DSN: 'https://abc123@o1.ingest.sentry.io/42',
+		};
+		expect(parseConfig(production).space).toEqual({});
+		expect(() => parseConfig({ ...production, SYNC_PAGE_SIZE: '3' })).toThrow(
+			'Space settings are development only: SYNC_PAGE_SIZE',
+		);
+	});
+});
