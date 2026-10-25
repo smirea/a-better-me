@@ -46,8 +46,15 @@ struct MuscleTile: View {
     let muscle: Muscle
 
     var body: some View {
-        if let name = muscle.tileImage {
-            Image(name).resizable().scaledToFit()
+        if let crop = BodyFigure.shared.tiles[muscle] {
+            BodyCrop(crop: crop) { region in
+                switch region {
+                case .silhouette: BodyFigure.silhouette
+                case .muscle(muscle): Theme.muscle
+                case .bone, .muscle: BodyFigure.muscleBase
+                }
+            }
+            .background(Color(hex: 0x252525))
         } else {
             Image(systemName: "figure.stand").resizable().scaledToFit().foregroundStyle(Theme.textTertiary).padding(8)
         }

@@ -242,109 +242,92 @@ for (const [id, entry] of Object.entries(source.uuidIndex)) {
 	});
 }
 
-// Muscle tiles are drawn for a light theme with the target muscle in blue. Their grays are swapped for the dark theme's,
-// and Xcode keeps them as vectors through an asset catalog. The owner's MF account uses the male figure.
-const muscleDir = join(assets, 'assets/muscle_groups/male');
-const muscleAssets = join(out, 'Muscles.xcassets');
-const contents = (value: unknown) => `${JSON.stringify(value, null, '\t')}\n`;
-await Bun.write(join(muscleAssets, 'Contents.json'), contents({ info: { author: 'xcode', version: 1 } }));
-const muscles = readdirSync(muscleDir).filter(f => f.endsWith('.svg'));
-for (const file of muscles) {
-	const name = `muscle-${file.replace('.svg', '')}`;
-	const svg = (await Bun.file(join(muscleDir, file)).text())
-		.replaceAll('#EEEEEE', '#4A4A4A')
-		.replaceAll('#DCDCDC', '#2E2E2E')
-		.replaceAll('fill="white"', 'fill="#252525"');
-	await Bun.write(join(muscleAssets, `${name}.imageset`, file), svg);
-	await Bun.write(
-		join(muscleAssets, `${name}.imageset`, 'Contents.json'),
-		contents({
-			images: [{ filename: file, idiom: 'universal' }],
-			info: { author: 'xcode', version: 1 },
-			properties: { 'preserves-vector-representation': true },
-		}),
-	);
-}
-
-// The Levels heat map and the summary fill each muscle of the whole-body figures separately. The SVG paths use only
-// absolute M, L, H, V, C, and Z, so they are flattened here into a start point and line ([x, y]) or cubic
-// ([x1, y1, x2, y2, x, y]) segments that Swift turns into a Path without parsing SVG.
+// `scripts/body.svg` is the reference app's front and back avatars (`assets/body/avatar_male_{front,back}.svg`) as one
+// figure, the back shifted right, with a path per side and region and a `<view>` per crop: each side for the Levels
+// heat map and each muscle's tile, the square the reference app's `assets/muscle_groups/male/<muscle>.svg` shows.
+// Its paths use only absolute M, L, H, V, C, and Z, so they are flattened here into subpaths of a start point and
+// line ([x, y]) or cubic ([x1, y1, x2, y2, x, y]) segments that Swift turns into a Path without parsing SVG.
 const muscleNames = new Set(
 	Object.values(source.uuidIndex)
 		.filter(entry => entry.type === 'featureMuscleGroup')
 		.map(entry => snake(entry.name)),
 );
-const bodyRegion = (id: string) => {
-	if (id === 'body' || id === 'bone') return id;
-	const muscle = id.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-	if (!muscleNames.has(muscle)) throw new Error(`Body figure path ${id} names no feature muscle group`);
-	return muscle;
+const bodyRegion = (region: string) => {
+	if (region !== 'body' && region !== 'bone' && !muscleNames.has(region))
+		throw new Error(`body.svg path region ${region} names no feature muscle group`);
+	return region;
 };
-const round = (value: number) => Math.round(value * 100) / 100;
 function bodyPath(id: string, d: string) {
 	const tokens = d.match(/[A-Za-z]|-?\d*\.?\d+(?:e-?\d+)?/g) ?? [];
-	let start: number[] | undefined;
-	const segments: number[][] = [];
+	const subpaths: number[][][] = [];
 	let point = [0, 0];
 	let command = '';
 	for (let i = 0; i < tokens.length;) {
 		if (/[A-Za-z]/.test(tokens[i]!)) command = tokens[i++]!;
 		const take = (count: number) => tokens.slice(i, (i += count)).map(Number);
+		const segments = subpaths.at(-1);
+		if (command !== 'M' && !segments) throw new Error(`body.svg path ${id} draws before its first M`);
 		switch (command) {
 			case 'M':
-				if (start) throw new Error(`Body figure path ${id} has several subpaths`);
 				point = take(2);
-				start = point.map(round);
+				subpaths.push([point]);
 				command = 'L';
 				break;
 			case 'L':
 				point = take(2);
-				segments.push(point.map(round));
+				segments!.push(point);
 				break;
 			case 'H':
 				point = [take(1)[0]!, point[1]!];
-				segments.push(point.map(round));
+				segments!.push(point);
 				break;
 			case 'V':
 				point = [point[0]!, take(1)[0]!];
-				segments.push(point.map(round));
+				segments!.push(point);
 				break;
 			case 'C': {
 				const curve = take(6);
 				point = curve.slice(4);
-				segments.push(curve.map(round));
+				segments!.push(curve);
 				break;
 			}
 			case 'Z':
-				if (i !== tokens.length) throw new Error(`Body figure path ${id} continues after Z`);
 				break;
 			default:
-				throw new Error(`Body figure path ${id} uses unsupported command ${command}`);
+				throw new Error(`body.svg path ${id} uses unsupported command ${command}`);
 		}
 	}
-	if (!start) throw new Error(`Body figure path ${id} has no start point`);
-	return { region: bodyRegion(id), start, segments };
+	if (!subpaths.length) throw new Error(`body.svg path ${id} is empty`);
+	return { region: bodyRegion(id.replace(/^(front|back)-/, '')), subpaths };
 }
-async function bodyFigure(side: 'front' | 'back') {
-	const svg = await Bun.file(join(assets, `assets/body/avatar_male_${side}.svg`)).text();
-	const paths = [...svg.matchAll(/<path id="([^"]+)" d="([^"]+)"/g)];
-	if (paths.length !== (svg.match(/<path/g) ?? []).length)
-		throw new Error(`avatar_male_${side}.svg has paths without an id before d`);
-	return paths.map(([, id, d]) => bodyPath(id!, d!));
-}
-const figureSize = (await Bun.file(join(assets, 'assets/body/avatar_male_front.svg')).text()).match(
-	/viewBox="0 0 (\d+) (\d+)"/,
+const bodySvg = await Bun.file(join(import.meta.dir, 'body.svg')).text();
+const views = Object.fromEntries(
+	[...bodySvg.matchAll(/<view id="([^"]+)" viewBox="([^"]+)"\/>/g)].map(([, id, box]) => [
+		id!,
+		box!.split(' ').map(Number),
+	]),
 );
-if (!figureSize) throw new Error('avatar_male_front.svg has no viewBox');
+const view = (id: string) => {
+	if (!views[id]) throw new Error(`body.svg has no view ${id}`);
+	return views[id];
+};
+const tiles = Object.fromEntries(
+	Object.keys(views)
+		.filter(id => id.startsWith('tile-'))
+		.map(id => [bodyRegion(id.slice('tile-'.length)), view(id)]),
+);
+const bodyPaths = [...bodySvg.matchAll(/<path id="((?:front|back)-[a-z_]+)" d="([^"]+)"\/>/g)];
+if (bodyPaths.length !== (bodySvg.match(/<path/g) ?? []).length)
+	throw new Error('body.svg has paths whose id is not <front|back>-<region> before d');
 
 const write = (name: string, value: unknown) => Bun.write(join(out, name), `${JSON.stringify(value, null, '\t')}\n`);
 await Bun.write(
 	join(out, 'body.json'),
 	`${JSON.stringify({
-		width: Number(figureSize[1]),
-		height: Number(figureSize[2]),
-		front: await bodyFigure('front'),
-		back: await bodyFigure('back'),
+		front: view('front'),
+		back: view('back'),
+		tiles,
+		parts: bodyPaths.map(([, id, d]) => bodyPath(id!, d!)),
 	})}\n`,
 );
 await write('exercises.json', exercises);
@@ -353,7 +336,7 @@ await write('articles.json', articles);
 console.log(
 	`${exercises.length} exercises (${exercises.filter(e => e.images.length).length} with images, ` +
 		`${exercises.filter(e => e.hasInstructions).length} with instructions), ${equipment.length} equipment, ` +
-		`${articles.length} articles, ${muscles.length} muscle tiles from the catalog generated ${source.generatedAt}. ` +
+		`${articles.length} articles, ${Object.keys(tiles).length} muscle tiles from the catalog generated ${source.generatedAt}. ` +
 		`Picker groups: ${JSON.stringify(
 			Object.groupBy(exercises, e => e.category),
 			(k, v) => (Array.isArray(v) ? v.length : v),

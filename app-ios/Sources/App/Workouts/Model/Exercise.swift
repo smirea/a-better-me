@@ -150,9 +150,6 @@ enum Muscle: String, Codable, CaseIterable, Identifiable {
     static let lowerBody: [Muscle] = [.quads, .glutes, .hamstrings, .calves, .abductors, .adductors, .tibs, .hipFlexors]
     static let upperBody: [Muscle] = allCases.filter { !$0.isLowerBody }
 
-    /// Asset name of the mini figure with this muscle highlighted. Hip flexors have no art in the reference app.
-    var tileImage: String? { self == .hipFlexors ? nil : "muscle-\(rawValue)" }
-
     var displayName: String {
         rawValue.split(separator: "_").map(\.capitalized).joined(separator: " ")
     }
