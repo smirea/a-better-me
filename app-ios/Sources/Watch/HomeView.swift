@@ -18,7 +18,7 @@ struct HomeView: View {
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(model.home == nil ? "Open Better Me on your iPhone" : "No workouts yet")
+                        Text(model.home == nil ? "Open A Better Me on your iPhone" : "No workouts yet")
                             .font(AppFont.headline(15))
                         Text(model.home == nil ? "Your workouts show up here once the phone app has run." : "Create a workout on your iPhone to start it here.")
                             .font(AppFont.caption(12))

@@ -374,7 +374,7 @@
 				DEVELOPMENT_TEAM = FNYFHG5SV7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+				INFOPLIST_KEY_CFBundleDisplayName = "A Better Me";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "The Dashboard charts your body weight and daily steps from Health, and workouts read your heart rate and energy while you train.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
@@ -410,7 +410,7 @@
 				DEVELOPMENT_TEAM = FNYFHG5SV7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+				INFOPLIST_KEY_CFBundleDisplayName = "A Better Me";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "The Dashboard charts your body weight and daily steps from Health, and workouts read your heart rate and energy while you train.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
@@ -481,7 +481,7 @@
 				DEVELOPMENT_TEAM = FNYFHG5SV7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/Watch-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+				INFOPLIST_KEY_CFBundleDisplayName = "A Better Me";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Workouts read your heart rate and energy while you train.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
@@ -513,7 +513,7 @@
 				DEVELOPMENT_TEAM = FNYFHG5SV7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/Watch-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+				INFOPLIST_KEY_CFBundleDisplayName = "A Better Me";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Workouts read your heart rate and energy while you train.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
@@ -544,7 +544,7 @@
 				DEVELOPMENT_TEAM = FNYFHG5SV7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/Widgets-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+				INFOPLIST_KEY_CFBundleDisplayName = "A Better Me";
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -572,7 +572,7 @@
 				DEVELOPMENT_TEAM = FNYFHG5SV7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/Widgets-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+				INFOPLIST_KEY_CFBundleDisplayName = "A Better Me";
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
