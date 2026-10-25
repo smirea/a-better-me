@@ -10,9 +10,15 @@ import { parseConfig } from './config';
 import env from './env';
 
 const config = parseConfig(env);
-// Before `Bun.serve`, which the SDK wraps to report a thrown error. Without a DSN the SDK stays silent.
-// A message without a stack trace keeps its own text as the issue title, not the calling function's name.
-if (config.sentry) Sentry.init({ ...config.sentry, attachStacktrace: false });
+// Before `Bun.serve`, which the SDK wraps to report a thrown error. Without a DSN the SDK stays silent. No stack
+// traces and no Dedupe, for the reasons in `worker.ts`'s `sentryOptions`.
+if (config.sentry) {
+	Sentry.init({
+		...config.sentry,
+		attachStacktrace: false,
+		integrations: defaults => defaults.filter(integration => integration.name !== 'Dedupe'),
+	});
+}
 
 // One file per checkout, named after its directory: a worktree never shares the main checkout's data.
 const root = join(import.meta.dir, '../..');

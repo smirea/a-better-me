@@ -80,7 +80,9 @@ function sentryOptions(env: Env): Sentry.CloudflareOptions {
 		...sentry,
 		// A message without a stack trace keeps its own text as the issue title, not the calling function's name.
 		attachStacktrace: false,
-		integrations: [
+		integrations: defaults => [
+			// Dedupe drops an event equal to the one before it, which is every refusal after the first in a run.
+			...defaults.filter(integration => integration.name !== 'Dedupe'),
 			Sentry.cronTriggersIntegration({
 				monitorSlug: cron => (cron === BACKUP_CRON ? 'a-better-me-backup' : undefined),
 			}),
