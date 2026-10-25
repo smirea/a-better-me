@@ -6,39 +6,29 @@
  *   bun scripts/secrets.ts github      the Cloudflare deploy credentials as repository secrets
  *   bun scripts/secrets.ts check       drift between env-manager prod, the Worker, and GitHub
  *   bun scripts/secrets.ts verify      CI, before deploying: the Worker has every required secret (no AWS)
- *   bun scripts/secrets.ts ios         Release's API_URL, OWNER_TOKEN and SENTRY_DSN_IOS from env-manager prod into app-ios/Config/Env.xcconfig
+ *   bun scripts/secrets.ts ios         uploads the app's assets, then writes Release's API_URL, OWNER_TOKEN, SENTRY_DSN_IOS
+ *                                      and asset bucket settings from env-manager prod into app-ios/Config/Env.xcconfig
  *
  * Every command but `verify` reads env-manager with `env-manager print`, which needs this Mac's AWS access.
  */
 import { spawnSync } from 'node:child_process';
 import { chmodSync, writeFileSync } from 'node:fs';
 import { REQUIRED_IN_PRODUCTION } from '../server/src/config';
-import { parseDotenv, type Values } from './lib';
+import { upload } from './assets';
+import { readEnv, type Values } from './lib';
 
-const PROJECT = 'a-better-me';
 const REPO = 'smirea/a-better-me';
 const WORKER_SECRETS = REQUIRED_IN_PRODUCTION;
 const CLOUDFLARE_SECRETS = ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'] as const;
-const IOS_RELEASE_SETTINGS = ['API_URL', 'OWNER_TOKEN', 'SENTRY_DSN_IOS'] as const;
+const IOS_RELEASE_SETTINGS = [
+	'API_URL',
+	'OWNER_TOKEN',
+	'SENTRY_DSN_IOS',
+	'ASSETS_URL',
+	'ASSETS_ACCESS_KEY_ID',
+	'ASSETS_SECRET_ACCESS_KEY',
+] as const;
 const IOS_CONFIG_PATH = new URL('../app-ios/Config/Env.xcconfig', import.meta.url).pathname;
-
-/** One environment's values, from the `.env.local` section of `env-manager print`. */
-function readEnv(env: string): Values {
-	// `bun run` puts the pinned `node_modules/.bin/env-manager` first, which cannot see the global one's AWS credentials.
-	const path = (process.env.PATH ?? '')
-		.split(':')
-		.filter(dir => !dir.endsWith('node_modules/.bin'))
-		.join(':');
-	const result = spawnSync('env-manager', ['print', PROJECT, '-e', env], {
-		encoding: 'utf8',
-		env: { ...process.env, PATH: path },
-	});
-	const section = /^\.env\.local$([\s\S]*?)(?:^files$|(?![\s\S]))/m.exec(result.stdout ?? '')?.[1];
-	if (result.status !== 0 || section === undefined) {
-		throw new Error(`env-manager print ${PROJECT} -e ${env} failed. It needs this Mac's AWS credentials.`);
-	}
-	return parseDotenv(section);
-}
 
 function require(values: Values, names: readonly string[], env: string): Values {
 	const missing = names.filter(name => !values[name]);
@@ -109,8 +99,12 @@ function verify() {
 	console.log(`The Worker has every required secret: ${WORKER_SECRETS.join(', ')}`);
 }
 
-/** The token ships inside the Release app: the owner's own phone is the only install, so it is as safe as the device. */
-function ios() {
+/**
+ * The tokens ship inside the Release app: the owner's own phone is the only install, so they are as safe as the device.
+ * The upload comes first, so a Release build never names an asset version the bucket lacks.
+ */
+async function ios() {
+	await upload();
 	const settings = require(readEnv('prod'), IOS_RELEASE_SETTINGS, 'prod');
 	// `$()` keeps an xcconfig from reading `//` as the start of a comment.
 	const lines = Object.entries(settings).map(
@@ -124,10 +118,10 @@ function ios() {
 	console.log(`Wrote ${IOS_RELEASE_SETTINGS.join(', ')} for Release to app-ios/Config/Env.xcconfig`);
 }
 
-const commands: Record<string, () => void> = { push, github, check, verify, ios };
+const commands: Record<string, () => unknown> = { push, github, check, verify, ios };
 const command = commands[process.argv[2] ?? ''];
 if (!command) {
 	console.error(`Usage: bun scripts/secrets.ts <${Object.keys(commands).join('|')}>`);
 	process.exit(1);
 }
-command();
+await command();

@@ -22,6 +22,7 @@
 		"env:generate": "env-manager gen --local",
 		"generate": "bun scripts/generate.ts",
 		"env:ios": "bun scripts/secrets.ts ios",
+		"assets": "bun scripts/assets.ts",
 		"pr:ship": "bun scripts/pr-ship.ts",
 		"secrets:push": "bun scripts/secrets.ts push",
 		"secrets:github": "bun scripts/secrets.ts github",

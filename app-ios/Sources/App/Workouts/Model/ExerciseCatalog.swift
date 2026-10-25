@@ -31,14 +31,15 @@ final class ExerciseCatalog {
     }
 
     /// Markdown with "Setting up", "Exercise technique", and "Description" sections.
+    /// Nil until `AssetStore` downloads it; a view that reads it re-renders when it arrives.
     func instructions(for exercise: Exercise) -> String? {
-        exercise.hasInstructions ? Self.markdown(exercise.id) : nil
+        exercise.hasInstructions ? Self.markdown("Instructions/\(exercise.id).md") : nil
     }
 
-    func articleText(_ article: Article) -> String? { Self.markdown(article.id) }
+    func articleText(_ article: Article) -> String? { Self.markdown("Articles/\(article.id).md") }
 
-    private static func markdown(_ name: String) -> String? {
-        Bundle.main.url(forResource: name, withExtension: "md").flatMap { try? String(contentsOf: $0, encoding: .utf8) }
+    private static func markdown(_ path: String) -> String? {
+        AssetStore.shared.url(path).flatMap { try? String(contentsOf: $0, encoding: .utf8) }
     }
 
     var all: [Exercise] { custom + bundled }
@@ -56,7 +57,7 @@ final class ExerciseCatalog {
     func name(_ id: ExerciseID) -> String { byID[id]?.name ?? "Unknown exercise" }
 }
 
-/// One of an exercise's position frames from the bundle, or a muscle-colored placeholder.
+/// One of an exercise's position frames, or a placeholder until `AssetStore` downloads it.
 struct ExerciseImage: View {
     let exercise: Exercise
     var frame = 0
@@ -79,7 +80,7 @@ struct ExerciseImage: View {
     private static func load(_ name: String?) -> UIImage? {
         guard let name else { return nil }
         if let hit = cache.object(forKey: name as NSString) { return hit }
-        guard let url = Bundle.main.url(forResource: name, withExtension: "webp"),
+        guard let url = AssetStore.shared.url("ExerciseImages/\(name).webp"),
               let image = UIImage(contentsOfFile: url.path) else { return nil }
         cache.setObject(image, forKey: name as NSString)
         return image

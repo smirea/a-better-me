@@ -6,6 +6,7 @@ import { createSpace, handleSync, LIVE_PROTOCOL } from 'sync-engine/core';
 import { schema } from '../../shared/db/schema';
 import { handleAgent } from './agent';
 import { handle } from './api';
+import { ASSETS_DIR, assetRoutes } from './assets';
 import { parseConfig } from './config';
 import env from './env';
 
@@ -37,11 +38,15 @@ async function nudging(run: () => Promise<Response>): Promise<Response> {
 	return response;
 }
 
+// No auth: the files are already in git, and the Worker never serves them.
+const assets = assetRoutes(ASSETS_DIR);
+
 const server = Bun.serve({
 	development: config.environment === 'development',
 	idleTimeout: 120,
 	port: env.API_PORT,
 	fetch: (request, server) =>
+		assets(request) ??
 		handle<undefined>(request, {
 			config,
 			report: Sentry,

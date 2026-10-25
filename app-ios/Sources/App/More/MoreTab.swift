@@ -18,6 +18,11 @@ struct MoreTab: View {
                     } label: {
                         SettingLabel(title: "Weight Unit", detail: nil, systemImage: "scalemass")
                     }
+                    Button { AssetStore.shared.refresh() } label: {
+                        SettingLabel(title: AssetStore.shared.statusLine, detail: nil, systemImage: "icloud.and.arrow.down")
+                    }
+                    .accessibilityLabel(AssetStore.shared.statusLine)
+                    .accessibilityHint("Checks for missing exercise images and downloads them now, on cellular too")
                 } header: {
                     SectionTitle("General").textCase(nil)
                 }
