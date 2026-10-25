@@ -41,23 +41,6 @@ extension PlateCalculatorOptions {
     }
 }
 
-struct RestSettings: Codable, Hashable {
-    var enabled = true
-    var playSound = true
-    var vibrate = true
-    var afterLastWarmUp = true
-    var betweenExercises = false
-    var betweenSides = false
-    var scaling = RestScaling()
-}
-
-/// Percent of the resolved rest.
-struct RestScaling: Codable, Hashable {
-    var afterLastWarmUp = 75
-    var betweenExercises = 100
-    var betweenSides = 50
-}
-
 struct ProgressionSettings: Codable, Hashable {
     var initialFill = InitialFill.smartProgression
     var applyInSession = true
@@ -101,4 +84,8 @@ struct DisplaySettings: Codable, Hashable {
 
 enum CalendarScrolling: String, Codable {
     case daily, weekly
+}
+
+extension WorkoutSettings {
+    var flow: FlowRules { FlowRules(rest: rest, supersetAutoScroll: supersetAutoScroll, exerciseAutoNext: exerciseAutoNext) }
 }

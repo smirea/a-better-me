@@ -6,6 +6,77 @@
 	objectVersion = 71;
 	objects = {
 
+		F00000000000000000000001 /* UITests/Watch */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = UITests/Watch;
+			sourceTree = "<group>";
+		};
+		F00000000000000000000002 /* WatchUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F00000000000000000000007;
+			buildPhases = (
+				F00000000000000000000004,
+				F00000000000000000000005,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F0000000000000000000000A,
+			);
+			fileSystemSynchronizedGroups = (
+				F00000000000000000000001,
+			);
+			name = WatchUITests;
+			productName = WatchUITests;
+			productReference = F00000000000000000000003;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		F00000000000000000000003 /* WatchUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WatchUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F00000000000000000000004 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		F00000000000000000000005 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		F00000000000000000000007 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F00000000000000000000008,
+				F00000000000000000000009,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F00000000000000000000008 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me.watch-uitests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = Watch;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Debug;
+		};
+		F00000000000000000000009 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me.watch-uitests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = Watch;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Release;
+		};
+		F0000000000000000000000A = {isa = PBXTargetDependency; target = B00000000000000000000002; targetProxy = F0000000000000000000000B; };
+		F0000000000000000000000B = {isa = PBXContainerItemProxy; containerPortal = A00000000000000000000001; proxyType = 1; remoteGlobalIDString = B00000000000000000000002; remoteInfo = Watch; };
 /* Begin PBXBuildFile section */
 		A00000000000000000000023 /* SyncEngine in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000021 /* SyncEngine */; };
 		A00000000000000000000024 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000022 /* GRDB */; };
@@ -117,6 +188,7 @@
 		A00000000000000000000002 = {
 			isa = PBXGroup;
 			children = (
+				F00000000000000000000001 /* UITests/Watch */,
 				A00000000000000000000016 /* Config/Base.xcconfig */,
 				A00000000000000000000004 /* Sources/App */,
 				D00000000000000000000001 /* Sources/Shared */,
@@ -130,6 +202,7 @@
 		A00000000000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				F00000000000000000000003 /* WatchUITests.xctest */,
 				A00000000000000000000006 /* App.app */,
 				A00000000000000000000032 /* AppTests.xctest */,
 				B00000000000000000000003 /* Watch.app */,
@@ -264,6 +337,7 @@
 				A00000000000000000000031 /* AppTests */,
 				B00000000000000000000002 /* Watch */,
 				C00000000000000000000002 /* Widgets */,
+				F00000000000000000000002 /* WatchUITests */,
 			);
 		};
 /* End PBXProject section */

@@ -151,7 +151,7 @@ final class LiveWorkoutController {
     private func upNext(after path: RowPath, in blocks: [WorkoutBlock]) -> RowPath? {
         var logged = blocks
         logged.setLog(SetLog(completedAt: .now), at: path)
-        let step = SessionFlow.afterCompleting(path, in: logged, settings: inputs.settings.workout) { _, _ in 0 }
+        let step = SessionFlow.afterCompleting(path, in: logged, settings: inputs.settings.workout.flow) { _, _ in 0 }
         let exerciseID = step.next ?? logged[path.block].exercises[path.exercise].id
         guard let at = logged.locate(exerciseID) else { return nil }
         return logged.firstOpenRow(block: at.block, exercise: at.item)
@@ -226,7 +226,7 @@ final class LiveWorkoutController {
             case .logged(let rowID, let path, let blocks):
                 live.drafts[rowID] = nil
                 let settings = inputs.settings
-                let step = SessionFlow.afterCompleting(path, in: blocks, settings: settings.workout) { [catalog, exerciseSettings = inputs.exerciseSettings] item, set in
+                let step = SessionFlow.afterCompleting(path, in: blocks, settings: settings.workout.flow) { [catalog, exerciseSettings = inputs.exerciseSettings] item, set in
                     item.restSeconds(after: set, exercise: catalog?.exercise(item.exerciseID), settings: .of(item.exerciseID, in: exerciseSettings), defaults: settings)
                 }
                 if let seconds = step.restSeconds { live.startRest(seconds: seconds, alerts: settings.workout.rest) }
@@ -335,19 +335,5 @@ extension SetTarget {
             rir.map { "\($0 >= 6 ? "6+" : "\($0)") RIR" },
         ].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-}
-
-extension [WorkoutBlock] {
-    var allRows: [RowPath] {
-        indices.flatMap { b in self[b].exercises.indices.flatMap { rows(block: b, exercise: $0) } }
-    }
-
-    func path(of id: UUID) -> RowPath? {
-        allRows.first { rowID(at: $0) == id }
-    }
-
-    func firstOpenRow(block: Int, exercise: Int) -> RowPath? {
-        rows(block: block, exercise: exercise).first { log(at: $0) == nil }
     }
 }

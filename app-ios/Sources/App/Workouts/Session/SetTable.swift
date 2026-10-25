@@ -229,7 +229,7 @@ extension SessionEditor {
         drafts[id] = nil
         guard mode == .live else { return }
         applyProgression(to: blocks[path.block].exercises[path.exercise].id)
-        let step = SessionFlow.afterCompleting(path, in: blocks, settings: defaults.workout, rest: restSeconds)
+        let step = SessionFlow.afterCompleting(path, in: blocks, settings: defaults.workout.flow, rest: restSeconds)
         if let seconds = step.restSeconds { store.startRest(seconds: seconds, alerts: defaults.workout.rest) }
         if let next = step.next, next != current { withAnimation { current = next } }
     }

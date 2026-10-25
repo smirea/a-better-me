@@ -1,7 +1,6 @@
 import Foundation
 import GRDB
 
-typealias EquipmentID = String
 
 /// A row of the synced `gym_profiles` table: a place to train and the equipment it has. At most one profile is meant to
 /// be the default; `LocalStore.setDefaultGym` keeps it so and `GymProfile.defaultGym` resolves a double state.
