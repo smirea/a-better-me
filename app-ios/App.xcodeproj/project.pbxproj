@@ -1,395 +1,682 @@
 // !$*UTF8*$!
 {
-    archiveVersion = 1;
-    classes = {};
-    objectVersion = 77;
-    objects = {
-        A00000000000000000000001 = {
-            isa = PBXProject;
-            attributes = { BuildIndependentTargetsInParallel = YES; LastSwiftUpdateCheck = 1600; LastUpgradeCheck = 1600; };
-            buildConfigurationList = A00000000000000000000010;
-            compatibilityVersion = "Xcode 16.0";
-            developmentRegion = en;
-            hasScannedForEncodings = 0;
-            knownRegions = (en, Base);
-            mainGroup = A00000000000000000000002;
-            packageReferences = (A00000000000000000000020, E00000000000000000000001);
-            preferredProjectObjectVersion = 77;
-            productRefGroup = A00000000000000000000003;
-            projectDirPath = "";
-            projectRoot = "";
-            targets = (A00000000000000000000005, A00000000000000000000031, B00000000000000000000002, C00000000000000000000002);
-        };
-        A00000000000000000000002 = {
-            isa = PBXGroup;
-            children = (A00000000000000000000016, A00000000000000000000004, D00000000000000000000001, B00000000000000000000001, C00000000000000000000001, A00000000000000000000030, A00000000000000000000003);
-            sourceTree = "<group>";
-        };
-        A00000000000000000000003 = {
-            isa = PBXGroup;
-            children = (A00000000000000000000006, A00000000000000000000032, B00000000000000000000003, C00000000000000000000003);
-            name = Products;
-            sourceTree = "<group>";
-        };
-        A00000000000000000000004 = {
-            isa = PBXFileSystemSynchronizedRootGroup;
-            path = Sources/App;
-            sourceTree = "<group>";
-        };
-        A00000000000000000000005 = {
-            isa = PBXNativeTarget;
-            buildConfigurationList = A00000000000000000000011;
-            buildPhases = (A00000000000000000000007, A00000000000000000000008, A00000000000000000000009, B0000000000000000000000D, C0000000000000000000000D);
-            buildRules = ();
-            dependencies = (B0000000000000000000000A, C0000000000000000000000A);
-            fileSystemSynchronizedGroups = (A00000000000000000000004, D00000000000000000000001);
-            name = App;
-            packageProductDependencies = (A00000000000000000000021, A00000000000000000000022, E00000000000000000000002);
-            productName = App;
-            productReference = A00000000000000000000006;
-            productType = "com.apple.product-type.application";
-        };
-        A00000000000000000000006 = {
-            isa = PBXFileReference;
-            explicitFileType = wrapper.application;
-            includeInIndex = 0;
-            path = App.app;
-            sourceTree = BUILT_PRODUCTS_DIR;
-        };
-        A00000000000000000000007 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-        A00000000000000000000008 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000023, A00000000000000000000024, E00000000000000000000003); runOnlyForDeploymentPostprocessing = 0; };
-        A00000000000000000000009 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-        A00000000000000000000010 = {
-            isa = XCConfigurationList;
-            buildConfigurations = (A00000000000000000000012, A00000000000000000000013);
-            defaultConfigurationIsVisible = 0;
-            defaultConfigurationName = Release;
-        };
-        A00000000000000000000011 = {
-            isa = XCConfigurationList;
-            buildConfigurations = (A00000000000000000000014, A00000000000000000000015);
-            defaultConfigurationIsVisible = 0;
-            defaultConfigurationName = Release;
-        };
-        A00000000000000000000012 = {
-            isa = XCBuildConfiguration;
-            buildSettings = { CLANG_ENABLE_MODULES = YES; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_TESTABILITY = YES; ONLY_ACTIVE_ARCH = YES; SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; };
-            name = Debug;
-        };
-        A00000000000000000000013 = {
-            isa = XCBuildConfiguration;
-            buildSettings = { CLANG_ENABLE_MODULES = YES; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; SWIFT_COMPILATION_MODE = wholemodule; };
-            name = Release;
-        };
-        /* The sync engine, which brings GRDB (see docs/decisions/sync.md). */
-        A00000000000000000000020 = {
-            isa = XCRemoteSwiftPackageReference;
-            repositoryURL = "https://github.com/smirea/sync-engine";
-            requirement = { kind = branch; branch = master; };
-        };
-        A00000000000000000000021 = { isa = XCSwiftPackageProductDependency; package = A00000000000000000000020; productName = SyncEngine; };
-        A00000000000000000000022 = { isa = XCSwiftPackageProductDependency; package = A00000000000000000000020; productName = GRDB; };
-        A00000000000000000000023 = { isa = PBXBuildFile; productRef = A00000000000000000000021; };
-        A00000000000000000000024 = { isa = PBXBuildFile; productRef = A00000000000000000000022; };
-        /* Crash and sync reporting, linked into App only (see docs/decisions/observability.md). The dynamic product, because
-           the static one embeds an unsigned stub framework that App Store Connect rejects. */
-        E00000000000000000000001 = {
-            isa = XCRemoteSwiftPackageReference;
-            repositoryURL = "https://github.com/getsentry/sentry-cocoa";
-            requirement = { kind = exactVersion; version = 9.30.2; };
-        };
-        E00000000000000000000002 = { isa = XCSwiftPackageProductDependency; package = E00000000000000000000001; productName = "Sentry-Dynamic"; };
-        E00000000000000000000003 = { isa = PBXBuildFile; productRef = E00000000000000000000002; };
-        A00000000000000000000016 = { isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Base.xcconfig; sourceTree = "<group>"; };
-        A00000000000000000000014 = {
-            isa = XCBuildConfiguration;
-            baseConfigurationReference = A00000000000000000000016;
-            buildSettings = {
-                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-                INFOPLIST_FILE = Config/Info.plist;
-                CODE_SIGN_ENTITLEMENTS = Config/App.entitlements;
-                CODE_SIGN_STYLE = Automatic;
-                CURRENT_PROJECT_VERSION = 1;
-                GENERATE_INFOPLIST_FILE = YES;
-                INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
-                INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-                INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-                IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-                LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-                MARKETING_VERSION = 1.0;
-                PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me;
-                PRODUCT_NAME = "$(TARGET_NAME)";
-                SDKROOT = iphoneos;
-                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-                SUPPORTS_MACCATALYST = NO;
-                SWIFT_VERSION = 6.0;
-                TARGETED_DEVICE_FAMILY = 1;
-                INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-                INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
-            };
-            name = Debug;
-        };
-        A00000000000000000000015 = {
-            isa = XCBuildConfiguration;
-            baseConfigurationReference = A00000000000000000000016;
-            buildSettings = {
-                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-                INFOPLIST_FILE = Config/Info.plist;
-                CODE_SIGN_ENTITLEMENTS = Config/App.entitlements;
-                CODE_SIGN_STYLE = Automatic;
-                CURRENT_PROJECT_VERSION = 1;
-                GENERATE_INFOPLIST_FILE = YES;
-                INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
-                INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-                INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-                IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-                LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-                MARKETING_VERSION = 1.0;
-                PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me;
-                PRODUCT_NAME = "$(TARGET_NAME)";
-                SDKROOT = iphoneos;
-                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-                SUPPORTS_MACCATALYST = NO;
-                SWIFT_VERSION = 6.0;
-                TARGETED_DEVICE_FAMILY = 1;
-                INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-                INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
-            };
-            name = Release;
-        };
-        /* Hosted unit tests for pure logic: one subfolder of Tests/ per feature. */
-        A00000000000000000000030 = {
-            isa = PBXFileSystemSynchronizedRootGroup;
-            path = Tests;
-            sourceTree = "<group>";
-        };
-        A00000000000000000000031 = {
-            isa = PBXNativeTarget;
-            buildConfigurationList = A00000000000000000000036;
-            buildPhases = (A00000000000000000000034, A00000000000000000000035);
-            buildRules = ();
-            dependencies = (A00000000000000000000033);
-            fileSystemSynchronizedGroups = (A00000000000000000000030);
-            name = AppTests;
-            productName = AppTests;
-            productReference = A00000000000000000000032;
-            productType = "com.apple.product-type.bundle.unit-test";
-        };
-        A00000000000000000000032 = {
-            isa = PBXFileReference;
-            explicitFileType = wrapper.cfbundle;
-            includeInIndex = 0;
-            path = AppTests.xctest;
-            sourceTree = BUILT_PRODUCTS_DIR;
-        };
-        A00000000000000000000033 = { isa = PBXTargetDependency; target = A00000000000000000000005; targetProxy = A00000000000000000000037; };
-        A00000000000000000000037 = { isa = PBXContainerItemProxy; containerPortal = A00000000000000000000001; proxyType = 1; remoteGlobalIDString = A00000000000000000000005; remoteInfo = App; };
-        A00000000000000000000034 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-        A00000000000000000000035 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-        A00000000000000000000036 = {
-            isa = XCConfigurationList;
-            buildConfigurations = (A00000000000000000000038, A00000000000000000000039);
-            defaultConfigurationIsVisible = 0;
-            defaultConfigurationName = Release;
-        };
-        A00000000000000000000038 = {
-            isa = XCBuildConfiguration;
-            buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 27.0; PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me.tests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = 1; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App.app/App"; };
-            name = Debug;
-        };
-        A00000000000000000000039 = {
-            isa = XCBuildConfiguration;
-            buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 27.0; PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me.tests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = 1; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App.app/App"; };
-            name = Release;
-        };
-        /* Shared between the app, the watch app, and the widget extension: design tokens, fonts, and the live workout contract. */
-        D00000000000000000000001 = {
-            isa = PBXFileSystemSynchronizedRootGroup;
-            path = Sources/Shared;
-            sourceTree = "<group>";
-        };
-        /* The watchOS app, embedded in the iPhone app. */
-        B00000000000000000000001 = {
-            isa = PBXFileSystemSynchronizedRootGroup;
-            path = Sources/Watch;
-            sourceTree = "<group>";
-        };
-        B00000000000000000000002 = {
-            isa = PBXNativeTarget;
-            buildConfigurationList = B00000000000000000000007;
-            buildPhases = (B00000000000000000000004, B00000000000000000000005, B00000000000000000000006);
-            buildRules = ();
-            dependencies = ();
-            fileSystemSynchronizedGroups = (B00000000000000000000001, D00000000000000000000001);
-            name = Watch;
-            productName = Watch;
-            productReference = B00000000000000000000003;
-            productType = "com.apple.product-type.application";
-        };
-        B00000000000000000000003 = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Watch.app; sourceTree = BUILT_PRODUCTS_DIR; };
-        B00000000000000000000004 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-        B00000000000000000000005 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-        B00000000000000000000006 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-        B00000000000000000000007 = {
-            isa = XCConfigurationList;
-            buildConfigurations = (B00000000000000000000008, B00000000000000000000009);
-            defaultConfigurationIsVisible = 0;
-            defaultConfigurationName = Release;
-        };
-        B00000000000000000000008 = {
-            isa = XCBuildConfiguration;
-            buildSettings = {
-                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-                CODE_SIGN_ENTITLEMENTS = Config/Watch.entitlements;
-                CODE_SIGN_STYLE = Automatic;
-                CURRENT_PROJECT_VERSION = 1;
-                GENERATE_INFOPLIST_FILE = YES;
-                INFOPLIST_FILE = Config/Watch-Info.plist;
-                INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
-                INFOPLIST_KEY_NSHealthShareUsageDescription = "Workouts read your heart rate and energy while you train.";
-                INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
-                INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-                INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.stefan.a-better-me;
-                INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
-                LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-                MARKETING_VERSION = 1.0;
-                PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me.watchkitapp;
-                PRODUCT_NAME = Watch;
-                SDKROOT = watchos;
-                SKIP_INSTALL = YES;
-                SUPPORTED_PLATFORMS = "watchos watchsimulator";
-                SWIFT_VERSION = 6.0;
-                TARGETED_DEVICE_FAMILY = 4;
-                WATCHOS_DEPLOYMENT_TARGET = 27.0;
-            };
-            name = Debug;
-        };
-        B00000000000000000000009 = {
-            isa = XCBuildConfiguration;
-            buildSettings = {
-                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-                CODE_SIGN_ENTITLEMENTS = Config/Watch.entitlements;
-                CODE_SIGN_STYLE = Automatic;
-                CURRENT_PROJECT_VERSION = 1;
-                GENERATE_INFOPLIST_FILE = YES;
-                INFOPLIST_FILE = Config/Watch-Info.plist;
-                INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
-                INFOPLIST_KEY_NSHealthShareUsageDescription = "Workouts read your heart rate and energy while you train.";
-                INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
-                INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-                INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.stefan.a-better-me;
-                INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
-                LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-                MARKETING_VERSION = 1.0;
-                PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me.watchkitapp;
-                PRODUCT_NAME = Watch;
-                SDKROOT = watchos;
-                SKIP_INSTALL = YES;
-                SUPPORTED_PLATFORMS = "watchos watchsimulator";
-                SWIFT_VERSION = 6.0;
-                TARGETED_DEVICE_FAMILY = 4;
-                WATCHOS_DEPLOYMENT_TARGET = 27.0;
-            };
-            name = Release;
-        };
-        B0000000000000000000000A = { isa = PBXTargetDependency; target = B00000000000000000000002; targetProxy = B0000000000000000000000B; };
-        B0000000000000000000000B = { isa = PBXContainerItemProxy; containerPortal = A00000000000000000000001; proxyType = 1; remoteGlobalIDString = B00000000000000000000002; remoteInfo = Watch; };
-        B0000000000000000000000C = { isa = PBXBuildFile; fileRef = B00000000000000000000003; settings = { ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-        B0000000000000000000000D = {
-            isa = PBXCopyFilesBuildPhase;
-            buildActionMask = 2147483647;
-            dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
-            dstSubfolderSpec = 16;
-            files = (B0000000000000000000000C);
-            name = "Embed Watch Content";
-            runOnlyForDeploymentPostprocessing = 0;
-        };
-        /* The widget extension: the workout Live Activity on the Lock Screen and in the Dynamic Island. */
-        C00000000000000000000001 = {
-            isa = PBXFileSystemSynchronizedRootGroup;
-            path = Sources/Widgets;
-            sourceTree = "<group>";
-        };
-        C00000000000000000000002 = {
-            isa = PBXNativeTarget;
-            buildConfigurationList = C00000000000000000000007;
-            buildPhases = (C00000000000000000000004, C00000000000000000000005, C00000000000000000000006);
-            buildRules = ();
-            dependencies = ();
-            fileSystemSynchronizedGroups = (C00000000000000000000001, D00000000000000000000001);
-            name = Widgets;
-            productName = Widgets;
-            productReference = C00000000000000000000003;
-            productType = "com.apple.product-type.app-extension";
-        };
-        C00000000000000000000003 = { isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Widgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-        C00000000000000000000004 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-        C00000000000000000000005 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-        C00000000000000000000006 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-        C00000000000000000000007 = {
-            isa = XCConfigurationList;
-            buildConfigurations = (C00000000000000000000008, C00000000000000000000009);
-            defaultConfigurationIsVisible = 0;
-            defaultConfigurationName = Release;
-        };
-        C00000000000000000000008 = {
-            isa = XCBuildConfiguration;
-            buildSettings = {
-                CODE_SIGN_ENTITLEMENTS = Config/Widgets.entitlements;
-                CODE_SIGN_STYLE = Automatic;
-                CURRENT_PROJECT_VERSION = 1;
-                GENERATE_INFOPLIST_FILE = YES;
-                INFOPLIST_FILE = Config/Widgets-Info.plist;
-                INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
-                IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-                LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-                MARKETING_VERSION = 1.0;
-                PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me.widgets;
-                PRODUCT_NAME = Widgets;
-                SDKROOT = iphoneos;
-                SKIP_INSTALL = YES;
-                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-                SUPPORTS_MACCATALYST = NO;
-                SWIFT_VERSION = 6.0;
-                TARGETED_DEVICE_FAMILY = 1;
-            };
-            name = Debug;
-        };
-        C00000000000000000000009 = {
-            isa = XCBuildConfiguration;
-            buildSettings = {
-                CODE_SIGN_ENTITLEMENTS = Config/Widgets.entitlements;
-                CODE_SIGN_STYLE = Automatic;
-                CURRENT_PROJECT_VERSION = 1;
-                GENERATE_INFOPLIST_FILE = YES;
-                INFOPLIST_FILE = Config/Widgets-Info.plist;
-                INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
-                IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-                LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-                MARKETING_VERSION = 1.0;
-                PRODUCT_BUNDLE_IDENTIFIER = com.stefan.a-better-me.widgets;
-                PRODUCT_NAME = Widgets;
-                SDKROOT = iphoneos;
-                SKIP_INSTALL = YES;
-                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-                SUPPORTS_MACCATALYST = NO;
-                SWIFT_VERSION = 6.0;
-                TARGETED_DEVICE_FAMILY = 1;
-            };
-            name = Release;
-        };
-        C0000000000000000000000A = { isa = PBXTargetDependency; target = C00000000000000000000002; targetProxy = C0000000000000000000000B; };
-        C0000000000000000000000B = { isa = PBXContainerItemProxy; containerPortal = A00000000000000000000001; proxyType = 1; remoteGlobalIDString = C00000000000000000000002; remoteInfo = Widgets; };
-        C0000000000000000000000C = { isa = PBXBuildFile; fileRef = C00000000000000000000003; settings = { ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-        C0000000000000000000000D = {
-            isa = PBXCopyFilesBuildPhase;
-            buildActionMask = 2147483647;
-            dstPath = "";
-            dstSubfolderSpec = 13;
-            files = (C0000000000000000000000C);
-            name = "Embed Foundation Extensions";
-            runOnlyForDeploymentPostprocessing = 0;
-        };
-    };
-    rootObject = A00000000000000000000001;
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 71;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A00000000000000000000023 /* SyncEngine in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000021 /* SyncEngine */; };
+		A00000000000000000000024 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000022 /* GRDB */; };
+		B0000000000000000000000C /* Watch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = B00000000000000000000003 /* Watch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C0000000000000000000000C /* Widgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C00000000000000000000003 /* Widgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E00000000000000000000003 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = E00000000000000000000002 /* Sentry-Dynamic */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A00000000000000000000037 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A00000000000000000000005;
+			remoteInfo = App;
+		};
+		B0000000000000000000000B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B00000000000000000000002;
+			remoteInfo = Watch;
+		};
+		C0000000000000000000000B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C00000000000000000000002;
+			remoteInfo = Widgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		B0000000000000000000000D /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				B0000000000000000000000C /* Watch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0000000000000000000000D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C0000000000000000000000C /* Widgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		A00000000000000000000006 /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000016 /* Config/Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Base.xcconfig; sourceTree = "<group>"; };
+		A00000000000000000000032 /* AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B00000000000000000000003 /* Watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Watch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C00000000000000000000003 /* Widgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Widgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		A00000000000000000000004 /* Sources/App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/App; sourceTree = "<group>"; };
+		A00000000000000000000030 /* Tests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Tests; sourceTree = "<group>"; };
+		B00000000000000000000001 /* Sources/Watch */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/Watch; sourceTree = "<group>"; };
+		C00000000000000000000001 /* Sources/Widgets */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/Widgets; sourceTree = "<group>"; };
+		D00000000000000000000001 /* Sources/Shared */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/Shared; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A00000000000000000000008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000023 /* SyncEngine in Frameworks */,
+				A00000000000000000000024 /* GRDB in Frameworks */,
+				E00000000000000000000003 /* Sentry-Dynamic in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A00000000000000000000035 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B00000000000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C00000000000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A00000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000016 /* Config/Base.xcconfig */,
+				A00000000000000000000004 /* Sources/App */,
+				D00000000000000000000001 /* Sources/Shared */,
+				B00000000000000000000001 /* Sources/Watch */,
+				C00000000000000000000001 /* Sources/Widgets */,
+				A00000000000000000000030 /* Tests */,
+				A00000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A00000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000006 /* App.app */,
+				A00000000000000000000032 /* AppTests.xctest */,
+				B00000000000000000000003 /* Watch.app */,
+				C00000000000000000000003 /* Widgets.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A00000000000000000000005 /* App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000011 /* Build configuration list for PBXNativeTarget "App" */;
+			buildPhases = (
+				A00000000000000000000007 /* Sources */,
+				A00000000000000000000008 /* Frameworks */,
+				A00000000000000000000009 /* Resources */,
+				B0000000000000000000000D /* Embed Watch Content */,
+				C0000000000000000000000D /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B0000000000000000000000A /* PBXTargetDependency */,
+				C0000000000000000000000A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A00000000000000000000004 /* Sources/App */,
+				D00000000000000000000001 /* Sources/Shared */,
+			);
+			name = App;
+			packageProductDependencies = (
+				A00000000000000000000021 /* SyncEngine */,
+				A00000000000000000000022 /* GRDB */,
+				E00000000000000000000002 /* Sentry-Dynamic */,
+			);
+			productName = App;
+			productReference = A00000000000000000000006 /* App.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A00000000000000000000031 /* AppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000036 /* Build configuration list for PBXNativeTarget "AppTests" */;
+			buildPhases = (
+				A00000000000000000000034 /* Sources */,
+				A00000000000000000000035 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A00000000000000000000033 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A00000000000000000000030 /* Tests */,
+			);
+			name = AppTests;
+			productName = AppTests;
+			productReference = A00000000000000000000032 /* AppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		B00000000000000000000002 /* Watch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B00000000000000000000007 /* Build configuration list for PBXNativeTarget "Watch" */;
+			buildPhases = (
+				B00000000000000000000004 /* Sources */,
+				B00000000000000000000005 /* Frameworks */,
+				B00000000000000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B00000000000000000000001 /* Sources/Watch */,
+				D00000000000000000000001 /* Sources/Shared */,
+			);
+			name = Watch;
+			productName = Watch;
+			productReference = B00000000000000000000003 /* Watch.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C00000000000000000000002 /* Widgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C00000000000000000000007 /* Build configuration list for PBXNativeTarget "Widgets" */;
+			buildPhases = (
+				C00000000000000000000004 /* Sources */,
+				C00000000000000000000005 /* Frameworks */,
+				C00000000000000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C00000000000000000000001 /* Sources/Widgets */,
+				D00000000000000000000001 /* Sources/Shared */,
+			);
+			name = Widgets;
+			productName = Widgets;
+			productReference = C00000000000000000000003 /* Widgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A00000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+			};
+			buildConfigurationList = A00000000000000000000010 /* Build configuration list for PBXProject "App" */;
+			compatibilityVersion = "Xcode 16.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A00000000000000000000002;
+			packageReferences = (
+				A00000000000000000000020 /* XCRemoteSwiftPackageReference "sync-engine" */,
+				E00000000000000000000001 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+			);
+			productRefGroup = A00000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A00000000000000000000005 /* App */,
+				A00000000000000000000031 /* AppTests */,
+				B00000000000000000000002 /* Watch */,
+				C00000000000000000000002 /* Widgets */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A00000000000000000000009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B00000000000000000000006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C00000000000000000000006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A00000000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A00000000000000000000034 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B00000000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C00000000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A00000000000000000000033 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A00000000000000000000005 /* App */;
+			targetProxy = A00000000000000000000037 /* PBXContainerItemProxy */;
+		};
+		B0000000000000000000000A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B00000000000000000000002 /* Watch */;
+			targetProxy = B0000000000000000000000B /* PBXContainerItemProxy */;
+		};
+		C0000000000000000000000A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C00000000000000000000002 /* Widgets */;
+			targetProxy = C0000000000000000000000B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A00000000000000000000012 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A00000000000000000000013 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		A00000000000000000000014 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A00000000000000000000016 /* Config/Base.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Config/App.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FNYFHG5SV7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "The Dashboard charts your body weight and daily steps from Health, and workouts read your heart rate and energy while you train.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		A00000000000000000000015 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A00000000000000000000016 /* Config/Base.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Config/App.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FNYFHG5SV7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "The Dashboard charts your body weight and daily steps from Health, and workouts read your heart rate and energy while you train.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		A00000000000000000000038 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = FNYFHG5SV7;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App.app/App";
+			};
+			name = Debug;
+		};
+		A00000000000000000000039 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = FNYFHG5SV7;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App.app/App";
+			};
+			name = Release;
+		};
+		B00000000000000000000008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Config/Watch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FNYFHG5SV7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Watch-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Workouts read your heart rate and energy while you train.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "com.stefan.a-better-me";
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me.watchkitapp";
+				PRODUCT_NAME = Watch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Debug;
+		};
+		B00000000000000000000009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Config/Watch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FNYFHG5SV7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Watch-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Workouts read your heart rate and energy while you train.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "com.stefan.a-better-me";
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me.watchkitapp";
+				PRODUCT_NAME = Watch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Release;
+		};
+		C00000000000000000000008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Config/Widgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FNYFHG5SV7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Widgets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me.widgets";
+				PRODUCT_NAME = Widgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		C00000000000000000000009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Config/Widgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FNYFHG5SV7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Widgets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Better Me";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me.widgets";
+				PRODUCT_NAME = Widgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A00000000000000000000010 /* Build configuration list for PBXProject "App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A00000000000000000000012 /* Debug */,
+				A00000000000000000000013 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A00000000000000000000011 /* Build configuration list for PBXNativeTarget "App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A00000000000000000000014 /* Debug */,
+				A00000000000000000000015 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A00000000000000000000036 /* Build configuration list for PBXNativeTarget "AppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A00000000000000000000038 /* Debug */,
+				A00000000000000000000039 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B00000000000000000000007 /* Build configuration list for PBXNativeTarget "Watch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B00000000000000000000008 /* Debug */,
+				B00000000000000000000009 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C00000000000000000000007 /* Build configuration list for PBXNativeTarget "Widgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C00000000000000000000008 /* Debug */,
+				C00000000000000000000009 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A00000000000000000000020 /* XCRemoteSwiftPackageReference "sync-engine" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/smirea/sync-engine";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+		E00000000000000000000001 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = exactVersion;
+				version = 9.30.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A00000000000000000000021 /* SyncEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A00000000000000000000020 /* XCRemoteSwiftPackageReference "sync-engine" */;
+			productName = SyncEngine;
+		};
+		A00000000000000000000022 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A00000000000000000000020 /* XCRemoteSwiftPackageReference "sync-engine" */;
+			productName = GRDB;
+		};
+		E00000000000000000000002 /* Sentry-Dynamic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E00000000000000000000001 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = "Sentry-Dynamic";
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A00000000000000000000001 /* Project object */;
 }
