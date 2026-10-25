@@ -789,7 +789,7 @@
 
     "supports-color": ["supports-color@10.2.2", "", {}, "sha512-SS+jx45GF1QjgEXQx4NJZV9ImqmO2NPz5FNsIHrsDjh2YsHnawpan7SNQ1o8NuhrbHZy9AZhIoCUiCeaW/C80g=="],
 
-    "sync-engine": ["sync-engine@github:smirea/sync-engine#f6c5c1a", { "dependencies": { "drizzle-orm": "^0.45.1", "zod": "^4.1.13" }, "peerDependencies": { "@cloudflare/workers-types": "^4.20251011.0", "@sqlite.org/sqlite-wasm": "3.54.1-build1" }, "optionalPeers": ["@cloudflare/workers-types", "@sqlite.org/sqlite-wasm"], "hasInstallScript": true }, "smirea-sync-engine-f6c5c1a", "sha512-zIGWS3YwVxEYZ7q475Fid16Y2maChJudLxWdbRSxQhORvXIIDexW3k4K9gaYxO2AG+mZ3Q+ZHacIrZjNGbI2QA=="],
+    "sync-engine": ["sync-engine@github:smirea/sync-engine#83298ce", { "dependencies": { "drizzle-orm": "^0.45.1", "zod": "^4.1.13" }, "peerDependencies": { "@cloudflare/workers-types": "^4.20251011.0", "@sqlite.org/sqlite-wasm": "3.54.1-build1" }, "optionalPeers": ["@cloudflare/workers-types", "@sqlite.org/sqlite-wasm"], "hasInstallScript": true }, "smirea-sync-engine-83298ce", "sha512-LyAvGJoeGpiRrYft+Zv59rb0z/l+vhIBLxhtrHnM6HOIWiN2gs2+QcseeHz+GlEMn3AayEQBPCPBSf3pBlB7/A=="],
 
     "tailwindcss": ["tailwindcss@4.3.3", "", {}, "sha512-gOhV3P7ufE62QDGg1zVaTgCR+EtPv92k2nIhVcVKcLmxT1sUBsQGhnZj175j+MqRt4zLF7ic+sCYjfhxMxj7YQ=="],
 
