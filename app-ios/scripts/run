@@ -147,8 +147,9 @@ async function deploy(target: Target, project: string) {
         if (!values.headless) await command(existsSync(simulator) ? ["open", "-a", simulator, "--args", "-CurrentDeviceUDID", target.id]
             : ["open", "-a", join(dirname(developer), "Applications/DeviceHub.app"), `devices://device/open?id=${target.id}`]);
         await command(["xcrun", "simctl", "install", target.id, app]);
-        await installWatchApp(target, app);
+        const watch = await installWatchApp(target, app);
         await command(["xcrun", "simctl", "launch", "--terminate-running-process", target.id, bundle]);
+        if (watch) await launchWatchApp(watch);
     } else if (target.kind === "device") {
         await command(["xcrun", "devicectl", "device", "install", "app", "--device", target.id, app]);
         await command(["xcrun", "devicectl", "device", "process", "launch", "--device", target.id, "--terminate-existing", bundle]);
@@ -161,7 +162,7 @@ async function deploy(target: Target, project: string) {
 
 /** Installs the embedded watch app on the simulator's paired watch (`xcrun simctl pair`), booting it, so the phone
  * sees the watch app as installed and can hand it workouts. Simulators without a pair skip this. */
-async function installWatchApp(target: Target, app: string) {
+async function installWatchApp(target: Target, app: string): Promise<{ udid: string; bundle: string } | undefined> {
     const pairs = Object.values(JSON.parse(await command(["xcrun", "simctl", "list", "pairs", "--json"], true)).pairs) as any[];
     const watch = pairs.find(pair => pair.phone.udid === target.id)?.watch;
     const watchApps = existsSync(join(app, "Watch")) ? readdirSync(join(app, "Watch")).filter(file => file.endsWith(".app")) : [];
@@ -172,7 +173,30 @@ async function installWatchApp(target: Target, app: string) {
     await command(["xcrun", "simctl", "bootstatus", watch.udid, "-b"], true);
     await command(["xcrun", "simctl", "install", watch.udid, watchApp]);
     const watchBundle = (await command(["plutil", "-extract", "CFBundleIdentifier", "raw", join(watchApp, "Info.plist")], true)).trim();
-    await command(["xcrun", "simctl", "launch", "--terminate-running-process", watch.udid, watchBundle], true);
+    return { udid: watch.udid, bundle: watchBundle };
+}
+
+/** A watch app launched before the watch's WatchConnectivity daemon maps it to its iOS app gets a client with no
+ * communication ID, its `WCSession` never activates, and it hears nothing from the phone until relaunched. After a
+ * fresh `simctl install` the mapping arrives only once the phone app has activated its own session, up to half a
+ * minute later, so this relaunches the watch app until the daemon registers it properly. */
+async function launchWatchApp(watch: { udid: string; bundle: string }) {
+    const pad = (value: number) => String(value).padStart(2, "0");
+    for (let attempt = 0; attempt < 15; attempt++) {
+        const now = new Date();
+        const since = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        await command(["xcrun", "simctl", "launch", "--terminate-running-process", watch.udid, watch.bundle], true);
+        await Bun.sleep(3000);
+        const log = await command([
+            "xcrun", "simctl", "spawn", watch.udid, "log", "show", "--start", since, "--style", "compact",
+            "--predicate", `process == "wcd" AND eventMessage CONTAINS "Created new client object" AND eventMessage CONTAINS "${watch.bundle}"`,
+        ], true);
+        const client = log.split("\n").filter(line => line.includes("Created new client object")).at(-1);
+        if (client && !client.includes("communicationID: (null)")) return;
+        if (attempt === 0) console.log("Waiting for the watch to link the watch app to the phone app…");
+        await Bun.sleep(2000);
+    }
+    console.error("The watch app never linked to the phone app; relaunch it once the phone app has run.");
 }
 
 async function main() {

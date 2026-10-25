@@ -2,6 +2,7 @@ import Foundation
 import HealthKit
 import Observation
 import WatchConnectivity
+import WatchKit
 
 /// The watch app's whole state. It never edits the workout: it shows the phone's latest `LiveWorkoutSnapshot` and sends
 /// `LiveWorkoutCommand`s back. It also runs the workout's `HKWorkoutSession` when the phone asks, mirrored to the phone,
@@ -27,27 +28,65 @@ final class WatchModel: NSObject {
     /// then everything goes over WatchConnectivity: a mirror can start here and never reach the phone.
     @ObservationIgnored private var isMirrorConfirmed = false
     @ObservationIgnored private var lastStatsSent = Date.distantPast
+    @ObservationIgnored private var connectivityTasks: [WKWatchConnectivityRefreshBackgroundTask] = []
+    @ObservationIgnored private var pendingContentObservation: NSKeyValueObservation?
+    /// A delivered plan's save outlives its delivery; the refresh task stays held until it lands.
+    @ObservationIgnored private var savesInFlight = 0
 
     /// Live numbers: this watch's own recording, else what the phone's snapshot carries.
     var metrics: LiveHealthMetrics? { stats?.live ?? snapshot?.status.metrics }
 
     func activate() {
+        Task { await loadMaxHeartRate() }
         guard WCSession.isSupported() else { return }
         WCSession.default.delegate = self
+        pendingContentObservation = WCSession.default.observe(\.hasContentPending) { _, _ in
+            Task { @MainActor in WatchModel.shared.completeConnectivityTasks() }
+        }
         WCSession.default.activate()
     }
 
-    func authorize() async {
+    /// Asks the phone to resend its state. Messages sent while this app was suspended are dropped, and the phone may
+    /// have skipped a context update while it read the app as not installed.
+    func requestState() {
+        sendOverConnectivity(.hello, queued: false)
+    }
+
+    func hold(_ task: WKWatchConnectivityRefreshBackgroundTask) {
+        connectivityTasks.append(task)
+        completeConnectivityTasks()
+    }
+
+    private func completeConnectivityTasks() {
+        guard WCSession.default.activationState == .activated, !WCSession.default.hasContentPending, savesInFlight == 0 else { return }
+        for task in connectivityTasks { task.setTaskCompletedWithSnapshot(false) }
+        connectivityTasks = []
+    }
+
+    /// Health access is asked for only when the owner starts a workout here or the phone launches this app to record
+    /// one, never at launch. A sheet raised at launch sat unanswered on the watch; when a workout later relaunched the
+    /// app, HealthKit stored its dismissal as a newer decision that synced to the phone and revoked the phone's grant.
+    private func authorize() async {
         guard HKHealthStore.isHealthDataAvailable() else { return }
         do {
             try await WorkoutRecording.authorize(healthStore)
-            if let birth = try? healthStore.dateOfBirthComponents().date,
-               let age = Calendar.current.dateComponents([.year], from: birth, to: .now).year {
-                maxHeartRate = Double(220 - age)
-            }
+            readMaxHeartRate()
         } catch {
             WorkoutRecording.log.error("HealthKit authorization failed: \(String(describing: error))")
         }
+    }
+
+    private func loadMaxHeartRate() async {
+        guard HKHealthStore.isHealthDataAvailable(),
+              (try? await healthStore.statusForAuthorizationRequest(toShare: WorkoutRecording.shareTypes, read: WorkoutRecording.readTypes)) == .unnecessary
+        else { return }
+        readMaxHeartRate()
+    }
+
+    private func readMaxHeartRate() {
+        guard let birth = try? healthStore.dateOfBirthComponents().date,
+              let age = Calendar.current.dateComponents([.year], from: birth, to: .now).year else { return }
+        maxHeartRate = Double(220 - age)
     }
 
     // MARK: Recording
@@ -59,6 +98,8 @@ final class WatchModel: NSObject {
             return sendOverConnectivity(.recordingStarted, queued: true)
         }
         Task {
+            await authorize()
+            guard recording == nil else { return }
             do {
                 adopt(try await WorkoutRecording.start(in: healthStore))
             } catch {
@@ -103,7 +144,12 @@ final class WatchModel: NSObject {
     private func save(_ plan: WorkoutRecordingPlan) {
         guard let recording, !recording.isMirror else { return }
         self.recording = nil
+        savesInFlight += 1
         Task {
+            defer {
+                savesInFlight -= 1
+                completeConnectivityTasks()
+            }
             do {
                 let health = try await recording.finish(plan, source: .watch)
                 if summary?.sessionID == plan.sessionID { summary?.health = health }
@@ -124,8 +170,11 @@ final class WatchModel: NSObject {
 
     func start(_ option: WatchWorkoutOption) {
         startingTemplate = option.id
-        send(.start(templateID: option.id))
         Task {
+            // The owner is looking at the watch, so a first-time sheet shows here, and the phone's own request, made
+            // in the background when the workout starts, finds access already settled.
+            await authorize()
+            send(.start(templateID: option.id))
             try? await Task.sleep(for: .seconds(15))
             if startingTemplate == option.id { startingTemplate = nil }
         }
@@ -187,6 +236,7 @@ final class WatchModel: NSObject {
     private func receive(context: [String: Any]) {
         if let data = context[WatchMessage.homeKey] as? Data, let message = try? WatchMessage(data) { receive(message) }
         if let data = context[WatchMessage.snapshotKey] as? Data, let message = try? WatchMessage(data) { receive(message) }
+        completeConnectivityTasks()
     }
 }
 
@@ -232,6 +282,9 @@ extension WatchModel: WCSessionDelegate {
 
     private nonisolated func receive(data: Data?) {
         guard let data, let message = try? WatchMessage(data) else { return }
-        Task { @MainActor in WatchModel.shared.receive(message) }
+        Task { @MainActor in
+            WatchModel.shared.receive(message)
+            WatchModel.shared.completeConnectivityTasks()
+        }
     }
 }

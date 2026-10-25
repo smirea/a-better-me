@@ -12,6 +12,8 @@ final class WatchBridge: NSObject {
     static let shared = WatchBridge()
 
     private(set) var isWatchAppInstalled = false
+    private(set) var isActivated = false
+    @ObservationIgnored private var activationWaiters: [CheckedContinuation<Void, Never>] = []
 
     @ObservationIgnored private var store: LocalStore?
     @ObservationIgnored private var catalog: ExerciseCatalog?
@@ -20,6 +22,13 @@ final class WatchBridge: NSObject {
     @ObservationIgnored private var snapshot: LiveWorkoutSnapshot?
 
     private var session: WCSession? { WCSession.isSupported() ? .default : nil }
+
+    /// Returns once WatchConnectivity knows whether the watch app is installed. Until then `isWatchAppInstalled` is
+    /// false even with a watch, and a workout in progress at launch would start recording on the phone.
+    func activated() async {
+        guard session != nil, !isActivated else { return }
+        await withCheckedContinuation { activationWaiters.append($0) }
+    }
 
     func start(store: LocalStore, catalog: ExerciseCatalog) {
         guard self.store == nil, let session else { return }
@@ -116,12 +125,14 @@ final class WatchBridge: NSObject {
         session.sendMessage(payload, replyHandler: nil) { @Sendable _ in WCSession.default.transferUserInfo(payload) }
     }
 
+    /// Not gated on `isWatchAppInstalled`, which reads false for seconds at a time while the watch app is installed
+    /// (seen between paired simulators), and an update skipped then left the watch on an old snapshot.
     private func updateContext() {
-        guard let session, session.activationState == .activated, session.isPaired, session.isWatchAppInstalled else { return }
+        guard let session, session.activationState == .activated, session.isPaired else { return }
         var context: [String: Any] = [:]
         if let data = try? WatchMessage.home(home).encoded() { context[WatchMessage.homeKey] = data }
         if let data = try? WatchMessage.snapshot(snapshot).encoded() { context[WatchMessage.snapshotKey] = data }
-        do { try session.updateApplicationContext(context) } catch {
+        do { try session.updateApplicationContext(context) } catch WCError.watchAppNotInstalled {} catch {
             LocalStore.log.error("Updating the watch's context failed: \(String(describing: error))")
         }
     }
@@ -177,6 +188,9 @@ extension WatchBridge: WCSessionDelegate {
         let installed = session.isPaired && session.isWatchAppInstalled
         Task { @MainActor in
             isWatchAppInstalled = installed
+            isActivated = true
+            for waiter in activationWaiters { waiter.resume() }
+            activationWaiters = []
             updateContext()
         }
     }
@@ -187,6 +201,12 @@ extension WatchBridge: WCSessionDelegate {
             isWatchAppInstalled = installed
             updateContext()
         }
+    }
+
+    /// A message sent while the watch was unreachable was dropped, so the watch gets the current state once it is back.
+    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
+        guard session.isReachable else { return }
+        Task { @MainActor in sendState() }
     }
 
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
