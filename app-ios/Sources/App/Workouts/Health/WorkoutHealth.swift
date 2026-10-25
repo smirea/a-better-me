@@ -84,6 +84,8 @@ final class WorkoutHealth {
             let recovered = try? await WorkoutRecording.recover(in: healthStore)
             guard sessionID == id, recorder == nil else { return recovered?.discard() ?? () }
             if let recovered { return adopt(.phone(recovered)) }
+            await WatchBridge.shared.activated()
+            guard sessionID == id, recorder == nil else { return }
             if WatchBridge.shared.isWatchAppInstalled {
                 do {
                     try await healthStore.startWatchApp(toHandle: WorkoutRecording.configuration)

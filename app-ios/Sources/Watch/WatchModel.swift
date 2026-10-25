@@ -2,6 +2,7 @@ import Foundation
 import HealthKit
 import Observation
 import WatchConnectivity
+import WatchKit
 
 /// The watch app's whole state. It never edits the workout: it shows the phone's latest `LiveWorkoutSnapshot` and sends
 /// `LiveWorkoutCommand`s back. It also runs the workout's `HKWorkoutSession` when the phone asks, mirrored to the phone,
@@ -27,6 +28,7 @@ final class WatchModel: NSObject {
     /// then everything goes over WatchConnectivity: a mirror can start here and never reach the phone.
     @ObservationIgnored private var isMirrorConfirmed = false
     @ObservationIgnored private var lastStatsSent = Date.distantPast
+    @ObservationIgnored private var connectivityTasks: [WKWatchConnectivityRefreshBackgroundTask] = []
 
     /// Live numbers: this watch's own recording, else what the phone's snapshot carries.
     var metrics: LiveHealthMetrics? { stats?.live ?? snapshot?.status.metrics }
@@ -35,6 +37,17 @@ final class WatchModel: NSObject {
         guard WCSession.isSupported() else { return }
         WCSession.default.delegate = self
         WCSession.default.activate()
+    }
+
+    func hold(_ task: WKWatchConnectivityRefreshBackgroundTask) {
+        connectivityTasks.append(task)
+        completeConnectivityTasks()
+    }
+
+    private func completeConnectivityTasks() {
+        guard WCSession.default.activationState == .activated, !WCSession.default.hasContentPending else { return }
+        for task in connectivityTasks { task.setTaskCompletedWithSnapshot(false) }
+        connectivityTasks = []
     }
 
     func authorize() async {
@@ -187,6 +200,7 @@ final class WatchModel: NSObject {
     private func receive(context: [String: Any]) {
         if let data = context[WatchMessage.homeKey] as? Data, let message = try? WatchMessage(data) { receive(message) }
         if let data = context[WatchMessage.snapshotKey] as? Data, let message = try? WatchMessage(data) { receive(message) }
+        completeConnectivityTasks()
     }
 }
 
@@ -232,6 +246,9 @@ extension WatchModel: WCSessionDelegate {
 
     private nonisolated func receive(data: Data?) {
         guard let data, let message = try? WatchMessage(data) else { return }
-        Task { @MainActor in WatchModel.shared.receive(message) }
+        Task { @MainActor in
+            WatchModel.shared.receive(message)
+            WatchModel.shared.completeConnectivityTasks()
+        }
     }
 }

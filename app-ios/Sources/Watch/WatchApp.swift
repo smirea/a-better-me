@@ -31,6 +31,18 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
         WatchModel.shared.startRecording()
     }
 
+    /// WatchConnectivity wakes the app with a refresh task for each delivery and expects it held until the content
+    /// has arrived; the system log shows deliveries failing when no handler exists.
+    func handle(_ backgroundTasks: Set<WKRefreshBackgroundTask>) {
+        for task in backgroundTasks {
+            if let task = task as? WKWatchConnectivityRefreshBackgroundTask {
+                WatchModel.shared.hold(task)
+            } else {
+                task.setTaskCompletedWithSnapshot(false)
+            }
+        }
+    }
+
     func handleActiveWorkoutRecovery() {
         WatchModel.shared.recover()
     }

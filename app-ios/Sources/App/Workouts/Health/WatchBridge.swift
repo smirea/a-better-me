@@ -12,6 +12,8 @@ final class WatchBridge: NSObject {
     static let shared = WatchBridge()
 
     private(set) var isWatchAppInstalled = false
+    private(set) var isActivated = false
+    @ObservationIgnored private var activationWaiters: [CheckedContinuation<Void, Never>] = []
 
     @ObservationIgnored private var store: LocalStore?
     @ObservationIgnored private var catalog: ExerciseCatalog?
@@ -20,6 +22,13 @@ final class WatchBridge: NSObject {
     @ObservationIgnored private var snapshot: LiveWorkoutSnapshot?
 
     private var session: WCSession? { WCSession.isSupported() ? .default : nil }
+
+    /// Returns once WatchConnectivity knows whether the watch app is installed. Until then `isWatchAppInstalled` is
+    /// false even with a watch, and a workout in progress at launch would start recording on the phone.
+    func activated() async {
+        guard session != nil, !isActivated else { return }
+        await withCheckedContinuation { activationWaiters.append($0) }
+    }
 
     func start(store: LocalStore, catalog: ExerciseCatalog) {
         guard self.store == nil, let session else { return }
@@ -177,6 +186,9 @@ extension WatchBridge: WCSessionDelegate {
         let installed = session.isPaired && session.isWatchAppInstalled
         Task { @MainActor in
             isWatchAppInstalled = installed
+            isActivated = true
+            for waiter in activationWaiters { waiter.resume() }
+            activationWaiters = []
             updateContext()
         }
     }
