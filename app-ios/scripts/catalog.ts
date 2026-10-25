@@ -12,7 +12,8 @@
 import { $ } from 'bun';
 import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { ASSETS_DIR, writeVersion } from '../../scripts/assets';
+import { ASSETS_DIR } from '../../server/src/assets';
+import { writeVersion } from '../../scripts/assets';
 
 const app = resolve(process.argv[2] ?? '/Applications/Runner.app');
 const assets = join(app, 'Wrapper/Runner.app/Frameworks/App.framework/flutter_assets');
