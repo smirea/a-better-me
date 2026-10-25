@@ -3,15 +3,21 @@ import { bunSqlite } from 'sync-engine/bun-sqlite';
 import { createSpace, handleSync, type SyncResponse } from 'sync-engine/core';
 import { schema } from '../../shared/db/schema';
 import { handleAgent } from './agent';
-import { handle, type App } from './api';
+import { handle, type App, type Report } from './api';
 import { DEV_OWNER_TOKEN, parseConfig } from './config';
 
 const driver = bunSqlite(':memory:');
 const space = createSpace(driver, schema);
 space.migrate();
 const config = parseConfig({});
+let reports: unknown[][] = [];
+const report: Report = {
+	captureMessage: (...args) => reports.push(['message', ...args]),
+	captureException: (error, context) => reports.push(['exception', String(error), context]),
+};
 const app: App = {
 	config,
+	report,
 	engine: request => handleSync(space, request),
 	agent: request => handleAgent(request, { space, driver, ownerToken: config.ownerToken }),
 };
@@ -126,6 +132,56 @@ describe('handle', () => {
 			['custom_exercises', 'custom-x1', 0],
 			['custom_exercises', 'x1', 1],
 			['settings', 'other', 1],
+		]);
+	});
+
+	test('a sync with rejected writes reports one warning naming each write and still answers the same body', async () => {
+		reports = [];
+		const response = await sync('reported', 0, [
+			{ seq: 1, table: 'settings', id: 'other', op: 'put', values: { weight_unit: 'kg' } },
+			{ seq: 2, table: 'custom_exercises', id: 'x2', op: 'put', values: { exercise: '{}' } },
+			{ seq: 3, table: 'custom_exercises', id: 'custom-x2', op: 'put', values: { exercise: '{}' } },
+		]);
+		expect(response.status).toBe(200);
+		expect(((await response.json()) as SyncResponse).acked).toBe(3);
+		expect(reports).toEqual([
+			[
+				'message',
+				'Sync rejected writes to custom_exercises, settings',
+				{
+					level: 'warning',
+					extra: {
+						rejected: [
+							{ seq: 1, table: 'settings', id: 'other', reason: 'id: Invalid input: expected "settings"' },
+							{ seq: 2, table: 'custom_exercises', id: 'x2', reason: 'id: Invalid string: must start with "custom-"' },
+						],
+					},
+					fingerprint: ['sync-rejected', 'custom_exercises, settings'],
+				},
+			],
+		]);
+
+		reports = [];
+		await synced('reported', 3, []);
+		expect(reports).toEqual([]);
+	});
+
+	test('a 5xx from the engine is reported as an error', async () => {
+		reports = [];
+		const failing: App = { ...app, engine: async () => new Response('boom', { status: 503 }) };
+		expect(
+			(
+				await handle(
+					new Request('http://api.test/api/sync', {
+						method: 'POST',
+						headers: { authorization: `Bearer ${DEV_OWNER_TOKEN}` },
+					}),
+					failing,
+				)
+			).status,
+		).toBe(503);
+		expect(reports).toEqual([
+			['exception', 'Error: POST /api/sync answered 503', { extra: { route: 'POST /api/sync', status: 503 } }],
 		]);
 	});
 });

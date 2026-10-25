@@ -17,6 +17,13 @@ enum AppEnvironment {
         return token
     }
 
+    /// Sentry project `a-better-me-ios`: Debug takes env-manager dev's through `LocalSecrets.xcconfig`, Release prod's
+    /// through `bun run env:ios`. Empty, as in CI and fresh worktrees, reports nothing.
+    static var sentryDSN: String? {
+        let dsn = setting("SENTRY_DSN_IOS")
+        return dsn.isEmpty ? nil : dsn
+    }
+
     private static func setting(_ key: String) -> String {
         (Bundle.main.object(forInfoDictionaryKey: key) as? String)?.trimmingCharacters(in: .whitespaces) ?? ""
     }

@@ -13,7 +13,7 @@
             hasScannedForEncodings = 0;
             knownRegions = (en, Base);
             mainGroup = A00000000000000000000002;
-            packageReferences = (A00000000000000000000020);
+            packageReferences = (A00000000000000000000020, E00000000000000000000001);
             preferredProjectObjectVersion = 77;
             productRefGroup = A00000000000000000000003;
             projectDirPath = "";
@@ -44,7 +44,7 @@
             dependencies = (B0000000000000000000000A, C0000000000000000000000A);
             fileSystemSynchronizedGroups = (A00000000000000000000004, D00000000000000000000001);
             name = App;
-            packageProductDependencies = (A00000000000000000000021, A00000000000000000000022);
+            packageProductDependencies = (A00000000000000000000021, A00000000000000000000022, E00000000000000000000002);
             productName = App;
             productReference = A00000000000000000000006;
             productType = "com.apple.product-type.application";
@@ -57,7 +57,7 @@
             sourceTree = BUILT_PRODUCTS_DIR;
         };
         A00000000000000000000007 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-        A00000000000000000000008 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000023, A00000000000000000000024); runOnlyForDeploymentPostprocessing = 0; };
+        A00000000000000000000008 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000023, A00000000000000000000024, E00000000000000000000003); runOnlyForDeploymentPostprocessing = 0; };
         A00000000000000000000009 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
         A00000000000000000000010 = {
             isa = XCConfigurationList;
@@ -81,7 +81,7 @@
             buildSettings = { CLANG_ENABLE_MODULES = YES; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; SWIFT_COMPILATION_MODE = wholemodule; };
             name = Release;
         };
-        /* The one dependency: the sync engine, which brings GRDB (see docs/decisions/sync.md). */
+        /* The sync engine, which brings GRDB (see docs/decisions/sync.md). */
         A00000000000000000000020 = {
             isa = XCRemoteSwiftPackageReference;
             repositoryURL = "https://github.com/smirea/sync-engine";
@@ -91,6 +91,15 @@
         A00000000000000000000022 = { isa = XCSwiftPackageProductDependency; package = A00000000000000000000020; productName = GRDB; };
         A00000000000000000000023 = { isa = PBXBuildFile; productRef = A00000000000000000000021; };
         A00000000000000000000024 = { isa = PBXBuildFile; productRef = A00000000000000000000022; };
+        /* Crash and sync reporting, linked into App only (see docs/decisions/observability.md). The dynamic product, because
+           the static one embeds an unsigned stub framework that App Store Connect rejects. */
+        E00000000000000000000001 = {
+            isa = XCRemoteSwiftPackageReference;
+            repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+            requirement = { kind = exactVersion; version = 9.30.2; };
+        };
+        E00000000000000000000002 = { isa = XCSwiftPackageProductDependency; package = E00000000000000000000001; productName = "Sentry-Dynamic"; };
+        E00000000000000000000003 = { isa = PBXBuildFile; productRef = E00000000000000000000002; };
         A00000000000000000000016 = { isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Base.xcconfig; sourceTree = "<group>"; };
         A00000000000000000000014 = {
             isa = XCBuildConfiguration;

@@ -6,7 +6,7 @@
  *   bun scripts/secrets.ts github      the Cloudflare deploy credentials as repository secrets
  *   bun scripts/secrets.ts check       drift between env-manager prod, the Worker, and GitHub
  *   bun scripts/secrets.ts verify      CI, before deploying: the Worker has every required secret (no AWS)
- *   bun scripts/secrets.ts ios         Release's API_URL and OWNER_TOKEN from env-manager prod into app-ios/Config/Env.xcconfig
+ *   bun scripts/secrets.ts ios         Release's API_URL, OWNER_TOKEN and SENTRY_DSN_IOS from env-manager prod into app-ios/Config/Env.xcconfig
  *
  * Every command but `verify` reads env-manager with `env-manager print`, which needs this Mac's AWS access.
  */
@@ -19,7 +19,7 @@ const PROJECT = 'a-better-me';
 const REPO = 'smirea/a-better-me';
 const WORKER_SECRETS = REQUIRED_IN_PRODUCTION;
 const CLOUDFLARE_SECRETS = ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'] as const;
-const IOS_RELEASE_SETTINGS = ['API_URL', 'OWNER_TOKEN'] as const;
+const IOS_RELEASE_SETTINGS = ['API_URL', 'OWNER_TOKEN', 'SENTRY_DSN_IOS'] as const;
 const IOS_CONFIG_PATH = new URL('../app-ios/Config/Env.xcconfig', import.meta.url).pathname;
 
 /** One environment's values, from the `.env.local` section of `env-manager print`. */

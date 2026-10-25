@@ -12,6 +12,7 @@ space.migrate();
 const config = parseConfig({});
 const app: App = {
 	config,
+	report: { captureMessage: () => undefined, captureException: () => undefined },
 	engine: request => handleSync(space, request),
 	agent: request => handleAgent(request, { space, driver, ownerToken: config.ownerToken }),
 };

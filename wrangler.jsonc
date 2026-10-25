@@ -3,12 +3,14 @@
 	"name": "a-better-me",
 	"main": "server/src/worker.ts",
 	"compatibility_date": "2026-10-01",
+	// `@sentry/cloudflare` keeps each request's scope in AsyncLocalStorage.
+	"compatibility_flags": ["nodejs_als"],
 	"routes": [{ "pattern": "a-better-me.stf.lol", "custom_domain": true }],
 	"workers_dev": false,
 	"preview_urls": false,
 	// `server/src/backup.ts` names it: the daily JSON dump of the space to R2.
 	"triggers": { "crons": ["0 9 * * *"] },
-	// OWNER_TOKEN is a Worker secret, pushed with `bun run secrets:push`.
+	// OWNER_TOKEN and SENTRY_DSN are Worker secrets, pushed with `bun run secrets:push`.
 	"vars": { "APP_ENV": "production" },
 	// The owner's one space: a SQLite-backed Durable Object holding every synced table.
 	"durable_objects": { "bindings": [{ "name": "SPACE", "class_name": "Space" }] },

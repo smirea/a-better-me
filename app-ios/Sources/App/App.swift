@@ -7,6 +7,7 @@ struct BetterMeApp: App {
     @State private var store: LocalStore
 
     init() {
+        Telemetry.start()
         AppFont.register()
         NavigationAppearance.apply()
         let catalog = ExerciseCatalog()
