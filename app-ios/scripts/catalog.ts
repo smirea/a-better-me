@@ -330,7 +330,11 @@ await Bun.write(
 		parts: bodyPaths.map(([, id, d]) => bodyPath(id!, d!)),
 	})}\n`,
 );
-await write('exercises.json', exercises);
+// One exercise per line: about 20% smaller in the bundle than indented, and a diff still names the exercises it touches.
+await Bun.write(
+	join(out, 'exercises.json'),
+	`[\n${exercises.map(exercise => JSON.stringify(exercise)).join(',\n')}\n]\n`,
+);
 await write('equipment.json', equipment);
 await write('articles.json', articles);
 console.log(
