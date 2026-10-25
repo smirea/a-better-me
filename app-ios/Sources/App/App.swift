@@ -10,9 +10,6 @@ struct BetterMeApp: App {
         AppFont.register()
         NavigationAppearance.apply()
         _catalog = State(initialValue: ExerciseCatalog())
-        #if DEBUG
-        OwnerToken.applyLaunchArgument()
-        #endif
         let store = LocalStore()
         _store = State(initialValue: store)
         #if DEBUG
