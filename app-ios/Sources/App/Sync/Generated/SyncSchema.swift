@@ -11,6 +11,7 @@ let syncSchema = SyncSchema(
         SyncTable(name: "programs", columns: ["name", "color", "icon", "cycles", "current_cycle", "active", "archived", "config", "days", "created_at", "updated_at"]),
         SyncTable(name: "gym_profiles", columns: ["name", "icon", "is_default", "equipment", "created_at", "updated_at"]),
         SyncTable(name: "body_weights", columns: ["measured_at", "weight_kg", "source"]),
+        SyncTable(name: "api_tokens", columns: ["name", "token_hash", "hint", "created_at"]),
     ],
     statements: [
         "CREATE TABLE IF NOT EXISTS workout_templates (id TEXT PRIMARY KEY, name TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '', blocks TEXT NOT NULL DEFAULT '[]', created_at TEXT NOT NULL, updated_at TEXT NOT NULL, program_id TEXT, gym_id TEXT, archived INTEGER NOT NULL DEFAULT 0)",
@@ -77,6 +78,11 @@ let syncSchema = SyncSchema(
         "ALTER TABLE body_weights ADD COLUMN measured_at TEXT NOT NULL",
         "ALTER TABLE body_weights ADD COLUMN weight_kg REAL NOT NULL",
         "ALTER TABLE body_weights ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'",
+        "CREATE TABLE IF NOT EXISTS api_tokens (id TEXT PRIMARY KEY, name TEXT NOT NULL, token_hash TEXT NOT NULL, hint TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL)",
+        "ALTER TABLE api_tokens ADD COLUMN name TEXT NOT NULL",
+        "ALTER TABLE api_tokens ADD COLUMN token_hash TEXT NOT NULL",
+        "ALTER TABLE api_tokens ADD COLUMN hint TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE api_tokens ADD COLUMN created_at TEXT NOT NULL",
         "CREATE TABLE IF NOT EXISTS _outbox (seq INTEGER PRIMARY KEY AUTOINCREMENT, \"table\" TEXT NOT NULL, id TEXT NOT NULL, op TEXT NOT NULL, col TEXT)",
         "CREATE TABLE IF NOT EXISTS _meta (key TEXT PRIMARY KEY, value)",
         "CREATE TRIGGER IF NOT EXISTS _ob_i_workout_templates AFTER INSERT ON workout_templates\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('workout_templates', NEW.id, 'insert', NULL); END",
@@ -151,5 +157,11 @@ let syncSchema = SyncSchema(
         "CREATE TRIGGER IF NOT EXISTS _ob_u_body_weights_measured_at AFTER UPDATE OF measured_at ON body_weights\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.measured_at IS NOT NEW.measured_at\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('body_weights', NEW.id, 'update', 'measured_at'); END",
         "CREATE TRIGGER IF NOT EXISTS _ob_u_body_weights_weight_kg AFTER UPDATE OF weight_kg ON body_weights\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.weight_kg IS NOT NEW.weight_kg\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('body_weights', NEW.id, 'update', 'weight_kg'); END",
         "CREATE TRIGGER IF NOT EXISTS _ob_u_body_weights_source AFTER UPDATE OF source ON body_weights\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.source IS NOT NEW.source\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('body_weights', NEW.id, 'update', 'source'); END",
+        "CREATE TRIGGER IF NOT EXISTS _ob_i_api_tokens AFTER INSERT ON api_tokens\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('api_tokens', NEW.id, 'insert', NULL); END",
+        "CREATE TRIGGER IF NOT EXISTS _ob_d_api_tokens AFTER DELETE ON api_tokens\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('api_tokens', OLD.id, 'delete', NULL); END",
+        "CREATE TRIGGER IF NOT EXISTS _ob_u_api_tokens_name AFTER UPDATE OF name ON api_tokens\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.name IS NOT NEW.name\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('api_tokens', NEW.id, 'update', 'name'); END",
+        "CREATE TRIGGER IF NOT EXISTS _ob_u_api_tokens_token_hash AFTER UPDATE OF token_hash ON api_tokens\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.token_hash IS NOT NEW.token_hash\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('api_tokens', NEW.id, 'update', 'token_hash'); END",
+        "CREATE TRIGGER IF NOT EXISTS _ob_u_api_tokens_hint AFTER UPDATE OF hint ON api_tokens\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.hint IS NOT NEW.hint\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('api_tokens', NEW.id, 'update', 'hint'); END",
+        "CREATE TRIGGER IF NOT EXISTS _ob_u_api_tokens_created_at AFTER UPDATE OF created_at ON api_tokens\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.created_at IS NOT NEW.created_at\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('api_tokens', NEW.id, 'update', 'created_at'); END",
     ]
 )

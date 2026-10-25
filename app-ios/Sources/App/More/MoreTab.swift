@@ -26,6 +26,11 @@ struct MoreTab: View {
                         Label("Gym Profiles", systemImage: "building.2")
                     }
                 }
+                Section("Automation") {
+                    NavigationLink { ApiTokensView() } label: {
+                        Label("API Tokens", systemImage: "key")
+                    }
+                }
             }
             .screenTitle("More")
         }

@@ -76,7 +76,7 @@ struct LegacyImportTests {
         ])
         #expect(try pool.read { try String.fetchAll($0, sql: "SELECT name FROM sqlite_master WHERE type = 'view'") } == [])
         #expect(try pool.read { try String.fetchAll($0, sql: "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name") } == [
-            "_meta", "_outbox", "body_weights", "custom_exercises", "exercise_settings", "gym_profiles", "programs",
+            "_meta", "_outbox", "api_tokens", "body_weights", "custom_exercises", "exercise_settings", "gym_profiles", "programs",
             "ps_data__gym_profiles", "ps_data__workout_templates", "settings", "sqlite_sequence", "workout_sessions", "workout_templates",
         ])
         #expect(try pool.read { try Int.fetchOne($0, sql: #"SELECT count(*) FROM "ps_data__workout_templates""#) } == 2)
@@ -109,6 +109,6 @@ struct LegacyImportTests {
         #expect(try pool.read { try WorkoutTemplate.fetchCount($0) } == 0)
         #expect(try pool.read { try Int.fetchOne($0, sql: "SELECT count(*) FROM _outbox") } == 0)
         #expect(FileManager.default.fileExists(atPath: Self.backup(beside: pool).path) == false)
-        #expect(try pool.read { try Int.fetchOne($0, sql: "SELECT count(*) FROM sqlite_master WHERE type = 'trigger'") } == 8 * 2 + syncSchema.tables.reduce(0) { $0 + $1.columns.count })
+        #expect(try pool.read { try Int.fetchOne($0, sql: "SELECT count(*) FROM sqlite_master WHERE type = 'trigger'") } == syncSchema.tables.count * 2 + syncSchema.tables.reduce(0) { $0 + $1.columns.count })
     }
 }
