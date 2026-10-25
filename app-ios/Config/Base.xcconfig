@@ -1,4 +1,6 @@
 #include "LocalSecrets.xcconfig"
+// The asset version every build downloads, written by `bun run assets version`.
+#include "Assets.xcconfig"
 // Release values from env-manager prod, written by `bun run env:ios`. Debug keeps LocalSecrets' API_URL, which carries
 // the worktree's ports.
 #include? "Env.xcconfig"

@@ -134,7 +134,7 @@ struct EquipmentImage: View {
 
     private static func load(_ id: String) -> UIImage? {
         if let hit = cache.object(forKey: id as NSString) { return hit }
-        guard let url = Bundle.main.url(forResource: id, withExtension: "webp"),
+        guard let url = AssetStore.shared.url("EquipmentImages/\(id).webp"),
               let image = UIImage(contentsOfFile: url.path) else { return nil }
         cache.setObject(image, forKey: id as NSString)
         return image

@@ -10,6 +10,7 @@ struct BetterMeApp: App {
         Telemetry.start()
         AppFont.register()
         NavigationAppearance.apply()
+        AssetStore.shared.start()
         let catalog = ExerciseCatalog()
         _catalog = State(initialValue: catalog)
         let store = LocalStore()

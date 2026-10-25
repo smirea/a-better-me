@@ -8,6 +8,14 @@
     <string>$(OWNER_TOKEN)</string>
     <key>SENTRY_DSN_IOS</key>
     <string>$(SENTRY_DSN_IOS)</string>
+    <key>ASSETS_URL</key>
+    <string>$(ASSETS_URL)</string>
+    <key>ASSETS_ACCESS_KEY_ID</key>
+    <string>$(ASSETS_ACCESS_KEY_ID)</string>
+    <key>ASSETS_SECRET_ACCESS_KEY</key>
+    <string>$(ASSETS_SECRET_ACCESS_KEY)</string>
+    <key>ASSETS_VERSION</key>
+    <string>$(ASSETS_VERSION)</string>
     <key>NSHealthShareUsageDescription</key>
     <string>The Dashboard charts your body weight and daily steps from Health, and workouts read your heart rate and energy while you train.</string>
     <key>NSHealthUpdateUsageDescription</key>
