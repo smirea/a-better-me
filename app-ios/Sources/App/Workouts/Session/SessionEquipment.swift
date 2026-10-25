@@ -19,15 +19,7 @@ extension SessionEditor {
     }
 
     func loading(for item: BlockExercise) -> Loading? {
-        guard let exercise = catalog.exercise(item.exerciseID),
-              let weight = SetField.fields(for: exercise).first(where: \.isWeight),
-              let option = exercise.chosenEquipment(item.equipment, in: availability) else { return nil }
-        let overrides = ExerciseSettings.of(item.exerciseID, in: exerciseSettings)?.overrides
-        let loads = GymLoads(gym: sessionGym, overrides: overrides?.equipment ?? [:], catalog: catalog.equipment)
-        return Loading.resolve(
-            option: option, catalog: catalog.equipment, unit: unit, perSide: weight == .weight(perSide: true),
-            calculator: calculatorOptions, barWeightKg: overrides?.barWeightKg ?? [:], load: loads.load
-        )
+        Loading.of(item, gym: sessionGym, catalog: catalog, settings: defaults, exerciseSettings: exerciseSettings)
     }
 
     func loading(at path: RowPath) -> Loading? {
