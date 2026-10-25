@@ -29,6 +29,8 @@
 	},
 	"dependencies": {
 		"@phosphor-icons/react": "^2.1.10",
+		"@sentry/bun": "11.9.0",
+		"@sentry/cloudflare": "11.9.0",
 		"@tailwindcss/vite": "^4.3.3",
 		"@tanstack/react-router": "^1.170.46",
 		"@tanstack/router-plugin": "^1.168.48",

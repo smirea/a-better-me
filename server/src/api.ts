@@ -1,5 +1,17 @@
-import { withBearer } from 'sync-engine/core';
+import { withBearer, type SyncResponse } from 'sync-engine/core';
 import type { Config } from './config';
+
+/**
+ * The two calls `handle` makes on a Sentry SDK. `index.ts` passes `@sentry/bun`, `worker.ts` `@sentry/cloudflare`,
+ * and either does nothing until its SDK is initialized.
+ */
+export type Report = {
+	captureMessage(
+		message: string,
+		context: { level: 'warning'; extra: Record<string, unknown>; fingerprint: string[] },
+	): unknown;
+	captureException(error: unknown, context: { extra: Record<string, unknown> }): unknown;
+};
 
 /**
  * `engine` is the sync engine behind `POST /api/sync` and `GET /api/live`, reached only after the owner check: the
@@ -9,6 +21,7 @@ import type { Config } from './config';
  */
 export type App<Upgraded = never> = {
 	config: Config;
+	report: Report;
 	engine(request: Request): Promise<Response | Upgraded>;
 	agent(request: Request): Promise<Response>;
 };
@@ -38,8 +51,41 @@ export async function handle<Upgraded = never>(request: Request, app: App<Upgrad
 	const route = `${request.method} ${url.pathname}`;
 	if (route === 'GET /status') return Response.json({ ok: true });
 	if (route !== 'POST /api/sync' && route !== 'GET /api/live') {
-		return url.pathname === '/api' || url.pathname.startsWith('/api/') ? app.agent(request) : error(404, 'Not found');
+		if (url.pathname !== '/api' && !url.pathname.startsWith('/api/')) return error(404, 'Not found');
+		return reportFailure(route, await app.agent(request), app.report);
 	}
 	if (!(await isOwner(withBearer(request), app.config.ownerToken))) return error(401, 'Missing or wrong owner token');
-	return app.engine(request);
+	const response = await app.engine(request);
+	if (!(response instanceof Response)) return response;
+	if (route === 'POST /api/sync' && response.status === 200) return reportRejected(response, app.report);
+	return reportFailure(route, response, app.report);
+}
+
+/** A 5xx is a server bug. A thrown error never reaches here: Bun's SDK and the Worker's catch report it. */
+function reportFailure(route: string, response: Response, report: Report): Response {
+	if (response.status >= 500) {
+		report.captureException(new Error(`${route} answered ${response.status}`), {
+			extra: { route, status: response.status },
+		});
+	}
+	return response;
+}
+
+/**
+ * The engine answers 200 even when it refuses writes, and the refused rows are dropped on the device, so a warning is
+ * their only lasting trace. The body is read once and handed back unchanged.
+ */
+async function reportRejected(response: Response, report: Report): Promise<Response> {
+	const body = await response.text();
+	const { rejected } = JSON.parse(body) as SyncResponse;
+	if (rejected.length) {
+		const tables = [...new Set(rejected.map(write => write.table))].sort().join(', ');
+		// One issue per set of tables, whichever runtime and stack sent it.
+		report.captureMessage(`Sync rejected writes to ${tables}`, {
+			level: 'warning',
+			extra: { rejected },
+			fingerprint: ['sync-rejected', tables],
+		});
+	}
+	return new Response(body, response);
 }

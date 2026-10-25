@@ -5,6 +5,7 @@ import type {
 	R2Bucket,
 	ScheduledController,
 } from '@cloudflare/workers-types';
+import * as Sentry from '@sentry/cloudflare';
 import { durableDriver, SpaceObject } from 'sync-engine/cloudflare';
 import { handleAgent } from './agent';
 import { schema } from '../../shared/db/schema';
@@ -20,7 +21,7 @@ type Env = Settings & { SPACE: DurableObjectNamespace; BACKUPS: R2Bucket };
  * The owner's one space. `/dump` is reachable only through the stub, which the Worker calls from the cron alone. The
  * agent API runs here, beside the rows and the bot tokens, on the request's original `/api` path.
  */
-export class Space extends SpaceObject<Env> {
+class OwnerSpace extends SpaceObject<Env> {
 	private readonly driver;
 
 	constructor(ctx: DurableObjectState, env: Env) {
@@ -63,6 +64,30 @@ function configOf(env: Env): Config {
 	return config;
 }
 
+/**
+ * Reporting to `a-better-me-worker`, with a cron monitor so a backup that never runs alerts, not only one that throws.
+ * A config that does not parse turns Sentry off here, so that `fetch` answers the 500 that names the missing setting.
+ */
+function sentryOptions(env: Env): Sentry.CloudflareOptions {
+	let sentry: Config['sentry'];
+	try {
+		sentry = configOf(env).sentry;
+	} catch {
+		return { enabled: false };
+	}
+	if (!sentry) return { enabled: false };
+	return {
+		...sentry,
+		// A message without a stack trace keeps its own text as the issue title, not the calling function's name.
+		attachStacktrace: false,
+		integrations: [
+			Sentry.cronTriggersIntegration({
+				monitorSlug: cron => (cron === BACKUP_CRON ? 'a-better-me-backup' : undefined),
+			}),
+		],
+	};
+}
+
 /** The stub speaks the Workers Request and Response types, which this tsconfig's Bun globals do not know. */
 const owner = (env: Env) =>
 	env.SPACE.get(env.SPACE.idFromName('owner')) as unknown as { fetch(input: Request | string): Promise<Response> };
@@ -73,6 +98,7 @@ async function fetch(request: Request, env: Env): Promise<Response> {
 		const config = configOf(env);
 		return await handle(request, {
 			config,
+			report: Sentry,
 			engine(request) {
 				const url = new URL(request.url);
 				url.pathname = url.pathname.slice('/api'.length);
@@ -82,6 +108,7 @@ async function fetch(request: Request, env: Env): Promise<Response> {
 		});
 	} catch (error) {
 		console.error(error);
+		Sentry.captureException(error);
 		return Response.json({ ok: false, error: 'Internal error' }, { status: 500 });
 	}
 }
@@ -93,4 +120,6 @@ async function scheduled(controller: ScheduledController, env: Env, _ctx: Execut
 	console.log(`Backed up the space to ${await backup(tables, env.BACKUPS, new Date(controller.scheduledTime))}`);
 }
 
-export default { fetch, scheduled };
+export const Space = Sentry.instrumentDurableObjectWithSentry(sentryOptions, OwnerSpace);
+
+export default Sentry.withSentry(sentryOptions, { fetch, scheduled } as never);

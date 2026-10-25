@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/bun';
 import { mkdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { bunSqlite } from 'sync-engine/bun-sqlite';
@@ -9,6 +10,9 @@ import { parseConfig } from './config';
 import env from './env';
 
 const config = parseConfig(env);
+// Before `Bun.serve`, which the SDK wraps to report a thrown error. Without a DSN the SDK stays silent.
+// A message without a stack trace keeps its own text as the issue title, not the calling function's name.
+if (config.sentry) Sentry.init({ ...config.sentry, attachStacktrace: false });
 
 // One file per checkout, named after its directory: a worktree never shares the main checkout's data.
 const root = join(import.meta.dir, '../..');
@@ -34,6 +38,7 @@ const server = Bun.serve({
 	fetch: (request, server) =>
 		handle<undefined>(request, {
 			config,
+			report: Sentry,
 			async engine(request) {
 				if (request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
 					// Echo the subprotocol only when offered: the Swift client offers none and fails the handshake on an echo.
@@ -62,3 +67,4 @@ const server = Bun.serve({
 });
 
 console.log(`Server running at ${server.url.href} over ${file}`);
+console.log(`Sentry: ${config.sentry ? config.sentry.environment : 'off'}`);
