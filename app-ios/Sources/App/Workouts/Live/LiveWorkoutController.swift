@@ -174,46 +174,38 @@ final class LiveWorkoutController {
         apply(command, to: session, in: store)
     }
 
-    /// The editor isn't on screen, so the command changes the stored session directly. Smart Progression's Apply in
-    /// session needs the editor's equipment context and waits until the editor next opens.
+    /// The editor isn't on screen, so the command changes the stored session. It reads the row inside the write, since
+    /// two commands can arrive before the first write's observation does. Smart Progression's Apply in session needs
+    /// the editor's equipment context and waits until the editor next opens.
     private func apply(_ command: LiveWorkoutCommand, to session: WorkoutSession, in store: LocalStore) {
-        var blocks = session.blocks
-        switch command {
-        case .log(let rowID, let values):
-            guard let path = blocks.path(of: rowID), blocks.log(at: path) == nil else { return }
-            let item = blocks[path.block].exercises[path.exercise]
-            let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
-            let value = SetEntry(values, keeping: entry(path, in: blocks, previous: previous))
-            blocks.setLog(value.log(at: .now), at: path)
-            live.drafts[rowID] = nil
-            let settings = inputs.settings
-            let step = SessionFlow.afterCompleting(path, in: blocks, settings: settings.workout) { [catalog, exerciseSettings = inputs.exerciseSettings] item, set in
-                item.restSeconds(after: set, exercise: catalog?.exercise(item.exerciseID), settings: .of(item.exerciseID, in: exerciseSettings), defaults: settings)
-            }
-            if let seconds = step.restSeconds { live.startRest(seconds: seconds, alerts: settings.workout.rest) }
-            if let next = step.next { live.currentExercise = next }
-        case .unlog(let rowID):
-            guard let path = blocks.path(of: rowID), let log = blocks.log(at: path) else { return }
-            live.drafts[rowID] = SetEntry(log)
-            blocks.setLog(nil, at: path)
-        case .edit(let rowID, let values):
-            guard let path = blocks.path(of: rowID) else { return }
-            let item = blocks[path.block].exercises[path.exercise]
-            let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
-            let value = SetEntry(values, keeping: entry(path, in: blocks, previous: previous))
-            if let log = blocks.log(at: path) {
-                blocks.setLog(value.log(at: log.completedAt), at: path)
-            } else {
-                live.drafts[rowID] = value
-            }
-        case .select(let exerciseID):
-            if blocks.locate(exerciseID) != nil { live.currentExercise = exerciseID }
-        case .adjustRest, .skipRest, .pause, .resume, .finish:
+        if case .select(let exerciseID) = command {
+            if session.blocks.locate(exerciseID) != nil { live.currentExercise = exerciseID }
             return
         }
-        guard blocks != session.blocks else { return }
-        let changed = blocks
-        store.modify(WorkoutSession.self, id: session.id) { $0.blocks = changed }
+        let fill = Fill(drafts: live.drafts, suggestions: live.suggestions, appliedRows: live.appliedRows, settings: inputs.settings, history: history)
+        let sessionID = session.id
+        let write = store.write { db -> Fill.Outcome in
+            guard let existing = try WorkoutSession.fetchOne(db, key: WorkoutSession.key(sessionID)) else { return .none }
+            var changed = existing
+            let outcome = fill.apply(command, to: &changed.blocks)
+            if changed.blocks != existing.blocks { try changed.updateChanges(db, from: existing) }
+            return outcome
+        }
+        Task {
+            switch try await write.value {
+            case .none: return
+            case .logged(let rowID, let path, let blocks):
+                live.drafts[rowID] = nil
+                let settings = inputs.settings
+                let step = SessionFlow.afterCompleting(path, in: blocks, settings: settings.workout) { [catalog, exerciseSettings = inputs.exerciseSettings] item, set in
+                    item.restSeconds(after: set, exercise: catalog?.exercise(item.exerciseID), settings: .of(item.exerciseID, in: exerciseSettings), defaults: settings)
+                }
+                if let seconds = step.restSeconds { live.startRest(seconds: seconds, alerts: settings.workout.rest) }
+                if let next = step.next { live.currentExercise = next }
+            case .draft(let rowID, let value):
+                live.drafts[rowID] = value
+            }
+        }
     }
 
     /// Done on Workout Complete with Update Workout Plan off. The phone's cover closes once the session has ended.
@@ -228,6 +220,47 @@ final class LiveWorkoutController {
         finished.endedAt = endedAt
         store.advanceProgram(after: finished)
         live.reset()
+    }
+}
+
+/// What a closed-editor command reads besides the stored blocks, copied off the main actor into its write.
+private struct Fill: Sendable {
+    enum Outcome: Sendable {
+        case none
+        case logged(rowID: UUID, path: RowPath, blocks: [WorkoutBlock])
+        case draft(rowID: UUID, SetEntry)
+    }
+
+    var drafts: [UUID: SetEntry]
+    var suggestions: [BlockExercise.ID: [UUID: SetSuggestion]]
+    var appliedRows: Set<UUID>
+    var settings: AppSettings
+    var history: [[WorkoutBlock]]
+
+    func apply(_ command: LiveWorkoutCommand, to blocks: inout [WorkoutBlock]) -> Outcome {
+        switch command {
+        case .log(let rowID, let values):
+            guard let path = blocks.path(of: rowID), blocks.log(at: path) == nil else { return .none }
+            blocks.setLog(SetEntry(values, keeping: entry(path, in: blocks)).log(at: .now), at: path)
+            return .logged(rowID: rowID, path: path, blocks: blocks)
+        case .unlog(let rowID):
+            guard let path = blocks.path(of: rowID), let log = blocks.log(at: path) else { return .none }
+            blocks.setLog(nil, at: path)
+            return .draft(rowID: rowID, SetEntry(log))
+        case .edit(let rowID, let values):
+            guard let path = blocks.path(of: rowID) else { return .none }
+            let value = SetEntry(values, keeping: entry(path, in: blocks))
+            guard let log = blocks.log(at: path) else { return .draft(rowID: rowID, value) }
+            blocks.setLog(value.log(at: log.completedAt), at: path)
+            return .none
+        case .select, .adjustRest, .skipRest, .pause, .resume, .finish:
+            return .none
+        }
+    }
+
+    private func entry(_ path: RowPath, in blocks: [WorkoutBlock]) -> SetEntry {
+        let previous = SessionFlow.previousSets(of: blocks[path.block].exercises[path.exercise].exerciseID, in: history)
+        return SessionFlow.entry(for: path, in: blocks, drafts: drafts, previous: previous, suggestions: suggestions, appliedRows: appliedRows, settings: settings)
     }
 }
 
