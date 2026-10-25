@@ -3,13 +3,16 @@
  * Regenerates the bundled exercise catalog from the installed MacroFactor Workouts app:
  * `bun app-ios/scripts/catalog.ts [path/to/Runner.app]`.
  * Reads the app's own catalog export (`packages/macrofactor/assets/import/app_file.json`), its instruction and
- * article Markdown, and its exercise and equipment images, and writes `Sources/App/Resources/Catalog/`.
+ * article Markdown, and its exercise and equipment images. It writes the JSON and muscle tiles to
+ * `Sources/App/Resources/Catalog/`, which the app bundles, and the Markdown and images to `Assets/`, which the app
+ * downloads after install, then refreshes the tracked asset version.
  * The default weight lists MF shows per equipment item (dumbbells 2.5 to 165 lb and so on) are not in the bundle;
  * they come from docs/research/mf-workouts/equipment.md.
  */
 import { $ } from 'bun';
 import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { ASSETS_DIR, writeVersion } from '../../scripts/assets';
 
 const app = resolve(process.argv[2] ?? '/Applications/Runner.app');
 const assets = join(app, 'Wrapper/Runner.app/Frameworks/App.framework/flutter_assets');
@@ -120,8 +123,9 @@ const gymPresets = [
 const stripLinks = (markdown: string) => markdown.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').trim();
 
 rmSync(out, { recursive: true, force: true });
+rmSync(ASSETS_DIR, { recursive: true, force: true });
 for (const dir of ['Instructions', 'Articles', 'ExerciseImages', 'EquipmentImages'])
-	mkdirSync(join(out, dir), { recursive: true });
+	mkdirSync(join(ASSETS_DIR, dir), { recursive: true });
 
 const imageFiles = readdirSync(join(assets, 'assets/exercises'));
 const markdownDir = join(assets, 'assets/markdown');
@@ -143,12 +147,13 @@ for (const e of source.exercises) {
 		.map(f => f.replace('.webp', ''));
 	for (const image of images)
 		await Bun.write(
-			join(out, 'ExerciseImages', `${image}.webp`),
+			join(ASSETS_DIR, 'ExerciseImages', `${image}.webp`),
 			Bun.file(join(assets, 'assets/exercises', `${image}.webp`)),
 		);
 	const instructions = Bun.file(join(markdownDir, `${id}.md`));
 	const hasInstructions = await instructions.exists();
-	if (hasInstructions) await Bun.write(join(out, 'Instructions', `${id}.md`), stripLinks(await instructions.text()));
+	if (hasInstructions)
+		await Bun.write(join(ASSETS_DIR, 'Instructions', `${id}.md`), stripLinks(await instructions.text()));
 	const articles = e.exerciseNote as string[];
 	articles.forEach(a => {
 		ref(a, 'exerciseNote');
@@ -197,7 +202,7 @@ const articles = [];
 for (const id of articleIDs) {
 	const file = Bun.file(join(markdownDir, `${id}.md`));
 	if (!(await file.exists())) continue;
-	await Bun.write(join(out, 'Articles', `${id}.md`), stripLinks(await file.text()));
+	await Bun.write(join(ASSETS_DIR, 'Articles', `${id}.md`), stripLinks(await file.text()));
 	articles.push({ id, title: ref(id, 'exerciseNote').name });
 }
 
@@ -208,7 +213,7 @@ for (const [id, entry] of Object.entries(source.uuidIndex)) {
 	const hasImage = existsSync(png);
 	// The app ships 1000px PNGs (81 MB in total). Thumbnails are all the library and filters need.
 	if (hasImage)
-		await $`magick ${png} -resize 240x240 -quality 80 ${join(out, 'EquipmentImages', `${id}.webp`)}`.quiet();
+		await $`magick ${png} -resize 240x240 -quality 80 ${join(ASSETS_DIR, 'EquipmentImages', `${id}.webp`)}`.quiet();
 	const kg = (value: unknown) => (typeof value === 'number' && value > 0 ? value : null);
 	const weightOptionsKg = ((entry.weightSelectKg as string | null) ?? '').split(',').flatMap(option => {
 		if (!option.trim()) return [];
@@ -353,3 +358,4 @@ console.log(
 			(k, v) => (Array.isArray(v) ? v.length : v),
 		)}`,
 );
+writeVersion();

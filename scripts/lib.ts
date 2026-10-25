@@ -1,5 +1,5 @@
 /**
- * What the repository scripts share: a process runner, the dotenv reader, and the worktree list. No npm imports:
+ * What the repository scripts share: a process runner, the dotenv and env-manager readers, and the worktree list. No npm imports:
  * `setup-worktree` runs before `bun install`.
  */
 import { spawnSync } from 'node:child_process';
@@ -51,6 +51,24 @@ export function parseDotenv(text: string): Values {
 		if (value) values[key] = value;
 	}
 	return values;
+}
+
+/** One environment's values, from the `.env.local` section of `env-manager print`. */
+export function readEnv(env: string): Values {
+	// `bun run` puts the pinned `node_modules/.bin/env-manager` first, which cannot see the global one's AWS credentials.
+	const path = (process.env.PATH ?? '')
+		.split(':')
+		.filter(dir => !dir.endsWith('node_modules/.bin'))
+		.join(':');
+	const result = spawnSync('env-manager', ['print', 'a-better-me', '-e', env], {
+		encoding: 'utf8',
+		env: { ...process.env, PATH: path },
+	});
+	const section = /^\.env\.local$([\s\S]*?)(?:^files$|(?![\s\S]))/m.exec(result.stdout ?? '')?.[1];
+	if (result.status !== 0 || section === undefined) {
+		throw new Error(`env-manager print a-better-me -e ${env} failed. It needs this Mac's AWS credentials.`);
+	}
+	return parseDotenv(section);
 }
 
 /** A worktree's `.env.override`, which `setup-worktree` writes with its ports, or null without one. */
