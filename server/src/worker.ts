@@ -25,7 +25,7 @@ class OwnerSpace extends SpaceObject<Env> {
 	private readonly driver;
 
 	constructor(ctx: DurableObjectState, env: Env) {
-		super(ctx, env, schema);
+		super(ctx, env, schema, configOf(env).space);
 		this.driver = durableDriver(ctx.storage);
 	}
 

@@ -25,7 +25,7 @@ const root = join(import.meta.dir, '../..');
 mkdirSync(join(root, '.data'), { recursive: true });
 const file = join(root, '.data', `${basename(root)}.sqlite`);
 const driver = bunSqlite(file);
-const space = createSpace(driver, schema);
+const space = createSpace(driver, schema, config.space);
 space.migrate();
 
 /** Tells every device to pull when the request advanced the head, whether a phone or an agent wrote. */

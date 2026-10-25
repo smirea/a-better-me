@@ -27,7 +27,7 @@ const sync = (client: string, cursor: number, writes: unknown[], token: string |
 		new Request('http://api.test/api/sync', {
 			method: 'POST',
 			headers: token ? { authorization: `Bearer ${token}` } : {},
-			body: JSON.stringify({ protocol: 1, client, cursor, writes }),
+			body: JSON.stringify({ protocol: 2, client, cursor, writes }),
 		}),
 		app,
 	);
@@ -75,6 +75,7 @@ describe('handle', () => {
 			acked: 0,
 			rejected: [],
 			snapshot: true,
+			next: null,
 			rows: [
 				{
 					table: 'workout_templates',
@@ -183,5 +184,20 @@ describe('handle', () => {
 		expect(reports).toEqual([
 			['exception', 'Error: POST /api/sync answered 503', { extra: { route: 'POST /api/sync', status: 503 } }],
 		]);
+	});
+});
+
+describe('parseConfig', () => {
+	test('space settings apply in development and stop production', () => {
+		expect(parseConfig({ SYNC_PAGE_SIZE: '3' }).space).toEqual({ pageSize: 3 });
+		const production = {
+			APP_ENV: 'production',
+			OWNER_TOKEN: 'secret',
+			SENTRY_DSN: 'https://abc123@o1.ingest.sentry.io/42',
+		};
+		expect(parseConfig(production).space).toEqual({});
+		expect(() => parseConfig({ ...production, SYNC_PAGE_SIZE: '3' })).toThrow(
+			'Space settings are development only: SYNC_PAGE_SIZE',
+		);
 	});
 });

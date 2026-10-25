@@ -7,6 +7,11 @@ struct MoreTab: View {
     var body: some View {
         NavigationStack {
             Form {
+                if let rows = store.snapshotRows {
+                    Section {
+                        SettingLabel(title: "Downloading… \(rows) rows", detail: nil, systemImage: "arrow.down.circle")
+                    }
+                }
                 Section {
                     Picker(selection: Binding(get: { settings.weightUnit }, set: { unit in store.updateSettings { $0.weightUnit = unit } })) {
                         ForEach(WeightUnit.allCases) { Text($0.rawValue).tag($0) }
