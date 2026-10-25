@@ -50,6 +50,8 @@ enum AssetPhase: Equatable, Sendable {
     case off
     case checking
     case waitingForWiFi
+    /// Debug builds download only when the More row is tapped.
+    case waitingForTap
     case downloading
     case complete
     case failed(String)
@@ -61,6 +63,7 @@ enum AssetPhase: Equatable, Sendable {
             return switch self {
             case .checking: "Assets · Checking…"
             case .waitingForWiFi: "Assets · Waiting for Wi-Fi"
+            case .waitingForTap: "Assets · Tap to download"
             case .failed(let message): "Assets · \(message)"
             case .off, .downloading, .complete: "Assets"
             }
@@ -72,6 +75,7 @@ enum AssetPhase: Equatable, Sendable {
         case .checking: "\(count) · Checking…"
         case .downloading: "\(count) · \(megabytes) MB left"
         case .waitingForWiFi: "\(count) · \(megabytes) MB waiting for Wi-Fi"
+        case .waitingForTap: "\(count) · \(megabytes) MB, tap to download"
         case .failed(let message): "\(count) · \(message)"
         }
     }

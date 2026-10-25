@@ -44,5 +44,7 @@ struct AssetManifestTests {
         #expect(AssetPhase.checking.statusLine(nil, locale: enUS) == "Assets · Checking…")
         #expect(AssetPhase.failed("Offline").statusLine(nil, locale: enUS) == "Assets · Offline")
         #expect(AssetPhase.off.statusLine(nil, locale: enUS) == "Assets · Off")
+        #expect(AssetPhase.waitingForTap.statusLine(nil, locale: enUS) == "Assets · Tap to download")
+        #expect(AssetPhase.waitingForTap.statusLine(partway, locale: enUS) == "Assets 1,200/3,002 · 12.4 MB, tap to download")
     }
 }

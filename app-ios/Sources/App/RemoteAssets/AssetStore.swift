@@ -54,12 +54,28 @@ final class AssetStore {
             phase = .failed("Storage error")
             return
         }
+        guard source.downloadsAutomatically else {
+            run = Task {
+                await loadLocal(source.version)
+                run = nil
+            }
+            return
+        }
         monitor.pathUpdateHandler = { [weak self] path in
             let onWiFi = path.status == .satisfied && !path.isExpensive && !path.isConstrained
             Task { @MainActor in self?.pathChanged(onWiFi: onWiFi) }
         }
         monitor.start(queue: .main)
         begin(allowsCellular: false, isRefresh: false)
+    }
+
+    /// Shows what is already on disk without touching the network, for builds that download only on the row's tap.
+    private func loadLocal(_ version: String) async {
+        if let cached = await Self.cachedManifest(version) { use(cached) }
+        present = await Self.scan()
+        scanned = true
+        revision += 1
+        phase = manifest.map { $0.missing(present: present).isEmpty } == true ? .complete : .waitingForTap
     }
 
     /// The settings row's tap: re-checks the manifest and downloads now, on cellular too. A tap during a run is ignored.
@@ -89,7 +105,7 @@ final class AssetStore {
         if onWiFi {
             switch phase {
             case .waitingForWiFi, .failed: begin(allowsCellular: false, isRefresh: false)
-            case .off, .checking, .downloading, .complete: break
+            case .off, .checking, .waitingForTap, .downloading, .complete: break
             }
         } else if !runAllowsCellular {
             run?.cancel()

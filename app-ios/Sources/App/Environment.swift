@@ -43,8 +43,17 @@ enum AppEnvironment {
         return AssetSource(
             url: base,
             version: version,
-            credentials: accessKeyID.isEmpty ? nil : S3Credentials(accessKeyID: accessKeyID, secretAccessKey: secretAccessKey)
+            credentials: accessKeyID.isEmpty ? nil : S3Credentials(accessKeyID: accessKeyID, secretAccessKey: secretAccessKey),
+            downloadsAutomatically: !isDebug
         )
+    }
+
+    private static var isDebug: Bool {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
     }
 
     private static func setting(_ key: String) -> String {
@@ -59,4 +68,6 @@ struct AssetSource: Sendable {
     let version: String
     /// Nil for the dev server, which takes unsigned requests.
     let credentials: S3Credentials?
+    /// False in Debug, so development builds download only when the More row is tapped.
+    let downloadsAutomatically: Bool
 }
