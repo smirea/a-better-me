@@ -30,6 +30,7 @@ final class LocalStore {
             fatalError("Could not open the local database at \(LocalDatabase.url.path): \(error)")
         }
         client.start()
+        Telemetry.watch(client)
     }
 
     // MARK: Writes
