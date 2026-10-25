@@ -183,6 +183,10 @@ export const Session = z
 		cycle: z.int().nullable(),
 		gymId: z.string().nullable(),
 		pausedSeconds: z.int(),
+		health: z
+			.record(z.string(), z.unknown())
+			.nullable()
+			.meta({ description: 'What the phone saved to Apple Health for this workout. Read-only.' }),
 	})
 	.meta({ id: 'Session', description: 'A logged workout. Its sets carry `log` once done.' });
 

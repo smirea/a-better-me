@@ -623,6 +623,7 @@ export const routes: Route[] = [
 				cycle: body.program?.cycle ?? null,
 				gymId,
 				pausedSeconds: body.pausedSeconds,
+				health: null,
 			};
 			db.commit(db.put('workout_sessions', row));
 			return row;
