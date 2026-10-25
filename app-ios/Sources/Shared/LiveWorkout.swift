@@ -26,6 +26,8 @@ struct LiveWorkoutStatus: Codable, Hashable, Sendable {
     var totalSets: Int
     var unit: WeightUnit
     var metrics: LiveHealthMetrics?
+    /// Set only on the Live Activity's final content, after the session was finished.
+    var endedAt: Date?
 }
 
 struct LiveRest: Codable, Hashable, Sendable {

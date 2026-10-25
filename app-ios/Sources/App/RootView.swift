@@ -40,5 +40,8 @@ struct RootView: View {
             catalog.setCustom(exercises)
         }
         .task { await GymSeed.run(store, equipment: catalog.equipment) }
+        .onOpenURL { url in
+            if url == LiveActivityLink.liveWorkout { presenter.isExpanded = true }
+        }
     }
 }
