@@ -135,11 +135,11 @@ enum SessionFlow {
         blocks.flatMap(\.exercises).first { !$0.isDone }?.id ?? blocks.first?.exercises.first?.id
     }
 
-    /// "Set 3 of 3", or "Superset 1 of 2 • Round 1 of 3".
-    static func subtitle(for path: (block: Int, exercise: Int), in blocks: [WorkoutBlock]) -> String {
+    /// "Set 3 of 3", or "Superset 1 of 2 • Round 1 of 3", for `set`, else the exercise's first open set.
+    static func subtitle(for path: (block: Int, exercise: Int), set: Int? = nil, in blocks: [WorkoutBlock]) -> String {
         let block = blocks[path.block]
         let item = block.exercises[path.exercise]
-        let position = (item.sets.firstIndex { !$0.isDone } ?? item.sets.count - 1) + 1
+        let position = (set ?? item.sets.firstIndex { !$0.isDone } ?? item.sets.count - 1) + 1
         guard block.isSuperset else {
             return item.sets.isEmpty ? "No sets" : "Set \(position) of \(item.sets.count)"
         }
@@ -298,6 +298,20 @@ extension SessionFlow {
         guard let set = blocks[path.block].exercises[path.exercise].sets.previousSet(at: path.set, in: previous) else { return nil }
         guard let sub = path.sub else { return set.log }
         return set.subSets[safe: sub]?.log
+    }
+
+    /// What a row shows and logs: its log once checked, else what was typed, else the prefill. Smart Progression's
+    /// suggestion fills it under the Smart Progression initial fill, or once Apply in session refilled the row.
+    static func entry(
+        for path: RowPath, in blocks: [WorkoutBlock], drafts: [UUID: SetEntry], previous: [WorkoutSet],
+        suggestions: [BlockExercise.ID: [UUID: SetSuggestion]], appliedRows: Set<UUID>, settings: AppSettings
+    ) -> SetEntry {
+        if let log = blocks.log(at: path) { return SetEntry(log) }
+        let id = blocks.rowID(at: path)
+        if let draft = drafts[id] { return draft }
+        let smartFill = settings.workout.progression.initialFill == .smartProgression || appliedRows.contains(id)
+        let suggestion = smartFill ? suggestions[blocks[path.block].exercises[path.exercise].id]?[id] : nil
+        return prefill(for: path, in: blocks, previous: previous, suggestion: suggestion, rirTracking: settings.workout.rirTracking, unit: settings.weightUnit)
     }
 
     /// The initial fill of one row: the Smart Progression suggestion when there is one, else Previous values.
