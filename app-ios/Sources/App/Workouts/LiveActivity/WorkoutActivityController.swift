@@ -155,7 +155,7 @@ final class WorkoutActivityController {
     private func writeThumbnail(_ catalogID: String) {
         guard let url = ExerciseThumbnails.url(for: catalogID), !FileManager.default.fileExists(atPath: url.path),
               let name = catalog?.exercise(catalogID)?.images.first,
-              let source = Bundle.main.url(forResource: name, withExtension: "webp"),
+              let source = AssetStore.shared.url("ExerciseImages/\(name).webp"),
               let image = UIImage(contentsOfFile: source.path) else { return }
         // A centered square, small enough for WidgetKit, which swaps larger images for a placeholder.
         let side = CGFloat(ExerciseThumbnails.pixelSize)
