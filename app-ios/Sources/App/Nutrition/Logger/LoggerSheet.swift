@@ -20,6 +20,7 @@ struct LoggerSheet: View {
         Group {
             if let session {
                 LoggerContent(session: session, close: { dismiss() })
+                    .environment(\.ingredientPicker, .search)
             } else if let failure {
                 ContentUnavailableView("Food search is unavailable", systemImage: "exclamationmark.triangle", description: Text(failure))
             } else {
@@ -52,22 +53,23 @@ private struct LoggerContent: View {
         VStack(spacing: 0) {
             LoggerBanner(session: session, exit: exit, chooseTime: { choosingTime = true }, openPlate: openPlate)
                 .id(session.time.day)
-            NavigationStack(path: $path) {
-                VStack(spacing: 0) {
-                    Picker("Logger tab", selection: $session.tab) {
-                        ForEach(LoggerTab.allCases, id: \.self) { tab in
-                            Text(tab.title).tag(tab)
-                        }
+            // Above the stack, so the Library's own navigation bar (title, sort, create, filter) sits under the tabs;
+            // a pushed detail or the plate covers them, as in MacroFactor.
+            if path.isEmpty {
+                Picker("Logger tab", selection: $session.tab) {
+                    ForEach(LoggerTab.allCases, id: \.self) { tab in
+                        Text(tab.title).tag(tab)
                     }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 8)
-                    tab
-                        .frame(maxHeight: .infinity)
                 }
-                .background(Theme.background)
-                .toolbar(.hidden, for: .navigationBar)
-                .navigationDestination(for: LoggerRoute.self) { route in
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
+            }
+            NavigationStack(path: $path) {
+                tab
+                    .frame(maxHeight: .infinity)
+                    .background(Theme.background)
+                    .navigationDestination(for: LoggerRoute.self) { route in
                     switch route {
                     case let .food(pick): FoodDetailView(session: session, editing: nil, pick: pick)
                     case let .plateItem(id):
@@ -96,10 +98,19 @@ private struct LoggerContent: View {
         let detail: (LoggerPick) -> Void = { path.append(.food($0)) }
         let open = settings.nutrition.logger.optimization == .context ? addAndShowPlate : detail
         switch session.tab {
-        case .scan: ScanTab(session: session, open: detail)
-        case .search: SearchTab(session: session, open: open)
-        case .quickAdd: QuickAddTab(session: session)
-        case .library: LibraryTab(session: session, open: open)
+        case .scan: ScanTab(session: session, open: detail).toolbar(.hidden, for: .navigationBar)
+        case .search: SearchTab(session: session, open: open).toolbar(.hidden, for: .navigationBar)
+        case .quickAdd: QuickAddTab(session: session).toolbar(.hidden, for: .navigationBar)
+        case .library:
+            FoodLibraryView(tab: session.library, onOpen: { open(LoggerPick($0.portion)) }, onAdd: { session.add(LoggerPick($0)) })
+                .safeAreaInset(edge: .bottom) {
+                    HStack {
+                        Spacer()
+                        LogFoodsButton(session: session).controlSize(.large)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                }
         }
     }
 
@@ -205,11 +216,22 @@ private struct LoggerBanner: View {
                 .frame(height: 3)
                 .overlay(alignment: .leading) {
                     GeometryReader { proxy in
-                        Capsule().fill(LoggerMacroColor.of(id)).frame(width: proxy.size.width * (value.progress ?? 0))
+                        Capsule().fill(MacroColor.of(id)).frame(width: proxy.size.width * (value.progress ?? 0))
                     }
                 }
         }
         .frame(maxWidth: 110, alignment: .leading)
+    }
+}
+
+extension FoodLibraryView.Item {
+    /// A food or recipe at its default serving, a favorite at its saved one.
+    var portion: FoodPortion {
+        switch self {
+        case let .food(food): FoodPortion(food.snapshot)
+        case let .recipe(recipe): FoodPortion(recipe.snapshot)
+        case let .favorite(favorite): favorite.portion
+        }
     }
 }
 

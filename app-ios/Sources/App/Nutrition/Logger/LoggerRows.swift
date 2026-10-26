@@ -1,22 +1,5 @@
 import SwiftUI
 
-/// MacroFactor's nutrient colors (research spec §1).
-enum LoggerMacroColor {
-    static let energy = Color(hex: 0x68A0FA)
-    static let protein = Color(hex: 0xFF8660)
-    static let fat = Color(hex: 0xFFD05E)
-    static let carbs = Color(hex: 0x5EB987)
-
-    static func of(_ id: NutrientID) -> Color {
-        switch id {
-        case .protein: protein
-        case .fat: fat
-        case .carbs: carbs
-        default: energy
-        }
-    }
-}
-
 extension NutrientID {
     /// The banner's and the plate's short names.
     var macroLetter: String {
@@ -39,14 +22,14 @@ extension Dictionary where Key == NutrientID, Value == Double {
     }
 }
 
-/// A food's icon: its own emoji when it has one, otherwise a symbol for where it came from.
+/// A food's icon: the one picked in the library when it has one, otherwise a symbol for where it came from.
 struct LoggerFoodIcon: View {
     let food: FoodSnapshot
 
     var body: some View {
         Group {
-            if let icon = food.icon, !icon.isEmpty {
-                Text(icon).font(.system(size: 22))
+            if FoodIcon.named(food.icon) != nil {
+                FoodIconView(name: food.icon, size: 26)
             } else {
                 Image(systemName: symbol)
                     .font(.system(size: 15, weight: .semibold))

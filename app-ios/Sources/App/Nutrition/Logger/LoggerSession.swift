@@ -23,22 +23,10 @@ enum LoggerTab: String, CaseIterable, Hashable, Sendable {
     }
 }
 
-enum LibrarySection: String, CaseIterable, Hashable, Sendable {
-    case recipes, foods, favorites
-
-    var title: String {
-        switch self {
-        case .recipes: "Recipes"
-        case .foods: "Foods"
-        case .favorites: "Favorites"
-        }
-    }
-}
-
 /// How the logger opens: the tab its shortcut names and, from an hour's + in the Food Log, that day and hour.
 struct LoggerStart: Hashable, Identifiable, Sendable {
     var tab = LoggerTab.search
-    var library = LibrarySection.foods
+    var library = FoodLibraryView.Tab.foods
     var time: LogTime?
 
     var id: Self { self }
@@ -60,7 +48,8 @@ final class LoggerSession {
     let store: LocalStore
     @ObservationIgnored let search: FoodSearch
     var tab: LoggerTab
-    var library: LibrarySection
+    /// The Library tab's opening section; the library keeps its own after that.
+    let library: FoodLibraryView.Tab
     /// The time chip's choice, or the hour the logger was opened at. Nil follows the clock, so a plate logged after
     /// the hour turns lands in the new hour instead of before the foods logged since.
     private var chosenTime: LogTime?
