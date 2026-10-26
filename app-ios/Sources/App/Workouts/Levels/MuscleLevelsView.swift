@@ -5,7 +5,8 @@ struct MuscleLevelsView: View {
     let muscle: Muscle
 
     @Environment(ExerciseCatalog.self) private var catalog
-    @Observe(WorkoutSession.finished) private var sessions
+    @Environment(SessionHistory.self) private var history
+    private var sessions: [WorkoutSession] { history.sessions }
     @AppStorage(LevelsPeriod.storageKey) private var period = LevelsPeriod.oneWeek
     @State private var shownExercise: ShownExercise?
 

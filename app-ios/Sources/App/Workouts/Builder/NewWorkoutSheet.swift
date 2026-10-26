@@ -10,7 +10,8 @@ struct NewWorkoutSheet: View {
     @Observe(AppSettings.current) private var settings
     @Observe(Program.active) private var activeProgram
     @Observe(WorkoutTemplate.all) private var templates
-    @Observe(WorkoutSession.finished) private var finished
+    @Environment(SessionHistory.self) private var history
+    private var finished: [WorkoutSession] { history.sessions }
     @State private var path = NavigationPath()
     @State private var creatingWorkout = false
     @State private var creatingProgram = false

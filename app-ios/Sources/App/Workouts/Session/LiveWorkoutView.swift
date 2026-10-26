@@ -23,6 +23,7 @@ struct SessionEditor: View {
     @Environment(ExerciseCatalog.self) var catalog
     @Environment(LiveWorkoutPresenter.self) var presenter
     @Environment(LocalStore.self) var localStore
+    @Environment(SessionHistory.self) private var sessionHistory
     @Environment(\.dismiss) var dismiss
     @Observe(ExerciseSettings.all) var exerciseSettings
     @Observe(AppSettings.current) var defaults
@@ -103,7 +104,7 @@ struct SessionEditor: View {
         .animation(.snappy(duration: 0.2), value: focus == nil)
         .task {
             let session = session
-            var earlier = (try? localStore.read { try WorkoutSession.earlier(than: session, $0) }) ?? []
+            var earlier = sessionHistory.earlier(than: session)
             if defaults.workout.previousReference == .withinProgram, let programID = session.program?.programID {
                 earlier = earlier.filter { $0.program?.programID == programID }
             }

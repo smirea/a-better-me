@@ -34,6 +34,7 @@ final class LiveWorkoutController {
     private var history: [[WorkoutBlock]] = []
     @ObservationIgnored private var historySessionID: UUID?
     @ObservationIgnored private var store: LocalStore?
+    @ObservationIgnored private var sessionHistory: SessionHistory?
     @ObservationIgnored private var catalog: ExerciseCatalog?
     @ObservationIgnored private var cancellable: AnyDatabaseCancellable?
     @ObservationIgnored private var loadableCache: [(loading: Loading, unit: WeightUnit, kg: [Double])] = []
@@ -48,11 +49,12 @@ final class LiveWorkoutController {
 
     private var live: LiveSessionStore { .shared }
 
-    func start(store: LocalStore, catalog: ExerciseCatalog) {
+    func start(store: LocalStore, history: SessionHistory, catalog: ExerciseCatalog) {
         guard self.store == nil else { return }
         self.store = store
+        sessionHistory = history
         self.catalog = catalog
-        cancellable = ValueObservation.tracking { db in
+        cancellable = ValueObservation.trackingConstantRegion { db in
             let session = try WorkoutSession.inProgress.fetch(db)
             let gyms = try GymProfile.all.fetch(db)
             return try Inputs(
@@ -81,9 +83,9 @@ final class LiveWorkoutController {
             historySessionID = nil
             return
         }
-        guard historySessionID != session.id, let store else { return }
+        guard historySessionID != session.id, let sessionHistory else { return }
         historySessionID = session.id
-        var earlier = (try? store.read { try WorkoutSession.earlier(than: session, $0) }) ?? []
+        var earlier = sessionHistory.earlier(than: session)
         if inputs.settings.workout.previousReference == .withinProgram, let programID = session.program?.programID {
             earlier = earlier.filter { $0.program?.programID == programID }
         }

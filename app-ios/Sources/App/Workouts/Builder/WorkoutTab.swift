@@ -9,7 +9,8 @@ struct WorkoutTab: View {
     @Observe(Program.library) private var programs
     @Observe(Program.archived) private var archivedPrograms
     @Observe(Program.active) private var activeProgram
-    @Observe(WorkoutSession.finished) private var sessions
+    @Environment(SessionHistory.self) private var history
+    private var sessions: [WorkoutSession] { history.sessions }
     @Environment(LocalStore.self) private var store
     @Environment(LiveWorkoutPresenter.self) private var presenter
     @Observe(AppSettings.current) private var settings

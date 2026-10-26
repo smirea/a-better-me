@@ -40,7 +40,7 @@ private final class Tracker<Value: Sendable & Equatable> {
 
     func start(_ query: DatabaseQuery<Value>, in store: LocalStore) {
         guard cancellable == nil else { return }
-        cancellable = ValueObservation.tracking(query.fetch).removeDuplicates().start(
+        cancellable = ValueObservation.trackingConstantRegion(query.fetch).removeDuplicates().start(
             in: store.database.pool,
             scheduling: .immediate,
             onError: { LocalStore.log.error("Observation failed: \(String(describing: $0))") },
@@ -79,11 +79,6 @@ extension WorkoutSession {
 
     static func one(_ id: UUID) -> DatabaseQuery<WorkoutSession?> {
         DatabaseQuery(nil) { try WorkoutSession.fetchOne($0, key: key(id)) }
-    }
-
-    /// Finished sessions that started before `session`, newest first: the history its Previous column and records read.
-    static func earlier(than session: WorkoutSession, _ db: Database) throws -> [WorkoutSession] {
-        try finished.fetch(db).filter { $0.startedAt < session.startedAt && $0.id != session.id }
     }
 }
 

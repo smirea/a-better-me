@@ -12,6 +12,7 @@ struct WorkoutSummaryView: View {
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(LiveWorkoutPresenter.self) private var presenter
     @Environment(LocalStore.self) private var store
+    @Environment(SessionHistory.self) private var sessionHistory
     @Environment(\.dismiss) private var dismiss
     @Observe(AppSettings.current) private var settings
     @Observe private var live: WorkoutSession?
@@ -81,7 +82,7 @@ struct WorkoutSummaryView: View {
         }
         .task {
             let session = session
-            earlier = ((try? store.read { try WorkoutSession.earlier(than: session, $0) }) ?? []).map(\.blocks)
+            earlier = sessionHistory.earlier(than: session).map(\.blocks)
             if let templateID = session.templateID {
                 template = try? store.read { try WorkoutTemplate.fetchOne($0, key: WorkoutTemplate.key(templateID)) }
             }

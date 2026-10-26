@@ -300,7 +300,8 @@ private struct AddRemoveSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(ExerciseCatalog.self) private var catalog
-    @Observe(WorkoutSession.finished) private var sessions
+    @Environment(SessionHistory.self) private var history
+    private var sessions: [WorkoutSession] { history.sessions }
     @State private var picking = false
 
     var body: some View {

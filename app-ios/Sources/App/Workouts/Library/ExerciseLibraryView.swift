@@ -4,7 +4,8 @@ import SwiftUI
 /// Modified (any Exercise Override), and Archived tabs. A row opens Exercise Settings.
 struct ExerciseLibraryView: View {
     @Environment(ExerciseCatalog.self) private var catalog
-    @Observe(WorkoutSession.finished) private var sessions
+    @Environment(SessionHistory.self) private var history
+    private var sessions: [WorkoutSession] { history.sessions }
     @Observe(CustomExercise.all) private var customExercises
     @Observe(ExerciseSettings.all) private var exerciseSettings
     @State private var tab = LibraryTab.all

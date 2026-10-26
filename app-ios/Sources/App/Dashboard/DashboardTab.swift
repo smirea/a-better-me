@@ -41,7 +41,8 @@ struct DashboardDataReader<Content: View>: View {
 
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(HealthData.self) private var health
-    @Observe(WorkoutSession.finished) private var sessions
+    @Environment(SessionHistory.self) private var history
+    private var sessions: [WorkoutSession] { history.sessions }
     @Observe(BodyWeight.all) private var logged
     @Observe(AppSettings.current) private var settings
 
