@@ -16,6 +16,9 @@ struct DashboardTab: View {
                     case .allExercises: AllExercisesView()
                     case let .muscle(_, metric): MetricDetailView(route: route, initialTab: metric.title)
                     case let .exercise(_, metric): MetricDetailView(route: route, initialTab: metric.title)
+                    case .goalProgress: GoalProgressView()
+                    case .foodLogging: FoodLoggingHabitView()
+                    case .nutritionData: NutritionDataManagerView()
                     default: MetricDetailView(route: route)
                     }
                 }
@@ -44,15 +47,28 @@ struct DashboardDataReader<Content: View>: View {
     @Observe(WorkoutSession.finished) private var sessions
     @Observe(BodyWeight.all) private var logged
     @Observe(AppSettings.current) private var settings
+    @Observe(NutritionLogDay.all) private var log
+    @Observe(NutritionPlan.all) private var plans
+    @Observe(BodyMetric.series(.steps)) private var importedSteps
 
     var body: some View {
-        content(DashboardData(
+        var data = DashboardData(
             sessions: sessions,
             weighIns: WeighIns.merge(logged: logged, health: health.weights),
-            steps: health.steps,
+            steps: [],
             unit: settings.weightUnit,
-            catalog: catalog.exercise
-        ))
+            catalog: catalog.exercise,
+            log: log,
+            plans: plans,
+            nutritionSettings: settings.nutrition
+        )
+        data.steps = NutritionMetrics.steps(health: health.steps, imported: importedSteps, calendar: data.calendar)
+        let kilograms = data.weighIns.map { DatedValue(date: $0.date, value: $0.kg) }
+        data.expenditure = NutritionMetrics.expenditure(
+            log: log, weighIns: kilograms, trend: data.trend, settings: settings.nutrition.expenditure,
+            profile: settings.profile, now: data.now, calendar: data.calendar
+        )
+        return content(data)
     }
 }
 
@@ -117,6 +133,18 @@ private struct DashboardHome: View {
                             label: recordLabel,
                             name: { data.catalog($0)?.name ?? "Unknown exercise" },
                             kind: $recordKind
+                        )
+                    case .weeklyNutrition:
+                        WeeklyNutritionCard(
+                            week: NutritionMetrics.week(of: data.today, log: data.log, plans: data.plans),
+                            today: data.today, overages: data.nutritionSettings.showOverages
+                        )
+                    case .energyBalance:
+                        EnergyBalanceFocusCard(data: data)
+                    case .dailyNutrition:
+                        DailyNutritionCard(
+                            day: NutritionMetrics.day(data.today, log: data.log, plans: data.plans),
+                            overages: data.nutritionSettings.showOverages
                         )
                     }
                 }
@@ -189,6 +217,17 @@ private struct DashboardHome: View {
                     MiniLine(values: trend, color: DashboardColor.trend)
                 }
             }
+        case .expenditure:
+            let values = data.expenditure.suffix(7).map(\.kcal)
+            NavigationLink(value: DashboardRoute.expenditure) {
+                DashboardCard(title: "Expenditure", period: "Last 7 Days", value: values.last.map { Int($0.rounded()).formatted() }, unit: "kcal") {
+                    MiniLine(values: values, color: DashboardColor.expenditure)
+                }
+            }
+        case .energyBalance:
+            EnergyBalanceInsightCard(data: data)
+        case .goalProgress:
+            GoalProgressInsightCard(data: data)
         }
     }
 
@@ -207,6 +246,13 @@ private struct DashboardHome: View {
             NavigationLink(value: DashboardRoute.workouts) {
                 DashboardCard(title: "Workouts", period: "Last 30 Days", value: "\(dates.count { data.calendar.isDate($0, equalTo: data.now, toGranularity: .weekOfYear) })", unit: "this week") {
                     DotGrid(days: DashboardMetrics.habitDays(dates, now: data.now, calendar: data.calendar), color: DashboardColor.workouts)
+                }
+            }
+        case .foodLogging:
+            let dates = NutritionMetrics.loggedDates(data.log, calendar: data.calendar)
+            NavigationLink(value: DashboardRoute.foodLogging) {
+                DashboardCard(title: "Food Logging", period: "Last 30 Days", value: "\(DashboardMetrics.daysThisWeek(dates, now: data.now, calendar: data.calendar))/7", unit: "this week") {
+                    DotGrid(days: DashboardMetrics.habitDays(dates, now: data.now, calendar: data.calendar), color: DashboardColor.energy)
                 }
             }
         }

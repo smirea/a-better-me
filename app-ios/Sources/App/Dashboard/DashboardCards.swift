@@ -52,6 +52,7 @@ struct MiniLine: View {
     let values: [Double]
     let color: Color
     var rightAlignedSlots = 7
+    var showsPoints = true
 
     var body: some View {
         let offset = max(rightAlignedSlots - values.count, 0)
@@ -61,10 +62,12 @@ struct MiniLine: View {
         Chart(Array(values.enumerated()), id: \.offset) { index, value in
             LineMark(x: .value("Index", index + offset), y: .value("Value", value))
                 .foregroundStyle(color)
-            PointMark(x: .value("Index", index + offset), y: .value("Value", value))
-                .symbol(.circle.strokeBorder(lineWidth: 1.5))
-                .symbolSize(30)
-                .foregroundStyle(color)
+            if showsPoints {
+                PointMark(x: .value("Index", index + offset), y: .value("Value", value))
+                    .symbol(.circle.strokeBorder(lineWidth: 1.5))
+                    .symbolSize(30)
+                    .foregroundStyle(color)
+            }
         }
         .chartXScale(domain: -0.3...Double(rightAlignedSlots - 1) + 0.3)
         .chartYScale(domain: (low - pad)...(high + pad))

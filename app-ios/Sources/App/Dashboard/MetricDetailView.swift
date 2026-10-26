@@ -37,12 +37,16 @@ private struct MetricDetailContent: View {
         let daily = tab.points.inside(interval)
         // A week or month that began before the range is drawn at the range's start, inside the chart.
         let plotted = averaging.bucket(daily, calendar: data.calendar).map { DatedValue(date: max($0.date, interval.start), value: $0.value) }
+        let overlay = tab.overlay.map { averaging.bucket($0.points.inside(interval), calendar: data.calendar).map { DatedValue(date: max($0.date, interval.start), value: $0.value) } } ?? []
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if detail.tabs.count > 1 { tabStrip }
-                summary(average: plotted.average, second: tab.summary.second(of: daily.map(\.value)), interval: interval)
+                summary(stats: tab.stats?(interval) ?? [
+                    MetricTab.Stat(title: tab.averageTitle, value: plotted.average),
+                    MetricTab.Stat(title: tab.summary.title(tab.title), value: tab.summary.second(of: daily.map(\.value))),
+                ], interval: interval)
                     .padding(.horizontal, 20)
-                chart(plotted, interval: interval)
+                chart(plotted, overlay: overlay, interval: interval)
                     .frame(height: 320)
                     .padding(.horizontal, 20)
                 controls.padding(.horizontal, 20)
@@ -95,12 +99,11 @@ private struct MetricDetailContent: View {
 
     /// The average is over the plotted points, so it follows the averaging. Totals, bests, and change are over the
     /// range's days, which averaging would distort.
-    private func summary(average: Double?, second: Double?, interval: DateInterval) -> some View {
+    private func summary(stats: [MetricTab.Stat], interval: DateInterval) -> some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .top, spacing: 40) {
-                    stat(tab.averageTitle, average)
-                    stat(tab.summary.title(tab.title), second)
+                    ForEach(stats, id: \.title) { stat($0.title, $0.value) }
                 }
                 Text(Self.rangeLabel(interval, calendar: data.calendar))
                     .font(AppFont.caption(14))
@@ -128,26 +131,40 @@ private struct MetricDetailContent: View {
     }
 
     private func format(_ value: Double) -> String {
-        tab.unit == "steps" ? Int(value.rounded()).formatted() : value.dashboardText
+        tab.unit == "steps" || tab.unit == "kcal" ? Int(value.rounded()).formatted() : value.dashboardText
     }
 
-    private func chart(_ points: [DatedValue], interval: DateInterval) -> some View {
-        let values = points.map(\.value)
+    private func chart(_ points: [DatedValue], overlay: [DatedValue], interval: DateInterval) -> some View {
+        let values = (points + overlay).map(\.value)
         let high = max(values.max() ?? 0, 1)
         let low = fitToData ? values.min() ?? 0 : 0
         let pad = fitToData ? max((high - low) * 0.1, 0.5) : high * 0.1
-        return Chart(points, id: \.date) { point in
-            switch tab.style {
-            case .bar:
-                BarMark(x: .value("Date", point.date, unit: averaging.component), y: .value(tab.title, point.value))
-                    .foregroundStyle(tab.color)
-            case .line:
-                LineMark(x: .value("Date", point.date), y: .value(tab.title, point.value))
-                    .foregroundStyle(tab.color)
-                if points.count < 15 {
-                    PointMark(x: .value("Date", point.date), y: .value(tab.title, point.value))
-                        .symbol(.circle.strokeBorder(lineWidth: 1.5))
+        return Chart {
+            if let line = tab.overlay {
+                ForEach(overlay, id: \.date) { point in
+                    LineMark(x: .value("Date", point.date), y: .value(line.title, point.value), series: .value("Series", line.title))
+                        .foregroundStyle(line.color)
+                        .lineStyle(StrokeStyle(lineWidth: line.dashed ? 1.5 : 2, dash: line.dashed ? [2, 3] : []))
+                }
+            }
+            ForEach(points, id: \.date) { point in
+                switch tab.style {
+                case .bar:
+                    BarMark(x: .value("Date", point.date, unit: averaging.component), y: .value(tab.title, point.value))
                         .foregroundStyle(tab.color)
+                case .line:
+                    LineMark(x: .value("Date", point.date), y: .value(tab.title, point.value), series: .value("Series", tab.title))
+                        .foregroundStyle(tab.color)
+                    if points.count < 15 {
+                        PointMark(x: .value("Date", point.date), y: .value(tab.title, point.value))
+                            .symbol(.circle.strokeBorder(lineWidth: 1.5))
+                            .foregroundStyle(tab.color)
+                    } else if averaging == .daily, tab.holding.contains(point.date) {
+                        PointMark(x: .value("Date", point.date), y: .value(tab.title, point.value))
+                            .symbol(.square.strokeBorder(lineWidth: 1))
+                            .symbolSize(18)
+                            .foregroundStyle(tab.color)
+                    }
                 }
             }
         }
@@ -194,11 +211,17 @@ private struct MetricDetailContent: View {
     }
 
     private var legend: some View {
-        Label {
-            Text(tab.title)
-        } icon: {
-            Image(systemName: tab.style == .bar ? "chart.bar.fill" : "point.topleft.down.to.point.bottomright.curvepath")
-                .foregroundStyle(tab.color)
+        HStack(spacing: 20) {
+            if let overlay = tab.overlay, !overlay.dashed {
+                legendItem(overlay.title, symbol: "point.topleft.down.to.point.bottomright.curvepath", color: overlay.color)
+            }
+            legendItem(tab.style == .bar && tab.overlay != nil ? "Calories" : tab.title, symbol: tab.style == .bar ? "chart.bar.fill" : "point.topleft.down.to.point.bottomright.curvepath", color: tab.color)
+            if let overlay = tab.overlay, overlay.dashed {
+                legendItem(overlay.title, symbol: "line.horizontal.3", color: overlay.color)
+            }
+            if !tab.holding.isEmpty {
+                legendItem("Holding", symbol: "square", color: tab.color)
+            }
         }
         .font(AppFont.medium(14))
         .frame(maxWidth: .infinity)
@@ -206,11 +229,29 @@ private struct MetricDetailContent: View {
         .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
     }
 
+    private func legendItem(_ title: String, symbol: String, color: Color) -> some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: symbol).foregroundStyle(color)
+        }
+    }
+
     @ViewBuilder
     private var footer: some View {
         switch detail.footer {
         case .months:
             MonthList(rows: tab.points.reversed().map { MonthRow(date: $0.date, text: "\(format($0.value)) \(tab.unit)") }, calendar: data.calendar)
+        case .expenditure:
+            ExpenditureInsights(data: data)
+            MonthList(rows: tab.points.reversed().map { point in
+                MonthRow(date: point.date, text: "\(format(point.value)) \(tab.unit)", tag: tab.holding.contains(point.date) ? MonthRow.Tag(text: "Holding", symbol: "square", color: tab.color) : nil)
+            }, calendar: data.calendar)
+        case .weightTrend:
+            WeightTrendInsights(data: data)
+            MonthList(rows: tab.points.reversed().map { MonthRow(date: $0.date, text: "\(format($0.value)) \(tab.unit)") }, calendar: data.calendar)
+        case .energyBalance:
+            EnergyBalanceInsights(data: data, tab: tab)
         case let .weighIns(weighIns):
             MonthList(rows: weighIns.map { weighIn in
                 MonthRow(date: weighIn.date, text: "\(data.unit.format(kg: weighIn.kg)) \(data.unit.rawValue)", detail: weighIn.source == .health ? "Health" : nil, source: weighIn.source)
@@ -267,16 +308,23 @@ private struct ShownExercise: Identifiable {
     let id: ExerciseID
 }
 
-private struct MonthRow: Identifiable {
+struct MonthRow: Identifiable {
+    struct Tag {
+        var text: String
+        var symbol: String
+        var color: Color
+    }
+
     var date: Date
     var text: String
     var detail: String?
     var source: WeighIn.Source?
+    var tag: Tag?
 
     var id: String { "\(date.timeIntervalSince1970) \(text)" }
 }
 
-private struct MonthList: View {
+struct MonthList: View {
     let rows: [MonthRow]
     let calendar: Calendar
     var showsTime = false
@@ -291,11 +339,22 @@ private struct MonthList: View {
                     VStack(spacing: 0) {
                         ForEach(Array(months[month]!.enumerated()), id: \.element.id) { index, row in
                             if index > 0 { Divider().overlay(Theme.separator) }
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(row.text).font(AppFont.headline(15))
-                                Text([showsTime ? row.date.formatted(.dateTime.weekday().month().day().hour().minute()) : row.date.formatted(.dateTime.weekday().month().day()), row.detail].compactMap { $0 }.joined(separator: " · "))
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(row.text).font(AppFont.headline(15))
+                                    Text([showsTime ? row.date.formatted(.dateTime.weekday().month().day().hour().minute()) : row.date.formatted(.dateTime.weekday().month().day()), row.detail].compactMap { $0 }.joined(separator: " · "))
+                                        .font(AppFont.caption(13))
+                                        .foregroundStyle(Theme.textSecondary)
+                                }
+                                Spacer()
+                                if let tag = row.tag {
+                                    Label {
+                                        Text(tag.text).foregroundStyle(Theme.textSecondary)
+                                    } icon: {
+                                        Image(systemName: tag.symbol).foregroundStyle(tag.color)
+                                    }
                                     .font(AppFont.caption(13))
-                                    .foregroundStyle(Theme.textSecondary)
+                                }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(14)

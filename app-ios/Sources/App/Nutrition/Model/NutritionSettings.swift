@@ -19,6 +19,8 @@ struct NutritionSettings: Codable, Hashable, Sendable {
         var staticKcal: Double?
         /// The owner's own starting estimate in place of the BMR one.
         var initialKcal: Double?
+        /// The Calculation Start Date; nil starts at the first logged day or weigh-in.
+        var startOn: CalendarDay?
     }
 
     /// Display only: every stored energy is kcal.
