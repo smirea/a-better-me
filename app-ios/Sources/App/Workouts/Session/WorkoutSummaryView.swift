@@ -12,6 +12,7 @@ struct WorkoutSummaryView: View {
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(LiveWorkoutPresenter.self) private var presenter
     @Environment(LocalStore.self) private var store
+    @Environment(SessionHistory.self) private var sessionHistory
     @Environment(\.dismiss) private var dismiss
     @Observe(AppSettings.current) private var settings
     @Observe private var live: WorkoutSession?
@@ -20,7 +21,6 @@ struct WorkoutSummaryView: View {
     @State private var finishedAt = Date.now
     @State private var updatePlan = false
     @State private var template: WorkoutTemplate?
-    @State private var earlier: [[WorkoutBlock]] = []
     @State private var expanded: Set<BlockExercise.ID> = []
     @State private var isEditing = false
     @State private var isEditingStart = false
@@ -43,7 +43,7 @@ struct WorkoutSummaryView: View {
     var body: some View {
         let blocks = session.blocks
         let stats = SessionRecords.stats(in: blocks, catalog: catalog.exercise)
-        let records = SessionRecords.records(in: blocks, earlier: earlier, catalog: catalog.exercise)
+        let records = SessionRecords.records(in: blocks, bests: earlierBests, catalog: catalog.exercise)
         return NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
@@ -80,8 +80,6 @@ struct WorkoutSummaryView: View {
             .overlay { if isFinishing, !records.isEmpty { ConfettiOverlay() } }
         }
         .task {
-            let session = session
-            earlier = ((try? store.read { try WorkoutSession.earlier(than: session, $0) }) ?? []).map(\.blocks)
             if let templateID = session.templateID {
                 template = try? store.read { try WorkoutTemplate.fetchOne($0, key: WorkoutTemplate.key(templateID)) }
             }
@@ -117,6 +115,14 @@ struct WorkoutSummaryView: View {
     private static func startText(_ date: Date) -> String {
         let time = date.formatted(date: .omitted, time: .shortened)
         return Calendar.current.isDateInToday(date) ? "Today \(time)" : "\(date.formatted(date: .numeric, time: .omitted)) \(time)"
+    }
+
+    /// The records' baseline: every earlier session's bests, read once per history change rather than per render.
+    private var earlierBests: [ExerciseID: [ExerciseRecord.Kind: Double]] {
+        let session = session
+        return sessionHistory.memo(EarlierBestsKey(sessionID: session.id, startedAt: session.startedAt)) { _ in
+            SessionRecords.bests(in: sessionHistory.earlier(than: session).map(\.blocks), catalog: catalog.exercise)
+        }
     }
 
     private var endedAt: Date { session.endedAt ?? finishedAt }
@@ -512,4 +518,9 @@ private struct WorkoutChangesSheet: View {
         default: "No target set"
         }
     }
+}
+
+private struct EarlierBestsKey: Hashable {
+    var sessionID: UUID
+    var startedAt: Date
 }

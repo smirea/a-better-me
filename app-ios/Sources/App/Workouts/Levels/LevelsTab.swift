@@ -3,12 +3,12 @@ import SwiftUI
 /// MF's Levels tab: average weekly sets per muscle as a body heat map and two ranked lists.
 struct LevelsTab: View {
     @Environment(ExerciseCatalog.self) private var catalog
-    @Observe(WorkoutSession.finished) private var sessions
+    @Environment(SessionHistory.self) private var history
     @AppStorage(LevelsPeriod.storageKey) private var period = LevelsPeriod.oneWeek
     @State private var side = BodySide.front
 
     var body: some View {
-        let weekly = WeeklySets(sessions: sessions, period: period, catalog: catalog.exercise)
+        let weekly = WeeklySets.memoized(in: history, period: period, catalog: catalog)
         NavigationStack {
             List {
                 Section {

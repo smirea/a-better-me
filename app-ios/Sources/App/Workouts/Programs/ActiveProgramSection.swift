@@ -5,7 +5,7 @@ import SwiftUI
 struct ActiveProgramSection: View {
     let program: Program?
     let templates: [UUID: WorkoutTemplate]
-    let finished: [WorkoutSession]
+    let finishedDays: Set<ProgramDay.ID>
     @Environment(LocalStore.self) private var store
     @State private var choosingCycle = false
 
@@ -23,7 +23,7 @@ struct ActiveProgramSection: View {
                 }
             }
             if let program {
-                ProgramCard(program: program, templates: templates, accessory: .checkbox(finished: finished) { day, done in
+                ProgramCard(program: program, templates: templates, accessory: .checkbox(finishedDays: finishedDays) { day, done in
                     store.tickRestDay(day.id, in: program.id, done: done)
                 })
             } else {

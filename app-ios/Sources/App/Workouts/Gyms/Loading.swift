@@ -2,7 +2,7 @@ import Foundation
 
 /// What one resistance option can load in a gym, in the display unit. Working in the display unit keeps sums of lb
 /// plates exact for a lb owner (45 lb is 20.41165665 kg), and every comparison rounds to hundredths of that unit.
-enum Loading: Equatable {
+enum Loading: Hashable {
     /// A loadable bar or a plate-loaded machine: a base weight plus plates on one or both sides.
     case plates(PlateLoading)
     /// Fixed loads in ascending order: dumbbells, kettlebells, fixed bars, or a pin stack's positions.
@@ -20,8 +20,8 @@ enum Loading: Equatable {
     }
 }
 
-struct PlateLoading: Equatable {
-    enum Base: Equatable { case bar, machine }
+struct PlateLoading: Hashable {
+    enum Base: Hashable { case bar, machine }
 
     var base: Base
     var baseWeight: Double
@@ -34,7 +34,7 @@ struct PlateLoading: Equatable {
     var baseID: EquipmentID?
     var baseWeights: [Double]
 
-    struct Plate: Equatable {
+    struct Plate: Hashable {
         var weight: Double
         var perSide: Int?
         var isBumper = false

@@ -71,8 +71,9 @@ struct ExerciseGroup: Identifiable {
 
     var id: ExerciseCategory { category }
 
+    /// `exercises` must already be in `ranked` order, as `ExerciseCatalog.all` is; grouping keeps it.
     static func grouping(_ exercises: [Exercise]) -> [ExerciseGroup] {
-        let byCategory = Dictionary(grouping: ranked(exercises), by: \.category)
+        let byCategory = Dictionary(grouping: exercises, by: \.category)
         return ExerciseCategory.allCases.compactMap { category in
             byCategory[category].map { ExerciseGroup(category: category, exercises: $0) }
         }
@@ -80,11 +81,57 @@ struct ExerciseGroup: Identifiable {
 }
 
 extension ExerciseGroup {
+    static func ranksBefore(_ a: Exercise, _ b: Exercise) -> Bool {
+        a.searchBoost != b.searchBoost
+            ? a.searchBoost > b.searchBoost
+            : a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+    }
+
     static func ranked(_ exercises: [Exercise]) -> [Exercise] {
-        exercises.sorted {
-            $0.searchBoost != $1.searchBoost
-                ? $0.searchBoost > $1.searchBoost
-                : $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        exercises.sorted(by: ranksBefore)
+    }
+
+    /// `ranked` for exercises already sorted by name, without comparing names again.
+    static func ranked(nameSorted exercises: [Exercise]) -> [Exercise] {
+        Dictionary(grouping: exercises, by: \.searchBoost).sorted { $0.key > $1.key }.flatMap(\.value)
+    }
+
+    /// Merges two lists that are each in `ranked` order.
+    static func merge(_ a: [Exercise], _ b: [Exercise]) -> [Exercise] {
+        var merged: [Exercise] = []
+        merged.reserveCapacity(a.count + b.count)
+        var i = a.startIndex, j = b.startIndex
+        while i < a.endIndex, j < b.endIndex {
+            if ranksBefore(b[j], a[i]) {
+                merged.append(b[j])
+                j += 1
+            } else {
+                merged.append(a[i])
+                i += 1
+            }
+        }
+        return merged + a[i...] + b[j...]
+    }
+
+    /// The browser's list: `ranked` exercises narrowed to `scope`, the filters, the gym, and the search, by category.
+    static func browse(
+        _ ranked: [Exercise], scope: BrowseScope, filter: ExerciseFilter, search: ExerciseSearch, availability: GymAvailability?
+    ) -> (scoped: [Exercise], groups: [ExerciseGroup]) {
+        let scoped = ranked.filter(scope.contains)
+        let shown = scoped.filter { filter.matches($0) && search.matches($0) && availability?.isAvailable($0) != false }
+        return (scoped, grouping(shown))
+    }
+}
+
+/// Which exercises a browser lists before its filters and search apply.
+enum BrowseScope: Hashable {
+    case except(Set<ExerciseID>)
+    case only(Set<ExerciseID>)
+
+    func contains(_ exercise: Exercise) -> Bool {
+        switch self {
+        case .except(let ids): !ids.contains(exercise.id)
+        case .only(let ids): ids.contains(exercise.id)
         }
     }
 }

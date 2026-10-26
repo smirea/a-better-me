@@ -39,6 +39,8 @@ Full rules in [`docs/decisions/environment.md`](docs/decisions/environment.md).
 
 # Native app
 
+- Performance is a top priority. Read the Performance section of `app-ios/AGENTS.md` before touching any view, query, or derived data.
+
 - SwiftUI lives in `app-ios/`; read its `AGENTS.md` for native development. The root `start:ios` script delegates to `app-ios/scripts/run` and forwards launcher arguments.
 - The web client lives in `app-web/`. Root `start` runs it and the server together. `start:client` and `start:server` run each individually; iOS runs separately.
 - The root env-manager schema declares each directory target with explicit output paths: TypeScript values at `.env.local` and readers at `src/env.ts`, native values at `Config/LocalSecrets.xcconfig`. Regenerate the nested xcconfig with `env-manager gen --local`; never hand-edit `app-ios/Config/LocalSecrets.xcconfig`.

@@ -5,12 +5,12 @@ struct MuscleLevelsView: View {
     let muscle: Muscle
 
     @Environment(ExerciseCatalog.self) private var catalog
-    @Observe(WorkoutSession.finished) private var sessions
+    @Environment(SessionHistory.self) private var history
     @AppStorage(LevelsPeriod.storageKey) private var period = LevelsPeriod.oneWeek
     @State private var shownExercise: ShownExercise?
 
     var body: some View {
-        let weekly = WeeklySets(sessions: sessions, period: period, catalog: catalog.exercise)
+        let weekly = WeeklySets.memoized(in: history, period: period, catalog: catalog)
         List {
             Section {
                 VStack(spacing: 16) {

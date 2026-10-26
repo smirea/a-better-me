@@ -64,6 +64,7 @@ private struct InstructionsTab: View {
     let exercise: Exercise
     @Environment(ExerciseCatalog.self) private var catalog
     @State private var frame = 0
+    @State private var content: InstructionSource.Content?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -93,20 +94,59 @@ private struct InstructionsTab: View {
                     }
                     .clipShape(.rect(cornerRadius: Theme.smallCornerRadius))
             }
-            let markdown = exercise.isCustom ? exercise.about ?? "" : catalog.instructions(for: exercise) ?? ""
-            let sections = MarkdownSection.parse(markdown).map { $0.title.isEmpty ? MarkdownSection(title: "Description", body: $0.body) : $0 }
-            if sections.isEmpty && exercise.articleIDs.isEmpty {
-                Text("No instructions for this exercise.").foregroundStyle(Theme.textSecondary)
-            }
-            ForEach(sections) { CollapsibleSection(section: $0, startsExpanded: true) }
-            ForEach(exercise.articleIDs.compactMap { catalog.articles[$0] }) { article in
-                if let text = catalog.articleText(article) {
-                    CollapsibleSection(section: MarkdownSection(title: article.title, body: text), startsExpanded: false)
+            if let content = content?.source == source ? content : nil {
+                if content.sections.isEmpty && exercise.articleIDs.isEmpty {
+                    Text("No instructions for this exercise.").foregroundStyle(Theme.textSecondary)
                 }
+                ForEach(content.sections) { CollapsibleSection(section: $0, startsExpanded: true) }
+                ForEach(content.articles) { CollapsibleSection(section: $0, startsExpanded: false) }
             }
         }
         .padding()
+        .task(id: source) { content = await source.load() }
     }
+
+    /// Resolving the URLs here re-renders the tab when `AssetStore` downloads a missing file.
+    private var source: InstructionSource {
+        InstructionSource(
+            about: exercise.isCustom ? exercise.about ?? "" : nil,
+            instructions: exercise.isCustom ? nil : catalog.instructionsURL(for: exercise),
+            articles: exercise.articleIDs.compactMap { catalog.articles[$0] }.map { .init(title: $0.title, url: catalog.articleURL($0)) }
+        )
+    }
+}
+
+/// The files an exercise's Instructions tab shows, read and parsed off main.
+struct InstructionSource: Hashable, Sendable {
+    struct ArticleFile: Hashable, Sendable {
+        let title: String
+        let url: URL?
+    }
+
+    /// A custom exercise's own description, which replaces the instructions file.
+    let about: String?
+    let instructions: URL?
+    let articles: [ArticleFile]
+
+    struct Content {
+        let source: InstructionSource
+        let sections: [MarkdownSection]
+        /// One section per article whose file is on disk.
+        let articles: [MarkdownSection]
+    }
+
+    @concurrent func load() async -> Content {
+        let markdown = about ?? instructions.flatMap(Self.read) ?? ""
+        return Content(
+            source: self,
+            sections: MarkdownSection.parse(markdown).map { $0.title.isEmpty ? MarkdownSection(title: "Description", body: $0.body) : $0 },
+            articles: articles.compactMap { article in
+                article.url.flatMap(Self.read).map { MarkdownSection(title: article.title, body: $0) }
+            }
+        )
+    }
+
+    private static func read(_ url: URL) -> String? { try? String(contentsOf: url, encoding: .utf8) }
 }
 
 private struct CollapsibleSection: View {

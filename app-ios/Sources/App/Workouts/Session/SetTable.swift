@@ -6,7 +6,7 @@ extension SessionEditor {
 
     func setTable(block: Int, exercise index: Int, fields: [SetField]) -> some View {
         let item = blocks[block].exercises[index]
-        let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
+        let previous = previousSets[item.exerciseID] ?? []
         let rows = blocks.rows(block: block, exercise: index).filter { !isHidden($0) }
         return VStack(spacing: 8) {
             HStack(spacing: 8) {
@@ -206,8 +206,7 @@ extension SessionEditor {
 
     private func update(_ path: RowPath, _ change: (inout SetEntry) -> Void) {
         guard blocks.contains(path) else { return }
-        let previous = SessionFlow.previousSets(of: blocks[path.block].exercises[path.exercise].exerciseID, in: history)
-        var value = entry(path, previous: previous)
+        var value = entry(path, previous: previousSets(for: path))
         change(&value)
         if let log = blocks.log(at: path) {
             blocks.setLog(value.log(at: log.completedAt), at: path)
@@ -328,14 +327,13 @@ extension SessionEditor {
         let overrides = ExerciseSettings.of(item.exerciseID, in: exerciseSettings)?.overrides
         let settings = defaults.workout.warmUp
         var context = WarmUpContext(
-            loadable: LoadableWeights(loading: loading(for: item), unit: unit),
+            loadable: loadable(for: item),
             scheme: overrides?.warmUpScheme ?? settings.schemes[exercise?.restCategory ?? .upperIsolation] ?? WarmUpStep.standard,
             automation: overrides?.warmUpAutomation ?? settings.automation,
             simplifyPlates: settings.simplifyPlates
         )
         if let set = item.sets.firstIndex(where: { $0.type != .warmUp }) {
-            let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
-            let value = entry(RowPath(block: block, exercise: index, set: set), previous: previous)
+            let value = entry(RowPath(block: block, exercise: index, set: set), previous: previousSets[item.exerciseID] ?? [])
             context.workingWeightKg = value.weightKg
             context.reps = value.reps ?? item.sets[set].target?.repsMax
             context.rir = value.rir
@@ -396,7 +394,7 @@ extension SessionEditor {
     }
 
     private func previousSets(for path: RowPath) -> [WorkoutSet] {
-        SessionFlow.previousSets(of: blocks[path.block].exercises[path.exercise].exerciseID, in: history)
+        previousSets[blocks[path.block].exercises[path.exercise].exerciseID] ?? []
     }
 
     private func handle(_ key: KeypadKey) {

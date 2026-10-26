@@ -4,11 +4,14 @@ import SwiftUI
 struct DashboardTab: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(LocalStore.self) private var store
+    @Environment(ExerciseCatalog.self) private var catalog
     @State private var health = HealthData()
+    @Observe(BodyWeight.all) private var logged
+    @Observe(AppSettings.current) private var settings
 
     var body: some View {
         NavigationStack {
-            DashboardDataReader { data in DashboardHome(data: data) }
+            DashboardHome(layout: settings.dashboard)
                 .navigationDestination(for: DashboardRoute.self) { route in
                     switch route {
                     case .customize: CustomizeDashboardView()
@@ -21,6 +24,11 @@ struct DashboardTab: View {
                 }
         }
         .environment(health)
+        // Rebuilt when the scene becomes active too, since this view reads `scenePhase`, so a new day shows on return.
+        .environment(\.dashboardContext, DashboardContext(
+            unit: settings.weightUnit, today: Calendar.current.startOfDay(for: .now), calendar: .current, custom: catalog.custom
+        ))
+        .onChange(of: logged, initial: true) { health.update(logged: logged) }
         .healthDataAccessRequest(store: health.store, shareTypes: HealthData.shareTypes, readTypes: HealthData.readTypes, trigger: health.requestTrigger) { _ in
             Task { await health.load() }
         }
@@ -36,36 +44,8 @@ struct DashboardTab: View {
     }
 }
 
-struct DashboardDataReader<Content: View>: View {
-    @ViewBuilder let content: (DashboardData) -> Content
-
-    @Environment(ExerciseCatalog.self) private var catalog
-    @Environment(HealthData.self) private var health
-    @Observe(WorkoutSession.finished) private var sessions
-    @Observe(BodyWeight.all) private var logged
-    @Observe(AppSettings.current) private var settings
-
-    var body: some View {
-        content(DashboardData(
-            sessions: sessions,
-            weighIns: WeighIns.merge(logged: logged, health: health.weights),
-            steps: health.steps,
-            unit: settings.weightUnit,
-            catalog: catalog.exercise
-        ))
-    }
-}
-
 private struct DashboardHome: View {
-    let data: DashboardData
-
-    @Observe(AppSettings.current) private var settings
-    @Observe(WorkoutTemplate.all) private var templates
-    @Observe(Program.active) private var program
-    @State private var scope = DashboardMetrics.CycleScope.activeProgram
-    @State private var recordKind = ExerciseRecord.Kind.volume
-
-    private var layout: DashboardLayout { settings.dashboard }
+    let layout: DashboardLayout
 
     var body: some View {
         ScrollView {
@@ -102,22 +82,8 @@ private struct DashboardHome: View {
             ForEach(layout.primaryFocus, id: \.self) { card in
                 Group {
                     switch card {
-                    case .workouts:
-                        CycleRingsCard(
-                            progress: DashboardMetrics.cycleProgress(
-                                program == nil ? .allWorkouts : scope, program: program, templates: templates, sessions: data.sessions,
-                                now: data.now, calendar: data.calendar, catalog: data.catalog
-                            ),
-                            hasProgram: program != nil,
-                            scope: $scope
-                        )
-                    case .recentRecords:
-                        RecentRecordsCard(
-                            records: DashboardMetrics.recentRecords(data.sessions, kind: recordKind, catalog: data.catalog),
-                            label: recordLabel,
-                            name: { data.catalog($0)?.name ?? "Unknown exercise" },
-                            kind: $recordKind
-                        )
+                    case .workouts: CycleFocus()
+                    case .recentRecords: RecordsFocus()
                     }
                 }
                 .padding(.horizontal, 20)
@@ -128,95 +94,135 @@ private struct DashboardHome: View {
         .frame(height: 320)
     }
 
-    private func recordLabel(_ value: Double) -> String {
-        switch recordKind {
-        case .reps: "\(Int(value)) reps"
-        case .volume, .oneRepMax: "\(data.unit.fromKg(value).dashboardText) \(data.unit.rawValue)"
-        }
-    }
-
     @ViewBuilder
     private func section(_ section: DashboardSection) -> some View {
         switch section {
         case .insights where !layout.insights.isEmpty:
             DashboardSectionView(title: "Insights & Analytics") {
-                ForEach(layout.insights, id: \.self) { insight($0) }
+                ForEach(layout.insights, id: \.self) { InsightCardView(card: $0) }
             }
         case .habits where !layout.habits.isEmpty:
             DashboardSectionView(title: "Habits") {
-                ForEach(layout.habits, id: \.self) { habit($0) }
+                ForEach(layout.habits, id: \.self) { HabitCardView(card: $0) }
             }
         case .bodyMetrics where !layout.bodyMetrics.isEmpty:
             DashboardSectionView(title: "Body Metrics") {
-                ForEach(layout.bodyMetrics, id: \.self) { _ in scaleWeight }
+                ForEach(layout.bodyMetrics, id: \.self) { _ in ScaleWeightCardView() }
             }
         case .muscles where !layout.muscles.isEmpty:
             DashboardSectionView(title: "Muscle Groups", seeAll: .allMuscles) {
-                ForEach(layout.muscles, id: \.self) { MuscleCardView(card: $0, data: data) }
+                ForEach(layout.muscles, id: \.self) { MuscleCardView(card: $0) }
             }
         case .exercises where !layout.exercises.isEmpty:
             DashboardSectionView(title: "Exercises", seeAll: .allExercises) {
-                ForEach(layout.exercises, id: \.self) { ExerciseCardView(card: $0, data: data) }
+                ForEach(layout.exercises, id: \.self) { ExerciseCardView(card: $0) }
             }
         case .general where layout.general.contains(.steps):
-            DashboardSectionView(title: "General") {
-                let days = data.lastDays(data.steps)
-                NavigationLink(value: DashboardRoute.steps) {
-                    DashboardCard(title: "Steps", period: "Last 7 Days", value: data.steps.isEmpty ? nil : Int(days.last!).formatted(), unit: "steps") {
-                        MiniBars(values: days, color: DashboardColor.workouts)
-                    }
-                }
-            }
+            DashboardSectionView(title: "General") { StepsCardView() }
         default:
             EmptyView()
         }
     }
+}
 
-    @ViewBuilder
-    private func insight(_ card: InsightCard) -> some View {
+/// Owns its picker's state, so a tap re-renders this card alone.
+private struct CycleFocus: View {
+    @Observe(WorkoutTemplate.all) private var templates
+    @Observe(Program.active) private var program
+    @State private var scope = DashboardMetrics.CycleScope.activeProgram
+    private var values = DashboardValues()
+
+    var body: some View {
+        CycleRingsCard(
+            progress: values.cycleProgress(scope, program: program, templates: templates),
+            hasProgram: program != nil,
+            scope: $scope
+        )
+    }
+}
+
+private struct RecordsFocus: View {
+    @State private var kind = ExerciseRecord.Kind.volume
+    private var values = DashboardValues()
+
+    var body: some View {
+        RecentRecordsCard(records: values.recentRecords(kind), kind: $kind)
+    }
+}
+
+private struct InsightCardView: View {
+    let card: InsightCard
+    private var values = DashboardValues()
+
+    init(card: InsightCard) { self.card = card }
+
+    var body: some View {
         switch card {
         case .workouts:
-            let sets = DashboardMetrics.workouts(data.sessions, metric: .sets, catalog: data.catalog).suffix(7).map(\.value)
+            let sets = values.workoutsCard
             NavigationLink(value: DashboardRoute.workouts) {
-                DashboardCard(title: "Workouts", period: "Last 7 Workouts", value: sets.last?.dashboardText, unit: "sets") {
-                    MiniBars(values: sets, color: DashboardColor.workouts)
+                DashboardCard(title: "Workouts", period: "Last 7 Workouts", value: sets.text, unit: "sets") {
+                    MiniBars(values: sets.values, color: DashboardColor.workouts)
                 }
             }
         case .weightTrend:
-            let trend = data.weight(data.trend).suffix(7).map(\.value)
+            let trend = values.trendCard
             NavigationLink(value: DashboardRoute.weightTrend) {
-                DashboardCard(title: "Weight Trend", period: "Last 7 Days", value: trend.last?.dashboardText, unit: data.unit.rawValue) {
-                    MiniLine(values: trend, color: DashboardColor.trend)
+                DashboardCard(title: "Weight Trend", period: "Last 7 Days", value: trend.text, unit: values.context.unit.rawValue) {
+                    MiniLine(values: trend.values, color: DashboardColor.trend)
                 }
             }
         }
     }
+}
 
-    @ViewBuilder
-    private func habit(_ card: HabitCard) -> some View {
+private struct HabitCardView: View {
+    let card: HabitCard
+    private var values = DashboardValues()
+
+    init(card: HabitCard) { self.card = card }
+
+    var body: some View {
         switch card {
         case .weighIn:
-            let dates = data.weighIns.map(\.date)
+            let habit = values.weighInHabit
             NavigationLink(value: DashboardRoute.scaleWeight) {
-                DashboardCard(title: "Weigh-In", period: "Last 30 Days", value: "\(DashboardMetrics.daysThisWeek(dates, now: data.now, calendar: data.calendar))/7", unit: "this week") {
-                    DotGrid(days: DashboardMetrics.habitDays(dates, now: data.now, calendar: data.calendar), color: DashboardColor.scale)
+                DashboardCard(title: "Weigh-In", period: "Last 30 Days", value: habit.text, unit: "this week") {
+                    DotGrid(days: habit.days, color: DashboardColor.scale)
                 }
             }
         case .workouts:
-            let dates = data.sessions.map(\.startedAt)
+            let habit = values.workoutHabit
             NavigationLink(value: DashboardRoute.workouts) {
-                DashboardCard(title: "Workouts", period: "Last 30 Days", value: "\(dates.count { data.calendar.isDate($0, equalTo: data.now, toGranularity: .weekOfYear) })", unit: "this week") {
-                    DotGrid(days: DashboardMetrics.habitDays(dates, now: data.now, calendar: data.calendar), color: DashboardColor.workouts)
+                DashboardCard(title: "Workouts", period: "Last 30 Days", value: habit.text, unit: "this week") {
+                    DotGrid(days: habit.days, color: DashboardColor.workouts)
                 }
             }
         }
     }
+}
 
-    private var scaleWeight: some View {
-        let entries = data.weighIns.suffix(7).map { data.unit.fromKg($0.kg) }
-        return NavigationLink(value: DashboardRoute.scaleWeight) {
-            DashboardCard(title: "Scale Weight", period: "Last 7 Entries", value: entries.last?.dashboardText, unit: data.unit.rawValue) {
-                MiniLine(values: entries, color: DashboardColor.scale)
+private struct ScaleWeightCardView: View {
+    private var values = DashboardValues()
+
+    var body: some View {
+        let entries = values.scaleWeightCard
+        NavigationLink(value: DashboardRoute.scaleWeight) {
+            DashboardCard(title: "Scale Weight", period: "Last 7 Entries", value: entries.text, unit: values.context.unit.rawValue) {
+                MiniLine(values: entries.values, color: DashboardColor.scale)
+            }
+        }
+    }
+}
+
+private struct StepsCardView: View {
+    private var values = DashboardValues()
+
+    var body: some View {
+        let days = values.stepsCard
+        NavigationLink(value: DashboardRoute.steps) {
+            DashboardCard(title: "Steps", period: "Last 7 Days", value: days.text, unit: "steps") {
+                MiniBars(values: days.values, color: DashboardColor.workouts)
             }
         }
     }
@@ -251,14 +257,15 @@ struct DashboardSectionView<Cards: View>: View {
 
 struct MuscleCardView: View {
     let card: MuscleCard
-    let data: DashboardData
+    private var values = DashboardValues()
+
+    init(card: MuscleCard) { self.card = card }
 
     var body: some View {
-        let days = data.lastDays(data.muscle(card.muscle, card.metric))
-        let total = days.reduce(0, +)
+        let days = values.muscleCard(card)
         NavigationLink(value: DashboardRoute.muscle(card.muscle, card.metric)) {
-            DashboardCard(title: card.muscle.displayName, period: "Last 7 Days", value: total > 0 ? total.dashboardText : nil, unit: data.muscleUnit(card.metric)) {
-                MiniBars(values: days, color: DashboardColor.muscle)
+            DashboardCard(title: card.muscle.displayName, period: "Last 7 Days", value: days.text, unit: card.metric.unit(values.context.unit)) {
+                MiniBars(values: days.values, color: DashboardColor.muscle)
             }
         }
     }
@@ -266,13 +273,16 @@ struct MuscleCardView: View {
 
 struct ExerciseCardView: View {
     let card: ExerciseCard
-    let data: DashboardData
+    @Environment(ExerciseCatalog.self) private var catalog
+    private var values = DashboardValues()
+
+    init(card: ExerciseCard) { self.card = card }
 
     var body: some View {
-        let values = data.exercise(card.exerciseID, card.metric).suffix(7).map(\.value)
+        let points = values.exerciseCard(card)
         NavigationLink(value: DashboardRoute.exercise(card.exerciseID, card.metric)) {
-            DashboardCard(title: data.catalog(card.exerciseID)?.name ?? "Unknown exercise", period: "Last 7 Workouts", value: values.last?.dashboardText, unit: data.exerciseUnit(card.metric)) {
-                MiniLine(values: values, color: DashboardColor.exercise)
+            DashboardCard(title: catalog.name(card.exerciseID), period: "Last 7 Workouts", value: points.text, unit: card.metric.unit(values.context.unit)) {
+                MiniLine(values: points.values, color: DashboardColor.exercise)
             }
         }
     }
@@ -280,38 +290,35 @@ struct ExerciseCardView: View {
 
 struct AllMusclesView: View {
     var body: some View {
-        DashboardDataReader { data in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 30) {
-                    ForEach([("Upper", Muscle.upperBody), ("Lower", Muscle.lowerBody)], id: \.0) { title, muscles in
-                        DashboardSectionView(title: title) {
-                            ForEach(muscles) { MuscleCardView(card: MuscleCard(muscle: $0), data: data) }
-                        }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 30) {
+                ForEach([("Upper", Muscle.upperBody), ("Lower", Muscle.lowerBody)], id: \.0) { title, muscles in
+                    DashboardSectionView(title: title) {
+                        ForEach(muscles) { MuscleCardView(card: MuscleCard(muscle: $0)) }
                     }
                 }
-                .padding(.vertical, 16)
             }
-            .background(Theme.background)
-            .navigationTitle("Muscle Groups")
-            .navigationBarTitleDisplayMode(.inline)
+            .padding(.vertical, 16)
         }
+        .background(Theme.background)
+        .navigationTitle("Muscle Groups")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
 struct AllExercisesView: View {
+    private var values = DashboardValues()
+
     var body: some View {
-        DashboardDataReader { data in
-            let ids = data.sessions.sorted { $0.startedAt > $1.startedAt }.flatMap { $0.blocks.flatMap(\.exercises).map(\.exerciseID) }.firstOccurrences()
-            ScrollView {
-                DashboardSectionView(title: "Trained") {
-                    ForEach(ids, id: \.self) { ExerciseCardView(card: ExerciseCard(exerciseID: $0), data: data) }
-                }
-                .padding(.vertical, 16)
+        ScrollView {
+            DashboardSectionView(title: "Trained") {
+                ForEach(values.trainedExercises, id: \.self) { ExerciseCardView(card: ExerciseCard(exerciseID: $0)) }
             }
-            .background(Theme.background)
-            .navigationTitle("Exercises")
-            .navigationBarTitleDisplayMode(.inline)
+            .padding(.vertical, 16)
         }
+        .background(Theme.background)
+        .navigationTitle("Exercises")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

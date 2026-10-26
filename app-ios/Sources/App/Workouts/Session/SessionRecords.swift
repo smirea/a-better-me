@@ -74,17 +74,30 @@ enum SessionRecords {
         }
     }
 
-    /// Records in `blocks` beaten against `earlier` sessions' blocks, in the session's exercise order.
-    static func records(in blocks: [WorkoutBlock], earlier: [[WorkoutBlock]], catalog: (ExerciseID) -> Exercise?) -> [ExerciseRecord] {
+    /// Each exercise's best value of each kind over `earlier` sessions' blocks.
+    static func bests(in earlier: [[WorkoutBlock]], catalog: (ExerciseID) -> Exercise?) -> [ExerciseID: [ExerciseRecord.Kind: Double]] {
+        var bests: [ExerciseID: [ExerciseRecord.Kind: Double]] = [:]
+        for blocks in earlier {
+            for (id, stats) in stats(in: blocks, catalog: catalog) {
+                for kind in ExerciseRecord.Kind.allCases {
+                    guard let value = stats.value(kind) else { continue }
+                    bests[id, default: [:]][kind] = max(bests[id]?[kind] ?? value, value)
+                }
+            }
+        }
+        return bests
+    }
+
+    /// Records in `blocks` beaten against the `bests` of earlier sessions, in the session's exercise order.
+    static func records(in blocks: [WorkoutBlock], bests: [ExerciseID: [ExerciseRecord.Kind: Double]], catalog: (ExerciseID) -> Exercise?) -> [ExerciseRecord] {
         let current = stats(in: blocks, catalog: catalog)
-        let past = earlier.map { stats(in: $0, catalog: catalog) }
         var seen = Set<ExerciseID>()
         let order = blocks.flatMap(\.exercises).map(\.exerciseID).filter { seen.insert($0).inserted }
         return order.flatMap { id -> [ExerciseRecord] in
             guard let stats = current[id] else { return [] }
             return ExerciseRecord.Kind.allCases.compactMap { kind in
                 guard let value = stats.value(kind) else { return nil }
-                let best = past.compactMap { $0[id]?.value(kind) }.max()
+                let best = bests[id]?[kind]
                 if let best, value <= best { return nil }
                 return ExerciseRecord(exerciseID: id, kind: kind, value: value, previousBest: best)
             }
