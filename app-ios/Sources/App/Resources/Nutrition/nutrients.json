@@ -1,0 +1,713 @@
+[
+	{
+		"id": "k",
+		"name": "Calories",
+		"short": "cal",
+		"unit": "kcal",
+		"group": "general",
+		"symbol": "flame.fill"
+	},
+	{
+		"id": "221",
+		"name": "Alcohol",
+		"short": "alcohol",
+		"unit": "g",
+		"group": "general",
+		"symbol": "wineglass.fill"
+	},
+	{
+		"id": "262",
+		"name": "Caffeine",
+		"short": "caffeine",
+		"unit": "mg",
+		"group": "general",
+		"symbol": "cup.and.saucer.fill",
+		"defaults": {
+			"male": {
+				"ceiling": 400
+			},
+			"female": {
+				"ceiling": 400
+			}
+		}
+	},
+	{
+		"id": "255",
+		"name": "Water",
+		"short": "H₂0",
+		"unit": "mL",
+		"group": "general",
+		"symbol": "drop.fill",
+		"defaults": {
+			"male": {
+				"target": 3700
+			},
+			"female": {
+				"target": 2700
+			}
+		}
+	},
+	{
+		"id": "p",
+		"name": "Protein",
+		"short": "prot",
+		"unit": "g",
+		"group": "protein",
+		"symbol": "square.grid.3x3.fill"
+	},
+	{
+		"id": "507",
+		"name": "Cystine",
+		"short": "Cys",
+		"unit": "g",
+		"group": "protein",
+		"symbol": "square.grid.3x3.fill"
+	},
+	{
+		"id": "512",
+		"name": "Histidine",
+		"short": "His",
+		"unit": "g",
+		"group": "protein",
+		"symbol": "square.grid.3x3.fill",
+		"targetPerKg": 0.014
+	},
+	{
+		"id": "503",
+		"name": "Isoleucine",
+		"short": "Ile",
+		"unit": "g",
+		"group": "protein",
+		"symbol": "square.grid.3x3.fill",
+		"targetPerKg": 0.019
+	},
+	{
+		"id": "504",
+		"name": "Leucine",
+		"short": "Leu",
+		"unit": "g",
+		"group": "protein",
+		"symbol": "square.grid.3x3.fill",
+		"targetPerKg": 0.042
+	},
+	{
+		"id": "505",
+		"name": "Lysine",
+		"short": "Lys",
+		"unit": "g",
+		"group": "protein",
+		"symbol": "square.grid.3x3.fill",
+		"targetPerKg": 0.038
+	},
+	{
+		"id": "506",
+		"name": "Methionine",
+		"short": "Met",
+		"unit": "g",
+		"group": "protein",
+		"symbol": "square.grid.3x3.fill"
+	},
+	{
+		"id": "508",
+		"name": "Phenylalanine",
+		"short": "Phe",
+		"unit": "g",
+		"group": "protein",
+		"symbol": "square.grid.3x3.fill"
+	},
+	{
+		"id": "502",
+		"name": "Threonine",
+		"short": "Thr",
+		"unit": "g",
+		"group": "protein",
+		"symbol": "square.grid.3x3.fill",
+		"targetPerKg": 0.02
+	},
+	{
+		"id": "501",
+		"name": "Tryptophan",
+		"short": "Trp",
+		"unit": "g",
+		"group": "protein",
+		"symbol": "square.grid.3x3.fill",
+		"targetPerKg": 0.005
+	},
+	{
+		"id": "509",
+		"name": "Tyrosine",
+		"short": "Tyr",
+		"unit": "g",
+		"group": "protein",
+		"symbol": "square.grid.3x3.fill"
+	},
+	{
+		"id": "510",
+		"name": "Valine",
+		"short": "Val",
+		"unit": "g",
+		"group": "protein",
+		"symbol": "square.grid.3x3.fill",
+		"targetPerKg": 0.024
+	},
+	{
+		"id": "c",
+		"name": "Carbs",
+		"short": "carb",
+		"unit": "g",
+		"group": "carbohydrates",
+		"symbol": "laurel.leading"
+	},
+	{
+		"id": "291",
+		"name": "Fiber",
+		"short": "fiber",
+		"unit": "g",
+		"group": "carbohydrates",
+		"symbol": "leaf.fill",
+		"defaults": {
+			"male": {
+				"target": 38
+			},
+			"female": {
+				"target": 25
+			}
+		}
+	},
+	{
+		"id": "nc",
+		"name": "Net Carbs",
+		"short": "net carbs",
+		"unit": "g",
+		"group": "carbohydrates",
+		"symbol": "laurel.leading"
+	},
+	{
+		"id": "209",
+		"name": "Starch",
+		"short": "starch",
+		"unit": "g",
+		"group": "carbohydrates",
+		"symbol": "laurel.leading"
+	},
+	{
+		"id": "269",
+		"name": "Sugars",
+		"short": "sugars",
+		"unit": "g",
+		"group": "carbohydrates",
+		"symbol": "laurel.leading"
+	},
+	{
+		"id": "539",
+		"name": "Sugars Added",
+		"short": "sugars+",
+		"unit": "g",
+		"group": "carbohydrates",
+		"symbol": "laurel.leading"
+	},
+	{
+		"id": "f",
+		"name": "Fat",
+		"short": "fat",
+		"unit": "g",
+		"group": "fats",
+		"symbol": "button.roundedtop.horizontal.fill"
+	},
+	{
+		"id": "645",
+		"name": "Monounsat. Fat",
+		"short": "MUFA",
+		"unit": "g",
+		"group": "fats",
+		"symbol": "button.roundedtop.horizontal.fill"
+	},
+	{
+		"id": "646",
+		"name": "Polyunsat. Fat",
+		"short": "PUFA",
+		"unit": "g",
+		"group": "fats",
+		"symbol": "button.roundedtop.horizontal.fill"
+	},
+	{
+		"id": "606",
+		"name": "Saturated Fat",
+		"short": "sat fat",
+		"unit": "g",
+		"group": "fats",
+		"symbol": "button.roundedtop.horizontal.fill"
+	},
+	{
+		"id": "693",
+		"name": "Trans Fat",
+		"short": "trans fat",
+		"unit": "g",
+		"group": "fats",
+		"symbol": "button.roundedtop.horizontal.fill"
+	},
+	{
+		"id": "901",
+		"name": "Omega 3",
+		"short": "ω-3",
+		"unit": "g",
+		"group": "fats",
+		"symbol": "button.roundedtop.horizontal.fill"
+	},
+	{
+		"id": "851",
+		"name": "ω-3 ALA",
+		"short": "ω-3 ALA",
+		"unit": "g",
+		"group": "fats",
+		"symbol": "button.roundedtop.horizontal",
+		"defaults": {
+			"male": {
+				"target": 1.6
+			},
+			"female": {
+				"target": 1.1
+			}
+		}
+	},
+	{
+		"id": "629",
+		"name": "ω-3 EPA",
+		"short": "ω-3 EPA",
+		"unit": "g",
+		"group": "fats",
+		"symbol": "button.roundedtop.horizontal"
+	},
+	{
+		"id": "621",
+		"name": "ω-3 DHA",
+		"short": "ω-3 DHA",
+		"unit": "g",
+		"group": "fats",
+		"symbol": "button.roundedtop.horizontal"
+	},
+	{
+		"id": "902",
+		"name": "Omega 6",
+		"short": "ω-6",
+		"unit": "g",
+		"group": "fats",
+		"symbol": "button.roundedtop.horizontal.fill",
+		"defaults": {
+			"male": {
+				"target": 17
+			},
+			"female": {
+				"target": 12
+			}
+		}
+	},
+	{
+		"id": "601",
+		"name": "Cholesterol",
+		"short": "cho",
+		"unit": "mg",
+		"group": "fats",
+		"symbol": "heart.fill"
+	},
+	{
+		"id": "417",
+		"name": "Folate",
+		"short": "folate",
+		"unit": "mcg",
+		"group": "vitamins",
+		"symbol": "circle.hexagongrid.fill",
+		"defaults": {
+			"male": {
+				"target": 400,
+				"ceiling": 1000
+			},
+			"female": {
+				"target": 400,
+				"ceiling": 1000
+			}
+		}
+	},
+	{
+		"id": "320",
+		"name": "Vitamin A",
+		"short": "vit A",
+		"unit": "mcg",
+		"group": "vitamins",
+		"symbol": "circle.hexagongrid.fill",
+		"defaults": {
+			"male": {
+				"target": 900,
+				"ceiling": 3000
+			},
+			"female": {
+				"target": 700,
+				"ceiling": 3000
+			}
+		}
+	},
+	{
+		"id": "404",
+		"name": "Vitamin B1",
+		"short": "vit B1",
+		"unit": "mg",
+		"group": "vitamins",
+		"symbol": "circle.hexagongrid.fill",
+		"defaults": {
+			"male": {
+				"target": 1.2
+			},
+			"female": {
+				"target": 1.1
+			}
+		}
+	},
+	{
+		"id": "405",
+		"name": "Vitamin B2",
+		"short": "vit B2",
+		"unit": "mg",
+		"group": "vitamins",
+		"symbol": "circle.hexagongrid.fill",
+		"defaults": {
+			"male": {
+				"target": 1.3
+			},
+			"female": {
+				"target": 1.1
+			}
+		}
+	},
+	{
+		"id": "406",
+		"name": "Vitamin B3",
+		"short": "vit B3",
+		"unit": "mg",
+		"group": "vitamins",
+		"symbol": "circle.hexagongrid.fill",
+		"defaults": {
+			"male": {
+				"target": 16,
+				"ceiling": 35
+			},
+			"female": {
+				"target": 14,
+				"ceiling": 35
+			}
+		}
+	},
+	{
+		"id": "410",
+		"name": "Vitamin B5",
+		"short": "vit B5",
+		"unit": "mg",
+		"group": "vitamins",
+		"symbol": "circle.hexagongrid.fill",
+		"defaults": {
+			"male": {
+				"target": 5
+			},
+			"female": {
+				"target": 5
+			}
+		}
+	},
+	{
+		"id": "415",
+		"name": "Vitamin B6",
+		"short": "vit B6",
+		"unit": "mg",
+		"group": "vitamins",
+		"symbol": "circle.hexagongrid.fill",
+		"defaults": {
+			"male": {
+				"target": 1.3,
+				"ceiling": 100
+			},
+			"female": {
+				"target": 1.3,
+				"ceiling": 100
+			}
+		}
+	},
+	{
+		"id": "418",
+		"name": "Vitamin B12",
+		"short": "vit B12",
+		"unit": "mcg",
+		"group": "vitamins",
+		"symbol": "circle.hexagongrid.fill",
+		"defaults": {
+			"male": {
+				"target": 2.4
+			},
+			"female": {
+				"target": 2.4
+			}
+		}
+	},
+	{
+		"id": "401",
+		"name": "Vitamin C",
+		"short": "vit C",
+		"unit": "mg",
+		"group": "vitamins",
+		"symbol": "circle.hexagongrid.fill",
+		"defaults": {
+			"male": {
+				"target": 90,
+				"ceiling": 2000
+			},
+			"female": {
+				"target": 75,
+				"ceiling": 2000
+			}
+		}
+	},
+	{
+		"id": "328",
+		"name": "Vitamin D",
+		"short": "vit D",
+		"unit": "mcg",
+		"group": "vitamins",
+		"symbol": "circle.hexagongrid.fill",
+		"defaults": {
+			"male": {
+				"target": 15,
+				"ceiling": 100
+			},
+			"female": {
+				"target": 15,
+				"ceiling": 100
+			}
+		}
+	},
+	{
+		"id": "323",
+		"name": "Vitamin E",
+		"short": "vit E",
+		"unit": "mg",
+		"group": "vitamins",
+		"symbol": "circle.hexagongrid.fill",
+		"defaults": {
+			"male": {
+				"target": 15,
+				"ceiling": 1000
+			},
+			"female": {
+				"target": 15,
+				"ceiling": 1000
+			}
+		}
+	},
+	{
+		"id": "430",
+		"name": "Vitamin K",
+		"short": "vit K",
+		"unit": "mcg",
+		"group": "vitamins",
+		"symbol": "circle.hexagongrid.fill",
+		"defaults": {
+			"male": {
+				"target": 120
+			},
+			"female": {
+				"target": 90
+			}
+		}
+	},
+	{
+		"id": "421",
+		"name": "Choline",
+		"short": "Chol",
+		"unit": "mg",
+		"group": "vitamins",
+		"symbol": "oval.portrait.fill",
+		"defaults": {
+			"male": {
+				"target": 550,
+				"ceiling": 3500
+			},
+			"female": {
+				"target": 425,
+				"ceiling": 3500
+			}
+		}
+	},
+	{
+		"id": "301",
+		"name": "Calcium",
+		"short": "Ca",
+		"unit": "mg",
+		"group": "minerals",
+		"symbol": "diamond",
+		"defaults": {
+			"male": {
+				"target": 1000,
+				"ceiling": 2500
+			},
+			"female": {
+				"target": 1000,
+				"ceiling": 2500
+			}
+		}
+	},
+	{
+		"id": "312",
+		"name": "Copper",
+		"short": "Cu",
+		"unit": "mg",
+		"group": "minerals",
+		"symbol": "diamond",
+		"defaults": {
+			"male": {
+				"target": 0.9,
+				"ceiling": 10
+			},
+			"female": {
+				"target": 0.9,
+				"ceiling": 10
+			}
+		}
+	},
+	{
+		"id": "303",
+		"name": "Iron",
+		"short": "iron",
+		"unit": "mg",
+		"group": "minerals",
+		"symbol": "diamond",
+		"defaults": {
+			"male": {
+				"target": 8,
+				"ceiling": 45
+			},
+			"female": {
+				"target": 18,
+				"ceiling": 45
+			}
+		}
+	},
+	{
+		"id": "304",
+		"name": "Magnesium",
+		"short": "Mg",
+		"unit": "mg",
+		"group": "minerals",
+		"symbol": "diamond",
+		"defaults": {
+			"male": {
+				"target": 420
+			},
+			"female": {
+				"target": 320
+			}
+		}
+	},
+	{
+		"id": "315",
+		"name": "Manganese",
+		"short": "Mn",
+		"unit": "mg",
+		"group": "minerals",
+		"symbol": "diamond",
+		"defaults": {
+			"male": {
+				"target": 2.3,
+				"ceiling": 11
+			},
+			"female": {
+				"target": 1.8,
+				"ceiling": 11
+			}
+		}
+	},
+	{
+		"id": "305",
+		"name": "Phosphorus",
+		"short": "P",
+		"unit": "mg",
+		"group": "minerals",
+		"symbol": "diamond",
+		"defaults": {
+			"male": {
+				"target": 700,
+				"ceiling": 4000
+			},
+			"female": {
+				"target": 700,
+				"ceiling": 4000
+			}
+		}
+	},
+	{
+		"id": "306",
+		"name": "Potassium",
+		"short": "K",
+		"unit": "mg",
+		"group": "minerals",
+		"symbol": "diamond",
+		"defaults": {
+			"male": {
+				"target": 3400
+			},
+			"female": {
+				"target": 2600
+			}
+		}
+	},
+	{
+		"id": "317",
+		"name": "Selenium",
+		"short": "Se",
+		"unit": "mcg",
+		"group": "minerals",
+		"symbol": "diamond",
+		"defaults": {
+			"male": {
+				"target": 55,
+				"ceiling": 400
+			},
+			"female": {
+				"target": 55,
+				"ceiling": 400
+			}
+		}
+	},
+	{
+		"id": "307",
+		"name": "Sodium",
+		"short": "Na",
+		"unit": "mg",
+		"group": "minerals",
+		"symbol": "diamond",
+		"defaults": {
+			"male": {
+				"target": 1500,
+				"ceiling": 2300
+			},
+			"female": {
+				"target": 1500,
+				"ceiling": 2300
+			}
+		}
+	},
+	{
+		"id": "309",
+		"name": "Zinc",
+		"short": "zinc",
+		"unit": "mg",
+		"group": "minerals",
+		"symbol": "diamond",
+		"defaults": {
+			"male": {
+				"target": 11,
+				"ceiling": 40
+			},
+			"female": {
+				"target": 8,
+				"ceiling": 40
+			}
+		}
+	}
+]

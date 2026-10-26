@@ -7,8 +7,8 @@ final class LocalDatabase: Sendable {
 
     let pool: DatabasePool
 
-    init() throws {
-        try FileManager.default.createDirectory(at: Self.directory, withIntermediateDirectories: true)
-        pool = try DatabasePool(path: Self.url.path)
+    init(at url: URL = LocalDatabase.url) throws {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        pool = try DatabasePool(path: url.path)
     }
 }

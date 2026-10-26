@@ -76,8 +76,10 @@ struct LegacyImportTests {
         ])
         #expect(try pool.read { try String.fetchAll($0, sql: "SELECT name FROM sqlite_master WHERE type = 'view'") } == [])
         #expect(try pool.read { try String.fetchAll($0, sql: "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name") } == [
-            "_meta", "_outbox", "api_tokens", "body_weights", "custom_exercises", "exercise_settings", "gym_profiles", "programs",
-            "ps_data__gym_profiles", "ps_data__workout_templates", "settings", "sqlite_sequence", "workout_sessions", "workout_templates",
+            "_meta", "_outbox", "api_tokens", "body_metrics", "body_weights", "custom_exercises", "exercise_settings", "food_entries",
+            "food_favorites", "food_log_notes", "foods", "gym_profiles", "nutrient_goals", "nutrition_days", "nutrition_plans", "programs",
+            "ps_data__gym_profiles", "ps_data__workout_templates", "recipes", "settings", "sqlite_sequence", "workout_sessions",
+            "workout_templates",
         ])
         #expect(try pool.read { try Int.fetchOne($0, sql: #"SELECT count(*) FROM "ps_data__workout_templates""#) } == 2)
         #expect(try pool.read { try String.fetchOne($0, sql: "SELECT value FROM _meta WHERE key = 'legacy_import'") }?.hasSuffix("Z") == true)
