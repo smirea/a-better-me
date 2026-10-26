@@ -53,10 +53,16 @@ extension Exercise {
 struct GymLoads {
     var gym: GymProfile?
     var overrides: [EquipmentID: EquipmentLoad]
-    var catalog: [EquipmentID: Equipment]
+    private let pluralOfSingular: [EquipmentID: EquipmentID]
+
+    init(gym: GymProfile?, overrides: [EquipmentID: EquipmentLoad], catalog: [EquipmentID: Equipment]) {
+        self.gym = gym
+        self.overrides = overrides
+        pluralOfSingular = Dictionary(catalog.values.compactMap { item in item.pluralOf.map { ($0, item.id) } }) { first, _ in first }
+    }
 
     func load(_ id: EquipmentID) -> EquipmentLoad? {
-        let listed = catalog.values.first { $0.pluralOf == id }?.id ?? id
+        let listed = pluralOfSingular[id] ?? id
         if let override = overrides[listed] { return override }
         guard let gym else { return GymDefaults.load(for: listed) }
         guard gym.equipment[listed] != nil else { return nil }

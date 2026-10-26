@@ -48,14 +48,17 @@ struct SetEntry: Hashable {
 }
 
 extension SessionFlow {
-    /// The sets of the last logged performance of `exerciseID`. `history` holds past sessions' blocks, newest first.
-    static func previousSets(of exerciseID: ExerciseID, in history: [[WorkoutBlock]]) -> [WorkoutSet] {
+    /// The sets of each exercise's last logged performance. `history` holds past sessions' blocks, newest first.
+    static func previousSets(in history: [[WorkoutBlock]]) -> [ExerciseID: [WorkoutSet]] {
+        var sets: [ExerciseID: [WorkoutSet]] = [:]
         for blocks in history {
-            if let item = blocks.flatMap(\.exercises).first(where: { $0.exerciseID == exerciseID && $0.hasLoggedSets }) {
-                return item.sets
+            for block in blocks {
+                for item in block.exercises where item.hasLoggedSets && sets[item.exerciseID] == nil {
+                    sets[item.exerciseID] = item.sets
+                }
             }
         }
-        return []
+        return sets
     }
 
     /// "Log All Sets": every unlogged row that has numbers is logged with them. Rows with nothing to log stay open.
@@ -188,14 +191,14 @@ extension SessionFlow {
     }
 
     /// The prefilled values of every row, for "Log All Sets".
-    static func prefills(for blocks: [WorkoutBlock], history: [[WorkoutBlock]], suggestions: [BlockExercise.ID: [UUID: SetSuggestion]], rirTracking: Bool, unit: WeightUnit) -> [UUID: SetEntry] {
+    static func prefills(for blocks: [WorkoutBlock], previous: [ExerciseID: [WorkoutSet]], suggestions: [BlockExercise.ID: [UUID: SetSuggestion]], rirTracking: Bool, unit: WeightUnit) -> [UUID: SetEntry] {
         var values: [UUID: SetEntry] = [:]
         for (b, block) in blocks.enumerated() {
             for (e, item) in block.exercises.enumerated() {
-                let previous = previousSets(of: item.exerciseID, in: history)
+                let sets = previous[item.exerciseID] ?? []
                 for path in blocks.rows(block: b, exercise: e) {
                     let id = blocks.rowID(at: path)
-                    values[id] = prefill(for: path, in: blocks, previous: previous, suggestion: suggestions[item.id]?[id], rirTracking: rirTracking, unit: unit)
+                    values[id] = prefill(for: path, in: blocks, previous: sets, suggestion: suggestions[item.id]?[id], rirTracking: rirTracking, unit: unit)
                 }
             }
         }
@@ -242,4 +245,23 @@ extension SessionFlow {
             return steps.map { WarmUpRow(label: "\($0.percent)% of working weight", weightKg: unit.toKg($0.weight), reps: $0.reps) }
         }
     }
+}
+
+extension SessionHistory {
+    /// The Previous column's sets per exercise for `session`: each exercise's last logged performance before it, within
+    /// its program when `reference` says so.
+    func previousSets(for session: WorkoutSession, reference: PreviousReference) -> [ExerciseID: [WorkoutSet]] {
+        let programID = reference == .withinProgram ? session.program?.programID : nil
+        return memo(PreviousSetsKey(sessionID: session.id, startedAt: session.startedAt, programID: programID)) { _ in
+            var sessions = earlier(than: session)
+            if let programID { sessions = sessions.filter { $0.program?.programID == programID } }
+            return SessionFlow.previousSets(in: sessions.map(\.blocks))
+        }
+    }
+}
+
+private struct PreviousSetsKey: Hashable {
+    var sessionID: UUID
+    var startedAt: Date
+    var programID: UUID?
 }

@@ -31,13 +31,15 @@ final class LiveWorkoutController {
     @ObservationIgnored var editor: ((LiveWorkoutCommand, Date) -> Void)?
 
     private var inputs = Inputs()
-    private var history: [[WorkoutBlock]] = []
+    /// Each exercise's last logged sets before the in-progress session, for its Previous values.
+    private var previousSets: [ExerciseID: [WorkoutSet]] = [:]
     @ObservationIgnored private var historySessionID: UUID?
     @ObservationIgnored private var store: LocalStore?
     @ObservationIgnored private var sessionHistory: SessionHistory?
     @ObservationIgnored private var catalog: ExerciseCatalog?
     @ObservationIgnored private var cancellable: AnyDatabaseCancellable?
-    @ObservationIgnored private var loadableCache: [(loading: Loading, unit: WeightUnit, kg: [Double])] = []
+    @ObservationIgnored private let loadings = LoadingCache()
+    @ObservationIgnored private var loadableKg: [LoadableKey: [Double]] = [:]
 
     private struct Inputs: Equatable, Sendable {
         var session: WorkoutSession?
@@ -79,17 +81,13 @@ final class LiveWorkoutController {
         self.inputs = inputs
         if !deferredWatchEvents.isEmpty { retryDeferredWatchEvents() }
         guard let session = inputs.session else {
-            history = []
+            previousSets = [:]
             historySessionID = nil
             return
         }
         guard historySessionID != session.id, let sessionHistory else { return }
         historySessionID = session.id
-        var earlier = sessionHistory.earlier(than: session)
-        if inputs.settings.workout.previousReference == .withinProgram, let programID = session.program?.programID {
-            earlier = earlier.filter { $0.program?.programID == programID }
-        }
-        history = earlier.map(\.blocks)
+        previousSets = sessionHistory.previousSets(for: session, reference: inputs.settings.workout.previousReference)
     }
 
     private func track() {
@@ -101,7 +99,7 @@ final class LiveWorkoutController {
 
     private func trackWatch() {
         let next = withObservationTracking {
-            inputs.session.map { watchWorkout(for: $0, history: history, gym: inputs.gym, isLive: true) }
+            inputs.session.map { watchWorkout(for: $0, previousSets: previousSets, gym: inputs.gym, isLive: true) }
         } onChange: { [weak self] in
             Task { @MainActor in self?.trackWatch() }
         }
@@ -133,6 +131,10 @@ final class LiveWorkoutController {
     /// `session` as the watch runs it: the in-progress one with what the phone typed and suggested, or a workout on
     /// the watch's home list as it would start, prefilled from `history`.
     func watchWorkout(for session: WorkoutSession, history: [[WorkoutBlock]], gym: GymProfile?, isLive: Bool) -> WatchWorkout {
+        watchWorkout(for: session, previousSets: SessionFlow.previousSets(in: history), gym: gym, isLive: isLive)
+    }
+
+    private func watchWorkout(for session: WorkoutSession, previousSets: [ExerciseID: [WorkoutSet]], gym: GymProfile?, isLive: Bool) -> WatchWorkout {
         let settings = inputs.settings
         let unit = settings.weightUnit
         let blocks = session.blocks
@@ -140,6 +142,7 @@ final class LiveWorkoutController {
         var rest: [UUID: Int] = [:]
         var prefill: [UUID: LiveValues] = [:]
         var previous: [UUID: LiveValues] = [:]
+        let exerciseSettings = Dictionary(inputs.exerciseSettings.map { ($0.id, $0) }) { first, _ in first }
         for (b, block) in blocks.enumerated() {
             for (e, item) in block.exercises.enumerated() {
                 let exercise = catalog?.exercise(item.exerciseID)
@@ -150,9 +153,9 @@ final class LiveWorkoutController {
                     )
                 }
                 for set in item.sets {
-                    rest[set.id] = item.restSeconds(after: set, exercise: exercise, settings: .of(item.exerciseID, in: inputs.exerciseSettings), defaults: settings)
+                    rest[set.id] = item.restSeconds(after: set, exercise: exercise, settings: exerciseSettings[item.exerciseID], defaults: settings)
                 }
-                let earlier = SessionFlow.previousSets(of: item.exerciseID, in: history)
+                let earlier = previousSets[item.exerciseID] ?? []
                 for path in blocks.rows(block: b, exercise: e) {
                     let id = blocks.rowID(at: path)
                     if let log = SessionFlow.previousLog(for: path, in: blocks, previous: earlier) { previous[id] = LiveValues(log) }
@@ -327,10 +330,12 @@ final class LiveWorkoutController {
     }
 
     /// Every total the exercise's equipment loads up to a ceiling no lift reaches, in kilograms. Plate math is slow next
-    /// to a rebuild, which runs on every heart rate sample, so lists are kept per loading.
+    /// to a rebuild, which runs on every draft keystroke and heart rate sample, so lists are kept per loading.
     private func loadableWeights(for item: BlockExercise, catalog: ExerciseCatalog, unit: WeightUnit, gym: GymProfile? = nil) -> [Double]? {
-        guard let loading = Loading.of(item, gym: gym ?? inputs.gym, catalog: catalog, settings: inputs.settings, exerciseSettings: inputs.exerciseSettings) else { return nil }
-        if let cached = loadableCache.first(where: { $0.loading == loading && $0.unit == unit }) { return cached.kg }
+        let answer = loadings.answer(for: item, gym: gym ?? inputs.gym, catalog: catalog, settings: inputs.settings, exerciseSettings: inputs.exerciseSettings)
+        guard let loading = answer.loading else { return nil }
+        let key = LoadableKey(loading: loading, unit: unit)
+        if let cached = loadableKg[key] { return cached }
         let ceiling = unit == .kg ? 500.0 : 1100.0
         var weights: [Double] = []
         var value = 0.0
@@ -339,15 +344,20 @@ final class LiveWorkoutController {
             value = next
         }
         let kg = weights.map(unit.toKg)
-        loadableCache.append((loading, unit, kg))
+        loadableKg[key] = kg
         return kg
+    }
+
+    private struct LoadableKey: Hashable {
+        var loading: Loading
+        var unit: WeightUnit
     }
 
     private func liveSet(_ path: RowPath, in blocks: [WorkoutBlock], catalog: ExerciseCatalog, unit: WeightUnit) -> LiveSet {
         let item = blocks[path.block].exercises[path.exercise]
         let set = item.sets[path.set]
         let exercise = catalog.exercise(item.exerciseID)
-        let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
+        let previous = previousSets[item.exerciseID] ?? []
         return LiveSet(
             id: blocks.rowID(at: path),
             blockExerciseID: item.id,
@@ -397,7 +407,7 @@ final class LiveWorkoutController {
             if session.blocks.locate(exerciseID) != nil { live.currentExercise = exerciseID }
             return
         }
-        let fill = Fill(drafts: live.drafts, suggestions: live.suggestions, appliedRows: live.appliedRows, settings: inputs.settings, history: history, at: date)
+        let fill = Fill(drafts: live.drafts, suggestions: live.suggestions, appliedRows: live.appliedRows, settings: inputs.settings, previousSets: previousSets, at: date)
         let sessionID = session.id
         let write = store.write { db -> Fill.Outcome in
             guard let existing = try WorkoutSession.fetchOne(db, key: WorkoutSession.key(sessionID)) else { return .none }
@@ -452,7 +462,7 @@ private struct Fill: Sendable {
     var suggestions: [BlockExercise.ID: [UUID: SetSuggestion]]
     var appliedRows: Set<UUID>
     var settings: AppSettings
-    var history: [[WorkoutBlock]]
+    var previousSets: [ExerciseID: [WorkoutSet]]
     var at: Date
 
     func apply(_ command: LiveWorkoutCommand, to blocks: inout [WorkoutBlock]) -> Outcome {
@@ -474,7 +484,7 @@ private struct Fill: Sendable {
     }
 
     private func entry(_ path: RowPath, in blocks: [WorkoutBlock]) -> SetEntry {
-        let previous = SessionFlow.previousSets(of: blocks[path.block].exercises[path.exercise].exerciseID, in: history)
+        let previous = previousSets[blocks[path.block].exercises[path.exercise].exerciseID] ?? []
         return SessionFlow.entry(for: path, in: blocks, drafts: drafts, previous: previous, suggestions: suggestions, appliedRows: appliedRows, settings: settings)
     }
 }
