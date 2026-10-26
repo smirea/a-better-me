@@ -1,11 +1,11 @@
 import SwiftUI
 
 /// A Nutrition "+" shortcut (research spec §2, `nav-03-choose-shortcuts.jpg`). AI, Describe, Photos, and Metrics are not
-/// built, and Edit Day belongs to the Dashboard's data manager, so they are not offered.
+/// built, so they are not offered.
 enum NutritionShortcut: String, Codable, CaseIterable, Sendable {
-    case yourFoods, search, barcode, quickAdd, recipes, favorites, weight
+    case yourFoods, search, barcode, quickAdd, recipes, favorites, editDay, weight
 
-    static let defaults: [NutritionShortcut] = [.yourFoods, .search, .barcode, .quickAdd, .recipes, .favorites, .weight]
+    static let defaults: [NutritionShortcut] = [.yourFoods, .search, .barcode, .quickAdd, .recipes, .favorites, .editDay, .weight]
     /// The first four are the round buttons, as MacroFactor tags them "Top Shortcut".
     static let topCount = 4
 
@@ -17,6 +17,7 @@ enum NutritionShortcut: String, Codable, CaseIterable, Sendable {
         case .quickAdd: "Quick Add"
         case .recipes: "Recipes"
         case .favorites: "Favorites"
+        case .editDay: "Edit Day"
         case .weight: "Weight"
         }
     }
@@ -29,6 +30,7 @@ enum NutritionShortcut: String, Codable, CaseIterable, Sendable {
         case .quickAdd: "Log calories and macros"
         case .recipes: "Browse and log your recipes"
         case .favorites: "Log a saved serving"
+        case .editDay: "Edit today's nutrition totals"
         case .weight: "Add scale weight and body fat %"
         }
     }
@@ -41,11 +43,12 @@ enum NutritionShortcut: String, Codable, CaseIterable, Sendable {
         case .quickAdd: "bolt.fill"
         case .recipes: "frying.pan"
         case .favorites: "heart.fill"
+        case .editDay: "square.and.pencil"
         case .weight: "scalemass.fill"
         }
     }
 
-    /// Where a logging shortcut opens the logger; nil for Weight.
+    /// Where a logging shortcut opens the logger; nil for Edit Day and Weight.
     var logger: LoggerStart? {
         switch self {
         case .yourFoods: LoggerStart(tab: .library, library: .foods)
@@ -54,7 +57,7 @@ enum NutritionShortcut: String, Codable, CaseIterable, Sendable {
         case .quickAdd: LoggerStart(tab: .quickAdd)
         case .recipes: LoggerStart(tab: .library, library: .recipes)
         case .favorites: LoggerStart(tab: .library, library: .favorites)
-        case .weight: nil
+        case .editDay, .weight: nil
         }
     }
 }
@@ -66,6 +69,7 @@ struct NutritionAddSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var logger: LoggerStart?
     @State private var loggingWeight = false
+    @State private var editingDay = false
     @State private var customizing = false
     @State private var contentHeight: CGFloat = 300
 
@@ -114,14 +118,15 @@ struct NutritionAddSheet: View {
         }
         .presentationDetents([.height(contentHeight + 76)])
         .sheet(isPresented: $loggingWeight) { BodyWeightLogSheet() }
+        .sheet(isPresented: $editingDay) { EditDaySheet() }
         .sheet(isPresented: $customizing) { CustomizeNutritionShortcuts() }
     }
 
     private func perform(_ shortcut: NutritionShortcut) {
-        if let start = shortcut.logger {
-            logger = start
-        } else {
-            loggingWeight = true
+        switch shortcut {
+        case .editDay: editingDay = true
+        case .weight: loggingWeight = true
+        default: logger = shortcut.logger
         }
     }
 
@@ -152,6 +157,30 @@ struct NutritionAddSheet: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Edit Day: the Dashboard's Nutrition Data Manager entry for today, once the log it reads is loaded off the main actor.
+private struct EditDaySheet: View {
+    @Environment(LocalStore.self) private var store
+    @State private var log: [NutritionLogDay]?
+
+    var body: some View {
+        Group {
+            if let log {
+                NutritionDayEntrySheet(day: .today, log: log)
+            } else {
+                ProgressView()
+            }
+        }
+        .task {
+            do {
+                log = try await store.database.pool.read(NutritionLogDay.all.fetch)
+            } catch {
+                LocalStore.log.error("Edit Day could not read the log: \(String(describing: error))")
+                log = []
+            }
+        }
     }
 }
 
