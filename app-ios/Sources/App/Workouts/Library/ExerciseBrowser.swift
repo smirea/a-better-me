@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// The filterable, category-grouped exercise list shared by the picker and More > Exercises. The owner of the
+/// The filterable, category-grouped exercise list shared by the picker and Settings > Exercises. The owner of the
 /// navigation stack attaches `.searchable` and passes its text in as `query`.
 struct ExerciseBrowser<Header: View, Trailing: View>: View {
-    let exercises: [Exercise]
+    let scope: BrowseScope
     @Binding var filter: ExerciseFilter
     let query: String
     var subtitle: (Exercise) -> String? = { _ in nil }
@@ -14,15 +14,25 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
     @Environment(ExerciseCatalog.self) private var catalog
     @Observe(GymProfile.all) private var gyms
     @State private var expanded: Set<ExerciseCategory> = []
+    @State private var results = ViewMemo<BrowseKey, (scoped: [Exercise], groups: [ExerciseGroup])>()
     private static var collapsedCount: Int { 5 }
+
+    private struct BrowseKey: Equatable {
+        let scope: BrowseScope
+        let filter: ExerciseFilter
+        let query: String
+        let gym: GymProfile?
+        let catalogRevision: Int
+    }
 
     var body: some View {
         let search = ExerciseSearch(query)
         let gym = filter.gymID.flatMap { id in gyms.first { $0.id == id } }
         let availability = gym.map { GymAvailability(gym: $0, equipment: catalog.equipment) }
-        let groups = ExerciseGroup.grouping(exercises.filter {
-            filter.matches($0) && search.matches($0) && availability?.isAvailable($0) != false
-        })
+        let key = BrowseKey(scope: scope, filter: filter, query: query, gym: gym, catalogRevision: catalog.revision)
+        let (scoped, groups) = results(key) {
+            ExerciseGroup.browse(catalog.all, scope: scope, filter: filter, search: search, availability: availability)
+        }
         List {
             if groups.isEmpty {
                 Text("No Results")
@@ -65,7 +75,7 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
         .safeAreaBar(edge: .top) {
             VStack(alignment: .leading, spacing: 10) {
                 header
-                ExerciseFilterBar(filter: $filter, exercises: exercises, gyms: gyms, availability: availability)
+                ExerciseFilterBar(filter: $filter, exercises: scoped, gyms: gyms, availability: availability)
                 MuscleFilterRow(selection: $filter.muscle)
             }
             .padding(.bottom, 6)
@@ -75,7 +85,7 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
 
 extension ExerciseBrowser where Header == EmptyView {
     init(
-        exercises: [Exercise],
+        scope: BrowseScope,
         filter: Binding<ExerciseFilter>,
         query: String,
         subtitle: @escaping (Exercise) -> String? = { _ in nil },
@@ -83,7 +93,7 @@ extension ExerciseBrowser where Header == EmptyView {
         @ViewBuilder trailing: @escaping (Exercise) -> Trailing
     ) {
         self.init(
-            exercises: exercises, filter: filter, query: query, subtitle: subtitle, onSelect: onSelect,
+            scope: scope, filter: filter, query: query, subtitle: subtitle, onSelect: onSelect,
             header: { EmptyView() }, trailing: trailing
         )
     }
@@ -328,5 +338,18 @@ struct MuscleFilterRow: View {
             .padding(.horizontal)
         }
         .scrollIndicators(.hidden)
+    }
+}
+
+/// One derived value cached in a view's `@State` until its key changes, so `body` reads it instead of recomputing it.
+/// The key must hold every input the computation reads.
+final class ViewMemo<Key: Equatable, Value> {
+    private var cached: (key: Key, value: Value)?
+
+    func callAsFunction(_ key: Key, _ compute: () -> Value) -> Value {
+        if let cached, cached.key == key { return cached.value }
+        let value = compute()
+        cached = (key, value)
+        return value
     }
 }

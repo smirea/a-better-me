@@ -49,6 +49,14 @@ enum Averaging: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Swift Charts slows down with hundreds of marks, and a daily bar on a year is narrower than a point, so a long
+    /// range draws weekly or monthly buckets whatever averaging is chosen.
+    func drawn(over interval: DateInterval) -> Averaging {
+        let days = interval.duration / 86_400
+        let coarsest: Averaging = days > 800 ? .monthly : days > 200 ? .weekly : .daily
+        return Self.allCases.firstIndex(of: self)! > Self.allCases.firstIndex(of: coarsest)! ? self : coarsest
+    }
+
     func bucket(_ points: [DatedValue], calendar: Calendar) -> [DatedValue] {
         let groups = Dictionary(grouping: points) { calendar.dateInterval(of: component, for: $0.date)!.start }
         return groups.map { start, values in

@@ -24,6 +24,8 @@ enum LevelsPeriod: String, CaseIterable, Identifiable {
 struct WeeklySets {
     private let byMuscle: [Muscle: [ExerciseID: Double]]
     let totals: [Muscle: Double]
+    /// The most-trained muscle's sets, which every bar is scaled against.
+    let top: Double
 
     init(sessions: [WorkoutSession], period: LevelsPeriod, now: Date = .now, calendar: Calendar = .current, catalog: (ExerciseID) -> Exercise?) {
         let interval = period.interval(endingAt: now, calendar: calendar)
@@ -32,21 +34,34 @@ struct WeeklySets {
         let weeks = Double(days) / 7
         var byMuscle: [Muscle: [ExerciseID: Double]] = [:]
         for session in sessions where session.endedAt != nil && session.startedAt > interval.start && session.startedAt <= interval.end {
-            for item in session.blocks.flatMap(\.exercises) {
-                let sets = WorkoutMetrics.muscleSets(in: [WorkoutBlock(exercises: [item])], catalog: catalog, loggedOnly: true)
-                for (muscle, count) in sets {
-                    byMuscle[muscle, default: [:]][item.exerciseID, default: 0] += count / weeks
+            for block in session.blocks {
+                for item in block.exercises {
+                    WorkoutMetrics.forEachMuscleSet(of: item, catalog: catalog, loggedOnly: true) { muscle, count in
+                        byMuscle[muscle, default: [:]][item.exerciseID, default: 0] += count / weeks
+                    }
                 }
             }
         }
         self.byMuscle = byMuscle
         totals = byMuscle.mapValues { $0.values.reduce(0, +) }
+        top = totals.values.max() ?? 0
+    }
+
+    /// Memoized in `history` until the history, the custom exercises, or the day changes, so rotating the body or
+    /// pushing a muscle reuses it. Within a day the window keeps the end it was first computed with.
+    @MainActor
+    static func memoized(in history: SessionHistory, period: LevelsPeriod, catalog: ExerciseCatalog) -> WeeklySets {
+        let key = Key(period: period, day: Calendar.current.startOfDay(for: .now), custom: catalog.custom)
+        return history.memo(key) { WeeklySets(sessions: $0, period: period, catalog: catalog.exercise) }
+    }
+
+    private struct Key: Hashable {
+        let period: LevelsPeriod
+        let day: Date
+        let custom: [Exercise]
     }
 
     func sets(_ muscle: Muscle) -> Double { totals[muscle] ?? 0 }
-
-    /// The most-trained muscle's sets, which every bar is scaled against.
-    var top: Double { totals.values.max() ?? 0 }
 
     /// Upper or lower body muscles, most sets first. The sort is stable, so ties keep the muscle order.
     func ranked(_ muscles: [Muscle]) -> [(muscle: Muscle, sets: Double)] {

@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 extension ExerciseMetric {
     var displayName: String {
@@ -116,28 +115,6 @@ struct ExerciseTile: View {
         }
         .frame(width: width, height: width * 1.5)
         .clipShape(.rect(cornerRadius: width / 5))
-    }
-}
-
-struct EquipmentImage: View {
-    let equipmentID: String
-
-    var body: some View {
-        if let image = Self.load(equipmentID) {
-            Image(uiImage: image).resizable().scaledToFit()
-        } else {
-            Image(systemName: "dumbbell").resizable().scaledToFit().foregroundStyle(Theme.textTertiary).padding(4)
-        }
-    }
-
-    private static let cache = NSCache<NSString, UIImage>()
-
-    private static func load(_ id: String) -> UIImage? {
-        if let hit = cache.object(forKey: id as NSString) { return hit }
-        guard let url = AssetStore.shared.url("EquipmentImages/\(id).webp"),
-              let image = UIImage(contentsOfFile: url.path) else { return nil }
-        cache.setObject(image, forKey: id as NSString)
-        return image
     }
 }
 

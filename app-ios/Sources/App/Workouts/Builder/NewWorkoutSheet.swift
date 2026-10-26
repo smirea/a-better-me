@@ -10,7 +10,7 @@ struct NewWorkoutSheet: View {
     @Observe(AppSettings.current) private var settings
     @Observe(Program.active) private var activeProgram
     @Observe(WorkoutTemplate.all) private var templates
-    @Observe(WorkoutSession.finished) private var finished
+    @Environment(SessionHistory.self) private var history
     @State private var path = NavigationPath()
     @State private var creatingWorkout = false
     @State private var creatingProgram = false
@@ -20,6 +20,8 @@ struct NewWorkoutSheet: View {
     @State private var expandsOnDismiss = false
     @State private var contentHeight: CGFloat = 320
     @State private var detent = PresentationDetent.large
+
+    private struct UpNextKey: Hashable { let program: Program }
 
     private var layout: ShortcutsLayout { settings.shortcuts }
     /// The inline navigation bar and grabber above the measured content.
@@ -36,7 +38,8 @@ struct NewWorkoutSheet: View {
                         }
                         .padding(.top, 8)
                     }
-                    if layout.upNextBanner, let activeProgram, let day = activeProgram.nextDay(finished: finished) {
+                    if layout.upNextBanner, let activeProgram,
+                       let day = history.memo(UpNextKey(program: activeProgram), { activeProgram.nextDay(finished: $0) }) {
                         UpNextCard(program: activeProgram, day: day, template: day.templateID.flatMap { id in templates.first { $0.id == id } })
                     }
                     VStack(spacing: 0) {

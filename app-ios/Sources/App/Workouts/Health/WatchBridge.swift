@@ -18,6 +18,9 @@ final class WatchBridge: NSObject {
 
     @ObservationIgnored private var store: LocalStore?
     @ObservationIgnored private var catalog: ExerciseCatalog?
+    @ObservationIgnored private var history: SessionHistory?
+    @ObservationIgnored private var homeInputs: HomeInputs?
+    @ObservationIgnored private var isTrackingHistory = false
     @ObservationIgnored private var homeObservation: AnyDatabaseCancellable?
     @ObservationIgnored private var home = WatchHome(workouts: [])
     @ObservationIgnored private var workout: WatchWorkout?
@@ -34,15 +37,16 @@ final class WatchBridge: NSObject {
         await withCheckedContinuation { activationWaiters.append($0) }
     }
 
-    func start(store: LocalStore, catalog: ExerciseCatalog) {
+    func start(store: LocalStore, history: SessionHistory, catalog: ExerciseCatalog) {
         guard self.store == nil, let session else { return }
         self.store = store
         self.catalog = catalog
+        self.history = history
         session.delegate = self
         session.activate()
-        homeObservation = ValueObservation.tracking { db in
+        homeObservation = ValueObservation.trackingConstantRegion { db in
             try HomeInputs(
-                templates: WorkoutTemplate.all.fetch(db), program: Program.active.fetch(db), finished: WorkoutSession.finished.fetch(db),
+                templates: WorkoutTemplate.all.fetch(db), program: Program.active.fetch(db),
                 gyms: GymProfile.all.fetch(db), defaultGym: GymProfile.defaultGym.fetch(db)
             )
         }
@@ -51,7 +55,10 @@ final class WatchBridge: NSObject {
             in: store.database.pool,
             scheduling: .immediate,
             onError: { LocalStore.log.error("Watch home observation failed: \(String(describing: $0))") },
-            onChange: { [weak self] in self?.publish($0) }
+            onChange: { [weak self] in
+                self?.homeInputs = $0
+                self?.publish()
+            }
         )
         track()
     }
@@ -59,15 +66,22 @@ final class WatchBridge: NSObject {
     private struct HomeInputs: Equatable, Sendable {
         var templates: [WorkoutTemplate]
         var program: Program?
-        var finished: [WorkoutSession]
         var gyms: [GymProfile]
         var defaultGym: GymProfile?
     }
 
-    private func publish(_ inputs: HomeInputs) {
-        guard let catalog else { return }
+    /// Runs again whenever the inputs or the history change.
+    private func publish() {
+        guard let catalog, let history, let inputs = homeInputs else { return }
+        let finished = isTrackingHistory ? history.sessions : withObservationTracking { history.sessions } onChange: {
+            Task { @MainActor in
+                WatchBridge.shared.isTrackingHistory = false
+                WatchBridge.shared.publish()
+            }
+        }
+        isTrackingHistory = true
         let byID = Dictionary(inputs.templates.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        let history = inputs.finished.map(\.blocks)
+        let blocks = finished.map(\.blocks)
         func option(_ template: WorkoutTemplate, program: String?, session: WorkoutSession) -> WatchWorkoutOption {
             var session = session
             session.gymID = session.gymID ?? inputs.defaultGym?.id
@@ -76,11 +90,11 @@ final class WatchBridge: NSObject {
             return WatchWorkoutOption(
                 id: template.id, name: template.name, program: program,
                 exercises: exercises.map { catalog.name($0.exerciseID) }, totalSets: exercises.flatMap(\.sets).count,
-                plan: LiveWorkoutController.shared.watchWorkout(for: session, history: history, gym: gym, isLive: false)
+                plan: LiveWorkoutController.shared.watchWorkout(for: session, history: blocks, gym: gym, isLive: false)
             )
         }
         var workouts: [WatchWorkoutOption] = []
-        if let program = inputs.program, let next = program.upNext(after: inputs.finished),
+        if let program = inputs.program, let next = program.upNext(after: finished),
            let templateID = program.days.first(where: { $0.id == next.dayID })?.templateID, let template = byID[templateID] {
             let session = program.session(startingFrom: template, dayID: next.dayID, gymID: template.gymID)
             workouts.append(option(template, program: program.name, session: session))
