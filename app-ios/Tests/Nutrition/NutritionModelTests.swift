@@ -40,6 +40,9 @@ struct NutritionModelTests {
         #expect(yogurt.nutrition.nutrients.amount(of: .netCarbs) == 10)
         #expect(([.carbs: 12, .fiber: 2, .netCarbs: 7] as NutrientAmounts).amount(of: .netCarbs) == 7)
         #expect(([.fiber: 2] as NutrientAmounts).amount(of: .netCarbs) == nil)
+        let mixed = ([.carbs: 12, .fiber: 2, .netCarbs: 7] as NutrientAmounts) + [.carbs: 20, .fiber: 5]
+        #expect(mixed.amount(of: .netCarbs) == 22)
+        #expect((yogurt.nutrition.nutrients + yogurt.nutrition.nutrients)[.netCarbs] == nil)
     }
 
     @Test func aRecipeIsItsIngredientsDividedIntoItsServings() {

@@ -25,8 +25,14 @@ typealias NutrientAmounts = [NutrientID: Double]
 extension Dictionary where Key == NutrientID, Value == Double {
     func scaled(by factor: Double) -> NutrientAmounts { mapValues { $0 * factor } }
 
+    /// Once either side reports net carbs, the sum carries them explicitly, so the side that does not report them
+    /// still adds its derived amount.
     static func + (lhs: NutrientAmounts, rhs: NutrientAmounts) -> NutrientAmounts {
-        lhs.merging(rhs, uniquingKeysWith: +)
+        var sum = lhs.merging(rhs, uniquingKeysWith: +)
+        if lhs[.netCarbs] != nil || rhs[.netCarbs] != nil {
+            sum[.netCarbs] = (lhs.amount(of: .netCarbs) ?? 0) + (rhs.amount(of: .netCarbs) ?? 0)
+        }
+        return sum
     }
 
     /// The amount of `id`, with net carbs derived from carbs and fiber when the food does not report it.
