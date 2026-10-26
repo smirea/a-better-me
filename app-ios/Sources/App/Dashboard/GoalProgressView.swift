@@ -68,10 +68,11 @@ private struct GoalProgressContent: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// The x axis is categorical, one slot per bar, so the remaining bar gets its own slot beside the last month's.
     private func chart(_ bars: [NutritionMetrics.WaterfallBar]) -> some View {
         Chart(Array(bars.enumerated()), id: \.offset) { index, bar in
             BarMark(
-                x: .value("Month", index),
+                x: .value("Month", String(index)),
                 yStart: .value("From", data.unit.fromKg(bar.low)),
                 yEnd: .value("To", data.unit.fromKg(bar.high)),
                 width: .ratio(0.7)
@@ -79,9 +80,16 @@ private struct GoalProgressContent: View {
             .foregroundStyle(color(bar.kind))
         }
         .chartXAxis {
-            AxisMarks(values: bars.indices.filter { $0 % 4 == 0 && bars[$0].kind != .remaining }) { value in
+            let step = bars.count > 7 ? 4 : 1
+            AxisMarks { value in
                 AxisValueLabel {
-                    if let index = value.as(Int.self) { Text("Month \(bars[index].month)") }
+                    if let index = value.as(String.self).flatMap(Int.init) {
+                        if bars[index].kind == .remaining {
+                            Text("Left")
+                        } else if index % step == 0 {
+                            Text("Month \(bars[index].month)")
+                        }
+                    }
                 }
                 .foregroundStyle(Theme.textSecondary)
             }

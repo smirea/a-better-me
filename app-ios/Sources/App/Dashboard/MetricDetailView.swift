@@ -162,7 +162,7 @@ private struct MetricDetailContent: View {
                     } else if averaging == .daily, tab.holding.contains(point.date) {
                         PointMark(x: .value("Date", point.date), y: .value(tab.title, point.value))
                             .symbol(.square.strokeBorder(lineWidth: 1))
-                            .symbolSize(18)
+                            .symbolSize(40)
                             .foregroundStyle(tab.color)
                     }
                 }

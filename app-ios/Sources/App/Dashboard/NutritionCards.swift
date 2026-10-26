@@ -52,7 +52,7 @@ struct WeeklyNutritionCard: View {
         if id == .energy {
             Image(systemName: "flame.fill").font(.caption).foregroundStyle(DashboardColor.energy).accessibilityLabel("Calories")
         } else {
-            Text(NutrientRegistry.nutrient(id)?.short ?? id.rawValue.uppercased()).font(AppFont.headline(12))
+            Text(id.rawValue.uppercased()).font(AppFont.headline(12)).accessibilityLabel(id.dashboardLabel)
         }
     }
 

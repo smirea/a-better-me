@@ -78,8 +78,9 @@ extension NutritionDay.Status {
     }
 }
 
-/// The Nutrition entry: a day's energy and macros, "Are you fasting?", and "Is this day incomplete?". Empty fields leave
-/// the logged totals in charge, which the fields show as placeholders.
+/// The Nutrition entry: a day's energy and macros, "Are you fasting?", and "Is this day incomplete?". With every field
+/// empty the log stays in charge; once one is filled, the override is the log's totals with the filled amounts on top,
+/// so an empty field keeps the logged amount its placeholder shows.
 struct NutritionDayEntrySheet: View {
     let log: [NutritionLogDay]
 
@@ -170,7 +171,9 @@ struct NutritionDayEntrySheet: View {
     }
 
     private func save() {
-        let amounts = amounts
+        let filled = amounts
+        let logged = existing.map { $0.hasOverride ? [:] : $0.consumed } ?? [:]
+        let amounts = filled.isEmpty ? filled : logged.merging(filled) { $1 }
         let status: NutritionDay.Status = fasting ? .fasted : incomplete ? .partial : .none
         store.updateDay(day) { row in
             row.override = amounts.isEmpty ? nil : amounts

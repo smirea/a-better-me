@@ -181,6 +181,8 @@ private struct ChangeRows: View {
                     Text(change.delta.map(format) ?? "--").font(AppFont.headline(14)).frame(minWidth: 70, alignment: .leading)
                     Spacer()
                     Label(direction.title, systemImage: direction.symbol)
+                        .lineLimit(1)
+                        .fixedSize()
                         .font(AppFont.caption(13))
                         .foregroundStyle(Theme.textSecondary)
                 }
