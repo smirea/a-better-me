@@ -63,7 +63,10 @@ struct SearchTab: View {
 
     private func rows(_ results: [FoodSearchResult]) -> some View {
         ForEach(results) { result in
-            LoggerFoodRow(portion: result.portion, open: { open(LoggerPick(result)) }, add: { session.add(LoggerPick(result)) })
+            LoggerFoodRow(portion: result.portion, open: {
+                focused = false
+                open(LoggerPick(result))
+            }, add: { session.add(LoggerPick(result)) })
         }
     }
 }
@@ -153,17 +156,17 @@ struct QuickAddTab: View {
                     added += 1
                     draft = QuickAddDraft(unit: draft.unit)
                 } label: {
-                    Text("Quick Add").frame(maxWidth: .infinity)
+                    Text("Quick Add")
                 }
-                .buttonStyle(.glass)
+                .secondaryPill()
                 .disabled(draft.portion == nil)
                 .sensoryFeedback(.success, trigger: added)
                 LogFoodsButton(session: session, prepare: {
                     if let portion = draft.portion { session.add(LoggerPick(portion)) }
                 }, hasPending: draft.portion != nil)
+                .buttonSizing(.flexible)
+                .controlSize(.large)
             }
-            .font(AppFont.headline(16))
-            .controlSize(.large)
             .padding(.horizontal, 16)
             .padding(.bottom, 8)
         }

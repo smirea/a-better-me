@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// MacroFactor's nutrient colors (research spec §1).
-enum MacroColor {
+enum LoggerMacroColor {
     static let energy = Color(hex: 0x68A0FA)
     static let protein = Color(hex: 0xFF8660)
     static let fat = Color(hex: 0xFFD05E)
@@ -40,7 +40,7 @@ extension Dictionary where Key == NutrientID, Value == Double {
 }
 
 /// A food's icon: its own emoji when it has one, otherwise a symbol for where it came from.
-struct FoodIcon: View {
+struct LoggerFoodIcon: View {
     let food: FoodSnapshot
 
     var body: some View {
@@ -80,7 +80,7 @@ struct LoggerFoodRow: View {
         HStack(spacing: 12) {
             Button(action: open) {
                 HStack(spacing: 12) {
-                    FoodIcon(food: portion.food)
+                    LoggerFoodIcon(food: portion.food)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title).font(AppFont.medium(15)).lineLimit(2)
                         Text("\(portion.amounts.macroLine) • \(portion.serving.label)")
@@ -127,6 +127,8 @@ struct LogFoodsButton: View {
         }
         .font(AppFont.headline(15))
         .buttonStyle(.glassProminent)
+        .tint(Theme.textPrimary)
+        .foregroundStyle(Color.black)
         .disabled(session.plate.isEmpty && !hasPending)
     }
 }

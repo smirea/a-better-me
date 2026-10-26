@@ -116,6 +116,14 @@ struct PlateTests {
         #expect(plate.items.count == 1)
     }
 
+    @Test func macroSharesSumToAHundredPercent() {
+        let label: NutrientAmounts = [.energy: 346, .protein: 10, .fat: 5, .carbs: 78.75]
+        #expect(label.macroShare(.protein) == 0.1)
+        #expect(label.macroShare(.fat) == 0.1125)
+        #expect(label.macroShare(.carbs) == 0.7875)
+        #expect(NutrientAmounts().macroShare(.protein) == 0)
+    }
+
     @Test func bannerShowsWhatThePlateLeaves() {
         let calories = BannerValue(day: 1200, plate: 500, target: 2000)
         #expect(calories.amount(.remainingAfterPlate, showOverages: true) == 300)

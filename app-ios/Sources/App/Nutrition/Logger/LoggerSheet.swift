@@ -43,6 +43,7 @@ struct LoggerSheet: View {
 private struct LoggerContent: View {
     @Bindable var session: LoggerSession
     let close: () -> Void
+    @Observe(AppSettings.current) private var settings
     @State private var path: [LoggerRoute] = []
     @State private var confirmingExit = false
     @State private var choosingTime = false
@@ -84,14 +85,18 @@ private struct LoggerContent: View {
             Text("Foods you added to your plate will be cleared.")
         }
         .sheet(isPresented: $choosingTime) {
-            LogTimePicker(session: session)
+            switch settings.nutrition.logger.timeSelection {
+            case .datePicker: LogTimePicker(session: session)
+            case .timePad: LogHourPad(session: session)
+            }
         }
     }
 
     @ViewBuilder private var tab: some View {
-        let open: (LoggerPick) -> Void = { path.append(.food($0)) }
+        let detail: (LoggerPick) -> Void = { path.append(.food($0)) }
+        let open = settings.nutrition.logger.optimization == .context ? addAndShowPlate : detail
         switch session.tab {
-        case .scan: ScanTab(session: session, open: open)
+        case .scan: ScanTab(session: session, open: detail)
         case .search: SearchTab(session: session, open: open)
         case .quickAdd: QuickAddTab(session: session)
         case .library: LibraryTab(session: session, open: open)
@@ -100,6 +105,12 @@ private struct LoggerContent: View {
 
     private func exit() {
         if session.plate.isEmpty { close() } else { confirmingExit = true }
+    }
+
+    /// Optimize for context: a tapped result goes on the plate, and the plate shows.
+    private func addAndShowPlate(_ pick: LoggerPick) {
+        session.add(pick)
+        openPlate()
     }
 
     private func openPlate() {
@@ -144,7 +155,7 @@ private struct LoggerBanner: View {
                 .accessibilityLabel("Log time, \(session.time.label())")
                 VStack(alignment: .leading, spacing: 5) {
                     ForEach(options.bannerNutrients, id: \.self) { id in
-                        bar(id, value(id), display: options.bannerDisplay)
+                        bar(id, value(id), display: options.nutritionDisplay)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -177,7 +188,7 @@ private struct LoggerBanner: View {
         return BannerValue(day: day, plate: plate[id] ?? 0, target: target)
     }
 
-    private func bar(_ id: NutrientID, _ value: BannerValue, display: LoggerBannerDisplay) -> some View {
+    private func bar(_ id: NutrientID, _ value: BannerValue, display: NutritionSettings.Logger.NutritionDisplay) -> some View {
         let amount = Int(value.amount(display, showOverages: settings.nutrition.showOverages).rounded())
         let prefix = id == .energy ? "" : "\(id.macroLetter) "
         let suffix = switch display {
@@ -192,7 +203,7 @@ private struct LoggerBanner: View {
                 .frame(height: 3)
                 .overlay(alignment: .leading) {
                     GeometryReader { proxy in
-                        Capsule().fill(MacroColor.of(id)).frame(width: proxy.size.width * (value.progress ?? 0))
+                        Capsule().fill(LoggerMacroColor.of(id)).frame(width: proxy.size.width * (value.progress ?? 0))
                     }
                 }
         }
@@ -244,21 +255,18 @@ private struct LogTimePicker: View {
                     session.time = LogTime(day: day, hour: hour)
                     dismiss()
                 } label: {
-                    Text("Select Date and Time").frame(maxWidth: .infinity)
+                    Text("Select Date and Time")
                 }
-                .buttonStyle(.glass)
-                .controlSize(.large)
+                .secondaryPill()
                 Button {
                     session.time = LogTime(day: day, hour: hour)
                     session.logPlate()
                 } label: {
-                    Text("Log to Date and Time").frame(maxWidth: .infinity)
+                    Text("Log to Date and Time")
                 }
-                .buttonStyle(.glassProminent)
-                .controlSize(.large)
+                .primaryPill()
                 .disabled(session.plate.isEmpty)
             }
-            .font(AppFont.headline(16))
             .padding(.horizontal, 20)
             .navigationTitle("Select Date and Time")
             .navigationBarTitleDisplayMode(.inline)
@@ -277,5 +285,44 @@ private struct LogTimePicker: View {
         var days = (-30...7).map { today.adding(days: $0) }
         if !days.contains(session.time.day) { days.append(session.time.day) }
         return days.sorted()
+    }
+}
+
+/// Time Pad: the 24 hours of the chosen day as buttons, without a date.
+private struct LogHourPad: View {
+    let session: LoggerSession
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                ForEach(0..<24, id: \.self) { hour in
+                    let selected = hour == session.time.hour
+                    Button {
+                        session.time.hour = hour
+                        dismiss()
+                    } label: {
+                        Text(LogTime.hourLabel(hour))
+                            .font(AppFont.medium(15))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 44)
+                            .foregroundStyle(selected ? Color.black : Theme.textPrimary)
+                            .background(selected ? Theme.textPrimary : Theme.surfaceRaised, in: .capsule)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal, 20)
+            .navigationTitle("Select Time")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", systemImage: "xmark") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.height(400)])
+        .presentationBackground(Theme.surface)
     }
 }

@@ -49,11 +49,6 @@ struct Plate: Hashable, Sendable {
     func item(_ id: UUID) -> Item? { items.first { $0.id == id } }
 }
 
-/// What the logger's banner shows per nutrient (Settings › Food Log › Logger Banner).
-enum LoggerBannerDisplay: String, Codable, CaseIterable, Sendable {
-    case plateOnly, dayAndPlate, remainingAfterPlate
-}
-
 /// One nutrient of the banner: the day's amount before the plate, the plate's, and the day's target when a plan sets
 /// one.
 struct BannerValue: Hashable, Sendable {
@@ -69,7 +64,7 @@ struct BannerValue: Hashable, Sendable {
 
     /// The number the banner prints. Remaining falls back to the day's total when there is no target, and stops at
     /// zero unless overages show.
-    func amount(_ display: LoggerBannerDisplay, showOverages: Bool) -> Double {
+    func amount(_ display: NutritionSettings.Logger.NutritionDisplay, showOverages: Bool) -> Double {
         switch display {
         case .plateOnly: return plate
         case .dayAndPlate: return day + plate
@@ -125,5 +120,16 @@ extension CalendarDay {
             let weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
             return "\(weekdays[weekday - 1]) \(shortLabel)"
         }
+    }
+}
+
+extension Dictionary where Key == NutrientID, Value == Double {
+    /// A macro's share of the calories the three macros supply (4, 9, and 4 kcal per gram), so the shares sum to 100%
+    /// as MacroFactor's chips do, even when a label's energy disagrees with its macros.
+    func macroShare(_ id: NutrientID) -> Double {
+        let perGram: [NutrientID: Double] = [.protein: 4, .fat: 9, .carbs: 4]
+        let kcal = perGram.reduce(into: NutrientAmounts()) { $0[$1.key] = (self[$1.key] ?? 0) * $1.value }
+        let total = kcal.values.reduce(0, +)
+        return total > 0 ? (kcal[id] ?? 0) / total : 0
     }
 }

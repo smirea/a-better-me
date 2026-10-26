@@ -24,7 +24,7 @@ struct PlateView: View {
                 ForEach(session.plate.items) { item in
                     Button { open(item.id) } label: {
                         HStack(spacing: 12) {
-                            FoodIcon(food: item.pick.portion.food)
+                            LoggerFoodIcon(food: item.pick.portion.food)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.pick.portion.food.name).font(AppFont.medium(15)).lineLimit(2)
                                 Text(item.pick.portion.amounts.macroLine).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
@@ -95,7 +95,7 @@ struct PlateView: View {
             Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.medium(15))
             Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
             ProgressView(value: target.map { min(1, (withDay ? day + plate : plate) / max($0, 1)) } ?? 0)
-                .tint(MacroColor.of(id))
+                .tint(LoggerMacroColor.of(id))
         }
         .padding(.vertical, 2)
     }

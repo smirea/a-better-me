@@ -25,7 +25,7 @@ struct ScanTab: View {
                 } description: {
                     Text("Type the barcode number instead.")
                 } actions: {
-                    Button("Enter Barcode") { typing = true }.buttonStyle(.glassProminent)
+                    Button("Enter Barcode") { typing = true }.primaryPill().fixedSize()
                 }
             }
             if looking {

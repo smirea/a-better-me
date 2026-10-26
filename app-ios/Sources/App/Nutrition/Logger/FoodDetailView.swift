@@ -105,15 +105,13 @@ struct FoodDetailView: View {
     }
 
     private func macro(_ id: NutrientID) -> some View {
-        let kcal = amounts[.energy] ?? 0
-        let perGram = id == .fat ? 9.0 : 4
-        let share = kcal > 0 ? Int(((amounts[id] ?? 0) * perGram / kcal * 100).rounded()) : 0
+        let share = Int((amounts.macroShare(id) * 100).rounded())
         return VStack(spacing: 2) {
             Text("\(share)%")
                 .font(AppFont.caption(11))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 1)
-                .background(MacroColor.of(id).opacity(0.35), in: .capsule)
+                .background(LoggerMacroColor.of(id).opacity(0.35), in: .capsule)
             Text(QuantityText.format(((amounts[id] ?? 0) * 10).rounded() / 10)).font(AppFont.headline(17))
             Text(NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
         }
@@ -134,7 +132,7 @@ struct FoodDetailView: View {
                         Text(goal > 0 ? "\(Int((share * 100).rounded()))%" : "–").font(AppFont.caption(12))
                     }
                     .gaugeStyle(.accessoryCircularCapacity)
-                    .tint(MacroColor.of(id))
+                    .tint(LoggerMacroColor.of(id))
                     Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? "").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
                 }
                 .frame(maxWidth: .infinity)

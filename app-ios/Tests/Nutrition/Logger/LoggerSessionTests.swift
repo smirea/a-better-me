@@ -5,7 +5,7 @@ import Testing
 
 private let bananaNutrition = #"{"nutrients":{"k":89,"p":1.09,"f":0.33,"c":22.84},"baseGrams":100,"measures":[{"name":"medium","quantity":1,"servings":1.18}]}"#
 
-private let yogurt = Food(
+private let greekYogurt = Food(
     .openFoodFacts(barcode: "0894700010137"), name: "Nonfat Greek Yogurt", brand: "Chobani",
     nutrition: FoodNutrition(nutrients: [.energy: 52.9, .protein: 9.41], baseGrams: 100, measures: [Measure(name: "serving", quantity: 1, servings: 1.7)])
 )
@@ -37,7 +37,7 @@ struct LoggerSessionTests {
     }
 
     @Test func logsThePlateInOneGoAndCachesDatabaseFoods() async throws {
-        let logger = try session(StubBranded(hits: [yogurt]))
+        let logger = try session(StubBranded(hits: [greekYogurt]))
         logger.setQuery("banana", branded: false)
         let banana = try #require(logger.results.first)
         #expect(banana.group == .common)
@@ -68,8 +68,8 @@ struct LoggerSessionTests {
     }
 
     @Test func addsBrandedResultsAfterThePause() async throws {
-        let logger = try session(StubBranded(hits: [yogurt]))
-        logger.setQuery("yogurt", branded: true)
+        let logger = try session(StubBranded(hits: [greekYogurt]))
+        logger.setQuery("greekYogurt", branded: true)
         #expect(logger.results.isEmpty)
         await logger.settleSearch()
         #expect(logger.results.map(\.group) == [.branded])
@@ -77,15 +77,16 @@ struct LoggerSessionTests {
     }
 
     @Test func looksUpABarcodeAndCachesIt() async throws {
-        let logger = try session(StubBranded(products: ["0894700010137": yogurt]))
+        let logger = try session(StubBranded(products: ["0894700010137": greekYogurt]))
         #expect(found(await logger.lookup(barcode: "0 894700 010137")) == "off-0894700010137")
+        try await store.write { _ in }.value
         #expect(try store.read { try Food.fetchOne($0, key: "off-0894700010137") }?.brand == "Chobani")
         #expect(await logger.lookup(barcode: "12345678") == .notFound("12345678"))
         #expect(await logger.lookup(barcode: "12 34") == .invalid)
     }
 
     @Test func aKnownBarcodeNeedsNoNetwork() async throws {
-        store.saveFood(yogurt)
+        store.saveFood(greekYogurt)
         try await store.write { _ in }.value
         let logger = try session(StubBranded(offline: true))
         #expect(found(await logger.lookup(barcode: "0894700010137")) == "off-0894700010137")

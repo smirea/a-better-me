@@ -14,11 +14,16 @@ struct NutritionSettings: Codable, Hashable, Sendable {
         var foodTimestamps = true
     }
 
-    /// Settings › Food Log › Logger Options.
-    struct LoggerOptions: Codable, Hashable, Sendable {
-        /// The nutrients the logger's banner shows, among energy and the three macros.
+    struct Logger: Codable, Hashable, Sendable {
         var bannerNutrients: [NutrientID] = [.energy, .protein]
-        var bannerDisplay = LoggerBannerDisplay.remainingAfterPlate
+        var nutritionDisplay = NutritionDisplay.remainingAfterPlate
+        var timeSelection = TimeSelection.datePicker
+        var optimization = Optimization.speed
+
+        enum NutritionDisplay: String, Codable, Sendable { case plateOnly, dayAndPlate, remainingAfterPlate }
+        enum TimeSelection: String, Codable, Sendable { case datePicker, timePad }
+        /// Speed opens a tapped search result's detail with the keypad; context closes search and shows the plate.
+        enum Optimization: String, Codable, Sendable { case speed, context }
     }
 
     struct Expenditure: Codable, Hashable, Sendable {
@@ -43,7 +48,7 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     /// Measure names pinned to the front of the serving picker, at most two weights and two volumes.
     var favoriteMeasures = ["g", "oz", "mL", "cup"]
     var timeline = Timeline()
-    var logger = LoggerOptions()
+    var logger = Logger()
     /// The Nutrition "+" sheet's shortcuts in order; the first four are its round buttons.
     var shortcuts = NutritionShortcut.defaults
     var expenditure = Expenditure()

@@ -6,7 +6,7 @@ struct ServingChoices: Hashable, Sendable {
     let units: [Measure]
     let servings: [Measure]
 
-    private static let unitNames: Set = ["g", "oz", "lb", "mL", "fl oz", "cup"]
+    private static let weightNames: Set = ["g", "oz", "lb"]
 
     init(_ nutrition: FoodNutrition, favorites: [String], current: Measure? = nil) {
         let all = nutrition.allMeasures
@@ -33,9 +33,9 @@ struct ServingChoices: Hashable, Sendable {
         nutrition.baseGrams.map { $0 * serving.servings }
     }
 
-    /// "large – 8" to 8 7/8" long • 136 g": the unit and, for a named serving, its weight.
+    /// "large – 8" to 8 7/8" long • 136 g": the unit and, unless it is a weight, its weight.
     static func detail(_ serving: Serving, _ nutrition: FoodNutrition) -> String {
-        guard !unitNames.contains(serving.measure.name), let grams = grams(serving, nutrition) else { return serving.measure.name }
+        guard !weightNames.contains(serving.measure.name), let grams = grams(serving, nutrition) else { return serving.measure.name }
         return "\(serving.measure.name) • \(QuantityText.format(grams.rounded())) g"
     }
 }

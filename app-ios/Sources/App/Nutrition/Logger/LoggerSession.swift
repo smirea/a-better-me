@@ -156,7 +156,7 @@ final class LoggerSession {
     }
 
     /// The digits of an EAN-8, UPC-A, EAN-13, or GTIN-14, as a scanner or a person types them.
-    static func barcode(_ text: String) -> String? {
+    nonisolated static func barcode(_ text: String) -> String? {
         let digits = text.filter { !$0.isWhitespace && $0 != "-" }
         guard (8...14).contains(digits.count), digits.allSatisfy(\.isASCII), digits.allSatisfy(\.isNumber) else { return nil }
         return digits
