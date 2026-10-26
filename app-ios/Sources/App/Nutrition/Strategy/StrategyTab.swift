@@ -28,7 +28,6 @@ struct StrategyDataReader<Content: View>: View {
 
     @Environment(HealthData.self) private var health
     @Observe(NutritionPlan.all) private var plans
-    @Observe(BodyWeight.all) private var logged
     @Observe(IntakeLog.all) private var log
     @Observe(AppSettings.current) private var settings
 
@@ -37,7 +36,7 @@ struct StrategyDataReader<Content: View>: View {
             plans: plans,
             settings: settings,
             inputs: StrategyInputs.make(
-                weighIns: WeighIns.merge(logged: logged, health: health.weights), log: log, settings: settings.nutrition,
+                weighIns: health.weighIns, log: log, settings: settings.nutrition,
                 profile: settings.profile, today: .today, calendar: .current
             )
         ))
@@ -45,7 +44,7 @@ struct StrategyDataReader<Content: View>: View {
 }
 
 enum StrategyRoute: Hashable {
-    case planHistory, nutrientGoals, checkInSettings
+    case planHistory, nutrientGoals, strategySettings
     case nutrient(NutrientID)
 }
 
@@ -54,6 +53,7 @@ enum StrategyRoute: Hashable {
 struct StrategyTab: View {
     @Environment(LocalStore.self) private var store
     @State private var health = HealthData()
+    @Observe(BodyWeight.all) private var logged
 
     var body: some View {
         NavigationStack {
@@ -62,12 +62,13 @@ struct StrategyTab: View {
                     switch route {
                     case .planHistory: PlanHistoryView()
                     case .nutrientGoals: NutrientGoalsListView()
-                    case .checkInSettings: CheckInSettingsView()
+                    case .strategySettings: StrategySettingsView()
                     case let .nutrient(id): NutrientGoalsView(nutrient: id)
                     }
                 }
         }
         .environment(health)
+        .onChange(of: logged, initial: true) { health.update(logged: logged) }
         .healthDataAccessRequest(store: health.store, shareTypes: HealthData.shareTypes, readTypes: HealthData.readTypes, trigger: health.requestTrigger) { _ in
             Task { await health.load() }
         }
@@ -140,7 +141,7 @@ private struct StrategyHome: View {
                 Button("Edit Program", systemImage: "pencil") { open(.editProgram) }
             }
             Divider()
-            NavigationLink(value: StrategyRoute.checkInSettings) { Label("Check-In Settings", systemImage: "calendar") }
+            NavigationLink(value: StrategyRoute.strategySettings) { Label("Strategy Settings", systemImage: "calendar") }
             NavigationLink(value: StrategyRoute.nutrientGoals) { Label("Nutrient Goals", systemImage: "target") }
         } label: {
             Image(systemName: "ellipsis")

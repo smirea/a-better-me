@@ -3,19 +3,19 @@ import SwiftUI
 /// Every finished workout, newest first and grouped by day. A row opens its summary.
 struct WorkoutHistoryView: View {
     @Environment(ExerciseCatalog.self) private var catalog
-    @Observe(WorkoutSession.finished) private var sessions
+    @Environment(SessionHistory.self) private var history
     @State private var selected: WorkoutSession?
 
     var body: some View {
-        let days = Dictionary(grouping: sessions) { Calendar.current.startOfDay(for: $0.startedAt) }
+        let days = history.memo(HistoryDaysKey()) { HistoryDay.group($0, calendar: .current) }
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(days.keys.sorted(by: >), id: \.self) { day in
-                    Text(day.formatted(date: .abbreviated, time: .omitted))
+                ForEach(days, id: \.start) { day in
+                    Text(day.start.formatted(date: .abbreviated, time: .omitted))
                         .font(AppFont.title(18))
                         .padding(.top, 20)
                         .padding(.bottom, 4)
-                    ForEach(days[day] ?? []) { session in
+                    ForEach(day.sessions) { session in
                         Button { selected = session } label: { HistoryRow(session: session) }
                             .foregroundStyle(Theme.textPrimary)
                     }
@@ -25,7 +25,7 @@ struct WorkoutHistoryView: View {
         }
         .background(Theme.background)
         .overlay {
-            if sessions.isEmpty {
+            if days.isEmpty {
                 ContentUnavailableView("No Workouts Yet", systemImage: "clock.arrow.circlepath", description: Text("Finished workouts show up here."))
             }
         }
@@ -34,6 +34,21 @@ struct WorkoutHistoryView: View {
         .fullScreenCover(item: $selected) { WorkoutSummaryView(session: $0) }
     }
 }
+
+/// One day of the history: its start and its sessions, kept in the order they were given.
+struct HistoryDay {
+    let start: Date
+    let sessions: [WorkoutSession]
+
+    /// Days newest first.
+    static func group(_ sessions: [WorkoutSession], calendar: Calendar) -> [HistoryDay] {
+        Dictionary(grouping: sessions) { calendar.startOfDay(for: $0.startedAt) }
+            .map { HistoryDay(start: $0.key, sessions: $0.value) }
+            .sorted { $0.start > $1.start }
+    }
+}
+
+private struct HistoryDaysKey: Hashable {}
 
 private struct HistoryRow: View {
     let session: WorkoutSession

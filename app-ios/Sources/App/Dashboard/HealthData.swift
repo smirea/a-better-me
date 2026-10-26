@@ -3,11 +3,16 @@ import HealthKit
 import os
 
 /// Read live and never copied into the database; see docs/decisions/workouts.md. HealthKit hides read denial, so a
-/// denied store reads as no data.
+/// denied store reads as no data. The app's own weigh-ins merge in here, so the dashboard has one weigh-in source.
 @MainActor @Observable
 final class HealthData {
-    private(set) var weights: [HealthWeight] = []
+    private(set) var weighIns: [WeighIn] = []
     private(set) var steps: [DatedValue] = []
+    /// Bumps whenever `weighIns` or `steps` changes; dashboard values derived from them key on it.
+    private(set) var revision = 0
+
+    @ObservationIgnored private var weights: [HealthWeight] = []
+    @ObservationIgnored private var logged: [BodyWeight] = []
 
     /// Flips when HealthKit says it should ask, which makes `healthDataAccessRequest` present its sheet.
     private(set) var requestTrigger = false
@@ -45,11 +50,28 @@ final class HealthData {
         }
         #endif
         do {
-            weights = try await readWeights()
-            steps = try await readSteps()
+            async let weights = readWeights()
+            async let steps = readSteps()
+            update(weights: try await weights, steps: try await steps, logged: logged)
         } catch {
             Self.log.error("Reading HealthKit failed: \(String(describing: error))")
         }
+    }
+
+    func update(logged: [BodyWeight]) {
+        update(weights: weights, steps: steps, logged: logged)
+    }
+
+    private func update(weights: [HealthWeight], steps: [DatedValue], logged: [BodyWeight]) {
+        let weighInsChanged = weights != self.weights || logged != self.logged
+        guard weighInsChanged || steps != self.steps else { return }
+        if weighInsChanged {
+            self.weights = weights
+            self.logged = logged
+            weighIns = WeighIns.merge(logged: logged, health: weights)
+        }
+        if steps != self.steps { self.steps = steps }
+        revision += 1
     }
 
     private func readWeights() async throws -> [HealthWeight] {

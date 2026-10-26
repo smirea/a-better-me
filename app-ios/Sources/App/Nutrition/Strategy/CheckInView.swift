@@ -1,17 +1,15 @@
 import SwiftUI
 
-/// The weekly check-in: Weigh-In and Review Your Week (MacroFactor's Weigh-In, Partial Logging, and Fasting modules),
-/// then Program Update, which writes the `check_in` plan. Fast Check-In skips straight to Program Update.
+/// The weekly check-in: the Weigh-In and Review Your Week modules the settings allow (MacroFactor's Weigh-In, Partial
+/// Logging, and Fasting), then Program Update, which writes the `check_in` plan.
 struct CheckInView: View {
-    enum Module: Hashable {
-        case weighIn, review, update
-    }
+    typealias Module = CheckInRules.Module
 
     @Environment(\.dismiss) private var dismiss
     @Observe(AppSettings.current) private var settings
     @State private var path: [Module] = []
 
-    private var modules: [Module] { settings.nutrition.fastCheckIn ? [.update] : [.weighIn, .review, .update] }
+    private var modules: [Module] { CheckInRules.modules(settings.nutrition) }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -97,11 +95,14 @@ private struct CheckInPage: View {
             }
         case .review:
             Text("Review Your Week").font(AppFont.title(22))
-            Text("Mark days you logged incompletely so they are left out, and days you fasted so they count as zero.")
+            let modules = data.settings.nutrition.coachingModules
+            Text(modules.partialLogging && modules.fasting
+                ? "Mark days you logged incompletely so they are left out, and days you fasted so they count as zero."
+                : modules.partialLogging ? "Mark days you logged incompletely so they are left out." : "Mark days you fasted so they count as zero.")
                 .font(AppFont.body(15))
                 .foregroundStyle(Theme.textSecondary)
             ForEach((1...7).map { data.today.adding(days: -$0) }.reversed(), id: \.self) { day in
-                DayReviewRow(day: day, kcal: data.inputs.intake[day], status: data.inputs.statuses[day] ?? .none)
+                DayReviewRow(day: day, kcal: data.inputs.intake[day], status: data.inputs.statuses[day] ?? .none, modules: modules)
             }
         case .update:
             Text("Program Update").font(AppFont.title(22))
@@ -129,6 +130,7 @@ private struct DayReviewRow: View {
     let day: CalendarDay
     let kcal: Double?
     let status: NutritionDay.Status
+    let modules: NutritionSettings.CoachingModules
 
     @Environment(LocalStore.self) private var store
 
@@ -141,44 +143,13 @@ private struct DayReviewRow: View {
             Spacer()
             Picker("Status", selection: Binding(get: { status }, set: { value in store.updateDay(day) { $0.status = value } })) {
                 Text("Complete").tag(NutritionDay.Status.none)
-                Text("Incomplete").tag(NutritionDay.Status.partial)
-                Text("Fasted").tag(NutritionDay.Status.fasted)
+                if modules.partialLogging || status == .partial { Text("Incomplete").tag(NutritionDay.Status.partial) }
+                if modules.fasting || status == .fasted { Text("Fasted").tag(NutritionDay.Status.fasted) }
             }
             .pickerStyle(.menu)
             .accessibilityLabel("Status of \(StrategyFormat.day(day))")
         }
         .padding(12)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
-    }
-}
-
-/// MacroFactor's More > Strategy settings: the check-in day, Fast Check-In, and the Standard Floor coached programs
-/// respect. Settings can push this page; Strategy's menu does too.
-struct CheckInSettingsView: View {
-    @Environment(LocalStore.self) private var store
-    @Observe(AppSettings.current) private var settings
-
-    var body: some View {
-        Form {
-            Section {
-                Picker("Check-In Day", selection: store.binding(settings, \.nutrition.checkInWeekday)) {
-                    ForEach(1...7, id: \.self) { Text(StrategyFormat.weekdayNames[$0 - 1]).tag($0) }
-                }
-                Toggle("Fast Check-In", isOn: store.binding(settings, \.nutrition.fastCheckIn))
-                    .tint(Theme.accent)
-            } footer: {
-                Text("Coached and collaborative programs update their targets on the check-in day. Fast Check-In skips all optional coaching modules.")
-            }
-            Section {
-                Stepper(value: store.binding(settings, \.nutrition.standardFloorKcal), in: 800...2500, step: 10) {
-                    LabeledContent("Standard Floor", value: "\(settings.nutrition.standardFloorKcal) kcal")
-                }
-            } footer: {
-                Text("Coached targets never go below the Standard Floor. The Low Floor is two thirds of it.")
-            }
-        }
-        .themedList()
-        .navigationTitle("Check-In Settings")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }

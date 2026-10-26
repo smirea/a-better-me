@@ -208,12 +208,12 @@ struct WeekStripProgramTests {
 
     @Test func progressCountsWorkoutDaysOfTheCurrentCycle() {
         let program = Self.weekly()
-        #expect(program.cycleProgress(finished: []) == 0)
-        #expect(program.cycleProgress(finished: [Self.finished(program, day: 0, cycle: 1)]) == 1.0 / 3.0)
-        #expect(program.cycleProgress(finished: [Self.finished(program, day: 0, cycle: 1), Self.finished(program, day: 2, cycle: 1)]) == 2.0 / 3.0)
-        #expect(program.cycleProgress(finished: [Self.finished(program, day: 0, cycle: 2)]) == 0)
+        #expect(program.cycleProgress(finishedDays: []) == 0)
+        #expect(program.cycleProgress(finishedDays: program.finishedDayIDs([Self.finished(program, day: 0, cycle: 1)])) == 1.0 / 3.0)
+        #expect(program.cycleProgress(finishedDays: program.finishedDayIDs([Self.finished(program, day: 0, cycle: 1), Self.finished(program, day: 2, cycle: 1)])) == 2.0 / 3.0)
+        #expect(program.cycleProgress(finishedDays: program.finishedDayIDs([Self.finished(program, day: 0, cycle: 2)])) == 0)
         let restOnly = Program(name: "Rest", color: .blue, cycles: 1, days: [ProgramDay()])
-        #expect(restOnly.cycleProgress(finished: []) == 0)
+        #expect(restOnly.cycleProgress(finishedDays: []) == 0)
     }
 
     @Test func unloggedDaysFromTodayToSundayOpenTheirProgramDay() {

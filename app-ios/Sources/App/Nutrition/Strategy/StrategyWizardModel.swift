@@ -25,7 +25,7 @@ struct StrategyWizardModel {
     let today: CalendarDay
     let weightKg: Double
     /// Nil without an expenditure estimate, which leaves only the manual program.
-    let basis: StrategyBasis?
+    private(set) var basis: StrategyBasis?
 
     var goal: GoalDraft
     var coaching: CoachingProgram
@@ -123,6 +123,11 @@ struct StrategyWizardModel {
         } else {
             collaborative = CollaborativeWeek(StrategyRules.weekTargets(week))
         }
+    }
+
+    /// The floor step edits the Standard Floor in place; the view saves it to the settings too.
+    mutating func setStandardFloor(_ kcal: Int) {
+        basis?.standardFloorKcal = kcal
     }
 
     mutating func toggleHighDay(_ weekday: Int) {

@@ -112,9 +112,20 @@ struct StrategyWizardView: View {
             option("Low-carb", "Carbs will be reduced to prioritize fat and protein intake", model.coaching.diet == .lowCarb) { model.coaching.diet = .lowCarb }
             option("Keto", "Carbs will be very restricted to allow for higher fat intake", model.coaching.diet == .keto) { model.coaching.diet = .keto }
         case .floor:
-            let standard = settings.nutrition.standardFloorKcal
+            let standard = model.basis?.standardFloorKcal ?? settings.nutrition.standardFloorKcal
             option("Standard Floor", "Your Calorie targets will never go below \(standard) kcal", model.coaching.floor == .standard) { model.coaching.floor = .standard }
             option("Low Floor", "Proceed with caution: targets may go as low as \(NutritionEngine.CalorieFloor.low(standardKcal: standard).kcal) kcal", model.coaching.floor == .low) { model.coaching.floor = .low }
+            Stepper(value: Binding(get: { standard }, set: { kcal in
+                model.setStandardFloor(kcal)
+                store.updateSettings { $0.nutrition.standardFloorKcal = kcal }
+            }), in: 800...2500, step: 10) {
+                LabeledContent("Your Standard Floor", value: "\(standard) kcal")
+            }
+            .padding(14)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+            Text("MacroFactor sets the Standard Floor for you; set yours here. The Low Floor is two thirds of it.")
+                .font(AppFont.caption())
+                .foregroundStyle(Theme.textSecondary)
         case .training:
             option("None or Relaxed Activity", nil, model.coaching.training == .none) { model.coaching.training = .none }
             option("Lifting", nil, model.coaching.training == .lifting) { model.coaching.training = .lifting }

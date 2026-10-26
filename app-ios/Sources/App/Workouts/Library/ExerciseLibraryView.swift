@@ -1,10 +1,9 @@
 import SwiftUI
 
-/// More > Exercises: the picker's list and filters with MF's All, Performed, Deprioritized (Do Not Recommend),
+/// Settings > Exercises: the picker's list and filters with MF's All, Performed, Deprioritized (Do Not Recommend),
 /// Modified (any Exercise Override), and Archived tabs. A row opens Exercise Settings.
 struct ExerciseLibraryView: View {
-    @Environment(ExerciseCatalog.self) private var catalog
-    @Observe(WorkoutSession.finished) private var sessions
+    @Environment(SessionHistory.self) private var history
     @Observe(CustomExercise.all) private var customExercises
     @Observe(ExerciseSettings.all) private var exerciseSettings
     @State private var tab = LibraryTab.all
@@ -18,21 +17,19 @@ struct ExerciseLibraryView: View {
         var id: Self { self }
     }
 
+    private struct PerformedCountsKey: Hashable {}
+
     var body: some View {
-        let counts = performedCounts
-        let archived = Set(customExercises.filter(\.isArchived).map(\.id))
-        let settings = Dictionary(exerciseSettings.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        let exercises = catalog.all.filter { exercise in
-            switch tab {
-            case .all: !archived.contains(exercise.id)
-            case .performed: counts[exercise.id] != nil
-            case .deprioritized: settings[exercise.id]?.doNotRecommend == true
-            case .modified: settings[exercise.id]?.isModified == true
-            case .archived: archived.contains(exercise.id)
-            }
+        let counts = history.memo(PerformedCountsKey()) { ExerciseLibrary.performedCounts($0) }
+        let scope: BrowseScope = switch tab {
+        case .all: .except(Set(customExercises.filter(\.isArchived).map(\.id)))
+        case .performed: .only(Set(counts.keys))
+        case .deprioritized: .only(Set(exerciseSettings.filter(\.doNotRecommend).map(\.id)))
+        case .modified: .only(Set(exerciseSettings.filter(\.isModified).map(\.id)))
+        case .archived: .only(Set(customExercises.filter(\.isArchived).map(\.id)))
         }
         ExerciseBrowser(
-            exercises: exercises,
+            scope: scope,
             filter: $filter,
             query: query,
             subtitle: { counts[$0.id].map { "Performed \($0) \($0 == 1 ? "time" : "times")" } },
@@ -51,8 +48,11 @@ struct ExerciseLibraryView: View {
         .navigationDestination(item: $opened) { ExerciseSettingsView(exerciseID: $0.id) }
         .sheet(isPresented: $creating) { CustomExerciseWizard() }
     }
+}
 
-    private var performedCounts: [ExerciseID: Int] {
+enum ExerciseLibrary {
+    /// How many finished sessions completed at least one set of each exercise.
+    static func performedCounts(_ sessions: [WorkoutSession]) -> [ExerciseID: Int] {
         var counts: [ExerciseID: Int] = [:]
         for session in sessions {
             let ids = Set(session.blocks.flatMap(\.exercises).filter { $0.sets.contains(where: \.isCompleted) }.map(\.exerciseID))
@@ -111,7 +111,7 @@ struct ExerciseSettingsView: View {
     @State private var editingNote = false
     @State private var noteDraft = ""
     @State private var confirmingDelete = false
-    @State private var duplicating = false
+    @State private var duplicate: CustomExerciseDraft?
 
     init(exerciseID: ExerciseID) {
         self.exerciseID = exerciseID
@@ -155,8 +155,10 @@ struct ExerciseSettingsView: View {
                     .labelsHidden()
                     .tint(Theme.accent)
                 }
-                if exercise != nil {
-                    Button { duplicating = true } label: {
+                if let exercise {
+                    Button {
+                        duplicate = CustomExerciseDraft(duplicating: exercise, instructions: catalog.instructions(for: exercise))
+                    } label: {
                         SettingsRow(
                             title: "Edit Duplicate",
                             subtitle: "To edit all available exercise properties, create a duplicate",
@@ -216,10 +218,8 @@ struct ExerciseSettingsView: View {
         .navigationTitle(exercise?.name ?? "Exercise")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingInfo) { ExerciseDetailSheet(exerciseID: exerciseID) }
-        .sheet(isPresented: $duplicating) {
-            if let exercise {
-                CustomExerciseWizard(draft: CustomExerciseDraft(duplicating: exercise, instructions: catalog.instructions(for: exercise)))
-            }
+        .sheet(isPresented: Binding { duplicate != nil } set: { if !$0 { duplicate = nil } }) {
+            if let duplicate { CustomExerciseWizard(draft: duplicate) }
         }
         .alert("Exercise Note", isPresented: $editingNote) {
             TextField("Note", text: $noteDraft, axis: .vertical)

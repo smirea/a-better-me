@@ -33,8 +33,8 @@ struct StrategyInputs {
     var expenditureKcal: Double?
     var isStaticExpenditure: Bool
 
-    /// MacroFactor's onboarding asks for activity; until a settings unit stores those answers, the initial estimate
-    /// assumes moderately active with one to three sessions a week.
+    /// The initial estimate's activity while the Expenditure settings leave it "Not set": moderately active with one to
+    /// three sessions a week.
     static let assumedActivity = NutritionEngine.ActivityLevel.moderatelyActive
     static let assumedExercise = NutritionEngine.ExerciseSessions.oneToThree
 
@@ -46,9 +46,10 @@ struct StrategyInputs {
         let trendSeries = NutritionEngine.TrendWeight.daily(weighIns: weights, through: end, calendar: calendar)
         let counted = log.days.compactMapValues(\.energy).filter { $0.key <= today }
         let initial = settings.expenditure.initialKcal ?? weights.first.flatMap {
-            initialEstimate(weightKg: $0.value, profile: profile, today: today)
+            initialEstimate(weightKg: $0.value, profile: profile, expenditure: settings.expenditure, today: today)
         }
-        let firstDay = ([weighIns.first.map { CalendarDay($0.date, in: calendar) }] + [counted.keys.min()]).compactMap(\.self).min()
+        let firstDay = settings.expenditure.calculationStart
+            ?? ([weighIns.first.map { CalendarDay($0.date, in: calendar) }] + [counted.keys.min()]).compactMap(\.self).min()
         var series: [NutritionEngine.ExpenditureDay] = []
         if let initial, let firstDay, firstDay <= today {
             series = NutritionEngine.Expenditure.daily(
@@ -70,12 +71,28 @@ struct StrategyInputs {
         )
     }
 
-    /// BMR (MacroFactor Equation) times the activity factor; nil until the profile has a height and a birth date.
-    static func initialEstimate(weightKg: Double, profile: ProfileSettings, today: CalendarDay) -> Double? {
+    /// BMR times the activity factor; nil until the profile has a height and a birth date. Always the MacroFactor
+    /// Equation's height and weight form: Cunningham needs a fat-free mass the profile does not hold.
+    static func initialEstimate(
+        weightKg: Double, profile: ProfileSettings, expenditure: NutritionSettings.Expenditure = .init(), today: CalendarDay
+    ) -> Double? {
         guard let height = profile.heightCm, let birth = profile.birthDate else { return nil }
         let age = today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day) ? 1 : 0)
         let bmr = NutritionEngine.BMR.macroFactor(weightKg: weightKg, heightCm: height, ageYears: age, sex: profile.sex == .female ? .female : .male)
-        return NutritionEngine.InitialExpenditure.estimate(bmr: bmr, activity: assumedActivity, exercise: assumedExercise)
+        let activity: NutritionEngine.ActivityLevel = switch expenditure.activity {
+        case .mostlySedentary: .sedentary
+        case .moderatelyActive: .moderatelyActive
+        case .veryActive: .veryActive
+        case nil: assumedActivity
+        }
+        let exercise: NutritionEngine.ExerciseSessions = switch expenditure.exercise {
+        case .zero: .none
+        case .oneToThree: .oneToThree
+        case .fourToSix: .fourToSix
+        case .sevenPlus: .sevenOrMore
+        case nil: assumedExercise
+        }
+        return NutritionEngine.InitialExpenditure.estimate(bmr: bmr, activity: activity, exercise: exercise)
     }
 
     static func date(_ day: CalendarDay, _ calendar: Calendar) -> Date {

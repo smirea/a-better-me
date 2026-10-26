@@ -103,10 +103,9 @@ private struct SwapSubstitutions: View {
         let muscles = Set(current.primaryMuscles)
         let hidden = Set(customExercises.filter(\.isArchived).map(\.id))
         let availability = gym.map { GymAvailability(gym: $0, equipment: catalog.equipment) }
-        let matches = catalog.all.filter {
+        return catalog.all.filter {
             $0.id != current.id && !hidden.contains($0.id) && Set($0.primaryMuscles) == muscles && availability?.isAvailable($0) != false
         }
-        return ExerciseGroup.ranked(matches)
     }
 
     private func pick(_ id: ExerciseID) {
@@ -122,9 +121,8 @@ private struct ExercisePickerList: View {
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(\.dismiss) private var dismiss
     @Observe(CustomExercise.all) private var customExercises
-    @State private var selection: [ExerciseID] = []
-    @State private var asGroup = false
-    @State private var showingTray = false
+    /// An object, so a toggle re-renders only the views that read the selection and not the list around them.
+    @State private var selection = PickerSelection()
     @State private var query = ""
     @State private var detail: ExerciseRef?
     @State private var creating = false
@@ -135,12 +133,12 @@ private struct ExercisePickerList: View {
 
     var body: some View {
         Group {
-            if showingTray {
-                tray
+            if selection.showingTray {
+                SelectionTray(selection: selection)
             } else {
-                let hidden = Set(customExercises.filter(\.isArchived).map(\.id))
+                let hidden = Set(customExercises.filter(\.isArchived).map(\.id) + [swapping].compactMap(\.self))
                 ExerciseBrowser(
-                    exercises: catalog.all.filter { !hidden.contains($0.id) && $0.id != swapping },
+                    scope: .except(hidden),
                     filter: $filter,
                     query: query,
                     onSelect: { detail = ExerciseRef(id: $0.id) },
@@ -148,7 +146,7 @@ private struct ExercisePickerList: View {
                         if swapping != nil {
                             SwapButton { finish(with: [exercise.id]) }
                         } else {
-                            AddButton(isSelected: selection.contains(exercise.id)) { toggle(exercise.id) }
+                            AddButton(selection: selection, id: exercise.id)
                         }
                     }
                 )
@@ -162,20 +160,25 @@ private struct ExercisePickerList: View {
                 Button("Close", systemImage: "xmark") { dismiss() }
                 Button("Create Custom Exercise", systemImage: "plus") { creating = true }
             }
-            ToolbarItem(placement: .principal) { header }
-            if swapping == nil {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(showingTray ? "Hide Selection" : "Show Selection", systemImage: showingTray ? "chevron.up" : "chevron.down") {
-                        showingTray.toggle()
+            ToolbarItem(placement: .principal) {
+                if let swapping {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.left.arrow.right")
+                        Text("Swapping with \u{201C}\(catalog.name(swapping))\u{201D}").lineLimit(1)
                     }
-                    .disabled(selection.isEmpty)
+                    .font(AppFont.medium(13))
+                } else {
+                    SelectionHeader(selection: selection)
                 }
+            }
+            if swapping == nil {
+                ToolbarItem(placement: .topBarTrailing) { TrayToggle(selection: selection) }
             }
             DefaultToolbarItem(kind: .search, placement: .bottomBar)
             if swapping == nil {
                 ToolbarSpacer(.fixed, placement: .bottomBar)
                 ToolbarItem(placement: .bottomBar) {
-                    Button("Done") { finish(with: selection) }
+                    Button("Done") { finish(with: selection.ids) }
                         .buttonStyle(.glassProminent)
                         .tint(Theme.textPrimary)
                         .foregroundStyle(Color.black)
@@ -196,22 +199,41 @@ private struct ExercisePickerList: View {
                 if swapping != nil { finish(with: [id]) } else { add(id) }
             })
         }
-        .onChange(of: selection) { _, ids in
-            if ids.isEmpty { showingTray = false }
-        }
     }
 
-    @ViewBuilder private var header: some View {
-        if let swapping {
-            HStack(spacing: 6) {
-                Image(systemName: "arrow.left.arrow.right")
-                Text("Swapping with \u{201C}\(catalog.name(swapping))\u{201D}").lineLimit(1)
-            }
-            .font(AppFont.medium(13))
-        } else if !selection.isEmpty {
-            Button { showingTray.toggle() } label: {
+    private func add(_ id: ExerciseID) {
+        if !selection.ids.contains(id) { selection.ids.append(id) }
+    }
+
+    private func finish(with ids: [ExerciseID]) {
+        if !ids.isEmpty { onPick(ExercisePick(exerciseIDs: ids, asSuperset: selection.asGroup && ids.count > 1)) }
+        dismiss()
+    }
+}
+
+/// The picked exercises in order. Emptying it closes the tray.
+@MainActor @Observable
+final class PickerSelection {
+    var ids: [ExerciseID] = [] {
+        didSet { if ids.isEmpty, showingTray { showingTray = false } }
+    }
+    var showingTray = false
+    var asGroup = false
+
+    func toggle(_ id: ExerciseID) {
+        if let index = ids.firstIndex(of: id) { ids.remove(at: index) } else { ids.append(id) }
+    }
+}
+
+private struct SelectionHeader: View {
+    let selection: PickerSelection
+    @Environment(ExerciseCatalog.self) private var catalog
+
+    var body: some View {
+        if !selection.ids.isEmpty {
+            Button { selection.showingTray.toggle() } label: {
                 HStack(spacing: -8) {
-                    ForEach(selection.compactMap(catalog.exercise)) { exercise in
+                    ForEach(selection.ids.compactMap(catalog.exercise)) { exercise in
                         ExerciseTile(exercise: exercise, width: 22)
                             .frame(width: 28, height: 28)
                             .clipShape(.circle)
@@ -219,16 +241,33 @@ private struct ExercisePickerList: View {
                     }
                 }
             }
-            .accessibilityLabel("\(selection.count) selected")
+            .accessibilityLabel("\(selection.ids.count) selected")
         }
     }
+}
 
-    private var tray: some View {
+private struct TrayToggle: View {
+    let selection: PickerSelection
+
+    var body: some View {
+        let showing = selection.showingTray
+        Button(showing ? "Hide Selection" : "Show Selection", systemImage: showing ? "chevron.up" : "chevron.down") {
+            selection.showingTray.toggle()
+        }
+        .disabled(selection.ids.isEmpty)
+    }
+}
+
+private struct SelectionTray: View {
+    @Bindable var selection: PickerSelection
+    @Environment(ExerciseCatalog.self) private var catalog
+
+    var body: some View {
         List {
             Section {
-                ForEach(selection.compactMap(catalog.exercise)) { exercise in
+                ForEach(selection.ids.compactMap(catalog.exercise)) { exercise in
                     LibraryExerciseRow(exercise: exercise) {
-                        Button("Remove", systemImage: "trash") { toggle(exercise.id) }
+                        Button("Remove", systemImage: "trash") { selection.toggle(exercise.id) }
                             .labelStyle(.iconOnly)
                             .foregroundStyle(Theme.textPrimary)
                             .frame(width: 30, height: 30)
@@ -237,13 +276,13 @@ private struct ExercisePickerList: View {
                     }
                     .listRowBackground(Theme.surface)
                 }
-                .onMove { selection.move(fromOffsets: $0, toOffset: $1) }
+                .onMove { selection.ids.move(fromOffsets: $0, toOffset: $1) }
             } header: {
                 SectionTitle("Your Exercises").textCase(nil)
             }
-            if selection.count > 1 {
+            if selection.ids.count > 1 {
                 Section {
-                    Toggle(selection.count > 2 ? "Add as a circuit?" : "Add as a superset?", isOn: $asGroup)
+                    Toggle(selection.ids.count > 2 ? "Add as a circuit?" : "Add as a superset?", isOn: $selection.asGroup)
                         .font(AppFont.medium(15))
                         .tint(Theme.accent)
                         .listRowBackground(Theme.surface)
@@ -252,27 +291,15 @@ private struct ExercisePickerList: View {
         }
         .scrollContentBackground(.hidden)
     }
-
-    private func toggle(_ id: ExerciseID) {
-        if let index = selection.firstIndex(of: id) { selection.remove(at: index) } else { selection.append(id) }
-    }
-
-    private func add(_ id: ExerciseID) {
-        if !selection.contains(id) { selection.append(id) }
-    }
-
-    private func finish(with ids: [ExerciseID]) {
-        if !ids.isEmpty { onPick(ExercisePick(exerciseIDs: ids, asSuperset: asGroup && ids.count > 1)) }
-        dismiss()
-    }
 }
 
 private struct AddButton: View {
-    let isSelected: Bool
-    let action: () -> Void
+    let selection: PickerSelection
+    let id: ExerciseID
 
     var body: some View {
-        Button(isSelected ? "Remove" : "Add", systemImage: isSelected ? "checkmark" : "plus", action: action)
+        let isSelected = selection.ids.contains(id)
+        Button(isSelected ? "Remove" : "Add", systemImage: isSelected ? "checkmark" : "plus") { selection.toggle(id) }
             .labelStyle(.iconOnly)
             .font(AppFont.headline(13))
             .foregroundStyle(isSelected ? Color.black : Theme.textPrimary)

@@ -43,8 +43,85 @@ struct DashboardMetricsTests {
 
     @Test func exerciseMetricsPerSession() {
         let items = [BlockExercise(exerciseID: "press", sets: [logged(50, 10, type: .warmUp), logged(100, 5, rir: 1), logged(90, 8, rir: 0)])]
-        let values = ExerciseChartMetric.allCases.map { DashboardMetrics.value($0, of: items, exercise: press).map { ($0 * 10).rounded() / 10 } }
+        let byMetric = DashboardMetrics.values(of: items, exercise: press)
+        let values = ExerciseChartMetric.allCases.map { byMetric[$0].map { ($0 * 10).rounded() / 10 } }
         #expect(values == [120, 109.1, 90, 100, 1720, 720, 13, 8, 2])
+    }
+
+    @Test func exerciseSeriesHasEveryMetricOldestFirstAndSkipsUnfinishedOrUntrained() {
+        let sessions = [
+            session("2026-10-05", [BlockExercise(exerciseID: "press", sets: [logged(100, 5), logged(90, 8)])]),
+            session("2026-10-01", [BlockExercise(exerciseID: "press", sets: [logged(80, 10)])]),
+            session("2026-10-03", [BlockExercise(exerciseID: "curl", sets: [logged(10, 10)])]),
+            session("2026-10-07", [BlockExercise(exerciseID: "press", sets: [logged(120, 1)])], finished: false),
+        ]
+        let series = DashboardMetrics.exercise("press", sessions: sessions, catalog: catalog)
+        #expect(Set(series.keys) == Set(ExerciseChartMetric.allCases))
+        #expect(series[.totalSets] == [DatedValue(date: day("2026-10-01", 18), value: 1), DatedValue(date: day("2026-10-05", 18), value: 2)])
+        #expect(series[.totalVolume]?.map(\.value) == [800, 1220])
+        #expect(series[.heaviestWeight]?.map(\.value) == [80, 100])
+        #expect(DashboardMetrics.exercise("unknown", sessions: sessions, catalog: catalog).isEmpty)
+    }
+
+    @Test func lastDaysSumsEachOfTheLastSevenDaysEndingToday() {
+        let data = DashboardData(sessions: [], weighIns: [], steps: [], unit: .kg, catalog: catalog, now: day("2026-10-07", 12), calendar: utc)
+        let points = [
+            DatedValue(date: day("2026-09-30"), value: 99),
+            DatedValue(date: day("2026-10-01", 0), value: 1),
+            DatedValue(date: day("2026-10-04", 7), value: 2),
+            DatedValue(date: day("2026-10-04", 20), value: 3),
+            DatedValue(date: day("2026-10-07", 23), value: 4),
+        ]
+        #expect(data.lastDays(points) == [1, 0, 0, 5, 0, 0, 4])
+    }
+
+    @Test func longRangesDrawCoarserBuckets() {
+        let now = day("2026-10-07")
+        let year = ChartRange.oneYear.interval(endingAt: now, earliest: nil, calendar: utc)
+        let sixMonths = ChartRange.sixMonths.interval(endingAt: now, earliest: nil, calendar: utc)
+        let threeYears = ChartRange.all.interval(endingAt: now, earliest: day("2023-10-01"), calendar: utc)
+        #expect(Averaging.daily.drawn(over: sixMonths) == .daily)
+        #expect(Averaging.daily.drawn(over: year) == .weekly)
+        #expect(Averaging.monthly.drawn(over: year) == .monthly)
+        #expect(Averaging.weekly.drawn(over: threeYears) == .monthly)
+    }
+
+    @Test func plotListsEveryEntryNewestFirstByMonth() {
+        let tab = MetricTab(
+            title: "Sets", points: [
+                DatedValue(date: day("2026-08-20", 0), value: 1),
+                DatedValue(date: day("2026-09-10", 0), value: 2),
+                DatedValue(date: day("2026-09-28", 0), value: 3),
+                DatedValue(date: day("2026-10-02", 0), value: 4),
+            ],
+            unit: "sets", averageTitle: "Average Sets", summary: .total, style: .bar, color: DashboardColor.muscle
+        )
+        let plot = MetricPlot(tab: tab, footer: .months, range: .oneMonth, averaging: .weekly, now: day("2026-10-07"), calendar: utc, unit: .kg)
+        #expect(plot.interval == DateInterval(start: day("2026-09-08", 0), end: day("2026-10-08", 0)))
+        #expect(plot.months.map(\.id) == [day("2026-10-01", 0), day("2026-09-01", 0), day("2026-08-01", 0)])
+        #expect(plot.months.map { $0.rows.map(\.text) } == [["4 sets"], ["3 sets", "2 sets"], ["1 sets"]])
+        #expect(plot.drawn == [
+            DatedValue(date: day("2026-09-08", 0), value: 2),
+            DatedValue(date: day("2026-09-28", 0), value: 3.5),
+        ])
+        #expect(plot.drawnUnit == .weekOfYear)
+        #expect(plot.average == 2.75)
+        #expect(plot.second == 9)
+    }
+
+    @Test func plotWeighInRowsDeleteOnlyAppEntries() {
+        let logged = BodyWeight(weightKg: 80, measuredAt: day("2026-10-06"))
+        let weighIns = [
+            WeighIn(date: day("2026-10-06"), kg: 80, source: .app(logged.id)),
+            WeighIn(date: day("2026-10-05"), kg: 80.5, source: .health),
+            WeighIn(date: day("2026-08-01"), kg: 82, source: .health),
+        ]
+        let tab = MetricTab(title: "Scale Weight", points: [], unit: "kg", averageTitle: "Average", summary: .change, style: .line, color: DashboardColor.scale)
+        let plot = MetricPlot(tab: tab, footer: .weighIns(weighIns), range: .oneMonth, averaging: .daily, now: day("2026-10-07"), calendar: utc, unit: .kg)
+        let rows = plot.months.flatMap(\.rows)
+        #expect(rows.map(\.text) == ["80 kg", "80.5 kg", "82 kg"])
+        #expect(rows.map(\.deletableID) == [logged.id, nil, nil])
+        #expect(rows[1].subtitle.hasSuffix(" · Health"))
     }
 
     @Test func recentRecordsAreTheNewestRecordPerExercise() {

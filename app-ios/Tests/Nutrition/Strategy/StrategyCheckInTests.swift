@@ -78,6 +78,17 @@ struct StrategyCheckInTests {
         #expect(CheckInRules.nextCheckInDay(today: calendarDay("2026-10-22"), weekday: 1) == calendarDay("2026-10-26"))
     }
 
+    @Test func theSettingsChooseTheModules() {
+        var settings = NutritionSettings()
+        #expect(CheckInRules.modules(settings) == [.review, .update])
+        settings.coachingModules = .init(partialLogging: false, weighIn: true, fasting: false, loggingBreak: false)
+        #expect(CheckInRules.modules(settings) == [.weighIn, .update])
+        settings.coachingModules = .init(partialLogging: false, weighIn: false, fasting: true, loggingBreak: true)
+        #expect(CheckInRules.modules(settings) == [.review, .update])
+        settings.fastCheckIn = true
+        #expect(CheckInRules.modules(settings) == [.update])
+    }
+
     @Test func coachedAndCollaborativeUpdateManualDoesNot() {
         let basis = StrategyBasis(weightKg: 80, expenditureKcal: 2000, standardFloorKcal: 1200)
         let today = calendarDay("2026-10-26")
@@ -141,6 +152,23 @@ struct StrategyInputsTests {
         profile.heightCm = 180
         profile.birthDate = calendarDay("1990-05-01")
         #expect(StrategyInputs.initialEstimate(weightKg: 80, profile: profile, today: calendarDay("2026-10-26")) == 2550)
+    }
+
+    @Test func theExpenditureSettingsSetTheActivityAndTheStart() {
+        var profile = ProfileSettings()
+        profile.heightCm = 180
+        profile.birthDate = calendarDay("1990-05-01")
+        var expenditure = NutritionSettings.Expenditure()
+        expenditure.activity = .mostlySedentary
+        expenditure.exercise = .zero
+        #expect(StrategyInputs.initialEstimate(weightKg: 80, profile: profile, expenditure: expenditure, today: calendarDay("2026-10-26")) == 2075)
+
+        var settings = NutritionSettings()
+        settings.expenditure.initialKcal = 2000
+        settings.expenditure.calculationStart = calendarDay("2026-10-24")
+        let weighIn = WeighIn(date: StrategyInputs.date(calendarDay("2026-10-01"), utc), kg: 80, source: .health)
+        let inputs = StrategyInputs.make(weighIns: [weighIn], log: IntakeLog(), settings: settings, profile: profile, today: calendarDay("2026-10-26"), calendar: utc)
+        #expect(inputs.expenditure.keys.sorted() == [calendarDay("2026-10-24"), calendarDay("2026-10-25"), calendarDay("2026-10-26")])
     }
 
     @Test func aStaticExpenditureWins() {

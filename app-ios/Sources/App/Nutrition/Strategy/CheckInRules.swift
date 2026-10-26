@@ -4,6 +4,18 @@ import Foundation
 /// `check_in` plan from today with the expenditure and trend weight it used. A manual program never changes its targets,
 /// so it shows the week's data without a check-in, as MacroFactor opts manual programs out of weekly updates.
 enum CheckInRules {
+    enum Module: Hashable {
+        case weighIn, review, update
+    }
+
+    /// The modules a check-in walks: the optional ones the settings turn on, unless Fast Check-In skips them, then
+    /// Program Update. Logging Break has no screen yet.
+    static func modules(_ settings: NutritionSettings) -> [Module] {
+        let optional = settings.coachingModules
+        guard !settings.fastCheckIn else { return [.update] }
+        return (optional.weighIn ? [.weighIn] : []) + (optional.partialLogging || optional.fasting ? [.review] : []) + [.update]
+    }
+
     struct WeekSummary: Hashable {
         /// The seven days before today.
         var first: CalendarDay

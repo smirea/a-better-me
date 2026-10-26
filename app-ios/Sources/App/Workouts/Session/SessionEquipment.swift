@@ -19,7 +19,15 @@ extension SessionEditor {
     }
 
     func loading(for item: BlockExercise) -> Loading? {
-        Loading.of(item, gym: sessionGym, catalog: catalog, settings: defaults, exerciseSettings: exerciseSettings)
+        loadingAnswer(for: item).loading
+    }
+
+    func loadable(for item: BlockExercise) -> LoadableWeights {
+        loadingAnswer(for: item).loadable
+    }
+
+    private func loadingAnswer(for item: BlockExercise) -> LoadingCache.Answer {
+        loadings.answer(for: item, gym: sessionGym, catalog: catalog, settings: defaults, exerciseSettings: exerciseSettings)
     }
 
     func loading(at path: RowPath) -> Loading? {
