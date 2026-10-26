@@ -336,7 +336,7 @@ const amount = z.number().nonnegative();
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 /** A nutrient registry id: a letter id (`k`, `nc`) or a three-digit USDA number. Not the registry's list itself, so a
  * nutrient a newer app adds needs no server deploy. */
-const nutrientID = z.string().regex(/^([a-z]{1,2}|\d{3})$/);
+export const nutrientID = z.string().regex(/^([a-z]{1,2}|\d{3})$/);
 
 /**
  * The inner shapes of the nutrition data columns, as the Swift encoder writes them. The app's decoders are strict, so a
