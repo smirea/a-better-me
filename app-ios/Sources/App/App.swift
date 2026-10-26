@@ -12,6 +12,7 @@ struct BetterMeApp: App {
         AppFont.register()
         NavigationAppearance.apply()
         AssetStore.shared.start()
+        _ = NutrientRegistry.all
         let catalog = ExerciseCatalog()
         _catalog = State(initialValue: catalog)
         let store = LocalStore()
@@ -22,6 +23,7 @@ struct BetterMeApp: App {
         WorkoutActivityController.shared.start(store: store, catalog: catalog)
         WatchBridge.shared.start(store: store, history: history, catalog: catalog)
         WorkoutHealth.shared.start(store: store, catalog: catalog)
+        NutritionHealth.shared.start(store: store)
         #if DEBUG
         SampleData.seedIfRequested(store)
         store.seedGeneratedProgramIfRequested(catalog: catalog)

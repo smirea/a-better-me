@@ -68,6 +68,6 @@ struct AssetSource: Sendable {
     let version: String
     /// Nil for the dev server, which takes unsigned requests.
     let credentials: S3Credentials?
-    /// False in Debug, so development builds download only when the More row is tapped.
+    /// False in Debug, so development builds download only when the Settings row is tapped.
     let downloadsAutomatically: Bool
 }

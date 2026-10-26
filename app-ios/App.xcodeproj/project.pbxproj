@@ -471,7 +471,7 @@
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "A Better Me";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "The Dashboard charts your body weight and daily steps from Health, and workouts read your heart rate and energy while you train.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy, and logged food as dietary energy and nutrients once you turn it on in Settings.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -507,7 +507,7 @@
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "A Better Me";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "The Dashboard charts your body weight and daily steps from Health, and workouts read your heart rate and energy while you train.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy, and logged food as dietary energy and nutrients once you turn it on in Settings.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

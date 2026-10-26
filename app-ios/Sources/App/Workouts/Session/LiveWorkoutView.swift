@@ -438,7 +438,7 @@ struct SessionEditor: View {
         }
     }
 
-    /// The More tab's screens, presented over the live workout with a Close button they don't need when pushed.
+    /// The Settings screens, presented over the live workout with a Close button they don't need when pushed.
     private func closableSheet(@ViewBuilder content: () -> some View) -> some View {
         NavigationStack {
             content().toolbar {

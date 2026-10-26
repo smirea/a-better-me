@@ -50,13 +50,13 @@ enum AssetPhase: Equatable, Sendable {
     case off
     case checking
     case waitingForWiFi
-    /// Debug builds download only when the More row is tapped.
+    /// Debug builds download only when the Settings row is tapped.
     case waitingForTap
     case downloading
     case complete
     case failed(String)
 
-    /// The More tab's one line, such as `Assets 1,200/3,002 · 12.4 MB left`.
+    /// The Settings row's one line, such as `Assets 1,200/3,002 · 12.4 MB left`.
     func statusLine(_ progress: AssetProgress?, locale: Locale = .current) -> String {
         if self == .off { return "Assets · Off" }
         guard let progress else {

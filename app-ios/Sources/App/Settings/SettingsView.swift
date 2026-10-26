@@ -1,8 +1,9 @@
 import SwiftUI
 
+/// The one settings tree for both halves, pushed from the Dashboard's gear. MacroFactor's and MacroFactor Workouts'
+/// More pages collapse into it (docs/decisions/nutrition.md#settings-and-health).
 struct SettingsView: View {
     @Environment(LocalStore.self) private var store
-    @Observe(AppSettings.current) private var settings
 
     var body: some View {
         Form {
@@ -12,16 +13,15 @@ struct SettingsView: View {
                 }
             }
             Section {
-                Picker(selection: Binding(get: { settings.weightUnit }, set: { unit in store.updateSettings { $0.weightUnit = unit } })) {
-                    ForEach(WeightUnit.allCases) { Text($0.rawValue).tag($0) }
-                } label: {
-                    SettingLabel(title: "Weight Unit", detail: nil, systemImage: "scalemass")
+                NavigationLink { UnitsSettingsView() } label: {
+                    SettingLabel(title: "Units", detail: nil, systemImage: "ruler")
                 }
-                Button { AssetStore.shared.refresh() } label: {
-                    SettingLabel(title: AssetStore.shared.statusLine, detail: nil, systemImage: "icloud.and.arrow.down")
+                NavigationLink { ProfileSettingsView() } label: {
+                    SettingLabel(title: "Profile", detail: nil, systemImage: "person.crop.circle")
                 }
-                .accessibilityLabel(AssetStore.shared.statusLine)
-                .accessibilityHint("Checks for missing exercise images and downloads them now, on cellular too")
+                NavigationLink { CustomizeDashboardView() } label: {
+                    SettingLabel(title: "Dashboard", detail: nil, systemImage: "square.grid.2x2")
+                }
             } header: {
                 SectionTitle("General").textCase(nil)
             }
@@ -36,12 +36,46 @@ struct SettingsView: View {
                     SettingLabel(title: "Gym Profiles", detail: nil, systemImage: "building.2")
                 }
             } header: {
-                SectionTitle("Feature Settings").textCase(nil)
+                SectionTitle("Workouts").textCase(nil)
             }
-            Section("Automation") {
-                NavigationLink { ApiTokensView() } label: {
-                    Label("API Tokens", systemImage: "key")
+            Section {
+                NavigationLink { FoodLogSettingsView() } label: {
+                    SettingLabel(title: "Food Log", detail: nil, systemImage: "fork.knife")
                 }
+                NavigationLink { ExpenditureSettingsView() } label: {
+                    SettingLabel(title: "Expenditure", detail: nil, systemImage: "bolt.fill")
+                }
+                NavigationLink { StrategySettingsView() } label: {
+                    SettingLabel(title: "Strategy", detail: nil, systemImage: "circle.hexagongrid")
+                }
+            } header: {
+                SectionTitle("Nutrition").textCase(nil)
+            }
+            Section {
+                NavigationLink { HealthSettingsView() } label: {
+                    SettingLabel(title: "Apple Health", detail: nil, systemImage: "heart.fill")
+                }
+            } header: {
+                SectionTitle("Integrations").textCase(nil)
+            }
+            Section {
+                NavigationLink { DataVisibilityView() } label: {
+                    SettingLabel(title: "Data Visibility", detail: nil, systemImage: "eye")
+                }
+                Button { AssetStore.shared.refresh() } label: {
+                    SettingLabel(title: AssetStore.shared.statusLine, detail: nil, systemImage: "icloud.and.arrow.down")
+                }
+                .accessibilityLabel(AssetStore.shared.statusLine)
+                .accessibilityHint("Checks for missing exercise images and downloads them now, on cellular too")
+            } header: {
+                SectionTitle("Data").textCase(nil)
+            }
+            Section {
+                NavigationLink { ApiTokensView() } label: {
+                    SettingLabel(title: "API Tokens", detail: nil, systemImage: "key")
+                }
+            } header: {
+                SectionTitle("Automation").textCase(nil)
             }
         }
         .themedList()

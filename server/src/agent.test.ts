@@ -70,7 +70,7 @@ describe('agent API', () => {
 
 		const denied = await call('GET', '/templates', undefined, 'abm_unknown');
 		expect(denied.status).toBe(401);
-		expect((await denied.json()).instructions).toContain('More > API Tokens');
+		expect((await denied.json()).instructions).toContain('Dashboard gear > Settings > API Tokens');
 	});
 
 	test('a token made on the phone works once synced, and stops working once revoked', async () => {

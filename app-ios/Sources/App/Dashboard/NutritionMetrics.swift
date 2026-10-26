@@ -80,23 +80,35 @@ enum NutritionMetrics {
         guard let start = expenditureStart(log: log, weighIns: weighIns, settings: settings, calendar: calendar) else { return nil }
         if let initial = settings.initialKcal { return ExpenditureSetup(start: start, initialKcal: initial) }
         let weightKg = trend.first { calendar.isDate($0.date, inSameDayAs: start) }?.value ?? trend.first?.value
-        guard let weightKg, let initial = initialEstimate(profile: profile, weightKg: weightKg, on: start, calendar: calendar) else { return nil }
+        guard let weightKg, let initial = initialEstimate(profile: profile, settings: settings, weightKg: weightKg, on: start, calendar: calendar) else { return nil }
         return ExpenditureSetup(start: start, initialKcal: initial)
     }
 
     static func expenditureStart(log: [NutritionLogDay], weighIns: [DatedValue], settings: NutritionSettings.Expenditure, calendar: Calendar) -> Date? {
         let firstIntake = intake(log, calendar: calendar).first?.date
         let firstWeighIn = weighIns.map(\.date).min().map { calendar.startOfDay(for: $0) }
-        return settings.startOn?.date(in: calendar) ?? [firstIntake, firstWeighIn].compactMap { $0 }.min()
+        return settings.calculationStart?.date(in: calendar) ?? [firstIntake, firstWeighIn].compactMap { $0 }.min()
     }
 
-    /// The activity answers are not settings yet, so they are the ones the decision file anchors the factor table on:
-    /// moderately active with 4 to 6 sessions a week.
-    static func initialEstimate(profile: ProfileSettings, weightKg: Double, on day: Date, calendar: Calendar) -> Double? {
+    /// An unanswered activity or exercise question reads as the cell the engine's factor table is anchored on:
+    /// moderately active with 4 to 6 sessions a week. Cunningham needs fat-free mass, which the weigh-ins do not carry
+    /// yet, so the MacroFactor Equation is used either way.
+    static func initialEstimate(profile: ProfileSettings, settings: NutritionSettings.Expenditure, weightKg: Double, on day: Date, calendar: Calendar) -> Double? {
         guard let height = profile.heightCm, let birth = profile.birthDate,
               let age = calendar.dateComponents([.year], from: birth.date(in: calendar), to: day).year else { return nil }
         let bmr = NutritionEngine.BMR.macroFactor(weightKg: weightKg, heightCm: height, ageYears: age, sex: profile.sex == .female ? .female : .male)
-        return NutritionEngine.InitialExpenditure.estimate(bmr: bmr, activity: .moderatelyActive, exercise: .fourToSix)
+        let activity: NutritionEngine.ActivityLevel = switch settings.activity {
+        case .mostlySedentary: .sedentary
+        case .veryActive: .veryActive
+        case .moderatelyActive, nil: .moderatelyActive
+        }
+        let exercise: NutritionEngine.ExerciseSessions = switch settings.exercise {
+        case .zero: .none
+        case .oneToThree: .oneToThree
+        case .sevenPlus: .sevenOrMore
+        case .fourToSix, nil: .fourToSix
+        }
+        return NutritionEngine.InitialExpenditure.estimate(bmr: bmr, activity: activity, exercise: exercise)
     }
 
     /// A static expenditure replaces every day's estimate, never holds, and needs no initial estimate.

@@ -171,8 +171,13 @@ struct NutritionMetricsTests {
         #expect(bmr.start == start("2026-10-03"))
         // MacroFactor BMR at 80 kg, 180 cm, 36 years: 129.6 × 80^0.55 + 0.011 × 180² − 1.96 × 36 = 1729.0, × 1.55.
         #expect(bmr.initialKcal == 2680)
+        settings.activity = .mostlySedentary
+        settings.exercise = .zero
+        let sedentary = try #require(NutritionMetrics.expenditureSetup(log: log, weighIns: weighIns, trend: trend, settings: settings, profile: profile, calendar: utc))
+        // 1729.0 × 1.2.
+        #expect(sedentary.initialKcal == 2075)
         settings.initialKcal = 2500
-        settings.startOn = CalendarDay("2026-10-04")
+        settings.calculationStart = CalendarDay("2026-10-04")
         let manual = NutritionMetrics.expenditureSetup(log: log, weighIns: weighIns, trend: trend, settings: settings, profile: ProfileSettings(), calendar: utc)
         #expect(manual == .init(start: start("2026-10-04"), initialKcal: 2500))
         settings.staticKcal = 2300
