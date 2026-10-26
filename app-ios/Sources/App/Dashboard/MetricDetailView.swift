@@ -88,8 +88,7 @@ struct MetricDetailView: View {
         return HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .top, spacing: 40) {
-                    stat(tab.averageTitle, plot.average, tab: tab)
-                    stat(tab.summary.title(tab.title), plot.second, tab: tab)
+                    ForEach(plot.stats, id: \.title) { stat($0.title, $0.value, tab: tab) }
                 }
                 Text(plot.rangeLabel)
                     .font(AppFont.caption(14))
@@ -119,22 +118,36 @@ struct MetricDetailView: View {
     private func chart(_ tab: MetricTab, _ plot: MetricPlot) -> some View {
         let points = plot.drawn
         let fit = fitToData(tab)
-        let values = points.map(\.value)
+        let values = (points + plot.overlay).map(\.value)
         let high = max(values.max() ?? 0, 1)
         let low = fit ? values.min() ?? 0 : 0
         let pad = fit ? max((high - low) * 0.1, 0.5) : high * 0.1
-        return Chart(points, id: \.date) { point in
-            switch tab.style {
-            case .bar:
-                BarMark(x: .value("Date", point.date, unit: plot.drawnUnit), y: .value(tab.title, point.value))
-                    .foregroundStyle(tab.color)
-            case .line:
-                LineMark(x: .value("Date", point.date), y: .value(tab.title, point.value))
-                    .foregroundStyle(tab.color)
-                if points.count < 15 {
-                    PointMark(x: .value("Date", point.date), y: .value(tab.title, point.value))
-                        .symbol(.circle.strokeBorder(lineWidth: 1.5))
+        return Chart {
+            if let line = tab.overlay {
+                ForEach(plot.overlay, id: \.date) { point in
+                    LineMark(x: .value("Date", point.date), y: .value(line.title, point.value), series: .value("Series", line.title))
+                        .foregroundStyle(line.color)
+                        .lineStyle(StrokeStyle(lineWidth: line.dashed ? 1.5 : 2, dash: line.dashed ? [2, 3] : []))
+                }
+            }
+            ForEach(points, id: \.date) { point in
+                switch tab.style {
+                case .bar:
+                    BarMark(x: .value("Date", point.date, unit: plot.drawnUnit), y: .value(tab.title, point.value))
                         .foregroundStyle(tab.color)
+                case .line:
+                    LineMark(x: .value("Date", point.date), y: .value(tab.title, point.value), series: .value("Series", tab.title))
+                        .foregroundStyle(tab.color)
+                    if points.count < 15 {
+                        PointMark(x: .value("Date", point.date), y: .value(tab.title, point.value))
+                            .symbol(.circle.strokeBorder(lineWidth: 1.5))
+                            .foregroundStyle(tab.color)
+                    } else if plot.holding.contains(point.date) {
+                        PointMark(x: .value("Date", point.date), y: .value(tab.title, point.value))
+                            .symbol(.square.strokeBorder(lineWidth: 1))
+                            .symbolSize(40)
+                            .foregroundStyle(tab.color)
+                    }
                 }
             }
         }
@@ -181,11 +194,20 @@ struct MetricDetailView: View {
     }
 
     private func legend(_ tab: MetricTab) -> some View {
-        Label {
-            Text(tab.title)
-        } icon: {
-            Image(systemName: tab.style == .bar ? "chart.bar.fill" : "point.topleft.down.to.point.bottomright.curvepath")
-                .foregroundStyle(tab.color)
+        HStack(spacing: 20) {
+            if let overlay = tab.overlay, !overlay.dashed {
+                legendItem(overlay.title, symbol: "point.topleft.down.to.point.bottomright.curvepath", color: overlay.color)
+            }
+            legendItem(
+                tab.style == .bar && tab.overlay != nil ? "Calories" : tab.title,
+                symbol: tab.style == .bar ? "chart.bar.fill" : "point.topleft.down.to.point.bottomright.curvepath", color: tab.color
+            )
+            if let overlay = tab.overlay, overlay.dashed {
+                legendItem(overlay.title, symbol: "line.horizontal.3", color: overlay.color)
+            }
+            if !tab.holding.isEmpty {
+                legendItem("Holding", symbol: "square", color: tab.color)
+            }
         }
         .font(AppFont.medium(14))
         .frame(maxWidth: .infinity)
@@ -193,10 +215,27 @@ struct MetricDetailView: View {
         .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
     }
 
+    private func legendItem(_ title: String, symbol: String, color: Color) -> some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: symbol).foregroundStyle(color)
+        }
+    }
+
     @ViewBuilder
     private func footer(_ footer: MetricDetail.Footer, _ plot: MetricPlot) -> some View {
         switch footer {
         case .months:
+            MonthList(months: plot.months)
+        case let .expenditure(summary):
+            ExpenditureInsights(summary: summary)
+            MonthList(months: plot.months)
+        case let .weightTrend(summary):
+            WeightTrendInsights(summary: summary, unit: plot.unit)
+            MonthList(months: plot.months)
+        case .energyBalance:
+            EnergyBalanceInsights(rows: plot.balanceRows, isExpenditure: plot.isExpenditureBalance)
             MonthList(months: plot.months)
         case .weighIns:
             MonthList(months: plot.months) { store.delete(BodyWeight.self, id: $0) }
@@ -230,8 +269,16 @@ struct MetricPlot {
     var drawnUnit: Calendar.Component
     var average: Double?
     var second: Double?
+    var overlay: [DatedValue]
+    var holding: Set<Date>
+    /// The tab's own stats when it has them, else the average and the second stat.
+    var stats: [MetricTab.Stat]
     /// Every entry, newest first, whatever the range.
     var months: [MonthSection]
+    var unit: WeightUnit
+    /// Energy Balance's 3- to 90-day mean differences.
+    var balanceRows: [(days: Int, mean: Double?)] = []
+    var isExpenditureBalance = false
 
     init(tab: MetricTab, footer: MetricDetail.Footer, range: ChartRange, averaging: Averaging, now: Date, calendar: Calendar, unit: WeightUnit) {
         let interval = range.interval(endingAt: now, earliest: tab.points.first?.date, calendar: calendar)
@@ -243,13 +290,27 @@ struct MetricPlot {
         rangeLabel = Self.rangeLabel(interval, calendar: calendar)
         self.drawn = drawn
         drawnUnit = drawing.component
+        self.unit = unit
+        overlay = tab.overlay.map { drawing.bucket($0.points.inside(interval), calendar: calendar).map { DatedValue(date: max($0.date, interval.start), value: $0.value) } } ?? []
+        holding = drawing == .daily ? tab.holding : []
         average = (drawing == averaging ? drawn : averaging.bucket(daily, calendar: calendar)).average
         second = tab.summary.second(of: daily.map(\.value))
-        let rows: [MonthRow] = switch footer {
-        case .months:
+        stats = tab.stats?(interval) ?? [
+            MetricTab.Stat(title: tab.averageTitle, value: average),
+            MetricTab.Stat(title: tab.summary.title(tab.title), value: second),
+        ]
+        func pointRows(tag: (DatedValue) -> MonthRow.Tag? = { _ in nil }) -> [MonthRow] {
             tab.points.reversed().map { point in
-                MonthRow(date: point.date, text: "\(tab.format(point.value)) \(tab.unit)", subtitle: point.date.formatted(.dateTime.weekday().month().day()))
+                MonthRow(date: point.date, text: "\(tab.format(point.value)) \(tab.unit)", subtitle: point.date.formatted(.dateTime.weekday().month().day()), tag: tag(point))
             }
+        }
+        let rows: [MonthRow] = switch footer {
+        case .months, .weightTrend:
+            pointRows()
+        case .expenditure:
+            pointRows { tab.holding.contains($0.date) ? MonthRow.Tag(text: "Holding", symbol: "square", color: tab.color) : nil }
+        case .energyBalance:
+            Self.balanceRows(tab, now: now, calendar: calendar)
         case let .weighIns(weighIns):
             weighIns.map { weighIn in
                 let date = weighIn.date.formatted(.dateTime.weekday().month().day().hour().minute())
@@ -260,9 +321,25 @@ struct MetricPlot {
             }
         case .topExercises: []
         }
+        if case .energyBalance = footer {
+            let differences = NutritionMetrics.differences(intake: tab.points, reference: tab.overlay?.points ?? [], calendar: calendar)
+            balanceRows = NutritionMetrics.changeSpans.map { (days: $0, mean: NutritionMetrics.trailingMean(differences, days: $0, now: now, calendar: calendar)) }
+            isExpenditureBalance = tab.id == "Expenditure"
+        }
         let months = Dictionary(grouping: rows) { calendar.dateInterval(of: .month, for: $0.date)!.start }
         self.months = months.keys.sorted(by: >).map { month in
             MonthSection(id: month, title: month.formatted(.dateTime.month(.wide).year()), rows: months[month]!)
+        }
+    }
+
+    private static func balanceRows(_ tab: MetricTab, now: Date, calendar: Calendar) -> [MonthRow] {
+        let isExpenditure = tab.id == "Expenditure"
+        return NutritionMetrics.differences(intake: tab.points, reference: tab.overlay?.points ?? [], calendar: calendar).reversed().map { day in
+            let tag = BalanceTag(balance: NutritionMetrics.balance(day.value), isExpenditure: isExpenditure)
+            return MonthRow(
+                date: day.date, text: "\(BalanceTag.signed(day.value)) kcal", subtitle: day.date.formatted(.dateTime.weekday().month().day()),
+                tag: MonthRow.Tag(text: tag.title, symbol: tag.symbol, color: tag.color)
+            )
         }
     }
 
@@ -279,11 +356,18 @@ struct MonthSection: Identifiable {
 }
 
 struct MonthRow: Identifiable {
+    struct Tag {
+        var text: String
+        var symbol: String
+        var color: Color
+    }
+
     var date: Date
     var text: String
     var subtitle: String
     /// The app weigh-in the row deletes; Health samples and metric days are not deletable here.
     var deletableID: UUID?
+    var tag: Tag?
 
     var id: String { "\(date.timeIntervalSince1970) \(text)" }
 }
@@ -327,11 +411,22 @@ private struct MonthList: View {
                     VStack(spacing: 0) {
                         ForEach(Array(month.rows.enumerated()), id: \.element.id) { index, row in
                             if index > 0 { Divider().overlay(Theme.separator) }
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(row.text).font(AppFont.headline(15))
-                                Text(row.subtitle)
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(row.text).font(AppFont.headline(15))
+                                    Text(row.subtitle)
+                                        .font(AppFont.caption(13))
+                                        .foregroundStyle(Theme.textSecondary)
+                                }
+                                Spacer()
+                                if let tag = row.tag {
+                                    Label {
+                                        Text(tag.text).foregroundStyle(Theme.textSecondary)
+                                    } icon: {
+                                        Image(systemName: tag.symbol).foregroundStyle(tag.color)
+                                    }
                                     .font(AppFont.caption(13))
-                                    .foregroundStyle(Theme.textSecondary)
+                                }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(14)

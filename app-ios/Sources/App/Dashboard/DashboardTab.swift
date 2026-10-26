@@ -6,8 +6,12 @@ struct DashboardTab: View {
     @Environment(LocalStore.self) private var store
     @Environment(ExerciseCatalog.self) private var catalog
     @State private var health = HealthData()
+    @State private var nutrition = NutritionData()
     @Observe(BodyWeight.all) private var logged
     @Observe(AppSettings.current) private var settings
+    @Observe(NutritionLogDay.all) private var foodLog
+    @Observe(NutritionPlan.all) private var plans
+    @Observe(BodyMetric.series(.steps)) private var importedSteps
 
     var body: some View {
         NavigationStack {
@@ -19,16 +23,23 @@ struct DashboardTab: View {
                     case .allExercises: AllExercisesView()
                     case let .muscle(_, metric): MetricDetailView(route: route, initialTab: metric.title)
                     case let .exercise(_, metric): MetricDetailView(route: route, initialTab: metric.title)
+                    case .goalProgress: GoalProgressView()
+                    case .foodLogging: FoodLoggingHabitView()
+                    case .nutritionData: NutritionDataManagerView()
                     default: MetricDetailView(route: route)
                     }
                 }
         }
         .environment(health)
+        .environment(nutrition)
         // Rebuilt when the scene becomes active too, since this view reads `scenePhase`, so a new day shows on return.
         .environment(\.dashboardContext, DashboardContext(
             unit: settings.weightUnit, today: Calendar.current.startOfDay(for: .now), calendar: .current, custom: catalog.custom
         ))
         .onChange(of: logged, initial: true) { health.update(logged: logged) }
+        .onChange(of: NutritionInputs(log: foodLog, plans: plans, settings: settings.nutrition, profile: settings.profile, steps: importedSteps), initial: true) { _, inputs in
+            nutrition.update(log: inputs.log, plans: inputs.plans, settings: inputs.settings, profile: inputs.profile, importedSteps: inputs.steps)
+        }
         .healthDataAccessRequest(store: health.store, shareTypes: HealthData.shareTypes, readTypes: HealthData.readTypes, trigger: health.requestTrigger) { _ in
             Task { await health.load() }
         }
@@ -84,6 +95,9 @@ private struct DashboardHome: View {
                     switch card {
                     case .workouts: CycleFocus()
                     case .recentRecords: RecordsFocus()
+                    case .weeklyNutrition: WeeklyNutritionFocus()
+                    case .energyBalance: EnergyBalanceFocusCard()
+                    case .dailyNutrition: DailyNutritionFocus()
                     }
                 }
                 .padding(.horizontal, 20)
@@ -123,6 +137,15 @@ private struct DashboardHome: View {
             EmptyView()
         }
     }
+}
+
+/// The observed nutrition inputs, compared as one value so a change to any of them updates `NutritionData` once.
+private struct NutritionInputs: Equatable {
+    var log: [NutritionLogDay]
+    var plans: [NutritionPlan]
+    var settings: NutritionSettings
+    var profile: ProfileSettings
+    var steps: [BodyMetric]
 }
 
 /// Owns its picker's state, so a tap re-renders this card alone.
@@ -172,6 +195,17 @@ private struct InsightCardView: View {
                     MiniLine(values: trend.values, color: DashboardColor.trend)
                 }
             }
+        case .expenditure:
+            let card = values.expenditureCard
+            NavigationLink(value: DashboardRoute.expenditure) {
+                DashboardCard(title: "Expenditure", period: "Last 7 Days", value: card.text, unit: "kcal") {
+                    MiniLine(values: card.values, color: DashboardColor.expenditure)
+                }
+            }
+        case .energyBalance:
+            EnergyBalanceInsightCard(balance: values.balance(.expenditure, days: 7))
+        case .goalProgress:
+            GoalProgressInsightCard(progress: values.goalProgress(.scale))
         }
     }
 }
@@ -196,6 +230,13 @@ private struct HabitCardView: View {
             NavigationLink(value: DashboardRoute.workouts) {
                 DashboardCard(title: "Workouts", period: "Last 30 Days", value: habit.text, unit: "this week") {
                     DotGrid(days: habit.days, color: DashboardColor.workouts)
+                }
+            }
+        case .foodLogging:
+            let habit = values.foodLogging.habit
+            NavigationLink(value: DashboardRoute.foodLogging) {
+                DashboardCard(title: "Food Logging", period: "Last 30 Days", value: habit.text, unit: "this week") {
+                    DotGrid(days: habit.days, color: DashboardColor.energy)
                 }
             }
         }
