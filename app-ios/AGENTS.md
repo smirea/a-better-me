@@ -22,6 +22,17 @@
 - The dependencies are the sync engine's Swift package, `https://github.com/smirea/sync-engine` on branch `master` in `App.xcodeproj`, which brings GRDB (see `docs/decisions/sync.md`), and sentry-cocoa, pinned exactly (see `docs/decisions/observability.md`). The launcher signs simulator builds ad hoc so the entitlements in `Config/App.entitlements` are embedded.
 - There is no Swift package. The Xcode project is the only build: `xcodebuild build -project App.xcodeproj -scheme App -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO` checks compilation, and `./scripts/run -t simulator --no-watch` builds and launches it (add `--headless` as an agent).
 
+# Performance
+
+Performance is a top priority: every tap must respond within a frame. Full rationale in [`docs/decisions/ios.md`](../docs/decisions/ios.md).
+
+- Keep the main thread free of data work. Never read the database synchronously on main (`store.read`, an `@Observe` of a large query in a pushed view), never read files in `body`, and decode images off main at display size.
+- `body` only lays out values that were already computed. Derive anything that loops over sessions, sets, the catalog, or Health samples once when its inputs change, in a shared store or in `@State`, never per render or per card.
+- Fetch and decode the workout history once, in one app-level observer. Screens read from it; they don't each start their own `@Observe(WorkoutSession.finished)`.
+- Keep invalidation narrow. Pass small `Equatable` values to child views, not closures, `Date.now`, or whole data bags, and assign `@Observable` properties only when the value changed.
+- Avoid O(n²) work: a dictionary lookup instead of `first {}` or `contains {}` inside a loop, and SQL `WHERE` or `ORDER BY` instead of fetching everything and filtering in Swift.
+- Judge speed only on a Release build on a device. Debug builds use `-Onone`. Sentry reports app hangs; check them after any change to a hot path.
+
 # Environment
 
 - When nested in `monorepo-swift`, this directory is an env-manager target of the root `.env`. Edit local values only in the root `.env.local` and run `env-manager gen --local` from either directory.
