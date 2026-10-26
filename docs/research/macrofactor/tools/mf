@@ -1,0 +1,29 @@
+#!/bin/bash
+# mf shot [name]                    capture the MacroFactor window to /tmp/mfr/cur.jpg (and screens/<name>.jpg when named)
+# mf save <name> [x1,y1,x2,y2 ...]  save the last capture as screens/<name>.jpg with owner data boxed out
+# mf <mfinput args...>              post input (see mfinput.swift), wait MF_WAIT seconds, then capture
+# MF_MODE=hid is required: MacroFactor ignores events posted to its pid while in the background.
+set -euo pipefail
+dir="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+mkdir -p /tmp/mfr
+bin=/tmp/mfr/mfinput
+mode="${MF_MODE:-hid}"
+[ -x "$bin" ] || swiftc -O "$dir/tools/mfinput.swift" -o "$bin"
+win() {
+  swift -e 'import CoreGraphics; let l = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as! [[String:Any]]; for w in l where (w["kCGWindowName"] as? String) == "MacroFactor" && (w["kCGWindowLayer"] as? Int) == 0 { print(w["kCGWindowNumber"]!) }' | head -1
+}
+shot() {
+  local n="${MF_WIN:-$(win)}"
+  screencapture -x -o -l "$n" /tmp/mfr/cur.png
+  sips -Z 1000 -s format jpeg /tmp/mfr/cur.png --out /tmp/mfr/cur.jpg >/dev/null
+  if [ -n "${1:-}" ]; then cp /tmp/mfr/cur.jpg "$dir/screens/$1.jpg"; echo "saved screens/$1.jpg"; fi
+}
+if [ "$1" = shot ]; then shift; shot "${1:-}"; exit; fi
+if [ "$1" = save ]; then
+  name="$2"; shift 2
+  [ -x /tmp/mfr/redact ] || swiftc -O "$dir/tools/redact.swift" -o /tmp/mfr/redact
+  /tmp/mfr/redact /tmp/mfr/cur.jpg "$dir/screens/$name.jpg" "$@"; echo "saved screens/$name.jpg"; exit
+fi
+"$bin" "$mode" "$@"
+sleep "${MF_WAIT:-0.8}"
+shot
