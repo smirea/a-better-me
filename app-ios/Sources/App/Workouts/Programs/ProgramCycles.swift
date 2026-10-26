@@ -40,16 +40,35 @@ extension Program {
         }
     }
 
+    /// The days with a finished session in the current run and cycle. It reads only the history and `runCycle`, so
+    /// screens memoize it on that key.
+    func finishedDayIDs(_ finished: [WorkoutSession]) -> Set<ProgramDay.ID> {
+        Set(sessions(ofCurrentCycle: finished).compactMap { $0.program?.dayID })
+    }
+
+    var runCycle: RunCycle { RunCycle(programID: id, cycle: currentCycle, runStartedAt: config.runStartedAt) }
+
+    struct RunCycle: Hashable {
+        let programID: UUID
+        let cycle: Int
+        let runStartedAt: Date?
+    }
+
     /// A workout day is done once a session of it in the current cycle has finished; a rest day once it was ticked
     /// this cycle. `finished` is the finished-session history.
     func isDone(_ day: ProgramDay, finished: [WorkoutSession]) -> Bool {
+        isDone(day, finishedDays: finishedDayIDs(finished))
+    }
+
+    func isDone(_ day: ProgramDay, finishedDays: Set<ProgramDay.ID>) -> Bool {
         guard day.templateID != nil else { return day.restDoneInCycle == currentCycle }
-        return sessions(ofCurrentCycle: finished).contains { $0.program?.dayID == day.id }
+        return finishedDays.contains(day.id)
     }
 
     /// Up Next: the first day in order that is not done, rest days included (research spec milestone-2.md §2.3).
     func nextDay(finished: [WorkoutSession]) -> ProgramDay? {
-        days.first { !isDone($0, finished: finished) }
+        let finishedDays = finishedDayIDs(finished)
+        return days.first { !isDone($0, finishedDays: finishedDays) }
     }
 
     /// The sets `item` trains in `cycle`, or `nil` when the exercise is skipped that cycle.
@@ -94,10 +113,10 @@ extension Program {
 
     /// The week strip's progress arc: the workout days done in the current cycle and run over the cycle's workout days.
     /// Rest days count for nothing, as they do for the advance.
-    func cycleProgress(finished: [WorkoutSession]) -> Double {
+    func cycleProgress(finishedDays: Set<ProgramDay.ID>) -> Double {
         let workoutDays = workoutDays
         guard !workoutDays.isEmpty else { return 0 }
-        return Double(workoutDays.count { isDone($0, finished: finished) }) / Double(workoutDays.count)
+        return Double(workoutDays.count { finishedDays.contains($0.id) }) / Double(workoutDays.count)
     }
 
     /// For a seven-day program, the program day `date` falls on: Day 1 on the weekday the current run started, the
@@ -135,7 +154,7 @@ extension BlockExercise {
 enum ProgramAdvance {
     static func cycle(after session: WorkoutSession, program: Program, finished: [WorkoutSession]) -> Int? {
         guard let position = session.program, position.programID == program.id, position.cycle == program.currentCycle else { return nil }
-        let done = Set(program.sessions(ofCurrentCycle: finished + [session]).compactMap { $0.program?.dayID })
+        let done = program.finishedDayIDs(finished + [session])
         let required = Set(program.workoutDays.map(\.id))
         guard !required.isEmpty, required.isSubset(of: done) else { return nil }
         return program.currentCycle >= program.totalCycles ? 1 : program.currentCycle + 1

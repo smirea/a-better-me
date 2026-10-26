@@ -10,7 +10,6 @@ struct WorkoutTab: View {
     @Observe(Program.archived) private var archivedPrograms
     @Observe(Program.active) private var activeProgram
     @Environment(SessionHistory.self) private var history
-    private var sessions: [WorkoutSession] { history.sessions }
     @Environment(LocalStore.self) private var store
     @Environment(LiveWorkoutPresenter.self) private var presenter
     @Observe(AppSettings.current) private var settings
@@ -23,8 +22,10 @@ struct WorkoutTab: View {
     @State private var path = NavigationPath()
 
     var body: some View {
-        let days = LoggedDays(sessions)
-        let progress = activeProgram.map { DayPillProgress(fraction: $0.cycleProgress(finished: sessions), color: $0.color.swatch) }
+        let days = history.memo(LoggedDaysKey()) { LoggedDays($0) }
+        let finishedDays = activeProgram.map { program in history.memo(program.runCycle) { program.finishedDayIDs($0) } } ?? []
+        let progress = activeProgram.map { DayPillProgress(fraction: $0.cycleProgress(finishedDays: finishedDays), color: $0.color.swatch) }
+        let templatesByID = Dictionary(allTemplates.map { ($0.id, $0) }) { first, _ in first }
         NavigationStack(path: $path) {
             Group {
                 if showingCalendar {
@@ -33,7 +34,7 @@ struct WorkoutTab: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 28) {
                             WeekStrip(days: days, progress: progress, target: { pillTarget($0, days: days) }, onOpen: open)
-                            ForEach(settings.workout.sections.visible) { section($0) }
+                            ForEach(settings.workout.sections.visible) { section($0, templates: templatesByID, finishedDays: finishedDays) }
                         }
                         .padding(.horizontal, 20)
                         .padding(.bottom)
@@ -105,11 +106,10 @@ struct WorkoutTab: View {
     }
 
     @ViewBuilder
-    private func section(_ section: WorkoutSection) -> some View {
-        let byID = Dictionary(allTemplates.map { ($0.id, $0) }) { first, _ in first }
+    private func section(_ section: WorkoutSection, templates byID: [UUID: WorkoutTemplate], finishedDays: Set<ProgramDay.ID>) -> some View {
         switch section {
         case .activeProgram:
-            ActiveProgramSection(program: activeProgram, templates: byID, finished: sessions)
+            ActiveProgramSection(program: activeProgram, templates: byID, finishedDays: finishedDays)
         case .library:
             library(templates: byID)
         case .yourSections:
@@ -174,3 +174,5 @@ struct WorkoutTab: View {
 private enum WorkoutTabRoute: Hashable {
     case history, archive, customizeSections
 }
+
+private struct LoggedDaysKey: Hashable {}
