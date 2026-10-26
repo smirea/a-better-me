@@ -12,6 +12,16 @@ enum Telemetry {
             options.dsn = dsn
             // Performance is a top priority, so a stall the owner can feel is reported, not only the SDK's 2 s hang.
             options.appHangTimeoutInterval = 0.5
+            // The owner is the only user, so every launch, screen load, and tap is traced and profiled: a slow tap
+            // arrives with the main thread's stacks. Session replay stays off, because it snapshots the screen on main.
+            options.tracesSampleRate = 1
+            options.configureProfiling = {
+                $0.sessionSampleRate = 1
+                $0.lifecycle = .trace
+                $0.profileAppStarts = true
+            }
+            options.attachScreenshot = true
+            options.attachViewHierarchy = true
             #if DEBUG
             options.environment = "development"
             #else
