@@ -54,7 +54,7 @@ struct CustomizeDashboardView: View {
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") {
-                    if let draft { store.updateSettings { $0.dashboard = draft } }
+                    if let draft { store.updateSettings { $0.dashboard = draft.saved } }
                     dismiss()
                 }
             }
@@ -162,27 +162,73 @@ extension DashboardSection: Identifiable {
 }
 
 extension InsightCard: CaseIterable {
-    static let allCases: [InsightCard] = [.workouts, .weightTrend]
+    static let allCases: [InsightCard] = [.workouts, .weightTrend, .expenditure, .energyBalance, .goalProgress]
 
-    var title: String { self == .workouts ? "Workouts" : "Weight Trend" }
-    var icon: CardIcon { self == .workouts ? .workouts : .trend }
+    var title: String {
+        switch self {
+        case .workouts: "Workouts"
+        case .weightTrend: "Weight Trend"
+        case .expenditure: "Expenditure"
+        case .energyBalance: "Energy Balance"
+        case .goalProgress: "Goal Progress"
+        }
+    }
+
+    var icon: CardIcon {
+        switch self {
+        case .workouts: .workouts
+        case .weightTrend: .trend
+        case .expenditure: .expenditure
+        case .energyBalance: .energyBalance
+        case .goalProgress: .goalProgress
+        }
+    }
 }
 
 extension HabitCard: CaseIterable {
-    static let allCases: [HabitCard] = [.weighIn, .workouts]
+    static let allCases: [HabitCard] = [.weighIn, .foodLogging, .workouts]
 
-    var title: String { self == .weighIn ? "Weigh-In" : "Workouts" }
-    var icon: CardIcon { self == .weighIn ? .weighInDots : .workoutDots }
+    var title: String {
+        switch self {
+        case .weighIn: "Weigh-In"
+        case .workouts: "Workouts"
+        case .foodLogging: "Food Logging"
+        }
+    }
+
+    var icon: CardIcon {
+        switch self {
+        case .weighIn: .weighInDots
+        case .workouts: .workoutDots
+        case .foodLogging: .foodLoggingDots
+        }
+    }
+}
+
+extension FocusCard: CaseIterable {
+    static let allCases: [FocusCard] = [.workouts, .recentRecords, .weeklyNutrition, .energyBalance, .dailyNutrition]
+
+    var title: String {
+        switch self {
+        case .workouts: "Weekly Workouts"
+        case .recentRecords: "Recent Records"
+        case .weeklyNutrition: "Weekly Nutrition"
+        case .energyBalance: "Energy Balance"
+        case .dailyNutrition: "Daily Nutrition"
+        }
+    }
 }
 
 enum CardIcon {
     case workouts, trend, weighInDots, workoutDots, scale, muscle, exercise, steps
+    case expenditure, energyBalance, goalProgress, foodLoggingDots
 
     var symbol: String {
         switch self {
-        case .workouts, .muscle, .exercise, .steps: "chart.bar.fill"
-        case .trend, .scale: "chart.line.uptrend.xyaxis"
-        case .weighInDots, .workoutDots: "ellipsis"
+        case .workouts, .muscle, .exercise, .steps, .energyBalance: "chart.bar.fill"
+        case .trend, .scale, .expenditure: "chart.line.uptrend.xyaxis"
+        case .weighInDots, .workoutDots, .foodLoggingDots: "ellipsis"
+        case .goalProgress: "minus"
         }
     }
 
@@ -193,6 +239,9 @@ enum CardIcon {
         case .weighInDots, .scale: DashboardColor.scale
         case .muscle: DashboardColor.muscle
         case .exercise: DashboardColor.exercise
+        case .expenditure: DashboardColor.expenditure
+        case .energyBalance, .foodLoggingDots: DashboardColor.energy
+        case .goalProgress: DashboardColor.goal
         }
     }
 }
@@ -236,43 +285,56 @@ private struct MetricMenuLabel: View {
     }
 }
 
+/// Every page as a tile with a toggle; the arrows move a shown page one place in the carousel's order.
 private struct PrimaryFocusPicker: View {
     @Binding var order: [FocusCard]
 
     private var shown: [FocusCard] {
-        order + [FocusCard.workouts, .recentRecords].filter { !order.contains($0) }
+        order + FocusCard.allCases.filter { !order.contains($0) }
     }
 
     var body: some View {
-        HStack(spacing: 14) {
-            ForEach(Array(shown.enumerated()), id: \.element) { index, card in
-                VStack(spacing: 8) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Toggle(card == .workouts ? "Weekly Workouts" : "Recent Records", isOn: Binding(
-                            get: { order.contains(card) },
-                            set: { on in
-                                if on { order.append(card) } else { order.removeAll { $0 == card } }
-                            }
-                        ))
-                        .font(AppFont.headline(12))
-                        .tint(Theme.accent)
-                        preview(card)
-                            .frame(maxWidth: .infinity, minHeight: 70)
+        ScrollView(.horizontal) {
+            HStack(spacing: 14) {
+                ForEach(shown, id: \.self) { card in
+                    let index = order.firstIndex(of: card)
+                    VStack(spacing: 8) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Toggle(card.title, isOn: Binding(
+                                get: { order.contains(card) },
+                                set: { on in
+                                    if on { order.append(card) } else { order.removeAll { $0 == card } }
+                                }
+                            ))
+                            .font(AppFont.headline(12))
+                            .tint(Theme.accent)
+                            preview(card)
+                                .frame(maxWidth: .infinity, minHeight: 70)
+                        }
+                        .padding(10)
+                        .frame(width: 150)
+                        .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
+                        .overlay(RoundedRectangle(cornerRadius: Theme.smallCornerRadius).stroke(Theme.textPrimary.opacity(index != nil ? 0.9 : 0.2)))
+                        HStack(spacing: 18) {
+                            Button("Move \(card.title) Left", systemImage: "arrow.left") { move(card, by: -1) }
+                                .disabled(index.map { $0 == 0 } ?? true)
+                            Button("Move \(card.title) Right", systemImage: "arrow.right") { move(card, by: 1) }
+                                .disabled(index.map { $0 == order.count - 1 } ?? true)
+                        }
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(Theme.textPrimary)
                     }
-                    .padding(10)
-                    .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
-                    .overlay(RoundedRectangle(cornerRadius: Theme.smallCornerRadius).stroke(Theme.textPrimary.opacity(order.contains(card) ? 0.9 : 0.2)))
-                    Button(index == 0 ? "Move Right" : "Move Left", systemImage: index == 0 ? "arrow.right" : "arrow.left") {
-                        withAnimation { order = Array(shown.reversed()).filter(order.contains) }
-                    }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(Theme.textPrimary)
-                    .disabled(order.count < 2)
                 }
             }
+            .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
+        .scrollIndicators(.hidden)
+    }
+
+    private func move(_ card: FocusCard, by offset: Int) {
+        guard let index = order.firstIndex(of: card) else { return }
+        withAnimation { order.swapAt(index, index + offset) }
     }
 
     @ViewBuilder
@@ -288,6 +350,34 @@ private struct PrimaryFocusPicker: View {
             VStack(alignment: .leading, spacing: 5) {
                 ForEach([0.9, 0.7, 0.8, 0.6, 0.75], id: \.self) { width in
                     Capsule().fill(DashboardColor.records).frame(width: 90 * width, height: 4)
+                }
+            }
+        case .weeklyNutrition:
+            Grid(horizontalSpacing: 7, verticalSpacing: 5) {
+                ForEach(NutritionMetrics.macros, id: \.self) { id in
+                    GridRow {
+                        ForEach(0..<7, id: \.self) { _ in
+                            Capsule().fill(DashboardColor.nutrient(id)).frame(width: 4, height: 10)
+                        }
+                    }
+                }
+            }
+        case .energyBalance:
+            HStack(alignment: .bottom, spacing: 3) {
+                ForEach(Array([0.6, 0.8, 0.5, 0.9, 0.7, 0.75, 0.55, 0.85, 0.65, 0.8].enumerated()), id: \.offset) { _, height in
+                    Capsule().fill(DashboardColor.energy).frame(width: 5, height: 40 * height)
+                }
+            }
+        case .dailyNutrition:
+            VStack(spacing: 8) {
+                Circle().trim(from: 0, to: 0.75)
+                    .stroke(DashboardColor.energy, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                    .rotationEffect(.degrees(135))
+                    .frame(width: 34, height: 34)
+                HStack(spacing: 10) {
+                    ForEach([NutrientID.protein, .fat, .carbs], id: \.self) { id in
+                        Capsule().fill(DashboardColor.nutrient(id)).frame(width: 22, height: 3)
+                    }
                 }
             }
         }
