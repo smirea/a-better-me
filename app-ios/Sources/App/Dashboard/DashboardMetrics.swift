@@ -62,31 +62,37 @@ enum DashboardMetrics {
     }
 
 
-    static func exercise(_ id: ExerciseID, sessions: [WorkoutSession], metric: ExerciseChartMetric, catalog: (ExerciseID) -> Exercise?) -> [DatedValue] {
-        guard let exercise = catalog(id) else { return [] }
-        return sessions.filter { $0.endedAt != nil }.compactMap { session in
+    /// Every chart metric of one exercise in one pass over the history, oldest first.
+    static func exercise(_ id: ExerciseID, sessions: [WorkoutSession], catalog: (ExerciseID) -> Exercise?) -> [ExerciseChartMetric: [DatedValue]] {
+        guard let exercise = catalog(id) else { return [:] }
+        var series: [ExerciseChartMetric: [DatedValue]] = [:]
+        for session in sessions where session.endedAt != nil {
             let items = session.blocks.flatMap(\.exercises).filter { $0.exerciseID == id }
-            return value(metric, of: items, exercise: exercise).map { DatedValue(date: session.startedAt, value: $0) }
+            for (metric, value) in values(of: items, exercise: exercise) {
+                series[metric, default: []].append(DatedValue(date: session.startedAt, value: value))
+            }
         }
-        .sorted { $0.date < $1.date }
+        return series.mapValues { $0.sorted { $0.date < $1.date } }
     }
 
-    static func value(_ metric: ExerciseChartMetric, of items: [BlockExercise], exercise: Exercise) -> Double? {
+    /// Empty when the items have no working set; a metric is missing when the sets don't measure it.
+    static func values(of items: [BlockExercise], exercise: Exercise) -> [ExerciseChartMetric: Double] {
         let working = workingSets(items)
-        guard !working.isEmpty else { return nil }
+        guard !working.isEmpty else { return [:] }
         let stats = SessionRecords.stats(of: items, exercise: exercise)
         let logs = working.flatMap { [$0.log] + $0.subSets.map(\.log) }.compactMap { $0 }
-        return switch metric {
-        case .oneRM: stats.bestOneRepMaxKg
-        case .threeRM: stats.bestOneRepMaxKg.map { repMaxKg(oneRepMaxKg: $0, reps: 3) }
-        case .tenRM: stats.bestOneRepMaxKg.map { repMaxKg(oneRepMaxKg: $0, reps: 10) }
-        case .heaviestWeight: logs.compactMap(\.weightKg).max()
-        case .totalVolume: stats.volumeKg > 0 ? stats.volumeKg : nil
-        case .bestSetVolume: working.map { WorkoutMetrics.volumeKg(of: $0, exercise: exercise) }.max().flatMap { $0 > 0 ? $0 : nil }
-        case .totalReps: logs.compactMap(\.reps).reduce(0, +).nonZero.map(Double.init)
-        case .bestSetReps: stats.bestReps.map(Double.init)
-        case .totalSets: Double(working.count)
-        }
+        let values: [ExerciseChartMetric: Double?] = [
+            .oneRM: stats.bestOneRepMaxKg,
+            .threeRM: stats.bestOneRepMaxKg.map { repMaxKg(oneRepMaxKg: $0, reps: 3) },
+            .tenRM: stats.bestOneRepMaxKg.map { repMaxKg(oneRepMaxKg: $0, reps: 10) },
+            .heaviestWeight: logs.compactMap(\.weightKg).max(),
+            .totalVolume: stats.volumeKg > 0 ? stats.volumeKg : nil,
+            .bestSetVolume: working.map { WorkoutMetrics.volumeKg(of: $0, exercise: exercise) }.max().flatMap { $0 > 0 ? $0 : nil },
+            .totalReps: logs.compactMap(\.reps).reduce(0, +).nonZero.map(Double.init),
+            .bestSetReps: stats.bestReps.map(Double.init),
+            .totalSets: Double(working.count),
+        ]
+        return values.compactMapValues { $0 }
     }
 
     static func repMaxKg(oneRepMaxKg: Double, reps: Int) -> Double {

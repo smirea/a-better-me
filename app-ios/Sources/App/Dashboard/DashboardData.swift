@@ -2,10 +2,25 @@ import SwiftUI
 
 enum DashboardRoute: Hashable {
     case workouts, weightTrend, scaleWeight, steps
-    case expenditure, energyBalance, goalProgress, foodLogging, nutritionData
     case muscle(Muscle, MuscleMetric)
     case exercise(ExerciseID, ExerciseChartMetric)
     case allMuscles, allExercises, customize
+    case expenditure, energyBalance, goalProgress, foodLogging, nutritionData
+
+    var usesHealth: Bool {
+        switch self {
+        case .weightTrend, .scaleWeight, .steps: true
+        default: usesNutrition
+        }
+    }
+
+    /// Reads the food log, plans, or imported steps, and the weigh-ins with them.
+    var usesNutrition: Bool {
+        switch self {
+        case .steps, .expenditure, .energyBalance: true
+        default: false
+        }
+    }
 }
 
 enum DashboardColor {
@@ -66,6 +81,10 @@ struct MetricTab: Identifiable {
     var stats: ((DateInterval) -> [Stat])?
 
     var id: String { title }
+
+    func format(_ value: Double) -> String {
+        unit == "steps" || unit == "kcal" ? Int(value.rounded()).formatted() : value.dashboardText
+    }
 }
 
 struct MetricDetail {
@@ -73,12 +92,51 @@ struct MetricDetail {
         case months
         case weighIns([WeighIn])
         case topExercises([(exerciseID: ExerciseID, sets: Int)])
-        case expenditure, weightTrend, energyBalance
+        case expenditure(ExpenditureSummary)
+        case weightTrend(WeightTrendSummary)
+        case energyBalance
     }
 
     var title: String
     var tabs: [MetricTab]
     var footer: Footer
+
+    func tab(_ id: MetricTab.ID?) -> MetricTab {
+        tabs.first { $0.id == id } ?? tabs[0]
+    }
+}
+
+/// What dashboard values read besides the history and Health; part of every memo key.
+struct DashboardContext: Hashable {
+    var unit = WeightUnit.kg
+    /// Only re-renders the cards on a new day. Values key on the date `DashboardValues` reads when called, because a
+    /// history change can recompute them before this refreshes.
+    var today = Calendar.current.startOfDay(for: .now)
+    var calendar = Calendar.current
+    /// Editing a custom exercise can change its name or the muscles it counts toward.
+    var custom: [Exercise] = []
+}
+
+extension EnvironmentValues {
+    @Entry var dashboardContext = DashboardContext()
+}
+
+struct CardValues: Equatable {
+    var values: [Double]
+    var text: String?
+}
+
+struct HabitValues: Equatable {
+    var days: [Bool]
+    var text: String
+}
+
+struct RecordRow: Hashable {
+    var exerciseID: ExerciseID
+    var name: String
+    var label: String
+    /// The value over the largest one shown.
+    var fraction: Double
 }
 
 /// Weights are stored in kilograms and converted to the owner's unit here, once, for every chart.
@@ -88,8 +146,8 @@ struct DashboardData {
     var steps: [DatedValue]
     var unit: WeightUnit
     var catalog: (ExerciseID) -> Exercise?
-    var now = Date.now
-    var calendar = Calendar.current
+    var now: Date
+    var calendar: Calendar
     var log: [NutritionLogDay] = []
     var plans: [NutritionPlan] = []
     var nutritionSettings = NutritionSettings()
@@ -99,46 +157,19 @@ struct DashboardData {
         WeightTrend.daily(weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, through: now, calendar: calendar)
     }
 
-    var today: CalendarDay { CalendarDay(now, in: calendar) }
-
-    var intake: [DatedValue] { NutritionMetrics.intake(log, calendar: calendar) }
-
-    var expenditurePoints: [DatedValue] { expenditure.map { DatedValue(date: $0.date, value: $0.kcal) } }
-
-    var energyTargets: [DatedValue] { NutritionMetrics.energyTargets(plans, through: today, calendar: calendar) }
-
-    var goalPlan: NutritionPlan? { NutritionPlan.effective(on: today, in: plans) }
-
-    /// Intake bars against a dashed reference, with the range's mean difference as the one stat.
-    private func balanceTab(_ title: String, icon: String, reference: [DatedValue], color: Color) -> MetricTab {
-        let differences = NutritionMetrics.differences(intake: intake, reference: reference, calendar: calendar)
-        let isExpenditure = title == "Expenditure"
-        return MetricTab(
-            title: title, icon: icon, points: intake, unit: "kcal", averageTitle: "Average", summary: .total, style: .bar,
-            color: DashboardColor.energy,
-            overlay: MetricTab.Overlay(title: isExpenditure ? "Expenditure" : "Targets", points: reference, color: color, dashed: true),
-            stats: { interval in
-                let mean = differences.inside(interval).average
-                guard isExpenditure else { return [MetricTab.Stat(title: "Average", value: mean)] }
-                return [MetricTab.Stat(title: (mean ?? 0) > 0 ? "Surplus" : "Deficit", value: mean.map(abs))]
-            }
-        )
-    }
-
     func weight(_ points: [DatedValue]) -> [DatedValue] {
         points.map { DatedValue(date: $0.date, value: unit.fromKg($0.value)) }
     }
 
     func lastDays(_ points: [DatedValue], count: Int = 7) -> [Double] {
-        let days = DailyCombine.sum.combine(points, calendar: calendar)
         let today = calendar.startOfDay(for: now)
-        return (0..<count).reversed().map { offset in
-            let day = calendar.date(byAdding: .day, value: -offset, to: today)!
-            return days.first { $0.date == day }?.value ?? 0
+        let first = calendar.date(byAdding: .day, value: -(count - 1), to: today)!
+        var days: [Date: Double] = [:]
+        for point in points where point.date >= first {
+            days[calendar.startOfDay(for: point.date), default: 0] += point.value
         }
+        return (0..<count).reversed().map { days[calendar.date(byAdding: .day, value: -$0, to: today)!] ?? 0 }
     }
-
-    func muscleUnit(_ metric: MuscleMetric) -> String { metric == .sets ? "sets" : unit.rawValue }
 
     func muscle(_ muscle: Muscle, _ metric: MuscleMetric) -> [DatedValue] {
         let points = DashboardMetrics.muscle(muscle, sessions: sessions, metric: metric, catalog: catalog)
@@ -146,16 +177,85 @@ struct DashboardData {
     }
 
     func exercise(_ id: ExerciseID, _ metric: ExerciseChartMetric) -> [DatedValue] {
-        let points = DashboardMetrics.exercise(id, sessions: sessions, metric: metric, catalog: catalog)
-        return metric.isWeight ? weight(points) : points
+        convert(DashboardMetrics.exercise(id, sessions: sessions, catalog: catalog)[metric] ?? [], metric)
     }
 
-    func exerciseUnit(_ metric: ExerciseChartMetric) -> String {
-        switch metric {
-        case .totalReps, .bestSetReps: "reps"
-        case .totalSets: "sets"
-        default: unit.rawValue
+    private func convert(_ points: [DatedValue], _ metric: ExerciseChartMetric) -> [DatedValue] {
+        metric.isWeight ? weight(points) : points
+    }
+
+    func muscleCard(_ card: MuscleCard) -> CardValues {
+        let days = lastDays(muscle(card.muscle, card.metric))
+        let total = days.reduce(0, +)
+        return CardValues(values: days, text: total > 0 ? total.dashboardText : nil)
+    }
+
+    func exerciseCard(_ card: ExerciseCard) -> CardValues {
+        let values = exercise(card.exerciseID, card.metric).suffix(7).map(\.value)
+        return CardValues(values: values, text: values.last?.dashboardText)
+    }
+
+    var workoutsCard: CardValues {
+        let sets = DashboardMetrics.workouts(sessions, metric: .sets, catalog: catalog).suffix(7).map(\.value)
+        return CardValues(values: sets, text: sets.last?.dashboardText)
+    }
+
+    var trendCard: CardValues {
+        let values = weight(Array(trend.suffix(7))).map(\.value)
+        return CardValues(values: values, text: values.last?.dashboardText)
+    }
+
+    var scaleWeightCard: CardValues {
+        let entries = weighIns.suffix(7).map { unit.fromKg($0.kg) }
+        return CardValues(values: entries, text: entries.last?.dashboardText)
+    }
+
+    var stepsCard: CardValues {
+        let days = lastDays(steps)
+        return CardValues(values: days, text: steps.isEmpty ? nil : Int(days.last!).formatted())
+    }
+
+    var weighInHabit: HabitValues {
+        let dates = weighIns.map(\.date)
+        return HabitValues(
+            days: DashboardMetrics.habitDays(dates, now: now, calendar: calendar),
+            text: "\(DashboardMetrics.daysThisWeek(dates, now: now, calendar: calendar))/7"
+        )
+    }
+
+    var workoutHabit: HabitValues {
+        let dates = sessions.map(\.startedAt)
+        return HabitValues(
+            days: DashboardMetrics.habitDays(dates, now: now, calendar: calendar),
+            text: "\(dates.count { calendar.isDate($0, equalTo: now, toGranularity: .weekOfYear) })"
+        )
+    }
+
+    func cycleProgress(_ scope: DashboardMetrics.CycleScope, program: Program?, templates: [WorkoutTemplate]) -> DashboardMetrics.CycleProgress {
+        DashboardMetrics.cycleProgress(
+            program == nil ? .allWorkouts : scope, program: program, templates: templates, sessions: sessions,
+            now: now, calendar: calendar, catalog: catalog
+        )
+    }
+
+    func recentRecords(_ kind: ExerciseRecord.Kind) -> [RecordRow] {
+        let records = DashboardMetrics.recentRecords(sessions, kind: kind, catalog: catalog)
+        let top = records.map(\.value).max() ?? 1
+        return records.map { record in
+            let label = switch kind {
+            case .reps: "\(Int(record.value)) reps"
+            case .volume, .oneRepMax: "\(unit.fromKg(record.value).dashboardText) \(unit.rawValue)"
+            }
+            return RecordRow(
+                exerciseID: record.exerciseID, name: catalog(record.exerciseID)?.name ?? "Unknown exercise",
+                label: label, fraction: record.value / top
+            )
         }
+    }
+
+    /// Newest first.
+    var trainedExercises: [ExerciseID] {
+        sessions.sorted { $0.startedAt > $1.startedAt }.flatMap { $0.blocks.flatMap(\.exercises).map(\.exerciseID) }.firstOccurrences()
     }
 
     func detail(_ route: DashboardRoute) -> MetricDetail {
@@ -172,18 +272,26 @@ struct DashboardData {
                 )
             }, footer: .topExercises(DashboardMetrics.topExercises(sessions, since: since)))
         case .weightTrend:
+            let trend = trend
             let scale = DailyCombine.mean.combine(weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, calendar: calendar)
             return MetricDetail(title: "Weight Trend", tabs: [MetricTab(
                 title: "Trend Weight", points: weight(trend), unit: unit.rawValue, averageTitle: "Average",
                 summary: .change, style: .line, color: DashboardColor.trend,
                 overlay: MetricTab.Overlay(title: "Scale Weight", points: weight(scale), color: DashboardColor.scaleOnTrend)
-            )], footer: .weightTrend)
+            )], footer: .weightTrend(WeightTrendSummary(
+                changes: NutritionMetrics.changes(trend, now: now, calendar: calendar),
+                insights: NutritionMetrics.weightInsights(trend: trend, now: now, calendar: calendar)
+            )))
         case .expenditure:
             return MetricDetail(title: "Expenditure", tabs: [MetricTab(
                 title: "Expenditure", points: expenditurePoints, unit: "kcal", averageTitle: "Average",
                 summary: .change, style: .line, color: DashboardColor.expenditure,
                 holding: Set(expenditure.filter(\.isHolding).map(\.date))
-            )], footer: .expenditure)
+            )], footer: .expenditure(ExpenditureSummary(
+                changes: NutritionMetrics.changes(expenditurePoints, now: now, calendar: calendar),
+                currentKcal: expenditure.last?.kcal,
+                strategy: NutritionMetrics.strategy(expenditure, settings: nutritionSettings.expenditure)
+            )))
         case .energyBalance:
             return MetricDetail(title: "Energy Balance", tabs: [
                 balanceTab("Expenditure", icon: "flame.fill", reference: expenditurePoints, color: DashboardColor.expenditure),
@@ -205,20 +313,119 @@ struct DashboardData {
                 MetricTab(
                     title: metric.title, icon: metric == .sets ? "arrow.right.circle.fill" : "scalemass.fill",
                     points: DailyCombine.sum.combine(self.muscle(muscle, metric), calendar: calendar),
-                    unit: muscleUnit(metric), averageTitle: "Average \(metric.title)", summary: .total,
+                    unit: metric.unit(unit), averageTitle: "Average \(metric.title)", summary: .total,
                     style: .bar, color: DashboardColor.muscle
                 )
             }, footer: .months)
         case let .exercise(id, _):
+            let series = DashboardMetrics.exercise(id, sessions: sessions, catalog: catalog)
             return MetricDetail(title: catalog(id)?.name ?? "Unknown exercise", tabs: ExerciseChartMetric.allCases.map { metric in
                 MetricTab(
-                    title: metric.title, points: metric.dailyCombine.combine(exercise(id, metric), calendar: calendar),
-                    unit: exerciseUnit(metric), averageTitle: "Avg \(metric.title)",
+                    title: metric.title, points: metric.dailyCombine.combine(convert(series[metric] ?? [], metric), calendar: calendar),
+                    unit: metric.unit(unit), averageTitle: "Avg \(metric.title)",
                     summary: .best, style: metric == .totalSets ? .bar : .line, color: DashboardColor.exercise
                 )
             }, footer: .months)
         case .allMuscles, .allExercises, .customize, .goalProgress, .foodLogging, .nutritionData:
             preconditionFailure("\(route) is not a metric detail")
+        }
+    }
+}
+
+/// Dashboard values through the history's memo: each is computed once per change of its inputs, and every view that
+/// shows it shares the result.
+@MainActor
+struct DashboardValues: DynamicProperty {
+    @Environment(SessionHistory.self) private var history
+    @Environment(ExerciseCatalog.self) private var catalog
+    @Environment(HealthData.self) private var health
+    @Environment(NutritionData.self) private var nutrition
+    @Environment(\.dashboardContext) var context
+
+    private enum Name: Hashable {
+        case muscleCard(MuscleCard), exerciseCard(ExerciseCard), workoutsCard, trendCard, scaleWeightCard, stepsCard
+        case weighInHabit, workoutHabit, records(ExerciseRecord.Kind), trained
+        case cycle(DashboardMetrics.CycleScope, Program?, [WorkoutTemplate])
+        case detail(DashboardRoute), plot(DashboardRoute, MetricTab.ID?, ChartRange, Averaging)
+        case expenditureDays, expenditureCard, balance(BalanceReference, days: Int), week, todayNutrition, foodLogging
+        case goal(GoalProgressValues.Source)
+    }
+
+    private struct Key: Hashable {
+        var name: Name
+        var context: DashboardContext
+        /// The start of today rather than `Date.now`, read on every call, so values that count days follow the date
+        /// without recomputing on every render.
+        var today: Date
+        var healthRevision: Int?
+        var nutritionRevision: Int?
+    }
+
+    /// Without `usesHealth`, `compute` sees no weigh-ins or steps, so a value that reads them without keying on Health
+    /// shows up empty instead of silently stale. `usesNutrition` adds the food log, plans, nutrition settings, the
+    /// expenditure, and the imported steps, and implies Health, because the expenditure reads the weigh-ins.
+    private func memo<Value>(_ name: Name, usesHealth: Bool = false, usesNutrition: Bool = false, _ compute: (DashboardData) -> Value) -> Value {
+        let today = context.calendar.startOfDay(for: .now)
+        let readsHealth = usesHealth || usesNutrition
+        let expenditure = usesNutrition && name != .expenditureDays ? expenditureDays : []
+        let key = Key(
+            name: name, context: context, today: today, healthRevision: readsHealth ? health.revision : nil,
+            nutritionRevision: usesNutrition ? nutrition.revision : nil
+        )
+        return history.memo(key) { sessions in
+            var data = DashboardData(
+                sessions: sessions, weighIns: readsHealth ? health.weighIns : [], steps: readsHealth ? health.steps : [],
+                unit: context.unit, catalog: catalog.exercise, now: today, calendar: context.calendar
+            )
+            if usesNutrition {
+                data.steps = NutritionMetrics.steps(health: health.steps, imported: nutrition.importedSteps, calendar: context.calendar)
+                data.log = nutrition.log
+                data.plans = nutrition.plans
+                data.nutritionSettings = nutrition.settings
+                data.expenditure = expenditure
+            }
+            return compute(data)
+        }
+    }
+
+    private var expenditureDays: [NutritionEngine.ExpenditureDay] {
+        memo(.expenditureDays, usesNutrition: true) { $0.computedExpenditure(profile: nutrition.profile) }
+    }
+
+    var expenditureCard: CardValues { memo(.expenditureCard, usesNutrition: true) { $0.expenditureCard } }
+    func balance(_ reference: BalanceReference, days: Int) -> BalanceValues { memo(.balance(reference, days: days), usesNutrition: true) { $0.balance(reference, days: days) } }
+    var week: [NutritionMetrics.DayNutrition] { memo(.week, usesNutrition: true) { $0.week } }
+    var todayNutrition: NutritionMetrics.DayNutrition { memo(.todayNutrition, usesNutrition: true) { $0.todayNutrition } }
+    var foodLogging: FoodLoggingValues { memo(.foodLogging, usesNutrition: true) { $0.foodLogging } }
+    func goalProgress(_ source: GoalProgressValues.Source) -> GoalProgressValues? { memo(.goal(source), usesNutrition: true) { GoalProgressValues(data: $0, source: source) } }
+    var nutritionSettings: NutritionSettings { nutrition.settings }
+
+    func muscleCard(_ card: MuscleCard) -> CardValues { memo(.muscleCard(card)) { $0.muscleCard(card) } }
+    func exerciseCard(_ card: ExerciseCard) -> CardValues { memo(.exerciseCard(card)) { $0.exerciseCard(card) } }
+    var workoutsCard: CardValues { memo(.workoutsCard) { $0.workoutsCard } }
+    var trendCard: CardValues { memo(.trendCard, usesHealth: true) { $0.trendCard } }
+    var scaleWeightCard: CardValues { memo(.scaleWeightCard, usesHealth: true) { $0.scaleWeightCard } }
+    var stepsCard: CardValues { memo(.stepsCard, usesNutrition: true) { $0.stepsCard } }
+    var weighInHabit: HabitValues { memo(.weighInHabit, usesHealth: true) { $0.weighInHabit } }
+    var workoutHabit: HabitValues { memo(.workoutHabit) { $0.workoutHabit } }
+    var trainedExercises: [ExerciseID] { memo(.trained) { $0.trainedExercises } }
+    func recentRecords(_ kind: ExerciseRecord.Kind) -> [RecordRow] { memo(.records(kind)) { $0.recentRecords(kind) } }
+
+    func cycleProgress(_ scope: DashboardMetrics.CycleScope, program: Program?, templates: [WorkoutTemplate]) -> DashboardMetrics.CycleProgress {
+        memo(.cycle(scope, program, templates)) { $0.cycleProgress(scope, program: program, templates: templates) }
+    }
+
+    func detail(_ route: DashboardRoute) -> MetricDetail {
+        memo(.detail(route), usesHealth: route.usesHealth, usesNutrition: route.usesNutrition) { $0.detail(route) }
+    }
+
+    func plot(_ route: DashboardRoute, tab: MetricTab.ID?, range: ChartRange, averaging: Averaging) -> MetricPlot {
+        memo(.plot(route, tab, range, averaging), usesHealth: route.usesHealth, usesNutrition: route.usesNutrition) { data in
+            let detail = detail(route)
+            return MetricPlot(
+                tab: detail.tab(tab), footer: detail.footer, range: range, averaging: averaging,
+                now: data.now, calendar: data.calendar, unit: data.unit
+            )
         }
     }
 }
@@ -230,6 +437,8 @@ extension MuscleMetric {
         case .volume: "Volume"
         }
     }
+
+    func unit(_ weight: WeightUnit) -> String { self == .sets ? "sets" : weight.rawValue }
 }
 
 extension ExerciseChartMetric {
@@ -244,6 +453,14 @@ extension ExerciseChartMetric {
         case .totalReps: "Total Reps"
         case .bestSetReps: "Best Set Reps"
         case .totalSets: "Total Sets"
+        }
+    }
+
+    func unit(_ weight: WeightUnit) -> String {
+        switch self {
+        case .totalReps, .bestSetReps: "reps"
+        case .totalSets: "sets"
+        default: weight.rawValue
         }
     }
 

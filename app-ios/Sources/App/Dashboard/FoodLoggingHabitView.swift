@@ -3,36 +3,33 @@ import SwiftUI
 /// MacroFactor's Food Logging habit page: today, the streak, a month of day rings, and one heat map per year.
 /// Tapping a day opens its Nutrition Data entry.
 struct FoodLoggingHabitView: View {
-    var body: some View {
-        DashboardDataReader { data in FoodLoggingHabitContent(data: data) }
-    }
-}
-
-private struct FoodLoggingHabitContent: View {
-    let data: DashboardData
+    @Environment(NutritionData.self) private var nutrition
+    private var values = DashboardValues()
     @State private var month: Date?
     @State private var editing: EditedDay?
 
-    private var calendar: Calendar { data.calendar }
+    private var calendar: Calendar { values.context.calendar }
+    private var now: Date { values.context.today }
+    private var today: CalendarDay { CalendarDay(now, in: calendar) }
 
     var body: some View {
-        let byDay = Dictionary(data.log.map { ($0.day, $0) }, uniquingKeysWith: { $1 })
-        let shown = month ?? calendar.dateInterval(of: .month, for: data.now)!.start
-        let dates = NutritionMetrics.loggedDates(data.log, calendar: calendar)
+        let habit = values.foodLogging
+        let byDay = habit.byDay
+        let shown = month ?? calendar.dateInterval(of: .month, for: now)!.start
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(spacing: 16) {
                     HStack(alignment: .top) {
-                        stat("Today", byDay[data.today].map { Int(($0.consumed[.energy] ?? 0).rounded()).formatted() } ?? "--", "kcal")
+                        stat("Today", habit.todayKcal.map { Int($0.rounded()).formatted() } ?? "--", "kcal")
                         Spacer()
-                        stat("Streak", NutritionMetrics.streak(dates, now: data.now, calendar: calendar).formatted(), "days")
+                        stat("Streak", habit.streak.formatted(), "days")
                         Spacer()
                     }
                     monthGrid(shown, byDay: byDay)
                     HStack {
                         Button("Previous Month", systemImage: "chevron.backward") { step(shown, by: -1) }
                         Button("Next Month", systemImage: "chevron.forward") { step(shown, by: 1) }
-                            .disabled(calendar.isDate(shown, equalTo: data.now, toGranularity: .month))
+                            .disabled(calendar.isDate(shown, equalTo: now, toGranularity: .month))
                         Spacer()
                         Text(shown.formatted(.dateTime.month(.wide).year())).font(AppFont.medium(15))
                     }
@@ -42,7 +39,7 @@ private struct FoodLoggingHabitContent: View {
                 .padding(14)
                 .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
                 legend
-                ForEach(years(), id: \.self) { year in
+                ForEach(habit.years, id: \.self) { year in
                     VStack(alignment: .leading, spacing: 8) {
                         Text(String(year)).font(AppFont.title())
                         YearHeatMap(year: year, states: byDay, calendar: calendar)
@@ -57,7 +54,7 @@ private struct FoodLoggingHabitContent: View {
         .background(Theme.background)
         .navigationTitle("Food Logging")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $editing) { NutritionDayEntrySheet(day: $0.day, log: data.log) }
+        .sheet(item: $editing) { NutritionDayEntrySheet(day: $0.day, log: nutrition.log) }
     }
 
     private func stat(_ title: String, _ value: String, _ unit: String) -> some View {
@@ -73,12 +70,6 @@ private struct FoodLoggingHabitContent: View {
 
     private func step(_ shown: Date, by months: Int) {
         month = calendar.date(byAdding: .month, value: months, to: shown)
-    }
-
-    private func years() -> [Int] {
-        let current = calendar.component(.year, from: data.now)
-        let first = data.log.first.map { $0.day.year } ?? current
-        return Array((first...current).reversed())
     }
 
     /// Monday-first weeks, as MacroFactor's calendar.
@@ -106,10 +97,10 @@ private struct FoodLoggingHabitContent: View {
     }
 
     private func dayCell(_ day: CalendarDay, state: NutritionMetrics.LogState) -> some View {
-        let future = day > data.today
+        let future = day > today
         return Button { editing = EditedDay(day: day) } label: {
             Text("\(day.day)")
-                .font(day == data.today ? AppFont.headline(14) : AppFont.body(14))
+                .font(day == today ? AppFont.headline(14) : AppFont.body(14))
                 .foregroundStyle(future ? Theme.textTertiary : Theme.textPrimary)
                 .frame(width: 38, height: 38)
                 .overlay {

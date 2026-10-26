@@ -17,6 +17,22 @@ extension NutrientID {
     }
 }
 
+struct WeeklyNutritionFocus: View {
+    private var values = DashboardValues()
+
+    var body: some View {
+        WeeklyNutritionCard(week: values.week, today: CalendarDay(values.context.today, in: values.context.calendar), overages: values.nutritionSettings.showOverages)
+    }
+}
+
+struct DailyNutritionFocus: View {
+    private var values = DashboardValues()
+
+    var body: some View {
+        DailyNutritionCard(day: values.todayNutrition, overages: values.nutritionSettings.showOverages)
+    }
+}
+
 struct WeeklyNutritionCard: View {
     let week: [NutritionMetrics.DayNutrition]
     let today: CalendarDay
@@ -167,44 +183,27 @@ struct DailyNutritionCard: View {
 }
 
 struct EnergyBalanceFocusCard: View {
-    enum Reference: String, CaseIterable {
-        case expenditure = "Expenditure", targets = "Targets"
-    }
-
-    let data: DashboardData
-    @State private var reference = Reference.expenditure
-
-    private static let days = 30
+    private var values = DashboardValues()
+    @State private var reference = BalanceReference.expenditure
 
     var body: some View {
-        let interval = DateInterval(
-            start: data.calendar.date(byAdding: .day, value: -(Self.days - 1), to: data.calendar.startOfDay(for: data.now))!,
-            end: data.calendar.date(byAdding: .day, value: 1, to: data.calendar.startOfDay(for: data.now))!
-        )
-        let intake = data.intake.inside(interval)
-        let line = (reference == .expenditure ? data.expenditurePoints : data.energyTargets).inside(interval)
-        let differences = NutritionMetrics.differences(intake: intake, reference: line, calendar: data.calendar)
-        // The three terms are means over the days that have both intake and a reference, so they add up.
-        let paired = Set(differences.map(\.date))
-        let meanDifference = differences.average
-        let meanIntake = paired.isEmpty ? intake.average : intake.filter { paired.contains($0.date) }.average
-        let meanReference = meanDifference.flatMap { difference in meanIntake.map { $0 - difference } } ?? line.average
+        let balance = values.balance(reference, days: 30)
         let lineColor = reference == .expenditure ? DashboardColor.expenditure : DashboardColor.fat
         VStack(alignment: .leading, spacing: 10) {
             Text("Energy Balance").font(AppFont.title())
-            BalanceChart(bars: intake, line: line, lineColor: lineColor, domain: interval)
+            BalanceChart(bars: balance.bars, line: balance.line, lineColor: lineColor, domain: balance.interval)
                 .frame(height: 110)
             Text("Last 30 Days").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             HStack(alignment: .top) {
-                term(meanIntake, "Nutrition", symbol: "chart.bar.fill", color: DashboardColor.energy)
+                term(balance.meanIntake, "Nutrition", symbol: "chart.bar.fill", color: DashboardColor.energy)
                 Text("−").font(AppFont.number(17))
-                term(meanReference, reference.rawValue, symbol: "line.diagonal", color: lineColor)
+                term(balance.meanReference, reference.rawValue, symbol: "line.diagonal", color: lineColor)
                 Text("=").font(AppFont.number(17))
-                term(meanDifference, "Difference", symbol: nil, color: Theme.textSecondary)
+                term(balance.meanDifference, "Difference", symbol: nil, color: Theme.textSecondary)
             }
             Picker("Compare With", selection: $reference) {
-                ForEach(Reference.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                ForEach(BalanceReference.allCases, id: \.self) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented)
             .frame(maxWidth: 260)
@@ -258,30 +257,25 @@ struct BalanceChart: View {
 }
 
 struct EnergyBalanceInsightCard: View {
-    let data: DashboardData
+    let balance: BalanceValues
 
     var body: some View {
-        let today = data.calendar.startOfDay(for: data.now)
-        let interval = DateInterval(start: data.calendar.date(byAdding: .day, value: -6, to: today)!, end: data.calendar.date(byAdding: .day, value: 1, to: today)!)
-        let reference = data.expenditurePoints.inside(interval)
-        let differences = NutritionMetrics.differences(intake: data.intake, reference: reference, calendar: data.calendar)
-        let mean = NutritionMetrics.trailingMean(differences, days: 7, now: data.now, calendar: data.calendar)
+        let mean = balance.meanDifference
         NavigationLink(value: DashboardRoute.energyBalance) {
             DashboardCard(
                 title: "Energy Balance", period: "Last 7 Days", value: mean.map { Int(abs($0).rounded()).formatted() },
                 unit: (mean ?? 0) > 0 ? "kcal surplus" : "kcal deficit"
             ) {
-                BalanceChart(bars: data.intake.inside(interval), line: reference, lineColor: DashboardColor.expenditure, domain: interval)
+                BalanceChart(bars: balance.bars, line: balance.line, lineColor: DashboardColor.expenditure, domain: balance.interval)
             }
         }
     }
 }
 
 struct GoalProgressInsightCard: View {
-    let data: DashboardData
+    let progress: GoalProgressValues?
 
     var body: some View {
-        let progress = GoalProgressValues(data: data, source: .scale)
         NavigationLink(value: DashboardRoute.goalProgress) {
             DashboardCard(
                 title: "Goal Progress",

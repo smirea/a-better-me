@@ -66,7 +66,7 @@ struct TemplateSummary: View {
 /// What a day row shows on its right: a chevron in the library and archive, a checkbox in the Active Program.
 enum ProgramDayAccessory {
     case chevron
-    case checkbox(finished: [WorkoutSession], tickRest: (ProgramDay, Bool) -> Void)
+    case checkbox(finishedDays: Set<ProgramDay.ID>, tickRest: (ProgramDay, Bool) -> Void)
 }
 
 /// A program as the Workout tab, the Archive, and the library draw it: the icon tile, name, "N workouts", a collapse
@@ -123,7 +123,7 @@ struct ProgramCard: View {
 
     @ViewBuilder
     private func row(_ day: ProgramDay) -> some View {
-        let done: Bool = if case let .checkbox(finished, _) = accessory { program.isDone(day, finished: finished) } else { false }
+        let done: Bool = if case let .checkbox(finishedDays, _) = accessory { program.isDone(day, finishedDays: finishedDays) } else { false }
         Group {
             if let templateID = day.templateID {
                 NavigationLink(value: ProgramRoute(programID: program.id, dayID: day.id)) {

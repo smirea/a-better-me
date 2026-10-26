@@ -4,22 +4,18 @@ import SwiftUI
 /// MacroFactor's Goal Progress detail: a monthly waterfall of the distance to the target on scale or trend weight.
 /// It has no range pills because the waterfall always spans the current goal.
 struct GoalProgressView: View {
-    var body: some View {
-        DashboardDataReader { data in GoalProgressContent(data: data) }
-    }
-}
-
-private struct GoalProgressContent: View {
-    let data: DashboardData
+    private var values = DashboardValues()
     @State private var source = GoalProgressValues.Source.scale
 
+    private var context: DashboardContext { values.context }
+
     var body: some View {
-        let progress = GoalProgressValues(data: data, source: source)
+        let progress = values.goalProgress(source)
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 tabStrip
                 if let progress {
-                    let bars = NutritionMetrics.waterfall(progress.points, goal: progress.goal, now: data.now, calendar: data.calendar)
+                    let bars = NutritionMetrics.waterfall(progress.points, goal: progress.goal, now: context.today, calendar: context.calendar)
                     if bars.isEmpty {
                         message("A goal to maintain has no distance to track. Set a target weight to lose or gain toward in Strategy.")
                     } else {
@@ -61,8 +57,8 @@ private struct GoalProgressContent: View {
         return VStack(alignment: .leading, spacing: 2) {
             Text("Distance").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(data.unit.fromKg(max(remaining, 0)).dashboardText).font(AppFont.number(22))
-                Text(data.unit.rawValue).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
+                Text(context.unit.fromKg(max(remaining, 0)).dashboardText).font(AppFont.number(22))
+                Text(context.unit.rawValue).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
             }
         }
         .accessibilityElement(children: .combine)
@@ -73,8 +69,8 @@ private struct GoalProgressContent: View {
         Chart(Array(bars.enumerated()), id: \.offset) { index, bar in
             BarMark(
                 x: .value("Month", String(index)),
-                yStart: .value("From", data.unit.fromKg(bar.low)),
-                yEnd: .value("To", data.unit.fromKg(bar.high)),
+                yStart: .value("From", context.unit.fromKg(bar.low)),
+                yEnd: .value("To", context.unit.fromKg(bar.high)),
                 width: .ratio(0.7)
             )
             .foregroundStyle(color(bar.kind))
@@ -131,12 +127,12 @@ private struct GoalProgressContent: View {
         )
         let eta = progress.currentKg
             .flatMap { NutritionEngine.Targets.estimatedDays(goal: rate, weightKg: $0) }
-            .map { data.calendar.date(byAdding: .day, value: $0, to: data.now)! }
+            .map { context.calendar.date(byAdding: .day, value: $0, to: context.today)! }
         return VStack(alignment: .leading, spacing: 12) {
             Text("Insights & Data").font(AppFont.title())
             InsightTiles(tiles: [
                 InsightTile(
-                    value: goal.targetWeightKg.map { data.unit.fromKg($0).dashboardText } ?? "--", unit: data.unit.rawValue,
+                    value: goal.targetWeightKg.map { context.unit.fromKg($0).dashboardText } ?? "--", unit: context.unit.rawValue,
                     title: "Target Weight", text: "The target you selected during goal creation."
                 ),
                 InsightTile(value: progress.days.formatted(), unit: "days", title: "Duration", text: "The number of days that you have spent pursuing your current goal."),

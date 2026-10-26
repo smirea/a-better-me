@@ -2,11 +2,11 @@ import SwiftUI
 
 /// The "Insights & Data" blocks under the nutrition detail charts (docs/research/macrofactor/README.md §3.2-3.5).
 struct ExpenditureInsights: View {
-    let data: DashboardData
+    let summary: ExpenditureSummary
 
     var body: some View {
-        let changes = NutritionMetrics.changes(data.expenditurePoints, now: data.now, calendar: data.calendar)
-        let strategy = NutritionMetrics.strategy(data.expenditure, settings: data.nutritionSettings.expenditure)
+        let changes = summary.changes
+        let strategy = summary.strategy
         VStack(alignment: .leading, spacing: 12) {
             Text("Insights & Data").font(AppFont.title())
             ChangeRows(title: "Expenditure Changes", changes: changes, color: DashboardColor.expenditure, tolerance: 0.5) {
@@ -14,7 +14,7 @@ struct ExpenditureInsights: View {
             }
             InsightTiles(tiles: [
                 InsightTile(
-                    value: data.expenditure.last.map { Int($0.kcal.rounded()).formatted() } ?? "--", unit: "kcal",
+                    value: summary.currentKcal.map { Int($0.rounded()).formatted() } ?? "--", unit: "kcal",
                     title: "Current Expenditure",
                     text: "The latest estimate of your daily energy expenditure based on your weight trend and nutrition data."
                 ),
@@ -49,12 +49,12 @@ extension NutritionMetrics.ExpenditureStrategy {
 }
 
 struct WeightTrendInsights: View {
-    let data: DashboardData
+    let summary: WeightTrendSummary
+    let unit: WeightUnit
 
     var body: some View {
-        let changes = NutritionMetrics.changes(data.trend, now: data.now, calendar: data.calendar)
-        let insights = NutritionMetrics.weightInsights(trend: data.trend, now: data.now, calendar: data.calendar)
-        let unit = data.unit
+        let changes = summary.changes
+        let insights = summary.insights
         let losing = (insights?.weeklyChangeKg ?? 0) < 0
         VStack(alignment: .leading, spacing: 12) {
             Text("Insights & Data").font(AppFont.title())
@@ -90,13 +90,10 @@ struct WeightTrendInsights: View {
 }
 
 struct EnergyBalanceInsights: View {
-    let data: DashboardData
-    let tab: MetricTab
+    let rows: [(days: Int, mean: Double?)]
+    let isExpenditure: Bool
 
     var body: some View {
-        let isExpenditure = tab.id == "Expenditure"
-        let differences = NutritionMetrics.differences(intake: tab.points, reference: tab.overlay?.points ?? [], calendar: data.calendar)
-        let rows = NutritionMetrics.changeSpans.map { (days: $0, mean: NutritionMetrics.trailingMean(differences, days: $0, now: data.now, calendar: data.calendar)) }
         VStack(alignment: .leading, spacing: 12) {
             Text("Insights & Data").font(AppFont.title())
             VStack(alignment: .leading, spacing: 12) {
@@ -104,7 +101,7 @@ struct EnergyBalanceInsights: View {
                 ForEach(rows, id: \.days) { row in
                     HStack {
                         Text("\(row.days)-day").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary).frame(width: 60, alignment: .leading)
-                        Text(row.mean.map { "\(signed($0)) kcal" } ?? "--").font(AppFont.headline(14))
+                        Text(row.mean.map { "\(BalanceTag.signed($0)) kcal" } ?? "--").font(AppFont.headline(14))
                         Spacer()
                         if let mean = row.mean { BalanceTag(balance: NutritionMetrics.balance(mean), isExpenditure: isExpenditure) }
                     }
@@ -114,21 +111,17 @@ struct EnergyBalanceInsights: View {
             .padding(14)
             .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
         }
-        MonthList(rows: differences.reversed().map { day in
-            let tag = BalanceTag(balance: NutritionMetrics.balance(day.value), isExpenditure: isExpenditure)
-            return MonthRow(date: day.date, text: "\(signed(day.value)) kcal", tag: MonthRow.Tag(text: tag.title, symbol: tag.symbol, color: tag.color))
-        }, calendar: data.calendar)
-    }
-
-    private func signed(_ value: Double) -> String {
-        let rounded = Int(value.rounded())
-        return (rounded > 0 ? "+" : "") + rounded.formatted()
     }
 }
 
-private struct BalanceTag: View {
+struct BalanceTag: View {
     let balance: NutritionMetrics.Balance
     let isExpenditure: Bool
+
+    static func signed(_ value: Double) -> String {
+        let rounded = Int(value.rounded())
+        return (rounded > 0 ? "+" : "") + rounded.formatted()
+    }
 
     var title: String {
         switch (balance, isExpenditure) {

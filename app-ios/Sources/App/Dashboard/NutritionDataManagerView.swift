@@ -4,10 +4,11 @@ import SwiftUI
 /// day's `nutrition_days` row: entered totals replace the log's, and a fasted or incomplete mark changes what the
 /// expenditure counts.
 struct NutritionDataManagerView: View {
-    @Observe(NutritionLogDay.all) private var log
+    @Environment(NutritionData.self) private var nutrition
     @State private var editing: EditedLogDay?
 
     var body: some View {
+        let log = nutrition.log
         let calendar = Calendar.current
         let months = Dictionary(grouping: log.reversed()) { CalendarDay(calendar.dateInterval(of: .month, for: $0.day.date(in: calendar))!.start, in: calendar) }
         List {
@@ -34,7 +35,7 @@ struct NutritionDataManagerView: View {
                 Button("Add Day", systemImage: "plus") { editing = EditedLogDay(day: .today) }
             }
         }
-        .sheet(item: $editing) { NutritionDayEntrySheet(day: $0.day, log: log) }
+        .sheet(item: $editing) { NutritionDayEntrySheet(day: $0.day, log: nutrition.log) }
     }
 
     private func row(_ day: NutritionLogDay, calendar: Calendar) -> some View {
