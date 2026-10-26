@@ -60,9 +60,8 @@ struct FoodDetailView: View {
                 choose: choose, logFoods: logFoods, confirm: confirm
             )
         }
-        .onChange(of: serving, initial: true) {
-            if editing == nil { session.pending = portion }
-        }
+        .onAppear(perform: preview)
+        .onChange(of: serving, preview)
         .onDisappear { session.pending = nil }
     }
 
@@ -83,13 +82,13 @@ struct FoodDetailView: View {
             }
             HStack(spacing: 10) {
                 Button {
-                    session.favorite(portion, uncached: pick.uncached)
                     favorited += 1
+                    Task { await session.favorite(portion, uncached: pick.uncached) }
                 } label: {
                     Label(favorited > 0 ? "Saved" : "Favorite", systemImage: favorited > 0 ? "heart.fill" : "heart")
                 }
                 .buttonStyle(.glass)
-                .disabled(serving.quantity <= 0)
+                .disabled(serving.quantity <= 0 || favorited > 0)
                 .sensoryFeedback(.success, trigger: favorited)
                 if let editing {
                     Button("Remove", systemImage: "trash", role: .destructive) {
@@ -157,7 +156,13 @@ struct FoodDetailView: View {
         session.logPlate()
     }
 
+    /// A food not yet on the plate shows in the banner as if it were.
+    private func preview() {
+        if editing == nil { session.pending = portion }
+    }
+
     private func putOnPlate() {
+        session.pending = nil
         if let editing {
             session.plate.setServing(serving, of: editing)
         } else {

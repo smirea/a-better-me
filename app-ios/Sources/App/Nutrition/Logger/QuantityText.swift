@@ -9,11 +9,14 @@ struct QuantityText: Hashable, Sendable {
 
     private(set) var text: String
     private(set) var replacesOnType = true
+    /// The exact value until the first key, since the shown text rounds it ("1/3" shows as 0.33).
+    private var untouched: Double?
 
     static let maxLength = 8
 
     init(_ value: Double) {
         text = Self.format(value)
+        untouched = value
     }
 
     init(text: String) {
@@ -21,9 +24,10 @@ struct QuantityText: Hashable, Sendable {
         replacesOnType = false
     }
 
-    var value: Double? { Self.parse(text) }
+    var value: Double? { untouched ?? Self.parse(text) }
 
     mutating func type(_ key: Key) {
+        untouched = nil
         if replacesOnType {
             replacesOnType = false
             if key == .backspace {

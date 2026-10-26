@@ -42,6 +42,15 @@ struct QuantityTextTests {
         #expect(typed([.point, .digit(5)]) == "0.5")
     }
 
+    @Test func keepsTheExactValueUntilTyped() {
+        var third = QuantityText(1.0 / 3)
+        #expect(third.text == "0.33")
+        #expect(third.value == 1.0 / 3)
+        third.type(.backspace)
+        third.type(.digit(2))
+        #expect(third.value == 2)
+    }
+
     @Test func typesAMixedNumber() {
         #expect(typed([.digit(1), .space, .digit(1), .slash, .digit(2)]) == "1 1/2")
     }

@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 import VisionKit
 
@@ -11,13 +12,15 @@ struct ScanTab: View {
     @State private var typed = ""
     @State private var looking = false
     @State private var problem: String?
-
-    private var cameraWorks: Bool { DataScannerViewController.isSupported && DataScannerViewController.isAvailable }
+    /// The scanner only reads while this tab is on screen, so a scan never pushes a second detail over the first.
+    @State private var visible = false
+    /// `DataScannerViewController.isAvailable` stays false until camera access is granted, and nothing else asks.
+    @State private var cameraWorks = false
 
     var body: some View {
         ZStack {
             if cameraWorks {
-                BarcodeScanner(paused: looking || typing || problem != nil) { barcode in lookup(barcode) }
+                BarcodeScanner(paused: !visible || looking || typing || problem != nil) { barcode in lookup(barcode) }
                     .ignoresSafeArea(edges: .bottom)
             } else {
                 ContentUnavailableView {
@@ -43,6 +46,15 @@ struct ScanTab: View {
         }
         .overlay(alignment: .bottomTrailing) {
             LogFoodsButton(session: session).controlSize(.large).padding(16)
+        }
+        .onAppear { visible = true }
+        .onDisappear { visible = false }
+        .task {
+            guard DataScannerViewController.isSupported else { return }
+            if AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
+                _ = await AVCaptureDevice.requestAccess(for: .video)
+            }
+            cameraWorks = DataScannerViewController.isAvailable
         }
         .alert("Manual Barcode", isPresented: $typing) {
             TextField("Enter the barcode number", text: $typed).keyboardType(.numberPad)
@@ -86,12 +98,17 @@ private struct BarcodeScanner: UIViewControllerRepresentable {
             qualityLevel: .balanced, isHighlightingEnabled: true
         )
         scanner.delegate = context.coordinator
-        try? scanner.startScanning()
         return scanner
     }
 
     func updateUIViewController(_ scanner: DataScannerViewController, context: Context) {
         context.coordinator.parent = self
+        guard !scanner.isScanning else { return }
+        do {
+            try scanner.startScanning()
+        } catch {
+            FoodSearch.log.error("The barcode scanner did not start: \(String(describing: error))")
+        }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator(parent: self) }

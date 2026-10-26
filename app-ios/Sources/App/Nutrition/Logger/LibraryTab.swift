@@ -1,3 +1,4 @@
+import GRDB
 import SwiftUI
 
 /// Library (`log-14-library-recipes.jpg`, `log-15-library-foods.jpg`): the owner's recipes, custom foods, and
@@ -6,7 +7,7 @@ struct LibraryTab: View {
     @Bindable var session: LoggerSession
     let open: (LoggerPick) -> Void
     @Environment(LocalStore.self) private var store
-    @Observe(Food.library) private var foods
+    @Observe(Food.custom) private var foods
     @Observe(Recipe.library) private var recipes
     @Observe(FoodFavorite.all) private var favorites
     @State private var filter = ""
@@ -24,7 +25,7 @@ struct LibraryTab: View {
                 case .recipes:
                     ForEach(matching(recipes.map { FoodPortion($0.snapshot) }), id: \.food.foodID) { row($0) }
                 case .foods:
-                    ForEach(matching(foods.filter { $0.source == .custom }.map { FoodPortion($0.snapshot) }), id: \.food.foodID) { row($0) }
+                    ForEach(matching(foods.map { FoodPortion($0.snapshot) }), id: \.food.foodID) { row($0) }
                 case .favorites:
                     ForEach(favorites.filter { matches($0.food) }) { favorite in
                         row(favorite.portion)
@@ -47,7 +48,7 @@ struct LibraryTab: View {
     @ViewBuilder private var empty: some View {
         let isEmpty = switch session.library {
         case .recipes: recipes.isEmpty
-        case .foods: !foods.contains { $0.source == .custom }
+        case .foods: foods.isEmpty
         case .favorites: favorites.isEmpty
         }
         if isEmpty {
@@ -74,5 +75,14 @@ struct LibraryTab: View {
 
     private func row(_ portion: FoodPortion) -> some View {
         LoggerFoodRow(portion: portion, open: { open(LoggerPick(portion)) }, add: { session.add(LoggerPick(portion)) })
+    }
+}
+
+extension Food {
+    /// The owner's own foods by name. `Food.library` also holds every cached USDA and Open Food Facts food.
+    static let custom = DatabaseQuery([Food]()) { db in
+        try Food.filter(Column("source") == FoodSource.custom.rawValue && Column("archived") == false)
+            .order(Column("name").collating(.localizedCaseInsensitiveCompare))
+            .fetchAll(db)
     }
 }

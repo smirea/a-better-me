@@ -72,7 +72,7 @@ private struct LoggerContent: View {
                     case let .food(pick): FoodDetailView(session: session, editing: nil, pick: pick)
                     case let .plateItem(id):
                         if let item = session.plate.item(id) { FoodDetailView(session: session, editing: id, pick: item.pick) }
-                    case .plate: PlateView(session: session, open: { path.append(.plateItem($0)) })
+                    case .plate: PlateView(session: session, open: { path.append(.plateItem($0)) }).id(session.time.day)
                     }
                 }
             }

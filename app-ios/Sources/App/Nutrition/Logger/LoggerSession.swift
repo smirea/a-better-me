@@ -61,7 +61,13 @@ final class LoggerSession {
     @ObservationIgnored let search: FoodSearch
     var tab: LoggerTab
     var library: LibrarySection
-    var time: LogTime
+    /// The time chip's choice, or the hour the logger was opened at. Nil follows the clock, so a plate logged after
+    /// the hour turns lands in the new hour instead of before the foods logged since.
+    private var chosenTime: LogTime?
+    var time: LogTime {
+        get { chosenTime ?? .now() }
+        set { chosenTime = newValue }
+    }
     var plate = Plate()
     /// The food detail's serving before it is added, so the banner shows what adding it would leave.
     var pending: FoodPortion?
@@ -72,12 +78,12 @@ final class LoggerSession {
     private(set) var logged = 0
     @ObservationIgnored private var remote: Task<Void, Never>?
 
-    init(store: LocalStore, search: FoodSearch, start: LoggerStart, now: Date = .now) {
+    init(store: LocalStore, search: FoodSearch, start: LoggerStart) {
         self.store = store
         self.search = search
         tab = start.tab
         library = start.library
-        time = start.time ?? .now(now)
+        chosenTime = start.time
         results = (try? search.local("")) ?? []
     }
 
@@ -121,6 +127,7 @@ final class LoggerSession {
         for item in plate.items {
             if let food = item.pick.uncached { store.saveFood(food) }
         }
+        let time = chosenTime ?? .now(date)
         store.log(plate.portions, on: time.day, minute: time.minute(at: date))
         plate = Plate()
         pending = nil
@@ -138,9 +145,10 @@ final class LoggerSession {
         }
     }
 
-    func favorite(_ portion: FoodPortion, uncached: Food?) {
+    func favorite(_ portion: FoodPortion, uncached: Food?) async {
         if let uncached { store.saveFood(uncached) }
         store.addFavorite(portion)
+        await reloadSearch()
     }
 
     /// A typed or scanned barcode: a custom or cached food first, then Open Food Facts.

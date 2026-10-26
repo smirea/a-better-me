@@ -59,6 +59,16 @@ struct LoggerSessionTests {
         #expect(logger.results.first?.group == .history)
     }
 
+    @Test func followsTheClockUntilATimeIsChosen() async throws {
+        let catalog = try fixtureCatalog([(173944, "Bananas, raw", 8, bananaNutrition)])
+        let logger = LoggerSession(store: store, search: try FoodSearch(store: store, catalog: catalog, branded: StubBranded()), start: LoggerStart())
+        logger.add(LoggerPick(try #require(QuickAddDraft(energy: "100").portion)))
+        let at = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 26, hour: 11, minute: 2))!
+        logger.logPlate(at: at)
+        let logged = try await entries()
+        #expect(logged.map(\.minute) == [11 * 60 + 2])
+    }
+
     @Test func showsLocalResultsWithoutAnErrorOffline() async throws {
         let logger = try session(StubBranded(offline: true))
         logger.setQuery("banana", branded: true)
@@ -98,8 +108,7 @@ struct LoggerSessionTests {
         logger.setQuery("banana", branded: false)
         let banana = try #require(logger.results.first)
         let two = Serving(measure: banana.portion.serving.measure, quantity: 2)
-        logger.favorite(FoodPortion(banana.portion.food, serving: two), uncached: banana.food)
-        await logger.reloadSearch()
+        await logger.favorite(FoodPortion(banana.portion.food, serving: two), uncached: banana.food)
         #expect(logger.results.map(\.group) == [.favorites])
         #expect(logger.results.first?.portion.serving.label == "2 medium")
     }

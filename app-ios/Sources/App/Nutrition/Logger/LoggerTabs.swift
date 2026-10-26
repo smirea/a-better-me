@@ -115,6 +115,7 @@ struct QuickAddTab: View {
     @Observe(AppSettings.current) private var settings
     @State private var draft = QuickAddDraft()
     @State private var added = 0
+    @State private var unitChosen = false
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -171,6 +172,8 @@ struct QuickAddTab: View {
             .padding(.bottom, 8)
         }
         .onAppear {
+            guard !unitChosen else { return }
+            unitChosen = true
             draft.unit = settings.nutrition.energyUnit
             focused = true
         }
