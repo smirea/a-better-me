@@ -230,12 +230,11 @@ struct MetricPlot {
     var drawnUnit: Calendar.Component
     var average: Double?
     var second: Double?
-    /// Newest first, and only the range's entries.
+    /// Every entry, newest first, whatever the range.
     var months: [MonthSection]
 
     init(tab: MetricTab, footer: MetricDetail.Footer, range: ChartRange, averaging: Averaging, now: Date, calendar: Calendar, unit: WeightUnit) {
         let interval = range.interval(endingAt: now, earliest: tab.points.first?.date, calendar: calendar)
-        let inside = { (date: Date) in date >= interval.start && date < interval.end }
         let daily = tab.points.inside(interval)
         let drawing = averaging.drawn(over: interval)
         // A week or month that began before the range is drawn at the range's start, inside the chart.
@@ -248,11 +247,11 @@ struct MetricPlot {
         second = tab.summary.second(of: daily.map(\.value))
         let rows: [MonthRow] = switch footer {
         case .months:
-            daily.reversed().map { point in
+            tab.points.reversed().map { point in
                 MonthRow(date: point.date, text: "\(tab.format(point.value)) \(tab.unit)", subtitle: point.date.formatted(.dateTime.weekday().month().day()))
             }
         case let .weighIns(weighIns):
-            weighIns.filter { inside($0.date) }.map { weighIn in
+            weighIns.map { weighIn in
                 let date = weighIn.date.formatted(.dateTime.weekday().month().day().hour().minute())
                 return switch weighIn.source {
                 case let .app(id): MonthRow(date: weighIn.date, text: "\(unit.format(kg: weighIn.kg)) \(unit.rawValue)", subtitle: date, deletableID: id)

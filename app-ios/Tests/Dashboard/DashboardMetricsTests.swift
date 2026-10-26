@@ -86,7 +86,7 @@ struct DashboardMetricsTests {
         #expect(Averaging.weekly.drawn(over: threeYears) == .monthly)
     }
 
-    @Test func plotListsOnlyTheRangeNewestFirstByMonth() {
+    @Test func plotListsEveryEntryNewestFirstByMonth() {
         let tab = MetricTab(
             title: "Sets", points: [
                 DatedValue(date: day("2026-08-20", 0), value: 1),
@@ -98,8 +98,8 @@ struct DashboardMetricsTests {
         )
         let plot = MetricPlot(tab: tab, footer: .months, range: .oneMonth, averaging: .weekly, now: day("2026-10-07"), calendar: utc, unit: .kg)
         #expect(plot.interval == DateInterval(start: day("2026-09-08", 0), end: day("2026-10-08", 0)))
-        #expect(plot.months.map(\.id) == [day("2026-10-01", 0), day("2026-09-01", 0)])
-        #expect(plot.months.map { $0.rows.map(\.text) } == [["4 sets"], ["3 sets", "2 sets"]])
+        #expect(plot.months.map(\.id) == [day("2026-10-01", 0), day("2026-09-01", 0), day("2026-08-01", 0)])
+        #expect(plot.months.map { $0.rows.map(\.text) } == [["4 sets"], ["3 sets", "2 sets"], ["1 sets"]])
         #expect(plot.drawn == [
             DatedValue(date: day("2026-09-08", 0), value: 2),
             DatedValue(date: day("2026-09-28", 0), value: 3.5),
@@ -119,8 +119,8 @@ struct DashboardMetricsTests {
         let tab = MetricTab(title: "Scale Weight", points: [], unit: "kg", averageTitle: "Average", summary: .change, style: .line, color: DashboardColor.scale)
         let plot = MetricPlot(tab: tab, footer: .weighIns(weighIns), range: .oneMonth, averaging: .daily, now: day("2026-10-07"), calendar: utc, unit: .kg)
         let rows = plot.months.flatMap(\.rows)
-        #expect(rows.map(\.text) == ["80 kg", "80.5 kg"])
-        #expect(rows.map(\.deletableID) == [logged.id, nil])
+        #expect(rows.map(\.text) == ["80 kg", "80.5 kg", "82 kg"])
+        #expect(rows.map(\.deletableID) == [logged.id, nil, nil])
         #expect(rows[1].subtitle.hasSuffix(" · Health"))
     }
 
