@@ -77,6 +77,9 @@ extension WorkoutSession {
         try WorkoutSession.filter(Column("ended_at") == nil).fetchAll(db).min { $0.startedAt < $1.startedAt }
     }
 
+    /// For views that only show whether a session is in progress, so logging a set doesn't re-render them.
+    static let inProgressID = DatabaseQuery(UUID?.none) { try inProgress.fetch($0)?.id }
+
     static func one(_ id: UUID) -> DatabaseQuery<WorkoutSession?> {
         DatabaseQuery(nil) { try WorkoutSession.fetchOne($0, key: key(id)) }
     }

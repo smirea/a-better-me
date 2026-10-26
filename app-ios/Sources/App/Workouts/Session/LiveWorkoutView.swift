@@ -2,9 +2,11 @@ import SwiftUI
 
 /// The full-screen live workout. The root view presents it over the tab bar while `LiveWorkoutPresenter.isExpanded`.
 struct LiveWorkoutView: View {
-    let session: WorkoutSession
+    @Observe(WorkoutSession.inProgress) private var session
 
-    var body: some View { SessionEditor(session: session, mode: .live) }
+    var body: some View {
+        if let session { SessionEditor(session: session, mode: .live).id(session.id) }
+    }
 }
 
 /// The set-logging screen. Live, it times rest and writes every change through to the session. Editing a past
