@@ -8,6 +8,7 @@ A Better Me's concepts, goals, paradigms, and high-level system decisions, one f
 - [Workflow](workflow.md): threads, PRs, worktrees, git hooks, and which tests run where.
 - [Workouts](workouts.md): milestone scope, the exercise catalog source, the workout domain model, and feature ownership.
 - [iOS](ios.md): platform targets, SwiftData persistence, the design system, code layout, and verification.
+- [Nutrition](nutrition.md): the MacroFactor half, its navigation shell, and what it defers.
 - [Live workout surfaces](live-workout.md): the Apple Watch app, which runs workouts without the phone, the Live Activity, and Apple Health.
 - [Sync](sync.md): offline first, the sync engine's one space, the shared SQLite schema and its validators, the owner token, the write rules, local servers, and the iOS client.
 - [Agent API](agent-api.md): the REST and OpenAPI surface for automation, its entry point, and bot tokens.

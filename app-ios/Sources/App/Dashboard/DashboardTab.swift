@@ -88,6 +88,12 @@ private struct DashboardHome: View {
                 }
                 .accessibilityLabel("Customize Dashboard")
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink { SettingsView() } label: {
+                    Image(systemName: "gearshape")
+                }
+                .accessibilityLabel("Settings")
+            }
         }
     }
 
