@@ -10,6 +10,8 @@ struct BodyWeight: SyncedRecord {
     var measuredAt: Date
     var weightKg: Double
     var source = BodyWeightSource.manual
+    /// The scale's body fat percent, entered with the weight in Nutrition's weigh-in sheet.
+    var bodyFatPercent: Double?
 
     init(weightKg: Double, measuredAt: Date = .now) {
         id = UUID()
@@ -23,6 +25,7 @@ struct BodyWeight: SyncedRecord {
         guard let kg: Double = row["weight_kg"] else { throw RowDecodingError(description: "weight_kg is null") }
         weightKg = kg
         source = (row["source"] as String?).flatMap(BodyWeightSource.init(rawValue:)) ?? .manual
+        bodyFatPercent = row["body_fat_percent"]
     }
 
     func encode(to container: inout PersistenceContainer) throws {
@@ -30,6 +33,7 @@ struct BodyWeight: SyncedRecord {
         container["measured_at"] = Instant.text(measuredAt)
         container["weight_kg"] = weightKg
         container["source"] = source.rawValue
+        container["body_fat_percent"] = bodyFatPercent
     }
 }
 

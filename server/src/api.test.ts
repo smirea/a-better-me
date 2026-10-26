@@ -113,6 +113,7 @@ describe('handle', () => {
 					profile: '{}',
 					dashboard: '{}',
 					shortcuts: '{}',
+					nutrition: '{}',
 				},
 			},
 		]);

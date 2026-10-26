@@ -33,6 +33,13 @@ final class LocalStore {
         Telemetry.watch(client)
     }
 
+    /// A store over a fresh file at `url` that migrates but never syncs, for tests.
+    init(unsyncedAt url: URL) throws {
+        database = try LocalDatabase(at: url)
+        client = SyncClient(database: database.pool, schema: syncSchema, endpoint: URL(string: "http://localhost")!, token: { nil })
+        try client.migrate()
+    }
+
     // MARK: Writes
 
     /// Runs `body` in one write transaction after every write called before it. The task resolves with its result.
@@ -79,6 +86,18 @@ final class LocalStore {
                 try fresh.insert(db)
             }
         }
+    }
+
+    /// Writes `record` whole under its id: inserted when new, otherwise only the columns that differ. For rows keyed by
+    /// what they describe (a day, a cached food), so writing one twice converges on one row.
+    func put(_ record: some SyncedRecord) {
+        write { try Self.put(record, in: $0) }
+    }
+
+    nonisolated static func put<R: SyncedRecord>(_ record: R, in db: Database) throws {
+        guard let existing = try R.fetchOne(db, key: record.key) else { return try record.insert(db) }
+        var changed = record
+        try changed.updateChanges(db, from: existing)
     }
 
     func editTemplate(_ id: UUID, _ change: @escaping @Sendable (inout WorkoutTemplate) -> Void) {
