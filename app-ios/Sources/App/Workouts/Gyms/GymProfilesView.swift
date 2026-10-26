@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// More > Gym Profiles, and the picker's Manage Gym Profiles. Push it inside a navigation stack.
+/// Settings > Gym Profiles, and the picker's Manage Gym Profiles. Push it inside a navigation stack.
 struct GymProfilesView: View {
     @Environment(LocalStore.self) private var store
     @Observe(GymProfile.all) private var gyms

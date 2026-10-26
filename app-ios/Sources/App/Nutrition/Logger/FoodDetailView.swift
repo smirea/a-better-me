@@ -176,19 +176,6 @@ struct FoodDetailView: View {
     }
 }
 
-extension NutrientGroup {
-    var title: String {
-        switch self {
-        case .general: "General"
-        case .protein: "Protein Breakdown"
-        case .carbohydrates: "Carb Breakdown"
-        case .fats: "Fat Breakdown"
-        case .vitamins: "Vitamins"
-        case .minerals: "Minerals"
-        }
-    }
-}
-
 /// MacroFactor's quantity keypad: the quantity and its unit, the unit chips, and keys for digits, a point, a fraction
 /// slash, and the space of a mixed number, beside Log Foods and Add. The system keyboard has no "/" or " 1/2".
 struct QuantityKeypad: View {
