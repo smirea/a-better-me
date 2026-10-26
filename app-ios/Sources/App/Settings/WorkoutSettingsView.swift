@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// More > Workout. Also the live workout's "Workout settings" sheet root, so it brings no NavigationStack of its own.
+/// Settings > Workout. Also the live workout's "Workout settings" sheet root, so it brings no NavigationStack of its own.
 struct WorkoutSettingsView: View {
     @Environment(LocalStore.self) private var store
     @Observe(AppSettings.current) private var settings
