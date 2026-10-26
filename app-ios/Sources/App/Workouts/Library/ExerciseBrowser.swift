@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The filterable, category-grouped exercise list shared by the picker and More > Exercises. The owner of the
+/// The filterable, category-grouped exercise list shared by the picker and Settings > Exercises. The owner of the
 /// navigation stack attaches `.searchable` and passes its text in as `query`.
 struct ExerciseBrowser<Header: View, Trailing: View>: View {
     let exercises: [Exercise]
