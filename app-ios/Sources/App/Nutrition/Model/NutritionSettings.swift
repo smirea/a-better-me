@@ -14,6 +14,13 @@ struct NutritionSettings: Codable, Hashable, Sendable {
         var foodTimestamps = true
     }
 
+    /// Settings › Food Log › Logger Options.
+    struct LoggerOptions: Codable, Hashable, Sendable {
+        /// The nutrients the logger's banner shows, among energy and the three macros.
+        var bannerNutrients: [NutrientID] = [.energy, .protein]
+        var bannerDisplay = LoggerBannerDisplay.remainingAfterPlate
+    }
+
     struct Expenditure: Codable, Hashable, Sendable {
         /// A fixed daily expenditure in kcal instead of the computed one.
         var staticKcal: Double?
@@ -36,5 +43,8 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     /// Measure names pinned to the front of the serving picker, at most two weights and two volumes.
     var favoriteMeasures = ["g", "oz", "mL", "cup"]
     var timeline = Timeline()
+    var logger = LoggerOptions()
+    /// The Nutrition "+" sheet's shortcuts in order; the first four are its round buttons.
+    var shortcuts = NutritionShortcut.defaults
     var expenditure = Expenditure()
 }

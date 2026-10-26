@@ -50,7 +50,7 @@ struct RootView: View {
         .sheet(isPresented: $showingNew) {
             switch mode {
             case .workouts: NewWorkoutSheet()
-            case .nutrition: ComingSoon(title: "Log Food").presentationDetents([.medium])
+            case .nutrition: NutritionAddSheet()
             }
         }
         // A session's insert and the observation that shows it land a moment apart, so the cover waits for both.
