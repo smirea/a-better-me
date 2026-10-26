@@ -25,7 +25,11 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     var energyUnit = EnergyUnit.kcal
     /// ISO weekday, Monday 1.
     var checkInWeekday = 1
+    /// Skips the check-in's optional modules and goes straight to the program update.
     var fastCheckIn = false
+    /// The coached programs' Standard Floor. MacroFactor individualizes it by an unpublished rule; the help's figure
+    /// is 1200 kcal. The Low Floor is two thirds of it.
+    var standardFloorKcal = 1200
     /// Remaining amounts go negative past a target instead of stopping at zero.
     var showOverages = true
     /// Shown first, in this order, on the Dashboard and in food details.
