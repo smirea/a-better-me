@@ -30,33 +30,9 @@ enum WeighIns {
     }
 }
 
-/// MF's V1 trend: it only looks back, so a new weigh-in never rewrites past days.
+/// The Dashboard's trend is the Nutrition engine's, so the app has one trend algorithm; see docs/decisions/nutrition.md.
 enum WeightTrend {
-    /// 0.1 is the Hacker's Diet value MF's trend is modeled on; see docs/decisions/workouts.md.
-    static let dailySmoothing = 0.1
-
-    /// After a gap of `d` days a weigh-in closes `1 - 0.9^d` of the gap, as if the missed days had weighed the same.
     static func daily(_ weighIns: [DatedValue], through end: Date, calendar: Calendar) -> [DatedValue] {
-        let days = DailyCombine.mean.combine(weighIns, calendar: calendar)
-        guard let first = days.first else { return [] }
-        let lastDay = calendar.startOfDay(for: end)
-        var result: [DatedValue] = []
-        var trend = first.value
-        var trendDay = first.date
-        var pending = days.dropFirst()[...]
-        var day = first.date
-        while day <= lastDay {
-            if let weighIn = pending.first, calendar.isDate(weighIn.date, inSameDayAs: day) {
-                // Day numbers, not elapsed time, because a daylight-saving day is 23 or 25 hours long.
-                let gap = Double(calendar.ordinality(of: .day, in: .era, for: day)! - calendar.ordinality(of: .day, in: .era, for: trendDay)!)
-                trend += (1 - pow(1 - dailySmoothing, gap)) * (weighIn.value - trend)
-                trendDay = day
-                pending.removeFirst()
-            }
-            result.append(DatedValue(date: day, value: trend))
-            // A day after a midnight daylight-saving change starts at 01:00, so each step starts from that day's own start.
-            day = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: day)!)
-        }
-        return result
+        NutritionEngine.TrendWeight.daily(weighIns: weighIns, through: end, calendar: calendar)
     }
 }
