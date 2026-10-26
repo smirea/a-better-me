@@ -96,6 +96,7 @@ struct StrategyWizardTests {
         model.goal.change(kind: kind, currentWeightKg: weightKg)
         model.goal.targetWeightKg = weightKg + (kind == .lose ? -5 : kind == .gain ? 5 : 0)
         model.choose(.collaborative)
+        model.leave(.style)
         #expect(model.steps.suffix(1) == [.collaborative])
         let even = StrategyRules.weekTargets(Engine.Targets.weekly(
             program: Engine.CoachedProgram(diet: .balanced, protein: .moderate, floor: .standard(kcal: 1361)),
@@ -109,6 +110,31 @@ struct StrategyWizardTests {
         #expect(plan.targets == model.collaborative.targets)
         #expect(plan.targets[1] == even[1])
         #expect(plan.targets.days.map(\.energy).reduce(0, +) == even.days.map(\.energy).reduce(0, +))
+    }
+
+    @Test func aNewGoalMovesTheCurrentCollaborativeWeekToItsBudget() {
+        let current = NutritionPlan(
+            from: calendarDay("2026-10-01"), kind: .setup,
+            goal: NutritionGoal(kind: .maintain, targetWeightKg: weightKg, ratePercentPerWeek: 0, startedOn: calendarDay("2026-10-01")),
+            coaching: CoachingProgram(style: .collaborative), targets: WeekTargets(every: target(2400, 150, 80, 250))
+        )
+        var model = wizard(.newGoal, current: current)
+        model.goal.change(kind: .lose, currentWeightKg: weightKg)
+        model.goal.targetWeightKg = 85
+        model.goal.ratePercent = 0.7594
+        #expect(model.coaching.style == .collaborative)
+        model.leave(.style)
+        #expect(model.plan(isFirst: false).targets.days.map(\.energy) == Array(repeating: 1462, count: 7))
+        #expect(model.plan(isFirst: false).targets[1].protein == 150)
+    }
+
+    @Test func aTargetOfZeroIsRejectedWithoutProjecting() {
+        var goal = GoalDraft(kind: .lose, currentWeightKg: 90)
+        goal.targetWeightKg = 0
+        #expect(goal.problem(currentWeightKg: 90) == "Enter a target weight.")
+        #expect(goal.projectedEnd(from: today, currentWeightKg: 90) == nil)
+        goal.targetWeightKg = -3
+        #expect(goal.projectedEnd(from: today, currentWeightKg: 90) == nil)
     }
 
     @Test(arguments: [NutritionGoal.Kind.lose, .maintain, .gain])

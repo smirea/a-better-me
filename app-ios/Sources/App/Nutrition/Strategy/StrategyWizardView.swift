@@ -58,6 +58,7 @@ struct StrategyWizardView: View {
     }
 
     private func advance(from step: StrategyWizardModel.Step) {
+        model.leave(step)
         if let next = model.next(after: step) {
             path.append(next)
         } else {
@@ -228,7 +229,7 @@ private struct GoalWeightRateStep: View {
     private var targetBinding: Binding<Double> {
         Binding(
             get: { (unit.fromKg(model.goal.targetWeightKg) * 10).rounded() / 10 },
-            set: { model.goal.targetWeightKg = unit.toKg($0) }
+            set: { model.goal.targetWeightKg = unit.toKg(max(0, $0)) }
         )
     }
 

@@ -28,6 +28,22 @@ struct CollaborativeWeekTests {
         #expect(edited.weeklyKcal == 14000)
     }
 
+    @Test func anIncreaseNeverOutgrowsTheUnlockedBudget() {
+        var edited = CollaborativeWeek(WeekTargets(every: target(1200, 100, 40, 110)))
+        edited.locked = [3, 4, 5, 6, 7]
+        edited.setCalories(3000, on: 1)
+        #expect(edited.targets.days.map(\.energy) == [2400, 0, 1200, 1200, 1200, 1200, 1200])
+        #expect(edited.weeklyKcal == 8400)
+        var uneven = CollaborativeWeek(WeekTargets([target(1000, 0, 0, 0), target(100, 0, 0, 0), target(2000, 0, 0, 0)] + Array(repeating: target(1000, 0, 0, 0), count: 4)))
+        uneven.locked = [4, 5, 6, 7]
+        uneven.setCalories(1600, on: 1)
+        #expect(uneven.targets.days.map(\.energy) == [1600, 0, 1500, 1000, 1000, 1000, 1000])
+        var stuck = CollaborativeWeek(WeekTargets(every: target(1200, 100, 40, 110)))
+        stuck.locked = [2, 3, 4, 5, 6, 7]
+        stuck.setCalories(900, on: 1)
+        #expect(stuck.weeklyKcal == 8400)
+    }
+
     @Test func proteinAndRatioEditOnlyTheirDay() {
         var edited = week
         edited.setProtein(180, on: 1)

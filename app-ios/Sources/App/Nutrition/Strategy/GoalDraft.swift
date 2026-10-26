@@ -82,7 +82,8 @@ struct GoalDraft: Hashable {
 
     /// Why the wizard cannot continue, or nil.
     func problem(currentWeightKg: Double) -> String? {
-        switch kind {
+        guard targetWeightKg.isFinite, targetWeightKg > 0 else { return "Enter a target weight." }
+        return switch kind {
         case .lose where targetWeightKg >= currentWeightKg: "A weight loss goal needs a target below your current weight."
         case .gain where targetWeightKg <= currentWeightKg: "A weight gain goal needs a target above your current weight."
         default: nil
@@ -98,7 +99,8 @@ struct GoalDraft: Hashable {
 
     /// The wizard's "projected end date": the day the trend reaches the target at this rate, nil while maintaining.
     func projectedEnd(from today: CalendarDay, currentWeightKg: Double) -> CalendarDay? {
-        NutritionEngine.Targets.estimatedDays(goal: StrategyRules.engineGoal(goal(startingOn: today)), weightKg: currentWeightKg)
+        guard problem(currentWeightKg: currentWeightKg) == nil else { return nil }
+        return NutritionEngine.Targets.estimatedDays(goal: StrategyRules.engineGoal(goal(startingOn: today)), weightKg: currentWeightKg)
             .map { today.adding(days: $0) }
     }
 }

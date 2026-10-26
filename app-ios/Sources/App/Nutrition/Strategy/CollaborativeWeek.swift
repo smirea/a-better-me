@@ -49,13 +49,29 @@ struct CollaborativeWeek: Hashable {
     }
 
     /// Moves one day's calories and spreads the opposite change over the other unlocked days, so the week's budget holds.
+    /// An increase is capped at what those days hold, and a day the spread would take below zero gives what it has and
+    /// drops out, so no edit can change the budget. With every other day locked, the day cannot move.
     mutating func setCalories(_ kcal: Int, on weekday: Int) {
-        let byDay = Dictionary(uniqueKeysWithValues: (1...7).map { (StrategyRules.weekday(iso: $0), Int(self[$0].energy)) })
-        let moved = NutritionEngine.Targets.rebalance(
-            byDay, changing: StrategyRules.weekday(iso: weekday), to: kcal, locked: Set(locked.map(StrategyRules.weekday(iso:)))
-        )
+        var byDay = Dictionary(uniqueKeysWithValues: (1...7).map { (StrategyRules.weekday(iso: $0), Int(self[$0].energy)) })
+        let changing = StrategyRules.weekday(iso: weekday)
+        var frozen = Set(locked.map(StrategyRules.weekday(iso:))).union([changing])
+        let others = byDay.filter { !frozen.contains($0.key) }
+        guard !others.isEmpty else { return }
+        let available = others.values.reduce(0, +)
+        let goal = min(max(0, kcal), byDay[changing]! + available)
+        var moved = byDay
+        while true {
+            moved = NutritionEngine.Targets.rebalance(byDay, changing: changing, to: goal, locked: frozen.subtracting([changing]))
+            let drained = moved.filter { $0.value < 0 }.map(\.key)
+            guard !drained.isEmpty else { break }
+            for day in drained {
+                byDay[changing]! += byDay[day]!
+                byDay[day] = 0
+                frozen.insert(day)
+            }
+        }
         for iso in 1...7 where moved[StrategyRules.weekday(iso: iso)]! != Int(self[iso].energy) {
-            set(iso, kcal: Double(max(0, moved[StrategyRules.weekday(iso: iso)]!)))
+            set(iso, kcal: Double(moved[StrategyRules.weekday(iso: iso)]!))
         }
     }
 

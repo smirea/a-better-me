@@ -105,13 +105,24 @@ struct StrategyWizardModel {
         }
     }
 
-    /// Picking a style seeds its editor: collaborative starts from an even coached week, as MacroFactor's editor did.
     mutating func choose(_ style: CoachingProgram.Style) {
         coaching.style = style
-        guard style == .collaborative, current?.coaching.style != .collaborative, let basis else { return }
+    }
+
+    /// Leaving the style step seeds the collaborative editor for the goal being saved: an even coached week, as
+    /// MacroFactor's editor starts, or the current collaborative week moved to the new goal's budget. Editing the
+    /// current program never passes here, so its week stays as it was.
+    mutating func leave(_ step: Step) {
+        guard step == .style, coaching.style == .collaborative, let basis else { return }
         var even = CoachingProgram()
         even.style = .collaborative
-        collaborative = CollaborativeWeek(StrategyRules.weekTargets(StrategyRules.coachedWeek(even, goal: savedGoal, basis: basis)))
+        let week = StrategyRules.coachedWeek(even, goal: savedGoal, basis: basis)
+        if let current, current.coaching.style == .collaborative {
+            collaborative = CollaborativeWeek(current.targets)
+            collaborative.rescale(toAverage: week.averageKcal)
+        } else {
+            collaborative = CollaborativeWeek(StrategyRules.weekTargets(week))
+        }
     }
 
     mutating func toggleHighDay(_ weekday: Int) {
