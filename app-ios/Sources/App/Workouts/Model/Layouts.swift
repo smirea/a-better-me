@@ -17,6 +17,14 @@ struct DashboardLayout: Codable, Hashable {
     /// The last revision whose cards this layout adopted. It stays nil in the defaults, because the settings reader
     /// fills a key the stored text lacks from the defaults, and a filled-in revision would skip the adoption.
     var revision: Int?
+
+    /// What Customize Dashboard saves: stamped with the current revision, so a layout made from the defaults, whose
+    /// revision is nil, does not adopt the cards the owner just removed on its next read.
+    var saved: DashboardLayout {
+        var layout = self
+        layout.revision = Self.revision
+        return layout
+    }
 }
 
 extension DashboardLayout {

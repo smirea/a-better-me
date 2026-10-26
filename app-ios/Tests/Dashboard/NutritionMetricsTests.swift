@@ -176,6 +176,7 @@ struct NutritionMetricsTests {
         let manual = NutritionMetrics.expenditureSetup(log: log, weighIns: weighIns, trend: trend, settings: settings, profile: ProfileSettings(), calendar: utc)
         #expect(manual == .init(start: start("2026-10-04"), initialKcal: 2500))
         settings.staticKcal = 2300
+        settings.initialKcal = nil
         let fixed = NutritionMetrics.expenditure(log: log, weighIns: weighIns, trend: trend, settings: settings, profile: ProfileSettings(), now: day("2026-10-06"), calendar: utc)
         #expect(fixed.map(\.kcal) == [2300, 2300, 2300])
         #expect(NutritionMetrics.strategy(fixed, settings: settings) == .fixed)
@@ -195,5 +196,9 @@ struct NutritionMetricsTests {
         #expect(kept.primaryFocus.isEmpty)
         let encoded = try RowJSON.text(kept)
         #expect(encoded.contains(#""revision":1"#))
+        var reset = DashboardLayout()
+        reset.insights.removeAll { $0 == .expenditure }
+        let reread = try RowJSON.decoder.decode(DashboardLayout.self, from: Data(RowJSON.text(reset.saved).utf8))
+        #expect(reread.insights == [.workouts, .weightTrend, .energyBalance, .goalProgress])
     }
 }

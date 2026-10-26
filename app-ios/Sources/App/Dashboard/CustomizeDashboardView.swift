@@ -54,7 +54,7 @@ struct CustomizeDashboardView: View {
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") {
-                    if let draft { store.updateSettings { $0.dashboard = draft } }
+                    if let draft { store.updateSettings { $0.dashboard = draft.saved } }
                     dismiss()
                 }
             }

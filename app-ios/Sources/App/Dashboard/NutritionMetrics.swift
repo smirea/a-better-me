@@ -77,13 +77,17 @@ enum NutritionMetrics {
         log: [NutritionLogDay], weighIns: [DatedValue], trend: [DatedValue], settings: NutritionSettings.Expenditure,
         profile: ProfileSettings, calendar: Calendar
     ) -> ExpenditureSetup? {
-        let firstIntake = intake(log, calendar: calendar).first?.date
-        let firstWeighIn = weighIns.map(\.date).min().map { calendar.startOfDay(for: $0) }
-        guard let start = settings.startOn?.date(in: calendar) ?? [firstIntake, firstWeighIn].compactMap({ $0 }).min() else { return nil }
+        guard let start = expenditureStart(log: log, weighIns: weighIns, settings: settings, calendar: calendar) else { return nil }
         if let initial = settings.initialKcal { return ExpenditureSetup(start: start, initialKcal: initial) }
         let weightKg = trend.first { calendar.isDate($0.date, inSameDayAs: start) }?.value ?? trend.first?.value
         guard let weightKg, let initial = initialEstimate(profile: profile, weightKg: weightKg, on: start, calendar: calendar) else { return nil }
         return ExpenditureSetup(start: start, initialKcal: initial)
+    }
+
+    static func expenditureStart(log: [NutritionLogDay], weighIns: [DatedValue], settings: NutritionSettings.Expenditure, calendar: Calendar) -> Date? {
+        let firstIntake = intake(log, calendar: calendar).first?.date
+        let firstWeighIn = weighIns.map(\.date).min().map { calendar.startOfDay(for: $0) }
+        return settings.startOn?.date(in: calendar) ?? [firstIntake, firstWeighIn].compactMap { $0 }.min()
     }
 
     /// The activity answers are not settings yet, so they are the ones the decision file anchors the factor table on:
@@ -95,16 +99,17 @@ enum NutritionMetrics {
         return NutritionEngine.InitialExpenditure.estimate(bmr: bmr, activity: .moderatelyActive, exercise: .fourToSix)
     }
 
-    /// A static expenditure replaces every day's estimate and never holds.
+    /// A static expenditure replaces every day's estimate, never holds, and needs no initial estimate.
     static func expenditure(
         log: [NutritionLogDay], weighIns: [DatedValue], trend: [DatedValue], settings: NutritionSettings.Expenditure,
         profile: ProfileSettings, now: Date, calendar: Calendar
     ) -> [NutritionEngine.ExpenditureDay] {
+        if let fixed = settings.staticKcal {
+            guard let start = expenditureStart(log: log, weighIns: weighIns, settings: settings, calendar: calendar), start <= now else { return [] }
+            return NutritionEngine.eachDay(from: start, through: now, calendar: calendar).map { .init(date: $0, kcal: fixed, isHolding: false) }
+        }
         guard let setup = expenditureSetup(log: log, weighIns: weighIns, trend: trend, settings: settings, profile: profile, calendar: calendar),
               setup.start <= now else { return [] }
-        if let fixed = settings.staticKcal {
-            return NutritionEngine.eachDay(from: setup.start, through: now, calendar: calendar).map { .init(date: $0, kcal: fixed, isHolding: false) }
-        }
         let intake = intake(log, calendar: calendar).map { NutritionEngine.IntakeDay(date: $0.date, kcal: $0.value) }
         return NutritionEngine.Expenditure.daily(
             intake: intake, trend: trend, weighIns: weighIns, initial: setup.initialKcal, from: setup.start, through: now, calendar: calendar
