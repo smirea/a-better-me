@@ -151,8 +151,11 @@ private struct NutrientGoalEditor: View {
     }
 }
 
-/// Every nutrient with its range today, grouped as the registry orders them; each opens its goals.
+/// Every nutrient with its range today, grouped as the registry orders them; each opens its goals. Calories and the
+/// macros are left out: their targets come from the program, as in MacroFactor.
 struct NutrientGoalsListView: View {
+    private static let fromProgram: Set<NutrientID> = [.energy, .protein, .fat, .carbs]
+
     @Observe(NutrientGoal.all) private var goals
     @Observe(AppSettings.current) private var settings
     @Observe(BodyWeight.latest) private var latestWeight
@@ -161,7 +164,7 @@ struct NutrientGoalsListView: View {
         List {
             ForEach(NutrientGroup.allCases, id: \.self) { group in
                 Section(group.rawValue.capitalized) {
-                    ForEach(NutrientRegistry.all.filter { $0.group == group }) { nutrient in
+                    ForEach(NutrientRegistry.all.filter { $0.group == group && !Self.fromProgram.contains($0.id) }) { nutrient in
                         NavigationLink(value: StrategyRoute.nutrient(nutrient.id)) {
                             LabeledContent(nutrient.name, value: Self.text(
                                 NutrientGoal.range(nutrient.id, on: .today, goals: goals, sex: settings.profile.sex, weightKg: latestWeight?.weightKg),

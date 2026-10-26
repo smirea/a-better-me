@@ -179,7 +179,7 @@ struct StrategyWizardView: View {
             }
             if let basis = model.basis {
                 StrategyCard(title: "Initial Daily Budget") {
-                    Text("\(model.goal.initialBudget(basis)) kcal").font(AppFont.number())
+                    Text("\(model.goal.initialBudget(basis).formatted()) kcal").font(AppFont.number())
                 }
             }
             if let end = model.goal.projectedEnd(from: model.today, currentWeightKg: model.weightKg) {
@@ -236,7 +236,7 @@ private struct GoalWeightRateStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 10) {
-                tile(model.basis.map { "\(model.goal.initialBudget($0)) kcal" } ?? "—", "initial daily budget", highlighted: true)
+                tile(model.basis.map { "\(model.goal.initialBudget($0).formatted()) kcal" } ?? "—", "initial daily budget", highlighted: true)
                 tile(model.goal.projectedEnd(from: model.today, currentWeightKg: model.weightKg).map { StrategyFormat.day($0, year: true) } ?? "—", "projected end date", highlighted: false)
             }
             Text("What is your target weight?").font(AppFont.title(20))
@@ -273,7 +273,7 @@ private struct GoalWeightRateStep: View {
                 .padding(.vertical, 5)
                 .background(model.goal.band == .faster ? Theme.amber.opacity(0.25) : StrategyPalette.goal.opacity(0.25), in: Capsule())
                 .frame(maxWidth: .infinity)
-            Slider(value: $model.goal.ratePercent, in: GoalDraft.rateRange(model.goal.kind), step: 0.01) {
+            Slider(value: Binding(get: { model.goal.ratePercent }, set: { model.goal.ratePercent = ($0 * 100).rounded() / 100 }), in: GoalDraft.rateRange(model.goal.kind)) {
                 Text("Goal rate")
             }
             .tint(model.goal.band == .faster ? Theme.amber : StrategyPalette.goal)
