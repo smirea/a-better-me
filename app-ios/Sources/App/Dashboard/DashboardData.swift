@@ -397,7 +397,10 @@ struct DashboardValues: DynamicProperty {
     var week: [NutritionMetrics.DayNutrition] { memo(.week, usesNutrition: true) { $0.week } }
     var todayNutrition: NutritionMetrics.DayNutrition { memo(.todayNutrition, usesNutrition: true) { $0.todayNutrition } }
     var foodLogging: FoodLoggingValues { memo(.foodLogging, usesNutrition: true) { $0.foodLogging } }
-    func goalProgress(_ source: GoalProgressValues.Source) -> GoalProgressValues? { memo(.goal(source), usesNutrition: true) { GoalProgressValues(data: $0, source: source) } }
+    /// Boxed because `SessionHistory.memo` reads a cached nil out of a miss when the value itself is optional.
+    func goalProgress(_ source: GoalProgressValues.Source) -> GoalProgressValues? {
+        memo(.goal(source), usesNutrition: true) { GoalBox(value: GoalProgressValues(data: $0, source: source)) }.value
+    }
     var nutritionSettings: NutritionSettings { nutrition.settings }
 
     func muscleCard(_ card: MuscleCard) -> CardValues { memo(.muscleCard(card)) { $0.muscleCard(card) } }
@@ -428,6 +431,10 @@ struct DashboardValues: DynamicProperty {
             )
         }
     }
+}
+
+private struct GoalBox {
+    var value: GoalProgressValues?
 }
 
 extension MuscleMetric {
