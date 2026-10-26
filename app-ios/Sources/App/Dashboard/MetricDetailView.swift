@@ -3,22 +3,11 @@ import SwiftUI
 
 struct MetricDetailView: View {
     let route: DashboardRoute
-    var initialTab: String?
-
-    var body: some View {
-        DashboardDataReader { data in
-            MetricDetailContent(detail: data.detail(route), data: data, route: route, initialTab: initialTab)
-        }
-    }
-}
-
-private struct MetricDetailContent: View {
-    let detail: MetricDetail
-    let data: DashboardData
-    let route: DashboardRoute
     let initialTab: String?
 
     @Environment(LocalStore.self) private var store
+    @Environment(ExerciseCatalog.self) private var catalog
+    private var values = DashboardValues()
     @State private var tabID: String?
     @State private var range = ChartRange.oneWeek
     @State private var averaging = Averaging.daily
@@ -26,28 +15,25 @@ private struct MetricDetailContent: View {
     @State private var loggingWeight = false
     @State private var shownExercise: ShownExercise?
 
-    private var fitToData: Bool { fitOverrides[tab.id] ?? (tab.style == .line) }
-
-    private var tab: MetricTab {
-        detail.tabs.first { $0.id == (tabID ?? initialTab) } ?? detail.tabs[0]
+    init(route: DashboardRoute, initialTab: String? = nil) {
+        self.route = route
+        self.initialTab = initialTab
     }
 
     var body: some View {
-        let interval = range.interval(endingAt: data.now, earliest: tab.points.first?.date, calendar: data.calendar)
-        let daily = tab.points.inside(interval)
-        // A week or month that began before the range is drawn at the range's start, inside the chart.
-        let plotted = averaging.bucket(daily, calendar: data.calendar).map { DatedValue(date: max($0.date, interval.start), value: $0.value) }
+        let detail = values.detail(route)
+        let tab = detail.tab(tabID ?? initialTab)
+        let plot = values.plot(route, tab: tab.id, range: range, averaging: averaging)
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if detail.tabs.count > 1 { tabStrip }
-                summary(average: plotted.average, second: tab.summary.second(of: daily.map(\.value)), interval: interval)
-                    .padding(.horizontal, 20)
-                chart(plotted, interval: interval)
+                if detail.tabs.count > 1 { tabStrip(detail.tabs, selected: tab) }
+                summary(tab, plot).padding(.horizontal, 20)
+                chart(tab, plot)
                     .frame(height: 320)
                     .padding(.horizontal, 20)
                 controls.padding(.horizontal, 20)
-                legend.padding(.horizontal, 20)
-                footer.padding(.horizontal, 20)
+                legend(tab).padding(.horizontal, 20)
+                footer(detail.footer, plot).padding(.horizontal, 20)
             }
             .padding(.bottom, 30)
         }
@@ -65,10 +51,12 @@ private struct MetricDetailContent: View {
         .sheet(item: $shownExercise) { ExerciseDetailSheet(exerciseID: $0.id) }
     }
 
-    private var tabStrip: some View {
+    private func fitToData(_ tab: MetricTab) -> Bool { fitOverrides[tab.id] ?? (tab.style == .line) }
+
+    private func tabStrip(_ tabs: [MetricTab], selected tab: MetricTab) -> some View {
         ScrollView(.horizontal) {
             HStack(spacing: 0) {
-                ForEach(detail.tabs) { item in
+                ForEach(tabs) { item in
                     let selected = item.id == tab.id
                     Button { tabID = item.id } label: {
                         Label {
@@ -80,7 +68,7 @@ private struct MetricDetailContent: View {
                         .foregroundStyle(selected ? Theme.textPrimary : Theme.textSecondary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .frame(minWidth: detail.tabs.count == 2 ? 180 : nil)
+                        .frame(minWidth: tabs.count == 2 ? 180 : nil)
                         .overlay(alignment: .bottom) {
                             Rectangle().fill(selected ? Theme.textPrimary : Theme.separator).frame(height: 2)
                         }
@@ -95,51 +83,50 @@ private struct MetricDetailContent: View {
 
     /// The average is over the plotted points, so it follows the averaging. Totals, bests, and change are over the
     /// range's days, which averaging would distort.
-    private func summary(average: Double?, second: Double?, interval: DateInterval) -> some View {
-        HStack(alignment: .top) {
+    private func summary(_ tab: MetricTab, _ plot: MetricPlot) -> some View {
+        let fit = fitToData(tab)
+        return HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .top, spacing: 40) {
-                    stat(tab.averageTitle, average)
-                    stat(tab.summary.title(tab.title), second)
+                    stat(tab.averageTitle, plot.average, tab: tab)
+                    stat(tab.summary.title(tab.title), plot.second, tab: tab)
                 }
-                Text(Self.rangeLabel(interval, calendar: data.calendar))
+                Text(plot.rangeLabel)
                     .font(AppFont.caption(14))
                     .foregroundStyle(Theme.textSecondary)
             }
             Spacer()
-            Button { fitOverrides[tab.id] = !fitToData } label: {
-                Image(systemName: fitToData ? "arrow.down.and.line.horizontal.and.arrow.up" : "arrow.up.and.line.horizontal.and.arrow.down")
+            Button { fitOverrides[tab.id] = !fit } label: {
+                Image(systemName: fit ? "arrow.down.and.line.horizontal.and.arrow.up" : "arrow.up.and.line.horizontal.and.arrow.down")
             }
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
-            .accessibilityLabel(fitToData ? "Scale from zero" : "Fit to data")
+            .accessibilityLabel(fit ? "Scale from zero" : "Fit to data")
         }
     }
 
-    private func stat(_ title: String, _ value: Double?) -> some View {
+    private func stat(_ title: String, _ value: Double?, tab: MetricTab) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(value.map(format) ?? "--").font(AppFont.number(22))
+                Text(value.map(tab.format) ?? "--").font(AppFont.number(22))
                 Text(tab.unit).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
             }
         }
         .accessibilityElement(children: .combine)
     }
 
-    private func format(_ value: Double) -> String {
-        tab.unit == "steps" ? Int(value.rounded()).formatted() : value.dashboardText
-    }
-
-    private func chart(_ points: [DatedValue], interval: DateInterval) -> some View {
+    private func chart(_ tab: MetricTab, _ plot: MetricPlot) -> some View {
+        let points = plot.drawn
+        let fit = fitToData(tab)
         let values = points.map(\.value)
         let high = max(values.max() ?? 0, 1)
-        let low = fitToData ? values.min() ?? 0 : 0
-        let pad = fitToData ? max((high - low) * 0.1, 0.5) : high * 0.1
+        let low = fit ? values.min() ?? 0 : 0
+        let pad = fit ? max((high - low) * 0.1, 0.5) : high * 0.1
         return Chart(points, id: \.date) { point in
             switch tab.style {
             case .bar:
-                BarMark(x: .value("Date", point.date, unit: averaging.component), y: .value(tab.title, point.value))
+                BarMark(x: .value("Date", point.date, unit: plot.drawnUnit), y: .value(tab.title, point.value))
                     .foregroundStyle(tab.color)
             case .line:
                 LineMark(x: .value("Date", point.date), y: .value(tab.title, point.value))
@@ -151,8 +138,8 @@ private struct MetricDetailContent: View {
                 }
             }
         }
-        .chartXScale(domain: interval.start...interval.end)
-        .chartYScale(domain: max(low - pad, fitToData ? -.infinity : 0)...(high + pad))
+        .chartXScale(domain: plot.interval.start...plot.interval.end)
+        .chartYScale(domain: max(low - pad, fit ? -.infinity : 0)...(high + pad))
         .chartYAxis {
             AxisMarks(position: .trailing) { _ in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3])).foregroundStyle(Theme.separator)
@@ -193,7 +180,7 @@ private struct MetricDetailContent: View {
         }
     }
 
-    private var legend: some View {
+    private func legend(_ tab: MetricTab) -> some View {
         Label {
             Text(tab.title)
         } icon: {
@@ -207,14 +194,12 @@ private struct MetricDetailContent: View {
     }
 
     @ViewBuilder
-    private var footer: some View {
-        switch detail.footer {
+    private func footer(_ footer: MetricDetail.Footer, _ plot: MetricPlot) -> some View {
+        switch footer {
         case .months:
-            MonthList(rows: tab.points.reversed().map { MonthRow(date: $0.date, text: "\(format($0.value)) \(tab.unit)") }, calendar: data.calendar)
-        case let .weighIns(weighIns):
-            MonthList(rows: weighIns.map { weighIn in
-                MonthRow(date: weighIn.date, text: "\(data.unit.format(kg: weighIn.kg)) \(data.unit.rawValue)", detail: weighIn.source == .health ? "Health" : nil, source: weighIn.source)
-            }, calendar: data.calendar, showsTime: true) { store.delete(BodyWeight.self, id: $0) }
+            MonthList(months: plot.months)
+        case .weighIns:
+            MonthList(months: plot.months) { store.delete(BodyWeight.self, id: $0) }
         case let .topExercises(top):
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -225,7 +210,7 @@ private struct MetricDetailContent: View {
                     ForEach(Array(top.enumerated()), id: \.element.exerciseID) { index, entry in
                         if index > 0 { Divider().overlay(Theme.separator).padding(.leading, 76) }
                         Button { shownExercise = ShownExercise(id: entry.exerciseID) } label: {
-                            TopExerciseRow(exercise: data.catalog(entry.exerciseID), sets: entry.sets)
+                            TopExerciseRow(exercise: catalog.exercise(entry.exerciseID), sets: entry.sets)
                         }
                         .buttonStyle(.plain)
                     }
@@ -234,11 +219,74 @@ private struct MetricDetailContent: View {
             }
         }
     }
+}
+
+/// What the detail screen shows for one tab, range, and averaging, with every row's text formatted up front.
+struct MetricPlot {
+    var interval: DateInterval
+    var rangeLabel: String
+    /// Coarser than the chosen averaging on long ranges; see `Averaging.drawn(over:)`.
+    var drawn: [DatedValue]
+    var drawnUnit: Calendar.Component
+    var average: Double?
+    var second: Double?
+    /// Newest first, and only the range's entries.
+    var months: [MonthSection]
+
+    init(tab: MetricTab, footer: MetricDetail.Footer, range: ChartRange, averaging: Averaging, now: Date, calendar: Calendar, unit: WeightUnit) {
+        let interval = range.interval(endingAt: now, earliest: tab.points.first?.date, calendar: calendar)
+        let inside = { (date: Date) in date >= interval.start && date < interval.end }
+        let daily = tab.points.inside(interval)
+        let drawing = averaging.drawn(over: interval)
+        // A week or month that began before the range is drawn at the range's start, inside the chart.
+        let drawn = drawing.bucket(daily, calendar: calendar).map { DatedValue(date: max($0.date, interval.start), value: $0.value) }
+        self.interval = interval
+        rangeLabel = Self.rangeLabel(interval, calendar: calendar)
+        self.drawn = drawn
+        drawnUnit = drawing.component
+        average = (drawing == averaging ? drawn : averaging.bucket(daily, calendar: calendar)).average
+        second = tab.summary.second(of: daily.map(\.value))
+        let rows: [MonthRow] = switch footer {
+        case .months:
+            daily.reversed().map { point in
+                MonthRow(date: point.date, text: "\(tab.format(point.value)) \(tab.unit)", subtitle: point.date.formatted(.dateTime.weekday().month().day()))
+            }
+        case let .weighIns(weighIns):
+            weighIns.filter { inside($0.date) }.map { weighIn in
+                let date = weighIn.date.formatted(.dateTime.weekday().month().day().hour().minute())
+                return switch weighIn.source {
+                case let .app(id): MonthRow(date: weighIn.date, text: "\(unit.format(kg: weighIn.kg)) \(unit.rawValue)", subtitle: date, deletableID: id)
+                case .health: MonthRow(date: weighIn.date, text: "\(unit.format(kg: weighIn.kg)) \(unit.rawValue)", subtitle: "\(date) · Health")
+                }
+            }
+        case .topExercises: []
+        }
+        let months = Dictionary(grouping: rows) { calendar.dateInterval(of: .month, for: $0.date)!.start }
+        self.months = months.keys.sorted(by: >).map { month in
+            MonthSection(id: month, title: month.formatted(.dateTime.month(.wide).year()), rows: months[month]!)
+        }
+    }
 
     static func rangeLabel(_ interval: DateInterval, calendar: Calendar) -> String {
         let last = calendar.date(byAdding: .day, value: -1, to: interval.end)!
         return (interval.start..<last.addingTimeInterval(1)).formatted(.interval.month(.abbreviated).day().year())
     }
+}
+
+struct MonthSection: Identifiable {
+    var id: Date
+    var title: String
+    var rows: [MonthRow]
+}
+
+struct MonthRow: Identifiable {
+    var date: Date
+    var text: String
+    var subtitle: String
+    /// The app weigh-in the row deletes; Health samples and metric days are not deletable here.
+    var deletableID: UUID?
+
+    var id: String { "\(date.timeIntervalSince1970) \(text)" }
 }
 
 private struct TopExerciseRow: View {
@@ -267,33 +315,22 @@ private struct ShownExercise: Identifiable {
     let id: ExerciseID
 }
 
-private struct MonthRow: Identifiable {
-    var date: Date
-    var text: String
-    var detail: String?
-    var source: WeighIn.Source?
-
-    var id: String { "\(date.timeIntervalSince1970) \(text)" }
-}
-
+/// Lazy by month, so a long range builds only the months scrolled into view.
 private struct MonthList: View {
-    let rows: [MonthRow]
-    let calendar: Calendar
-    var showsTime = false
+    let months: [MonthSection]
     var delete: ((UUID) -> Void)?
 
     var body: some View {
-        let months = Dictionary(grouping: rows) { calendar.dateInterval(of: .month, for: $0.date)!.start }
-        VStack(alignment: .leading, spacing: 20) {
-            ForEach(months.keys.sorted(by: >), id: \.self) { month in
+        LazyVStack(alignment: .leading, spacing: 20) {
+            ForEach(months) { month in
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(month.formatted(.dateTime.month(.wide).year())).font(AppFont.title())
+                    Text(month.title).font(AppFont.title())
                     VStack(spacing: 0) {
-                        ForEach(Array(months[month]!.enumerated()), id: \.element.id) { index, row in
+                        ForEach(Array(month.rows.enumerated()), id: \.element.id) { index, row in
                             if index > 0 { Divider().overlay(Theme.separator) }
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(row.text).font(AppFont.headline(15))
-                                Text([showsTime ? row.date.formatted(.dateTime.weekday().month().day().hour().minute()) : row.date.formatted(.dateTime.weekday().month().day()), row.detail].compactMap { $0 }.joined(separator: " · "))
+                                Text(row.subtitle)
                                     .font(AppFont.caption(13))
                                     .foregroundStyle(Theme.textSecondary)
                             }
@@ -301,7 +338,7 @@ private struct MonthList: View {
                             .padding(14)
                             .contentShape(.rect)
                             .contextMenu {
-                                if case let .app(id) = row.source, let delete {
+                                if let id = row.deletableID, let delete {
                                     Button("Delete Weigh-In", systemImage: "trash", role: .destructive) { delete(id) }
                                 }
                             }

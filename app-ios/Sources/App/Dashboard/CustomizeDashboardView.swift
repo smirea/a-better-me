@@ -300,8 +300,7 @@ private struct AddRemoveSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(ExerciseCatalog.self) private var catalog
-    @Environment(SessionHistory.self) private var history
-    private var sessions: [WorkoutSession] { history.sessions }
+    private var values = DashboardValues()
     @State private var picking = false
 
     var body: some View {
@@ -348,7 +347,7 @@ private struct AddRemoveSheet: View {
             Section("Upper") { muscleToggles(Muscle.upperBody) }
             Section("Lower") { muscleToggles(Muscle.lowerBody) }
         case .exercises:
-            let trained = (layout.exercises.map(\.exerciseID) + sessions.flatMap { $0.blocks.flatMap(\.exercises).map(\.exerciseID) })
+            let trained = layout.exercises.map(\.exerciseID) + values.trainedExercises
             ForEach(trained.firstOccurrences(), id: \.self) { id in
                 Toggle(isOn: Binding(
                     get: { layout.exercises.contains { $0.exerciseID == id } },

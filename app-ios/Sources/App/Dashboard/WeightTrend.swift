@@ -23,9 +23,14 @@ enum WeighIns {
     /// A HealthKit sample next to an app weigh-in is the same weigh-in written to Health by another app; the app row wins.
     static func merge(logged: [BodyWeight], health: [HealthWeight]) -> [WeighIn] {
         let app = logged.map { WeighIn(date: $0.measuredAt, kg: $0.weightKg, source: .app($0.id)) }
-        let fromHealth = health
-            .filter { sample in !logged.contains { abs($0.measuredAt.timeIntervalSince(sample.date)) < sameMomentTolerance } }
-            .map { WeighIn(date: $0.date, kg: $0.kg, source: .health) }
+        let appDates = logged.map(\.measuredAt).sorted()
+        var next = 0
+        var fromHealth: [WeighIn] = []
+        for sample in health.sorted(by: { $0.date < $1.date }) {
+            while next < appDates.count, appDates[next] <= sample.date.addingTimeInterval(-sameMomentTolerance) { next += 1 }
+            if next < appDates.count, appDates[next] < sample.date.addingTimeInterval(sameMomentTolerance) { continue }
+            fromHealth.append(WeighIn(date: sample.date, kg: sample.kg, source: .health))
+        }
         return (app + fromHealth).sorted { $0.date < $1.date }
     }
 }

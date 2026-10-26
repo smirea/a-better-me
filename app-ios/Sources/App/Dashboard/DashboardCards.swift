@@ -1,4 +1,3 @@
-import Charts
 import SwiftUI
 
 struct DashboardCard<Chart: View>: View {
@@ -32,19 +31,22 @@ struct DashboardCard<Chart: View>: View {
     }
 }
 
+/// Drawn rather than charted: a Swift Charts chart per card costs a layout pass of its own on every dashboard render.
 struct MiniBars: View {
     let values: [Double]
     let color: Color
 
     var body: some View {
-        Chart(Array(values.enumerated()), id: \.offset) { index, value in
-            BarMark(x: .value("Index", "\(index)"), y: .value("Value", value), width: .ratio(0.7))
-                .foregroundStyle(color)
-                .clipShape(.rect(cornerRadius: 2))
+        Canvas { context, size in
+            guard !values.isEmpty else { return }
+            let top = max(values.max() ?? 0, 1)
+            let band = size.width / CGFloat(values.count)
+            for (index, value) in values.enumerated() {
+                let height = size.height * value / top
+                let bar = CGRect(x: band * (CGFloat(index) + 0.15), y: size.height - height, width: band * 0.7, height: height)
+                context.fill(RoundedRectangle(cornerRadius: 2).path(in: bar), with: .color(color))
+            }
         }
-        .chartYScale(domain: 0...max(values.max() ?? 0, 1))
-        .chartXAxis(.hidden)
-        .chartYAxis(.hidden)
     }
 }
 
@@ -54,22 +56,29 @@ struct MiniLine: View {
     var rightAlignedSlots = 7
 
     var body: some View {
-        let offset = max(rightAlignedSlots - values.count, 0)
-        let low = values.min() ?? 0
-        let high = values.max() ?? 1
-        let pad = max((high - low) * 0.15, 0.5)
-        Chart(Array(values.enumerated()), id: \.offset) { index, value in
-            LineMark(x: .value("Index", index + offset), y: .value("Value", value))
-                .foregroundStyle(color)
-            PointMark(x: .value("Index", index + offset), y: .value("Value", value))
-                .symbol(.circle.strokeBorder(lineWidth: 1.5))
-                .symbolSize(30)
-                .foregroundStyle(color)
+        Canvas { context, size in
+            let offset = max(rightAlignedSlots - values.count, 0)
+            let low = values.min() ?? 0
+            let high = values.max() ?? 1
+            let pad = max((high - low) * 0.15, 0.5)
+            let x = (low: -0.3, high: Double(rightAlignedSlots - 1) + 0.3)
+            let y = (low: low - pad, high: high + pad)
+            let points = values.enumerated().map { index, value in
+                CGPoint(
+                    x: size.width * (Double(index + offset) - x.low) / (x.high - x.low),
+                    y: size.height * (1 - (value - y.low) / (y.high - y.low))
+                )
+            }
+            var line = Path()
+            line.addLines(points)
+            context.stroke(line, with: .color(color), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+            // Swift Charts' symbol size 30 is an area: a 5.5 pt circle with its 1.5 pt border inside it.
+            let radius = 30.squareRoot() / 2 - 0.75
+            for point in points {
+                let dot = Path(ellipseIn: CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2))
+                context.stroke(dot, with: .color(color), lineWidth: 1.5)
+            }
         }
-        .chartXScale(domain: -0.3...Double(rightAlignedSlots - 1) + 0.3)
-        .chartYScale(domain: (low - pad)...(high + pad))
-        .chartXAxis(.hidden)
-        .chartYAxis(.hidden)
     }
 }
 
@@ -150,9 +159,7 @@ struct CycleRingsCard: View {
 }
 
 struct RecentRecordsCard: View {
-    let records: [DashboardMetrics.RecentRecord]
-    let label: (Double) -> String
-    let name: (ExerciseID) -> String
+    let records: [RecordRow]
     @Binding var kind: ExerciseRecord.Kind
 
     var body: some View {
@@ -164,18 +171,13 @@ struct RecentRecordsCard: View {
                     .foregroundStyle(Theme.textSecondary)
                     .frame(maxWidth: .infinity, minHeight: 190)
             } else {
-                let top = records.map(\.value).max() ?? 1
                 VStack(spacing: 10) {
                     ForEach(records, id: \.exerciseID) { record in
                         HStack(spacing: 8) {
-                            Text(name(record.exerciseID)).font(AppFont.caption(12)).lineLimit(1).frame(width: 96, alignment: .leading)
-                            GeometryReader { proxy in
-                                HStack(spacing: 6) {
-                                    Capsule().fill(DashboardColor.records)
-                                        .frame(width: max(proxy.size.width * 0.72 * record.value / top, 4), height: 8)
-                                    Text(label(record.value)).font(AppFont.caption(12)).lineLimit(1).fixedSize()
-                                }
-                                .frame(maxHeight: .infinity)
+                            Text(record.name).font(AppFont.caption(12)).lineLimit(1).frame(width: 96, alignment: .leading)
+                            RecordBar(fraction: record.fraction) {
+                                Capsule().fill(DashboardColor.records)
+                                Text(record.label).font(AppFont.caption(12)).lineLimit(1).fixedSize()
                             }
                         }
                         .frame(height: 18)
@@ -193,5 +195,21 @@ struct RecentRecordsCard: View {
             .frame(maxWidth: 260)
             .frame(maxWidth: .infinity)
         }
+    }
+}
+
+/// The bar spans 72% of the row's remaining width at the record's fraction, with its label after it; one layout instead
+/// of a `GeometryReader` per row.
+private struct RecordBar: Layout {
+    var fraction: Double
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        proposal.replacingUnspecifiedDimensions()
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let width = max(bounds.width * 0.72 * fraction, 4)
+        subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(width: width, height: 8))
+        subviews[1].place(at: CGPoint(x: bounds.minX + width + 6, y: bounds.midY), anchor: .leading, proposal: .unspecified)
     }
 }
