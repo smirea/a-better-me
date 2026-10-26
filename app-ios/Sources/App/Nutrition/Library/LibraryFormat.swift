@@ -2,9 +2,9 @@ import Foundation
 
 /// The library's text for amounts, macro lines, and servings.
 enum LibraryFormat {
-    /// Up to one decimal under 10 and whole numbers above, as MacroFactor prints amounts: 0.5, 15.6, 120.
+    /// Up to one decimal under 100 and whole numbers above, as MacroFactor prints amounts: 0.5, 15.6, 120.
     static func amount(_ value: Double) -> String {
-        let digits = abs(value) < 10 ? 0...1 : 0...0
+        let digits = abs(value) < 100 ? 0...1 : 0...0
         return value.formatted(.number.precision(.fractionLength(digits)))
     }
 
