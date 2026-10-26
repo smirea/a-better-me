@@ -1,0 +1,287 @@
+import SwiftUI
+
+/// Create Recipe and Edit Recipe: MacroFactor's "Build your recipe" and "Preparation" steps (§6.2) in one Form,
+/// with the derived nutrition per serving or for the whole recipe as the ingredients change.
+struct RecipeEditor: View {
+    private let recipeID: UUID?
+    private let onCreateAndAdd: ((Recipe) -> Void)?
+    @Environment(LocalStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.ingredientPicker) private var ingredientPicker
+    @State private var draft: RecipeDraft
+    @State private var showErrors = false
+    @State private var choosingIcon = false
+    @State private var addingIngredient = false
+    @State private var confirmingDelete = false
+    @State private var perServing = true
+    @State private var showAllNutrients = false
+
+    init(recipe: Recipe? = nil, draft: RecipeDraft? = nil, onCreateAndAdd: ((Recipe) -> Void)? = nil) {
+        recipeID = recipe?.id
+        self.onCreateAndAdd = onCreateAndAdd
+        _draft = State(initialValue: draft ?? recipe.map(RecipeDraft.init) ?? RecipeDraft())
+    }
+
+    var body: some View {
+        let issues = showErrors ? draft.issues : [:]
+        let preview = draft.preview
+        NavigationStack {
+            Form {
+                build(issues, preview: preview)
+                ingredients(issues)
+                nutrition(preview)
+                if showAllNutrients {
+                    NutrientBreakdown(amounts: perServing ? preview.nutrition.nutrients : RecipeMath.total(preview.ingredients), showAll: true)
+                }
+                preparation(issues)
+                steps
+                if recipeID != nil {
+                    Section {
+                        Button("Delete Recipe", systemImage: "trash", role: .destructive) { confirmingDelete = true }
+                            .foregroundStyle(Theme.destructive)
+                            .listRowBackground(Theme.surface)
+                    }
+                }
+            }
+            .themedList()
+            .scrollDismissesKeyboard(.interactively)
+            .navigationTitle(recipeID == nil ? "Create Recipe" : "Edit Recipe")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", systemImage: "xmark") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save", systemImage: "checkmark") { save(adding: false) }
+                }
+                if onCreateAndAdd != nil {
+                    ToolbarItem(placement: .bottomBar) {
+                        Button("Create & Add") { save(adding: true) }
+                    }
+                }
+            }
+            .sheet(isPresented: $choosingIcon) { FoodIconPicker(selection: $draft.icon) }
+            .sheet(isPresented: $addingIngredient) {
+                ingredientPicker.content(recipeID) { draft.ingredients.append(RecipeIngredient($0)) }
+            }
+            .confirmationDialog("Delete Recipe", isPresented: $confirmingDelete, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    if let recipeID { store.deleteRecipe(recipeID) }
+                    dismiss()
+                }
+            } message: {
+                Text("Are you sure you want to delete \(draft.name)? Logged entries keep their copy. This action cannot be undone.")
+            }
+        }
+    }
+
+    private func build(_ issues: [RecipeDraft.Field: String], preview: Recipe) -> some View {
+        Section {
+            HStack(spacing: 12) {
+                FoodIconView(name: draft.icon, size: 36)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(draft.name.isEmpty ? "Your New Recipe" : draft.name).font(AppFont.medium(15))
+                    Text("\(LibraryFormat.macros(preview.nutrition.nutrients)) · \(servingLabel(preview))")
+                        .font(AppFont.caption(12))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                Spacer()
+                Button("Edit Icon") { choosingIcon = true }
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.small)
+            }
+            TextField("Recipe Name", text: $draft.name)
+                .accessibilityLabel("Recipe Name")
+            FieldIssue(issues[.name])
+            LabeledContent("Serving Quantity") {
+                TextField("1", text: $draft.servings)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .accessibilityLabel("Serving Quantity")
+            }
+            FieldIssue(issues[.servings])
+            LabeledContent("Total Weight") {
+                HStack(spacing: 4) {
+                    TextField(draft.ingredientGrams > 0 ? LibraryFormat.amount(draft.ingredientGrams) : "Weight after cooking", text: $draft.totalWeight)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .accessibilityLabel("Total Weight in grams")
+                    Text("g").foregroundStyle(Theme.textSecondary)
+                }
+            }
+            FieldIssue(issues[.totalWeight])
+        } header: {
+            SectionTitle("Recipe").textCase(nil)
+        } footer: {
+            if let cookedGrams = preview.cookedGrams {
+                Text("Per serving weight will be \(LibraryFormat.amount(cookedGrams / preview.servings)) g. Total Weight is the weight of all servings combined, after cooking; blank uses the ingredients' weight.")
+            } else {
+                Text("Weight for all servings this recipe makes combined.")
+            }
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private func ingredients(_ issues: [RecipeDraft.Field: String]) -> some View {
+        Section {
+            ForEach($draft.ingredients) { $ingredient in
+                IngredientRow(ingredient: $ingredient)
+            }
+            .onDelete { draft.ingredients.remove(atOffsets: $0) }
+            .onMove { draft.ingredients.move(fromOffsets: $0, toOffset: $1) }
+            Button("Add Ingredient", systemImage: "plus") { addingIngredient = true }
+            FieldIssue(issues[.ingredients])
+        } header: {
+            VStack(alignment: .leading, spacing: 4) {
+                SectionTitle("Ingredients")
+                Text("Weight of ingredients is \(LibraryFormat.amount(draft.ingredientGrams)) g")
+                    .font(AppFont.caption(12))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .textCase(nil)
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private func nutrition(_ preview: Recipe) -> some View {
+        Section {
+            Picker("Nutrition Per", selection: $perServing) {
+                Text("Serving").tag(true)
+                Text("Recipe").tag(false)
+            }
+            .pickerStyle(.segmented)
+            MacroSummary(
+                amounts: perServing ? preview.nutrition.nutrients : RecipeMath.total(preview.ingredients),
+                caption: perServing ? "Per \(servingLabel(preview))" : "For \(LibraryFormat.quantity(preview.servings)) servings"
+            )
+            Toggle("Show all nutrients", isOn: $showAllNutrients).tint(Theme.accent)
+        } header: {
+            SectionTitle("Nutrition").textCase(nil)
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private func preparation(_ issues: [RecipeDraft.Field: String]) -> some View {
+        Section {
+            minutesField("Preparation Time", text: $draft.prepMinutes)
+            FieldIssue(issues[.prepMinutes])
+            minutesField("Cooking Time", text: $draft.cookMinutes)
+            FieldIssue(issues[.cookMinutes])
+            TextField("Link to the recipe", text: $draft.link)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .accessibilityLabel("Link")
+            FieldIssue(issues[.link])
+            VStack(alignment: .trailing, spacing: 4) {
+                TextField("Describe the recipe", text: limited($draft.notes, to: RecipeDraft.notesLimit), axis: .vertical)
+                    .lineLimit(3...10)
+                    .accessibilityLabel("Description")
+                Text("\(draft.notes.count)/\(RecipeDraft.notesLimit)").font(AppFont.caption(11)).foregroundStyle(Theme.textTertiary)
+            }
+        } header: {
+            SectionTitle("Preparation").textCase(nil)
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private var steps: some View {
+        Section {
+            ForEach(Array($draft.steps.enumerated()), id: \.element.id) { index, $step in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Step \(index + 1)").font(AppFont.headline(13)).foregroundStyle(Theme.textSecondary)
+                    TextField("Describe this step", text: limited($step.text, to: RecipeDraft.stepLimit), axis: .vertical)
+                        .lineLimit(1...8)
+                        .accessibilityLabel("Step \(index + 1)")
+                }
+            }
+            .onDelete { draft.steps.remove(atOffsets: $0) }
+            .onMove { draft.steps.move(fromOffsets: $0, toOffset: $1) }
+            Button("Add Step", systemImage: "plus") { draft.steps.append(RecipeDraft.Step()) }
+        } header: {
+            SectionTitle("Steps").textCase(nil)
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private func minutesField(_ title: String, text: Binding<String>) -> some View {
+        LabeledContent(title) {
+            HStack(spacing: 4) {
+                TextField("0", text: text)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .accessibilityLabel(title)
+                Text("min").foregroundStyle(Theme.textSecondary)
+            }
+        }
+    }
+
+    private func limited(_ text: Binding<String>, to limit: Int) -> Binding<String> {
+        Binding { text.wrappedValue } set: { text.wrappedValue = String($0.prefix(limit)) }
+    }
+
+    private func servingLabel(_ recipe: Recipe) -> String {
+        LibraryFormat.serving(FoodPortion(recipe.snapshot).serving, of: recipe.snapshot)
+    }
+
+    private func save(adding: Bool) {
+        showErrors = true
+        guard let valid = draft.valid else { return }
+        if let recipeID {
+            store.editRecipe(recipeID) { valid.write(into: &$0) }
+        } else {
+            let recipe = valid.newRecipe()
+            store.saveRecipe(recipe)
+            if adding { onCreateAndAdd?(recipe) }
+        }
+        dismiss()
+    }
+}
+
+/// An ingredient with its quantity typed in place and its measure picked from the food's measures. Switching the
+/// measure converts the quantity, so the amount stays the same.
+private struct IngredientRow: View {
+    @Binding var ingredient: RecipeIngredient
+    @State private var text: String
+
+    init(ingredient: Binding<RecipeIngredient>) {
+        _ingredient = ingredient
+        _text = State(initialValue: NumberText.text(ingredient.wrappedValue.serving.quantity))
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            FoodIconView(name: ingredient.food.icon)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(ingredient.food.name).font(AppFont.medium(14)).lineLimit(2)
+                Text(LibraryFormat.macros(ingredient.food.amounts(ingredient.serving)))
+                    .font(AppFont.caption(12))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            TextField("1", text: $text)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 56)
+                .accessibilityLabel("\(ingredient.food.name) quantity")
+                .onChange(of: text) { _, value in
+                    if let quantity = NumberText.parse(value), quantity > 0 { ingredient.serving.quantity = quantity }
+                }
+            Picker("\(ingredient.food.name) measure", selection: measure) {
+                ForEach(ingredient.food.nutrition.allMeasures, id: \.name) { Text($0.name).tag($0.name) }
+            }
+            .labelsHidden()
+            .fixedSize()
+        }
+    }
+
+    private var measure: Binding<String> {
+        Binding { ingredient.serving.measure.name } set: { name in
+            guard let target = ingredient.food.nutrition.allMeasures.first(where: { $0.name == name }) else { return }
+            let quantity = RecipeMath.convert(ingredient.serving.quantity, from: ingredient.serving.measure, to: target)
+            ingredient.serving = Serving(measure: target, quantity: quantity)
+            text = NumberText.text(quantity)
+        }
+    }
+}

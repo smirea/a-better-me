@@ -38,6 +38,13 @@ struct SettingsView: View {
             } header: {
                 SectionTitle("Feature Settings").textCase(nil)
             }
+            Section {
+                NavigationLink { FoodLibraryView() } label: {
+                    SettingLabel(title: "Foods & Recipes", detail: nil, systemImage: "fork.knife")
+                }
+            } header: {
+                SectionTitle("Nutrition").textCase(nil)
+            }
             Section("Automation") {
                 NavigationLink { ApiTokensView() } label: {
                     Label("API Tokens", systemImage: "key")
