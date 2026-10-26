@@ -10,6 +10,8 @@ enum Telemetry {
         guard let dsn = AppEnvironment.sentryDSN, !isTestRun else { return }
         SentrySDK.start { options in
             options.dsn = dsn
+            // Performance is a top priority, so a stall the owner can feel is reported, not only the SDK's 2 s hang.
+            options.appHangTimeoutInterval = 0.5
             #if DEBUG
             options.environment = "development"
             #else
