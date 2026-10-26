@@ -1,0 +1,18 @@
+#!/bin/bash
+# calibrate-engine [export.xlsx]   compile the Nutrition engine with the calibration harness and print its error
+#                                  against MacroFactor's own trend weight and expenditure for the owner's history.
+# The export and the JSON it writes stay under ~/.claude/orchestrate/a-better-me-nutrition/private/ (never in git).
+set -euo pipefail
+dir="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+root="$(cd "$dir/../../../.." && pwd)"
+private="$HOME/.claude/orchestrate/a-better-me-nutrition/private"
+export_xlsx="${1:-$private/export/macrofactor-granular-all-20261026.xlsx}"
+scratch="$private/scratch"
+mkdir -p "$scratch" "$root/app-ios/DerivedData"
+python3 -I "$dir/calibrate-export.py" "$export_xlsx" "$scratch/calibrate.json"
+swiftc -O \
+  "$root/app-ios/Sources/App/Dashboard/Series.swift" \
+  "$root"/app-ios/Sources/App/Nutrition/Engine/*.swift \
+  "$dir/calibrate-engine.swift" \
+  -o "$root/app-ios/DerivedData/calibrate-engine"
+"$root/app-ios/DerivedData/calibrate-engine" "$scratch/calibrate.json"
