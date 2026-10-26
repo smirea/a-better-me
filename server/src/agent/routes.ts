@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { SETTINGS_ID } from '../../../shared/db/schema';
+import { foodRoutes } from '../food/routes';
 import { CATALOG_EXERCISES, catalogExercise, EQUIPMENT, EQUIPMENT_BY_ID, type Exercise } from './catalog';
 import { ApiError, type Db, type RowOf } from './db';
 import * as M from './models';
@@ -962,6 +963,7 @@ export const routes: Route[] = [
 			return { deleted: params.id! };
 		},
 	}),
+	...foodRoutes,
 ];
 
 /** What the authenticated root returns besides the docs: enough state that an agent knows where things stand. */

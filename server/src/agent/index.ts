@@ -132,7 +132,7 @@ export async function handleAgent(request: Request, host: AgentHost): Promise<Re
 				return error(400, 'The body must be JSON');
 			}
 		}
-		const result = route.run({
+		const result = await route.run({
 			db,
 			params,
 			query: (route.query ?? z.object({})).parse(Object.fromEntries(url.searchParams)),
