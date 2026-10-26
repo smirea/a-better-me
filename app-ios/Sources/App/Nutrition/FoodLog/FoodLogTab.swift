@@ -1,0 +1,360 @@
+import SwiftUI
+
+/// MacroFactor's Food Log: a week strip, the day's macro summary, and a timeline of hours that pages between days.
+struct FoodLogTab: View {
+    @Environment(LocalStore.self) private var store
+    @State private var state = FoodLogState()
+    @State private var showingCalendar = false
+
+    var body: some View {
+        NavigationStack(path: $state.path) {
+            VStack(spacing: 0) {
+                FoodLogHeader()
+                DayPager()
+            }
+            .background(Theme.background)
+            .safeAreaInset(edge: .bottom) { FoodLogBottomBar() }
+            .screenTitle(FoodLog.dayTitle(state.day, today: .today))
+            .toolbar {
+                if state.day != .today {
+                    ToolbarItem {
+                        Button("Today", systemImage: "arrow.uturn.backward") { state.day = .today }
+                    }
+                }
+                ToolbarItem {
+                    Button("Calendar", systemImage: "calendar") { showingCalendar = true }
+                }
+                ToolbarItem {
+                    DayMenu(day: state.day).id(state.day)
+                }
+            }
+            .navigationDestination(for: FoodLogRoute.self) { route in
+                switch route {
+                case let .overview(day): NutritionOverview(day: day)
+                case let .contributors(day, nutrient): ContributorsView(day: day, nutrient: nutrient)
+                }
+            }
+        }
+        .environment(state)
+        // F2's logger replaces this placeholder; every add affordance already builds its request.
+        .sheet(item: $state.logRequest) { _ in
+            ComingSoon(title: "Log Food").presentationDetents([.medium])
+        }
+        .sheet(item: $state.editing) { EntryEditor(entry: $0) }
+        .sheet(item: $state.note) { NoteEditor(draft: $0) }
+        .sheet(isPresented: $showingCalendar) { CalendarSheet().environment(state) }
+        .task {
+            #if DEBUG
+            FoodLogSeed.seedIfRequested(store)
+            #endif
+        }
+    }
+}
+
+/// The week strip and the day's macro summary, pinned over the timeline.
+private struct FoodLogHeader: View {
+    @Environment(FoodLogState.self) private var state
+    @Observe(NutritionPlan.all) private var plans
+
+    var body: some View {
+        VStack(spacing: 6) {
+            DayStrip(plans: plans)
+            DaySummary(day: state.day, plans: plans).id(state.day)
+        }
+        .padding(.bottom, 6)
+        .background(Theme.header)
+    }
+}
+
+/// Day pills a week at a time, Monday first. Swiping shows other weeks without leaving the day; tapping a pill opens
+/// it. Each pill's outline fills with the day's calories against its target.
+private struct DayStrip: View {
+    let plans: [NutritionPlan]
+
+    @Environment(FoodLogState.self) private var state
+    @State private var origin = FoodLog.week(of: .today)[0]
+    @State private var week: Int?
+
+    private static let weeksBack = 104
+    private static let weeksAhead = 52
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 0) {
+                ForEach(-Self.weeksBack...Self.weeksAhead, id: \.self) { offset in
+                    WeekPills(monday: origin.adding(days: offset * 7), plans: plans)
+                        .containerRelativeFrame(.horizontal)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollTargetBehavior(.paging)
+        .scrollPosition(id: $week)
+        .scrollIndicators(.hidden)
+        .frame(height: 64)
+        .onAppear { week = offset(of: state.day) }
+        .onChange(of: state.day) { _, day in
+            withAnimation { week = offset(of: day) }
+        }
+    }
+
+    private func offset(of day: CalendarDay) -> Int {
+        origin.days(to: FoodLog.week(of: day)[0]) / 7
+    }
+}
+
+private struct WeekPills: View {
+    let monday: CalendarDay
+    let plans: [NutritionPlan]
+
+    @Environment(FoodLogState.self) private var state
+    @Observe private var entries: [FoodEntry]
+
+    init(monday: CalendarDay, plans: [NutritionPlan]) {
+        self.monday = monday
+        self.plans = plans
+        _entries = Observe(FoodEntry.between(monday, monday.adding(days: 6)))
+    }
+
+    var body: some View {
+        let kcal = Dictionary(grouping: entries, by: \.day).mapValues { FoodLog.totals($0)[.energy] ?? 0 }
+        HStack(spacing: 6) {
+            ForEach(FoodLog.week(of: monday), id: \.self) { day in
+                let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day).energy
+                DayPill(
+                    day: day, isSelected: day == state.day, isToday: day == .today,
+                    progress: FoodLog.ringProgress(kcal: kcal[day] ?? 0, target: target)
+                ) { state.day = day }
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+}
+
+private struct DayPill: View {
+    let day: CalendarDay
+    let isSelected: Bool
+    let isToday: Bool
+    let progress: Double
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 1) {
+                Text("\(day.day)").font(AppFont.headline(16)).monospacedDigit()
+                Text(day.date.formatted(.dateTime.weekday(.short)).prefix(2)).font(AppFont.caption(11))
+                    .foregroundStyle(Theme.textSecondary)
+                Circle().fill(isToday ? Theme.textPrimary : .clear).frame(width: 4, height: 4)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(isSelected ? Theme.surfaceRaised : .clear, in: Capsule())
+            .overlay {
+                Capsule().strokeBorder(Theme.textTertiary.opacity(0.6), lineWidth: 1)
+                Capsule().inset(by: 0.75).trim(from: 0, to: progress)
+                    .stroke(Theme.calories, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                    .rotationEffect(.degrees(180))
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(day.date.formatted(date: .complete, time: .omitted))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+/// The day's four macro lines in two pages: eaten against target, then what is left. Without a plan it shows what
+/// was eaten. Tapping it opens the Nutrition Overview.
+private struct DaySummary: View {
+    let day: CalendarDay
+    let plans: [NutritionPlan]
+
+    @Environment(FoodLogState.self) private var state
+    @Observe(AppSettings.current) private var settings
+    @Observe private var entries: [FoodEntry]
+    @Observe private var row: NutritionDay
+
+    init(day: CalendarDay, plans: [NutritionPlan]) {
+        self.day = day
+        self.plans = plans
+        _entries = Observe(FoodEntry.on(day))
+        _row = Observe(NutritionDay.one(day))
+    }
+
+    var body: some View {
+        let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day)
+        let lines = FoodLog.summary(row.override ?? FoodLog.totals(entries), target: target, showOverages: settings.nutrition.showOverages)
+        VStack(spacing: 4) {
+            if row.status != .none || row.override != nil {
+                DayStatusBadges(row: row)
+            }
+            Group {
+                if target == nil {
+                    MacroColumns(lines: lines, page: .consumed)
+                } else {
+                    TabView {
+                        MacroColumns(lines: lines, page: .consumed)
+                        MacroColumns(lines: lines, page: .remaining)
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .always))
+                    .frame(height: 52)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { state.path.append(.overview(day)) }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("Opens the Nutrition Overview")
+        }
+        .padding(.horizontal, 20)
+    }
+}
+
+private struct DayStatusBadges: View {
+    let row: NutritionDay
+
+    var body: some View {
+        HStack(spacing: 6) {
+            switch row.status {
+            case .fasted: badge("Fasted", systemImage: "moon.zzz.fill")
+            case .partial: badge("Incomplete", systemImage: "circle.lefthalf.filled")
+            case .none: EmptyView()
+            }
+            if row.override != nil { badge("Edited totals", systemImage: "pencil") }
+            Spacer()
+        }
+    }
+
+    private func badge(_ title: String, systemImage: String) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(AppFont.caption(12))
+            .foregroundStyle(Theme.textSecondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Theme.surfaceRaised, in: Capsule())
+    }
+}
+
+private struct MacroColumns: View {
+    enum Page { case consumed, remaining }
+
+    let lines: [MacroLine]
+    let page: Page
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(lines) { line in
+                let color = NutrientRegistry.nutrient(line.nutrient)?.color ?? Theme.calories
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("\(prefix(line.nutrient)) \(Text(text(line)).font(AppFont.caption(12)))")
+                        .font(AppFont.headline(12))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    GeometryReader { proxy in
+                        ZStack(alignment: page == .remaining ? .trailing : .leading) {
+                            Capsule().fill(Theme.surfaceRaised)
+                            Capsule().fill(color)
+                                .frame(width: proxy.size.width * fill(line))
+                        }
+                    }
+                    .frame(height: 3)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.bottom, lines.first?.target == nil ? 0 : 18)
+        .contentShape(Rectangle())
+    }
+
+    private func prefix(_ id: NutrientID) -> Text {
+        id == .energy ? Text(calorieGlyph) : Text(id.rawValue.uppercased())
+    }
+
+    private func text(_ line: MacroLine) -> String {
+        let consumed = Int(line.consumed.rounded())
+        switch (page, line.target, line.remaining) {
+        case let (.remaining, _, remaining?): return "\(Int(remaining.rounded())) left"
+        case let (_, target?, _): return "\(consumed) / \(Int(target.rounded()))"
+        default: return "\(consumed)"
+        }
+    }
+
+    private func fill(_ line: MacroLine) -> Double {
+        switch page {
+        case .consumed: line.progress
+        case .remaining: line.target == nil ? 0 : 1 - line.progress
+        }
+    }
+}
+
+/// The days as horizontal pages: swiping the timeline moves a day, as MacroFactor's does. Select mode holds the page.
+private struct DayPager: View {
+    @Environment(FoodLogState.self) private var state
+    @State private var origin = CalendarDay.today
+    @State private var position: Int?
+
+    private static let daysBack = 730
+    private static let daysAhead = 365
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 0) {
+                ForEach(-Self.daysBack...Self.daysAhead, id: \.self) { offset in
+                    DayPage(day: origin.adding(days: offset))
+                        .containerRelativeFrame(.horizontal)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollTargetBehavior(.paging)
+        .scrollPosition(id: $position)
+        .scrollIndicators(.hidden)
+        .scrollDisabled(state.selecting && state.pending?.inline != true)
+        .onAppear { position = origin.days(to: state.day) }
+        .onChange(of: position) { _, position in
+            guard let position else { return }
+            let day = origin.adding(days: position)
+            if day != state.day { state.day = day }
+        }
+        .onChange(of: state.day) { _, day in
+            let target = origin.days(to: day)
+            guard position != target else { return }
+            if let position, abs(position - target) == 1 {
+                withAnimation { self.position = target }
+            } else {
+                position = target
+            }
+        }
+    }
+}
+
+/// Select Date: the native month calendar, and Go to Today.
+private struct CalendarSheet: View {
+    @Environment(FoodLogState.self) private var state
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            DatePicker(
+                "Day",
+                selection: Binding(get: { state.day.date }, set: { state.day = CalendarDay($0); dismiss() }),
+                displayedComponents: .date
+            )
+            .datePickerStyle(.graphical)
+            .padding(.horizontal, 20)
+            .navigationTitle("Select Date")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(role: .close) { dismiss() }
+                }
+                ToolbarItem(placement: .bottomBar) {
+                    Button("Go to Today") {
+                        state.day = .today
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}

@@ -10,6 +10,8 @@ struct NutritionSettings: Codable, Hashable, Sendable {
         var firstHour = 8
         var lastHour = 21
         var hideEmptyHours = false
+        /// Food tiles show only their names.
+        var hideFoodDetails = false
         var hourlyTotals = true
         var foodTimestamps = true
     }
