@@ -14,6 +14,10 @@ final class FakeDietaryStore: DietaryStore {
         held.filter { $0.sample.day == day }
     }
 
+    func writtenDays() async throws -> Set<CalendarDay> {
+        Set(held.map(\.sample.day))
+    }
+
     func save(_ samples: [DietarySample]) async throws {
         saves += samples.count
         held += samples.map { StoredDietarySample(id: UUID(), sample: $0) }
@@ -142,6 +146,46 @@ struct DietaryHealthTests {
 
         store.deleteEntries([id])
         try await eventually { health.held.isEmpty }
+    }
+
+    @Test func anEditSyncedInWithAnOlderTimestampStillChangesTheDaysDigest() async throws {
+        let store = try LocalStore(unsyncedAt: FileManager.default.temporaryDirectory.appending(path: "digest-\(UUID().uuidString)/a.sqlite"))
+        store.quickAdd([.energy: 300], on: monday, minute: 8 * 60)
+        store.quickAdd([.energy: 500], on: monday, minute: 12 * 60)
+        try await store.write { _ in }.value
+        let before = try store.read(NutritionHealth.dayDigests)
+
+        try await store.write { db in
+            try db.execute(sql: """
+                UPDATE food_entries SET serving = json_set(serving, '$.quantity', 2), updated_at = '2000-01-01T00:00:00.000Z'
+                WHERE minute = 480
+                """)
+        }.value
+        let after = try store.read(NutritionHealth.dayDigests)
+
+        #expect(before.keys.sorted() == ["2026-10-26"])
+        #expect(after.keys.sorted() == ["2026-10-26"])
+        #expect(before["2026-10-26"] != after["2026-10-26"])
+    }
+
+    @Test func turningTheSettingBackOnRewritesAnOldDayChangedWhileItWasOff() async throws {
+        let store = try LocalStore(unsyncedAt: FileManager.default.temporaryDirectory.appending(path: "reenable-\(UUID().uuidString)/a.sqlite"))
+        let suite = "dietary-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let health = FakeDietaryStore()
+        let old = CalendarDay(.now, in: utc).adding(days: -30)
+        health.held = [StoredDietarySample(id: UUID(), sample: DietarySample(
+            key: "\(key)/k", day: old, nutrient: .energy, amount: 180, date: instant("2026-09-26T08:15:00Z"), food: "Yogurt"
+        ))]
+        let sync = NutritionHealth(target: health, defaults: defaults, calendar: utc)
+        sync.start(store: store)
+
+        sync.isEnabled = true
+        await sync.idle()
+
+        #expect(health.summary == [])
+        #expect(health.deletes == 1)
     }
 
     /// Waits for the observation's next delivery, which GRDB schedules on the main queue after a commit.

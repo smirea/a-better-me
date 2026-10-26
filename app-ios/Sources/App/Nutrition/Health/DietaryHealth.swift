@@ -24,6 +24,8 @@ struct StoredDietarySample: Hashable, Sendable {
 protocol DietaryStore {
     /// The samples this app wrote for `day`, and only those.
     func samples(on day: CalendarDay) async throws -> [StoredDietarySample]
+    /// Every day this app holds samples for.
+    func writtenDays() async throws -> Set<CalendarDay>
     func save(_ samples: [DietarySample]) async throws
     func delete(_ samples: [StoredDietarySample]) async throws
 }

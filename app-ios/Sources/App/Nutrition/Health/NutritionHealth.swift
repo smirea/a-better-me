@@ -17,7 +17,7 @@ final class NutritionHealth {
     var isEnabled: Bool {
         didSet {
             defaults.set(isEnabled, forKey: Self.enabledKey)
-            if isEnabled { syncRecent() }
+            if isEnabled, !oldValue { reconcile() }
         }
     }
 
@@ -32,6 +32,7 @@ final class NutritionHealth {
     @ObservationIgnored private var digests: [String: String]?
     @ObservationIgnored private var pending: Set<CalendarDay> = []
     @ObservationIgnored private var worker: Task<Void, Never>?
+    @ObservationIgnored private var listing: Task<Void, Never>?
 
     init(target: any DietaryStore, defaults: UserDefaults = .standard, calendar: Calendar = .current) {
         self.target = target
@@ -57,17 +58,36 @@ final class NutritionHealth {
         enqueue((0..<DietaryHealth.recentDays).map { today.adding(days: -$0) })
     }
 
+    /// The recent window and every older day the app wrote before, since a day edited or deleted while the switch was
+    /// off still holds its old samples.
+    func reconcile() {
+        syncRecent()
+        listing = Task {
+            defer { listing = nil }
+            do {
+                enqueue(Array(try await target.writtenDays()))
+            } catch {
+                Self.log.error("Listing the days written to Health failed: \(String(describing: error))")
+            }
+        }
+    }
+
     /// Returns once every queued day is written.
     func idle() async {
-        while let worker { await worker.value }
+        while let task = listing ?? worker { await task.value }
     }
 
     /// One text per day that changes whenever an entry of the day is added, edited, moved, or deleted, or its override
-    /// changes, so a change re-writes only its days.
-    private static let dayDigests: @Sendable (Database) throws -> [String: String] = { db in
+    /// changes, so a change re-writes only its days. Every entry is in it, so an edit that syncs in with an older
+    /// timestamp than another entry's still shows. The snapshot is left out: it never changes without `updated_at`.
+    static let dayDigests: @Sendable (Database) throws -> [String: String] = { db in
         var digests: [String: String] = [:]
-        for row in try Row.fetchAll(db, sql: "SELECT day, COUNT(*) AS count, MAX(updated_at) AS updated FROM food_entries GROUP BY day") {
-            digests[row["day"] as String] = "\(row["count"] as Int) \(row["updated"] as String? ?? "")"
+        let entries = """
+            SELECT day, group_concat(id || ' ' || minute || ' ' || updated_at || ' ' || serving, char(10)) AS digest
+            FROM (SELECT * FROM food_entries ORDER BY day, id) GROUP BY day
+            """
+        for row in try Row.fetchAll(db, sql: entries) {
+            digests[row["day"] as String] = row["digest"] as String
         }
         for row in try Row.fetchAll(db, sql: "SELECT id, override FROM nutrition_days WHERE override IS NOT NULL") {
             digests[row["id"] as String, default: ""] += " \(row["override"] as String)"
@@ -138,6 +158,16 @@ struct HealthDietaryStore: DietaryStore {
                 date: sample.startDate, food: sample.metadata?[HKMetadataKeyFoodType] as? String
             ))
         }
+    }
+
+    func writtenDays() async throws -> Set<CalendarDay> {
+        guard HKHealthStore.isHealthDataAvailable() else { return [] }
+        let predicate = HKQuery.predicateForObjects(withMetadataKey: Self.dayKey)
+        let query = HKSampleQueryDescriptor(
+            predicates: DietaryHealth.types.values.map { .quantitySample(type: HKQuantityType($0), predicate: predicate) },
+            sortDescriptors: []
+        )
+        return Set(try await query.result(for: store).compactMap { ($0.metadata?[Self.dayKey] as? String).flatMap(CalendarDay.init) })
     }
 
     /// Only types the owner allowed; Health refuses a whole save that holds one it was not allowed.
