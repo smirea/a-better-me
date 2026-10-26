@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// More > API Tokens: bot tokens for an agent, such as an AI coach, to read and manage workouts through the API.
+/// Settings > API Tokens: bot tokens for an agent, such as an AI coach, to read and manage workouts through the API.
 struct ApiTokensView: View {
     @Environment(LocalStore.self) private var store
     @Observe(ApiToken.all) private var tokens

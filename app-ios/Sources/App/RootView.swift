@@ -1,7 +1,8 @@
 import SwiftUI
 
+/// The tab bar's slots. Slots 3 and 5 show the current mode's tab, so flipping the mode keeps the selection.
 enum AppTab: Hashable {
-    case dashboard, workout, add, levels, more
+    case switchMode, dashboard, log, add, progress
 }
 
 struct RootView: View {
@@ -10,28 +11,48 @@ struct RootView: View {
     @Environment(LocalStore.self) private var store
     @Observe(CustomExercise.all) private var customExercises
     @Observe(WorkoutSession.inProgress) private var activeSession
-    @State private var tab = AppTab.workout
-    @State private var showingNewWorkout = false
+    @AppStorage("appMode") private var mode = AppMode.workouts
+    @State private var tab = AppTab.log
+    @State private var showingNew = false
 
     var body: some View {
         TabView(selection: $tab) {
+            Tab(mode.other.title, systemImage: mode.other.systemImage, value: .switchMode) { Color.clear }
+                .accessibilityLabel("Switch to \(mode.other.title)")
             // The tab bar's selection keeps the accent, so each tab's content restores the app's white tint.
             Tab("Dashboard", systemImage: "square.grid.2x2", value: .dashboard) { DashboardTab().tint(Theme.textPrimary) }
-            Tab("Workout", systemImage: "dumbbell", value: .workout) { WorkoutTab().tint(Theme.textPrimary) }
+            switch mode {
+            case .workouts:
+                Tab("Workout", systemImage: "dumbbell", value: .log) { WorkoutTab().tint(Theme.textPrimary) }
+            case .nutrition:
+                Tab("Food Log", systemImage: "fork.knife", value: .log) { ComingSoon(title: "Food Log").tint(Theme.textPrimary) }
+            }
             Tab("New", systemImage: "plus", value: .add, role: .prominent) { Color.clear }
-            Tab("Levels", systemImage: "trophy", value: .levels) { LevelsTab().tint(Theme.textPrimary) }
-            Tab("More", systemImage: "ellipsis.circle", value: .more) { MoreTab().tint(Theme.textPrimary) }
+            switch mode {
+            case .workouts:
+                Tab("Levels", systemImage: "trophy", value: .progress) { LevelsTab().tint(Theme.textPrimary) }
+            case .nutrition:
+                Tab("Strategy", systemImage: "chart.line.uptrend.xyaxis", value: .progress) { ComingSoon(title: "Strategy").tint(Theme.textPrimary) }
+            }
         }
         .tint(Theme.accent)
         .tabViewBottomAccessory(isEnabled: activeSession != nil) { ActiveSessionBar() }
         .resolvingWorkoutStart()
         .onChange(of: tab) { previous, current in
-            // "+" acts as a button, like the reference app's center tab: it presents a sheet and keeps the tab.
-            guard current == .add else { return }
+            // Slot 1 and "+" act as buttons, like the reference app's center tab: they act and keep the selected tab.
+            switch current {
+            case .switchMode: mode = mode.other
+            case .add: showingNew = true
+            default: return
+            }
             tab = previous
-            showingNewWorkout = true
         }
-        .sheet(isPresented: $showingNewWorkout) { NewWorkoutSheet() }
+        .sheet(isPresented: $showingNew) {
+            switch mode {
+            case .workouts: NewWorkoutSheet()
+            case .nutrition: ComingSoon(title: "Log Food").presentationDetents([.medium])
+            }
+        }
         // A session's insert and the observation that shows it land a moment apart, so the cover waits for both.
         .fullScreenCover(isPresented: Binding(get: { presenter.isExpanded && activeSession != nil }, set: { presenter.isExpanded = $0 })) {
             if let activeSession { LiveWorkoutView(session: activeSession).id(activeSession.id) }

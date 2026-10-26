@@ -1,6 +1,10 @@
 # Nutrition
 
-The Nutrition half re-creates MacroFactor (food logging, the expenditure coach, and its strategy). The reference app's screens, settings, export sheets, and the Collapse map that places each feature in our app are in [`docs/research/macrofactor/README.md`](../research/macrofactor/README.md); what it stores and computes is in `data-model.md`, `nutrients.md`, and `algorithms.md` beside it. Feature workers read those and never drive the app.
+The Nutrition half re-creates MacroFactor (`/Applications/MacroFactor.app`: food logging, the expenditure coach, and its strategy) the way the Workouts half re-creates MacroFactor Workouts ([Workouts](workouts.md)). Features that both apps share collapse into one: one Settings screen and one Dashboard. The reference app's screens, settings, export sheets, and the Collapse map that places each feature in our app are in [`docs/research/macrofactor/README.md`](../research/macrofactor/README.md); what it stores and computes is in `data-model.md`, `nutrients.md`, and `algorithms.md` beside it. Feature workers read those and never drive the app.
+
+## Navigation shell
+
+- **Navigation shell.** The first tab-bar slot switches between the two apps. The bar is [switcher] [Dashboard] [Workout | Food Log] [+] [Levels | Strategy]. The switcher acts instead of selecting, like "+": tapping it flips the mode and keeps the selected slot, so Workout becomes Food Log and Levels becomes Strategy. Its label and icon name the mode it switches to, because an action names what it does. The mode (`AppMode`, `Sources/App/Nutrition/Shell/`) is the device's UI state, kept in `@AppStorage`; it is not owner data and does not sync. Dashboard is one screen for both modes. "+" opens the current mode's sheet. The in-progress workout accessory and the live workout cover stay in both modes. MacroFactor's More tab has no slot; its settings join the app's one Settings screen, pushed from the gear in the Dashboard's toolbar. Food Log, Strategy, and the Nutrition "+" sheet are placeholders until their feature units land.
 
 ## Food data
 
