@@ -3,7 +3,8 @@
 Joins four native sources on the nutrient id: the App Intents `NutrientAppEnum`
 (order, title, synonyms, SF Symbol), the widget intent definition (`m`-prefixed
 codes), the widget's unit-bearing labels, and StrongerModels' four name forms.
-Rewrites only the lines between the generated markers in nutrients.md.
+Rewrites only the lines between the generated markers in nutrients.md, then
+formats the file with the repo's oxfmt, as the pre-commit hook would.
 
 Usage: python3 -I tools/bundle-nutrients.py [MacroFactor.app]
 """
@@ -98,3 +99,4 @@ if START not in doc or END not in doc:
 before, rest = doc.split(START, 1)
 _, after = rest.split(END, 1)
 DOC.write_text(before + START + "\n" + "\n".join(table) + "\n" + END + after)
+subprocess.run(["bunx", "oxfmt", str(DOC)], cwd=DOC.parents[3], check=True, capture_output=True)
