@@ -227,7 +227,7 @@ private struct StrategyHome: View {
                     StrategyStat(value: "\(StrategyFormat.signed(goal.ratePercentPerWeek, digits: 0...2)) %", caption: "Goal Rate / week")
                 }
             }
-            if let period { GoalProgressView(period: period, inputs: data.inputs, unit: data.unit) }
+            if let period { GoalTrendProgress(period: period, inputs: data.inputs, unit: data.unit) }
         } actions: {
             Button("New Goal", systemImage: "plus") { open(.newGoal) }
             Button("Edit Goal", systemImage: "pencil") { open(.editGoal) }
@@ -263,7 +263,7 @@ private struct StrategyHome: View {
     }
 }
 
-private struct GoalProgressView: View {
+private struct GoalTrendProgress: View {
     let period: GoalPeriod
     let inputs: StrategyInputs
     let unit: WeightUnit

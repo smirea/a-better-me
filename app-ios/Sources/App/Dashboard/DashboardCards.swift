@@ -54,6 +54,7 @@ struct MiniLine: View {
     let values: [Double]
     let color: Color
     var rightAlignedSlots = 7
+    var showsPoints = true
 
     var body: some View {
         Canvas { context, size in
@@ -74,7 +75,7 @@ struct MiniLine: View {
             context.stroke(line, with: .color(color), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
             // Swift Charts' symbol size 30 is an area: a 5.5 pt circle with its 1.5 pt border inside it.
             let radius = 30.squareRoot() / 2 - 0.75
-            for point in points {
+            for point in points where showsPoints {
                 let dot = Path(ellipseIn: CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2))
                 context.stroke(dot, with: .color(color), lineWidth: 1.5)
             }
