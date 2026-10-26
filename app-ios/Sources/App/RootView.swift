@@ -10,7 +10,7 @@ struct RootView: View {
     @Environment(LiveWorkoutPresenter.self) private var presenter
     @Environment(LocalStore.self) private var store
     @Observe(CustomExercise.all) private var customExercises
-    @Observe(WorkoutSession.inProgress) private var activeSession
+    @Observe(WorkoutSession.inProgressID) private var activeSessionID
     @AppStorage("appMode") private var mode = AppMode.workouts
     @State private var tab = AppTab.log
     @State private var showingNew = false
@@ -36,7 +36,7 @@ struct RootView: View {
             }
         }
         .tint(Theme.accent)
-        .tabViewBottomAccessory(isEnabled: activeSession != nil) { ActiveSessionBar() }
+        .tabViewBottomAccessory(isEnabled: activeSessionID != nil) { ActiveSessionBar() }
         .resolvingWorkoutStart()
         .onChange(of: tab) { previous, current in
             // Slot 1 and "+" act as buttons, like the reference app's center tab: they act and keep the selected tab.
@@ -54,8 +54,8 @@ struct RootView: View {
             }
         }
         // A session's insert and the observation that shows it land a moment apart, so the cover waits for both.
-        .fullScreenCover(isPresented: Binding(get: { presenter.isExpanded && activeSession != nil }, set: { presenter.isExpanded = $0 })) {
-            if let activeSession { LiveWorkoutView(session: activeSession).id(activeSession.id) }
+        .fullScreenCover(isPresented: Binding(get: { presenter.isExpanded && activeSessionID != nil }, set: { presenter.isExpanded = $0 })) {
+            LiveWorkoutView()
         }
         .onChange(of: customExercises.map(\.exercise), initial: true) { _, exercises in
             catalog.setCustom(exercises)

@@ -11,7 +11,7 @@ struct RestTimerPill: View {
     var body: some View {
         let store = LiveSessionStore.shared
         Button(action: action) {
-            TimelineView(.periodic(from: .now, by: 0.25)) { context in
+            TimelineView(.animation(minimumInterval: 0.25, paused: store.rest == nil)) { context in
                 let remaining = store.rest?.remaining(at: context.date) ?? 0
                 let fraction = store.rest.map { remaining / $0.duration } ?? 0
                 HStack(spacing: 8) {
@@ -40,7 +40,7 @@ struct RestTimerSheet: View {
         let store = LiveSessionStore.shared
         NavigationStack {
             VStack(alignment: .leading, spacing: 20) {
-                TimelineView(.periodic(from: .now, by: 0.25)) { context in
+                TimelineView(.animation(minimumInterval: 0.25, paused: store.rest == nil)) { context in
                     let remaining = store.rest?.remaining(at: context.date) ?? 0
                     VStack(spacing: 16) {
                         ProgressView(value: store.rest.map { remaining / $0.duration } ?? 0)

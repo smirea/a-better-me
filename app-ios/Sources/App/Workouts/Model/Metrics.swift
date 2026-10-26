@@ -7,14 +7,21 @@ enum WorkoutMetrics {
     /// and a drop or myo set counts once however many sub-rows it has. Pass `loggedOnly` for sessions.
     static func muscleSets(in blocks: [WorkoutBlock], catalog: (ExerciseID) -> Exercise?, loggedOnly: Bool) -> [Muscle: Double] {
         var sets: [Muscle: Double] = [:]
-        for item in blocks.flatMap(\.exercises) {
-            guard let exercise = catalog(item.exerciseID) else { continue }
-            let count = Double(item.sets.count { $0.type != .warmUp && (!loggedOnly || $0.isCompleted) })
-            guard count > 0 else { continue }
-            for muscle in exercise.primaryMuscles { sets[muscle, default: 0] += count }
-            for muscle in exercise.secondaryMuscles { sets[muscle, default: 0] += count * 0.5 }
+        for block in blocks {
+            for item in block.exercises {
+                forEachMuscleSet(of: item, catalog: catalog, loggedOnly: loggedOnly) { sets[$0, default: 0] += $1 }
+            }
         }
         return sets
+    }
+
+    /// `muscleSets` for one exercise, handing each muscle and its count to `add` instead of building a dictionary.
+    static func forEachMuscleSet(of item: BlockExercise, catalog: (ExerciseID) -> Exercise?, loggedOnly: Bool, _ add: (Muscle, Double) -> Void) {
+        guard let exercise = catalog(item.exerciseID) else { return }
+        let count = Double(item.sets.count { $0.type != .warmUp && (!loggedOnly || $0.isCompleted) })
+        guard count > 0 else { return }
+        for muscle in exercise.primaryMuscles { add(muscle, count) }
+        for muscle in exercise.secondaryMuscles { add(muscle, count * 0.5) }
     }
 
     /// Weight x reps over a set and its sub-rows, doubled for per-side metrics. Warm-ups count, as in MF's summary.
