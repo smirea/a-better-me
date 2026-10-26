@@ -75,8 +75,8 @@ private struct DayStrip: View {
     @State private var origin = FoodLog.week(of: .today)[0]
     @State private var week: Int?
 
-    private static let weeksBack = 104
-    private static let weeksAhead = 52
+    private static let weeksBack = FoodLogState.daysBack / 7 + 1
+    private static let weeksAhead = FoodLogState.daysAhead / 7 + 1
 
     var body: some View {
         ScrollView(.horizontal) {
@@ -182,7 +182,7 @@ private struct DaySummary: View {
 
     var body: some View {
         let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day)
-        let lines = FoodLog.summary(row.override ?? FoodLog.totals(entries), target: target, showOverages: settings.nutrition.showOverages)
+        let lines = FoodLog.summary(FoodLog.dayTotals(entries, row: row), target: target, showOverages: settings.nutrition.showOverages)
         VStack(spacing: 4) {
             if row.status != .none || row.override != nil {
                 DayStatusBadges(row: row)
@@ -292,13 +292,10 @@ private struct DayPager: View {
     @State private var origin = CalendarDay.today
     @State private var position: Int?
 
-    private static let daysBack = 730
-    private static let daysAhead = 365
-
     var body: some View {
         ScrollView(.horizontal) {
             LazyHStack(spacing: 0) {
-                ForEach(-Self.daysBack...Self.daysAhead, id: \.self) { offset in
+                ForEach(-FoodLogState.daysBack...FoodLogState.daysAhead, id: \.self) { offset in
                     DayPage(day: origin.adding(days: offset))
                         .containerRelativeFrame(.horizontal)
                 }
@@ -337,6 +334,7 @@ private struct CalendarSheet: View {
             DatePicker(
                 "Day",
                 selection: Binding(get: { state.day.date }, set: { state.day = CalendarDay($0); dismiss() }),
+                in: CalendarDay.today.adding(days: -FoodLogState.daysBack).date...CalendarDay.today.adding(days: FoodLogState.daysAhead).date,
                 displayedComponents: .date
             )
             .datePickerStyle(.graphical)

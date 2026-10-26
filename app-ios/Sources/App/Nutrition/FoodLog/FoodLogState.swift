@@ -26,6 +26,10 @@ final class FoodLogState {
         var inline = false
     }
 
+    /// How far the pager, the week strip, and the calendar reach from today, in days.
+    static let daysBack = 730
+    static let daysAhead = 365
+
     var day = CalendarDay.today
     var selecting = false
     var selection: Set<UUID> = []

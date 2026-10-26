@@ -50,6 +50,8 @@ struct EntryEditor: View {
                             .keyboardType(.decimalPad)
                             .font(AppFont.number(20))
                             .onChange(of: quantity) { _, text in
+                                // The unit picker writes the rounded label of an exact conversion; only typing replaces it.
+                                guard text != FoodLog.amountLabel(serving.quantity) else { return }
                                 if let value = Double(text.replacingOccurrences(of: ",", with: ".")) { serving.quantity = value }
                             }
                         Picker("Unit", selection: Binding(get: { serving.measure }, set: { measure in

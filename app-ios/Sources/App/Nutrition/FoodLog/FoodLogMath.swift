@@ -68,6 +68,12 @@ enum FoodLog {
         entries.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts }
     }
 
+    /// The day's totals with its override's amounts in place of the logged ones; nutrients the override leaves out
+    /// keep the log's amounts.
+    static func dayTotals(_ entries: [FoodEntry], row: NutritionDay?) -> NutrientAmounts {
+        totals(entries).merging(row?.override ?? [:]) { $1 }
+    }
+
     /// The day's hours: the configured range, unless empty hours hide, plus every hour that has an entry.
     static func hours(_ entries: [FoodEntry], timeline: NutritionSettings.Timeline) -> [TimelineHour] {
         let byHour = Dictionary(grouping: entries, by: \.hour)
@@ -174,10 +180,9 @@ enum FoodLog {
         return max(reference / 0.6, value)
     }
 
-    /// The same amount in `measure`, to two decimals, so switching units keeps what was eaten.
+    /// The same amount in `measure`, unrounded, so switching units back and forth never changes what was eaten.
     static func converted(_ serving: Serving, to measure: Measure) -> Serving {
-        let quantity = serving.servings * measure.quantity / measure.servings
-        return Serving(measure: measure, quantity: (quantity * 100).rounded() / 100)
+        Serving(measure: measure, quantity: serving.servings * measure.quantity / measure.servings)
     }
 
     // MARK: Labels

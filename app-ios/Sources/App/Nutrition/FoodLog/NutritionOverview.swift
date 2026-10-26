@@ -70,7 +70,7 @@ private struct OverviewList: View {
 
     var body: some View {
         let days = (0..<period.rawValue).map { day.adding(days: -$0) }
-        let amounts = period == .today ? FoodLog.totals(entries) : FoodLog.dailyAverage(entries, rows: rows, days: days)
+        let amounts = period == .today ? FoodLog.dayTotals(entries, row: rows.first { $0.id == day }) : FoodLog.dailyAverage(entries, rows: rows, days: days)
         let targets = NutrientTargets(
             target: NutritionPlan.effective(on: day, in: plans)?.target(on: day), goals: goals, day: day,
             sex: settings.profile.sex, weightKg: weight?.weightKg ?? settings.profile.bodyWeightKg

@@ -56,6 +56,14 @@ struct FoodLogMathTests {
         let clamped = FoodLog.summary(totals, target: target, showOverages: false)
         #expect(clamped.map(\.remaining) == [1340, 0, 48, 134])
 
+        var edited = NutritionDay(id: monday)
+        edited.override = [.energy: 1800, .protein: 120]
+        let overridden = FoodLog.dayTotals(entries, row: edited)
+        #expect(overridden[.energy] == 1800)
+        #expect(overridden[.protein] == 120)
+        #expect(overridden[.fat] == 22)
+        #expect(FoodLog.dayTotals(entries, row: nil) == totals)
+
         let untargeted = FoodLog.summary(totals, target: nil, showOverages: true)
         #expect(untargeted.map(\.remaining) == [nil, nil, nil, nil])
         #expect(untargeted.map(\.progress) == [0, 0, 0, 0])
@@ -132,9 +140,11 @@ struct FoodLogMathTests {
         let container = Serving(measure: yogurt.nutrition.measures[0], quantity: 2)
         let grams = yogurt.nutrition.allMeasures.first { $0.name == "g" }!
         let ounces = yogurt.nutrition.allMeasures.first { $0.name == "oz" }!
-        #expect(FoodLog.converted(container, to: grams).quantity == 300)
-        #expect(FoodLog.converted(container, to: ounces).quantity == 10.58)
-        #expect(FoodLog.converted(FoodLog.converted(container, to: grams), to: yogurt.nutrition.measures[0]) == container)
+        #expect(abs(FoodLog.converted(container, to: grams).quantity - 300) < 1e-9)
+        #expect(FoodLog.amountLabel(FoodLog.converted(container, to: ounces).quantity) == "10.58")
+        let pounds = yogurt.nutrition.allMeasures.first { $0.name == "lb" }!
+        let back = FoodLog.converted(FoodLog.converted(container, to: pounds), to: yogurt.nutrition.measures[0])
+        #expect(abs(back.quantity - 2) < 1e-9)
         #expect(calendarDay("2026-10-26").days(to: calendarDay("2027-01-01")) == 67)
         #expect(calendarDay("2026-10-26").days(to: calendarDay("2026-10-20")) == -6)
     }
