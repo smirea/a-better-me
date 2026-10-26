@@ -20,9 +20,9 @@ struct LoggerSessionTests {
         store = try LocalStore(unsyncedAt: FileManager.default.temporaryDirectory.appending(path: "logger-\(UUID().uuidString)/a.sqlite"))
     }
 
-    func session(_ branded: StubBranded = StubBranded()) throws -> LoggerSession {
+    func session(_ branded: StubBranded = StubBranded()) async throws -> LoggerSession {
         let catalog = try fixtureCatalog([(173944, "Bananas, raw", 8, bananaNutrition)])
-        let search = try FoodSearch(store: store, catalog: catalog, branded: branded)
+        let search = try await FoodSearch.load(store: store, catalog: catalog, branded: branded)
         return LoggerSession(store: store, search: search, start: LoggerStart(time: LogTime(day: monday, hour: 14)))
     }
 
@@ -37,7 +37,7 @@ struct LoggerSessionTests {
     }
 
     @Test func logsThePlateInOneGoAndCachesDatabaseFoods() async throws {
-        let logger = try session(StubBranded(hits: [greekYogurt]))
+        let logger = try await session(StubBranded(hits: [greekYogurt]))
         logger.setQuery("banana", branded: false)
         let banana = try #require(logger.results.first)
         #expect(banana.group == .common)
@@ -61,7 +61,7 @@ struct LoggerSessionTests {
 
     @Test func followsTheClockUntilATimeIsChosen() async throws {
         let catalog = try fixtureCatalog([(173944, "Bananas, raw", 8, bananaNutrition)])
-        let logger = LoggerSession(store: store, search: try FoodSearch(store: store, catalog: catalog, branded: StubBranded()), start: LoggerStart())
+        let logger = LoggerSession(store: store, search: try await FoodSearch.load(store: store, catalog: catalog, branded: StubBranded()), start: LoggerStart())
         logger.add(LoggerPick(try #require(QuickAddDraft(energy: "100").portion)))
         let at = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 26, hour: 11, minute: 2))!
         logger.logPlate(at: at)
@@ -70,7 +70,7 @@ struct LoggerSessionTests {
     }
 
     @Test func showsLocalResultsWithoutAnErrorOffline() async throws {
-        let logger = try session(StubBranded(offline: true))
+        let logger = try await session(StubBranded(offline: true))
         logger.setQuery("banana", branded: true)
         await logger.settleSearch()
         #expect(logger.results.map(\.portion.food.name) == ["Bananas, raw"])
@@ -78,7 +78,7 @@ struct LoggerSessionTests {
     }
 
     @Test func addsBrandedResultsAfterThePause() async throws {
-        let logger = try session(StubBranded(hits: [greekYogurt]))
+        let logger = try await session(StubBranded(hits: [greekYogurt]))
         logger.setQuery("greekYogurt", branded: true)
         #expect(logger.results.isEmpty)
         await logger.settleSearch()
@@ -87,7 +87,7 @@ struct LoggerSessionTests {
     }
 
     @Test func looksUpABarcodeAndCachesIt() async throws {
-        let logger = try session(StubBranded(products: ["0894700010137": greekYogurt]))
+        let logger = try await session(StubBranded(products: ["0894700010137": greekYogurt]))
         #expect(found(await logger.lookup(barcode: "0 894700 010137")) == "off-0894700010137")
         try await store.write { _ in }.value
         #expect(try store.read { try Food.fetchOne($0, key: "off-0894700010137") }?.brand == "Chobani")
@@ -98,13 +98,13 @@ struct LoggerSessionTests {
     @Test func aKnownBarcodeNeedsNoNetwork() async throws {
         store.saveFood(greekYogurt)
         try await store.write { _ in }.value
-        let logger = try session(StubBranded(offline: true))
+        let logger = try await session(StubBranded(offline: true))
         #expect(found(await logger.lookup(barcode: "0894700010137")) == "off-0894700010137")
         #expect(await logger.lookup(barcode: "12345678") == .unreachable)
     }
 
     @Test func favoritesAPortionAndFindsItAgain() async throws {
-        let logger = try session()
+        let logger = try await session()
         logger.setQuery("banana", branded: false)
         let banana = try #require(logger.results.first)
         let two = Serving(measure: banana.portion.serving.measure, quantity: 2)

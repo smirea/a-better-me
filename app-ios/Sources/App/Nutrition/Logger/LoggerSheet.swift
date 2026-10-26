@@ -32,7 +32,7 @@ struct LoggerSheet: View {
         .task {
             guard session == nil else { return }
             do {
-                session = LoggerSession(store: store, search: try FoodSearch(store: store), start: start)
+                session = LoggerSession(store: store, search: try await FoodSearch.load(store: store), start: start)
             } catch {
                 failure = String(describing: error)
             }
@@ -128,6 +128,7 @@ private struct LoggerBanner: View {
     @Observe(AppSettings.current) private var settings
     @Observe(NutritionPlan.all) private var plans
     @Observe<[FoodEntry]> private var entries: [FoodEntry]
+    @Observe<NutritionDay> private var dayRow: NutritionDay
 
     init(session: LoggerSession, exit: @escaping () -> Void, chooseTime: @escaping () -> Void, openPlate: @escaping () -> Void) {
         self.session = session
@@ -135,10 +136,12 @@ private struct LoggerBanner: View {
         self.chooseTime = chooseTime
         self.openPlate = openPlate
         _entries = Observe(FoodEntry.on(session.time.day))
+        _dayRow = Observe(NutritionDay.one(session.time.day))
     }
 
     var body: some View {
         let options = settings.nutrition.logger
+        let day = dayRow.intake(entries)
         GlassEffectContainer {
             HStack(spacing: 10) {
                 Button("Close", systemImage: "xmark", action: exit)
@@ -155,7 +158,7 @@ private struct LoggerBanner: View {
                 .accessibilityLabel("Log time, \(session.time.label())")
                 VStack(alignment: .leading, spacing: 5) {
                     ForEach(options.bannerNutrients, id: \.self) { id in
-                        bar(id, value(id), display: options.nutritionDisplay)
+                        bar(id, value(id, day: day), display: options.nutritionDisplay)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -180,12 +183,11 @@ private struct LoggerBanner: View {
         .animation(.snappy, value: session.plate.items.count)
     }
 
-    private func value(_ id: NutrientID) -> BannerValue {
+    private func value(_ id: NutrientID, day: NutrientAmounts) -> BannerValue {
         var plate = session.plate.totals
         if let pending = session.pending { plate = plate + pending.amounts }
-        let day = entries.reduce(0) { $0 + ($1.amounts[id] ?? 0) }
         let target = NutritionPlan.effective(on: session.time.day, in: plans)?.target(on: session.time.day).amount(id)
-        return BannerValue(day: day, plate: plate[id] ?? 0, target: target)
+        return BannerValue(day: day[id] ?? 0, plate: plate[id] ?? 0, target: target)
     }
 
     private func bar(_ id: NutrientID, _ value: BannerValue, display: NutritionSettings.Logger.NutritionDisplay) -> some View {

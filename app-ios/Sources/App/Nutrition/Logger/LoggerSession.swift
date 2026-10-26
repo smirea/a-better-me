@@ -138,7 +138,7 @@ final class LoggerSession {
     func reloadSearch() async {
         try? await store.write { _ in }.value
         do {
-            try search.reload()
+            try await search.refresh()
             results = try search.local(query)
         } catch {
             FoodSearch.log.error("Reloading search failed: \(String(describing: error))")

@@ -7,6 +7,7 @@ struct PlateView: View {
     let open: (UUID) -> Void
     @Observe(NutritionPlan.all) private var plans
     @Observe<[FoodEntry]> private var entries: [FoodEntry]
+    @Observe<NutritionDay> private var dayRow: NutritionDay
     @State private var withDay = false
     @State private var allNutrients = false
 
@@ -14,11 +15,12 @@ struct PlateView: View {
         self.session = session
         self.open = open
         _entries = Observe(FoodEntry.on(session.time.day))
+        _dayRow = Observe(NutritionDay.one(session.time.day))
     }
 
     var body: some View {
         let plate = session.plate.totals
-        let day = entries.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts }
+        let day = dayRow.intake(entries)
         List {
             Section("Your Plate") {
                 ForEach(session.plate.items) { item in

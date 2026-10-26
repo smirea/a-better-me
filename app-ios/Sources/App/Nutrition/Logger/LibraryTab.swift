@@ -7,8 +7,8 @@ struct LibraryTab: View {
     @Bindable var session: LoggerSession
     let open: (LoggerPick) -> Void
     @Environment(LocalStore.self) private var store
-    @Observe(Food.custom) private var foods
-    @Observe(Recipe.library) private var recipes
+    @Observe(FoodPortion.customFoods) private var foods
+    @Observe(FoodPortion.recipes) private var recipes
     @Observe(FoodFavorite.all) private var favorites
     @State private var filter = ""
 
@@ -23,9 +23,9 @@ struct LibraryTab: View {
             List {
                 switch session.library {
                 case .recipes:
-                    ForEach(matching(recipes.map { FoodPortion($0.snapshot) }), id: \.food.foodID) { row($0) }
+                    ForEach(matching(recipes), id: \.food.foodID) { row($0) }
                 case .foods:
-                    ForEach(matching(foods.map { FoodPortion($0.snapshot) }), id: \.food.foodID) { row($0) }
+                    ForEach(matching(foods), id: \.food.foodID) { row($0) }
                 case .favorites:
                     ForEach(favorites.filter { matches($0.food) }) { favorite in
                         row(favorite.portion)
@@ -78,11 +78,21 @@ struct LibraryTab: View {
     }
 }
 
-extension Food {
-    /// The owner's own foods by name. `Food.library` also holds every cached USDA and Open Food Facts food.
-    static let custom = DatabaseQuery([Food]()) { db in
+extension FoodPortion {
+    /// The owner's own foods by name, at their default serving. `Food.library` also holds every cached USDA and Open
+    /// Food Facts food.
+    static let customFoods = DatabaseQuery([FoodPortion]()) { db in
         try Food.filter(Column("source") == FoodSource.custom.rawValue && Column("archived") == false)
             .order(Column("name").collating(.localizedCaseInsensitiveCompare))
             .fetchAll(db)
+            .map { FoodPortion($0.snapshot) }
+    }
+
+    /// Recipes by name, each derived from its ingredients once per change instead of once per keystroke.
+    static let recipes = DatabaseQuery([FoodPortion]()) { db in
+        try Recipe.filter(Column("archived") == false)
+            .order(Column("name").collating(.localizedCaseInsensitiveCompare))
+            .fetchAll(db)
+            .map { FoodPortion($0.snapshot) }
     }
 }

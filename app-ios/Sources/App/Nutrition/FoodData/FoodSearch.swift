@@ -87,16 +87,33 @@ final class FoodSearch {
     private let branded: any BrandedFoodSource
     private(set) var library: FoodLibrary
 
-    init(store: LocalStore, catalog: USDACatalog = .bundled, branded: any BrandedFoodSource = FoodDatabaseClient.live) throws {
+    convenience init(store: LocalStore, catalog: USDACatalog = .bundled, branded: any BrandedFoodSource = FoodDatabaseClient.live) throws {
+        self.init(store: store, catalog: catalog, branded: branded, library: try store.read(FoodLibrary.read))
+    }
+
+    private init(store: LocalStore, catalog: USDACatalog, branded: any BrandedFoodSource, library: FoodLibrary) {
         self.store = store
         self.catalog = catalog
         self.branded = branded
-        library = try store.read(FoodLibrary.read)
+        self.library = library
+    }
+
+    /// The search with its history read and the bundled catalog's 7,300 names loaded off the main actor, for a screen
+    /// that opens one.
+    static func load(store: LocalStore, catalog: USDACatalog? = nil, branded: any BrandedFoodSource = FoodDatabaseClient.live) async throws -> FoodSearch {
+        async let library = store.database.pool.read(FoodLibrary.read)
+        let catalog = await Task.detached { catalog ?? .bundled }.value
+        return FoodSearch(store: store, catalog: catalog, branded: branded, library: try await library)
     }
 
     /// Rereads the owner's side, after logging or editing foods.
     func reload() throws {
         library = try store.read(FoodLibrary.read)
+    }
+
+    /// `reload`, read off the main actor.
+    func refresh() async throws {
+        library = try await store.database.pool.read(FoodLibrary.read)
     }
 
     /// Everything that needs no network. An empty query lists the history, newest first (MacroFactor's Latest).
