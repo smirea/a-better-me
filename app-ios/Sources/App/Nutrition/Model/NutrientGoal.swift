@@ -2,7 +2,8 @@ import Foundation
 import GRDB
 
 /// A row of the synced `nutrient_goals` table: a nutrient's floor, target, and ceiling from a day on, keyed
-/// `<day>/<nutrient>`. Days before a nutrient's first goal, and goals in `auto`, use the registry's defaults.
+/// `<day>/<nutrient>`. Days before a nutrient's first goal, and goals in `auto`, use the registry's defaults; `hidden`
+/// shows no bounds.
 struct NutrientGoal: SyncedRecord {
     static let table = "nutrient_goals"
 
@@ -10,6 +11,8 @@ struct NutrientGoal: SyncedRecord {
         case auto
         /// A nil bound is hidden.
         case custom(NutrientRange)
+        /// MacroFactor's "None": no target or range.
+        case hidden
     }
 
     var nutrient: NutrientID
@@ -31,17 +34,21 @@ struct NutrientGoal: SyncedRecord {
         _ nutrient: NutrientID, on day: CalendarDay, goals: [NutrientGoal], sex: BodySex, weightKg: Double?
     ) -> NutrientRange {
         let goal = goals.filter { $0.nutrient == nutrient && $0.startsOn <= day }.max { $0.startsOn < $1.startsOn }
-        if case let .custom(range) = goal?.mode { return range }
+        switch goal?.mode {
+        case let .custom(range): return range
+        case .hidden: return NutrientRange()
+        case .auto, nil: break
+        }
         return NutrientRegistry.nutrient(nutrient)?.defaultRange(sex: sex, weightKg: weightKg) ?? NutrientRange()
     }
 
     init(row: Row) throws {
         nutrient = NutrientID(rawValue: row["nutrient"])
         startsOn = try row.day("starts_on")
-        if row["mode"] as String? == "custom" {
-            mode = .custom(NutrientRange(floor: row["floor"], target: row["target"], ceiling: row["ceiling"]))
-        } else {
-            mode = .auto
+        switch row["mode"] as String? {
+        case "custom": mode = .custom(NutrientRange(floor: row["floor"], target: row["target"], ceiling: row["ceiling"]))
+        case "none": mode = .hidden
+        default: mode = .auto
         }
     }
 
@@ -50,8 +57,8 @@ struct NutrientGoal: SyncedRecord {
         container["nutrient"] = nutrient.rawValue
         container["starts_on"] = startsOn.description
         switch mode {
-        case .auto:
-            container["mode"] = "auto"
+        case .auto, .hidden:
+            container["mode"] = mode == .auto ? "auto" : "none"
             container["floor"] = Double?.none
             container["target"] = Double?.none
             container["ceiling"] = Double?.none

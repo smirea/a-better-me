@@ -56,6 +56,7 @@ struct FoodSnapshot: Hashable, Codable, Sendable {
     var source: FoodSource
     var name: String
     var brand: String?
+    var icon: String?
     var nutrition: FoodNutrition
 
     func amounts(_ serving: Serving) -> NutrientAmounts { nutrition.nutrients.scaled(by: serving.servings) }
@@ -96,6 +97,7 @@ struct Food: SyncedRecord {
     var name: String
     var brand: String?
     var barcode: String?
+    var icon: String?
     var nutrition: FoodNutrition
     var isArchived = false
     var createdAt: Date
@@ -127,7 +129,7 @@ struct Food: SyncedRecord {
     }
 
     var snapshot: FoodSnapshot {
-        FoodSnapshot(foodID: id, source: source, name: name, brand: brand, nutrition: nutrition)
+        FoodSnapshot(foodID: id, source: source, name: name, brand: brand, icon: icon, nutrition: nutrition)
     }
 
     init(row: Row) throws {
@@ -136,6 +138,7 @@ struct Food: SyncedRecord {
         name = row["name"]
         brand = row["brand"]
         barcode = row["barcode"]
+        icon = row["icon"]
         nutrition = try row.json("nutrition")
         isArchived = row.flag("archived")
         createdAt = try row.instant("created_at")
@@ -148,6 +151,7 @@ struct Food: SyncedRecord {
         container["name"] = name
         container["brand"] = brand
         container["barcode"] = barcode
+        container["icon"] = icon
         container["nutrition"] = try RowJSON.text(nutrition)
         container["archived"] = isArchived ? 1 : 0
         container["created_at"] = Instant.text(createdAt)

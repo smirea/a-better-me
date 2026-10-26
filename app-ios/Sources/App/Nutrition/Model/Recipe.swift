@@ -19,6 +19,7 @@ struct Recipe: SyncedRecord {
 
     var id: UUID
     var name: String
+    var icon: String?
     var ingredients: [RecipeIngredient] = []
     /// How many servings the whole recipe makes.
     var servings: Double = 1
@@ -27,6 +28,8 @@ struct Recipe: SyncedRecord {
     var steps: [String] = []
     var prepMinutes: Int?
     var cookMinutes: Int?
+    /// The page it was imported from.
+    var link: String?
     var notes = ""
     var isArchived = false
     var createdAt: Date
@@ -51,18 +54,20 @@ struct Recipe: SyncedRecord {
     }
 
     var snapshot: FoodSnapshot {
-        FoodSnapshot(foodID: key, source: .recipe, name: name, nutrition: nutrition)
+        FoodSnapshot(foodID: key, source: .recipe, name: name, icon: icon, nutrition: nutrition)
     }
 
     init(row: Row) throws {
         id = try row.uuid("id")
         name = row["name"]
+        icon = row["icon"]
         ingredients = try row.json("ingredients")
         servings = row["servings"] ?? 1
         cookedGrams = row["cooked_grams"]
         steps = try row.json("steps")
         prepMinutes = row["prep_minutes"]
         cookMinutes = row["cook_minutes"]
+        link = row["link"]
         notes = row["notes"] ?? ""
         isArchived = row.flag("archived")
         createdAt = try row.instant("created_at")
@@ -72,12 +77,14 @@ struct Recipe: SyncedRecord {
     func encode(to container: inout PersistenceContainer) throws {
         container["id"] = key
         container["name"] = name
+        container["icon"] = icon
         container["ingredients"] = try RowJSON.text(ingredients)
         container["servings"] = servings
         container["cooked_grams"] = cookedGrams
         container["steps"] = try RowJSON.text(steps)
         container["prep_minutes"] = prepMinutes
         container["cook_minutes"] = cookMinutes
+        container["link"] = link
         container["notes"] = notes
         container["archived"] = isArchived ? 1 : 0
         container["created_at"] = Instant.text(createdAt)

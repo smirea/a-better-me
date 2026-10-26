@@ -6,9 +6,9 @@ import GRDB
 extension LocalStore {
     // MARK: Log
 
-    /// Logs every portion into `hour` of `day`, as one transaction: a plate, a recipe, or a single food.
-    func log(_ portions: [FoodPortion], on day: CalendarDay, hour: Int) {
-        let entries = portions.map { FoodEntry($0, day: day, hour: hour) }
+    /// Logs every portion at `minute` of `day`, as one transaction: a plate, a recipe, or a single food.
+    func log(_ portions: [FoodPortion], on day: CalendarDay, minute: Int) {
+        let entries = portions.map { FoodEntry($0, day: day, minute: minute) }
         write { db in
             for entry in entries {
                 try entry.insert(db)
@@ -16,8 +16,8 @@ extension LocalStore {
         }
     }
 
-    func quickAdd(_ amounts: NutrientAmounts, name: String? = nil, on day: CalendarDay, hour: Int) {
-        log([FoodPortion(.quickAdd(amounts, name: name))], on: day, hour: hour)
+    func quickAdd(_ amounts: NutrientAmounts, name: String? = nil, on day: CalendarDay, minute: Int) {
+        log([FoodPortion(.quickAdd(amounts, name: name))], on: day, minute: minute)
     }
 
     func editEntry(_ id: UUID, _ change: @escaping @Sendable (inout FoodEntry) -> Void) {
@@ -27,14 +27,14 @@ extension LocalStore {
         }
     }
 
-    /// Patches only `day` and `hour`, so a move on one device and a serving edit on another both land.
-    func moveEntries(_ ids: [UUID], to day: CalendarDay, hour: Int) {
+    /// Patches only `day` and `minute`, so a move on one device and a serving edit on another both land.
+    func moveEntries(_ ids: [UUID], to day: CalendarDay, minute: Int) {
         write { db in
             for id in ids {
                 guard let entry = try FoodEntry.fetchOne(db, key: FoodEntry.key(id)) else { continue }
                 var moved = entry
                 moved.day = day
-                moved.hour = hour
+                moved.minute = minute
                 moved.updatedAt = .now
                 try moved.updateChanges(db, from: entry)
             }
@@ -42,11 +42,11 @@ extension LocalStore {
     }
 
     /// Copies keep the snapshot and serving under new ids, so pasting twice logs twice.
-    func copyEntries(_ ids: [UUID], to day: CalendarDay, hour: Int) {
+    func copyEntries(_ ids: [UUID], to day: CalendarDay, minute: Int) {
         write { db in
             for id in ids {
                 guard let entry = try FoodEntry.fetchOne(db, key: FoodEntry.key(id)) else { continue }
-                try FoodEntry(entry.portion, day: day, hour: hour).insert(db)
+                try FoodEntry(entry.portion, day: day, minute: minute).insert(db)
             }
         }
     }
@@ -62,6 +62,18 @@ extension LocalStore {
     /// Changes the day's row, creating it on first use.
     func updateDay(_ day: CalendarDay, _ change: @escaping @Sendable (inout NutritionDay) -> Void) {
         modify(NutritionDay.self, id: day, orInsert: { NutritionDay(id: day) }, change)
+    }
+
+    func saveNote(_ note: FoodLogNote) {
+        insert(note)
+    }
+
+    func editNote(_ id: UUID, _ change: @escaping @Sendable (inout FoodLogNote) -> Void) {
+        modify(FoodLogNote.self, id: id, change)
+    }
+
+    func deleteNote(_ id: UUID) {
+        delete(FoodLogNote.self, id: id)
     }
 
     // MARK: Foods and recipes

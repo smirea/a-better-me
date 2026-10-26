@@ -2,10 +2,10 @@ import Foundation
 import GRDB
 
 extension FoodEntry {
-    /// The day's entries by hour, then in the order they were logged.
+    /// The day's entries by time, then in the order they were logged.
     static func on(_ day: CalendarDay) -> DatabaseQuery<[FoodEntry]> {
         DatabaseQuery([]) { db in
-            try FoodEntry.filter(Column("day") == day.description).fetchAll(db).sorted { ($0.hour, $0.createdAt) < ($1.hour, $1.createdAt) }
+            try FoodEntry.filter(Column("day") == day.description).fetchAll(db).sorted { ($0.minute, $0.createdAt) < ($1.minute, $1.createdAt) }
         }
     }
 
@@ -13,7 +13,15 @@ extension FoodEntry {
     static func between(_ start: CalendarDay, _ end: CalendarDay) -> DatabaseQuery<[FoodEntry]> {
         DatabaseQuery([]) { db in
             try FoodEntry.filter(Column("day") >= start.description && Column("day") <= end.description).fetchAll(db)
-                .sorted { ($0.day, $0.hour, $0.createdAt) < ($1.day, $1.hour, $1.createdAt) }
+                .sorted { ($0.day, $0.minute, $0.createdAt) < ($1.day, $1.minute, $1.createdAt) }
+        }
+    }
+}
+
+extension FoodLogNote {
+    static func on(_ day: CalendarDay) -> DatabaseQuery<[FoodLogNote]> {
+        DatabaseQuery([]) { db in
+            try FoodLogNote.filter(Column("day") == day.description).fetchAll(db).sorted { $0.minute < $1.minute }
         }
     }
 }

@@ -17,7 +17,6 @@ struct NutritionDay: SyncedRecord {
 
     var id: CalendarDay
     var status = Status.none
-    var note = ""
     /// Replaces the log's totals for the algorithms and the day's rings.
     var override: NutrientAmounts?
 
@@ -28,14 +27,12 @@ struct NutritionDay: SyncedRecord {
     init(row: Row) throws {
         id = try row.day("id")
         status = (row["status"] as String?).flatMap(Status.init(rawValue:)) ?? .none
-        note = row["note"] ?? ""
         override = try (row["override"] as String?).map { try RowJSON.decoder.decode(NutrientAmounts.self, from: Data($0.utf8)) }
     }
 
     func encode(to container: inout PersistenceContainer) throws {
         container["id"] = key
         container["status"] = status.rawValue
-        container["note"] = note
         container["override"] = try override.map(RowJSON.text)
     }
 }

@@ -59,7 +59,7 @@ struct NutritionModelTests {
 
     @Test func aDayCountsAsLoggedFastedOrSkipped() {
         let day = calendarDay("2026-10-26")
-        let entry = FoodEntry(FoodPortion(yogurt), day: day, hour: 8)
+        let entry = FoodEntry(FoodPortion(yogurt), day: day, minute: 8 * 60)
         var marked = NutritionDay(id: day)
 
         #expect(DayIntake(entries: [entry], day: nil).energy == 180)
@@ -120,6 +120,6 @@ struct NutritionModelTests {
         #expect(try RowJSON.text(WeekTargets(every: DayTarget(energy: 2000, protein: 150, fat: 70, carbs: 200))).hasPrefix(#"[{"carbs":200,"energy":2000,"fat":70,"protein":150},"#))
         let goal = NutritionGoal(kind: .gain, ratePercentPerWeek: 0.25, startedOn: calendarDay("2026-10-26"))
         #expect(try RowJSON.text(goal) == #"{"kind":"gain","ratePercentPerWeek":0.25,"startedOn":"2026-10-26"}"#)
-        #expect(try RowJSON.text(CoachingProgram()) == #"{"diet":"balanced","floor":"standard","highDays":[],"protein":"high","style":"coached"}"#)
+        #expect(try RowJSON.text(CoachingProgram()) == #"{"diet":"balanced","floor":"standard","highDays":[],"protein":"moderate","style":"coached","training":"lifting"}"#)
     }
 }

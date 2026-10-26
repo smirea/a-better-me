@@ -21,7 +21,7 @@ struct NutritionMigrationTests {
         let store = try LocalStore(unsyncedAt: url)
         let tables = try store.read { try String.fetchAll($0, sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '\\_%' ESCAPE '\\' ORDER BY name") }
         #expect(tables == [
-            "api_tokens", "body_metrics", "body_weights", "custom_exercises", "exercise_settings", "food_entries", "food_favorites",
+            "api_tokens", "body_metrics", "body_weights", "custom_exercises", "exercise_settings", "food_entries", "food_favorites", "food_log_notes",
             "foods", "gym_profiles", "nutrient_goals", "nutrition_days", "nutrition_plans", "programs", "recipes", "settings",
             "workout_sessions", "workout_templates",
         ])
@@ -31,7 +31,7 @@ struct NutritionMigrationTests {
         #expect(settings.nutrition == NutritionSettings())
         #expect(try store.read { try WorkoutTemplate.fetchAll($0) }.map(\.name) == ["Upper"])
 
-        store.quickAdd([.energy: 300], on: calendarDay("2026-10-26"), hour: 9)
+        store.quickAdd([.energy: 300], on: calendarDay("2026-10-26"), minute: 9 * 60)
         try await store.write { _ in }.value
         #expect(try store.read(FoodEntry.on(calendarDay("2026-10-26")).fetch).count == 1)
     }

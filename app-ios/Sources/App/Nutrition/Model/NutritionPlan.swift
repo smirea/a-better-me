@@ -18,11 +18,14 @@ struct CoachingProgram: Hashable, Codable, Sendable {
     enum Diet: String, Codable, Sendable { case balanced, lowFat = "low_fat", lowCarb = "low_carb", keto }
     enum Protein: String, Codable, Sendable { case low, moderate, high, extraHigh = "extra_high" }
     enum Floor: String, Codable, Sendable { case standard, low, ignored }
+    /// Mainly moves the protein recommendation.
+    enum Training: String, Codable, Sendable { case none, lifting, cardio, cardioLifting = "cardio_lifting" }
 
     var style = Style.coached
     var diet = Diet.balanced
-    var protein = Protein.high
+    var protein = Protein.moderate
     var floor = Floor.standard
+    var training = Training.lifting
     /// ISO weekdays (Monday 1) that get more calories; empty spreads them evenly.
     var highDays: [Int] = []
 }

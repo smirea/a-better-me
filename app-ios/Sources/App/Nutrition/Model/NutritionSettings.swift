@@ -6,8 +6,12 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     enum EnergyUnit: String, Codable, Sendable { case kcal, kj }
 
     struct Timeline: Codable, Hashable, Sendable {
+        /// The hours always shown, inclusive; hours with entries outside them still show.
+        var firstHour = 8
+        var lastHour = 21
         var hideEmptyHours = false
         var hourlyTotals = true
+        var foodTimestamps = true
     }
 
     struct Expenditure: Codable, Hashable, Sendable {
@@ -21,13 +25,16 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     var energyUnit = EnergyUnit.kcal
     /// ISO weekday, Monday 1.
     var checkInWeekday = 1
+    var fastCheckIn = false
+    /// Remaining amounts go negative past a target instead of stopping at zero.
+    var showOverages = true
     /// Shown first, in this order, on the Dashboard and in food details.
     var pinnedNutrients: [NutrientID] = [.energy, .protein, .fat, .carbs]
     var hideAdditionalNutrients = false
     var searchBranded = true
-    var searchOpenFoodFacts = true
-    /// Measure names pinned to the front of the serving picker.
-    var favoriteMeasures: [String] = []
+    var searchOpenFoodFacts = false
+    /// Measure names pinned to the front of the serving picker, at most two weights and two volumes.
+    var favoriteMeasures = ["g", "oz", "mL", "cup"]
     var timeline = Timeline()
     var expenditure = Expenditure()
 }

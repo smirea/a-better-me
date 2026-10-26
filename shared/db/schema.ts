@@ -20,11 +20,13 @@ export const BODY_WEIGHT_SOURCES = ['manual', 'healthkit'] as const;
 export const FOOD_SOURCES = ['custom', 'usda', 'open_food_facts', 'recipe', 'quick_add'] as const;
 export const FOOD_ROW_SOURCES = ['custom', 'usda', 'open_food_facts'] as const;
 export const DAY_STATUSES = ['none', 'partial', 'fasted'] as const;
+export const NOTE_COLORS = ['red', 'blue', 'green', 'yellow', 'purple'] as const;
 export const BODY_METRIC_KINDS = [
-	'body_fat',
+	'visual_body_fat',
 	'steps',
 	'neck',
 	'shoulders',
+	'bust',
 	'chest',
 	'waist',
 	'hips',
@@ -32,18 +34,23 @@ export const BODY_METRIC_KINDS = [
 	'right_bicep',
 	'left_forearm',
 	'right_forearm',
+	'left_wrist',
+	'right_wrist',
 	'left_thigh',
 	'right_thigh',
 	'left_calf',
 	'right_calf',
+	'left_ankle',
+	'right_ankle',
 ] as const;
+export const TRAINING_TYPES = ['none', 'lifting', 'cardio', 'cardio_lifting'] as const;
 export const PLAN_KINDS = ['setup', 'check_in', 'edit'] as const;
 export const GOAL_KINDS = ['lose', 'maintain', 'gain'] as const;
 export const PROGRAM_STYLES = ['coached', 'collaborative', 'manual'] as const;
 export const DIET_STYLES = ['balanced', 'low_fat', 'low_carb', 'keto'] as const;
 export const PROTEIN_LEVELS = ['low', 'moderate', 'high', 'extra_high'] as const;
 export const CALORIE_FLOORS = ['standard', 'low', 'ignored'] as const;
-export const NUTRIENT_GOAL_MODES = ['auto', 'custom'] as const;
+export const NUTRIENT_GOAL_MODES = ['auto', 'custom', 'none'] as const;
 
 export const workoutTemplates = sqliteTable('workout_templates', {
 	id: text('id').primaryKey(),
@@ -147,6 +154,8 @@ export const bodyWeights = sqliteTable('body_weights', {
 	measuredAt: text('measured_at').notNull(),
 	weightKg: real('weight_kg').notNull(),
 	source: text('source', { enum: BODY_WEIGHT_SOURCES }).notNull().default('manual'),
+	/** The scale's body fat percent, entered with the weight. */
+	bodyFatPercent: real('body_fat_percent'),
 });
 
 /**
@@ -174,6 +183,8 @@ export const foods = sqliteTable('foods', {
 	name: text('name').notNull(),
 	brand: text('brand'),
 	barcode: text('barcode'),
+	/** The food icon's name, or null for the default. */
+	icon: text('icon'),
 	/** `FoodNutrition`: sparse nutrients per base serving and the measures it can be logged in. */
 	nutrition: json('nutrition').notNull().default({}),
 	archived: bool('archived').notNull().default(false),
@@ -184,6 +195,7 @@ export const foods = sqliteTable('foods', {
 export const recipes = sqliteTable('recipes', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
+	icon: text('icon'),
 	/** `[RecipeIngredient]`, in order: `{ id, food: FoodSnapshot, serving: Serving }`. */
 	ingredients: json('ingredients').notNull().default([]),
 	/** How many servings the whole recipe makes. */
@@ -194,6 +206,8 @@ export const recipes = sqliteTable('recipes', {
 	steps: json('steps').notNull().default([]),
 	prepMinutes: integer('prep_minutes'),
 	cookMinutes: integer('cook_minutes'),
+	/** The page it was imported from. */
+	link: text('link'),
 	notes: text('notes').notNull().default(''),
 	archived: bool('archived').notNull().default(false),
 	createdAt: text('created_at').notNull(),
@@ -201,7 +215,7 @@ export const recipes = sqliteTable('recipes', {
 });
 
 /**
- * One logged food, in MacroFactor's hour bucket of a calendar day. `food` is a snapshot taken when it was logged, so
+ * One logged food at a time of a calendar day; MacroFactor's timeline groups entries by hour of a calendar day. `food` is a snapshot taken when it was logged, so
  * editing or deleting the food never rewrites the log. `food` and `serving` are separate columns because a move, a
  * serving change, and a food swap are separate edits; the measure and its quantity share `serving` so a merge never
  * pairs one device's unit with another's amount.
@@ -209,7 +223,8 @@ export const recipes = sqliteTable('recipes', {
 export const foodEntries = sqliteTable('food_entries', {
 	id: text('id').primaryKey(),
 	day: text('day').notNull(),
-	hour: integer('hour').notNull().default(12),
+	/** Minutes since midnight, 0 through 1439. */
+	minute: integer('minute').notNull().default(720),
 	/** `FoodSnapshot`. */
 	food: json('food').notNull().default({}),
 	/** `Serving`: `{ measure, quantity }`. */
@@ -230,17 +245,26 @@ export const foodFavorites = sqliteTable('food_favorites', {
 export const nutritionDays = sqliteTable('nutrition_days', {
 	id: text('id').primaryKey(),
 	status: text('status', { enum: DAY_STATUSES }).notNull().default('none'),
-	note: text('note').notNull().default(''),
 	/** Sparse nutrients that replace the log's totals for this day, or null to use the log. */
 	override: json('override'),
 });
 
-/** A manual body fat, tape measurement, or step count for a day. The id is `<day>/<kind>`, so one value per day. */
+/** A titled note on a day of the food log, at a time; MacroFactor allows five a day. */
+export const foodLogNotes = sqliteTable('food_log_notes', {
+	id: text('id').primaryKey(),
+	day: text('day').notNull(),
+	minute: integer('minute').notNull().default(720),
+	title: text('title').notNull(),
+	body: text('body').notNull().default(''),
+	color: text('color', { enum: NOTE_COLORS }).notNull().default('blue'),
+});
+
+/** A manual visual body fat, tape measurement, or step count for a day. The id is `<day>/<kind>`, so one value per day. */
 export const bodyMetrics = sqliteTable('body_metrics', {
 	id: text('id').primaryKey(),
 	day: text('day').notNull(),
 	kind: text('kind', { enum: BODY_METRIC_KINDS }).notNull(),
-	/** Percent for `body_fat`, a count for `steps`, centimeters for the rest. */
+	/** Percent for `visual_body_fat`, a count for `steps`, centimeters for the rest. */
 	value: real('value').notNull(),
 	updatedAt: text('updated_at').notNull(),
 });
@@ -266,7 +290,8 @@ export const nutritionPlans = sqliteTable('nutrition_plans', {
 
 /**
  * A micronutrient's floor, target, and ceiling from a day on. The id is `<day>/<nutrient>`. `auto` takes the
- * registry's defaults and ignores the three bounds; a null bound under `custom` hides that bound.
+ * registry's defaults and ignores the three bounds, `none` shows no bounds, and a null bound under `custom` hides that
+ * bound.
  */
 export const nutrientGoals = sqliteTable('nutrient_goals', {
 	id: text('id').primaryKey(),
@@ -294,6 +319,7 @@ export const SYNCED_TABLES = {
 	food_entries: foodEntries,
 	food_favorites: foodFavorites,
 	nutrition_days: nutritionDays,
+	food_log_notes: foodLogNotes,
 	body_metrics: bodyMetrics,
 	nutrition_plans: nutritionPlans,
 	nutrient_goals: nutrientGoals,
@@ -332,8 +358,10 @@ export const foodSnapshot = z.object({
 	source: z.enum(FOOD_SOURCES),
 	name: z.string().min(1),
 	brand: z.string().optional(),
+	icon: z.string().optional(),
 	nutrition: foodNutrition,
 });
+const minute = z.int().min(0).max(1439);
 const recipeIngredient = z.object({ id: z.string(), food: foodSnapshot, serving });
 const dayTarget = z.object({ energy: amount, protein: amount, fat: amount, carbs: amount });
 const nutritionGoal = z.object({
@@ -347,6 +375,7 @@ const coachingProgram = z.object({
 	diet: z.enum(DIET_STYLES),
 	protein: z.enum(PROTEIN_LEVELS),
 	floor: z.enum(CALORIE_FLOORS),
+	training: z.enum(TRAINING_TYPES),
 	/** ISO weekdays, Monday 1, that get more calories. Empty spreads them evenly. */
 	highDays: z.array(z.int().min(1).max(7)),
 });
@@ -379,7 +408,11 @@ export const schema = defineSchema({
 		},
 		programs: { cycles: atLeastOne, currentCycle: atLeastOne, config: object, days: array },
 		gym_profiles: { equipment: object },
-		body_weights: { weightKg: z.number().positive(), source: z.enum(BODY_WEIGHT_SOURCES) },
+		body_weights: {
+			weightKg: z.number().positive(),
+			source: z.enum(BODY_WEIGHT_SOURCES),
+			bodyFatPercent: z.number().min(0).max(100),
+		},
 		api_tokens: { tokenHash: z.string().regex(/^[0-9a-f]{64}$/) },
 		foods: { source: z.enum(FOOD_ROW_SOURCES), name: z.string().min(1), nutrition: foodNutrition },
 		recipes: {
@@ -391,9 +424,10 @@ export const schema = defineSchema({
 			prepMinutes: count,
 			cookMinutes: count,
 		},
-		food_entries: { day, hour: z.int().min(0).max(23), food: foodSnapshot, serving },
+		food_entries: { day, minute, food: foodSnapshot, serving },
 		food_favorites: { food: foodSnapshot, serving },
 		nutrition_days: { status: z.enum(DAY_STATUSES), override: nutrientAmounts },
+		food_log_notes: { day, minute, title: z.string().min(1), color: z.enum(NOTE_COLORS) },
 		body_metrics: { day, kind: z.enum(BODY_METRIC_KINDS), value: amount },
 		nutrition_plans: {
 			kind: z.enum(PLAN_KINDS),

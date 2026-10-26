@@ -1,16 +1,19 @@
 import Foundation
 import GRDB
 
-/// What `body_metrics` tracks besides the weigh-ins in `body_weights`. The raw values are the schema's
-/// `BODY_METRIC_KINDS`.
+/// What `body_metrics` tracks besides the weigh-ins (and their scale body fat) in `body_weights`. The raw values are
+/// the schema's `BODY_METRIC_KINDS`.
 enum BodyMetricKind: String, Codable, CaseIterable, Sendable {
-    case bodyFat = "body_fat", steps, neck, shoulders, chest, waist, hips
+    case visualBodyFat = "visual_body_fat", steps
+    case neck, shoulders, bust, chest, waist, hips
     case leftBicep = "left_bicep", rightBicep = "right_bicep", leftForearm = "left_forearm", rightForearm = "right_forearm"
+    case leftWrist = "left_wrist", rightWrist = "right_wrist"
     case leftThigh = "left_thigh", rightThigh = "right_thigh", leftCalf = "left_calf", rightCalf = "right_calf"
+    case leftAnkle = "left_ankle", rightAnkle = "right_ankle"
 }
 
 /// A row of the synced `body_metrics` table: one manual value per kind and day, keyed `<day>/<kind>`, so setting it again
-/// replaces it. Body fat is a percent, steps a count, and every tape measurement centimeters.
+/// replaces it. Visual body fat is a percent, steps a count, and every tape measurement centimeters.
 struct BodyMetric: SyncedRecord {
     static let table = "body_metrics"
 

@@ -945,7 +945,7 @@ export const routes: Route[] = [
 		body: M.BodyWeightCreate,
 		response: M.BodyWeight,
 		run({ db, body }) {
-			const row: RowOf<'body_weights'> = { id: M.newId(), ...body, source: 'manual' };
+			const row: RowOf<'body_weights'> = { id: M.newId(), ...body, source: 'manual', bodyFatPercent: null };
 			db.commit(db.put('body_weights', row));
 			return row;
 		},
