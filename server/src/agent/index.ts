@@ -33,7 +33,7 @@ async function authenticate(request: Request, db: Db, ownerToken: string): Promi
 const howToAuthenticate = (base: string) =>
 	[
 		'A Better Me is a personal workout and nutrition tracker. This API reads and manages its workouts, programs, exercises, gyms, food log, foods, recipes, nutrition strategy, settings, and body metrics.',
-		'Every route but this one and /openapi.json needs a bot token. The owner creates one in the iOS app under More > API Tokens; it starts with `abm_` and is shown once.',
+		'Every route but this one and /openapi.json needs a bot token. The owner creates one in the iOS app under Dashboard gear > Settings > API Tokens; it starts with `abm_` and is shown once.',
 		`Send it on every request as the header \`Authorization: Bearer abm_...\`, then GET ${base} again: the answer holds the full guide, the current state, and the OpenAPI document.`,
 	].join('\n\n');
 

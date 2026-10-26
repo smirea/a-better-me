@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// More > Exercises: the picker's list and filters with MF's All, Performed, Deprioritized (Do Not Recommend),
+/// Settings > Exercises: the picker's list and filters with MF's All, Performed, Deprioritized (Do Not Recommend),
 /// Modified (any Exercise Override), and Archived tabs. A row opens Exercise Settings.
 struct ExerciseLibraryView: View {
     @Environment(SessionHistory.self) private var history
