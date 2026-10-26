@@ -1,0 +1,22 @@
+#!/bin/bash
+# The App target's last build phase. Uploads every dSYM of a Release device build (app, watch app, widgets, Sentry)
+# with their sources, so crashes and hangs show symbolicated stack traces. Simulator builds are never installed on a
+# phone, so CI's Release check skips the upload.
+set -euo pipefail
+
+[ "$CONFIGURATION" = Release ] && [ "$PLATFORM_NAME" = iphoneos ] || exit 0
+
+if [ -z "${SENTRY_AUTH_TOKEN:-}" ]; then
+    echo "error: SENTRY_AUTH_TOKEN is not set, so Sentry could not symbolicate this build. Run \`bun run env:ios\`."
+    exit 1
+fi
+
+cli="$(cd -P "$SRCROOT/../node_modules/@sentry/cli" && pwd)/../cli-darwin/bin/sentry-cli"
+if [ ! -x "$cli" ]; then
+    echo "error: sentry-cli is missing at $cli. Run \`bun install\` in the repository root."
+    exit 1
+fi
+
+# The watch app builds into its own platform's folder next to the phone's.
+"$cli" debug-files upload --org self-uo7 --project a-better-me-ios --include-sources \
+    "$DWARF_DSYM_FOLDER_PATH" "${DWARF_DSYM_FOLDER_PATH%-iphoneos}-watchos"

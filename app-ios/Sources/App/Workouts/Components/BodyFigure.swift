@@ -12,12 +12,23 @@ struct BodyFigure {
         let path: Path
     }
 
-    let parts: [Part]
-    let front: CGRect
-    let back: CGRect
-    let tiles: [Muscle: CGRect]
+    /// A rectangle of the figure and the parts that reach into it, found once at load so a render never scans all
+    /// parts' bounds.
+    struct Crop {
+        let rect: CGRect
+        let parts: [Part]
 
-    func side(_ side: BodySide) -> CGRect { side == .front ? front : back }
+        init(_ rect: CGRect, from parts: [Part]) {
+            self.rect = rect
+            self.parts = parts.filter { $0.path.boundingRect.intersects(rect) }
+        }
+    }
+
+    let front: Crop
+    let back: Crop
+    let tiles: [Muscle: Crop]
+
+    func side(_ side: BodySide) -> Crop { side == .front ? front : back }
 
     static let shared = load()
 
@@ -48,13 +59,13 @@ struct BodyFigure {
         } catch {
             fatalError("body.json does not match its Swift type: \(error)")
         }
+        let parts = file.parts.map(part)
         return BodyFigure(
-            parts: file.parts.map(part),
-            front: rect(file.front),
-            back: rect(file.back),
+            front: Crop(rect(file.front), from: parts),
+            back: Crop(rect(file.back), from: parts),
             tiles: Dictionary(uniqueKeysWithValues: file.tiles.map { name, box in
                 guard let muscle = Muscle(rawValue: name) else { fatalError("body.json has a tile for unknown muscle \(name)") }
-                return (muscle, rect(box))
+                return (muscle, Crop(rect(box), from: parts))
             })
         )
     }
@@ -92,20 +103,17 @@ struct BodyFigure {
 
 /// The body figure cropped to `crop`, a rectangle in `body.svg` coordinates, with each region filled by `fill`.
 struct BodyCrop: View {
-    let crop: CGRect
+    let crop: BodyFigure.Crop
     let fill: (BodyFigure.Region) -> Color
 
     var body: some View {
-        let figure = BodyFigure.shared
         ZStack {
-            ForEach(figure.parts.indices, id: \.self) { index in
-                let part = figure.parts[index]
-                if part.path.boundingRect.intersects(crop) {
-                    CroppedShape(path: part.path, crop: crop).fill(fill(part.region))
-                }
+            ForEach(crop.parts.indices, id: \.self) { index in
+                let part = crop.parts[index]
+                CroppedShape(path: part.path, crop: crop.rect).fill(fill(part.region))
             }
         }
-        .aspectRatio(crop.size, contentMode: .fit)
+        .aspectRatio(crop.rect.size, contentMode: .fit)
         .clipped()
         .accessibilityHidden(true)
     }

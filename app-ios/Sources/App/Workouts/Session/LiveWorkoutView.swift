@@ -2,9 +2,11 @@ import SwiftUI
 
 /// The full-screen live workout. The root view presents it over the tab bar while `LiveWorkoutPresenter.isExpanded`.
 struct LiveWorkoutView: View {
-    let session: WorkoutSession
+    @Observe(WorkoutSession.inProgress) private var session
 
-    var body: some View { SessionEditor(session: session, mode: .live) }
+    var body: some View {
+        if let session { SessionEditor(session: session, mode: .live).id(session.id) }
+    }
 }
 
 /// The set-logging screen. Live, it times rest and writes every change through to the session. Editing a past
@@ -23,10 +25,11 @@ struct SessionEditor: View {
     @Environment(ExerciseCatalog.self) var catalog
     @Environment(LiveWorkoutPresenter.self) var presenter
     @Environment(LocalStore.self) var localStore
+    @Environment(SessionHistory.self) private var sessionHistory
     @Environment(\.dismiss) var dismiss
     @Observe(ExerciseSettings.all) var exerciseSettings
     @Observe(AppSettings.current) var defaults
-    @Observe(BodyWeight.all) private var bodyWeights
+    @Observe(BodyWeight.latest) private var latestBodyWeight
     @Observe(GymProfile.all) var gyms
     @Observe(GymProfile.defaultGym) var defaultGym
     /// The session's row as it changes under the editor, which `session` cannot show once the cover is up.
@@ -36,8 +39,9 @@ struct SessionEditor: View {
     @State var current: BlockExercise.ID?
     @State var focus: KeypadFocus?
     @State var sheet: Sheet?
-    /// Earlier sessions' blocks, newest first, for the Previous column. Decoded once, since history can't change here.
-    @State var history: [[WorkoutBlock]] = []
+    /// Each exercise's last logged sets, for the Previous column. Read once, since history can't change here.
+    @State var previousSets: [ExerciseID: [WorkoutSet]] = [:]
+    @State var loadings = LoadingCache()
     @State private var historyLoaded = false
     @State private var confirmingFinish = false
     @State private var confirmingDiscard = false
@@ -102,12 +106,7 @@ struct SessionEditor: View {
         .background(Theme.background)
         .animation(.snappy(duration: 0.2), value: focus == nil)
         .task {
-            let session = session
-            var earlier = (try? localStore.read { try WorkoutSession.earlier(than: session, $0) }) ?? []
-            if defaults.workout.previousReference == .withinProgram, let programID = session.program?.programID {
-                earlier = earlier.filter { $0.program?.programID == programID }
-            }
-            history = earlier.map(\.blocks)
+            previousSets = sessionHistory.previousSets(for: session, reference: defaults.workout.previousReference)
             historyLoaded = true
             ensureSuggestions()
             automateWarmUps()
@@ -117,7 +116,7 @@ struct SessionEditor: View {
             saveBlocks(blocks)
             ensureSuggestions()
         }
-        .onChange(of: blocks.flatMap(\.exercises).map { LoadableWeights(loading: loading(for: $0), unit: unit) }) {
+        .onChange(of: blocks.flatMap(\.exercises).map { loadable(for: $0) }) {
             guard mode == .live else { return }
             ensureSuggestions()
         }
@@ -304,7 +303,7 @@ struct SessionEditor: View {
     /// Bodyweight Contribution: "Body weight 80 kg · 65% counted (52 kg)", for exercises that lift part of the body.
     private func bodyweightCaption(_ exercise: Exercise?) -> String? {
         guard mode == .live, defaults.workout.display.bodyweightContribution, let fraction = exercise?.bodyweightFraction, fraction > 0,
-              let kg = currentBodyWeightKg(logged: bodyWeights, health: nil, manual: defaults.profile.bodyWeightKg) else { return nil }
+              let kg = currentBodyWeightKg(logged: latestBodyWeight.map { [$0] } ?? [], health: nil, manual: defaults.profile.bodyWeightKg) else { return nil }
         let percent = (fraction * 100).formatted(.number.precision(.fractionLength(0)))
         return "Body weight \(unit.format(kg: kg)) \(unit.rawValue) · \(percent)% counted (\(unit.format(kg: kg * fraction)) \(unit.rawValue))"
     }
@@ -439,7 +438,7 @@ struct SessionEditor: View {
         }
     }
 
-    /// The More tab's screens, presented over the live workout with a Close button they don't need when pushed.
+    /// The Settings screens, presented over the live workout with a Close button they don't need when pushed.
     private func closableSheet(@ViewBuilder content: () -> some View) -> some View {
         NavigationStack {
             content().toolbar {
@@ -462,7 +461,7 @@ struct SessionEditor: View {
         if store.pausedAt != nil { resumeWorkout() }
         if logAll {
             let suggestions = defaults.workout.progression.initialFill == .smartProgression ? store.suggestions : [:]
-            let prefills = SessionFlow.prefills(for: blocks, history: history, suggestions: suggestions, rirTracking: defaults.workout.rirTracking, unit: unit)
+            let prefills = SessionFlow.prefills(for: blocks, previous: previousSets, suggestions: suggestions, rirTracking: defaults.workout.rirTracking, unit: unit)
             blocks = SessionFlow.logAll(blocks, at: .now) { drafts[$0] ?? prefills[$0] ?? SetEntry() }
         }
         // The session ends on the summary's Done; saving now keeps the logged sets if the app dies before that.
@@ -495,9 +494,9 @@ struct SessionEditor: View {
     func ensureSuggestions() {
         guard mode == .live, historyLoaded else { return }
         for item in blocks.flatMap(\.exercises) {
-            let basis = SuggestionBasis(planned: item.sets.map(\.planned), loadable: LoadableWeights(loading: loading(for: item), unit: unit))
+            let basis = SuggestionBasis(planned: item.sets.map(\.planned), loadable: loadable(for: item))
             guard store.suggestionBasis[item.id] != basis else { continue }
-            let previous = SessionFlow.previousSets(of: item.exerciseID, in: history)
+            let previous = previousSets[item.exerciseID] ?? []
             let suggestions = SmartProgression.suggest(
                 sets: item.sets, previous: previous, settings: progressionSettings(for: item.exerciseID),
                 loadable: basis.loadable, rirTracking: defaults.workout.rirTracking, unit: unit
@@ -515,7 +514,7 @@ struct SessionEditor: View {
         let item = blocks[at.block].exercises[at.item]
         let changed = SmartProgression.applyInSession(
             sets: item.sets, current: current, settings: progressionSettings(for: item.exerciseID),
-            loadable: LoadableWeights(loading: loading(for: item), unit: unit), rirTracking: defaults.workout.rirTracking, unit: unit
+            loadable: loadable(for: item), rirTracking: defaults.workout.rirTracking, unit: unit
         )
         guard !changed.isEmpty else { return }
         store.suggestions[id] = current.merging(changed) { $1 }

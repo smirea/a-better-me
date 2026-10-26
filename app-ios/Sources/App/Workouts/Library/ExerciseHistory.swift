@@ -149,16 +149,27 @@ enum ExerciseHistory {
 
 struct ExerciseHistoryTab: View {
     let exercise: Exercise
-    @Observe(WorkoutSession.finished) private var sessions
+    @Environment(SessionHistory.self) private var history
     @Observe(AppSettings.current) private var settings
     @State private var metric = HistoryMetric.oneRepMax
     @State private var sort = HistorySort.mostRecent
     @State private var records = RecordsFilter.on
     @State private var expanded: Set<UUID> = []
 
+    private struct EntriesKey: Hashable { let exercise: Exercise }
+
+    private struct ArrangedKey: Hashable {
+        let exercise: Exercise
+        let sort: HistorySort
+        let records: RecordsFilter
+        let metric: HistoryMetric
+    }
+
     var body: some View {
-        let entries = ExerciseHistory.entries(of: exercise, in: sessions)
-        let shown = ExerciseHistory.arranged(entries, sort: sort, records: records, metric: metric, exercise: exercise)
+        let entries = history.memo(EntriesKey(exercise: exercise)) { ExerciseHistory.entries(of: exercise, in: $0) }
+        let shown = history.memo(ArrangedKey(exercise: exercise, sort: sort, records: records, metric: metric)) { _ in
+            ExerciseHistory.arranged(entries, sort: sort, records: records, metric: metric, exercise: exercise)
+        }
         VStack(alignment: .leading, spacing: 0) {
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {

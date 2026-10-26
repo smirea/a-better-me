@@ -213,6 +213,26 @@
 		};
 /* End PBXGroup section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		E00000000000000000000010 /* Upload dSYMs to Sentry */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
+			);
+			name = "Upload dSYMs to Sentry";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/scripts/upload-dsyms\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXNativeTarget section */
 		A00000000000000000000005 /* App */ = {
 			isa = PBXNativeTarget;
@@ -223,6 +243,7 @@
 				A00000000000000000000009 /* Resources */,
 				B0000000000000000000000D /* Embed Watch Content */,
 				C0000000000000000000000D /* Embed Foundation Extensions */,
+				E00000000000000000000010 /* Upload dSYMs to Sentry */,
 			);
 			buildRules = (
 			);
@@ -450,7 +471,7 @@
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "A Better Me";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "The Dashboard charts your body weight and daily steps from Health, and workouts read your heart rate and energy while you train.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy, and logged food as dietary energy and nutrients once you turn it on in Settings.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -486,7 +507,7 @@
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "A Better Me";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "The Dashboard charts your body weight and daily steps from Health, and workouts read your heart rate and energy while you train.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Workouts are saved to Health with their heart rate and energy, and logged food as dietary energy and nutrients once you turn it on in Settings.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
