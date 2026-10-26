@@ -25,6 +25,12 @@ let excelEpoch = calendar.date(from: DateComponents(year: 1899, month: 12, day: 
 func date(_ serial: Int) -> Date { calendar.date(byAdding: .day, value: serial, to: excelEpoch)! }
 func series(_ points: [Point], scale: Double = 1) -> [DatedValue] { points.map { DatedValue(date: date($0.day), value: $0.value * scale) } }
 
+/// The Fasting and Partial Logging sheets date their rows as `M/D/YYYY` text.
+func flaggedDay(_ text: String) -> Date {
+    let parts = text.split(separator: "/").map { Int($0)! }
+    return calendar.date(from: DateComponents(year: parts[2], month: parts[0], day: parts[1]))!
+}
+
 /// The Dashboard's trend before this engine: after a gap of d days a weigh-in closed 1 - 0.9^d of the gap and a day
 /// without a weigh-in kept the trend.
 func legacyTrend(_ weighIns: [DatedValue], through end: Date) -> [DatedValue] {
@@ -75,7 +81,12 @@ struct Calibrate {
         let afterSeed = trendRef.filter { $0.date >= calendar.date(byAdding: .day, value: 60, to: trendRef[0].date)! }
         print("  final, after the first 60 days:          ", compare(trend, afterSeed))
 
-        let intake = export.intakeKcal.map { NutritionEngine.IntakeDay(date: date($0.day), kcal: $0.value) }
+        let incomplete = Set(export.incomplete.map(flaggedDay))
+        let fasting = Set(export.fasting.map(flaggedDay))
+        var intake = export.intakeKcal.map { NutritionEngine.IntakeDay(date: date($0.day), kcal: $0.value, isIncomplete: incomplete.contains(date($0.day))) }
+        let loggedDays = Set(intake.map(\.date))
+        intake += fasting.subtracting(loggedDays).map { NutritionEngine.IntakeDay(date: $0, kcal: 0) }
+        print("  \(incomplete.count) incomplete days, \(fasting.count) fasting days")
         let start = expenditureRef[0].date
         let initial = expenditureRef[0].value
         print("\nExpenditure, kcal/day, against MacroFactor's Expenditure column (seeded with its first value)")

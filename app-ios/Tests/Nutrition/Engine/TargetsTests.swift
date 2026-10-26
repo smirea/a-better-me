@@ -78,14 +78,19 @@ struct TargetsTests {
         #expect(Engine.Targets.estimatedDays(goal: Engine.Goal(kind: .maintain, ratePercentPerWeek: 0, targetWeightKg: 80), weightKg: 90) == nil)
     }
 
-    /// The measured edit: +538 on one day took 108 off each of five unlocked days, so the week moves by the rounding.
-    @Test func collaborativeRebalanceSpreadsTheChangeOverTheUnlockedDays() {
+    /// The measured edit: +538 on one day took 108 off each of five unlocked days (two of ours take 107).
+    @Test func collaborativeRebalanceKeepsTheWeekTotal() {
         let week = Dictionary(uniqueKeysWithValues: Engine.Weekday.allCases.map { ($0, 2000) })
         let moved = Engine.Targets.rebalance(week, changing: .tuesday, to: 2538, locked: [.monday])
         #expect(moved[.tuesday] == 2538)
         #expect(moved[.monday] == 2000)
         #expect(moved[.wednesday] == 1892)
-        #expect(moved.values.reduce(0, +) == 13998)
+        #expect(moved[.sunday] == 1893)
+        #expect(moved.values.reduce(0, +) == 14000)
+        let lowered = Engine.Targets.rebalance(week, changing: .tuesday, to: 1462, locked: [])
+        #expect(lowered[.monday] == 2090)
+        #expect(lowered[.sunday] == 2089)
+        #expect(lowered.values.reduce(0, +) == 14000)
     }
 }
 

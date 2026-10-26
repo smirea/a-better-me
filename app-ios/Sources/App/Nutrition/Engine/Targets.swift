@@ -177,15 +177,18 @@ extension NutritionEngine {
         }
 
         /// Collaborative editing: moving one day's calories spreads the opposite change over the unlocked days, so the
-        /// week's total stays fixed up to rounding (measured: +538 on one day took 108 off each of five unlocked days).
+        /// week's total stays fixed (measured: +538 on one day took 108 off each of five unlocked days). A remainder
+        /// that does not divide goes one calorie at a time to the earliest unlocked days.
         static func rebalance(_ kcal: [Weekday: Int], changing day: Weekday, to newKcal: Int, locked: Set<Weekday>) -> [Weekday: Int] {
             var result = kcal
             let delta = newKcal - kcal[day, default: 0]
-            let others = Weekday.allCases.filter { $0 != day && !locked.contains($0) }
+            let others = Weekday.mondayFirst.filter { $0 != day && !locked.contains($0) }
             result[day] = newKcal
             guard !others.isEmpty else { return result }
-            let share = Int((Double(delta) / Double(others.count)).rounded())
-            for other in others { result[other, default: 0] -= share }
+            let (share, remainder) = abs(delta).quotientAndRemainder(dividingBy: others.count)
+            for (index, other) in others.enumerated() {
+                result[other, default: 0] -= delta.signum() * (share + (index < remainder ? 1 : 0))
+            }
             return result
         }
     }
