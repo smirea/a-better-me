@@ -76,6 +76,7 @@ private struct SelectionBar: View {
                     Button("Modify Timestamp") { prompt = .timestamp }
                 }
                 .buttonStyle(.glass)
+                .font(AppFont.medium(14))
                 .disabled(count == 0)
             }
             .scrollIndicators(.hidden)
@@ -137,6 +138,7 @@ private struct PasteBar: View {
                         Button("Paste Inline") { state.pending?.inline = true }
                     }
                     .buttonStyle(.glass)
+                    .font(AppFont.medium(14))
                 }
                 .scrollIndicators(.hidden)
             }

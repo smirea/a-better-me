@@ -135,7 +135,8 @@ private struct EntryRow: View {
         let entry = row.entry
         let isSelected = state.selection.contains(entry.id)
         HStack(spacing: 0) {
-            Group {
+            ZStack {
+                Color.clear
                 if state.selecting {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 20))

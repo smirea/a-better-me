@@ -148,7 +148,7 @@ private struct DayPill: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 56)
-            .background(isSelected ? Theme.surfaceRaised : .clear, in: Capsule())
+            .background(isSelected ? Theme.textPrimary.opacity(0.18) : .clear, in: Capsule())
             .overlay {
                 Capsule().strokeBorder(Theme.textTertiary.opacity(0.6), lineWidth: 1)
                 Capsule().inset(by: 0.75).trim(from: 0, to: progress)
@@ -196,7 +196,7 @@ private struct DaySummary: View {
                         MacroColumns(lines: lines, page: .remaining)
                     }
                     .tabViewStyle(.page(indexDisplayMode: .always))
-                    .frame(height: 52)
+                    .frame(height: 64)
                 }
             }
             .contentShape(Rectangle())
@@ -261,7 +261,7 @@ private struct MacroColumns: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .padding(.bottom, lines.first?.target == nil ? 0 : 18)
+        .padding(.bottom, lines.first?.target == nil ? 0 : 30)
         .contentShape(Rectangle())
     }
 
