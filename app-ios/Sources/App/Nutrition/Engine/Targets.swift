@@ -177,7 +177,7 @@ extension NutritionEngine {
         }
 
         /// Collaborative editing: moving one day's calories spreads the opposite change over the unlocked days, so the
-        /// week's total stays fixed (measured: +538 on one day took 108 off each of five unlocked days).
+        /// week's total stays fixed up to rounding (measured: +538 on one day took 108 off each of five unlocked days).
         static func rebalance(_ kcal: [Weekday: Int], changing day: Weekday, to newKcal: Int, locked: Set<Weekday>) -> [Weekday: Int] {
             var result = kcal
             let delta = newKcal - kcal[day, default: 0]

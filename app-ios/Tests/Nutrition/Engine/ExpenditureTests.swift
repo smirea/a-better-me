@@ -33,7 +33,7 @@ struct ExpenditureTests {
         #expect(held.map(\.kcal) == [2500, 2500, 2500])
         #expect(held.map(\.isHolding) == [true, true, true])
         let noWeighIns = Engine.Expenditure.daily(intake: intake, trend: trend, weighIns: [], initial: 2500, from: days[30], through: days[30], calendar: utc)
-        #expect(noWeighIns == [Engine.ExpenditureDay(date: days[30], kcal: 2500, isHolding: true)])
+        #expect(noWeighIns == [Engine.ExpenditureDay(date: utc.startOfDay(for: days[30]), kcal: 2500, isHolding: true)])
     }
 
     @Test func todaysLogAndIncompleteDaysDoNotCount() {
@@ -41,13 +41,13 @@ struct ExpenditureTests {
         var incomplete = intake
         for index in 23...29 { incomplete[index].isIncomplete = true }
         let result = Engine.Expenditure.daily(intake: incomplete, trend: trend, weighIns: weighIns, initial: 2500, from: days[30], through: days[30], calendar: utc)
-        #expect(result == [Engine.ExpenditureDay(date: days[30], kcal: 2500, isHolding: true)])
+        #expect(result == [Engine.ExpenditureDay(date: utc.startOfDay(for: days[30]), kcal: 2500, isHolding: true)])
     }
 
     @Test func noTrendMeansEveryDayHolds() {
         let result = Engine.Expenditure.daily(intake: intake, trend: [], weighIns: [], initial: 2300, from: days[0], through: days[1], calendar: utc)
         #expect(result.map(\.kcal) == [2300, 2300])
-        #expect(result.map(\.date) == [days[0], days[1]])
+        #expect(result.map(\.date) == [days[0], days[1]].map { utc.startOfDay(for: $0) })
     }
 
     @Test func stepsOneCalendarDayAcrossADaylightSavingChange() {
