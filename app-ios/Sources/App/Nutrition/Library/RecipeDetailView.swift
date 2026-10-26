@@ -17,6 +17,7 @@ struct RecipeDetailView: View {
     @State private var confirmingDelete = false
     @State private var showAllNutrients = false
     @State private var favorited = false
+    @State private var preparing = false
 
     init(recipeID: UUID) {
         _recipe = Observe(Recipe.one(recipeID))
@@ -26,7 +27,9 @@ struct RecipeDetailView: View {
         if let recipe {
             content(recipe)
         } else {
+            // Deleting from the editor sheet leaves this page behind; it pops once its recipe is gone.
             ContentUnavailableView("Recipe deleted", systemImage: "trash")
+                .onAppear { dismiss() }
         }
     }
 
@@ -81,6 +84,7 @@ struct RecipeDetailView: View {
         .navigationTitle(recipe.name)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $sheet) { $0.editor }
+        .navigationDestination(isPresented: $preparing) { RecipePrepareView(recipe: recipe) }
         .sensoryFeedback(.success, trigger: favorited)
         .confirmationDialog("Delete Recipe", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
@@ -94,7 +98,7 @@ struct RecipeDetailView: View {
 
     private func actions(_ recipe: Recipe, portion: FoodPortion) -> some View {
         HStack {
-            NavigationLink { RecipePrepareView(recipe: recipe) } label: { ActionLabel(title: "Prepare", systemImage: "frying.pan") }
+            Button { preparing = true } label: { ActionLabel(title: "Prepare", systemImage: "frying.pan") }
             Button { sheet = LibraryEditorSheet(.editRecipe(recipe)) } label: { ActionLabel(title: "Edit", systemImage: "pencil") }
             Button {
                 store.addFavorite(portion)
@@ -228,6 +232,7 @@ struct RecipePrepareView: View {
                 Text("\(LibraryFormat.amount(perServing[id] ?? 0)) \(unit)/serv, \(LibraryFormat.amount(total[id] ?? 0)) total")
                     .font(AppFont.caption(12))
                     .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
         }
