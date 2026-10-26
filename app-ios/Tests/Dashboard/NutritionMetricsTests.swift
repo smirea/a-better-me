@@ -169,8 +169,8 @@ struct NutritionMetricsTests {
         profile.birthDate = CalendarDay("1990-06-01")
         let bmr = try #require(NutritionMetrics.expenditureSetup(log: log, weighIns: weighIns, trend: trend, settings: settings, profile: profile, calendar: utc))
         #expect(bmr.start == start("2026-10-03"))
-        // MacroFactor BMR at 80 kg, 180 cm, 36 years: 129.6 × 80^0.55 + 0.011 × 180² − 1.96 × 36 = 1767.3, × 1.55.
-        #expect(bmr.initialKcal == 2739)
+        // MacroFactor BMR at 80 kg, 180 cm, 36 years: 129.6 × 80^0.55 + 0.011 × 180² − 1.96 × 36 = 1729.0, × 1.55.
+        #expect(bmr.initialKcal == 2680)
         settings.initialKcal = 2500
         settings.startOn = CalendarDay("2026-10-04")
         let manual = NutritionMetrics.expenditureSetup(log: log, weighIns: weighIns, trend: trend, settings: settings, profile: ProfileSettings(), calendar: utc)
