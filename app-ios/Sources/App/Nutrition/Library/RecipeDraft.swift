@@ -46,8 +46,35 @@ struct RecipeDraft: Equatable, Sendable {
         var text = ""
     }
 
+    /// An ingredient and its quantity as typed. Typing a positive number sets the serving; switching the measure
+    /// converts the serving at full precision and only displays it rounded, so a round trip never drifts.
+    struct Ingredient: Equatable, Identifiable, Sendable {
+        private(set) var value: RecipeIngredient
+        private(set) var quantity: String
+
+        var id: UUID { value.id }
+        var isValid: Bool { (NumberText.parse(quantity) ?? 0) > 0 }
+
+        init(_ value: RecipeIngredient) {
+            self.value = value
+            quantity = NumberText.text(value.serving.quantity)
+        }
+
+        mutating func type(_ text: String) {
+            quantity = text
+            if let typed = NumberText.parse(text), typed > 0 { value.serving.quantity = typed }
+        }
+
+        mutating func switchMeasure(to measure: Measure) {
+            let converted = RecipeMath.convert(value.serving.quantity, from: value.serving.measure, to: measure)
+            value.serving = Serving(measure: measure, quantity: converted)
+            quantity = NumberText.text(converted)
+        }
+    }
+
     enum Field: Hashable, Sendable {
         case name, servings, totalWeight, ingredients, prepMinutes, cookMinutes, link
+        case ingredientQuantity(UUID)
     }
 
     struct Valid: Equatable, Sendable {
@@ -71,7 +98,7 @@ struct RecipeDraft: Equatable, Sendable {
     var servings = "1"
     /// The cooked weight of the whole recipe in grams; blank falls back to the ingredients' weight.
     var totalWeight = ""
-    var ingredients: [RecipeIngredient] = []
+    var ingredients: [Ingredient] = []
     var prepMinutes = ""
     var cookMinutes = ""
     var link = ""
@@ -85,7 +112,7 @@ struct RecipeDraft: Equatable, Sendable {
         icon = recipe.icon
         name = recipe.name
         servings = NumberText.text(recipe.servings)
-        ingredients = recipe.ingredients
+        ingredients = recipe.ingredients.map(Ingredient.init)
         if let cookedGrams = recipe.cookedGrams, abs(cookedGrams - RecipeMath.ingredientGrams(recipe.ingredients)) > 0.001 {
             totalWeight = NumberText.text(cookedGrams)
         }
@@ -99,12 +126,12 @@ struct RecipeDraft: Equatable, Sendable {
     func duplicate() -> RecipeDraft {
         var copy = self
         copy.name = "\(name) (Copy)"
-        copy.ingredients = ingredients.map { RecipeIngredient(FoodPortion($0.food, serving: $0.serving)) }
+        copy.ingredients = ingredients.map { Ingredient(RecipeIngredient(FoodPortion($0.value.food, serving: $0.value.serving))) }
         copy.steps = steps.map { Step(text: $0.text) }
         return copy
     }
 
-    var ingredientGrams: Double { RecipeMath.ingredientGrams(ingredients) }
+    var ingredientGrams: Double { RecipeMath.ingredientGrams(ingredients.map(\.value)) }
 
     /// The cooked weight the recipe saves with: the typed total, else the ingredients' weight when any is known.
     var cookedGrams: Double? {
@@ -117,7 +144,7 @@ struct RecipeDraft: Equatable, Sendable {
     var preview: Recipe {
         var recipe = Recipe(name: name, servings: NumberText.parse(servings).flatMap { $0 > 0 ? $0 : nil } ?? 1)
         recipe.icon = icon
-        recipe.ingredients = ingredients
+        recipe.ingredients = ingredients.map(\.value)
         recipe.cookedGrams = cookedGrams
         return recipe
     }
@@ -139,6 +166,9 @@ struct RecipeDraft: Equatable, Sendable {
             issues[.totalWeight] = "Must be greater than 0"
         }
         if ingredients.isEmpty { issues[.ingredients] = "Add at least one ingredient" }
+        for ingredient in ingredients where !ingredient.isValid {
+            issues[.ingredientQuantity(ingredient.id)] = "Must be greater than 0"
+        }
         let prep = Self.minutes(self.prepMinutes)
         if prep == nil { issues[.prepMinutes] = "Enter whole minutes" }
         let cook = Self.minutes(self.cookMinutes)
@@ -150,7 +180,7 @@ struct RecipeDraft: Equatable, Sendable {
         let steps = self.steps.map { String($0.text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Self.stepLimit)) }.filter { !$0.isEmpty }
         return (
             Valid(
-                name: name, icon: icon, ingredients: ingredients, servings: servings, cookedGrams: cookedGrams, steps: steps,
+                name: name, icon: icon, ingredients: ingredients.map(\.value), servings: servings, cookedGrams: cookedGrams, steps: steps,
                 prepMinutes: prep, cookMinutes: cook, link: link,
                 notes: String(notes.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Self.notesLimit))
             ),

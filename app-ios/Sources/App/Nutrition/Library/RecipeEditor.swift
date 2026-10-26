@@ -62,7 +62,7 @@ struct RecipeEditor: View {
             }
             .sheet(isPresented: $choosingIcon) { FoodIconPicker(selection: $draft.icon) }
             .sheet(isPresented: $addingIngredient) {
-                ingredientPicker.content(recipeID) { draft.ingredients.append(RecipeIngredient($0)) }
+                ingredientPicker.content(recipeID) { draft.ingredients.append(RecipeDraft.Ingredient(RecipeIngredient($0))) }
             }
             .confirmationDialog("Delete Recipe", isPresented: $confirmingDelete, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) {
@@ -127,6 +127,7 @@ struct RecipeEditor: View {
         Section {
             ForEach($draft.ingredients) { $ingredient in
                 IngredientRow(ingredient: $ingredient)
+                FieldIssue(issues[.ingredientQuantity(ingredient.id)])
             }
             .onDelete { draft.ingredients.remove(atOffsets: $0) }
             .onMove { draft.ingredients.move(fromOffsets: $0, toOffset: $1) }
@@ -242,34 +243,26 @@ struct RecipeEditor: View {
 /// An ingredient with its quantity typed in place and its measure picked from the food's measures. Switching the
 /// measure converts the quantity, so the amount stays the same.
 private struct IngredientRow: View {
-    @Binding var ingredient: RecipeIngredient
-    @State private var text: String
-
-    init(ingredient: Binding<RecipeIngredient>) {
-        _ingredient = ingredient
-        _text = State(initialValue: NumberText.text(ingredient.wrappedValue.serving.quantity))
-    }
+    @Binding var ingredient: RecipeDraft.Ingredient
 
     var body: some View {
+        let food = ingredient.value.food
         HStack(spacing: 10) {
-            FoodIconView(name: ingredient.food.icon)
+            FoodIconView(name: food.icon)
             VStack(alignment: .leading, spacing: 2) {
-                Text(ingredient.food.name).font(AppFont.medium(14)).lineLimit(2)
-                Text(LibraryFormat.macros(ingredient.food.amounts(ingredient.serving)))
+                Text(food.name).font(AppFont.medium(14)).lineLimit(2)
+                Text(LibraryFormat.macros(food.amounts(ingredient.value.serving)))
                     .font(AppFont.caption(12))
                     .foregroundStyle(Theme.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            TextField("1", text: $text)
+            TextField("1", text: Binding { ingredient.quantity } set: { ingredient.type($0) })
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .frame(width: 56)
-                .accessibilityLabel("\(ingredient.food.name) quantity")
-                .onChange(of: text) { _, value in
-                    if let quantity = NumberText.parse(value), quantity > 0 { ingredient.serving.quantity = quantity }
-                }
-            Picker("\(ingredient.food.name) measure", selection: measure) {
-                ForEach(ingredient.food.nutrition.allMeasures, id: \.name) { Text($0.name).tag($0.name) }
+                .accessibilityLabel("\(food.name) quantity")
+            Picker("\(food.name) measure", selection: measure) {
+                ForEach(food.nutrition.allMeasures, id: \.name) { Text($0.name).tag($0.name) }
             }
             .labelsHidden()
             .fixedSize()
@@ -277,11 +270,9 @@ private struct IngredientRow: View {
     }
 
     private var measure: Binding<String> {
-        Binding { ingredient.serving.measure.name } set: { name in
-            guard let target = ingredient.food.nutrition.allMeasures.first(where: { $0.name == name }) else { return }
-            let quantity = RecipeMath.convert(ingredient.serving.quantity, from: ingredient.serving.measure, to: target)
-            ingredient.serving = Serving(measure: target, quantity: quantity)
-            text = NumberText.text(quantity)
+        Binding { ingredient.value.serving.measure.name } set: { name in
+            guard let target = ingredient.value.food.nutrition.allMeasures.first(where: { $0.name == name }) else { return }
+            ingredient.switchMeasure(to: target)
         }
     }
 }

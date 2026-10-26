@@ -118,8 +118,12 @@ struct FoodLibraryView: View {
         }
     }
 
+    /// Cached USDA and Open Food Facts rows are database copies that a refresh overwrites, so only the owner's own
+    /// foods are listed and editable here.
+    private var customFoods: [Food] { foods.filter { $0.source == .custom } }
+
     private var foodRows: some View {
-        ForEach(LibraryFilter.foods(foods, matching: query, sort: sort)) { food in
+        ForEach(LibraryFilter.foods(customFoods, matching: query, sort: sort)) { food in
             row(food.snapshot, serving: nil) {
                 if let onOpen { onOpen(.food(food)) } else { sheet = LibraryEditorSheet(.editFood(food)) }
             }
@@ -187,7 +191,7 @@ struct FoodLibraryView: View {
     private var emptyState: some View {
         let isEmpty = switch tab {
         case .recipes: LibraryFilter.recipes(recipes, matching: query).isEmpty
-        case .foods: LibraryFilter.foods(foods, matching: query).isEmpty
+        case .foods: LibraryFilter.foods(customFoods, matching: query).isEmpty
         case .favorites: LibraryFilter.favorites(favorites, matching: query).isEmpty
         }
         if isEmpty {

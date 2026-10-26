@@ -48,7 +48,7 @@ struct RecipeMathTests {
         var draft = RecipeDraft()
         draft.name = "Bread"
         draft.servings = "2"
-        draft.ingredients = [large(1)]
+        draft.ingredients = [.init(large(1))]
         #expect(draft.cookedGrams == 150)
         #expect(draft.preview.nutrition.baseGrams == 75)
 
@@ -66,7 +66,7 @@ struct RecipeMathTests {
         var draft = RecipeDraft()
         draft.name = " Soup "
         draft.servings = "4"
-        draft.ingredients = [large(2)]
+        draft.ingredients = [.init(large(2))]
         draft.prepMinutes = "10"
         draft.link = "example.com/soup"
         draft.notes = " Warm. "
@@ -81,6 +81,36 @@ struct RecipeMathTests {
         #expect(valid?.link == "https://example.com/soup")
         #expect(valid?.notes == "Warm.")
         #expect(valid?.steps == ["Chop", "Simmer"])
+    }
+
+    @Test func aTypedIngredientQuantityMustBePositiveToSave() {
+        var draft = RecipeDraft()
+        draft.name = "Bread"
+        draft.ingredients = [.init(large(1))]
+        let id = draft.ingredients[0].id
+
+        draft.ingredients[0].type("0")
+        #expect(draft.valid == nil)
+        #expect(draft.issues == [.ingredientQuantity(id): "Must be greater than 0"])
+
+        draft.ingredients[0].type("")
+        #expect(draft.issues == [.ingredientQuantity(id): "Must be greater than 0"])
+
+        draft.ingredients[0].type("2,5")
+        #expect(draft.valid?.ingredients.map(\.serving.quantity) == [2.5])
+    }
+
+    @Test func switchingAnIngredientsMeasureKeepsItsAmountAtFullPrecision() {
+        var ingredient = RecipeDraft.Ingredient(large(1))
+        let pound = Measure(name: "lb", quantity: 1, servings: 4.5359237)
+        ingredient.switchMeasure(to: pound)
+        #expect(ingredient.quantity == "0.331")
+        #expect(ingredient.value.serving.quantity == 1.5 / 4.5359237)
+        #expect(RecipeMath.grams(ingredient.value.serving, of: banana) == 150)
+
+        ingredient.switchMeasure(to: banana.nutrition.measures[0])
+        #expect(ingredient.value.serving.quantity == 1)
+        #expect(ingredient.quantity == "1")
     }
 
     @Test func invalidRecipeFieldsReportMacroFactorsMessages() {
