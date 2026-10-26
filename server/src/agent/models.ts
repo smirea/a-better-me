@@ -1,5 +1,25 @@
 import { z } from 'zod';
-import { BODY_WEIGHT_SOURCES, WEIGHT_UNITS } from '../../../shared/db/schema';
+import {
+	BODY_METRIC_KINDS,
+	BODY_WEIGHT_SOURCES,
+	CALORIE_FLOORS,
+	DAY_STATUSES,
+	DIET_STYLES,
+	FOOD_ROW_SOURCES,
+	GOAL_KINDS,
+	NOTE_COLORS,
+	NUTRIENT_GOAL_MODES,
+	PLAN_KINDS,
+	PROGRAM_STYLES,
+	PROTEIN_LEVELS,
+	TRAINING_TYPES,
+	WEIGHT_UNITS,
+	foodNutrition,
+	foodSnapshot,
+	nutrientAmounts,
+	nutrientID,
+	serving,
+} from '../../../shared/db/schema';
 
 /**
  * The agent API's request and response shapes. The JSON trees mirror the Swift `Codable` models in
@@ -461,6 +481,339 @@ export const ExerciseHistory = z
 	)
 	.meta({ id: 'ExerciseHistory', description: 'Newest first: every finished session that trained the exercise.' });
 
+export const day = z.iso
+	.date()
+	.meta({ description: 'A calendar day, `YYYY-MM-DD`. It never moves through a time zone.' });
+const minute = z.int().min(0).max(1439).meta({ description: 'Minutes since midnight, 0 through 1439.' });
+const nonnegative = z.number().min(0);
+
+export const NutrientAmounts = nutrientAmounts.meta({
+	id: 'NutrientAmounts',
+	description:
+		'Sparse amounts keyed by nutrient id: `k` (kcal), `p`, `f`, `c`, and `nc` (net carbs) in grams, and USDA nutrient numbers such as `291` (fiber) in the registry unit. A missing id means not reported.',
+});
+export const Serving = serving.meta({
+	id: 'Serving',
+	description:
+		'How much: `quantity` of `measure`. `measure.quantity` of the measure is `measure.servings` base servings, so the amounts are the nutrients times `measure.servings * quantity / measure.quantity`.',
+});
+export const FoodNutrition = foodNutrition.meta({
+	id: 'FoodNutrition',
+	description:
+		'Nutrients per base serving, the grams or milliliters in one when known (which unlocks g, oz, lb, mL, fl oz, and cup), and the named measures, the first the default.',
+});
+export const FoodSnapshot = foodSnapshot.meta({
+	id: 'FoodSnapshot',
+	description: 'A food as logged. Editing or deleting the food later never changes it. `foodID` is provenance only.',
+});
+
+export const Food = z
+	.object({
+		id: z.string(),
+		source: z.enum(FOOD_ROW_SOURCES),
+		name: z.string(),
+		brand: z.string().nullable(),
+		barcode: z.string().nullable(),
+		icon: z.string().nullable(),
+		nutrition: FoodNutrition,
+		archived: z.boolean(),
+		createdAt: z.string(),
+		updatedAt: z.string(),
+	})
+	.meta({
+		id: 'Food',
+		description:
+			'A food the owner made (`custom`, a UUID id) or a cached `usda` (`usda-<fdcId>`) or `open_food_facts` (`off-<barcode>`) food.',
+	});
+const foodFields = {
+	name: z.string().trim().min(1),
+	brand: z.string().nullable(),
+	barcode: z.string().nullable(),
+	icon: z.string().nullable().meta({ description: 'A food icon name; null for the default.' }),
+	nutrition: FoodNutrition,
+	archived: z.boolean(),
+};
+export const FoodCreate = z
+	.object({
+		id: z.string().optional().meta({
+			description: 'A custom food: a UUID, generated when omitted. A cached food: `usda-<fdcId>` or `off-<barcode>`.',
+		}),
+		source: z.enum(FOOD_ROW_SOURCES).default('custom'),
+		...foodFields,
+		brand: foodFields.brand.default(null),
+		barcode: foodFields.barcode.default(null),
+		icon: foodFields.icon.default(null),
+		archived: foodFields.archived.default(false),
+	})
+	.meta({ id: 'FoodCreate' });
+export const FoodPatch = z.object(foodFields).partial().meta({ id: 'FoodPatch' });
+
+const portionFields = {
+	food: FoodSnapshot.optional().meta({ description: 'The food as eaten. Or give `foodId` or `recipeId` instead.' }),
+	foodId: z.string().optional().meta({ description: 'Snapshot a stored food.' }),
+	recipeId: z
+		.guid()
+		.optional()
+		.meta({ description: 'Snapshot a stored recipe, one serving of its yield per base serving.' }),
+	serving: Serving.optional().meta({ description: "Defaults to the quantity of the food's first measure." }),
+};
+const onePortion = [
+	(value: { food?: unknown; foodId?: unknown; recipeId?: unknown }) =>
+		[value.food, value.foodId, value.recipeId].filter(part => part !== undefined).length === 1,
+	'Give exactly one of food, foodId, and recipeId',
+] as const;
+
+export const RecipeIngredient = z
+	.object({ id: z.string(), food: FoodSnapshot, serving: Serving })
+	.meta({ id: 'RecipeIngredient' });
+export const Recipe = z
+	.object({
+		id: z.string(),
+		name: z.string(),
+		icon: z.string().nullable(),
+		ingredients: z.array(RecipeIngredient),
+		servings: z.number().meta({ description: 'How many servings the whole recipe makes.' }),
+		cookedGrams: z.number().nullable().meta({ description: 'What everything it makes weighs once cooked.' }),
+		steps: z.array(z.string()),
+		prepMinutes: z.int().nullable(),
+		cookMinutes: z.int().nullable(),
+		link: z.string().nullable(),
+		notes: z.string(),
+		archived: z.boolean(),
+		createdAt: z.string(),
+		updatedAt: z.string(),
+		nutrition: FoodNutrition.meta({
+			description: 'Derived from the ingredients, per serving of the yield. Never stored, so it cannot drift.',
+		}),
+	})
+	.meta({ id: 'Recipe' });
+const IngredientInput = z
+	.object({ id: id.default(newId), ...portionFields })
+	.refine(...onePortion)
+	.meta({ id: 'RecipeIngredientInput' });
+const recipeFields = {
+	name: z.string().trim().min(1),
+	icon: z.string().nullable(),
+	ingredients: z.array(IngredientInput),
+	servings: z.number().positive(),
+	cookedGrams: z.number().positive().nullable(),
+	steps: z.array(z.string()),
+	prepMinutes: count.nullable(),
+	cookMinutes: count.nullable(),
+	link: z.string().nullable(),
+	notes: z.string(),
+	archived: z.boolean(),
+};
+export const RecipeCreate = z
+	.object({
+		id: id.optional(),
+		...recipeFields,
+		icon: recipeFields.icon.default(null),
+		ingredients: recipeFields.ingredients.default([]),
+		servings: recipeFields.servings.default(1),
+		cookedGrams: recipeFields.cookedGrams.default(null),
+		steps: recipeFields.steps.default([]),
+		prepMinutes: recipeFields.prepMinutes.default(null),
+		cookMinutes: recipeFields.cookMinutes.default(null),
+		link: recipeFields.link.default(null),
+		notes: recipeFields.notes.default(''),
+		archived: recipeFields.archived.default(false),
+	})
+	.meta({ id: 'RecipeCreate' });
+export const RecipePatch = z
+	.object(recipeFields)
+	.partial()
+	.meta({ id: 'RecipePatch', description: '`ingredients` and `steps` replace the whole list.' });
+
+export const FoodEntry = z
+	.object({
+		id: z.string(),
+		day,
+		minute,
+		food: FoodSnapshot,
+		serving: Serving,
+		amounts: NutrientAmounts.meta({ description: "What was eaten: the snapshot's nutrients scaled by the serving." }),
+		createdAt: z.string(),
+		updatedAt: z.string(),
+	})
+	.meta({ id: 'FoodEntry', description: 'One logged food at a minute of a day. The log has no meals.' });
+export const FoodEntryCreate = z
+	.object({ id: id.optional(), day, minute: minute.default(720), ...portionFields })
+	.refine(...onePortion)
+	.meta({ id: 'FoodEntryCreate' });
+export const FoodEntryPatch = z
+	.object({ day, minute, food: FoodSnapshot, serving: Serving })
+	.partial()
+	.meta({ id: 'FoodEntryPatch' });
+
+export const FoodFavorite = z
+	.object({ id: z.string(), food: FoodSnapshot, serving: Serving, createdAt: z.string() })
+	.meta({ id: 'FoodFavorite', description: 'A food saved at a chosen serving. Several may come from one food.' });
+export const FoodFavoriteCreate = z
+	.object({ id: id.optional(), ...portionFields })
+	.refine(...onePortion)
+	.meta({ id: 'FoodFavoriteCreate' });
+
+export const FoodLogNote = z
+	.object({
+		id: z.string(),
+		day,
+		minute,
+		title: z.string(),
+		body: z.string(),
+		color: z.enum(NOTE_COLORS),
+	})
+	.meta({ id: 'FoodLogNote', description: 'A titled note on a day of the food log. At most five a day.' });
+const noteFields = { day, minute, title: z.string().trim().min(1), body: z.string(), color: z.enum(NOTE_COLORS) };
+export const FoodLogNoteCreate = z
+	.object({
+		id: id.optional(),
+		...noteFields,
+		minute: minute.default(720),
+		body: noteFields.body.default(''),
+		color: noteFields.color.default('blue'),
+	})
+	.meta({ id: 'FoodLogNoteCreate' });
+export const FoodLogNotePatch = z.object(noteFields).partial().meta({ id: 'FoodLogNotePatch' });
+
+export const NutritionDay = z
+	.object({
+		id: day,
+		status: z.enum(DAY_STATUSES).meta({
+			description: '`partial`: incomplete, skipped by the expenditure algorithm. `fasted`: counts as zero when empty.',
+		}),
+		override: NutrientAmounts.nullable().meta({ description: "Replaces the log's totals for the day." }),
+	})
+	.meta({ id: 'NutritionDay', description: 'What the owner said about a day. The id is the day.' });
+export const NutritionDayPut = z
+	.object({ status: z.enum(DAY_STATUSES).default('none'), override: NutrientAmounts.nullable().default(null) })
+	.meta({ id: 'NutritionDayPut' });
+
+export const FoodLogDay = z
+	.object({
+		day,
+		status: z.enum(DAY_STATUSES),
+		override: NutrientAmounts.nullable(),
+		totals: NutrientAmounts.meta({ description: "The entries' amounts summed. `override` replaces them when set." }),
+		entries: z.array(FoodEntry),
+		notes: z.array(FoodLogNote),
+	})
+	.meta({ id: 'FoodLogDay' });
+
+export const BodyMetric = z
+	.object({ id: z.string(), day, kind: z.enum(BODY_METRIC_KINDS), value: z.number(), updatedAt: z.string() })
+	.meta({
+		id: 'BodyMetric',
+		description:
+			'One value per day and kind, id `<day>/<kind>`: a percent for `visual_body_fat`, a count for `steps`, centimeters for the rest.',
+	});
+export const BodyMetricPut = z.object({ value: nonnegative }).meta({ id: 'BodyMetricPut' });
+
+const DayTarget = z
+	.object({ energy: nonnegative, protein: nonnegative, fat: nonnegative, carbs: nonnegative })
+	.meta({ id: 'DayTarget', description: 'kcal and grams.' });
+export const NutritionGoal = z
+	.object({
+		kind: z.enum(GOAL_KINDS),
+		targetWeightKg: z.number().positive().optional(),
+		ratePercentPerWeek: z.number().meta({ description: 'Percent of body weight per week, negative while losing.' }),
+		startedOn: day,
+	})
+	.meta({ id: 'NutritionGoal' });
+export const CoachingProgram = z
+	.object({
+		style: z.enum(PROGRAM_STYLES).default('coached'),
+		diet: z.enum(DIET_STYLES).default('balanced'),
+		protein: z.enum(PROTEIN_LEVELS).default('moderate'),
+		floor: z.enum(CALORIE_FLOORS).default('standard'),
+		training: z.enum(TRAINING_TYPES).default('lifting'),
+		highDays: z
+			.array(z.int().min(1).max(7))
+			.default([])
+			.meta({ description: 'ISO weekdays, Monday 1, that get more calories. Empty spreads them evenly.' }),
+	})
+	.meta({ id: 'CoachingProgram' });
+export const NutritionPlan = z
+	.object({
+		id: day,
+		kind: z.enum(PLAN_KINDS),
+		goal: NutritionGoal,
+		coaching: CoachingProgram,
+		targets: z.array(DayTarget).length(7).meta({ description: 'Seven, Monday first.' }),
+		expenditureKcal: z.number().nullable().meta({ description: 'What a check-in computed and used.' }),
+		trendWeightKg: z.number().nullable(),
+		createdAt: z.string(),
+	})
+	.meta({
+		id: 'NutritionPlan',
+		description:
+			'The strategy from its day (the id) until the next plan. The plan for a day is the latest on or before it.',
+	});
+export const NutritionPlanPut = z
+	.object({
+		kind: z.enum(PLAN_KINDS).default('edit'),
+		goal: NutritionGoal,
+		coaching: CoachingProgram.default(CoachingProgram.parse({})),
+		targets: z.array(DayTarget).length(7),
+		expenditureKcal: z.number().positive().nullable().default(null),
+		trendWeightKg: z.number().positive().nullable().default(null),
+	})
+	.meta({ id: 'NutritionPlanPut' });
+
+export const NutrientGoal = z
+	.object({
+		id: z.string(),
+		nutrient: z.string(),
+		startsOn: day,
+		mode: z.enum(NUTRIENT_GOAL_MODES),
+		floor: z.number().nullable(),
+		target: z.number().nullable(),
+		ceiling: z.number().nullable(),
+	})
+	.meta({
+		id: 'NutrientGoal',
+		description:
+			"A nutrient's bounds from a day on, id `<day>/<nutrient>`. `auto` uses the app's defaults, `none` shows no bounds, and a null bound under `custom` is hidden.",
+	});
+export const NutrientGoalPut = z
+	.object({
+		mode: z.enum(NUTRIENT_GOAL_MODES),
+		floor: nonnegative.nullable().default(null),
+		target: nonnegative.nullable().default(null),
+		ceiling: nonnegative.nullable().default(null),
+	})
+	.meta({ id: 'NutrientGoalPut', description: 'The bounds apply only under `custom`.' });
+
+const NutritionSettingsPatch = z
+	.object({
+		energyUnit: z.enum(['kcal', 'kj']).meta({ description: 'Display only. The API always speaks kcal.' }),
+		checkInWeekday: z.int().min(1).max(7),
+		fastCheckIn: z.boolean(),
+		showOverages: z.boolean(),
+		pinnedNutrients: z.array(nutrientID),
+		hideAdditionalNutrients: z.boolean(),
+		searchBranded: z.boolean(),
+		searchOpenFoodFacts: z.boolean(),
+		favoriteMeasures: z.array(z.string()),
+		timeline: z
+			.object({
+				firstHour: z.int().min(0).max(23),
+				lastHour: z.int().min(0).max(23),
+				hideEmptyHours: z.boolean(),
+				hourlyTotals: z.boolean(),
+				foodTimestamps: z.boolean(),
+			})
+			.partial(),
+		expenditure: z
+			.object({ staticKcal: z.number().positive().nullable(), initialKcal: z.number().positive().nullable() })
+			.partial(),
+	})
+	.partial()
+	.meta({
+		id: 'NutritionSettingsPatch',
+		description: 'Merges into the stored Nutrition settings, `timeline` and `expenditure` key by key.',
+	});
+
 const Rest = z.object(
 	Object.fromEntries(REST_CATEGORIES.map(key => [key, count])) as Record<
 		(typeof REST_CATEGORIES)[number],
@@ -475,6 +828,9 @@ export const Settings = z
 		profile: z.record(z.string(), z.unknown()),
 		dashboard: z.record(z.string(), z.unknown()),
 		shortcuts: z.record(z.string(), z.unknown()),
+		nutrition: z
+			.record(z.string(), z.unknown())
+			.meta({ description: 'The Nutrition settings as stored. A key left out takes the app default.' }),
 	})
 	.meta({ id: 'Settings' });
 export const SettingsPatch = z
@@ -486,20 +842,37 @@ export const SettingsPatch = z
 				sex: z.enum(['male', 'female']),
 				liftingExperience: z.enum(['beginner', 'intermediate', 'advanced']),
 				bodyWeightKg: z.number().positive(),
+				heightCm: z.number().positive().meta({ description: 'Read by the BMR and the nutrient defaults.' }),
+				birthDate: z.iso.date(),
 			})
 			.partial(),
+		nutrition: NutritionSettingsPatch,
 	})
 	.partial()
 	.meta({ id: 'SettingsPatch' });
 
 export const BodyWeight = z
-	.object({ id: z.string(), measuredAt: z.string(), weightKg: z.number(), source: z.enum(BODY_WEIGHT_SOURCES) })
+	.object({
+		id: z.string(),
+		measuredAt: z.string(),
+		weightKg: z.number(),
+		source: z.enum(BODY_WEIGHT_SOURCES),
+		bodyFatPercent: z.number().nullable().meta({ description: "The scale's body fat, entered with the weight." }),
+	})
 	.meta({ id: 'BodyWeight' });
+const bodyWeightFields = {
+	weightKg: z.number().positive(),
+	measuredAt: instant,
+	bodyFatPercent: z.number().min(0).max(100).nullable(),
+};
 export const BodyWeightCreate = z
 	.object({
-		weightKg: z.number().positive(),
+		id: id.optional(),
+		...bodyWeightFields,
 		measuredAt: instant.default(() => new Date().toISOString()).meta({ description: 'Defaults to now.' }),
+		bodyFatPercent: bodyWeightFields.bodyFatPercent.default(null),
 	})
 	.meta({ id: 'BodyWeightCreate' });
+export const BodyWeightPatch = z.object(bodyWeightFields).partial().meta({ id: 'BodyWeightPatch' });
 
 export const Deleted = z.object({ deleted: z.string() }).meta({ id: 'Deleted' });
