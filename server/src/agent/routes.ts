@@ -4,32 +4,8 @@ import { foodRoutes } from '../food/routes';
 import { CATALOG_EXERCISES, catalogExercise, EQUIPMENT, EQUIPMENT_BY_ID, type Exercise } from './catalog';
 import { ApiError, type Db, type RowOf } from './db';
 import * as M from './models';
-
-export type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE';
-type Context<Query, Body> = { db: Db; params: Record<string, string>; query: Query; body: Body; now: string };
-
-/** One operation: the router dispatches on it and the OpenAPI document is generated from it, so the two never drift. */
-export type Route = {
-	method: Method;
-	path: string;
-	tag: string;
-	summary: string;
-	description?: string;
-	query?: z.ZodObject;
-	body?: z.ZodType;
-	response: z.ZodType;
-	run(context: Context<any, any>): unknown;
-};
-
-function route<Query extends z.ZodObject = z.ZodObject<{}>, Body extends z.ZodType = z.ZodUndefined>(
-	definition: Omit<Route, 'run' | 'query' | 'body'> & {
-		query?: Query;
-		body?: Body;
-		run(context: Context<z.output<Query>, z.output<Body>>): unknown;
-	},
-): Route {
-	return definition as Route;
-}
+import { fresh, mergeNutrition, nutritionRoutes } from './nutrition';
+import { flag, limit, offset, route, where, type Route } from './route';
 
 type TemplateRow = RowOf<'workout_templates'>;
 type SessionRow = RowOf<'workout_sessions'>;
@@ -37,16 +13,8 @@ type ProgramRow = RowOf<'programs'>;
 type ProgramDay = z.output<typeof M.ProgramDay>;
 type Config = z.output<typeof M.ProgramConfig>;
 
-const flag = z.stringbool();
-const limit = (fallback: number, max: number) => z.coerce.number().int().min(1).max(max).default(fallback);
-const offset = z.coerce.number().int().min(0).default(0);
 const sameId = (a: string | null | undefined, b: string | null | undefined) =>
 	!!a && a.toLowerCase() === b?.toLowerCase();
-
-function where(conditions: [string, ...(string | number)[]][]): [string | undefined, (string | number)[]] {
-	if (!conditions.length) return [undefined, []];
-	return [conditions.map(([sql]) => sql).join(' AND '), conditions.flatMap(([, ...params]) => params)];
-}
 
 function forEachSet(blocks: M.Blocks, visit: (set: { log?: z.output<typeof M.SetLog> }) => void) {
 	for (const block of blocks) {
@@ -254,6 +222,7 @@ function settings(db: Db): z.output<typeof M.Settings> {
 		profile: (row?.profile as Record<string, unknown>) ?? {},
 		dashboard: (row?.dashboard as Record<string, unknown>) ?? {},
 		shortcuts: (row?.shortcuts as Record<string, unknown>) ?? {},
+		nutrition: (row?.nutrition as Record<string, unknown>) ?? {},
 	};
 }
 
@@ -888,7 +857,7 @@ export const routes: Route[] = [
 		method: 'GET',
 		path: '/settings',
 		tag: 'Settings',
-		summary: 'Get the weight unit, rest defaults, and profile',
+		summary: 'Get the weight unit, rest defaults, profile, and Nutrition settings',
 		response: M.Settings,
 		run: ({ db }) => settings(db),
 	}),
@@ -896,8 +865,8 @@ export const routes: Route[] = [
 		method: 'PATCH',
 		path: '/settings',
 		tag: 'Settings',
-		summary: 'Change the weight unit, rest defaults, or profile',
-		description: '`profile` merges into the stored profile.',
+		summary: 'Change the weight unit, rest defaults, profile, or Nutrition settings',
+		description: '`profile` and `nutrition` merge into the stored ones.',
 		body: M.SettingsPatch,
 		response: M.Settings,
 		run({ db, body }) {
@@ -911,12 +880,13 @@ export const routes: Route[] = [
 				restLowerIsolation: rest.lowerIsolation,
 				restCore: rest.core,
 				profile: { ...current.profile, ...body.profile },
+				nutrition: mergeNutrition(current.nutrition, body.nutrition),
 			};
 			const exists = db.get('settings', SETTINGS_ID);
 			db.commit(
 				exists
 					? db.patch('settings', SETTINGS_ID, values)
-					: db.put('settings', { ...current, ...values, nutrition: {}, id: SETTINGS_ID }),
+					: db.put('settings', { ...current, ...values, id: SETTINGS_ID }),
 			);
 			return settings(db);
 		},
@@ -928,14 +898,18 @@ export const routes: Route[] = [
 		tag: 'Body weight',
 		summary: 'List logged body weights, newest first',
 		description: 'Only weigh-ins logged in the app or here. HealthKit samples never leave the phone.',
-		query: z.object({ from: M.instant.optional(), to: M.instant.optional(), limit: limit(100, 1000) }),
+		query: z.object({ from: M.instant.optional(), to: M.instant.optional(), limit: limit(100, 1000), offset }),
 		response: z.array(M.BodyWeight),
 		run({ db, query }) {
 			const conditions: [string, ...(string | number)[]][] = [];
 			if (query.from) conditions.push(['measured_at >= ?', query.from]);
 			if (query.to) conditions.push(['measured_at < ?', query.to]);
 			const [sql, params] = where(conditions);
-			return db.all('body_weights', `${sql ?? '1'} ORDER BY measured_at DESC LIMIT ?`, [...params, query.limit]);
+			return db.all('body_weights', `${sql ?? '1'} ORDER BY measured_at DESC, id LIMIT ? OFFSET ?`, [
+				...params,
+				query.limit,
+				query.offset,
+			]);
 		},
 	}),
 	route({
@@ -946,9 +920,22 @@ export const routes: Route[] = [
 		body: M.BodyWeightCreate,
 		response: M.BodyWeight,
 		run({ db, body }) {
-			const row: RowOf<'body_weights'> = { id: M.newId(), ...body, source: 'manual', bodyFatPercent: null };
+			const row: RowOf<'body_weights'> = { ...body, id: fresh(db, 'body_weights', body.id), source: 'manual' };
 			db.commit(db.put('body_weights', row));
 			return row;
+		},
+	}),
+	route({
+		method: 'PATCH',
+		path: '/body-weights/{id}',
+		tag: 'Body weight',
+		summary: 'Edit a logged body weight',
+		body: M.BodyWeightPatch,
+		response: M.BodyWeight,
+		run({ db, params, body }) {
+			db.find('body_weights', params.id!, 'body weight');
+			db.commit(db.patch('body_weights', params.id!, body));
+			return db.find('body_weights', params.id!, 'body weight');
 		},
 	}),
 	route({
@@ -963,6 +950,7 @@ export const routes: Route[] = [
 			return { deleted: params.id! };
 		},
 	}),
+	...nutritionRoutes,
 	...foodRoutes,
 ];
 
@@ -988,6 +976,11 @@ export function snapshot(db: Db) {
 			gyms: count('gym_profiles'),
 			customExercises: count('custom_exercises'),
 			bodyWeights: count('body_weights'),
+			foods: count('foods'),
+			recipes: count('recipes'),
+			foodEntries: count('food_entries'),
+			nutritionPlans: count('nutrition_plans'),
 		},
+		lastFoodLogDay: db.all('food_entries', '1 ORDER BY day DESC LIMIT 1')[0]?.day ?? null,
 	};
 }

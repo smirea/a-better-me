@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ApiError } from '../agent/db';
-import type { Route } from '../agent/routes';
+import { limit, route, type Route } from '../agent/route';
 import { BrandedFood, lookupBarcode, searchProducts } from './openFoodFacts';
 
 /**
@@ -9,7 +9,7 @@ import { BrandedFood, lookupBarcode, searchProducts } from './openFoodFacts';
  * logs (`LocalStore.saveFood`), and a lookup is one request.
  */
 export const foodRoutes: Route[] = [
-	{
+	route({
 		method: 'GET',
 		path: '/food-database/barcode/{barcode}',
 		tag: 'Food database',
@@ -24,15 +24,15 @@ export const foodRoutes: Route[] = [
 			if (!food) throw new ApiError(404, `Open Food Facts has no usable product ${barcode}`);
 			return food;
 		},
-	},
-	{
+	}),
+	route({
 		method: 'GET',
 		path: '/food-database/search',
 		tag: 'Food database',
 		summary: 'Search branded foods by name',
 		description: 'Open Food Facts products matching `q`, in its relevance order, without the ones that have no energy.',
-		query: z.object({ q: z.string().trim().min(2), limit: z.coerce.number().int().min(1).max(50).default(20) }),
+		query: z.object({ q: z.string().trim().min(2), limit: limit(20, 50) }),
 		response: z.array(BrandedFood),
 		run: ({ query }) => searchProducts(query.q, query.limit),
-	},
+	}),
 ];
