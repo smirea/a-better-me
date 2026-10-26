@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 /// The one row of the synced `settings` table, id `settings`: the weight unit, the rest default per category, and the
-/// four JSON settings trees. A column the row lacks (another device created it with one change) reads as its default,
+/// five JSON settings trees. A column the row lacks (another device created it with one change) reads as its default,
 /// so the row is only ever patched, never rewritten whole.
 struct AppSettings: SyncedRecord {
     static let table = "settings"
@@ -15,6 +15,7 @@ struct AppSettings: SyncedRecord {
     var profile = ProfileSettings()
     var dashboard = DashboardLayout()
     var shortcuts = ShortcutsLayout()
+    var nutrition = NutritionSettings()
 
     init() {}
 
@@ -28,6 +29,7 @@ struct AppSettings: SyncedRecord {
         profile = row.json("profile", over: ProfileSettings())
         dashboard = row.json("dashboard", over: DashboardLayout())
         shortcuts = row.json("shortcuts", over: ShortcutsLayout())
+        nutrition = row.json("nutrition", over: NutritionSettings())
     }
 
     func encode(to container: inout PersistenceContainer) throws {
@@ -40,6 +42,7 @@ struct AppSettings: SyncedRecord {
         container["profile"] = try RowJSON.text(profile)
         container["dashboard"] = try RowJSON.text(dashboard)
         container["shortcuts"] = try RowJSON.text(shortcuts)
+        container["nutrition"] = try RowJSON.text(nutrition)
     }
 
     func restSeconds(_ category: RestCategory) -> Int { rest[category] ?? category.defaultSeconds }
@@ -79,6 +82,9 @@ struct ProfileSettings: Codable, Hashable {
     /// The manual fallback the live workout's Bodyweight Contribution uses when no `BodyWeight` row and no HealthKit
     /// sample exist. `currentBodyWeightKg` ranks it last.
     var bodyWeightKg: Double?
+    /// The BMR and nutrient-default inputs Nutrition reads.
+    var heightCm: Double?
+    var birthDate: CalendarDay?
 }
 
 enum BodySex: String, Codable {

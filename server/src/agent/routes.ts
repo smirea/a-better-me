@@ -915,7 +915,7 @@ export const routes: Route[] = [
 			db.commit(
 				exists
 					? db.patch('settings', SETTINGS_ID, values)
-					: db.put('settings', { ...current, ...values, id: SETTINGS_ID }),
+					: db.put('settings', { ...current, ...values, nutrition: {}, id: SETTINGS_ID }),
 			);
 			return settings(db);
 		},
