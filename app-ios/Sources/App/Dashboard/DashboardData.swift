@@ -61,7 +61,8 @@ struct MetricDetail {
 /// What dashboard values read besides the history and Health; part of every memo key.
 struct DashboardContext: Hashable {
     var unit = WeightUnit.kg
-    /// The start of today rather than `Date.now`, so values that count days change with the date, not every render.
+    /// Only re-renders the cards on a new day. Values key on the date `DashboardValues` reads when called, because a
+    /// history change can recompute them before this refreshes.
     var today = Calendar.current.startOfDay(for: .now)
     var calendar = Calendar.current
     /// Editing a custom exercise can change its name or the muscles it counts toward.
@@ -277,16 +278,20 @@ struct DashboardValues: DynamicProperty {
     private struct Key: Hashable {
         var name: Name
         var context: DashboardContext
+        /// The start of today rather than `Date.now`, read on every call, so values that count days follow the date
+        /// without recomputing on every render.
+        var today: Date
         var healthRevision: Int?
     }
 
     /// Without `usesHealth`, `compute` sees no weigh-ins or steps, so a value that reads them without keying on Health
     /// shows up empty instead of silently stale.
     private func memo<Value>(_ name: Name, usesHealth: Bool = false, _ compute: (DashboardData) -> Value) -> Value {
-        history.memo(Key(name: name, context: context, healthRevision: usesHealth ? health.revision : nil)) { sessions in
+        let today = context.calendar.startOfDay(for: .now)
+        return history.memo(Key(name: name, context: context, today: today, healthRevision: usesHealth ? health.revision : nil)) { sessions in
             compute(DashboardData(
                 sessions: sessions, weighIns: usesHealth ? health.weighIns : [], steps: usesHealth ? health.steps : [],
-                unit: context.unit, catalog: catalog.exercise, now: context.today, calendar: context.calendar
+                unit: context.unit, catalog: catalog.exercise, now: today, calendar: context.calendar
             ))
         }
     }

@@ -79,7 +79,9 @@ final class SessionHistory {
                     }
                 }
                 cache = next
-                let sorted = next.values.sorted { $0.session.startedAt > $1.session.startedAt }
+                let sorted = next.values.sorted {
+                    $0.session.startedAt != $1.session.startedAt ? $0.session.startedAt > $1.session.startedAt : $0.session.key < $1.session.key
+                }
                 return Snapshot(rows: sorted.map(\.row), sessions: sorted.map(\.session))
             }
         }
