@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Calories, Protein, Fat, and Carbs side by side, each in its color.
+/// Calories, Protein, Fat, and Carbs side by side.
 struct MacroSummary: View {
     let amounts: NutrientAmounts
     var caption: String?
@@ -16,7 +16,7 @@ struct MacroSummary: View {
                             .foregroundStyle(Theme.textPrimary)
                         Text(nutrient?.name ?? "")
                             .font(AppFont.rowDetail)
-                            .foregroundStyle(Theme.macro(id))
+                            .foregroundStyle(Theme.textSecondary)
                     }
                     .frame(maxWidth: .infinity)
                     .accessibilityElement(children: .combine)

@@ -170,7 +170,7 @@ private struct MacroColumns: View {
     var body: some View {
         HStack(spacing: 10) {
             ForEach(lines) { line in
-                let color = NutrientRegistry.nutrient(line.nutrient)?.color ?? Theme.calories
+                let color = line.nutrient.color
                 VStack(alignment: .leading, spacing: 5) {
                     Text("\(prefix(line.nutrient)) \(Text(text(line)).font(AppFont.rowDetail))")
                         .font(AppFont.headline(12))

@@ -183,7 +183,7 @@ private struct LoggerBanner: View {
                     .padding(.horizontal, 14)
                     .frame(height: 44)
                 }
-                .glassEffect(session.plate.isEmpty ? .regular.interactive() : .regular.tint(Theme.accent.opacity(0.5)).interactive(), in: .capsule)
+                .glassEffect(session.plate.isEmpty ? .regular.interactive() : .regular.tint(Theme.textPrimary.opacity(0.3)).interactive(), in: .capsule)
                 .accessibilityLabel("Your Plate, \(session.plate.items.count) foods")
             }
         }
@@ -211,7 +211,7 @@ private struct LoggerBanner: View {
         }
         return VStack(alignment: .leading, spacing: 2) {
             Text("\(prefix)\(amount)\(suffix)").font(AppFont.caption(11)).monospacedDigit()
-            ProgressView(value: value.progress ?? 0).progressViewStyle(.bar(Theme.macro(id), height: 3))
+            ProgressView(value: value.progress ?? 0).progressViewStyle(.bar(id.color, height: 3))
         }
         .frame(maxWidth: 110, alignment: .leading)
     }

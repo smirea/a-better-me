@@ -11,7 +11,7 @@ struct NutritionCardView: View {
             let tile = values.nutrientTile(card)
             NavigationLink(value: DashboardRoute.nutrient(id)) {
                 DashboardCard(title: nutrient.name, period: "Today", value: tile.text, unit: tile.unit) {
-                    TileBar(value: tile.consumed, range: tile.range, color: Theme.macro(id))
+                    TileBar(value: tile.consumed, range: tile.range, color: id.color)
                 }
             }
         } else if card.nutrient == nil {
@@ -112,7 +112,7 @@ struct NutrientTodaySection: View {
                         Text("\((summary.consumedToday / target * 100).wholeText)%").font(AppFont.body(14)).foregroundStyle(Theme.textSecondary)
                     }
                 }
-                TileBar(value: summary.consumedToday, range: summary.range, color: Theme.macro(summary.nutrient)).frame(height: 16)
+                TileBar(value: summary.consumedToday, range: summary.range, color: summary.nutrient.color).frame(height: 16)
                 if summary.range.floor != nil || summary.range.ceiling != nil {
                     HStack {
                         if let floor = summary.range.floor { Text("Floor \(floor.dashboardText) \(summary.unit)") }

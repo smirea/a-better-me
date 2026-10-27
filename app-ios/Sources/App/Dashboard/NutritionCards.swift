@@ -86,7 +86,7 @@ struct WeeklyNutritionCard: View {
                 .fill(Theme.surfaceRaised)
                 .frame(width: 5, height: 26)
                 .overlay(alignment: .bottom) {
-                    Capsule().fill(Theme.macro(id)).frame(height: 26 * fill)
+                    Capsule().fill(id.color).frame(height: 26 * fill)
                 }
             VStack(alignment: .leading, spacing: 0) {
                 Text(value?.wholeText ?? "--").font(AppFont.badge)
@@ -151,7 +151,7 @@ struct DailyNutritionCard: View {
         let fill = target.map { $0 > 0 ? (value ?? 0) / $0 : 0 } ?? 0
         return VStack(spacing: 4) {
             Text(id.dashboardLabel).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-            ProgressView(value: min(max(fill, 0), 1)).progressViewStyle(.bar(Theme.macro(id)))
+            ProgressView(value: min(max(fill, 0), 1)).progressViewStyle(.bar(id.color))
             Text("\(value?.wholeText ?? "--") / \(target.map { "\(Int($0.rounded()))g" } ?? "--")")
                 .font(AppFont.headline(12))
         }

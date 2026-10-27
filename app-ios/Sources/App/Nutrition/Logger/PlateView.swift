@@ -81,7 +81,7 @@ struct PlateView: View {
             Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.rowTitle)
             Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
             ProgressView(value: target.map { min(1, (withDay ? day + plate : plate) / max($0, 1)) } ?? 0)
-                .progressViewStyle(.bar(Theme.macro(id)))
+                .progressViewStyle(.bar(id.color))
         }
         .padding(.vertical, 2)
     }

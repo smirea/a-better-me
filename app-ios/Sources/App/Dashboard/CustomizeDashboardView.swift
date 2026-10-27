@@ -359,7 +359,7 @@ private struct PrimaryFocusPicker: View {
                 ForEach(NutrientID.macros, id: \.self) { id in
                     GridRow {
                         ForEach(0..<7, id: \.self) { _ in
-                            Capsule().fill(Theme.macro(id)).frame(width: 4, height: 10)
+                            Capsule().fill(id.color).frame(width: 4, height: 10)
                         }
                     }
                 }
@@ -376,7 +376,7 @@ private struct PrimaryFocusPicker: View {
                     .frame(width: 34, height: 34)
                 HStack(spacing: 10) {
                     ForEach([NutrientID.protein, .fat, .carbs], id: \.self) { id in
-                        Capsule().fill(Theme.macro(id)).frame(width: 22, height: 3)
+                        Capsule().fill(id.color).frame(width: 22, height: 3)
                     }
                 }
             }
