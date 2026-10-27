@@ -32,6 +32,23 @@ struct LoggerStart: Hashable, Identifiable, Sendable {
     var id: Self { self }
 }
 
+extension LoggerStart {
+    /// The Food Log's request: its tab, and the hour whose + asked. A request for today without an hour follows the
+    /// clock; another day logs at the current hour of that day.
+    init(_ request: LogFoodRequest, now: Date = .now, calendar: Calendar = .current) {
+        tab = switch request.start {
+        case .search: .search
+        case .barcode: .scan
+        case .library: .library
+        }
+        if let minute = request.minute {
+            time = LogTime(day: request.day, hour: minute / 60)
+        } else if request.day != CalendarDay(now, in: calendar) {
+            time = LogTime(day: request.day, hour: calendar.component(.hour, from: now))
+        }
+    }
+}
+
 /// What a barcode lookup found. The scanner and the manual entry both end here.
 enum BarcodeOutcome: Hashable, Sendable {
     case found(Food)

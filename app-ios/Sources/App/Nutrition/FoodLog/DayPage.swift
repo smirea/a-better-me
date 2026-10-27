@@ -171,7 +171,7 @@ struct FoodTile: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            FoodIcon(food: entry.food)
+            EntryIcon(food: entry.food)
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.food.displayName).font(AppFont.headline(14)).lineLimit(2)
                 if !hidesDetails {
@@ -200,14 +200,14 @@ struct FoodTile: View {
     }
 }
 
-/// The food's emoji, or a fork and knife for a food without one.
-struct FoodIcon: View {
+/// The food's library icon, or a fork and knife for a food without one.
+struct EntryIcon: View {
     let food: FoodSnapshot
 
     var body: some View {
         Group {
-            if let icon = food.icon, !icon.isEmpty {
-                Text(icon).font(.system(size: 24))
+            if FoodIcon.named(food.icon) != nil {
+                FoodIconView(name: food.icon, size: 30)
             } else {
                 Image(systemName: food.source == .quickAdd ? "bolt.fill" : "fork.knife")
                     .font(.system(size: 16, weight: .semibold))
