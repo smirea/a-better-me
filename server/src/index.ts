@@ -63,7 +63,10 @@ const server = Bun.serve({
 				}
 				return nudging(() => handleSync(space, request));
 			},
-			agent: request => nudging(() => handleAgent(request, { space, driver, ownerToken: config.ownerToken })),
+			agent: request =>
+				nudging(() =>
+					handleAgent(request, { space, driver, ownerToken: config.ownerToken, geminiApiKey: config.geminiApiKey }),
+				),
 		}),
 	websocket: {
 		open: ws => void ws.subscribe('live'),

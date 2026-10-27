@@ -195,10 +195,22 @@ describe('parseConfig', () => {
 			APP_ENV: 'production',
 			OWNER_TOKEN: 'secret',
 			SENTRY_DSN: 'https://abc123@o1.ingest.sentry.io/42',
+			GEMINI_API_KEY: 'gemini',
 		};
 		expect(parseConfig(production).space).toEqual({});
 		expect(() => parseConfig({ ...production, SYNC_PAGE_SIZE: '3' })).toThrow(
 			'Space settings are development only: SYNC_PAGE_SIZE',
 		);
+	});
+
+	test('production refuses to start without the Gemini key that photo logging needs', () => {
+		expect(() =>
+			parseConfig({
+				APP_ENV: 'production',
+				OWNER_TOKEN: 'secret',
+				SENTRY_DSN: 'https://abc123@o1.ingest.sentry.io/42',
+			}),
+		).toThrow('Missing production settings: GEMINI_API_KEY');
+		expect(parseConfig({}).geminiApiKey).toBeNull();
 	});
 });

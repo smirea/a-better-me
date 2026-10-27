@@ -79,8 +79,7 @@ struct FoodLibrary: Sendable {
 @MainActor
 final class FoodSearch {
     nonisolated static let log = Logger(subsystem: "com.stefan.a-better-me", category: "food-search")
-    /// Per group, like MacroFactor's twenty Common results.
-    static let limit = 20
+    nonisolated static let limit = FoodIndex.limit
 
     private let store: LocalStore
     private let catalog: USDACatalog
@@ -118,26 +117,11 @@ final class FoodSearch {
 
     /// Everything that needs no network. An empty query lists the history, newest first (MacroFactor's Latest).
     func local(_ query: String) throws -> [FoodSearchResult] {
-        let terms = FoodText.terms(query)
-        guard !terms.isEmpty else { return (library.items[.history] ?? []).prefix(Self.limit).map(\.result) }
-        var shown = Set<String>()
-        var results: [FoodSearchResult] = []
-        func add(_ group: [FoodSearchResult]) {
-            for result in group where shown.insert(result.key).inserted {
-                results.append(result)
-            }
-        }
-        for group in [FoodSearchGroup.history, .favorites, .custom, .recipes] {
-            add(Self.rank(library.items[group] ?? [], terms))
-        }
-        let matches = catalog.search(terms, limit: Self.limit + shown.count)
-        let foods = try catalog.foods(matches.map(\.entry.fdcID))
-        add(Array(matches.compactMap { match in
-            foods[match.entry.fdcID].map { FoodSearchResult(.common, FoodPortion($0.snapshot), food: $0) }
-        }.filter { !shown.contains($0.key) }.prefix(Self.limit)))
-        add(Self.rank(library.items[.branded] ?? [], terms))
-        return results
+        try index.local(query)
     }
+
+    /// What `local` reads, as a value a background task can search without the main actor.
+    var index: FoodIndex { FoodIndex(library: library, catalog: catalog) }
 
     /// `local`, then Open Food Facts' branded foods when `branded` is on and the server answers. Offline, or when the
     /// server fails, it is `local` alone, without an error: the logger keeps working.
@@ -177,6 +161,78 @@ final class FoodSearch {
     /// Caches a USDA or Open Food Facts result before it is logged; a no-op for the owner's own foods.
     func cache(_ result: FoodSearchResult) {
         if let food = result.food { store.saveFood(food) }
+    }
+}
+
+/// The owner's foods and the bundled catalog, searched the same way on or off the main actor: `FoodSearch` serves the
+/// logger's keystrokes from it, and a meal photo matches its foods with it on a background task.
+struct FoodIndex: Sendable {
+    /// Per group, like MacroFactor's twenty Common results.
+    static let limit = 20
+
+    let library: FoodLibrary
+    let catalog: USDACatalog
+
+    /// Everything that needs no network. An empty query lists the history, newest first (MacroFactor's Latest).
+    func local(_ query: String) throws -> [FoodSearchResult] {
+        let terms = FoodText.terms(query)
+        guard !terms.isEmpty else { return (library.items[.history] ?? []).prefix(Self.limit).map(\.result) }
+        var shown = Set<String>()
+        var results: [FoodSearchResult] = []
+        func add(_ group: [FoodSearchResult]) {
+            for result in group where shown.insert(result.key).inserted {
+                results.append(result)
+            }
+        }
+        for group in [FoodSearchGroup.history, .favorites, .custom, .recipes] {
+            add(Self.rank(library.items[group] ?? [], terms))
+        }
+        let matches = catalog.search(terms, limit: Self.limit + shown.count)
+        let foods = try catalog.foods(matches.map(\.entry.fdcID))
+        add(Array(matches.compactMap { match in
+            foods[match.entry.fdcID].map { FoodSearchResult(.common, FoodPortion($0.snapshot), food: $0) }
+        }.filter { !shown.contains($0.key) }.prefix(Self.limit)))
+        add(Self.rank(library.items[.branded] ?? [], terms))
+        return results
+    }
+
+    /// The best local food for a name the photo model gave, or nil. The model is asked for SR Legacy's own description
+    /// ("Chicken, broilers or fryers, drumstick, meat and skin, cooked, roasted"), which wins outright when the bundle
+    /// has it; plainer names ranked chicken skin above the drumstick. Every remaining word must match, as in typed
+    /// search. Only two kinds of word may go: one no food uses at all ("skinless", "pilaf"), and then the cooking words,
+    /// one at a time. Dropping any other word turned "garlic cooked" into cooked rice and a green salad into a
+    /// peppercorn dressing, so a food with no honest match is left for the owner to search. A description SR Legacy
+    /// lacks ("Rice, white, long-grain, parboiled, unenriched, cooked") still names its food in the first two parts,
+    /// so those are tried last, where the generator's staple prior picks the plain row.
+    func match(_ name: String) throws -> FoodSearchResult? {
+        if let hit = try matchWords(name) { return hit }
+        let parts = name.split(separator: ",").prefix(2)
+        guard parts.count == 2 else { return nil }
+        return try matchWords(parts.joined(separator: ","))
+    }
+
+    private func matchWords(_ name: String) throws -> FoodSearchResult? {
+        var terms = FoodText.terms(name).filter { !Self.fillers.contains($0) && uses($0) }
+        while terms.contains(where: { !Self.preparations.contains($0) }) {
+            let results = try local(terms.joined(separator: " "))
+            if let hit = results.first(where: { $0.portion.food.name.caseInsensitiveCompare(name) == .orderedSame }) ?? results.first {
+                return hit
+            }
+            guard let index = terms.lastIndex(where: { Self.preparations.contains($0) }), terms.count > 1 else { return nil }
+            terms.remove(at: index)
+        }
+        return nil
+    }
+
+    private static let fillers: Set<String> = ["a", "an", "and", "of", "on", "or", "the", "with", "in"]
+    private static let preparations: Set<String> = Set([
+        "baked", "boiled", "braised", "broiled", "chopped", "cooked", "fresh", "fried", "grilled", "homemade", "mashed",
+        "mixed", "plain", "poached", "raw", "roasted", "sauteed", "sliced", "steamed", "stewed", "toasted",
+    ].map(FoodText.stem))
+
+    /// Whether any food's name has the word, without decoding a row.
+    private func uses(_ term: String) -> Bool {
+        !catalog.search([term], limit: 1).isEmpty || library.items.values.contains { items in items.contains { $0.text.score([term]) != nil } }
     }
 
     /// Matching items, best score first, keeping the library's order (newest first for history) between equals.
