@@ -33,10 +33,9 @@ struct FoodEditor: View {
                 otherServings(issues)
                 ForEach(NutrientSection.allCases) { nutrients($0, issues: issues) }
                 if foodID != nil {
-                    Section {
+                    ThemedSection {
                         Button("Delete Food", systemImage: "trash", role: .destructive) { confirmingDelete = true }
                             .foregroundStyle(Theme.destructive)
-                            .listRowBackground(Theme.surface)
                     }
                 }
             }
@@ -45,10 +44,10 @@ struct FoodEditor: View {
             .detailTitle(foodID == nil ? "Create Food" : "Edit Food")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save", systemImage: "checkmark") { save(adding: false) }
+                    Button(role: .confirm) { save(adding: false) }
                 }
                 if onCreateAndAdd != nil {
                     ToolbarItem(placement: .bottomBar) {
@@ -69,13 +68,10 @@ struct FoodEditor: View {
     }
 
     private func identity(_ issues: [FoodDraft.Field: String]) -> some View {
-        Section {
+        ThemedSection("Food") {
             HStack(spacing: 12) {
-                FoodIconView(name: draft.icon, size: 36)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(draft.name.isEmpty ? "Custom Food" : draft.name).font(AppFont.medium(15))
-                    Text(draft.brand.isEmpty ? "Brand Unknown" : draft.brand).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-                }
+                FoodIcon(icon: draft.icon, source: .custom, size: 36)
+                RowLabel(title: draft.name.isEmpty ? "Custom Food" : draft.name, detail: draft.brand.isEmpty ? "Brand Unknown" : draft.brand)
                 Spacer()
                 Button("Edit Icon") { choosingIcon = true }
                     .buttonStyle(.bordered)
@@ -90,14 +86,14 @@ struct FoodEditor: View {
             TextField("Barcode", text: $draft.barcode)
                 .keyboardType(.numberPad)
                 .accessibilityLabel("Barcode")
-        } header: {
-            SectionTitle("Food").textCase(nil)
         }
-        .listRowBackground(Theme.surface)
     }
 
     private func serving(_ issues: [FoodDraft.Field: String]) -> some View {
-        Section {
+        ThemedSection(
+            "Nutrition For",
+            footer: draft.basis == .serving ? "With a serving weight, every standard unit of weight is available when you log this food. If a serving is 4 pieces, enter 4 and pieces." : nil
+        ) {
             Picker("Nutrition For", selection: $draft.basis) {
                 ForEach(NutritionBasis.allCases) { Text($0.rawValue).tag($0) }
             }
@@ -125,18 +121,11 @@ struct FoodEditor: View {
                 }
                 FieldIssue(issues[.servingQuantity] ?? issues[.servingName])
             }
-        } header: {
-            SectionTitle("Nutrition For").textCase(nil)
-        } footer: {
-            if draft.basis == .serving {
-                Text("With a serving weight, every standard unit of weight is available when you log this food. If a serving is 4 pieces, enter 4 and pieces.")
-            }
         }
-        .listRowBackground(Theme.surface)
     }
 
     private func otherServings(_ issues: [FoodDraft.Field: String]) -> some View {
-        Section {
+        ThemedSection("Other Servings", footer: "More servings to log this food in, such as 1 slice = 30 g.") {
             ForEach($draft.measures) { $measure in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
@@ -159,12 +148,7 @@ struct FoodEditor: View {
             }
             .onDelete { draft.measures.remove(atOffsets: $0) }
             Button("Add Serving", systemImage: "plus") { draft.measures.append(FoodDraft.MeasureDraft()) }
-        } header: {
-            SectionTitle("Other Servings").textCase(nil)
-        } footer: {
-            Text("More servings to log this food in, such as 1 slice = 30 g.")
         }
-        .listRowBackground(Theme.surface)
     }
 
     @ViewBuilder
@@ -174,18 +158,11 @@ struct FoodEditor: View {
             FieldIssue(issues[.nutrient(nutrient.id)])
         }
         if section == .macros {
-            Section {
+            ThemedSection(section.rawValue, subtitle: "Serving Size: \(draft.basisLabel)") {
                 rows
-            } header: {
-                VStack(alignment: .leading, spacing: 4) {
-                    SectionTitle(section.rawValue)
-                    Text("Serving Size: \(draft.basisLabel)").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-                }
-                .textCase(nil)
             }
-            .listRowBackground(Theme.surface)
         } else {
-            Section {
+            ThemedSection {
                 DisclosureGroup(isExpanded: Binding {
                     expanded.contains(section)
                 } set: {
@@ -196,7 +173,6 @@ struct FoodEditor: View {
                     Text(section.rawValue).font(AppFont.headline(16))
                 }
             }
-            .listRowBackground(Theme.surface)
         }
     }
 
@@ -256,7 +232,7 @@ struct FieldIssue: View {
 
     var body: some View {
         if let message {
-            Text(message).font(AppFont.caption(12)).foregroundStyle(Theme.destructive)
+            Text(message).font(AppFont.rowDetail).foregroundStyle(Theme.destructive)
         }
     }
 }

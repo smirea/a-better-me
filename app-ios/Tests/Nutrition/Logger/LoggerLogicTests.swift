@@ -67,9 +67,9 @@ struct QuantityTextTests {
     }
 
     @Test func formatsWithAPointAndTwoDecimals() {
-        #expect(QuantityText.format(1) == "1")
-        #expect(QuantityText.format(1.5) == "1.5")
-        #expect(QuantityText.format(1234.567) == "1234.57")
+        #expect(NutritionFormat.quantity(1) == "1")
+        #expect(NutritionFormat.quantity(1.5) == "1.5")
+        #expect(NutritionFormat.quantity(1234.567) == "1234.57")
     }
 }
 
@@ -94,18 +94,19 @@ struct ServingChoicesTests {
     @Test func convertsBetweenMeasuresKeepingTheAmount() {
         let large = Serving(measure: banana.nutrition.measures[1], quantity: 1)
         let grams = banana.nutrition.allMeasures.first { $0.name == "g" }!
-        let inGrams = ServingChoices.convert(large, to: grams)
-        #expect(inGrams.quantity == 136)
+        let inGrams = large.converted(to: grams)
+        #expect(NutritionFormat.serving(inGrams) == "136 g")
         let ounces = banana.nutrition.allMeasures.first { $0.name == "oz" }!
-        #expect(ServingChoices.convert(large, to: ounces).quantity == 4.8)
-        #expect(ServingChoices.convert(inGrams, to: banana.nutrition.measures[0]).quantity == 1.15)
+        #expect(NutritionFormat.serving(large.converted(to: ounces)) == "4.8 oz")
+        #expect(NutritionFormat.serving(inGrams.converted(to: banana.nutrition.measures[0]), of: banana) == "1.15 medium (136 g)")
+        #expect(abs(inGrams.converted(to: large.measure).quantity - 1) < 1e-9)
     }
 
     @Test func scalesNutritionByTheServing() {
         let twoMedium = FoodPortion(banana, serving: Serving(measure: banana.nutrition.measures[0], quantity: 2))
         #expect(twoMedium.amounts[.energy] == 89 * 2.36)
         #expect(ServingChoices.detail(twoMedium.serving, banana.nutrition) == "medium • 236 g")
-        #expect(twoMedium.serving.label == "2 medium")
+        #expect(NutritionFormat.serving(twoMedium.serving) == "2 medium")
     }
 }
 
@@ -133,12 +134,14 @@ struct PlateTests {
         #expect(NutrientAmounts().macroShare(.protein) == 0)
     }
 
-    @Test func aDaysOverrideReplacesItsEntries() {
+    @Test func aDaysOverrideReplacesOnlyTheNutrientsItSets() {
         let entry = FoodEntry(FoodPortion(.quickAdd([.energy: 500, .protein: 30])), day: calendarDay("2026-10-26"), minute: 600)
         var day = NutritionDay(id: calendarDay("2026-10-26"))
-        #expect(day.intake([entry, entry]) == [.energy: 1000, .protein: 60])
-        day.override = [.energy: 1800, .protein: 120]
-        #expect(day.intake([entry, entry]) == [.energy: 1800, .protein: 120])
+        #expect(day.totals([entry, entry]) == [.energy: 1000, .protein: 60])
+        day.override = [.energy: 1800]
+        #expect(day.totals([entry, entry]) == [.energy: 1800, .protein: 60])
+        #expect(DayIntake(entries: [entry, entry], day: day) == .logged([.energy: 1800, .protein: 60]))
+        #expect(NutritionLogDay(day: day.id, entries: [entry, entry], row: day).consumed == [.energy: 1800, .protein: 60])
     }
 
     @Test func bannerShowsWhatThePlateLeaves() {
@@ -178,8 +181,8 @@ struct LogTimeTests {
         #expect(LogTime(day: today, hour: 14).label(today: today) == "2 PM")
         #expect(LogTime(day: today, hour: 0).label(today: today) == "12 AM")
         #expect(LogTime(day: calendarDay("2026-07-31"), hour: 12).label(today: today) == "12 PM · Jul 31")
-        #expect(today.adding(days: -1).relativeLabel(today: today) == "Yesterday")
-        #expect(calendarDay("2026-10-24").relativeLabel(today: today) == "Sat Oct 24")
+        #expect(NutritionFormat.dayTitle(today.adding(days: -1), today: today) == "Yesterday")
+        #expect(NutritionFormat.dayTitle(calendarDay("2026-10-24"), today: today) == "Sat, Oct 24")
     }
 }
 

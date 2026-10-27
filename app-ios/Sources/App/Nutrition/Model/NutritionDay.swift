@@ -6,18 +6,34 @@ import GRDB
 struct NutritionDay: SyncedRecord {
     static let table = "nutrition_days"
 
-    enum Status: String, Codable, Sendable {
+    enum Status: String, CaseIterable, Codable, Sendable {
         /// Logged as usual: the entries are the intake.
         case none
         /// Marked incomplete; the algorithms skip it.
         case partial
         /// Marked fasted; with no entries it counts as zero calories.
         case fasted
+
+        var title: String {
+            switch self {
+            case .none: "Complete"
+            case .partial: "Incomplete"
+            case .fasted: "Fasted"
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .none: "checkmark.circle"
+            case .partial: "circle.lefthalf.filled"
+            case .fasted: "moon.zzz.fill"
+            }
+        }
     }
 
     var id: CalendarDay
     var status = Status.none
-    /// Replaces the log's totals for the algorithms and the day's rings.
+    /// The owner's amounts for the day, in place of the logged ones (`totals`).
     var override: NutrientAmounts?
 
     init(id: CalendarDay) {
@@ -35,6 +51,12 @@ struct NutritionDay: SyncedRecord {
         container["status"] = status.rawValue
         container["override"] = try override.map(RowJSON.text)
     }
+
+    /// The day's totals everywhere they show: the entries' sum with the override's amounts in place of the logged
+    /// ones. A nutrient the override leaves out keeps its logged amount, so a calorie-only edit never zeroes protein.
+    func totals(_ entries: [FoodEntry]) -> NutrientAmounts {
+        FoodLog.totals(entries).merging(override ?? [:]) { $1 }
+    }
 }
 
 /// A day as the expenditure algorithm reads it (docs/research/macrofactor/algorithms.md).
@@ -46,14 +68,14 @@ enum DayIntake: Equatable, Sendable {
 
     /// An override wins over everything, then a partial mark; a fasted day counts as zero only while nothing is logged.
     init(entries: [FoodEntry], day: NutritionDay?) {
-        if let override = day?.override {
-            self = .logged(override)
+        if let day, day.override != nil {
+            self = .logged(day.totals(entries))
         } else if day?.status == .partial {
             self = .skipped
         } else if entries.isEmpty {
             self = day?.status == .fasted ? .fasted : .skipped
         } else {
-            self = .logged(entries.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts })
+            self = .logged(FoodLog.totals(entries))
         }
     }
 

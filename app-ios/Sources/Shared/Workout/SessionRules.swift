@@ -213,9 +213,9 @@ extension SetTarget {
         default: nil
         }
         let parts = [
-            weightKg.map { "\(unit.format(kg: $0)) \(unit.rawValue)" },
+            weightKg.map { "\(unit.label(kg: $0))" },
             reps,
-            durationSeconds.map { Duration.seconds($0).formatted(.time(pattern: .minuteSecond)) },
+            durationSeconds.map { $0.minuteSecond },
             rir.map { "\($0 >= 6 ? "6+" : "\($0)") RIR" },
         ].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")

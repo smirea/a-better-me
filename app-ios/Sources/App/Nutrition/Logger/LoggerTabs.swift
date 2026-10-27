@@ -12,7 +12,7 @@ struct SearchTab: View {
     var body: some View {
         List {
             if session.query.isEmpty {
-                Section("Latest") { rows(session.results) }
+                ThemedSection("Latest") { rows(session.results) }
             } else {
                 ForEach(groups, id: \.0) { group, results in
                     Section(group.title) { rows(results) }
@@ -63,10 +63,16 @@ struct SearchTab: View {
 
     private func rows(_ results: [FoodSearchResult]) -> some View {
         ForEach(results) { result in
-            LoggerFoodRow(portion: result.portion, open: {
-                focused = false
-                open(LoggerPick(result))
-            }, add: { session.add(LoggerPick(result)) })
+            HStack(spacing: 12) {
+                Button {
+                    focused = false
+                    open(LoggerPick(result))
+                } label: {
+                    FoodRow(food: result.portion.food, serving: result.portion.serving)
+                }
+                .buttonStyle(.plain)
+                AddToPlateButton(food: result.portion.food) { session.add(LoggerPick(result)) }
+            }
         }
     }
 }
@@ -103,7 +109,7 @@ struct LoggerBottomBar<Field: View>: View {
                     .controlSize(.large)
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Theme.margin)
         .padding(.bottom, 8)
     }
 }
@@ -120,7 +126,7 @@ struct QuickAddTab: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection("Energy", footer: "Macro sum is \(Int(draft.macroSum.rounded())) \(draft.unit == .kj ? "kJ" : "kcal")") {
                 HStack {
                     TextField("Energy", text: $draft.energy)
                         .keyboardType(.decimalPad)
@@ -132,18 +138,14 @@ struct QuickAddTab: View {
                     .labelsHidden()
                     .fixedSize()
                 }
-            } header: {
-                Text("Energy")
-            } footer: {
-                Text("Macro sum is \(Int(draft.macroSum.rounded())) \(draft.unit == .kj ? "kJ" : "kcal")")
             }
-            Section {
+            ThemedSection {
                 grams("Protein", $draft.protein)
                 grams("Fat", $draft.fat)
                 grams("Carbs", $draft.carbs)
                 grams("Alcohol", $draft.alcohol)
             }
-            Section("Name") {
+            ThemedSection("Name") {
                 TextField("Quick Add", text: $draft.name)
             }
         }
@@ -168,7 +170,7 @@ struct QuickAddTab: View {
                 .buttonSizing(.flexible)
                 .controlSize(.large)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Theme.margin)
             .padding(.bottom, 8)
         }
         .onAppear {

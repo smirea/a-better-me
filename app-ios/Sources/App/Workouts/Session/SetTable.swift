@@ -22,21 +22,13 @@ extension SessionEditor {
             .font(AppFont.medium(13))
             .foregroundStyle(Theme.textSecondary)
             if item.sets.isEmpty {
-                Text("No sets yet").font(AppFont.caption()).foregroundStyle(Theme.textTertiary).padding(.vertical, 8)
+                Text("No sets yet").font(AppFont.rowDetail).foregroundStyle(Theme.textTertiary).padding(.vertical, 8)
             }
             ForEach(rows, id: \.self) { path in
                 row(path, number: item.sets.number(at: path.set), fields: fields, previous: previous)
             }
-            HStack {
-                Button { addSet(block: block, exercise: index) } label: {
-                    Image(systemName: "plus")
-                        .font(AppFont.headline(15))
-                        .frame(width: 36, height: 36)
-                        .background(Theme.surfaceRaised, in: Circle())
-                }
-                .accessibilityLabel("Add Set")
-                Spacer()
-            }
+            RoundIconButton("Add Set", systemImage: "plus") { addSet(block: block, exercise: index) }
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .foregroundStyle(Theme.textPrimary)
     }
@@ -127,18 +119,18 @@ extension SessionEditor {
                 Text(lines.empty).foregroundStyle(Theme.textTertiary)
             }
         }
-        .font(AppFont.caption(12))
+        .font(AppFont.rowDetail)
         .lineLimit(1)
         .minimumScaleFactor(0.8)
     }
 
     /// "40 kg x 8", "40 kg x 8 + 2" with partials, or the weight or the reps alone when only one was logged.
     static func summary(of log: SetLog, unit: WeightUnit) -> String {
-        let weight = log.weightKg.map { "\(unit.format(kg: $0)) \(unit.rawValue)" }
+        let weight = log.weightKg.map { "\(unit.label(kg: $0))" }
         let reps = log.reps.map { full in
             if let partial = log.partialReps, partial > 0 { "\(full) + \(partial)" } else { String(full) }
         }
-        let duration = log.durationSeconds.map { Duration.seconds($0).formatted(.time(pattern: .minuteSecond)) }
+        let duration = log.durationSeconds.map { $0.minuteSecond }
         let distance = log.distanceMeters.map { Measurement(value: $0, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated)) }
         return [weight, reps ?? duration, distance].compactMap { $0 }.joined(separator: " x ")
     }
@@ -153,9 +145,9 @@ extension SessionEditor {
                 .font(AppFont.medium(16))
                 .foregroundStyle(isFocused && focus?.replacesOnType == true ? Theme.accent : Theme.textPrimary)
                 .frame(maxWidth: .infinity, minHeight: 36)
-                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 8))
+                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
                 .overlay {
-                    if isFocused { RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.textPrimary, lineWidth: 2) }
+                    if isFocused { RoundedRectangle(cornerRadius: Theme.tinyCornerRadius).strokeBorder(Theme.textPrimary, lineWidth: 2) }
                 }
                 .overlay(alignment: .bottomTrailing) {
                     if field.isReps, value.rir != nil || (path.sub == nil && blocks[path.block].exercises[path.exercise].sets[path.set].type != .warmUp) {

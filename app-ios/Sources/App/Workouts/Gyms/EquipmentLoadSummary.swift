@@ -27,8 +27,3 @@ extension EquipmentLoad {
 
     private static func quantity(_ count: Int?) -> String { count.map { " ×\($0)" } ?? "" }
 }
-
-extension WeightUnit {
-    /// "102.5 lb", with a no-break space so a list never wraps between number and unit.
-    func label(kg: Double) -> String { "\(format(kg: kg))\u{00A0}\(rawValue)" }
-}

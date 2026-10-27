@@ -13,7 +13,6 @@ struct GymProfileEditor: View {
     @State private var selectedOnly = false
     @State private var query = ""
     @State private var renaming = false
-    @State private var newName = ""
     @State private var confirmingRemove = false
     @State private var editingLoad: Equipment?
 
@@ -41,10 +40,7 @@ struct GymProfileEditor: View {
                 GymActions(
                     icon: gym.icon,
                     onIcon: { icon in edit { $0.icon = icon } },
-                    onRename: {
-                        newName = gym.name
-                        renaming = true
-                    },
+                    onRename: { renaming = true },
                     onDuplicate: { duplicate(gym) },
                     onRemove: gyms.count > 1 ? { confirmingRemove = true } : nil
                 )
@@ -85,10 +81,9 @@ struct GymProfileEditor: View {
                 .textCase(nil)
             }
             if sections.isEmpty {
-                Text("No Results")
-                    .font(AppFont.medium(15))
-                    .foregroundStyle(Theme.textSecondary)
+                ContentUnavailableView.search(text: query)
                     .listRowBackground(Theme.background)
+                    .listRowSeparator(.hidden)
             }
             ForEach(sections, id: \.category) { section in
                 let anySelected = section.items.contains { gym.equipment[$0.id] != nil }
@@ -135,13 +130,8 @@ struct GymProfileEditor: View {
                 }
             }
         }
-        .alert("Rename Gym", isPresented: $renaming) {
-            TextField("Gym name", text: $newName)
-            Button("Save") {
-                let name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !name.isEmpty { edit { $0.name = name } }
-            }
-            Button("Cancel", role: .cancel) {}
+        .nameAlert("Rename Gym", isPresented: $renaming, initial: gym.name, placeholder: "Gym name") { name in
+            edit { $0.name = name }
         }
         .confirmationDialog("Remove \(gym.name)?", isPresented: $confirmingRemove, titleVisibility: .visible) {
             Button("Remove", role: .destructive) { remove(gym, wasDefault: isDefault) }
@@ -244,7 +234,7 @@ private struct EquipmentRow: View {
         HStack(spacing: 14) {
             EquipmentImage(equipmentID: item.id).frame(width: 40, height: 40)
             VStack(alignment: .leading, spacing: 3) {
-                Text(item.name).font(AppFont.headline(15)).foregroundStyle(Theme.textPrimary)
+                Text(item.name).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
                 if let load {
                     Text(load.summary(in: unit))
                         .font(AppFont.caption(13))
@@ -295,26 +285,17 @@ private struct GymActions: View {
                         ForEach(Self.icons, id: \.symbol) { Label($0.name, systemImage: $0.symbol).tag($0.symbol) }
                     }
                 } label: {
-                    chip("Edit Icon", systemImage: icon)
+                    Chip(title: "Edit Icon", systemImage: icon)
                 }
-                Button(action: onRename) { chip("Rename Gym", systemImage: "square.and.pencil") }
-                Button(action: onDuplicate) { chip("Duplicate", systemImage: "plus.square.on.square") }
-                Button { onRemove?() } label: { chip("Remove", systemImage: "minus.circle.fill") }
+                Button(action: onRename) { Chip(title: "Rename Gym", systemImage: "square.and.pencil") }
+                Button(action: onDuplicate) { Chip(title: "Duplicate", systemImage: "plus.square.on.square") }
+                Button { onRemove?() } label: { Chip(title: "Remove", systemImage: "minus.circle.fill") }
                     .disabled(onRemove == nil)
             }
-            .padding(.horizontal)
+            .padding(.horizontal, Theme.margin)
             .padding(.vertical, 4)
         }
         .scrollIndicators(.hidden)
         .buttonStyle(.plain)
-    }
-
-    private func chip(_ title: String, systemImage: String) -> some View {
-        Label(title, systemImage: systemImage)
-            .font(AppFont.medium(13))
-            .foregroundStyle(Theme.textPrimary)
-            .padding(.horizontal, 12)
-            .frame(height: 32)
-            .background(Theme.surfaceRaised, in: .capsule)
     }
 }

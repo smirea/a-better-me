@@ -34,16 +34,33 @@ struct DayPage: View {
                 NotesSection(day: day, notes: notes)
                     .padding(.top, 28)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.vertical, 12)
         }
         .scrollIndicators(.hidden)
     }
 }
 
+/// Observes the shown day's entries for the bars. It sits outside the pager so a page never reads `state.day`, which
+/// would re-render every loaded page on each swipe.
+struct ShownDayEntries: View {
+    @Environment(FoodLogState.self) private var state
+    @Observe private var entries: [FoodEntry]
+
+    init(day: CalendarDay) {
+        _entries = Observe(FoodEntry.on(day))
+    }
+
+    var body: some View {
+        Color.clear.onChange(of: entries, initial: true) {
+            if state.entries != entries { state.entries = entries }
+        }
+    }
+}
+
 /// The hour pill, its + (a paste button while pasting inline), and the hour's macro totals.
 private struct HourRow: View {
-    static let gutter: CGFloat = 58
+    static let gutter: CGFloat = 84
 
     let day: CalendarDay
     let hour: TimelineHour
@@ -53,20 +70,12 @@ private struct HourRow: View {
     @Environment(LocalStore.self) private var store
 
     var body: some View {
-        let label = FoodLog.hourLabel(hour.hour)
+        let label = NutritionFormat.hour(hour.hour)
         let isCurrent = day == .today && Calendar.current.component(.hour, from: .now) == hour.hour
         let isSelected = state.selecting && hour.rows.contains { state.selection.contains($0.id) }
         HStack(spacing: 8) {
-            HStack(spacing: 3) {
-                Text(label)
-                if isCurrent { Circle().frame(width: 4, height: 4) }
-            }
-            .font(AppFont.headline(11))
-            .foregroundStyle(isSelected ? Theme.onPrimary : Theme.textPrimary)
-            .padding(.horizontal, 8)
-            .frame(height: 22)
-            .background(isSelected ? Theme.textPrimary : Theme.surfaceRaised, in: Capsule())
-            .frame(width: Self.gutter)
+            Chip(title: label, trailingImage: isCurrent ? "circlebadge.fill" : nil, isActive: isSelected)
+                .frame(width: Self.gutter)
             addButton(label)
             Spacer(minLength: 8)
             if showsTotals, !hour.rows.isEmpty {
@@ -80,7 +89,7 @@ private struct HourRow: View {
     private func addButton(_ label: String) -> some View {
         if let pending = state.pending, pending.inline {
             Button("Paste at \(label)", systemImage: "doc.on.clipboard.fill") {
-                store.relocate(store.entries(pending.ids), pending.action, to: .hour(day, hour: hour.hour))
+                store.relocate(pending.entries, pending.action, to: .hour(day, hour: hour.hour))
                 state.endSelection()
             }
             .labelStyle(.iconOnly)
@@ -105,7 +114,7 @@ private struct HourTotals: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            ForEach(FoodLog.macros, id: \.self) { id in
+            ForEach(NutrientID.macros, id: \.self) { id in
                 HStack(spacing: 4) {
                     Text("\(Int((amounts[id] ?? 0).rounded()))").font(AppFont.medium(12)).monospacedDigit()
                     Group {
@@ -142,85 +151,30 @@ private struct EntryRow: View {
                         .font(.system(size: 20))
                         .foregroundStyle(Theme.textPrimary)
                 } else if showsTime, row.showsTime {
-                    Text(FoodLog.timeLabel(entry.minute)).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
+                    Text(NutritionFormat.time(entry.minute)).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
                 }
             }
             .frame(width: HourRow.gutter)
-            FoodTile(entry: entry, hidesDetails: hidesDetails, isSelecting: state.selecting)
-                .onTapGesture { state.select(entry.id) }
-                .contextMenu {
-                    Button("Edit", systemImage: "pencil") { state.editing = entry }
-                    Button("Duplicate", systemImage: "plus.square.on.square") {
-                        store.log([entry.portion], on: entry.day, minute: entry.minute)
-                    }
-                    Button("Remove", systemImage: "trash", role: .destructive) { store.deleteEntries([entry.id]) }
+            HStack(spacing: 12) {
+                FoodRow(food: entry.food, serving: entry.serving, showsDetail: !hidesDetails)
+                RoundIconButton("Edit \(entry.food.name)", systemImage: "pencil", size: .small) { state.editing = entry }
+                    .disabled(state.selecting)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
+            .contentShape(.rect(cornerRadius: Theme.smallCornerRadius))
+            .onTapGesture { state.select(entry.id) }
+            .contextMenu {
+                Button("Edit", systemImage: "pencil") { state.editing = entry }
+                Button("Duplicate", systemImage: "plus.square.on.square") {
+                    store.log([entry.portion], on: entry.day, minute: entry.minute)
                 }
-                .accessibilityAddTraits(isSelected ? .isSelected : [])
+                Button("Remove", systemImage: "trash", role: .destructive) { store.deleteEntries([entry.id]) }
+            }
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
         }
         .padding(.bottom, 8)
-    }
-}
-
-/// The icon, "Name By Brand", "200ઠ 12P 8F 20C • 1 portion", and the pencil that opens the editor.
-struct FoodTile: View {
-    let entry: FoodEntry
-    var hidesDetails = false
-    var isSelecting = false
-
-    @Environment(FoodLogState.self) private var state
-
-    var body: some View {
-        HStack(spacing: 12) {
-            FoodEntryIcon(food: entry.food)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(entry.food.displayName).font(AppFont.headline(14)).lineLimit(2)
-                if !hidesDetails {
-                    let kcal = Int((entry.amounts[.energy] ?? 0).rounded())
-                    Text("\(kcal)\(Text(calorieGlyph).font(.system(size: 9))) \(FoodLog.macroLabel(entry.amounts)) • \(FoodLog.servingLabel(entry.serving))")
-                        .font(AppFont.caption(12))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 4)
-            Button("Edit \(entry.food.name)", systemImage: "pencil") { state.editing = entry }
-                .labelStyle(.iconOnly)
-                .font(.system(size: 13, weight: .semibold))
-                .frame(width: 30, height: 30)
-                .background(Theme.surfaceRaised, in: Circle())
-                .disabled(isSelecting)
-                .opacity(isSelecting ? 0.4 : 1)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
-        .contentShape(RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(entry.food.displayName)
-    }
-}
-
-/// The food's library icon, or a bolt for a quick add.
-struct FoodEntryIcon: View {
-    let food: FoodSnapshot
-
-    var body: some View {
-        if food.source == .quickAdd {
-            Image(systemName: "bolt.fill")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(Theme.calories)
-                .frame(width: 32, height: 32)
-        } else {
-            FoodIconView(name: food.icon, size: 32)
-        }
-    }
-}
-
-extension FoodSnapshot {
-    /// "ZZ Test Food By ZZ Brand", as MacroFactor names branded foods.
-    var displayName: String {
-        guard let brand, !brand.isEmpty else { return name }
-        return "\(name) By \(brand)"
     }
 }
 
@@ -234,14 +188,13 @@ private struct NotesSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Notes").font(AppFont.title(18))
+                Text("Notes").font(AppFont.listTitle)
                 Spacer()
                 if !notes.isEmpty {
                     Text("\(notes.count) / \(FoodLogNote.limitPerDay)").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
                 }
                 Button("Add Note", systemImage: "plus") {
-                    let now = Calendar.current.dateComponents([.hour, .minute], from: .now)
-                    state.note = NoteDraft(note: FoodLogNote(day: day, minute: now.hour! * 60 + now.minute!, title: ""), isNew: true)
+                    state.note = NoteDraft(note: FoodLogNote(day: day, minute: Date.now.minuteOfDay(), title: ""), isNew: true)
                 }
                 .labelStyle(.iconOnly)
                 .font(.system(size: 13, weight: .bold))
@@ -256,8 +209,7 @@ private struct NotesSection: View {
                     .font(AppFont.caption())
                     .foregroundStyle(Theme.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(14)
-                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+                    .card()
             }
             ForEach(notes) { note in
                 Button { state.note = NoteDraft(note: note, isNew: false) } label: { NoteCard(note: note) }
@@ -273,19 +225,18 @@ private struct NoteCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(note.title).font(AppFont.headline(15))
+            Text(note.title).font(AppFont.rowTitle)
             if !note.body.isEmpty {
                 Text(note.body).font(AppFont.caption(14)).foregroundStyle(Theme.textSecondary).lineLimit(4)
             }
             HStack(spacing: 6) {
                 Spacer()
-                Text(FoodLog.clockLabel(note.minute)).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
+                Text(NutritionFormat.clock(note.minute)).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
                 Circle().fill(note.color.tint).frame(width: 6, height: 6)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+        .card()
         .contentShape(Rectangle())
     }
 }

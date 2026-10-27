@@ -36,22 +36,21 @@ struct RecipeDetailView: View {
     private func content(_ recipe: Recipe) -> some View {
         let portion = FoodPortion(recipe.snapshot)
         return Form {
-            Section {
+            ThemedSection {
                 HStack(spacing: 12) {
-                    FoodIconView(name: recipe.icon, size: 44)
+                    FoodIcon(food: recipe.snapshot, size: 44)
                     Text(recipe.name).font(AppFont.title(20))
                 }
-                MacroSummary(amounts: portion.amounts, caption: "Per \(LibraryFormat.serving(portion.serving, of: portion.food))")
+                MacroSummary(amounts: portion.amounts, caption: "Per \(NutritionFormat.serving(portion.serving, of: portion.food))")
                 actions(recipe, portion: portion)
             }
-            .listRowBackground(Theme.surface)
-            Section {
-                LabeledContent("Makes", value: "\(LibraryFormat.quantity(recipe.servings)) \(recipe.servings == 1 ? "serving" : "servings")")
+            ThemedSection("Details") {
+                LabeledContent("Makes", value: "\(NutritionFormat.quantity(recipe.servings)) \(recipe.servings == 1 ? "serving" : "servings")")
                 if let cookedGrams = recipe.cookedGrams {
-                    LabeledContent("Total Weight", value: "\(LibraryFormat.amount(cookedGrams)) g")
+                    LabeledContent("Total Weight", value: "\(NutritionFormat.amount(cookedGrams)) g")
                 }
                 if let perGram = RecipeMath.perGram(recipe) {
-                    LabeledContent("Per 100 g", value: LibraryFormat.macros(perGram.scaled(by: 100)))
+                    LabeledContent("Per 100 g", value: NutritionFormat.macroLine(perGram.scaled(by: 100)))
                 }
                 if let prep = recipe.prepMinutes { LabeledContent("Preparation Time", value: "\(prep) min") }
                 if let cook = recipe.cookMinutes { LabeledContent("Cooking Time", value: "\(cook) min") }
@@ -59,25 +58,18 @@ struct RecipeDetailView: View {
                     Link(destination: url) { Label(url.host() ?? link, systemImage: "link") }
                 }
                 if !recipe.notes.isEmpty { Text(recipe.notes).font(AppFont.body(15)) }
-            } header: {
-                SectionTitle("Details").textCase(nil)
             }
-            .listRowBackground(Theme.surface)
-            Section {
+            ThemedSection("Ingredients") {
                 ForEach(recipe.ingredients) { ingredient in
                     FoodRow(food: ingredient.food, serving: ingredient.serving)
                 }
-            } header: {
-                SectionTitle("Ingredients").textCase(nil)
             }
-            .listRowBackground(Theme.surface)
             if !recipe.steps.isEmpty {
                 StepsSection(steps: recipe.steps)
             }
-            Section {
+            ThemedSection {
                 Toggle("Show all nutrients", isOn: $showAllNutrients).tint(Theme.accent)
             }
-            .listRowBackground(Theme.surface)
             NutrientBreakdown(amounts: portion.amounts, showAll: showAllNutrients)
         }
         .themedList()
@@ -134,17 +126,14 @@ private struct StepsSection: View {
     let steps: [String]
 
     var body: some View {
-        Section {
+        ThemedSection("Steps") {
             ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     Text("\(index + 1)").font(AppFont.headline(15)).foregroundStyle(Theme.textSecondary)
                     Text(step).font(AppFont.body(15))
                 }
             }
-        } header: {
-            SectionTitle("Steps").textCase(nil)
         }
-        .listRowBackground(Theme.surface)
     }
 }
 
@@ -163,9 +152,9 @@ struct RecipePrepareView: View {
         let perServing = recipe.nutrition.nutrients
         let total = RecipeMath.total(recipe.ingredients)
         Form {
-            Section {
+            ThemedSection("Recipe summary") {
                 Text(recipe.steps.count == 1 ? "1 step" : "\(recipe.steps.count) steps")
-                    .font(AppFont.caption(12))
+                    .font(AppFont.rowDetail)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(Theme.surfaceRaised, in: .capsule)
@@ -179,35 +168,21 @@ struct RecipePrepareView: View {
                         summaryTile(.carbs, perServing: perServing, total: total)
                     }
                 }
-            } header: {
-                SectionTitle("Recipe summary").textCase(nil)
             }
-            .listRowBackground(Theme.surface)
-            Section {
+            ThemedSection("Ingredients") {
                 Stepper(value: $servings, in: 0.5...100, step: 0.5) {
-                    Text("Instructions for \(LibraryFormat.quantity(servings)) \(servings == 1 ? "serving" : "servings")")
-                        .font(AppFont.medium(15))
+                    Text("Instructions for \(NutritionFormat.quantity(servings)) \(servings == 1 ? "serving" : "servings")")
+                        .font(AppFont.rowTitle)
                 }
-                .accessibilityValue("\(LibraryFormat.quantity(servings)) servings")
+                .accessibilityValue("\(NutritionFormat.quantity(servings)) servings")
                 ForEach(RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: servings)) { ingredient in
-                    HStack(spacing: 10) {
-                        FoodIconView(name: ingredient.food.icon, size: 24)
-                        Text(ingredient.food.name).font(AppFont.body(15))
-                        Spacer()
-                        Text(LibraryFormat.serving(ingredient.serving, of: ingredient.food))
-                            .font(AppFont.medium(14))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
+                    FoodRow(food: ingredient.food, serving: ingredient.serving)
                 }
-            } header: {
-                SectionTitle("Ingredients").textCase(nil)
             }
-            .listRowBackground(Theme.surface)
             if recipe.steps.isEmpty {
-                Section {
+                ThemedSection {
                     Text("No preparation steps are available for this recipe").foregroundStyle(Theme.textSecondary)
                 }
-                .listRowBackground(Theme.surface)
             } else {
                 StepsSection(steps: recipe.steps)
             }
@@ -225,13 +200,11 @@ struct RecipePrepareView: View {
         let unit = id == .energy ? "kcal" : "g"
         return HStack(spacing: 8) {
             Capsule().fill(Theme.macro(id)).frame(width: 4)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(NutrientRegistry.nutrient(id)?.name ?? "").font(AppFont.medium(14))
-                Text("\(LibraryFormat.amount(perServing[id] ?? 0)) \(unit)/serv, \(LibraryFormat.amount(total[id] ?? 0)) total")
-                    .font(AppFont.caption(12))
-                    .foregroundStyle(Theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            RowLabel(
+                title: NutrientRegistry.nutrient(id)?.name ?? "",
+                detail: "\(NutritionFormat.amount(perServing[id] ?? 0)) \(unit)/serv, \(NutritionFormat.amount(total[id] ?? 0)) total"
+            )
+            .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
         .padding(8)

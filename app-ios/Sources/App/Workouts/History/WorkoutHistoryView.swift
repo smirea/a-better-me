@@ -12,7 +12,7 @@ struct WorkoutHistoryView: View {
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(days, id: \.start) { day in
                     Text(day.start.formatted(date: .abbreviated, time: .omitted))
-                        .font(AppFont.title(18))
+                        .font(AppFont.listTitle)
                         .padding(.top, 20)
                         .padding(.bottom, 4)
                     ForEach(day.sessions) { session in
@@ -21,7 +21,7 @@ struct WorkoutHistoryView: View {
                     }
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
         }
         .background(Theme.background)
         .overlay {
@@ -59,22 +59,16 @@ private struct HistoryRow: View {
         let secondary = exercises.flatMap(\.secondaryMuscles).uniqued().filter { !primary.contains($0) }
         HStack(spacing: 14) {
             Image(systemName: "dumbbell.fill")
-                .foregroundStyle(.black)
+                .foregroundStyle(Theme.onPrimary)
                 .frame(width: 40, height: 40)
                 .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
             VStack(alignment: .leading, spacing: 4) {
                 Text(session.name).font(AppFont.headline(16))
                 Text(exercises.map(\.name).joined(separator: ", "))
-                    .font(AppFont.caption())
+                    .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)
-                ScrollView(.horizontal) {
-                    HStack(spacing: 4) {
-                        ForEach(primary) { tag($0, primary: true) }
-                        ForEach(secondary) { tag($0, primary: false) }
-                    }
-                }
-                .scrollIndicators(.hidden)
+                MuscleTags(primary: primary, secondary: secondary)
             }
             Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
         }
@@ -82,17 +76,6 @@ private struct HistoryRow: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(session.name), \(session.startedAt.formatted(date: .abbreviated, time: .shortened))")
-    }
-
-    private func tag(_ muscle: Muscle, primary: Bool) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 4)
-        return Text(muscle.displayName)
-            .font(AppFont.caption(11))
-            .foregroundStyle(Theme.textSecondary)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background { if primary { shape.fill(Theme.surfaceRaised) } }
-            .overlay { if !primary { shape.strokeBorder(Theme.surfaceRaised) } }
     }
 }
 

@@ -29,7 +29,7 @@ struct ExerciseDetailSheet: View {
                             ForEach(DetailTab.allCases) { Text($0.rawValue).tag($0) }
                         }
                         .pickerStyle(.segmented)
-                        .padding(.horizontal)
+                        .padding(.horizontal, Theme.margin)
                         .padding(.bottom, 8)
                     }
                     .navigationTitle(exercise.name)
@@ -51,7 +51,7 @@ struct ExerciseDetailSheet: View {
                         dismiss()
                     }
                     .primaryPill()
-                    .padding(.horizontal)
+                    .padding(.horizontal, Theme.margin)
                 }
             }
         }
@@ -78,11 +78,9 @@ private struct InstructionsTab: View {
                             VStack(spacing: 8) {
                                 ForEach(exercise.images.indices, id: \.self) { index in
                                     Button { frame = index } label: {
-                                        ExerciseImage(exercise: exercise, frame: index)
-                                            .frame(width: 40, height: 60)
-                                            .clipShape(.rect(cornerRadius: 6))
+                                        ExerciseTile(exercise: exercise, frame: index)
                                             .overlay {
-                                                RoundedRectangle(cornerRadius: 6)
+                                                RoundedRectangle(cornerRadius: Theme.tinyCornerRadius)
                                                     .strokeBorder(index == frame ? Theme.textPrimary : .clear, lineWidth: 2)
                                             }
                                     }
@@ -102,7 +100,7 @@ private struct InstructionsTab: View {
                 ForEach(content.articles) { CollapsibleSection(section: $0, startsExpanded: false) }
             }
         }
-        .padding()
+        .padding(Theme.margin)
         .task(id: source) { content = await source.load() }
     }
 
@@ -177,8 +175,8 @@ private struct DetailsTab: View {
                 SectionTitle("Target Muscles")
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
-                        ForEach(exercise.primaryMuscles) { TargetMuscleCard(muscle: $0, role: "Primary") }
-                        ForEach(exercise.secondaryMuscles) { TargetMuscleCard(muscle: $0, role: "Secondary") }
+                        ForEach(exercise.primaryMuscles) { MuscleTileCard(muscle: $0, details: ["Primary"]) }
+                        ForEach(exercise.secondaryMuscles) { MuscleTileCard(muscle: $0, details: ["Secondary"]) }
                     }
                 }
                 .scrollIndicators(.hidden)
@@ -205,7 +203,7 @@ private struct DetailsTab: View {
                 }
             }
         }
-        .padding()
+        .padding(Theme.margin)
     }
 
     private var details: [(title: String, value: String)] {
@@ -222,25 +220,6 @@ private struct DetailsTab: View {
     }
 }
 
-struct TargetMuscleCard: View {
-    let muscle: Muscle
-    let role: String
-
-    var body: some View {
-        HStack(spacing: 10) {
-            MuscleTile(muscle: muscle).frame(width: 52, height: 52)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(muscle.displayName).font(AppFont.medium(14))
-                Text(role).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-            }
-            .padding(.trailing, 12)
-        }
-        .padding(4)
-        .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
-        .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.surfaceRaised) }
-    }
-}
-
 private struct RatingRow: View {
     let title: String
     let value: Int
@@ -249,7 +228,7 @@ private struct RatingRow: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(AppFont.medium(14))
-                Text("\(value)/5").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                Text("\(value)/5").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
             RatingBar(value: value)

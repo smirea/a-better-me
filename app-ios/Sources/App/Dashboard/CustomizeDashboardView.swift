@@ -10,49 +10,35 @@ struct CustomizeDashboardView: View {
     var body: some View {
         let layout = draft ?? settings.dashboard
         List {
-            Section {
+            ThemedSection("Primary Focus") {
                 PrimaryFocusPicker(order: binding(\.primaryFocus))
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
-            } header: {
-                Text("Primary Focus").font(AppFont.title()).foregroundStyle(Theme.textPrimary)
             }
-            ForEach(Array(layout.sections.enumerated()), id: \.element) { index, section in
-                Section {
+            ThemedSection("Section Order") {
+                ForEach(layout.sections) { RowLabel(title: $0.title) }
+                    .onMove { binding(\.sections).wrappedValue.move(fromOffsets: $0, toOffset: $1) }
+            }
+            ForEach(layout.sections) { section in
+                ThemedSection(section.title) {
                     rows(section)
                     Button("Add or Remove \(section.addTitle)") { editing = section }
                         .font(AppFont.medium(16))
                         .frame(maxWidth: .infinity)
                         .foregroundStyle(Theme.textPrimary)
                         .moveDisabled(true)
-                } header: {
-                    HStack {
-                        Text(section.title).font(AppFont.title()).foregroundStyle(Theme.textPrimary)
-                        Spacer()
-                        Button("Move \(section.title) Up", systemImage: "arrow.up") { moveSection(index, by: -1) }
-                            .disabled(index == 0)
-                        Button("Move \(section.title) Down", systemImage: "arrow.down") { moveSection(index, by: 1) }
-                            .disabled(index == layout.sections.count - 1)
-                    }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(Theme.textPrimary)
                 }
-                .listRowBackground(Theme.surface)
             }
-            Section {
-                Button("Reset to App Defaults", role: .destructive) { draft = DashboardLayout() }
-                    .frame(maxWidth: .infinity)
-                    .foregroundStyle(Theme.destructive)
+            ThemedSection {
+                ResetRowButton("Reset to App Defaults") { draft = DashboardLayout() }
             }
-            .listRowBackground(Theme.surface)
         }
         .environment(\.editMode, .constant(.active))
         .themedList()
         .detailTitle("Customize Dashboard")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
+                Button("Save", role: .confirm) {
                     if let draft { store.updateSettings { $0.dashboard = draft.saved } }
                     dismiss()
                 }
@@ -72,10 +58,6 @@ struct CustomizeDashboardView: View {
                 draft = layout
             }
         )
-    }
-
-    private func moveSection(_ index: Int, by offset: Int) {
-        withAnimation { binding(\.sections).wrappedValue.swapAt(index, index + offset) }
     }
 
     @ViewBuilder
@@ -254,12 +236,11 @@ enum CardIcon {
 
     var color: Color {
         switch self {
-        case .workouts, .workoutDots, .steps: DashboardColor.workouts
-        case .trend: DashboardColor.trend
+        case .workouts, .workoutDots, .steps, .expenditure: Theme.accent
+        case .trend: Theme.weightTrend
         case .weighInDots, .scale: Theme.green
         case .muscle: Theme.muscle
-        case .exercise: DashboardColor.exercise
-        case .expenditure: DashboardColor.expenditure
+        case .exercise: Theme.exercise
         case .energyBalance, .foodLoggingDots, .nutrient: Theme.calories
         case .macros: Theme.protein
         case .goalProgress: Theme.goal
@@ -278,9 +259,9 @@ private struct CardRow<Trailing: View>: View {
                 .font(.footnote.weight(.bold))
                 .foregroundStyle(icon.color)
                 .frame(width: 30, height: 24)
-                .background(Theme.surfaceRaised, in: .rect(cornerRadius: 4))
+                .background(Theme.surfaceRaised, in: .rect(cornerRadius: Theme.tinyCornerRadius))
                 .accessibilityHidden(true)
-            Text(title).font(AppFont.medium(15)).lineLimit(1)
+            RowLabel(title: title).lineLimit(1)
             Spacer(minLength: 8)
             trailing
         }
@@ -301,7 +282,7 @@ private struct MetricMenuLabel: View {
             Text(title)
             Image(systemName: "chevron.down").font(.caption2.weight(.bold))
         }
-        .font(AppFont.body(14))
+        .font(AppFont.chip)
         .foregroundStyle(Theme.textSecondary)
     }
 }
@@ -363,19 +344,19 @@ private struct PrimaryFocusPicker: View {
         switch card {
         case .workouts:
             HStack(spacing: 6) {
-                Circle().stroke(Theme.muscle, lineWidth: 2.5).frame(width: 26)
-                Circle().stroke(Theme.accent, lineWidth: 2.5).frame(width: 36)
-                Circle().stroke(DashboardColor.exercise, lineWidth: 2.5).frame(width: 26)
+                ProgressRing(fraction: 1, color: Theme.muscle, lineWidth: 2.5).frame(width: 26, height: 26)
+                ProgressRing(fraction: 1, color: Theme.accent, lineWidth: 2.5).frame(width: 36, height: 36)
+                ProgressRing(fraction: 1, color: Theme.exercise, lineWidth: 2.5).frame(width: 26, height: 26)
             }
         case .recentRecords:
             VStack(alignment: .leading, spacing: 5) {
                 ForEach([0.9, 0.7, 0.8, 0.6, 0.75], id: \.self) { width in
-                    Capsule().fill(DashboardColor.records).frame(width: 90 * width, height: 4)
+                    Capsule().fill(Theme.records).frame(width: 90 * width, height: 4)
                 }
             }
         case .weeklyNutrition:
             Grid(horizontalSpacing: 7, verticalSpacing: 5) {
-                ForEach(NutritionMetrics.macros, id: \.self) { id in
+                ForEach(NutrientID.macros, id: \.self) { id in
                     GridRow {
                         ForEach(0..<7, id: \.self) { _ in
                             Capsule().fill(Theme.macro(id)).frame(width: 4, height: 10)
@@ -391,9 +372,7 @@ private struct PrimaryFocusPicker: View {
             }
         case .dailyNutrition:
             VStack(spacing: 8) {
-                Circle().trim(from: 0, to: 0.75)
-                    .stroke(Theme.calories, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                    .rotationEffect(.degrees(135))
+                ProgressRing(fraction: 1, color: Theme.calories, lineWidth: 2.5, arc: 0.75)
                     .frame(width: 34, height: 34)
                 HStack(spacing: 10) {
                     ForEach([NutrientID.protein, .fat, .carbs], id: \.self) { id in
@@ -417,7 +396,7 @@ private struct AddRemoveSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                content.listRowBackground(Theme.surface)
+                content
             }
             .themedList()
             .navigationTitle(section.title)
@@ -425,7 +404,7 @@ private struct AddRemoveSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", systemImage: "checkmark") { dismiss() }
+                    Button(role: .confirm) { dismiss() }
                 }
                 if section == .exercises {
                     ToolbarItem(placement: .topBarLeading) {
@@ -447,57 +426,58 @@ private struct AddRemoveSheet: View {
     private var content: some View {
         switch section {
         case .insights:
-            ForEach(InsightCard.allCases, id: \.self) { toggle($0.title, $0.icon, \.insights, $0) }
+            ThemedSection {
+                ForEach(InsightCard.allCases, id: \.self) { toggle($0.title, $0.icon, \.insights, $0) }
+            }
         case .habits:
-            ForEach(HabitCard.allCases, id: \.self) { toggle($0.title, $0.icon, \.habits, $0) }
+            ThemedSection {
+                ForEach(HabitCard.allCases, id: \.self) { toggle($0.title, $0.icon, \.habits, $0) }
+            }
         case .nutrition:
-            Section("Calories & Macros") {
+            ThemedSection("Calories & Macros") {
                 toggle("Macros", .macros, \.nutrition, .macros, matching: { $0.nutrient == nil })
-                nutrientToggles(NutritionMetrics.macros)
+                nutrientToggles(NutrientID.macros)
             }
             ForEach(NutrientGroup.allCases, id: \.self) { group in
-                let ids = NutrientRegistry.all.filter { $0.group == group && !NutritionMetrics.macros.contains($0.id) }.map(\.id)
+                let ids = NutrientRegistry.all.filter { $0.group == group && !NutrientID.macros.contains($0.id) }.map(\.id)
                 if !ids.isEmpty {
-                    Section(group.title) { nutrientToggles(ids) }
+                    ThemedSection(group.title) { nutrientToggles(ids) }
                 }
             }
         case .bodyMetrics:
             let available = BodyMetricCard.available(visible: values.nutritionSettings.visibleBodyMetrics)
-            ForEach(BodyMetricCard.allCases, id: \.self) { card in
-                if available.contains(card) {
-                    toggle(card.title, .scale, \.bodyMetrics, card)
-                } else {
-                    LabeledContent { Text("Turned Off").foregroundStyle(Theme.textSecondary) } label: { CardRow(title: card.title, icon: .scale) }
+            ThemedSection {
+                ForEach(BodyMetricCard.allCases, id: \.self) { card in
+                    if available.contains(card) {
+                        toggle(card.title, .scale, \.bodyMetrics, card)
+                    } else {
+                        LabeledContent { Text("Turned Off").foregroundStyle(Theme.textSecondary) } label: { CardRow(title: card.title, icon: .scale) }
+                    }
                 }
             }
         case .general:
-            toggle("Steps", .steps, \.general, .steps)
+            ThemedSection {
+                toggle("Steps", .steps, \.general, .steps)
+            }
         case .muscles:
-            Section("Upper") { muscleToggles(Muscle.upperBody) }
-            Section("Lower") { muscleToggles(Muscle.lowerBody) }
+            ThemedSection("Upper") { muscleToggles(Muscle.upperBody) }
+            ThemedSection("Lower") { muscleToggles(Muscle.lowerBody) }
         case .exercises:
             let trained = layout.exercises.map(\.exerciseID) + values.trainedExercises
-            ForEach(trained.firstOccurrences(), id: \.self) { id in
-                Toggle(isOn: Binding(
-                    get: { layout.exercises.contains { $0.exerciseID == id } },
-                    set: { on in
-                        if on { layout.exercises.append(ExerciseCard(exerciseID: id)) } else { layout.exercises.removeAll { $0.exerciseID == id } }
-                    }
-                )) { CardRow(title: catalog.exercise(id)?.name ?? "Unknown exercise", icon: .exercise) }
-                .tint(Theme.accent)
+            ThemedSection {
+                ForEach(trained.firstOccurrences(), id: \.self) { id in
+                    toggle(
+                        catalog.exercise(id)?.name ?? "Unknown exercise", .exercise, \.exercises, ExerciseCard(exerciseID: id),
+                        matching: { $0.exerciseID == id }
+                    )
+                }
             }
         }
     }
 
     private func muscleToggles(_ muscles: [Muscle]) -> some View {
         ForEach(muscles) { muscle in
-            Toggle(isOn: Binding(
-                get: { layout.muscles.contains { $0.muscle == muscle } },
-                set: { on in
-                    if on { layout.muscles.append(MuscleCard(muscle: muscle)) } else { layout.muscles.removeAll { $0.muscle == muscle } }
-                }
-            )) { CardRow(title: muscle.displayName, icon: .muscle) }
-            .tint(Theme.accent)
+            toggle(muscle.displayName, .muscle, \.muscles, MuscleCard(muscle: muscle), matching: { $0.muscle == muscle })
         }
     }
 

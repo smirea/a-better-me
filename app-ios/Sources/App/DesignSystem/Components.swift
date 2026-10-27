@@ -21,6 +21,11 @@ extension View {
     func themedList() -> some View {
         scrollContentBackground(.hidden).background(Theme.background)
     }
+
+    /// Asks for a name, as creating or renaming a section, program, or gym does. Blank names are ignored.
+    func nameAlert(_ title: String, isPresented: Binding<Bool>, initial: String = "", placeholder: String = "Name", confirm: String = "Save", onSave: @escaping (String) -> Void) -> some View {
+        modifier(NameAlert(title: title, isPresented: isPresented, initial: initial, placeholder: placeholder, confirm: confirm, onSave: onSave))
+    }
 }
 
 enum NavigationAppearance {

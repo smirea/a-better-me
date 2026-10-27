@@ -9,7 +9,7 @@ enum TileMetrics {
     static func range(
         _ id: NutrientID, on day: CalendarDay, plans: [NutritionPlan], goals: [NutrientGoal], sex: BodySex, weightKg: Double?
     ) -> NutrientRange {
-        guard NutritionMetrics.macros.contains(id) else {
+        guard NutrientID.macros.contains(id) else {
             return NutrientGoal.range(id, on: day, goals: goals, sex: sex, weightKg: weightKg)
         }
         let target = NutritionMetrics.DayNutrition(day: day, consumed: [:], target: NutritionPlan.effective(on: day, in: plans)?.target(on: day)).target(id)
@@ -37,15 +37,15 @@ enum TileMetrics {
     }
 
     /// Percent and Remaining fall back to Consumed for a nutrient without a target, as MacroFactor disables them there.
-    static func tile(consumed: Double, range: NutrientRange, display: NutritionCard.Display, unit: String) -> Tile {
-        let format: (Double) -> String = { unit == "kcal" ? Int($0.rounded()).formatted() : nutrientText($0) }
+    static func tile(consumed: Double, range: NutrientRange, display: NutritionCard.Display, unit: NutrientUnit) -> Tile {
+        let format: (Double) -> String = { unit == .kcal ? $0.wholeText : nutrientText($0) }
         switch (display, range.target) {
         case let (.percent, target?) where target > 0:
-            return Tile(text: Int((consumed / target * 100).rounded()).formatted(), unit: "%", consumed: consumed, range: range)
+            return Tile(text: (consumed / target * 100).wholeText, unit: "%", consumed: consumed, range: range)
         case let (.remaining, target?):
-            return Tile(text: format(target - consumed), unit: "\(unit) left", consumed: consumed, range: range)
+            return Tile(text: format(target - consumed), unit: "\(unit.rawValue) left", consumed: consumed, range: range)
         default:
-            return Tile(text: format(consumed), unit: unit, consumed: consumed, range: range)
+            return Tile(text: format(consumed), unit: unit.rawValue, consumed: consumed, range: range)
         }
     }
 

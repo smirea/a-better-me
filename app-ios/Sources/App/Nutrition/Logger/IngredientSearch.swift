@@ -21,16 +21,17 @@ private struct IngredientSearch: View {
         NavigationStack {
             List {
                 if let session {
-                    ForEach(session.results.filter { $0.portion.food.foodID != excluding.map(Recipe.key) }) { result in
-                        Button {
-                            if let food = result.food { store.saveFood(food) }
-                            add(result.portion)
-                            dismiss()
-                        } label: {
-                            FoodRow(food: result.portion.food, serving: result.portion.serving)
+                    ThemedSection {
+                        ForEach(choices(session)) { result in
+                            Button {
+                                if let food = result.food { store.saveFood(food) }
+                                add(result.portion)
+                                dismiss()
+                            } label: {
+                                FoodRow(food: result.portion.food, serving: result.portion.serving)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
-                        .listRowBackground(Theme.surface)
                     }
                     if session.isSearchingBranded {
                         ProgressView().frame(maxWidth: .infinity)
@@ -38,12 +39,21 @@ private struct IngredientSearch: View {
                 }
             }
             .themedList()
+            .overlay {
+                if let session, choices(session).isEmpty, !session.isSearchingBranded {
+                    if query.isEmpty {
+                        ContentUnavailableView("Search for a food", systemImage: "magnifyingglass", description: Text("Any food can be an ingredient."))
+                    } else {
+                        ContentUnavailableView.search(text: query)
+                    }
+                }
+            }
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search for a food")
             .onChange(of: query) { session?.setQuery(query, branded: settings.nutrition.searchBranded) }
             .detailTitle("Add Ingredient")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }
@@ -51,5 +61,11 @@ private struct IngredientSearch: View {
             guard session == nil, let search = try? await FoodSearch.load(store: store) else { return }
             session = LoggerSession(store: store, search: search, start: LoggerStart())
         }
+    }
+
+    /// The results, without the recipe being edited, which cannot contain itself.
+    private func choices(_ session: LoggerSession) -> [FoodSearchResult] {
+        guard let excluding else { return session.results }
+        return session.results.filter { $0.portion.food.foodID != Recipe.key(excluding) }
     }
 }

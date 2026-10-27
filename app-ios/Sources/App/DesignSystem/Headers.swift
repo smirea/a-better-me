@@ -13,7 +13,7 @@ struct SectionHeader<Actions: View>: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(title).font(AppFont.title())
+            Text(title).font(AppFont.sectionTitle)
             Spacer()
             actions
                 .font(AppFont.medium(15))
@@ -47,6 +47,6 @@ struct SectionTitle: View {
     init(_ title: String) { self.title = title }
 
     var body: some View {
-        Text(title).font(AppFont.title(18)).foregroundStyle(Theme.textPrimary)
+        Text(title).font(AppFont.listTitle).foregroundStyle(Theme.textPrimary)
     }
 }

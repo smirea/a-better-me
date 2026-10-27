@@ -38,13 +38,13 @@ struct PlateCalculatorView: View {
                 }
                 if isExpanded { controls }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.vertical, 10)
             Divider().overlay(Theme.separator)
             Text(sentence)
-                .font(AppFont.caption(12))
+                .font(AppFont.rowDetail)
                 .foregroundStyle(Theme.textSecondary)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Theme.margin)
                 .padding(.vertical, 8)
         }
         .foregroundStyle(Theme.textPrimary)
@@ -57,7 +57,7 @@ struct PlateCalculatorView: View {
         layout {
             if plan.loading.baseWeights.count > 1, let onBar { barMenu(onBar) }
             if showsOffset, let onOffset {
-                Button(action: onOffset) { chip(offset?.label(unit: unit) ?? "Offset", systemImage: "plusminus") }
+                Button(action: onOffset) { Chip(title: offset?.label(unit: unit) ?? "Offset", systemImage: "plusminus") }
                     .accessibilityLabel(offset.map { "Offset weight, \($0.label(unit: unit))" } ?? "Offset weight, none")
             }
         }
@@ -76,18 +76,9 @@ struct PlateCalculatorView: View {
                 ForEach(plan.loading.baseWeights, id: \.self) { Text("\(SetField.plain($0)) \(unit.rawValue)").tag($0) }
             }
         } label: {
-            chip("\(SetField.plain(plan.loading.baseWeight)) \(unit.rawValue) bar", systemImage: "chevron.up.chevron.down")
+            Chip(title: "\(SetField.plain(plan.loading.baseWeight)) \(unit.rawValue) bar", systemImage: "chevron.up.chevron.down")
         }
         .accessibilityLabel("Bar weight, \(SetField.plain(plan.loading.baseWeight)) \(unit.rawValue)")
-    }
-
-    private func chip(_ title: String, systemImage: String) -> some View {
-        Label(title, systemImage: systemImage)
-            .font(AppFont.medium(12))
-            .foregroundStyle(Theme.textPrimary)
-            .padding(.horizontal, 10)
-            .frame(height: 26)
-            .background(Theme.surfaceRaised, in: .capsule)
     }
 
     @ViewBuilder

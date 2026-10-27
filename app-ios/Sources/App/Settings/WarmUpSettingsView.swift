@@ -6,7 +6,7 @@ struct WarmUpSettingsView: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection("Behavior") {
                 SettingChoice(
                     title: "Warm-Up Automation", systemImage: "puzzlepiece.fill",
                     selection: store.binding(settings, \.workout.warmUp.automation),
@@ -34,8 +34,6 @@ struct WarmUpSettingsView: View {
                     detail: "Adjust warm-up weights to the nearest load that doesn't require trivially small plates",
                     systemImage: "arrow.down.circle", isOn: store.binding(settings, \.workout.warmUp.simplifyPlates)
                 )
-            } header: {
-                SectionTitle("Behavior").textCase(nil)
             }
         }
         .themedList()
@@ -50,26 +48,19 @@ private struct WarmUpSchemeView: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection("Scheme") {
                 ForEach(RestCategory.allCases) { category in
                     LabeledContent {
                         Button("Edit") { editing = category }
-                            .font(AppFont.medium(14))
-                            .buttonStyle(.bordered)
-                            .buttonBorderShape(.capsule)
+                            .rowAction()
                             .accessibilityLabel("Edit \(category.displayName) scheme")
                     } label: {
                         RowLabel(title: category.displayName, detail: summary(steps(category)))
                     }
                 }
-            } header: {
-                SectionTitle("Scheme").textCase(nil)
             }
-            Section {
-                Button("Reset Scheme", role: .destructive) { store.updateSettings { $0.workout.warmUp.schemes = WarmUpSettings().schemes } }
-                    .font(AppFont.medium(15))
-                    .frame(maxWidth: .infinity)
-                    .foregroundStyle(Theme.destructive)
+            ThemedSection {
+                ResetRowButton("Reset Scheme") { store.updateSettings { $0.workout.warmUp.schemes = WarmUpSettings().schemes } }
             }
         }
         .themedList()
@@ -97,63 +88,53 @@ private struct WarmUpSchemeEditor: View {
     var body: some View {
         NavigationStack {
             List {
-                ForEach(steps.indices, id: \.self) { index in
-                    HStack(spacing: 12) {
-                        Text("W")
-                            .font(AppFont.headline(13))
-                            .frame(width: 30, height: 30)
-                            .background(Theme.surfaceRaised, in: .circle)
-                        Text("\(steps[index].percent)% of set \(index + 1)")
-                            .font(AppFont.caption(13))
-                            .frame(maxWidth: .infinity)
-                        TextField("Percent", value: $steps[index].percent, format: .percent)
-                            .accessibilityLabel("Warm-up set \(index + 1) percent")
-                            .frame(width: 56)
-                        TextField("Reps", value: $steps[index].reps, format: .number)
-                            .accessibilityLabel("Warm-up set \(index + 1) reps")
-                            .frame(width: 56)
+                ThemedSection {
+                    ForEach(steps.indices, id: \.self) { index in
+                        HStack(spacing: 12) {
+                            Text("W")
+                                .font(AppFont.headline(13))
+                                .frame(width: 30, height: 30)
+                                .background(Theme.surfaceRaised, in: .circle)
+                            Text("\(steps[index].percent)% of set \(index + 1)")
+                                .font(AppFont.rowDetail)
+                                .frame(maxWidth: .infinity)
+                            TextField("Percent", value: $steps[index].percent, format: .percent)
+                                .accessibilityLabel("Warm-up set \(index + 1) percent")
+                                .frame(width: 56)
+                            TextField("Reps", value: $steps[index].reps, format: .number)
+                                .accessibilityLabel("Warm-up set \(index + 1) reps")
+                                .frame(width: 56)
+                        }
+                        .textFieldStyle(.roundedBorder)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.center)
                     }
-                    .textFieldStyle(.roundedBorder)
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.center)
+                    .onDelete { steps.remove(atOffsets: $0) }
+                    RoundIconButton("Add Warm-Up Set", systemImage: "plus") {
+                        let last = steps.last ?? WarmUpStep(percent: 30, reps: 5)
+                        steps.append(WarmUpStep(percent: min(last.percent + 10, 100), reps: last.reps))
+                    }
                 }
-                .onDelete { steps.remove(atOffsets: $0) }
-                Button("Add Warm-Up Set", systemImage: "plus") {
-                    let last = steps.last ?? WarmUpStep(percent: 30, reps: 5)
-                    steps.append(WarmUpStep(percent: min(last.percent + 10, 100), reps: last.reps))
-                }
-                .labelStyle(.iconOnly)
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.circle)
             }
+            .themedList()
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 8) {
-                    Button { save(to: RestCategory.allCases) } label: {
-                        Text("Save To All Categories").frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    Button { save(to: [category]) } label: {
-                        Text("Save").frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .foregroundStyle(Theme.background)
+                    Button("Save To All Categories") { save(to: RestCategory.allCases) }
+                        .secondaryPill()
+                    Button("Save") { save(to: [category]) }
+                        .primaryPill()
                 }
-                .font(AppFont.headline(16))
-                .controlSize(.large)
-                .padding()
+                .padding(.horizontal, Theme.margin)
+                .padding(.bottom, 8)
             }
+            .navigationTitle("Default Scheme")
+            .navigationSubtitle(category.displayName)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
-                }
-                ToolbarItem(placement: .principal) {
-                    VStack(spacing: 0) {
-                        Text("Default Scheme").font(AppFont.headline(17))
-                        Text(category.displayName).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
-                    }
+                    Button(role: .close) { dismiss() }
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.large])
     }

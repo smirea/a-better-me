@@ -25,15 +25,40 @@ enum DashboardRoute: Hashable {
     }
 }
 
-enum DashboardColor {
-    static let workouts = Theme.accent
-    static let trend = Color(hex: 0xA99BF0)
-    static let exercise = Color(hex: 0x8EC9E8)
-    static let records = Color(hex: 0xF5C842)
-    static let expenditure = Color(hex: 0xF9845D)
-    static let goalAway = Color(hex: 0x6CC596)
-    static let goalTowards = Color(hex: 0x1F5A3A)
-    static let scaleOnTrend = Color(hex: 0x6E5BB8)
+/// A metric's unit label and how its values read.
+enum MetricUnit: Equatable {
+    /// Whole numbers, as kcal and steps.
+    case whole(String)
+    /// Up to one decimal, as weights, lengths, sets, and grams.
+    case decimal(String)
+    /// Enough decimals that a small nutrient amount never reads as zero, as mg and mcg.
+    case trace(String)
+    /// Two decimals, the body ratios.
+    case ratio
+
+    init(_ unit: NutrientUnit) {
+        switch unit {
+        case .kcal: self = .whole(unit.rawValue)
+        case .mg, .mcg: self = .trace(unit.rawValue)
+        case .g, .mL: self = .decimal(unit.rawValue)
+        }
+    }
+
+    var label: String {
+        switch self {
+        case let .whole(label), let .decimal(label), let .trace(label): label
+        case .ratio: "ratio"
+        }
+    }
+
+    func format(_ value: Double) -> String {
+        switch self {
+        case .whole: value.wholeText
+        case .decimal: value.dashboardText
+        case .trace: TileMetrics.nutrientText(value)
+        case .ratio: value.formatted(.number.precision(.fractionLength(2)))
+        }
+    }
 }
 
 struct MetricTab: Identifiable {
@@ -53,9 +78,8 @@ struct MetricTab: Identifiable {
     }
 
     var title: String
-    var icon: String?
     var points: [DatedValue]
-    var unit: String
+    var unit: MetricUnit
     /// What the legend calls the main series when it differs from the tab, such as intake ("Calories") on a balance tab.
     var seriesTitle: String?
     var averageTitle: String
@@ -67,17 +91,10 @@ struct MetricTab: Identifiable {
     var holding: Set<Date> = []
     /// Replaces the Average and second stat with these, computed over the range.
     var stats: ((DateInterval) -> [Stat])?
+    /// What an Energy Balance tab compares intake with.
+    var balance: BalanceReference?
 
     var id: String { title }
-
-    func format(_ value: Double) -> String {
-        switch unit {
-        case "steps", "kcal": Int(value.rounded()).formatted()
-        case "ratio": value.formatted(.number.precision(.fractionLength(2)))
-        case "mg", "mcg": TileMetrics.nutrientText(value)
-        default: value.dashboardText
-        }
-    }
 }
 
 struct MetricDetail {
@@ -210,7 +227,7 @@ struct DashboardData {
 
     var stepsCard: CardValues {
         let days = lastDays(steps)
-        return CardValues(values: days, text: steps.isEmpty ? nil : Int(days.last!).formatted())
+        return CardValues(values: days, text: steps.isEmpty ? nil : days.last!.wholeText)
     }
 
     var weighInHabit: HabitValues {
@@ -263,27 +280,27 @@ struct DashboardData {
             return MetricDetail(title: "Workouts", tabs: DashboardMetrics.WorkoutMetric.allCases.map { metric in
                 let points = DashboardMetrics.workouts(sessions, metric: metric, catalog: catalog)
                 return MetricTab(
-                    title: metric.rawValue, icon: metric == .sets ? "arrow.right.circle.fill" : "scalemass.fill",
+                    title: metric.rawValue,
                     points: DailyCombine.sum.combine(metric == .volume ? weight(points) : points, calendar: calendar),
-                    unit: metric == .sets ? "sets" : unit.rawValue, averageTitle: "Average \(metric.rawValue)",
-                    summary: .total, style: .bar, color: DashboardColor.workouts
+                    unit: .decimal(metric == .sets ? "sets" : unit.rawValue), averageTitle: "Average \(metric.rawValue)",
+                    summary: .total, style: .bar, color: Theme.accent
                 )
             }, footer: .topExercises(DashboardMetrics.topExercises(sessions, since: since)))
         case .weightTrend:
             let trend = trend
             let scale = DailyCombine.mean.combine(weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, calendar: calendar)
             return MetricDetail(title: "Weight Trend", tabs: [MetricTab(
-                title: "Trend Weight", points: weight(trend), unit: unit.rawValue, averageTitle: "Average",
-                summary: .change, style: .line, color: DashboardColor.trend,
-                overlay: MetricTab.Overlay(title: "Scale Weight", points: weight(scale), color: DashboardColor.scaleOnTrend)
+                title: "Trend Weight", points: weight(trend), unit: .decimal(unit.rawValue), averageTitle: "Average",
+                summary: .change, style: .line, color: Theme.weightTrend,
+                overlay: MetricTab.Overlay(title: "Scale Weight", points: weight(scale), color: Theme.scaleOnTrend)
             )], footer: .weightTrend(WeightTrendSummary(
                 changes: NutritionMetrics.changes(trend, now: now, calendar: calendar),
                 insights: NutritionMetrics.weightInsights(trend: trend, now: now, calendar: calendar)
             )))
         case .expenditure:
             return MetricDetail(title: "Expenditure", tabs: [MetricTab(
-                title: "Expenditure", points: expenditurePoints, unit: "kcal", averageTitle: "Average",
-                summary: .change, style: .line, color: DashboardColor.expenditure,
+                title: "Expenditure", points: expenditurePoints, unit: .whole("kcal"), averageTitle: "Average",
+                summary: .change, style: .line, color: Theme.accent,
                 holding: Set(expenditure.filter(\.isHolding).map(\.date))
             )], footer: .expenditure(ExpenditureSummary(
                 changes: NutritionMetrics.changes(expenditurePoints, now: now, calendar: calendar),
@@ -292,26 +309,26 @@ struct DashboardData {
             )))
         case .energyBalance:
             return MetricDetail(title: "Energy Balance", tabs: [
-                balanceTab("Expenditure", icon: "flame.fill", reference: expenditurePoints, color: DashboardColor.expenditure),
-                balanceTab("Calorie Targets", icon: "smallcircle.filled.circle", reference: energyTargets, color: Theme.fat),
+                balanceTab(.expenditure, title: "Expenditure", points: expenditurePoints, color: Theme.accent),
+                balanceTab(.targets, title: "Calorie Targets", points: energyTargets, color: Theme.fat),
             ], footer: .energyBalance)
         case .scaleWeight:
             let points = DailyCombine.mean.combine(weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, calendar: calendar)
             return MetricDetail(title: "Scale Weight", tabs: [MetricTab(
-                title: "Scale Weight", points: weight(points), unit: unit.rawValue, averageTitle: "Average",
+                title: "Scale Weight", points: weight(points), unit: .decimal(unit.rawValue), averageTitle: "Average",
                 summary: .change, style: .line, color: Theme.green
             )], footer: .weighIns(weighIns.reversed()))
         case .steps:
             return MetricDetail(title: "Steps", tabs: [MetricTab(
-                title: "Steps", points: steps, unit: "steps", averageTitle: "Average Steps",
-                summary: .total, style: .bar, color: DashboardColor.workouts
+                title: "Steps", points: steps, unit: .whole("steps"), averageTitle: "Average Steps",
+                summary: .total, style: .bar, color: Theme.accent
             )], footer: .months)
         case let .muscle(muscle, _):
             return MetricDetail(title: muscle.displayName, tabs: [MuscleMetric.sets, .volume].map { metric in
                 MetricTab(
-                    title: metric.title, icon: metric == .sets ? "arrow.right.circle.fill" : "scalemass.fill",
+                    title: metric.title,
                     points: DailyCombine.sum.combine(self.muscle(muscle, metric), calendar: calendar),
-                    unit: metric.unit(unit), averageTitle: "Average \(metric.title)", summary: .total,
+                    unit: .decimal(metric.unit(unit)), averageTitle: "Average \(metric.title)", summary: .total,
                     style: .bar, color: Theme.muscle
                 )
             }, footer: .months)
@@ -320,8 +337,8 @@ struct DashboardData {
             return MetricDetail(title: catalog(id)?.name ?? "Unknown exercise", tabs: ExerciseChartMetric.allCases.map { metric in
                 MetricTab(
                     title: metric.title, points: metric.dailyCombine.combine(convert(series[metric] ?? [], metric), calendar: calendar),
-                    unit: metric.unit(unit), averageTitle: "Avg \(metric.title)",
-                    summary: .best, style: metric == .totalSets ? .bar : .line, color: DashboardColor.exercise
+                    unit: .decimal(metric.unit(unit)), averageTitle: "Avg \(metric.title)",
+                    summary: .best, style: metric == .totalSets ? .bar : .line, color: Theme.exercise
                 )
             }, footer: .months)
         case let .nutrient(id):
@@ -494,4 +511,6 @@ extension ExerciseChartMetric {
 
 extension Double {
     var dashboardText: String { formatted(.number.precision(.fractionLength(0...1))) }
+    /// Rounded to a whole number with grouping: "2,345".
+    var wholeText: String { Int(rounded()).formatted() }
 }

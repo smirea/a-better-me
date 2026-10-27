@@ -15,7 +15,7 @@ struct NoteEditor: View {
     init(draft: NoteDraft) {
         isNew = draft.isNew
         _note = State(initialValue: draft.note)
-        _time = State(initialValue: Calendar.current.date(bySettingHour: draft.note.minute / 60, minute: draft.note.minute % 60, second: 0, of: draft.note.day.date)!)
+        _time = State(initialValue: draft.note.day.date(atMinute: draft.note.minute))
     }
 
     var body: some View {
@@ -72,10 +72,9 @@ struct NoteEditor: View {
     }
 
     private func save() {
-        let parts = Calendar.current.dateComponents([.hour, .minute], from: time)
         var edited = note
         edited.title = note.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        edited.minute = parts.hour! * 60 + parts.minute!
+        edited.minute = time.minuteOfDay()
         let saved = edited
         if isNew {
             store.saveNote(saved)

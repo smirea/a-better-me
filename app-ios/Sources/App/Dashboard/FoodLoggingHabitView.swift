@@ -20,50 +20,37 @@ struct FoodLoggingHabitView: View {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(spacing: 16) {
                     HStack(alignment: .top) {
-                        stat("Today", habit.todayKcal.map { Int($0.rounded()).formatted() } ?? "--", "kcal")
+                        StatView(title: "Today", value: habit.todayKcal?.wholeText ?? "--", unit: "kcal")
                         Spacer()
-                        stat("Streak", habit.streak.formatted(), "days")
+                        StatView(title: "Streak", value: habit.streak.formatted(), unit: "days")
                         Spacer()
                     }
                     monthGrid(shown, byDay: byDay)
                     HStack {
-                        Button("Previous Month", systemImage: "chevron.backward") { step(shown, by: -1) }
-                        Button("Next Month", systemImage: "chevron.forward") { step(shown, by: 1) }
+                        RoundIconButton("Previous Month", systemImage: "chevron.backward", size: .small) { step(shown, by: -1) }
+                        RoundIconButton("Next Month", systemImage: "chevron.forward", size: .small) { step(shown, by: 1) }
                             .disabled(calendar.isDate(shown, equalTo: now, toGranularity: .month))
                         Spacer()
-                        Text(shown.formatted(.dateTime.month(.wide).year())).font(AppFont.medium(15))
+                        Text(shown.formatted(.dateTime.month(.wide).year())).font(AppFont.rowTitle)
                     }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.glass)
                 }
                 .card()
                 legend
                 ForEach(habit.years, id: \.self) { year in
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(String(year)).font(AppFont.title())
+                        SectionHeader(String(year))
                         YearHeatMap(year: year, states: byDay, calendar: calendar)
                             .padding(10)
                             .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
                     }
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.bottom, 30)
         }
         .background(Theme.background)
         .detailTitle("Food Logging")
         .sheet(item: $editing) { NutritionDayEntrySheet(day: $0.day, log: nutrition.log) }
-    }
-
-    private func stat(_ title: String, _ value: String, _ unit: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(value).font(AppFont.number(22))
-                Text(unit).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
-            }
-        }
-        .accessibilityElement(children: .combine)
     }
 
     private func step(_ shown: Date, by months: Int) {
@@ -87,11 +74,16 @@ struct FoodLoggingHabitView: View {
                 }
             }
             HStack(spacing: 6) {
-                ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) {
-                    Text($0).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary).frame(maxWidth: .infinity)
+                ForEach(mondayFirstWeekdays, id: \.self) {
+                    Text($0).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).frame(maxWidth: .infinity)
                 }
             }
         }
+    }
+
+    private var mondayFirstWeekdays: [String] {
+        let symbols = calendar.shortWeekdaySymbols
+        return Array(symbols[1...] + symbols[..<1])
     }
 
     private func dayCell(_ day: CalendarDay, state: NutritionMetrics.LogState) -> some View {
@@ -116,15 +108,11 @@ struct FoodLoggingHabitView: View {
     }
 
     private var legend: some View {
-        HStack(spacing: 20) {
-            Label { Text("Tracked") } icon: { Image(systemName: "circle").foregroundStyle(Theme.calories) }
-            Label { Text("Fasting") } icon: { Image(systemName: "circle.dashed").foregroundStyle(Theme.calories) }
-            Label { Text("Untracked") } icon: { Image(systemName: "circle").foregroundStyle(Theme.textTertiary) }
-        }
-        .font(AppFont.medium(14))
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
+        ChartLegend(items: [
+            ChartLegend.Item(title: "Tracked", symbol: "circle", color: Theme.calories),
+            ChartLegend.Item(title: "Fasting", symbol: "circle.dashed", color: Theme.calories),
+            ChartLegend.Item(title: "Untracked", symbol: "circle", color: Theme.textTertiary),
+        ])
     }
 }
 

@@ -195,11 +195,7 @@ struct SessionEditor: View {
                 }
                 .accessibilityLabel("Workout Options")
                 if store.pausedAt != nil {
-                    Text("Paused")
-                        .font(AppFont.headline(13))
-                        .padding(.horizontal, 10)
-                        .frame(height: 26)
-                        .background(Theme.surfaceRaised, in: Capsule())
+                    Chip(title: "Paused")
                         .accessibilityLabel("Workout paused")
                 } else if defaults.workout.display.workoutTimer {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -225,7 +221,7 @@ struct SessionEditor: View {
             }
         }
         .foregroundStyle(Theme.textPrimary)
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Theme.margin)
         .frame(height: 52)
     }
 
@@ -242,33 +238,22 @@ struct SessionEditor: View {
                     VStack(spacing: 6) {
                         Image(systemName: "plus")
                             .font(.title3)
-                            .frame(width: 48, height: 60)
-                            .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 6))
+                            .frame(width: ExerciseTile.Size.regular.width, height: ExerciseTile.Size.regular.width * 1.5)
+                            .background(Theme.surfaceRaised, in: .rect(cornerRadius: Theme.tinyCornerRadius))
                         Capsule().fill(Theme.surfaceRaised).frame(height: 3)
                     }
                     .foregroundStyle(Theme.textSecondary)
                 }
                 .accessibilityLabel("Add Exercise")
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
         }
         .scrollIndicators(.hidden)
     }
 
     private func stripTile(_ item: BlockExercise) -> some View {
         VStack(spacing: 6) {
-            Group {
-                if let exercise = catalog.exercise(item.exerciseID) { ExerciseImage(exercise: exercise) } else { Theme.surfaceRaised }
-            }
-            .frame(width: 48, height: 60)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
-            .overlay {
-                if item.isDone {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(.black, Theme.textPrimary)
-                }
-            }
+            ExerciseTile(exercise: catalog.exercise(item.exerciseID), badge: item.isDone ? .done : nil)
             Capsule()
                 .fill(item.id == current ? Theme.textPrimary : Theme.surfaceRaised)
                 .frame(height: 3)
@@ -288,12 +273,12 @@ struct SessionEditor: View {
                     .font(AppFont.caption(14))
                     .foregroundStyle(Theme.textSecondary)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             chips(item: item, isSuperset: blocks[block].isSuperset, hiddenWarmUps: hiddenWarmUpCount(block: block, exercise: index))
             setTable(block: block, exercise: index, fields: SetField.fields(for: exercise))
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Theme.margin)
             if let caption = bodyweightCaption(exercise) {
-                Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary).padding(.horizontal, 20)
+                Text(caption).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).padding(.horizontal, Theme.margin)
             }
             if let note = item.note, !note.isEmpty { noteCard("Session Note", note) }
             if !pinned.isEmpty { noteCard("Pinned Note", pinned) }
@@ -305,7 +290,7 @@ struct SessionEditor: View {
         guard mode == .live, defaults.workout.display.bodyweightContribution, let fraction = exercise?.bodyweightFraction, fraction > 0,
               let kg = currentBodyWeightKg(logged: latestBodyWeight.map { [$0] } ?? [], health: nil, manual: defaults.profile.bodyWeightKg) else { return nil }
         let percent = (fraction * 100).formatted(.number.precision(.fractionLength(0)))
-        return "Body weight \(unit.format(kg: kg)) \(unit.rawValue) · \(percent)% counted (\(unit.format(kg: kg * fraction)) \(unit.rawValue))"
+        return "Body weight \(unit.label(kg: kg)) · \(percent)% counted (\(unit.label(kg: kg * fraction)))"
     }
 
     private func noteCard(_ title: String, _ text: String) -> some View {
@@ -315,7 +300,7 @@ struct SessionEditor: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .card()
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Theme.margin)
     }
 
     private func chips(item: BlockExercise, isSuperset: Bool, hiddenWarmUps: Int) -> some View {
@@ -340,7 +325,7 @@ struct SessionEditor: View {
                     Button("Remove from Workout", systemImage: "trash", role: .destructive) { remove(item.id) }
                 } label: { chipLabel("More", "ellipsis") }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
         }
         .scrollIndicators(.hidden)
     }
@@ -350,7 +335,7 @@ struct SessionEditor: View {
         let adjusted = store.suggestions[item.id]?.values.contains { $0.adjustedReps != nil } ?? false
         return Button { sheet = .progression } label: {
             Image(systemName: "wand.and.stars")
-                .font(AppFont.medium(14))
+                .font(AppFont.chip)
                 .foregroundStyle(Theme.textPrimary)
                 .frame(width: 44, height: 32)
                 .background(Theme.surfaceRaised, in: Capsule())
@@ -366,17 +351,12 @@ struct SessionEditor: View {
     }
 
     private func chipLabel(_ title: String, _ icon: String, badge: Int = 0) -> some View {
-        Label(title, systemImage: icon)
-            .font(AppFont.medium(14))
-            .foregroundStyle(Theme.textPrimary)
-            .padding(.horizontal, 12)
-            .frame(height: 32)
-            .background(Theme.surfaceRaised, in: Capsule())
+        Chip(title: title, systemImage: icon)
             .overlay(alignment: .topTrailing) {
                 if badge > 0 {
                     Text("\(badge)")
-                        .font(AppFont.headline(11))
-                        .foregroundStyle(.white)
+                        .font(AppFont.badge)
+                        .foregroundStyle(Theme.textPrimary)
                         .frame(minWidth: 18, minHeight: 18)
                         .background(Theme.muscle, in: Circle())
                         .offset(x: 4, y: -4)

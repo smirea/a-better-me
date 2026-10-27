@@ -32,9 +32,9 @@ struct RecipeMathTests {
         let cup = Measure(name: "cup", quantity: 1, servings: 2.5)
         let tablespoon = Measure(name: "tbsp", quantity: 1, servings: 0.15625)
         let grams = Measure(name: "g", quantity: 1, servings: 0.01)
-        #expect(RecipeMath.convert(1, from: cup, to: tablespoon) == 16)
-        #expect(RecipeMath.convert(8, from: tablespoon, to: cup) == 0.5)
-        #expect(RecipeMath.convert(2, from: banana.nutrition.measures[0], to: grams) == 300)
+        #expect(Serving(measure: cup, quantity: 1).converted(to: tablespoon).quantity == 16)
+        #expect(Serving(measure: tablespoon, quantity: 8).converted(to: cup).quantity == 0.5)
+        #expect(Serving(measure: banana.nutrition.measures[0], quantity: 2).converted(to: grams).quantity == 300)
         #expect(RecipeMath.grams(Serving(measure: banana.nutrition.measures[0], quantity: 2), of: banana) == 300)
     }
 
@@ -152,10 +152,11 @@ struct LibraryFilterTests {
     }
 
     @Test func amountsAndServingsReadLikeMacroFactor() {
-        #expect(LibraryFormat.amount(15.64) == "15.6")
-        #expect(LibraryFormat.amount(120.4) == "120")
-        #expect(LibraryFormat.macros([.energy: 60.4, .protein: 0.4, .carbs: 15.6]) == "60 kcal · 0P 0F 16C")
-        #expect(LibraryFormat.serving(Serving(measure: banana.nutrition.measures[0], quantity: 1), of: banana) == "1 large (150 g)")
-        #expect(LibraryFormat.serving(Serving(measure: Measure(name: "g", quantity: 1, servings: 0.01), quantity: 30), of: banana) == "30 g")
+        #expect(NutritionFormat.amount(15.64) == "15.6")
+        #expect(NutritionFormat.amount(120.4) == "120")
+        #expect(NutritionFormat.amount(2.26, .mg) == "2.3 mg")
+        #expect(NutritionFormat.macroLine([.energy: 60.4, .protein: 0.4, .carbs: 15.6]) == "60 kcal · 0P 0F 16C")
+        #expect(NutritionFormat.serving(Serving(measure: banana.nutrition.measures[0], quantity: 1), of: banana) == "1 large (150 g)")
+        #expect(NutritionFormat.serving(Serving(measure: Measure(name: "g", quantity: 1, servings: 0.01), quantity: 30), of: banana) == "30 g")
     }
 }

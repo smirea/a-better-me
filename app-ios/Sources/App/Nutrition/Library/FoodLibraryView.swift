@@ -58,10 +58,12 @@ struct FoodLibraryView: View {
 
     var body: some View {
         List {
-            switch tab {
-            case .recipes: recipeRows
-            case .foods: foodRows
-            case .favorites: favoriteRows
+            ThemedSection {
+                switch tab {
+                case .recipes: recipeRows
+                case .foods: foodRows
+                case .favorites: favoriteRows
+                }
             }
         }
         .themedList()
@@ -73,7 +75,7 @@ struct FoodLibraryView: View {
                 Image(systemName: "heart.fill").accessibilityLabel("Favorites").tag(Tab.favorites)
             }
             .pickerStyle(.segmented)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.bottom, 8)
         }
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Filter \(tab.rawValue.lowercased())")
@@ -102,7 +104,7 @@ struct FoodLibraryView: View {
         .sheet(item: $sheet) { $0.editor }
         .navigationDestination(item: $openedRecipe) { RecipeDetailView(recipeID: $0) }
         .sensoryFeedback(.success, trigger: favorited)
-        .confirmationDialog(deleteTitle, isPresented: Binding { pendingDelete != nil } set: { if !$0 { pendingDelete = nil } }, titleVisibility: .visible) {
+        .confirmationDialog(deleteTitle, isPresented: .isPresent($pendingDelete), titleVisibility: .visible) {
             Button(pendingDelete.map { if case .favorite = $0 { "Remove" } else { "Delete" } } ?? "Delete", role: .destructive) {
                 switch pendingDelete {
                 case let .food(food): store.deleteFood(food.id)
@@ -167,14 +169,9 @@ struct FoodLibraryView: View {
             Button(action: open) { FoodRow(food: food, serving: serving) }
                 .buttonStyle(.plain)
             if let onAdd {
-                Button("Add \(food.name)", systemImage: "plus") { onAdd(FoodPortion(food, serving: serving)) }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
-                    .controlSize(.small)
+                AddToPlateButton(food: food) { onAdd(FoodPortion(food, serving: serving)) }
             }
         }
-        .listRowBackground(Theme.surface)
     }
 
     private func deleteButton(_ item: Item, title: String = "Delete") -> some View {

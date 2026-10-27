@@ -23,4 +23,7 @@ enum WeightUnit: String, CaseIterable, Identifiable, Codable {
     func format(kg: Double) -> String {
         fromKg(kg).formatted(.number.precision(.fractionLength(0...2)))
     }
+
+    /// "102.5 lb", kept on one line.
+    func label(kg: Double) -> String { "\(format(kg: kg))\u{00A0}\(rawValue)" }
 }

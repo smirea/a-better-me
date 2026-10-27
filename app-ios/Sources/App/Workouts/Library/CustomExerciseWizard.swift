@@ -157,14 +157,14 @@ struct CustomExerciseWizard: View {
                 case .review: ReviewStep(draft: draft)
                 }
             }
-            .padding()
+            .padding(Theme.margin)
         }
         .scrollDismissesKeyboard(.interactively)
         .background(Theme.background)
         .detailTitle("Create Custom Exercise")
         .safeAreaBar(edge: .top) {
             ProgressView(value: Double(step.rawValue + 1), total: Double(Step.allCases.count))
-                .padding(.horizontal)
+                .padding(.horizontal, Theme.margin)
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 10) {
@@ -179,7 +179,7 @@ struct CustomExerciseWizard: View {
                         .disabled(!canAdvance(step))
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, Theme.margin)
         }
     }
 
@@ -219,7 +219,7 @@ private struct FieldLabel: View {
         HStack {
             Text(title).font(AppFont.medium(14))
             Spacer()
-            if let trailing { Text(trailing).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary) }
+            if let trailing { Text(trailing).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary) }
         }
     }
 }
@@ -340,7 +340,7 @@ private struct MuscleStep: View {
                                 .overlay(alignment: .bottomTrailing) {
                                     if let role {
                                         Text(role == .primary ? "P" : "S")
-                                            .font(AppFont.headline(11))
+                                            .font(AppFont.badge)
                                             .foregroundStyle(Theme.onPrimary)
                                             .frame(width: 18, height: 18)
                                             .background(Theme.textPrimary, in: .circle)
@@ -397,9 +397,9 @@ private struct EquipmentStep: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(role.title).font(AppFont.medium(15))
-                    Text(role.summary).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-                    Text(role == .resistance ? "Required" : "Optional").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                    Text(role.title).font(AppFont.rowTitle)
+                    Text(role.summary).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+                    Text(role == .resistance ? "Required" : "Optional").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 }
                 Spacer()
                 Button(options.isEmpty ? "Add" : "Change") { picking = role }
@@ -441,8 +441,8 @@ private struct FinalDetailsStep: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            RatingStepper(title: "Range of Motion", value: $draft.rangeOfMotion)
-            RatingStepper(title: "Stability", value: $draft.stability).padding(.bottom, 12)
+            rating("Range of Motion", value: $draft.rangeOfMotion)
+            rating("Stability", value: $draft.stability).padding(.bottom, 12)
             FieldLabel(title: "Body Weight Contribution", trailing: "Required")
             HStack {
                 TextField("", text: $percentText)
@@ -457,7 +457,7 @@ private struct FinalDetailsStep: View {
             .onChange(of: percentText) { _, text in
                 draft.bodyWeightPercent = text.isEmpty ? nil : try? Double(text, format: .number)
             }
-            Text(contributionLine).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+            Text(contributionLine).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             ForEach(JointActionRole.allCases) { role in
                 FieldLabel(title: role.title).padding(.top, 12)
                 Button { choosing = role } label: {
@@ -476,19 +476,19 @@ private struct FinalDetailsStep: View {
                         draft.alternativeNames = String(text.prefix(CustomExerciseDraft.alternativeNamesLimit))
                     }
                 }
-            Text("Separate names with a comma").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+            Text("Separate names with a comma").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Description").font(AppFont.medium(15))
+                    Text("Description").font(AppFont.rowTitle)
                     Text(draft.about.isEmpty ? "Empty" : draft.about)
-                        .font(AppFont.caption(12))
+                        .font(AppFont.rowDetail)
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(3)
                 }
                 Spacer()
                 Button("Edit") { editingDescription = true }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
+                    .font(AppFont.chip)
+                    .buttonStyle(.glass)
                     .accessibilityLabel("Edit Description")
             }
             .padding(.top, 16)
@@ -513,6 +513,16 @@ private struct FinalDetailsStep: View {
         }
     }
 
+    private func rating(_ title: String, value: Binding<Int>) -> some View {
+        Stepper(value: value, in: 0...5) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title).font(AppFont.rowTitle)
+                RatingBar(value: value.wrappedValue)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
     /// "18 lb at your current weight", from the newest weigh-in or the profile's weight.
     private var contributionLine: String {
         guard let percent = draft.bodyWeightPercent else { return "Enter the share of body weight the exercise moves" }
@@ -521,7 +531,7 @@ private struct FinalDetailsStep: View {
         guard let bodyKg = currentBodyWeightKg(logged: weighIns, health: nil, manual: settings.profile.bodyWeightKg) else {
             return "Log your body weight to see the load this adds"
         }
-        return "\(unit.format(kg: bodyKg * percent / 100)) \(unit.rawValue) at your current weight"
+        return "\(unit.label(kg: bodyKg * percent / 100)) at your current weight"
     }
 
     enum JointActionRole: CaseIterable, Identifiable {
@@ -532,30 +542,6 @@ private struct FinalDetailsStep: View {
         var path: WritableKeyPath<CustomExerciseDraft, [String]> {
             self == .primary ? \.primaryJointActions : \.secondaryJointActions
         }
-    }
-}
-
-private struct RatingStepper: View {
-    let title: String
-    @Binding var value: Int
-
-    var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(title).font(AppFont.medium(15))
-                RatingBar(value: value)
-            }
-            Spacer()
-            Button("Decrease \(title)", systemImage: "minus") { value -= 1 }
-                .disabled(value == 0)
-            Text("\(value)").font(AppFont.headline(16)).monospacedDigit().frame(minWidth: 20)
-            Button("Increase \(title)", systemImage: "plus") { value += 1 }
-                .disabled(value == 5)
-        }
-        .labelStyle(.iconOnly)
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.circle)
-        .padding(.vertical, 6)
     }
 }
 
@@ -571,24 +557,21 @@ private struct JointActionPicker: View {
         let vocabulary = Set(catalog.bundled.flatMap { $0.primaryJointActions + $0.secondaryJointActions }).sorted()
         NavigationStack {
             List {
-                Section {
+                ThemedSection(subtitle: "Choose all that apply") {
                     ForEach(vocabulary.filter { query.isEmpty || $0.localizedStandardContains(query) }, id: \.self) { action in
                         let isSelected = selection.contains(action)
                         Button {
                             if isSelected { selection.removeAll { $0 == action } } else { selection = (selection + [action]).sorted() }
                         } label: {
                             HStack {
-                                Text(action).font(AppFont.body(15)).foregroundStyle(Theme.textPrimary)
+                                Text(action).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
                                 Spacer()
                                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                                     .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textTertiary)
                             }
                         }
                         .accessibilityAddTraits(isSelected ? .isSelected : [])
-                        .listRowBackground(Theme.surface)
                     }
-                } header: {
-                    Text("Choose all that apply").font(AppFont.caption(12)).textCase(nil)
                 }
             }
             .themedList()
@@ -614,7 +597,7 @@ private struct DescriptionEditor: View {
                 .scrollContentBackground(.hidden)
                 .padding(12)
                 .background(Theme.surfaceRaised, in: .rect(cornerRadius: Theme.smallCornerRadius))
-                .padding()
+                .padding(Theme.margin)
                 .frame(maxHeight: .infinity, alignment: .top)
                 .background(Theme.background)
                 .accessibilityLabel("Description")
@@ -653,8 +636,8 @@ private struct ReviewStep: View {
             SectionTitle("Target Muscles")
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
-                    ForEach(exercise.primaryMuscles) { TargetMuscleCard(muscle: $0, role: "Primary") }
-                    ForEach(exercise.secondaryMuscles) { TargetMuscleCard(muscle: $0, role: "Secondary") }
+                    ForEach(exercise.primaryMuscles) { MuscleTileCard(muscle: $0, details: ["Primary"]) }
+                    ForEach(exercise.secondaryMuscles) { MuscleTileCard(muscle: $0, details: ["Secondary"]) }
                 }
             }
             .scrollIndicators(.hidden)
@@ -682,7 +665,7 @@ private struct ReviewStep: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(AppFont.medium(14))
-                Text(value.map { "\($0)/5" } ?? "None").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                Text(value.map { "\($0)/5" } ?? "None").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
             RatingBar(value: value ?? 0)

@@ -20,13 +20,9 @@ struct LevelsView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 340)
                     .overlay(alignment: .bottomTrailing) {
-                        Button("Rotate Body", systemImage: "arrow.trianglehead.2.clockwise.rotate.90") {
+                        RoundIconButton("Rotate Body", systemImage: "arrow.trianglehead.2.clockwise.rotate.90") {
                             withAnimation(.smooth) { side.toggle() }
                         }
-                        .labelStyle(.iconOnly)
-                        .font(.title3)
-                        .buttonStyle(.glass)
-                        .buttonBorderShape(.circle)
                     }
                     PeriodCaption(period: $period)
                 }
@@ -37,7 +33,6 @@ struct LevelsView: View {
         }
         .themedList()
         .detailTitle("Levels")
-        .navigationDestination(for: Muscle.self) { MuscleLevelsView(muscle: $0) }
     }
 }
 
@@ -47,7 +42,7 @@ private struct LevelsSection: View {
     let weekly: WeeklySets
 
     var body: some View {
-        Section {
+        ThemedSection(title) {
             ForEach(weekly.ranked(muscles), id: \.muscle) { muscle, sets in
                 let row = MuscleLevelRow(muscle: muscle, sets: sets, top: weekly.top)
                 // Untrained muscles have nothing to list, so the reference shows them without a chevron.
@@ -57,22 +52,7 @@ private struct LevelsSection: View {
                     row
                 }
             }
-            .listRowBackground(Theme.surface)
-        } header: {
-            LevelsHeader(title: title)
         }
-    }
-}
-
-struct LevelsHeader: View {
-    let title: String
-
-    var body: some View {
-        Text(title)
-            .font(AppFont.title())
-            .foregroundStyle(Theme.textPrimary)
-            .textCase(nil)
-            .padding(.leading, -16)
     }
 }
 

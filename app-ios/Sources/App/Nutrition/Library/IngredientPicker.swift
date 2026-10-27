@@ -29,21 +29,17 @@ private struct LibraryIngredientPicker: View {
         NavigationStack {
             List {
                 if !foods.isEmpty {
-                    Section {
+                    ThemedSection("Foods") {
                         ForEach(foods) { food in
                             pickRow(food.snapshot)
                         }
-                    } header: {
-                        SectionTitle("Foods").textCase(nil)
                     }
                 }
                 if !recipes.isEmpty {
-                    Section {
+                    ThemedSection("Recipes") {
                         ForEach(recipes) { recipe in
                             pickRow(recipe.snapshot)
                         }
-                    } header: {
-                        SectionTitle("Recipes").textCase(nil)
                     }
                 }
             }
@@ -61,7 +57,7 @@ private struct LibraryIngredientPicker: View {
             .detailTitle("Add Ingredient")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }
@@ -76,6 +72,5 @@ private struct LibraryIngredientPicker: View {
             FoodRow(food: food, serving: portion.serving)
         }
         .buttonStyle(.plain)
-        .listRowBackground(Theme.surface)
     }
 }

@@ -66,7 +66,7 @@ enum HistoryMetric: String, CaseIterable, Identifiable {
 
     func format(_ value: Double, unit: WeightUnit) -> String {
         switch self {
-        case .oneRepMax, .threeRepMax, .tenRepMax, .heaviestWeight, .totalVolume, .bestSetVolume: "\(unit.format(kg: value)) \(unit.rawValue)"
+        case .oneRepMax, .threeRepMax, .tenRepMax, .heaviestWeight, .totalVolume, .bestSetVolume: "\(unit.label(kg: value))"
         case .totalReps, .bestSetReps: "\(Int(value)) reps"
         case .totalSets: "\(Int(value)) sets"
         }
@@ -131,13 +131,13 @@ enum ExerciseHistory {
             let side = metric.isPerSide ? " (per side)" : ""
             switch metric {
             case .weight, .weightPerSide, .weightPerSidePersistent:
-                return log.weightKg.map { "\(unit.format(kg: $0)) \(unit.rawValue)\(side)" }
+                return log.weightKg.map { "\(unit.label(kg: $0))\(side)" }
             case .assistanceWeight:
-                return log.weightKg.map { "\(unit.format(kg: $0)) \(unit.rawValue) assist" }
+                return log.weightKg.map { "\(unit.label(kg: $0)) assist" }
             case .reps, .repsPerSide:
                 return log.reps.map { "\($0)\(side)" }
             case .duration, .durationPerSide:
-                return log.durationSeconds.map { Duration.seconds($0).formatted(.time(pattern: .minuteSecond)) + side }
+                return log.durationSeconds.map { $0.minuteSecond + side }
             case .distanceShort, .distanceShortPerSide, .distanceLong:
                 return log.distanceMeters.map {
                     Measurement(value: $0, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated, usage: .road)) + side
@@ -178,24 +178,24 @@ struct ExerciseHistoryTab: View {
                             ForEach(HistoryMetric.allCases) { Text($0.rawValue).tag($0) }
                         }
                     } label: {
-                        FilterChipLabel(title: metric.rawValue, systemImage: "medal")
+                        Chip(title: metric.rawValue, systemImage: "medal", trailingImage: "chevron.down")
                     }
                     Menu {
                         Picker("Sort", selection: $sort) {
                             ForEach(HistorySort.allCases) { Text($0.rawValue).tag($0) }
                         }
                     } label: {
-                        FilterChipLabel(title: sort.rawValue, systemImage: "line.3.horizontal.decrease")
+                        Chip(title: sort.rawValue, systemImage: "line.3.horizontal.decrease", trailingImage: "chevron.down")
                     }
                     Menu {
                         Picker("Records", selection: $records) {
                             ForEach(RecordsFilter.allCases) { Text($0.rawValue).tag($0) }
                         }
                     } label: {
-                        FilterChipLabel(title: records.rawValue, systemImage: "trophy")
+                        Chip(title: records.rawValue, systemImage: "trophy", trailingImage: "chevron.down")
                     }
                 }
-                .padding()
+                .padding(Theme.margin)
             }
             .scrollIndicators(.hidden)
             if entries.isEmpty {
@@ -243,10 +243,10 @@ private struct HistoryRow: View {
                         .frame(width: 40, height: 40)
                         .background(Theme.accent, in: .rect(cornerRadius: Theme.smallCornerRadius))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(entry.date.formatted(date: .long, time: .omitted)).font(AppFont.medium(15))
-                        Text(entry.workoutName).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                        Text(entry.date.formatted(date: .long, time: .omitted)).font(AppFont.rowTitle)
+                        Text(entry.workoutName).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                         if let value = metric.value(of: entry, exercise: exercise) {
-                            Text(metric.format(value, unit: unit)).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                            Text(metric.format(value, unit: unit)).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                         }
                         if showsRecords && !entry.records.isEmpty {
                             HStack(spacing: 10) {
@@ -268,10 +268,7 @@ private struct HistoryRow: View {
             if isExpanded {
                 ForEach(Array(entry.sets.enumerated()), id: \.element.id) { index, set in
                     HStack(spacing: 12) {
-                        Text(set.type.badge ?? "\(entry.sets[...index].count { $0.type != .warmUp })")
-                            .font(AppFont.headline(11))
-                            .frame(width: 22, height: 22)
-                            .background(Theme.surfaceRaised, in: .circle)
+                        SetBadge(type: set.type, number: entry.sets.number(at: index), size: .compact)
                         Text(set.log.map { ExerciseHistory.describe($0, exercise: exercise, unit: unit) } ?? "")
                             .font(AppFont.body(14))
                         Spacer()
@@ -292,7 +289,7 @@ private struct HistoryRow: View {
                 }
             }
         }
-        .padding(.horizontal)
+        .padding(.horizontal, Theme.margin)
         .padding(.vertical, 12)
     }
 }

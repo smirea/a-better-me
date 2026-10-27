@@ -37,11 +37,11 @@ struct StrategyInputs {
     static func make(
         weighIns: [WeighIn], log: IntakeLog, settings: NutritionSettings, profile: ProfileSettings, today: CalendarDay, calendar: Calendar
     ) -> StrategyInputs {
-        let end = date(today, calendar)
+        let end = today.date(in: calendar)
         let weights = weighIns.map { DatedValue(date: $0.date, value: $0.kg) }
         let trendSeries = NutritionEngine.TrendWeight.daily(weighIns: weights, through: end, calendar: calendar)
         let counted = log.days.compactMapValues(\.energy).filter { $0.key <= today }
-        let intake = counted.keys.sorted().map { DatedValue(date: date($0, calendar), value: counted[$0]!) }
+        let intake = counted.keys.sorted().map { DatedValue(date: $0.date(in: calendar), value: counted[$0]!) }
         let series = NutritionMetrics.expenditure(
             intake: intake, weighIns: weights, trend: trendSeries, settings: settings.expenditure, profile: profile, now: end, calendar: calendar
         )
@@ -59,10 +59,6 @@ struct StrategyInputs {
             expenditureKcal: settings.expenditure.staticKcal ?? series.last?.kcal ?? initial,
             isStaticExpenditure: settings.expenditure.staticKcal != nil
         )
-    }
-
-    static func date(_ day: CalendarDay, _ calendar: Calendar) -> Date {
-        calendar.date(from: DateComponents(year: day.year, month: day.month, day: day.day))!
     }
 
     func basis(standardFloorKcal: Int) -> StrategyBasis? {

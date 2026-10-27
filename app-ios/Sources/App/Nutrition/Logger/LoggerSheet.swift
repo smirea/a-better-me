@@ -62,7 +62,7 @@ private struct LoggerContent: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Theme.margin)
                 .padding(.vertical, 8)
             }
             NavigationStack(path: $path) {
@@ -108,7 +108,7 @@ private struct LoggerContent: View {
                         Spacer()
                         LogFoodsButton(session: session).controlSize(.large)
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, Theme.margin)
                     .padding(.bottom, 8)
                 }
         }
@@ -152,7 +152,7 @@ private struct LoggerBanner: View {
 
     var body: some View {
         let options = settings.nutrition.logger
-        let day = dayRow.intake(entries)
+        let day = dayRow.totals(entries)
         GlassEffectContainer {
             HStack(spacing: 10) {
                 Button("Close", systemImage: "xmark", action: exit)
@@ -188,7 +188,7 @@ private struct LoggerBanner: View {
             }
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Theme.margin)
         .padding(.top, 14)
         .padding(.bottom, 6)
         .animation(.snappy, value: session.plate.items.count)
@@ -211,14 +211,7 @@ private struct LoggerBanner: View {
         }
         return VStack(alignment: .leading, spacing: 2) {
             Text("\(prefix)\(amount)\(suffix)").font(AppFont.caption(11)).monospacedDigit()
-            Capsule()
-                .fill(Theme.surfaceRaised)
-                .frame(height: 3)
-                .overlay(alignment: .leading) {
-                    GeometryReader { proxy in
-                        Capsule().fill(Theme.macro(id)).frame(width: proxy.size.width * (value.progress ?? 0))
-                    }
-                }
+            ProgressView(value: value.progress ?? 0).progressViewStyle(.bar(Theme.macro(id), height: 3))
         }
         .frame(maxWidth: 110, alignment: .leading)
     }
@@ -231,18 +224,6 @@ extension FoodLibraryView.Item {
         case let .food(food): FoodPortion(food.snapshot)
         case let .recipe(recipe): FoodPortion(recipe.snapshot)
         case let .favorite(favorite): favorite.portion
-        }
-    }
-}
-
-extension DayTarget {
-    func amount(_ id: NutrientID) -> Double? {
-        switch id {
-        case .energy: energy
-        case .protein: protein
-        case .fat: fat
-        case .carbs: carbs
-        default: nil
         }
     }
 }
@@ -266,10 +247,10 @@ private struct LogTimePicker: View {
             VStack(spacing: 12) {
                 HStack(spacing: 0) {
                     Picker("Day", selection: $day) {
-                        ForEach(days, id: \.self) { Text($0.relativeLabel(today: today)).tag($0) }
+                        ForEach(days, id: \.self) { Text(NutritionFormat.dayTitle($0, today: today)).tag($0) }
                     }
                     Picker("Hour", selection: $hour) {
-                        ForEach(0..<24, id: \.self) { Text(LogTime.hourLabel($0)).tag($0) }
+                        ForEach(0..<24, id: \.self) { Text(NutritionFormat.hour($0)).tag($0) }
                     }
                     .frame(width: 120)
                 }
@@ -291,11 +272,11 @@ private struct LogTimePicker: View {
                 .primaryPill()
                 .disabled(session.plate.isEmpty)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .detailTitle("Select Date and Time")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }
@@ -325,22 +306,17 @@ private struct LogHourPad: View {
                         session.time.hour = hour
                         dismiss()
                     } label: {
-                        Text(LogTime.hourLabel(hour))
-                            .font(AppFont.medium(15))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 44)
-                            .foregroundStyle(selected ? Theme.onPrimary : Theme.textPrimary)
-                            .background(selected ? Theme.textPrimary : Theme.surfaceRaised, in: .capsule)
+                        Chip(title: NutritionFormat.hour(hour), isActive: selected)
                     }
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(selected ? .isSelected : [])
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .detailTitle("Select Time")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }

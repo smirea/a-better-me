@@ -60,18 +60,10 @@ struct Contributor: Hashable, Identifiable {
     var id: UUID { entryID }
 }
 
-/// The Food Log's arithmetic and labels, kept out of the views so the suites can pin them.
+/// The Food Log's arithmetic, kept out of the views so the suites can pin them.
 enum FoodLog {
-    static let macros: [NutrientID] = [.energy, .protein, .fat, .carbs]
-
     static func totals(_ entries: [FoodEntry]) -> NutrientAmounts {
         entries.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts }
-    }
-
-    /// The day's totals with its override's amounts in place of the logged ones; nutrients the override leaves out
-    /// keep the log's amounts.
-    static func dayTotals(_ entries: [FoodEntry], row: NutritionDay?) -> NutrientAmounts {
-        totals(entries).merging(row?.override ?? [:]) { $1 }
     }
 
     /// The day's hours: the configured range, unless empty hours hide, plus every hour that has an entry.
@@ -95,10 +87,9 @@ enum FoodLog {
     }
 
     static func summary(_ amounts: NutrientAmounts, target: DayTarget?, showOverages: Bool) -> [MacroLine] {
-        let targets: [NutrientID: Double] = target.map { [.energy: $0.energy, .protein: $0.protein, .fat: $0.fat, .carbs: $0.carbs] } ?? [:]
-        return macros.map { id in
+        NutrientID.macros.map { id in
             let consumed = amounts[id] ?? 0
-            let target = targets[id]
+            let target = target?.amount(id)
             return MacroLine(
                 nutrient: id, consumed: consumed, target: target,
                 remaining: target.map { remaining(consumed: consumed, target: $0, showOverages: showOverages) }
@@ -152,8 +143,7 @@ enum FoodLog {
         let ids = entries.map(\.id)
         switch target {
         case .now:
-            let parts = calendar.dateComponents([.hour, .minute], from: now)
-            return [Relocation(ids: ids, day: today, minute: parts.hour! * 60 + parts.minute!)]
+            return [Relocation(ids: ids, day: today, minute: now.minuteOfDay(in: calendar))]
         case .today:
             return keepingTimes(entries, on: today)
         case .tomorrow:
@@ -178,55 +168,5 @@ enum FoodLog {
     static func barMaximum(value: Double, range: NutrientRange) -> Double? {
         guard let reference = range.target ?? range.ceiling ?? range.floor, reference > 0 else { return nil }
         return max(reference / 0.6, value)
-    }
-
-    /// The same amount in `measure`, unrounded, so switching units back and forth never changes what was eaten.
-    static func converted(_ serving: Serving, to measure: Measure) -> Serving {
-        Serving(measure: measure, quantity: serving.servings * measure.quantity / measure.servings)
-    }
-
-    // MARK: Labels
-
-    /// "8 AM", "12 PM", "12 AM".
-    static func hourLabel(_ hour: Int) -> String {
-        let twelve = hour % 12 == 0 ? 12 : hour % 12
-        return "\(twelve) \(hour < 12 ? "AM" : "PM")"
-    }
-
-    /// The gutter's "2:48", without AM or PM, as the hour pill above already says which.
-    static func timeLabel(_ minute: Int) -> String {
-        let hour = minute / 60 % 12 == 0 ? 12 : minute / 60 % 12
-        return String(format: "%d:%02d", hour, minute % 60)
-    }
-
-    /// "2:48 PM".
-    static func clockLabel(_ minute: Int) -> String {
-        "\(timeLabel(minute)) \(minute < 720 ? "AM" : "PM")"
-    }
-
-    /// "1.25 cup", "150 g", "1 serving".
-    static func servingLabel(_ serving: Serving) -> String {
-        "\(amountLabel(serving.quantity)) \(serving.measure.name)"
-    }
-
-    /// Up to two decimals, without trailing zeros.
-    static func amountLabel(_ value: Double) -> String {
-        value.formatted(.number.precision(.fractionLength(0...2)).grouping(.never))
-    }
-
-    /// "12P 8F 20C": the protein, fat, and carbs that follow the calories on a food tile.
-    static func macroLabel(_ amounts: NutrientAmounts) -> String {
-        let grams = macros.dropFirst().map { Int((amounts[$0] ?? 0).rounded()) }
-        return "\(grams[0])P \(grams[1])F \(grams[2])C"
-    }
-
-    /// "Today", "Yesterday", "Tomorrow", or "Fri, Jul 31"; the screen title upper-cases it.
-    static func dayTitle(_ day: CalendarDay, today: CalendarDay) -> String {
-        switch day {
-        case today: return "Today"
-        case today.adding(days: -1): return "Yesterday"
-        case today.adding(days: 1): return "Tomorrow"
-        default: return day.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-        }
     }
 }

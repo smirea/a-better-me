@@ -24,11 +24,6 @@ enum RecipeMath {
         return total(recipe.ingredients).scaled(by: 1 / cookedGrams)
     }
 
-    /// The same amount expressed in another measure: 1 cup at 2.4 base servings is 6 of a measure at 0.4.
-    static func convert(_ quantity: Double, from: Measure, to: Measure) -> Double {
-        quantity * from.servings / from.quantity * to.quantity / to.servings
-    }
-
     /// The ingredients for `servings` servings of a recipe that makes `yield`, as Prepare lists them.
     static func scaled(_ ingredients: [RecipeIngredient], from yield: Double, to servings: Double) -> [RecipeIngredient] {
         ingredients.map {
@@ -66,9 +61,8 @@ struct RecipeDraft: Equatable, Sendable {
         }
 
         mutating func switchMeasure(to measure: Measure) {
-            let converted = RecipeMath.convert(value.serving.quantity, from: value.serving.measure, to: measure)
-            value.serving = Serving(measure: measure, quantity: converted)
-            quantity = NumberText.text(converted)
+            value.serving = value.serving.converted(to: measure)
+            quantity = NumberText.text(value.serving.quantity)
         }
     }
 

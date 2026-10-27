@@ -13,35 +13,25 @@ struct ApiTokensView: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection(footer: "An agent starts with GET on this URL. Without a token it explains how to authenticate; with one it returns the full guide and every operation.") {
                 LabeledContent("API", value: apiURL)
-                    .font(AppFont.caption(13))
+                    .font(AppFont.rowDetail)
                     .textSelection(.enabled)
-            } footer: {
-                Text("An agent starts with GET on this URL. Without a token it explains how to authenticate; with one it returns the full guide and every operation.")
             }
-            Section {
+            ThemedSection(tokens.count == 1 ? "1 Token" : "\(tokens.count) Tokens", footer: "A token works once the app has synced. Swipe left to revoke one.") {
                 ForEach(tokens) { token in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(token.name).font(AppFont.medium(15)).foregroundStyle(Theme.textPrimary)
-                        Text("\(token.hint)… · Created \(token.createdAt.formatted(date: .abbreviated, time: .omitted))")
-                            .font(AppFont.caption(12))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    .swipeActions {
-                        Button("Revoke", role: .destructive) { revoking = token }
-                    }
+                    RowLabel(title: token.name, detail: "\(token.hint)… · Created \(token.createdAt.formatted(date: .abbreviated, time: .omitted))")
+                        .swipeActions {
+                            Button("Revoke", role: .destructive) { revoking = token }
+                        }
                 }
                 Button("New Token", systemImage: "plus") {
                     name = ""
                     naming = true
                 }
-            } header: {
-                SectionTitle(tokens.count == 1 ? "1 Token" : "\(tokens.count) Tokens").textCase(nil)
-            } footer: {
-                Text("A token works once the app has synced. Swipe left to revoke one.")
             }
         }
+        .themedList()
         .detailTitle("API Tokens")
         .alert("New Token", isPresented: $naming) {
             TextField("Name, e.g. Coach", text: $name)
@@ -55,7 +45,7 @@ struct ApiTokensView: View {
             Text("Name it after the agent that will use it.")
         }
         .confirmationDialog(
-            "Revoke \(revoking?.name ?? "")?", isPresented: Binding(get: { revoking != nil }, set: { if !$0 { revoking = nil } }),
+            "Revoke \(revoking?.name ?? "")?", isPresented: .isPresent($revoking),
             titleVisibility: .visible
         ) {
             Button("Revoke", role: .destructive) {
@@ -93,22 +83,21 @@ private struct CreatedTokenSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
+                ThemedSection(footer: "Copy it now. It is shown only once; only its fingerprint is stored.") {
                     Text(created.token)
                         .font(.system(.footnote, design: .monospaced))
                         .textSelection(.enabled)
                         .accessibilityIdentifier("api-token")
-                } footer: {
-                    Text("Copy it now. It is shown only once; only its fingerprint is stored.")
                 }
-                Section {
+                ThemedSection {
                     copyButton("Copy Token", value: created.token)
                     copyButton("Copy Setup for an Agent", value: created.setup)
                 }
             }
+            .themedList()
             .detailTitle(created.name)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() } }
             }
         }
         .interactiveDismissDisabled()

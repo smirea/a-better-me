@@ -73,68 +73,22 @@ struct LibraryExerciseRow<Trailing: View>: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ExerciseTile(exercise: exercise)
+            ExerciseTile(exercise: exercise, size: .small)
             VStack(alignment: .leading, spacing: 2) {
                 Text(search.highlighted(exercise.name))
-                    .font(AppFont.medium(15))
+                    .font(AppFont.rowTitle)
                     .foregroundStyle(Theme.textPrimary)
                 Text(exercise.muscleLine)
-                    .font(AppFont.caption(12))
+                    .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
                 if let subtitle {
-                    Text(subtitle).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                    Text(subtitle).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             trailing
         }
         .contentShape(.rect)
-    }
-}
-
-/// The 2:3 studio photo tile. Custom exercises have no media, so they show their initials stacked, as in the reference.
-struct ExerciseTile: View {
-    let exercise: Exercise
-    var width: CGFloat = 30
-
-    var body: some View {
-        Group {
-            if exercise.images.isEmpty {
-                VStack(spacing: 0) {
-                    ForEach(Array(exercise.name.split(separator: " ").prefix(2).enumerated()), id: \.offset) { _, word in
-                        Text(word.prefix(1).uppercased())
-                    }
-                }
-                .font(AppFont.headline(width * 0.4))
-                .foregroundStyle(Theme.textSecondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Theme.surfaceRaised)
-            } else {
-                ExerciseImage(exercise: exercise)
-            }
-        }
-        .frame(width: width, height: width * 1.5)
-        .clipShape(.rect(cornerRadius: width / 5))
-    }
-}
-
-/// An active filter turns white, like the reference's selected gym chip.
-struct FilterChipLabel: View {
-    let title: String
-    let systemImage: String
-    var isActive = false
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage).imageScale(.small)
-            Text(title).lineLimit(1)
-            Image(systemName: "chevron.down").imageScale(.small)
-        }
-        .font(AppFont.medium(13))
-        .foregroundStyle(isActive ? Theme.onPrimary : Theme.textPrimary)
-        .padding(.horizontal, 12)
-        .frame(height: 32)
-        .background(isActive ? Theme.textPrimary : Theme.surfaceRaised, in: .capsule)
     }
 }
 

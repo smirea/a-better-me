@@ -10,21 +10,20 @@ extension View {
 private struct NewSectionAlert: ViewModifier {
     @Binding var isPresented: Bool
     @Environment(LocalStore.self) private var store
-    @State private var name = ""
 
     func body(content: Content) -> some View {
-        content
-            .alert("New Section", isPresented: $isPresented) {
-                TextField("Section Name", text: $name)
-                Button("Add Section") {
-                    let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !name.isEmpty { store.updateSettings { $0.workout.sections.addSection(named: name) } }
-                }
-                Button("Cancel", role: .cancel) {}
-            }
-            .onChange(of: isPresented) { _, shown in
-                if shown { name = "" }
-            }
+        content.nameAlert("New Section", isPresented: $isPresented, placeholder: "Section Name", confirm: "Add Section") { name in
+            store.updateSettings { $0.workout.sections.addSection(named: name) }
+        }
+    }
+}
+
+/// The Your Sections placeholder on the Workout tab and in Customize Sections.
+struct NoSectionsLabel: View {
+    var body: some View {
+        Label("You haven’t added new sections yet. You can add one by tapping + on this page", systemImage: "rectangle.split.1x2")
+            .font(AppFont.rowDetail)
+            .foregroundStyle(Theme.textSecondary)
     }
 }
 
@@ -37,7 +36,6 @@ struct CustomSectionView: View {
     @Environment(LocalStore.self) private var store
     @State private var addingWorkouts = false
     @State private var renaming = false
-    @State private var newName = ""
     @State private var confirmingDelete = false
 
     var body: some View {
@@ -54,10 +52,7 @@ struct CustomSectionView: View {
                 }
                 Menu("\(section.name) Options", systemImage: "ellipsis") {
                     Button("Add Workout", systemImage: "plus") { addingWorkouts = true }
-                    Button("Rename", systemImage: "pencil") {
-                        newName = section.name
-                        renaming = true
-                    }
+                    Button("Rename", systemImage: "pencil") { renaming = true }
                     Button("Delete Section", systemImage: "trash", role: .destructive) { confirmingDelete = true }
                 }
                 .labelStyle(.iconOnly)
@@ -65,7 +60,7 @@ struct CustomSectionView: View {
             }
             if templates.isEmpty {
                 Text("Workouts you add to this section appear here. Tap ⋮ to add one from your library.")
-                    .font(AppFont.caption())
+                    .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
             } else if !section.collapsed {
                 ForEach(templates) { template in
@@ -82,13 +77,8 @@ struct CustomSectionView: View {
         .sheet(isPresented: $addingWorkouts) {
             SectionWorkoutsSheet(section: section, library: library)
         }
-        .alert("Rename Section", isPresented: $renaming) {
-            TextField("Section Name", text: $newName)
-            Button("Save") {
-                let name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !name.isEmpty { store.updateSettings { $0.workout.sections.rename(id, to: name) } }
-            }
-            Button("Cancel", role: .cancel) {}
+        .nameAlert("Rename Section", isPresented: $renaming, initial: section.name, placeholder: "Section Name") { name in
+            store.updateSettings { $0.workout.sections.rename(id, to: name) }
         }
         .alert("Delete Section", isPresented: $confirmingDelete) {
             Button("Delete Section", role: .destructive) {
@@ -119,31 +109,31 @@ private struct SectionWorkoutsSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                if library.isEmpty {
-                    Text("Workouts you create appear here.")
-                        .font(AppFont.caption())
-                        .foregroundStyle(Theme.textSecondary)
-                        .listRowBackground(Theme.surface)
-                }
-                ForEach(library) { template in
-                    let isFiled = filed.contains(template.id)
-                    Button {
-                        let id = section.id
-                        let templateID = template.id
-                        if isFiled { filed.remove(templateID) } else { filed.insert(templateID) }
-                        store.updateSettings { $0.workout.sections.file(templateID, in: id, !isFiled) }
-                    } label: {
-                        HStack(spacing: 12) {
-                            Text(template.name).font(AppFont.headline(15))
-                            Spacer()
-                            Image(systemName: isFiled ? "checkmark.square.fill" : "square").font(.system(size: 20))
-                        }
-                        .foregroundStyle(Theme.textPrimary)
-                        .contentShape(Rectangle())
+                ThemedSection {
+                    if library.isEmpty {
+                        Text("Workouts you create appear here.")
+                            .font(AppFont.rowDetail)
+                            .foregroundStyle(Theme.textSecondary)
                     }
-                    .buttonStyle(.plain)
-                    .listRowBackground(Theme.surface)
-                    .accessibilityAddTraits(isFiled ? .isSelected : [])
+                    ForEach(library) { template in
+                        let isFiled = filed.contains(template.id)
+                        Button {
+                            let id = section.id
+                            let templateID = template.id
+                            if isFiled { filed.remove(templateID) } else { filed.insert(templateID) }
+                            store.updateSettings { $0.workout.sections.file(templateID, in: id, !isFiled) }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Text(template.name).font(AppFont.rowTitle)
+                                Spacer()
+                                Image(systemName: isFiled ? "checkmark.square.fill" : "square").font(.system(size: 20))
+                            }
+                            .foregroundStyle(Theme.textPrimary)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(isFiled ? .isSelected : [])
+                    }
                 }
             }
             .scrollContentBackground(.hidden)

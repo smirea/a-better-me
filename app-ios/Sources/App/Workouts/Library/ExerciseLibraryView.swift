@@ -34,7 +34,7 @@ struct ExerciseLibraryView: View {
             query: query,
             subtitle: { counts[$0.id].map { "Performed \($0) \($0 == 1 ? "time" : "times")" } },
             onSelect: { opened = ExerciseRef(id: $0.id) },
-            header: { LibraryTabBar(selection: $tab) },
+            header: { UnderlineTabs(items: LibraryTab.allCases.map { ($0, $0.rawValue) }, selection: $tab) },
             trailing: { _ in Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary) }
         )
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search for an exercise")
@@ -58,41 +58,6 @@ enum ExerciseLibrary {
             for id in ids { counts[id, default: 0] += 1 }
         }
         return counts
-    }
-}
-
-/// MF's underlined text tabs. Five labels overflow a segmented control on iPhone, so the row scrolls.
-private struct LibraryTabBar: View {
-    @Binding var selection: ExerciseLibraryView.LibraryTab
-    @Namespace private var underline
-
-    var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 22) {
-                ForEach(ExerciseLibraryView.LibraryTab.allCases) { tab in
-                    let isSelected = tab == selection
-                    Button { withAnimation(.snappy) { selection = tab } } label: {
-                        Text(tab.rawValue)
-                            .font(AppFont.medium(15))
-                            .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textSecondary)
-                            .padding(.vertical, 8)
-                            .overlay(alignment: .bottom) {
-                                if isSelected {
-                                    Capsule()
-                                        .fill(Theme.textPrimary)
-                                        .frame(height: 3)
-                                        .matchedGeometryEffect(id: "underline", in: underline)
-                                }
-                            }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(isSelected ? .isSelected : [])
-                }
-            }
-            .padding(.horizontal)
-        }
-        .scrollIndicators(.hidden)
-        .overlay(alignment: .bottom) { Rectangle().fill(Theme.separator).frame(height: 1) }
     }
 }
 
@@ -124,7 +89,7 @@ struct ExerciseSettingsView: View {
         let exercise = catalog.exercise(exerciseID)
         let category = exercise?.restCategory ?? .upperIsolation
         Form {
-            Section {
+            ThemedSection("General") {
                 Button { showingInfo = true } label: {
                     SettingsRow(title: "Info", subtitle: "View instructions, exercise details, and history", systemImage: "chart.bar.fill") {
                         Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
@@ -182,15 +147,13 @@ struct ExerciseSettingsView: View {
                         title: "Delete Exercise",
                         subtitle: "This will remove the exercise from your custom library. Logged sets stay in your history.",
                         systemImage: "trash.fill",
-                        tint: Theme.destructive
+                        iconTint: Theme.destructive
                     ) {
                         Button("Delete", role: .destructive) { confirmingDelete = true }
                     }
                 }
-            } header: {
-                SectionTitle("General").textCase(nil)
             }
-            Section {
+            ThemedSection("Exercise Overrides") {
                 ForEach(ExerciseOverrideRow.allCases) { row in
                     overrideRow(row, category: category)
                 }
@@ -204,19 +167,17 @@ struct ExerciseSettingsView: View {
                         title: "Reset Defaults",
                         subtitle: "Remove all exercise level overrides",
                         systemImage: "arrow.counterclockwise",
-                        tint: Theme.destructive
+                        iconTint: Theme.destructive
                     ) { EmptyView() }
                 }
                 .buttonStyle(.plain)
                 .disabled(current?.isModified != true)
-            } header: {
-                SectionTitle("Exercise Overrides").textCase(nil)
             }
         }
         .themedList()
         .detailTitle(exercise?.name ?? "Exercise")
         .sheet(isPresented: $showingInfo) { ExerciseDetailSheet(exerciseID: exerciseID) }
-        .sheet(isPresented: Binding { duplicate != nil } set: { if !$0 { duplicate = nil } }) {
+        .sheet(isPresented: .isPresent($duplicate)) {
             if let duplicate { CustomExerciseWizard(draft: duplicate) }
         }
         .alert("Exercise Note", isPresented: $editingNote) {
@@ -253,9 +214,9 @@ struct ExerciseSettingsView: View {
             SettingsRow(title: row.title, subtitle: summary, systemImage: row.systemImage) {
                 Menu("Edit") {
                     Picker(row.title, selection: restBinding) {
-                        Text("Default (\(ExerciseOverrideRow.formatRest(defaults.restSeconds(category))))").tag(Int?.none)
+                        Text("Default (\(defaults.restSeconds(category).minuteSecond))").tag(Int?.none)
                         ForEach(Array(stride(from: 15, through: 600, by: 15)), id: \.self) {
-                            Text(ExerciseOverrideRow.formatRest($0)).tag(Optional($0))
+                            Text($0.minuteSecond).tag(Optional($0))
                         }
                     }
                 }
@@ -345,14 +306,11 @@ private struct WarmUpSchemeEditor: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection(footer: "Percent of the first working set's target weight.") {
                 ForEach(steps.indices, id: \.self) { index in
                     let step = step(at: index)
                     HStack(spacing: 12) {
-                        Text("W")
-                            .font(AppFont.headline(11))
-                            .frame(width: 22, height: 22)
-                            .background(Theme.surfaceRaised, in: .circle)
+                        SetBadge(type: .warmUp, number: 0, size: .compact)
                         Text("\(step.wrappedValue.percent)%").frame(width: 44, alignment: .leading)
                         Stepper("Percent", value: step.percent, in: 5...100, step: 5)
                             .labelsHidden()
@@ -363,24 +321,19 @@ private struct WarmUpSchemeEditor: View {
                             .labelsHidden()
                             .accessibilityValue("\(step.wrappedValue.reps) reps")
                     }
-                    .font(AppFont.medium(15))
-                    .listRowBackground(Theme.surface)
+                    .font(AppFont.rowTitle)
                 }
                 .onDelete { steps.remove(atOffsets: $0) }
                 Button("Add Warm-Up Set", systemImage: "plus") {
                     let last = steps.last ?? WarmUpStep(percent: 30, reps: 5)
                     steps.append(WarmUpStep(percent: min(last.percent + 10, 100), reps: last.reps))
                 }
-                .listRowBackground(Theme.surface)
-            } footer: {
-                Text("Percent of the first working set's target weight.").font(AppFont.caption(12))
             }
-            Section {
+            ThemedSection {
                 Button("Reset to Default", role: .destructive) {
                     save(nil)
                 }
                 .disabled(!isOverridden)
-                .listRowBackground(Theme.surface)
             }
         }
         .themedList()
@@ -404,24 +357,20 @@ private struct SettingsRow<Accessory: View>: View {
     let title: String
     let subtitle: String
     let systemImage: String
-    var tint = Theme.textPrimary
+    var iconTint = Theme.textPrimary
     @ViewBuilder var accessory: Accessory
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: systemImage).foregroundStyle(tint).frame(width: 24)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(AppFont.medium(15))
-                Text(subtitle).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary).lineLimit(3)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            RowLabel(title: title, detail: subtitle, systemImage: systemImage, iconTint: iconTint)
+                .lineLimit(3)
+                .frame(maxWidth: .infinity, alignment: .leading)
             accessory
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
+                .font(AppFont.chip)
+                .buttonStyle(.glass)
                 .controlSize(.small)
         }
         .contentShape(.rect)
-        .listRowBackground(Theme.surface)
     }
 }
 

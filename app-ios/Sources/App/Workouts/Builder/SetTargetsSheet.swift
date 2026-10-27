@@ -69,23 +69,15 @@ struct SetTargetsSheet: View {
                     setRow($set)
                     ForEach($set.subSets) { $sub in subSetRow($sub, of: set) }
                 }
-                Button { addSet() } label: {
-                    Image(systemName: "plus")
-                        .font(AppFont.headline())
-                        .frame(width: 36, height: 36)
-                        .background(Theme.surfaceRaised, in: Circle())
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Add Set")
-                .listRowSeparator(.hidden)
+                RoundIconButton("Add Set", systemImage: "plus") { addSet() }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .listRowSeparator(.hidden)
                 if let footer { footer }
                 Toggle(isOn: $restTimers) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Set Rest Timers").font(AppFont.headline(15))
+                        Text("Set Rest Timers").font(AppFont.rowTitle)
                         Text("This will override default exercise settings")
-                            .font(AppFont.caption())
+                            .font(AppFont.rowDetail)
                             .foregroundStyle(Theme.textSecondary)
                     }
                 }
@@ -98,18 +90,11 @@ struct SetTargetsSheet: View {
             .background(Theme.surface)
             .scrollDismissesKeyboard(.interactively)
             .environment(\.defaultMinListRowHeight, 40)
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(subtitle == nil ? "Targets" : catalog.name(draft.exerciseID))
+            .navigationSubtitle(subtitle ?? catalog.name(draft.exerciseID))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }
-                }
-                ToolbarItem(placement: .principal) {
-                    VStack(spacing: 0) {
-                        Text(subtitle == nil ? "Targets" : catalog.name(draft.exerciseID)).font(AppFont.title(17))
-                        Text(subtitle ?? catalog.name(draft.exerciseID))
-                            .font(AppFont.caption())
-                            .foregroundStyle(Theme.textSecondary)
-                    }
                 }
                 ToolbarItem(placement: .keyboard) {
                     Button("Done") { focus = nil }.frame(maxWidth: .infinity, alignment: .trailing)
@@ -141,7 +126,7 @@ struct SetTargetsSheet: View {
     @ViewBuilder private var bottomButtons: some View {
         if let readOnlyNote {
             Text(readOnlyNote)
-                .font(AppFont.caption())
+                .font(AppFont.rowDetail)
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
@@ -154,7 +139,7 @@ struct SetTargetsSheet: View {
                     }
                     .buttonStyle(.glass)
                     .controlSize(.large)
-                    .padding(.horizontal)
+                    .padding(.horizontal, Theme.margin)
                 }
                 PinnedActionButton("Save") { save() }
                 ForEach(actions.filter { $0.placement == .belowSave }) { action in
@@ -299,7 +284,7 @@ private struct RepsField: View {
         .focused(focus, equals: field)
         .frame(height: 32)
         .frame(maxWidth: .infinity)
-        .background(Theme.surfaceRaised.opacity(isEnabled ? 1 : 0.5), in: RoundedRectangle(cornerRadius: 6))
+        .background(Theme.surfaceRaised.opacity(isEnabled ? 1 : 0.5), in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
     }
 }
 
@@ -315,7 +300,7 @@ private struct RestCell: View {
                 .font(AppFont.body(14))
                 .foregroundStyle(isEnabled ? Theme.textPrimary : Theme.textTertiary)
                 .frame(width: 56, height: 32)
-                .background(Theme.surfaceRaised.opacity(isEnabled ? 1 : 0.5), in: RoundedRectangle(cornerRadius: 6))
+                .background(Theme.surfaceRaised.opacity(isEnabled ? 1 : 0.5), in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Rest \(seconds.minuteSecond)")
@@ -351,8 +336,8 @@ private struct SetTypePicker: View {
                 } label: {
                     HStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(type.title).font(AppFont.headline(15))
-                            Text(type.summary).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                            Text(type.title).font(AppFont.rowTitle)
+                            Text(type.summary).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                         }
                         Spacer()
                         Image(systemName: type == selected ? "largecircle.fill.circle" : "circle")
@@ -417,7 +402,7 @@ private struct RIRPicker: View {
                     .accessibilityLabel(rir.map { "RIR \($0)" } ?? "No RIR")
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, Theme.margin)
             .detailTitle("RIR Targets")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

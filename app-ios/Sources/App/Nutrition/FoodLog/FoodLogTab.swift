@@ -12,8 +12,9 @@ struct FoodLogTab: View {
                 DayPager()
             }
             .background(Theme.background)
+            .background { ShownDayEntries(day: state.day).id(state.day) }
             .safeAreaInset(edge: .bottom) { FoodLogBottomBar() }
-            .screenTitle(FoodLog.dayTitle(state.day, today: .today))
+            .screenTitle(NutritionFormat.dayTitle(state.day))
             .toolbar {
                 if state.day != .today {
                     ToolbarItem {
@@ -67,15 +68,21 @@ private struct WeekPills: View {
 
     @Environment(FoodLogState.self) private var state
     @Observe private var entries: [FoodEntry]
+    @Observe private var rows: [NutritionDay]
 
     init(monday: CalendarDay, plans: [NutritionPlan]) {
         self.monday = monday
         self.plans = plans
         _entries = Observe(FoodEntry.between(monday, monday.adding(days: 6)))
+        _rows = Observe(NutritionDay.between(monday, monday.adding(days: 6)))
     }
 
     var body: some View {
-        let kcal = Dictionary(grouping: entries, by: \.day).mapValues { FoodLog.totals($0)[.energy] ?? 0 }
+        let byDay = Dictionary(grouping: entries, by: \.day)
+        let rowByDay = Dictionary(rows.map { ($0.id, $0) }) { first, _ in first }
+        let kcal = Dictionary(uniqueKeysWithValues: monday.week.map { day in
+            (day, (rowByDay[day] ?? NutritionDay(id: day)).totals(byDay[day] ?? [])[.energy] ?? 0)
+        })
         ForEach(monday.week, id: \.self) { day in
             let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day).energy
             DayPill(
@@ -106,7 +113,7 @@ private struct DaySummary: View {
 
     var body: some View {
         let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day)
-        let lines = FoodLog.summary(FoodLog.dayTotals(entries, row: row), target: target, showOverages: settings.nutrition.showOverages)
+        let lines = FoodLog.summary(row.totals(entries), target: target, showOverages: settings.nutrition.showOverages)
         VStack(spacing: 4) {
             if row.status != .none || row.override != nil {
                 DayStatusBadges(row: row)
@@ -129,7 +136,7 @@ private struct DaySummary: View {
             .accessibilityAddTraits(.isButton)
             .accessibilityHint("Opens the Nutrition Overview")
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Theme.margin)
     }
 }
 
@@ -138,11 +145,7 @@ private struct DayStatusBadges: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            switch row.status {
-            case .fasted: badge("Fasted", systemImage: "moon.zzz.fill")
-            case .partial: badge("Incomplete", systemImage: "circle.lefthalf.filled")
-            case .none: EmptyView()
-            }
+            if row.status != .none { badge(row.status.title, systemImage: row.status.symbol) }
             if row.override != nil { badge("Edited totals", systemImage: "pencil") }
             Spacer()
         }
@@ -150,7 +153,7 @@ private struct DayStatusBadges: View {
 
     private func badge(_ title: String, systemImage: String) -> some View {
         Label(title, systemImage: systemImage)
-            .font(AppFont.caption(12))
+            .font(AppFont.rowDetail)
             .foregroundStyle(Theme.textSecondary)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
@@ -169,18 +172,13 @@ private struct MacroColumns: View {
             ForEach(lines) { line in
                 let color = NutrientRegistry.nutrient(line.nutrient)?.color ?? Theme.calories
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("\(prefix(line.nutrient)) \(Text(text(line)).font(AppFont.caption(12)))")
+                    Text("\(prefix(line.nutrient)) \(Text(text(line)).font(AppFont.rowDetail))")
                         .font(AppFont.headline(12))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                    GeometryReader { proxy in
-                        ZStack(alignment: page == .remaining ? .trailing : .leading) {
-                            Capsule().fill(Theme.surfaceRaised)
-                            Capsule().fill(color)
-                                .frame(width: proxy.size.width * fill(line))
-                        }
-                    }
-                    .frame(height: 3)
+                    ProgressView(value: fill(line))
+                        .progressViewStyle(.bar(color, height: 3))
+                        .scaleEffect(x: page == .remaining ? -1 : 1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -262,7 +260,7 @@ private struct CalendarSheet: View {
                 displayedComponents: .date
             )
             .datePickerStyle(.graphical)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .detailTitle("Select Date")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

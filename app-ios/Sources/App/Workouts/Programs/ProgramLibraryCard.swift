@@ -53,7 +53,7 @@ struct TemplateSummary: View {
             Text(title ?? template.name).font(AppFont.headline())
             if !items.isEmpty {
                 Text(items.map { catalog.name($0.exerciseID) }.joined(separator: ", "))
-                    .font(AppFont.caption())
+                    .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(2)
                 MuscleTags(primary: primary.sorted { $0.displayName < $1.displayName }, secondary: secondary.sorted { $0.displayName < $1.displayName })
@@ -97,7 +97,7 @@ struct ProgramCard: View {
                     ProgramIconTile(program: program)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(program.name).font(AppFont.headline())
-                        Text(workoutCount).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                        Text(workoutCount).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                     }
                     Spacer(minLength: 0)
                 }

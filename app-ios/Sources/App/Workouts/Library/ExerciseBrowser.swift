@@ -35,10 +35,9 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
         }
         List {
             if groups.isEmpty {
-                Text("No Results")
-                    .font(AppFont.medium(15))
-                    .foregroundStyle(Theme.textSecondary)
-                    .listRowBackground(Theme.surface)
+                ContentUnavailableView.search(text: query)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
             ForEach(groups) { group in
                 let isExpanded = expanded.contains(group.category)
@@ -128,7 +127,7 @@ struct ExerciseFilterBar: View {
                         ForEach(RestCategory.allCases) { Text($0.displayName).tag(Optional($0)) }
                     }
                 } label: {
-                    FilterChipLabel(title: filter.type?.displayName ?? "Type", systemImage: "square.stack.3d.up", isActive: filter.type != nil)
+                    Chip(title: filter.type?.displayName ?? "Type", systemImage: "square.stack.3d.up", trailingImage: "chevron.down", isActive: filter.type != nil)
                 }
                 Menu {
                     Picker("Laterality", selection: $filter.laterality) {
@@ -136,18 +135,20 @@ struct ExerciseFilterBar: View {
                         ForEach(Laterality.allCases, id: \.self) { Text($0.displayName).tag(Optional($0)) }
                     }
                 } label: {
-                    FilterChipLabel(
+                    Chip(
                         title: filter.laterality?.displayName ?? "Laterality",
                         systemImage: "rectangle.lefthalf.filled",
+                        trailingImage: "chevron.down",
                         isActive: filter.laterality != nil
                     )
                 }
                 ForEach(EquipmentRole.allCases) { role in
                     let selected = filter[keyPath: role.filterKey]
                     Button { equipmentSheet = role } label: {
-                        FilterChipLabel(
+                        Chip(
                             title: selected.flatMap { catalog.equipment[$0.id]?.name } ?? role.title,
                             systemImage: role.systemImage,
+                            trailingImage: "chevron.down",
                             isActive: selected != nil
                         )
                     }
@@ -161,14 +162,15 @@ struct ExerciseFilterBar: View {
                     }
                 } label: {
                     let range = filter.rangeOfMotion
-                    FilterChipLabel(
+                    Chip(
                         title: range == ExerciseFilter.fullRange ? "Range of Motion" : "ROM \(range.lowerBound)-\(range.upperBound)",
                         systemImage: "arrow.left.and.right",
+                        trailingImage: "chevron.down",
                         isActive: range != ExerciseFilter.fullRange
                     )
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, Theme.margin)
         }
         .scrollIndicators(.hidden)
         .sheet(item: $equipmentSheet) { role in
@@ -204,7 +206,7 @@ struct ExerciseFilterBar: View {
             }
             Button("Manage Gym Profiles", systemImage: "gearshape") { managingGyms = true }
         } label: {
-            FilterChipLabel(title: gym?.name ?? "Gym", systemImage: "building.2", isActive: gym != nil)
+            Chip(title: gym?.name ?? "Gym", systemImage: "building.2", trailingImage: "chevron.down", isActive: gym != nil)
         }
     }
 
@@ -262,7 +264,7 @@ struct EquipmentPickerSheet: View {
         NavigationStack {
             List {
                 ForEach(sections, id: \.key) { category, equipment in
-                    Section(category) {
+                    ThemedSection(category) {
                         ForEach(equipment.sorted { $0.name < $1.name }) { item in
                             let isSelected = selection?.id == item.id
                             Button {
@@ -272,9 +274,9 @@ struct EquipmentPickerSheet: View {
                                 HStack(spacing: 14) {
                                     EquipmentImage(equipmentID: item.id).frame(width: 32, height: 32)
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(item.name).font(AppFont.medium(15)).foregroundStyle(Theme.textPrimary)
+                                        Text(item.name).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
                                         if availability?.provides(item.id) == false {
-                                            Text("Not available in this gym").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                                            Text("Not available in this gym").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                                         }
                                     }
                                     Spacer()
@@ -282,7 +284,6 @@ struct EquipmentPickerSheet: View {
                                         .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textTertiary)
                                 }
                             }
-                            .listRowBackground(Theme.surface)
                         }
                     }
                 }
@@ -317,9 +318,9 @@ struct MuscleFilterRow: View {
                             MuscleTile(muscle: muscle)
                                 .frame(width: 48, height: 48)
                                 .background(Theme.surface)
-                                .clipShape(.rect(cornerRadius: 8))
+                                .clipShape(.rect(cornerRadius: Theme.tinyCornerRadius))
                                 .overlay {
-                                    RoundedRectangle(cornerRadius: 8)
+                                    RoundedRectangle(cornerRadius: Theme.tinyCornerRadius)
                                         .strokeBorder(selection == muscle ? Theme.textPrimary : .clear, lineWidth: 2)
                                 }
                             Text(muscle.displayName)
@@ -334,7 +335,7 @@ struct MuscleFilterRow: View {
                     .accessibilityAddTraits(selection == muscle ? .isSelected : [])
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, Theme.margin)
         }
         .scrollIndicators(.hidden)
     }

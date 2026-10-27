@@ -82,7 +82,7 @@ private struct DashboardHome: View {
                     case .dailyNutrition: DailyNutritionFocus()
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Theme.margin)
                 .frame(maxHeight: .infinity, alignment: .top)
             }
         }
@@ -92,35 +92,42 @@ private struct DashboardHome: View {
 
     @ViewBuilder
     private func section(_ section: DashboardSection) -> some View {
+        if !isEmpty(section) {
+            DashboardSectionView(title: section.title, seeAll: section.seeAll) {
+                switch section {
+                case .insights: ForEach(layout.insights, id: \.self) { InsightCardView(card: $0) }
+                case .habits: ForEach(layout.habits, id: \.self) { HabitCardView(card: $0) }
+                case .nutrition: ForEach(layout.nutrition, id: \.self) { NutritionCardView(card: $0) }
+                case .bodyMetrics: ForEach(layout.bodyMetrics, id: \.self) { BodyMetricCardView(card: $0) }
+                case .muscles: ForEach(layout.muscles, id: \.self) { MuscleCardView(card: $0) }
+                case .exercises: ForEach(layout.exercises, id: \.self) { ExerciseCardView(card: $0) }
+                case .general: StepsCardView()
+                }
+            }
+        }
+    }
+
+    private func isEmpty(_ section: DashboardSection) -> Bool {
         switch section {
-        case .insights where !layout.insights.isEmpty:
-            DashboardSectionView(title: "Insights & Analytics") {
-                ForEach(layout.insights, id: \.self) { InsightCardView(card: $0) }
-            }
-        case .habits where !layout.habits.isEmpty:
-            DashboardSectionView(title: "Habits") {
-                ForEach(layout.habits, id: \.self) { HabitCardView(card: $0) }
-            }
-        case .nutrition where !layout.nutrition.isEmpty:
-            DashboardSectionView(title: "Nutrition", seeAll: .allNutrition) {
-                ForEach(layout.nutrition, id: \.self) { NutritionCardView(card: $0) }
-            }
-        case .bodyMetrics where !layout.bodyMetrics.isEmpty:
-            DashboardSectionView(title: "Body Metrics", seeAll: .allBodyMetrics) {
-                ForEach(layout.bodyMetrics, id: \.self) { BodyMetricCardView(card: $0) }
-            }
-        case .muscles where !layout.muscles.isEmpty:
-            DashboardSectionView(title: "Muscle Groups", seeAll: .allMuscles) {
-                ForEach(layout.muscles, id: \.self) { MuscleCardView(card: $0) }
-            }
-        case .exercises where !layout.exercises.isEmpty:
-            DashboardSectionView(title: "Exercises", seeAll: .allExercises) {
-                ForEach(layout.exercises, id: \.self) { ExerciseCardView(card: $0) }
-            }
-        case .general where layout.general.contains(.steps):
-            DashboardSectionView(title: "General") { StepsCardView() }
-        default:
-            EmptyView()
+        case .insights: layout.insights.isEmpty
+        case .habits: layout.habits.isEmpty
+        case .nutrition: layout.nutrition.isEmpty
+        case .bodyMetrics: layout.bodyMetrics.isEmpty
+        case .muscles: layout.muscles.isEmpty
+        case .exercises: layout.exercises.isEmpty
+        case .general: !layout.general.contains(.steps)
+        }
+    }
+}
+
+private extension DashboardSection {
+    var seeAll: DashboardRoute? {
+        switch self {
+        case .nutrition: .allNutrition
+        case .bodyMetrics: .allBodyMetrics
+        case .muscles: .allMuscles
+        case .exercises: .allExercises
+        case .insights, .habits, .general: nil
         }
     }
 }
@@ -162,21 +169,21 @@ private struct InsightCardView: View {
             let sets = values.workoutsCard
             NavigationLink(value: DashboardRoute.workouts) {
                 DashboardCard(title: "Workouts", period: "Last 7 Workouts", value: sets.text, unit: "sets") {
-                    MiniBars(values: sets.values, color: DashboardColor.workouts)
+                    MiniBars(values: sets.values, color: Theme.accent)
                 }
             }
         case .weightTrend:
             let trend = values.trendCard
             NavigationLink(value: DashboardRoute.weightTrend) {
                 DashboardCard(title: "Weight Trend", period: "Last 7 Days", value: trend.text, unit: values.context.unit.rawValue) {
-                    MiniLine(values: trend.values, color: DashboardColor.trend)
+                    MiniLine(values: trend.values, color: Theme.weightTrend)
                 }
             }
         case .expenditure:
             let card = values.expenditureCard
             NavigationLink(value: DashboardRoute.expenditure) {
                 DashboardCard(title: "Expenditure", period: "Last 7 Days", value: card.text, unit: "kcal") {
-                    MiniLine(values: card.values, color: DashboardColor.expenditure)
+                    MiniLine(values: card.values, color: Theme.accent)
                 }
             }
         case .energyBalance:
@@ -206,7 +213,7 @@ private struct HabitCardView: View {
             let habit = values.workoutHabit
             NavigationLink(value: DashboardRoute.workouts) {
                 DashboardCard(title: "Workouts", period: "Last 30 Days", value: habit.text, unit: "this week") {
-                    DotGrid(days: habit.days, color: DashboardColor.workouts)
+                    DotGrid(days: habit.days, color: Theme.accent)
                 }
             }
         case .foodLogging:
@@ -227,7 +234,7 @@ private struct StepsCardView: View {
         let days = values.stepsCard
         NavigationLink(value: DashboardRoute.steps) {
             DashboardCard(title: "Steps", period: "Last 7 Days", value: days.text, unit: "steps") {
-                MiniBars(values: days.values, color: DashboardColor.workouts)
+                MiniBars(values: days.values, color: Theme.accent)
             }
         }
     }
@@ -248,7 +255,7 @@ struct DashboardSectionView<Cards: View>: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Theme.margin)
     }
 }
 
@@ -279,7 +286,7 @@ struct ExerciseCardView: View {
         let points = values.exerciseCard(card)
         NavigationLink(value: DashboardRoute.exercise(card.exerciseID, card.metric)) {
             DashboardCard(title: catalog.name(card.exerciseID), period: "Last 7 Workouts", value: points.text, unit: card.metric.unit(values.context.unit)) {
-                MiniLine(values: points.values, color: DashboardColor.exercise)
+                MiniLine(values: points.values, color: Theme.exercise)
             }
         }
     }

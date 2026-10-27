@@ -212,7 +212,7 @@ enum MetricScale {
         case .weight: (values.weightKg.map { unit.fromKg($0).formatted(.number.precision(.fractionLength(0...1))) } ?? "–", unit.rawValue.uppercased())
         case .reps: (values.reps.map(String.init) ?? "–", "REPS")
         case .rir: (values.rir.map { $0 >= 6 ? "6+" : "\($0)" } ?? "–", "RIR")
-        case .duration: (values.durationSeconds.map { Duration.seconds($0).formatted(.time(pattern: .minuteSecond)) } ?? "–", "TIME")
+        case .duration: (values.durationSeconds.map { $0.minuteSecond } ?? "–", "TIME")
         case .distance: (values.distanceMeters.map { $0.formatted(.number.precision(.fractionLength(0))) } ?? "–", "M")
         }
     }

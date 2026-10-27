@@ -1,4 +1,3 @@
-import GRDB
 import SwiftUI
 
 /// Every visible nutrient against its target for the day, or as a daily average over the week, month, three months,
@@ -38,7 +37,7 @@ struct NutritionOverview: View {
                         Toggle("Contributors", isOn: $contributors).tint(Theme.accent)
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Theme.margin)
                 .padding(.bottom, 8)
                 .background(Theme.background)
             }
@@ -69,14 +68,14 @@ private struct OverviewList: View {
 
     var body: some View {
         let days = (0..<period.rawValue).map { day.adding(days: -$0) }
-        let amounts = period == .today ? FoodLog.dayTotals(entries, row: rows.first { $0.id == day }) : FoodLog.dailyAverage(entries, rows: rows, days: days)
+        let amounts = period == .today ? (rows.first { $0.id == day } ?? NutritionDay(id: day)).totals(entries) : FoodLog.dailyAverage(entries, rows: rows, days: days)
         let targets = NutrientTargets(
             target: NutritionPlan.effective(on: day, in: plans)?.target(on: day), goals: goals, day: day,
             sex: settings.profile.sex, weightKg: weight?.weightKg ?? settings.profile.bodyWeightKg
         )
         List {
-            ForEach(settings.nutrition.hideAdditionalNutrients ? NutrientSections.lead : NutrientSections.all) { section in
-                Section(section.title) {
+            ForEach(settings.nutrition.hideAdditionalNutrients ? [.macros] : NutrientSection.allCases) { section in
+                ThemedSection(section.rawValue) {
                     ForEach(section.nutrients) { nutrient in
                         let row = NutrientRow(
                             nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id),
@@ -110,12 +109,12 @@ struct ContributorsView: View {
 
     var body: some View {
         let info = NutrientRegistry.nutrient(nutrient)
-        List(FoodLog.contributors(entries, of: nutrient)) { contributor in
-            HStack {
-                Text(contributor.name)
-                Spacer()
-                Text(info?.label(contributor.amount) ?? FoodLog.amountLabel(contributor.amount)).monospacedDigit()
-                    .foregroundStyle(Theme.textSecondary)
+        List {
+            ThemedSection {
+                ForEach(FoodLog.contributors(entries, of: nutrient)) { contributor in
+                    LabeledContent(contributor.name, value: info.map { NutritionFormat.amount(contributor.amount, $0.unit) } ?? NutritionFormat.amount(contributor.amount))
+                        .monospacedDigit()
+                }
             }
         }
         .themedList()
@@ -125,14 +124,5 @@ struct ContributorsView: View {
             }
         }
         .detailTitle(info?.name ?? "Contributors")
-    }
-}
-
-extension NutritionDay {
-    /// The rows from `start` through `end`; days without one are plain.
-    static func between(_ start: CalendarDay, _ end: CalendarDay) -> DatabaseQuery<[NutritionDay]> {
-        DatabaseQuery([]) { db in
-            try NutritionDay.filter(Column("id") >= start.description && Column("id") <= end.description).fetchAll(db)
-        }
     }
 }

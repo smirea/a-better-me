@@ -11,11 +11,11 @@ struct CustomizeSectionsView: View {
     var body: some View {
         let layout = settings.workout.sections
         List {
-            Section {
+            ThemedSection("Default Sections") {
                 ForEach(layout.order) { section in
                     HStack(spacing: 14) {
                         Image(systemName: section.icon).frame(width: 24).accessibilityHidden(true)
-                        Text(section.title).font(AppFont.headline(15))
+                        Text(section.title).font(AppFont.rowTitle)
                         Spacer()
                         if section == .activeProgram {
                             Toggle("Show Active Program", isOn: Binding(
@@ -26,27 +26,15 @@ struct CustomizeSectionsView: View {
                             .tint(Theme.accent)
                         }
                     }
-                    .listRowBackground(Theme.surface)
                 }
                 .onMove { from, to in store.updateSettings { $0.workout.sections.order.move(fromOffsets: from, toOffset: to) } }
-            } header: {
-                header("Default Sections")
             }
-            Section {
-                if layout.custom.isEmpty {
-                    Label("You haven’t added new sections yet. You can add one by tapping + on this page", systemImage: "rectangle.split.1x2")
-                        .font(AppFont.caption())
-                        .foregroundStyle(Theme.textSecondary)
-                        .listRowBackground(Theme.surface)
-                }
+            ThemedSection("Your Sections", footer: "Drag to reorder. Your sections appear on the Workout tab where the Your Sections row sits.") {
+                if layout.custom.isEmpty { NoSectionsLabel() }
                 ForEach(layout.custom) { section in
-                    Text(section.name).font(AppFont.headline(15)).listRowBackground(Theme.surface)
+                    Text(section.name).font(AppFont.rowTitle)
                 }
                 .onMove { from, to in store.updateSettings { $0.workout.sections.custom.move(fromOffsets: from, toOffset: to) } }
-            } header: {
-                header("Your Sections")
-            } footer: {
-                Text("Drag to reorder. Your sections appear on the Workout tab where the Your Sections row sits.")
             }
         }
         .environment(\.editMode, .constant(.active))
@@ -58,9 +46,5 @@ struct CustomizeSectionsView: View {
             }
         }
         .newSectionAlert(isPresented: $addingSection)
-    }
-
-    private func header(_ title: String) -> some View {
-        Text(title).font(AppFont.title(18)).foregroundStyle(Theme.textPrimary).textCase(nil)
     }
 }

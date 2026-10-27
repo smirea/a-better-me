@@ -26,14 +26,14 @@ struct MetricDetailView: View {
         let plot = values.plot(route, tab: tab.id, range: range, averaging: averaging)
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if detail.tabs.count > 1 { tabStrip(detail.tabs, selected: tab) }
-                summary(tab, plot).padding(.horizontal, 20)
+                if detail.tabs.count > 1 { tabs(detail.tabs, selected: tab) }
+                summary(tab, plot).padding(.horizontal, Theme.margin)
                 chart(tab, plot)
                     .frame(height: 320)
-                    .padding(.horizontal, 20)
-                controls.padding(.horizontal, 20)
-                legend(tab).padding(.horizontal, 20)
-                footer(detail.footer, plot, tab: tab).padding(.horizontal, 20)
+                    .padding(.horizontal, Theme.margin)
+                controls.padding(.horizontal, Theme.margin)
+                legend(tab).padding(.horizontal, Theme.margin)
+                footer(detail.footer, plot, tab: tab).padding(.horizontal, Theme.margin)
             }
             .padding(.bottom, 30)
         }
@@ -45,7 +45,7 @@ struct MetricDetailView: View {
                     Button("Log Weight", systemImage: "plus") { loggingWeight = true }
                 }
             }
-            if case let .nutrient(id) = route, !NutritionMetrics.macros.contains(id) {
+            if case let .nutrient(id) = route, !NutrientID.macros.contains(id) {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink { NutrientGoalsView(nutrient: id) } label: {
                         Image(systemName: "target")
@@ -74,32 +74,18 @@ struct MetricDetailView: View {
 
     private func fitToData(_ tab: MetricTab) -> Bool { fitOverrides[tab.id] ?? (tab.style == .line) }
 
-    private func tabStrip(_ tabs: [MetricTab], selected tab: MetricTab) -> some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 0) {
-                ForEach(tabs) { item in
-                    let selected = item.id == tab.id
-                    Button { tabID = item.id } label: {
-                        Label {
-                            Text(item.title)
-                        } icon: {
-                            if let icon = item.icon { Image(systemName: icon) }
-                        }
-                        .font(AppFont.medium(15))
-                        .foregroundStyle(selected ? Theme.textPrimary : Theme.textSecondary)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .frame(minWidth: tabs.count == 2 ? 180 : nil)
-                        .overlay(alignment: .bottom) {
-                            Rectangle().fill(selected ? Theme.textPrimary : Theme.separator).frame(height: 2)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(selected ? .isSelected : [])
-                }
+    /// Two or three tabs fit a segmented picker; an exercise's nine metrics scroll.
+    @ViewBuilder
+    private func tabs(_ tabs: [MetricTab], selected tab: MetricTab) -> some View {
+        if tabs.count <= 3 {
+            Picker("Metric", selection: Binding(get: { tab.id }, set: { tabID = $0 })) {
+                ForEach(tabs) { Text($0.title).tag($0.id) }
             }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, Theme.margin)
+        } else {
+            UnderlineTabs(items: tabs.map { ($0.id, $0.title) }, selection: Binding(get: { tab.id }, set: { tabID = $0 }))
         }
-        .scrollIndicators(.hidden)
     }
 
     /// The average is over the plotted points, so it follows the averaging. Totals, bests, and change are over the
@@ -109,31 +95,20 @@ struct MetricDetailView: View {
         return HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .top, spacing: 40) {
-                    ForEach(plot.stats, id: \.title) { stat($0.title, $0.value, tab: tab) }
+                    ForEach(plot.stats, id: \.title) { stat in
+                        StatView(title: stat.title, value: stat.value.map(tab.unit.format) ?? "--", unit: tab.unit.label)
+                    }
                 }
                 Text(plot.rangeLabel)
                     .font(AppFont.caption(14))
                     .foregroundStyle(Theme.textSecondary)
             }
             Spacer()
-            Button { fitOverrides[tab.id] = !fit } label: {
-                Image(systemName: fit ? "arrow.down.and.line.horizontal.and.arrow.up" : "arrow.up.and.line.horizontal.and.arrow.down")
-            }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .accessibilityLabel(fit ? "Scale from zero" : "Fit to data")
+            RoundIconButton(
+                fit ? "Scale from zero" : "Fit to data",
+                systemImage: fit ? "arrow.down.and.line.horizontal.and.arrow.up" : "arrow.up.and.line.horizontal.and.arrow.down"
+            ) { fitOverrides[tab.id] = !fit }
         }
-    }
-
-    private func stat(_ title: String, _ value: Double?, tab: MetricTab) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(value.map(tab.format) ?? "--").font(AppFont.number(22))
-                Text(tab.unit).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
-            }
-        }
-        .accessibilityElement(children: .combine)
     }
 
     private func chart(_ tab: MetricTab, _ plot: MetricPlot) -> some View {
@@ -174,12 +149,7 @@ struct MetricDetailView: View {
         }
         .chartXScale(domain: plot.interval.start...plot.interval.end)
         .chartYScale(domain: max(low - pad, fit ? -.infinity : 0)...(high + pad))
-        .chartYAxis {
-            AxisMarks(position: .trailing) { _ in
-                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3])).foregroundStyle(Theme.separator)
-                AxisValueLabel().foregroundStyle(Theme.textSecondary)
-            }
-        }
+        .themedYAxis()
         .chartXAxis {
             AxisMarks(values: .automatic(desiredCount: range == .oneWeek ? 7 : 5)) { _ in
                 AxisValueLabel(format: range == .oneWeek ? .dateTime.weekday(.abbreviated) : .dateTime.month(.abbreviated).day())
@@ -204,7 +174,7 @@ struct MetricDetailView: View {
                     Text(averaging.rawValue)
                     Image(systemName: "chevron.down").font(.caption2.weight(.bold))
                 }
-                .font(AppFont.medium(14))
+                .font(AppFont.chip)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
             }
@@ -215,33 +185,19 @@ struct MetricDetailView: View {
     }
 
     private func legend(_ tab: MetricTab) -> some View {
-        HStack(spacing: 20) {
-            if let overlay = tab.overlay, !overlay.dashed {
-                legendItem(overlay.title, symbol: "point.topleft.down.to.point.bottomright.curvepath", color: overlay.color)
-            }
-            legendItem(
-                tab.seriesTitle ?? tab.title,
-                symbol: tab.style == .bar ? "chart.bar.fill" : "point.topleft.down.to.point.bottomright.curvepath", color: tab.color
-            )
-            if let overlay = tab.overlay, overlay.dashed {
-                legendItem(overlay.title, symbol: "line.horizontal.3", color: overlay.color)
-            }
-            if !tab.holding.isEmpty {
-                legendItem("Holding", symbol: "square", color: tab.color)
-            }
+        let line = "point.topleft.down.to.point.bottomright.curvepath"
+        var items: [ChartLegend.Item] = []
+        if let overlay = tab.overlay, !overlay.dashed {
+            items.append(ChartLegend.Item(title: overlay.title, symbol: line, color: overlay.color))
         }
-        .font(AppFont.medium(14))
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
-    }
-
-    private func legendItem(_ title: String, symbol: String, color: Color) -> some View {
-        Label {
-            Text(title)
-        } icon: {
-            Image(systemName: symbol).foregroundStyle(color)
+        items.append(ChartLegend.Item(title: tab.seriesTitle ?? tab.title, symbol: tab.style == .bar ? "chart.bar.fill" : line, color: tab.color))
+        if let overlay = tab.overlay, overlay.dashed {
+            items.append(ChartLegend.Item(title: overlay.title, symbol: "line.horizontal.3", color: overlay.color))
         }
+        if !tab.holding.isEmpty {
+            items.append(ChartLegend.Item(title: "Holding", symbol: "square", color: tab.color))
+        }
+        return ChartLegend(items: items)
     }
 
     @ViewBuilder
@@ -268,8 +224,8 @@ struct MetricDetailView: View {
         case let .topExercises(top):
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Top 5 Exercises by Sets").font(AppFont.title())
-                    Text("Last 30 Days").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
+                    SectionHeader("Top 5 Exercises by Sets")
+                    Text("Last 30 Days").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
                 }
                 VStack(spacing: 0) {
                     ForEach(Array(top.enumerated()), id: \.element.exerciseID) { index, entry in
@@ -327,7 +283,7 @@ struct MetricPlot {
         ]
         func pointRows(tag: (DatedValue) -> MonthRow.Tag? = { _ in nil }) -> [MonthRow] {
             tab.points.reversed().map { point in
-                MonthRow(date: point.date, text: "\(tab.format(point.value)) \(tab.unit)", subtitle: point.date.formatted(.dateTime.weekday().month().day()), tag: tag(point))
+                MonthRow(date: point.date, text: "\(tab.unit.format(point.value)) \(tab.unit.label)", subtitle: point.date.formatted(.dateTime.weekday().month().day()), tag: tag(point))
             }
         }
         let rows: [MonthRow] = switch footer {
@@ -341,8 +297,8 @@ struct MetricPlot {
             weighIns.map { weighIn in
                 let date = weighIn.date.formatted(.dateTime.weekday().month().day().hour().minute())
                 return switch weighIn.source {
-                case let .app(id): MonthRow(date: weighIn.date, text: "\(unit.format(kg: weighIn.kg)) \(unit.rawValue)", subtitle: date, deletableID: id)
-                case .health: MonthRow(date: weighIn.date, text: "\(unit.format(kg: weighIn.kg)) \(unit.rawValue)", subtitle: "\(date) · Health")
+                case let .app(id): MonthRow(date: weighIn.date, text: "\(unit.label(kg: weighIn.kg))", subtitle: date, deletableID: id)
+                case .health: MonthRow(date: weighIn.date, text: "\(unit.label(kg: weighIn.kg))", subtitle: "\(date) · Health")
                 }
             }
         case .topExercises: []
@@ -350,7 +306,7 @@ struct MetricPlot {
         if case .energyBalance = footer {
             let differences = NutritionMetrics.differences(intake: tab.points, reference: tab.overlay?.points ?? [], calendar: calendar)
             balanceRows = NutritionMetrics.changeSpans.map { (days: $0, mean: NutritionMetrics.trailingMean(differences, days: $0, now: now, calendar: calendar)) }
-            isExpenditureBalance = tab.id == "Expenditure"
+            isExpenditureBalance = tab.balance == .expenditure
         }
         let months = Dictionary(grouping: rows) { calendar.dateInterval(of: .month, for: $0.date)!.start }
         self.months = months.keys.sorted(by: >).map { month in
@@ -359,7 +315,7 @@ struct MetricPlot {
     }
 
     private static func balanceRows(_ tab: MetricTab, now: Date, calendar: Calendar) -> [MonthRow] {
-        let isExpenditure = tab.id == "Expenditure"
+        let isExpenditure = tab.balance == .expenditure
         return NutritionMetrics.differences(intake: tab.points, reference: tab.overlay?.points ?? [], calendar: calendar).reversed().map { day in
             let tag = BalanceTag(balance: NutritionMetrics.balance(day.value), isExpenditure: isExpenditure)
             return MonthRow(
@@ -405,9 +361,7 @@ private struct TopExerciseRow: View {
     var body: some View {
         HStack(spacing: 14) {
             if let exercise {
-                ExerciseImage(exercise: exercise)
-                    .frame(width: 34, height: 50)
-                    .clipShape(.rect(cornerRadius: 6))
+                ExerciseTile(exercise: exercise, size: .small)
             }
             Text(exercise?.name ?? "Unknown exercise").font(AppFont.headline(15)).lineLimit(2)
             Spacer()
@@ -424,7 +378,6 @@ private struct ShownExercise: Identifiable {
     let id: ExerciseID
 }
 
-/// Lazy by month, so a long range builds only the months scrolled into view.
 /// Every entry of a metric, newest first and grouped by month, pushed from the detail screen's history.
 private struct MetricHistoryView: View {
     let route: DashboardRoute
@@ -447,7 +400,7 @@ private struct MetricHistoryView: View {
             LazyVStack(alignment: .leading, spacing: 20) {
                 ForEach(values.plot(route, tab: tab, range: range, averaging: averaging).months) { month in
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(month.title).font(AppFont.title())
+                        SectionHeader(month.title)
                         VStack(spacing: 0) {
                             ForEach(Array(month.rows.enumerated()), id: \.element.id) { index, row in
                                 if index > 0 { Divider().overlay(Theme.separator) }
@@ -458,7 +411,7 @@ private struct MetricHistoryView: View {
                     }
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.bottom, 30)
         }
         .background(Theme.background)
@@ -472,12 +425,7 @@ private struct MonthRowView: View {
 
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(row.text).font(AppFont.headline(15))
-                Text(row.subtitle)
-                    .font(AppFont.caption(13))
-                    .foregroundStyle(Theme.textSecondary)
-            }
+            RowLabel(title: row.text, detail: row.subtitle)
             Spacer()
             if let tag = row.tag {
                 Label {
@@ -485,7 +433,7 @@ private struct MonthRowView: View {
                 } icon: {
                     Image(systemName: tag.symbol).foregroundStyle(tag.color)
                 }
-                .font(AppFont.caption(13))
+                .font(AppFont.rowDetail)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

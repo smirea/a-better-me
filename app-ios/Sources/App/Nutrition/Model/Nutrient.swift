@@ -16,6 +16,9 @@ struct NutrientID: RawRepresentable, Hashable, Codable, CodingKeyRepresentable, 
     static let netCarbs: NutrientID = "nc"
     static let fiber: NutrientID = "291"
     static let alcohol: NutrientID = "221"
+
+    /// Calories, then protein, fat, and carbs: the order every summary, header, and macro line uses.
+    static let macros: [NutrientID] = [.energy, .protein, .fat, .carbs]
 }
 
 /// Sparse nutrient amounts in the registry's units (energy always kcal). A missing id means not reported, which a total

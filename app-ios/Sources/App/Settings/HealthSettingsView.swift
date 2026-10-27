@@ -5,20 +5,18 @@ import SwiftUI
 /// Settings > Apple Health: what the app reads and writes. Reads and workouts need no switch; writing food does,
 /// because MacroFactor may already write the same meals.
 struct HealthSettingsView: View {
-    @State private var healthStore = HKHealthStore()
+    private let healthStore = HealthStore.shared
     @State private var requestTrigger = false
     @State private var energyAllowed = false
     private let nutrition = NutritionHealth.shared
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection("Reads") {
                 RowLabel(title: "Body Weight and Steps", detail: "Charted on the Dashboard", systemImage: "scalemass")
                 RowLabel(title: "Heart Rate and Energy", detail: "Read during workouts", systemImage: "heart.text.square")
-            } header: {
-                SectionTitle("Reads").textCase(nil)
             }
-            Section {
+            ThemedSection("Writes", footer: footer) {
                 RowLabel(title: "Workouts", detail: "Each finished workout, with its heart rate and energy", systemImage: "figure.strengthtraining.traditional")
                 SettingToggle(
                     title: "Nutrition", detail: "Logged food as dietary energy, macros, and the micronutrients Health has types for",
@@ -29,12 +27,8 @@ struct HealthSettingsView: View {
                 )
                 if nutrition.isEnabled, let last = nutrition.lastWrite {
                     LabeledContent("Last written", value: "\(last.day) · \(last.samples) samples")
-                        .font(AppFont.caption(13))
+                        .font(AppFont.rowDetail)
                 }
-            } header: {
-                SectionTitle("Writes").textCase(nil)
-            } footer: {
-                Text(footer)
             }
         }
         .themedList()

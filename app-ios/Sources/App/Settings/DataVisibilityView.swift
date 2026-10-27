@@ -5,17 +5,13 @@ import SwiftUI
 struct DataVisibilityView: View {
     var body: some View {
         Form {
-            Section {
+            ThemedSection("Visibility Settings", footer: "Hide the metrics you do not use to simplify the app. Hidden data is kept, and you can show it again at any time.") {
                 NavigationLink { NutrientVisibilityView() } label: {
                     RowLabel(title: "Nutrient Visibility", systemImage: "leaf")
                 }
                 NavigationLink { BodyMetricsVisibilityView() } label: {
                     RowLabel(title: "Body Metrics Visibility", systemImage: "figure.arms.open")
                 }
-            } header: {
-                SectionTitle("Visibility Settings").textCase(nil)
-            } footer: {
-                Text("Hide the metrics you do not use to simplify the app. Hidden data is kept, and you can show it again at any time.")
             }
         }
         .themedList()
@@ -31,19 +27,15 @@ private struct NutrientVisibilityView: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection("Calories & Macros", footer: "Hidden nutrients still count toward totals and still go to Apple Health.") {
                 ForEach(Self.alwaysShown, id: \.self) { id in
                     LabeledContent(NutrientRegistry.nutrient(id)?.name ?? id.rawValue, value: "Default")
                 }
-            } header: {
-                SectionTitle("Calories & Macros").textCase(nil)
-            } footer: {
-                Text("Hidden nutrients still count toward totals and still go to Apple Health.")
             }
             ForEach(NutrientGroup.allCases, id: \.self) { group in
                 let nutrients = NutrientRegistry.all.filter { $0.group == group && !Self.alwaysShown.contains($0.id) }
                 if !nutrients.isEmpty {
-                    Section {
+                    ThemedSection(group.title) {
                         ForEach(nutrients) { nutrient in
                             Toggle(nutrient.name, isOn: Binding(
                                 get: { !settings.nutrition.hiddenNutrients.contains(nutrient.id) },
@@ -53,8 +45,6 @@ private struct NutrientVisibilityView: View {
                             ))
                             .tint(Theme.accent)
                         }
-                    } header: {
-                        SectionTitle(group.title).textCase(nil)
                     }
                 }
             }
@@ -76,14 +66,12 @@ private struct BodyMetricsVisibilityView: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection("Weight & Body Fat") {
                 LabeledContent("Scale Weight", value: "Default")
                 LabeledContent("Visual Body Fat", value: "Default")
-            } header: {
-                SectionTitle("Weight & Body Fat").textCase(nil)
             }
             ForEach(Self.groups, id: \.title) { group in
-                Section {
+                ThemedSection(group.title) {
                     ForEach(group.kinds, id: \.self) { kind in
                         Toggle(kind.title, isOn: Binding(
                             get: { settings.nutrition.visibleBodyMetrics.contains(kind) },
@@ -93,8 +81,6 @@ private struct BodyMetricsVisibilityView: View {
                         ))
                         .tint(Theme.accent)
                     }
-                } header: {
-                    SectionTitle(group.title).textCase(nil)
                 }
             }
         }

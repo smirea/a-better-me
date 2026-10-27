@@ -36,10 +36,9 @@ struct RecipeEditor: View {
                 preparation(issues)
                 steps
                 if recipeID != nil {
-                    Section {
+                    ThemedSection {
                         Button("Delete Recipe", systemImage: "trash", role: .destructive) { confirmingDelete = true }
                             .foregroundStyle(Theme.destructive)
-                            .listRowBackground(Theme.surface)
                     }
                 }
             }
@@ -48,10 +47,10 @@ struct RecipeEditor: View {
             .detailTitle(recipeID == nil ? "Create Recipe" : "Edit Recipe")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save", systemImage: "checkmark") { save(adding: false) }
+                    Button(role: .confirm) { save(adding: false) }
                 }
                 if onCreateAndAdd != nil {
                     ToolbarItem(placement: .bottomBar) {
@@ -75,15 +74,17 @@ struct RecipeEditor: View {
     }
 
     private func build(_ issues: [RecipeDraft.Field: String], preview: Recipe) -> some View {
-        Section {
+        ThemedSection(
+            "Recipe",
+            footer: preview.cookedGrams.map { "Per serving weight will be \(NutritionFormat.amount($0 / preview.servings)) g. Total Weight is the weight of all servings combined, after cooking; blank uses the ingredients' weight." }
+                ?? "Weight for all servings this recipe makes combined."
+        ) {
             HStack(spacing: 12) {
-                FoodIconView(name: draft.icon, size: 36)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(draft.name.isEmpty ? "Your New Recipe" : draft.name).font(AppFont.medium(15))
-                    Text("\(LibraryFormat.macros(preview.nutrition.nutrients)) · \(servingLabel(preview))")
-                        .font(AppFont.caption(12))
-                        .foregroundStyle(Theme.textSecondary)
-                }
+                FoodIcon(icon: draft.icon, source: .recipe, size: 36)
+                RowLabel(
+                    title: draft.name.isEmpty ? "Your New Recipe" : draft.name,
+                    detail: "\(NutritionFormat.macroLine(preview.nutrition.nutrients)) · \(servingLabel(preview))"
+                )
                 Spacer()
                 Button("Edit Icon") { choosingIcon = true }
                     .buttonStyle(.bordered)
@@ -102,7 +103,7 @@ struct RecipeEditor: View {
             FieldIssue(issues[.servings])
             LabeledContent("Total Weight") {
                 HStack(spacing: 4) {
-                    TextField(draft.ingredientGrams > 0 ? LibraryFormat.amount(draft.ingredientGrams) : "Weight after cooking", text: $draft.totalWeight)
+                    TextField(draft.ingredientGrams > 0 ? NutritionFormat.amount(draft.ingredientGrams) : "Weight after cooking", text: $draft.totalWeight)
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                         .accessibilityLabel("Total Weight in grams")
@@ -110,20 +111,11 @@ struct RecipeEditor: View {
                 }
             }
             FieldIssue(issues[.totalWeight])
-        } header: {
-            SectionTitle("Recipe").textCase(nil)
-        } footer: {
-            if let cookedGrams = preview.cookedGrams {
-                Text("Per serving weight will be \(LibraryFormat.amount(cookedGrams / preview.servings)) g. Total Weight is the weight of all servings combined, after cooking; blank uses the ingredients' weight.")
-            } else {
-                Text("Weight for all servings this recipe makes combined.")
-            }
         }
-        .listRowBackground(Theme.surface)
     }
 
     private func ingredients(_ issues: [RecipeDraft.Field: String]) -> some View {
-        Section {
+        ThemedSection("Ingredients", subtitle: "Weight of ingredients is \(NutritionFormat.amount(draft.ingredientGrams)) g") {
             ForEach($draft.ingredients) { $ingredient in
                 IngredientRow(ingredient: $ingredient)
                 FieldIssue(issues[.ingredientQuantity(ingredient.id)])
@@ -132,20 +124,11 @@ struct RecipeEditor: View {
             .onMove { draft.ingredients.move(fromOffsets: $0, toOffset: $1) }
             Button("Add Ingredient", systemImage: "plus") { addingIngredient = true }
             FieldIssue(issues[.ingredients])
-        } header: {
-            VStack(alignment: .leading, spacing: 4) {
-                SectionTitle("Ingredients")
-                Text("Weight of ingredients is \(LibraryFormat.amount(draft.ingredientGrams)) g")
-                    .font(AppFont.caption(12))
-                    .foregroundStyle(Theme.textSecondary)
-            }
-            .textCase(nil)
         }
-        .listRowBackground(Theme.surface)
     }
 
     private func nutrition(_ preview: Recipe) -> some View {
-        Section {
+        ThemedSection("Nutrition") {
             Picker("Nutrition Per", selection: $perServing) {
                 Text("Serving").tag(true)
                 Text("Recipe").tag(false)
@@ -153,17 +136,14 @@ struct RecipeEditor: View {
             .pickerStyle(.segmented)
             MacroSummary(
                 amounts: perServing ? preview.nutrition.nutrients : RecipeMath.total(preview.ingredients),
-                caption: perServing ? "Per \(servingLabel(preview))" : "For \(LibraryFormat.quantity(preview.servings)) servings"
+                caption: perServing ? "Per \(servingLabel(preview))" : "For \(NutritionFormat.quantity(preview.servings)) servings"
             )
             Toggle("Show all nutrients", isOn: $showAllNutrients).tint(Theme.accent)
-        } header: {
-            SectionTitle("Nutrition").textCase(nil)
         }
-        .listRowBackground(Theme.surface)
     }
 
     private func preparation(_ issues: [RecipeDraft.Field: String]) -> some View {
-        Section {
+        ThemedSection("Preparation") {
             minutesField("Preparation Time", text: $draft.prepMinutes)
             FieldIssue(issues[.prepMinutes])
             minutesField("Cooking Time", text: $draft.cookMinutes)
@@ -180,14 +160,11 @@ struct RecipeEditor: View {
                     .accessibilityLabel("Description")
                 Text("\(draft.notes.count)/\(RecipeDraft.notesLimit)").font(AppFont.caption(11)).foregroundStyle(Theme.textTertiary)
             }
-        } header: {
-            SectionTitle("Preparation").textCase(nil)
         }
-        .listRowBackground(Theme.surface)
     }
 
     private var steps: some View {
-        Section {
+        ThemedSection("Steps") {
             ForEach(Array($draft.steps.enumerated()), id: \.element.id) { index, $step in
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Step \(index + 1)").font(AppFont.headline(13)).foregroundStyle(Theme.textSecondary)
@@ -199,10 +176,7 @@ struct RecipeEditor: View {
             .onDelete { draft.steps.remove(atOffsets: $0) }
             .onMove { draft.steps.move(fromOffsets: $0, toOffset: $1) }
             Button("Add Step", systemImage: "plus") { draft.steps.append(RecipeDraft.Step()) }
-        } header: {
-            SectionTitle("Steps").textCase(nil)
         }
-        .listRowBackground(Theme.surface)
     }
 
     private func minutesField(_ title: String, text: Binding<String>) -> some View {
@@ -222,7 +196,7 @@ struct RecipeEditor: View {
     }
 
     private func servingLabel(_ recipe: Recipe) -> String {
-        LibraryFormat.serving(FoodPortion(recipe.snapshot).serving, of: recipe.snapshot)
+        NutritionFormat.serving(FoodPortion(recipe.snapshot).serving, of: recipe.snapshot)
     }
 
     private func save(adding: Bool) {
@@ -247,14 +221,10 @@ private struct IngredientRow: View {
     var body: some View {
         let food = ingredient.value.food
         HStack(spacing: 10) {
-            FoodIconView(name: food.icon)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(food.name).font(AppFont.medium(14)).lineLimit(2)
-                Text(LibraryFormat.macros(food.amounts(ingredient.value.serving)))
-                    .font(AppFont.caption(12))
-                    .foregroundStyle(Theme.textSecondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            FoodIcon(food: food)
+            RowLabel(title: food.displayName, detail: NutritionFormat.macroLine(food.amounts(ingredient.value.serving)))
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
             TextField("1", text: Binding { ingredient.quantity } set: { ingredient.type($0) })
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)

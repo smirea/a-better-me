@@ -28,19 +28,6 @@ enum NutritionBasis: String, CaseIterable, Identifiable, Sendable {
     var id: Self { self }
 }
 
-/// Parses a typed number, accepting a comma decimal separator. Empty text is nil, as is anything that is not a
-/// number; `isNumber` tells the two apart.
-enum NumberText {
-    static func parse(_ text: String) -> Double? {
-        let trimmed = text.trimmingCharacters(in: .whitespaces).replacing(",", with: ".")
-        return trimmed.isEmpty ? nil : Double(trimmed)
-    }
-
-    static func text(_ value: Double?) -> String {
-        value.map { $0.formatted(.number.precision(.fractionLength(0...3)).grouping(.never).locale(Locale(identifier: "en_US_POSIX"))) } ?? ""
-    }
-}
-
 /// The custom food editor's fields as typed, so the form binds text and validation and conversion stay testable.
 struct FoodDraft: Equatable, Sendable {
     /// A named measure beyond the base serving: `quantity` `name` is `size`, in the food's size unit or, for a food

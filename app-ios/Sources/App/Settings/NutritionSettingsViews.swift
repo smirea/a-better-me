@@ -9,7 +9,7 @@ struct FoodLogSettingsView: View {
     var body: some View {
         let timeline = settings.nutrition.timeline
         Form {
-            Section {
+            ThemedSection("Nutrient Reporting") {
                 SettingChoice(
                     title: "Nutrient Reporting", systemImage: "minus.forwardslash.plus", selection: store.binding(settings, \.nutrition.showOverages),
                     options: [
@@ -17,10 +17,8 @@ struct FoodLogSettingsView: View {
                         SettingOption(value: true, title: "Show Overages", detail: "Negative numbers will be used in nutrient remaining views if you exceed your target"),
                     ]
                 )
-            } header: {
-                SectionTitle("Nutrient Reporting").textCase(nil)
             }
-            Section {
+            ThemedSection("Timeline Options") {
                 NavigationLink { HourRangeView() } label: {
                     RowLabel(title: "Hour Range", detail: "\(SettingsRules.hour(timeline.firstHour)) – \(SettingsRules.hour(timeline.lastHour))", systemImage: "clock")
                 }
@@ -62,18 +60,14 @@ struct FoodLogSettingsView: View {
                     title: "Premove", detail: "After selecting a food, the Move shortcut will appear next to the hour even if the Move action has not yet been selected",
                     systemImage: "arrow.up.and.down.and.arrow.left.and.right", isOn: store.binding(settings, \.nutrition.timeline.premove)
                 )
-            } header: {
-                SectionTitle("Timeline Options").textCase(nil)
             }
-            Section {
+            ThemedSection("Food Search") {
                 SettingToggle(
                     title: "Branded Results", detail: "Include branded foods from Open Food Facts in search",
                     systemImage: "tag", isOn: store.binding(settings, \.nutrition.searchBranded)
                 )
-            } header: {
-                SectionTitle("Food Search").textCase(nil)
             }
-            Section {
+            ThemedSection("Logger Options") {
                 NavigationLink { LoggerBannerView() } label: {
                     RowLabel(title: "Logger Banner", detail: "Customize the nutrients in the logger banner", systemImage: "rectangle.topthird.inset.filled")
                 }
@@ -94,8 +88,6 @@ struct FoodLogSettingsView: View {
                         SettingOption(value: .context, title: "Optimize for context", detail: "Tapping a search result closes search and shows the plate"),
                     ]
                 )
-            } header: {
-                SectionTitle("Logger Options").textCase(nil)
             }
         }
         .themedList()
@@ -109,15 +101,13 @@ private struct HourRangeView: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection(footer: "The timeline always shows these hours. Hours with food outside them still show.") {
                 Picker("From", selection: store.binding(settings, \.nutrition.timeline.firstHour)) {
                     ForEach(0...settings.nutrition.timeline.lastHour, id: \.self) { Text(SettingsRules.hour($0)).tag($0) }
                 }
                 Picker("To", selection: store.binding(settings, \.nutrition.timeline.lastHour)) {
                     ForEach(settings.nutrition.timeline.firstHour...23, id: \.self) { Text(SettingsRules.hour($0)).tag($0) }
                 }
-            } footer: {
-                Text("The timeline always shows these hours. Hours with food outside them still show.")
             }
         }
         .themedList()
@@ -134,7 +124,7 @@ private struct LoggerBannerView: View {
     var body: some View {
         let shown = settings.nutrition.logger.bannerNutrients
         Form {
-            Section {
+            ThemedSection("Nutrients") {
                 ForEach(Self.nutrients, id: \.self) { id in
                     Toggle(NutrientRegistry.nutrient(id)?.name ?? id.rawValue, isOn: Binding(
                         get: { shown.contains(id) },
@@ -147,10 +137,8 @@ private struct LoggerBannerView: View {
                     .tint(Theme.accent)
                     .disabled(shown == [id])
                 }
-            } header: {
-                SectionTitle("Nutrients").textCase(nil)
             }
-            Section {
+            ThemedSection {
                 SettingChoice(
                     title: "Nutrition Display", selection: store.binding(settings, \.nutrition.logger.nutritionDisplay),
                     options: [
@@ -180,7 +168,7 @@ private struct FavoriteMeasuresView: View {
     }
 
     private func section(_ title: String, _ measures: [String]) -> some View {
-        Section {
+        ThemedSection(title, footer: "Up to \(SettingsRules.favoritesPerCategory). Favorites come first in the serving picker.") {
             ForEach(measures, id: \.self) { measure in
                 Button {
                     store.updateSettings { $0.nutrition.favoriteMeasures = SettingsRules.toggleFavorite(measure, in: $0.nutrition.favoriteMeasures) }
@@ -192,10 +180,6 @@ private struct FavoriteMeasuresView: View {
                 .foregroundStyle(Theme.textPrimary)
                 .accessibilityAddTraits(settings.nutrition.favoriteMeasures.contains(measure) ? .isSelected : [])
             }
-        } header: {
-            SectionTitle(title).textCase(nil)
-        } footer: {
-            Text("Up to \(SettingsRules.favoritesPerCategory). Favorites come first in the serving picker.")
         }
     }
 }
@@ -209,7 +193,7 @@ struct ExpenditureSettingsView: View {
         let expenditure = settings.nutrition.expenditure
         let unit = settings.nutrition.energyUnit
         Form {
-            Section {
+            ThemedSection("Initial Estimate") {
                 SettingChoice(
                     title: "Estimation Method", systemImage: "function",
                     selection: Binding(
@@ -228,10 +212,8 @@ struct ExpenditureSettingsView: View {
                 NavigationLink { BMREquationView() } label: {
                     RowLabel(title: "BMR Equation", detail: "Configure how your BMR is initially calculated", systemImage: "figure.arms.open")
                 }
-            } header: {
-                SectionTitle("Initial Estimate").textCase(nil)
             }
-            Section {
+            ThemedSection("Expenditure Calculation") {
                 SettingChoice(
                     title: "Calculation Mode", systemImage: "waveform.path.ecg",
                     selection: Binding(
@@ -254,10 +236,8 @@ struct ExpenditureSettingsView: View {
                         SettingOption(value: .v1, title: "Expenditure V1"),
                     ]
                 )
-            } header: {
-                SectionTitle("Expenditure Calculation").textCase(nil)
             }
-            Section {
+            ThemedSection("Expenditure Modifiers") {
                 SettingToggle(
                     title: "Step-Informed Updates",
                     detail: "Uses step trends to speed up expenditure updates during periods where the step data improves confidence",
@@ -268,8 +248,6 @@ struct ExpenditureSettingsView: View {
                     detail: "Applies a predictive adjustment to expenditure based on the likely impact of goal changes",
                     systemImage: "chart.line.uptrend.xyaxis", isOn: store.binding(settings, \.nutrition.expenditure.predictiveGoalAdjustment)
                 )
-            } header: {
-                SectionTitle("Expenditure Modifiers").textCase(nil)
             }
         }
         .themedList()
@@ -291,9 +269,7 @@ struct ExpenditureSettingsView: View {
         } else {
             LabeledContent {
                 Button("Edit") { store.updateSettings { $0.nutrition.expenditure.calculationStart = .today } }
-                    .font(AppFont.medium(14))
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
+                    .rowAction()
                     .accessibilityLabel("Edit Calculation Start Date")
             } label: {
                 RowLabel(title: "Calculation Start Date", detail: "Default: your first logged day", systemImage: "calendar")
@@ -308,7 +284,7 @@ private struct BMREquationView: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection("BMR Equation") {
                 SettingChoice(
                     title: "Equation", systemImage: "function", selection: store.binding(settings, \.nutrition.expenditure.bmrEquation),
                     options: [
@@ -316,10 +292,8 @@ private struct BMREquationView: View {
                         SettingOption(value: .cunningham, title: "Cunningham Equation", detail: "Published in 1980"),
                     ]
                 )
-            } header: {
-                SectionTitle("BMR Equation").textCase(nil)
             }
-            Section {
+            ThemedSection("BMR Impacting Variables", footer: "Sex, height, and date of birth are in Settings > Profile.") {
                 SettingChoice(
                     title: "Activity", systemImage: "figure.walk", selection: store.binding(settings, \.nutrition.expenditure.activity),
                     options: orNotSet([
@@ -363,10 +337,6 @@ private struct BMREquationView: View {
                         SettingOption(value: .notSure, title: "Not sure"),
                     ])
                 )
-            } header: {
-                SectionTitle("BMR Impacting Variables").textCase(nil)
-            } footer: {
-                Text("Sex, height, and date of birth are in Settings > Profile.")
             }
         }
         .themedList()
@@ -385,7 +355,7 @@ struct StrategySettingsView: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection("General") {
                 SettingChoice(
                     title: "Check-In Day", systemImage: "calendar.badge.checkmark", selection: store.binding(settings, \.nutrition.checkInWeekday),
                     options: (1...7).map { SettingOption(value: $0, title: Calendar.current.weekdaySymbols[$0 % 7]) }
@@ -394,20 +364,14 @@ struct StrategySettingsView: View {
                     title: "Fast Check-In", detail: "Skips all optional coaching modules",
                     systemImage: "forward", isOn: store.binding(settings, \.nutrition.fastCheckIn)
                 )
-            } header: {
-                SectionTitle("General").textCase(nil)
             }
-            Section {
+            ThemedSection("Coaching Modules", footer: "Individually configure which modules can appear during your check-in.") {
                 LabeledContent("Introduction", value: "Default")
                 Toggle("Partial Logging", isOn: store.binding(settings, \.nutrition.coachingModules.partialLogging)).tint(Theme.accent)
                 Toggle("Weigh-In", isOn: store.binding(settings, \.nutrition.coachingModules.weighIn)).tint(Theme.accent)
                 Toggle("Fasting", isOn: store.binding(settings, \.nutrition.coachingModules.fasting)).tint(Theme.accent)
                 Toggle("Logging Break", isOn: store.binding(settings, \.nutrition.coachingModules.loggingBreak)).tint(Theme.accent)
                 LabeledContent("Program Update", value: "Default")
-            } header: {
-                SectionTitle("Coaching Modules").textCase(nil)
-            } footer: {
-                Text("Individually configure which modules can appear during your check-in.")
             }
         }
         .themedList()

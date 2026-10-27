@@ -20,25 +20,12 @@ struct PlateView: View {
 
     var body: some View {
         let plate = session.plate.totals
-        let day = dayRow.intake(entries)
+        let day = dayRow.totals(entries)
         List {
-            Section("Your Plate") {
+            ThemedSection("Your Plate") {
                 ForEach(session.plate.items) { item in
                     Button { open(item.id) } label: {
-                        HStack(spacing: 12) {
-                            LoggerFoodIcon(food: item.pick.portion.food)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.pick.portion.food.name).font(AppFont.medium(15)).lineLimit(2)
-                                Text(item.pick.portion.amounts.macroLine).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-                            }
-                            Spacer()
-                            Text(item.pick.portion.serving.label)
-                                .font(AppFont.medium(13))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 8))
-                        }
-                        .contentShape(Rectangle())
+                        FoodRow(food: item.pick.portion.food, serving: item.pick.portion.serving)
                     }
                     .buttonStyle(.plain)
                 }
@@ -48,7 +35,7 @@ struct PlateView: View {
                     }
                 }
             }
-            Section {
+            ThemedSection("Nutrition") {
                 Picker("Nutrition", selection: $withDay) {
                     Text("Plate").tag(false)
                     Text("Day").tag(true)
@@ -56,18 +43,16 @@ struct PlateView: View {
                 .pickerStyle(.segmented)
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
-                ForEach([NutrientID.energy, .protein, .fat, .carbs], id: \.self) { id in
+                ForEach(NutrientID.macros, id: \.self) { id in
                     macroRow(id, plate: plate[id] ?? 0, day: day[id] ?? 0)
                 }
                 Toggle("Show all nutrients", isOn: $allNutrients).tint(Theme.accent)
                 if allNutrients {
                     let total = withDay ? day + plate : plate
-                    ForEach(NutrientRegistry.all.filter { ![.energy, .protein, .fat, .carbs].contains($0.id) && total.amount(of: $0.id) != nil }) { nutrient in
-                        LabeledContent(nutrient.name, value: FoodDetailView.amount(total.amount(of: nutrient.id) ?? 0, nutrient.unit))
+                    ForEach(NutrientSection.allCases.dropFirst().flatMap(\.nutrients).filter { total.amount(of: $0.id) != nil }) { nutrient in
+                        LabeledContent(nutrient.name, value: NutritionFormat.amount(total.amount(of: nutrient.id) ?? 0, nutrient.unit))
                     }
                 }
-            } header: {
-                Text("Nutrition")
             }
         }
         .themedList()
@@ -81,7 +66,7 @@ struct PlateView: View {
                 Spacer()
                 LogFoodsButton(session: session).controlSize(.large)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Theme.margin)
             .padding(.bottom, 8)
         }
         .detailTitle("Your Plate")
@@ -93,10 +78,10 @@ struct PlateView: View {
         let amount = Int((withDay ? day + plate : plate).rounded())
         let caption = withDay ? "\(amount)\(target.map { " / \(Int($0.rounded()))" } ?? "") \(unit) with plate" : "\(amount) \(unit) in plate"
         return VStack(alignment: .leading, spacing: 6) {
-            Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.medium(15))
+            Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.rowTitle)
             Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
             ProgressView(value: target.map { min(1, (withDay ? day + plate : plate) / max($0, 1)) } ?? 0)
-                .tint(Theme.macro(id))
+                .progressViewStyle(.bar(Theme.macro(id)))
         }
         .padding(.vertical, 2)
     }

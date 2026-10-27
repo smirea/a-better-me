@@ -49,7 +49,7 @@ struct LoggerSessionTests {
         let logged = try await entries()
         #expect(logged.map(\.food.name) == ["Bananas, raw", "Shake"])
         #expect(logged.map(\.minute) == [14 * 60 + 41, 14 * 60 + 41])
-        #expect(logged.map(\.serving.label) == ["1 medium", "1 serving"])
+        #expect(logged.map { NutritionFormat.serving($0.serving) } == ["1 medium", "1 serving"])
         #expect(logger.plate.isEmpty)
         #expect(try store.read { try Food.fetchOne($0, key: "usda-173944") }?.name == "Bananas, raw")
 
@@ -110,6 +110,6 @@ struct LoggerSessionTests {
         let two = Serving(measure: banana.portion.serving.measure, quantity: 2)
         await logger.favorite(FoodPortion(banana.portion.food, serving: two), uncached: banana.food)
         #expect(logger.results.map(\.group) == [.favorites])
-        #expect(logger.results.first?.portion.serving.label == "2 medium")
+        #expect(logger.results.first.map { NutritionFormat.serving($0.portion.serving) } == "2 medium")
     }
 }

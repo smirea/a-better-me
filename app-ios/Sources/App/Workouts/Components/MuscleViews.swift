@@ -30,7 +30,7 @@ struct MuscleTags: View {
 
     private func tag(_ muscle: Muscle, primary: Bool) -> some View {
         let color = muscle == highlight ? Theme.textPrimary : Theme.surfaceRaised
-        let shape = RoundedRectangle(cornerRadius: 4)
+        let shape = RoundedRectangle(cornerRadius: Theme.tinyCornerRadius)
         return Text(muscle.displayName)
             .font(AppFont.caption(11))
             .foregroundStyle(primary && muscle == highlight ? Theme.onPrimary : Theme.textSecondary)
@@ -61,28 +61,54 @@ struct MuscleTile: View {
     }
 }
 
+/// A muscle's tile beside its name and detail lines, for an exercise's target muscles and a workout's muscle totals.
+struct MuscleTileCard: View {
+    let muscle: Muscle
+    let details: [String]
+
+    var body: some View {
+        HStack(spacing: 10) {
+            MuscleTile(muscle: muscle).frame(width: 52, height: 52)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(muscle.displayName).font(AppFont.rowTitle)
+                ForEach(details, id: \.self) { Text($0) }
+                    .font(AppFont.rowDetail)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .padding(.trailing, 12)
+        }
+        .padding(4)
+        .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
+        .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.surfaceRaised) }
+    }
+}
+
 /// The colored corner badge on a reps cell and the circles in the RIR picker.
 struct RIRBadge: View {
     let rir: Int?
 
     var body: some View {
         Text(rir.map { $0 >= 6 ? "6+" : "\($0)" } ?? "?")
-            .font(AppFont.headline(11))
-            .foregroundStyle(.white)
+            .font(AppFont.badge)
+            .foregroundStyle(Theme.textPrimary)
             .frame(minWidth: 18, minHeight: 18)
             .background(Theme.rir(rir), in: Circle())
     }
 }
 
-/// The 36 pt set circle: the set number for standard sets, the type letter (W, D, M, F) otherwise.
+/// The set circle: the set number for standard sets, the type letter (W, D, M, F) otherwise. Set tables use the
+/// regular size; target and summary lines use the compact one.
 struct SetBadge: View {
+    enum Size { case regular, compact }
+
     let type: SetType
     let number: Int
+    var size = Size.regular
 
     var body: some View {
         Text(type.badge ?? "\(number)")
-            .font(AppFont.headline(15))
-            .frame(width: 36, height: 36)
-            .background(Theme.surfaceRaised, in: Circle())
+            .font(size == .regular ? AppFont.headline(15) : AppFont.badge)
+            .frame(width: size == .regular ? 36 : 20, height: size == .regular ? 36 : 20)
+            .background(Theme.surfaceRaised, in: .circle)
     }
 }

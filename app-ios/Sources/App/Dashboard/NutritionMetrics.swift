@@ -4,7 +4,6 @@ import GRDB
 /// One day of the food log as the Dashboard reads it: what was eaten and what the owner said about the day.
 struct NutritionLogDay: Equatable, Sendable {
     var day: CalendarDay
-    /// The override when the day has one, else the entries' sum.
     var consumed: NutrientAmounts
     var entryCount: Int
     var status: NutritionDay.Status
@@ -14,8 +13,7 @@ struct NutritionLogDay: Equatable, Sendable {
 
     init(day: CalendarDay, entries: [FoodEntry], row: NutritionDay?) {
         self.day = day
-        let total = entries.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts }
-        consumed = row?.override ?? total
+        consumed = (row ?? NutritionDay(id: day)).totals(entries)
         entryCount = entries.count
         status = row?.status ?? .none
         hasOverride = row?.override != nil
@@ -30,17 +28,9 @@ struct NutritionLogDay: Equatable, Sendable {
     }
 }
 
-extension CalendarDay {
-    /// The start of the day in `calendar`, where the Dashboard's series live.
-    func date(in calendar: Calendar) -> Date {
-        calendar.date(from: DateComponents(year: year, month: month, day: day))!
-    }
-}
-
 /// The nutrition numbers on the Dashboard, as pure functions over the log, the plans, and the engine's series, so tests
 /// pin each to literal values. See docs/decisions/nutrition.md "Dashboard".
 enum NutritionMetrics {
-    static let macros: [NutrientID] = [.energy, .protein, .fat, .carbs]
 
     // MARK: Steps
 

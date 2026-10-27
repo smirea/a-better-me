@@ -47,7 +47,7 @@ struct WorkoutEditor: View {
     private func targetMuscles(_ targets: [MuscleTarget]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Target Muscles").font(AppFont.title())
+                Text("Target Muscles").font(AppFont.sectionTitle)
                 Spacer()
                 if let program {
                     Picker("Target Muscles span", selection: program.span) {
@@ -60,7 +60,12 @@ struct WorkoutEditor: View {
             }
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
-                    ForEach(targets) { MuscleTargetCard(target: $0) }
+                    ForEach(targets) { target in
+                        MuscleTileCard(muscle: target.muscle, details: [
+                            target.exercises == 1 ? "1 exercise" : "\(target.exercises) exercises",
+                            "\(target.sets.formatted(.number.precision(.fractionLength(0...1)))) sets",
+                        ])
+                    }
                 }
                 .padding(.horizontal)
             }
@@ -77,10 +82,10 @@ struct WorkoutEditor: View {
         }
         return HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(count == 1 ? "1 Exercise" : "\(count) Exercises").font(AppFont.title())
+                Text(count == 1 ? "1 Exercise" : "\(count) Exercises").font(AppFont.sectionTitle)
                 if program == nil {
                     Text("Estimated workout time is \(minutes) min")
-                        .font(AppFont.caption())
+                        .font(AppFont.rowDetail)
                         .foregroundStyle(Theme.textSecondary)
                 }
             }
@@ -91,11 +96,7 @@ struct WorkoutEditor: View {
                     .underline()
                     .buttonStyle(.plain)
             } else {
-                Button("Add Exercise", systemImage: "plus") { sheet = .picker(.add) }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
-                    .controlSize(.large)
+                RoundIconButton("Add Exercise", systemImage: "plus") { sheet = .picker(.add) }
             }
         }
         .padding(.top, 12)
@@ -165,9 +166,9 @@ private struct BlockView: View {
         let rounds = block.exercises.map(\.sets.count).max() ?? 0
         return HStack {
             VStack(alignment: .leading, spacing: 0) {
-                Text(block.exercises.count > 2 ? "Circuit" : "Superset").font(AppFont.headline(15))
+                Text(block.exercises.count > 2 ? "Circuit" : "Superset").font(AppFont.rowTitle)
                 Text(rounds == 1 ? "1 round" : "\(rounds) rounds")
-                    .font(AppFont.caption(12))
+                    .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
             }
             Spacer()
@@ -208,9 +209,9 @@ private struct ExerciseRow: View {
         let exercise = catalog.exercise(item.exerciseID)
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 16) {
-                ExerciseThumbnail(exercise: exercise, inSuperset: inSuperset)
+                ExerciseTile(exercise: exercise, badge: inSuperset ? .superset : nil)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(catalog.name(item.exerciseID)).font(AppFont.headline(15))
+                    Text(catalog.name(item.exerciseID)).font(AppFont.rowTitle)
                     if let exercise { MuscleTags(exercise: exercise) }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -225,15 +226,15 @@ private struct ExerciseRow: View {
         let exercise = catalog.exercise(item.exerciseID)
         let hasTargets = item.sets.contains { $0.target != nil }
         return HStack(alignment: .top, spacing: 16) {
-            ExerciseThumbnail(exercise: exercise, inSuperset: inSuperset)
+            ExerciseTile(exercise: exercise, badge: inSuperset ? .superset : nil)
             VStack(alignment: .leading, spacing: 4) {
-                Text(catalog.name(item.exerciseID)).font(AppFont.headline(15))
+                Text(catalog.name(item.exerciseID)).font(AppFont.rowTitle)
                 if hasTargets {
                     ForEach(Array(item.sets.enumerated()), id: \.element.id) { index, set in
                         TargetLine(set: set, number: item.sets.number(at: index))
                     }
                 } else {
-                    Text("No target set").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                    Text("No target set").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 }
                 if let exercise { MuscleTags(exercise: exercise) }
             }
@@ -300,39 +301,13 @@ struct TargetLine: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Text(set.type.badge ?? "\(number)")
-                .font(AppFont.headline(11))
-                .frame(width: 18, height: 18)
-                .background(Theme.surfaceRaised, in: Circle())
+            SetBadge(type: set.type, number: number, size: .compact)
             Text(set.targets.repsText)
-                .font(AppFont.caption())
+                .font(AppFont.rowDetail)
                 .foregroundStyle(Theme.textSecondary)
             Spacer()
             if let rir = set.target?.rir { RIRBadge(rir: rir) }
         }
-    }
-}
-
-private struct MuscleTargetCard: View {
-    let target: MuscleTarget
-
-    var body: some View {
-        HStack(spacing: 10) {
-            MuscleTile(muscle: target.muscle).frame(width: 72, height: 56)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(target.muscle.displayName).font(AppFont.headline(15))
-                Group {
-                    Text(target.exercises == 1 ? "1 exercise" : "\(target.exercises) exercises")
-                    Text("\(target.sets.formatted(.number.precision(.fractionLength(0...1)))) sets")
-                }
-                .font(AppFont.caption(12))
-                .foregroundStyle(Theme.textSecondary)
-            }
-            .frame(minWidth: 70, alignment: .leading)
-        }
-        .padding(8)
-        .padding(.trailing, 8)
-        .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textTertiary) }
     }
 }
 

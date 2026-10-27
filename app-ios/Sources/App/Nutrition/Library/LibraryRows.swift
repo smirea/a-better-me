@@ -40,24 +40,21 @@ enum LibraryFilter {
     }
 }
 
-/// A food, recipe, or favorite in a list: icon, name and brand, then its macros at `serving`.
+/// A food everywhere one is listed (the timeline, search, the library, the plate, a recipe): its icon, "Name By
+/// Brand", and "120 kcal · 1P 0F 31C · 1 large (136 g)" at `serving`.
 struct FoodRow: View {
     let food: FoodSnapshot
     let serving: Serving
+    var showsDetail = true
 
     var body: some View {
         HStack(spacing: 12) {
-            FoodIconView(name: food.icon)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(food.brand.map { "\(food.name) By \($0)" } ?? food.name)
-                    .font(AppFont.medium(15))
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(2)
-                Text("\(LibraryFormat.macros(food.amounts(serving))) · \(LibraryFormat.serving(serving, of: food))")
-                    .font(AppFont.caption(12))
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
-            }
+            FoodIcon(food: food)
+            RowLabel(
+                title: food.displayName,
+                detail: showsDetail ? "\(NutritionFormat.macroLine(food.amounts(serving))) · \(NutritionFormat.serving(serving, of: food))" : nil
+            )
+            .lineLimit(2)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .contentShape(.rect)

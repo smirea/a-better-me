@@ -89,9 +89,27 @@ extension CalendarDay {
         Self.calendar.dateComponents([.day], from: utcDate, to: other.utcDate).day!
     }
 
+    /// The start of the day in `calendar`, where the Dashboard's series live.
+    func date(in calendar: Calendar) -> Date {
+        calendar.date(from: DateComponents(year: year, month: month, day: day))!
+    }
+
     /// Noon of the day on the device's calendar: a `Date` for pickers and formatters that no zone shift moves to
     /// another day.
     var date: Date {
         Calendar.current.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
+    }
+
+    /// The moment `minute` minutes after the day's midnight in `calendar`, as an entry's or note's minute counts.
+    func date(atMinute minute: Int, in calendar: Calendar = .current) -> Date {
+        calendar.date(from: DateComponents(year: year, month: month, day: day, hour: minute / 60, minute: minute % 60))!
+    }
+}
+
+extension Date {
+    /// Minutes since midnight in `calendar`, 0 through 1439.
+    func minuteOfDay(in calendar: Calendar = .current) -> Int {
+        let parts = calendar.dateComponents([.hour, .minute], from: self)
+        return parts.hour! * 60 + parts.minute!
     }
 }

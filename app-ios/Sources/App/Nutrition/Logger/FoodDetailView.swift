@@ -30,18 +30,18 @@ struct FoodDetailView: View {
 
     var body: some View {
         List {
-            Section {
+            ThemedSection {
                 header
             }
-            Section("Impact on Targets") {
+            ThemedSection("Impact on Targets") {
                 impact
             }
-            ForEach(NutrientGroup.allCases, id: \.self) { group in
-                let rows = NutrientRegistry.all.filter { $0.group == group && food.nutrition.nutrients.amount(of: $0.id) != nil }
+            ForEach(NutrientSection.allCases) { section in
+                let rows = section.nutrients.filter { food.nutrition.nutrients.amount(of: $0.id) != nil }
                 if !rows.isEmpty {
-                    Section(group.title) {
+                    ThemedSection(section.rawValue) {
                         ForEach(rows) { nutrient in
-                            LabeledContent(nutrient.name, value: Self.amount(amounts.amount(of: nutrient.id) ?? 0, nutrient.unit))
+                            LabeledContent(nutrient.name, value: NutritionFormat.amount(amounts.amount(of: nutrient.id) ?? 0, nutrient.unit))
                         }
                     }
                 }
@@ -69,16 +69,7 @@ struct FoodDetailView: View {
             if let brand = food.brand, !brand.isEmpty {
                 Text(brand).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
             }
-            HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("\(Int((amounts[.energy] ?? 0).rounded()))").font(AppFont.number(34))
-                    Text("Calories").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
-                }
-                Spacer()
-                ForEach([NutrientID.protein, .fat, .carbs], id: \.self) { id in
-                    macro(id)
-                }
-            }
+            MacroHeader(amounts: amounts)
             HStack(spacing: 10) {
                 Button {
                     favorited += 1
@@ -97,50 +88,17 @@ struct FoodDetailView: View {
                     .buttonStyle(.glass)
                 }
             }
-            .font(AppFont.medium(14))
+            .font(AppFont.chip)
         }
         .padding(.vertical, 6)
     }
 
-    private func macro(_ id: NutrientID) -> some View {
-        let share = Int((amounts.macroShare(id) * 100).rounded())
-        return VStack(spacing: 2) {
-            Text("\(share)%")
-                .font(AppFont.caption(11))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 1)
-                .background(Theme.macro(id).opacity(0.35), in: .capsule)
-            Text(QuantityText.format(((amounts[id] ?? 0) * 10).rounded() / 10)).font(AppFont.headline(17))
-            Text(NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-        }
-        .frame(width: 64)
-    }
-
-    /// Each macro's share of the day's target this serving uses, as MacroFactor's four rings.
     private var impact: some View {
-        let target = NutritionPlan.effective(on: session.time.day, in: plans)?.target(on: session.time.day)
-        return HStack {
-            ForEach([NutrientID.energy, .protein, .fat, .carbs], id: \.self) { id in
-                let goal = target?.amount(id) ?? 0
-                let share = goal > 0 ? (amounts[id] ?? 0) / goal : 0
-                VStack(spacing: 6) {
-                    Gauge(value: min(share, 1)) {
-                        EmptyView()
-                    } currentValueLabel: {
-                        Text(goal > 0 ? "\(Int((share * 100).rounded()))%" : "–").font(AppFont.caption(12))
-                    }
-                    .gaugeStyle(.accessoryCircularCapacity)
-                    .tint(Theme.macro(id))
-                    Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? "").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-                }
-                .frame(maxWidth: .infinity)
-            }
-        }
-        .padding(.vertical, 4)
+        ImpactGauges(amounts: amounts, target: NutritionPlan.effective(on: session.time.day, in: plans)?.target(on: session.time.day))
     }
 
     private func choose(_ next: Measure) {
-        let converted = ServingChoices.convert(serving, to: next)
+        let converted = serving.converted(to: next)
         measure = next
         quantity = QuantityText(converted.quantity)
     }
@@ -167,11 +125,6 @@ struct FoodDetailView: View {
         } else {
             session.add(LoggerPick(portion, uncached: pick.uncached))
         }
-    }
-
-    static func amount(_ value: Double, _ unit: NutrientUnit) -> String {
-        let rounded = value >= 10 ? value.rounded() : (value * 10).rounded() / 10
-        return "\(QuantityText.format(rounded)) \(unit.rawValue)"
     }
 }
 
@@ -236,13 +189,7 @@ struct QuantityKeypad: View {
     private func chip(_ option: Measure) -> some View {
         let selected = option == measure
         return Button { choose(option) } label: {
-            Text(option.name)
-                .font(AppFont.medium(13))
-                .lineLimit(1)
-                .padding(.horizontal, 12)
-                .frame(height: 32)
-                .foregroundStyle(selected ? .black : Theme.textPrimary)
-                .background(selected ? Theme.textPrimary : Theme.surfaceRaised, in: .capsule)
+            Chip(title: option.name, isActive: selected)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -257,7 +204,7 @@ struct QuantityKeypad: View {
             content()
                 .frame(maxWidth: .infinity)
                 .frame(height: Self.keyHeight)
-                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 8))
+                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -271,7 +218,7 @@ struct QuantityKeypad: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: Self.keyHeight)
                 .foregroundStyle(prominent ? .black : Theme.textPrimary)
-                .background(prominent ? Theme.textPrimary : Theme.surface, in: RoundedRectangle(cornerRadius: 8))
+                .background(prominent ? Theme.textPrimary : Theme.surface, in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
         }
         .buttonStyle(.plain)
         .disabled(quantity.value.map { $0 <= 0 } ?? true)

@@ -39,7 +39,7 @@ struct WorkoutTab: View {
                             .padding(.horizontal, -20)
                             ForEach(settings.workout.sections.visible) { section($0, templates: templatesByID, finishedDays: finishedDays) }
                         }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, Theme.margin)
                         .padding(.bottom)
                     }
                 }
@@ -129,9 +129,7 @@ struct WorkoutTab: View {
             if custom.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     SectionHeader("Your Sections")
-                    Label("You haven’t added new sections yet. You can add one by tapping + on this page", systemImage: "rectangle.split.1x2")
-                        .font(AppFont.caption())
-                        .foregroundStyle(Theme.textSecondary)
+                    NoSectionsLabel()
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .card()
                 }
@@ -155,7 +153,7 @@ struct WorkoutTab: View {
             }
             if templates.isEmpty, libraryPrograms.isEmpty {
                 Text("Workouts you create appear here. Tap + to build one.")
-                    .font(AppFont.caption())
+                    .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
             } else if !libraryCollapsed {
                 ForEach(templates) { template in

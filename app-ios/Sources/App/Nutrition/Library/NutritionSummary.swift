@@ -8,14 +8,14 @@ struct MacroSummary: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                ForEach(NutrientSection.macroIDs, id: \.self) { id in
+                ForEach(NutrientID.macros, id: \.self) { id in
                     let nutrient = NutrientRegistry.nutrient(id)
                     VStack(spacing: 2) {
-                        Text(LibraryFormat.amount(amounts[id] ?? 0))
+                        Text(NutritionFormat.amount(amounts[id] ?? 0))
                             .font(AppFont.number(id == .energy ? 26 : 18))
                             .foregroundStyle(Theme.textPrimary)
                         Text(nutrient?.name ?? "")
-                            .font(AppFont.caption(12))
+                            .font(AppFont.rowDetail)
                             .foregroundStyle(Theme.macro(id))
                     }
                     .frame(maxWidth: .infinity)
@@ -23,7 +23,7 @@ struct MacroSummary: View {
                 }
             }
             if let caption {
-                Text(caption).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                Text(caption).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
         }
@@ -43,17 +43,14 @@ struct NutrientBreakdown: View {
                 return showAll || amount != nil ? (nutrient, amount) : nil
             }
             if !rows.isEmpty {
-                Section {
+                ThemedSection(section.rawValue) {
                     ForEach(rows, id: \.0.id) { nutrient, amount in
                         LabeledContent(nutrient.name) {
-                            Text(amount.map { LibraryFormat.value($0, of: nutrient) } ?? "–")
+                            Text(amount.map { NutritionFormat.amount($0, nutrient.unit) } ?? "–")
                                 .monospacedDigit()
                         }
                         .font(AppFont.body(15))
-                        .listRowBackground(Theme.surface)
                     }
-                } header: {
-                    SectionTitle(section.rawValue).textCase(nil)
                 }
             }
         }

@@ -51,14 +51,35 @@ struct SettingChoice<Value: Hashable>: View {
                     }
                 }
             } label: {
-                Text("Edit").font(AppFont.medium(14))
+                Text("Edit")
             }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.capsule)
+            .rowAction()
             .accessibilityLabel("Edit \(title)")
         } label: {
             RowLabel(title: title, detail: options.first { $0.value == selection }?.title ?? "", systemImage: systemImage)
         }
+    }
+}
+
+/// A full-width row that restores a screen's defaults.
+struct ResetRowButton: View {
+    let title: String
+    let action: () -> Void
+
+    init(_ title: String, action: @escaping () -> Void) {
+        self.title = title
+        self.action = action
+    }
+
+    var body: some View {
+        Button(title, role: .destructive, action: action).frame(maxWidth: .infinity)
+    }
+}
+
+extension View {
+    /// The capsule beside a row's value that edits or sets it.
+    func rowAction() -> some View {
+        buttonStyle(.glass).buttonBorderShape(.capsule).font(AppFont.chip)
     }
 }
 
@@ -68,10 +89,6 @@ extension [SettingOption<Int>] {
     }
 
     static func restDurations() -> Self {
-        stride(from: 0, through: 600, by: 15).map { SettingOption(value: $0, title: restDuration($0)) }
+        stride(from: 0, through: 600, by: 15).map { SettingOption(value: $0, title: $0.minuteSecond) }
     }
-}
-
-func restDuration(_ seconds: Int) -> String {
-    Duration.seconds(seconds).formatted(.time(pattern: .minuteSecond))
 }

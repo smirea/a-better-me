@@ -24,9 +24,9 @@ struct EquipmentWeightsOverrideView: View {
             Section {
                 Label {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("This impacts your workouts").font(AppFont.medium(15))
+                        Text("This impacts your workouts").font(AppFont.rowTitle)
                         Text("Settings below will override your gym profile weights for this exercise. Equipment availability is still determined by the profile.")
-                            .font(AppFont.caption(12))
+                            .font(AppFont.rowDetail)
                             .foregroundStyle(Theme.textSecondary)
                     }
                 } icon: {
@@ -34,27 +34,24 @@ struct EquipmentWeightsOverrideView: View {
                 }
                 .listRowBackground(Theme.accent.opacity(0.25))
             }
-            Section {
+            ThemedSection("\(exercise?.name ?? "Exercise") Weights") {
                 ForEach(items(of: exercise)) { item in
                     HStack(spacing: 14) {
                         EquipmentImage(equipmentID: item.id).frame(width: 32, height: 32)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(item.name).font(AppFont.medium(15))
+                            Text(item.name).font(AppFont.rowTitle)
                             Text(overrides[item.id]?.summary(in: unit) ?? "Default")
-                                .font(AppFont.caption(12))
+                                .font(AppFont.rowDetail)
                                 .foregroundStyle(Theme.textSecondary)
                                 .lineLimit(2)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         Button("Edit") { editing = item }
-                            .buttonStyle(.bordered)
-                            .buttonBorderShape(.capsule)
+                            .font(AppFont.chip)
+                            .buttonStyle(.glass)
                             .controlSize(.small)
                     }
-                    .listRowBackground(Theme.surface)
                 }
-            } header: {
-                SectionTitle("\(exercise?.name ?? "Exercise") Weights").textCase(nil)
             }
         }
         .themedList()

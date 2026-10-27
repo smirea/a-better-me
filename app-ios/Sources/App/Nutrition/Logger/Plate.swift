@@ -49,14 +49,6 @@ struct Plate: Hashable, Sendable {
     func item(_ id: UUID) -> Item? { items.first { $0.id == id } }
 }
 
-extension NutritionDay {
-    /// What the day holds before the plate: its override when the owner set one, which replaces the log's totals
-    /// (docs/decisions/nutrition.md), otherwise the sum of its entries.
-    func intake(_ entries: [FoodEntry]) -> NutrientAmounts {
-        override ?? entries.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts }
-    }
-}
-
 /// One nutrient of the banner: the day's amount before the plate, the plate's, and the day's target when a plan sets
 /// one.
 struct BannerValue: Hashable, Sendable {
@@ -100,34 +92,9 @@ struct LogTime: Hashable, Sendable {
 
     /// "2 PM" today, "2 PM · Jul 31" on any other day.
     func label(today: CalendarDay = .today) -> String {
-        let hourText = Self.hourLabel(hour)
+        let hourText = NutritionFormat.hour(hour)
         guard day != today else { return hourText }
-        return "\(hourText) · \(day.shortLabel)"
-    }
-
-    static func hourLabel(_ hour: Int) -> String {
-        let twelve = hour % 12 == 0 ? 12 : hour % 12
-        return "\(twelve) \(hour < 12 ? "AM" : "PM")"
-    }
-}
-
-extension CalendarDay {
-    /// "Jul 31".
-    var shortLabel: String {
-        let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-        return "\(months[month - 1]) \(day)"
-    }
-
-    /// "Yesterday", "Today", "Tomorrow", or "Sat Oct 24", as the logger's date wheel names days.
-    func relativeLabel(today: CalendarDay = .today) -> String {
-        switch self {
-        case today: return "Today"
-        case today.adding(days: -1): return "Yesterday"
-        case today.adding(days: 1): return "Tomorrow"
-        default:
-            let weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-            return "\(weekdays[weekday - 1]) \(shortLabel)"
-        }
+        return "\(hourText) · \(NutritionFormat.shortDay(day))"
     }
 }
 

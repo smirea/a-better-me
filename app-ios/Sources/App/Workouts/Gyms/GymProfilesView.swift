@@ -10,7 +10,7 @@ struct GymProfilesView: View {
 
     var body: some View {
         List {
-            Section {
+            ThemedSection(gyms.count == 1 ? "1 Gym" : "\(gyms.count) Gyms") {
                 ForEach(gyms) { gym in
                     let isDefault = gym.id == defaultGym?.id
                     GymRow(gym: gym, isDefault: isDefault) { editing = gym.id }
@@ -27,8 +27,6 @@ struct GymProfilesView: View {
                             Button("Edit", systemImage: "pencil") { editing = gym.id }
                         }
                 }
-            } header: {
-                SectionTitle(gyms.count == 1 ? "1 Gym" : "\(gyms.count) Gyms").textCase(nil)
             }
         }
         .listStyle(.plain)
@@ -37,7 +35,7 @@ struct GymProfilesView: View {
         .safeAreaInset(edge: .bottom) {
             Button("Add New Gym Profile") { adding = true }
                 .secondaryPill()
-                .padding(.horizontal)
+                .padding(.horizontal, Theme.margin)
         }
         .sheet(isPresented: $adding) {
             NewGymSheet(makesDefault: gyms.isEmpty) { editing = $0 }
@@ -58,7 +56,7 @@ private struct GymRow: View {
                 .foregroundStyle(Theme.textPrimary)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(gym.name).font(AppFont.headline(15)).foregroundStyle(Theme.textPrimary)
+                Text(gym.name).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
                 Text(gym.equipment.count == 1 ? "1 piece of equipment" : "\(gym.equipment.count) pieces of equipment")
                     .font(AppFont.caption(13))
                     .foregroundStyle(Theme.textSecondary)
@@ -93,20 +91,17 @@ private struct NewGymSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
+                ThemedSection("Name") {
                     TextField("Gym name", text: $name)
                         .font(AppFont.medium(16))
-                        .listRowBackground(Theme.surface)
-                } header: {
-                    SectionTitle("Name").textCase(nil)
                 }
-                Section {
+                ThemedSection("Gym Type") {
                     ForEach(GymTemplate.allCases) { option in
                         Button { template = option } label: {
                             HStack(spacing: 14) {
                                 Image(systemName: option.icon).font(.system(size: 18)).frame(width: 28)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(option.title).font(AppFont.headline(15))
+                                    Text(option.title).font(AppFont.rowTitle)
                                     Text(option.summary).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
                                 }
                                 Spacer()
@@ -118,10 +113,7 @@ private struct NewGymSheet: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(template == option ? .isSelected : [])
-                        .listRowBackground(Theme.surface)
                     }
-                } header: {
-                    SectionTitle("Gym Type").textCase(nil)
                 }
             }
             .themedList()
@@ -134,7 +126,7 @@ private struct NewGymSheet: View {
             .safeAreaInset(edge: .bottom) {
                 Button("Create Gym Profile", action: create)
                     .primaryPill()
-                    .padding(.horizontal)
+                    .padding(.horizontal, Theme.margin)
             }
         }
     }

@@ -28,7 +28,7 @@ extension DashboardData {
             return TileMetrics.Tile(text: nil, unit: "", consumed: 0, range: NutrientRange())
         }
         let consumed = log.first { $0.day == today }?.consumed.amount(of: id) ?? 0
-        return TileMetrics.tile(consumed: consumed, range: nutrientRange(id, on: today), display: card.display, unit: nutrient.unit.rawValue)
+        return TileMetrics.tile(consumed: consumed, range: nutrientRange(id, on: today), display: card.display, unit: nutrient.unit)
     }
 
     var macrosCard: MacrosCardValues {
@@ -37,7 +37,7 @@ extension DashboardData {
         let bars = consumed.map { [($0[.protein] ?? 0) * 4, ($0[.fat] ?? 0) * 9, ($0[.carbs] ?? 0) * 4] }
         let logged = consumed.compactMap { $0[.energy] }.filter { $0 > 0 }
         let average = logged.isEmpty ? nil : logged.reduce(0, +) / Double(logged.count)
-        return MacrosCardValues(days: bars, text: average.map { Int($0.rounded()).formatted() })
+        return MacrosCardValues(days: bars, text: average?.wholeText)
     }
 
     func bodyMetricCard(_ card: BodyMetricCard) -> CardValues {
@@ -49,10 +49,11 @@ extension DashboardData {
     func nutrientDetail(_ id: NutrientID) -> MetricDetail {
         let nutrient = NutrientRegistry.nutrient(id)
         let unit = nutrient?.unit.rawValue ?? ""
+        let metricUnit = nutrient.map { MetricUnit($0.unit) } ?? .decimal("")
         let days = TileMetrics.nutrientDays(id, log: log, plans: plans, goals: goals, sex: profile.sex, weightKg: latestWeightKg, calendar: calendar)
         let color = Theme.macro(id)
         return MetricDetail(title: nutrient?.name ?? id.rawValue, tabs: [MetricTab(
-            title: nutrient?.name ?? id.rawValue, points: days.consumed, unit: unit, averageTitle: "Average",
+            title: nutrient?.name ?? id.rawValue, points: days.consumed, unit: metricUnit, averageTitle: "Average",
             summary: .total, style: .bar, color: color,
             overlay: days.target.isEmpty ? nil : MetricTab.Overlay(title: "Target", points: days.target, color: Theme.textPrimary, dashed: true)
         )], footer: .nutrient(NutrientSummary(
@@ -66,7 +67,7 @@ extension DashboardData {
         let tabs = [(NutrientID.protein, "Protein"), (.fat, "Fat"), (.carbs, "Carbs")].map { id, title in
             MetricTab(
                 title: title, points: logged.map { DatedValue(date: $0.day.date(in: calendar), value: $0.consumed.amount(of: id) ?? 0) },
-                unit: "g", averageTitle: "Average \(title)", summary: .total, style: .bar, color: Theme.macro(id)
+                unit: .decimal("g"), averageTitle: "Average \(title)", summary: .total, style: .bar, color: Theme.macro(id)
             )
         }
         return MetricDetail(title: "Macros", tabs: tabs, footer: .macros(logged.reversed().compactMap { day in
@@ -75,7 +76,10 @@ extension DashboardData {
     }
 
     func bodyMetricDetail(_ card: BodyMetricCard) -> MetricDetail {
-        let unit = card.unit(weight: self.unit, height: nutritionSettings.heightUnit)
+        let unit: MetricUnit = switch card {
+        case .waistToHeight, .waistToHip: .ratio
+        default: .decimal(card.unit(weight: self.unit, height: nutritionSettings.heightUnit))
+        }
         return MetricDetail(title: card.title, tabs: [MetricTab(
             title: card.title, points: bodySeries(card).map { DatedValue(date: $0.date, value: display(card, $0.value)) }, unit: unit,
             averageTitle: "Average", summary: .change, style: .line, color: Theme.green
@@ -92,7 +96,7 @@ extension DashboardData {
 
     private func format(_ card: BodyMetricCard, _ value: Double) -> String {
         switch card {
-        case .waistToHeight, .waistToHip: value.formatted(.number.precision(.fractionLength(2)))
+        case .waistToHeight, .waistToHip: MetricUnit.ratio.format(value)
         default: display(card, value).dashboardText
         }
     }

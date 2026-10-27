@@ -20,6 +20,12 @@ struct Serving: Hashable, Codable, Sendable {
 
     /// The base servings eaten, the one factor every amount scales by.
     var servings: Double { measure.servings * quantity / measure.quantity }
+
+    /// The same amount in `measure`, at full precision, so switching units back and forth never changes what was
+    /// eaten. Screens round the quantity only when they print it (`NutritionFormat.quantity`).
+    func converted(to measure: Measure) -> Serving {
+        Serving(measure: measure, quantity: servings * measure.quantity / measure.servings)
+    }
 }
 
 /// A food's nutrition: sparse amounts per base serving and the measures it can be logged in, the first the default.
@@ -60,6 +66,12 @@ struct FoodSnapshot: Hashable, Codable, Sendable {
     var nutrition: FoodNutrition
 
     func amounts(_ serving: Serving) -> NutrientAmounts { nutrition.nutrients.scaled(by: serving.servings) }
+
+    /// "ZZ Test Food By ZZ Brand", as MacroFactor names branded foods.
+    var displayName: String {
+        guard let brand, !brand.isEmpty else { return name }
+        return "\(name) By \(brand)"
+    }
 
     static func quickAdd(_ amounts: NutrientAmounts, name: String? = nil) -> FoodSnapshot {
         FoodSnapshot(

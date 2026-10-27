@@ -25,26 +25,50 @@ struct StrategyData {
 struct StrategyDataReader<Content: View>: View {
     @ViewBuilder let content: (StrategyData) -> Content
 
+    private struct Sources: Equatable {
+        var weighIns: [WeighIn]
+        var log: IntakeLog
+        var settings: NutritionSettings
+        var profile: ProfileSettings
+        var today: CalendarDay
+
+        func inputs() -> StrategyInputs {
+            StrategyInputs.make(weighIns: weighIns, log: log, settings: settings, profile: profile, today: today, calendar: .current)
+        }
+    }
+
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(HealthData.self) private var health
     @Observe(NutritionPlan.all) private var plans
     @Observe(IntakeLog.all) private var log
     @Observe(AppSettings.current) private var settings
+    @State private var inputs: StrategyInputs?
 
     var body: some View {
-        content(StrategyData(
-            plans: plans,
-            settings: settings,
-            inputs: StrategyInputs.make(
-                weighIns: health.weighIns, log: log, settings: settings.nutrition,
-                profile: settings.profile, today: .today, calendar: .current
-            )
-        ))
+        // Reading `scenePhase` re-renders on return to the app, so `today` moves past midnight.
+        let _ = scenePhase
+        let sources = Sources(weighIns: health.weighIns, log: log, settings: settings.nutrition, profile: settings.profile, today: .today)
+        // The first frame derives synchronously rather than drawing blank; later changes go through `onChange`.
+        content(StrategyData(plans: plans, settings: settings, inputs: inputs ?? sources.inputs()))
+            .onChange(of: sources, initial: true) { _, sources in
+                inputs = sources.inputs()
+            }
     }
 }
 
 enum StrategyRoute: Hashable {
     case planHistory, nutrientGoals, strategySettings
     case nutrient(NutrientID)
+
+    @ViewBuilder
+    var destination: some View {
+        switch self {
+        case .planHistory: PlanHistoryView()
+        case .nutrientGoals: NutrientGoalsListView()
+        case .strategySettings: StrategySettingsView()
+        case let .nutrient(id): NutrientGoalsView(nutrient: id)
+        }
+    }
 }
 
 /// Strategy, pushed from More: the program and its week of targets, the goal and its progress, the weekly check-in,
@@ -54,14 +78,6 @@ struct StrategyView: View {
 
     var body: some View {
         StrategyDataReader { StrategyHome(data: $0) }
-            .navigationDestination(for: StrategyRoute.self) { route in
-                switch route {
-                case .planHistory: PlanHistoryView()
-                case .nutrientGoals: NutrientGoalsListView()
-                case .strategySettings: StrategySettingsView()
-                case let .nutrient(id): NutrientGoalsView(nutrient: id)
-                }
-            }
             .task {
                 #if DEBUG
                 StrategySeed.seedIfRequested(store)
@@ -105,7 +121,7 @@ private struct StrategyHome: View {
                     emptyState
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.bottom, 30)
         }
         .background(Theme.background)
@@ -188,7 +204,7 @@ private struct StrategyHome: View {
         ) {
             WeekTargetsChart(targets: plan.targets, today: data.today.weekday)
             HStack {
-                StrategyStat(value: StrategyFormat.kcal(todayTarget.energy), caption: "Today · \(StrategyFormat.macros(todayTarget))")
+                StrategyStat(value: StrategyFormat.kcal(todayTarget.energy), caption: "Today · \(NutritionFormat.macros(todayTarget.amounts))")
                 StrategyStat(value: StrategyFormat.kcal(StrategyRules.averageEnergy(plan.targets)), caption: "Daily average")
             }
         } actions: {
@@ -264,7 +280,7 @@ private struct GoalTrendProgress: View {
             if points.count > 1 {
                 Chart {
                     ForEach(points, id: \.day) { point in
-                        LineMark(x: .value("Day", StrategyInputs.date(point.day, .current)), y: .value("Trend", unit.fromKg(point.kg)))
+                        LineMark(x: .value("Day", point.day.date(in: .current)), y: .value("Trend", unit.fromKg(point.kg)))
                             .foregroundStyle(Theme.goal)
                             .interpolationMethod(.monotone)
                     }
@@ -298,7 +314,7 @@ private struct GoalHistoryRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(StrategyFormat.range(period.start, period.end)).font(AppFont.headline(15))
+                Text(StrategyFormat.range(period.start, period.end)).font(AppFont.rowTitle)
                 Text("\(StrategyFormat.weight(period.startWeightKg, unit)) → \(StrategyFormat.weight(period.endWeightKg, unit))")
                     .font(AppFont.caption())
                     .foregroundStyle(Theme.textSecondary)
@@ -308,8 +324,7 @@ private struct GoalHistoryRow: View {
             Image(systemName: period.end == nil ? "hourglass" : "checkmark.circle.fill")
                 .foregroundStyle(period.end == nil ? Theme.textPrimary : Theme.goal)
         }
-        .padding(14)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+        .card()
         .accessibilityElement(children: .combine)
     }
 
@@ -328,21 +343,20 @@ struct PlanRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(StrategyFormat.day(plan.id, year: true)).font(AppFont.headline(15))
+                Text(StrategyFormat.day(plan.id, year: true)).font(AppFont.rowTitle)
                 Text("\(kindName) · \(StrategyRules.styleName(plan.coaching.style))")
                     .font(AppFont.caption())
                     .foregroundStyle(Theme.textSecondary)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 3) {
-                Text(StrategyFormat.kcal(StrategyRules.averageEnergy(plan.targets))).font(AppFont.medium(15)).monospacedDigit()
+                Text(StrategyFormat.kcal(StrategyRules.averageEnergy(plan.targets))).font(AppFont.rowTitle).monospacedDigit()
                 if let expenditure = plan.expenditureKcal {
                     Text("Expenditure \(Int(expenditure.rounded()))").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
                 }
             }
         }
-        .padding(14)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+        .card()
         .accessibilityElement(children: .combine)
     }
 

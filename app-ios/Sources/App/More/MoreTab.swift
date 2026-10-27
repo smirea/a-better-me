@@ -8,63 +8,80 @@ struct MoreTab: View {
         NavigationStack {
             Form {
                 if let rows = store.snapshotRows {
-                    Section {
+                    ThemedSection {
                         RowLabel(title: "Downloading… \(rows) rows", systemImage: "arrow.down.circle")
                     }
                 }
-                Section {
-                    row("Levels", "trophy") { LevelsView() }
-                    row("Strategy", "chart.line.uptrend.xyaxis") { StrategyView() }
-                    row("Workout History", "list.bullet.rectangle") { WorkoutHistoryView() }
-                } header: {
-                    SectionTitle("Progress").textCase(nil)
+                ThemedSection("Progress") {
+                    row(.levels, "Levels", "trophy")
+                    row(.strategy, "Strategy", "chart.line.uptrend.xyaxis")
+                    row(.workoutHistory, "Workout History", "list.bullet.rectangle")
                 }
-                Section {
-                    row("Units", "ruler") { UnitsSettingsView() }
-                    row("Profile", "person.crop.circle") { ProfileSettingsView() }
-                    row("Dashboard", "square.grid.2x2") { CustomizeDashboardView() }
-                } header: {
-                    SectionTitle("General").textCase(nil)
+                ThemedSection("General") {
+                    row(.units, "Units", "ruler")
+                    row(.profile, "Profile", "person.crop.circle")
+                    row(.dashboard, "Dashboard", "square.grid.2x2")
                 }
-                Section {
-                    row("Workout", "dumbbell") { WorkoutSettingsView() }
-                    row("Exercises", "figure.strengthtraining.traditional") { ExerciseLibraryView() }
-                    row("Gym Profiles", "building.2") { GymProfilesView() }
-                } header: {
-                    SectionTitle("Workouts").textCase(nil)
+                ThemedSection("Workouts") {
+                    row(.workout, "Workout", "dumbbell")
+                    row(.exercises, "Exercises", "figure.strengthtraining.traditional")
+                    row(.gymProfiles, "Gym Profiles", "building.2")
                 }
-                Section {
-                    row("Food Log", "fork.knife") { FoodLogSettingsView() }
-                    row("Expenditure", "bolt.fill") { ExpenditureSettingsView() }
-                    row("Strategy Settings", "circle.hexagongrid") { StrategySettingsView() }
-                    row("Foods & Recipes", "carrot") { FoodLibraryView() }
-                } header: {
-                    SectionTitle("Nutrition").textCase(nil)
+                ThemedSection("Nutrition") {
+                    row(.foodLog, "Food Log", "fork.knife")
+                    row(.expenditure, "Expenditure", "bolt.fill")
+                    row(.strategySettings, "Strategy Settings", "circle.hexagongrid")
+                    row(.foodsRecipes, "Foods & Recipes", "carrot")
                 }
-                Section {
-                    row("Apple Health", "heart.fill") { HealthSettingsView() }
-                } header: {
-                    SectionTitle("Integrations").textCase(nil)
+                ThemedSection("Integrations") {
+                    row(.appleHealth, "Apple Health", "heart.fill")
                 }
-                Section {
-                    row("Data Visibility", "eye") { DataVisibilityView() }
+                ThemedSection("Data") {
+                    row(.dataVisibility, "Data Visibility", "eye")
                     AssetsRow()
-                } header: {
-                    SectionTitle("Data").textCase(nil)
                 }
-                Section {
-                    row("API Tokens", "key") { ApiTokensView() }
-                } header: {
-                    SectionTitle("Automation").textCase(nil)
+                ThemedSection("Automation") {
+                    row(.apiTokens, "API Tokens", "key")
                 }
             }
             .themedList()
             .screenTitle("More")
+            .navigationDestination(for: MoreRoute.self) { $0.destination }
+            .navigationDestination(for: Muscle.self) { MuscleLevelsView(muscle: $0) }
+            .navigationDestination(for: StrategyRoute.self) { $0.destination }
         }
     }
 
-    private func row(_ title: String, _ systemImage: String, @ViewBuilder destination: () -> some View) -> some View {
-        NavigationLink(destination: destination) { RowLabel(title: title, systemImage: systemImage) }
+    private func row(_ route: MoreRoute, _ title: String, _ systemImage: String) -> some View {
+        NavigationLink(value: route) { RowLabel(title: title, systemImage: systemImage) }
+    }
+}
+
+/// More's screens are path values registered at its root, with the destinations Levels and Strategy push. A
+/// value link inside a screen pushed with a view destination never fired, so nothing here pushes by view.
+private enum MoreRoute: Hashable {
+    case levels, strategy, workoutHistory, units, profile, dashboard, workout, exercises, gymProfiles, foodLog, expenditure, strategySettings, foodsRecipes, appleHealth, dataVisibility, apiTokens
+
+    @ViewBuilder
+    var destination: some View {
+        switch self {
+        case .levels: LevelsView()
+        case .strategy: StrategyView()
+        case .workoutHistory: WorkoutHistoryView()
+        case .units: UnitsSettingsView()
+        case .profile: ProfileSettingsView()
+        case .dashboard: CustomizeDashboardView()
+        case .workout: WorkoutSettingsView()
+        case .exercises: ExerciseLibraryView()
+        case .gymProfiles: GymProfilesView()
+        case .foodLog: FoodLogSettingsView()
+        case .expenditure: ExpenditureSettingsView()
+        case .strategySettings: StrategySettingsView()
+        case .foodsRecipes: FoodLibraryView()
+        case .appleHealth: HealthSettingsView()
+        case .dataVisibility: DataVisibilityView()
+        case .apiTokens: ApiTokensView()
+        }
     }
 }
 
@@ -76,7 +93,7 @@ private struct AssetsRow: View {
             VStack(alignment: .leading, spacing: 8) {
                 RowLabel(title: store.statusLine, systemImage: "icloud.and.arrow.down")
                 if store.phase == .downloading, let progress = store.progress {
-                    ProgressView(value: progress.fraction).tint(Theme.textPrimary)
+                    ProgressView(value: progress.fraction).progressViewStyle(.bar(Theme.textPrimary))
                 }
             }
         }

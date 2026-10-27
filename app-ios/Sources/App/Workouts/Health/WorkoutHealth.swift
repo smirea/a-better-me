@@ -19,7 +19,7 @@ final class WorkoutHealth {
         case watch
     }
 
-    @ObservationIgnored let healthStore = HKHealthStore()
+    @ObservationIgnored let healthStore = HealthStore.shared
     private(set) var recorder: Recorder?
     /// The session being recorded, and its live numbers for Workout Complete until the summary is saved.
     private(set) var sessionID: UUID?

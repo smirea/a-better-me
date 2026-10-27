@@ -53,7 +53,7 @@ struct WorkoutSummaryView: View {
                         BodyMap(values: muscleSets, side: .back, fullAt: 3)
                     }
                     .frame(height: 280)
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, Theme.margin)
                     if !records.isEmpty { recordCards(records) }
                     details(volumeKg: stats.values.reduce(0) { $0 + $1.volumeKg })
                     HealthSummaryCard(session: session)
@@ -170,23 +170,23 @@ struct WorkoutSummaryView: View {
                             VStack(alignment: .trailing, spacing: 0) {
                                 Text(recordValue(record.kind, record.value)).font(AppFont.headline(15))
                                 Text(record.gain.map { $0.formatted(.percent.precision(.fractionLength(0)).sign(strategy: .always())) } ?? "New!")
-                                    .font(AppFont.caption(12))
+                                    .font(AppFont.rowDetail)
                                     .foregroundStyle(Theme.textSecondary)
                             }
                         }
                         Text(catalog.name(record.exerciseID))
-                            .font(AppFont.headline(15))
+                            .font(AppFont.rowTitle)
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 0)
-                        Text(record.kind.title).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                        Text(record.kind.title).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                     }
                     .padding(14)
                     .frame(width: 160, height: 130)
                     .overlay(RoundedRectangle(cornerRadius: Theme.cornerRadius).strokeBorder(Theme.surfaceRaised, lineWidth: 1.5))
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
         }
         .scrollIndicators(.hidden)
     }
@@ -202,7 +202,7 @@ struct WorkoutSummaryView: View {
 
     private func details(volumeKg: Double) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Workout Details").font(AppFont.title()).padding(.bottom, 8)
+            Text("Workout Details").font(AppFont.sectionTitle).padding(.bottom, 8)
             detailRow("Volume", icon: "scalemass.fill", value: weight(volumeKg))
             Divider().overlay(Theme.separator)
             detailRow("Start Time", icon: "arrow.right.to.line", subtitle: Self.startText(session.startedAt)) {
@@ -217,20 +217,17 @@ struct WorkoutSummaryView: View {
                 detailRow("Edit Workout", icon: "dumbbell.fill", subtitle: "Go to the workout editor") { isEditing = true }
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Theme.margin)
     }
 
     private func detailRow(_ title: String, icon: String, subtitle: String? = nil, value: String? = nil, edit: (() -> Void)? = nil) -> some View {
         HStack(spacing: 16) {
-            Image(systemName: icon).frame(width: 24)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(AppFont.medium(16))
-                if let subtitle { Text(subtitle).font(AppFont.caption()).foregroundStyle(Theme.textSecondary) }
-            }
+            RowLabel(title: title, detail: subtitle, systemImage: icon)
             Spacer()
-            if let value { Text(value).font(AppFont.body(15)) }
+            if let value { Text(value).font(AppFont.rowTitle) }
             if let edit {
                 Button("Edit", action: edit)
+                    .font(AppFont.chip)
                     .buttonStyle(.glass)
                     .accessibilityLabel("Edit \(title)")
             }
@@ -240,7 +237,7 @@ struct WorkoutSummaryView: View {
 
     private func exerciseDetails(_ blocks: [WorkoutBlock], stats: [ExerciseID: ExerciseStats], records: [ExerciseRecord]) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Details").font(AppFont.title()).padding(.horizontal, 20).padding(.bottom, 8)
+            Text("Details").font(AppFont.sectionTitle).padding(.horizontal, Theme.margin).padding(.bottom, 8)
             ForEach(blocks) { block in
                 let items = block.exercises.filter(\.hasLoggedSets)
                 if !items.isEmpty {
@@ -248,7 +245,7 @@ struct WorkoutSummaryView: View {
                         Text(block.exercises.count > 2 ? "Circuit" : "Superset")
                             .font(AppFont.medium(14))
                             .foregroundStyle(Theme.textSecondary)
-                            .padding(.horizontal, 20)
+                            .padding(.horizontal, Theme.margin)
                             .padding(.top, 12)
                     }
                     ForEach(items) { item in
@@ -271,18 +268,14 @@ struct WorkoutSummaryView: View {
                 }
             } label: {
                 HStack(spacing: 14) {
-                    Group {
-                        if let exercise { ExerciseImage(exercise: exercise) } else { Theme.surfaceRaised }
-                    }
-                    .frame(width: 48, height: 64)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    ExerciseTile(exercise: exercise)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(catalog.name(item.exerciseID))
-                            .font(AppFont.headline(15))
+                            .font(AppFont.rowTitle)
                             .foregroundStyle(Theme.textPrimary)
                             .multilineTextAlignment(.leading)
-                        Text("\(weight(stats.volumeKg)) volume").font(AppFont.caption())
-                        Text(stats.loggedSets == 1 ? "1 set" : "\(stats.loggedSets) sets").font(AppFont.caption())
+                        Text("\(weight(stats.volumeKg)) volume").font(AppFont.rowDetail)
+                        Text(stats.loggedSets == 1 ? "1 set" : "\(stats.loggedSets) sets").font(AppFont.rowDetail)
                         if !records.isEmpty {
                             HStack(spacing: 10) {
                                 ForEach(records) { record in
@@ -290,14 +283,14 @@ struct WorkoutSummaryView: View {
                                         .labelStyle(.titleAndIcon)
                                 }
                             }
-                            .font(AppFont.caption(12))
+                            .font(AppFont.rowDetail)
                         }
                     }
                     .foregroundStyle(Theme.textSecondary)
                     Spacer()
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down").foregroundStyle(Theme.textSecondary)
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Theme.margin)
                 .padding(.vertical, 10)
                 .contentShape(Rectangle())
             }
@@ -305,7 +298,7 @@ struct WorkoutSummaryView: View {
             .accessibilityLabel("\(catalog.name(item.exerciseID)) details")
             if isExpanded {
                 ForEach(Array(item.sets.enumerated().filter { $0.element.isCompleted }), id: \.element.id) { index, set in
-                    setLine(set, number: item.sets.prefix(index + 1).count { $0.type != .warmUp })
+                    setLine(set, number: item.sets.number(at: index))
                 }
             }
         }
@@ -316,15 +309,12 @@ struct WorkoutSummaryView: View {
             ForEach([set.log] + set.subSets.map(\.log), id: \.self) { log in
                 if let log {
                     HStack(spacing: 14) {
-                        Text(set.type.badge ?? "\(number)")
-                            .font(AppFont.headline(12))
-                            .frame(width: 24, height: 24)
-                            .background(Theme.surfaceRaised, in: Circle())
-                        Text(SessionEditor.summary(of: log, unit: unit)).font(AppFont.medium(15))
+                        SetBadge(type: set.type, number: number, size: .compact)
+                        Text(SessionEditor.summary(of: log, unit: unit)).font(AppFont.rowTitle)
                         Spacer()
                         if log.rir != nil { RIRBadge(rir: log.rir) }
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, Theme.margin)
                     .frame(height: 40)
                 }
             }
@@ -336,12 +326,12 @@ struct WorkoutSummaryView: View {
             if template != nil {
                 Toggle(isOn: $updatePlan) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Update Workout Plan").font(AppFont.headline(15))
+                        Text("Update Workout Plan").font(AppFont.rowTitle)
                         Text("Save these changes as the new default for this workout")
-                            .font(AppFont.caption(12))
+                            .font(AppFont.rowDetail)
                             .foregroundStyle(Theme.textSecondary)
                         Button("View Changes") { isShowingChanges = true }
-                            .font(AppFont.caption(12))
+                            .font(AppFont.rowDetail)
                             .underline()
                             .foregroundStyle(Theme.textPrimary)
                     }
@@ -353,9 +343,9 @@ struct WorkoutSummaryView: View {
             }
             .buttonStyle(.glassProminent)
             .tint(Theme.textPrimary)
-            .foregroundStyle(.black)
+            .foregroundStyle(Theme.onPrimary)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Theme.margin)
         .padding(.vertical, 12)
         .background(Theme.background)
     }
@@ -451,7 +441,7 @@ private struct WorkoutChangesSheet: View {
                     section(.regrouped, "Supersets") {
                         ForEach(changes.regrouped) { block in
                             Text(block.exercises.map { catalog.name($0.exerciseID) }.joined(separator: " + "))
-                                .font(AppFont.medium(15))
+                                .font(AppFont.rowTitle)
                         }
                     }
                 }
@@ -491,15 +481,12 @@ private struct WorkoutChangesSheet: View {
 
     private func plan(_ item: BlockExercise, title: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(AppFont.headline(15))
-            if item.sets.isEmpty { Text("No sets").font(AppFont.caption()).foregroundStyle(Theme.textSecondary) }
+            Text(title).font(AppFont.rowTitle)
+            if item.sets.isEmpty { Text("No sets").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary) }
             ForEach(Array(item.sets.enumerated()), id: \.element.id) { index, set in
                 HStack(spacing: 8) {
-                    Text(set.type.badge ?? "\(item.sets.prefix(index + 1).count { $0.type != .warmUp })")
-                        .font(AppFont.headline(11))
-                        .frame(width: 20, height: 20)
-                        .background(Theme.surfaceRaised, in: Circle())
-                    Text(Self.target(set.target)).font(AppFont.caption())
+                    SetBadge(type: set.type, number: item.sets.number(at: index), size: .compact)
+                    Text(Self.target(set.target)).font(AppFont.rowDetail)
                     Spacer()
                     if let rir = set.target?.rir { RIRBadge(rir: rir) }
                 }

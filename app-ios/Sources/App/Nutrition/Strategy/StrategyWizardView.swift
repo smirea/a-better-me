@@ -18,7 +18,7 @@ struct StrategyWizardView: View {
             page(model.steps[0])
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Close", systemImage: "xmark") { dismiss() }
+                        Button(role: .close) { dismiss() }
                     }
                 }
                 .navigationDestination(for: StrategyWizardModel.Step.self) { page($0) }
@@ -35,18 +35,13 @@ struct StrategyWizardView: View {
                 }
                 content(step)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.vertical, 16)
         }
         .scrollDismissesKeyboard(.interactively)
         .background(Theme.background)
         .safeAreaInset(edge: .top, spacing: 0) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(model.phase(of: step).uppercased()).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
-                ProgressView(value: model.progress(at: step)).tint(Theme.textPrimary)
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
+            WizardProgress(phase: model.phase(of: step), value: model.progress(at: step))
         }
         .safeAreaInset(edge: .bottom) {
             PinnedActionButton(last ? "Done" : "Next") { advance(from: step) }
@@ -89,9 +84,9 @@ struct StrategyWizardView: View {
     private func content(_ step: StrategyWizardModel.Step) -> some View {
         switch step {
         case .goalType:
-            option("Lose Weight", nil, model.goal.kind == .lose) { model.goal.change(kind: .lose, currentWeightKg: model.weightKg) }
-            option("Maintain Weight", nil, model.goal.kind == .maintain) { model.goal.change(kind: .maintain, currentWeightKg: model.weightKg) }
-            option("Gain Weight", nil, model.goal.kind == .gain) { model.goal.change(kind: .gain, currentWeightKg: model.weightKg) }
+            WizardOption(title: "Lose Weight", subtitle: nil, selected: model.goal.kind == .lose) { model.goal.change(kind: .lose, currentWeightKg: model.weightKg) }
+            WizardOption(title: "Maintain Weight", subtitle: nil, selected: model.goal.kind == .maintain) { model.goal.change(kind: .maintain, currentWeightKg: model.weightKg) }
+            WizardOption(title: "Gain Weight", subtitle: nil, selected: model.goal.kind == .gain) { model.goal.change(kind: .gain, currentWeightKg: model.weightKg) }
         case .goalWeightRate:
             GoalWeightRateStep(model: $model, unit: unit)
         case .goalSummary:
@@ -106,33 +101,32 @@ struct StrategyWizardView: View {
                     .foregroundStyle(Theme.textSecondary)
             }
         case .diet:
-            option("Balanced", "Standard distribution of carbs and fat", model.coaching.diet == .balanced) { model.coaching.diet = .balanced }
-            option("Low-fat", "Fat will be reduced to prioritize carb and protein intake", model.coaching.diet == .lowFat) { model.coaching.diet = .lowFat }
-            option("Low-carb", "Carbs will be reduced to prioritize fat and protein intake", model.coaching.diet == .lowCarb) { model.coaching.diet = .lowCarb }
-            option("Keto", "Carbs will be very restricted to allow for higher fat intake", model.coaching.diet == .keto) { model.coaching.diet = .keto }
+            WizardOption(title: "Balanced", subtitle: "Standard distribution of carbs and fat", selected: model.coaching.diet == .balanced) { model.coaching.diet = .balanced }
+            WizardOption(title: "Low-fat", subtitle: "Fat will be reduced to prioritize carb and protein intake", selected: model.coaching.diet == .lowFat) { model.coaching.diet = .lowFat }
+            WizardOption(title: "Low-carb", subtitle: "Carbs will be reduced to prioritize fat and protein intake", selected: model.coaching.diet == .lowCarb) { model.coaching.diet = .lowCarb }
+            WizardOption(title: "Keto", subtitle: "Carbs will be very restricted to allow for higher fat intake", selected: model.coaching.diet == .keto) { model.coaching.diet = .keto }
         case .floor:
             let standard = model.basis?.standardFloorKcal ?? settings.nutrition.standardFloorKcal
-            option("Standard Floor", "Your Calorie targets will never go below \(standard) kcal", model.coaching.floor == .standard) { model.coaching.floor = .standard }
-            option("Low Floor", "Proceed with caution: targets may go as low as \(NutritionEngine.CalorieFloor.low(standardKcal: standard).kcal) kcal", model.coaching.floor == .low) { model.coaching.floor = .low }
+            WizardOption(title: "Standard Floor", subtitle: "Your Calorie targets will never go below \(standard) kcal", selected: model.coaching.floor == .standard) { model.coaching.floor = .standard }
+            WizardOption(title: "Low Floor", subtitle: "Proceed with caution: targets may go as low as \(NutritionEngine.CalorieFloor.low(standardKcal: standard).kcal) kcal", selected: model.coaching.floor == .low) { model.coaching.floor = .low }
             Stepper(value: Binding(get: { standard }, set: { kcal in
                 model.setStandardFloor(kcal)
                 store.updateSettings { $0.nutrition.standardFloorKcal = kcal }
             }), in: 800...2500, step: 10) {
                 LabeledContent("Your Standard Floor", value: "\(standard) kcal")
             }
-            .padding(14)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+            .card()
             Text("MacroFactor sets the Standard Floor for you; set yours here. The Low Floor is two thirds of it.")
                 .font(AppFont.caption())
                 .foregroundStyle(Theme.textSecondary)
         case .training:
-            option("None or Relaxed Activity", nil, model.coaching.training == .none) { model.coaching.training = .none }
-            option("Lifting", nil, model.coaching.training == .lifting) { model.coaching.training = .lifting }
-            option("Cardio", nil, model.coaching.training == .cardio) { model.coaching.training = .cardio }
-            option("Cardio & Lifting", nil, model.coaching.training == .cardioLifting) { model.coaching.training = .cardioLifting }
+            WizardOption(title: "None or Relaxed Activity", subtitle: nil, selected: model.coaching.training == .none) { model.coaching.training = .none }
+            WizardOption(title: "Lifting", subtitle: nil, selected: model.coaching.training == .lifting) { model.coaching.training = .lifting }
+            WizardOption(title: "Cardio", subtitle: nil, selected: model.coaching.training == .cardio) { model.coaching.training = .cardio }
+            WizardOption(title: "Cardio & Lifting", subtitle: nil, selected: model.coaching.training == .cardioLifting) { model.coaching.training = .cardioLifting }
         case .distribution:
-            option("Distribute Evenly", "The same Calorie target every day", !model.shiftCalories) { model.shiftCalories = false }
-            option("Shift Calorie Targets", "Higher targets on the days you choose, the same weekly total", model.shiftCalories) { model.shiftCalories = true }
+            WizardOption(title: "Distribute Evenly", subtitle: "The same Calorie target every day", selected: !model.shiftCalories) { model.shiftCalories = false }
+            WizardOption(title: "Shift Calorie Targets", subtitle: "Higher targets on the days you choose, the same weekly total", selected: model.shiftCalories) { model.shiftCalories = true }
         case .highDays:
             ForEach(1...7, id: \.self) { weekday in
                 let selected = model.coaching.highDays.contains(weekday)
@@ -141,26 +135,22 @@ struct StrategyWizardView: View {
         case .protein:
             ForEach([CoachingProgram.Protein.low, .moderate, .high, .extraHigh], id: \.self) { level in
                 let perLb = StrategyRules.engineProgram(CoachingProgram(protein: level), standardFloorKcal: 0).protein.gramsPerLb
-                option(proteinName(level), "\(perLb.formatted()) g per lb of body weight", model.coaching.protein == level) { model.coaching.protein = level }
+                WizardOption(title: proteinName(level), subtitle: "\(perLb.formatted()) g per lb of body weight", selected: model.coaching.protein == level) { model.coaching.protein = level }
             }
         case .coachedResult:
             coachedResult
         case .collaborative:
             CollaborativeEditorView(week: $model.collaborative, weightLb: model.weightKg / NutritionEngine.kgPerLb, expenditureKcal: model.basis?.expenditureKcal)
         case .manualMode:
-            option("Same targets all week", nil, model.manualSameAllWeek) { model.manualSameAllWeek = true }
-            option("Different targets per day", nil, !model.manualSameAllWeek) { model.manualSameAllWeek = false }
+            WizardOption(title: "Same targets all week", subtitle: nil, selected: model.manualSameAllWeek) { model.manualSameAllWeek = true }
+            WizardOption(title: "Different targets per day", subtitle: nil, selected: !model.manualSameAllWeek) { model.manualSameAllWeek = false }
         case .manualTargets:
             ManualTargetsStep(targets: $model.manual, sameAllWeek: model.manualSameAllWeek)
         }
     }
 
-    private func option(_ title: String, _ subtitle: String?, _ selected: Bool, action: @escaping () -> Void) -> some View {
-        WizardOption(title: title, subtitle: subtitle, selected: selected, action: action)
-    }
-
     private func styleOption(_ style: CoachingProgram.Style, _ title: String, _ subtitle: String) -> some View {
-        option(title, subtitle, model.coaching.style == style) { model.choose(style) }
+        WizardOption(title: title, subtitle: subtitle, selected: model.coaching.style == style) { model.choose(style) }
             .disabled(!model.canChoose(style))
     }
 
@@ -215,9 +205,9 @@ struct StrategyWizardView: View {
                         .frame(width: 26, height: 26)
                         .background(Theme.textPrimary, in: Circle())
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(note.title).font(AppFont.headline(15))
+                        Text(note.title).font(AppFont.rowTitle)
                         if let value = note.value {
-                            Text(value).font(AppFont.medium(15)).foregroundStyle(Theme.goal)
+                            Text(value).font(AppFont.rowTitle).foregroundStyle(Theme.goal)
                         }
                         Text(note.text).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
                     }
@@ -260,8 +250,7 @@ private struct GoalWeightRateStep: View {
                 Spacer()
                 Stepper("Target weight", value: targetBinding, step: unit == .lb ? 1 : 0.5).labelsHidden()
             }
-            .padding(14)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+            .card()
             Text("Current trend weight: \(StrategyFormat.weight(model.weightKg, unit))").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
             if let problem = model.goal.problem(currentWeightKg: model.weightKg) {
                 Text(problem).font(AppFont.caption()).foregroundStyle(Theme.destructive)
@@ -300,7 +289,7 @@ private struct GoalWeightRateStep: View {
                     Text("Per Month").foregroundStyle(Theme.textSecondary)
                 }
             }
-            .font(AppFont.medium(15))
+            .font(AppFont.rowTitle)
             .monospacedDigit()
         }
     }
@@ -308,7 +297,7 @@ private struct GoalWeightRateStep: View {
     private func tile(_ value: String, _ caption: String, highlighted: Bool) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value).font(AppFont.headline())
-            Text(caption).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+            Text(caption).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
@@ -352,7 +341,6 @@ private struct ManualTargetsStep: View {
                 .accessibilityLabel("\(title) target")
             Text(unit).font(AppFont.caption()).foregroundStyle(Theme.textSecondary).frame(width: 30, alignment: .leading)
         }
-        .padding(14)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+        .card()
     }
 }

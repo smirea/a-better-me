@@ -1,9 +1,5 @@
 import SwiftUI
 
-private func clock(_ seconds: TimeInterval) -> String {
-    Duration.seconds(seconds.rounded(.up)).formatted(.time(pattern: .minuteSecond))
-}
-
 /// The header's stopwatch, countdown, and draining bar. Tapping it opens the Rest Timer sheet.
 struct RestTimerPill: View {
     let action: () -> Void
@@ -16,7 +12,7 @@ struct RestTimerPill: View {
                 let fraction = store.rest.map { remaining / $0.duration } ?? 0
                 HStack(spacing: 8) {
                     Image(systemName: "stopwatch.fill").font(.footnote)
-                    Text(clock(remaining)).font(AppFont.number(17)).fixedSize()
+                    Text(remaining.countdown).font(AppFont.number(17)).fixedSize()
                     Capsule()
                         .fill(Theme.surfaceRaised)
                         .frame(width: 64, height: 12)
@@ -45,11 +41,11 @@ struct RestTimerSheet: View {
                     VStack(spacing: 16) {
                         ProgressView(value: store.rest.map { remaining / $0.duration } ?? 0)
                         HStack {
-                            roundButton("gobackward.15", "Subtract 15 seconds") { store.adjustRest(by: -15) }
+                            RoundIconButton("Subtract 15 seconds", systemImage: "gobackward.15") { store.adjustRest(by: -15) }
                             Spacer()
-                            Label(clock(remaining), systemImage: "stopwatch.fill").font(AppFont.number(24))
+                            Label(remaining.countdown, systemImage: "stopwatch.fill").font(AppFont.number(24))
                             Spacer()
-                            roundButton("goforward.15", "Add 15 seconds") { store.adjustRest(by: 15) }
+                            RoundIconButton("Add 15 seconds", systemImage: "goforward.15") { store.adjustRest(by: 15) }
                         }
                     }
                 }
@@ -58,12 +54,12 @@ struct RestTimerSheet: View {
                     HStack(spacing: 8) {
                         pill("(0:00)", icon: "stop.fill", label: "Stop timer") { store.stopRest() }
                         if let seconds = store.setRestSeconds {
-                            pill("(\(clock(TimeInterval(seconds))))", icon: "arrow.counterclockwise", label: "Restart timer") {
+                            pill("(\(seconds.minuteSecond))", icon: "arrow.counterclockwise", label: "Restart timer") {
                                 store.restartRest(seconds: seconds)
                             }
                         }
                         ForEach(Self.restartOptions, id: \.self) { seconds in
-                            pill(clock(TimeInterval(seconds)), label: "Restart with \(clock(TimeInterval(seconds)))") {
+                            pill(seconds.minuteSecond, label: "Restart with \(seconds.minuteSecond)") {
                                 store.restartRest(seconds: seconds)
                             }
                         }
@@ -72,7 +68,7 @@ struct RestTimerSheet: View {
                 .scrollIndicators(.hidden)
                 Spacer(minLength: 0)
             }
-            .padding(20)
+            .padding(Theme.margin)
             .detailTitle("Rest Timer")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -83,22 +79,13 @@ struct RestTimerSheet: View {
         .presentationDetents([.height(280)])
     }
 
-    private func roundButton(_ icon: String, _ label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon).font(.title3).frame(width: 44, height: 44)
-        }
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
-        .accessibilityLabel(label)
-    }
-
     private func pill(_ title: String, icon: String? = nil, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 if let icon { Image(systemName: icon) }
                 Text(title)
             }
-            .font(AppFont.medium(14))
+            .font(AppFont.chip)
             .frame(height: 28)
         }
         .buttonStyle(.glass)
@@ -137,16 +124,16 @@ struct WarmUpSheet: View {
                         HStack(spacing: 12) {
                             SetBadge(type: .warmUp, number: 0)
                             VStack(alignment: .leading) {
-                                Text(row.label).font(AppFont.medium(15))
-                                Text("\(unit.format(kg: row.weightKg)) \(unit.rawValue)")
-                                    .font(AppFont.caption())
+                                Text(row.label).font(AppFont.rowTitle)
+                                Text("\(unit.label(kg: row.weightKg))")
+                                    .font(AppFont.rowDetail)
                                     .foregroundStyle(Theme.textSecondary)
                             }
                             Spacer()
                             Text("\(row.reps)")
-                                .font(AppFont.medium(15))
+                                .font(AppFont.rowTitle)
                                 .frame(width: 44, height: 32)
-                                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 8))
+                                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
                             Button("Add", systemImage: "plus") { add([row]) }
                                 .labelStyle(.iconOnly)
                                 .buttonStyle(.glass)
@@ -177,7 +164,7 @@ struct WarmUpSheet: View {
                         Label {
                             VStack(alignment: .leading) {
                                 Text("Add empty warm-up set")
-                                Text("Add a warm-up set to your workout").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                                Text("Add a warm-up set to your workout").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                             }
                         } icon: { Image(systemName: "plus") }
                     }
@@ -243,9 +230,9 @@ struct NoteSheet: View {
                 }
                 .buttonStyle(.glassProminent)
                 .tint(Theme.textPrimary)
-                .foregroundStyle(.black)
+                .foregroundStyle(Theme.onPrimary)
             }
-            .padding(20)
+            .padding(Theme.margin)
             .detailTitle("Note")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -262,9 +249,9 @@ struct NoteSheet: View {
     private func editor(_ title: String, text: Binding<String>, prompt: String, footer: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(title).font(AppFont.headline(15))
+                Text(title).font(AppFont.rowTitle)
                 Spacer()
-                Text("\(text.wrappedValue.count)/\(Self.limit)").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                Text("\(text.wrappedValue.count)/\(Self.limit)").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             }
             TextField(prompt, text: text, axis: .vertical)
                 .lineLimit(3...8)
@@ -273,7 +260,7 @@ struct NoteSheet: View {
                 .onChange(of: text.wrappedValue) { _, value in
                     if value.count > Self.limit { text.wrappedValue = String(value.prefix(Self.limit)) }
                 }
-            Text(footer).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+            Text(footer).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
         }
     }
 

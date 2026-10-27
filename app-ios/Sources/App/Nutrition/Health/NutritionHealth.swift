@@ -7,7 +7,7 @@ import os
 /// entries and override, and re-writes a day whenever they change, from this phone or from a sync.
 @MainActor @Observable
 final class NutritionHealth {
-    static let shared = NutritionHealth(target: HealthDietaryStore(store: HKHealthStore()))
+    static let shared = NutritionHealth(target: HealthDietaryStore(store: HealthStore.shared))
 
     /// Device state, not owner data: Health access belongs to this phone's Health store, and a synced switch would
     /// make a second phone write the same food again.

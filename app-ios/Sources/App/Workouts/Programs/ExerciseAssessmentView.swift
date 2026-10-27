@@ -9,10 +9,10 @@ struct ExerciseAssessmentView: View {
 
     var body: some View {
         List {
-            Section {
+            ThemedSection(subtitle: "A few questions about your experience with the following exercises") {
                 ForEach(AssessmentQuestion.all) { question in
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(question.text).font(AppFont.medium(15))
+                        Text(question.text).font(AppFont.rowTitle)
                         Picker(question.text, selection: answer(question)) {
                             Text("No").tag(String?.some(AssessmentQuestion.no))
                             Text("Yes").tag(String?.some(AssessmentQuestion.yes))
@@ -21,14 +21,7 @@ struct ExerciseAssessmentView: View {
                         .labelsHidden()
                     }
                     .padding(.vertical, 6)
-                    .listRowBackground(Theme.surface)
                 }
-            } header: {
-                Text("A few questions about your experience with the following exercises")
-                    .font(AppFont.medium(15))
-                    .foregroundStyle(Theme.textSecondary)
-                    .textCase(nil)
-                    .padding(.bottom, 4)
             }
         }
         .themedList()
