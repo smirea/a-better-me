@@ -79,9 +79,10 @@ struct MonthCalendar<Pill: View>: View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 ForEach(weeks, id: \.self) { offset in
-                    HStack(spacing: 6) {
+                    HStack(spacing: 0) {
                         ForEach(origin.adding(days: offset * 7).week, id: \.self) { day in
                             pill(day)
+                                .padding(.horizontal, 5)
                                 .padding(.vertical, 10)
                                 .background(day.month.isMultiple(of: 2) ? Theme.background : Theme.surface)
                                 .overlay(alignment: .top) {
@@ -89,7 +90,6 @@ struct MonthCalendar<Pill: View>: View {
                                 }
                         }
                     }
-                    .padding(.horizontal, 20)
                 }
             }
             .scrollTargetLayout()
