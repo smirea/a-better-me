@@ -32,7 +32,7 @@ struct RootView: View {
             case .workouts:
                 Tab("Levels", systemImage: "trophy", value: .progress) { LevelsTab().tint(Theme.textPrimary) }
             case .nutrition:
-                Tab("Strategy", systemImage: "chart.line.uptrend.xyaxis", value: .progress) { ComingSoon(title: "Strategy").tint(Theme.textPrimary) }
+                Tab("Strategy", systemImage: "chart.line.uptrend.xyaxis", value: .progress) { StrategyTab().tint(Theme.textPrimary) }
             }
         }
         .tint(Theme.accent)
