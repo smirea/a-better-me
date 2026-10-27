@@ -46,25 +46,26 @@ extension NutritionEngine {
             let logged = Dictionary(intake.filter { !$0.isIncomplete }.map { (calendar.startOfDay(for: $0.date), $0.kcal) }, uniquingKeysWith: { $1 })
             let trendByDay = Dictionary(trend.map { (calendar.startOfDay(for: $0.date), $0.value) }, uniquingKeysWith: { $1 })
             let weighInDays = Set(weighIns.map { calendar.startOfDay(for: $0.date) })
-            func daysBack(_ day: Date, _ count: Int) -> [Date] {
-                (1...count).map { calendar.startOfDay(for: calendar.date(byAdding: .day, value: -$0, to: day)!) }
-            }
+            // One calendar walk covers the look-back and each day reads its windows by index: stepping the calendar
+            // per day and window hung Strategy's synchronous first frame.
+            let lookback = max(model.window, model.gateWindow) + 1
+            let days = eachDay(from: calendar.date(byAdding: .day, value: -lookback, to: calendar.startOfDay(for: start))!, through: end, calendar: calendar)
+            let kcal = days.map { logged[$0] }
+            let hasWeighIn = days.map { weighInDays.contains($0) }
+            let trendOn = days.map { trendByDay[$0] }
             var estimate = initial
-            return eachDay(from: start, through: end, calendar: calendar).map { day in
-                let gate = daysBack(day, model.gateWindow)
-                let canUpdate = gate.filter { logged[$0] != nil }.count >= model.loggedDaysRequired
-                    && gate.filter { weighInDays.contains($0) }.count >= model.weighInsRequired
-                let windowDays = daysBack(day, model.window)
-                let intakeDays = windowDays.compactMap { logged[$0] }
-                if canUpdate, !intakeDays.isEmpty,
-                   let endTrend = trendByDay[windowDays.first!],
-                   let startTrend = trendByDay[calendar.startOfDay(for: calendar.date(byAdding: .day, value: -1, to: windowDays.last!)!)] {
+            return (lookback..<max(lookback, days.count)).map { i in
+                let gate = i - model.gateWindow..<i
+                let canUpdate = gate.filter { kcal[$0] != nil }.count >= model.loggedDaysRequired
+                    && gate.filter { hasWeighIn[$0] }.count >= model.weighInsRequired
+                let intakeDays = (i - model.window..<i).reversed().compactMap { kcal[$0] }
+                if canUpdate, !intakeDays.isEmpty, let endTrend = trendOn[i - 1], let startTrend = trendOn[i - model.window - 1] {
                     let meanIntake = intakeDays.reduce(0, +) / Double(intakeDays.count)
                     let raw = meanIntake - (endTrend - startTrend) * model.kcalPerKg / Double(model.window)
                     estimate += model.gain * (raw - estimate)
-                    return ExpenditureDay(date: day, kcal: estimate, isHolding: false)
+                    return ExpenditureDay(date: days[i], kcal: estimate, isHolding: false)
                 }
-                return ExpenditureDay(date: day, kcal: estimate, isHolding: true)
+                return ExpenditureDay(date: days[i], kcal: estimate, isHolding: true)
             }
         }
     }
