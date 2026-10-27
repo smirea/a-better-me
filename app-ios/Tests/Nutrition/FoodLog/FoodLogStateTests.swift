@@ -93,6 +93,18 @@ struct FoodLogStateTests {
         #expect(try await entries(on: monday).map(\.minute) == [482, 780])
     }
 
+    @Test func undoingAMoveRestoresTheTimeTheMoveReplacedNotTheSelectedOne() async throws {
+        let snack = entry(minute: 600)
+        try await log([snack])
+        store.moveEntries([snack.id], to: monday, minute: 630)
+        let state = FoodLogState()
+
+        state.relocate([snack], .move, to: .hour(monday, hour: 15), in: store)
+        #expect(try await entries(on: monday).map(\.minute) == [900])
+        state.undo(in: store)
+        #expect(try await entries(on: monday).map(\.minute) == [630])
+    }
+
     @Test func aCopyOfAnEntryDeletedBeforeTheWriteIsSkipped() async throws {
         let breakfast = [entry(minute: 482), entry(minute: 485)]
         try await log(breakfast)

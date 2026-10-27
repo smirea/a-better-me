@@ -35,8 +35,9 @@ struct EntryEditor: View {
     }
 
     private var targets: NutrientTargets {
-        NutrientTargets(
-            target: NutritionPlan.effective(on: entry.day, in: plans)?.target(on: entry.day), goals: goals, day: entry.day,
+        let day = CalendarDay(time)
+        return NutrientTargets(
+            target: NutritionPlan.effective(on: day, in: plans)?.target(on: day), goals: goals, day: day,
             sex: settings.profile.sex, weightKg: weight?.weightKg ?? settings.profile.bodyWeightKg
         )
     }

@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import Synchronization
 import SwiftUI
 
 /// What the logger sheet opens with. Every add affordance on the Food Log (the search field, its barcode and Your
@@ -28,10 +29,12 @@ final class FoodLogState {
     }
 
     /// "Copied 3 foods to Today" over the bottom bar, with Undo when it can be taken back.
-    struct Notice: Identifiable, Hashable {
+    struct Notice: Identifiable, Equatable {
         let id = UUID()
         let message: String
         var undo: LogUndo?
+
+        static func == (lhs: Notice, rhs: Notice) -> Bool { lhs.id == rhs.id }
     }
 
     struct RecipeRequest: Identifiable {
@@ -173,10 +176,16 @@ struct MovedEntry: Hashable {
     let to: EntryTime
 }
 
+/// The entries a move changed and where each was. The move's write fills it and its undo's write, which always runs
+/// later, reads it, so the undo restores what the move actually replaced.
+final class MoveRecord: Sendable {
+    let moves = Mutex<[MovedEntry]>([])
+}
+
 /// What takes a copy or move back: removing the copies, or returning the moved entries to where they were.
-enum LogUndo: Hashable {
+enum LogUndo {
     case remove([UUID])
-    case restore([MovedEntry])
+    case restore(MoveRecord)
 }
 
 extension LocalStore {
@@ -199,15 +208,24 @@ extension LocalStore {
             }
             return .remove(copies.map(\.id))
         case .move:
-            let from = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, EntryTime(day: $0.day, minute: $0.minute)) })
-            for relocation in relocations {
-                moveEntries(relocation.ids, to: relocation.day, minute: relocation.minute)
-            }
-            return .restore(relocations.flatMap { relocation in
-                relocation.ids.compactMap { id in
-                    from[id].map { MovedEntry(id: id, from: $0, to: EntryTime(day: relocation.day, minute: relocation.minute)) }
+            let record = MoveRecord()
+            write { db in
+                var moved: [MovedEntry] = []
+                for relocation in relocations {
+                    let to = EntryTime(day: relocation.day, minute: relocation.minute)
+                    for id in relocation.ids {
+                        guard let entry = try FoodEntry.fetchOne(db, key: FoodEntry.key(id)) else { continue }
+                        var changed = entry
+                        changed.day = to.day
+                        changed.minute = to.minute
+                        changed.updatedAt = .now
+                        try changed.updateChanges(db, from: entry)
+                        moved.append(MovedEntry(id: id, from: EntryTime(day: entry.day, minute: entry.minute), to: to))
+                    }
                 }
-            })
+                record.moves.withLock { $0 = moved }
+            }
+            return .restore(record)
         }
     }
 
@@ -215,9 +233,9 @@ extension LocalStore {
         switch undo {
         case let .remove(ids):
             deleteEntries(ids)
-        case let .restore(moves):
+        case let .restore(record):
             write { db in
-                for move in moves {
+                for move in record.moves.withLock({ $0 }) {
                     guard let current = try FoodEntry.fetchOne(db, key: FoodEntry.key(move.id)),
                           EntryTime(day: current.day, minute: current.minute) == move.to
                     else { continue }
