@@ -108,8 +108,7 @@ struct EnergyBalanceInsights: View {
                     .accessibilityElement(children: .combine)
                 }
             }
-            .padding(14)
-            .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+            .card()
         }
     }
 }
@@ -142,7 +141,7 @@ struct BalanceTag: View {
         }
     }
 
-    var color: Color { isExpenditure ? DashboardColor.expenditure : DashboardColor.fat }
+    var color: Color { isExpenditure ? DashboardColor.expenditure : Theme.fat }
 
     var body: some View {
         Label {
@@ -182,8 +181,7 @@ private struct ChangeRows: View {
                 .accessibilityElement(children: .combine)
             }
         }
-        .padding(14)
-        .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+        .card()
     }
 }
 

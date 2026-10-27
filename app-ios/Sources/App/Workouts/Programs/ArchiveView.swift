@@ -29,7 +29,6 @@ struct ArchiveView: View {
             .padding(.bottom)
         }
         .background(Theme.background)
-        .navigationTitle("Workout Archive")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Workout Archive")
     }
 }

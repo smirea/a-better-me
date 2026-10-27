@@ -1,13 +1,10 @@
-import HealthKitUI
 import SwiftUI
 
 struct DashboardTab: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(LocalStore.self) private var store
     @Environment(ExerciseCatalog.self) private var catalog
-    @State private var health = HealthData()
     @State private var nutrition = NutritionData()
-    @Observe(BodyWeight.all) private var logged
     @Observe(AppSettings.current) private var settings
     @Observe(NutritionLogDay.all) private var foodLog
     @Observe(NutritionPlan.all) private var plans
@@ -15,6 +12,8 @@ struct DashboardTab: View {
     @Observe(BodyMetric.all) private var bodyMetrics
 
     var body: some View {
+        // Reading `scenePhase` rebuilds the context when the scene becomes active, so a new day shows on return.
+        let _ = scenePhase
         NavigationStack {
             DashboardHome(layout: settings.dashboard)
                 .navigationDestination(for: DashboardRoute.self) { route in
@@ -33,29 +32,19 @@ struct DashboardTab: View {
                     }
                 }
         }
-        .environment(health)
         .environment(nutrition)
-        // Rebuilt when the scene becomes active too, since this view reads `scenePhase`, so a new day shows on return.
         .environment(\.dashboardContext, DashboardContext(
             unit: settings.weightUnit, today: Calendar.current.startOfDay(for: .now), calendar: .current, custom: catalog.custom
         ))
-        .onChange(of: logged, initial: true) { health.update(logged: logged) }
         .onChange(of: NutritionData.Inputs(
             log: foodLog, plans: plans, goals: goals, settings: settings.nutrition, profile: settings.profile, bodyMetrics: bodyMetrics
         ), initial: true) { _, inputs in
             nutrition.update(inputs)
         }
-        .healthDataAccessRequest(store: health.store, shareTypes: HealthData.shareTypes, readTypes: HealthData.readTypes, trigger: health.requestTrigger) { _ in
-            Task { await health.load() }
-        }
         .task {
             #if DEBUG
             DashboardSeed.seedIfRequested(store)
             #endif
-            await health.refresh()
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await health.refresh() } }
         }
     }
 }
@@ -83,12 +72,6 @@ private struct DashboardHome: View {
                     Image(systemName: "slider.horizontal.3")
                 }
                 .accessibilityLabel("Customize Dashboard")
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink { SettingsView() } label: {
-                    Image(systemName: "gearshape")
-                }
-                .accessibilityLabel("Settings")
             }
         }
     }
@@ -222,7 +205,7 @@ private struct HabitCardView: View {
             let habit = values.weighInHabit
             NavigationLink(value: DashboardRoute.scaleWeight) {
                 DashboardCard(title: "Weigh-In", period: "Last 30 Days", value: habit.text, unit: "this week") {
-                    DotGrid(days: habit.days, color: DashboardColor.scale)
+                    DotGrid(days: habit.days, color: Theme.green)
                 }
             }
         case .workouts:
@@ -236,7 +219,7 @@ private struct HabitCardView: View {
             let habit = values.foodLogging.habit
             NavigationLink(value: DashboardRoute.foodLogging) {
                 DashboardCard(title: "Food Logging", period: "Last 30 Days", value: habit.text, unit: "this week") {
-                    DotGrid(days: habit.days, color: DashboardColor.energy)
+                    DotGrid(days: habit.days, color: Theme.calories)
                 }
             }
         }
@@ -263,16 +246,8 @@ struct DashboardSectionView<Cards: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(title).font(AppFont.title())
-                Spacer()
-                if let seeAll {
-                    NavigationLink(value: seeAll) {
-                        Text("See All").font(AppFont.medium(15)).underline()
-                    }
-                    .foregroundStyle(Theme.textPrimary)
-                    .accessibilityLabel("See All \(title)")
-                }
+            SectionHeader(title) {
+                if let seeAll { SeeAllLink(section: title, value: seeAll) }
             }
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                 cards
@@ -293,7 +268,7 @@ struct MuscleCardView: View {
         let days = values.muscleCard(card)
         NavigationLink(value: DashboardRoute.muscle(card.muscle, card.metric)) {
             DashboardCard(title: card.muscle.displayName, period: "Last 7 Days", value: days.text, unit: card.metric.unit(values.context.unit)) {
-                MiniBars(values: days.values, color: DashboardColor.muscle)
+                MiniBars(values: days.values, color: Theme.muscle)
             }
         }
     }
@@ -329,8 +304,7 @@ struct AllMusclesView: View {
             .padding(.vertical, 16)
         }
         .background(Theme.background)
-        .navigationTitle("Muscle Groups")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Muscle Groups")
     }
 }
 
@@ -345,8 +319,7 @@ struct AllExercisesView: View {
             .padding(.vertical, 16)
         }
         .background(Theme.background)
-        .navigationTitle("Exercises")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Exercises")
     }
 }
 

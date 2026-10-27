@@ -111,7 +111,7 @@ struct LogFoodsButton: View {
         .font(AppFont.headline(15))
         .buttonStyle(.glassProminent)
         .tint(Theme.textPrimary)
-        .foregroundStyle(Color.black)
+        .foregroundStyle(Theme.onPrimary)
         .disabled(session.plate.isEmpty && !hasPending)
     }
 }

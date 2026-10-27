@@ -39,8 +39,7 @@ struct WarmUpSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Warm-Up")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Warm-Up")
     }
 }
 
@@ -60,7 +59,7 @@ private struct WarmUpSchemeView: View {
                             .buttonBorderShape(.capsule)
                             .accessibilityLabel("Edit \(category.displayName) scheme")
                     } label: {
-                        SettingLabel(title: category.displayName, detail: summary(steps(category)))
+                        RowLabel(title: category.displayName, detail: summary(steps(category)))
                     }
                 }
             } header: {
@@ -74,8 +73,7 @@ private struct WarmUpSchemeView: View {
             }
         }
         .themedList()
-        .navigationTitle("Warm-Up Scheme")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Warm-Up Scheme")
         .sheet(item: $editing) { category in
             WarmUpSchemeEditor(category: category, steps: steps(category))
         }

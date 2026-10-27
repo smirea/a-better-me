@@ -32,8 +32,7 @@ struct GoalProgressView: View {
             .padding(.bottom, 30)
         }
         .background(Theme.background)
-        .navigationTitle("Goal Progress")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Goal Progress")
     }
 
     private var tabStrip: some View {
@@ -48,8 +47,7 @@ struct GoalProgressView: View {
             .font(AppFont.body(15))
             .foregroundStyle(Theme.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(14)
-            .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+            .card()
     }
 
     private func header(_ bars: [NutritionMetrics.WaterfallBar]) -> some View {

@@ -11,8 +11,6 @@ enum MovementPattern: String, CaseIterable, Hashable {
     case hipHinge = "Hip Hinge"
 
     var isPull: Bool { self == .horizontalPull || self == .verticalPull }
-    var isLeg: Bool { self == .squat || self == .hipHinge }
-    var isPush: Bool { self == .horizontalPush || self == .verticalPush }
 }
 
 enum SlotRole: Hashable {

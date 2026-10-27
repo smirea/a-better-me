@@ -36,10 +36,6 @@ enum NumberText {
         return trimmed.isEmpty ? nil : Double(trimmed)
     }
 
-    static func isBlankOrNumber(_ text: String) -> Bool {
-        text.trimmingCharacters(in: .whitespaces).isEmpty || parse(text) != nil
-    }
-
     static func text(_ value: Double?) -> String {
         value.map { $0.formatted(.number.precision(.fractionLength(0...3)).grouping(.never).locale(Locale(identifier: "en_US_POSIX"))) } ?? ""
     }

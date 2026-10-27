@@ -45,8 +45,7 @@ struct RecipeEditor: View {
             }
             .themedList()
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle(recipeID == nil ? "Create Recipe" : "Edit Recipe")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(recipeID == nil ? "Create Recipe" : "Edit Recipe")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", systemImage: "xmark") { dismiss() }

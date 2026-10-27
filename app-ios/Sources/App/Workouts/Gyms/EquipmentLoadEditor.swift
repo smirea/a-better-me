@@ -43,8 +43,7 @@ struct EquipmentLoadEditor: View {
             }
             .themedList()
             .font(AppFont.medium(15))
-            .navigationTitle(equipment.name)
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(equipment.name)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", systemImage: "xmark") { dismiss() }

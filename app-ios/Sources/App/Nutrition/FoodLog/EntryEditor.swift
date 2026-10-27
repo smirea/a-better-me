@@ -79,8 +79,7 @@ struct EntryEditor: View {
                 }
             }
             .themedList()
-            .navigationTitle(entry.food.displayName)
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(entry.food.displayName)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

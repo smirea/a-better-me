@@ -84,8 +84,7 @@ struct PlateView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 8)
         }
-        .navigationTitle("Your Plate")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Your Plate")
     }
 
     private func macroRow(_ id: NutrientID, plate: Double, day: Double) -> some View {
@@ -97,7 +96,7 @@ struct PlateView: View {
             Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.medium(15))
             Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
             ProgressView(value: target.map { min(1, (withDay ? day + plate : plate) / max($0, 1)) } ?? 0)
-                .tint(MacroColor.of(id))
+                .tint(Theme.macro(id))
         }
         .padding(.vertical, 2)
     }

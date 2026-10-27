@@ -24,16 +24,19 @@ struct WorkoutTab: View {
     var body: some View {
         let days = history.memo(LoggedDaysKey()) { LoggedDays($0) }
         let finishedDays = activeProgram.map { program in history.memo(program.runCycle) { program.finishedDayIDs($0) } } ?? []
-        let progress = activeProgram.map { DayPillProgress(fraction: $0.cycleProgress(finishedDays: finishedDays), color: $0.color.swatch) }
+        let progress = activeProgram.map { DayRing(fraction: $0.cycleProgress(finishedDays: finishedDays), color: $0.color.swatch) }
         let templatesByID = Dictionary(allTemplates.map { ($0.id, $0) }) { first, _ in first }
         NavigationStack(path: $path) {
             Group {
                 if showingCalendar {
-                    MonthCalendar(days: days, progress: progress, target: { pillTarget($0, days: days) }, onOpen: open)
+                    MonthCalendar(weeks: days.weeks(minimumBack: 26, ahead: 26)) { pill($0, days: days, progress: progress) }
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 28) {
-                            WeekStrip(days: days, progress: progress, target: { pillTarget($0, days: days) }, onOpen: open)
+                            WeekStrip(anchor: .today, weeks: days.weeks(minimumBack: 12, ahead: 12)) { monday in
+                                ForEach(monday.week, id: \.self) { pill($0, days: days, progress: progress) }
+                            }
+                            .padding(.horizontal, -20)
                             ForEach(settings.workout.sections.visible) { section($0, templates: templatesByID, finishedDays: finishedDays) }
                         }
                         .padding(.horizontal, 20)
@@ -64,9 +67,18 @@ struct WorkoutTab: View {
         .newSectionAlert(isPresented: $creatingSection)
     }
 
-    private func pillTarget(_ day: Date, days: LoggedDays) -> DayPillTarget? {
-        DayPillTarget.of(day, session: days.session(on: day), program: activeProgram, now: .now, calendar: LoggedDays.calendar)
+    private func pill(_ day: CalendarDay, days: LoggedDays, progress: DayRing?) -> some View {
+        let session = days.session(on: day)
+        let target = DayPillTarget.of(day.date, session: session, program: activeProgram, now: .now, calendar: Self.calendar)
+        return WorkoutDayPill(day: day, isLogged: session != nil, program: progress, target: target, onOpen: open)
     }
+
+    /// Program weekdays and "this week" start on Monday, like every day strip.
+    private static let calendar: Calendar = {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2
+        return calendar
+    }()
 
     private func open(_ target: DayPillTarget) {
         switch target {
@@ -116,13 +128,12 @@ struct WorkoutTab: View {
             let custom = settings.workout.sections.custom
             if custom.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Your Sections").font(AppFont.title())
+                    SectionHeader("Your Sections")
                     Label("You haven’t added new sections yet. You can add one by tapping + on this page", systemImage: "rectangle.split.1x2")
                         .font(AppFont.caption())
                         .foregroundStyle(Theme.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
-                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+                        .card()
                 }
             } else {
                 VStack(alignment: .leading, spacing: 28) {
@@ -137,14 +148,9 @@ struct WorkoutTab: View {
         let templates = templates.filter { !filed.contains($0.id) }
         let libraryPrograms = programs.filter { $0.id != activeProgram?.id }
         return VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Workout Library").font(AppFont.title())
-                Spacer()
+            SectionHeader("Workout Library") {
                 if !templates.isEmpty || !libraryPrograms.isEmpty {
                     Button(libraryCollapsed ? "Expand" : "Collapse") { withAnimation { libraryCollapsed.toggle() } }
-                        .font(AppFont.headline(15))
-                        .underline()
-                        .foregroundStyle(Theme.textPrimary)
                 }
             }
             if templates.isEmpty, libraryPrograms.isEmpty {

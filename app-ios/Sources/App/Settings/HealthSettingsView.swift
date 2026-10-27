@@ -13,13 +13,13 @@ struct HealthSettingsView: View {
     var body: some View {
         Form {
             Section {
-                SettingLabel(title: "Body Weight and Steps", detail: "Charted on the Dashboard", systemImage: "scalemass")
-                SettingLabel(title: "Heart Rate and Energy", detail: "Read during workouts", systemImage: "heart.text.square")
+                RowLabel(title: "Body Weight and Steps", detail: "Charted on the Dashboard", systemImage: "scalemass")
+                RowLabel(title: "Heart Rate and Energy", detail: "Read during workouts", systemImage: "heart.text.square")
             } header: {
                 SectionTitle("Reads").textCase(nil)
             }
             Section {
-                SettingLabel(title: "Workouts", detail: "Each finished workout, with its heart rate and energy", systemImage: "figure.strengthtraining.traditional")
+                RowLabel(title: "Workouts", detail: "Each finished workout, with its heart rate and energy", systemImage: "figure.strengthtraining.traditional")
                 SettingToggle(
                     title: "Nutrition", detail: "Logged food as dietary energy, macros, and the micronutrients Health has types for",
                     systemImage: "fork.knife",
@@ -38,8 +38,7 @@ struct HealthSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Apple Health")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Apple Health")
         .healthDataAccessRequest(store: healthStore, shareTypes: DietaryHealth.shareTypes, readTypes: [], trigger: requestTrigger) { @Sendable _ in
             // HealthKit calls back off the main thread, where a main-actor closure traps.
             Task { @MainActor in

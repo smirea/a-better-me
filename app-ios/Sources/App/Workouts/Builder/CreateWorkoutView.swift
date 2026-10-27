@@ -112,8 +112,7 @@ struct CreateWorkoutView: View {
         .padding(.horizontal)
         .background(Theme.background)
         .safeAreaInset(edge: .bottom) { next() }
-        .navigationTitle("Create Workout")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Create Workout")
     }
 
     private func importWorkout(_ result: Result<URL, Error>) {
@@ -147,7 +146,6 @@ struct CreateWorkoutView: View {
                 }
                 .disabled(blocks.isEmpty)
             }
-            .navigationTitle("Create Workout")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Create Workout")
     }
 }

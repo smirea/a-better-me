@@ -216,7 +216,7 @@ private struct LoggerBanner: View {
                 .frame(height: 3)
                 .overlay(alignment: .leading) {
                     GeometryReader { proxy in
-                        Capsule().fill(MacroColor.of(id)).frame(width: proxy.size.width * (value.progress ?? 0))
+                        Capsule().fill(Theme.macro(id)).frame(width: proxy.size.width * (value.progress ?? 0))
                     }
                 }
         }
@@ -292,8 +292,7 @@ private struct LogTimePicker: View {
                 .disabled(session.plate.isEmpty)
             }
             .padding(.horizontal, 20)
-            .navigationTitle("Select Date and Time")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Select Date and Time")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", systemImage: "xmark") { dismiss() }
@@ -330,7 +329,7 @@ private struct LogHourPad: View {
                             .font(AppFont.medium(15))
                             .frame(maxWidth: .infinity)
                             .frame(height: 44)
-                            .foregroundStyle(selected ? Color.black : Theme.textPrimary)
+                            .foregroundStyle(selected ? Theme.onPrimary : Theme.textPrimary)
                             .background(selected ? Theme.textPrimary : Theme.surfaceRaised, in: .capsule)
                     }
                     .buttonStyle(.plain)
@@ -338,8 +337,7 @@ private struct LogHourPad: View {
                 }
             }
             .padding(.horizontal, 20)
-            .navigationTitle("Select Time")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Select Time")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", systemImage: "xmark") { dismiss() }

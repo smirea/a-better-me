@@ -108,7 +108,7 @@ extension DashboardData {
         let isExpenditure = title == "Expenditure"
         return MetricTab(
             title: title, icon: icon, points: intake, unit: "kcal", seriesTitle: "Calories", averageTitle: "Average", summary: .total, style: .bar,
-            color: DashboardColor.energy,
+            color: Theme.calories,
             overlay: MetricTab.Overlay(title: isExpenditure ? "Expenditure" : "Targets", points: reference, color: color, dashed: true),
             stats: { interval in
                 let mean = differences.inside(interval).average

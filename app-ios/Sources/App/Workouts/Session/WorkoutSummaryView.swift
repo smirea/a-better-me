@@ -62,8 +62,7 @@ struct WorkoutSummaryView: View {
                 .padding(.vertical, 16)
             }
             .background(Theme.background)
-            .navigationTitle(isFinishing ? "Workout Complete" : session.startedAt.formatted(date: .abbreviated, time: .omitted))
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(isFinishing ? "Workout Complete" : session.startedAt.formatted(date: .abbreviated, time: .omitted))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { close() }
@@ -372,8 +371,7 @@ private struct StartTimeSheet: View {
             DatePicker("Start Time", selection: $start, in: ...Date.now)
                 .datePickerStyle(.wheel)
                 .labelsHidden()
-                .navigationTitle("Start Time")
-                .navigationBarTitleDisplayMode(.inline)
+                .detailTitle("Start Time")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) {
@@ -408,8 +406,7 @@ private struct DurationSheet: View {
                 Picker("Minutes", selection: $minutes) { ForEach(0..<60, id: \.self) { Text("\($0) min") } }
             }
             .pickerStyle(.wheel)
-            .navigationTitle("Duration")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Duration")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -462,8 +459,7 @@ private struct WorkoutChangesSheet: View {
                     section(.removed, "Removed Exercises") { ForEach(changes.removed) { plan($0, title: catalog.name($0.exerciseID)) } }
                 }
             }
-            .navigationTitle("Workout Changes")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Workout Changes")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// A Nutrition "+" shortcut (research spec §2, `nav-03-choose-shortcuts.jpg`). AI, Describe, Photos, and Metrics are not
 /// built, so they are not offered.
-enum NutritionShortcut: String, Codable, CaseIterable, Sendable {
+enum NutritionShortcut: String, Codable, CaseIterable, Sendable, ShortcutItem {
     case yourFoods, search, barcode, quickAdd, recipes, favorites, editDay, weight
 
     static let defaults: [NutritionShortcut] = [.yourFoods, .search, .barcode, .quickAdd, .recipes, .favorites, .editDay, .weight]
@@ -66,7 +66,6 @@ enum NutritionShortcut: String, Codable, CaseIterable, Sendable {
 /// logging shortcut turns this sheet into the full-height logger instead of stacking a second sheet on it.
 struct NutritionAddSheet: View {
     @Observe(AppSettings.current) private var settings
-    @Environment(\.dismiss) private var dismiss
     @State private var logger: LoggerStart?
     @State private var loggingWeight = false
     @State private var editingDay = false
@@ -86,37 +85,9 @@ struct NutritionAddSheet: View {
         let top = Array(all.prefix(NutritionShortcut.topCount))
         let rows = Array(all.dropFirst(NutritionShortcut.topCount))
         return NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    HStack(alignment: .top) {
-                        ForEach(top, id: \.self) { round($0) }
-                    }
-                    .padding(.top, 8)
-                    VStack(spacing: 0) {
-                        ForEach(rows, id: \.self) { shortcut in
-                            if shortcut != rows.first { Divider().overlay(Theme.separator).padding(.leading, 44) }
-                            row(shortcut)
-                        }
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .background(Theme.surface)
-            .navigationTitle("Shortcuts")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Customize Shortcuts", systemImage: "slider.horizontal.3") { customizing = true }
-                }
-            }
+            ShortcutsPanel(top: top, rows: rows, height: $contentHeight, perform: perform) { customizing = true }
         }
-        .presentationDetents([.height(contentHeight + 76)])
+        .presentationDetents([.shortcutsFitted(contentHeight)])
         .sheet(isPresented: $loggingWeight) { BodyWeightLogSheet() }
         .sheet(isPresented: $editingDay) { EditDaySheet() }
         .sheet(isPresented: $customizing) { CustomizeNutritionShortcuts() }
@@ -128,35 +99,6 @@ struct NutritionAddSheet: View {
         case .weight: loggingWeight = true
         default: logger = shortcut.logger
         }
-    }
-
-    private func round(_ shortcut: NutritionShortcut) -> some View {
-        Button { perform(shortcut) } label: {
-            VStack(spacing: 8) {
-                Image(systemName: shortcut.systemImage)
-                    .font(.system(size: 17, weight: .semibold))
-                    .frame(width: 44, height: 44)
-                    .background(Theme.surfaceRaised, in: .circle)
-                Text(shortcut.title).font(AppFont.medium(13))
-            }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func row(_ shortcut: NutritionShortcut) -> some View {
-        Button { perform(shortcut) } label: {
-            HStack(spacing: 18) {
-                Image(systemName: shortcut.systemImage).frame(width: 26)
-                Text(shortcut.title).font(AppFont.headline())
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
-            }
-            .padding(.vertical, 16)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -215,8 +157,7 @@ private struct CustomizeNutritionShortcuts: View {
             }
             .environment(\.editMode, .constant(.active))
             .themedList()
-            .navigationTitle("Customize Shortcuts")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Customize Shortcuts")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done", systemImage: "checkmark") { dismiss() }

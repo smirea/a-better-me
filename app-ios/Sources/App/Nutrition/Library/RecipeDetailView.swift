@@ -81,8 +81,7 @@ struct RecipeDetailView: View {
             NutrientBreakdown(amounts: portion.amounts, showAll: showAllNutrients)
         }
         .themedList()
-        .navigationTitle(recipe.name)
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle(recipe.name)
         .sheet(item: $sheet) { $0.editor }
         .navigationDestination(isPresented: $preparing) { RecipePrepareView(recipe: recipe) }
         .sensoryFeedback(.success, trigger: favorited)
@@ -219,14 +218,13 @@ struct RecipePrepareView: View {
             NutrientBreakdown(amounts: perServing)
         }
         .themedList()
-        .navigationTitle(recipe.name)
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle(recipe.name)
     }
 
     private func summaryTile(_ id: NutrientID, perServing: NutrientAmounts, total: NutrientAmounts) -> some View {
         let unit = id == .energy ? "kcal" : "g"
         return HStack(spacing: 8) {
-            Capsule().fill(MacroColor.of(id)).frame(width: 4)
+            Capsule().fill(Theme.macro(id)).frame(width: 4)
             VStack(alignment: .leading, spacing: 2) {
                 Text(NutrientRegistry.nutrient(id)?.name ?? "").font(AppFont.medium(14))
                 Text("\(LibraryFormat.amount(perServing[id] ?? 0)) \(unit)/serv, \(LibraryFormat.amount(total[id] ?? 0)) total")

@@ -289,8 +289,7 @@ struct EquipmentPickerSheet: View {
             }
             .themedList()
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Filter equipment by name")
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(title)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }

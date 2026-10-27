@@ -7,10 +7,10 @@ struct DataVisibilityView: View {
         Form {
             Section {
                 NavigationLink { NutrientVisibilityView() } label: {
-                    SettingLabel(title: "Nutrient Visibility", detail: nil, systemImage: "leaf")
+                    RowLabel(title: "Nutrient Visibility", systemImage: "leaf")
                 }
                 NavigationLink { BodyMetricsVisibilityView() } label: {
-                    SettingLabel(title: "Body Metrics Visibility", detail: nil, systemImage: "figure.arms.open")
+                    RowLabel(title: "Body Metrics Visibility", systemImage: "figure.arms.open")
                 }
             } header: {
                 SectionTitle("Visibility Settings").textCase(nil)
@@ -19,8 +19,7 @@ struct DataVisibilityView: View {
             }
         }
         .themedList()
-        .navigationTitle("Data Visibility")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Data Visibility")
     }
 }
 
@@ -61,8 +60,7 @@ private struct NutrientVisibilityView: View {
             }
         }
         .themedList()
-        .navigationTitle("Nutrient Visibility")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Nutrient Visibility")
     }
 }
 
@@ -101,8 +99,7 @@ private struct BodyMetricsVisibilityView: View {
             }
         }
         .themedList()
-        .navigationTitle("Body Metrics Visibility")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Body Metrics Visibility")
     }
 }
 

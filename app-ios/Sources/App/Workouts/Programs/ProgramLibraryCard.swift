@@ -183,8 +183,7 @@ struct TemplateCard: View {
             TemplateSummary(template: template)
             Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
         }
-        .padding()
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+        .card()
         .contentShape(Rectangle())
     }
 }

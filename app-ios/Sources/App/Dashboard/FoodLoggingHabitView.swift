@@ -36,8 +36,7 @@ struct FoodLoggingHabitView: View {
                     .labelStyle(.iconOnly)
                     .buttonStyle(.glass)
                 }
-                .padding(14)
-                .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+                .card()
                 legend
                 ForEach(habit.years, id: \.self) { year in
                     VStack(alignment: .leading, spacing: 8) {
@@ -52,8 +51,7 @@ struct FoodLoggingHabitView: View {
             .padding(.bottom, 30)
         }
         .background(Theme.background)
-        .navigationTitle("Food Logging")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Food Logging")
         .sheet(item: $editing) { NutritionDayEntrySheet(day: $0.day, log: nutrition.log) }
     }
 
@@ -105,8 +103,8 @@ struct FoodLoggingHabitView: View {
                 .frame(width: 38, height: 38)
                 .overlay {
                     switch state {
-                    case .tracked: Circle().stroke(DashboardColor.energy, lineWidth: 2)
-                    case .fasting: Circle().stroke(DashboardColor.energy, style: StrokeStyle(lineWidth: 2, dash: [3, 3]))
+                    case .tracked: Circle().stroke(Theme.calories, lineWidth: 2)
+                    case .fasting: Circle().stroke(Theme.calories, style: StrokeStyle(lineWidth: 2, dash: [3, 3]))
                     case .untracked: Circle().stroke(Theme.surfaceRaised, lineWidth: 1.5)
                     }
                 }
@@ -119,8 +117,8 @@ struct FoodLoggingHabitView: View {
 
     private var legend: some View {
         HStack(spacing: 20) {
-            Label { Text("Tracked") } icon: { Image(systemName: "circle").foregroundStyle(DashboardColor.energy) }
-            Label { Text("Fasting") } icon: { Image(systemName: "circle.dashed").foregroundStyle(DashboardColor.energy) }
+            Label { Text("Tracked") } icon: { Image(systemName: "circle").foregroundStyle(Theme.calories) }
+            Label { Text("Fasting") } icon: { Image(systemName: "circle.dashed").foregroundStyle(Theme.calories) }
             Label { Text("Untracked") } icon: { Image(systemName: "circle").foregroundStyle(Theme.textTertiary) }
         }
         .font(AppFont.medium(14))
@@ -163,8 +161,8 @@ private struct YearHeatMap: View {
                 let slot = lead + offset
                 let rect = CGRect(x: CGFloat(slot / 7) * cell, y: CGFloat(slot % 7) * cell, width: cell - 1.5, height: cell - 1.5)
                 let color = switch NutritionMetrics.logState(states[day]) {
-                case .tracked: DashboardColor.energy
-                case .fasting: DashboardColor.energy.opacity(0.45)
+                case .tracked: Theme.calories
+                case .fasting: Theme.calories.opacity(0.45)
                 case .untracked: Theme.surfaceRaised
                 }
                 context.fill(Path(roundedRect: rect, cornerRadius: 1.5), with: .color(color))

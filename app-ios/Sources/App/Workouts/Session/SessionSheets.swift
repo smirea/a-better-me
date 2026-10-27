@@ -73,8 +73,7 @@ struct RestTimerSheet: View {
                 Spacer(minLength: 0)
             }
             .padding(20)
-            .navigationTitle("Rest Timer")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Rest Timer")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }
@@ -184,8 +183,7 @@ struct WarmUpSheet: View {
                     }
                 }
             }
-            .navigationTitle("Warm Up")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Warm Up")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }
@@ -248,8 +246,7 @@ struct NoteSheet: View {
                 .foregroundStyle(.black)
             }
             .padding(20)
-            .navigationTitle("Note")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Note")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }

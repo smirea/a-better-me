@@ -1,14 +1,5 @@
 import SwiftUI
 
-/// MacroFactor's nutrient colors, sampled from its dark theme (docs/research/macrofactor/README.md §1).
-enum StrategyPalette {
-    static let energy = Color(hex: 0x68A0FA)
-    static let protein = Color(hex: 0xFF8660)
-    static let fat = Color(hex: 0xFFD05E)
-    static let carbs = Color(hex: 0x5EB987)
-    static let goal = Color(hex: 0x5EBB89)
-}
-
 enum StrategyFormat {
     static let weekdayLetters = ["M", "T", "W", "T", "F", "S", "S"]
     static let weekdayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -66,10 +57,10 @@ struct WeekTargetsChart: View {
                 .foregroundStyle(Theme.background)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 3)
-                .background(StrategyPalette.energy, in: Capsule())
-            block("\(Int(target.protein)) P", target.protein * NutritionEngine.Targets.kcalPerGProtein * scale, StrategyPalette.protein)
-            block("\(Int(target.fat)) F", target.fat * NutritionEngine.Targets.kcalPerGFat * scale, StrategyPalette.fat)
-            block("\(Int(target.carbs)) C", target.carbs * NutritionEngine.Targets.kcalPerGCarb * scale, StrategyPalette.carbs)
+                .background(Theme.calories, in: Capsule())
+            block("\(Int(target.protein)) P", target.protein * NutritionEngine.Targets.kcalPerGProtein * scale, Theme.protein)
+            block("\(Int(target.fat)) F", target.fat * NutritionEngine.Targets.kcalPerGFat * scale, Theme.fat)
+            block("\(Int(target.carbs)) C", target.carbs * NutritionEngine.Targets.kcalPerGCarb * scale, Theme.carbs)
             dayLabel(weekday)
         }
         .accessibilityElement(children: .combine)

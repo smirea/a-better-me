@@ -45,13 +45,6 @@ struct GymProfile: SyncedRecord {
         container["created_at"] = Instant.text(createdAt)
         container["updated_at"] = Instant.text(updatedAt)
     }
-
-    func hasEquipment(for exercise: Exercise) -> Bool {
-        func hasOption(among alternatives: [[EquipmentID]]) -> Bool {
-            alternatives.isEmpty || alternatives.contains { $0.allSatisfy { equipment[$0] != nil } }
-        }
-        return hasOption(among: exercise.resistanceEquipmentIDs) && hasOption(among: exercise.supportEquipmentIDs)
-    }
 }
 
 struct GymEquipment: Codable, Hashable {

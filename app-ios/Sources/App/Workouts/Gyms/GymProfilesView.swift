@@ -33,8 +33,7 @@ struct GymProfilesView: View {
         }
         .listStyle(.plain)
         .themedList()
-        .navigationTitle("Gym Profiles")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Gym Profiles")
         .safeAreaInset(edge: .bottom) {
             Button("Add New Gym Profile") { adding = true }
                 .secondaryPill()
@@ -126,8 +125,7 @@ private struct NewGymSheet: View {
                 }
             }
             .themedList()
-            .navigationTitle("New Gym Profile")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("New Gym Profile")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }

@@ -44,8 +44,7 @@ struct WorkoutDetailView: View {
             set: { blocks = $0 }
         )
         return WorkoutEditor(blocks: shown)
-            .navigationTitle(template.name)
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(template.name)
             .toolbar(.hidden, for: .tabBar)
             .toolbar {
                 Menu("Workout Options", systemImage: "ellipsis") {

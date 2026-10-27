@@ -93,8 +93,7 @@ private struct ProgramEditorScreen: View {
             }
         }
         .background(Theme.background)
-        .navigationTitle(draft == nil ? program.name : "Create Program")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle(draft == nil ? program.name : "Create Program")
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
             Button("Program Settings", systemImage: "slider.horizontal.3") { settingsShown = true }

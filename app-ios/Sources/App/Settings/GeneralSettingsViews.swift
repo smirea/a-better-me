@@ -27,8 +27,7 @@ struct UnitsSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Units")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Units")
     }
 }
 
@@ -54,8 +53,7 @@ struct ProfileSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Profile")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Profile")
     }
 
     /// Tallest first, with the stored height kept as it is when it falls between two choices of the unit.
@@ -74,7 +72,7 @@ struct ProfileSettingsView: View {
                 ),
                 in: ...Date.now, displayedComponents: .date
             ) {
-                SettingLabel(title: "Date of Birth", detail: nil, systemImage: "birthday.cake")
+                RowLabel(title: "Date of Birth", systemImage: "birthday.cake")
             }
         } else {
             LabeledContent {
@@ -83,7 +81,7 @@ struct ProfileSettingsView: View {
                     .buttonBorderShape(.capsule)
                     .accessibilityLabel("Set Date of Birth")
             } label: {
-                SettingLabel(title: "Date of Birth", detail: "Not set", systemImage: "birthday.cake")
+                RowLabel(title: "Date of Birth", detail: "Not set", systemImage: "birthday.cake")
             }
         }
     }

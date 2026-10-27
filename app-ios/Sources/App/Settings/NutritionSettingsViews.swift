@@ -22,7 +22,7 @@ struct FoodLogSettingsView: View {
             }
             Section {
                 NavigationLink { HourRangeView() } label: {
-                    SettingLabel(title: "Hour Range", detail: "\(SettingsRules.hour(timeline.firstHour)) – \(SettingsRules.hour(timeline.lastHour))", systemImage: "clock")
+                    RowLabel(title: "Hour Range", detail: "\(SettingsRules.hour(timeline.firstHour)) – \(SettingsRules.hour(timeline.lastHour))", systemImage: "clock")
                 }
                 SettingToggle(
                     title: "Hide Empty Hours", detail: "Hours without food collapse, even inside the hour range",
@@ -75,7 +75,7 @@ struct FoodLogSettingsView: View {
             }
             Section {
                 NavigationLink { LoggerBannerView() } label: {
-                    SettingLabel(title: "Logger Banner", detail: "Customize the nutrients in the logger banner", systemImage: "rectangle.topthird.inset.filled")
+                    RowLabel(title: "Logger Banner", detail: "Customize the nutrients in the logger banner", systemImage: "rectangle.topthird.inset.filled")
                 }
                 SettingChoice(
                     title: "Time Selection", systemImage: "clock.arrow.2.circlepath", selection: store.binding(settings, \.nutrition.logger.timeSelection),
@@ -85,7 +85,7 @@ struct FoodLogSettingsView: View {
                     ]
                 )
                 NavigationLink { FavoriteMeasuresView() } label: {
-                    SettingLabel(title: "Favorite Measurements", detail: settings.nutrition.favoriteMeasures.joined(separator: ", "), systemImage: "star")
+                    RowLabel(title: "Favorite Measurements", detail: settings.nutrition.favoriteMeasures.joined(separator: ", "), systemImage: "star")
                 }
                 SettingChoice(
                     title: "Optimization", systemImage: "hare", selection: store.binding(settings, \.nutrition.logger.optimization),
@@ -99,8 +99,7 @@ struct FoodLogSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Food Log")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Food Log")
     }
 }
 
@@ -122,8 +121,7 @@ private struct HourRangeView: View {
             }
         }
         .themedList()
-        .navigationTitle("Hour Range")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Hour Range")
     }
 }
 
@@ -164,8 +162,7 @@ private struct LoggerBannerView: View {
             }
         }
         .themedList()
-        .navigationTitle("Logger Banner")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Logger Banner")
     }
 }
 
@@ -179,8 +176,7 @@ private struct FavoriteMeasuresView: View {
             section("Volume", SettingsRules.volumeMeasures)
         }
         .themedList()
-        .navigationTitle("Favorite Measurements")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Favorite Measurements")
     }
 
     private func section(_ title: String, _ measures: [String]) -> some View {
@@ -230,7 +226,7 @@ struct ExpenditureSettingsView: View {
                 }
                 calculationStart(expenditure.calculationStart)
                 NavigationLink { BMREquationView() } label: {
-                    SettingLabel(title: "BMR Equation", detail: "Configure how your BMR is initially calculated", systemImage: "figure.arms.open")
+                    RowLabel(title: "BMR Equation", detail: "Configure how your BMR is initially calculated", systemImage: "figure.arms.open")
                 }
             } header: {
                 SectionTitle("Initial Estimate").textCase(nil)
@@ -277,8 +273,7 @@ struct ExpenditureSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Expenditure")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Expenditure")
     }
 
     @ViewBuilder private func calculationStart(_ start: CalendarDay?) -> some View {
@@ -290,7 +285,7 @@ struct ExpenditureSettingsView: View {
                 ),
                 displayedComponents: .date
             ) {
-                SettingLabel(title: "Calculation Start Date", detail: nil, systemImage: "calendar")
+                RowLabel(title: "Calculation Start Date", systemImage: "calendar")
             }
             Button("Reset to Default") { store.updateSettings { $0.nutrition.expenditure.calculationStart = nil } }
         } else {
@@ -301,7 +296,7 @@ struct ExpenditureSettingsView: View {
                     .buttonBorderShape(.capsule)
                     .accessibilityLabel("Edit Calculation Start Date")
             } label: {
-                SettingLabel(title: "Calculation Start Date", detail: "Default: your first logged day", systemImage: "calendar")
+                RowLabel(title: "Calculation Start Date", detail: "Default: your first logged day", systemImage: "calendar")
             }
         }
     }
@@ -375,8 +370,7 @@ private struct BMREquationView: View {
             }
         }
         .themedList()
-        .navigationTitle("BMR Equation")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("BMR Equation")
     }
 
     private func orNotSet<Value>(_ options: [SettingOption<Value>]) -> [SettingOption<Value?>] {
@@ -417,8 +411,7 @@ struct StrategySettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Strategy")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Strategy")
     }
 }
 

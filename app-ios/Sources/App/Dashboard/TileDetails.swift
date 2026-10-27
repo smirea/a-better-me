@@ -50,7 +50,7 @@ extension DashboardData {
         let nutrient = NutrientRegistry.nutrient(id)
         let unit = nutrient?.unit.rawValue ?? ""
         let days = TileMetrics.nutrientDays(id, log: log, plans: plans, goals: goals, sex: profile.sex, weightKg: latestWeightKg, calendar: calendar)
-        let color = DashboardColor.nutrient(id)
+        let color = Theme.macro(id)
         return MetricDetail(title: nutrient?.name ?? id.rawValue, tabs: [MetricTab(
             title: nutrient?.name ?? id.rawValue, points: days.consumed, unit: unit, averageTitle: "Average",
             summary: .total, style: .bar, color: color,
@@ -66,7 +66,7 @@ extension DashboardData {
         let tabs = [(NutrientID.protein, "Protein"), (.fat, "Fat"), (.carbs, "Carbs")].map { id, title in
             MetricTab(
                 title: title, points: logged.map { DatedValue(date: $0.day.date(in: calendar), value: $0.consumed.amount(of: id) ?? 0) },
-                unit: "g", averageTitle: "Average \(title)", summary: .total, style: .bar, color: DashboardColor.nutrient(id)
+                unit: "g", averageTitle: "Average \(title)", summary: .total, style: .bar, color: Theme.macro(id)
             )
         }
         return MetricDetail(title: "Macros", tabs: tabs, footer: .macros(logged.reversed().compactMap { day in
@@ -78,7 +78,7 @@ extension DashboardData {
         let unit = card.unit(weight: self.unit, height: nutritionSettings.heightUnit)
         return MetricDetail(title: card.title, tabs: [MetricTab(
             title: card.title, points: bodySeries(card).map { DatedValue(date: $0.date, value: display(card, $0.value)) }, unit: unit,
-            averageTitle: "Average", summary: .change, style: .line, color: DashboardColor.scale
+            averageTitle: "Average", summary: .change, style: .line, color: Theme.green
         )], footer: .months)
     }
 

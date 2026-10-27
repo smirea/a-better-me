@@ -58,8 +58,7 @@ private struct LibraryIngredientPicker: View {
                 }
             }
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Filter foods and recipes")
-            .navigationTitle("Add Ingredient")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Add Ingredient")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", systemImage: "xmark") { dismiss() }

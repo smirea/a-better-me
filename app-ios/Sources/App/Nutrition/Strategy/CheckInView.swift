@@ -71,8 +71,7 @@ private struct CheckInPage: View {
             .disabled(module == .update && update == nil)
             .padding(.top, 8)
         }
-        .navigationTitle("Check-In")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Check-In")
         .sheet(isPresented: $loggingWeight) { BodyWeightLogSheet() }
     }
 

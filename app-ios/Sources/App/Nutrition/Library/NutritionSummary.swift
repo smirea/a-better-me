@@ -1,22 +1,5 @@
 import SwiftUI
 
-/// MacroFactor's nutrient colors (docs/research/macrofactor/README.md §1).
-enum MacroColor {
-    static let energy = Color(hex: 0x68A0FA)
-    static let protein = Color(hex: 0xFF8660)
-    static let fat = Color(hex: 0xFFD05E)
-    static let carbs = Color(hex: 0x5EB987)
-
-    static func of(_ id: NutrientID) -> Color {
-        switch id {
-        case .protein: protein
-        case .fat: fat
-        case .carbs: carbs
-        default: energy
-        }
-    }
-}
-
 /// Calories, Protein, Fat, and Carbs side by side, each in its color.
 struct MacroSummary: View {
     let amounts: NutrientAmounts
@@ -33,7 +16,7 @@ struct MacroSummary: View {
                             .foregroundStyle(Theme.textPrimary)
                         Text(nutrient?.name ?? "")
                             .font(AppFont.caption(12))
-                            .foregroundStyle(MacroColor.of(id))
+                            .foregroundStyle(Theme.macro(id))
                     }
                     .frame(maxWidth: .infinity)
                     .accessibilityElement(children: .combine)

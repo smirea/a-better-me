@@ -11,6 +11,8 @@ enum Theme {
     static let textPrimary = Color.white
     static let textSecondary = Color(hex: 0xABABAB)
     static let textTertiary = Color(hex: 0x6E6E6E)
+    /// Text and icons on a white fill: primary pills and selected chips.
+    static let onPrimary = background
 
     static let accent = Color(hex: 0xF28969)
     static let lavender = Color(hex: 0xACA0D2)
@@ -28,10 +30,12 @@ enum Theme {
     static let carbs = Color(hex: 0x5EB987)
     static let vitamins = Color(hex: 0xB28DF7)
     static let minerals = Color(hex: 0xFF7EA2)
+    /// Goals and their progress on Strategy and the Dashboard.
+    static let goal = Color(hex: 0x5EBB89)
 
     /// MF's RIR badge colors: 0-1 red, 2-3 amber, 4-5 green, 6+ blue, unknown gray.
     static func rir(_ rir: Int?) -> Color {
-        guard let rir else { return Color(hex: 0x6E6E6E) }
+        guard let rir else { return textTertiary }
         return switch rir {
         case ...1: Color(hex: 0xD63A3A)
         case 2...3: amber

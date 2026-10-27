@@ -38,8 +38,7 @@ struct ExerciseLibraryView: View {
             trailing: { _ in Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary) }
         )
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search for an exercise")
-        .navigationTitle("Exercises")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Exercises")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Create Custom Exercise", systemImage: "plus") { creating = true }
@@ -215,8 +214,7 @@ struct ExerciseSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle(exercise?.name ?? "Exercise")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle(exercise?.name ?? "Exercise")
         .sheet(isPresented: $showingInfo) { ExerciseDetailSheet(exerciseID: exerciseID) }
         .sheet(isPresented: Binding { duplicate != nil } set: { if !$0 { duplicate = nil } }) {
             if let duplicate { CustomExerciseWizard(draft: duplicate) }
@@ -386,8 +384,7 @@ private struct WarmUpSchemeEditor: View {
             }
         }
         .themedList()
-        .navigationTitle("Warm-Up Scheme")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Warm-Up Scheme")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") { save(steps) }

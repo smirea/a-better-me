@@ -33,7 +33,7 @@ struct MuscleTags: View {
         let shape = RoundedRectangle(cornerRadius: 4)
         return Text(muscle.displayName)
             .font(AppFont.caption(11))
-            .foregroundStyle(primary && muscle == highlight ? Color.black : Theme.textSecondary)
+            .foregroundStyle(primary && muscle == highlight ? Theme.onPrimary : Theme.textSecondary)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background { if primary { shape.fill(color) } }

@@ -11,14 +11,14 @@ struct NutritionCardView: View {
             let tile = values.nutrientTile(card)
             NavigationLink(value: DashboardRoute.nutrient(id)) {
                 DashboardCard(title: nutrient.name, period: "Today", value: tile.text, unit: tile.unit) {
-                    TileBar(value: tile.consumed, range: tile.range, color: DashboardColor.nutrient(id))
+                    TileBar(value: tile.consumed, range: tile.range, color: Theme.macro(id))
                 }
             }
         } else if card.nutrient == nil {
             let macros = values.macrosCard
             NavigationLink(value: DashboardRoute.macros) {
                 DashboardCard(title: "Macros", period: "Last 7 Days", value: macros.text, unit: "kcal avg") {
-                    MiniStackedBars(days: macros.days, colors: [DashboardColor.protein, DashboardColor.fat, DashboardColor.carbs])
+                    MiniStackedBars(days: macros.days, colors: [Theme.protein, Theme.fat, Theme.carbs])
                 }
             }
         }
@@ -36,14 +36,14 @@ struct BodyMetricCardView: View {
             let entries = values.scaleWeightCard
             NavigationLink(value: DashboardRoute.scaleWeight) {
                 DashboardCard(title: "Scale Weight", period: "Last 7 Entries", value: entries.text, unit: values.context.unit.rawValue) {
-                    MiniLine(values: entries.values, color: DashboardColor.scale)
+                    MiniLine(values: entries.values, color: Theme.green)
                 }
             }
         } else {
             let entries = values.bodyMetricCard(card)
             NavigationLink(value: DashboardRoute.bodyMetric(card)) {
                 DashboardCard(title: card.title, period: "Last 7 Entries", value: entries.text, unit: values.bodyMetricUnit(card)) {
-                    MiniLine(values: entries.values, color: DashboardColor.scale)
+                    MiniLine(values: entries.values, color: Theme.green)
                 }
             }
         }
@@ -117,7 +117,7 @@ struct NutrientTodaySection: View {
                         Text("\(Int((summary.consumedToday / target * 100).rounded()))%").font(AppFont.body(14)).foregroundStyle(Theme.textSecondary)
                     }
                 }
-                TileBar(value: summary.consumedToday, range: summary.range, color: DashboardColor.nutrient(summary.nutrient)).frame(height: 16)
+                TileBar(value: summary.consumedToday, range: summary.range, color: Theme.macro(summary.nutrient)).frame(height: 16)
                 if summary.range.floor != nil || summary.range.ceiling != nil {
                     HStack {
                         if let floor = summary.range.floor { Text("Floor \(floor.dashboardText) \(summary.unit)") }
@@ -139,8 +139,7 @@ struct NutrientTodaySection: View {
                     }
                 }
             }
-            .padding(14)
-            .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+            .card()
         }
         .sheet(isPresented: $showingAbout) { AboutNutrientGoalsSheet() }
     }
@@ -168,8 +167,7 @@ private struct AboutNutrientGoalsSheet: View {
                 .listRowBackground(Theme.surface)
             }
             .themedList()
-            .navigationTitle("About Nutrient Goals")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("About Nutrient Goals")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done", systemImage: "checkmark") { dismiss() }
@@ -195,9 +193,9 @@ struct MacroSplitList: View {
                     }
                     GeometryReader { proxy in
                         HStack(spacing: 2) {
-                            DashboardColor.protein.frame(width: proxy.size.width * day.split.protein)
-                            DashboardColor.fat.frame(width: proxy.size.width * day.split.fat)
-                            DashboardColor.carbs
+                            Theme.protein.frame(width: proxy.size.width * day.split.protein)
+                            Theme.fat.frame(width: proxy.size.width * day.split.fat)
+                            Theme.carbs
                         }
                         .clipShape(.capsule)
                     }
@@ -235,8 +233,7 @@ struct AllNutritionView: View {
             .padding(.vertical, 16)
         }
         .background(Theme.background)
-        .navigationTitle("Nutrition")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Nutrition")
     }
 }
 
@@ -260,8 +257,7 @@ struct AllBodyMetricsView: View {
             .padding(.vertical, 16)
         }
         .background(Theme.background)
-        .navigationTitle("Body Metrics")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Body Metrics")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Log Measurements", systemImage: "plus") { logging = true }
