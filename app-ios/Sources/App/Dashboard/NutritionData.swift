@@ -6,23 +6,26 @@ import Observation
 /// `HealthData.revision`.
 @MainActor @Observable
 final class NutritionData {
+    /// Only what the derived values compute from. A presentation setting such as the Food Log's timeline lives in
+    /// `settings` alone, so toggling it never recomputes the expenditure.
     struct Inputs: Equatable {
         var log: [NutritionLogDay] = []
         var plans: [NutritionPlan] = []
         var goals: [NutrientGoal] = []
-        var settings = NutritionSettings()
+        var expenditure = NutritionSettings.Expenditure()
+        var heightUnit = NutritionSettings.HeightUnit.feetAndInches
         var profile = ProfileSettings()
         var bodyMetrics: [BodyMetric] = []
     }
 
     private(set) var inputs = Inputs()
+    var settings = NutritionSettings()
     /// Bumps whenever any input changes.
     private(set) var revision = 0
 
     var log: [NutritionLogDay] { inputs.log }
     var plans: [NutritionPlan] { inputs.plans }
     var goals: [NutrientGoal] { inputs.goals }
-    var settings: NutritionSettings { inputs.settings }
     var profile: ProfileSettings { inputs.profile }
     var bodyMetrics: [BodyMetric] { inputs.bodyMetrics }
     var importedSteps: [BodyMetric] { inputs.bodyMetrics.filter { $0.kind == .steps } }

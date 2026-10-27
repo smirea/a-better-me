@@ -162,7 +162,8 @@ struct DashboardData {
     var calendar: Calendar
     var log: [NutritionLogDay] = []
     var plans: [NutritionPlan] = []
-    var nutritionSettings = NutritionSettings()
+    var expenditureSettings = NutritionSettings.Expenditure()
+    var heightUnit = NutritionSettings.HeightUnit.feetAndInches
     var expenditure: [NutritionEngine.ExpenditureDay] = []
     var goals: [NutrientGoal] = []
     var bodyMetrics: [BodyMetric] = []
@@ -305,7 +306,7 @@ struct DashboardData {
             )], footer: .expenditure(ExpenditureSummary(
                 changes: NutritionMetrics.changes(expenditurePoints, now: now, calendar: calendar),
                 currentKcal: expenditure.last?.kcal,
-                strategy: NutritionMetrics.strategy(expenditure, settings: nutritionSettings.expenditure)
+                strategy: NutritionMetrics.strategy(expenditure, settings: expenditureSettings)
             )))
         case .energyBalance:
             return MetricDetail(title: "Energy Balance", tabs: [
@@ -403,7 +404,8 @@ struct DashboardValues: DynamicProperty {
                 data.steps = NutritionMetrics.steps(health: health.steps, imported: nutrition.importedSteps, calendar: context.calendar)
                 data.log = nutrition.log
                 data.plans = nutrition.plans
-                data.nutritionSettings = nutrition.settings
+                data.expenditureSettings = nutrition.inputs.expenditure
+                data.heightUnit = nutrition.inputs.heightUnit
                 data.expenditure = expenditure
                 data.goals = nutrition.goals
                 data.bodyMetrics = nutrition.bodyMetrics

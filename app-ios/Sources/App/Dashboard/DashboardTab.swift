@@ -36,9 +36,13 @@ struct DashboardTab: View {
             unit: settings.weightUnit, today: Calendar.current.startOfDay(for: .now), calendar: .current, custom: catalog.custom
         ))
         .onChange(of: NutritionData.Inputs(
-            log: foodLog, plans: plans, goals: goals, settings: settings.nutrition, profile: settings.profile, bodyMetrics: bodyMetrics
+            log: foodLog, plans: plans, goals: goals, expenditure: settings.nutrition.expenditure, heightUnit: settings.nutrition.heightUnit,
+            profile: settings.profile, bodyMetrics: bodyMetrics
         ), initial: true) { _, inputs in
             nutrition.update(inputs)
+        }
+        .onChange(of: settings.nutrition, initial: true) { _, settings in
+            nutrition.settings = settings
         }
     }
 }
