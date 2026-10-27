@@ -34,7 +34,7 @@ struct EquipmentWeightsOverrideView: View {
                 }
                 .listRowBackground(Theme.accent.opacity(0.25))
             }
-            Section {
+            ThemedSection("\(exercise?.name ?? "Exercise") Weights") {
                 ForEach(items(of: exercise)) { item in
                     HStack(spacing: 14) {
                         EquipmentImage(equipmentID: item.id).frame(width: 32, height: 32)
@@ -47,14 +47,11 @@ struct EquipmentWeightsOverrideView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         Button("Edit") { editing = item }
-                            .buttonStyle(.bordered)
-                            .buttonBorderShape(.capsule)
+                            .font(AppFont.chip)
+                            .buttonStyle(.glass)
                             .controlSize(.small)
                     }
-                    .listRowBackground(Theme.surface)
                 }
-            } header: {
-                SectionTitle("\(exercise?.name ?? "Exercise") Weights").textCase(nil)
             }
         }
         .themedList()

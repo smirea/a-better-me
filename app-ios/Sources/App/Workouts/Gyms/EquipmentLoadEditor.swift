@@ -26,20 +26,18 @@ struct EquipmentLoadEditor: View {
                     WeightRangesEditor(ranges: options, unit: unit) { draft = .ranges(options: $0, micro: micro) }
                     MicroAdjustmentEditor(micro: micro, unit: unit) { draft = .ranges(options: options, micro: $0) }
                 case .base(let kg):
-                    Section("Base Weight") {
+                    ThemedSection("Base Weight") {
                         WeightField(title: "Base weight", kg: kg, unit: unit) { draft = .base(kg: $0) }
                     }
-                    .listRowBackground(Theme.surface)
                 case .bands(let options):
                     BandOptionsEditor(bands: options) { draft = .bands(options: $0) }
                 }
-                Section {
+                ThemedSection {
                     Button("Reset to Default", systemImage: "arrow.counterclockwise", role: .destructive) {
                         onSave(nil)
                         dismiss()
                     }
                 }
-                .listRowBackground(Theme.surface)
             }
             .themedList()
             .font(AppFont.medium(15))
@@ -66,7 +64,7 @@ private struct WeightOptionsEditor: View {
     @State private var newWeight = ""
 
     var body: some View {
-        Section("Weights") {
+        ThemedSection("Weights") {
             HStack {
                 TextField("Add a weight (\(unit.rawValue))", text: $newWeight)
                     .keyboardType(.decimalPad)
@@ -95,7 +93,6 @@ private struct WeightOptionsEditor: View {
                 onChange(changed)
             }
         }
-        .listRowBackground(Theme.surface)
     }
 }
 
@@ -106,7 +103,7 @@ private struct WeightRangesEditor: View {
 
     var body: some View {
         ForEach(Array(ranges.enumerated()), id: \.offset) { index, range in
-            Section("Range \(index + 1) · \(EquipmentLoad.ranges(options: [range]).summary(in: unit))") {
+            ThemedSection("Range \(index + 1) · \(EquipmentLoad.ranges(options: [range]).summary(in: unit))") {
                 WeightField(title: "Minimum", kg: range.minKg, unit: unit, onChange: update(index) { $0.minKg = $1 })
                 WeightField(title: "Maximum", kg: range.maxKg, unit: unit, onChange: update(index) { $0.maxKg = $1 })
                 WeightField(title: "Increment", kg: range.incrementKg, unit: unit, onChange: update(index) { $0.incrementKg = $1 })
@@ -118,17 +115,15 @@ private struct WeightRangesEditor: View {
                     }
                 }
             }
-            .listRowBackground(Theme.surface)
         }
         // Fields keep their typed text, so removing a range rebuilds them rather than shifting stale text up.
         .id(ranges.count)
-        Section {
+        ThemedSection {
             Button("Add Range", systemImage: "plus") {
                 let last = ranges.last ?? WeightRange(minKg: 0, maxKg: unit.toKg(500), incrementKg: unit.toKg(10))
                 onChange(ranges + [last])
             }
         }
-        .listRowBackground(Theme.surface)
     }
 
     private func update(_ index: Int, _ change: @escaping (inout WeightRange, Double) -> Void) -> (Double) -> Void {
@@ -148,7 +143,7 @@ private struct MicroAdjustmentEditor: View {
     @State private var newWeight = ""
 
     var body: some View {
-        Section {
+        ThemedSection("Micro-Adjustments", footer: micro.map { Self.summary($0.kind) }) {
             Picker("Add Micro-Adjustments", selection: Binding(get: { micro?.kind }, set: { kind in
                 onChange(kind.map { MicroAdjustment(kind: $0, weightsKg: micro?.weightsKg ?? []) })
             })) {
@@ -179,12 +174,7 @@ private struct MicroAdjustmentEditor: View {
                     onChange(MicroAdjustment(kind: micro.kind, weightsKg: weights))
                 }
             }
-        } header: {
-            Text("Micro-Adjustments")
-        } footer: {
-            if let micro { Text(Self.summary(micro.kind)) }
         }
-        .listRowBackground(Theme.surface)
     }
 
     static func title(_ kind: MicroAdjustment.Kind) -> String {
@@ -211,7 +201,7 @@ private struct BandOptionsEditor: View {
     @State private var newColor = ""
 
     var body: some View {
-        Section("Bands") {
+        ThemedSection("Bands") {
             HStack {
                 TextField("Add a color", text: $newColor)
                 Button("Add", systemImage: "plus") {
@@ -240,7 +230,6 @@ private struct BandOptionsEditor: View {
                 onChange(changed)
             }
         }
-        .listRowBackground(Theme.surface)
     }
 }
 

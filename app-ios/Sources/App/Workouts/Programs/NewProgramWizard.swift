@@ -516,32 +516,35 @@ private struct ExperienceSheet: View {
 
     var body: some View {
         NavigationStack {
-            List(ExperienceChoice.allCases) { choice in
-                Button {
-                    store.updateSettings { $0.profile.liftingExperience = choice.level }
-                    onPick(choice)
-                    dismiss()
-                } label: {
-                    HStack(spacing: 14) {
-                        Image(systemName: "cellularbars", variableValue: choice.bars)
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(Theme.background)
-                            .frame(width: 30, height: 30)
-                            .background(Theme.textPrimary, in: .circle)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(choice.title).font(AppFont.headline(15))
-                            Text(choice.summary).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+            List {
+                ThemedSection {
+                    ForEach(ExperienceChoice.allCases) { choice in
+                        Button {
+                            store.updateSettings { $0.profile.liftingExperience = choice.level }
+                            onPick(choice)
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 14) {
+                                Image(systemName: "cellularbars", variableValue: choice.bars)
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(Theme.background)
+                                    .frame(width: 30, height: 30)
+                                    .background(Theme.textPrimary, in: .circle)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(choice.title).font(AppFont.headline(15))
+                                    Text(choice.summary).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                                }
+                                Spacer()
+                                Image(systemName: choice == selected ? "record.circle.fill" : "circle")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(choice == selected ? Theme.textPrimary : Theme.textTertiary)
+                            }
+                            .contentShape(Rectangle())
                         }
-                        Spacer()
-                        Image(systemName: choice == selected ? "record.circle.fill" : "circle")
-                            .font(.system(size: 22))
-                            .foregroundStyle(choice == selected ? Theme.textPrimary : Theme.textTertiary)
+                        .foregroundStyle(Theme.textPrimary)
+                        .accessibilityAddTraits(choice == selected ? .isSelected : [])
                     }
-                    .contentShape(Rectangle())
                 }
-                .foregroundStyle(Theme.textPrimary)
-                .listRowBackground(Theme.surface)
-                .accessibilityAddTraits(choice == selected ? .isSelected : [])
             }
             .scrollContentBackground(.hidden)
             .background(Theme.surface)

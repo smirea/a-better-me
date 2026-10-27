@@ -81,9 +81,7 @@ struct GymProfileEditor: View {
                 .textCase(nil)
             }
             if sections.isEmpty {
-                Text("No Results")
-                    .font(AppFont.medium(15))
-                    .foregroundStyle(Theme.textSecondary)
+                ContentUnavailableView.search(text: query)
                     .listRowBackground(Theme.background)
             }
             ForEach(sections, id: \.category) { section in

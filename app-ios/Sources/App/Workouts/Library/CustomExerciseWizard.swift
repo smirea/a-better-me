@@ -487,8 +487,8 @@ private struct FinalDetailsStep: View {
                 }
                 Spacer()
                 Button("Edit") { editingDescription = true }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
+                    .font(AppFont.chip)
+                    .buttonStyle(.glass)
                     .accessibilityLabel("Edit Description")
             }
             .padding(.top, 16)

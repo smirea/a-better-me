@@ -18,6 +18,15 @@ private struct NewSectionAlert: ViewModifier {
     }
 }
 
+/// The Your Sections placeholder on the Workout tab and in Customize Sections.
+struct NoSectionsLabel: View {
+    var body: some View {
+        Label("You haven’t added new sections yet. You can add one by tapping + on this page", systemImage: "rectangle.split.1x2")
+            .font(AppFont.rowDetail)
+            .foregroundStyle(Theme.textSecondary)
+    }
+}
+
 /// A custom section on the Workout tab: its name, Collapse, the ⋮ menu (Add Workout, Rename, Delete Section), and its
 /// workouts as library cards. `library` resolves the filed ids; an id it lacks (deleted, archived, or moved into a
 /// program) is skipped.
@@ -100,31 +109,31 @@ private struct SectionWorkoutsSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                if library.isEmpty {
-                    Text("Workouts you create appear here.")
-                        .font(AppFont.caption())
-                        .foregroundStyle(Theme.textSecondary)
-                        .listRowBackground(Theme.surface)
-                }
-                ForEach(library) { template in
-                    let isFiled = filed.contains(template.id)
-                    Button {
-                        let id = section.id
-                        let templateID = template.id
-                        if isFiled { filed.remove(templateID) } else { filed.insert(templateID) }
-                        store.updateSettings { $0.workout.sections.file(templateID, in: id, !isFiled) }
-                    } label: {
-                        HStack(spacing: 12) {
-                            Text(template.name).font(AppFont.headline(15))
-                            Spacer()
-                            Image(systemName: isFiled ? "checkmark.square.fill" : "square").font(.system(size: 20))
-                        }
-                        .foregroundStyle(Theme.textPrimary)
-                        .contentShape(Rectangle())
+                ThemedSection {
+                    if library.isEmpty {
+                        Text("Workouts you create appear here.")
+                            .font(AppFont.rowDetail)
+                            .foregroundStyle(Theme.textSecondary)
                     }
-                    .buttonStyle(.plain)
-                    .listRowBackground(Theme.surface)
-                    .accessibilityAddTraits(isFiled ? .isSelected : [])
+                    ForEach(library) { template in
+                        let isFiled = filed.contains(template.id)
+                        Button {
+                            let id = section.id
+                            let templateID = template.id
+                            if isFiled { filed.remove(templateID) } else { filed.insert(templateID) }
+                            store.updateSettings { $0.workout.sections.file(templateID, in: id, !isFiled) }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Text(template.name).font(AppFont.rowTitle)
+                                Spacer()
+                                Image(systemName: isFiled ? "checkmark.square.fill" : "square").font(.system(size: 20))
+                            }
+                            .foregroundStyle(Theme.textPrimary)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(isFiled ? .isSelected : [])
+                    }
                 }
             }
             .scrollContentBackground(.hidden)

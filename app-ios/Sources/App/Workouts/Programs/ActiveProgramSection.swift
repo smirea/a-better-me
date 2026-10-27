@@ -46,23 +46,26 @@ private struct GoToCycleSheet: View {
 
     var body: some View {
         NavigationStack {
-            List(1...program.totalCycles, id: \.self) { cycle in
-                Button {
-                    store.goToCycle(cycle, in: program.id)
-                    dismiss()
-                } label: {
-                    HStack(spacing: 16) {
-                        Image(systemName: cycle == program.currentCycle ? "mappin.and.ellipse" : "arrow.right")
-                            .frame(width: 24)
-                        Text(program.cycleLabel(cycle)).font(AppFont.headline())
-                        Spacer()
-                        Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
+            List {
+                ThemedSection {
+                    ForEach(1...program.totalCycles, id: \.self) { cycle in
+                        Button {
+                            store.goToCycle(cycle, in: program.id)
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 16) {
+                                Image(systemName: cycle == program.currentCycle ? "mappin.and.ellipse" : "arrow.right")
+                                    .frame(width: 24)
+                                Text(program.cycleLabel(cycle)).font(AppFont.rowTitle)
+                                Spacer()
+                                Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .foregroundStyle(Theme.textPrimary)
+                        .accessibilityAddTraits(cycle == program.currentCycle ? .isSelected : [])
                     }
-                    .contentShape(Rectangle())
                 }
-                .foregroundStyle(Theme.textPrimary)
-                .listRowBackground(Theme.surface)
-                .accessibilityAddTraits(cycle == program.currentCycle ? .isSelected : [])
             }
             .scrollContentBackground(.hidden)
             .background(Theme.surface)

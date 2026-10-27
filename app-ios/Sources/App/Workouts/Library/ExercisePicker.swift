@@ -63,10 +63,11 @@ private struct SwapSubstitutions: View {
         let current = catalog.exercise(exerciseID)
         List {
             if let current {
-                LibraryExerciseRow(exercise: current) { EmptyView() }
-                    .listRowBackground(Theme.surface)
+                ThemedSection {
+                    LibraryExerciseRow(exercise: current) { EmptyView() }
+                }
             }
-            Section {
+            ThemedSection("Smart Substitutions") {
                 ForEach(substitutes(for: current)) { exercise in
                     Button { detail = ExerciseRef(id: exercise.id) } label: {
                         LibraryExerciseRow(exercise: exercise) { SwapButton { pick(exercise.id) } }
@@ -74,8 +75,6 @@ private struct SwapSubstitutions: View {
                     .buttonStyle(.plain)
                 }
                 .listRowBackground(Theme.background)
-            } header: {
-                SectionTitle("Smart Substitutions").textCase(nil)
             }
         }
         .listStyle(.plain)
@@ -263,7 +262,7 @@ private struct SelectionTray: View {
 
     var body: some View {
         List {
-            Section {
+            ThemedSection("Your Exercises") {
                 ForEach(selection.ids.compactMap(catalog.exercise)) { exercise in
                     LibraryExerciseRow(exercise: exercise) {
                         Button("Remove", systemImage: "trash") { selection.toggle(exercise.id) }
@@ -273,18 +272,14 @@ private struct SelectionTray: View {
                             .background(Theme.surfaceRaised, in: .circle)
                             .buttonStyle(.plain)
                     }
-                    .listRowBackground(Theme.surface)
                 }
                 .onMove { selection.ids.move(fromOffsets: $0, toOffset: $1) }
-            } header: {
-                SectionTitle("Your Exercises").textCase(nil)
             }
             if selection.ids.count > 1 {
-                Section {
+                ThemedSection {
                     Toggle(selection.ids.count > 2 ? "Add as a circuit?" : "Add as a superset?", isOn: $selection.asGroup)
                         .font(AppFont.medium(15))
                         .tint(Theme.accent)
-                        .listRowBackground(Theme.surface)
                 }
             }
         }

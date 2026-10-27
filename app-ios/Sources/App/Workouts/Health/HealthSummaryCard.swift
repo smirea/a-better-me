@@ -34,10 +34,10 @@ struct HealthSummaryCard: View {
     var body: some View {
         if let numbers, !numbers.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Apple Health").font(AppFont.title())
+                Text("Apple Health").font(AppFont.sectionTitle)
                 if let source = numbers.source {
                     Text(source == .watch ? "Recorded on Apple Watch" : "Recorded on iPhone")
-                        .font(AppFont.caption())
+                        .font(AppFont.rowDetail)
                         .foregroundStyle(Theme.textSecondary)
                 }
                 row("Average Heart Rate", icon: "heart.fill", value: numbers.averageHeartRate.map { "\(Int($0.rounded())) bpm" })
@@ -45,7 +45,7 @@ struct HealthSummaryCard: View {
                 row("Active Energy", icon: "flame.fill", value: numbers.activeEnergyKcal.map { "\(Int($0.rounded())) kcal" })
                 row("Total Energy", icon: "flame", value: numbers.totalEnergyKcal.map { "\(Int($0.rounded())) kcal" })
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
         }
     }
 
@@ -54,10 +54,9 @@ struct HealthSummaryCard: View {
         if let value {
             Divider().overlay(Theme.separator)
             HStack(spacing: 16) {
-                Image(systemName: icon).frame(width: 24)
-                Text(title).font(AppFont.medium(16))
+                RowLabel(title: title, systemImage: icon)
                 Spacer()
-                Text(value).font(AppFont.body(15))
+                Text(value).font(AppFont.rowTitle)
             }
             .frame(minHeight: 52)
             .accessibilityElement(children: .combine)

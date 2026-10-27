@@ -26,7 +26,7 @@ struct EquipmentSettingsView: View {
         let overrides = current?.overrides ?? ExerciseOverrides()
         Form {
             if let plates = loading?.plates, let baseID = plates.baseID, plates.baseWeights.count > 1 {
-                Section {
+                ThemedSection("Bar Weight", footer: "The \(catalog.equipment[baseID]?.name ?? "bar") weight the plate calculator loads on for this exercise.") {
                     Picker("Bar Weight", selection: Binding(
                         get: { overrides.barWeightKg?[baseID].flatMap { chosen in plates.baseWeights.first { abs(unit.toKg($0) - chosen) < 0.005 } } },
                         set: { weight in
@@ -41,15 +41,10 @@ struct EquipmentSettingsView: View {
                         ForEach(plates.baseWeights, id: \.self) { Text("\(SetField.plain($0)) \(unit.rawValue)").tag(Optional($0)) }
                     }
                     .accessibilityLabel("Bar Weight")
-                } header: {
-                    SectionTitle("Bar Weight").textCase(nil)
-                } footer: {
-                    Text("The \(catalog.equipment[baseID]?.name ?? "bar") weight the plate calculator loads on for this exercise.")
                 }
-                .listRowBackground(Theme.surface)
             }
             if offsetEnabled {
-                Section {
+                ThemedSection("Offset Weight", footer: "Adds the ability to optionally offset the total weight targeted by the weight calculator. A negative offset loads less than the logged weight.") {
                     Picker("Offset", selection: Binding(get: { OffsetKind(overrides.plateOffset) }, set: { kind in
                         offsetText = ""
                         edit { $0.overrides.plateOffset = kind.offset(value: 0, unit: unit) }
@@ -71,14 +66,9 @@ struct EquipmentSettingsView: View {
                                 }
                         }
                     }
-                } header: {
-                    SectionTitle("Offset Weight").textCase(nil)
-                } footer: {
-                    Text("Adds the ability to optionally offset the total weight targeted by the weight calculator. A negative offset loads less than the logged weight.")
                 }
-                .listRowBackground(Theme.surface)
             }
-            Section {
+            ThemedSection {
                 NavigationLink {
                     EquipmentWeightsOverrideView(exerciseID: exerciseID)
                 } label: {
@@ -86,7 +76,6 @@ struct EquipmentSettingsView: View {
                 }
                 .accessibilityLabel("Equipment Weights")
             }
-            .listRowBackground(Theme.surface)
         }
         .themedList()
         .font(AppFont.medium(15))

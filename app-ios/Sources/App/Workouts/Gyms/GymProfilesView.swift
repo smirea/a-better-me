@@ -10,7 +10,7 @@ struct GymProfilesView: View {
 
     var body: some View {
         List {
-            Section {
+            ThemedSection(gyms.count == 1 ? "1 Gym" : "\(gyms.count) Gyms") {
                 ForEach(gyms) { gym in
                     let isDefault = gym.id == defaultGym?.id
                     GymRow(gym: gym, isDefault: isDefault) { editing = gym.id }
@@ -27,8 +27,6 @@ struct GymProfilesView: View {
                             Button("Edit", systemImage: "pencil") { editing = gym.id }
                         }
                 }
-            } header: {
-                SectionTitle(gyms.count == 1 ? "1 Gym" : "\(gyms.count) Gyms").textCase(nil)
             }
         }
         .listStyle(.plain)
@@ -93,14 +91,11 @@ private struct NewGymSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
+                ThemedSection("Name") {
                     TextField("Gym name", text: $name)
                         .font(AppFont.medium(16))
-                        .listRowBackground(Theme.surface)
-                } header: {
-                    SectionTitle("Name").textCase(nil)
                 }
-                Section {
+                ThemedSection("Gym Type") {
                     ForEach(GymTemplate.allCases) { option in
                         Button { template = option } label: {
                             HStack(spacing: 14) {
@@ -118,10 +113,7 @@ private struct NewGymSheet: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(template == option ? .isSelected : [])
-                        .listRowBackground(Theme.surface)
                     }
-                } header: {
-                    SectionTitle("Gym Type").textCase(nil)
                 }
             }
             .themedList()

@@ -35,10 +35,8 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
         }
         List {
             if groups.isEmpty {
-                Text("No Results")
-                    .font(AppFont.medium(15))
-                    .foregroundStyle(Theme.textSecondary)
-                    .listRowBackground(Theme.surface)
+                ContentUnavailableView.search(text: query)
+                    .listRowBackground(Color.clear)
             }
             ForEach(groups) { group in
                 let isExpanded = expanded.contains(group.category)
@@ -265,7 +263,7 @@ struct EquipmentPickerSheet: View {
         NavigationStack {
             List {
                 ForEach(sections, id: \.key) { category, equipment in
-                    Section(category) {
+                    ThemedSection(category) {
                         ForEach(equipment.sorted { $0.name < $1.name }) { item in
                             let isSelected = selection?.id == item.id
                             Button {
@@ -285,7 +283,6 @@ struct EquipmentPickerSheet: View {
                                         .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textTertiary)
                                 }
                             }
-                            .listRowBackground(Theme.surface)
                         }
                     }
                 }

@@ -202,7 +202,7 @@ struct WorkoutSummaryView: View {
 
     private func details(volumeKg: Double) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Workout Details").font(AppFont.title()).padding(.bottom, 8)
+            Text("Workout Details").font(AppFont.sectionTitle).padding(.bottom, 8)
             detailRow("Volume", icon: "scalemass.fill", value: weight(volumeKg))
             Divider().overlay(Theme.separator)
             detailRow("Start Time", icon: "arrow.right.to.line", subtitle: Self.startText(session.startedAt)) {
@@ -222,15 +222,12 @@ struct WorkoutSummaryView: View {
 
     private func detailRow(_ title: String, icon: String, subtitle: String? = nil, value: String? = nil, edit: (() -> Void)? = nil) -> some View {
         HStack(spacing: 16) {
-            Image(systemName: icon).frame(width: 24)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(AppFont.medium(16))
-                if let subtitle { Text(subtitle).font(AppFont.caption()).foregroundStyle(Theme.textSecondary) }
-            }
+            RowLabel(title: title, detail: subtitle, systemImage: icon)
             Spacer()
-            if let value { Text(value).font(AppFont.body(15)) }
+            if let value { Text(value).font(AppFont.rowTitle) }
             if let edit {
                 Button("Edit", action: edit)
+                    .font(AppFont.chip)
                     .buttonStyle(.glass)
                     .accessibilityLabel("Edit \(title)")
             }

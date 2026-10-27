@@ -129,9 +129,7 @@ struct WorkoutTab: View {
             if custom.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     SectionHeader("Your Sections")
-                    Label("You haven’t added new sections yet. You can add one by tapping + on this page", systemImage: "rectangle.split.1x2")
-                        .font(AppFont.caption())
-                        .foregroundStyle(Theme.textSecondary)
+                    NoSectionsLabel()
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .card()
                 }
