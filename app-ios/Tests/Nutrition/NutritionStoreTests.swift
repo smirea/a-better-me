@@ -212,6 +212,17 @@ struct NutritionStoreTests {
         store.deletePlan(startingOn: monday)
         try await settled()
         #expect(try read(NutritionPlan.all).map(\.kind) == [.checkIn])
+
+        var edit = NutritionPlan(from: monday.adding(days: 7), kind: .edit, goal: goal, coaching: CoachingProgram(), targets: WeekTargets(every: DayTarget(energy: 1900, protein: 170, fat: 60, carbs: 190)))
+        edit.goal.targetWeightKg = 72
+        store.savePlan(edit)
+        try await settled()
+        let edited = try read(NutritionPlan.all)
+        #expect(edited.map(\.kind) == [.checkIn])
+        #expect(edited[0].goal.targetWeightKg == 72)
+        #expect(edited[0].target(on: monday.adding(days: 9)).energy == 1900)
+        #expect(edited[0].expenditureKcal == 2650)
+        #expect(edited[0].trendWeightKg == 81.2)
     }
 
     @Test func setsAndDeletesNutrientGoals() async throws {

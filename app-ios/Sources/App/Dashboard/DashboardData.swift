@@ -6,6 +6,8 @@ enum DashboardRoute: Hashable {
     case exercise(ExerciseID, ExerciseChartMetric)
     case allMuscles, allExercises, customize
     case expenditure, energyBalance, goalProgress, foodLogging, nutritionData
+    case nutrient(NutrientID), macros, allNutrition
+    case bodyMetric(BodyMetricCard), allBodyMetrics
 
     var usesHealth: Bool {
         switch self {
@@ -17,7 +19,7 @@ enum DashboardRoute: Hashable {
     /// Reads the food log, plans, or imported steps, and the weigh-ins with them.
     var usesNutrition: Bool {
         switch self {
-        case .steps, .expenditure, .energyBalance: true
+        case .steps, .expenditure, .energyBalance, .nutrient, .macros, .bodyMetric: true
         default: false
         }
     }
@@ -70,6 +72,8 @@ struct MetricTab: Identifiable {
     var icon: String?
     var points: [DatedValue]
     var unit: String
+    /// What the legend calls the main series when it differs from the tab, such as intake ("Calories") on a balance tab.
+    var seriesTitle: String?
     var averageTitle: String
     var summary: SummaryKind
     var style: Style
@@ -83,7 +87,12 @@ struct MetricTab: Identifiable {
     var id: String { title }
 
     func format(_ value: Double) -> String {
-        unit == "steps" || unit == "kcal" ? Int(value.rounded()).formatted() : value.dashboardText
+        switch unit {
+        case "steps", "kcal": Int(value.rounded()).formatted()
+        case "ratio": value.formatted(.number.precision(.fractionLength(2)))
+        case "mg", "mcg": TileMetrics.nutrientText(value)
+        default: value.dashboardText
+        }
     }
 }
 
@@ -95,6 +104,8 @@ struct MetricDetail {
         case expenditure(ExpenditureSummary)
         case weightTrend(WeightTrendSummary)
         case energyBalance
+        case nutrient(NutrientSummary)
+        case macros([(date: Date, split: TileMetrics.MacroSplit)])
     }
 
     var title: String
@@ -152,6 +163,9 @@ struct DashboardData {
     var plans: [NutritionPlan] = []
     var nutritionSettings = NutritionSettings()
     var expenditure: [NutritionEngine.ExpenditureDay] = []
+    var goals: [NutrientGoal] = []
+    var bodyMetrics: [BodyMetric] = []
+    var profile = ProfileSettings()
 
     var trend: [DatedValue] {
         WeightTrend.daily(weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, through: now, calendar: calendar)
@@ -326,7 +340,13 @@ struct DashboardData {
                     summary: .best, style: metric == .totalSets ? .bar : .line, color: DashboardColor.exercise
                 )
             }, footer: .months)
-        case .allMuscles, .allExercises, .customize, .goalProgress, .foodLogging, .nutritionData:
+        case let .nutrient(id):
+            return nutrientDetail(id)
+        case .macros:
+            return macrosDetail
+        case let .bodyMetric(card):
+            return bodyMetricDetail(card)
+        case .allMuscles, .allExercises, .customize, .goalProgress, .foodLogging, .nutritionData, .allNutrition, .allBodyMetrics:
             preconditionFailure("\(route) is not a metric detail")
         }
     }
@@ -349,6 +369,7 @@ struct DashboardValues: DynamicProperty {
         case detail(DashboardRoute), plot(DashboardRoute, MetricTab.ID?, ChartRange, Averaging)
         case expenditureDays, expenditureCard, balance(BalanceReference, days: Int), week, todayNutrition, foodLogging
         case goal(GoalProgressValues.Source)
+        case nutrientTile(NutritionCard), macrosCard, bodyMetricCard(BodyMetricCard)
     }
 
     private struct Key: Hashable {
@@ -383,6 +404,9 @@ struct DashboardValues: DynamicProperty {
                 data.plans = nutrition.plans
                 data.nutritionSettings = nutrition.settings
                 data.expenditure = expenditure
+                data.goals = nutrition.goals
+                data.bodyMetrics = nutrition.bodyMetrics
+                data.profile = nutrition.profile
             }
             return compute(data)
         }
@@ -397,11 +421,13 @@ struct DashboardValues: DynamicProperty {
     var week: [NutritionMetrics.DayNutrition] { memo(.week, usesNutrition: true) { $0.week } }
     var todayNutrition: NutritionMetrics.DayNutrition { memo(.todayNutrition, usesNutrition: true) { $0.todayNutrition } }
     var foodLogging: FoodLoggingValues { memo(.foodLogging, usesNutrition: true) { $0.foodLogging } }
-    /// Boxed because `SessionHistory.memo` reads a cached nil out of a miss when the value itself is optional.
     func goalProgress(_ source: GoalProgressValues.Source) -> GoalProgressValues? {
-        memo(.goal(source), usesNutrition: true) { GoalBox(value: GoalProgressValues(data: $0, source: source)) }.value
+        memo(.goal(source), usesNutrition: true) { GoalProgressValues(data: $0, source: source) }
     }
     var nutritionSettings: NutritionSettings { nutrition.settings }
+    func nutrientTile(_ card: NutritionCard) -> TileMetrics.Tile { memo(.nutrientTile(card), usesNutrition: true) { $0.nutrientTile(card) } }
+    var macrosCard: MacrosCardValues { memo(.macrosCard, usesNutrition: true) { $0.macrosCard } }
+    func bodyMetricCard(_ card: BodyMetricCard) -> CardValues { memo(.bodyMetricCard(card), usesNutrition: true) { $0.bodyMetricCard(card) } }
 
     func muscleCard(_ card: MuscleCard) -> CardValues { memo(.muscleCard(card)) { $0.muscleCard(card) } }
     func exerciseCard(_ card: ExerciseCard) -> CardValues { memo(.exerciseCard(card)) { $0.exerciseCard(card) } }
@@ -431,10 +457,6 @@ struct DashboardValues: DynamicProperty {
             )
         }
     }
-}
-
-private struct GoalBox {
-    var value: GoalProgressValues?
 }
 
 extension MuscleMetric {

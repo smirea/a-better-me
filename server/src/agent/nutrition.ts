@@ -84,21 +84,19 @@ const FOOD_IDS: Record<RowOf<'foods'>['source'], [RegExp, string]> = {
 	open_food_facts: [/^off-\S+$/, '`off-<barcode>`'],
 };
 
-type NutritionSettings = Record<string, unknown> & { timeline?: object; expenditure?: object };
+const NESTED = ['coachingModules', 'timeline', 'logger', 'expenditure'] as const;
 
-/** `profile`-style merge, one level deeper for the two nested groups. */
+/** `profile`-style merge, one level deeper for the nested groups. */
 export function mergeNutrition(
 	current: Record<string, unknown>,
 	patch: z.output<typeof M.SettingsPatch>['nutrition'],
 ): Record<string, unknown> {
 	if (!patch) return current;
-	const stored = current as NutritionSettings;
-	return {
-		...stored,
-		...patch,
-		...(patch.timeline && { timeline: { ...stored.timeline, ...patch.timeline } }),
-		...(patch.expenditure && { expenditure: { ...stored.expenditure, ...patch.expenditure } }),
-	};
+	const merged: Record<string, unknown> = { ...current, ...patch };
+	for (const key of NESTED) {
+		if (patch[key]) merged[key] = { ...(current[key] as object | undefined), ...patch[key] };
+	}
+	return merged;
 }
 
 const days = z.object({

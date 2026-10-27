@@ -88,8 +88,26 @@ struct CustomizeDashboardView: View {
         case .habits:
             ForEach(binding(\.habits).wrappedValue, id: \.self) { CardRow(title: $0.title, icon: $0.icon) }
                 .onMove { binding(\.habits).wrappedValue.move(fromOffsets: $0, toOffset: $1) }
+        case .nutrition:
+            ForEach(binding(\.nutrition)) { $card in
+                if let id = card.nutrient {
+                    CardRow(title: NutrientRegistry.nutrient(id)?.name ?? id.rawValue, icon: .nutrient) {
+                        Menu {
+                            Picker("Nutrient Display", selection: $card.display) {
+                                Text("Percent").tag(NutritionCard.Display.percent)
+                                Text("Consumed").tag(NutritionCard.Display.consumed)
+                                Text("Remaining").tag(NutritionCard.Display.remaining)
+                            }
+                        } label: { MetricMenuLabel(title: card.display.title) }
+                            .accessibilityLabel("\(NutrientRegistry.nutrient(id)?.name ?? id.rawValue) display")
+                    }
+                } else {
+                    CardRow(title: "Macros", icon: .macros)
+                }
+            }
+            .onMove { binding(\.nutrition).wrappedValue.move(fromOffsets: $0, toOffset: $1) }
         case .bodyMetrics:
-            ForEach(binding(\.bodyMetrics).wrappedValue, id: \.self) { _ in CardRow(title: "Scale Weight", icon: .scale) }
+            ForEach(binding(\.bodyMetrics).wrappedValue, id: \.self) { CardRow(title: $0.title, icon: .scale) }
                 .onMove { binding(\.bodyMetrics).wrappedValue.move(fromOffsets: $0, toOffset: $1) }
         case .muscles:
             ForEach(binding(\.muscles)) { $card in
@@ -142,6 +160,7 @@ extension DashboardSection: Identifiable {
         switch self {
         case .insights: "Insights & Analytics"
         case .habits: "Habits"
+        case .nutrition: "Nutrition"
         case .bodyMetrics: "Body Metrics"
         case .muscles: "Muscle Groups"
         case .exercises: "Exercises"
@@ -153,6 +172,7 @@ extension DashboardSection: Identifiable {
         switch self {
         case .insights: "Insights"
         case .habits: "Habits"
+        case .nutrition: "Nutrition"
         case .bodyMetrics: "Body Metrics"
         case .muscles: "Muscle Groups"
         case .exercises: "Exercises"
@@ -221,11 +241,12 @@ extension FocusCard: CaseIterable {
 
 enum CardIcon {
     case workouts, trend, weighInDots, workoutDots, scale, muscle, exercise, steps
-    case expenditure, energyBalance, goalProgress, foodLoggingDots
+    case expenditure, energyBalance, goalProgress, foodLoggingDots, nutrient, macros
 
     var symbol: String {
         switch self {
-        case .workouts, .muscle, .exercise, .steps, .energyBalance: "chart.bar.fill"
+        case .workouts, .muscle, .exercise, .steps, .energyBalance, .macros: "chart.bar.fill"
+        case .nutrient: "minus"
         case .trend, .scale, .expenditure: "chart.line.uptrend.xyaxis"
         case .weighInDots, .workoutDots, .foodLoggingDots: "ellipsis"
         case .goalProgress: "minus"
@@ -240,7 +261,8 @@ enum CardIcon {
         case .muscle: DashboardColor.muscle
         case .exercise: DashboardColor.exercise
         case .expenditure: DashboardColor.expenditure
-        case .energyBalance, .foodLoggingDots: DashboardColor.energy
+        case .energyBalance, .foodLoggingDots, .nutrient: DashboardColor.energy
+        case .macros: DashboardColor.protein
         case .goalProgress: DashboardColor.goal
         }
     }
@@ -429,8 +451,26 @@ private struct AddRemoveSheet: View {
             ForEach(InsightCard.allCases, id: \.self) { toggle($0.title, $0.icon, \.insights, $0) }
         case .habits:
             ForEach(HabitCard.allCases, id: \.self) { toggle($0.title, $0.icon, \.habits, $0) }
+        case .nutrition:
+            Section("Calories & Macros") {
+                toggle("Macros", .macros, \.nutrition, .macros, matching: { $0.nutrient == nil })
+                nutrientToggles(NutritionMetrics.macros)
+            }
+            ForEach(NutrientGroup.allCases, id: \.self) { group in
+                let ids = NutrientRegistry.all.filter { $0.group == group && !NutritionMetrics.macros.contains($0.id) }.map(\.id)
+                if !ids.isEmpty {
+                    Section(group.title) { nutrientToggles(ids) }
+                }
+            }
         case .bodyMetrics:
-            toggle("Scale Weight", .scale, \.bodyMetrics, .scaleWeight)
+            let available = BodyMetricCard.available(visible: values.nutritionSettings.visibleBodyMetrics)
+            ForEach(BodyMetricCard.allCases, id: \.self) { card in
+                if available.contains(card) {
+                    toggle(card.title, .scale, \.bodyMetrics, card)
+                } else {
+                    LabeledContent { Text("Turned Off").foregroundStyle(Theme.textSecondary) } label: { CardRow(title: card.title, icon: .scale) }
+                }
+            }
         case .general:
             toggle("Steps", .steps, \.general, .steps)
         case .muscles:
@@ -462,13 +502,37 @@ private struct AddRemoveSheet: View {
         }
     }
 
-    private func toggle<Card: Equatable>(_ title: String, _ icon: CardIcon, _ path: WritableKeyPath<DashboardLayout, [Card]>, _ card: Card) -> some View {
-        Toggle(isOn: Binding(
-            get: { layout[keyPath: path].contains(card) },
+    private func nutrientToggles(_ ids: [NutrientID]) -> some View {
+        ForEach(ids, id: \.self) { id in
+            toggle(NutrientRegistry.nutrient(id)?.name ?? id.rawValue, .nutrient, \.nutrition, NutritionCard(nutrient: id), matching: { $0.nutrient == id })
+        }
+    }
+
+    /// `matching` finds the card whatever its display setting, so turning a nutrient off removes it however it shows.
+    private func toggle<Card: Equatable>(
+        _ title: String, _ icon: CardIcon, _ path: WritableKeyPath<DashboardLayout, [Card]>, _ card: Card, matching: ((Card) -> Bool)? = nil
+    ) -> some View {
+        let matches = matching ?? { $0 == card }
+        return Toggle(isOn: Binding(
+            get: { layout[keyPath: path].contains(where: matches) },
             set: { on in
-                if on { layout[keyPath: path].append(card) } else { layout[keyPath: path].removeAll { $0 == card } }
+                if on { layout[keyPath: path].append(card) } else { layout[keyPath: path].removeAll(where: matches) }
             }
         )) { CardRow(title: title, icon: icon) }
         .tint(Theme.accent)
+    }
+}
+
+extension NutritionCard: Identifiable {
+    var id: String { nutrient?.rawValue ?? "macros" }
+}
+
+extension NutritionCard.Display {
+    var title: String {
+        switch self {
+        case .percent: "Percent"
+        case .consumed: "Consumed"
+        case .remaining: "Remaining"
+        }
     }
 }

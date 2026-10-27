@@ -146,23 +146,10 @@ struct StrategyCheckInTests {
 }
 
 struct StrategyInputsTests {
-    @Test func theInitialEstimateIsBmrTimesTheAssumedActivity() {
-        var profile = ProfileSettings()
-        #expect(StrategyInputs.initialEstimate(weightKg: 80, profile: profile, today: calendarDay("2026-10-26")) == nil)
-        profile.heightCm = 180
-        profile.birthDate = calendarDay("1990-05-01")
-        #expect(StrategyInputs.initialEstimate(weightKg: 80, profile: profile, today: calendarDay("2026-10-26")) == 2550)
-    }
-
-    @Test func theExpenditureSettingsSetTheActivityAndTheStart() {
+    @Test func theExpenditureSettingsSetTheStart() {
         var profile = ProfileSettings()
         profile.heightCm = 180
         profile.birthDate = calendarDay("1990-05-01")
-        var expenditure = NutritionSettings.Expenditure()
-        expenditure.activity = .mostlySedentary
-        expenditure.exercise = .zero
-        #expect(StrategyInputs.initialEstimate(weightKg: 80, profile: profile, expenditure: expenditure, today: calendarDay("2026-10-26")) == 2075)
-
         var settings = NutritionSettings()
         settings.expenditure.initialKcal = 2000
         settings.expenditure.calculationStart = calendarDay("2026-10-24")
@@ -180,6 +167,12 @@ struct StrategyInputsTests {
         #expect(inputs.isStaticExpenditure)
         #expect(inputs.trendWeightKg == 80)
         #expect(inputs.basis(standardFloorKcal: 1200) == StrategyBasis(weightKg: 80, expenditureKcal: 2400, standardFloorKcal: 1200))
+
+        settings.expenditure.initialKcal = 2000
+        settings.expenditure.calculationStart = calendarDay("2026-10-27")
+        let notStarted = StrategyInputs.make(weighIns: [weighIn], log: IntakeLog(), settings: settings, profile: ProfileSettings(), today: calendarDay("2026-10-26"), calendar: utc)
+        #expect(notStarted.expenditure.isEmpty)
+        #expect(notStarted.expenditureKcal == 2400)
     }
 }
 

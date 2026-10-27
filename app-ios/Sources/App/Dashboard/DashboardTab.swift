@@ -11,7 +11,8 @@ struct DashboardTab: View {
     @Observe(AppSettings.current) private var settings
     @Observe(NutritionLogDay.all) private var foodLog
     @Observe(NutritionPlan.all) private var plans
-    @Observe(BodyMetric.series(.steps)) private var importedSteps
+    @Observe(NutrientGoal.all) private var goals
+    @Observe(BodyMetric.all) private var bodyMetrics
 
     var body: some View {
         NavigationStack {
@@ -26,6 +27,8 @@ struct DashboardTab: View {
                     case .goalProgress: GoalProgressView()
                     case .foodLogging: FoodLoggingHabitView()
                     case .nutritionData: NutritionDataManagerView()
+                    case .allNutrition: AllNutritionView()
+                    case .allBodyMetrics: AllBodyMetricsView()
                     default: MetricDetailView(route: route)
                     }
                 }
@@ -37,8 +40,10 @@ struct DashboardTab: View {
             unit: settings.weightUnit, today: Calendar.current.startOfDay(for: .now), calendar: .current, custom: catalog.custom
         ))
         .onChange(of: logged, initial: true) { health.update(logged: logged) }
-        .onChange(of: NutritionInputs(log: foodLog, plans: plans, settings: settings.nutrition, profile: settings.profile, steps: importedSteps), initial: true) { _, inputs in
-            nutrition.update(log: inputs.log, plans: inputs.plans, settings: inputs.settings, profile: inputs.profile, importedSteps: inputs.steps)
+        .onChange(of: NutritionData.Inputs(
+            log: foodLog, plans: plans, goals: goals, settings: settings.nutrition, profile: settings.profile, bodyMetrics: bodyMetrics
+        ), initial: true) { _, inputs in
+            nutrition.update(inputs)
         }
         .healthDataAccessRequest(store: health.store, shareTypes: HealthData.shareTypes, readTypes: HealthData.readTypes, trigger: health.requestTrigger) { _ in
             Task { await health.load() }
@@ -119,9 +124,13 @@ private struct DashboardHome: View {
             DashboardSectionView(title: "Habits") {
                 ForEach(layout.habits, id: \.self) { HabitCardView(card: $0) }
             }
+        case .nutrition where !layout.nutrition.isEmpty:
+            DashboardSectionView(title: "Nutrition", seeAll: .allNutrition) {
+                ForEach(layout.nutrition, id: \.self) { NutritionCardView(card: $0) }
+            }
         case .bodyMetrics where !layout.bodyMetrics.isEmpty:
-            DashboardSectionView(title: "Body Metrics") {
-                ForEach(layout.bodyMetrics, id: \.self) { _ in ScaleWeightCardView() }
+            DashboardSectionView(title: "Body Metrics", seeAll: .allBodyMetrics) {
+                ForEach(layout.bodyMetrics, id: \.self) { BodyMetricCardView(card: $0) }
             }
         case .muscles where !layout.muscles.isEmpty:
             DashboardSectionView(title: "Muscle Groups", seeAll: .allMuscles) {
@@ -137,15 +146,6 @@ private struct DashboardHome: View {
             EmptyView()
         }
     }
-}
-
-/// The observed nutrition inputs, compared as one value so a change to any of them updates `NutritionData` once.
-private struct NutritionInputs: Equatable {
-    var log: [NutritionLogDay]
-    var plans: [NutritionPlan]
-    var settings: NutritionSettings
-    var profile: ProfileSettings
-    var steps: [BodyMetric]
 }
 
 /// Owns its picker's state, so a tap re-renders this card alone.
@@ -238,19 +238,6 @@ private struct HabitCardView: View {
                 DashboardCard(title: "Food Logging", period: "Last 30 Days", value: habit.text, unit: "this week") {
                     DotGrid(days: habit.days, color: DashboardColor.energy)
                 }
-            }
-        }
-    }
-}
-
-private struct ScaleWeightCardView: View {
-    private var values = DashboardValues()
-
-    var body: some View {
-        let entries = values.scaleWeightCard
-        NavigationLink(value: DashboardRoute.scaleWeight) {
-            DashboardCard(title: "Scale Weight", period: "Last 7 Entries", value: entries.text, unit: values.context.unit.rawValue) {
-                MiniLine(values: entries.values, color: DashboardColor.scale)
             }
         }
     }

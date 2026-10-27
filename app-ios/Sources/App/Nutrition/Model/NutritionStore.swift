@@ -144,8 +144,18 @@ extension LocalStore {
     // MARK: Strategy
 
     /// Saves the plan from its day on, replacing a plan that starts the same day.
+    /// One plan per day, so a goal or program edited on a check-in's day replaces that row. It stays a check-in and
+    /// keeps the expenditure and trend weight the check-in froze, or the check-in history would lose that week.
     func savePlan(_ plan: NutritionPlan) {
-        put(plan)
+        write { db in
+            var plan = plan
+            if let existing = try NutritionPlan.fetchOne(db, key: plan.key), existing.kind == .checkIn, plan.kind == .edit {
+                plan.kind = .checkIn
+                plan.expenditureKcal = plan.expenditureKcal ?? existing.expenditureKcal
+                plan.trendWeightKg = plan.trendWeightKg ?? existing.trendWeightKg
+            }
+            try Self.put(plan, in: db)
+        }
     }
 
     func deletePlan(startingOn day: CalendarDay) {

@@ -48,7 +48,7 @@ extension DashboardData {
 
     func computedExpenditure(profile: ProfileSettings) -> [NutritionEngine.ExpenditureDay] {
         NutritionMetrics.expenditure(
-            log: log, weighIns: weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, trend: trend,
+            intake: NutritionMetrics.intake(log, calendar: calendar), weighIns: weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, trend: trend,
             settings: nutritionSettings.expenditure, profile: profile, now: now, calendar: calendar
         )
     }
@@ -107,7 +107,7 @@ extension DashboardData {
         let differences = NutritionMetrics.differences(intake: intake, reference: reference, calendar: calendar)
         let isExpenditure = title == "Expenditure"
         return MetricTab(
-            title: title, icon: icon, points: intake, unit: "kcal", averageTitle: "Average", summary: .total, style: .bar,
+            title: title, icon: icon, points: intake, unit: "kcal", seriesTitle: "Calories", averageTitle: "Average", summary: .total, style: .bar,
             color: DashboardColor.energy,
             overlay: MetricTab.Overlay(title: isExpenditure ? "Expenditure" : "Targets", points: reference, color: color, dashed: true),
             stats: { interval in

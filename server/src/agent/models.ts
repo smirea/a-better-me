@@ -784,34 +784,75 @@ export const NutrientGoalPut = z
 	})
 	.meta({ id: 'NutrientGoalPut', description: 'The bounds apply only under `custom`.' });
 
+const hour = z.int().min(0).max(23);
+/** Mirrors `NutritionSettings` in the iOS app; a key the app does not know is ignored there. */
 const NutritionSettingsPatch = z
 	.object({
 		energyUnit: z.enum(['kcal', 'kj']).meta({ description: 'Display only. The API always speaks kcal.' }),
+		heightUnit: z
+			.enum(['feetAndInches', 'centimeters'])
+			.meta({ description: 'Display only. The API always speaks centimeters.' }),
 		checkInWeekday: z.int().min(1).max(7),
 		fastCheckIn: z.boolean(),
+		coachingModules: z
+			.object({ partialLogging: z.boolean(), weighIn: z.boolean(), fasting: z.boolean(), loggingBreak: z.boolean() })
+			.partial(),
+		standardFloorKcal: z.int().min(0).meta({ description: "The coached program's standard calorie floor." }),
 		showOverages: z.boolean(),
 		pinnedNutrients: z.array(nutrientID),
 		hideAdditionalNutrients: z.boolean(),
-		searchBranded: z.boolean(),
-		searchOpenFoodFacts: z.boolean(),
+		searchBranded: z.boolean().meta({ description: 'Include Open Food Facts branded foods in search.' }),
 		favoriteMeasures: z.array(z.string()),
 		timeline: z
 			.object({
-				firstHour: z.int().min(0).max(23),
-				lastHour: z.int().min(0).max(23),
+				firstHour: hour,
+				lastHour: hour,
 				hideEmptyHours: z.boolean(),
+				hideFoodDetails: z.boolean(),
 				hourlyTotals: z.boolean(),
 				foodTimestamps: z.boolean(),
+				alignment: z.enum(['left', 'right']),
+				addFoodsToHour: z.enum(['plusIcon', 'longPress']),
+				calendarWeekBanner: z.enum(['show', 'showAndPin', 'hide']),
+				calendarScrolling: z.enum(['daily', 'weekly']),
+				premove: z.boolean(),
 			})
 			.partial(),
-		expenditure: z
-			.object({ staticKcal: z.number().positive().nullable(), initialKcal: z.number().positive().nullable() })
+		logger: z
+			.object({
+				bannerNutrients: z.array(nutrientID),
+				nutritionDisplay: z.enum(['plateOnly', 'dayAndPlate', 'remainingAfterPlate']),
+				timeSelection: z.enum(['datePicker', 'timePad']),
+				optimization: z.enum(['speed', 'context']),
+			})
 			.partial(),
+		shortcuts: z.array(
+			z.enum(['yourFoods', 'search', 'barcode', 'quickAdd', 'recipes', 'favorites', 'editDay', 'weight']),
+		),
+		expenditure: z
+			.object({
+				staticKcal: z.number().positive().nullable(),
+				initialKcal: z.number().positive().nullable(),
+				calculationStart: day.nullable(),
+				bmrEquation: z.enum(['macroFactor', 'cunningham']),
+				activity: z.enum(['mostlySedentary', 'moderatelyActive', 'veryActive']).nullable(),
+				exercise: z.enum(['zero', 'oneToThree', 'fourToSix', 'sevenPlus']).nullable(),
+				athleticPursuits: z.enum(['exerciseRegularly', 'athlete', 'professionalAthlete', 'noneOfTheAbove']).nullable(),
+				priorWeight: z.enum(['yes', 'no', 'notSure']).nullable(),
+				priorProgress: z.enum(['gaining', 'losing', 'stable', 'notSure']).nullable(),
+				algorithm: z.enum(['v1', 'v2', 'v3']),
+				stepInformedUpdates: z.boolean(),
+				predictiveGoalAdjustment: z.boolean(),
+			})
+			.partial(),
+		hiddenNutrients: z.array(nutrientID),
+		visibleBodyMetrics: z.array(z.enum(BODY_METRIC_KINDS)),
 	})
 	.partial()
 	.meta({
 		id: 'NutritionSettingsPatch',
-		description: 'Merges into the stored Nutrition settings, `timeline` and `expenditure` key by key.',
+		description:
+			'Merges into the stored Nutrition settings, and `coachingModules`, `timeline`, `logger`, and `expenditure` key by key.',
 	});
 
 const Rest = z.object(

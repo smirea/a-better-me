@@ -279,6 +279,25 @@ describe('nutrition agent API', () => {
 		expect(settings.nutrition).toEqual({ checkInWeekday: 3, timeline: { firstHour: 6, lastHour: 22 } });
 		expect(settings.profile).toEqual({ heightCm: 180, birthDate: '1990-01-31' });
 		expect((await status('PATCH', '/settings', { nutrition: { checkInWeekday: 8 } })).status).toBe(400);
+
+		await ok('PATCH', '/settings', { nutrition: { standardFloorKcal: 1300, logger: { timeSelection: 'timePad' } } });
+		const later = await ok('PATCH', '/settings', {
+			nutrition: {
+				logger: { optimization: 'context' },
+				coachingModules: { fasting: true },
+				visibleBodyMetrics: ['waist'],
+			},
+		});
+		expect(later.nutrition).toEqual({
+			checkInWeekday: 3,
+			timeline: { firstHour: 6, lastHour: 22 },
+			standardFloorKcal: 1300,
+			logger: { timeSelection: 'timePad', optimization: 'context' },
+			coachingModules: { fasting: true },
+			visibleBodyMetrics: ['waist'],
+		});
+		const stripped = await ok('PATCH', '/settings', { nutrition: { searchOpenFoodFacts: true } });
+		expect(stripped.nutrition).not.toHaveProperty('searchOpenFoodFacts');
 	});
 
 	test('the OpenAPI document lists the nutrition operations', async () => {

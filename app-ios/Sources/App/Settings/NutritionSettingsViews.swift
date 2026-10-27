@@ -67,12 +67,8 @@ struct FoodLogSettingsView: View {
             }
             Section {
                 SettingToggle(
-                    title: "Branded Results", detail: "Include branded foods in search",
+                    title: "Branded Results", detail: "Include branded foods from Open Food Facts in search",
                     systemImage: "tag", isOn: store.binding(settings, \.nutrition.searchBranded)
-                )
-                SettingToggle(
-                    title: "Open Food Facts Results", detail: "Include Open Food Facts foods in search",
-                    systemImage: "globe", isOn: store.binding(settings, \.nutrition.searchOpenFoodFacts)
                 )
             } header: {
                 SectionTitle("Food Search").textCase(nil)

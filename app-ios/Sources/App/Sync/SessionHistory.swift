@@ -42,7 +42,8 @@ final class SessionHistory {
             memos = [:]
             memoRevision = revision
         }
-        if let hit = memos[AnyHashable(key)] as? Value { return hit }
+        // A lookup's own Optional would satisfy `as? Value` when `Value` is optional, so a miss must be told apart first.
+        if let index = memos.index(forKey: AnyHashable(key)), let hit = memos[index].value as? Value { return hit }
         let value = compute(sessions)
         memos[AnyHashable(key)] = value
         return value

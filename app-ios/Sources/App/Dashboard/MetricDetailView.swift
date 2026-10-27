@@ -13,6 +13,7 @@ struct MetricDetailView: View {
     @State private var averaging = Averaging.daily
     @State private var fitOverrides: [MetricTab.ID: Bool] = [:]
     @State private var loggingWeight = false
+    @State private var loggingMetrics = false
     @State private var shownExercise: ShownExercise?
 
     init(route: DashboardRoute, initialTab: String? = nil) {
@@ -46,8 +47,22 @@ struct MetricDetailView: View {
                     Button("Log Weight", systemImage: "plus") { loggingWeight = true }
                 }
             }
+            if case let .nutrient(id) = route, !NutritionMetrics.macros.contains(id) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink { NutrientGoalsView(nutrient: id) } label: {
+                        Image(systemName: "target")
+                    }
+                    .accessibilityLabel("Nutrient Goals")
+                }
+            }
+            if case .bodyMetric = route {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Log Measurements", systemImage: "plus") { loggingMetrics = true }
+                }
+            }
         }
         .sheet(isPresented: $loggingWeight) { BodyWeightLogSheet() }
+        .sheet(isPresented: $loggingMetrics) { BodyMetricsLogSheet() }
         .sheet(item: $shownExercise) { ExerciseDetailSheet(exerciseID: $0.id) }
     }
 
@@ -199,7 +214,7 @@ struct MetricDetailView: View {
                 legendItem(overlay.title, symbol: "point.topleft.down.to.point.bottomright.curvepath", color: overlay.color)
             }
             legendItem(
-                tab.style == .bar && tab.overlay != nil ? "Calories" : tab.title,
+                tab.seriesTitle ?? tab.title,
                 symbol: tab.style == .bar ? "chart.bar.fill" : "point.topleft.down.to.point.bottomright.curvepath", color: tab.color
             )
             if let overlay = tab.overlay, overlay.dashed {
@@ -239,6 +254,11 @@ struct MetricDetailView: View {
             MonthList(months: plot.months)
         case .weighIns:
             MonthList(months: plot.months) { store.delete(BodyWeight.self, id: $0) }
+        case let .nutrient(summary):
+            NutrientTodaySection(summary: summary)
+            MonthList(months: plot.months)
+        case let .macros(days):
+            MacroSplitList(days: days)
         case let .topExercises(top):
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -305,7 +325,7 @@ struct MetricPlot {
             }
         }
         let rows: [MonthRow] = switch footer {
-        case .months, .weightTrend:
+        case .months, .weightTrend, .nutrient, .macros:
             pointRows()
         case .expenditure:
             pointRows { tab.holding.contains($0.date) ? MonthRow.Tag(text: "Holding", symbol: "square", color: tab.color) : nil }
