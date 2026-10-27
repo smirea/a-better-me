@@ -6,77 +6,6 @@
 	objectVersion = 71;
 	objects = {
 
-		F00000000000000000000001 /* UITests/Watch */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = UITests/Watch;
-			sourceTree = "<group>";
-		};
-		F00000000000000000000002 /* WatchUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = F00000000000000000000007;
-			buildPhases = (
-				F00000000000000000000004,
-				F00000000000000000000005,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				F0000000000000000000000A,
-			);
-			fileSystemSynchronizedGroups = (
-				F00000000000000000000001,
-			);
-			name = WatchUITests;
-			productName = WatchUITests;
-			productReference = F00000000000000000000003;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
-		F00000000000000000000003 /* WatchUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WatchUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		F00000000000000000000004 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		F00000000000000000000005 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		F00000000000000000000007 = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				F00000000000000000000008,
-				F00000000000000000000009,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		F00000000000000000000008 = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me.watch-uitests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = watchos;
-				SUPPORTED_PLATFORMS = "watchos watchsimulator";
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				TEST_TARGET_NAME = Watch;
-				WATCHOS_DEPLOYMENT_TARGET = 27.0;
-			};
-			name = Debug;
-		};
-		F00000000000000000000009 = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me.watch-uitests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = watchos;
-				SUPPORTED_PLATFORMS = "watchos watchsimulator";
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				TEST_TARGET_NAME = Watch;
-				WATCHOS_DEPLOYMENT_TARGET = 27.0;
-			};
-			name = Release;
-		};
-		F0000000000000000000000A = {isa = PBXTargetDependency; target = B00000000000000000000002; targetProxy = F0000000000000000000000B; };
-		F0000000000000000000000B = {isa = PBXContainerItemProxy; containerPortal = A00000000000000000000001; proxyType = 1; remoteGlobalIDString = B00000000000000000000002; remoteInfo = Watch; };
 /* Begin PBXBuildFile section */
 		A00000000000000000000023 /* SyncEngine in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000021 /* SyncEngine */; };
 		A00000000000000000000024 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000022 /* GRDB */; };
@@ -106,6 +35,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = C00000000000000000000002;
 			remoteInfo = Widgets;
+		};
+		F0000000000000000000000B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B00000000000000000000002;
+			remoteInfo = Watch;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -140,6 +76,7 @@
 		A00000000000000000000032 /* AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B00000000000000000000003 /* Watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Watch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C00000000000000000000003 /* Widgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Widgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F00000000000000000000003 /* WatchUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WatchUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -148,6 +85,7 @@
 		B00000000000000000000001 /* Sources/Watch */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/Watch; sourceTree = "<group>"; };
 		C00000000000000000000001 /* Sources/Widgets */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/Widgets; sourceTree = "<group>"; };
 		D00000000000000000000001 /* Sources/Shared */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/Shared; sourceTree = "<group>"; };
+		F00000000000000000000001 /* UITests/Watch */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = UITests/Watch; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -176,6 +114,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		C00000000000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F00000000000000000000005 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -212,26 +157,6 @@
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		E00000000000000000000010 /* Upload dSYMs to Sentry */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
-			);
-			name = "Upload dSYMs to Sentry";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"$SRCROOT/scripts/upload-dsyms\"\n";
-			showEnvVarsInLog = 0;
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXNativeTarget section */
 		A00000000000000000000005 /* App */ = {
@@ -327,6 +252,26 @@
 			productReference = C00000000000000000000003 /* Widgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		F00000000000000000000002 /* WatchUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F00000000000000000000007 /* Build configuration list for PBXNativeTarget "WatchUITests" */;
+			buildPhases = (
+				F00000000000000000000004 /* Sources */,
+				F00000000000000000000005 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F0000000000000000000000A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F00000000000000000000001 /* UITests/Watch */,
+			);
+			name = WatchUITests;
+			productName = WatchUITests;
+			productReference = F00000000000000000000003 /* WatchUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -387,6 +332,26 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		E00000000000000000000010 /* Upload dSYMs to Sentry */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
+			);
+			name = "Upload dSYMs to Sentry";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/scripts/upload-dsyms\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		A00000000000000000000007 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -416,6 +381,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F00000000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -433,6 +405,11 @@
 			isa = PBXTargetDependency;
 			target = C00000000000000000000002 /* Widgets */;
 			targetProxy = C0000000000000000000000B /* PBXContainerItemProxy */;
+		};
+		F0000000000000000000000A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B00000000000000000000002 /* Watch */;
+			targetProxy = F0000000000000000000000B /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -686,6 +663,40 @@
 			};
 			name = Release;
 		};
+		F00000000000000000000008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = FNYFHG5SV7;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me.watch-uitests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = Watch;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Debug;
+		};
+		F00000000000000000000009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = FNYFHG5SV7;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me.watch-uitests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = Watch;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -730,6 +741,15 @@
 			buildConfigurations = (
 				C00000000000000000000008 /* Debug */,
 				C00000000000000000000009 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F00000000000000000000007 /* Build configuration list for PBXNativeTarget "WatchUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F00000000000000000000008 /* Debug */,
+				F00000000000000000000009 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
