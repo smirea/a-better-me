@@ -30,16 +30,16 @@ struct FoodDetailView: View {
 
     var body: some View {
         List {
-            Section {
+            ThemedSection {
                 header
             }
-            Section("Impact on Targets") {
+            ThemedSection("Impact on Targets") {
                 impact
             }
             ForEach(NutrientSection.allCases) { section in
                 let rows = section.nutrients.filter { food.nutrition.nutrients.amount(of: $0.id) != nil }
                 if !rows.isEmpty {
-                    Section(section.rawValue) {
+                    ThemedSection(section.rawValue) {
                         ForEach(rows) { nutrient in
                             LabeledContent(nutrient.name, value: NutritionFormat.amount(amounts.amount(of: nutrient.id) ?? 0, nutrient.unit))
                         }
@@ -88,7 +88,7 @@ struct FoodDetailView: View {
                     .buttonStyle(.glass)
                 }
             }
-            .font(AppFont.medium(14))
+            .font(AppFont.chip)
         }
         .padding(.vertical, 6)
     }
@@ -189,13 +189,7 @@ struct QuantityKeypad: View {
     private func chip(_ option: Measure) -> some View {
         let selected = option == measure
         return Button { choose(option) } label: {
-            Text(option.name)
-                .font(AppFont.medium(13))
-                .lineLimit(1)
-                .padding(.horizontal, 12)
-                .frame(height: 32)
-                .foregroundStyle(selected ? .black : Theme.textPrimary)
-                .background(selected ? Theme.textPrimary : Theme.surfaceRaised, in: .capsule)
+            Chip(title: option.name, isActive: selected)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -210,7 +204,7 @@ struct QuantityKeypad: View {
             content()
                 .frame(maxWidth: .infinity)
                 .frame(height: Self.keyHeight)
-                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 8))
+                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -224,7 +218,7 @@ struct QuantityKeypad: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: Self.keyHeight)
                 .foregroundStyle(prominent ? .black : Theme.textPrimary)
-                .background(prominent ? Theme.textPrimary : Theme.surface, in: RoundedRectangle(cornerRadius: 8))
+                .background(prominent ? Theme.textPrimary : Theme.surface, in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
         }
         .buttonStyle(.plain)
         .disabled(quantity.value.map { $0 <= 0 } ?? true)

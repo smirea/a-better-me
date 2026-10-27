@@ -120,7 +120,7 @@ private struct StrategyHome: View {
                     emptyState
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.bottom, 30)
         }
         .background(Theme.background)
@@ -313,7 +313,7 @@ private struct GoalHistoryRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(StrategyFormat.range(period.start, period.end)).font(AppFont.headline(15))
+                Text(StrategyFormat.range(period.start, period.end)).font(AppFont.rowTitle)
                 Text("\(StrategyFormat.weight(period.startWeightKg, unit)) → \(StrategyFormat.weight(period.endWeightKg, unit))")
                     .font(AppFont.caption())
                     .foregroundStyle(Theme.textSecondary)
@@ -323,8 +323,7 @@ private struct GoalHistoryRow: View {
             Image(systemName: period.end == nil ? "hourglass" : "checkmark.circle.fill")
                 .foregroundStyle(period.end == nil ? Theme.textPrimary : Theme.goal)
         }
-        .padding(14)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+        .card()
         .accessibilityElement(children: .combine)
     }
 
@@ -343,21 +342,20 @@ struct PlanRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(StrategyFormat.day(plan.id, year: true)).font(AppFont.headline(15))
+                Text(StrategyFormat.day(plan.id, year: true)).font(AppFont.rowTitle)
                 Text("\(kindName) · \(StrategyRules.styleName(plan.coaching.style))")
                     .font(AppFont.caption())
                     .foregroundStyle(Theme.textSecondary)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 3) {
-                Text(StrategyFormat.kcal(StrategyRules.averageEnergy(plan.targets))).font(AppFont.medium(15)).monospacedDigit()
+                Text(StrategyFormat.kcal(StrategyRules.averageEnergy(plan.targets))).font(AppFont.rowTitle).monospacedDigit()
                 if let expenditure = plan.expenditureKcal {
                     Text("Expenditure \(Int(expenditure.rounded()))").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
                 }
             }
         }
-        .padding(14)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+        .card()
         .accessibilityElement(children: .combine)
     }
 

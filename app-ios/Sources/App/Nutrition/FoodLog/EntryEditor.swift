@@ -42,9 +42,9 @@ struct EntryEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section { MacroHeader(amounts: amounts) }
-                Section { actions }
-                Section("Amount") {
+                ThemedSection { MacroHeader(amounts: amounts) }
+                ThemedSection { actions }
+                ThemedSection("Amount") {
                     HStack {
                         TextField("Quantity", text: $quantity)
                             .keyboardType(.decimalPad)
@@ -64,11 +64,11 @@ struct EntryEditor: View {
                     }
                     DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
                 }
-                Section("Impact on Targets") { ImpactGauges(amounts: amounts, target: targets.target) }
+                ThemedSection("Impact on Targets") { ImpactGauges(amounts: amounts, target: targets.target) }
                 ForEach(NutrientSection.allCases) { section in
                     let shown = section.nutrients.filter { amounts.amount(of: $0.id) != nil }
                     if !shown.isEmpty {
-                        Section(section.rawValue) {
+                        ThemedSection(section.rawValue) {
                             ForEach(shown) { nutrient in
                                 NutrientRow(nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id))
                             }
@@ -115,7 +115,7 @@ struct EntryEditor: View {
                     .font(.system(size: 16, weight: .semibold))
                     .frame(width: 40, height: 40)
                     .background(Theme.surfaceRaised, in: Circle())
-                Text(title).font(AppFont.caption(12))
+                Text(title).font(AppFont.rowDetail)
             }
             .frame(maxWidth: .infinity)
         }

@@ -34,7 +34,7 @@ struct DayPage: View {
                 NotesSection(day: day, notes: notes)
                     .padding(.top, 28)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.vertical, 12)
         }
         .scrollIndicators(.hidden)
@@ -49,7 +49,7 @@ struct DayPage: View {
 
 /// The hour pill, its + (a paste button while pasting inline), and the hour's macro totals.
 private struct HourRow: View {
-    static let gutter: CGFloat = 58
+    static let gutter: CGFloat = 76
 
     let day: CalendarDay
     let hour: TimelineHour
@@ -63,16 +63,8 @@ private struct HourRow: View {
         let isCurrent = day == .today && Calendar.current.component(.hour, from: .now) == hour.hour
         let isSelected = state.selecting && hour.rows.contains { state.selection.contains($0.id) }
         HStack(spacing: 8) {
-            HStack(spacing: 3) {
-                Text(label)
-                if isCurrent { Circle().frame(width: 4, height: 4) }
-            }
-            .font(AppFont.headline(11))
-            .foregroundStyle(isSelected ? Theme.onPrimary : Theme.textPrimary)
-            .padding(.horizontal, 8)
-            .frame(height: 22)
-            .background(isSelected ? Theme.textPrimary : Theme.surfaceRaised, in: Capsule())
-            .frame(width: Self.gutter)
+            Chip(title: label, trailingImage: isCurrent ? "circlebadge.fill" : nil, isActive: isSelected)
+                .frame(width: Self.gutter)
             addButton(label)
             Spacer(minLength: 8)
             if showsTotals, !hour.rows.isEmpty {
@@ -185,7 +177,7 @@ private struct NotesSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Notes").font(AppFont.title(18))
+                Text("Notes").font(AppFont.listTitle)
                 Spacer()
                 if !notes.isEmpty {
                     Text("\(notes.count) / \(FoodLogNote.limitPerDay)").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
@@ -206,8 +198,7 @@ private struct NotesSection: View {
                     .font(AppFont.caption())
                     .foregroundStyle(Theme.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(14)
-                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+                    .card()
             }
             ForEach(notes) { note in
                 Button { state.note = NoteDraft(note: note, isNew: false) } label: { NoteCard(note: note) }
@@ -223,7 +214,7 @@ private struct NoteCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(note.title).font(AppFont.headline(15))
+            Text(note.title).font(AppFont.rowTitle)
             if !note.body.isEmpty {
                 Text(note.body).font(AppFont.caption(14)).foregroundStyle(Theme.textSecondary).lineLimit(4)
             }
@@ -234,8 +225,7 @@ private struct NoteCard: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+        .card()
         .contentShape(Rectangle())
     }
 }

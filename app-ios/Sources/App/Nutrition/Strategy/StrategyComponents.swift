@@ -70,7 +70,7 @@ struct WeekTargetsChart: View {
             .foregroundStyle(Theme.background)
             .frame(maxWidth: .infinity)
             .frame(height: max(14, height))
-            .background(color, in: RoundedRectangle(cornerRadius: 4))
+            .background(color, in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
     }
 
     @ViewBuilder
@@ -79,13 +79,7 @@ struct WeekTargetsChart: View {
         if let selection {
             let selected = selection.wrappedValue == weekday
             Button { selection.wrappedValue = weekday } label: {
-                VStack(spacing: 2) {
-                    Text(letter).font(AppFont.headline(14))
-                    Image(systemName: "lock.fill").font(.system(size: 8)).opacity(locked.contains(weekday) ? 1 : 0)
-                }
-                .foregroundStyle(selected ? Theme.background : Theme.textPrimary)
-                .frame(width: 34, height: 40)
-                .background(selected ? Theme.textPrimary : Theme.surfaceRaised, in: Capsule())
+                Chip(title: letter, trailingImage: locked.contains(weekday) ? "lock.fill" : nil, isActive: selected)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(StrategyFormat.weekdayNames[weekday - 1])
@@ -99,6 +93,23 @@ struct WeekTargetsChart: View {
                 .background(weekday == today ? Theme.surfaceRaised : .clear, in: Circle())
                 .padding(.top, 4)
         }
+    }
+}
+
+/// The Strategy wizards' and the check-in's header: the step's phase, when it has one, over its progress.
+struct WizardProgress: View {
+    var phase: String?
+    let value: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let phase {
+                Text(phase.uppercased()).font(AppFont.badge).foregroundStyle(Theme.textSecondary)
+            }
+            ProgressView(value: value).progressViewStyle(.bar(Theme.textPrimary))
+        }
+        .padding(.horizontal, Theme.margin)
+        .padding(.bottom, 8)
     }
 }
 
@@ -126,12 +137,11 @@ struct StrategyCard<Content: View, Actions: View>: View {
                 .scrollIndicators(.hidden)
                 .buttonStyle(.glass)
                 .controlSize(.small)
-                .font(AppFont.medium(14))
+                .font(AppFont.chip)
             }
         }
-        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+        .card()
     }
 }
 
@@ -149,7 +159,7 @@ struct StrategyStat: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value).font(AppFont.number(20)).lineLimit(1).minimumScaleFactor(0.7)
-            Text(caption).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+            Text(caption).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)

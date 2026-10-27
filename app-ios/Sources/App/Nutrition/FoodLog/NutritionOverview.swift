@@ -38,7 +38,7 @@ struct NutritionOverview: View {
                         Toggle("Contributors", isOn: $contributors).tint(Theme.accent)
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Theme.margin)
                 .padding(.bottom, 8)
                 .background(Theme.background)
             }
@@ -76,7 +76,7 @@ private struct OverviewList: View {
         )
         List {
             ForEach(settings.nutrition.hideAdditionalNutrients ? [.macros] : NutrientSection.allCases) { section in
-                Section(section.rawValue) {
+                ThemedSection(section.rawValue) {
                     ForEach(section.nutrients) { nutrient in
                         let row = NutrientRow(
                             nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id),
@@ -110,12 +110,12 @@ struct ContributorsView: View {
 
     var body: some View {
         let info = NutrientRegistry.nutrient(nutrient)
-        List(FoodLog.contributors(entries, of: nutrient)) { contributor in
-            HStack {
-                Text(contributor.name)
-                Spacer()
-                Text(info.map { NutritionFormat.amount(contributor.amount, $0.unit) } ?? NutritionFormat.amount(contributor.amount)).monospacedDigit()
-                    .foregroundStyle(Theme.textSecondary)
+        List {
+            ThemedSection {
+                ForEach(FoodLog.contributors(entries, of: nutrient)) { contributor in
+                    LabeledContent(contributor.name, value: info.map { NutritionFormat.amount(contributor.amount, $0.unit) } ?? NutritionFormat.amount(contributor.amount))
+                        .monospacedDigit()
+                }
             }
         }
         .themedList()

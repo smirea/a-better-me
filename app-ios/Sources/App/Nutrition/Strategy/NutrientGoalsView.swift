@@ -18,11 +18,11 @@ struct NutrientGoalsView: View {
 
     var body: some View {
         List {
-            Section("Active Goal") {
+            ThemedSection("Active Goal") {
                 LabeledContent(NutrientGoalDraft.label(active), value: rangeText(on: today))
             }
             if !goals.isEmpty {
-                Section("Goals") {
+                ThemedSection("Goals") {
                     ForEach(goals) { goal in
                         Button {
                             editing = NutrientGoalDraft(goal)
@@ -41,9 +41,7 @@ struct NutrientGoalsView: View {
                     }
                 }
             }
-            Section {
-            } footer: {
-                Text("All days before the first goal default to Auto: the floor, target, and ceiling are set for you from your sex and weight.")
+            ThemedSection(footer: "All days before the first goal default to Auto: the floor, target, and ceiling are set for you from your sex and weight.") {
             }
         }
         .themedList()
@@ -87,7 +85,7 @@ private struct NutrientGoalEditor: View {
                     selection: Binding(get: { draft.startsOn.date }, set: { draft.startsOn = CalendarDay($0) }),
                     displayedComponents: .date
                 )
-                Section("Goal Type") {
+                ThemedSection("Goal Type") {
                     Picker("Goal Type", selection: $draft.kind) {
                         ForEach(NutrientGoalDraft.Kind.allCases, id: \.self) { kind in
                             VStack(alignment: .leading) {
@@ -106,17 +104,17 @@ private struct NutrientGoalEditor: View {
                     bound("Ceiling", \.ceiling)
                 }
                 if let problem = draft.problem {
-                    Section { Text(problem).foregroundStyle(Theme.destructive) }
+                    ThemedSection { Text(problem).foregroundStyle(Theme.destructive) }
                 }
             }
             .themedList()
             .detailTitle(original == nil ? "New \(name) Goal" : "Edit \(name) Goal")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save", systemImage: "checkmark") { save() }
+                    Button(role: .confirm) { save() }
                         .disabled(draft.problem != nil)
                 }
             }
@@ -124,7 +122,7 @@ private struct NutrientGoalEditor: View {
     }
 
     private func bound(_ title: String, _ path: WritableKeyPath<NutrientRange, Double?>) -> some View {
-        Section("Custom \(title)") {
+        ThemedSection("Custom \(title)") {
             Toggle("Show a \(title.lowercased())", isOn: Binding(
                 get: { draft.range[keyPath: path] != nil },
                 set: { draft.range[keyPath: path] = $0 ? 0 : nil }

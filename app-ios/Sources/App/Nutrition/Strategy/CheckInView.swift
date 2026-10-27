@@ -16,7 +16,7 @@ struct CheckInView: View {
             page(modules[0])
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Close", systemImage: "xmark") { dismiss() }
+                        Button(role: .close) { dismiss() }
                     }
                 }
                 .navigationDestination(for: Module.self) { page($0) }
@@ -56,12 +56,12 @@ private struct CheckInPage: View {
             VStack(alignment: .leading, spacing: 14) {
                 content
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.vertical, 16)
         }
         .background(Theme.background)
         .safeAreaInset(edge: .top, spacing: 0) {
-            ProgressView(value: progress).tint(Theme.textPrimary).padding(.horizontal, 20).padding(.bottom, 8)
+            WizardProgress(value: progress)
         }
         .safeAreaInset(edge: .bottom) {
             PinnedActionButton(module == .update ? "Done" : "Next") {
@@ -145,10 +145,7 @@ private struct DayReviewRow: View {
 
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(day.date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())).font(AppFont.headline(15))
-                Text(kcal.map(StrategyFormat.kcal) ?? "Not counted").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
-            }
+            RowLabel(title: day.date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()), detail: kcal.map(StrategyFormat.kcal) ?? "Not counted")
             Spacer()
             Picker("Status", selection: Binding(get: { status }, set: { value in store.updateDay(day) { $0.status = value } })) {
                 ForEach(choices, id: \.self) { Label($0.title, systemImage: $0.symbol).tag($0) }
@@ -156,7 +153,6 @@ private struct DayReviewRow: View {
             .pickerStyle(.menu)
             .accessibilityLabel("Status of \(StrategyFormat.day(day))")
         }
-        .padding(12)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+        .card()
     }
 }

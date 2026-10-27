@@ -136,7 +136,7 @@ private struct CustomizeNutritionShortcuts: View {
         let shown = settings.nutrition.shortcuts
         NavigationStack {
             List {
-                Section {
+                ThemedSection(footer: "The first four are the round buttons at the top.") {
                     ForEach(Array(shown.enumerated()), id: \.element) { index, shortcut in
                         toggle(shortcut, on: true, top: index < NutritionShortcut.topCount)
                     }
@@ -146,10 +146,8 @@ private struct CustomizeNutritionShortcuts: View {
                     ForEach(NutritionShortcut.allCases.filter { !shown.contains($0) }, id: \.self) { shortcut in
                         toggle(shortcut, on: false, top: false).moveDisabled(true)
                     }
-                } footer: {
-                    Text("The first four are the round buttons at the top.")
                 }
-                Section {
+                ThemedSection {
                     Button("Reset to App Defaults", role: .destructive) {
                         store.updateSettings { $0.nutrition.shortcuts = NutritionShortcut.defaults }
                     }
@@ -160,7 +158,7 @@ private struct CustomizeNutritionShortcuts: View {
             .detailTitle("Customize Shortcuts")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", systemImage: "checkmark") { dismiss() }
+                    Button(role: .confirm) { dismiss() }
                 }
             }
         }
@@ -176,7 +174,7 @@ private struct CustomizeNutritionShortcuts: View {
             Label {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(shortcut.title)
-                    Text(top ? "Top Shortcut" : shortcut.detail).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                    Text(top ? "Top Shortcut" : shortcut.detail).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 }
             } icon: {
                 Image(systemName: shortcut.systemImage).foregroundStyle(Theme.textPrimary)

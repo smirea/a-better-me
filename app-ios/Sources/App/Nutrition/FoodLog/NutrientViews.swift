@@ -57,7 +57,7 @@ struct NutrientRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(nutrient.name).font(AppFont.medium(15))
+                Text(nutrient.name).font(AppFont.rowTitle)
                 Spacer()
                 Text(range.target.map { "\(NutritionFormat.amount(value)) / \(NutritionFormat.amount($0, nutrient.unit))" } ?? NutritionFormat.amount(value, nutrient.unit))
                     .font(AppFont.caption(14))
@@ -73,13 +73,11 @@ struct NutrientRow: View {
             }
             if let contributors {
                 ForEach(contributors) { contributor in
-                    HStack {
-                        Text(contributor.name).lineLimit(1)
-                        Spacer()
-                        Text(NutritionFormat.amount(contributor.amount, nutrient.unit)).monospacedDigit()
-                    }
-                    .font(AppFont.caption(13))
-                    .foregroundStyle(Theme.textSecondary)
+                    LabeledContent(contributor.name, value: NutritionFormat.amount(contributor.amount, nutrient.unit))
+                        .lineLimit(1)
+                        .monospacedDigit()
+                        .font(AppFont.rowDetail)
+                        .foregroundStyle(Theme.textSecondary)
                 }
                 if contributors.isEmpty {
                     Text("No contributors").font(AppFont.caption(13)).foregroundStyle(Theme.textTertiary)

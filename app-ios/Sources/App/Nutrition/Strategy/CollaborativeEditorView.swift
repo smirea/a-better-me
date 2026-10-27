@@ -47,8 +47,7 @@ struct CollaborativeEditorView: View {
                 Text("kcal").foregroundStyle(Theme.textSecondary)
                 Stepper("Calories", onIncrement: { step(25) }, onDecrement: { step(-25) }).labelsHidden()
             }
-            .padding(12)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+            .card()
         }
     }
 
@@ -88,7 +87,7 @@ struct CollaborativeEditorView: View {
                 Spacer()
                 Text("\((target.fat / weightLb).formatted(.number.precision(.fractionLength(2)))) F/lb BW")
             }
-            .font(AppFont.caption(12))
+            .font(AppFont.rowDetail)
             .foregroundStyle(Theme.textSecondary)
             Text("Set carbs as portion of remaining calories.").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
         }

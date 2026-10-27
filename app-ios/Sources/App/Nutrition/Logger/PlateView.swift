@@ -22,7 +22,7 @@ struct PlateView: View {
         let plate = session.plate.totals
         let day = dayRow.totals(entries)
         List {
-            Section("Your Plate") {
+            ThemedSection("Your Plate") {
                 ForEach(session.plate.items) { item in
                     Button { open(item.id) } label: {
                         FoodRow(food: item.pick.portion.food, serving: item.pick.portion.serving)
@@ -35,7 +35,7 @@ struct PlateView: View {
                     }
                 }
             }
-            Section {
+            ThemedSection("Nutrition") {
                 Picker("Nutrition", selection: $withDay) {
                     Text("Plate").tag(false)
                     Text("Day").tag(true)
@@ -53,8 +53,6 @@ struct PlateView: View {
                         LabeledContent(nutrient.name, value: NutritionFormat.amount(total.amount(of: nutrient.id) ?? 0, nutrient.unit))
                     }
                 }
-            } header: {
-                Text("Nutrition")
             }
         }
         .themedList()
@@ -68,7 +66,7 @@ struct PlateView: View {
                 Spacer()
                 LogFoodsButton(session: session).controlSize(.large)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Theme.margin)
             .padding(.bottom, 8)
         }
         .detailTitle("Your Plate")
@@ -80,10 +78,10 @@ struct PlateView: View {
         let amount = Int((withDay ? day + plate : plate).rounded())
         let caption = withDay ? "\(amount)\(target.map { " / \(Int($0.rounded()))" } ?? "") \(unit) with plate" : "\(amount) \(unit) in plate"
         return VStack(alignment: .leading, spacing: 6) {
-            Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.medium(15))
+            Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.rowTitle)
             Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
             ProgressView(value: target.map { min(1, (withDay ? day + plate : plate) / max($0, 1)) } ?? 0)
-                .tint(Theme.macro(id))
+                .progressViewStyle(.bar(Theme.macro(id)))
         }
         .padding(.vertical, 2)
     }

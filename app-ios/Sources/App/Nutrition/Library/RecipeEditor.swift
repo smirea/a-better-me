@@ -36,10 +36,9 @@ struct RecipeEditor: View {
                 preparation(issues)
                 steps
                 if recipeID != nil {
-                    Section {
+                    ThemedSection {
                         Button("Delete Recipe", systemImage: "trash", role: .destructive) { confirmingDelete = true }
                             .foregroundStyle(Theme.destructive)
-                            .listRowBackground(Theme.surface)
                     }
                 }
             }
@@ -48,10 +47,10 @@ struct RecipeEditor: View {
             .detailTitle(recipeID == nil ? "Create Recipe" : "Edit Recipe")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save", systemImage: "checkmark") { save(adding: false) }
+                    Button(role: .confirm) { save(adding: false) }
                 }
                 if onCreateAndAdd != nil {
                     ToolbarItem(placement: .bottomBar) {
@@ -134,7 +133,7 @@ struct RecipeEditor: View {
             VStack(alignment: .leading, spacing: 4) {
                 SectionTitle("Ingredients")
                 Text("Weight of ingredients is \(NutritionFormat.amount(draft.ingredientGrams)) g")
-                    .font(AppFont.caption(12))
+                    .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
             }
             .textCase(nil)
@@ -143,7 +142,7 @@ struct RecipeEditor: View {
     }
 
     private func nutrition(_ preview: Recipe) -> some View {
-        Section {
+        ThemedSection("Nutrition") {
             Picker("Nutrition Per", selection: $perServing) {
                 Text("Serving").tag(true)
                 Text("Recipe").tag(false)
@@ -154,14 +153,11 @@ struct RecipeEditor: View {
                 caption: perServing ? "Per \(servingLabel(preview))" : "For \(NutritionFormat.quantity(preview.servings)) servings"
             )
             Toggle("Show all nutrients", isOn: $showAllNutrients).tint(Theme.accent)
-        } header: {
-            SectionTitle("Nutrition").textCase(nil)
         }
-        .listRowBackground(Theme.surface)
     }
 
     private func preparation(_ issues: [RecipeDraft.Field: String]) -> some View {
-        Section {
+        ThemedSection("Preparation") {
             minutesField("Preparation Time", text: $draft.prepMinutes)
             FieldIssue(issues[.prepMinutes])
             minutesField("Cooking Time", text: $draft.cookMinutes)
@@ -178,14 +174,11 @@ struct RecipeEditor: View {
                     .accessibilityLabel("Description")
                 Text("\(draft.notes.count)/\(RecipeDraft.notesLimit)").font(AppFont.caption(11)).foregroundStyle(Theme.textTertiary)
             }
-        } header: {
-            SectionTitle("Preparation").textCase(nil)
         }
-        .listRowBackground(Theme.surface)
     }
 
     private var steps: some View {
-        Section {
+        ThemedSection("Steps") {
             ForEach(Array($draft.steps.enumerated()), id: \.element.id) { index, $step in
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Step \(index + 1)").font(AppFont.headline(13)).foregroundStyle(Theme.textSecondary)
@@ -197,10 +190,7 @@ struct RecipeEditor: View {
             .onDelete { draft.steps.remove(atOffsets: $0) }
             .onMove { draft.steps.move(fromOffsets: $0, toOffset: $1) }
             Button("Add Step", systemImage: "plus") { draft.steps.append(RecipeDraft.Step()) }
-        } header: {
-            SectionTitle("Steps").textCase(nil)
         }
-        .listRowBackground(Theme.surface)
     }
 
     private func minutesField(_ title: String, text: Binding<String>) -> some View {

@@ -58,10 +58,12 @@ struct FoodLibraryView: View {
 
     var body: some View {
         List {
-            switch tab {
-            case .recipes: recipeRows
-            case .foods: foodRows
-            case .favorites: favoriteRows
+            ThemedSection {
+                switch tab {
+                case .recipes: recipeRows
+                case .foods: foodRows
+                case .favorites: favoriteRows
+                }
             }
         }
         .themedList()
@@ -73,7 +75,7 @@ struct FoodLibraryView: View {
                 Image(systemName: "heart.fill").accessibilityLabel("Favorites").tag(Tab.favorites)
             }
             .pickerStyle(.segmented)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.bottom, 8)
         }
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Filter \(tab.rawValue.lowercased())")
@@ -170,7 +172,6 @@ struct FoodLibraryView: View {
                 AddToPlateButton(food: food) { onAdd(FoodPortion(food, serving: serving)) }
             }
         }
-        .listRowBackground(Theme.surface)
     }
 
     private func deleteButton(_ item: Item, title: String = "Delete") -> some View {

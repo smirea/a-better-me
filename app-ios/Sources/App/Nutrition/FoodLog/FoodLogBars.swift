@@ -15,7 +15,7 @@ struct FoodLogBottomBar: View {
                 SearchBar()
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Theme.margin)
         .padding(.bottom, 8)
     }
 }
@@ -76,7 +76,7 @@ private struct SelectionBar: View {
                     Button("Modify Timestamp") { prompt = .timestamp }
                 }
                 .buttonStyle(.glass)
-                .font(AppFont.medium(14))
+                .font(AppFont.chip)
                 .disabled(count == 0)
             }
             .scrollIndicators(.hidden)
@@ -136,7 +136,7 @@ private struct PasteBar: View {
                         Button("Paste Inline") { state.pending?.inline = true }
                     }
                     .buttonStyle(.glass)
-                    .font(AppFont.medium(14))
+                    .font(AppFont.chip)
                 }
                 .scrollIndicators(.hidden)
             }
@@ -218,10 +218,10 @@ private struct TimePrompt: View {
                         .labelsHidden()
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .detailTitle(title)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(role: .cancel) { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm) {
                         onDone(CalendarDay(date), date.minuteOfDay())
@@ -244,10 +244,10 @@ private struct DatesPrompt: View {
     var body: some View {
         NavigationStack {
             MultiDatePicker("Dates", selection: $dates)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Theme.margin)
                 .detailTitle("Copy to Dates")
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button(role: .cancel) { dismiss() } }
+                    ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) {
                         Button(role: .confirm) {
                             onDone(dates.compactMap { Calendar.current.date(from: $0) }.map { CalendarDay($0) })

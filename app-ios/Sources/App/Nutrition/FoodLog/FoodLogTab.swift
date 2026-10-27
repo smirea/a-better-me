@@ -129,7 +129,7 @@ private struct DaySummary: View {
             .accessibilityAddTraits(.isButton)
             .accessibilityHint("Opens the Nutrition Overview")
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Theme.margin)
     }
 }
 
@@ -146,7 +146,7 @@ private struct DayStatusBadges: View {
 
     private func badge(_ title: String, systemImage: String) -> some View {
         Label(title, systemImage: systemImage)
-            .font(AppFont.caption(12))
+            .font(AppFont.rowDetail)
             .foregroundStyle(Theme.textSecondary)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
@@ -165,18 +165,13 @@ private struct MacroColumns: View {
             ForEach(lines) { line in
                 let color = NutrientRegistry.nutrient(line.nutrient)?.color ?? Theme.calories
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("\(prefix(line.nutrient)) \(Text(text(line)).font(AppFont.caption(12)))")
+                    Text("\(prefix(line.nutrient)) \(Text(text(line)).font(AppFont.rowDetail))")
                         .font(AppFont.headline(12))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                    GeometryReader { proxy in
-                        ZStack(alignment: page == .remaining ? .trailing : .leading) {
-                            Capsule().fill(Theme.surfaceRaised)
-                            Capsule().fill(color)
-                                .frame(width: proxy.size.width * fill(line))
-                        }
-                    }
-                    .frame(height: 3)
+                    ProgressView(value: fill(line))
+                        .progressViewStyle(.bar(color, height: 3))
+                        .scaleEffect(x: page == .remaining ? -1 : 1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -258,7 +253,7 @@ private struct CalendarSheet: View {
                 displayedComponents: .date
             )
             .datePickerStyle(.graphical)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .detailTitle("Select Date")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

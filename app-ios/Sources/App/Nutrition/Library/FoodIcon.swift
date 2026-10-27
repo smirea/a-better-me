@@ -131,14 +131,14 @@ struct FoodIconPicker: View {
                         }
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Theme.margin)
             }
             .background(Theme.background)
             .searchable(text: $query, prompt: "Search icons")
             .detailTitle("Choose Icon")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .destructiveAction) {
                     Button("Default") { choose(nil) }
