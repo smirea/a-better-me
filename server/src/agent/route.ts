@@ -2,7 +2,14 @@ import { z } from 'zod';
 import type { Db } from './db';
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-type Context<Query, Body> = { db: Db; params: Record<string, string>; query: Query; body: Body; now: string };
+type Context<Query, Body> = {
+	db: Db;
+	params: Record<string, string>;
+	query: Query;
+	body: Body;
+	now: string;
+	geminiApiKey: string | null;
+};
 
 /** One operation: the router dispatches on it and the OpenAPI document is generated from it, so the two never drift. */
 export type Route = {

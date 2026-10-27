@@ -1,11 +1,12 @@
 import { z } from 'zod';
 import { ApiError } from '../agent/db';
 import { limit, route, type Route } from '../agent/route';
+import { MealPhoto, MealPhotoRequest, recognizeMeal } from './mealPhoto';
 import { BrandedFood, lookupBarcode, searchProducts } from './openFoodFacts';
 
 /**
  * Branded foods for the app's food search, proxied from Open Food Facts so the phone holds no third-party client and
- * the mapping to registry nutrient ids lives in one place. Nothing is cached here: the phone caches what the owner
+ * the mapping to registry nutrient ids lives in one place, and photo logging, proxied to Gemini so its key stays here. Nothing is cached here: the phone caches what the owner
  * logs (`LocalStore.saveFood`), and a lookup is one request.
  */
 export const foodRoutes: Route[] = [
@@ -34,5 +35,19 @@ export const foodRoutes: Route[] = [
 		query: z.object({ q: z.string().trim().min(2), limit: limit(20, 50) }),
 		response: z.array(BrandedFood),
 		run: ({ query }) => searchProducts(query.q, query.limit),
+	}),
+	route({
+		method: 'POST',
+		path: '/food-database/photo',
+		tag: 'Food database',
+		summary: 'Name the foods in a meal photo',
+		description:
+			'Gemini lists each food it sees with its edible weight in grams and a generic `search` name; it never estimates nutrition. Match `search` against a food database and scale its nutrients by `grams`. `note` corrects what the photo cannot show. 503 when the server has no Gemini key.',
+		body: MealPhotoRequest,
+		response: MealPhoto,
+		run({ body, geminiApiKey }) {
+			if (!geminiApiKey) throw new ApiError(503, 'Photo logging needs GEMINI_API_KEY on the server');
+			return recognizeMeal(body, geminiApiKey);
+		},
 	}),
 ];

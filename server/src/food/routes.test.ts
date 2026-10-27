@@ -5,6 +5,7 @@ import { foodNutrition, schema } from '../../../shared/db/schema';
 import { handleAgent } from '../agent';
 import { handle, type App } from '../api';
 import { parseConfig } from '../config';
+import { GEMINI_MODEL } from './mealPhoto';
 import { USER_AGENT } from './openFoodFacts';
 
 const driver = bunSqlite(':memory:');
@@ -173,5 +174,65 @@ describe('food database', () => {
 		expect((await call('/food-database/barcode/3017624010701')).status).toBe(502);
 
 		expect((await call('/food-database/search?q=yogurt', null)).status).toBe(401);
+	});
+});
+
+const photo = (geminiApiKey: string | null, body: unknown) =>
+	handleAgent(
+		new Request('http://api.test/api/food-database/photo', {
+			method: 'POST',
+			headers: { authorization: `Bearer ${config.ownerToken}` },
+			body: JSON.stringify(body),
+		}),
+		{ space, driver, ownerToken: config.ownerToken, geminiApiKey },
+	);
+
+const geminiText = (text: string) => Response.json({ candidates: [{ content: { parts: [{ text }] } }] });
+
+describe('meal photo', () => {
+	const image = btoa('not really a jpeg');
+
+	test('Gemini gets the photo, the note, and a schema, and the foods come back with grams', async () => {
+		stub(() =>
+			geminiText(
+				JSON.stringify({
+					items: [
+						{ name: 'Grilled chicken breast', search: 'chicken breast cooked', grams: 150, confidence: 0.9 },
+						{ name: 'Olive oil', search: 'olive oil', grams: 0, confidence: 0.3 },
+					],
+				}),
+			),
+		);
+		const response = await photo('gemini-key', { image, mediaType: 'image/jpeg', note: 'no skin' });
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({
+			items: [{ name: 'Grilled chicken breast', search: 'chicken breast cooked', grams: 150, confidence: 0.9 }],
+		});
+		const [request] = requests;
+		expect(request!.url).toBe(
+			`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+		);
+		expect(request!.headers.get('x-goog-api-key')).toBe('gemini-key');
+		const sent = await request!.json();
+		expect(sent.contents[0].parts[0]).toEqual({ inline_data: { mime_type: 'image/jpeg', data: image } });
+		expect(sent.contents[0].parts[1].text).toEndWith("The person's note: no skin");
+		expect(sent.generationConfig.responseSchema.required).toEqual(['items']);
+	});
+
+	test('no key is a 503 before calling Gemini, and a bad answer or a bad photo is refused', async () => {
+		stub(() => geminiText('{}'));
+		expect((await photo(null, { image, mediaType: 'image/jpeg' })).status).toBe(503);
+		expect(requests).toEqual([]);
+
+		expect((await photo('gemini-key', { image, mediaType: 'image/gif' })).status).toBe(400);
+		expect((await photo('gemini-key', { image: 'not base64!', mediaType: 'image/jpeg' })).status).toBe(400);
+
+		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(502);
+		stub(() => geminiText('not json'));
+		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(502);
+		stub(() => Response.json({ promptFeedback: { blockReason: 'SAFETY' } }));
+		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(422);
+		stub(() => new Response('quota', { status: 429 }));
+		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(502);
 	});
 });

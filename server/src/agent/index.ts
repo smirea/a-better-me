@@ -8,7 +8,7 @@ import type { Method } from './route';
 import { routes, snapshot } from './routes';
 
 /** What runs the agent API: the space's own host, since bot tokens and every row live in it. */
-export type AgentHost = { space: Space; driver: SqlDriver; ownerToken: string };
+export type AgentHost = { space: Space; driver: SqlDriver; ownerToken: string; geminiApiKey?: string | null };
 
 export const TOKEN_PREFIX = 'abm_';
 
@@ -148,6 +148,7 @@ export async function handleAgent(request: Request, host: AgentHost): Promise<Re
 			query: (route.query ?? z.object({})).parse(Object.fromEntries(url.searchParams)),
 			body: route.body?.parse(raw),
 			now: new Date().toISOString(),
+			geminiApiKey: host.geminiApiKey ?? null,
 		});
 		return Response.json(result);
 	} catch (caught) {

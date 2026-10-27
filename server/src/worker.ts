@@ -38,6 +38,7 @@ class OwnerSpace extends SpaceObject<Env> {
 			space: this.space,
 			driver: this.driver,
 			ownerToken: configOf(this.env).ownerToken,
+			geminiApiKey: configOf(this.env).geminiApiKey,
 		});
 		const head = this.space.head();
 		if (head > before) {

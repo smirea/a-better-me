@@ -5,7 +5,7 @@ import type { SpaceOptions } from 'sync-engine/core';
  * bindings, so this file imports neither. Secrets stay optional in the env schema so `env-manager gen --local` works
  * offline and in CI; production refuses to start without them instead of failing on the first request that reads one.
  */
-export const REQUIRED_IN_PRODUCTION = ['OWNER_TOKEN', 'SENTRY_DSN'] as const;
+export const REQUIRED_IN_PRODUCTION = ['OWNER_TOKEN', 'SENTRY_DSN', 'GEMINI_API_KEY'] as const;
 
 /** The owner bearer of every local server and the tests. Never valid in production. */
 export const DEV_OWNER_TOKEN = 'insecure-local-dev-owner-token';
@@ -28,7 +28,14 @@ export type Settings = Partial<Record<TextSetting, string> & Record<SpaceSetting
 /** Sentry project `a-better-me-worker`, reported under the server's own environment. Null turns reporting off. */
 export type SentryTarget = { dsn: string; environment: Environment };
 
-export type Config = { environment: Environment; ownerToken: string; sentry: SentryTarget | null; space: SpaceOptions };
+export type Config = {
+	environment: Environment;
+	ownerToken: string;
+	sentry: SentryTarget | null;
+	space: SpaceOptions;
+	/** Photo logging's Gemini key. Null in development without one, where the photo route answers 503. */
+	geminiApiKey: string | null;
+};
 
 const DSN = /^https:\/\/[0-9a-f]+@[^/@\s]+\/\d+$/;
 
@@ -60,5 +67,6 @@ export function parseConfig(settings: Settings): Config {
 		ownerToken: read('OWNER_TOKEN') ?? DEV_OWNER_TOKEN,
 		sentry: dsn ? { dsn, environment } : null,
 		space,
+		geminiApiKey: read('GEMINI_API_KEY') ?? null,
 	};
 }
