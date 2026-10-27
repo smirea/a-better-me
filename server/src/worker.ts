@@ -85,7 +85,9 @@ function sentryOptions(env: Env): Sentry.CloudflareOptions {
 			// Dedupe drops an event equal to the one before it, which is every refusal after the first in a run.
 			...defaults.filter(integration => integration.name !== 'Dedupe'),
 			Sentry.cronTriggersIntegration({
-				monitorSlug: cron => (cron === BACKUP_CRON ? 'a-better-me-backup' : undefined),
+				// A local `wrangler dev` run would open a development monitor that then misses every day.
+				monitorSlug: cron =>
+					cron === BACKUP_CRON && sentry.environment === 'production' ? 'a-better-me-backup' : undefined,
 			}),
 		],
 	};
