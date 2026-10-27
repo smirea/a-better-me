@@ -14,6 +14,7 @@ final class WidgetPublisher {
     private var observation: AnyDatabaseCancellable?
     private var activation: (any NSObjectProtocol)?
     private var published: NutritionSnapshot?
+    private var writing: Task<Void, Never>?
 
     func start(store: LocalStore) {
         guard self.store == nil else { return }
@@ -37,7 +38,10 @@ final class WidgetPublisher {
     private func publish(_ snapshot: NutritionSnapshot) {
         guard snapshot != published else { return }
         published = snapshot
-        Task.detached(priority: .utility) {
+        let previous = writing
+        writing = Task.detached(priority: .utility) {
+            // Chained, so a slow write can't land after a newer one and leave stale totals on disk.
+            await previous?.value
             do {
                 try snapshot.save()
                 for kind in WidgetKind.nutrition { WidgetCenter.shared.reloadTimelines(ofKind: kind) }

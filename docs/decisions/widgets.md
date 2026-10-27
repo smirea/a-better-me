@@ -14,7 +14,7 @@ Home Screen and Lock Screen widgets, and the Control Center control. The referen
 - **Seven days, so midnight needs no app.** The snapshot holds today and the six days after it, each with its consumed amounts (planned entries count) and its ranges: calories and macros from the plan's weekday target, every other nutrient from its goal. The timeline has one entry per day from its midnight, then an entry asking to open the app. The day key is the device's calendar day, as `CalendarDay` writes it.
 - **A new day changes no table,** so the publisher reads again each time the app becomes active.
 - **The snapshot carries what the widget can't look up:** the visible nutrients (hidden ones are left out, the macros always stay) with names, units, and tints, the pinned nutrients, and `showOverages`. The nutrient picker in a widget's settings lists the snapshot's nutrients.
-- **Remaining follows MacroFactor's wording.** `NutrientProgress` measures against the target, else the floor while it is unmet, else the ceiling. Remaining goes negative ("120 kcal over") only when overages show.
+- **Remaining follows MacroFactor's wording.** `NutrientProgress` measures against the target, else the floor, else the ceiling. Passing a floor reads "Minimum met"; only a target or a ceiling can be overshot, and remaining goes negative ("120 kcal over") only when overages show.
 - **Empty slots take the pinned nutrients.** The nutrient query has no `defaultResult`, because App Intents filled every empty slot with it and a new Nutrient Collection showed Calories four times.
 
 ## Quick actions

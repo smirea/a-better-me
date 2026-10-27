@@ -73,23 +73,27 @@ enum NutrientTint: String, Codable, Sendable {
     case calories, protein, fat, carbs, vitamins, minerals
 }
 
-/// One nutrient's day against its goal, as MacroFactor's widgets word it: what is left to the target, else to the
-/// floor while it is unmet, else to the ceiling.
+/// One nutrient's day against its goal, as MacroFactor's widgets word it: the target, else the floor, else the
+/// ceiling. Passing a floor meets it; only a target or a ceiling can be overshot.
 struct NutrientProgress: Hashable, Sendable {
     let nutrient: NutritionSnapshot.Nutrient
     let consumed: Double
     let range: NutritionSnapshot.Range
     let showOverages: Bool
 
-    var goal: Double? {
-        if let target = range.target { return target }
-        if let floor = range.floor, consumed < floor { return floor }
-        return range.ceiling ?? range.floor
-    }
+    var goal: Double? { range.target ?? range.floor ?? range.ceiling }
 
-    /// Goal minus consumed; below zero only when overages show.
+    private var goalIsFloor: Bool { range.target == nil && range.floor != nil }
+
+    /// Goal minus consumed; below zero only past a target or a ceiling, and only when overages show.
     var remaining: Double? {
-        goal.map { showOverages ? $0 - consumed : max(0, $0 - consumed) }
+        guard let goal else { return nil }
+        var left = goal - consumed
+        if goalIsFloor {
+            left = max(0, left)
+            if let ceiling = range.ceiling, consumed > ceiling { left = ceiling - consumed }
+        }
+        return showOverages ? left : max(0, left)
     }
 
     /// The ring's fill, 0 through 1. Without a goal anything logged fills it.
@@ -113,6 +117,7 @@ struct NutrientProgress: Hashable, Sendable {
     /// "1,240 kcal left", "120 kcal over", or the amount eaten when there is no goal.
     var remainingLabel: String {
         guard let remaining else { return "\(consumedLabel) \(nutrient.unit)" }
+        if goalIsFloor, remaining == 0, consumed > 0, consumed <= range.ceiling ?? .infinity { return "Minimum met" }
         return "\(Self.number(remaining)) \(nutrient.unit) \(remaining < 0 ? "over" : "left")"
     }
 
