@@ -76,7 +76,7 @@ Milestone 1 is split so that parallel agents never edit the same files.
 - **Exercise library.** `Sources/App/Workouts/Library/`: Settings > Exercises, search, filters, the picker, the detail sheet with its Instructions, Details, and History tabs, Exercise Settings, and creating custom exercises.
 - **Workout builder.** `Sources/App/Workouts/Builder/`: the Workout tab (week strip, Workout Library), the workout detail editor, the Targets sheet, supersets, and the "+" sheet with Empty Workout and New Workout.
 - **Live session and history.** `Sources/App/Workouts/Session/` and `Sources/App/Workouts/History/`: the live workout and its keypad, rest timer, warm-up scheme, finishing, the Workout Complete summary, Update Workout Plan, the in-progress bottom accessory, and Workout History.
-- **Levels.** `Sources/App/Workouts/Levels/`: the Levels tab, the muscle detail with Contributing Lifts, and the front and back body heat map. The summary's body figures reuse that heat map once both land, and the coordinator wires them together.
+- **Levels.** `Sources/App/Workouts/Levels/`: the Levels screen (pushed from More), the muscle detail with Contributing Lifts, and the front and back body heat map. The summary's body figures reuse that heat map once both land, and the coordinator wires them together.
 
 ## Exercise library
 

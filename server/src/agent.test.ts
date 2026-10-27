@@ -71,7 +71,7 @@ describe('agent API', () => {
 			keys: ['name', 'authenticated', 'instructions'],
 		});
 		expect(body.authenticated).toBe(false);
-		expect(body.instructions).toContain('Dashboard gear > Settings > API Tokens');
+		expect(body.instructions).toContain('More > API Tokens');
 		expect(body.instructions).toContain('Authorization: Bearer abm_');
 
 		for (const [path, token] of [
