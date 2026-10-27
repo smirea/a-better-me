@@ -4,13 +4,14 @@ import Foundation
 /// array is hidden, so there is no `hidden` flag that could disagree with the order.
 struct DashboardLayout: Codable, Hashable {
     /// Bumped when a release adds cards; see `init(from:)`.
-    static let revision = 1
+    static let revision = 2
 
     var primaryFocus: [FocusCard] = [.workouts, .recentRecords, .weeklyNutrition, .energyBalance, .dailyNutrition]
     var sections = DashboardSection.allCases
     var insights: [InsightCard] = [.workouts, .weightTrend, .expenditure, .energyBalance, .goalProgress]
     var habits: [HabitCard] = [.weighIn, .foodLogging, .workouts]
-    var bodyMetrics: [BodyMetricCard] = [.scaleWeight]
+    var nutrition: [NutritionCard] = NutritionCard.defaults
+    var bodyMetrics: [BodyMetricCard] = [.scaleWeight, .visualBodyFat]
     var muscles: [MuscleCard] = []
     var exercises: [ExerciseCard] = []
     var general: [GeneralCard] = [.steps]
@@ -38,6 +39,7 @@ extension DashboardLayout {
         sections = try container.decodeIfPresent([DashboardSection].self, forKey: .sections) ?? defaults.sections
         insights = try container.decodeIfPresent([InsightCard].self, forKey: .insights) ?? defaults.insights
         habits = try container.decodeIfPresent([HabitCard].self, forKey: .habits) ?? defaults.habits
+        nutrition = try container.decodeIfPresent([NutritionCard].self, forKey: .nutrition) ?? defaults.nutrition
         bodyMetrics = try container.decodeIfPresent([BodyMetricCard].self, forKey: .bodyMetrics) ?? defaults.bodyMetrics
         muscles = try container.decodeIfPresent([MuscleCard].self, forKey: .muscles) ?? defaults.muscles
         exercises = try container.decodeIfPresent([ExerciseCard].self, forKey: .exercises) ?? defaults.exercises
@@ -47,6 +49,10 @@ extension DashboardLayout {
             primaryFocus.adopt([.weeklyNutrition, .energyBalance, .dailyNutrition], from: defaults.primaryFocus)
             insights.adopt([.expenditure, .energyBalance, .goalProgress], from: defaults.insights)
             habits.adopt([.foodLogging], from: defaults.habits)
+        }
+        if saved < 2 {
+            sections.adopt([.nutrition], from: defaults.sections)
+            bodyMetrics.adopt([.visualBodyFat], from: defaults.bodyMetrics)
         }
         revision = Self.revision
     }
@@ -67,7 +73,7 @@ enum FocusCard: String, Codable {
 }
 
 enum DashboardSection: String, Codable, CaseIterable {
-    case insights, habits, bodyMetrics, muscles, exercises, general
+    case insights, habits, nutrition, bodyMetrics, muscles, exercises, general
 }
 
 enum InsightCard: String, Codable {
@@ -78,8 +84,29 @@ enum HabitCard: String, Codable {
     case weighIn, workouts, foodLogging
 }
 
-enum BodyMetricCard: String, Codable {
-    case scaleWeight
+/// A raw-value enum rather than a wrapper around `BodyMetricKind`, so layouts saved before the tape measurements existed
+/// still decode. Steps live in General, not here.
+enum BodyMetricCard: String, Codable, CaseIterable {
+    case scaleWeight, visualBodyFat
+    case neck, shoulders, bust, chest, waist, hips
+    case leftBicep, rightBicep, leftForearm, rightForearm, leftWrist, rightWrist
+    case leftThigh, rightThigh, leftCalf, rightCalf, leftAnkle, rightAnkle
+    case waistToHeight, waistToHip
+}
+
+/// The Macros tile or one nutrient's tile, with how the tile states its value.
+struct NutritionCard: Codable, Hashable {
+    enum Display: String, Codable, CaseIterable {
+        case percent, consumed, remaining
+    }
+
+    /// Nil is the Macros tile.
+    var nutrient: NutrientID?
+    var display = Display.consumed
+
+    static let macros = NutritionCard(nutrient: nil)
+    /// MacroFactor's defaults, which the owner kept: Macros, then Calories, Protein, Fiber, Carbs, and Sugars Added.
+    static let defaults: [NutritionCard] = [.macros] + ([.energy, .protein, .fiber, .carbs, "539"] as [NutrientID]).map { NutritionCard(nutrient: $0) }
 }
 
 enum GeneralCard: String, Codable {

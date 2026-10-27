@@ -6,11 +6,14 @@ struct BodyWeightLogSheet: View {
     @Observe(AppSettings.current) private var settings
     @Observe(BodyWeight.latest) private var latest
     @State private var text = ""
+    @State private var bodyFatText = ""
     @State private var measuredAt = Date.now
     @FocusState private var focused: Bool
 
     private var unit: WeightUnit { settings.weightUnit }
     private var value: Double? { Double(text.replacing(",", with: ".")).flatMap { $0 > 0 ? $0 : nil } }
+    /// The scale's body fat, optional; anything outside 1–75% is not a reading.
+    private var bodyFat: Double? { Double(bodyFatText.replacing(",", with: ".")).flatMap { (1...75).contains($0) ? $0 : nil } }
 
     var body: some View {
         NavigationStack {
@@ -23,6 +26,16 @@ struct BodyWeightLogSheet: View {
                             .font(AppFont.number(28))
                             .accessibilityLabel("Weight in \(unit.rawValue)")
                         Text(unit.rawValue).font(AppFont.headline()).foregroundStyle(Theme.textSecondary)
+                    }
+                    HStack {
+                        Text("Body Fat")
+                        Spacer()
+                        TextField("Optional", text: $bodyFatText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 90)
+                            .accessibilityLabel("Body fat percent")
+                        Text("%").foregroundStyle(Theme.textSecondary)
                     }
                     DatePicker("Time", selection: $measuredAt, in: ...Date.now)
                 } footer: {
@@ -42,10 +55,12 @@ struct BodyWeightLogSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save", systemImage: "checkmark") {
                         guard let value else { return }
-                        store.insert(BodyWeight(weightKg: unit.toKg(value), measuredAt: measuredAt))
+                        var weighIn = BodyWeight(weightKg: unit.toKg(value), measuredAt: measuredAt)
+                        weighIn.bodyFatPercent = bodyFat
+                        store.insert(weighIn)
                         dismiss()
                     }
-                    .disabled(value == nil)
+                    .disabled(value == nil || (!bodyFatText.isEmpty && bodyFat == nil))
                 }
             }
             .onAppear {

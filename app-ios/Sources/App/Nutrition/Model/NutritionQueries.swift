@@ -53,6 +53,11 @@ extension FoodFavorite {
 }
 
 extension BodyMetric {
+    /// Every manual metric of every kind, oldest first.
+    static let all = DatabaseQuery([BodyMetric]()) { db in
+        try BodyMetric.fetchAll(db).sorted { ($0.day, $0.kind.rawValue) < ($1.day, $1.kind.rawValue) }
+    }
+
     /// Every value of `kind`, oldest first.
     static func series(_ kind: BodyMetricKind) -> DatabaseQuery<[BodyMetric]> {
         DatabaseQuery([]) { db in
