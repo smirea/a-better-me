@@ -68,7 +68,7 @@ struct CollaborativeEditorView: View {
                 value: Binding(get: { min(perLb, CollaborativeWeek.maxProteinPerLb) }, set: { week.setProtein(Int(($0 * weightLb).rounded()), on: weekday) }),
                 in: 0...CollaborativeWeek.maxProteinPerLb
             ) { Text("Protein") }
-                .tint(StrategyPalette.protein)
+                .tint(Theme.protein)
             Text("Set between 0.0 and \(CollaborativeWeek.maxProteinPerLb.formatted()) g per lb of body weight.").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
         }
     }
@@ -82,7 +82,7 @@ struct CollaborativeEditorView: View {
                 Text("\(Int((week.carbShare(weekday) * 100).rounded())) %").font(AppFont.medium(14)).monospacedDigit()
             }
             Slider(value: Binding(get: { week.carbShare(weekday) }, set: { week.setCarbShare(($0 * 100).rounded() / 100, on: weekday) }), in: 0...1) { Text("Carb to Fat Ratio") }
-                .tint(StrategyPalette.carbs)
+                .tint(Theme.carbs)
             HStack {
                 Text("\((target.carbs / weightLb).formatted(.number.precision(.fractionLength(2)))) C/lb BW")
                 Spacer()

@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// MF's Levels tab: average weekly sets per muscle as a body heat map and two ranked lists.
-struct LevelsTab: View {
+/// Levels, pushed from More: average weekly sets per muscle as a body heat map and two ranked lists.
+struct LevelsView: View {
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(SessionHistory.self) private var history
     @AppStorage(LevelsPeriod.storageKey) private var period = LevelsPeriod.oneWeek
@@ -9,37 +9,35 @@ struct LevelsTab: View {
 
     var body: some View {
         let weekly = WeeklySets.memoized(in: history, period: period, catalog: catalog)
-        NavigationStack {
-            List {
-                Section {
-                    VStack(spacing: 20) {
-                        ZStack {
-                            BodyMap(values: weekly.totals, side: side)
-                                .id(side)
-                                .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 340)
-                        .overlay(alignment: .bottomTrailing) {
-                            Button("Rotate Body", systemImage: "arrow.trianglehead.2.clockwise.rotate.90") {
-                                withAnimation(.smooth) { side.toggle() }
-                            }
-                            .labelStyle(.iconOnly)
-                            .font(.title3)
-                            .buttonStyle(.glass)
-                            .buttonBorderShape(.circle)
-                        }
-                        PeriodCaption(period: $period)
+        List {
+            Section {
+                VStack(spacing: 20) {
+                    ZStack {
+                        BodyMap(values: weekly.totals, side: side)
+                            .id(side)
+                            .transition(.opacity.combined(with: .scale(scale: 0.96)))
                     }
-                    .listRowBackground(Color.clear)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 340)
+                    .overlay(alignment: .bottomTrailing) {
+                        Button("Rotate Body", systemImage: "arrow.trianglehead.2.clockwise.rotate.90") {
+                            withAnimation(.smooth) { side.toggle() }
+                        }
+                        .labelStyle(.iconOnly)
+                        .font(.title3)
+                        .buttonStyle(.glass)
+                        .buttonBorderShape(.circle)
+                    }
+                    PeriodCaption(period: $period)
                 }
-                LevelsSection(title: "Upper Body Levels", muscles: Muscle.upperBody, weekly: weekly)
-                LevelsSection(title: "Lower Body Levels", muscles: Muscle.lowerBody, weekly: weekly)
+                .listRowBackground(Color.clear)
             }
-            .themedList()
-            .screenTitle("Levels")
-            .navigationDestination(for: Muscle.self) { MuscleLevelsView(muscle: $0) }
+            LevelsSection(title: "Upper Body Levels", muscles: Muscle.upperBody, weekly: weekly)
+            LevelsSection(title: "Lower Body Levels", muscles: Muscle.lowerBody, weekly: weekly)
         }
+        .themedList()
+        .screenTitle("Levels")
+        .navigationDestination(for: Muscle.self) { MuscleLevelsView(muscle: $0) }
     }
 }
 

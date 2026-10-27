@@ -1,30 +1,5 @@
 import SwiftUI
 
-/// The reference's full-width white pill pinned to the bottom: Start Workout, Next, Save to Library, Save.
-struct PinnedActionButton: View {
-    let title: String
-    let action: () -> Void
-
-    init(_ title: String, action: @escaping () -> Void) {
-        self.title = title
-        self.action = action
-    }
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(AppFont.headline())
-                .foregroundStyle(Theme.background)
-                .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.glassProminent)
-        .tint(Theme.textPrimary)
-        .controlSize(.large)
-        .padding(.horizontal)
-        .padding(.bottom, 8)
-    }
-}
-
 /// The ⋮ that opens Exercise Options and Superset Options.
 struct OptionsLabel: View {
     let title: String

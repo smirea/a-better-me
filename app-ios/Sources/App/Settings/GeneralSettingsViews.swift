@@ -74,7 +74,7 @@ struct ProfileSettingsView: View {
                 ),
                 in: ...Date.now, displayedComponents: .date
             ) {
-                SettingLabel(title: "Date of Birth", detail: nil, systemImage: "birthday.cake")
+                RowLabel(title: "Date of Birth", systemImage: "birthday.cake")
             }
         } else {
             LabeledContent {
@@ -83,7 +83,7 @@ struct ProfileSettingsView: View {
                     .buttonBorderShape(.capsule)
                     .accessibilityLabel("Set Date of Birth")
             } label: {
-                SettingLabel(title: "Date of Birth", detail: "Not set", systemImage: "birthday.cake")
+                RowLabel(title: "Date of Birth", detail: "Not set", systemImage: "birthday.cake")
             }
         }
     }

@@ -138,35 +138,6 @@ struct FilterChipLabel: View {
     }
 }
 
-extension View {
-    func primaryPill() -> some View {
-        buttonStyle(.glassProminent)
-            .buttonSizing(.flexible)
-            .controlSize(.large)
-            .tint(Theme.textPrimary)
-            .foregroundStyle(Color.black)
-            .font(AppFont.headline())
-    }
-
-    func secondaryPill() -> some View {
-        buttonStyle(.glass)
-            .buttonSizing(.flexible)
-            .controlSize(.large)
-            .foregroundStyle(Theme.textPrimary)
-            .font(AppFont.headline())
-    }
-}
-
-struct SectionTitle: View {
-    let title: String
-
-    init(_ title: String) { self.title = title }
-
-    var body: some View {
-        Text(title).font(AppFont.title(18)).foregroundStyle(Theme.textPrimary)
-    }
-}
-
 /// MF's 5-segment bar for Range of Motion and Stability.
 struct RatingBar: View {
     let value: Int

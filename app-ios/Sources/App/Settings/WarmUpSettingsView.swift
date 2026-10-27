@@ -60,7 +60,7 @@ private struct WarmUpSchemeView: View {
                             .buttonBorderShape(.capsule)
                             .accessibilityLabel("Edit \(category.displayName) scheme")
                     } label: {
-                        SettingLabel(title: category.displayName, detail: summary(steps(category)))
+                        RowLabel(title: category.displayName, detail: summary(steps(category)))
                     }
                 }
             } header: {

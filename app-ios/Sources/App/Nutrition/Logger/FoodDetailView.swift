@@ -110,7 +110,7 @@ struct FoodDetailView: View {
                 .font(AppFont.caption(11))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 1)
-                .background(MacroColor.of(id).opacity(0.35), in: .capsule)
+                .background(Theme.macro(id).opacity(0.35), in: .capsule)
             Text(QuantityText.format(((amounts[id] ?? 0) * 10).rounded() / 10)).font(AppFont.headline(17))
             Text(NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
         }
@@ -131,7 +131,7 @@ struct FoodDetailView: View {
                         Text(goal > 0 ? "\(Int((share * 100).rounded()))%" : "–").font(AppFont.caption(12))
                     }
                     .gaugeStyle(.accessoryCircularCapacity)
-                    .tint(MacroColor.of(id))
+                    .tint(Theme.macro(id))
                     Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? "").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
                 }
                 .frame(maxWidth: .infinity)

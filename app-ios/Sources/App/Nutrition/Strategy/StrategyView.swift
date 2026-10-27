@@ -1,5 +1,4 @@
 import Charts
-import HealthKitUI
 import SwiftUI
 
 /// Everything Strategy's screens read, built once per change of the plans, weigh-ins, log, or settings.
@@ -48,36 +47,26 @@ enum StrategyRoute: Hashable {
     case nutrient(NutrientID)
 }
 
-/// Nutrition mode's Strategy tab (MacroFactor's Strategy rail item): the program and its week of targets, the goal and
-/// its progress, the weekly check-in, and the goal and program history.
-struct StrategyTab: View {
+/// Strategy, pushed from More: the program and its week of targets, the goal and its progress, the weekly check-in,
+/// and the goal and program history.
+struct StrategyView: View {
     @Environment(LocalStore.self) private var store
-    @State private var health = HealthData()
-    @Observe(BodyWeight.all) private var logged
 
     var body: some View {
-        NavigationStack {
-            StrategyDataReader { StrategyHome(data: $0) }
-                .navigationDestination(for: StrategyRoute.self) { route in
-                    switch route {
-                    case .planHistory: PlanHistoryView()
-                    case .nutrientGoals: NutrientGoalsListView()
-                    case .strategySettings: StrategySettingsView()
-                    case let .nutrient(id): NutrientGoalsView(nutrient: id)
-                    }
+        StrategyDataReader { StrategyHome(data: $0) }
+            .navigationDestination(for: StrategyRoute.self) { route in
+                switch route {
+                case .planHistory: PlanHistoryView()
+                case .nutrientGoals: NutrientGoalsListView()
+                case .strategySettings: StrategySettingsView()
+                case let .nutrient(id): NutrientGoalsView(nutrient: id)
                 }
-        }
-        .environment(health)
-        .onChange(of: logged, initial: true) { health.update(logged: logged) }
-        .healthDataAccessRequest(store: health.store, shareTypes: HealthData.shareTypes, readTypes: HealthData.readTypes, trigger: health.requestTrigger) { _ in
-            Task { await health.load() }
-        }
-        .task {
-            #if DEBUG
-            StrategySeed.seedIfRequested(store)
-            #endif
-            await health.refresh()
-        }
+            }
+            .task {
+                #if DEBUG
+                StrategySeed.seedIfRequested(store)
+                #endif
+            }
     }
 }
 
@@ -177,23 +166,15 @@ private struct StrategyHome: View {
                 Text("Start Check-In").font(AppFont.headline()).frame(maxWidth: .infinity)
             }
             .buttonStyle(.glassProminent)
-            .tint(StrategyPalette.goal)
+            .tint(Theme.goal)
             .controlSize(.large)
         }
     }
 
     private func section<Content: View>(_ title: String, seeAll: Bool = false, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(title).font(AppFont.title())
-                Spacer()
-                if seeAll {
-                    NavigationLink(value: StrategyRoute.planHistory) {
-                        Text("See All").font(AppFont.medium(15)).underline()
-                    }
-                    .foregroundStyle(Theme.textPrimary)
-                    .accessibilityLabel("See All \(title)")
-                }
+            SectionHeader(title) {
+                if seeAll { SeeAllLink(section: title, value: StrategyRoute.planHistory) }
             }
             content()
         }
@@ -284,7 +265,7 @@ private struct GoalTrendProgress: View {
                 Chart {
                     ForEach(points, id: \.day) { point in
                         LineMark(x: .value("Day", StrategyInputs.date(point.day, .current)), y: .value("Trend", unit.fromKg(point.kg)))
-                            .foregroundStyle(StrategyPalette.goal)
+                            .foregroundStyle(Theme.goal)
                             .interpolationMethod(.monotone)
                     }
                     if let target = period.goal.targetWeightKg {
@@ -304,7 +285,7 @@ private struct GoalTrendProgress: View {
                         .font(AppFont.caption())
                         .foregroundStyle(Theme.textSecondary)
                 }
-                .tint(StrategyPalette.goal)
+                .tint(Theme.goal)
             }
         }
     }
@@ -325,7 +306,7 @@ private struct GoalHistoryRow: View {
             Spacer()
             Text(kindName).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
             Image(systemName: period.end == nil ? "hourglass" : "checkmark.circle.fill")
-                .foregroundStyle(period.end == nil ? Theme.textPrimary : StrategyPalette.goal)
+                .foregroundStyle(period.end == nil ? Theme.textPrimary : Theme.goal)
         }
         .padding(14)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))

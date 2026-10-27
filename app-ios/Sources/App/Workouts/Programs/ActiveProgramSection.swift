@@ -11,14 +11,9 @@ struct ActiveProgramSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Active Program").font(AppFont.title())
-                Spacer()
+            SectionHeader("Active Program") {
                 if let program {
                     Button(program.cycleLabel(program.currentCycle)) { choosingCycle = true }
-                        .font(AppFont.headline(15))
-                        .underline()
-                        .foregroundStyle(Theme.textPrimary)
                         .accessibilityHint("Go to another \(program.cycleNoun.lowercased())")
                 }
             }

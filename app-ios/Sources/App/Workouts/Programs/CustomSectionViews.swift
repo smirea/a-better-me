@@ -45,16 +45,11 @@ struct CustomSectionView: View {
         let templates = section.templateIDs.compactMap { byID[$0] }
         let id = section.id
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                Text(section.name).font(AppFont.title())
-                Spacer()
+            SectionHeader(section.name) {
                 if !templates.isEmpty {
                     Button(section.collapsed ? "Expand" : "Collapse") {
                         store.updateSettings { $0.workout.sections.toggleCollapsed(id) }
                     }
-                    .font(AppFont.headline(15))
-                    .underline()
-                    .foregroundStyle(Theme.textPrimary)
                     .accessibilityLabel(section.collapsed ? "Expand \(section.name)" : "Collapse \(section.name)")
                 }
                 Menu("\(section.name) Options", systemImage: "ellipsis") {
@@ -66,8 +61,6 @@ struct CustomSectionView: View {
                     Button("Delete Section", systemImage: "trash", role: .destructive) { confirmingDelete = true }
                 }
                 .labelStyle(.iconOnly)
-                .font(AppFont.headline(15))
-                .foregroundStyle(Theme.textPrimary)
                 .frame(width: 32, height: 32)
             }
             if templates.isEmpty {

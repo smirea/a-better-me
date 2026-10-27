@@ -142,7 +142,7 @@ struct BalanceTag: View {
         }
     }
 
-    var color: Color { isExpenditure ? DashboardColor.expenditure : DashboardColor.fat }
+    var color: Color { isExpenditure ? DashboardColor.expenditure : Theme.fat }
 
     var body: some View {
         Label {

@@ -1,28 +1,5 @@
 import SwiftUI
 
-struct SettingLabel: View {
-    let title: String
-    let detail: String?
-    var systemImage: String?
-
-    var body: some View {
-        if let systemImage {
-            Label { text } icon: { Image(systemName: systemImage).foregroundStyle(Theme.textPrimary) }
-        } else {
-            text
-        }
-    }
-
-    private var text: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(AppFont.medium(15)).foregroundStyle(Theme.textPrimary)
-            if let detail {
-                Text(detail).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-            }
-        }
-    }
-}
-
 struct SettingToggle: View {
     let title: String
     let detail: String
@@ -30,7 +7,7 @@ struct SettingToggle: View {
     @Binding var isOn: Bool
 
     var body: some View {
-        Toggle(isOn: $isOn) { SettingLabel(title: title, detail: detail, systemImage: systemImage) }
+        Toggle(isOn: $isOn) { RowLabel(title: title, detail: detail, systemImage: systemImage) }
             .tint(Theme.accent)
             .accessibilityLabel(title)
     }
@@ -43,7 +20,7 @@ struct SettingLink<Destination: View>: View {
     @ViewBuilder let destination: () -> Destination
 
     var body: some View {
-        NavigationLink(destination: destination) { SettingLabel(title: title, detail: detail, systemImage: systemImage) }
+        NavigationLink(destination: destination) { RowLabel(title: title, detail: detail, systemImage: systemImage) }
             .accessibilityLabel(title)
     }
 }
@@ -80,7 +57,7 @@ struct SettingChoice<Value: Hashable>: View {
             .buttonBorderShape(.capsule)
             .accessibilityLabel("Edit \(title)")
         } label: {
-            SettingLabel(title: title, detail: options.first { $0.value == selection }?.title ?? "", systemImage: systemImage)
+            RowLabel(title: title, detail: options.first { $0.value == selection }?.title ?? "", systemImage: systemImage)
         }
     }
 }

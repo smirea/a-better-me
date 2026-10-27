@@ -28,28 +28,12 @@ enum DashboardRoute: Hashable {
 enum DashboardColor {
     static let workouts = Theme.accent
     static let trend = Color(hex: 0xA99BF0)
-    static let scale = Color(hex: 0x7CC48A)
     static let exercise = Color(hex: 0x8EC9E8)
     static let records = Color(hex: 0xF5C842)
-    static let muscle = Color(hex: 0x6C8EF0)
-    static let energy = Color(hex: 0x68A0FA)
-    static let protein = Color(hex: 0xFF8660)
-    static let fat = Color(hex: 0xFFD05E)
-    static let carbs = Color(hex: 0x5EB987)
     static let expenditure = Color(hex: 0xF9845D)
-    static let goal = Color(hex: 0x5EBB89)
     static let goalAway = Color(hex: 0x6CC596)
     static let goalTowards = Color(hex: 0x1F5A3A)
     static let scaleOnTrend = Color(hex: 0x6E5BB8)
-
-    static func nutrient(_ id: NutrientID) -> Color {
-        switch id {
-        case .protein: protein
-        case .fat: fat
-        case .carbs: carbs
-        default: energy
-        }
-    }
 }
 
 struct MetricTab: Identifiable {
@@ -309,13 +293,13 @@ struct DashboardData {
         case .energyBalance:
             return MetricDetail(title: "Energy Balance", tabs: [
                 balanceTab("Expenditure", icon: "flame.fill", reference: expenditurePoints, color: DashboardColor.expenditure),
-                balanceTab("Calorie Targets", icon: "smallcircle.filled.circle", reference: energyTargets, color: DashboardColor.fat),
+                balanceTab("Calorie Targets", icon: "smallcircle.filled.circle", reference: energyTargets, color: Theme.fat),
             ], footer: .energyBalance)
         case .scaleWeight:
             let points = DailyCombine.mean.combine(weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, calendar: calendar)
             return MetricDetail(title: "Scale Weight", tabs: [MetricTab(
                 title: "Scale Weight", points: weight(points), unit: unit.rawValue, averageTitle: "Average",
-                summary: .change, style: .line, color: DashboardColor.scale
+                summary: .change, style: .line, color: Theme.green
             )], footer: .weighIns(weighIns.reversed()))
         case .steps:
             return MetricDetail(title: "Steps", tabs: [MetricTab(
@@ -328,7 +312,7 @@ struct DashboardData {
                     title: metric.title, icon: metric == .sets ? "arrow.right.circle.fill" : "scalemass.fill",
                     points: DailyCombine.sum.combine(self.muscle(muscle, metric), calendar: calendar),
                     unit: metric.unit(unit), averageTitle: "Average \(metric.title)", summary: .total,
-                    style: .bar, color: DashboardColor.muscle
+                    style: .bar, color: Theme.muscle
                 )
             }, footer: .months)
         case let .exercise(id, _):

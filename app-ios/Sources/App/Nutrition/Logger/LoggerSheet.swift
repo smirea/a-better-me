@@ -216,7 +216,7 @@ private struct LoggerBanner: View {
                 .frame(height: 3)
                 .overlay(alignment: .leading) {
                     GeometryReader { proxy in
-                        Capsule().fill(MacroColor.of(id)).frame(width: proxy.size.width * (value.progress ?? 0))
+                        Capsule().fill(Theme.macro(id)).frame(width: proxy.size.width * (value.progress ?? 0))
                     }
                 }
         }

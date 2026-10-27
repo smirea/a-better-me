@@ -66,7 +66,7 @@ struct WeeklyNutritionCard: View {
     @ViewBuilder
     private func rowLabel(_ id: NutrientID) -> some View {
         if id == .energy {
-            Image(systemName: "flame.fill").font(.caption).foregroundStyle(DashboardColor.energy).accessibilityLabel("Calories")
+            Image(systemName: "flame.fill").font(.caption).foregroundStyle(Theme.calories).accessibilityLabel("Calories")
         } else {
             Text(id.rawValue.uppercased()).font(AppFont.headline(12)).accessibilityLabel(id.dashboardLabel)
         }
@@ -81,7 +81,7 @@ struct WeeklyNutritionCard: View {
                 .fill(Theme.surfaceRaised)
                 .frame(width: 5, height: 26)
                 .overlay(alignment: .bottom) {
-                    Capsule().fill(DashboardColor.nutrient(id)).frame(height: 26 * fill)
+                    Capsule().fill(Theme.macro(id)).frame(height: 26 * fill)
                 }
             VStack(alignment: .leading, spacing: 0) {
                 Text(value.map { Int($0.rounded()).formatted() } ?? "--").font(AppFont.headline(11))
@@ -150,7 +150,7 @@ struct DailyNutritionCard: View {
                 .stroke(Theme.surfaceRaised, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                 .rotationEffect(.degrees(135))
             Circle().trim(from: 0, to: 0.75 * min(max(fill, 0), 1))
-                .stroke(DashboardColor.energy, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                .stroke(Theme.calories, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                 .rotationEffect(.degrees(135))
             VStack(spacing: 0) {
                 Text(center.map { Int($0.rounded()).formatted() } ?? "--").font(AppFont.number(26))
@@ -170,7 +170,7 @@ struct DailyNutritionCard: View {
             GeometryReader { proxy in
                 Capsule().fill(Theme.surfaceRaised)
                     .overlay(alignment: .leading) {
-                        Capsule().fill(DashboardColor.nutrient(id)).frame(width: proxy.size.width * min(max(fill, 0), 1))
+                        Capsule().fill(Theme.macro(id)).frame(width: proxy.size.width * min(max(fill, 0), 1))
                     }
             }
             .frame(height: 4)
@@ -188,7 +188,7 @@ struct EnergyBalanceFocusCard: View {
 
     var body: some View {
         let balance = values.balance(reference, days: 30)
-        let lineColor = reference == .expenditure ? DashboardColor.expenditure : DashboardColor.fat
+        let lineColor = reference == .expenditure ? DashboardColor.expenditure : Theme.fat
         VStack(alignment: .leading, spacing: 10) {
             Text("Energy Balance").font(AppFont.title())
             BalanceChart(bars: balance.bars, line: balance.line, lineColor: lineColor, domain: balance.interval)
@@ -196,7 +196,7 @@ struct EnergyBalanceFocusCard: View {
             Text("Last 30 Days").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             HStack(alignment: .top) {
-                term(balance.meanIntake, "Nutrition", symbol: "chart.bar.fill", color: DashboardColor.energy)
+                term(balance.meanIntake, "Nutrition", symbol: "chart.bar.fill", color: Theme.calories)
                 Text("−").font(AppFont.number(17))
                 term(balance.meanReference, reference.rawValue, symbol: "line.diagonal", color: lineColor)
                 Text("=").font(AppFont.number(17))
@@ -240,7 +240,7 @@ struct BalanceChart: View {
         Chart {
             ForEach(bars, id: \.date) { point in
                 BarMark(x: .value("Date", point.date, unit: .day), y: .value("Calories", point.value), width: .ratio(0.6))
-                    .foregroundStyle(DashboardColor.energy)
+                    .foregroundStyle(Theme.calories)
             }
             ForEach(line, id: \.date) { point in
                 LineMark(x: .value("Date", point.date, unit: .day), y: .value("Reference", point.value), series: .value("Series", "Reference"))
@@ -286,7 +286,7 @@ struct GoalProgressInsightCard: View {
                 GeometryReader { proxy in
                     Capsule().fill(Theme.surfaceRaised)
                         .overlay(alignment: .leading) {
-                            Capsule().fill(DashboardColor.goal).frame(width: proxy.size.width * (progress?.percent ?? 0) / 100)
+                            Capsule().fill(Theme.goal).frame(width: proxy.size.width * (progress?.percent ?? 0) / 100)
                         }
                         .frame(height: 8)
                         .frame(maxHeight: .infinity)

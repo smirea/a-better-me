@@ -160,7 +160,7 @@ struct FoodLogMathTests {
         #expect(FoodLog.dayTitle(monday, today: monday) == "Today")
         #expect(FoodLog.dayTitle(monday, today: monday.adding(days: 1)) == "Yesterday")
         #expect(FoodLog.dayTitle(monday, today: monday.adding(days: -1)) == "Tomorrow")
-        #expect(FoodLog.week(of: calendarDay("2026-10-29")).map(\.description) == [
+        #expect(calendarDay("2026-10-29").week.map(\.description) == [
             "2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01",
         ])
     }

@@ -257,13 +257,13 @@ enum CardIcon {
         switch self {
         case .workouts, .workoutDots, .steps: DashboardColor.workouts
         case .trend: DashboardColor.trend
-        case .weighInDots, .scale: DashboardColor.scale
-        case .muscle: DashboardColor.muscle
+        case .weighInDots, .scale: Theme.green
+        case .muscle: Theme.muscle
         case .exercise: DashboardColor.exercise
         case .expenditure: DashboardColor.expenditure
-        case .energyBalance, .foodLoggingDots, .nutrient: DashboardColor.energy
-        case .macros: DashboardColor.protein
-        case .goalProgress: DashboardColor.goal
+        case .energyBalance, .foodLoggingDots, .nutrient: Theme.calories
+        case .macros: Theme.protein
+        case .goalProgress: Theme.goal
         }
     }
 }
@@ -379,7 +379,7 @@ private struct PrimaryFocusPicker: View {
                 ForEach(NutritionMetrics.macros, id: \.self) { id in
                     GridRow {
                         ForEach(0..<7, id: \.self) { _ in
-                            Capsule().fill(DashboardColor.nutrient(id)).frame(width: 4, height: 10)
+                            Capsule().fill(Theme.macro(id)).frame(width: 4, height: 10)
                         }
                     }
                 }
@@ -387,18 +387,18 @@ private struct PrimaryFocusPicker: View {
         case .energyBalance:
             HStack(alignment: .bottom, spacing: 3) {
                 ForEach(Array([0.6, 0.8, 0.5, 0.9, 0.7, 0.75, 0.55, 0.85, 0.65, 0.8].enumerated()), id: \.offset) { _, height in
-                    Capsule().fill(DashboardColor.energy).frame(width: 5, height: 40 * height)
+                    Capsule().fill(Theme.calories).frame(width: 5, height: 40 * height)
                 }
             }
         case .dailyNutrition:
             VStack(spacing: 8) {
                 Circle().trim(from: 0, to: 0.75)
-                    .stroke(DashboardColor.energy, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                    .stroke(Theme.calories, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                     .rotationEffect(.degrees(135))
                     .frame(width: 34, height: 34)
                 HStack(spacing: 10) {
                     ForEach([NutrientID.protein, .fat, .carbs], id: \.self) { id in
-                        Capsule().fill(DashboardColor.nutrient(id)).frame(width: 22, height: 3)
+                        Capsule().fill(Theme.macro(id)).frame(width: 22, height: 3)
                     }
                 }
             }

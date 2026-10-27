@@ -229,26 +229,4 @@ enum FoodLog {
         default: return day.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
         }
     }
-
-    /// The ISO week (Monday first) that holds `day`.
-    static func week(of day: CalendarDay) -> [CalendarDay] {
-        let monday = day.adding(days: 1 - day.weekday)
-        return (0..<7).map { monday.adding(days: $0) }
-    }
-}
-
-extension CalendarDay {
-    /// Whole days from `self` to `other`, negative when `other` is earlier.
-    func days(to other: CalendarDay) -> Int {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "UTC")!
-        let dates = [self, other].map { calendar.date(from: DateComponents(year: $0.year, month: $0.month, day: $0.day))! }
-        return calendar.dateComponents([.day], from: dates[0], to: dates[1]).day!
-    }
-
-    /// Noon of the day on the device's calendar: a `Date` for pickers and formatters that no zone shift moves to
-    /// another day.
-    var date: Date {
-        Calendar.current.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
-    }
 }

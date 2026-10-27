@@ -77,3 +77,21 @@ extension Row {
         return day
     }
 }
+
+extension CalendarDay {
+    var monday: CalendarDay { adding(days: 1 - weekday) }
+
+    /// The ISO week (Monday first) that holds the day.
+    var week: [CalendarDay] { (0..<7).map { monday.adding(days: $0) } }
+
+    /// Whole days from `self` to `other`, negative when `other` is earlier.
+    func days(to other: CalendarDay) -> Int {
+        Self.calendar.dateComponents([.day], from: utcDate, to: other.utcDate).day!
+    }
+
+    /// Noon of the day on the device's calendar: a `Date` for pickers and formatters that no zone shift moves to
+    /// another day.
+    var date: Date {
+        Calendar.current.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
+    }
+}

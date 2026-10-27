@@ -218,7 +218,7 @@ struct StrategyWizardView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(note.title).font(AppFont.headline(15))
                         if let value = note.value {
-                            Text(value).font(AppFont.medium(15)).foregroundStyle(StrategyPalette.goal)
+                            Text(value).font(AppFont.medium(15)).foregroundStyle(Theme.goal)
                         }
                         Text(note.text).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
                     }
@@ -282,12 +282,12 @@ private struct GoalWeightRateStep: View {
                 .font(AppFont.headline(13))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(model.goal.band == .faster ? Theme.amber.opacity(0.25) : StrategyPalette.goal.opacity(0.25), in: Capsule())
+                .background(model.goal.band == .faster ? Theme.amber.opacity(0.25) : Theme.goal.opacity(0.25), in: Capsule())
                 .frame(maxWidth: .infinity)
             Slider(value: Binding(get: { model.goal.ratePercent }, set: { model.goal.ratePercent = ($0 * 100).rounded() / 100 }), in: GoalDraft.rateRange(model.goal.kind)) {
                 Text("Goal rate")
             }
-            .tint(model.goal.band == .faster ? Theme.amber : StrategyPalette.goal)
+            .tint(model.goal.band == .faster ? Theme.amber : Theme.goal)
             .accessibilityValue("\(model.goal.ratePercent.formatted(.number.precision(.fractionLength(2)))) percent per week")
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                 GridRow {
@@ -313,7 +313,7 @@ private struct GoalWeightRateStep: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(highlighted ? StrategyPalette.goal.opacity(0.18) : Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+        .background(highlighted ? Theme.goal.opacity(0.18) : Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
         .accessibilityElement(children: .combine)
     }
 }

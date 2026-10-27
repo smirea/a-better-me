@@ -55,7 +55,9 @@ private struct FoodLogHeader: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            DayStrip(plans: plans)
+            WeekStrip(anchor: state.day, weeks: -(FoodLogState.daysBack / 7 + 1)...(FoodLogState.daysAhead / 7 + 1)) {
+                WeekPills(monday: $0, plans: plans)
+            }
             DaySummary(day: state.day, plans: plans).id(state.day)
         }
         .padding(.bottom, 6)
@@ -63,43 +65,8 @@ private struct FoodLogHeader: View {
     }
 }
 
-/// Day pills a week at a time, Monday first. Swiping shows other weeks without leaving the day; tapping a pill opens
-/// it. Each pill's outline fills with the day's calories against its target.
-private struct DayStrip: View {
-    let plans: [NutritionPlan]
-
-    @Environment(FoodLogState.self) private var state
-    @State private var origin = FoodLog.week(of: .today)[0]
-    @State private var week: Int?
-
-    private static let weeksBack = FoodLogState.daysBack / 7 + 1
-    private static let weeksAhead = FoodLogState.daysAhead / 7 + 1
-
-    var body: some View {
-        ScrollView(.horizontal) {
-            LazyHStack(spacing: 0) {
-                ForEach(-Self.weeksBack...Self.weeksAhead, id: \.self) { offset in
-                    WeekPills(monday: origin.adding(days: offset * 7), plans: plans)
-                        .containerRelativeFrame(.horizontal)
-                }
-            }
-            .scrollTargetLayout()
-        }
-        .scrollTargetBehavior(.paging)
-        .scrollPosition(id: $week)
-        .scrollIndicators(.hidden)
-        .frame(height: 64)
-        .onAppear { week = offset(of: state.day) }
-        .onChange(of: state.day) { _, day in
-            withAnimation { week = offset(of: day) }
-        }
-    }
-
-    private func offset(of day: CalendarDay) -> Int {
-        origin.days(to: FoodLog.week(of: day)[0]) / 7
-    }
-}
-
+/// The week strip's pills, each outline filling with the day's calories against its target. One week per view, so a
+/// page observes only its own entries.
 private struct WeekPills: View {
     let monday: CalendarDay
     let plans: [NutritionPlan]
@@ -115,47 +82,13 @@ private struct WeekPills: View {
 
     var body: some View {
         let kcal = Dictionary(grouping: entries, by: \.day).mapValues { FoodLog.totals($0)[.energy] ?? 0 }
-        HStack(spacing: 6) {
-            ForEach(FoodLog.week(of: monday), id: \.self) { day in
-                let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day).energy
-                DayPill(
-                    day: day, isSelected: day == state.day, isToday: day == .today,
-                    progress: FoodLog.ringProgress(kcal: kcal[day] ?? 0, target: target)
-                ) { state.day = day }
-            }
+        ForEach(monday.week, id: \.self) { day in
+            let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day).energy
+            DayPill(
+                day: day, isSelected: day == state.day,
+                ring: DayRing(fraction: FoodLog.ringProgress(kcal: kcal[day] ?? 0, target: target), color: Theme.calories)
+            ) { state.day = day }
         }
-        .padding(.horizontal, 20)
-    }
-}
-
-private struct DayPill: View {
-    let day: CalendarDay
-    let isSelected: Bool
-    let isToday: Bool
-    let progress: Double
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 1) {
-                Text("\(day.day)").font(AppFont.headline(16)).monospacedDigit()
-                Text(day.date.formatted(.dateTime.weekday(.short)).prefix(2)).font(AppFont.caption(11))
-                    .foregroundStyle(Theme.textSecondary)
-                Circle().fill(isToday ? Theme.textPrimary : .clear).frame(width: 4, height: 4)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 56)
-            .background(isSelected ? Theme.textPrimary.opacity(0.18) : .clear, in: Capsule())
-            .overlay {
-                Capsule().strokeBorder(Theme.textTertiary.opacity(0.6), lineWidth: 1)
-                Capsule().inset(by: 0.75).trim(from: 0, to: progress)
-                    .stroke(Theme.calories, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
-                    .rotationEffect(.degrees(180))
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(day.date.formatted(date: .complete, time: .omitted))
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

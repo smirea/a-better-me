@@ -21,3 +21,14 @@ enum NavigationAppearance {
         bar.titleTextAttributes = [.font: UIFont(name: "DMSans-SemiBold", size: 17)!]
     }
 }
+
+extension Theme {
+    static func macro(_ id: NutrientID) -> Color {
+        switch id {
+        case .protein: protein
+        case .fat: fat
+        case .carbs: carbs
+        default: calories
+        }
+    }
+}

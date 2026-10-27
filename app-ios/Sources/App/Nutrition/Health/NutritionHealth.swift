@@ -9,7 +9,7 @@ import os
 final class NutritionHealth {
     static let shared = NutritionHealth(target: HealthDietaryStore(store: HKHealthStore()))
 
-    /// Device state, like `AppMode`: Health access belongs to this phone's Health store, and a synced switch would
+    /// Device state, not owner data: Health access belongs to this phone's Health store, and a synced switch would
     /// make a second phone write the same food again.
     static let enabledKey = "writesNutritionToHealth"
     nonisolated static let log = Logger(subsystem: "com.stefan.a-better-me", category: "nutrition-health")
