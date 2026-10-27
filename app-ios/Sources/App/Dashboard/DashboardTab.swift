@@ -2,7 +2,6 @@ import SwiftUI
 
 struct DashboardTab: View {
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(LocalStore.self) private var store
     @Environment(ExerciseCatalog.self) private var catalog
     @State private var nutrition = NutritionData()
     @Observe(AppSettings.current) private var settings
@@ -40,11 +39,6 @@ struct DashboardTab: View {
             log: foodLog, plans: plans, goals: goals, settings: settings.nutrition, profile: settings.profile, bodyMetrics: bodyMetrics
         ), initial: true) { _, inputs in
             nutrition.update(inputs)
-        }
-        .task {
-            #if DEBUG
-            DashboardSeed.seedIfRequested(store)
-            #endif
         }
     }
 }

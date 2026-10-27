@@ -25,6 +25,7 @@ struct BetterMeApp: App {
         WorkoutHealth.shared.start(store: store, catalog: catalog)
         NutritionHealth.shared.start(store: store)
         #if DEBUG
+        DevSeed.run(store)
         SampleData.seedIfRequested(store)
         store.seedGeneratedProgramIfRequested(catalog: catalog)
         SampleWorkout.startIfRequested(store)

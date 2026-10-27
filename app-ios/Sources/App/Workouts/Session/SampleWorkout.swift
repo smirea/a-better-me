@@ -2,7 +2,7 @@
 import Foundation
 import GRDB
 
-/// Launch with `-startSampleWorkout` (after `-seedSampleData`) to start the seeded "Upper" template with a drop set and
+/// Launch with `-startSampleWorkout` (the dev seed makes it) to start the seeded "Upper" template with a drop set and
 /// a superset, so the live workout can be driven in the simulator before the builder's Start Workout lands.
 enum SampleWorkout {
     static let launchArgument = "-startSampleWorkout"
