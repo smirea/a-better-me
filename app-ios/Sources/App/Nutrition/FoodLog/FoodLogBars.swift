@@ -1,22 +1,56 @@
 import SwiftUI
 
 /// The bar under the timeline: the search field, or in select mode the selection's actions, or a copy or move's
-/// targets.
+/// targets. A notice of what was just copied or moved sits over it.
 struct FoodLogBottomBar: View {
     @Environment(FoodLogState.self) private var state
 
     var body: some View {
         GlassEffectContainer {
-            if let pending = state.pending {
-                PasteBar(pending: pending)
-            } else if state.selecting {
-                SelectionBar()
-            } else {
-                SearchBar()
+            VStack(alignment: .leading, spacing: 8) {
+                if let notice = state.notice {
+                    NoticeBar(notice: notice)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                if let pending = state.pending {
+                    PasteBar(pending: pending)
+                } else if state.selecting {
+                    SelectionBar()
+                } else {
+                    SearchBar()
+                }
             }
         }
         .padding(.horizontal, Theme.margin)
         .padding(.bottom, 8)
+        .animation(.snappy, value: state.notice)
+    }
+}
+
+/// "Copied 3 foods to Today · Undo". It leaves after a few seconds, or when replaced by the next.
+private struct NoticeBar: View {
+    let notice: FoodLogState.Notice
+
+    @Environment(FoodLogState.self) private var state
+    @Environment(LocalStore.self) private var store
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(notice.message).font(AppFont.medium(14)).lineLimit(2)
+            Spacer(minLength: 0)
+            if notice.undo != nil {
+                Button("Undo") { state.undo(in: store) }
+                    .font(AppFont.headline(14))
+                    .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 18)
+        .frame(minHeight: 44)
+        .glassEffect(.regular, in: .capsule)
+        .task(id: notice.id) {
+            try? await Task.sleep(for: .seconds(5))
+            if state.notice?.id == notice.id { state.notice = nil }
+        }
     }
 }
 
@@ -63,23 +97,23 @@ private struct SelectionBar: View {
 
     var body: some View {
         let count = state.selection.count
-        HStack(spacing: 10) {
+        FlowLayout {
             BarTitle(title: "Select", count: count, systemImage: "xmark") { state.endSelection() }
-            ScrollView(.horizontal) {
-                HStack(spacing: 8) {
-                    if count == 1 {
-                        Button("Edit") { state.editing = state.selectedEntries.first }
-                    }
-                    Button("Copy") { state.pending = .init(action: .copy, entries: state.selectedEntries) }
-                    Button("Move") { state.pending = .init(action: .move, entries: state.selectedEntries) }
-                    Button("Remove") { confirmingRemove = true }
-                    Button("Modify Timestamp") { prompt = .timestamp }
+            Group {
+                if count == 1 {
+                    Button("Edit") { state.editing = state.selectedEntries.first }
                 }
-                .buttonStyle(.glass)
-                .font(AppFont.chip)
-                .disabled(count == 0)
+                Button("Copy") { state.pending = .init(action: .copy, entries: state.selectedEntries) }
+                Button("Move") { state.pending = .init(action: .move, entries: state.selectedEntries) }
+                Button("Remove") { confirmingRemove = true }
+                Button("Modify Timestamp") { prompt = .timestamp }
+                if count > 1 {
+                    Button("Create Recipe") { state.createRecipe() }
+                }
             }
-            .scrollIndicators(.hidden)
+            .buttonStyle(.glass)
+            .font(AppFont.chip)
+            .disabled(count == 0)
         }
         .alert("Remove Foods", isPresented: $confirmingRemove) {
             Button("Remove", role: .destructive) {
@@ -93,8 +127,7 @@ private struct SelectionBar: View {
         .sheet(item: $prompt) { _ in
             let entries = state.selectedEntries
             TimePrompt(title: "Modify Timestamp", day: state.day, minute: entries.first?.minute ?? 720, showsDate: false) { day, minute in
-                store.moveEntries(entries.map(\.id), to: day, minute: minute)
-                state.endSelection()
+                state.relocate(entries, .move, to: .dateTime(day, minute: minute), in: store)
             }
         }
     }
@@ -116,29 +149,29 @@ private struct PasteBar: View {
 
     var body: some View {
         let title = pending.action == .copy ? "Copy" : "Move"
-        HStack(spacing: 10) {
+        FlowLayout {
             BarTitle(title: title, count: pending.entries.count, systemImage: "chevron.left") {
                 if pending.inline { state.pending?.inline = false } else { state.pending = nil }
             }
             if pending.inline {
-                Text("Tap an hour to paste").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
-                Spacer()
+                Text("Tap an hour to paste")
+                    .font(AppFont.medium(14))
+                    .padding(.horizontal, 16)
+                    .frame(height: 44)
+                    .glassEffect(.regular, in: .capsule)
             } else {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 8) {
-                        Button("To Now") { paste(.now) }
-                        Button("To Today") { paste(.today) }
-                        Button("To Tomorrow") { paste(.tomorrow) }
-                        if pending.action == .copy {
-                            Button("To Dates") { prompt = .dates }
-                        }
-                        Button("To Date & Time") { prompt = .dateTime }
-                        Button("Paste Inline") { state.pending?.inline = true }
+                Group {
+                    Button("To Now") { paste(.now) }
+                    Button("To Today") { paste(.today) }
+                    Button("To Tomorrow") { paste(.tomorrow) }
+                    if pending.action == .copy {
+                        Button("To Dates") { prompt = .dates }
                     }
-                    .buttonStyle(.glass)
-                    .font(AppFont.chip)
+                    Button("To Date & Time") { prompt = .dateTime }
+                    Button("Paste Inline") { state.pending?.inline = true }
                 }
-                .scrollIndicators(.hidden)
+                .buttonStyle(.glass)
+                .font(AppFont.chip)
             }
         }
         .sheet(item: $prompt) { prompt in
@@ -154,8 +187,7 @@ private struct PasteBar: View {
     }
 
     private func paste(_ target: PasteTarget) {
-        store.relocate(pending.entries, pending.action, to: target)
-        state.endSelection()
+        state.paste(to: target, in: store)
     }
 }
 

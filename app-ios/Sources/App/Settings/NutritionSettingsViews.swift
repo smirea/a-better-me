@@ -27,10 +27,6 @@ struct FoodLogSettingsView: View {
                     systemImage: "rectangle.compress.vertical", isOn: store.binding(settings, \.nutrition.timeline.hideEmptyHours)
                 )
                 SettingChoice(
-                    title: "Alignment", systemImage: "text.alignleft", selection: store.binding(settings, \.nutrition.timeline.alignment),
-                    options: [SettingOption(value: .left, title: "Left aligned"), SettingOption(value: .right, title: "Right aligned")]
-                )
-                SettingChoice(
                     title: "Add Foods to Hour", systemImage: "plus.circle", selection: store.binding(settings, \.nutrition.timeline.addFoodsToHour),
                     options: [
                         SettingOption(value: .plusIcon, title: "Plus icon next to each hour"),
@@ -47,13 +43,10 @@ struct FoodLogSettingsView: View {
                 )
                 SettingChoice(
                     title: "Calendar Week Banner", systemImage: "calendar", selection: store.binding(settings, \.nutrition.timeline.calendarWeekBanner),
-                    options: [SettingOption(value: .show, title: "Show"), SettingOption(value: .showAndPin, title: "Show & Pin"), SettingOption(value: .hide, title: "Hide")]
-                )
-                SettingChoice(
-                    title: "Calendar Scrolling", systemImage: "calendar.day.timeline.left", selection: store.binding(settings, \.nutrition.timeline.calendarScrolling),
                     options: [
-                        SettingOption(value: .daily, title: "Daily Scroll", detail: "Scrolls freely and settles one day at a time"),
-                        SettingOption(value: .weekly, title: "Weekly Swipe"),
+                        SettingOption(value: .show, title: "Show", detail: "Folds away while the timeline is scrolled down"),
+                        SettingOption(value: .showAndPin, title: "Show & Pin", detail: "Always shown over the timeline"),
+                        SettingOption(value: .hide, title: "Hide"),
                     ]
                 )
                 SettingToggle(

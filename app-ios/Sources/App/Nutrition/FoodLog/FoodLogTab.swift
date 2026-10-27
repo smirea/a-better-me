@@ -37,21 +37,28 @@ struct FoodLogTab: View {
         }
         .environment(state)
         .sheet(item: $state.logRequest) { LoggerSheet(start: LoggerStart($0)) }
-        .sheet(item: $state.editing) { EntryEditor(entry: $0) }
+        .sheet(item: $state.editing) { EntryEditor(entry: $0).environment(state) }
+        .sheet(item: $state.recipeRequest) { RecipeEditor(draft: $0.draft) }
         .sheet(item: $state.note) { NoteEditor(draft: $0) }
         .sheet(isPresented: $showingCalendar) { CalendarSheet().environment(state) }
     }
 }
 
-/// The week strip and the day's macro summary, pinned over the timeline.
+/// The week strip and the day's macro summary over the timeline. The summary stays; the strip follows Calendar Week
+/// Banner, folding away while the timeline is scrolled down unless it is pinned.
 private struct FoodLogHeader: View {
     @Environment(FoodLogState.self) private var state
     @Observe(NutritionPlan.all) private var plans
+    @Observe(AppSettings.current) private var settings
 
     var body: some View {
+        let banner = settings.nutrition.timeline.calendarWeekBanner
         VStack(spacing: 6) {
-            WeekStrip(anchor: state.day, weeks: -(FoodLogState.daysBack / 7 + 1)...(FoodLogState.daysAhead / 7 + 1)) {
-                WeekPills(monday: $0, plans: plans)
+            if banner == .showAndPin || banner == .show && !state.stripCollapsed {
+                WeekStrip(anchor: state.day, weeks: -(FoodLogState.daysBack / 7 + 1)...(FoodLogState.daysAhead / 7 + 1)) {
+                    WeekPills(monday: $0, plans: plans)
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
             DaySummary(day: state.day, plans: plans).id(state.day)
         }

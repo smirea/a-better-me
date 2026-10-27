@@ -163,6 +163,56 @@ enum FoodLog {
         }
     }
 
+    /// "Copied 3 foods to Today": the confirmation shown after a copy, move, or paste.
+    static func confirmation(_ action: FoodLogState.Action, count: Int, to target: PasteTarget, today: CalendarDay = .today) -> String {
+        let verb = action == .copy ? "Copied" : "Moved"
+        let foods = count == 1 ? "1 food" : "\(count) foods"
+        let place = switch target {
+        case .now: "Now"
+        case .today: "Today"
+        case .tomorrow: "Tomorrow"
+        case let .days(days) where days.count == 1: NutritionFormat.dayTitle(days[0], today: today)
+        case let .days(days): "\(days.count) days"
+        case let .dateTime(day, minute): "\(NutritionFormat.dayTitle(day, today: today)) at \(NutritionFormat.clock(minute))"
+        case let .hour(day, hour): "\(NutritionFormat.dayTitle(day, today: today)) at \(NutritionFormat.hour(hour))"
+        }
+        return "\(verb) \(foods) to \(place)"
+    }
+
+    /// The selection after tapping an hour's pill: the hour's entries join it, or leave it when all are already in.
+    static func toggling(_ hour: [UUID], in selection: Set<UUID>) -> Set<UUID> {
+        selection.isSuperset(of: hour) ? selection.subtracting(hour) : selection.union(hour)
+    }
+
+    /// A recipe logged at `serving`, as its ingredients at the amounts eaten: half a serving of a one-serving recipe
+    /// halves every ingredient.
+    static func exploded(_ serving: Serving, of recipe: Recipe) -> [FoodPortion] {
+        RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: serving.servings).map { FoodPortion($0.food, serving: $0.serving) }
+    }
+
+    /// Create Recipe's starting draft: the selected entries as ingredients at their logged servings, one serving.
+    static func recipeDraft(_ entries: [FoodEntry]) -> RecipeDraft {
+        var draft = RecipeDraft()
+        draft.ingredients = entries.map { .init(RecipeIngredient($0.portion)) }
+        return draft
+    }
+
+    /// The entry to bring into view after the day's entries changed: the last one in the timeline that was not there
+    /// before. Nil when nothing was added.
+    static func added(from old: [FoodEntry], to new: [FoodEntry]) -> UUID? {
+        let before = Set(old.map(\.id))
+        return new.last { !before.contains($0.id) }?.id
+    }
+
+    /// Whether the week strip collapses for a timeline scrolled `offset` points down, with `slack` points of content
+    /// beyond the screen. Nil keeps the strip as it is, so collapsing, which lengthens the timeline's view, never
+    /// expands it again on the next frame.
+    static func collapsesStrip(offset: Double, slack: Double) -> Bool? {
+        if offset < 12 { return false }
+        if offset > 40, slack > 100 { return true }
+        return nil
+    }
+
     /// The bar's full length for `value` against `range`: the reference bound sits at 60% of the track, as
     /// MacroFactor draws its target tick, and an amount past the end stretches the track.
     static func barMaximum(value: Double, range: NutrientRange) -> Double? {

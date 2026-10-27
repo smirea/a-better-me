@@ -16,15 +16,14 @@ struct NutritionSettings: Codable, Hashable, Sendable {
         var hideFoodDetails = false
         var hourlyTotals = true
         var foodTimestamps = true
-        var alignment = Alignment.left
         var addFoodsToHour = AddFoodsToHour.plusIcon
         var calendarWeekBanner = CalendarWeekBanner.show
-        var calendarScrolling = CalendarScrolling.daily
         /// The Move shortcut shows beside each hour as soon as a food is selected.
         var premove = false
 
-        enum Alignment: String, Codable, Sendable { case left, right }
+        /// The hour's + adds food there, or long-pressing its pill does and the + is gone.
         enum AddFoodsToHour: String, Codable, Sendable { case plusIcon, longPress }
+        /// The week strip folds away while the timeline is scrolled down, stays, or is never shown.
         enum CalendarWeekBanner: String, Codable, Sendable { case show, showAndPin, hide }
     }
 

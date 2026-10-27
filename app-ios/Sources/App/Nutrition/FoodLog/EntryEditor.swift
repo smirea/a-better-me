@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// The pencil's sheet over the timeline: the entry's calories and macros, Remove, Favorite, and Duplicate, its amount
-/// and time, the share of the day's targets it uses, and its nutrients. Done saves the amount and time.
+/// The pencil's sheet over the timeline: the entry's calories and macros, Remove, Favorite, Duplicate, and for a
+/// recipe Explode, its amount, day, and time, the share of the day's targets it uses, and its nutrients. Done saves the
+/// amount, day, and time.
 struct EntryEditor: View {
     let entry: FoodEntry
 
     @Environment(LocalStore.self) private var store
+    @Environment(FoodLogState.self) private var state
     @Environment(\.dismiss) private var dismiss
     @Observe(NutritionPlan.all) private var plans
     @Observe(NutrientGoal.all) private var goals
@@ -62,7 +64,11 @@ struct EntryEditor: View {
                         }
                         .labelsHidden()
                     }
-                    DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
+                    DatePicker(
+                        "Date & Time", selection: $time,
+                        in: CalendarDay.today.adding(days: -FoodLogState.daysBack).date...CalendarDay.today.adding(days: FoodLogState.daysAhead + 1).date,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
                 }
                 ThemedSection("Impact on Targets") { ImpactGauges(amounts: amounts, target: targets.target) }
                 ForEach(NutrientSection.allCases) { section in
@@ -101,8 +107,14 @@ struct EntryEditor: View {
             }
             .disabled(favorited)
             action("Duplicate", systemImage: "plus.square.on.square") {
-                store.log([FoodPortion(entry.food, serving: serving)], on: entry.day, minute: minute)
+                store.log([FoodPortion(entry.food, serving: serving)], on: CalendarDay(time), minute: minute)
                 dismiss()
+            }
+            if entry.food.source == .recipe {
+                action("Explode", systemImage: "square.grid.3x3.square") {
+                    state.explode(entry.id, in: store)
+                    dismiss()
+                }
             }
         }
         .buttonStyle(.borderless)
@@ -126,9 +138,11 @@ struct EntryEditor: View {
 
     private func save() {
         let serving = serving
+        let day = CalendarDay(time)
         let minute = minute
         store.editEntry(entry.id) {
             $0.serving = serving
+            $0.day = day
             $0.minute = minute
         }
         dismiss()

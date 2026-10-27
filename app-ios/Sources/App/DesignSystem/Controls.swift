@@ -31,24 +31,70 @@ struct ThemedSection<Content: View>: View {
     }
 }
 
-/// A capsule chip for filters, choices, and quick values. Active chips fill white.
+/// A capsule chip for filters, choices, and quick values. Active chips fill white. Small chips are the Food Log's hour
+/// pills.
 struct Chip: View {
+    enum Size { case small, regular }
+
     let title: String
     var systemImage: String?
     var trailingImage: String?
     var isActive = false
+    var size = Size.regular
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: size == .small ? 3 : 6) {
             if let systemImage { Image(systemName: systemImage).imageScale(.small) }
             Text(title).lineLimit(1)
             if let trailingImage { Image(systemName: trailingImage).imageScale(.small) }
         }
-        .font(AppFont.chip)
+        .font(size == .small ? AppFont.badge : AppFont.chip)
         .foregroundStyle(isActive ? Theme.onPrimary : Theme.textPrimary)
-        .padding(.horizontal, 12)
-        .frame(height: 32)
+        .padding(.horizontal, size == .small ? 8 : 12)
+        .frame(height: size == .small ? 22 : 32)
         .background(isActive ? Theme.textPrimary : Theme.surfaceRaised, in: .capsule)
+    }
+}
+
+/// Rows of its children that wrap when the next one would not fit, each centered on its row, so a bar of actions
+/// never hides one off-screen.
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let items = frames(subviews, width: proposal.width ?? .infinity)
+        return CGSize(width: items.map(\.maxX).max() ?? 0, height: items.map(\.maxY).max() ?? 0)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for (subview, frame) in zip(subviews, frames(subviews, width: bounds.width)) {
+            subview.place(at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY), proposal: ProposedViewSize(frame.size))
+        }
+    }
+
+    private func frames(_ subviews: Subviews, width: CGFloat) -> [CGRect] {
+        var rows: [[CGSize]] = [[]]
+        var x: CGFloat = 0
+        for size in subviews.map({ $0.sizeThatFits(.unspecified) }) {
+            if !rows[rows.count - 1].isEmpty, x + size.width > width {
+                rows.append([])
+                x = 0
+            }
+            rows[rows.count - 1].append(size)
+            x += size.width + spacing
+        }
+        var frames: [CGRect] = []
+        var y: CGFloat = 0
+        for row in rows where !row.isEmpty {
+            let height = row.map(\.height).max() ?? 0
+            var x: CGFloat = 0
+            for size in row {
+                frames.append(CGRect(x: x, y: y + (height - size.height) / 2, width: size.width, height: size.height))
+                x += size.width + spacing
+            }
+            y += height + spacing
+        }
+        return frames
     }
 }
 
