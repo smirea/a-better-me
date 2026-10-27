@@ -25,7 +25,7 @@ struct RootView: View {
             case .workouts:
                 Tab("Workout", systemImage: "dumbbell", value: .log) { WorkoutTab().tint(Theme.textPrimary) }
             case .nutrition:
-                Tab("Food Log", systemImage: "fork.knife", value: .log) { ComingSoon(title: "Food Log").tint(Theme.textPrimary) }
+                Tab("Food Log", systemImage: "fork.knife", value: .log) { FoodLogTab().tint(Theme.textPrimary) }
             }
             Tab("New", systemImage: "plus", value: .add, role: .prominent) { Color.clear }
             switch mode {
