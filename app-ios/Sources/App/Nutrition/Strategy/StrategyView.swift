@@ -25,20 +25,33 @@ struct StrategyData {
 struct StrategyDataReader<Content: View>: View {
     @ViewBuilder let content: (StrategyData) -> Content
 
+    private struct Sources: Equatable {
+        var weighIns: [WeighIn]
+        var log: IntakeLog
+        var settings: NutritionSettings
+        var profile: ProfileSettings
+    }
+
     @Environment(HealthData.self) private var health
     @Observe(NutritionPlan.all) private var plans
     @Observe(IntakeLog.all) private var log
     @Observe(AppSettings.current) private var settings
+    @State private var inputs: StrategyInputs?
 
     var body: some View {
-        content(StrategyData(
-            plans: plans,
-            settings: settings,
-            inputs: StrategyInputs.make(
-                weighIns: health.weighIns, log: log, settings: settings.nutrition,
-                profile: settings.profile, today: .today, calendar: .current
+        Group {
+            if let inputs {
+                content(StrategyData(plans: plans, settings: settings, inputs: inputs))
+            } else {
+                Color.clear
+            }
+        }
+        .onChange(of: Sources(weighIns: health.weighIns, log: log, settings: settings.nutrition, profile: settings.profile), initial: true) { _, sources in
+            inputs = StrategyInputs.make(
+                weighIns: sources.weighIns, log: sources.log, settings: sources.settings,
+                profile: sources.profile, today: .today, calendar: .current
             )
-        ))
+        }
     }
 }
 

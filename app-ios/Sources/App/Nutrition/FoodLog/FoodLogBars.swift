@@ -68,10 +68,10 @@ private struct SelectionBar: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
                     if count == 1 {
-                        Button("Edit") { state.editing = store.entries(state.selection).first }
+                        Button("Edit") { state.editing = state.selectedEntries.first }
                     }
-                    Button("Copy") { state.pending = .init(action: .copy, ids: ordered) }
-                    Button("Move") { state.pending = .init(action: .move, ids: ordered) }
+                    Button("Copy") { state.pending = .init(action: .copy, entries: state.selectedEntries) }
+                    Button("Move") { state.pending = .init(action: .move, entries: state.selectedEntries) }
                     Button("Remove") { confirmingRemove = true }
                     Button("Modify Timestamp") { prompt = .timestamp }
                 }
@@ -91,15 +91,13 @@ private struct SelectionBar: View {
             Text("\(count) food \(count == 1 ? "entry" : "entries") will be removed from the timeline. Are you sure you want to continue? This action cannot be undone.")
         }
         .sheet(item: $prompt) { _ in
-            let entries = store.entries(state.selection)
+            let entries = state.selectedEntries
             TimePrompt(title: "Modify Timestamp", day: state.day, minute: entries.first?.minute ?? 720, showsDate: false) { day, minute in
                 store.moveEntries(entries.map(\.id), to: day, minute: minute)
                 state.endSelection()
             }
         }
     }
-
-    private var ordered: [UUID] { store.entries(state.selection).map(\.id) }
 }
 
 /// Copy or Move's targets. Paste Inline turns every hour's + into a paste button, on any day the owner swipes to.
@@ -119,7 +117,7 @@ private struct PasteBar: View {
     var body: some View {
         let title = pending.action == .copy ? "Copy" : "Move"
         HStack(spacing: 10) {
-            BarTitle(title: title, count: pending.ids.count, systemImage: "chevron.left") {
+            BarTitle(title: title, count: pending.entries.count, systemImage: "chevron.left") {
                 if pending.inline { state.pending?.inline = false } else { state.pending = nil }
             }
             if pending.inline {
@@ -146,7 +144,7 @@ private struct PasteBar: View {
         .sheet(item: $prompt) { prompt in
             switch prompt {
             case .dateTime:
-                TimePrompt(title: "\(title) to Date & Time", day: state.day, minute: store.entries(pending.ids).first?.minute ?? 720, showsDate: true) { day, minute in
+                TimePrompt(title: "\(title) to Date & Time", day: state.day, minute: pending.entries.first?.minute ?? 720, showsDate: true) { day, minute in
                     paste(.dateTime(day, minute: minute))
                 }
             case .dates:
@@ -156,7 +154,7 @@ private struct PasteBar: View {
     }
 
     private func paste(_ target: PasteTarget) {
-        store.relocate(store.entries(pending.ids), pending.action, to: target)
+        store.relocate(pending.entries, pending.action, to: target)
         state.endSelection()
     }
 }
@@ -287,7 +285,7 @@ struct DayMenu: View {
             Button("Copy Day", systemImage: "doc.on.doc") {
                 state.selecting = true
                 state.selection = Set(entries.map(\.id))
-                state.pending = .init(action: .copy, ids: entries.map(\.id))
+                state.pending = .init(action: .copy, entries: entries)
             }
             .disabled(entries.isEmpty)
             Button("Select All", systemImage: "checkmark.circle") {

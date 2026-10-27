@@ -38,6 +38,12 @@ struct DayPage: View {
             .padding(.vertical, 12)
         }
         .scrollIndicators(.hidden)
+        .onChange(of: entries, initial: true) { publish() }
+        .onChange(of: state.day) { publish() }
+    }
+
+    private func publish() {
+        if state.day == day, state.entries != entries { state.entries = entries }
     }
 }
 
@@ -80,7 +86,7 @@ private struct HourRow: View {
     private func addButton(_ label: String) -> some View {
         if let pending = state.pending, pending.inline {
             Button("Paste at \(label)", systemImage: "doc.on.clipboard.fill") {
-                store.relocate(store.entries(pending.ids), pending.action, to: .hour(day, hour: hour.hour))
+                store.relocate(pending.entries, pending.action, to: .hour(day, hour: hour.hour))
                 state.endSelection()
             }
             .labelStyle(.iconOnly)

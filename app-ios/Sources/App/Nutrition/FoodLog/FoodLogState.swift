@@ -22,7 +22,7 @@ final class FoodLogState {
     /// Selected entries waiting for a paste target: the bar lists targets, and with `inline` every hour's + pastes.
     struct Pending: Hashable {
         var action: Action
-        var ids: [UUID]
+        var entries: [FoodEntry]
         var inline = false
     }
 
@@ -31,6 +31,8 @@ final class FoodLogState {
     static let daysAhead = 365
 
     var day = CalendarDay.today
+    /// The shown day's entries in timeline order, as its page observes them, so the bars never read the database.
+    var entries: [FoodEntry] = []
     var selecting = false
     var selection: Set<UUID> = []
     var pending: Pending?
@@ -38,6 +40,8 @@ final class FoodLogState {
     var editing: FoodEntry?
     var note: NoteDraft?
     var path: [FoodLogRoute] = []
+
+    var selectedEntries: [FoodEntry] { entries.filter { selection.contains($0.id) } }
 
     func select(_ id: UUID) {
         if selecting {
@@ -80,17 +84,6 @@ extension LocalStore {
             case .copy: copyEntries(relocation.ids, to: relocation.day, minute: relocation.minute)
             case .move: moveEntries(relocation.ids, to: relocation.day, minute: relocation.minute)
             }
-        }
-    }
-
-    /// The entries with `ids`, read now, in timeline order.
-    func entries(_ ids: some Collection<UUID>) -> [FoodEntry] {
-        let keys = ids.map(FoodEntry.key)
-        do {
-            return try read { try FoodEntry.fetchAll($0, keys: keys) }.sorted { ($0.day, $0.minute, $0.createdAt) < ($1.day, $1.minute, $1.createdAt) }
-        } catch {
-            Self.log.error("Could not read the selected entries: \(String(describing: error))")
-            return []
         }
     }
 }
