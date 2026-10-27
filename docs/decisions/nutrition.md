@@ -99,7 +99,7 @@ Custom foods, recipes, and favorites live in `app-ios/Sources/App/Nutrition/Libr
 
 - **Totals.** Entry amounts, hour and day totals, and net carbs are computed from snapshots and servings. A day's override replaces its totals.
 - **Day intake.** `DayIntake` is what the expenditure algorithm reads: an override counts, a partial day is skipped, an empty day counts as zero only when marked fasted, and any other empty day is skipped.
-- **Trend weight and expenditure** are recomputed from `body_weights` and the log by the [engine](#engine). MacroFactor stores them as series; we don't, because a stored series goes stale on any edit to a past weigh-in or entry. Only a check-in freezes the expenditure and trend weight it used, in its plan row.
+- **Trend weight and expenditure** are recomputed from `body_weights` and the log by the [engine](#engine). MacroFactor stores them as series; we don't, because a stored series goes stale on any edit to a past weigh-in or entry. Only a check-in freezes the expenditure and trend weight it used, in its plan row. The agent API recomputes them the same way on the server ([Agent API](agent-api.md)).
 - **Micronutrient ranges** resolve from `nutrient_goals` and the registry. Recents, habits, and logging consistency derive from the entries and the day rows.
 
 ## Import

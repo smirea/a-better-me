@@ -1,11 +1,21 @@
 import { z } from 'zod';
 import { SETTINGS_ID } from '../../../shared/db/schema';
 import { foodRoutes } from '../food/routes';
-import { CATALOG_EXERCISES, catalogExercise, EQUIPMENT, EQUIPMENT_BY_ID, type Exercise } from './catalog';
+import {
+	CATALOG_EXERCISES,
+	catalogExercise,
+	EQUIPMENT,
+	EQUIPMENT_BY_ID,
+	exerciseLookup,
+	type Exercise,
+} from './catalog';
 import { ApiError, type Db, type RowOf } from './db';
+import { planOn } from './engine';
+import { expenditureFor, insightRoutes } from './insights';
+import { sessionStats, statsByExercise } from './metrics';
 import * as M from './models';
-import { fresh, mergeNutrition, nutritionRoutes } from './nutrition';
-import { flag, limit, offset, route, where, type Route } from './route';
+import { fresh, logDays, mergeNutrition, nutritionRoutes, pagedList } from './nutrition';
+import { flag, limit, offset, paged, route, where, type Route } from './route';
 
 type TemplateRow = RowOf<'workout_templates'>;
 type SessionRow = RowOf<'workout_sessions'>;
@@ -123,8 +133,28 @@ function exerciseSettings(db: Db, id: string): z.output<typeof M.ExerciseSetting
 		pinnedNote: row?.pinnedNote ?? '',
 		restSeconds: row?.restSeconds ?? null,
 		doNotRecommend: row?.doNotRecommend ?? false,
+		overrides: (row?.overrides as Record<string, unknown> | undefined) ?? {},
 	};
 }
+
+/** Objects merge key by key and everything else replaces, as the app reads a settings tree over its defaults. */
+function deepMerge(base: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> {
+	const merged = { ...base };
+	for (const [key, value] of Object.entries(patch)) {
+		const current = merged[key];
+		const nested = value && typeof value === 'object' && !Array.isArray(value);
+		const into = current && typeof current === 'object' && !Array.isArray(current);
+		merged[key] =
+			nested && into ? deepMerge(current as Record<string, unknown>, value as Record<string, unknown>) : value;
+	}
+	return merged;
+}
+
+const withStats = (db: Db) => {
+	const lookup = exerciseLookup(db);
+	return (row: SessionRow) => ({ ...row, stats: sessionStats(row, lookup) });
+};
+const session = (db: Db, id: string) => withStats(db)(db.find('workout_sessions', id, 'session'));
 
 /** Day ids and template ids lowercase, so they compare equal to row ids and a session's `programDayId`. */
 function program(row: ProgramRow) {
@@ -288,26 +318,33 @@ export const routes: Route[] = [
 		path: '/exercises/{id}/history',
 		tag: 'Exercises',
 		summary: 'Every finished session that trained the exercise, with its sets',
-		description: 'The input for progression: weights, reps, and RIR per set, newest session first.',
-		query: z.object({ limit: limit(10, 200) }),
-		response: M.ExerciseHistory,
+		description:
+			'The input for progression: weights, reps, and RIR per set, newest session first, with the stats the app derives from them.',
+		query: z.object({
+			from: M.instant.optional().meta({ description: 'Started at or after.' }),
+			to: M.instant.optional().meta({ description: 'Started before.' }),
+			limit: limit(10, 1000),
+			offset,
+		}),
+		response: paged(M.ExerciseHistoryEntry),
 		run({ db, params, query }) {
 			findExercise(db, params.id!);
-			const sessions = db.all(
-				'workout_sessions',
-				'ended_at IS NOT NULL AND instr(blocks, ?) > 0 ORDER BY started_at DESC LIMIT ?',
-				[`"exerciseID":${JSON.stringify(params.id)}`, query.limit],
-			);
-			return sessions.map(session => {
-				const exercises = (session.blocks as M.Blocks)
-					.flatMap(b => b.exercises)
-					.filter(e => e.exerciseID === params.id);
+			const lookup = exerciseLookup(db);
+			const conditions: [string, ...(string | number)[]][] = [
+				['ended_at IS NOT NULL'],
+				['instr(blocks, ?) > 0', `"exerciseID":${JSON.stringify(params.id)}`],
+			];
+			if (query.from) conditions.push(['started_at >= ?', query.from]);
+			if (query.to) conditions.push(['started_at < ?', query.to]);
+			return pagedList(db, 'workout_sessions', conditions, 'started_at DESC', query, row => {
+				const exercises = (row.blocks as M.Blocks).flatMap(b => b.exercises).filter(e => e.exerciseID === params.id);
 				return {
-					sessionId: session.id,
-					sessionName: session.name,
-					startedAt: session.startedAt,
+					sessionId: row.id,
+					sessionName: row.name,
+					startedAt: row.startedAt,
 					note: exercises.find(e => e.note)?.note ?? null,
 					sets: exercises.flatMap(e => e.sets),
+					stats: statsByExercise([{ exercises }] as M.Blocks, lookup)[0] ?? null,
 				};
 			});
 		},
@@ -390,16 +427,17 @@ export const routes: Route[] = [
 		response: M.ExerciseSettings,
 		run({ db, params, body }) {
 			findExercise(db, params.id!);
-			const existing = db.get('exercise_settings', params.id!);
+			const { overrides: changed, ...rest } = body;
+			const current = exerciseSettings(db, params.id!);
+			const overrides = changed && {
+				overrides: Object.fromEntries(
+					Object.entries({ ...current.overrides, ...changed }).filter(([, value]) => value !== null),
+				),
+			};
 			db.commit(
-				existing
-					? db.patch('exercise_settings', params.id!, body)
-					: db.put('exercise_settings', {
-							id: params.id!,
-							overrides: {},
-							...exerciseSettings(db, params.id!),
-							...body,
-						}),
+				db.get('exercise_settings', params.id!)
+					? db.patch('exercise_settings', params.id!, { ...rest, ...overrides })
+					: db.put('exercise_settings', { id: params.id!, ...current, ...rest, ...overrides }),
 			);
 			return exerciseSettings(db, params.id!);
 		},
@@ -525,7 +563,7 @@ export const routes: Route[] = [
 			limit: limit(20, 200),
 			offset,
 		}),
-		response: z.array(M.Session),
+		response: paged(M.Session),
 		run({ db, query }) {
 			const conditions: [string, ...(string | number)[]][] = [];
 			if (query.from) conditions.push(['started_at >= ?', query.from]);
@@ -535,12 +573,7 @@ export const routes: Route[] = [
 				conditions.push(['instr(blocks, ?) > 0', `"exerciseID":${JSON.stringify(query.exerciseId)}`]);
 			if (query.templateId) conditions.push(['template_id = ?', query.templateId.toLowerCase()]);
 			if (query.programId) conditions.push(['program_id = ?', query.programId.toLowerCase()]);
-			const [sql, params] = where(conditions);
-			return db.all('workout_sessions', `${sql ?? '1'} ORDER BY started_at DESC LIMIT ? OFFSET ?`, [
-				...params,
-				query.limit,
-				query.offset,
-			]);
+			return pagedList(db, 'workout_sessions', conditions, 'started_at DESC', query, withStats(db));
 		},
 	}),
 	route({
@@ -549,7 +582,7 @@ export const routes: Route[] = [
 		tag: 'Sessions',
 		summary: 'Get a logged workout',
 		response: M.Session,
-		run: context => context.db.find('workout_sessions', id(context), 'session'),
+		run: context => session(context.db, id(context)),
 	}),
 	route({
 		method: 'POST',
@@ -596,7 +629,7 @@ export const routes: Route[] = [
 				health: null,
 			};
 			db.commit(db.put('workout_sessions', row));
-			return row;
+			return withStats(db)(row);
 		},
 	}),
 	route({
@@ -628,7 +661,7 @@ export const routes: Route[] = [
 				});
 			}
 			db.commit(db.patch('workout_sessions', existing.id, changes));
-			return db.find('workout_sessions', existing.id, 'session');
+			return session(db, existing.id);
 		},
 	}),
 	route({
@@ -753,6 +786,61 @@ export const routes: Route[] = [
 		},
 	}),
 	route({
+		method: 'POST',
+		path: '/programs/{id}/days/{dayId}/rest-done',
+		tag: 'Programs',
+		summary: 'Tick a rest day done in the current cycle, or untick it',
+		description: "The Active Program's rest-day checkbox. A workout day is done by a finished session of it instead.",
+		body: z.object({ done: z.boolean().default(true) }),
+		response: M.ProgramDetail,
+		run({ db, params, body, now }) {
+			const row = program(db.find('programs', params.id!, 'program'));
+			const target = row.days.find(day => sameId(day.id, params.dayId));
+			if (!target) throw new ApiError(404, `Program ${row.id} has no day ${params.dayId}`);
+			if (target.templateID) throw new ApiError(422, `Day ${target.id} is a workout day, not a rest day`);
+			const days = row.days.map(({ restDoneInCycle, ...day }) => {
+				const tick = day.id === target.id ? (body.done ? row.currentCycle : undefined) : restDoneInCycle;
+				return tick === undefined ? day : { ...day, restDoneInCycle: tick };
+			});
+			db.commit(db.patch('programs', row.id, { days, updatedAt: now }));
+			return programDetail(db, db.find('programs', row.id, 'program'));
+		},
+	}),
+	route({
+		method: 'POST',
+		path: '/programs/{id}/duplicate',
+		tag: 'Programs',
+		summary: 'Copy a program and its templates, inactive, named "<name> Copy"',
+		response: M.ProgramDetail,
+		run({ db, params, now }) {
+			const source = program(db.find('programs', params.id!, 'program'));
+			const programId = M.newId();
+			const changes: ReturnType<Db['put']>[] = [];
+			const days = source.days.map((day): ProgramDay => {
+				const template = day.templateID && db.get('workout_templates', day.templateID);
+				if (!template) return { id: M.newId() };
+				const copy: TemplateRow = { ...template, id: M.newId(), programId, createdAt: now, updatedAt: now };
+				changes.push(db.put('workout_templates', copy));
+				return { id: M.newId(), templateID: copy.id };
+			});
+			const { runStartedAt: _, ...config } = source.config;
+			const row: ProgramRow = {
+				...source,
+				id: programId,
+				name: `${source.name} Copy`,
+				currentCycle: 1,
+				active: false,
+				archived: false,
+				config,
+				days,
+				createdAt: now,
+				updatedAt: now,
+			};
+			db.commit(...changes, db.put('programs', row));
+			return programDetail(db, db.find('programs', programId, 'program'));
+		},
+	}),
+	route({
 		method: 'DELETE',
 		path: '/programs/{id}',
 		tag: 'Programs',
@@ -857,7 +945,7 @@ export const routes: Route[] = [
 		method: 'GET',
 		path: '/settings',
 		tag: 'Settings',
-		summary: 'Get the weight unit, rest defaults, profile, and Nutrition settings',
+		summary: 'Get the weight unit, rest defaults, profile, Workout settings, and Nutrition settings',
 		response: M.Settings,
 		run: ({ db }) => settings(db),
 	}),
@@ -865,8 +953,8 @@ export const routes: Route[] = [
 		method: 'PATCH',
 		path: '/settings',
 		tag: 'Settings',
-		summary: 'Change the weight unit, rest defaults, profile, or Nutrition settings',
-		description: '`profile` and `nutrition` merge into the stored ones.',
+		summary: 'Change the weight unit, rest defaults, profile, Workout settings, or Nutrition settings',
+		description: '`profile`, `workout`, and `nutrition` merge into the stored ones.',
 		body: M.SettingsPatch,
 		response: M.Settings,
 		run({ db, body }) {
@@ -881,6 +969,7 @@ export const routes: Route[] = [
 				restCore: rest.core,
 				profile: { ...current.profile, ...body.profile },
 				nutrition: mergeNutrition(current.nutrition, body.nutrition),
+				workout: deepMerge(current.workout, body.workout ?? {}),
 			};
 			const exists = db.get('settings', SETTINGS_ID);
 			db.commit(
@@ -899,18 +988,21 @@ export const routes: Route[] = [
 		summary: 'List logged body weights, newest first',
 		description: 'Only weigh-ins logged in the app or here. HealthKit samples never leave the phone.',
 		query: z.object({ from: M.instant.optional(), to: M.instant.optional(), limit: limit(100, 1000), offset }),
-		response: z.array(M.BodyWeight),
+		response: paged(M.BodyWeight),
 		run({ db, query }) {
 			const conditions: [string, ...(string | number)[]][] = [];
 			if (query.from) conditions.push(['measured_at >= ?', query.from]);
 			if (query.to) conditions.push(['measured_at < ?', query.to]);
-			const [sql, params] = where(conditions);
-			return db.all('body_weights', `${sql ?? '1'} ORDER BY measured_at DESC, id LIMIT ? OFFSET ?`, [
-				...params,
-				query.limit,
-				query.offset,
-			]);
+			return pagedList(db, 'body_weights', conditions, 'measured_at DESC, id', query);
 		},
+	}),
+	route({
+		method: 'GET',
+		path: '/body-weights/{id}',
+		tag: 'Body weight',
+		summary: 'Get a logged body weight',
+		response: M.BodyWeight,
+		run: ({ db, params }) => db.find('body_weights', params.id!.toLowerCase(), 'body weight'),
 	}),
 	route({
 		method: 'POST',
@@ -951,11 +1043,12 @@ export const routes: Route[] = [
 		},
 	}),
 	...nutritionRoutes,
+	...insightRoutes,
 	...foodRoutes,
 ];
 
 /** What the authenticated root returns besides the docs: enough state that an agent knows where things stand. */
-export function snapshot(db: Db) {
+export function snapshot(db: Db, timeZone: string, now: string) {
 	const active = db.all('programs', 'active = 1 ORDER BY updated_at DESC')[0];
 	const defaultGym = db.all('gym_profiles', 'is_default = 1 ORDER BY updated_at DESC')[0];
 	const inProgress = db.all('workout_sessions', 'ended_at IS NULL')[0];
@@ -982,5 +1075,26 @@ export function snapshot(db: Db) {
 			nutritionPlans: count('nutrition_plans'),
 		},
 		lastFoodLogDay: db.all('food_entries', '1 ORDER BY day DESC LIMIT 1')[0]?.day ?? null,
+		...nutritionState(db, timeZone, now),
+	};
+}
+
+function nutritionState(db: Db, timeZone: string, now: string) {
+	const { today, trend, result } = expenditureFor(db, timeZone, now);
+	const latest = db.all('body_weights', '1 ORDER BY measured_at DESC LIMIT 1')[0];
+	const log = logDays(db, { from: today, to: today })[0];
+	const placed = planOn(db.all('nutrition_plans'), today);
+	return {
+		today,
+		timeZone,
+		latestWeighIn: latest ? { measuredAt: latest.measuredAt, weightKg: latest.weightKg } : null,
+		trendWeightKg: trend.at(-1)?.trendKg ?? null,
+		expenditure: result.strategy ? { kcal: result.days.at(-1)!.kcal, strategy: result.strategy } : null,
+		nutritionToday: {
+			planId: placed?.plan.id ?? null,
+			target: placed?.target ?? null,
+			consumed: log?.consumed ?? {},
+			entryCount: log?.entryCount ?? 0,
+		},
 	};
 }

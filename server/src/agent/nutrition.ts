@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { BODY_METRIC_KINDS, nutrientID, type SyncedTable } from '../../../shared/db/schema';
 import { ApiError, type Db, type RowOf } from './db';
 import * as M from './models';
-import { limit, offset, route, where, type Route } from './route';
+import { countedKcal, planOn } from './engine';
+import { limit, offset, paged, route, where, type Route } from './route';
 
 type Amounts = Record<string, number>;
 type Snapshot = z.output<typeof M.FoodSnapshot>;
@@ -111,16 +112,62 @@ function dayRange(column: string, query: { from?: string; to?: string }) {
 }
 const page = { limit: limit(500, 5000), offset };
 
-function list<T extends SyncedTable>(
+function list<T extends SyncedTable>(db: Db, table: T, conditions: [string, ...(string | number)[]][], order: string) {
+	const [sql, params] = where(conditions);
+	return db.all(table, `${sql ?? '1'} ORDER BY ${order}`, params);
+}
+
+export function pagedList<T extends SyncedTable, Item = RowOf<T>>(
 	db: Db,
 	table: T,
 	conditions: [string, ...(string | number)[]][],
 	order: string,
-	query?: { limit: number; offset: number },
+	query: { limit: number; offset: number },
+	map: (row: RowOf<T>) => Item = row => row as Item,
 ) {
 	const [sql, params] = where(conditions);
-	const paging = query ? ` LIMIT ${query.limit} OFFSET ${query.offset}` : '';
-	return db.all(table, `${sql ?? '1'} ORDER BY ${order}${paging}`, params);
+	const rows = db.all(table, `${sql ?? '1'} ORDER BY ${order} LIMIT ? OFFSET ?`, [
+		...params,
+		query.limit,
+		query.offset,
+	]);
+	return { total: db.count(table, sql, params), items: rows.map(map) };
+}
+
+type Plans = RowOf<'nutrition_plans'>[];
+
+/** A day as the Dashboard reads it (`NutritionLogDay`), with the target of the plan in force. */
+function logSummary(
+	day: string,
+	entries: ReturnType<typeof entry>[],
+	row: RowOf<'nutrition_days'> | undefined,
+	plans: Plans,
+) {
+	const totals = total(entries as { food: Snapshot; serving: Serving }[]);
+	const status = row?.status ?? 'none';
+	const override = (row?.override as Amounts | null | undefined) ?? null;
+	const placed = planOn(plans, day);
+	return {
+		day,
+		status,
+		override,
+		entryCount: entries.length,
+		totals,
+		consumed: override ?? totals,
+		countedKcal: countedKcal(entries.length ? (totals.k ?? 0) : null, status, override),
+		planId: placed?.plan.id ?? null,
+		target: placed?.target ?? null,
+	};
+}
+
+/** Every day in the range with entries or a day row, oldest first. */
+export function logDays(db: Db, range: { from?: string; to?: string }) {
+	const entries = Map.groupBy(list(db, 'food_entries', dayRange('day', range), 'day').map(entry), e => e.day);
+	const rows = new Map(list(db, 'nutrition_days', dayRange('id', range), 'id').map(row => [row.id, row]));
+	const plans = db.all('nutrition_plans');
+	return [...new Set([...entries.keys(), ...rows.keys()])]
+		.toSorted()
+		.map(day => logSummary(day, entries.get(day) ?? [], rows.get(day), plans));
 }
 
 const dayParam = (params: Record<string, string>) => M.day.parse(params.day);
@@ -141,7 +188,7 @@ export const nutritionRoutes: Route[] = [
 			archived: z.stringbool().optional(),
 			...page,
 		}),
-		response: z.array(M.Food),
+		response: paged(M.Food),
 		run({ db, query }) {
 			const conditions: [string, ...(string | number)[]][] = [];
 			if (query.q)
@@ -151,7 +198,7 @@ export const nutritionRoutes: Route[] = [
 				]);
 			if (query.source) conditions.push(['source = ?', query.source]);
 			if (query.archived !== undefined) conditions.push(['archived = ?', query.archived ? 1 : 0]);
-			return list(db, 'foods', conditions, 'name, id', query);
+			return pagedList(db, 'foods', conditions, 'name, id', query);
 		},
 	}),
 	route({
@@ -214,12 +261,12 @@ export const nutritionRoutes: Route[] = [
 		tag: 'Recipes',
 		summary: 'List recipes, with the nutrition each derives from its ingredients',
 		query: z.object({ q: z.string().optional(), archived: z.stringbool().optional(), ...page }),
-		response: z.array(M.Recipe),
+		response: paged(M.Recipe),
 		run({ db, query }) {
 			const conditions: [string, ...(string | number)[]][] = [];
 			if (query.q) conditions.push(['instr(lower(name), ?) > 0', query.q.toLowerCase()]);
 			if (query.archived !== undefined) conditions.push(['archived = ?', query.archived ? 1 : 0]);
-			return list(db, 'recipes', conditions, 'name, id', query).map(recipe);
+			return pagedList(db, 'recipes', conditions, 'name, id', query, recipe);
 		},
 	}),
 	route({
@@ -287,26 +334,41 @@ export const nutritionRoutes: Route[] = [
 		run({ db, params }) {
 			const day = dayParam(params);
 			const entries = db.all('food_entries', 'day = ? ORDER BY minute, created_at, id', [day]).map(entry);
-			const row = db.get('nutrition_days', day);
-			return {
+			const { entryCount: _, ...summary } = logSummary(
 				day,
-				status: row?.status ?? 'none',
-				override: row?.override ?? null,
-				totals: total(entries as { food: Snapshot; serving: Serving }[]),
 				entries,
-				notes: db.all('food_log_notes', 'day = ? ORDER BY minute, id', [day]),
-			};
+				db.get('nutrition_days', day),
+				db.all('nutrition_plans'),
+			);
+			return { ...summary, entries, notes: db.all('food_log_notes', 'day = ? ORDER BY minute, id', [day]) };
 		},
+	}),
+	route({
+		method: 'GET',
+		path: '/food-log',
+		tag: 'Food log',
+		summary: 'Each day of a range with its totals, status, and target, without the entries',
+		description:
+			'One call for intake against targets over weeks or months. A day missing from the list has no entries and no day row: nothing was logged.',
+		query: days,
+		response: z.array(M.FoodLogSummary),
+		run: ({ db, query }) => logDays(db, query),
 	}),
 	route({
 		method: 'GET',
 		path: '/food-entries',
 		tag: 'Food log',
 		summary: 'List logged foods, oldest first',
-		query: days.extend(page),
-		response: z.array(M.FoodEntry),
-		run: ({ db, query }) =>
-			list(db, 'food_entries', dayRange('day', query), 'day, minute, created_at, id', query).map(entry),
+		query: days.extend({
+			foodId: z.string().optional().meta({ description: 'Only entries of this food or recipe.' }),
+			...page,
+		}),
+		response: paged(M.FoodEntry),
+		run({ db, query }) {
+			const conditions = dayRange('day', query);
+			if (query.foodId) conditions.push(["lower(json_extract(food, '$.foodID')) = ?", query.foodId.toLowerCase()]);
+			return pagedList(db, 'food_entries', conditions, 'day, minute, created_at, id', query, entry);
+		},
 	}),
 	route({
 		method: 'GET',
@@ -412,6 +474,14 @@ export const nutritionRoutes: Route[] = [
 		run: ({ db, query }) => list(db, 'food_log_notes', dayRange('day', query), 'day, minute, id'),
 	}),
 	route({
+		method: 'GET',
+		path: '/food-log-notes/{id}',
+		tag: 'Food log',
+		summary: 'Get a food log note',
+		response: M.FoodLogNote,
+		run: ({ db, params }) => db.find('food_log_notes', params.id!.toLowerCase(), 'note'),
+	}),
+	route({
 		method: 'POST',
 		path: '/food-log-notes',
 		tag: 'Food log',
@@ -462,6 +532,14 @@ export const nutritionRoutes: Route[] = [
 		run: ({ db }) => db.all('food_favorites', '1 ORDER BY created_at, id'),
 	}),
 	route({
+		method: 'GET',
+		path: '/food-favorites/{id}',
+		tag: 'Foods',
+		summary: 'Get a favorite',
+		response: M.FoodFavorite,
+		run: ({ db, params }) => db.find('food_favorites', params.id!.toLowerCase(), 'favorite'),
+	}),
+	route({
 		method: 'POST',
 		path: '/food-favorites',
 		tag: 'Foods',
@@ -501,11 +579,11 @@ export const nutritionRoutes: Route[] = [
 		tag: 'Body weight',
 		summary: 'List visual body fat, tape measurements, and step counts, oldest first',
 		query: days.extend({ kind: z.enum(BODY_METRIC_KINDS).optional(), ...page }),
-		response: z.array(M.BodyMetric),
+		response: paged(M.BodyMetric),
 		run({ db, query }) {
 			const conditions = dayRange('day', query);
 			if (query.kind) conditions.push(['kind = ?', query.kind]);
-			return list(db, 'body_metrics', conditions, 'day, kind', query);
+			return pagedList(db, 'body_metrics', conditions, 'day, kind', query);
 		},
 	}),
 	route({
@@ -544,6 +622,20 @@ export const nutritionRoutes: Route[] = [
 		summary: 'List nutrition plans, oldest first: goal history and check-in history',
 		response: z.array(M.NutritionPlan),
 		run: ({ db }) => db.all('nutrition_plans', '1 ORDER BY id'),
+	}),
+	route({
+		method: 'GET',
+		path: '/nutrition-plans/on/{day}',
+		tag: 'Strategy',
+		summary: "The plan in force on a day, with that day's target",
+		description: 'The latest plan that starts on or before the day.',
+		response: z.object({ plan: M.NutritionPlan, target: M.DayTarget }),
+		run({ db, params }) {
+			const day = dayParam(params);
+			const placed = planOn(db.all('nutrition_plans'), day);
+			if (!placed) throw new ApiError(404, `No nutrition plan is in force on ${day}`);
+			return placed;
+		},
 	}),
 	route({
 		method: 'GET',

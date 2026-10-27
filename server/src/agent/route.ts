@@ -30,6 +30,8 @@ export function route<Query extends z.ZodObject = z.ZodObject<{}>, Body extends 
 export const flag = z.stringbool();
 export const limit = (fallback: number, max: number) => z.coerce.number().int().min(1).max(max).default(fallback);
 export const offset = z.coerce.number().int().min(0).default(0);
+/** A list that pages: `total` counts every match, so an agent knows when it has them all. */
+export const paged = (item: z.ZodType) => z.object({ total: z.int(), items: z.array(item) });
 
 export function where(conditions: [string, ...(string | number)[]][]): [string | undefined, (string | number)[]] {
 	if (!conditions.length) return [undefined, []];

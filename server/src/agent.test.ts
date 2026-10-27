@@ -173,7 +173,15 @@ describe('agent API', () => {
 		done[0].exercises[0].sets[0].log = { weightKg: 100, reps: 6, rir: 2 };
 		await ok('PATCH', `/sessions/${logged.id}`, { blocks: done });
 		const history = await ok('GET', `/exercises/${BENCH}/history`);
-		expect(history[0].sets[0].log).toEqual({ weightKg: 100, reps: 6, rir: 2, completedAt: '2026-10-24T09:00:00.000Z' });
+		expect(history.total).toBe(1);
+		expect(history.items[0].sets[0].log).toEqual({
+			weightKg: 100,
+			reps: 6,
+			rir: 2,
+			completedAt: '2026-10-24T09:00:00.000Z',
+		});
+		expect(history.items[0].stats).toMatchObject({ loggedSets: 1, workingSets: 1, volumeKg: 600, bestReps: 6 });
+		expect(history.items[0].stats.bestEstimatedOneRepMaxKg).toBeCloseTo(126.67, 2);
 	});
 
 	test('bad input is refused before it can reach the phone', async () => {

@@ -199,7 +199,7 @@ describe('import-macrofactor', () => {
 	test('a dry run counts what it would write and writes nothing', async () => {
 		const { counts } = await run([granular, quick], true);
 		expect(counts.food_entries).toEqual(row(4));
-		expect(await get('/foods')).toEqual([]);
+		expect(await get('/foods')).toEqual({ total: 0, items: [] });
 	});
 
 	test('the first run creates every row, and a second creates none', async () => {
@@ -275,7 +275,7 @@ describe('import-macrofactor', () => {
 			{ id: '2026-01-08', status: 'none', override: { k: 2000, f: 70, c: 200, p: 150, '291': 30 } },
 			{ id: '2026-01-10', status: 'fasted', override: null },
 		]);
-		expect(await get('/body-weights')).toEqual([
+		expect((await get('/body-weights')).items).toEqual([
 			{
 				id: stableId('weight', '2026-01-09'),
 				measuredAt: '2026-01-09T12:00:00.000Z',
@@ -291,7 +291,7 @@ describe('import-macrofactor', () => {
 				bodyFatPercent: 25,
 			},
 		]);
-		expect((await get('/body-metrics')).map((metric: any) => [metric.id, metric.value])).toEqual([
+		expect((await get('/body-metrics')).items.map((metric: any) => [metric.id, metric.value])).toEqual([
 			['2026-01-08/steps', 8000],
 			['2026-01-08/visual_body_fat', 20],
 			['2026-01-08/waist', 86.36],
@@ -342,7 +342,9 @@ describe('import-macrofactor', () => {
 		});
 		const first = await run([scale]);
 		expect(first.counts.body_weights).toEqual(row(0, 1));
-		const day = (await get('/body-weights')).filter((weighIn: any) => weighIn.measuredAt.startsWith('2026-02-01'));
+		const day = (await get('/body-weights')).items.filter((weighIn: any) =>
+			weighIn.measuredAt.startsWith('2026-02-01'),
+		);
 		expect(day.map((weighIn: any) => [weighIn.measuredAt, weighIn.weightKg, weighIn.bodyFatPercent])).toEqual([
 			['2026-02-01T17:00:00.000Z', 95, 22],
 		]);

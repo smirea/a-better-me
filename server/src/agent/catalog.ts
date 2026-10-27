@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import equipmentJson from '../../../app-ios/Sources/App/Resources/Catalog/equipment.json';
 import exercisesJson from '../../../app-ios/Sources/App/Resources/Catalog/exercises.json';
+import type { Db } from './db';
 import type { StoredExercise } from './models';
 
 /**
@@ -20,3 +21,9 @@ export const EQUIPMENT_BY_ID = new Map(EQUIPMENT.map(item => [item.id, item]));
 const BY_ID = new Map(CATALOG_EXERCISES.map(exercise => [exercise.id, exercise]));
 
 export const catalogExercise = (id: string) => BY_ID.get(id);
+
+/** Catalog and custom exercises by id, reading the custom ones once per request. */
+export function exerciseLookup(db: Db) {
+	const custom = new Map(db.all('custom_exercises').map(row => [row.id, row.exercise as Exercise]));
+	return (id: string) => BY_ID.get(id) ?? custom.get(id);
+}

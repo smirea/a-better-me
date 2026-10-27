@@ -27,12 +27,14 @@ async function get(path: string): Promise<any> {
 	if (!response.ok) throw new Error(`GET ${path}: ${response.status}`);
 	return response.json();
 }
+/** A paged list answers `{ total, items }`; an unpaged one, such as the plans, answers its whole array. */
 async function every(path: string): Promise<Row[]> {
 	const rows: Row[] = [];
 	for (let offset = 0; ; offset += 1000) {
-		const page: Row[] = await get(`${path}?limit=1000&offset=${offset}`);
-		rows.push(...page);
-		if (page.length < 1000) return rows;
+		const page: Row[] | { total: number; items: Row[] } = await get(`${path}?limit=1000&offset=${offset}`);
+		if (Array.isArray(page)) return page;
+		rows.push(...page.items);
+		if (rows.length >= page.total || !page.items.length) return rows;
 	}
 }
 
