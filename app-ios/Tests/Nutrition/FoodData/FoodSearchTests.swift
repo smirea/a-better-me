@@ -174,4 +174,13 @@ struct FoodSearchTests {
         #expect(try store.read { try Food.fetchOne($0, key: "usda-173944") }?.name == "Bananas, raw")
         #expect(names(try search.local("banana")).first == "history Bananas, raw")
     }
+
+    @Test func aPhotoNameMatchesItsExactDescriptionOrOnlyWordsThatCount() async throws {
+        let search = try await search()
+        #expect(try search.match("Chicken, broilers or fryers, breast, meat only, cooked, fried")?.portion.food.name == "Chicken, broilers or fryers, breast, meat only, cooked, fried")
+        #expect(try search.match("skinless chicken breast cooked")?.portion.food.name == "Chicken, broilers or fryers, breast, meat only, cooked, roasted")
+        #expect(try search.match("grilled salmon")?.portion.food.name == "Fish, salmon, Atlantic, farmed, cooked, dry heat")
+        #expect(try search.match("rice cooked") == nil)
+        #expect(try search.match("") == nil)
+    }
 }

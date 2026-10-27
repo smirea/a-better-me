@@ -2,11 +2,12 @@ import Foundation
 import Observation
 
 enum LoggerTab: String, CaseIterable, Hashable, Sendable {
-    case scan, search, quickAdd, library
+    case scan, photo, search, quickAdd, library
 
     var title: String {
         switch self {
         case .scan: "Scan"
+        case .photo: "Photo"
         case .search: "Search"
         case .quickAdd: "Quick Add"
         case .library: "Library"
@@ -16,6 +17,7 @@ enum LoggerTab: String, CaseIterable, Hashable, Sendable {
     var systemImage: String {
         switch self {
         case .scan: "barcode.viewfinder"
+        case .photo: "camera"
         case .search: "magnifyingglass"
         case .quickAdd: "bolt"
         case .library: "books.vertical"
@@ -58,12 +60,19 @@ enum BarcodeOutcome: Hashable, Sendable {
     case unreachable
 }
 
+/// What a meal photo put on the plate, and the foods it named that nothing in the search matched.
+struct PhotoOutcome: Hashable, Sendable {
+    var added: Int
+    var unmatched: [String]
+}
+
 /// The logger sheet's state: the search, the plate, and the time it logs at. The views are thin over it, so the flows
 /// (multi-add, logging the plate, a barcode lookup) are tested without a screen.
 @MainActor @Observable
 final class LoggerSession {
     let store: LocalStore
     @ObservationIgnored let search: FoodSearch
+    @ObservationIgnored let recognizer: any MealRecognizer
     var tab: LoggerTab
     /// The Library tab's opening section; the library keeps its own after that.
     let library: FoodLibraryView.Tab
@@ -84,9 +93,10 @@ final class LoggerSession {
     private(set) var logged = 0
     @ObservationIgnored private var remote: Task<Void, Never>?
 
-    init(store: LocalStore, search: FoodSearch, start: LoggerStart) {
+    init(store: LocalStore, search: FoodSearch, start: LoggerStart, recognizer: any MealRecognizer = MealPhotoClient.live) {
         self.store = store
         self.search = search
+        self.recognizer = recognizer
         tab = start.tab
         library = start.library
         chosenTime = start.time
@@ -155,6 +165,27 @@ final class LoggerSession {
         if let uncached { store.saveFood(uncached) }
         store.addFavorite(portion)
         await reloadSearch()
+    }
+
+    /// Puts the foods a meal photo shows on the plate: each name the server's model gives is matched against the
+    /// local search (history first, then the owner's foods and USDA) and weighed at the model's grams, or left at the
+    /// food's default serving when it has no weight. Throws when the server cannot be reached or refuses the photo.
+    func addPhoto(jpeg: Data, note: String?) async throws -> PhotoOutcome {
+        let foods = try await recognizer.recognize(jpeg: jpeg, note: note)
+        var outcome = PhotoOutcome(added: 0, unmatched: [])
+        for food in foods {
+            guard let result = try search.match(food.search) else {
+                outcome.unmatched.append(food.name)
+                continue
+            }
+            var pick = LoggerPick(result)
+            if let grams = pick.portion.food.nutrition.allMeasures.first(where: { $0.name == "g" }) {
+                pick.portion.serving = Serving(measure: grams, quantity: food.grams)
+            }
+            plate.add(pick)
+            outcome.added += 1
+        }
+        return outcome
     }
 
     /// A typed or scanned barcode: a custom or cached food first, then Open Food Facts.

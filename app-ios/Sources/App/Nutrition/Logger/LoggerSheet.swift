@@ -7,7 +7,7 @@ enum LoggerRoute: Hashable {
 }
 
 /// MacroFactor's logger (research spec §5): one full-height sheet with the banner (exit, time chip, what the plate
-/// leaves of the day, the plate) over the Scan, Search, Quick Add, and Library tabs. Describe and AI are not built
+/// leaves of the day, the plate) over the Scan, Photo, Search, Quick Add, and Library tabs. Describe is not built
 /// (docs/decisions/nutrition.md). Logging the plate closes it.
 struct LoggerSheet: View {
     let start: LoggerStart
@@ -99,6 +99,7 @@ private struct LoggerContent: View {
         let open = settings.nutrition.logger.optimization == .context ? addAndShowPlate : detail
         switch session.tab {
         case .scan: ScanTab(session: session, open: detail).toolbar(.hidden, for: .navigationBar)
+        case .photo: PhotoTab(session: session, showPlate: openPlate).toolbar(.hidden, for: .navigationBar)
         case .search: SearchTab(session: session, open: open).toolbar(.hidden, for: .navigationBar)
         case .quickAdd: QuickAddTab(session: session).toolbar(.hidden, for: .navigationBar)
         case .library:

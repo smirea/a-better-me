@@ -32,7 +32,7 @@ const PROMPT = `You log meals for a calorie tracker. List every food and drink i
 
 - One item per separately weighable food: split a plate into its components (rice, chicken, broccoli), but keep a single dish whole when its parts cannot be told apart (lasagna, a smoothie, soup).
 - Include what is cooked in or poured on when you can see or reasonably infer it: oil, butter, dressing, sauce, cheese, sugar in a drink. Give it its own item.
-- "name" is what a person would call it ("Grilled chicken breast"). "search" is the plain generic food a nutrition database lists, raw or cooked as served, no brands or adjectives that do not change nutrition ("chicken breast cooked", "white rice cooked", "olive oil").
+- "name" is what a person would call it ("Grilled chicken breast"). "search" is the closest food description in USDA's SR Legacy database, in its comma style, for the food as served: "Chicken, broilers or fryers, breast, meat only, cooked, roasted", "Rice, white, long-grain, regular, enriched, cooked", "Broccoli, cooked, boiled, drained, without salt", "Oil, olive, salad or cooking". Prefer a common SR Legacy food over a branded or restaurant one.
 - "grams" is the edible weight in the photo. Use the plate, cutlery, hands, and packaging for scale. A scale's display or a label's weight overrides your estimate.
 - "confidence" is 0 to 1 for the identification and the weight together.
 - If the note contradicts the photo, the note wins. If there is no food, return no items.`;

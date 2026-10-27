@@ -174,6 +174,35 @@ final class FoodSearch {
         return food
     }
 
+    /// The best local food for a name the photo model gave, or nil. The model is asked for SR Legacy's own description
+    /// ("Chicken, broilers or fryers, drumstick, meat and skin, cooked, roasted"), which wins outright when the bundle
+    /// has it; plainer names ranked chicken skin above the drumstick. Every remaining word must match, as in typed
+    /// search. Only two kinds of word may go: one no food uses at all
+    /// ("skinless", "pilaf"), and then the cooking words, one at a time. Dropping any other word turned "garlic cooked"
+    /// into cooked rice and a green salad into a peppercorn dressing, so a food with no honest match is left for the
+    /// owner to search.
+    func match(_ name: String) throws -> FoodSearchResult? {
+        var terms: [String] = []
+        for term in FoodText.terms(name) where !Self.fillers.contains(term) {
+            if try !local(term).isEmpty { terms.append(term) }
+        }
+        while terms.contains(where: { !Self.preparations.contains($0) }) {
+            let results = try local(terms.joined(separator: " "))
+            if let hit = results.first(where: { $0.portion.food.name.caseInsensitiveCompare(name) == .orderedSame }) ?? results.first {
+                return hit
+            }
+            guard let index = terms.lastIndex(where: { Self.preparations.contains($0) }), terms.count > 1 else { return nil }
+            terms.remove(at: index)
+        }
+        return nil
+    }
+
+    private static let fillers: Set<String> = ["a", "an", "and", "of", "on", "or", "the", "with", "in"]
+    private static let preparations: Set<String> = Set([
+        "baked", "boiled", "braised", "broiled", "chopped", "cooked", "fresh", "fried", "grilled", "homemade", "mashed",
+        "mixed", "plain", "poached", "raw", "roasted", "sauteed", "sliced", "steamed", "stewed", "toasted",
+    ].map(FoodText.stem))
+
     /// Caches a USDA or Open Food Facts result before it is logged; a no-op for the owner's own foods.
     func cache(_ result: FoodSearchResult) {
         if let food = result.food { store.saveFood(food) }
