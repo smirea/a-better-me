@@ -37,6 +37,7 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
             if groups.isEmpty {
                 ContentUnavailableView.search(text: query)
                     .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
             ForEach(groups) { group in
                 let isExpanded = expanded.contains(group.category)

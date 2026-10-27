@@ -364,6 +364,7 @@ private struct DaysStepper: View {
                 RoundIconButton("More days", systemImage: "plus") { days += 1 }
                     .disabled(days >= NewProgramWizardRules.dayRange.upperBound)
             }
+            .font(AppFont.headline(20))
             Text("times per week").font(AppFont.medium(15))
         }
         .frame(maxWidth: .infinity)

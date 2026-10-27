@@ -83,6 +83,7 @@ struct GymProfileEditor: View {
             if sections.isEmpty {
                 ContentUnavailableView.search(text: query)
                     .listRowBackground(Theme.background)
+                    .listRowSeparator(.hidden)
             }
             ForEach(sections, id: \.category) { section in
                 let anySelected = section.items.contains { gym.equipment[$0.id] != nil }
