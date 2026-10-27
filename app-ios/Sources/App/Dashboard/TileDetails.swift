@@ -78,7 +78,7 @@ extension DashboardData {
     func bodyMetricDetail(_ card: BodyMetricCard) -> MetricDetail {
         let unit: MetricUnit = switch card {
         case .waistToHeight, .waistToHip: .ratio
-        default: .decimal(card.unit(weight: self.unit, height: nutritionSettings.heightUnit))
+        default: .decimal(card.unit(weight: self.unit, height: heightUnit))
         }
         return MetricDetail(title: card.title, tabs: [MetricTab(
             title: card.title, points: bodySeries(card).map { DatedValue(date: $0.date, value: display(card, $0.value)) }, unit: unit,
@@ -91,7 +91,7 @@ extension DashboardData {
     }
 
     private func display(_ card: BodyMetricCard, _ value: Double) -> Double {
-        card.isLength ? nutritionSettings.heightUnit.fromCm(value) : value
+        card.isLength ? heightUnit.fromCm(value) : value
     }
 
     private func format(_ card: BodyMetricCard, _ value: Double) -> String {
