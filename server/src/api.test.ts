@@ -47,10 +47,10 @@ const template = {
 };
 
 describe('handle', () => {
-	test('GET /status is open', async () => {
-		const response = await handle(new Request('http://api.test/status'), app);
-		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({ ok: true });
+	test('nothing outside /api answers', async () => {
+		for (const path of ['/', '/status', '/openapi.json']) {
+			expect((await handle(new Request(`http://api.test${path}`), app)).status).toBe(404);
+		}
 	});
 
 	test('the sync routes need the owner token, anything outside /api is 404', async () => {
