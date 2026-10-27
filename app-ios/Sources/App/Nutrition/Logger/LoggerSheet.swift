@@ -152,7 +152,7 @@ private struct LoggerBanner: View {
 
     var body: some View {
         let options = settings.nutrition.logger
-        let day = dayRow.intake(entries)
+        let day = dayRow.totals(entries)
         GlassEffectContainer {
             HStack(spacing: 10) {
                 Button("Close", systemImage: "xmark", action: exit)

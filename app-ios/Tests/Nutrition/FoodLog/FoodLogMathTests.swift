@@ -58,11 +58,11 @@ struct FoodLogMathTests {
 
         var edited = NutritionDay(id: monday)
         edited.override = [.energy: 1800, .protein: 120]
-        let overridden = FoodLog.dayTotals(entries, row: edited)
+        let overridden = edited.totals(entries)
         #expect(overridden[.energy] == 1800)
         #expect(overridden[.protein] == 120)
         #expect(overridden[.fat] == 22)
-        #expect(FoodLog.dayTotals(entries, row: nil) == totals)
+        #expect(NutritionDay(id: monday).totals(entries) == totals)
 
         let untargeted = FoodLog.summary(totals, target: nil, showOverages: true)
         #expect(untargeted.map(\.remaining) == [nil, nil, nil, nil])

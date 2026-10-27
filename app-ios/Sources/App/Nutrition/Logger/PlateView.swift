@@ -20,7 +20,7 @@ struct PlateView: View {
 
     var body: some View {
         let plate = session.plate.totals
-        let day = dayRow.intake(entries)
+        let day = dayRow.totals(entries)
         List {
             Section("Your Plate") {
                 ForEach(session.plate.items) { item in

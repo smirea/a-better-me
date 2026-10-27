@@ -95,10 +95,7 @@ struct NutrientTodaySection: View {
         _entries = Observe(FoodEntry.on(summary.today))
     }
 
-    private var contributors: [(name: String, amount: Double)] {
-        let amounts = Dictionary(entries.map { ($0.food.name, $0.amounts.amount(of: summary.nutrient) ?? 0) }, uniquingKeysWith: +)
-        return amounts.filter { $0.value > 0 }.sorted { $0.value > $1.value }.prefix(3).map { ($0.key, $0.value) }
-    }
+    private var contributors: [Contributor] { FoodLog.contributors(entries, of: summary.nutrient, limit: 3) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -128,7 +125,7 @@ struct NutrientTodaySection: View {
                 if !contributors.isEmpty {
                     Divider().overlay(Theme.separator)
                     Text("Top 3 Contributors").font(AppFont.rowTitle)
-                    ForEach(contributors, id: \.name) { item in
+                    ForEach(contributors) { item in
                         HStack {
                             Text(item.name).font(AppFont.rowTitle).lineLimit(1)
                             Spacer()

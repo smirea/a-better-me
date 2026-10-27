@@ -73,7 +73,7 @@ struct NutritionModelTests {
         marked.status = .partial
         #expect(DayIntake(entries: [entry], day: marked) == .skipped)
         marked.override = [.energy: 2100]
-        #expect(DayIntake(entries: [entry], day: marked) == .logged([.energy: 2100]))
+        #expect(DayIntake(entries: [entry], day: marked) == .logged([.energy: 2100, .protein: 15, .fat: 6, .carbs: 18, .fiber: 3]))
     }
 
     @Test func aDayTakesTheLatestPlanStartingOnOrBeforeIt() {

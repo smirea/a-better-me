@@ -49,14 +49,6 @@ struct Plate: Hashable, Sendable {
     func item(_ id: UUID) -> Item? { items.first { $0.id == id } }
 }
 
-extension NutritionDay {
-    /// What the day holds before the plate: its override when the owner set one, which replaces the log's totals
-    /// (docs/decisions/nutrition.md), otherwise the sum of its entries.
-    func intake(_ entries: [FoodEntry]) -> NutrientAmounts {
-        override ?? entries.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts }
-    }
-}
-
 /// One nutrient of the banner: the day's amount before the plate, the plate's, and the day's target when a plan sets
 /// one.
 struct BannerValue: Hashable, Sendable {

@@ -4,7 +4,7 @@ import GRDB
 /// One day of the food log as the Dashboard reads it: what was eaten and what the owner said about the day.
 struct NutritionLogDay: Equatable, Sendable {
     var day: CalendarDay
-    /// The override when the day has one, else the entries' sum.
+    /// The entries' sum with the day's override on top (`NutritionDay.totals`).
     var consumed: NutrientAmounts
     var entryCount: Int
     var status: NutritionDay.Status
@@ -14,8 +14,7 @@ struct NutritionLogDay: Equatable, Sendable {
 
     init(day: CalendarDay, entries: [FoodEntry], row: NutritionDay?) {
         self.day = day
-        let total = entries.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts }
-        consumed = row?.override ?? total
+        consumed = (row ?? NutritionDay(id: day)).totals(entries)
         entryCount = entries.count
         status = row?.status ?? .none
         hasOverride = row?.override != nil

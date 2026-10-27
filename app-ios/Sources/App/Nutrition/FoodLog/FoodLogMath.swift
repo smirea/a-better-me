@@ -68,12 +68,6 @@ enum FoodLog {
         entries.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts }
     }
 
-    /// The day's totals with its override's amounts in place of the logged ones; nutrients the override leaves out
-    /// keep the log's amounts.
-    static func dayTotals(_ entries: [FoodEntry], row: NutritionDay?) -> NutrientAmounts {
-        totals(entries).merging(row?.override ?? [:]) { $1 }
-    }
-
     /// The day's hours: the configured range, unless empty hours hide, plus every hour that has an entry.
     static func hours(_ entries: [FoodEntry], timeline: NutritionSettings.Timeline) -> [TimelineHour] {
         let byHour = Dictionary(grouping: entries, by: \.hour)

@@ -106,7 +106,7 @@ private struct DaySummary: View {
 
     var body: some View {
         let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day)
-        let lines = FoodLog.summary(FoodLog.dayTotals(entries, row: row), target: target, showOverages: settings.nutrition.showOverages)
+        let lines = FoodLog.summary(row.totals(entries), target: target, showOverages: settings.nutrition.showOverages)
         VStack(spacing: 4) {
             if row.status != .none || row.override != nil {
                 DayStatusBadges(row: row)

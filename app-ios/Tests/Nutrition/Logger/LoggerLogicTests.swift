@@ -133,12 +133,14 @@ struct PlateTests {
         #expect(NutrientAmounts().macroShare(.protein) == 0)
     }
 
-    @Test func aDaysOverrideReplacesItsEntries() {
+    @Test func aDaysOverrideReplacesOnlyTheNutrientsItSets() {
         let entry = FoodEntry(FoodPortion(.quickAdd([.energy: 500, .protein: 30])), day: calendarDay("2026-10-26"), minute: 600)
         var day = NutritionDay(id: calendarDay("2026-10-26"))
-        #expect(day.intake([entry, entry]) == [.energy: 1000, .protein: 60])
-        day.override = [.energy: 1800, .protein: 120]
-        #expect(day.intake([entry, entry]) == [.energy: 1800, .protein: 120])
+        #expect(day.totals([entry, entry]) == [.energy: 1000, .protein: 60])
+        day.override = [.energy: 1800]
+        #expect(day.totals([entry, entry]) == [.energy: 1800, .protein: 60])
+        #expect(DayIntake(entries: [entry, entry], day: day) == .logged([.energy: 1800, .protein: 60]))
+        #expect(NutritionLogDay(day: day.id, entries: [entry, entry], row: day).consumed == [.energy: 1800, .protein: 60])
     }
 
     @Test func bannerShowsWhatThePlateLeaves() {
