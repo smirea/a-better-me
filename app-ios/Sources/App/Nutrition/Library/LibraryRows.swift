@@ -40,24 +40,47 @@ enum LibraryFilter {
     }
 }
 
-/// A food everywhere one is listed (the timeline, search, the library, the plate, a recipe): its icon, "Name By
-/// Brand", and "120 kcal · 1P 0F 31C · 1 large (136 g)" at `serving`.
+/// A food everywhere one is listed (the timeline, search, the library, the plate, a recipe), one line each like
+/// MacroFactor's 47 pt rows: its icon, "Name By Brand" with the words a search matched in bold, and "120ઠ 1P 0F 31C · 1
+/// large" at `serving`.
 struct FoodRow: View {
     let food: FoodSnapshot
     let serving: Serving
     var showsDetail = true
+    /// The search's terms (`FoodText.terms`), whose matches draw bold.
+    var matching: [String] = []
 
     var body: some View {
         HStack(spacing: 12) {
             FoodIcon(food: food)
             RowLabel(
-                title: food.displayName,
-                detail: showsDetail ? "\(NutritionFormat.macroLine(food.amounts(serving))) · \(NutritionFormat.serving(serving, of: food))" : nil
+                title: title,
+                detail: showsDetail ? Text("\(Text(macroLine: food.amounts(serving))) · \(NutritionFormat.serving(serving))") : nil
             )
-            .lineLimit(2)
+            .lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
+    }
+
+    private var title: Text {
+        let name = food.displayName
+        let ranges = FoodText.matches(in: name, terms: matching)
+        guard !ranges.isEmpty else { return Text(name) }
+        var title = AttributedString(name)
+        for range in ranges {
+            guard let lower = AttributedString.Index(range.lowerBound, within: title),
+                  let upper = AttributedString.Index(range.upperBound, within: title) else { continue }
+            title[lower..<upper].font = AppFont.title(15)
+        }
+        return Text(title)
+    }
+}
+
+extension Text {
+    /// "105ઠ 1P 0F 27C": MacroFactor's compact nutrition, with the calorie glyph in place of "kcal".
+    init(macroLine amounts: NutrientAmounts) {
+        self.init("\(NutritionFormat.calories(amounts))\(calorieGlyph) \(NutritionFormat.macros(amounts))")
     }
 }

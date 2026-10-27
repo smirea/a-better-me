@@ -51,6 +51,29 @@ struct LoggerSessionTests {
         return try store.read(FoodEntry.on(monday).fetch)
     }
 
+    @Test func anHoursPicksShowAboveLatestOnlyForThatHourAndAnEmptyQuery() async throws {
+        let catalog = try fixtureCatalog([(173944, "Bananas, raw", 8, bananaNutrition)])
+        store.log([FoodPortion(yogurt)], on: .today, minute: 8 * 60 + 5)
+        store.log([FoodPortion(yogurt)], on: CalendarDay.today.adding(days: -1), minute: 8 * 60 + 40)
+        store.log([FoodPortion(greekYogurt.snapshot)], on: .today, minute: 12 * 60)
+        try await store.write { _ in }.value
+        let search = try await FoodSearch.load(store: store, catalog: catalog, branded: StubBranded())
+
+        let eight = LoggerSession(store: store, search: search, start: LoggerStart(time: LogTime(day: .today, hour: 8)))
+        #expect(eight.picksHour == 8)
+        #expect(eight.picks.map(\.portion.food.name) == ["Yogurt"])
+        #expect(eight.picks.first?.group == .picks)
+        eight.setQuery("yog", branded: false)
+        #expect(eight.picks.isEmpty)
+        eight.time = LogTime(day: .today, hour: 12)
+        eight.setQuery("", branded: false)
+        #expect(eight.picks.map(\.portion.food.name) == ["Nonfat Greek Yogurt"])
+
+        let clock = LoggerSession(store: store, search: search, start: LoggerStart())
+        #expect(clock.picksHour == nil)
+        #expect(clock.picks.isEmpty)
+    }
+
     @Test func logsThePlateInOneGoAndCachesDatabaseFoods() async throws {
         let logger = try await session(StubBranded(hits: [greekYogurt]))
         logger.setQuery("banana", branded: false)

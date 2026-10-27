@@ -22,8 +22,9 @@ enum NutritionFormat {
         NutrientID.macros.dropFirst().map { "\(Int((amounts[$0] ?? 0).rounded()))\($0.macroLetter)" }.joined(separator: " ")
     }
 
-    static func macroLine(_ amounts: NutrientAmounts) -> String {
-        "\(Int((amounts[.energy] ?? 0).rounded()).formatted()) kcal · \(macros(amounts))"
+    /// Whole kilocalories with grouping, "1,509"; rows follow it with `calorieGlyph` (`Text(macroLine:)`).
+    static func calories(_ amounts: NutrientAmounts) -> String {
+        Int((amounts[.energy] ?? 0).rounded()).formatted()
     }
 
     /// "1.25 cup", "100 g", or with the food's weight when it knows its grams, "1 large (136 g)".

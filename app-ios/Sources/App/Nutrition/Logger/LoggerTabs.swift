@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Search (`log-02-search-results.jpg`): Latest when the field is empty, otherwise the groups `FoodSearch` returns, with
-/// the field and Log Foods at the bottom.
+/// Search (`log-02-search-results.jpg`): the hour's Picks and Latest when the field is empty, otherwise the groups
+/// `FoodSearch` returns, in MacroFactor's compact rows, with the field and Log Foods at the bottom.
 struct SearchTab: View {
     let session: LoggerSession
     let open: (LoggerPick) -> Void
@@ -10,20 +10,29 @@ struct SearchTab: View {
     @FocusState private var focused: Bool
 
     var body: some View {
+        let terms = FoodText.terms(session.query)
+        let picks = session.picks
         List {
             if session.query.isEmpty {
-                ThemedSection("Latest") { rows(session.results) }
+                if let hour = session.picksHour, !picks.isEmpty {
+                    ThemedSection("\(NutritionFormat.hour(hour)) Picks") { rows(picks, terms) }
+                }
+                ThemedSection("Latest") { rows(session.results, terms) }
             } else {
                 ForEach(groups, id: \.0) { group, results in
-                    Section(group.title) { rows(results) }
+                    ThemedSection(group.title) { rows(results, terms) }
                 }
                 if session.isSearchingBranded {
-                    Section(FoodSearchGroup.branded.title) {
-                        ProgressView().frame(maxWidth: .infinity)
+                    ThemedSection(FoodSearchGroup.branded.title) {
+                        ProgressView().frame(maxWidth: .infinity).listRowBackground(Color.clear)
                     }
                 }
             }
         }
+        .listStyle(.plain)
+        .listSectionSpacing(0)
+        .environment(\.defaultMinListRowHeight, 0)
+        .scrollDismissesKeyboard(.immediately)
         .themedList()
         .overlay {
             if session.results.isEmpty, !session.isSearchingBranded {
@@ -35,7 +44,7 @@ struct SearchTab: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            LoggerBottomBar(session: session) {
+            LoggerBottomBar(session: session, text: $text) {
                 TextField("Search for a food", text: $text)
                     .focused($focused)
                     .submitLabel(.search)
@@ -61,18 +70,20 @@ struct SearchTab: View {
         return groups
     }
 
-    private func rows(_ results: [FoodSearchResult]) -> some View {
+    private func rows(_ results: [FoodSearchResult], _ terms: [String]) -> some View {
         ForEach(results) { result in
-            HStack(spacing: 12) {
+            HStack(spacing: 4) {
                 Button {
                     focused = false
                     open(LoggerPick(result))
                 } label: {
-                    FoodRow(food: result.portion.food, serving: result.portion.serving)
+                    FoodRow(food: result.portion.food, serving: result.portion.serving, matching: terms)
                 }
                 .buttonStyle(.plain)
                 AddToPlateButton(food: result.portion.food) { session.add(LoggerPick(result)) }
             }
+            .listRowInsets(EdgeInsets(top: 2, leading: Theme.margin, bottom: 2, trailing: 8))
+            .listRowBackground(Color.clear)
         }
     }
 }
@@ -80,6 +91,7 @@ struct SearchTab: View {
 extension FoodSearchGroup {
     var title: String {
         switch self {
+        case .picks: "Picks"
         case .history: "From History"
         case .favorites: "Favorites"
         case .custom: "Your Foods"
@@ -90,9 +102,10 @@ extension FoodSearchGroup {
     }
 }
 
-/// A tab's bottom bar: its field in a glass capsule and Log Foods.
+/// A tab's bottom bar: its field in a glass capsule, with a clear button while `text` holds something, and Log Foods.
 struct LoggerBottomBar<Field: View>: View {
     let session: LoggerSession
+    var text: Binding<String>?
     @ViewBuilder let field: () -> Field
 
     var body: some View {
@@ -101,8 +114,17 @@ struct LoggerBottomBar<Field: View>: View {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass").foregroundStyle(Theme.textSecondary)
                     field()
+                    if let text, !text.wrappedValue.isEmpty {
+                        Button("Clear search", systemImage: "xmark.circle.fill") { text.wrappedValue = "" }
+                            .labelStyle(.iconOnly)
+                            .buttonStyle(.plain)
+                            .foregroundStyle(Theme.textSecondary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(.rect)
+                    }
                 }
-                .padding(.horizontal, 16)
+                .padding(.leading, 16)
+                .padding(.trailing, text?.wrappedValue.isEmpty == false ? 2 : 16)
                 .frame(height: 48)
                 .glassEffect(.regular.interactive(), in: .capsule)
                 LogFoodsButton(session: session)

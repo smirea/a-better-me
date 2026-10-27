@@ -103,6 +103,16 @@ final class LoggerSession {
     private(set) var logged = 0
     @ObservationIgnored private var remote: Task<Void, Never>?
 
+    /// The hour the logger was opened for or the time chip picked, whose Picks show above Latest. Nil while the time
+    /// follows the clock.
+    var picksHour: Int? { chosenTime?.hour }
+
+    /// "8 AM Picks" (`HourPicks`) while the query is empty.
+    var picks: [FoodSearchResult] {
+        guard query.isEmpty, let picksHour else { return [] }
+        return search.picks(hour: picksHour)
+    }
+
     init(store: LocalStore, search: FoodSearch, start: LoggerStart, recognizer: any MealRecognizer = MealPhotoClient.live) {
         self.store = store
         self.search = search

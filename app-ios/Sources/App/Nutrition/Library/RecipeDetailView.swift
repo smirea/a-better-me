@@ -50,7 +50,7 @@ struct RecipeDetailView: View {
                     LabeledContent("Total Weight", value: "\(NutritionFormat.amount(cookedGrams)) g")
                 }
                 if let perGram = RecipeMath.perGram(recipe) {
-                    LabeledContent("Per 100 g", value: NutritionFormat.macroLine(perGram.scaled(by: 100)))
+                    LabeledContent("Per 100 g") { Text(macroLine: perGram.scaled(by: 100)) }
                 }
                 if let prep = recipe.prepMinutes { LabeledContent("Preparation Time", value: "\(prep) min") }
                 if let cook = recipe.cookMinutes { LabeledContent("Cooking Time", value: "\(cook) min") }
