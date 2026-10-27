@@ -6,7 +6,8 @@ import { BrandedFood, lookupBarcode, searchProducts } from './openFoodFacts';
 
 /**
  * Branded foods for the app's food search, proxied from Open Food Facts so the phone holds no third-party client and
- * the mapping to registry nutrient ids lives in one place, and photo logging, proxied to Gemini so its key stays here. Nothing is cached here: the phone caches what the owner
+ * the mapping to registry nutrient ids lives in one place. Photo logging goes through here too, so the Gemini key
+ * never leaves the server. Nothing is cached here: the phone caches what the owner
  * logs (`LocalStore.saveFood`), and a lookup is one request.
  */
 export const foodRoutes: Route[] = [

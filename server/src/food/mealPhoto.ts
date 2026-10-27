@@ -93,7 +93,13 @@ export async function recognizeMeal(request: z.output<typeof MealPhotoRequest>, 
 		throw new ApiError(502, `Gemini is unreachable: ${String(error)}`);
 	}
 	if (!response.ok) throw new ApiError(502, `Gemini answered ${response.status}: ${await response.text()}`);
-	const answer = GeminiAnswer.parse(await response.json());
+	const body = await response.text();
+	let answer: z.output<typeof GeminiAnswer>;
+	try {
+		answer = GeminiAnswer.parse(JSON.parse(body));
+	} catch {
+		throw new ApiError(502, `Gemini's response is not a generateContent answer: ${body.slice(0, 200)}`);
+	}
 	if (answer.promptFeedback?.blockReason) {
 		throw new ApiError(422, `Gemini declined the photo: ${answer.promptFeedback.blockReason}`);
 	}

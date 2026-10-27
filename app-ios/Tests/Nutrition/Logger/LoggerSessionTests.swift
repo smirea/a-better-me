@@ -144,10 +144,26 @@ struct LoggerSessionTests {
         #expect(logger.plate.items.allSatisfy { $0.pick.uncached != nil })
     }
 
-    @Test func aRefusedPhotoLeavesThePlateAsItWas() async throws {
+    @Test func aRefusedPhotoLeavesThePlateAsItWasAndSaysWhy() async throws {
         let logger = try await session(photo: StubRecognizer(failure: "Photo logging needs GEMINI_API_KEY on the server"))
-        await #expect(throws: MealPhotoError.self) { try await logger.addPhoto(jpeg: Data(), note: "no skin") }
+        await logger.findFoods(jpeg: Data(), note: "no skin")
         #expect(logger.plate.isEmpty)
+        #expect(logger.photoNotice == .failed("Photo logging needs GEMINI_API_KEY on the server"))
+        #expect(!logger.isFindingFoods)
+    }
+
+    @Test func findingFoodsLeavesTheUnmatchedOnesForTheTab() async throws {
+        let logger = try await session(photo: StubRecognizer(foods: [
+            RecognizedFood(name: "Banana", search: "Bananas, raw", grams: 100, confidence: 0.9),
+            RecognizedFood(name: "Mystery sauce", search: "mystery sauce", grams: 20, confidence: 0.3),
+        ]))
+        await logger.findFoods(jpeg: Data(), note: nil)
+        #expect(logger.photoNotice == .added(unmatched: ["Mystery sauce"]))
+        #expect(logger.plate.items.count == 1)
+
+        let empty = try await session(photo: StubRecognizer(foods: []))
+        await empty.findFoods(jpeg: Data(), note: nil)
+        #expect(empty.photoNotice == .failed("No food was found in the photo."))
     }
 
     @Test func aPhotoShrinksToAnUprightJPEG() throws {

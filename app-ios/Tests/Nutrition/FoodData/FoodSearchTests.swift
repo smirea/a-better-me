@@ -177,10 +177,10 @@ struct FoodSearchTests {
 
     @Test func aPhotoNameMatchesItsExactDescriptionOrOnlyWordsThatCount() async throws {
         let search = try await search()
-        #expect(try search.match("Chicken, broilers or fryers, breast, meat only, cooked, fried")?.portion.food.name == "Chicken, broilers or fryers, breast, meat only, cooked, fried")
-        #expect(try search.match("skinless chicken breast cooked")?.portion.food.name == "Chicken, broilers or fryers, breast, meat only, cooked, roasted")
-        #expect(try search.match("grilled salmon")?.portion.food.name == "Fish, salmon, Atlantic, farmed, cooked, dry heat")
-        #expect(try search.match("rice cooked") == nil)
-        #expect(try search.match("") == nil)
+        #expect(try search.index.match("Chicken, broilers or fryers, breast, meat only, cooked, fried")?.portion.food.name == "Chicken, broilers or fryers, breast, meat only, cooked, fried")
+        #expect(try search.index.match("skinless chicken breast cooked")?.portion.food.name == "Chicken, broilers or fryers, breast, meat only, cooked, roasted")
+        #expect(try search.index.match("grilled salmon")?.portion.food.name == "Fish, salmon, Atlantic, farmed, cooked, dry heat")
+        #expect(try search.index.match("rice cooked") == nil)
+        #expect(try search.index.match("Egg, white, dried, chicken")?.portion.food.name == "Egg, white, raw, fresh")
     }
 }

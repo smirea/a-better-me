@@ -66,6 +66,14 @@ struct PhotoOutcome: Hashable, Sendable {
     var unmatched: [String]
 }
 
+/// What the Photo tab still has to tell the owner. It lives in the session, not the tab, so switching tabs while
+/// Gemini answers neither loses the unmatched foods nor pushes the plate over another tab.
+enum PhotoNotice: Hashable, Sendable {
+    /// Foods went on the plate; the ones nothing matched are named before the plate shows.
+    case added(unmatched: [String])
+    case failed(String)
+}
+
 /// The logger sheet's state: the search, the plate, and the time it logs at. The views are thin over it, so the flows
 /// (multi-add, logging the plate, a barcode lookup) are tested without a screen.
 @MainActor @Observable
@@ -89,6 +97,8 @@ final class LoggerSession {
     private(set) var query = ""
     private(set) var results: [FoodSearchResult] = []
     private(set) var isSearchingBranded = false
+    private(set) var isFindingFoods = false
+    var photoNotice: PhotoNotice?
     /// Counts logged plates; the sheet closes on a change.
     private(set) var logged = 0
     @ObservationIgnored private var remote: Task<Void, Never>?
@@ -172,9 +182,12 @@ final class LoggerSession {
     /// food's default serving when it has no weight. Throws when the server cannot be reached or refuses the photo.
     func addPhoto(jpeg: Data, note: String?) async throws -> PhotoOutcome {
         let foods = try await recognizer.recognize(jpeg: jpeg, note: note)
+        // Each name scans the 7,300 USDA names a few times and reads their nutrition, too much for one frame.
+        let index = search.index
+        let matches = try await Task.detached { try foods.map { ($0, try index.match($0.search)) } }.value
         var outcome = PhotoOutcome(added: 0, unmatched: [])
-        for food in foods {
-            guard let result = try search.match(food.search) else {
+        for (food, result) in matches {
+            guard let result else {
                 outcome.unmatched.append(food.name)
                 continue
             }
@@ -186,6 +199,23 @@ final class LoggerSession {
             outcome.added += 1
         }
         return outcome
+    }
+
+    /// `addPhoto` for the Photo tab: one request at a time, its result left in `photoNotice`.
+    func findFoods(jpeg: Data, note: String?) async {
+        guard !isFindingFoods else { return }
+        isFindingFoods = true
+        defer { isFindingFoods = false }
+        do {
+            let outcome = try await addPhoto(jpeg: jpeg, note: note)
+            photoNotice = outcome.added > 0 ? .added(unmatched: outcome.unmatched)
+                : .failed(outcome.unmatched.isEmpty ? "No food was found in the photo." : "No food in the database matched \(outcome.unmatched.formatted(.list(type: .and))). Add them from Search.")
+        } catch let error as MealPhotoError {
+            photoNotice = .failed(error.message)
+        } catch {
+            FoodSearch.log.info("Photo logging failed: \(String(describing: error))")
+            photoNotice = .failed("The server can't be reached. Check the connection and try again.")
+        }
     }
 
     /// A typed or scanned barcode: a custom or cached food first, then Open Food Facts.

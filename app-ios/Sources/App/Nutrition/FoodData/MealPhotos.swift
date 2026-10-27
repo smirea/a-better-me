@@ -17,7 +17,6 @@ protocol MealRecognizer: Sendable {
     func recognize(jpeg: Data, note: String?) async throws -> [RecognizedFood]
 }
 
-/// The server's refusal, worded for the logger.
 struct MealPhotoError: LocalizedError {
     let message: String
     var errorDescription: String? { message }

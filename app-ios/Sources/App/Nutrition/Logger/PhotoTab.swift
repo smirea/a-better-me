@@ -13,10 +13,7 @@ struct PhotoTab: View {
     @State private var choosing = false
     @State private var picked: PhotosPickerItem?
     @State private var capturing = false
-    @State private var analyzing = false
-    @State private var problem: String?
-    /// Foods went on the plate, but the alert naming the unmatched ones shows first, on this tab.
-    @State private var plateAfterAlert = false
+    @State private var unreadable = false
     @FocusState private var noteFocused: Bool
 
     private let cameraWorks = UIImagePickerController.isSourceTypeAvailable(.camera)
@@ -56,77 +53,84 @@ struct PhotoTab: View {
         .themedList()
         .scrollDismissesKeyboard(.interactively)
         .overlay {
-            if analyzing {
+            if session.isFindingFoods {
                 ProgressView("Finding foods").padding(20).glassEffect(in: .rect(cornerRadius: Theme.cornerRadius))
             }
         }
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 10) {
-                Button("Find Foods", action: analyze)
+                Button("Find Foods", action: findFoods)
                     .primaryPill()
-                    .disabled(photo == nil || analyzing)
-                LogFoodsButton(session: session).controlSize(.large)
+                    .disabled(photo == nil || session.isFindingFoods)
+                LogFoodsButton(session: session)
+                    .controlSize(.large)
+                    .disabled(session.isFindingFoods)
             }
             .padding(.horizontal, Theme.margin)
             .padding(.bottom, 8)
         }
         .photosPicker(isPresented: $choosing, selection: $picked, matching: .images)
         .fullScreenCover(isPresented: $capturing) {
-            CameraCapture { data in load(data) }.ignoresSafeArea()
+            CameraCapture { image in load { MealPhoto(image) } }.ignoresSafeArea()
         }
         .onChange(of: picked) {
             guard let picked else { return }
             Task {
                 let data = try? await picked.loadTransferable(type: Data.self)
                 self.picked = nil
-                if let data { load(data) } else { problem = "That photo could not be read." }
+                if let data { load { MealPhoto(data) } } else { unreadable = true }
             }
         }
-        .alert("Photo", isPresented: .isPresent($problem)) {
+        .onAppear(perform: showAddedFoods)
+        .onChange(of: session.photoNotice, showAddedFoods)
+        .alert("Photo", isPresented: .constant(alert != nil)) {
             Button("OK", role: .cancel) {
-                if plateAfterAlert {
-                    plateAfterAlert = false
-                    showPlate()
-                }
+                let foodsAdded = if case .added = session.photoNotice { true } else { false }
+                session.photoNotice = nil
+                unreadable = false
+                if foodsAdded { clearAndShowPlate() }
             }
         } message: {
-            Text(problem ?? "")
+            Text(alert ?? "")
         }
+    }
+
+    private var alert: String? {
+        if unreadable { return "That photo could not be read." }
+        switch session.photoNotice {
+        case let .added(unmatched) where !unmatched.isEmpty:
+            return "No food in the database matched \(unmatched.formatted(.list(type: .and))). Add \(unmatched.count == 1 ? "it" : "them") from Search."
+        case let .failed(message): return message
+        case .added, nil: return nil
+        }
+    }
+
+    /// Foods that all matched go straight to the plate; unmatched ones wait for the alert's OK.
+    private func showAddedFoods() {
+        guard session.photoNotice == .added(unmatched: []) else { return }
+        session.photoNotice = nil
+        clearAndShowPlate()
+    }
+
+    private func clearAndShowPlate() {
+        photo = nil
+        note = ""
+        showPlate()
     }
 
     /// Shrinks the photo off the main actor; the full-size original never stays in memory.
-    private func load(_ data: Data) {
+    private func load(_ prepare: @escaping @Sendable () -> MealPhoto?) {
         Task {
-            let prepared = await Task.detached { MealPhoto(data) }.value
-            if let prepared { photo = prepared } else { problem = "That file is not a photo." }
+            let prepared = await Task.detached(operation: prepare).value
+            if let prepared { photo = prepared } else { unreadable = true }
         }
     }
 
-    private func analyze() {
-        guard let photo, !analyzing else { return }
-        analyzing = true
+    private func findFoods() {
+        guard let photo else { return }
         noteFocused = false
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
-        Task {
-            defer { analyzing = false }
-            do {
-                let outcome = try await session.addPhoto(jpeg: photo.jpeg, note: trimmed.isEmpty ? nil : trimmed)
-                if outcome.added > 0 {
-                    self.photo = nil
-                    note = ""
-                    if outcome.unmatched.isEmpty { showPlate() } else { plateAfterAlert = true }
-                }
-                if !outcome.unmatched.isEmpty {
-                    problem = "No food in the database matched \(outcome.unmatched.formatted(.list(type: .and))). Add \(outcome.unmatched.count == 1 ? "it" : "them") from Search."
-                } else if outcome.added == 0 {
-                    problem = "No food was found in the photo."
-                }
-            } catch let error as MealPhotoError {
-                problem = error.message
-            } catch {
-                problem = "The server can't be reached. Check the connection and try again."
-            }
-        }
+        Task { await session.findFoods(jpeg: photo.jpeg, note: trimmed.isEmpty ? nil : trimmed) }
     }
 }
 
@@ -140,11 +144,21 @@ private struct MealPhoto: Sendable {
         self.jpeg = jpeg
         self.preview = preview
     }
+
+    /// A camera photo, shrunk before it is encoded so the full-size frame is never compressed.
+    init?(_ image: UIImage) {
+        let pixels = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+        let scale = min(1, Double(MealPhotoImage.maxPixels) / max(pixels.width, pixels.height))
+        guard let small = image.preparingThumbnail(of: CGSize(width: pixels.width * scale, height: pixels.height * scale)),
+              let jpeg = small.jpegData(compressionQuality: 0.7) else { return nil }
+        self.jpeg = jpeg
+        preview = small
+    }
 }
 
-/// The system camera, handing back the photo as JPEG data.
+/// The system camera, handing back the photo as taken.
 private struct CameraCapture: UIViewControllerRepresentable {
-    let captured: (Data) -> Void
+    let captured: (UIImage) -> Void
     @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
@@ -166,7 +180,7 @@ private struct CameraCapture: UIViewControllerRepresentable {
         }
 
         func imagePickerController(_: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            if let data = (info[.originalImage] as? UIImage)?.jpegData(compressionQuality: 0.9) { parent.captured(data) }
+            if let image = info[.originalImage] as? UIImage { parent.captured(image) }
             parent.dismiss()
         }
 

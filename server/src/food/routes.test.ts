@@ -232,6 +232,10 @@ describe('meal photo', () => {
 		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(502);
 		stub(() => Response.json({ promptFeedback: { blockReason: 'SAFETY' } }));
 		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(422);
+		stub(() => new Response('<html>proxy error</html>', { headers: { 'content-type': 'text/html' } }));
+		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(502);
+		stub(() => Response.json({ candidates: 'not a list' }));
+		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(502);
 		stub(() => new Response('quota', { status: 429 }));
 		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(502);
 	});
