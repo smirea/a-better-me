@@ -36,11 +36,11 @@ enum DayPillTarget: Hashable {
     }
 }
 
-/// A workout day's pill: a logged day's outline is full in amber, and today's unlogged pill fills with the active
-/// program's cycle.
+/// A workout day's pill: today fills with the active program's cycle, and any other logged day's outline is full in
+/// amber.
 struct WorkoutDayPill: View {
     let day: CalendarDay
-    let days: LoggedDays
+    let isLogged: Bool
     let program: DayRing?
     let target: DayPillTarget?
     let onOpen: (DayPillTarget) -> Void
@@ -54,8 +54,8 @@ struct WorkoutDayPill: View {
     }
 
     private var ring: DayRing? {
-        if days.session(on: day) != nil { return DayRing(fraction: 1, color: Theme.amber) }
-        return day == .today ? program : nil
+        if day == .today, let program { return program }
+        return isLogged ? DayRing(fraction: 1, color: Theme.amber) : nil
     }
 
     private var hint: String {

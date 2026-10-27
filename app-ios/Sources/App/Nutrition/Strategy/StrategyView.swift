@@ -109,7 +109,7 @@ private struct StrategyHome: View {
             .padding(.bottom, 30)
         }
         .background(Theme.background)
-        .screenTitle("Strategy")
+        .detailTitle("Strategy")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) { menu }
         }

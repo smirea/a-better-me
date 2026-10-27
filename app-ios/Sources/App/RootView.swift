@@ -42,7 +42,6 @@ struct RootView: View {
             Tab("New", systemImage: "plus", value: .add, role: .prominent) { Color.clear }
         }
         .tint(Theme.accent)
-        .environment(health)
         .tabViewBottomAccessory(isEnabled: activeSessionID != nil) { ActiveSessionBar() }
         .resolvingWorkoutStart()
         .onChange(of: tab) { previous, current in
@@ -71,6 +70,7 @@ struct RootView: View {
         .onOpenURL { url in
             if url == LiveActivityLink.liveWorkout { presenter.isExpanded = true }
         }
+        .environment(health)
     }
 }
 

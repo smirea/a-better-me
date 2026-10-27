@@ -36,7 +36,7 @@ struct LevelsView: View {
             LevelsSection(title: "Lower Body Levels", muscles: Muscle.lowerBody, weekly: weekly)
         }
         .themedList()
-        .screenTitle("Levels")
+        .detailTitle("Levels")
         .navigationDestination(for: Muscle.self) { MuscleLevelsView(muscle: $0) }
     }
 }

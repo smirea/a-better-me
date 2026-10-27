@@ -48,10 +48,19 @@ struct WeekStrip<Week: View>: View {
     /// Weeks before and after the current one that the strip reaches.
     let weeks: ClosedRange<Int>
     /// The pills of the week that starts on the given Monday.
-    @ViewBuilder let week: (CalendarDay) -> Week
+    let week: (CalendarDay) -> Week
 
-    @State private var origin = CalendarDay.today.monday
+    @State private var origin: CalendarDay
     @State private var visible: Int?
+
+    init(anchor: CalendarDay, weeks: ClosedRange<Int>, @ViewBuilder week: @escaping (CalendarDay) -> Week) {
+        self.anchor = anchor
+        self.weeks = weeks
+        self.week = week
+        let origin = CalendarDay.today.monday
+        _origin = State(initialValue: origin)
+        _visible = State(initialValue: origin.days(to: anchor.monday) / 7)
+    }
 
     var body: some View {
         let anchorWeek = offset(of: anchor)
@@ -69,7 +78,6 @@ struct WeekStrip<Week: View>: View {
         .scrollPosition(id: $visible)
         .scrollIndicators(.hidden)
         .frame(height: 64)
-        .onAppear { visible = anchorWeek }
         .onChange(of: anchorWeek) { _, week in
             withAnimation { visible = week }
         }

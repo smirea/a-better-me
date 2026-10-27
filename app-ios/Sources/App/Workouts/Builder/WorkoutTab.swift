@@ -68,8 +68,9 @@ struct WorkoutTab: View {
     }
 
     private func pill(_ day: CalendarDay, days: LoggedDays, progress: DayRing?) -> some View {
-        let target = DayPillTarget.of(day.date, session: days.session(on: day), program: activeProgram, now: .now, calendar: Self.calendar)
-        return WorkoutDayPill(day: day, days: days, program: progress, target: target, onOpen: open)
+        let session = days.session(on: day)
+        let target = DayPillTarget.of(day.date, session: session, program: activeProgram, now: .now, calendar: Self.calendar)
+        return WorkoutDayPill(day: day, isLogged: session != nil, program: progress, target: target, onOpen: open)
     }
 
     /// Program weekdays and "this week" start on Monday, like every day strip.
