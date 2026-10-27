@@ -49,8 +49,3 @@ extension SetTarget {
         }
     }
 }
-
-extension Int {
-    /// "1:30" for rest timers.
-    var minuteSecond: String { Duration.seconds(self).formatted(.time(pattern: .minuteSecond)) }
-}

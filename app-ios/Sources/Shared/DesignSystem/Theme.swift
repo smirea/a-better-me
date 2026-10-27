@@ -46,6 +46,10 @@ enum Theme {
 
     static let cornerRadius: CGFloat = 16
     static let smallCornerRadius: CGFloat = 10
+    /// Thumbnails, keys, and tags.
+    static let tinyCornerRadius: CGFloat = 6
+    /// Every screen's side margin.
+    static let margin: CGFloat = 20
 }
 
 /// Static instances cut from the reference app's variable fonts by `scripts/make-fonts.py`. iOS ignores variation
@@ -61,6 +65,14 @@ enum AppFont {
     static func caption(_ size: CGFloat = 13) -> Font { .custom("DMSans-Regular", size: size) }
     /// Big numbers in set rows, timers, and stat rings.
     static func number(_ size: CGFloat = 22) -> Font { .custom("DMSans-Bold", size: size).monospacedDigit() }
+
+    /// Type roles. Prefer these over a size so the same role reads the same on every screen.
+    static let sectionTitle = title()
+    static let listTitle = title(18)
+    static let rowTitle = medium(15)
+    static let rowDetail = caption(12)
+    static let chip = medium(14)
+    static let badge = headline(11)
 
     static let displayName = "MacroSansDisplay-Black"
 

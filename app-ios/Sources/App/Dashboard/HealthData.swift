@@ -17,7 +17,7 @@ final class HealthData {
     /// Flips when HealthKit says it should ask, which makes `healthDataAccessRequest` present its sheet.
     private(set) var requestTrigger = false
 
-    @ObservationIgnored let store = HKHealthStore()
+    @ObservationIgnored let store = HealthStore.shared
     static let readTypes: Set<HKObjectType> = [HKQuantityType(.bodyMass), HKQuantityType(.stepCount)]
     #if DEBUG
     static let shareTypes: Set<HKSampleType> = HealthSeed.isRequested ? [HKQuantityType(.bodyMass), HKQuantityType(.stepCount)] : []

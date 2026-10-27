@@ -66,7 +66,7 @@ enum HistoryMetric: String, CaseIterable, Identifiable {
 
     func format(_ value: Double, unit: WeightUnit) -> String {
         switch self {
-        case .oneRepMax, .threeRepMax, .tenRepMax, .heaviestWeight, .totalVolume, .bestSetVolume: "\(unit.format(kg: value)) \(unit.rawValue)"
+        case .oneRepMax, .threeRepMax, .tenRepMax, .heaviestWeight, .totalVolume, .bestSetVolume: "\(unit.label(kg: value))"
         case .totalReps, .bestSetReps: "\(Int(value)) reps"
         case .totalSets: "\(Int(value)) sets"
         }
@@ -131,13 +131,13 @@ enum ExerciseHistory {
             let side = metric.isPerSide ? " (per side)" : ""
             switch metric {
             case .weight, .weightPerSide, .weightPerSidePersistent:
-                return log.weightKg.map { "\(unit.format(kg: $0)) \(unit.rawValue)\(side)" }
+                return log.weightKg.map { "\(unit.label(kg: $0))\(side)" }
             case .assistanceWeight:
-                return log.weightKg.map { "\(unit.format(kg: $0)) \(unit.rawValue) assist" }
+                return log.weightKg.map { "\(unit.label(kg: $0)) assist" }
             case .reps, .repsPerSide:
                 return log.reps.map { "\($0)\(side)" }
             case .duration, .durationPerSide:
-                return log.durationSeconds.map { Duration.seconds($0).formatted(.time(pattern: .minuteSecond)) + side }
+                return log.durationSeconds.map { $0.minuteSecond + side }
             case .distanceShort, .distanceShortPerSide, .distanceLong:
                 return log.distanceMeters.map {
                     Measurement(value: $0, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated, usage: .road)) + side

@@ -305,7 +305,7 @@ struct SessionEditor: View {
         guard mode == .live, defaults.workout.display.bodyweightContribution, let fraction = exercise?.bodyweightFraction, fraction > 0,
               let kg = currentBodyWeightKg(logged: latestBodyWeight.map { [$0] } ?? [], health: nil, manual: defaults.profile.bodyWeightKg) else { return nil }
         let percent = (fraction * 100).formatted(.number.precision(.fractionLength(0)))
-        return "Body weight \(unit.format(kg: kg)) \(unit.rawValue) · \(percent)% counted (\(unit.format(kg: kg * fraction)) \(unit.rawValue))"
+        return "Body weight \(unit.label(kg: kg)) · \(percent)% counted (\(unit.label(kg: kg * fraction)))"
     }
 
     private func noteCard(_ title: String, _ text: String) -> some View {

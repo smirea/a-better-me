@@ -40,7 +40,7 @@ struct BodyWeightLogSheet: View {
                     DatePicker("Time", selection: $measuredAt, in: ...Date.now)
                 } footer: {
                     if let latest {
-                        Text("Last weigh-in: \(unit.format(kg: latest.weightKg)) \(unit.rawValue), \(latest.measuredAt.formatted(.relative(presentation: .named)))")
+                        Text("Last weigh-in: \(unit.label(kg: latest.weightKg)), \(latest.measuredAt.formatted(.relative(presentation: .named)))")
                     }
                 }
                 .listRowBackground(Theme.surface)

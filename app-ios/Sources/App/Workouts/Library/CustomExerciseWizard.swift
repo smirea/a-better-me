@@ -521,7 +521,7 @@ private struct FinalDetailsStep: View {
         guard let bodyKg = currentBodyWeightKg(logged: weighIns, health: nil, manual: settings.profile.bodyWeightKg) else {
             return "Log your body weight to see the load this adds"
         }
-        return "\(unit.format(kg: bodyKg * percent / 100)) \(unit.rawValue) at your current weight"
+        return "\(unit.label(kg: bodyKg * percent / 100)) at your current weight"
     }
 
     enum JointActionRole: CaseIterable, Identifiable {

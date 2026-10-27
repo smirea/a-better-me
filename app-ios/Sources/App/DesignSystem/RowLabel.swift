@@ -16,9 +16,9 @@ struct RowLabel: View {
 
     private var text: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(AppFont.medium(15)).foregroundStyle(Theme.textPrimary)
+            Text(title).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
             if let detail {
-                Text(detail).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                Text(detail).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             }
         }
     }

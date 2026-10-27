@@ -218,7 +218,7 @@ struct StatPills: View {
             switch field {
             case .weight: (values.weightKg.map(weight) ?? "–", unit.rawValue.uppercased())
             case .reps: (values.reps.map(String.init) ?? "–", "REPS")
-            case .duration: (values.durationSeconds.map { Duration.seconds($0).formatted(.time(pattern: .minuteSecond)) } ?? "–", "TIME")
+            case .duration: (values.durationSeconds.map { $0.minuteSecond } ?? "–", "TIME")
             case .distance: distance(values.distanceMeters)
             case .rir: nil
             }

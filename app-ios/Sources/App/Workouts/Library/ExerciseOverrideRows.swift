@@ -40,7 +40,7 @@ enum ExerciseOverrideRow: CaseIterable, Identifiable {
         let overrides = settings.overrides
         let value: String? = switch self {
         case .equipmentWeights: overrides.equipment.map { "\($0.count) \($0.count == 1 ? "item" : "items") overridden" }
-        case .restTimer: settings.restSeconds.map(Self.formatRest)
+        case .restTimer: settings.restSeconds?.minuteSecond
         case .restBetweenSides: overrides.restBetweenSides.map(Self.onOff)
         case .expandRepRange: overrides.expandRepRange.map(Self.onOff)
         case .weightMatch: overrides.weightMatch.map(Self.onOff)
@@ -51,10 +51,6 @@ enum ExerciseOverrideRow: CaseIterable, Identifiable {
     }
 
     static func onOff(_ on: Bool) -> String { on ? "On" : "Off" }
-
-    static func formatRest(_ seconds: Int) -> String {
-        Duration.seconds(seconds).formatted(.time(pattern: .minuteSecond))
-    }
 
     static func name(_ automation: WarmUpAutomation) -> String {
         switch automation {

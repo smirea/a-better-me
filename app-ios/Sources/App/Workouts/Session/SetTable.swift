@@ -134,11 +134,11 @@ extension SessionEditor {
 
     /// "40 kg x 8", "40 kg x 8 + 2" with partials, or the weight or the reps alone when only one was logged.
     static func summary(of log: SetLog, unit: WeightUnit) -> String {
-        let weight = log.weightKg.map { "\(unit.format(kg: $0)) \(unit.rawValue)" }
+        let weight = log.weightKg.map { "\(unit.label(kg: $0))" }
         let reps = log.reps.map { full in
             if let partial = log.partialReps, partial > 0 { "\(full) + \(partial)" } else { String(full) }
         }
-        let duration = log.durationSeconds.map { Duration.seconds($0).formatted(.time(pattern: .minuteSecond)) }
+        let duration = log.durationSeconds.map { $0.minuteSecond }
         let distance = log.distanceMeters.map { Measurement(value: $0, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated)) }
         return [weight, reps ?? duration, distance].compactMap { $0 }.joined(separator: " x ")
     }

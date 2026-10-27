@@ -1,9 +1,5 @@
 import SwiftUI
 
-private func clock(_ seconds: TimeInterval) -> String {
-    Duration.seconds(seconds.rounded(.up)).formatted(.time(pattern: .minuteSecond))
-}
-
 /// The header's stopwatch, countdown, and draining bar. Tapping it opens the Rest Timer sheet.
 struct RestTimerPill: View {
     let action: () -> Void
@@ -16,7 +12,7 @@ struct RestTimerPill: View {
                 let fraction = store.rest.map { remaining / $0.duration } ?? 0
                 HStack(spacing: 8) {
                     Image(systemName: "stopwatch.fill").font(.footnote)
-                    Text(clock(remaining)).font(AppFont.number(17)).fixedSize()
+                    Text(remaining.countdown).font(AppFont.number(17)).fixedSize()
                     Capsule()
                         .fill(Theme.surfaceRaised)
                         .frame(width: 64, height: 12)
@@ -47,7 +43,7 @@ struct RestTimerSheet: View {
                         HStack {
                             roundButton("gobackward.15", "Subtract 15 seconds") { store.adjustRest(by: -15) }
                             Spacer()
-                            Label(clock(remaining), systemImage: "stopwatch.fill").font(AppFont.number(24))
+                            Label(remaining.countdown, systemImage: "stopwatch.fill").font(AppFont.number(24))
                             Spacer()
                             roundButton("goforward.15", "Add 15 seconds") { store.adjustRest(by: 15) }
                         }
@@ -58,12 +54,12 @@ struct RestTimerSheet: View {
                     HStack(spacing: 8) {
                         pill("(0:00)", icon: "stop.fill", label: "Stop timer") { store.stopRest() }
                         if let seconds = store.setRestSeconds {
-                            pill("(\(clock(TimeInterval(seconds))))", icon: "arrow.counterclockwise", label: "Restart timer") {
+                            pill("(\(seconds.minuteSecond))", icon: "arrow.counterclockwise", label: "Restart timer") {
                                 store.restartRest(seconds: seconds)
                             }
                         }
                         ForEach(Self.restartOptions, id: \.self) { seconds in
-                            pill(clock(TimeInterval(seconds)), label: "Restart with \(clock(TimeInterval(seconds)))") {
+                            pill(seconds.minuteSecond, label: "Restart with \(seconds.minuteSecond)") {
                                 store.restartRest(seconds: seconds)
                             }
                         }
@@ -138,7 +134,7 @@ struct WarmUpSheet: View {
                             SetBadge(type: .warmUp, number: 0)
                             VStack(alignment: .leading) {
                                 Text(row.label).font(AppFont.medium(15))
-                                Text("\(unit.format(kg: row.weightKg)) \(unit.rawValue)")
+                                Text("\(unit.label(kg: row.weightKg))")
                                     .font(AppFont.caption())
                                     .foregroundStyle(Theme.textSecondary)
                             }

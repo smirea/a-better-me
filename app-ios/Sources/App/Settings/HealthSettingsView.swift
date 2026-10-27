@@ -5,7 +5,7 @@ import SwiftUI
 /// Settings > Apple Health: what the app reads and writes. Reads and workouts need no switch; writing food does,
 /// because MacroFactor may already write the same meals.
 struct HealthSettingsView: View {
-    @State private var healthStore = HKHealthStore()
+    private let healthStore = HealthStore.shared
     @State private var requestTrigger = false
     @State private var energyAllowed = false
     private let nutrition = NutritionHealth.shared

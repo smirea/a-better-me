@@ -188,7 +188,7 @@ extension LiveValues {
     /// "185 lb x 8 @ 2", the way a watch line fits it: weight to a tenth, reps or time, and RIR.
     func summary(unit: WeightUnit) -> String {
         let weight = weightKg.map { "\(unit.fromKg($0).formatted(.number.precision(.fractionLength(0...1)))) \(unit.rawValue)" }
-        let amount = reps.map(String.init) ?? durationSeconds.map { Duration.seconds($0).formatted(.time(pattern: .minuteSecond)) }
+        let amount = reps.map(String.init) ?? durationSeconds.map { $0.minuteSecond }
         let main = [weight, amount].compactMap { $0 }.joined(separator: " x ")
         return rir.map { "\(main) @ \($0 >= 6 ? "6+" : "\($0)") RIR" } ?? main
     }

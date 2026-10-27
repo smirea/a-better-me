@@ -21,7 +21,7 @@ struct ActiveSessionBar: View {
                         Spacer()
                         if let rest = LiveSessionStore.shared.rest {
                             Label(
-                                Duration.seconds(rest.remaining(at: context.date).rounded(.up)).formatted(.time(pattern: .minuteSecond)),
+                                rest.remaining(at: context.date).countdown,
                                 systemImage: "stopwatch.fill"
                             )
                             .font(AppFont.number(15))

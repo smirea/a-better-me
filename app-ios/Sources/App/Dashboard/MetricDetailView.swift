@@ -341,8 +341,8 @@ struct MetricPlot {
             weighIns.map { weighIn in
                 let date = weighIn.date.formatted(.dateTime.weekday().month().day().hour().minute())
                 return switch weighIn.source {
-                case let .app(id): MonthRow(date: weighIn.date, text: "\(unit.format(kg: weighIn.kg)) \(unit.rawValue)", subtitle: date, deletableID: id)
-                case .health: MonthRow(date: weighIn.date, text: "\(unit.format(kg: weighIn.kg)) \(unit.rawValue)", subtitle: "\(date) · Health")
+                case let .app(id): MonthRow(date: weighIn.date, text: "\(unit.label(kg: weighIn.kg))", subtitle: date, deletableID: id)
+                case .health: MonthRow(date: weighIn.date, text: "\(unit.label(kg: weighIn.kg))", subtitle: "\(date) · Health")
                 }
             }
         case .topExercises: []

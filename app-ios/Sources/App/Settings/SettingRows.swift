@@ -68,10 +68,6 @@ extension [SettingOption<Int>] {
     }
 
     static func restDurations() -> Self {
-        stride(from: 0, through: 600, by: 15).map { SettingOption(value: $0, title: restDuration($0)) }
+        stride(from: 0, through: 600, by: 15).map { SettingOption(value: $0, title: $0.minuteSecond) }
     }
-}
-
-func restDuration(_ seconds: Int) -> String {
-    Duration.seconds(seconds).formatted(.time(pattern: .minuteSecond))
 }

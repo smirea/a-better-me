@@ -253,9 +253,9 @@ struct ExerciseSettingsView: View {
             SettingsRow(title: row.title, subtitle: summary, systemImage: row.systemImage) {
                 Menu("Edit") {
                     Picker(row.title, selection: restBinding) {
-                        Text("Default (\(ExerciseOverrideRow.formatRest(defaults.restSeconds(category))))").tag(Int?.none)
+                        Text("Default (\(defaults.restSeconds(category).minuteSecond))").tag(Int?.none)
                         ForEach(Array(stride(from: 15, through: 600, by: 15)), id: \.self) {
-                            Text(ExerciseOverrideRow.formatRest($0)).tag(Optional($0))
+                            Text($0.minuteSecond).tag(Optional($0))
                         }
                     }
                 }
