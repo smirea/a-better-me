@@ -6,7 +6,7 @@ struct RestTimerSettingsView: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection("Behavior") {
                 SettingToggle(
                     title: "Use Rest Timers", detail: "Rest timers will count down after each exercise set",
                     systemImage: "stopwatch.fill", isOn: store.binding(settings, \.workout.rest.enabled)
@@ -33,10 +33,8 @@ struct RestTimerSettingsView: View {
                     title: "Rest Between Left/Right Sets", detail: "Use rest timers in between left and right sets",
                     systemImage: "arrow.triangle.branch", isOn: store.binding(settings, \.workout.rest.betweenSides)
                 )
-            } header: {
-                SectionTitle("Behavior").textCase(nil)
             }
-            Section {
+            ThemedSection("Rest Scaling", footer: "Optionally reduce rest under specific conditions") {
                 SettingChoice(
                     title: "Rest After Last Warm-up Set",
                     selection: store.binding(settings, \.workout.rest.scaling.afterLastWarmUp), options: .percents()
@@ -49,12 +47,6 @@ struct RestTimerSettingsView: View {
                     title: "Rest Between Left/Right Sets",
                     selection: store.binding(settings, \.workout.rest.scaling.betweenSides), options: .percents()
                 )
-            } header: {
-                VStack(alignment: .leading, spacing: 2) {
-                    SectionTitle("Rest Scaling")
-                    Text("Optionally reduce rest under specific conditions").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-                }
-                .textCase(nil)
             }
         }
         .themedList()
@@ -68,7 +60,7 @@ private struct RestNotificationSettingsView: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection("Notifications") {
                 SettingToggle(
                     title: "Play Sound", detail: "Play sound when rest time is over",
                     systemImage: "music.note", isOn: store.binding(settings, \.workout.rest.playSound)
@@ -77,8 +69,6 @@ private struct RestNotificationSettingsView: View {
                     title: "Vibrate", detail: "Vibrate when rest time is over",
                     systemImage: "iphone.radiowaves.left.and.right", isOn: store.binding(settings, \.workout.rest.vibrate)
                 )
-            } header: {
-                SectionTitle("Notifications").textCase(nil)
             }
         }
         .themedList()
@@ -92,7 +82,7 @@ private struct RestDurationSettingsView: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection("Default Timers") {
                 ForEach(RestCategory.allCases) { category in
                     SettingChoice(
                         title: category.displayName,
@@ -103,14 +93,9 @@ private struct RestDurationSettingsView: View {
                         options: .restDurations()
                     )
                 }
-            } header: {
-                SectionTitle("Default Timers").textCase(nil)
             }
-            Section {
-                Button("Reset Defaults", role: .destructive) { store.updateSettings { $0.resetRestTimer() } }
-                    .font(AppFont.medium(15))
-                    .frame(maxWidth: .infinity)
-                    .foregroundStyle(Theme.destructive)
+            ThemedSection {
+                ResetRowButton("Reset Defaults") { store.updateSettings { $0.resetRestTimer() } }
             }
         }
         .themedList()

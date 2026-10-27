@@ -8,7 +8,7 @@ struct UnitsSettingsView: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection {
                 SettingChoice(
                     title: "Weight", systemImage: "scalemass", selection: store.binding(settings, \.weightUnit),
                     options: [SettingOption(value: .lb, title: "Pounds"), SettingOption(value: .kg, title: "Kilograms")]
@@ -40,7 +40,7 @@ struct ProfileSettingsView: View {
     var body: some View {
         let unit = settings.nutrition.heightUnit
         Form {
-            Section {
+            ThemedSection {
                 SettingChoice(
                     title: "Sex", systemImage: "figure.stand", selection: store.binding(settings, \.profile.sex),
                     options: [SettingOption(value: .male, title: "Male"), SettingOption(value: .female, title: "Female")]
@@ -77,8 +77,7 @@ struct ProfileSettingsView: View {
         } else {
             LabeledContent {
                 Button("Set") { store.updateSettings { $0.profile.birthDate = CalendarDay("1990-01-01") } }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
+                    .rowAction()
                     .accessibilityLabel("Set Date of Birth")
             } label: {
                 RowLabel(title: "Date of Birth", detail: "Not set", systemImage: "birthday.cake")

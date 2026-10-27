@@ -7,7 +7,7 @@ struct WorkoutSettingsView: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection("General") {
                 SettingLink(title: "Rest Timer", detail: "Configure rest timer settings", systemImage: "stopwatch.fill") {
                     RestTimerSettingsView()
                 }
@@ -41,10 +41,8 @@ struct WorkoutSettingsView: View {
                     title: "Exercise Auto-Next", detail: "Scroll next automatically when an exercise is completed",
                     systemImage: "chevron.forward.2", isOn: store.binding(settings, \.workout.exerciseAutoNext)
                 )
-            } header: {
-                SectionTitle("General").textCase(nil)
             }
-            Section {
+            ThemedSection("Display") {
                 SettingToggle(
                     title: "Keep Alive", detail: "Keep your phone alive during active workout sessions",
                     systemImage: "sun.max", isOn: store.binding(settings, \.workout.display.keepAlive)
@@ -66,8 +64,6 @@ struct WorkoutSettingsView: View {
                         SettingOption(value: .weekly, title: "Weekly Swipe"),
                     ]
                 )
-            } header: {
-                SectionTitle("Display").textCase(nil)
             }
         }
         .themedList()
@@ -81,7 +77,7 @@ private struct SmartProgressionSettingsView: View {
 
     var body: some View {
         Form {
-            Section {
+            ThemedSection("Behavior") {
                 SettingChoice(
                     title: "Initial log fill", systemImage: "book.pages",
                     selection: store.binding(settings, \.workout.progression.initialFill),
@@ -110,8 +106,6 @@ private struct SmartProgressionSettingsView: View {
                     title: "Weight Match", detail: "Prefer matching the previous set's weight when possible.",
                     systemImage: "equal.square", isOn: store.binding(settings, \.workout.progression.weightMatch)
                 )
-            } header: {
-                SectionTitle("Behavior").textCase(nil)
             }
         }
         .themedList()

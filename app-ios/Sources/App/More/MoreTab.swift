@@ -8,54 +8,40 @@ struct MoreTab: View {
         NavigationStack {
             Form {
                 if let rows = store.snapshotRows {
-                    Section {
+                    ThemedSection {
                         RowLabel(title: "Downloading… \(rows) rows", systemImage: "arrow.down.circle")
                     }
                 }
-                Section {
+                ThemedSection("Progress") {
                     row("Levels", "trophy") { LevelsView() }
                     row("Strategy", "chart.line.uptrend.xyaxis") { StrategyView() }
                     row("Workout History", "list.bullet.rectangle") { WorkoutHistoryView() }
-                } header: {
-                    SectionTitle("Progress").textCase(nil)
                 }
-                Section {
+                ThemedSection("General") {
                     row("Units", "ruler") { UnitsSettingsView() }
                     row("Profile", "person.crop.circle") { ProfileSettingsView() }
                     row("Dashboard", "square.grid.2x2") { CustomizeDashboardView() }
-                } header: {
-                    SectionTitle("General").textCase(nil)
                 }
-                Section {
+                ThemedSection("Workouts") {
                     row("Workout", "dumbbell") { WorkoutSettingsView() }
                     row("Exercises", "figure.strengthtraining.traditional") { ExerciseLibraryView() }
                     row("Gym Profiles", "building.2") { GymProfilesView() }
-                } header: {
-                    SectionTitle("Workouts").textCase(nil)
                 }
-                Section {
+                ThemedSection("Nutrition") {
                     row("Food Log", "fork.knife") { FoodLogSettingsView() }
                     row("Expenditure", "bolt.fill") { ExpenditureSettingsView() }
                     row("Strategy Settings", "circle.hexagongrid") { StrategySettingsView() }
                     row("Foods & Recipes", "carrot") { FoodLibraryView() }
-                } header: {
-                    SectionTitle("Nutrition").textCase(nil)
                 }
-                Section {
+                ThemedSection("Integrations") {
                     row("Apple Health", "heart.fill") { HealthSettingsView() }
-                } header: {
-                    SectionTitle("Integrations").textCase(nil)
                 }
-                Section {
+                ThemedSection("Data") {
                     row("Data Visibility", "eye") { DataVisibilityView() }
                     AssetsRow()
-                } header: {
-                    SectionTitle("Data").textCase(nil)
                 }
-                Section {
+                ThemedSection("Automation") {
                     row("API Tokens", "key") { ApiTokensView() }
-                } header: {
-                    SectionTitle("Automation").textCase(nil)
                 }
             }
             .themedList()
@@ -76,7 +62,7 @@ private struct AssetsRow: View {
             VStack(alignment: .leading, spacing: 8) {
                 RowLabel(title: store.statusLine, systemImage: "icloud.and.arrow.down")
                 if store.phase == .downloading, let progress = store.progress {
-                    ProgressView(value: progress.fraction).tint(Theme.textPrimary)
+                    ProgressView(value: progress.fraction).progressViewStyle(.bar(Theme.textPrimary))
                 }
             }
         }
