@@ -129,7 +129,9 @@ struct InstructionSource: Hashable, Sendable {
         let articles: [MarkdownSection]
     }
 
-    @concurrent func load(from pack: MarkdownPack = .bundled) async -> Content {
+    /// Nil means the bundled pack, resolved here rather than in a default argument, which the caller's actor evaluates.
+    @concurrent func load(from pack: MarkdownPack? = nil) async -> Content {
+        let pack = pack ?? .bundled
         let markdown = about ?? instructions.flatMap(pack.instructions) ?? ""
         return Content(
             source: self,

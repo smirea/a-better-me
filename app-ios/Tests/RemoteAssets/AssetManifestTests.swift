@@ -10,7 +10,7 @@ private let enUS = Locale(identifier: "en_US")
 private let manifest = AssetManifest(version: "0123456789abcdef", packs: [
     .init(sha256: a, size: 1_000_000, files: [.init(path: "EquipmentImages/x.webp", offset: 0, size: 1_000_000)]),
     .init(sha256: b, size: 2_500_000, files: [.init(path: "ExerciseImages/x_a.webp", offset: 0, size: 2_500_000)]),
-    .init(sha256: b, size: 2_500_000, files: [.init(path: "ExerciseImages/y_a.webp", offset: 0, size: 2_500_000)]),
+    .init(sha256: b, size: 2_500_000, files: [.init(path: "ExerciseImages/x_a.webp", offset: 0, size: 2_500_000)]),
     .init(sha256: c, size: 10_000_000, files: [.init(path: "ExerciseImages/z_a.webp", offset: 0, size: 10_000_000)]),
 ])
 
@@ -20,13 +20,21 @@ private func parse(_ packs: String) throws(AssetError) -> AssetManifest {
 
 struct AssetManifestTests {
     @Test func missingListsEachAbsentPackOnce() {
-        #expect(manifest.missing(present: [a]).map(\.sha256) == [b, c])
-        #expect(manifest.missing(present: [a, b, c]) == [])
+        let all = Set(manifest.packs.map(\.directory))
+        #expect(manifest.missing(present: [manifest.packs[0].directory]).map(\.sha256) == [b, c])
+        #expect(manifest.missing(present: all) == [])
     }
 
     @Test func progressCountsBytesOfEachPackOnce() {
-        #expect(manifest.progress(present: [a]) == AssetProgress(bytesDone: 1_000_000, bytesTotal: 13_500_000))
-        #expect(manifest.progress(present: [a, b, c]).fraction == 1)
+        #expect(manifest.progress(present: [manifest.packs[0].directory]) == AssetProgress(bytesDone: 1_000_000, bytesTotal: 13_500_000))
+        #expect(manifest.progress(present: Set(manifest.packs.map(\.directory))).fraction == 1)
+    }
+
+    @Test func aRenamedFileGetsANewDirectoryEvenWhenThePackBytesMatch() {
+        let before = AssetManifest.Pack(sha256: a, size: 3, files: [.init(path: "ExerciseImages/x.webp", offset: 0, size: 3)])
+        let renamed = AssetManifest.Pack(sha256: a, size: 3, files: [.init(path: "ExerciseImages/y.webp", offset: 0, size: 3)])
+        #expect(before.directory != renamed.directory)
+        #expect(AssetManifest.isBlobName(before.directory))
     }
 
     @Test func parseRejectsAnotherVersionAPathLikeHashOrAnEscapingPath() throws {

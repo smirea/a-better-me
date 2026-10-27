@@ -17,7 +17,7 @@ final class AssetStore {
 
     @ObservationIgnored private var source: AssetSource?
     @ObservationIgnored private var manifest: AssetManifest?
-    /// Each file's pack sha256.
+    /// Each file's pack directory.
     @ObservationIgnored private var byPath: [String: String] = [:]
     @ObservationIgnored private var present: Set<String> = []
     @ObservationIgnored private var scanned = false
@@ -86,7 +86,7 @@ final class AssetStore {
 
     /// The downloaded file at `path`, such as `ExerciseImages/x.webp`, or nil until its pack arrives.
     func url(_ path: String) -> URL? {
-        if let sha256 = byPath[path], present.contains(sha256) { return Self.blobs.appending(path: "\(sha256)/\(path)") }
+        if let directory = byPath[path], present.contains(directory) { return Self.blobs.appending(path: "\(directory)/\(path)") }
         _ = revision
         return nil
     }
@@ -146,7 +146,7 @@ final class AssetStore {
     private func use(_ manifest: AssetManifest) {
         self.manifest = manifest
         byPath = Dictionary(
-            manifest.packs.flatMap { pack in pack.files.map { ($0.path, pack.sha256) } },
+            manifest.packs.flatMap { pack in pack.files.map { ($0.path, pack.directory) } },
             uniquingKeysWith: { first, _ in first }
         )
         revision += 1
@@ -159,8 +159,8 @@ final class AssetStore {
                 guard let pack = queue.next() else { break }
                 group.addTask { try await Self.fetchPack(pack, source: source, session: session) }
             }
-            while let sha256 = try await group.next() {
-                present.insert(sha256)
+            while let directory = try await group.next() {
+                present.insert(directory)
                 revision += 1
                 if let pack = queue.next() {
                     group.addTask { try await Self.fetchPack(pack, source: source, session: session) }
@@ -200,23 +200,23 @@ final class AssetStore {
         return try? AssetManifest.parse(data, version: version)
     }
 
-    /// Unpacks into a hidden directory only after the pack's size and hash match, then renames it to `blobs/<sha256>/`,
-    /// so a pack directory is always whole.
+    /// Unpacks into a hidden directory only after the pack's size and hash match, then renames it to
+    /// `blobs/<directory>/`, so a pack directory is always whole.
     private nonisolated static func fetchPack(_ pack: AssetManifest.Pack, source: AssetSource, session: URLSession) async throws -> String {
         let data = try await get("blobs/\(pack.sha256)", source: source, session: session)
         guard data.count == pack.size, SHA256.hash(data: data).hex == pack.sha256 else { throw AssetError.corrupt }
         let fileManager = FileManager.default
-        let staging = blobs.appending(path: ".\(pack.sha256)")
+        let staging = blobs.appending(path: ".\(pack.directory)")
         try? fileManager.removeItem(at: staging)
         for file in pack.files {
             let url = staging.appending(path: file.path)
             try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try data[file.offset..<file.offset + file.size].write(to: url)
         }
-        let destination = blobs.appending(path: pack.sha256)
+        let destination = blobs.appending(path: pack.directory)
         try? fileManager.removeItem(at: destination)
         try fileManager.moveItem(at: staging, to: destination)
-        return pack.sha256
+        return pack.directory
     }
 
     /// Directories only: builds before packs kept each file as a plain `blobs/<sha256>` file.
@@ -232,7 +232,7 @@ final class AssetStore {
 
     /// Deletes packs and cached manifests other versions left behind, once this version's packs are all present.
     private nonisolated static func prune(keeping manifest: AssetManifest) async -> Set<String> {
-        let keep = Set(manifest.packs.map(\.sha256))
+        let keep = Set(manifest.packs.map(\.directory))
         let fileManager = FileManager.default
         for name in (try? fileManager.contentsOfDirectory(atPath: blobs.path)) ?? [] where !keep.contains(name) {
             try? fileManager.removeItem(at: blobs.appending(path: name))

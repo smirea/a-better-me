@@ -1,15 +1,38 @@
+import CryptoKit
 import Foundation
 
 /// One asset version's packs, as `bun scripts/assets.ts upload` writes `manifests/<version>.json`. Each pack is the
 /// bucket's `blobs/<sha256>`: its files back to back, at the offsets listed here.
-struct AssetManifest: Codable, Equatable, Sendable {
-    struct Pack: Codable, Equatable, Sendable {
+struct AssetManifest: Decodable, Equatable, Sendable {
+    struct Pack: Decodable, Equatable, Sendable {
         let sha256: String
         let size: Int
         let files: [File]
+        /// Names the pack's unpacked directory. The bytes' hash alone is not enough: renaming a file keeps the bytes, so
+        /// a directory named by it would still hold the old file name.
+        let directory: String
+
+        private enum CodingKeys: String, CodingKey { case sha256, size, files }
+
+        init(sha256: String, size: Int, files: [File]) {
+            self.sha256 = sha256
+            self.size = size
+            self.files = files
+            let layout = files.map { "\($0.path)\u{0}\($0.offset)\u{0}\($0.size)\n" }.joined()
+            directory = SHA256.hash(data: Data("\(sha256)\n\(layout)".utf8)).hex
+        }
+
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            try self.init(
+                sha256: container.decode(String.self, forKey: .sha256),
+                size: container.decode(Int.self, forKey: .size),
+                files: container.decode([File].self, forKey: .files)
+            )
+        }
     }
 
-    struct File: Codable, Equatable, Sendable {
+    struct File: Decodable, Equatable, Sendable {
         let path: String
         let offset: Int
         let size: Int
@@ -18,8 +41,8 @@ struct AssetManifest: Codable, Equatable, Sendable {
     let version: String
     let packs: [Pack]
 
-    /// A pack's directory name is its sha256 and its files land at their paths inside it, so a hash that is not
-    /// 64 lowercase hex characters or a path with `..` could write outside `blobs/`.
+    /// The pack's sha256 names its bucket key and its files land at their paths inside its directory, so a hash that is
+    /// not 64 lowercase hex characters or a path with `..` could reach outside the bucket's `blobs/` or the app's.
     static func parse(_ data: Data, version: String) throws(AssetError) -> AssetManifest {
         guard let manifest = try? JSONDecoder().decode(AssetManifest.self, from: data),
               manifest.version == version,
@@ -39,17 +62,17 @@ struct AssetManifest: Codable, Equatable, Sendable {
         path.split(separator: "/", omittingEmptySubsequences: false).allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
     }
 
-    /// Each pack still to download, once.
+    /// Each pack whose directory is not unpacked yet, once.
     func missing(present: Set<String>) -> [Pack] {
         var seen = present
-        return packs.filter { seen.insert($0.sha256).inserted }
+        return packs.filter { seen.insert($0.directory).inserted }
     }
 
     func progress(present: Set<String>) -> AssetProgress {
         var seen = Set<String>()
-        let unique = packs.filter { seen.insert($0.sha256).inserted }
+        let unique = packs.filter { seen.insert($0.directory).inserted }
         return AssetProgress(
-            bytesDone: unique.reduce(0) { $0 + (present.contains($1.sha256) ? $1.size : 0) },
+            bytesDone: unique.reduce(0) { $0 + (present.contains($1.directory) ? $1.size : 0) },
             bytesTotal: unique.reduce(0) { $0 + $1.size }
         )
     }
