@@ -17,6 +17,7 @@ A phone's udid drives the watch in its active pair (./scripts/run --pair-watch m
   longpress <label|id>
   tapxy <x> <y>         tap at points from the top left
   crown <delta>         rotate the Digital Crown (1.0 is about one full turn)
+  home                  press the Digital Crown: the watch face, then the Smart Stack with crown -1
   swipe left|right|up|down
   shot [path]           screenshot, default DerivedData/watch-driver-<udid>/shot.png
   launch [args...]      relaunch the watch app with launch arguments
@@ -102,7 +103,8 @@ async function start() {
 async function send(op: string, args: string[]) {
     if (!existsSync(join(dir, "ready"))) throw new Error(`No driver for ${udid}. Run: scripts/watch-drive ${udid} start`);
     if (op === "stop") op = "quit";
-    if (op === "shot" && args.length === 0) args = [join(dir, "shot.png")];
+    // The driver runs with `/` as its working directory, so a relative path is resolved here.
+    if (op === "shot") args = [args.length ? resolve(args[0]) : join(dir, "shot.png")];
     const index = readdirSync(dir).filter(file => file.startsWith("cmd-")).length;
     writeFileSync(join(dir, `cmd-${index}.json`), JSON.stringify({ op, args }));
     const output = join(dir, `out-${index}.txt`);
