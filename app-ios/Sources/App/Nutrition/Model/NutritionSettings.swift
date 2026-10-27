@@ -93,7 +93,6 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     var pinnedNutrients: [NutrientID] = [.energy, .protein, .fat, .carbs]
     var hideAdditionalNutrients = false
     var searchBranded = true
-    var searchOpenFoodFacts = false
     /// Measure names pinned to the front of the serving picker, at most two weights and two volumes.
     var favoriteMeasures = ["g", "oz", "mL", "cup"]
     var timeline = Timeline()
