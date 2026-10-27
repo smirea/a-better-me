@@ -25,10 +25,10 @@ extension DashboardData {
 
     func nutrientTile(_ card: NutritionCard) -> TileMetrics.Tile {
         guard let id = card.nutrient, let nutrient = NutrientRegistry.nutrient(id) else {
-            return TileMetrics.Tile(text: nil, unit: "", fill: 0, tick: nil)
+            return TileMetrics.Tile(text: nil, unit: "", consumed: 0, range: NutrientRange())
         }
         let consumed = log.first { $0.day == today }?.consumed.amount(of: id) ?? 0
-        return TileMetrics.tile(consumed: consumed, target: nutrientRange(id, on: today).target, display: card.display, unit: nutrient.unit.rawValue)
+        return TileMetrics.tile(consumed: consumed, range: nutrientRange(id, on: today), display: card.display, unit: nutrient.unit.rawValue)
     }
 
     var macrosCard: MacrosCardValues {

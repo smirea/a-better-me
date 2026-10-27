@@ -10,20 +10,17 @@ struct TileMetricsTests {
     }()
 
     @Test func tileStatesConsumedPercentAndRemaining() {
-        let consumed = TileMetrics.tile(consumed: 85, target: 170, display: .consumed, unit: "g")
-        #expect(consumed == TileMetrics.Tile(text: "85", unit: "g", fill: 85 / (170 / 0.59), tick: 0.59))
-        #expect(TileMetrics.tile(consumed: 85, target: 170, display: .percent, unit: "g").text == "50")
-        #expect(TileMetrics.tile(consumed: 85, target: 170, display: .percent, unit: "g").unit == "%")
-        let remaining = TileMetrics.tile(consumed: 200, target: 170, display: .remaining, unit: "g")
-        #expect(remaining.text == "-30")
-        #expect(remaining.unit == "g left")
-        #expect(remaining.fill == 200 / (170 / 0.59))
+        let range = NutrientRange(target: 170)
+        #expect(TileMetrics.tile(consumed: 85, range: range, display: .consumed, unit: "g") == TileMetrics.Tile(text: "85", unit: "g", consumed: 85, range: range))
+        #expect(TileMetrics.tile(consumed: 85, range: range, display: .percent, unit: "g") == TileMetrics.Tile(text: "50", unit: "%", consumed: 85, range: range))
+        #expect(TileMetrics.tile(consumed: 200, range: range, display: .remaining, unit: "g") == TileMetrics.Tile(text: "-30", unit: "g left", consumed: 200, range: range))
     }
 
-    @Test func tileWithoutATargetFallsBackToConsumedAndFillsFully() {
-        let tile = TileMetrics.tile(consumed: 12.5, target: nil, display: .remaining, unit: "g")
-        #expect(tile == TileMetrics.Tile(text: "12.5", unit: "g", fill: 1, tick: nil))
-        #expect(TileMetrics.tile(consumed: 1234.4, target: nil, display: .consumed, unit: "mg").text == "1,234")
+    @Test func tileWithoutATargetFallsBackToConsumed() {
+        let floorOnly = NutrientRange(floor: 10)
+        #expect(TileMetrics.tile(consumed: 12.5, range: floorOnly, display: .remaining, unit: "g").text == "12.5")
+        #expect(TileMetrics.tile(consumed: 12.5, range: floorOnly, display: .percent, unit: "g").unit == "g")
+        #expect(TileMetrics.tile(consumed: 1234.4, range: NutrientRange(), display: .consumed, unit: "mg").text == "1,234")
     }
 
     @Test func macroSplitIsTheShareOfCalories() {

@@ -32,28 +32,20 @@ enum TileMetrics {
     struct Tile: Equatable {
         var text: String?
         var unit: String
-        /// How full the bar is, 0 to 1.
-        var fill: Double
-        /// Where the target tick sits, nil without a target.
-        var tick: Double?
+        var consumed: Double
+        var range: NutrientRange
     }
 
-    /// MacroFactor draws the target tick at about 59% of the bar, leaving room to show going over.
-    static let tickPosition = 0.59
-
     /// Percent and Remaining fall back to Consumed for a nutrient without a target, as MacroFactor disables them there.
-    static func tile(consumed: Double, target: Double?, display: NutritionCard.Display, unit: String) -> Tile {
-        let scale = target.map { $0 / tickPosition } ?? max(consumed, 1)
-        let fill = min(max(consumed / max(scale, 1e-9), 0), 1)
-        let tick = target.map { _ in tickPosition }
+    static func tile(consumed: Double, range: NutrientRange, display: NutritionCard.Display, unit: String) -> Tile {
         let format: (Double) -> String = { unit == "kcal" || unit == "mg" || unit == "mcg" ? Int($0.rounded()).formatted() : $0.dashboardText }
-        switch (display, target) {
+        switch (display, range.target) {
         case let (.percent, target?) where target > 0:
-            return Tile(text: Int((consumed / target * 100).rounded()).formatted(), unit: "%", fill: fill, tick: tick)
+            return Tile(text: Int((consumed / target * 100).rounded()).formatted(), unit: "%", consumed: consumed, range: range)
         case let (.remaining, target?):
-            return Tile(text: format(target - consumed), unit: "\(unit) left", fill: fill, tick: tick)
+            return Tile(text: format(target - consumed), unit: "\(unit) left", consumed: consumed, range: range)
         default:
-            return Tile(text: format(consumed), unit: unit, fill: fill, tick: tick)
+            return Tile(text: format(consumed), unit: unit, consumed: consumed, range: range)
         }
     }
 

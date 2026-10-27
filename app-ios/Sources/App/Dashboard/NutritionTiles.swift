@@ -11,7 +11,7 @@ struct NutritionCardView: View {
             let tile = values.nutrientTile(card)
             NavigationLink(value: DashboardRoute.nutrient(id)) {
                 DashboardCard(title: nutrient.name, period: "Today", value: tile.text, unit: tile.unit) {
-                    NutrientBar(fill: tile.fill, tick: tile.tick, color: DashboardColor.nutrient(id))
+                    TileBar(value: tile.consumed, range: tile.range, color: DashboardColor.nutrient(id))
                 }
             }
         } else if card.nutrient == nil {
@@ -50,25 +50,15 @@ struct BodyMetricCardView: View {
     }
 }
 
-/// A horizontal bar with the target as a tick, as MacroFactor's nutrient tiles draw it.
-struct NutrientBar: View {
-    let fill: Double
-    let tick: Double?
+/// The Food Log's nutrient bar, centered in a card's chart area.
+private struct TileBar: View {
+    let value: Double
+    let range: NutrientRange
     let color: Color
 
     var body: some View {
-        GeometryReader { proxy in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Theme.surfaceRaised)
-                Capsule().fill(color).frame(width: proxy.size.width * fill)
-                if let tick {
-                    Rectangle().fill(Theme.textPrimary).frame(width: 2, height: 16).offset(x: proxy.size.width * tick - 1)
-                }
-            }
-            .frame(height: 10)
+        NutrientBar(value: value, range: range, maximum: FoodLog.barMaximum(value: value, range: range) ?? max(value, 1), color: color)
             .frame(maxHeight: .infinity)
-        }
-        .accessibilityHidden(true)
     }
 }
 
@@ -111,7 +101,6 @@ struct NutrientTodaySection: View {
     }
 
     var body: some View {
-        let tile = TileMetrics.tile(consumed: summary.consumedToday, target: summary.range.target, display: .consumed, unit: summary.unit)
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("\(summary.name) Today").font(AppFont.title())
@@ -128,7 +117,7 @@ struct NutrientTodaySection: View {
                         Text("\(Int((summary.consumedToday / target * 100).rounded()))%").font(AppFont.body(14)).foregroundStyle(Theme.textSecondary)
                     }
                 }
-                NutrientBar(fill: tile.fill, tick: tile.tick, color: DashboardColor.nutrient(summary.nutrient)).frame(height: 16)
+                TileBar(value: summary.consumedToday, range: summary.range, color: DashboardColor.nutrient(summary.nutrient)).frame(height: 16)
                 if summary.range.floor != nil || summary.range.ceiling != nil {
                     HStack {
                         if let floor = summary.range.floor { Text("Floor \(floor.dashboardText) \(summary.unit)") }
