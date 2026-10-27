@@ -99,8 +99,7 @@ struct FoodLogSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Food Log")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Food Log")
     }
 }
 
@@ -122,8 +121,7 @@ private struct HourRangeView: View {
             }
         }
         .themedList()
-        .navigationTitle("Hour Range")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Hour Range")
     }
 }
 
@@ -164,8 +162,7 @@ private struct LoggerBannerView: View {
             }
         }
         .themedList()
-        .navigationTitle("Logger Banner")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Logger Banner")
     }
 }
 
@@ -179,8 +176,7 @@ private struct FavoriteMeasuresView: View {
             section("Volume", SettingsRules.volumeMeasures)
         }
         .themedList()
-        .navigationTitle("Favorite Measurements")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Favorite Measurements")
     }
 
     private func section(_ title: String, _ measures: [String]) -> some View {
@@ -277,8 +273,7 @@ struct ExpenditureSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Expenditure")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Expenditure")
     }
 
     @ViewBuilder private func calculationStart(_ start: CalendarDay?) -> some View {
@@ -375,8 +370,7 @@ private struct BMREquationView: View {
             }
         }
         .themedList()
-        .navigationTitle("BMR Equation")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("BMR Equation")
     }
 
     private func orNotSet<Value>(_ options: [SettingOption<Value>]) -> [SettingOption<Value?>] {
@@ -417,8 +411,7 @@ struct StrategySettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Strategy")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Strategy")
     }
 }
 

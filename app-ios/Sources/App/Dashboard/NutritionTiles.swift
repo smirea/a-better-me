@@ -139,8 +139,7 @@ struct NutrientTodaySection: View {
                     }
                 }
             }
-            .padding(14)
-            .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+            .card()
         }
         .sheet(isPresented: $showingAbout) { AboutNutrientGoalsSheet() }
     }
@@ -168,8 +167,7 @@ private struct AboutNutrientGoalsSheet: View {
                 .listRowBackground(Theme.surface)
             }
             .themedList()
-            .navigationTitle("About Nutrient Goals")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("About Nutrient Goals")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done", systemImage: "checkmark") { dismiss() }
@@ -235,8 +233,7 @@ struct AllNutritionView: View {
             .padding(.vertical, 16)
         }
         .background(Theme.background)
-        .navigationTitle("Nutrition")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Nutrition")
     }
 }
 
@@ -260,8 +257,7 @@ struct AllBodyMetricsView: View {
             .padding(.vertical, 16)
         }
         .background(Theme.background)
-        .navigationTitle("Body Metrics")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Body Metrics")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Log Measurements", systemImage: "plus") { logging = true }

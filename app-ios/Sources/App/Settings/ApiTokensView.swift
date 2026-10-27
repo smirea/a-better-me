@@ -42,8 +42,7 @@ struct ApiTokensView: View {
                 Text("A token works once the app has synced. Swipe left to revoke one.")
             }
         }
-        .navigationTitle("API Tokens")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("API Tokens")
         .alert("New Token", isPresented: $naming) {
             TextField("Name, e.g. Coach", text: $name)
             Button("Cancel", role: .cancel) {}
@@ -107,8 +106,7 @@ private struct CreatedTokenSheet: View {
                     copyButton("Copy Setup for an Agent", value: created.setup)
                 }
             }
-            .navigationTitle(created.name)
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(created.name)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }

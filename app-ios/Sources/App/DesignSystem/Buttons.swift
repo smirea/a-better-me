@@ -7,7 +7,7 @@ extension View {
             .buttonSizing(.flexible)
             .controlSize(.large)
             .tint(Theme.textPrimary)
-            .foregroundStyle(Theme.background)
+            .foregroundStyle(Theme.onPrimary)
             .font(AppFont.headline())
     }
 

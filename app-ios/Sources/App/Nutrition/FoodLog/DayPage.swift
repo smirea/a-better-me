@@ -62,7 +62,7 @@ private struct HourRow: View {
                 if isCurrent { Circle().frame(width: 4, height: 4) }
             }
             .font(AppFont.headline(11))
-            .foregroundStyle(isSelected ? Color.black : Theme.textPrimary)
+            .foregroundStyle(isSelected ? Theme.onPrimary : Theme.textPrimary)
             .padding(.horizontal, 8)
             .frame(height: 22)
             .background(isSelected ? Theme.textPrimary : Theme.surfaceRaised, in: Capsule())

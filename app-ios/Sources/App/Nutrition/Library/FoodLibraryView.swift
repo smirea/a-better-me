@@ -77,8 +77,7 @@ struct FoodLibraryView: View {
             .padding(.bottom, 8)
         }
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Filter \(tab.rawValue.lowercased())")
-        .navigationTitle("Foods & Recipes")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Foods & Recipes")
         .toolbar {
             if tab != .favorites {
                 ToolbarItem(placement: .topBarTrailing) {

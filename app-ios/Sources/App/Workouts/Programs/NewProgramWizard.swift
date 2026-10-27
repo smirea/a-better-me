@@ -303,8 +303,7 @@ private struct WizardPage<Content: View, Footer: View>: View {
             .padding(.top, 8)
             .background(Theme.background)
         }
-        .navigationTitle("Create Program")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Create Program")
     }
 }
 
@@ -564,8 +563,7 @@ private struct ExperienceSheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(Theme.surface)
-            .navigationTitle("Lifting Experience")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Lifting Experience")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }

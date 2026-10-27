@@ -36,8 +36,7 @@ struct FoodLoggingHabitView: View {
                     .labelStyle(.iconOnly)
                     .buttonStyle(.glass)
                 }
-                .padding(14)
-                .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+                .card()
                 legend
                 ForEach(habit.years, id: \.self) { year in
                     VStack(alignment: .leading, spacing: 8) {
@@ -52,8 +51,7 @@ struct FoodLoggingHabitView: View {
             .padding(.bottom, 30)
         }
         .background(Theme.background)
-        .navigationTitle("Food Logging")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Food Logging")
         .sheet(item: $editing) { NutritionDayEntrySheet(day: $0.day, log: nutrition.log) }
     }
 

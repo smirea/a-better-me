@@ -362,8 +362,7 @@ private struct SetTypePicker: View {
                 }
             }
             .listStyle(.plain)
-            .navigationTitle("Set Type")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Set Type")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }
@@ -419,8 +418,7 @@ private struct RIRPicker: View {
                 }
             }
             .padding(.horizontal)
-            .navigationTitle("RIR Targets")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("RIR Targets")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }
@@ -468,8 +466,7 @@ private struct RestPicker: View {
                     dismiss()
                 }
             }
-            .navigationTitle("Rest Timer")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Rest Timer")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }

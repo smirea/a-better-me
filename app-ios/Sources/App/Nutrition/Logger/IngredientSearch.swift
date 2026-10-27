@@ -40,8 +40,7 @@ private struct IngredientSearch: View {
             .themedList()
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search for a food")
             .onChange(of: query) { session?.setQuery(query, branded: settings.nutrition.searchBranded) }
-            .navigationTitle("Add Ingredient")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Add Ingredient")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", systemImage: "xmark") { dismiss() }

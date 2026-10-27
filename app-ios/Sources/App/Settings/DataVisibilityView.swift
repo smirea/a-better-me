@@ -19,8 +19,7 @@ struct DataVisibilityView: View {
             }
         }
         .themedList()
-        .navigationTitle("Data Visibility")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Data Visibility")
     }
 }
 
@@ -61,8 +60,7 @@ private struct NutrientVisibilityView: View {
             }
         }
         .themedList()
-        .navigationTitle("Nutrient Visibility")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Nutrient Visibility")
     }
 }
 
@@ -101,8 +99,7 @@ private struct BodyMetricsVisibilityView: View {
             }
         }
         .themedList()
-        .navigationTitle("Body Metrics Visibility")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Body Metrics Visibility")
     }
 }
 

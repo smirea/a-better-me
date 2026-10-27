@@ -38,8 +38,7 @@ struct HealthSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Apple Health")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Apple Health")
         .healthDataAccessRequest(store: healthStore, shareTypes: DietaryHealth.shareTypes, readTypes: [], trigger: requestTrigger) { @Sendable _ in
             // HealthKit calls back off the main thread, where a main-actor closure traps.
             Task { @MainActor in

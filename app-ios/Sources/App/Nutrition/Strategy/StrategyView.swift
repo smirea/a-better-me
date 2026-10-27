@@ -368,7 +368,6 @@ struct PlanHistoryView: View {
         }
         .listStyle(.plain)
         .themedList()
-        .navigationTitle("Program History")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Program History")
     }
 }

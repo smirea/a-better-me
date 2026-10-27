@@ -58,8 +58,7 @@ struct RestTimerSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Rest Timer")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Rest Timer")
     }
 }
 
@@ -83,8 +82,7 @@ private struct RestNotificationSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Notifications")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Notifications")
     }
 }
 
@@ -116,7 +114,6 @@ private struct RestDurationSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Timer Duration")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Timer Duration")
     }
 }

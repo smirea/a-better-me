@@ -148,8 +148,7 @@ private struct SectionWorkoutsSheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(Theme.surface)
-            .navigationTitle("Add Workout")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Add Workout")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }

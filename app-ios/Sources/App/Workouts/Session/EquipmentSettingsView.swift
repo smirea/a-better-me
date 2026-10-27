@@ -90,8 +90,7 @@ struct EquipmentSettingsView: View {
         }
         .themedList()
         .font(AppFont.medium(15))
-        .navigationTitle("Equipment Settings")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Equipment Settings")
         .onAppear { offsetText = Self.text(of: overrides.plateOffset, unit: unit) }
     }
 

@@ -11,6 +11,8 @@ enum Theme {
     static let textPrimary = Color.white
     static let textSecondary = Color(hex: 0xABABAB)
     static let textTertiary = Color(hex: 0x6E6E6E)
+    /// Text and icons on a white fill: primary pills and selected chips.
+    static let onPrimary = background
 
     static let accent = Color(hex: 0xF28969)
     static let lavender = Color(hex: 0xACA0D2)

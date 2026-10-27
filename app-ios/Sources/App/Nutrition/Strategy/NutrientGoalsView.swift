@@ -47,8 +47,7 @@ struct NutrientGoalsView: View {
             }
         }
         .themedList()
-        .navigationTitle("\(info?.name ?? nutrient.rawValue) Goals")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("\(info?.name ?? nutrient.rawValue) Goals")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("New Goal", systemImage: "plus") { editing = NutrientGoalDraft(startsOn: today) }
@@ -111,8 +110,7 @@ private struct NutrientGoalEditor: View {
                 }
             }
             .themedList()
-            .navigationTitle(original == nil ? "New \(name) Goal" : "Edit \(name) Goal")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(original == nil ? "New \(name) Goal" : "Edit \(name) Goal")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }
@@ -176,8 +174,7 @@ struct NutrientGoalsListView: View {
             }
         }
         .themedList()
-        .navigationTitle("Nutrient Goals")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Nutrient Goals")
     }
 
     /// "Floor 25 · Target 38 · Ceiling 100 g", or "No targets".

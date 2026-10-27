@@ -24,8 +24,7 @@ struct DashboardCard<Chart: View>: View {
             }
             .padding(.top, 10)
         }
-        .padding(14)
-        .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+        .card()
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
     }

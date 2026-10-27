@@ -42,8 +42,7 @@ struct FoodEditor: View {
             }
             .themedList()
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle(foodID == nil ? "Create Food" : "Edit Food")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(foodID == nil ? "Create Food" : "Edit Food")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", systemImage: "xmark") { dismiss() }

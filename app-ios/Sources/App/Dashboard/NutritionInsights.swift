@@ -108,8 +108,7 @@ struct EnergyBalanceInsights: View {
                     .accessibilityElement(children: .combine)
                 }
             }
-            .padding(14)
-            .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+            .card()
         }
     }
 }
@@ -182,8 +181,7 @@ private struct ChangeRows: View {
                 .accessibilityElement(children: .combine)
             }
         }
-        .padding(14)
-        .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+        .card()
     }
 }
 

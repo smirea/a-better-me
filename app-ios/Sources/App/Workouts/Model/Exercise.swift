@@ -49,7 +49,6 @@ struct Exercise: Codable, Hashable, Identifiable {
     var images: [String] = []
 
     var isCustom: Bool { id.hasPrefix("custom-") }
-    var tracksWeight: Bool { metrics.contains { $0.isWeight } }
     var tracksReps: Bool { metrics.contains { $0 == .reps || $0 == .repsPerSide } }
     /// Per-side metrics count both sides in volume: 25 kg/side x 10/side is 500 kg.
     var countsBothSides: Bool { metrics.contains { $0.isPerSide } }

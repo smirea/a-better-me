@@ -53,8 +53,7 @@ struct StrategyWizardView: View {
                 .disabled(!model.canAdvance(from: step))
                 .padding(.top, 8)
         }
-        .navigationTitle(model.title)
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle(model.title)
     }
 
     private func advance(from step: StrategyWizardModel.Step) {

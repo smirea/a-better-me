@@ -39,8 +39,7 @@ struct MetricDetailView: View {
             .padding(.bottom, 30)
         }
         .background(Theme.background)
-        .navigationTitle(detail.title)
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle(detail.title)
         .toolbar {
             if route == .scaleWeight || route == .weightTrend {
                 ToolbarItem(placement: .topBarTrailing) {

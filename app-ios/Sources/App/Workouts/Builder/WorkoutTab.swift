@@ -132,8 +132,7 @@ struct WorkoutTab: View {
                         .font(AppFont.caption())
                         .foregroundStyle(Theme.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
-                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+                        .card()
                 }
             } else {
                 VStack(alignment: .leading, spacing: 28) {

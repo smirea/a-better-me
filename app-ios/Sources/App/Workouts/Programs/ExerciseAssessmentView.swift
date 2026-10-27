@@ -32,8 +32,7 @@ struct ExerciseAssessmentView: View {
             }
         }
         .themedList()
-        .navigationTitle("Exercise Assessment")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Exercise Assessment")
     }
 
     private func answer(_ question: AssessmentQuestion) -> Binding<String?> {

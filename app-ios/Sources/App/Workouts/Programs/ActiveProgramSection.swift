@@ -66,8 +66,7 @@ private struct GoToCycleSheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(Theme.surface)
-            .navigationTitle("Go to...")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Go to...")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }

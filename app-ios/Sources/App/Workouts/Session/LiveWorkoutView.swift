@@ -314,8 +314,7 @@ struct SessionEditor: View {
             Text(text).font(AppFont.body(14)).foregroundStyle(Theme.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+        .card()
         .padding(.horizontal, 20)
     }
 

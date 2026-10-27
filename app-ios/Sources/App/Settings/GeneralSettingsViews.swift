@@ -27,8 +27,7 @@ struct UnitsSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Units")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Units")
     }
 }
 
@@ -54,8 +53,7 @@ struct ProfileSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Profile")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Profile")
     }
 
     /// Tallest first, with the stored height kept as it is when it falls between two choices of the unit.

@@ -19,8 +19,6 @@ struct ServingChoices: Hashable, Sendable {
         self.servings = servings
     }
 
-    var all: [Measure] { units + servings }
-
     /// The same amount in `measure`: whole grams and milliliters, two decimals for anything else.
     static func convert(_ serving: Serving, to measure: Measure) -> Serving {
         let quantity = serving.servings * measure.quantity / measure.servings

@@ -71,8 +71,7 @@ struct WorkoutSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Workout")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Workout")
     }
 }
 
@@ -116,7 +115,6 @@ private struct SmartProgressionSettingsView: View {
             }
         }
         .themedList()
-        .navigationTitle("Smart Progression")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Smart Progression")
     }
 }

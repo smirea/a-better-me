@@ -49,8 +49,7 @@ struct CustomizeDashboardView: View {
         }
         .environment(\.editMode, .constant(.active))
         .themedList()
-        .navigationTitle("Customize Dashboard")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Customize Dashboard")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") {

@@ -30,8 +30,7 @@ struct SmartProgressionSheet: View {
                     }
                 }
             }
-            .navigationTitle("Smart Progression")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Smart Progression")
             .navigationDestination(isPresented: $isShowingSettings) { WorkoutSettingsView() }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

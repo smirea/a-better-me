@@ -80,8 +80,7 @@ private struct SwapSubstitutions: View {
         }
         .listStyle(.plain)
         .themedList()
-        .navigationTitle("Swap")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Swap")
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Close", systemImage: "xmark") { dismiss() }
@@ -181,7 +180,7 @@ private struct ExercisePickerList: View {
                     Button("Done") { finish(with: selection.ids) }
                         .buttonStyle(.glassProminent)
                         .tint(Theme.textPrimary)
-                        .foregroundStyle(Color.black)
+                        .foregroundStyle(Theme.onPrimary)
                         .font(AppFont.headline())
                 }
             }
@@ -302,7 +301,7 @@ private struct AddButton: View {
         Button(isSelected ? "Remove" : "Add", systemImage: isSelected ? "checkmark" : "plus") { selection.toggle(id) }
             .labelStyle(.iconOnly)
             .font(AppFont.headline(13))
-            .foregroundStyle(isSelected ? Color.black : Theme.textPrimary)
+            .foregroundStyle(isSelected ? Theme.onPrimary : Theme.textPrimary)
             .frame(width: 30, height: 30)
             .background(isSelected ? Theme.textPrimary : Theme.surfaceRaised, in: .circle)
             .buttonStyle(.plain)

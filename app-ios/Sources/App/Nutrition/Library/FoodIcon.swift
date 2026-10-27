@@ -110,8 +110,7 @@ struct FoodIconPicker: View {
             }
             .background(Theme.background)
             .searchable(text: $query, prompt: "Search icons")
-            .navigationTitle("Choose Icon")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Choose Icon")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", systemImage: "xmark") { dismiss() }

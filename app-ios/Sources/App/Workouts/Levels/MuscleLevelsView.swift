@@ -34,8 +34,7 @@ struct MuscleLevelsView: View {
             }
         }
         .themedList()
-        .navigationTitle(muscle.displayName)
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle(muscle.displayName)
         .sheet(item: $shownExercise) { ExerciseDetailSheet(exerciseID: $0.id) }
     }
 }

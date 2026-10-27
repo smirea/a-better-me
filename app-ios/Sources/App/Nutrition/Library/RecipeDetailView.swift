@@ -81,8 +81,7 @@ struct RecipeDetailView: View {
             NutrientBreakdown(amounts: portion.amounts, showAll: showAllNutrients)
         }
         .themedList()
-        .navigationTitle(recipe.name)
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle(recipe.name)
         .sheet(item: $sheet) { $0.editor }
         .navigationDestination(isPresented: $preparing) { RecipePrepareView(recipe: recipe) }
         .sensoryFeedback(.success, trigger: favorited)
@@ -219,8 +218,7 @@ struct RecipePrepareView: View {
             NutrientBreakdown(amounts: perServing)
         }
         .themedList()
-        .navigationTitle(recipe.name)
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle(recipe.name)
     }
 
     private func summaryTile(_ id: NutrientID, perServing: NutrientAmounts, total: NutrientAmounts) -> some View {

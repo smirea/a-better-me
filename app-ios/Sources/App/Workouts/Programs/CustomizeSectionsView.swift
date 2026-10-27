@@ -51,8 +51,7 @@ struct CustomizeSectionsView: View {
         }
         .environment(\.editMode, .constant(.active))
         .themedList()
-        .navigationTitle("Customize Sections")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Customize Sections")
         .toolbar {
             ToolbarItem {
                 Button("New Section", systemImage: "plus") { addingSection = true }

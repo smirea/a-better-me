@@ -34,8 +34,7 @@ struct EquipmentSheet<Settings: View>: View {
                 .padding(20)
             }
             .background(Theme.background)
-            .navigationTitle("Equipment")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Equipment")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }

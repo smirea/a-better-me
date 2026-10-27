@@ -221,8 +221,7 @@ private struct TimePrompt: View {
                 }
             }
             .padding(.horizontal, 20)
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(title)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(role: .cancel) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -249,8 +248,7 @@ private struct DatesPrompt: View {
         NavigationStack {
             MultiDatePicker("Dates", selection: $dates)
                 .padding(.horizontal, 20)
-                .navigationTitle("Copy to Dates")
-                .navigationBarTitleDisplayMode(.inline)
+                .detailTitle("Copy to Dates")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button(role: .cancel) { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) {

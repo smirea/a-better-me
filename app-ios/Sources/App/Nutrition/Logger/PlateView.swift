@@ -84,8 +84,7 @@ struct PlateView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 8)
         }
-        .navigationTitle("Your Plate")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Your Plate")
     }
 
     private func macroRow(_ id: NutrientID, plate: Double, day: Double) -> some View {

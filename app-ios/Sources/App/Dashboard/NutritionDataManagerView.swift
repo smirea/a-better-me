@@ -28,8 +28,7 @@ struct NutritionDataManagerView: View {
             }
         }
         .themedList()
-        .navigationTitle("Nutrition Data Manager")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Nutrition Data Manager")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Add Day", systemImage: "plus") { editing = EditedLogDay(day: .today) }

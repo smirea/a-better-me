@@ -161,8 +161,7 @@ struct CustomExerciseWizard: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .background(Theme.background)
-        .navigationTitle("Create Custom Exercise")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Create Custom Exercise")
         .safeAreaBar(edge: .top) {
             ProgressView(value: Double(step.rawValue + 1), total: Double(Step.allCases.count))
                 .padding(.horizontal)
@@ -342,7 +341,7 @@ private struct MuscleStep: View {
                                     if let role {
                                         Text(role == .primary ? "P" : "S")
                                             .font(AppFont.headline(11))
-                                            .foregroundStyle(Color.black)
+                                            .foregroundStyle(Theme.onPrimary)
                                             .frame(width: 18, height: 18)
                                             .background(Theme.textPrimary, in: .circle)
                                             .offset(x: 4, y: 4)
@@ -594,8 +593,7 @@ private struct JointActionPicker: View {
             }
             .themedList()
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search joint actions")
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(title)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -620,8 +618,7 @@ private struct DescriptionEditor: View {
                 .frame(maxHeight: .infinity, alignment: .top)
                 .background(Theme.background)
                 .accessibilityLabel("Description")
-                .navigationTitle("Description")
-                .navigationBarTitleDisplayMode(.inline)
+                .detailTitle("Description")
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") { dismiss() }

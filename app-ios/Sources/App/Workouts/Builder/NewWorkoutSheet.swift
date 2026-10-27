@@ -24,45 +24,16 @@ struct NewWorkoutSheet: View {
     private struct UpNextKey: Hashable { let program: Program }
 
     private var layout: ShortcutsLayout { settings.shortcuts }
-    /// The inline navigation bar and grabber above the measured content.
-    private var fitted: PresentationDetent { .height(contentHeight + 76) }
+    private var fitted: PresentationDetent { .shortcutsFitted(contentHeight) }
 
     var body: some View {
         NavigationStack(path: $path) {
-            ScrollView {
-                VStack(spacing: 16) {
-                    let top = layout.topRow
-                    if !top.isEmpty {
-                        HStack(alignment: .top) {
-                            ForEach(top, id: \.self) { roundButton($0) }
-                        }
-                        .padding(.top, 8)
-                    }
-                    if layout.upNextBanner, let activeProgram,
-                       let day = history.memo(UpNextKey(program: activeProgram), { activeProgram.nextDay(finished: $0) }) {
-                        UpNextCard(program: activeProgram, day: day, template: day.templateID.flatMap { id in templates.first { $0.id == id } })
-                    }
-                    VStack(spacing: 0) {
-                        ForEach(layout.rows, id: \.self) { item in
-                            if item != layout.rows.first { Divider().overlay(Theme.separator).padding(.leading, 44) }
-                            row(item)
-                        }
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .background(Theme.surface)
-            .navigationTitle("Shortcuts")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Customize Shortcuts", systemImage: "slider.horizontal.3") { customizing = true }
+            ShortcutsPanel(top: layout.topRow, rows: layout.rows, height: $contentHeight, perform: perform) {
+                customizing = true
+            } banner: {
+                if layout.upNextBanner, let activeProgram,
+                   let day = history.memo(UpNextKey(program: activeProgram), { activeProgram.nextDay(finished: $0) }) {
+                    UpNextCard(program: activeProgram, day: day, template: day.templateID.flatMap { id in templates.first { $0.id == id } })
                 }
             }
             .navigationDestination(for: ProgramRoute.self) { ProgramEditorView(programID: $0.programID, initialDayID: $0.dayID) }
@@ -103,35 +74,6 @@ struct NewWorkoutSheet: View {
         case .newProgram: creatingProgram = true
         case .newWorkout: creatingWorkout = true
         }
-    }
-
-    private func roundButton(_ shortcut: Shortcut) -> some View {
-        Button { perform(shortcut) } label: {
-            VStack(spacing: 8) {
-                Image(systemName: shortcut.icon)
-                    .font(.system(size: 17, weight: .semibold))
-                    .frame(width: 44, height: 44)
-                    .background(Theme.surfaceRaised, in: .circle)
-                Text(shortcut.title).font(AppFont.medium(13))
-            }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func row(_ shortcut: Shortcut) -> some View {
-        Button { perform(shortcut) } label: {
-            HStack(spacing: 18) {
-                Image(systemName: shortcut.icon).frame(width: 26)
-                Text(shortcut.title).font(AppFont.headline())
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
-            }
-            .padding(.vertical, 16)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -194,7 +136,7 @@ private struct CustomizeShortcutsSheet: View {
                 }
                 Section("Top Row") {
                     Picker("Pinned shortcut", selection: Binding(get: { layout.top }, set: { top in store.updateSettings { $0.shortcuts.top = top } })) {
-                        ForEach(Shortcut.allCases, id: \.self) { Label($0.title, systemImage: $0.icon).tag($0) }
+                        ForEach(Shortcut.allCases, id: \.self) { Label($0.title, systemImage: $0.systemImage).tag($0) }
                     }
                 }
                 Section("Shortcuts") {
@@ -215,8 +157,7 @@ private struct CustomizeShortcutsSheet: View {
             }
             .environment(\.editMode, .constant(.active))
             .themedList()
-            .navigationTitle("Customize Shortcuts")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Customize Shortcuts")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done", systemImage: "checkmark") { dismiss() }
@@ -227,13 +168,13 @@ private struct CustomizeShortcutsSheet: View {
 
     private func visibility(_ item: Shortcut, visible: Bool) -> some View {
         Toggle(isOn: Binding(get: { visible }, set: { show in store.updateSettings { $0.shortcuts.setVisible(item, show) } })) {
-            Label { Text(item.title) } icon: { Image(systemName: item.icon).foregroundStyle(Theme.textPrimary) }
+            Label { Text(item.title) } icon: { Image(systemName: item.systemImage).foregroundStyle(Theme.textPrimary) }
         }
         .tint(Theme.accent)
     }
 }
 
-extension Shortcut: CaseIterable {
+extension Shortcut: CaseIterable, ShortcutItem {
     static let allCases: [Shortcut] = [.weight, .history, .emptyWorkout, .newProgram, .newWorkout]
 
     var title: String {
@@ -246,7 +187,7 @@ extension Shortcut: CaseIterable {
         }
     }
 
-    var icon: String {
+    var systemImage: String {
         switch self {
         case .weight: "scalemass.fill"
         case .history: "clock.arrow.circlepath"

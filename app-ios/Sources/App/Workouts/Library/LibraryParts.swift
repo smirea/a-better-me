@@ -131,7 +131,7 @@ struct FilterChipLabel: View {
             Image(systemName: "chevron.down").imageScale(.small)
         }
         .font(AppFont.medium(13))
-        .foregroundStyle(isActive ? Color.black : Theme.textPrimary)
+        .foregroundStyle(isActive ? Theme.onPrimary : Theme.textPrimary)
         .padding(.horizontal, 12)
         .frame(height: 32)
         .background(isActive ? Theme.textPrimary : Theme.surfaceRaised, in: .capsule)

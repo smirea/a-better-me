@@ -46,8 +46,7 @@ struct BodyWeightLogSheet: View {
                 .listRowBackground(Theme.surface)
             }
             .themedList()
-            .navigationTitle("Log Weight")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Log Weight")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", systemImage: "xmark") { dismiss() }

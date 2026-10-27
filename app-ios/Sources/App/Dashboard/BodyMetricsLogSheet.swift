@@ -49,8 +49,7 @@ struct BodyMetricsLogSheet: View {
                 .listRowBackground(Theme.surface)
             }
             .themedList()
-            .navigationTitle("Log Measurements")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Log Measurements")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", systemImage: "xmark") { dismiss() }
@@ -117,8 +116,7 @@ private struct BodyFatReferenceSheet: View {
                 LabeledContent(range, value: description).listRowBackground(Theme.surface)
             }
             .themedList()
-            .navigationTitle("Body Fat Reference")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Body Fat Reference")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done", systemImage: "checkmark") { dismiss() }

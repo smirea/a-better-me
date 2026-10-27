@@ -42,8 +42,7 @@ struct NutritionOverview: View {
                 .padding(.bottom, 8)
                 .background(Theme.background)
             }
-            .navigationTitle("Nutrition Overview")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Nutrition Overview")
     }
 }
 
@@ -125,8 +124,7 @@ struct ContributorsView: View {
                 ContentUnavailableView("No Contributors", systemImage: "fork.knife")
             }
         }
-        .navigationTitle(info?.name ?? "Contributors")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle(info?.name ?? "Contributors")
     }
 }
 

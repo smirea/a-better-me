@@ -29,8 +29,7 @@ struct WorkoutHistoryView: View {
                 ContentUnavailableView("No Workouts Yet", systemImage: "clock.arrow.circlepath", description: Text("Finished workouts show up here."))
             }
         }
-        .navigationTitle("Workout History")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Workout History")
         .fullScreenCover(item: $selected) { WorkoutSummaryView(session: $0) }
     }
 }

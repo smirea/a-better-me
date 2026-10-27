@@ -49,8 +49,7 @@ struct FoodDetailView: View {
         }
         .themedList()
         .contentMargins(.bottom, 12, for: .scrollContent)
-        .navigationTitle(food.name)
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle(food.name)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             QuantityKeypad(
                 quantity: $quantity, measure: measure,

@@ -269,8 +269,7 @@ private struct CalendarSheet: View {
             )
             .datePickerStyle(.graphical)
             .padding(.horizontal, 20)
-            .navigationTitle("Select Date")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Select Date")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .close) { dismiss() }

@@ -304,8 +304,7 @@ struct AllMusclesView: View {
             .padding(.vertical, 16)
         }
         .background(Theme.background)
-        .navigationTitle("Muscle Groups")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Muscle Groups")
     }
 }
 
@@ -320,8 +319,7 @@ struct AllExercisesView: View {
             .padding(.vertical, 16)
         }
         .background(Theme.background)
-        .navigationTitle("Exercises")
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Exercises")
     }
 }
 
