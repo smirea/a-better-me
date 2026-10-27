@@ -49,7 +49,7 @@ struct DayPage: View {
 
 /// The hour pill, its + (a paste button while pasting inline), and the hour's macro totals.
 private struct HourRow: View {
-    static let gutter: CGFloat = 76
+    static let gutter: CGFloat = 84
 
     let day: CalendarDay
     let hour: TimelineHour
