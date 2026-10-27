@@ -103,7 +103,7 @@ struct PlateView: View {
             } label: {
                 HStack(spacing: 12) {
                     FoodIcon(food: portion.food)
-                    RowLabel(title: portion.food.displayName, detail: NutritionFormat.macroLine(portion.amounts))
+                    RowLabel(title: portion.food.displayName, detail: Text(macroLine: portion.amounts))
                         .lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
