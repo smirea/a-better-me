@@ -30,6 +30,13 @@ async function authenticate(request: Request, db: Db, ownerToken: string): Promi
 	return row ? { kind: 'bot', id: row.id, name: row.name } : null;
 }
 
+const howToAuthenticate = (base: string) =>
+	[
+		'A Better Me is a personal workout and nutrition tracker. This API reads and manages its workouts, programs, exercises, gyms, food log, foods, recipes, nutrition strategy, settings, and body metrics.',
+		'Every route but this one needs a bot token. The owner creates one in the iOS app under Dashboard gear > Settings > API Tokens; it starts with `abm_` and is shown once.',
+		`Send it on every request as the header \`Authorization: Bearer abm_...\`, then GET ${base} again: the answer holds the full guide, the current state, and the OpenAPI document.`,
+	].join('\n\n');
+
 const guide = (base: string) => `# A Better Me agent API
 
 The owner's workout and nutrition data, as the iOS app holds it. Every write here lands on the server at once and reaches the phone on its next sync, within seconds while the app is open. The last write to a field wins.
@@ -85,9 +92,9 @@ function match(method: string, path: string) {
 }
 
 /**
- * Every `/api` route but the sync engine's, all behind a token. `GET /api` is the entry point: the guide, a snapshot
- * of the owner's state, and the OpenAPI document. Nothing answers without a token beyond a bare 401, so the server
- * says nothing about the app or its data to a stranger.
+ * Every `/api` route but the sync engine's. `GET /api` is the entry point: without a token it explains how to get one,
+ * with a token it returns the guide, a snapshot of the owner's state, and the OpenAPI document. Every other route,
+ * `/openapi.json` included, answers a bare 401 without a token.
  */
 export async function handleAgent(request: Request, host: AgentHost): Promise<Response> {
 	const url = new URL(request.url);
@@ -96,6 +103,9 @@ export async function handleAgent(request: Request, host: AgentHost): Promise<Re
 	const db = openDb(host.space, host.driver);
 
 	const actor = await authenticate(request, db, host.ownerToken);
+	if (!actor && request.method === 'GET' && path === '') {
+		return Response.json({ name: 'A Better Me', authenticated: false, instructions: howToAuthenticate(base) });
+	}
 	if (!actor) {
 		return Response.json(
 			{ ok: false, error: 'Missing, wrong, or revoked token' },

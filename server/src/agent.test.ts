@@ -63,9 +63,18 @@ async function phoneWrites(writes: unknown[]) {
 }
 
 describe('agent API', () => {
-	test('without a token every route, the root and the OpenAPI document included, is a bare 401', async () => {
+	test('the root explains how to get a token, and every other route, the OpenAPI document included, is a bare 401', async () => {
+		const open = await call('GET', '', undefined, null);
+		const body = await open.json();
+		expect({ status: open.status, keys: Object.keys(body) }).toEqual({
+			status: 200,
+			keys: ['name', 'authenticated', 'instructions'],
+		});
+		expect(body.authenticated).toBe(false);
+		expect(body.instructions).toContain('Dashboard gear > Settings > API Tokens');
+		expect(body.instructions).toContain('Authorization: Bearer abm_');
+
 		for (const [path, token] of [
-			['', null],
 			['/openapi.json', null],
 			['/templates', 'abm_unknown'],
 			['/food-database/search?q=egg', null],

@@ -7,4 +7,4 @@
 - `src/agent/` is the agent API ([decisions](../docs/decisions/agent-api.md)): `routes.ts` is the one registry the router and the OpenAPI document both read, so a new operation is one `route({...})` entry with its Zod schemas in `models.ts` (nutrition operations in `nutrition.ts`, which joins the same list). `src/agent.test.ts` drives it like an agent and reads back what a phone would sync.
 - `src/api.test.ts` drives `handle` over an in-memory space from `sync-engine/core`; add a case there for any route or rule change.
 - `src/index.ts` also serves `../app-ios/Assets/` at `/assets/manifests/<version>.json` and `/assets/blobs/<sha256>`, the asset bucket's layout, for Debug iOS builds (`src/assets.ts`). It has no auth and recomputes the manifest per request. The Worker never serves assets.
-- Every route needs a token; nothing is public (see `docs/decisions/agent-api.md`). Shared contracts belong in `../shared/`; keep them independent of server configuration.
+- Every route needs a token except `GET /api`, which only explains how to get one (see `docs/decisions/agent-api.md`). Shared contracts belong in `../shared/`; keep them independent of server configuration.

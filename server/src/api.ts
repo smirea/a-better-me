@@ -43,7 +43,8 @@ export async function isOwner(request: Request, token: string): Promise<boolean>
 
 /**
  * Every route, as one fetch handler: `index.ts` serves it with Bun and `worker.ts` on Cloudflare, so it stays free of
- * Bun and Node APIs. Every route needs a token: the owner's for the engine, the owner's or a bot's for the agent API.
+ * Bun and Node APIs. Every route needs a token, the owner's for the engine and the owner's or a bot's for the agent
+ * API, except `GET /api`, which only explains how to get one.
  * The engine sees the original request, which Bun needs for the upgrade;
  * `withBearer` only matters for a browser's `/live`, whose token rides in the subprotocol.
  */
