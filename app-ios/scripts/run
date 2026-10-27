@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { withBuildLock } from "./build-lock.ts";
 
 const root = resolve(import.meta.dir, "..");
 const runCommand = "./scripts/run";
@@ -117,23 +118,27 @@ function snapshot(project: string) {
     return hash.digest("hex");
 }
 
+let booting: Promise<void> | undefined;
+
 async function deploy(target: Target, project: string) {
     console.log(`Building for ${target.name}${target.runtime ? ` (${target.runtime})` : ""}…`);
     const build = join(root, "DerivedData", target.kind);
     mkdirSync(build, { recursive: true });
     const log = join(build, "build.log");
     const fd = openSync(log, "w");
-    const booting = target.kind === "simulator" ? boot(target) : undefined;
+    // A boot still running after a failed build is reused, so a quick save can't pair a second watch.
+    booting ??= target.kind === "simulator" ? boot(target).finally(() => { booting = undefined; }) : undefined;
     booting?.catch(() => {});
+    const thisBoot = booting;
     try {
-        await command([
+        await withBuildLock(build, () => command([
             "xcodebuild", "-quiet", "-project", project, "-scheme", basename(project, ".xcodeproj"),
             "-configuration", "Debug", "-destination", target.destination, "-derivedDataPath", build,
             "-clonedSourcePackagesDirPath", join(root, "DerivedData", "SourcePackages"),
             // Ad hoc signing still embeds the entitlements, so the simulator grants HealthKit.
             ...(target.kind === "device" ? ["-allowProvisioningUpdates", "-allowProvisioningDeviceRegistration"] : ["CODE_SIGN_IDENTITY=-"]),
             ...(values.team ? [`DEVELOPMENT_TEAM=${values.team}`] : []), "build",
-        ], false, fd);
+        ], false, fd));
     } catch {
         console.error(readFileSync(log, "utf8"));
         throw new Error(`Build failed. See ${log}. For a physical device, check signing in Xcode or use --team.`);
@@ -145,7 +150,7 @@ async function deploy(target: Target, project: string) {
     const plist = join(app, target.kind === "mac" ? "Contents/Info.plist" : "Info.plist");
     const bundle = (await command(["plutil", "-extract", "CFBundleIdentifier", "raw", plist], true)).trim();
     if (target.kind === "simulator") {
-        await booting;
+        await thisBoot;
         target.state = "booted";
         const developer = process.env.DEVELOPER_DIR ?? (await command(["xcode-select", "-p"], true)).trim();
         const simulator = join(developer, "Applications/Simulator.app");
@@ -203,7 +208,9 @@ async function pairWatch(target: Target) {
 /** Shuts down and deletes the simulator and every watch paired with it, which `simctl delete` of the phone leaves
  * behind. */
 async function deleteSimulator(target: Target) {
-    if (!values.target) throw new Error("--delete needs -t <simulator>, so it never falls back to the default target.");
+    if (values.target?.toLowerCase() !== target.id.toLowerCase()) {
+        throw new Error("--delete needs -t <udid>: a name or `simulator` could match another agent's simulator.");
+    }
     if (target.kind !== "simulator") throw new Error("--delete only deletes simulators.");
     const watches = (await pairs()).filter(pair => pair.phone.udid === target.id).map(pair => pair.watch.udid);
     for (const udid of [target.id, ...watches]) await command(["xcrun", "simctl", "shutdown", udid], true).catch(() => {});
