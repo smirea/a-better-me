@@ -107,7 +107,7 @@ extension DashboardData {
         let differences = NutritionMetrics.differences(intake: intake, reference: reference, calendar: calendar)
         let isExpenditure = title == "Expenditure"
         return MetricTab(
-            title: title, icon: icon, points: intake, unit: "kcal", averageTitle: "Average", summary: .total, style: .bar,
+            title: title, icon: icon, points: intake, unit: "kcal", seriesTitle: "Calories", averageTitle: "Average", summary: .total, style: .bar,
             color: DashboardColor.energy,
             overlay: MetricTab.Overlay(title: isExpenditure ? "Expenditure" : "Targets", points: reference, color: color, dashed: true),
             stats: { interval in

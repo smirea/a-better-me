@@ -47,6 +47,14 @@ struct MetricDetailView: View {
                     Button("Log Weight", systemImage: "plus") { loggingWeight = true }
                 }
             }
+            if case let .nutrient(id) = route, !NutritionMetrics.macros.contains(id) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink { NutrientGoalsView(nutrient: id) } label: {
+                        Image(systemName: "target")
+                    }
+                    .accessibilityLabel("Nutrient Goals")
+                }
+            }
             if case .bodyMetric = route {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Log Measurements", systemImage: "plus") { loggingMetrics = true }
@@ -206,7 +214,7 @@ struct MetricDetailView: View {
                 legendItem(overlay.title, symbol: "point.topleft.down.to.point.bottomright.curvepath", color: overlay.color)
             }
             legendItem(
-                tab.style == .bar && tab.overlay != nil ? "Calories" : tab.title,
+                tab.seriesTitle ?? tab.title,
                 symbol: tab.style == .bar ? "chart.bar.fill" : "point.topleft.down.to.point.bottomright.curvepath", color: tab.color
             )
             if let overlay = tab.overlay, overlay.dashed {

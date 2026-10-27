@@ -72,6 +72,8 @@ struct MetricTab: Identifiable {
     var icon: String?
     var points: [DatedValue]
     var unit: String
+    /// What the legend calls the main series when it differs from the tab, such as intake ("Calories") on a balance tab.
+    var seriesTitle: String?
     var averageTitle: String
     var summary: SummaryKind
     var style: Style
