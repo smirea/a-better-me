@@ -92,26 +92,6 @@ struct LibraryExerciseRow<Trailing: View>: View {
     }
 }
 
-/// An active filter turns white, like the reference's selected gym chip.
-struct FilterChipLabel: View {
-    let title: String
-    let systemImage: String
-    var isActive = false
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage).imageScale(.small)
-            Text(title).lineLimit(1)
-            Image(systemName: "chevron.down").imageScale(.small)
-        }
-        .font(AppFont.medium(13))
-        .foregroundStyle(isActive ? Theme.onPrimary : Theme.textPrimary)
-        .padding(.horizontal, 12)
-        .frame(height: 32)
-        .background(isActive ? Theme.textPrimary : Theme.surfaceRaised, in: .capsule)
-    }
-}
-
 /// MF's 5-segment bar for Range of Motion and Stability.
 struct RatingBar: View {
     let value: Int

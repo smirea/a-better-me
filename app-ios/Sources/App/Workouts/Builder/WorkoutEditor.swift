@@ -60,7 +60,12 @@ struct WorkoutEditor: View {
             }
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
-                    ForEach(targets) { MuscleTargetCard(target: $0) }
+                    ForEach(targets) { target in
+                        MuscleTileCard(muscle: target.muscle, details: [
+                            target.exercises == 1 ? "1 exercise" : "\(target.exercises) exercises",
+                            "\(target.sets.formatted(.number.precision(.fractionLength(0...1)))) sets",
+                        ])
+                    }
                 }
                 .padding(.horizontal)
             }
@@ -91,11 +96,7 @@ struct WorkoutEditor: View {
                     .underline()
                     .buttonStyle(.plain)
             } else {
-                Button("Add Exercise", systemImage: "plus") { sheet = .picker(.add) }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
-                    .controlSize(.large)
+                RoundIconButton("Add Exercise", systemImage: "plus") { sheet = .picker(.add) }
             }
         }
         .padding(.top, 12)
@@ -307,29 +308,6 @@ struct TargetLine: View {
             Spacer()
             if let rir = set.target?.rir { RIRBadge(rir: rir) }
         }
-    }
-}
-
-private struct MuscleTargetCard: View {
-    let target: MuscleTarget
-
-    var body: some View {
-        HStack(spacing: 10) {
-            MuscleTile(muscle: target.muscle).frame(width: 72, height: 56)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(target.muscle.displayName).font(AppFont.headline(15))
-                Group {
-                    Text(target.exercises == 1 ? "1 exercise" : "\(target.exercises) exercises")
-                    Text("\(target.sets.formatted(.number.precision(.fractionLength(0...1)))) sets")
-                }
-                .font(AppFont.caption(12))
-                .foregroundStyle(Theme.textSecondary)
-            }
-            .frame(minWidth: 70, alignment: .leading)
-        }
-        .padding(8)
-        .padding(.trailing, 8)
-        .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textTertiary) }
     }
 }
 

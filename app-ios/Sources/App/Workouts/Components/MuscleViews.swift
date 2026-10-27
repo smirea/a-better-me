@@ -30,7 +30,7 @@ struct MuscleTags: View {
 
     private func tag(_ muscle: Muscle, primary: Bool) -> some View {
         let color = muscle == highlight ? Theme.textPrimary : Theme.surfaceRaised
-        let shape = RoundedRectangle(cornerRadius: 4)
+        let shape = RoundedRectangle(cornerRadius: Theme.tinyCornerRadius)
         return Text(muscle.displayName)
             .font(AppFont.caption(11))
             .foregroundStyle(primary && muscle == highlight ? Theme.onPrimary : Theme.textSecondary)
@@ -58,6 +58,28 @@ struct MuscleTile: View {
         } else {
             Image(systemName: "figure.stand").resizable().scaledToFit().foregroundStyle(Theme.textTertiary).padding(8)
         }
+    }
+}
+
+/// A muscle's tile beside its name and detail lines, for an exercise's target muscles and a workout's muscle totals.
+struct MuscleTileCard: View {
+    let muscle: Muscle
+    let details: [String]
+
+    var body: some View {
+        HStack(spacing: 10) {
+            MuscleTile(muscle: muscle).frame(width: 52, height: 52)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(muscle.displayName).font(AppFont.rowTitle)
+                ForEach(details, id: \.self) { Text($0) }
+                    .font(AppFont.rowDetail)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .padding(.trailing, 12)
+        }
+        .padding(4)
+        .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
+        .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.surfaceRaised) }
     }
 }
 

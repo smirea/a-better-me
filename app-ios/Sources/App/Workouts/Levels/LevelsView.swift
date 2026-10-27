@@ -20,13 +20,9 @@ struct LevelsView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 340)
                     .overlay(alignment: .bottomTrailing) {
-                        Button("Rotate Body", systemImage: "arrow.trianglehead.2.clockwise.rotate.90") {
+                        RoundIconButton("Rotate Body", systemImage: "arrow.trianglehead.2.clockwise.rotate.90") {
                             withAnimation(.smooth) { side.toggle() }
                         }
-                        .labelStyle(.iconOnly)
-                        .font(.title3)
-                        .buttonStyle(.glass)
-                        .buttonBorderShape(.circle)
                     }
                     PeriodCaption(period: $period)
                 }

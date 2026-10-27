@@ -286,11 +286,11 @@ private struct GymActions: View {
                         ForEach(Self.icons, id: \.symbol) { Label($0.name, systemImage: $0.symbol).tag($0.symbol) }
                     }
                 } label: {
-                    chip("Edit Icon", systemImage: icon)
+                    Chip(title: "Edit Icon", systemImage: icon)
                 }
-                Button(action: onRename) { chip("Rename Gym", systemImage: "square.and.pencil") }
-                Button(action: onDuplicate) { chip("Duplicate", systemImage: "plus.square.on.square") }
-                Button { onRemove?() } label: { chip("Remove", systemImage: "minus.circle.fill") }
+                Button(action: onRename) { Chip(title: "Rename Gym", systemImage: "square.and.pencil") }
+                Button(action: onDuplicate) { Chip(title: "Duplicate", systemImage: "plus.square.on.square") }
+                Button { onRemove?() } label: { Chip(title: "Remove", systemImage: "minus.circle.fill") }
                     .disabled(onRemove == nil)
             }
             .padding(.horizontal)
@@ -298,14 +298,5 @@ private struct GymActions: View {
         }
         .scrollIndicators(.hidden)
         .buttonStyle(.plain)
-    }
-
-    private func chip(_ title: String, systemImage: String) -> some View {
-        Label(title, systemImage: systemImage)
-            .font(AppFont.medium(13))
-            .foregroundStyle(Theme.textPrimary)
-            .padding(.horizontal, 12)
-            .frame(height: 32)
-            .background(Theme.surfaceRaised, in: .capsule)
     }
 }

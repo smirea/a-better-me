@@ -41,11 +41,11 @@ struct RestTimerSheet: View {
                     VStack(spacing: 16) {
                         ProgressView(value: store.rest.map { remaining / $0.duration } ?? 0)
                         HStack {
-                            roundButton("gobackward.15", "Subtract 15 seconds") { store.adjustRest(by: -15) }
+                            RoundIconButton("Subtract 15 seconds", systemImage: "gobackward.15") { store.adjustRest(by: -15) }
                             Spacer()
                             Label(remaining.countdown, systemImage: "stopwatch.fill").font(AppFont.number(24))
                             Spacer()
-                            roundButton("goforward.15", "Add 15 seconds") { store.adjustRest(by: 15) }
+                            RoundIconButton("Add 15 seconds", systemImage: "goforward.15") { store.adjustRest(by: 15) }
                         }
                     }
                 }
@@ -77,15 +77,6 @@ struct RestTimerSheet: View {
             }
         }
         .presentationDetents([.height(280)])
-    }
-
-    private func roundButton(_ icon: String, _ label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon).font(.title3).frame(width: 44, height: 44)
-        }
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
-        .accessibilityLabel(label)
     }
 
     private func pill(_ title: String, icon: String? = nil, label: String, action: @escaping () -> Void) -> some View {

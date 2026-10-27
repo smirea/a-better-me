@@ -128,7 +128,7 @@ struct ExerciseFilterBar: View {
                         ForEach(RestCategory.allCases) { Text($0.displayName).tag(Optional($0)) }
                     }
                 } label: {
-                    FilterChipLabel(title: filter.type?.displayName ?? "Type", systemImage: "square.stack.3d.up", isActive: filter.type != nil)
+                    Chip(title: filter.type?.displayName ?? "Type", systemImage: "square.stack.3d.up", trailingImage: "chevron.down", isActive: filter.type != nil)
                 }
                 Menu {
                     Picker("Laterality", selection: $filter.laterality) {
@@ -136,18 +136,20 @@ struct ExerciseFilterBar: View {
                         ForEach(Laterality.allCases, id: \.self) { Text($0.displayName).tag(Optional($0)) }
                     }
                 } label: {
-                    FilterChipLabel(
+                    Chip(
                         title: filter.laterality?.displayName ?? "Laterality",
                         systemImage: "rectangle.lefthalf.filled",
+                        trailingImage: "chevron.down",
                         isActive: filter.laterality != nil
                     )
                 }
                 ForEach(EquipmentRole.allCases) { role in
                     let selected = filter[keyPath: role.filterKey]
                     Button { equipmentSheet = role } label: {
-                        FilterChipLabel(
+                        Chip(
                             title: selected.flatMap { catalog.equipment[$0.id]?.name } ?? role.title,
                             systemImage: role.systemImage,
+                            trailingImage: "chevron.down",
                             isActive: selected != nil
                         )
                     }
@@ -161,9 +163,10 @@ struct ExerciseFilterBar: View {
                     }
                 } label: {
                     let range = filter.rangeOfMotion
-                    FilterChipLabel(
+                    Chip(
                         title: range == ExerciseFilter.fullRange ? "Range of Motion" : "ROM \(range.lowerBound)-\(range.upperBound)",
                         systemImage: "arrow.left.and.right",
+                        trailingImage: "chevron.down",
                         isActive: range != ExerciseFilter.fullRange
                     )
                 }
@@ -204,7 +207,7 @@ struct ExerciseFilterBar: View {
             }
             Button("Manage Gym Profiles", systemImage: "gearshape") { managingGyms = true }
         } label: {
-            FilterChipLabel(title: gym?.name ?? "Gym", systemImage: "building.2", isActive: gym != nil)
+            Chip(title: gym?.name ?? "Gym", systemImage: "building.2", trailingImage: "chevron.down", isActive: gym != nil)
         }
     }
 

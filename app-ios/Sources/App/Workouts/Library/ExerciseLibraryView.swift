@@ -34,7 +34,7 @@ struct ExerciseLibraryView: View {
             query: query,
             subtitle: { counts[$0.id].map { "Performed \($0) \($0 == 1 ? "time" : "times")" } },
             onSelect: { opened = ExerciseRef(id: $0.id) },
-            header: { LibraryTabBar(selection: $tab) },
+            header: { UnderlineTabs(items: LibraryTab.allCases.map { ($0, $0.rawValue) }, selection: $tab) },
             trailing: { _ in Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary) }
         )
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search for an exercise")
@@ -58,41 +58,6 @@ enum ExerciseLibrary {
             for id in ids { counts[id, default: 0] += 1 }
         }
         return counts
-    }
-}
-
-/// MF's underlined text tabs. Five labels overflow a segmented control on iPhone, so the row scrolls.
-private struct LibraryTabBar: View {
-    @Binding var selection: ExerciseLibraryView.LibraryTab
-    @Namespace private var underline
-
-    var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 22) {
-                ForEach(ExerciseLibraryView.LibraryTab.allCases) { tab in
-                    let isSelected = tab == selection
-                    Button { withAnimation(.snappy) { selection = tab } } label: {
-                        Text(tab.rawValue)
-                            .font(AppFont.medium(15))
-                            .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textSecondary)
-                            .padding(.vertical, 8)
-                            .overlay(alignment: .bottom) {
-                                if isSelected {
-                                    Capsule()
-                                        .fill(Theme.textPrimary)
-                                        .frame(height: 3)
-                                        .matchedGeometryEffect(id: "underline", in: underline)
-                                }
-                            }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(isSelected ? .isSelected : [])
-                }
-            }
-            .padding(.horizontal)
-        }
-        .scrollIndicators(.hidden)
-        .overlay(alignment: .bottom) { Rectangle().fill(Theme.separator).frame(height: 1) }
     }
 }
 

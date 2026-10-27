@@ -441,8 +441,8 @@ private struct FinalDetailsStep: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            RatingStepper(title: "Range of Motion", value: $draft.rangeOfMotion)
-            RatingStepper(title: "Stability", value: $draft.stability).padding(.bottom, 12)
+            rating("Range of Motion", value: $draft.rangeOfMotion)
+            rating("Stability", value: $draft.stability).padding(.bottom, 12)
             FieldLabel(title: "Body Weight Contribution", trailing: "Required")
             HStack {
                 TextField("", text: $percentText)
@@ -513,6 +513,16 @@ private struct FinalDetailsStep: View {
         }
     }
 
+    private func rating(_ title: String, value: Binding<Int>) -> some View {
+        Stepper(value: value, in: 0...5) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title).font(AppFont.rowTitle)
+                RatingBar(value: value.wrappedValue)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
     /// "18 lb at your current weight", from the newest weigh-in or the profile's weight.
     private var contributionLine: String {
         guard let percent = draft.bodyWeightPercent else { return "Enter the share of body weight the exercise moves" }
@@ -532,30 +542,6 @@ private struct FinalDetailsStep: View {
         var path: WritableKeyPath<CustomExerciseDraft, [String]> {
             self == .primary ? \.primaryJointActions : \.secondaryJointActions
         }
-    }
-}
-
-private struct RatingStepper: View {
-    let title: String
-    @Binding var value: Int
-
-    var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(title).font(AppFont.medium(15))
-                RatingBar(value: value)
-            }
-            Spacer()
-            Button("Decrease \(title)", systemImage: "minus") { value -= 1 }
-                .disabled(value == 0)
-            Text("\(value)").font(AppFont.headline(16)).monospacedDigit().frame(minWidth: 20)
-            Button("Increase \(title)", systemImage: "plus") { value += 1 }
-                .disabled(value == 5)
-        }
-        .labelStyle(.iconOnly)
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.circle)
-        .padding(.vertical, 6)
     }
 }
 
@@ -653,8 +639,8 @@ private struct ReviewStep: View {
             SectionTitle("Target Muscles")
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
-                    ForEach(exercise.primaryMuscles) { TargetMuscleCard(muscle: $0, role: "Primary") }
-                    ForEach(exercise.secondaryMuscles) { TargetMuscleCard(muscle: $0, role: "Secondary") }
+                    ForEach(exercise.primaryMuscles) { MuscleTileCard(muscle: $0, details: ["Primary"]) }
+                    ForEach(exercise.secondaryMuscles) { MuscleTileCard(muscle: $0, details: ["Secondary"]) }
                 }
             }
             .scrollIndicators(.hidden)

@@ -175,8 +175,8 @@ private struct DetailsTab: View {
                 SectionTitle("Target Muscles")
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
-                        ForEach(exercise.primaryMuscles) { TargetMuscleCard(muscle: $0, role: "Primary") }
-                        ForEach(exercise.secondaryMuscles) { TargetMuscleCard(muscle: $0, role: "Secondary") }
+                        ForEach(exercise.primaryMuscles) { MuscleTileCard(muscle: $0, details: ["Primary"]) }
+                        ForEach(exercise.secondaryMuscles) { MuscleTileCard(muscle: $0, details: ["Secondary"]) }
                     }
                 }
                 .scrollIndicators(.hidden)
@@ -217,25 +217,6 @@ private struct DetailsTab: View {
             ("Secondary Joint Action", exercise.secondaryJointActions.joined(separator: ", ")),
         ]
         return rows.filter { !$0.1.isEmpty }
-    }
-}
-
-struct TargetMuscleCard: View {
-    let muscle: Muscle
-    let role: String
-
-    var body: some View {
-        HStack(spacing: 10) {
-            MuscleTile(muscle: muscle).frame(width: 52, height: 52)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(muscle.displayName).font(AppFont.medium(14))
-                Text(role).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-            }
-            .padding(.trailing, 12)
-        }
-        .padding(4)
-        .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
-        .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.surfaceRaised) }
     }
 }
 

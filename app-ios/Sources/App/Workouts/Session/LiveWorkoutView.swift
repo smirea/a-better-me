@@ -195,11 +195,7 @@ struct SessionEditor: View {
                 }
                 .accessibilityLabel("Workout Options")
                 if store.pausedAt != nil {
-                    Text("Paused")
-                        .font(AppFont.headline(13))
-                        .padding(.horizontal, 10)
-                        .frame(height: 26)
-                        .background(Theme.surfaceRaised, in: Capsule())
+                    Chip(title: "Paused")
                         .accessibilityLabel("Workout paused")
                 } else if defaults.workout.display.workoutTimer {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -339,7 +335,7 @@ struct SessionEditor: View {
         let adjusted = store.suggestions[item.id]?.values.contains { $0.adjustedReps != nil } ?? false
         return Button { sheet = .progression } label: {
             Image(systemName: "wand.and.stars")
-                .font(AppFont.medium(14))
+                .font(AppFont.chip)
                 .foregroundStyle(Theme.textPrimary)
                 .frame(width: 44, height: 32)
                 .background(Theme.surfaceRaised, in: Capsule())
@@ -355,17 +351,12 @@ struct SessionEditor: View {
     }
 
     private func chipLabel(_ title: String, _ icon: String, badge: Int = 0) -> some View {
-        Label(title, systemImage: icon)
-            .font(AppFont.medium(14))
-            .foregroundStyle(Theme.textPrimary)
-            .padding(.horizontal, 12)
-            .frame(height: 32)
-            .background(Theme.surfaceRaised, in: Capsule())
+        Chip(title: title, systemImage: icon)
             .overlay(alignment: .topTrailing) {
                 if badge > 0 {
                     Text("\(badge)")
-                        .font(AppFont.headline(11))
-                        .foregroundStyle(.white)
+                        .font(AppFont.badge)
+                        .foregroundStyle(Theme.textPrimary)
                         .frame(minWidth: 18, minHeight: 18)
                         .background(Theme.muscle, in: Circle())
                         .offset(x: 4, y: -4)

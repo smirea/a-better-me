@@ -178,21 +178,21 @@ struct ExerciseHistoryTab: View {
                             ForEach(HistoryMetric.allCases) { Text($0.rawValue).tag($0) }
                         }
                     } label: {
-                        FilterChipLabel(title: metric.rawValue, systemImage: "medal")
+                        Chip(title: metric.rawValue, systemImage: "medal", trailingImage: "chevron.down")
                     }
                     Menu {
                         Picker("Sort", selection: $sort) {
                             ForEach(HistorySort.allCases) { Text($0.rawValue).tag($0) }
                         }
                     } label: {
-                        FilterChipLabel(title: sort.rawValue, systemImage: "line.3.horizontal.decrease")
+                        Chip(title: sort.rawValue, systemImage: "line.3.horizontal.decrease", trailingImage: "chevron.down")
                     }
                     Menu {
                         Picker("Records", selection: $records) {
                             ForEach(RecordsFilter.allCases) { Text($0.rawValue).tag($0) }
                         }
                     } label: {
-                        FilterChipLabel(title: records.rawValue, systemImage: "trophy")
+                        Chip(title: records.rawValue, systemImage: "trophy", trailingImage: "chevron.down")
                     }
                 }
                 .padding()

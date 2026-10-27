@@ -75,9 +75,11 @@ private struct ProgramEditorScreen: View {
         let day = program.days.first { $0.id == selection } ?? program.days.first
         let template = day?.templateID.flatMap { id in templates.first { $0.id == id } }
         return VStack(spacing: 0) {
-            ProgramEditorDayTabs(program: program, templates: templates, selected: day?.id) { selection = $0 } addDay: {
-                pendingIndex = program.days.count
-                store.addProgramDay(to: program.id, rest: true, name: "", gymID: nil)
+            UnderlineTabs(items: dayTabs(program, templates: templates), selection: Binding { day?.id } set: { selection = $0 }) {
+                Button("Add Day") {
+                    pendingIndex = program.days.count
+                    store.addProgramDay(to: program.id, rest: true, name: "", gymID: nil)
+                }
             }
             if let day {
                 chips(program, day: day, template: template)
@@ -152,6 +154,16 @@ private struct ProgramEditorScreen: View {
         }
     }
 
+    private func dayTabs(_ program: Program, templates: [WorkoutTemplate]) -> [(id: ProgramDay.ID?, title: String)] {
+        let names = Dictionary(templates.map { ($0.id, $0.name) }) { first, _ in first }
+        return program.days.map { day in (day.id, day.templateID.flatMap { names[$0] } ?? "Rest") }
+    }
+
+    private func chip(_ title: String, systemImage: String, trailingImage: String? = nil, action: @escaping () -> Void) -> some View {
+        Button(action: action) { Chip(title: title, systemImage: systemImage, trailingImage: trailingImage) }
+            .buttonStyle(.plain)
+    }
+
     private func chips(_ program: Program, day: ProgramDay, template: WorkoutTemplate?) -> some View {
         let isRest = template == nil
         let gymName = template?.gymID.flatMap { id in gyms.first { $0.id == id }?.name } ?? "No Gym"
@@ -159,22 +171,22 @@ private struct ProgramEditorScreen: View {
         return ScrollView(.horizontal) {
             HStack(spacing: 8) {
                 if isRest {
-                    ProgramEditorChip("Remove", systemImage: "minus.circle.fill") { confirming = .remove }.disabled(!canRemove)
+                    chip("Remove", systemImage: "minus.circle.fill") { confirming = .remove }.disabled(!canRemove)
                 }
                 Group {
-                    ProgramEditorChip(gymName, systemImage: "house.fill", trailingImage: "chevron.down") { gymOptionsShown = true }
+                    chip(gymName, systemImage: "house.fill", trailingImage: "chevron.down") { gymOptionsShown = true }
                         .accessibilityLabel("Gym, \(gymName)")
-                    ProgramEditorChip("Rename", systemImage: "square.and.pencil") { renaming = true }
-                    ProgramEditorChip("Re-order", systemImage: "arrow.up.arrow.down") { reordering = true }
-                    ProgramEditorChip("Duplicate", systemImage: "plus.square.on.square") {
+                    chip("Rename", systemImage: "square.and.pencil") { renaming = true }
+                    chip("Re-order", systemImage: "arrow.up.arrow.down") { reordering = true }
+                    chip("Duplicate", systemImage: "plus.square.on.square") {
                         pendingIndex = program.days.count
                         store.duplicateProgramDay(day.id, in: program.id)
                     }
-                    ProgramEditorChip("Change to Rest", systemImage: "arrow.triangle.swap") { confirming = .changeToRest }
+                    chip("Change to Rest", systemImage: "arrow.triangle.swap") { confirming = .changeToRest }
                 }
                 .disabled(isRest)
                 if !isRest {
-                    ProgramEditorChip("Remove", systemImage: "minus.circle.fill") { confirming = .remove }.disabled(!canRemove)
+                    chip("Remove", systemImage: "minus.circle.fill") { confirming = .remove }.disabled(!canRemove)
                 }
             }
             .padding(.horizontal)
@@ -237,85 +249,6 @@ private struct ProgramEditorScreen: View {
 }
 
 /// The scrolling day tabs: one per day, underlined when selected, then Add Day.
-private struct ProgramEditorDayTabs: View {
-    let program: Program
-    let templates: [WorkoutTemplate]
-    let selected: ProgramDay.ID?
-    let select: (ProgramDay.ID) -> Void
-    let addDay: () -> Void
-
-    var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal) {
-                HStack(spacing: 22) {
-                    ForEach(program.days) { day in
-                        tab(name(of: day), isSelected: day.id == selected) { select(day.id) }.id(day.id)
-                    }
-                    tab("Add Day", isSelected: false, action: addDay)
-                }
-                .padding(.horizontal)
-            }
-            .scrollIndicators(.hidden)
-            .overlay(alignment: .bottom) { Rectangle().fill(Theme.surfaceRaised).frame(height: 2) }
-            .onChange(of: selected) { _, id in
-                withAnimation { proxy.scrollTo(id, anchor: .center) }
-            }
-            .onAppear { proxy.scrollTo(selected, anchor: .center) }
-        }
-    }
-
-    private func name(of day: ProgramDay) -> String {
-        day.templateID.flatMap { id in templates.first { $0.id == id }?.name } ?? "Rest"
-    }
-
-    private func tab(_ title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(AppFont.headline(15))
-                .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textSecondary)
-                .padding(.vertical, 12)
-                .overlay(alignment: .bottom) {
-                    if isSelected { Rectangle().fill(Theme.textPrimary).frame(height: 2) }
-                }
-        }
-        .buttonStyle(.plain)
-        .zIndex(1)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-}
-
-/// A capsule action under the day tabs.
-private struct ProgramEditorChip: View {
-    let title: String
-    let systemImage: String
-    var trailingImage: String?
-    let action: () -> Void
-
-    @Environment(\.isEnabled) private var isEnabled
-
-    init(_ title: String, systemImage: String, trailingImage: String? = nil, action: @escaping () -> Void) {
-        self.title = title
-        self.systemImage = systemImage
-        self.trailingImage = trailingImage
-        self.action = action
-    }
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: systemImage).font(AppFont.caption(12))
-                Text(title).font(AppFont.headline(13))
-                if let trailingImage { Image(systemName: trailingImage).font(AppFont.caption(11)) }
-            }
-            .foregroundStyle(isEnabled ? Theme.textPrimary : Theme.textTertiary)
-            .padding(.horizontal, 12)
-            .frame(height: 34)
-            .background(Theme.surfaceRaised.opacity(isEnabled ? 1 : 0.5), in: Capsule())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 /// "Gym Options · Impacts exercise selection": the day's gym, or every day's with Apply to All Days.
 private struct ProgramEditorGymOptions: View {
     let gyms: [GymProfile]
