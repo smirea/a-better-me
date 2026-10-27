@@ -65,12 +65,17 @@ struct RoundIconButton: View {
     }
 
     var body: some View {
-        Button(title, systemImage: systemImage, role: role, action: action)
-            .labelStyle(.iconOnly)
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .controlSize(size == .small ? .small : .regular)
+        // A fixed glyph frame keeps every circle the same size, whatever the symbol's own width.
+        Button(role: role, action: action) {
+            Image(systemName: systemImage).frame(width: glyph, height: glyph)
+        }
+        .accessibilityLabel(title)
+        .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
+        .controlSize(size == .small ? .small : .regular)
     }
+
+    private var glyph: CGFloat { size == .small ? 16 : 22 }
 }
 
 /// A thin capsule bar for a nutrient or goal's progress: `ProgressView(value:).progressViewStyle(.bar(color))`.

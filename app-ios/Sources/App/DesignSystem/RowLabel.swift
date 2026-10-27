@@ -5,10 +5,11 @@ struct RowLabel: View {
     let title: String
     var detail: String?
     var systemImage: String?
+    var iconTint = Theme.textPrimary
 
     var body: some View {
         if let systemImage {
-            Label { text } icon: { Image(systemName: systemImage).foregroundStyle(Theme.textPrimary) }
+            Label { text } icon: { Image(systemName: systemImage).foregroundStyle(iconTint) }
         } else {
             text
         }

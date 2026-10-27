@@ -45,6 +45,16 @@ struct StrategyDataReader<Content: View>: View {
 enum StrategyRoute: Hashable {
     case planHistory, nutrientGoals, strategySettings
     case nutrient(NutrientID)
+
+    @ViewBuilder
+    var destination: some View {
+        switch self {
+        case .planHistory: PlanHistoryView()
+        case .nutrientGoals: NutrientGoalsListView()
+        case .strategySettings: StrategySettingsView()
+        case let .nutrient(id): NutrientGoalsView(nutrient: id)
+        }
+    }
 }
 
 /// Strategy, pushed from More: the program and its week of targets, the goal and its progress, the weekly check-in,
@@ -54,14 +64,6 @@ struct StrategyView: View {
 
     var body: some View {
         StrategyDataReader { StrategyHome(data: $0) }
-            .navigationDestination(for: StrategyRoute.self) { route in
-                switch route {
-                case .planHistory: PlanHistoryView()
-                case .nutrientGoals: NutrientGoalsListView()
-                case .strategySettings: StrategySettingsView()
-                case let .nutrient(id): NutrientGoalsView(nutrient: id)
-                }
-            }
             .task {
                 #if DEBUG
                 StrategySeed.seedIfRequested(store)

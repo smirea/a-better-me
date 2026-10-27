@@ -146,7 +146,8 @@ struct ExerciseSettingsView: View {
                     SettingsRow(
                         title: "Delete Exercise",
                         subtitle: "This will remove the exercise from your custom library. Logged sets stay in your history.",
-                        systemImage: "trash.fill"
+                        systemImage: "trash.fill",
+                        iconTint: Theme.destructive
                     ) {
                         Button("Delete", role: .destructive) { confirmingDelete = true }
                     }
@@ -165,7 +166,8 @@ struct ExerciseSettingsView: View {
                     SettingsRow(
                         title: "Reset Defaults",
                         subtitle: "Remove all exercise level overrides",
-                        systemImage: "arrow.counterclockwise"
+                        systemImage: "arrow.counterclockwise",
+                        iconTint: Theme.destructive
                     ) { EmptyView() }
                 }
                 .buttonStyle(.plain)
@@ -355,11 +357,12 @@ private struct SettingsRow<Accessory: View>: View {
     let title: String
     let subtitle: String
     let systemImage: String
+    var iconTint = Theme.textPrimary
     @ViewBuilder var accessory: Accessory
 
     var body: some View {
         HStack(spacing: 14) {
-            RowLabel(title: title, detail: subtitle, systemImage: systemImage)
+            RowLabel(title: title, detail: subtitle, systemImage: systemImage, iconTint: iconTint)
                 .lineLimit(3)
                 .frame(maxWidth: .infinity, alignment: .leading)
             accessory

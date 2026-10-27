@@ -33,7 +33,6 @@ struct LevelsView: View {
         }
         .themedList()
         .detailTitle("Levels")
-        .navigationDestination(for: Muscle.self) { MuscleLevelsView(muscle: $0) }
     }
 }
 

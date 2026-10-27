@@ -84,24 +84,7 @@ struct MetricDetailView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, Theme.margin)
         } else {
-            ScrollView(.horizontal) {
-                HStack(spacing: 0) {
-                    ForEach(tabs) { item in
-                        let selected = item.id == tab.id
-                        Button(item.title) { tabID = item.id }
-                            .font(AppFont.rowTitle)
-                            .foregroundStyle(selected ? Theme.textPrimary : Theme.textSecondary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
-                            .overlay(alignment: .bottom) {
-                                Rectangle().fill(selected ? Theme.textPrimary : Theme.separator).frame(height: 2)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityAddTraits(selected ? .isSelected : [])
-                    }
-                }
-            }
-            .scrollIndicators(.hidden)
+            UnderlineTabs(items: tabs.map { ($0.id, $0.title) }, selection: Binding(get: { tab.id }, set: { tabID = $0 }))
         }
     }
 
