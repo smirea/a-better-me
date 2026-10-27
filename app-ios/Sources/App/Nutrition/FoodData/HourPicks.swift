@@ -8,6 +8,8 @@ enum HourPicks {
         let portion: FoodPortion
         let day: CalendarDay
         let minute: Int
+        /// Orders entries logged in the same minute: the later write, then the id.
+        let written: String
     }
 
     static let days = 30
@@ -26,7 +28,7 @@ enum HourPicks {
             let key = FoodSearchResult.key(entry.portion.food)
             var tally = tallies[entry.minute / 60, default: [:]][key] ?? Tally(latest: entry)
             tally.days.insert(entry.day)
-            if (entry.day, entry.minute) >= (tally.latest.day, tally.latest.minute) { tally.latest = entry }
+            if (entry.day, entry.minute, entry.written) > (tally.latest.day, tally.latest.minute, tally.latest.written) { tally.latest = entry }
             tallies[entry.minute / 60, default: [:]][key] = tally
         }
         return tallies.mapValues { foods in

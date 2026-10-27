@@ -54,7 +54,7 @@ struct FoodLibrary: Sendable {
         // Bare columns beside MAX() come from the row holding the max, so each food brings its latest serving. Logging
         // or editing an entry sets updated_at, so a copy onto a future day ranks by when it was copied, not by its day.
         let history = try Row.fetchAll(db, sql: """
-            SELECT food, serving, MAX(updated_at || day || printf('%04d', minute)) AS latest
+            SELECT food, serving, MAX(updated_at || day || printf('%04d', minute) || created_at || id) AS latest
             FROM food_entries
             WHERE json_extract(food, '$.source') <> 'quick_add'
             GROUP BY COALESCE(json_extract(food, '$.foodID'), json_extract(food, '$.name') || '|' || COALESCE(json_extract(food, '$.brand'), ''))
@@ -64,10 +64,10 @@ struct FoodLibrary: Sendable {
         }
         let foods = try Food.filter(Column("archived") == false).fetchAll(db)
         let recent = try Row.fetchAll(db, sql: """
-            SELECT food, serving, day, minute FROM food_entries
+            SELECT food, serving, day, minute, updated_at || created_at || id AS written FROM food_entries
             WHERE day BETWEEN ? AND ? AND json_extract(food, '$.source') <> 'quick_add'
             """, arguments: [today.adding(days: -(HourPicks.days - 1)).description, today.description]).map { row in
-            HourPicks.Entry(portion: FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving), day: try row.day("day"), minute: row["minute"])
+            HourPicks.Entry(portion: FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving), day: try row.day("day"), minute: row["minute"], written: row["written"])
         }
         var library = FoodLibrary()
         library.picks = HourPicks.picks(recent, today: today).mapValues { $0.map { FoodSearchResult(.picks, $0) } }

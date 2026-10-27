@@ -9,11 +9,11 @@ struct HourPicksTests {
         FoodSnapshot(foodID: "custom-\(name)", source: .custom, name: name, nutrition: FoodNutrition(nutrients: [.energy: 100], measures: [Measure(name: "serving", quantity: 1, servings: 1)]))
     }
 
-    func entry(_ name: String, daysAgo: Int, _ hour: Int, _ minute: Int, quantity: Double = 1) -> HourPicks.Entry {
+    func entry(_ name: String, daysAgo: Int, _ hour: Int, _ minute: Int, quantity: Double = 1, written: String = "") -> HourPicks.Entry {
         let snapshot = food(name)
         return HourPicks.Entry(
             portion: FoodPortion(snapshot, serving: Serving(measure: snapshot.nutrition.measures[0], quantity: quantity)),
-            day: today.adding(days: -daysAgo), minute: hour * 60 + minute
+            day: today.adding(days: -daysAgo), minute: hour * 60 + minute, written: written
         )
     }
 
@@ -45,5 +45,12 @@ struct HourPicksTests {
     @Test func aMonthBackCountsAndTheDayBeforeDoesNot() {
         let picks = HourPicks.picks([entry("Coffee", daysAgo: 29, 6, 0), entry("Tea", daysAgo: 30, 6, 0)], today: today)
         #expect(picks[6]?.map(\.food.name) == ["Coffee"])
+    }
+
+    @Test func theLaterWriteWinsWithinOneMinuteWhateverTheOrder() {
+        let first = entry("Oats", daysAgo: 0, 8, 0, quantity: 1, written: "2026-10-27T08:00:01.000Z")
+        let second = entry("Oats", daysAgo: 0, 8, 0, quantity: 2, written: "2026-10-27T08:00:02.000Z")
+        #expect(HourPicks.picks([first, second], today: today)[8]?.first?.serving.quantity == 2)
+        #expect(HourPicks.picks([second, first], today: today)[8]?.first?.serving.quantity == 2)
     }
 }
