@@ -71,11 +71,8 @@ struct FoodEditor: View {
     private func identity(_ issues: [FoodDraft.Field: String]) -> some View {
         Section {
             HStack(spacing: 12) {
-                FoodIconView(name: draft.icon, size: 36)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(draft.name.isEmpty ? "Custom Food" : draft.name).font(AppFont.medium(15))
-                    Text(draft.brand.isEmpty ? "Brand Unknown" : draft.brand).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-                }
+                FoodIcon(icon: draft.icon, source: .custom, size: 36)
+                RowLabel(title: draft.name.isEmpty ? "Custom Food" : draft.name, detail: draft.brand.isEmpty ? "Brand Unknown" : draft.brand)
                 Spacer()
                 Button("Edit Icon") { choosingIcon = true }
                     .buttonStyle(.bordered)

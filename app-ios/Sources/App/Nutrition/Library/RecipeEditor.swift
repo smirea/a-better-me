@@ -77,13 +77,11 @@ struct RecipeEditor: View {
     private func build(_ issues: [RecipeDraft.Field: String], preview: Recipe) -> some View {
         Section {
             HStack(spacing: 12) {
-                FoodIconView(name: draft.icon, size: 36)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(draft.name.isEmpty ? "Your New Recipe" : draft.name).font(AppFont.medium(15))
-                    Text("\(NutritionFormat.macroLine(preview.nutrition.nutrients)) · \(servingLabel(preview))")
-                        .font(AppFont.caption(12))
-                        .foregroundStyle(Theme.textSecondary)
-                }
+                FoodIcon(icon: draft.icon, source: .recipe, size: 36)
+                RowLabel(
+                    title: draft.name.isEmpty ? "Your New Recipe" : draft.name,
+                    detail: "\(NutritionFormat.macroLine(preview.nutrition.nutrients)) · \(servingLabel(preview))"
+                )
                 Spacer()
                 Button("Edit Icon") { choosingIcon = true }
                     .buttonStyle(.bordered)
@@ -247,14 +245,10 @@ private struct IngredientRow: View {
     var body: some View {
         let food = ingredient.value.food
         HStack(spacing: 10) {
-            FoodIconView(name: food.icon)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(food.name).font(AppFont.medium(14)).lineLimit(2)
-                Text(NutritionFormat.macroLine(food.amounts(ingredient.value.serving)))
-                    .font(AppFont.caption(12))
-                    .foregroundStyle(Theme.textSecondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            FoodIcon(food: food)
+            RowLabel(title: food.displayName, detail: NutritionFormat.macroLine(food.amounts(ingredient.value.serving)))
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
             TextField("1", text: Binding { ingredient.quantity } set: { ingredient.type($0) })
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)

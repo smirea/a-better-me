@@ -167,11 +167,7 @@ struct FoodLibraryView: View {
             Button(action: open) { FoodRow(food: food, serving: serving) }
                 .buttonStyle(.plain)
             if let onAdd {
-                Button("Add \(food.name)", systemImage: "plus") { onAdd(FoodPortion(food, serving: serving)) }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
-                    .controlSize(.small)
+                AddToPlateButton(food: food) { onAdd(FoodPortion(food, serving: serving)) }
             }
         }
         .listRowBackground(Theme.surface)

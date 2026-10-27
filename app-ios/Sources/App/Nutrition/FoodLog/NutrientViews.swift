@@ -91,6 +91,62 @@ struct NutrientRow: View {
     }
 }
 
+/// Big calories, then protein, fat, and carbs, each with its share of the calories the three supply (`macroShare`).
+struct MacroHeader: View {
+    let amounts: NutrientAmounts
+
+    var body: some View {
+        let hasMacros = NutrientID.macros.dropFirst().contains { (amounts[$0] ?? 0) > 0 }
+        HStack(alignment: .bottom) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("\(Int((amounts[.energy] ?? 0).rounded()))").font(AppFont.number(32))
+                Text("Calories").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+            }
+            Spacer()
+            ForEach(NutrientID.macros.dropFirst(), id: \.self) { id in
+                VStack(spacing: 2) {
+                    Text(hasMacros ? "\(Int((amounts.macroShare(id) * 100).rounded()))%" : "–")
+                        .font(AppFont.badge)
+                        .foregroundStyle(Theme.onPrimary)
+                        .padding(.horizontal, 6)
+                        .background(Theme.macro(id), in: .capsule)
+                    Text(NutritionFormat.amount(amounts[id] ?? 0)).font(AppFont.number(18))
+                    Text(NutrientRegistry.nutrient(id)?.name ?? "").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+                }
+                .frame(width: 64)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Four rings: the share of the day's calorie and macro targets the amounts use, "–" where no plan sets one.
+struct ImpactGauges: View {
+    let amounts: NutrientAmounts
+    let target: DayTarget?
+
+    var body: some View {
+        HStack {
+            ForEach(NutrientID.macros, id: \.self) { id in
+                let goal = target?.amount(id) ?? 0
+                let share = goal > 0 ? (amounts[id] ?? 0) / goal : 0
+                VStack(spacing: 6) {
+                    Gauge(value: min(1, share)) {
+                        EmptyView()
+                    } currentValueLabel: {
+                        Text(goal > 0 ? "\(Int((share * 100).rounded()))%" : "–").font(AppFont.rowDetail)
+                    }
+                    .gaugeStyle(.accessoryCircularCapacity)
+                    .tint(Theme.macro(id))
+                    Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? "").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
 /// The nutrient sections every nutrient list shows, in MacroFactor's Food Detail order.
 enum NutrientSection: String, CaseIterable, Identifiable {
     case macros = "Calories & Macros"

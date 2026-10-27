@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// The food icons a custom food or recipe can pick. A food stores the icon's name; it draws as the emoji. A name this
-/// list does not know (or none) draws MacroFactor's default fork and knife.
-struct FoodIcon: Identifiable, Hashable {
+/// list does not know (or none) draws a symbol for where the food came from.
+struct FoodIconChoice: Identifiable, Hashable {
     let name: String
     let emoji: String
     let category: Category
@@ -17,7 +17,7 @@ struct FoodIcon: Identifiable, Hashable {
         var id: Self { self }
     }
 
-    static let all = table.map { FoodIcon(name: $0.0, emoji: $0.1, category: $0.2) }
+    static let all = table.map { FoodIconChoice(name: $0.0, emoji: $0.1, category: $0.2) }
 
     private static let table: [(String, String, Category)] = [
         ("apple", "🍎", .fruit), ("green-apple", "🍏", .fruit), ("pear", "🍐", .fruit), ("orange", "🍊", .fruit),
@@ -52,23 +52,48 @@ struct FoodIcon: Identifiable, Hashable {
 
     private static let byName = Dictionary(uniqueKeysWithValues: all.map { ($0.name, $0) })
 
-    static func named(_ name: String?) -> FoodIcon? { name.flatMap { byName[$0] } }
+    static func named(_ name: String?) -> FoodIconChoice? { name.flatMap { byName[$0] } }
 }
 
-struct FoodIconView: View {
-    let name: String?
-    var size: CGFloat = 28
+/// A food's icon everywhere it shows: the picked emoji, else a symbol for where the food came from, on a round tile.
+struct FoodIcon: View {
+    let icon: String?
+    let source: FoodSource
+    var size: CGFloat = 34
+
+    init(food: FoodSnapshot, size: CGFloat = 34) {
+        self.init(icon: food.icon, source: food.source, size: size)
+    }
+
+    init(icon: String?, source: FoodSource, size: CGFloat = 34) {
+        self.icon = icon
+        self.source = source
+        self.size = size
+    }
 
     var body: some View {
         Group {
-            if let icon = FoodIcon.named(name) {
-                Text(icon.emoji).font(.system(size: size * 0.8))
+            if let choice = FoodIconChoice.named(icon) {
+                Text(choice.emoji).font(.system(size: size * 0.6))
             } else {
-                Image(systemName: "fork.knife").font(.system(size: size * 0.6, weight: .semibold)).foregroundStyle(Theme.green)
+                Image(systemName: symbol)
+                    .font(.system(size: size * 0.42, weight: .semibold))
+                    .foregroundStyle(Theme.textSecondary)
             }
         }
         .frame(width: size, height: size)
+        .background(Theme.surfaceRaised, in: .circle)
         .accessibilityHidden(true)
+    }
+
+    private var symbol: String {
+        switch source {
+        case .recipe: "frying.pan"
+        case .quickAdd: "bolt.fill"
+        case .openFoodFacts: "barcode"
+        case .custom: "fork.knife"
+        case .usda: "leaf"
+        }
     }
 }
 
@@ -82,8 +107,8 @@ struct FoodIconPicker: View {
         NavigationStack {
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 52), spacing: 8)], spacing: 8, pinnedViews: .sectionHeaders) {
-                    ForEach(FoodIcon.Category.allCases) { category in
-                        let icons = FoodIcon.all.filter { $0.category == category && matches($0) }
+                    ForEach(FoodIconChoice.Category.allCases) { category in
+                        let icons = FoodIconChoice.all.filter { $0.category == category && matches($0) }
                         if !icons.isEmpty {
                             Section {
                                 ForEach(icons) { icon in
@@ -122,7 +147,7 @@ struct FoodIconPicker: View {
         }
     }
 
-    private func matches(_ icon: FoodIcon) -> Bool {
+    private func matches(_ icon: FoodIconChoice) -> Bool {
         query.isEmpty || icon.name.replacing("-", with: " ").localizedCaseInsensitiveContains(query)
     }
 

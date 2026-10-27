@@ -67,6 +67,12 @@ struct FoodSnapshot: Hashable, Codable, Sendable {
 
     func amounts(_ serving: Serving) -> NutrientAmounts { nutrition.nutrients.scaled(by: serving.servings) }
 
+    /// "ZZ Test Food By ZZ Brand", as MacroFactor names branded foods.
+    var displayName: String {
+        guard let brand, !brand.isEmpty else { return name }
+        return "\(name) By \(brand)"
+    }
+
     static func quickAdd(_ amounts: NutrientAmounts, name: String? = nil) -> FoodSnapshot {
         FoodSnapshot(
             source: .quickAdd, name: name ?? "Quick Add",

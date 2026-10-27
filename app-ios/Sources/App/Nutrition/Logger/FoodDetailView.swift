@@ -69,16 +69,7 @@ struct FoodDetailView: View {
             if let brand = food.brand, !brand.isEmpty {
                 Text(brand).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
             }
-            HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("\(Int((amounts[.energy] ?? 0).rounded()))").font(AppFont.number(34))
-                    Text("Calories").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
-                }
-                Spacer()
-                ForEach(NutrientID.macros.dropFirst(), id: \.self) { id in
-                    macro(id)
-                }
-            }
+            MacroHeader(amounts: amounts)
             HStack(spacing: 10) {
                 Button {
                     favorited += 1
@@ -102,41 +93,8 @@ struct FoodDetailView: View {
         .padding(.vertical, 6)
     }
 
-    private func macro(_ id: NutrientID) -> some View {
-        let share = Int((amounts.macroShare(id) * 100).rounded())
-        return VStack(spacing: 2) {
-            Text("\(share)%")
-                .font(AppFont.caption(11))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 1)
-                .background(Theme.macro(id).opacity(0.35), in: .capsule)
-            Text(NutritionFormat.amount(amounts[id] ?? 0)).font(AppFont.headline(17))
-            Text(NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-        }
-        .frame(width: 64)
-    }
-
-    /// Each macro's share of the day's target this serving uses, as MacroFactor's four rings.
     private var impact: some View {
-        let target = NutritionPlan.effective(on: session.time.day, in: plans)?.target(on: session.time.day)
-        return HStack {
-            ForEach(NutrientID.macros, id: \.self) { id in
-                let goal = target?.amount(id) ?? 0
-                let share = goal > 0 ? (amounts[id] ?? 0) / goal : 0
-                VStack(spacing: 6) {
-                    Gauge(value: min(share, 1)) {
-                        EmptyView()
-                    } currentValueLabel: {
-                        Text(goal > 0 ? "\(Int((share * 100).rounded()))%" : "–").font(AppFont.caption(12))
-                    }
-                    .gaugeStyle(.accessoryCircularCapacity)
-                    .tint(Theme.macro(id))
-                    Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? "").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-                }
-                .frame(maxWidth: .infinity)
-            }
-        }
-        .padding(.vertical, 4)
+        ImpactGauges(amounts: amounts, target: NutritionPlan.effective(on: session.time.day, in: plans)?.target(on: session.time.day))
     }
 
     private func choose(_ next: Measure) {

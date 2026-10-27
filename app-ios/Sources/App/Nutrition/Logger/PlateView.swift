@@ -25,20 +25,7 @@ struct PlateView: View {
             Section("Your Plate") {
                 ForEach(session.plate.items) { item in
                     Button { open(item.id) } label: {
-                        HStack(spacing: 12) {
-                            LoggerFoodIcon(food: item.pick.portion.food)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.pick.portion.food.name).font(AppFont.medium(15)).lineLimit(2)
-                                Text(NutritionFormat.macroLine(item.pick.portion.amounts)).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-                            }
-                            Spacer()
-                            Text(NutritionFormat.serving(item.pick.portion.serving))
-                                .font(AppFont.medium(13))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 8))
-                        }
-                        .contentShape(Rectangle())
+                        FoodRow(food: item.pick.portion.food, serving: item.pick.portion.serving)
                     }
                     .buttonStyle(.plain)
                 }

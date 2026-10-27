@@ -38,7 +38,7 @@ struct RecipeDetailView: View {
         return Form {
             Section {
                 HStack(spacing: 12) {
-                    FoodIconView(name: recipe.icon, size: 44)
+                    FoodIcon(food: recipe.snapshot, size: 44)
                     Text(recipe.name).font(AppFont.title(20))
                 }
                 MacroSummary(amounts: portion.amounts, caption: "Per \(NutritionFormat.serving(portion.serving, of: portion.food))")
@@ -190,14 +190,7 @@ struct RecipePrepareView: View {
                 }
                 .accessibilityValue("\(NutritionFormat.quantity(servings)) servings")
                 ForEach(RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: servings)) { ingredient in
-                    HStack(spacing: 10) {
-                        FoodIconView(name: ingredient.food.icon, size: 24)
-                        Text(ingredient.food.name).font(AppFont.body(15))
-                        Spacer()
-                        Text(NutritionFormat.serving(ingredient.serving, of: ingredient.food))
-                            .font(AppFont.medium(14))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
+                    FoodRow(food: ingredient.food, serving: ingredient.serving)
                 }
             } header: {
                 SectionTitle("Ingredients").textCase(nil)

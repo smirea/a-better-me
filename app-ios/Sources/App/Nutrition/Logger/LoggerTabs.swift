@@ -63,10 +63,16 @@ struct SearchTab: View {
 
     private func rows(_ results: [FoodSearchResult]) -> some View {
         ForEach(results) { result in
-            LoggerFoodRow(portion: result.portion, open: {
-                focused = false
-                open(LoggerPick(result))
-            }, add: { session.add(LoggerPick(result)) })
+            HStack(spacing: 12) {
+                Button {
+                    focused = false
+                    open(LoggerPick(result))
+                } label: {
+                    FoodRow(food: result.portion.food, serving: result.portion.serving)
+                }
+                .buttonStyle(.plain)
+                AddToPlateButton(food: result.portion.food) { session.add(LoggerPick(result)) }
+            }
         }
     }
 }

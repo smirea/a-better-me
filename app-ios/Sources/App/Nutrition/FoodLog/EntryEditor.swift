@@ -64,9 +64,7 @@ struct EntryEditor: View {
                     }
                     DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
                 }
-                if targets.target != nil {
-                    Section("Impact on Targets") { ImpactRings(amounts: amounts, targets: targets) }
-                }
+                Section("Impact on Targets") { ImpactGauges(amounts: amounts, target: targets.target) }
                 ForEach(NutrientSection.allCases) { section in
                     let shown = section.nutrients.filter { amounts.amount(of: $0.id) != nil }
                     if !shown.isEmpty {
@@ -134,63 +132,5 @@ struct EntryEditor: View {
             $0.minute = minute
         }
         dismiss()
-    }
-}
-
-/// Big calories, then protein, fat, and carbs with each one's share of the calories.
-private struct MacroHeader: View {
-    let amounts: NutrientAmounts
-
-    var body: some View {
-        let kcal = amounts[.energy] ?? 0
-        HStack(alignment: .bottom) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("\(Int(kcal.rounded()))").font(AppFont.number(30))
-                Text("Calories").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-            }
-            Spacer()
-            ForEach([(NutrientID.protein, 4.0), (.fat, 9.0), (.carbs, 4.0)], id: \.0) { id, kcalPerGram in
-                let grams = amounts[id] ?? 0
-                let nutrient = NutrientRegistry.nutrient(id)!
-                VStack(spacing: 2) {
-                    Text(kcal > 0 ? "\(Int((grams * kcalPerGram / kcal * 100).rounded()))%" : "–")
-                        .font(AppFont.headline(11))
-                        .foregroundStyle(.black)
-                        .padding(.horizontal, 6)
-                        .background(nutrient.color, in: Capsule())
-                    Text(NutritionFormat.amount(grams)).font(AppFont.number(18))
-                    Text(nutrient.name).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-                }
-                .frame(width: 64)
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// Four rings: the percent of the day's calorie and macro targets this entry uses.
-private struct ImpactRings: View {
-    let amounts: NutrientAmounts
-    let targets: NutrientTargets
-
-    var body: some View {
-        HStack {
-            ForEach(NutrientID.macros, id: \.self) { id in
-                let nutrient = NutrientRegistry.nutrient(id)!
-                let target = targets.range(id).target ?? 0
-                let share = target > 0 ? (amounts[id] ?? 0) / target : 0
-                VStack(spacing: 6) {
-                    Gauge(value: min(1, share)) {
-                        EmptyView()
-                    } currentValueLabel: {
-                        Text("\(Int((share * 100).rounded()))%").font(AppFont.caption(12))
-                    }
-                    .gaugeStyle(.accessoryCircularCapacity)
-                    .tint(nutrient.color)
-                    Text(id == .energy ? "Calories" : nutrient.name).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-                }
-                .frame(maxWidth: .infinity)
-            }
-        }
     }
 }

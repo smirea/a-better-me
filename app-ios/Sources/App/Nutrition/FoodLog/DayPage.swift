@@ -152,81 +152,26 @@ private struct EntryRow: View {
                 }
             }
             .frame(width: HourRow.gutter)
-            FoodTile(entry: entry, hidesDetails: hidesDetails, isSelecting: state.selecting)
-                .onTapGesture { state.select(entry.id) }
-                .contextMenu {
-                    Button("Edit", systemImage: "pencil") { state.editing = entry }
-                    Button("Duplicate", systemImage: "plus.square.on.square") {
-                        store.log([entry.portion], on: entry.day, minute: entry.minute)
-                    }
-                    Button("Remove", systemImage: "trash", role: .destructive) { store.deleteEntries([entry.id]) }
+            HStack(spacing: 12) {
+                FoodRow(food: entry.food, serving: entry.serving, showsDetail: !hidesDetails)
+                RoundIconButton("Edit \(entry.food.name)", systemImage: "pencil", size: .small) { state.editing = entry }
+                    .disabled(state.selecting)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
+            .contentShape(.rect(cornerRadius: Theme.smallCornerRadius))
+            .onTapGesture { state.select(entry.id) }
+            .contextMenu {
+                Button("Edit", systemImage: "pencil") { state.editing = entry }
+                Button("Duplicate", systemImage: "plus.square.on.square") {
+                    store.log([entry.portion], on: entry.day, minute: entry.minute)
                 }
-                .accessibilityAddTraits(isSelected ? .isSelected : [])
+                Button("Remove", systemImage: "trash", role: .destructive) { store.deleteEntries([entry.id]) }
+            }
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
         }
         .padding(.bottom, 8)
-    }
-}
-
-/// The icon, "Name By Brand", "200ઠ 12P 8F 20C • 1 portion", and the pencil that opens the editor.
-struct FoodTile: View {
-    let entry: FoodEntry
-    var hidesDetails = false
-    var isSelecting = false
-
-    @Environment(FoodLogState.self) private var state
-
-    var body: some View {
-        HStack(spacing: 12) {
-            FoodEntryIcon(food: entry.food)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(entry.food.displayName).font(AppFont.headline(14)).lineLimit(2)
-                if !hidesDetails {
-                    let kcal = Int((entry.amounts[.energy] ?? 0).rounded())
-                    Text("\(kcal)\(Text(calorieGlyph).font(.system(size: 9))) \(NutritionFormat.macros(entry.amounts)) · \(NutritionFormat.serving(entry.serving, of: entry.food))")
-                        .font(AppFont.caption(12))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 4)
-            Button("Edit \(entry.food.name)", systemImage: "pencil") { state.editing = entry }
-                .labelStyle(.iconOnly)
-                .font(.system(size: 13, weight: .semibold))
-                .frame(width: 30, height: 30)
-                .background(Theme.surfaceRaised, in: Circle())
-                .disabled(isSelecting)
-                .opacity(isSelecting ? 0.4 : 1)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
-        .contentShape(RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(entry.food.displayName)
-    }
-}
-
-/// The food's library icon, or a bolt for a quick add.
-struct FoodEntryIcon: View {
-    let food: FoodSnapshot
-
-    var body: some View {
-        if food.source == .quickAdd {
-            Image(systemName: "bolt.fill")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(Theme.calories)
-                .frame(width: 32, height: 32)
-        } else {
-            FoodIconView(name: food.icon, size: 32)
-        }
-    }
-}
-
-extension FoodSnapshot {
-    /// "ZZ Test Food By ZZ Brand", as MacroFactor names branded foods.
-    var displayName: String {
-        guard let brand, !brand.isEmpty else { return name }
-        return "\(name) By \(brand)"
     }
 }
 
