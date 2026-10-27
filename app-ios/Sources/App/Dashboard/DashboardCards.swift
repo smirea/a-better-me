@@ -10,7 +10,7 @@ struct DashboardCard<Chart: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(title).font(AppFont.headline(16)).lineLimit(1)
-            Text(period).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+            Text(period).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             chart
                 .frame(height: 50)
                 .frame(maxWidth: .infinity)
@@ -18,9 +18,9 @@ struct DashboardCard<Chart: View>: View {
             Divider().overlay(Theme.separator)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(value ?? "--").font(AppFont.number(17))
-                Text(unit).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                Text(unit).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 Spacer(minLength: 0)
-                Image(systemName: "chevron.forward").font(.caption.weight(.semibold)).foregroundStyle(Theme.textTertiary)
+                Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(Theme.textTertiary)
             }
             .padding(.top, 10)
         }
@@ -111,21 +111,18 @@ struct CycleRingsCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text(hasProgram ? "Cycle Workouts" : "Weekly Workouts").font(AppFont.title())
+            SectionHeader(hasProgram ? "Cycle Workouts" : "Weekly Workouts")
             HStack(alignment: .top) {
                 ring("Muscles", progress.muscles, size: 78, color: Theme.muscle)
                 Spacer()
                 ring("Sets", progress.sets, size: 128, color: Theme.accent)
                 Spacer()
-                ring("Exercises", progress.exercises, size: 78, color: DashboardColor.exercise)
+                ring("Exercises", progress.exercises, size: 78, color: Theme.exercise)
             }
             if hasProgram {
-                Picker("Count", selection: $scope) {
+                CardPicker("Count", selection: $scope) {
                     ForEach(DashboardMetrics.CycleScope.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 260)
-                .frame(maxWidth: .infinity)
             }
         }
     }
@@ -133,25 +130,19 @@ struct CycleRingsCard: View {
     private func ring(_ title: String, _ ring: DashboardMetrics.Ring, size: CGFloat, color: Color) -> some View {
         VStack(spacing: 10) {
             ZStack {
-                Circle().stroke(Theme.surfaceRaised, lineWidth: 5)
-                if let target = ring.target, target > 0 {
-                    Circle()
-                        .trim(from: 0, to: min(Double(ring.done) / Double(target), 1))
-                        .stroke(color, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                }
+                ProgressRing(fraction: ring.target.map { $0 > 0 ? Double(ring.done) / Double($0) : 0 } ?? 0, color: color)
                 VStack(spacing: 0) {
                     Text("\(ring.done)").font(AppFont.number(size > 100 ? 22 : 18))
                     if let left = ring.left {
-                        Text("\(left) left").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                        Text("\(left) left").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                     }
                 }
             }
             .frame(width: size, height: size)
             .frame(height: 128)
             VStack(spacing: 2) {
-                Text(title).font(AppFont.headline(15))
-                Text(ring.target.map { "\($0) target" } ?? "done").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                Text(title).font(AppFont.rowTitle)
+                Text(ring.target.map { "\($0) target" } ?? "done").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             }
         }
         .accessibilityElement(children: .combine)
@@ -164,20 +155,18 @@ struct RecentRecordsCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Recent Records").font(AppFont.title())
+            SectionHeader("Recent Records")
             if records.isEmpty {
-                Text("Finish a workout to set records.")
-                    .font(AppFont.caption(14))
-                    .foregroundStyle(Theme.textSecondary)
-                    .frame(maxWidth: .infinity, minHeight: 190)
+                ContentUnavailableView("No Records", systemImage: "trophy", description: Text("Finish a workout to set records."))
+                    .frame(minHeight: 190)
             } else {
                 VStack(spacing: 10) {
                     ForEach(records, id: \.exerciseID) { record in
                         HStack(spacing: 8) {
-                            Text(record.name).font(AppFont.caption(12)).lineLimit(1).frame(width: 96, alignment: .leading)
+                            Text(record.name).font(AppFont.rowDetail).lineLimit(1).frame(width: 96, alignment: .leading)
                             RecordBar(fraction: record.fraction) {
-                                Capsule().fill(DashboardColor.records)
-                                Text(record.label).font(AppFont.caption(12)).lineLimit(1).fixedSize()
+                                Capsule().fill(Theme.records)
+                                Text(record.label).font(AppFont.rowDetail).lineLimit(1).fixedSize()
                             }
                         }
                         .frame(height: 18)
@@ -186,14 +175,11 @@ struct RecentRecordsCard: View {
                 }
                 .frame(minHeight: 190, alignment: .top)
             }
-            Picker("Record", selection: $kind) {
+            CardPicker("Record", selection: $kind) {
                 Text("Volume").tag(ExerciseRecord.Kind.volume)
                 Text("Reps").tag(ExerciseRecord.Kind.reps)
                 Text("1-RM").tag(ExerciseRecord.Kind.oneRepMax)
             }
-            .pickerStyle(.segmented)
-            .frame(maxWidth: 260)
-            .frame(maxWidth: .infinity)
         }
     }
 }

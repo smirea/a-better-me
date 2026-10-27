@@ -94,7 +94,7 @@ struct DashboardMetricsTests {
                 DatedValue(date: day("2026-09-28", 0), value: 3),
                 DatedValue(date: day("2026-10-02", 0), value: 4),
             ],
-            unit: "sets", averageTitle: "Average Sets", summary: .total, style: .bar, color: Theme.muscle
+            unit: .decimal("sets"), averageTitle: "Average Sets", summary: .total, style: .bar, color: Theme.muscle
         )
         let plot = MetricPlot(tab: tab, footer: .months, range: .oneMonth, averaging: .weekly, now: day("2026-10-07"), calendar: utc, unit: .kg)
         #expect(plot.interval == DateInterval(start: day("2026-09-08", 0), end: day("2026-10-08", 0)))
@@ -116,10 +116,10 @@ struct DashboardMetricsTests {
             WeighIn(date: day("2026-10-05"), kg: 80.5, source: .health),
             WeighIn(date: day("2026-08-01"), kg: 82, source: .health),
         ]
-        let tab = MetricTab(title: "Scale Weight", points: [], unit: "kg", averageTitle: "Average", summary: .change, style: .line, color: Theme.green)
+        let tab = MetricTab(title: "Scale Weight", points: [], unit: .decimal("kg"), averageTitle: "Average", summary: .change, style: .line, color: Theme.green)
         let plot = MetricPlot(tab: tab, footer: .weighIns(weighIns), range: .oneMonth, averaging: .daily, now: day("2026-10-07"), calendar: utc, unit: .kg)
         let rows = plot.months.flatMap(\.rows)
-        #expect(rows.map(\.text) == ["80 kg", "80.5 kg", "82 kg"])
+        #expect(rows.map(\.text) == ["80\u{00A0}kg", "80.5\u{00A0}kg", "82\u{00A0}kg"])
         #expect(rows.map(\.deletableID) == [logged.id, nil, nil])
         #expect(rows[1].subtitle.hasSuffix(" · Health"))
     }

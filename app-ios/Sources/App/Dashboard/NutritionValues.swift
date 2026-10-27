@@ -78,7 +78,7 @@ extension DashboardData {
 
     var expenditureCard: CardValues {
         let values = expenditure.suffix(7).map(\.kcal)
-        return CardValues(values: values, text: values.last.map { Int($0.rounded()).formatted() })
+        return CardValues(values: values, text: values.last?.wholeText)
     }
 
     var week: [NutritionMetrics.DayNutrition] { NutritionMetrics.week(of: today, log: log, plans: plans) }
@@ -102,19 +102,19 @@ extension DashboardData {
     }
 
     /// Intake bars against a dashed reference, with the range's mean difference as the one stat.
-    func balanceTab(_ title: String, icon: String, reference: [DatedValue], color: Color) -> MetricTab {
+    func balanceTab(_ reference: BalanceReference, title: String, points: [DatedValue], color: Color) -> MetricTab {
         let intake = intake
-        let differences = NutritionMetrics.differences(intake: intake, reference: reference, calendar: calendar)
-        let isExpenditure = title == "Expenditure"
+        let differences = NutritionMetrics.differences(intake: intake, reference: points, calendar: calendar)
         return MetricTab(
-            title: title, icon: icon, points: intake, unit: "kcal", seriesTitle: "Calories", averageTitle: "Average", summary: .total, style: .bar,
+            title: title, points: intake, unit: .whole("kcal"), seriesTitle: "Calories", averageTitle: "Average", summary: .total, style: .bar,
             color: Theme.calories,
-            overlay: MetricTab.Overlay(title: isExpenditure ? "Expenditure" : "Targets", points: reference, color: color, dashed: true),
+            overlay: MetricTab.Overlay(title: reference.rawValue, points: points, color: color, dashed: true),
             stats: { interval in
                 let mean = differences.inside(interval).average
-                guard isExpenditure else { return [MetricTab.Stat(title: "Average", value: mean)] }
+                guard reference == .expenditure else { return [MetricTab.Stat(title: "Average", value: mean)] }
                 return [MetricTab.Stat(title: (mean ?? 0) > 0 ? "Surplus" : "Deficit", value: mean.map(abs))]
-            }
+            },
+            balance: reference
         )
     }
 }

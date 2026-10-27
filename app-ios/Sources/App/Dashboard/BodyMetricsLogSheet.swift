@@ -8,8 +8,8 @@ struct BodyMetricsLogSheet: View {
     @Observe(AppSettings.current) private var settings
     @Observe(BodyMetric.all) private var metrics
     @State private var date = Date.now
-    @State private var texts: [BodyMetricKind: String] = [:]
-    @State private var original: [BodyMetricKind: String] = [:]
+    @State private var values: [BodyMetricKind: Double] = [:]
+    @State private var original: [BodyMetricKind: Double] = [:]
     @State private var showingReference = false
 
     private var day: CalendarDay { CalendarDay(date) }
@@ -21,11 +21,10 @@ struct BodyMetricsLogSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
+                ThemedSection {
                     DatePicker("Date", selection: $date, in: ...Date.now, displayedComponents: .date)
                 }
-                .listRowBackground(Theme.surface)
-                Section {
+                ThemedSection(footer: "Turn on more measurements in Settings > Data Visibility > Body Metrics.") {
                     ForEach(kinds, id: \.self) { kind in
                         HStack {
                             Text(kind.title)
@@ -35,7 +34,7 @@ struct BodyMetricsLogSheet: View {
                                     .foregroundStyle(Theme.textSecondary)
                             }
                             Spacer()
-                            TextField("--", text: binding(kind))
+                            TextField("--", value: binding(kind), format: .number.precision(.fractionLength(0...1)))
                                 .keyboardType(.decimalPad)
                                 .multilineTextAlignment(.trailing)
                                 .frame(width: 90)
@@ -43,51 +42,48 @@ struct BodyMetricsLogSheet: View {
                             Text(unit(kind)).foregroundStyle(Theme.textSecondary).frame(width: 30, alignment: .leading)
                         }
                     }
-                } footer: {
-                    Text("Turn on more measurements in Settings > Data Visibility > Body Metrics.")
                 }
-                .listRowBackground(Theme.surface)
             }
             .themedList()
             .detailTitle("Log Measurements")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save", systemImage: "checkmark") {
+                    Button(role: .confirm) {
                         save()
                         dismiss()
                     }
-                    .disabled(texts == original)
+                    .disabled(values == original)
                 }
             }
             .onChange(of: day, initial: true) { load() }
-            .onChange(of: metrics) { if texts == original { load() } }
+            .onChange(of: metrics) { if values == original { load() } }
             .sheet(isPresented: $showingReference) { BodyFatReferenceSheet() }
         }
     }
 
     private func unit(_ kind: BodyMetricKind) -> String { kind.isLength ? heightUnit.lengthLabel : "%" }
 
+    /// Rounded to the field's one decimal, so an untouched field compares equal to what it shows.
     private func load() {
         original = Dictionary(uniqueKeysWithValues: metrics.filter { $0.day == day && kinds.contains($0.kind) }.map { metric in
-            (metric.kind, (metric.kind.isLength ? heightUnit.fromCm(metric.value) : metric.value).dashboardText)
+            (metric.kind, ((metric.kind.isLength ? heightUnit.fromCm(metric.value) : metric.value) * 10).rounded() / 10)
         })
-        texts = original
+        values = original
     }
 
-    private func binding(_ kind: BodyMetricKind) -> Binding<String> {
-        Binding(get: { texts[kind] ?? "" }, set: { texts[kind] = $0 })
+    private func binding(_ kind: BodyMetricKind) -> Binding<Double?> {
+        Binding(get: { values[kind] }, set: { values[kind] = $0 })
     }
 
     private func save() {
-        for kind in kinds where (texts[kind] ?? "") != (original[kind] ?? "") {
-            let trimmed = (texts[kind] ?? "").trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty {
+        for kind in kinds where values[kind] != original[kind] {
+            if let value = values[kind] {
+                if value > 0 { store.setBodyMetric(kind, on: day, value: kind.isLength ? heightUnit.toCm(value) : value) }
+            } else {
                 store.setBodyMetric(kind, on: day, value: nil)
-            } else if let value = Double(trimmed.replacing(",", with: ".")), value > 0 {
-                store.setBodyMetric(kind, on: day, value: kind.isLength ? heightUnit.toCm(value) : value)
             }
         }
     }
@@ -112,14 +108,18 @@ private struct BodyFatReferenceSheet: View {
 
     var body: some View {
         NavigationStack {
-            List(Self.ranges, id: \.0) { range, description in
-                LabeledContent(range, value: description).listRowBackground(Theme.surface)
+            List {
+                ThemedSection {
+                    ForEach(Self.ranges, id: \.0) { range, description in
+                        LabeledContent(range, value: description)
+                    }
+                }
             }
             .themedList()
             .detailTitle("Body Fat Reference")
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", systemImage: "checkmark") { dismiss() }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(role: .close) { dismiss() }
                 }
             }
         }

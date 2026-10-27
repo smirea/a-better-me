@@ -102,9 +102,7 @@ struct NutrientTodaySection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("\(summary.name) Today").font(AppFont.title())
-                Spacer()
+            SectionHeader("\(summary.name) Today") {
                 Button("About Nutrient Goals", systemImage: "info.circle") { showingAbout = true }
                     .labelStyle(.iconOnly)
                     .foregroundStyle(Theme.textSecondary)
@@ -114,7 +112,7 @@ struct NutrientTodaySection: View {
                     Text(amountText).font(AppFont.number(17))
                     Spacer()
                     if let target = summary.range.target, target > 0 {
-                        Text("\(Int((summary.consumedToday / target * 100).rounded()))%").font(AppFont.body(14)).foregroundStyle(Theme.textSecondary)
+                        Text("\((summary.consumedToday / target * 100).wholeText)%").font(AppFont.body(14)).foregroundStyle(Theme.textSecondary)
                     }
                 }
                 TileBar(value: summary.consumedToday, range: summary.range, color: Theme.macro(summary.nutrient)).frame(height: 16)
@@ -124,17 +122,17 @@ struct NutrientTodaySection: View {
                         Spacer()
                         if let ceiling = summary.range.ceiling { Text("Ceiling \(ceiling.dashboardText) \(summary.unit)") }
                     }
-                    .font(AppFont.caption(12))
+                    .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
                 }
                 if !contributors.isEmpty {
                     Divider().overlay(Theme.separator)
-                    Text("Top 3 Contributors").font(AppFont.headline(15))
+                    Text("Top 3 Contributors").font(AppFont.rowTitle)
                     ForEach(contributors, id: \.name) { item in
                         HStack {
-                            Text(item.name).font(AppFont.body(15)).lineLimit(1)
+                            Text(item.name).font(AppFont.rowTitle).lineLimit(1)
                             Spacer()
-                            Text("\(item.amount.dashboardText) \(summary.unit)").font(AppFont.body(15)).foregroundStyle(Theme.textSecondary)
+                            Text("\(item.amount.dashboardText) \(summary.unit)").font(AppFont.rowTitle).foregroundStyle(Theme.textSecondary)
                         }
                     }
                 }
@@ -157,20 +155,17 @@ private struct AboutNutrientGoalsSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
+                ThemedSection(footer: "A goal may have any of the three. Auto goals follow your age and sex; custom goals are set per nutrient from its detail.") {
                     LabeledContent("Floor", value: "A practical minimum: the lower threshold intake, below which nearly everyone falls short.")
                     LabeledContent("Target", value: "The recommended intake (RDA or AI), enough for about 98% of people.")
                     LabeledContent("Ceiling", value: "The tolerable upper intake level. Going over regularly may cause harm.")
-                } footer: {
-                    Text("A goal may have any of the three. Auto goals follow your age and sex; custom goals are set per nutrient from its detail.")
                 }
-                .listRowBackground(Theme.surface)
             }
             .themedList()
             .detailTitle("About Nutrient Goals")
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", systemImage: "checkmark") { dismiss() }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(role: .close) { dismiss() }
                 }
             }
         }
@@ -187,9 +182,9 @@ struct MacroSplitList: View {
                 if index > 0 { Divider().overlay(Theme.separator) }
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Text(day.date.formatted(.dateTime.weekday().month().day())).font(AppFont.body(15))
+                        Text(day.date.formatted(.dateTime.weekday().month().day())).font(AppFont.rowTitle)
                         Spacer()
-                        Text(day.split.text).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
+                        Text(day.split.text).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                     }
                     GeometryReader { proxy in
                         HStack(spacing: 2) {

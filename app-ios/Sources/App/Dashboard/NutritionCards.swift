@@ -21,7 +21,11 @@ struct WeeklyNutritionFocus: View {
     private var values = DashboardValues()
 
     var body: some View {
-        WeeklyNutritionCard(week: values.week, today: CalendarDay(values.context.today, in: values.context.calendar), overages: values.nutritionSettings.showOverages)
+        let context = values.context
+        WeeklyNutritionCard(
+            week: values.week, today: CalendarDay(context.today, in: context.calendar), calendar: context.calendar,
+            overages: values.nutritionSettings.showOverages
+        )
     }
 }
 
@@ -36,12 +40,13 @@ struct DailyNutritionFocus: View {
 struct WeeklyNutritionCard: View {
     let week: [NutritionMetrics.DayNutrition]
     let today: CalendarDay
+    let calendar: Calendar
     let overages: Bool
     @State private var shown = NutritionShown.consumed
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Weekly Nutrition").font(AppFont.title())
+            SectionHeader("Weekly Nutrition")
             Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 8) {
                 ForEach(NutritionMetrics.macros, id: \.self) { id in
                     GridRow {
@@ -52,14 +57,14 @@ struct WeeklyNutritionCard: View {
                 GridRow {
                     Color.clear.frame(width: 18, height: 1)
                     ForEach(week, id: \.day) { day in
-                        Text(day.day.date(in: .current).formatted(.dateTime.weekday(.abbreviated)))
-                            .font(day.day == today ? AppFont.headline(12) : AppFont.caption(12))
+                        Text(day.day.date(in: calendar).formatted(.dateTime.weekday(.abbreviated)))
+                            .font(day.day == today ? AppFont.headline(12) : AppFont.rowDetail)
                             .foregroundStyle(day.day == today ? Theme.textPrimary : Theme.textSecondary)
                             .frame(maxWidth: .infinity)
                     }
                 }
             }
-            NutritionShownPicker(shown: $shown)
+            shownPicker($shown)
         }
     }
 
@@ -84,29 +89,22 @@ struct WeeklyNutritionCard: View {
                     Capsule().fill(Theme.macro(id)).frame(height: 26 * fill)
                 }
             VStack(alignment: .leading, spacing: 0) {
-                Text(value.map { Int($0.rounded()).formatted() } ?? "--").font(AppFont.headline(11))
-                Text(target.map { Int($0.rounded()).formatted() } ?? "--").font(AppFont.caption(10)).foregroundStyle(Theme.textSecondary)
+                Text(value?.wholeText ?? "--").font(AppFont.badge)
+                Text(target?.wholeText ?? "--").font(AppFont.caption(10)).foregroundStyle(Theme.textSecondary)
             }
             .lineLimit(1)
             .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(id.dashboardLabel) \(day.day.date(in: .current).formatted(.dateTime.weekday(.wide)))")
-        .accessibilityValue("\(value.map { Int($0.rounded()).formatted() } ?? "none") \(shown.rawValue.lowercased()) of \(target.map { Int($0.rounded()).formatted() } ?? "no target")")
+        .accessibilityLabel("\(id.dashboardLabel) \(day.day.date(in: calendar).formatted(.dateTime.weekday(.wide)))")
+        .accessibilityValue("\(value?.wholeText ?? "none") \(shown.rawValue.lowercased()) of \(target?.wholeText ?? "no target")")
     }
 }
 
-private struct NutritionShownPicker: View {
-    @Binding var shown: NutritionShown
-
-    var body: some View {
-        Picker("Show", selection: $shown) {
-            ForEach(NutritionShown.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-        }
-        .pickerStyle(.segmented)
-        .frame(maxWidth: 260)
-        .frame(maxWidth: .infinity)
+private func shownPicker(_ shown: Binding<NutritionShown>) -> some View {
+    CardPicker("Show", selection: shown) {
+        ForEach(NutritionShown.allCases, id: \.self) { Text($0.rawValue).tag($0) }
     }
 }
 
@@ -121,40 +119,26 @@ struct DailyNutritionCard: View {
         let remaining = day.remaining(.energy, overages: overages)
         let center = shown == .consumed ? consumed : remaining
         VStack(alignment: .leading, spacing: 14) {
-            Text("Daily Nutrition").font(AppFont.title())
+            SectionHeader("Daily Nutrition")
             HStack {
-                sideStat(shown == .consumed ? remaining : consumed, shown == .consumed ? "Remaining" : "Consumed")
+                StatView(title: shown == .consumed ? "Remaining" : "Consumed", value: (shown == .consumed ? remaining : consumed)?.wholeText ?? "--", size: .compact)
                 gauge(center: center, title: shown.rawValue, fill: target.map { $0 > 0 ? (center ?? 0) / $0 : 0 } ?? 0)
-                sideStat(target, "Target")
+                StatView(title: "Target", value: target?.wholeText ?? "--", size: .compact)
             }
             HStack(spacing: 18) {
                 ForEach([NutrientID.protein, .fat, .carbs], id: \.self) { macroBar($0) }
             }
-            NutritionShownPicker(shown: $shown)
+            shownPicker($shown)
         }
-    }
-
-    private func sideStat(_ value: Double?, _ title: String) -> some View {
-        VStack(spacing: 2) {
-            Text(value.map { Int($0.rounded()).formatted() } ?? "--").font(AppFont.number(19))
-            Text(title).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
     }
 
     /// MacroFactor's 270° gauge, open at the bottom.
     private func gauge(center: Double?, title: String, fill: Double) -> some View {
         ZStack {
-            Circle().trim(from: 0, to: 0.75)
-                .stroke(Theme.surfaceRaised, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                .rotationEffect(.degrees(135))
-            Circle().trim(from: 0, to: 0.75 * min(max(fill, 0), 1))
-                .stroke(Theme.calories, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                .rotationEffect(.degrees(135))
+            ProgressRing(fraction: fill, color: Theme.calories, lineWidth: 6, arc: 0.75)
             VStack(spacing: 0) {
-                Text(center.map { Int($0.rounded()).formatted() } ?? "--").font(AppFont.number(26))
-                Text(title).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                Text(center?.wholeText ?? "--").font(AppFont.number(26))
+                Text(title).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             }
         }
         .frame(width: 112, height: 112)
@@ -166,15 +150,9 @@ struct DailyNutritionCard: View {
         let value = shown == .consumed ? day.consumed(id) : day.remaining(id, overages: overages)
         let fill = target.map { $0 > 0 ? (value ?? 0) / $0 : 0 } ?? 0
         return VStack(spacing: 4) {
-            Text(id.dashboardLabel).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-            GeometryReader { proxy in
-                Capsule().fill(Theme.surfaceRaised)
-                    .overlay(alignment: .leading) {
-                        Capsule().fill(Theme.macro(id)).frame(width: proxy.size.width * min(max(fill, 0), 1))
-                    }
-            }
-            .frame(height: 4)
-            Text("\(value.map { Int($0.rounded()).formatted() } ?? "--") / \(target.map { "\(Int($0.rounded()))g" } ?? "--")")
+            Text(id.dashboardLabel).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+            ProgressView(value: min(max(fill, 0), 1)).progressViewStyle(.bar(Theme.macro(id)))
+            Text("\(value?.wholeText ?? "--") / \(target.map { "\(Int($0.rounded()))g" } ?? "--")")
                 .font(AppFont.headline(12))
         }
         .frame(maxWidth: .infinity)
@@ -188,42 +166,24 @@ struct EnergyBalanceFocusCard: View {
 
     var body: some View {
         let balance = values.balance(reference, days: 30)
-        let lineColor = reference == .expenditure ? DashboardColor.expenditure : Theme.fat
+        let lineColor = reference == .expenditure ? Theme.accent : Theme.fat
         VStack(alignment: .leading, spacing: 10) {
-            Text("Energy Balance").font(AppFont.title())
+            SectionHeader("Energy Balance")
             BalanceChart(bars: balance.bars, line: balance.line, lineColor: lineColor, domain: balance.interval)
                 .frame(height: 110)
-            Text("Last 30 Days").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+            Text("Last 30 Days").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             HStack(alignment: .top) {
-                term(balance.meanIntake, "Nutrition", symbol: "chart.bar.fill", color: Theme.calories)
-                Text("−").font(AppFont.number(17))
-                term(balance.meanReference, reference.rawValue, symbol: "line.diagonal", color: lineColor)
-                Text("=").font(AppFont.number(17))
-                term(balance.meanDifference, "Difference", symbol: nil, color: Theme.textSecondary)
+                StatView(title: "Nutrition", value: balance.meanIntake?.wholeText ?? "--", size: .compact, symbol: ("chart.bar.fill", Theme.calories))
+                Text("−").font(AppFont.number(19))
+                StatView(title: reference.rawValue, value: balance.meanReference?.wholeText ?? "--", size: .compact, symbol: ("line.diagonal", lineColor))
+                Text("=").font(AppFont.number(19))
+                StatView(title: "Difference", value: balance.meanDifference?.wholeText ?? "--", size: .compact)
             }
-            Picker("Compare With", selection: $reference) {
+            CardPicker("Compare With", selection: $reference) {
                 ForEach(BalanceReference.allCases, id: \.self) { Text($0.rawValue).tag($0) }
             }
-            .pickerStyle(.segmented)
-            .frame(maxWidth: 260)
-            .frame(maxWidth: .infinity)
         }
-    }
-
-    private func term(_ value: Double?, _ title: String, symbol: String?, color: Color) -> some View {
-        VStack(spacing: 2) {
-            Text(value.map { Int($0.rounded()).formatted() } ?? "N/A").font(AppFont.number(17))
-            Label {
-                Text(title)
-            } icon: {
-                if let symbol { Image(systemName: symbol).foregroundStyle(color) }
-            }
-            .font(AppFont.caption(12))
-            .foregroundStyle(Theme.textSecondary)
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
     }
 }
 
@@ -263,10 +223,10 @@ struct EnergyBalanceInsightCard: View {
         let mean = balance.meanDifference
         NavigationLink(value: DashboardRoute.energyBalance) {
             DashboardCard(
-                title: "Energy Balance", period: "Last 7 Days", value: mean.map { Int(abs($0).rounded()).formatted() },
+                title: "Energy Balance", period: "Last 7 Days", value: mean.map { abs($0).wholeText },
                 unit: (mean ?? 0) > 0 ? "kcal surplus" : "kcal deficit"
             ) {
-                BalanceChart(bars: balance.bars, line: balance.line, lineColor: DashboardColor.expenditure, domain: balance.interval)
+                BalanceChart(bars: balance.bars, line: balance.line, lineColor: Theme.accent, domain: balance.interval)
             }
         }
     }
@@ -280,17 +240,11 @@ struct GoalProgressInsightCard: View {
             DashboardCard(
                 title: "Goal Progress",
                 period: progress.map { "Last \($0.days) Days" } ?? "No Goal",
-                value: progress?.percent.map { Int($0.rounded()).formatted() },
+                value: progress?.percent?.wholeText,
                 unit: "%"
             ) {
-                GeometryReader { proxy in
-                    Capsule().fill(Theme.surfaceRaised)
-                        .overlay(alignment: .leading) {
-                            Capsule().fill(Theme.goal).frame(width: proxy.size.width * (progress?.percent ?? 0) / 100)
-                        }
-                        .frame(height: 8)
-                        .frame(maxHeight: .infinity)
-                }
+                ProgressView(value: min(max((progress?.percent ?? 0) / 100, 0), 1))
+                    .progressViewStyle(.bar(Theme.goal, height: 8))
             }
         }
     }

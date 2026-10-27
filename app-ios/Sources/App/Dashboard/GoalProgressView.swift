@@ -17,7 +17,10 @@ struct GoalProgressView: View {
                 if let progress {
                     let bars = NutritionMetrics.waterfall(progress.points, goal: progress.goal, now: context.today, calendar: context.calendar)
                     if bars.isEmpty {
-                        message("A goal to maintain has no distance to track. Set a target weight to lose or gain toward in Strategy.")
+                        ContentUnavailableView(
+                            "No Distance to Track", systemImage: "equal.circle",
+                            description: Text("A goal to maintain has no distance to track. Set a target weight to lose or gain toward in Strategy.")
+                        )
                     } else {
                         header(bars)
                         chart(bars).frame(height: 320)
@@ -25,10 +28,12 @@ struct GoalProgressView: View {
                     }
                     insights(progress)
                 } else {
-                    message("Set a weight goal in Strategy to track your progress toward it.")
+                    ContentUnavailableView(
+                        "No Weight Goal", systemImage: "target", description: Text("Set a weight goal in Strategy to track your progress toward it.")
+                    )
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.bottom, 30)
         }
         .background(Theme.background)
@@ -42,24 +47,9 @@ struct GoalProgressView: View {
         .pickerStyle(.segmented)
     }
 
-    private func message(_ text: String) -> some View {
-        Text(text)
-            .font(AppFont.body(15))
-            .foregroundStyle(Theme.textSecondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .card()
-    }
-
     private func header(_ bars: [NutritionMetrics.WaterfallBar]) -> some View {
         let remaining = bars.last.map { $0.low < 0 ? $0.low : $0.high } ?? 0
-        return VStack(alignment: .leading, spacing: 2) {
-            Text("Distance").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(context.unit.fromKg(max(remaining, 0)).dashboardText).font(AppFont.number(22))
-                Text(context.unit.rawValue).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
-            }
-        }
-        .accessibilityElement(children: .combine)
+        return StatView(title: "Distance", value: context.unit.fromKg(max(remaining, 0)).dashboardText, unit: context.unit.rawValue)
     }
 
     /// The x axis is categorical, one slot per bar, so the remaining bar gets its own slot beside the last month's.
@@ -88,33 +78,24 @@ struct GoalProgressView: View {
                 .foregroundStyle(Theme.textSecondary)
             }
         }
-        .chartYAxis {
-            AxisMarks(position: .trailing) { _ in
-                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3])).foregroundStyle(Theme.separator)
-                AxisValueLabel().foregroundStyle(Theme.textSecondary)
-            }
-        }
+        .themedYAxis()
         .accessibilityLabel("Goal progress waterfall")
     }
 
     private func color(_ kind: NutritionMetrics.WaterfallBar.Kind) -> Color {
         switch kind {
-        case .start, .away: DashboardColor.goalAway
-        case .towards: DashboardColor.goalTowards
+        case .start, .away: Theme.goal
+        case .towards: Theme.goalTowards
         case .remaining: Theme.surfaceRaised
         }
     }
 
     private var legend: some View {
-        HStack(spacing: 20) {
-            Label { Text("Away") } icon: { Image(systemName: "square.fill").foregroundStyle(DashboardColor.goalAway) }
-            Label { Text("Towards") } icon: { Image(systemName: "square.fill").foregroundStyle(DashboardColor.goalTowards) }
-            Label { Text("Distance") } icon: { Image(systemName: "square.fill").foregroundStyle(Theme.surfaceRaised) }
-        }
-        .font(AppFont.medium(14))
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
+        ChartLegend(items: [
+            ChartLegend.Item(title: "Away", symbol: "square.fill", color: Theme.goal),
+            ChartLegend.Item(title: "Towards", symbol: "square.fill", color: Theme.goalTowards),
+            ChartLegend.Item(title: "Distance", symbol: "square.fill", color: Theme.surfaceRaised),
+        ])
     }
 
     private func insights(_ progress: GoalProgressValues) -> some View {
@@ -127,7 +108,7 @@ struct GoalProgressView: View {
             .flatMap { NutritionEngine.Targets.estimatedDays(goal: rate, weightKg: $0) }
             .map { context.calendar.date(byAdding: .day, value: $0, to: context.today)! }
         return VStack(alignment: .leading, spacing: 12) {
-            Text("Insights & Data").font(AppFont.title())
+            SectionHeader("Insights & Data")
             InsightTiles(tiles: [
                 InsightTile(
                     value: goal.targetWeightKg.map { context.unit.fromKg($0).dashboardText } ?? "--", unit: context.unit.rawValue,

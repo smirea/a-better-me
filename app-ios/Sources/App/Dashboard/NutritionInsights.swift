@@ -8,13 +8,13 @@ struct ExpenditureInsights: View {
         let changes = summary.changes
         let strategy = summary.strategy
         VStack(alignment: .leading, spacing: 12) {
-            Text("Insights & Data").font(AppFont.title())
-            ChangeRows(title: "Expenditure Changes", changes: changes, color: DashboardColor.expenditure, tolerance: 0.5) {
-                "\(Int($0.rounded()).formatted()) kcal"
+            SectionHeader("Insights & Data")
+            ChangeRows(title: "Expenditure Changes", changes: changes, color: Theme.accent, tolerance: 0.5) {
+                "\($0.wholeText) kcal"
             }
             InsightTiles(tiles: [
                 InsightTile(
-                    value: summary.currentKcal.map { Int($0.rounded()).formatted() } ?? "--", unit: "kcal",
+                    value: summary.currentKcal?.wholeText ?? "--", unit: "kcal",
                     title: "Current Expenditure",
                     text: "The latest estimate of your daily energy expenditure based on your weight trend and nutrition data."
                 ),
@@ -57,8 +57,8 @@ struct WeightTrendInsights: View {
         let insights = summary.insights
         let losing = (insights?.weeklyChangeKg ?? 0) < 0
         VStack(alignment: .leading, spacing: 12) {
-            Text("Insights & Data").font(AppFont.title())
-            ChangeRows(title: "Weight Changes", changes: changes, color: DashboardColor.trend, tolerance: unit.toKg(0.05)) {
+            SectionHeader("Insights & Data")
+            ChangeRows(title: "Weight Changes", changes: changes, color: Theme.weightTrend, tolerance: unit.toKg(0.05)) {
                 "\(unit.fromKg($0).dashboardText) \(unit.rawValue)"
             }
             InsightTiles(tiles: [
@@ -71,7 +71,7 @@ struct WeightTrendInsights: View {
                     text: "Your typical weekly rate of weight \(losing ? "loss" : "gain") over the past three weeks."
                 ),
                 InsightTile(
-                    value: insights?.energyBalanceKcal.map { Int(abs($0).rounded()).formatted() } ?? "--", unit: "kcal/day",
+                    value: insights?.energyBalanceKcal.map { abs($0).wholeText } ?? "--", unit: "kcal/day",
                     title: losing ? "Energy Deficit" : "Energy Surplus",
                     text: "Our estimate of your average daily caloric \(losing ? "deficit" : "surplus"), based on your rate of weight \(losing ? "loss" : "gain") over the past three weeks."
                 ),
@@ -95,12 +95,12 @@ struct EnergyBalanceInsights: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Insights & Data").font(AppFont.title())
+            SectionHeader("Insights & Data")
             VStack(alignment: .leading, spacing: 12) {
                 Text(isExpenditure ? "Relative to Expenditure" : "Relative to Targets").font(AppFont.headline(16))
                 ForEach(rows, id: \.days) { row in
                     HStack {
-                        Text("\(row.days)-day").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary).frame(width: 60, alignment: .leading)
+                        Text("\(row.days)-day").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).frame(width: 60, alignment: .leading)
                         Text(row.mean.map { "\(BalanceTag.signed($0)) kcal" } ?? "--").font(AppFont.headline(14))
                         Spacer()
                         if let mean = row.mean { BalanceTag(balance: NutritionMetrics.balance(mean), isExpenditure: isExpenditure) }
@@ -118,8 +118,7 @@ struct BalanceTag: View {
     let isExpenditure: Bool
 
     static func signed(_ value: Double) -> String {
-        let rounded = Int(value.rounded())
-        return (rounded > 0 ? "+" : "") + rounded.formatted()
+        (Int(value.rounded()) > 0 ? "+" : "") + value.wholeText
     }
 
     var title: String {
@@ -141,7 +140,7 @@ struct BalanceTag: View {
         }
     }
 
-    var color: Color { isExpenditure ? DashboardColor.expenditure : Theme.fat }
+    var color: Color { isExpenditure ? Theme.accent : Theme.fat }
 
     var body: some View {
         Label {
@@ -149,7 +148,7 @@ struct BalanceTag: View {
         } icon: {
             Image(systemName: symbol).foregroundStyle(color)
         }
-        .font(AppFont.caption(13))
+        .font(AppFont.rowDetail)
     }
 }
 
@@ -167,7 +166,7 @@ private struct ChangeRows: View {
             ForEach(changes, id: \.days) { change in
                 let direction = NutritionMetrics.direction(change.delta, tolerance: tolerance)
                 HStack(spacing: 12) {
-                    Text("\(change.days)-day").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary).frame(width: 52, alignment: .leading)
+                    Text("\(change.days)-day").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).frame(width: 52, alignment: .leading)
                     MiniLine(values: change.values, color: color, rightAlignedSlots: max(change.values.count, 2), showsPoints: false)
                         .frame(width: 70, height: 18)
                     Text(change.delta.map(format) ?? "--").font(AppFont.headline(14)).frame(minWidth: 70, alignment: .leading)
@@ -175,7 +174,7 @@ private struct ChangeRows: View {
                     Label(direction.title, systemImage: direction.symbol)
                         .lineLimit(1)
                         .fixedSize()
-                        .font(AppFont.caption(13))
+                        .font(AppFont.rowDetail)
                         .foregroundStyle(Theme.textSecondary)
                 }
                 .accessibilityElement(children: .combine)
@@ -226,8 +225,8 @@ struct InsightTiles: View {
                     .frame(width: 86, height: 64)
                     .background(Theme.surfaceRaised, in: .rect(cornerRadius: Theme.smallCornerRadius))
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(tile.title).font(AppFont.headline(15))
-                        Text(tile.text).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
+                        Text(tile.title).font(AppFont.rowTitle)
+                        Text(tile.text).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                     }
                 }
                 .accessibilityElement(children: .combine)
@@ -244,17 +243,13 @@ private struct DataSources: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Data Sources").font(AppFont.title())
+            SectionHeader("Data Sources")
             VStack(spacing: 0) {
                 ForEach(Array(sources.enumerated()), id: \.offset) { index, source in
-                    if index > 0 { Divider().overlay(Theme.separator).padding(.leading, 50) }
+                    if index > 0 { Divider().overlay(Theme.separator).padding(.leading, 40) }
                     NavigationLink(value: source.route) {
-                        HStack(spacing: 14) {
-                            Image(systemName: source.symbol).frame(width: 22)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(source.title).font(AppFont.headline(15))
-                                Text("Manage Data").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
-                            }
+                        HStack {
+                            RowLabel(title: source.title, detail: "Manage Data", systemImage: source.symbol)
                             Spacer()
                             Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(Theme.textTertiary)
                         }

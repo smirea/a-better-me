@@ -5,22 +5,22 @@ struct BodyWeightLogSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Observe(AppSettings.current) private var settings
     @Observe(BodyWeight.latest) private var latest
-    @State private var text = ""
-    @State private var bodyFatText = ""
+    @State private var weight: Double?
+    @State private var bodyFatInput: Double?
     @State private var measuredAt = Date.now
     @FocusState private var focused: Bool
 
     private var unit: WeightUnit { settings.weightUnit }
-    private var value: Double? { Double(text.replacing(",", with: ".")).flatMap { $0 > 0 ? $0 : nil } }
+    private var value: Double? { weight.flatMap { $0 > 0 ? $0 : nil } }
     /// The scale's body fat, optional; anything outside 1–75% is not a reading.
-    private var bodyFat: Double? { Double(bodyFatText.replacing(",", with: ".")).flatMap { (1...75).contains($0) ? $0 : nil } }
+    private var bodyFat: Double? { bodyFatInput.flatMap { (1...75).contains($0) ? $0 : nil } }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section {
+                ThemedSection(footer: latest.map { "Last weigh-in: \(unit.label(kg: $0.weightKg)), \($0.measuredAt.formatted(.relative(presentation: .named)))" }) {
                     HStack {
-                        TextField("Weight", text: $text)
+                        TextField("Weight", value: $weight, format: .number.precision(.fractionLength(0...2)).grouping(.never))
                             .keyboardType(.decimalPad)
                             .focused($focused)
                             .font(AppFont.number(28))
@@ -30,7 +30,7 @@ struct BodyWeightLogSheet: View {
                     HStack {
                         Text("Body Fat")
                         Spacer()
-                        TextField("Optional", text: $bodyFatText)
+                        TextField("Optional", value: $bodyFatInput, format: .number)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
                             .frame(width: 90)
@@ -38,32 +38,27 @@ struct BodyWeightLogSheet: View {
                         Text("%").foregroundStyle(Theme.textSecondary)
                     }
                     DatePicker("Time", selection: $measuredAt, in: ...Date.now)
-                } footer: {
-                    if let latest {
-                        Text("Last weigh-in: \(unit.label(kg: latest.weightKg)), \(latest.measuredAt.formatted(.relative(presentation: .named)))")
-                    }
                 }
-                .listRowBackground(Theme.surface)
             }
             .themedList()
             .detailTitle("Log Weight")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save", systemImage: "checkmark") {
+                    Button(role: .confirm) {
                         guard let value else { return }
                         var weighIn = BodyWeight(weightKg: unit.toKg(value), measuredAt: measuredAt)
                         weighIn.bodyFatPercent = bodyFat
                         store.insert(weighIn)
                         dismiss()
                     }
-                    .disabled(value == nil || (!bodyFatText.isEmpty && bodyFat == nil))
+                    .disabled(value == nil || (bodyFatInput != nil && bodyFat == nil))
                 }
             }
             .onAppear {
-                if let latest { text = unit.fromKg(latest.weightKg).formatted(.number.precision(.fractionLength(0...2)).grouping(.never)) }
+                if let latest { weight = (unit.fromKg(latest.weightKg) * 100).rounded() / 100 }
                 focused = true
             }
         }
