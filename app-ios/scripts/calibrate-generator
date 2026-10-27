@@ -25,7 +25,8 @@ console.log(`Simulator: ${device.name} (${device.udid})`);
 const result = await run([
     "xcodebuild", "test", "-project", "App.xcodeproj", "-scheme", "App",
     "-destination", `platform=iOS Simulator,id=${device.udid}`,
-    "-derivedDataPath", "DerivedData/tests", "-only-testing:AppTests/GeneratorCalibrationTests",
+    "-derivedDataPath", "DerivedData/tests",
+    "-clonedSourcePackagesDirPath", "DerivedData/SourcePackages", "-only-testing:AppTests/GeneratorCalibrationTests",
     "CODE_SIGN_IDENTITY=-",
 ]);
 const lines = (result.out + result.err).split("\n");
