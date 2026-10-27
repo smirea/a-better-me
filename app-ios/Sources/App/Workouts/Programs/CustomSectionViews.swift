@@ -10,21 +10,11 @@ extension View {
 private struct NewSectionAlert: ViewModifier {
     @Binding var isPresented: Bool
     @Environment(LocalStore.self) private var store
-    @State private var name = ""
 
     func body(content: Content) -> some View {
-        content
-            .alert("New Section", isPresented: $isPresented) {
-                TextField("Section Name", text: $name)
-                Button("Add Section") {
-                    let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !name.isEmpty { store.updateSettings { $0.workout.sections.addSection(named: name) } }
-                }
-                Button("Cancel", role: .cancel) {}
-            }
-            .onChange(of: isPresented) { _, shown in
-                if shown { name = "" }
-            }
+        content.nameAlert("New Section", isPresented: $isPresented, placeholder: "Section Name", confirm: "Add Section") { name in
+            store.updateSettings { $0.workout.sections.addSection(named: name) }
+        }
     }
 }
 
@@ -37,7 +27,6 @@ struct CustomSectionView: View {
     @Environment(LocalStore.self) private var store
     @State private var addingWorkouts = false
     @State private var renaming = false
-    @State private var newName = ""
     @State private var confirmingDelete = false
 
     var body: some View {
@@ -54,10 +43,7 @@ struct CustomSectionView: View {
                 }
                 Menu("\(section.name) Options", systemImage: "ellipsis") {
                     Button("Add Workout", systemImage: "plus") { addingWorkouts = true }
-                    Button("Rename", systemImage: "pencil") {
-                        newName = section.name
-                        renaming = true
-                    }
+                    Button("Rename", systemImage: "pencil") { renaming = true }
                     Button("Delete Section", systemImage: "trash", role: .destructive) { confirmingDelete = true }
                 }
                 .labelStyle(.iconOnly)
@@ -82,13 +68,8 @@ struct CustomSectionView: View {
         .sheet(isPresented: $addingWorkouts) {
             SectionWorkoutsSheet(section: section, library: library)
         }
-        .alert("Rename Section", isPresented: $renaming) {
-            TextField("Section Name", text: $newName)
-            Button("Save") {
-                let name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !name.isEmpty { store.updateSettings { $0.workout.sections.rename(id, to: name) } }
-            }
-            Button("Cancel", role: .cancel) {}
+        .nameAlert("Rename Section", isPresented: $renaming, initial: section.name, placeholder: "Section Name") { name in
+            store.updateSettings { $0.workout.sections.rename(id, to: name) }
         }
         .alert("Delete Section", isPresented: $confirmingDelete) {
             Button("Delete Section", role: .destructive) {

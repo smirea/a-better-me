@@ -13,7 +13,6 @@ struct GymProfileEditor: View {
     @State private var selectedOnly = false
     @State private var query = ""
     @State private var renaming = false
-    @State private var newName = ""
     @State private var confirmingRemove = false
     @State private var editingLoad: Equipment?
 
@@ -41,10 +40,7 @@ struct GymProfileEditor: View {
                 GymActions(
                     icon: gym.icon,
                     onIcon: { icon in edit { $0.icon = icon } },
-                    onRename: {
-                        newName = gym.name
-                        renaming = true
-                    },
+                    onRename: { renaming = true },
                     onDuplicate: { duplicate(gym) },
                     onRemove: gyms.count > 1 ? { confirmingRemove = true } : nil
                 )
@@ -135,13 +131,8 @@ struct GymProfileEditor: View {
                 }
             }
         }
-        .alert("Rename Gym", isPresented: $renaming) {
-            TextField("Gym name", text: $newName)
-            Button("Save") {
-                let name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !name.isEmpty { edit { $0.name = name } }
-            }
-            Button("Cancel", role: .cancel) {}
+        .nameAlert("Rename Gym", isPresented: $renaming, initial: gym.name, placeholder: "Gym name") { name in
+            edit { $0.name = name }
         }
         .confirmationDialog("Remove \(gym.name)?", isPresented: $confirmingRemove, titleVisibility: .visible) {
             Button("Remove", role: .destructive) { remove(gym, wasDefault: isDefault) }

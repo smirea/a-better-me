@@ -27,16 +27,8 @@ extension SessionEditor {
             ForEach(rows, id: \.self) { path in
                 row(path, number: item.sets.number(at: path.set), fields: fields, previous: previous)
             }
-            HStack {
-                Button { addSet(block: block, exercise: index) } label: {
-                    Image(systemName: "plus")
-                        .font(AppFont.headline(15))
-                        .frame(width: 36, height: 36)
-                        .background(Theme.surfaceRaised, in: Circle())
-                }
-                .accessibilityLabel("Add Set")
-                Spacer()
-            }
+            RoundIconButton("Add Set", systemImage: "plus") { addSet(block: block, exercise: index) }
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .foregroundStyle(Theme.textPrimary)
     }

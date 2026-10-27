@@ -69,17 +69,9 @@ struct SetTargetsSheet: View {
                     setRow($set)
                     ForEach($set.subSets) { $sub in subSetRow($sub, of: set) }
                 }
-                Button { addSet() } label: {
-                    Image(systemName: "plus")
-                        .font(AppFont.headline())
-                        .frame(width: 36, height: 36)
-                        .background(Theme.surfaceRaised, in: Circle())
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Add Set")
-                .listRowSeparator(.hidden)
+                RoundIconButton("Add Set", systemImage: "plus") { addSet() }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .listRowSeparator(.hidden)
                 if let footer { footer }
                 Toggle(isOn: $restTimers) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -98,18 +90,11 @@ struct SetTargetsSheet: View {
             .background(Theme.surface)
             .scrollDismissesKeyboard(.interactively)
             .environment(\.defaultMinListRowHeight, 40)
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(subtitle == nil ? "Targets" : catalog.name(draft.exerciseID))
+            .navigationSubtitle(subtitle ?? catalog.name(draft.exerciseID))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }
-                }
-                ToolbarItem(placement: .principal) {
-                    VStack(spacing: 0) {
-                        Text(subtitle == nil ? "Targets" : catalog.name(draft.exerciseID)).font(AppFont.title(17))
-                        Text(subtitle ?? catalog.name(draft.exerciseID))
-                            .font(AppFont.caption())
-                            .foregroundStyle(Theme.textSecondary)
-                    }
                 }
                 ToolbarItem(placement: .keyboard) {
                     Button("Done") { focus = nil }.frame(maxWidth: .infinity, alignment: .trailing)

@@ -208,7 +208,7 @@ private struct ExerciseRow: View {
         let exercise = catalog.exercise(item.exerciseID)
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 16) {
-                ExerciseThumbnail(exercise: exercise, inSuperset: inSuperset)
+                ExerciseTile(exercise: exercise, badge: inSuperset ? .superset : nil)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(catalog.name(item.exerciseID)).font(AppFont.headline(15))
                     if let exercise { MuscleTags(exercise: exercise) }
@@ -225,7 +225,7 @@ private struct ExerciseRow: View {
         let exercise = catalog.exercise(item.exerciseID)
         let hasTargets = item.sets.contains { $0.target != nil }
         return HStack(alignment: .top, spacing: 16) {
-            ExerciseThumbnail(exercise: exercise, inSuperset: inSuperset)
+            ExerciseTile(exercise: exercise, badge: inSuperset ? .superset : nil)
             VStack(alignment: .leading, spacing: 4) {
                 Text(catalog.name(item.exerciseID)).font(AppFont.headline(15))
                 if hasTargets {
@@ -300,10 +300,7 @@ struct TargetLine: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Text(set.type.badge ?? "\(number)")
-                .font(AppFont.headline(11))
-                .frame(width: 18, height: 18)
-                .background(Theme.surfaceRaised, in: Circle())
+            SetBadge(type: set.type, number: number, size: .compact)
             Text(set.targets.repsText)
                 .font(AppFont.caption())
                 .foregroundStyle(Theme.textSecondary)

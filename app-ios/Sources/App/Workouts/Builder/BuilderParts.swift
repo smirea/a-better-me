@@ -15,30 +15,6 @@ struct OptionsLabel: View {
     }
 }
 
-/// The 2:3 exercise photo on workout rows. Superset members carry a small ⇄ badge.
-struct ExerciseThumbnail: View {
-    let exercise: Exercise?
-    var inSuperset = false
-
-    var body: some View {
-        Group {
-            if let exercise { ExerciseImage(exercise: exercise) } else { Theme.surfaceRaised }
-        }
-        .frame(width: 46, height: 64)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(alignment: .bottomTrailing) {
-            if inSuperset {
-                Image(systemName: "arrow.left.arrow.right")
-                    .font(AppFont.title(9))
-                    .foregroundStyle(Theme.textPrimary)
-                    .frame(width: 18, height: 18)
-                    .background(Theme.background, in: RoundedRectangle(cornerRadius: 4))
-                    .offset(x: -3, y: -3)
-            }
-        }
-    }
-}
-
 /// "8-12 reps", "8 reps", or "No rep target" for one set's line on a workout row.
 extension SetTarget {
     var repsText: String {

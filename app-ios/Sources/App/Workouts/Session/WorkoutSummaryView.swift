@@ -271,11 +271,7 @@ struct WorkoutSummaryView: View {
                 }
             } label: {
                 HStack(spacing: 14) {
-                    Group {
-                        if let exercise { ExerciseImage(exercise: exercise) } else { Theme.surfaceRaised }
-                    }
-                    .frame(width: 48, height: 64)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    ExerciseTile(exercise: exercise)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(catalog.name(item.exerciseID))
                             .font(AppFont.headline(15))
@@ -305,7 +301,7 @@ struct WorkoutSummaryView: View {
             .accessibilityLabel("\(catalog.name(item.exerciseID)) details")
             if isExpanded {
                 ForEach(Array(item.sets.enumerated().filter { $0.element.isCompleted }), id: \.element.id) { index, set in
-                    setLine(set, number: item.sets.prefix(index + 1).count { $0.type != .warmUp })
+                    setLine(set, number: item.sets.number(at: index))
                 }
             }
         }
@@ -316,10 +312,7 @@ struct WorkoutSummaryView: View {
             ForEach([set.log] + set.subSets.map(\.log), id: \.self) { log in
                 if let log {
                     HStack(spacing: 14) {
-                        Text(set.type.badge ?? "\(number)")
-                            .font(AppFont.headline(12))
-                            .frame(width: 24, height: 24)
-                            .background(Theme.surfaceRaised, in: Circle())
+                        SetBadge(type: set.type, number: number, size: .compact)
                         Text(SessionEditor.summary(of: log, unit: unit)).font(AppFont.medium(15))
                         Spacer()
                         if log.rir != nil { RIRBadge(rir: log.rir) }
@@ -495,10 +488,7 @@ private struct WorkoutChangesSheet: View {
             if item.sets.isEmpty { Text("No sets").font(AppFont.caption()).foregroundStyle(Theme.textSecondary) }
             ForEach(Array(item.sets.enumerated()), id: \.element.id) { index, set in
                 HStack(spacing: 8) {
-                    Text(set.type.badge ?? "\(item.sets.prefix(index + 1).count { $0.type != .warmUp })")
-                        .font(AppFont.headline(11))
-                        .frame(width: 20, height: 20)
-                        .background(Theme.surfaceRaised, in: Circle())
+                    SetBadge(type: set.type, number: item.sets.number(at: index), size: .compact)
                     Text(Self.target(set.target)).font(AppFont.caption())
                     Spacer()
                     if let rir = set.target?.rir { RIRBadge(rir: rir) }

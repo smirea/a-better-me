@@ -56,7 +56,7 @@ struct WeekTargetsSheet: View {
                 .tint(Theme.accent)
             }
         }
-        .sheet(isPresented: Binding { savingOptions != nil } set: { if !$0 { savingOptions = nil } }) {
+        .sheet(isPresented: .isPresent($savingOptions)) {
             if let sets = savingOptions {
                 WeekTargetsSavingOptions(
                     setCount: sets.count, weekTitle: card.title, exerciseName: catalog.name(item.exerciseID),
@@ -121,7 +121,8 @@ struct WeekTargetsSavingOptions: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(Theme.surface)
-            .programSheetTitle("Saving Options", subtitle: setCount == 1 ? "1 set" : "\(setCount) sets")
+            .detailTitle("Saving Options")
+            .navigationSubtitle(setCount == 1 ? "1 set" : "\(setCount) sets")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }

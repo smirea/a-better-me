@@ -378,9 +378,7 @@ private struct TopExerciseRow: View {
     var body: some View {
         HStack(spacing: 14) {
             if let exercise {
-                ExerciseImage(exercise: exercise)
-                    .frame(width: 34, height: 50)
-                    .clipShape(.rect(cornerRadius: 6))
+                ExerciseTile(exercise: exercise, size: .small)
             }
             Text(exercise?.name ?? "Unknown exercise").font(AppFont.headline(15)).lineLimit(2)
             Spacer()

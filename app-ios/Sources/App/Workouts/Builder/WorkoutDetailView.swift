@@ -15,7 +15,6 @@ struct WorkoutDetailView: View {
     @Observe private var template: WorkoutTemplate?
     @State private var blocks: [WorkoutBlock]?
     @State private var renaming = false
-    @State private var newName = ""
     @State private var confirmingDelete = false
     @State private var confirmingReset = false
 
@@ -48,7 +47,7 @@ struct WorkoutDetailView: View {
             .toolbar(.hidden, for: .tabBar)
             .toolbar {
                 Menu("Workout Options", systemImage: "ellipsis") {
-                    Button { newName = template.name; renaming = true } label: {
+                    Button { renaming = true } label: {
                         Label("Name", systemImage: "textformat")
                         Text(template.name)
                     }
@@ -84,13 +83,8 @@ struct WorkoutDetailView: View {
             .onChange(of: template.blocks) { _, remote in
                 if store.pendingWrites == 0, remote != blocks { blocks = nil }
             }
-            .alert("Name", isPresented: $renaming) {
-                TextField("Name", text: $newName)
-                Button("Save") {
-                    let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty { store.editTemplate(templateID) { $0.name = trimmed } }
-                }
-                Button("Cancel", role: .cancel) {}
+            .nameAlert("Name", isPresented: $renaming, initial: template.name) { name in
+                store.editTemplate(templateID) { $0.name = name }
             }
             .confirmationDialog("Reset \(template.name)?", isPresented: $confirmingReset, titleVisibility: .visible) {
                 Button("Reset Workout", role: .destructive) {

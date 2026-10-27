@@ -233,7 +233,7 @@ private struct SelectionHeader: View {
             Button { selection.showingTray.toggle() } label: {
                 HStack(spacing: -8) {
                     ForEach(selection.ids.compactMap(catalog.exercise)) { exercise in
-                        ExerciseTile(exercise: exercise, width: 22)
+                        ExerciseTile(exercise: exercise, size: .small)
                             .frame(width: 28, height: 28)
                             .clipShape(.circle)
                             .overlay { Circle().strokeBorder(Theme.background, lineWidth: 1.5) }

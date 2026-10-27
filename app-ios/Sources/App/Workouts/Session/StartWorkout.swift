@@ -25,10 +25,8 @@ private struct ResolveWorkoutStart: ViewModifier {
     @Observe(WorkoutSession.inProgress) private var active
 
     func body(content: Content) -> some View {
-        content.alert(
-            "Workout in progress",
-            isPresented: Binding { presenter.pendingStart != nil } set: { if !$0 { presenter.pendingStart = nil } }
-        ) {
+        @Bindable var presenter = presenter
+        return content.alert("Workout in progress", isPresented: .isPresent($presenter.pendingStart)) {
             Button("Resume \(active?.name ?? "Workout")") {
                 presenter.pendingStart = nil
                 presenter.isExpanded = true

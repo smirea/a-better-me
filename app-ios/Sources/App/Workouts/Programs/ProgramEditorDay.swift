@@ -68,7 +68,7 @@ struct ProgramDayEditor: View {
                 }
             }
             .sheet(isPresented: $reordering) { ProgramEditorReorderSheet(blocks: shown) }
-            .alert("Program Note", isPresented: Binding { noteFor != nil } set: { if !$0 { noteFor = nil } }) {
+            .alert("Program Note", isPresented: .isPresent($noteFor)) {
                 TextField("Note", text: $noteText)
                 Button("Save") {
                     guard let id = noteFor, let at = shown.wrappedValue.locate(id) else { return }
@@ -182,7 +182,7 @@ struct ProgramEditorReorderSheet: View {
             List {
                 ForEach(blocks) { block in
                     HStack(spacing: 12) {
-                        ExerciseThumbnail(exercise: block.exercises.first.flatMap { catalog.exercise($0.exerciseID) }, inSuperset: block.isSuperset)
+                        ExerciseTile(exercise: block.exercises.first.flatMap { catalog.exercise($0.exerciseID) }, badge: block.isSuperset ? .superset : nil)
                         Text(block.exercises.map { catalog.name($0.exerciseID) }.joined(separator: " + "))
                             .font(AppFont.headline(15))
                     }
@@ -191,7 +191,7 @@ struct ProgramEditorReorderSheet: View {
             }
             .listStyle(.plain)
             .environment(\.editMode, .constant(.active))
-            .programSheetTitle("Re-Order")
+            .detailTitle("Re-Order")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -227,7 +227,8 @@ struct ProgramEditorMoveSheet: View {
                 }
             }
             .listStyle(.plain)
-            .programSheetTitle("Move", subtitle: "Relocate the exercise in your program")
+            .detailTitle("Move")
+            .navigationSubtitle("Relocate the exercise in your program")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }
@@ -239,22 +240,5 @@ struct ProgramEditorMoveSheet: View {
 
     private func name(of day: ProgramDay) -> String {
         day.templateID.flatMap { id in templates.first { $0.id == id }?.name } ?? "Rest"
-    }
-}
-
-extension View {
-    /// The program sheets' centered title with a caption under it, as the reference draws them.
-    func programSheetTitle(_ title: String, subtitle: String? = nil) -> some View {
-        navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    VStack(spacing: 0) {
-                        Text(title).font(AppFont.title(17))
-                        if let subtitle {
-                            Text(subtitle).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
-                        }
-                    }
-                }
-            }
     }
 }

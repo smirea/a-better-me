@@ -74,15 +74,19 @@ struct RIRBadge: View {
     }
 }
 
-/// The 36 pt set circle: the set number for standard sets, the type letter (W, D, M, F) otherwise.
+/// The set circle: the set number for standard sets, the type letter (W, D, M, F) otherwise. Set tables use the
+/// regular size; target and summary lines use the compact one.
 struct SetBadge: View {
+    enum Size { case regular, compact }
+
     let type: SetType
     let number: Int
+    var size = Size.regular
 
     var body: some View {
         Text(type.badge ?? "\(number)")
-            .font(AppFont.headline(15))
-            .frame(width: 36, height: 36)
-            .background(Theme.surfaceRaised, in: Circle())
+            .font(size == .regular ? AppFont.headline(15) : AppFont.badge)
+            .frame(width: size == .regular ? 36 : 20, height: size == .regular ? 36 : 20)
+            .background(Theme.surfaceRaised, in: .circle)
     }
 }

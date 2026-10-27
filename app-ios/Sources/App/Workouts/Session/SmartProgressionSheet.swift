@@ -121,10 +121,7 @@ struct WorkoutTargetsView: View {
 
     private func row(_ set: WorkoutSet, number: Int, reps: String?) -> some View {
         HStack(spacing: 10) {
-            Text(set.type.badge ?? "\(number)")
-                .font(AppFont.headline(11))
-                .frame(width: 22, height: 22)
-                .background(Theme.surfaceRaised, in: Circle())
+            SetBadge(type: set.type, number: number, size: .compact)
             Text(reps.map { "\($0) reps" } ?? "No target set").font(AppFont.body(14))
             Spacer()
             if let rir = set.target?.rir { RIRBadge(rir: rir) }

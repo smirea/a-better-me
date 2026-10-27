@@ -46,7 +46,6 @@ private struct ProgramEditorScreen: View {
     @State private var gymOptionsShown = false
     @State private var addingToRestDay = false
     @State private var renaming = false
-    @State private var newName = ""
     @State private var confirming: DayConfirmation?
 
     private enum DayConfirmation {
@@ -123,15 +122,10 @@ private struct ProgramEditorScreen: View {
                 store.appendBlocks(blocks, toDay: day.id, in: program.id, name: name, gymID: templates.first?.gymID)
             }
         }
-        .alert("Rename Day", isPresented: $renaming) {
-            TextField("Name", text: $newName)
-            Button("Save") {
-                let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-                if let template, !trimmed.isEmpty { store.editTemplate(template.id) { $0.name = trimmed } }
-            }
-            Button("Cancel", role: .cancel) {}
+        .nameAlert("Rename Day", isPresented: $renaming, initial: template?.name ?? "") { name in
+            if let template { store.editTemplate(template.id) { $0.name = name } }
         }
-        .alert(confirmationTitle, isPresented: Binding { confirming != nil } set: { if !$0 { confirming = nil } }, presenting: confirming) { confirmation in
+        .alert(confirmationTitle, isPresented: .isPresent($confirming), presenting: confirming) { confirmation in
             switch confirmation {
             case .changeToRest:
                 Button("Change to Rest", role: .destructive) {
@@ -170,10 +164,7 @@ private struct ProgramEditorScreen: View {
                 Group {
                     ProgramEditorChip(gymName, systemImage: "house.fill", trailingImage: "chevron.down") { gymOptionsShown = true }
                         .accessibilityLabel("Gym, \(gymName)")
-                    ProgramEditorChip("Rename", systemImage: "square.and.pencil") {
-                        newName = template?.name ?? ""
-                        renaming = true
-                    }
+                    ProgramEditorChip("Rename", systemImage: "square.and.pencil") { renaming = true }
                     ProgramEditorChip("Re-order", systemImage: "arrow.up.arrow.down") { reordering = true }
                     ProgramEditorChip("Duplicate", systemImage: "plus.square.on.square") {
                         pendingIndex = program.days.count
@@ -390,7 +381,8 @@ private struct ProgramEditorGymOptions: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(Theme.surface)
-            .programSheetTitle("Gym Options", subtitle: "Impacts exercise selection")
+            .detailTitle("Gym Options")
+            .navigationSubtitle("Impacts exercise selection")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }

@@ -14,7 +14,6 @@ struct ProgramSettingsView: View {
     @State private var page: Page?
     @State private var confirming: Confirmation?
     @State private var renaming = false
-    @State private var newName = ""
 
     private enum Page: Identifiable {
         case colorIcon, dayOrder, deload, duplicate
@@ -30,10 +29,7 @@ struct ProgramSettingsView: View {
             List {
                 row("Number of \(program.cycleNoun)s", program.weeksText, systemImage: "heart.fill") { weeksStepper }
                 row("Name", program.name, systemImage: "textformat.size") {
-                    editButton("Name") {
-                        newName = program.name
-                        renaming = true
-                    }
+                    editButton("Name") { renaming = true }
                 }
                 row("Color & Icon", "\(program.color.title), \(ProgramIcon.title(of: program.icon))", icon: colorIconTile) {
                     editButton("Color & Icon") { page = .colorIcon }
@@ -47,7 +43,7 @@ struct ProgramSettingsView: View {
                 periodizationRow
                 actionRow("Duplicate Program", systemImage: "rectangle.on.rectangle", chevron: true) { page = .duplicate }
                 ShareLink(item: exportFile, preview: SharePreview(program.name)) {
-                    actionLabel("Export Program", systemImage: "square.and.arrow.down")
+                    actionLabel("Export Program", systemImage: "square.and.arrow.down", chevron: false)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Export Program")
@@ -62,12 +58,16 @@ struct ProgramSettingsView: View {
                 actionRow(program.isArchived ? "Unarchive Program" : "Archive Program", systemImage: "archivebox.fill") {
                     store.setProgramArchived(program.id, !program.isArchived)
                 }
-                actionRow("Delete Program", systemImage: "trash.fill", tint: Theme.destructive) { confirming = .delete }
+                Button("Delete Program", systemImage: "trash.fill", role: .destructive) { confirming = .delete }
+                    .font(AppFont.rowTitle)
+                    .foregroundStyle(Theme.destructive)
+                    .padding(.vertical, 10)
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(Theme.surface)
-            .programSheetTitle("Program Settings", subtitle: program.name)
+            .detailTitle("Program Settings")
+            .navigationSubtitle(program.name)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }
@@ -89,15 +89,10 @@ struct ProgramSettingsView: View {
                     }
                 }
             }
-            .alert("Name", isPresented: $renaming) {
-                TextField("Name", text: $newName)
-                Button("Save") {
-                    let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty { store.editProgram(program.id) { $0.name = trimmed } }
-                }
-                Button("Cancel", role: .cancel) {}
+            .nameAlert("Name", isPresented: $renaming, initial: program.name) { name in
+                store.editProgram(program.id) { $0.name = name }
             }
-            .alert(confirmationTitle, isPresented: Binding { confirming != nil } set: { if !$0 { confirming = nil } }, presenting: confirming) { confirmation in
+            .alert(confirmationTitle, isPresented: .isPresent($confirming), presenting: confirming) { confirmation in
                 switch confirmation {
                 case .periodizationOff:
                     Button("Turn Off", role: .destructive) { store.setPeriodization(false, in: program.id) }
@@ -133,13 +128,12 @@ struct ProgramSettingsView: View {
     }
 
     private var weeksStepper: some View {
-        HStack(spacing: 10) {
-            stepButton("Remove a \(program.cycleNoun.lowercased())", systemImage: "minus") { store.setProgramWeeks(program.cycles - 1, in: program.id) }
-                .disabled(program.cycles <= 1)
-            Text("\(program.cycles)").font(AppFont.headline()).monospacedDigit().frame(minWidth: 22)
-            stepButton("Add a \(program.cycleNoun.lowercased())", systemImage: "plus") { store.setProgramWeeks(program.cycles + 1, in: program.id) }
-                .disabled(program.cycles >= ProgramSettingsView.maxWeeks)
-        }
+        Stepper(
+            "Number of \(program.cycleNoun)s",
+            value: Binding { program.cycles } set: { store.setProgramWeeks($0, in: program.id) },
+            in: 1...ProgramSettingsView.maxWeeks
+        )
+        .labelsHidden()
     }
 
     static let maxWeeks = 52
@@ -151,7 +145,7 @@ struct ProgramSettingsView: View {
             if on { store.setPeriodization(true, in: program.id) } else { confirming = .periodizationOff }
         }
         return Toggle(isOn: isOn) {
-            settingLabel("Periodization", "Organize your training into phases that vary intensity and volume to support continuous progress and effective recovery", icon: Image(systemName: "chart.bar.xaxis").settingIcon())
+            RowLabel(title: "Periodization", detail: "Organize your training into phases that vary intensity and volume to support continuous progress and effective recovery", systemImage: "chart.bar.xaxis")
         }
         .tint(Theme.accent)
         .padding(.vertical, 6)
@@ -162,44 +156,32 @@ struct ProgramSettingsView: View {
             .font(AppFont.caption(12))
             .foregroundStyle(.white)
             .frame(width: 24, height: 24)
-            .background(program.color.swatch, in: RoundedRectangle(cornerRadius: 6))
+            .background(program.color.swatch, in: .rect(cornerRadius: Theme.tinyCornerRadius))
     }
 
     private func row(_ title: String, _ value: String, systemImage: String, @ViewBuilder trailing: () -> some View) -> some View {
-        row(title, value, icon: Image(systemName: systemImage).settingIcon(), trailing: trailing)
-    }
-
-    private func row(_ title: String, _ value: String, icon: some View, @ViewBuilder trailing: () -> some View) -> some View {
         HStack {
-            settingLabel(title, value, icon: icon)
+            RowLabel(title: title, detail: value, systemImage: systemImage)
             Spacer()
             trailing()
         }
         .padding(.vertical, 6)
     }
 
-    private func settingLabel(_ title: String, _ value: String, icon: some View) -> some View {
-        HStack(spacing: 16) {
-            icon.frame(width: 24)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(AppFont.headline(15))
-                Text(value).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
-            }
+    private func row(_ title: String, _ value: String, icon: some View, @ViewBuilder trailing: () -> some View) -> some View {
+        HStack {
+            Label { RowLabel(title: title, detail: value) } icon: { icon }
+            Spacer()
+            trailing()
         }
+        .padding(.vertical, 6)
     }
 
     private func editButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button("Edit", action: action)
-            .font(AppFont.headline(14))
+            .font(AppFont.chip)
             .buttonStyle(.glass)
             .accessibilityLabel("Edit \(title)")
-    }
-
-    private func stepButton(_ label: String, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(label, systemImage: systemImage, action: action)
-            .labelStyle(.iconOnly)
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
     }
 
     private var exportFile: TransferFile {
@@ -207,29 +189,21 @@ struct ProgramSettingsView: View {
         return TransferFile { try MFTransfer.export(program, templates: templates, exercises: exercises, gyms: gyms, at: $0) }
     }
 
-    private func actionRow(_ title: String, systemImage: String, tint: Color = Theme.textPrimary, chevron: Bool = false, action: @escaping () -> Void) -> some View {
+    private func actionRow(_ title: String, systemImage: String, chevron: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            actionLabel(title, systemImage: systemImage, tint: tint, chevron: chevron)
+            actionLabel(title, systemImage: systemImage, chevron: chevron)
         }
         .buttonStyle(.plain)
     }
 
-    private func actionLabel(_ title: String, systemImage: String, tint: Color = Theme.textPrimary, chevron: Bool = false) -> some View {
-        HStack(spacing: 16) {
-            Image(systemName: systemImage).settingIcon().frame(width: 24)
-            Text(title).font(AppFont.headline(15))
+    private func actionLabel(_ title: String, systemImage: String, chevron: Bool) -> some View {
+        HStack {
+            RowLabel(title: title, systemImage: systemImage)
             Spacer()
             if chevron { Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary) }
         }
-        .foregroundStyle(tint)
         .padding(.vertical, 10)
         .contentShape(Rectangle())
-    }
-}
-
-private extension Image {
-    func settingIcon() -> some View {
-        font(AppFont.headline(17)).foregroundStyle(Theme.textPrimary)
     }
 }
 
@@ -339,7 +313,8 @@ private struct ProgramSettingsColorIcon: View {
                 .padding()
             }
             .background(Theme.surface)
-            .programSheetTitle("Color & Icon", subtitle: "\(program.color.title), \(ProgramIcon.title(of: program.icon))")
+            .detailTitle("Color & Icon")
+            .navigationSubtitle("\(program.color.title), \(ProgramIcon.title(of: program.icon))")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -381,7 +356,8 @@ private struct ProgramSettingsDayOrder: View {
             .scrollContentBackground(.hidden)
             .background(Theme.surface)
             .environment(\.editMode, .constant(.active))
-            .programSheetTitle("Day Order", subtitle: "\(order.count)-Day Cycle")
+            .detailTitle("Day Order")
+            .navigationSubtitle("\(order.count)-Day Cycle")
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 4) {
                     PinnedActionButton("Save") {
@@ -444,7 +420,7 @@ private struct ProgramSettingsDeload: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(Theme.surface)
-            .programSheetTitle("Deload")
+            .detailTitle("Deload")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }
@@ -475,7 +451,7 @@ private struct ProgramSettingsDuplicate: View {
                 Spacer()
             }
             .background(Theme.surface)
-            .programSheetTitle("Program Name")
+            .detailTitle("Program Name")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", systemImage: "xmark") { dismiss() }

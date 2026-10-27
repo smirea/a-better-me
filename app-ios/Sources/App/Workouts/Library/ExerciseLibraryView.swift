@@ -216,7 +216,7 @@ struct ExerciseSettingsView: View {
         .themedList()
         .detailTitle(exercise?.name ?? "Exercise")
         .sheet(isPresented: $showingInfo) { ExerciseDetailSheet(exerciseID: exerciseID) }
-        .sheet(isPresented: Binding { duplicate != nil } set: { if !$0 { duplicate = nil } }) {
+        .sheet(isPresented: .isPresent($duplicate)) {
             if let duplicate { CustomExerciseWizard(draft: duplicate) }
         }
         .alert("Exercise Note", isPresented: $editingNote) {

@@ -50,9 +50,7 @@ private struct LiftRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            ExerciseImage(exercise: exercise)
-                .frame(width: 44, height: 66)
-                .clipShape(.rect(cornerRadius: 6))
+            ExerciseTile(exercise: exercise)
             VStack(alignment: .leading, spacing: 6) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(exercise.name).font(AppFont.headline(15)).lineLimit(2)

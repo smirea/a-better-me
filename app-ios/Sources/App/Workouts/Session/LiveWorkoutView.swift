@@ -242,8 +242,8 @@ struct SessionEditor: View {
                     VStack(spacing: 6) {
                         Image(systemName: "plus")
                             .font(.title3)
-                            .frame(width: 48, height: 60)
-                            .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 6))
+                            .frame(width: ExerciseTile.Size.regular.width, height: ExerciseTile.Size.regular.width * 1.5)
+                            .background(Theme.surfaceRaised, in: .rect(cornerRadius: Theme.tinyCornerRadius))
                         Capsule().fill(Theme.surfaceRaised).frame(height: 3)
                     }
                     .foregroundStyle(Theme.textSecondary)
@@ -257,18 +257,7 @@ struct SessionEditor: View {
 
     private func stripTile(_ item: BlockExercise) -> some View {
         VStack(spacing: 6) {
-            Group {
-                if let exercise = catalog.exercise(item.exerciseID) { ExerciseImage(exercise: exercise) } else { Theme.surfaceRaised }
-            }
-            .frame(width: 48, height: 60)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
-            .overlay {
-                if item.isDone {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(.black, Theme.textPrimary)
-                }
-            }
+            ExerciseTile(exercise: catalog.exercise(item.exerciseID), badge: item.isDone ? .done : nil)
             Capsule()
                 .fill(item.id == current ? Theme.textPrimary : Theme.surfaceRaised)
                 .frame(height: 3)

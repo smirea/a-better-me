@@ -73,7 +73,7 @@ struct LibraryExerciseRow<Trailing: View>: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ExerciseTile(exercise: exercise)
+            ExerciseTile(exercise: exercise, size: .small)
             VStack(alignment: .leading, spacing: 2) {
                 Text(search.highlighted(exercise.name))
                     .font(AppFont.medium(15))
@@ -89,32 +89,6 @@ struct LibraryExerciseRow<Trailing: View>: View {
             trailing
         }
         .contentShape(.rect)
-    }
-}
-
-/// The 2:3 studio photo tile. Custom exercises have no media, so they show their initials stacked, as in the reference.
-struct ExerciseTile: View {
-    let exercise: Exercise
-    var width: CGFloat = 30
-
-    var body: some View {
-        Group {
-            if exercise.images.isEmpty {
-                VStack(spacing: 0) {
-                    ForEach(Array(exercise.name.split(separator: " ").prefix(2).enumerated()), id: \.offset) { _, word in
-                        Text(word.prefix(1).uppercased())
-                    }
-                }
-                .font(AppFont.headline(width * 0.4))
-                .foregroundStyle(Theme.textSecondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Theme.surfaceRaised)
-            } else {
-                ExerciseImage(exercise: exercise)
-            }
-        }
-        .frame(width: width, height: width * 1.5)
-        .clipShape(.rect(cornerRadius: width / 5))
     }
 }
 

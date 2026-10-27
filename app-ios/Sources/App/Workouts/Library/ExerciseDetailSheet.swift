@@ -78,11 +78,9 @@ private struct InstructionsTab: View {
                             VStack(spacing: 8) {
                                 ForEach(exercise.images.indices, id: \.self) { index in
                                     Button { frame = index } label: {
-                                        ExerciseImage(exercise: exercise, frame: index)
-                                            .frame(width: 40, height: 60)
-                                            .clipShape(.rect(cornerRadius: 6))
+                                        ExerciseTile(exercise: exercise, frame: index)
                                             .overlay {
-                                                RoundedRectangle(cornerRadius: 6)
+                                                RoundedRectangle(cornerRadius: Theme.tinyCornerRadius)
                                                     .strokeBorder(index == frame ? Theme.textPrimary : .clear, lineWidth: 2)
                                             }
                                     }

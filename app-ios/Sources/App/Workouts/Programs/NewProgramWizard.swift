@@ -358,25 +358,16 @@ private struct DaysStepper: View {
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 28) {
-                round("Fewer days", "minus", enabled: days > NewProgramWizardRules.dayRange.lowerBound) { days -= 1 }
+                RoundIconButton("Fewer days", systemImage: "minus") { days -= 1 }
+                    .disabled(days <= NewProgramWizardRules.dayRange.lowerBound)
                 Text("\(days)").font(AppFont.number(36)).frame(minWidth: 40)
-                round("More days", "plus", enabled: days < NewProgramWizardRules.dayRange.upperBound) { days += 1 }
+                RoundIconButton("More days", systemImage: "plus") { days += 1 }
+                    .disabled(days >= NewProgramWizardRules.dayRange.upperBound)
             }
             Text("times per week").font(AppFont.medium(15))
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 180)
-    }
-
-    private func round(_ label: String, _ icon: String, enabled: Bool, action: @escaping () -> Void) -> some View {
-        Button(label, systemImage: icon, action: action)
-            .labelStyle(.iconOnly)
-            .font(AppFont.headline(20))
-            .frame(width: 44, height: 44)
-            .background(Theme.surfaceRaised, in: .circle)
-            .buttonStyle(.plain)
-            .disabled(!enabled)
-            .opacity(enabled ? 1 : 0.4)
     }
 }
 
@@ -441,7 +432,7 @@ private struct KeepSelections: View {
             Text("Recommended").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
         }
         card(icon: "chart.bar.fill") {
-            pencil("Edit Lifting Experience") { editingExperience = true }
+            RoundIconButton("Edit Lifting Experience", systemImage: "pencil", size: .small) { editingExperience = true }
         } text: {
             Text("Lifting Experience").font(AppFont.headline(15))
             Text(ExperienceChoice(profile.liftingExperience, pickedNone: pickedNone).title)
@@ -449,7 +440,7 @@ private struct KeepSelections: View {
                 .foregroundStyle(Theme.textSecondary)
         }
         card(icon: "checklist") {
-            pencil("Edit Exercise Assessment") { assessing = true }
+            RoundIconButton("Edit Exercise Assessment", systemImage: "pencil", size: .small) { assessing = true }
         } text: {
             Text("Exercise Assessment").font(AppFont.headline(15))
             Text(assessmentStatus).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
@@ -491,15 +482,6 @@ private struct KeepSelections: View {
         .padding(14)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
         .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.surfaceRaised) }
-    }
-
-    private func pencil(_ label: String, action: @escaping () -> Void) -> some View {
-        Button(label, systemImage: "pencil", action: action)
-            .labelStyle(.iconOnly)
-            .font(AppFont.headline(13))
-            .frame(width: 30, height: 30)
-            .background(Theme.surfaceRaised, in: .circle)
-            .buttonStyle(.plain)
     }
 }
 
