@@ -39,7 +39,7 @@ struct NutritionDataManagerView: View {
             HStack {
                 RowLabel(
                     title: day.entryCount > 0 || day.hasOverride ? "\((day.consumed[.energy] ?? 0).wholeText) kcal" : "No intake",
-                    detail: [day.day.date(in: calendar).formatted(.dateTime.weekday().month().day().year()), day.status.label].compactMap { $0 }.joined(separator: " · "),
+                    detail: [day.day.date(in: calendar).formatted(.dateTime.weekday().month().day().year()), day.status == .none ? nil : day.status.title].compactMap { $0 }.joined(separator: " · "),
                     systemImage: day.hasOverride ? "square.and.pencil" : day.entryCount > 0 ? "fork.knife" : "moon.zzz"
                 )
                 Spacer()
@@ -58,16 +58,6 @@ struct NutritionDataManagerView: View {
 private struct EditedLogDay: Identifiable {
     var day: CalendarDay
     var id: CalendarDay { day }
-}
-
-extension NutritionDay.Status {
-    var label: String? {
-        switch self {
-        case .none: nil
-        case .partial: "Incomplete"
-        case .fasted: "Fasted"
-        }
-    }
 }
 
 /// The Nutrition entry: a day's energy and macros, "Are you fasting?", and "Is this day incomplete?". With every field
@@ -102,7 +92,7 @@ struct NutritionDayEntrySheet: View {
                     DatePicker("Date", selection: $date, in: ...Date.now, displayedComponents: .date)
                 }
                 ThemedSection("Nutrition") {
-                    ForEach(NutritionMetrics.macros, id: \.self) { id in
+                    ForEach(NutrientID.macros, id: \.self) { id in
                         HStack {
                             Text(id == .energy ? "Energy" : id.dashboardLabel)
                             TextField(placeholder(id), value: Binding(get: { fields[id] }, set: { fields[id] = $0 }), format: .number.precision(.fractionLength(0...1)).grouping(.never))
@@ -150,7 +140,7 @@ struct NutritionDayEntrySheet: View {
 
     private func load() {
         let override = existing.flatMap { $0.hasOverride ? $0.consumed : nil }
-        fields = Dictionary(uniqueKeysWithValues: NutritionMetrics.macros.compactMap { id in override?[id].map { (id, $0) } })
+        fields = Dictionary(uniqueKeysWithValues: NutrientID.macros.compactMap { id in override?[id].map { (id, $0) } })
         fasting = existing?.status == .fasted
         incomplete = existing?.status == .partial
     }

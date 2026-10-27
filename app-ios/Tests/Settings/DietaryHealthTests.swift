@@ -77,10 +77,14 @@ struct DietaryHealthTests {
         ])
     }
 
-    @Test func anOverrideReplacesTheEntriesAtNoon() {
+    @Test func anOverrideReplacesOnlyTheNutrientsItSetsAtNoon() {
         let samples = DietaryHealth.samples(on: monday, entries: [breakfast(on: monday)], override: [.energy: 2100, .protein: 160, .alcohol: 20], calendar: utc)
+        let eight = instant("2026-10-26T08:15:00Z")
         let noon = instant("2026-10-26T12:00:00Z")
         #expect(samples == [
+            DietarySample(key: "\(key)/291", day: monday, nutrient: .fiber, amount: 3, date: eight, food: "Yogurt"),
+            DietarySample(key: "\(key)/c", day: monday, nutrient: .carbs, amount: 18, date: eight, food: "Yogurt"),
+            DietarySample(key: "\(key)/f", day: monday, nutrient: .fat, amount: 6, date: eight, food: "Yogurt"),
             DietarySample(key: "2026-10-26/k", day: monday, nutrient: .energy, amount: 2100, date: noon, food: nil),
             DietarySample(key: "2026-10-26/p", day: monday, nutrient: .protein, amount: 160, date: noon, food: nil),
         ])

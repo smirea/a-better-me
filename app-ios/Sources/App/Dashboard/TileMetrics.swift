@@ -9,7 +9,7 @@ enum TileMetrics {
     static func range(
         _ id: NutrientID, on day: CalendarDay, plans: [NutritionPlan], goals: [NutrientGoal], sex: BodySex, weightKg: Double?
     ) -> NutrientRange {
-        guard NutritionMetrics.macros.contains(id) else {
+        guard NutrientID.macros.contains(id) else {
             return NutrientGoal.range(id, on: day, goals: goals, sex: sex, weightKg: weightKg)
         }
         let target = NutritionMetrics.DayNutrition(day: day, consumed: [:], target: NutritionPlan.effective(on: day, in: plans)?.target(on: day)).target(id)

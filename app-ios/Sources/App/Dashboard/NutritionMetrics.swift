@@ -29,17 +29,9 @@ struct NutritionLogDay: Equatable, Sendable {
     }
 }
 
-extension CalendarDay {
-    /// The start of the day in `calendar`, where the Dashboard's series live.
-    func date(in calendar: Calendar) -> Date {
-        calendar.date(from: DateComponents(year: year, month: month, day: day))!
-    }
-}
-
 /// The nutrition numbers on the Dashboard, as pure functions over the log, the plans, and the engine's series, so tests
 /// pin each to literal values. See docs/decisions/nutrition.md "Dashboard".
 enum NutritionMetrics {
-    static let macros: [NutrientID] = [.energy, .protein, .fat, .carbs]
 
     // MARK: Steps
 

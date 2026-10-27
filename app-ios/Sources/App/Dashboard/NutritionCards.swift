@@ -48,7 +48,7 @@ struct WeeklyNutritionCard: View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader("Weekly Nutrition")
             Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 8) {
-                ForEach(NutritionMetrics.macros, id: \.self) { id in
+                ForEach(NutrientID.macros, id: \.self) { id in
                     GridRow {
                         rowLabel(id).frame(width: 18)
                         ForEach(week, id: \.day) { cell(id, $0) }

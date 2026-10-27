@@ -209,11 +209,11 @@ struct AllNutritionView: View {
             VStack(alignment: .leading, spacing: 30) {
                 DashboardSectionView(title: "Calories & Macros") {
                     NutritionCardView(card: .macros)
-                    ForEach(NutritionMetrics.macros, id: \.self) { NutritionCardView(card: NutritionCard(nutrient: $0)) }
+                    ForEach(NutrientID.macros, id: \.self) { NutritionCardView(card: NutritionCard(nutrient: $0)) }
                 }
                 ForEach(NutrientGroup.allCases, id: \.self) { group in
                     let nutrients = NutrientRegistry.all.filter {
-                        $0.group == group && !NutritionMetrics.macros.contains($0.id) && !settings.nutrition.hiddenNutrients.contains($0.id)
+                        $0.group == group && !NutrientID.macros.contains($0.id) && !settings.nutrition.hiddenNutrients.contains($0.id)
                     }
                     if !nutrients.isEmpty {
                         DashboardSectionView(title: group.title) {

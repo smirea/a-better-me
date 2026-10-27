@@ -89,6 +89,11 @@ extension CalendarDay {
         Self.calendar.dateComponents([.day], from: utcDate, to: other.utcDate).day!
     }
 
+    /// The start of the day in `calendar`, where the Dashboard's series live.
+    func date(in calendar: Calendar) -> Date {
+        calendar.date(from: DateComponents(year: year, month: month, day: day))!
+    }
+
     /// Noon of the day on the device's calendar: a `Date` for pickers and formatters that no zone shift moves to
     /// another day.
     var date: Date {

@@ -356,7 +356,7 @@ private struct PrimaryFocusPicker: View {
             }
         case .weeklyNutrition:
             Grid(horizontalSpacing: 7, verticalSpacing: 5) {
-                ForEach(NutritionMetrics.macros, id: \.self) { id in
+                ForEach(NutrientID.macros, id: \.self) { id in
                     GridRow {
                         ForEach(0..<7, id: \.self) { _ in
                             Capsule().fill(Theme.macro(id)).frame(width: 4, height: 10)
@@ -436,10 +436,10 @@ private struct AddRemoveSheet: View {
         case .nutrition:
             ThemedSection("Calories & Macros") {
                 toggle("Macros", .macros, \.nutrition, .macros, matching: { $0.nutrient == nil })
-                nutrientToggles(NutritionMetrics.macros)
+                nutrientToggles(NutrientID.macros)
             }
             ForEach(NutrientGroup.allCases, id: \.self) { group in
-                let ids = NutrientRegistry.all.filter { $0.group == group && !NutritionMetrics.macros.contains($0.id) }.map(\.id)
+                let ids = NutrientRegistry.all.filter { $0.group == group && !NutrientID.macros.contains($0.id) }.map(\.id)
                 if !ids.isEmpty {
                     ThemedSection(group.title) { nutrientToggles(ids) }
                 }

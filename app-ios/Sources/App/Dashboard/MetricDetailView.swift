@@ -45,7 +45,7 @@ struct MetricDetailView: View {
                     Button("Log Weight", systemImage: "plus") { loggingWeight = true }
                 }
             }
-            if case let .nutrient(id) = route, !NutritionMetrics.macros.contains(id) {
+            if case let .nutrient(id) = route, !NutrientID.macros.contains(id) {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink { NutrientGoalsView(nutrient: id) } label: {
                         Image(systemName: "target")
