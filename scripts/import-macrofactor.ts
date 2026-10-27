@@ -600,9 +600,12 @@ async function every(api: Client, path: string): Promise<Row[]> {
 	const rows: Row[] = [];
 	const size = 1000;
 	for (let offset = 0; ; offset += size) {
-		const page: Row[] = await api('GET', `${path}${path.includes('?') ? '&' : '?'}limit=${size}&offset=${offset}`);
-		rows.push(...page);
-		if (page.length < size) return rows;
+		const page: { total: number; items: Row[] } = await api(
+			'GET',
+			`${path}${path.includes('?') ? '&' : '?'}limit=${size}&offset=${offset}`,
+		);
+		rows.push(...page.items);
+		if (rows.length >= page.total || !page.items.length) return rows;
 	}
 }
 

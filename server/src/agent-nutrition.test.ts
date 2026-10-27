@@ -81,8 +81,8 @@ describe('nutrition agent API', () => {
 
 		const patched = await ok('PATCH', `/foods/${created.id}`, { brand: 'Quaker' });
 		expect(patched.brand).toBe('Quaker');
-		expect((await ok('GET', '/foods?q=quaker')).map((food: any) => food.id)).toEqual([created.id]);
-		expect((await ok('GET', '/foods?source=usda')).map((food: any) => food.id)).toEqual(['usda-173904']);
+		expect((await ok('GET', '/foods?q=quaker')).items.map((food: any) => food.id)).toEqual([created.id]);
+		expect((await ok('GET', '/foods?source=usda')).items.map((food: any) => food.id)).toEqual(['usda-173904']);
 
 		const row = (await phone('foods')).find(food => food.id === created.id);
 		expect(row!.nutrition).toBe(
@@ -160,11 +160,11 @@ describe('nutrition agent API', () => {
 		expect(day.entries.map((entry: any) => entry.id)).toEqual([logged.id, quick.id]);
 
 		await ok('PATCH', `/food-entries/${quick.id}`, { day: '2026-10-21', minute: 60 });
-		expect((await ok('GET', '/food-entries?from=2026-10-21&to=2026-10-21')).map((entry: any) => entry.id)).toEqual([
-			quick.id,
-		]);
+		expect(
+			(await ok('GET', '/food-entries?from=2026-10-21&to=2026-10-21')).items.map((entry: any) => entry.id),
+		).toEqual([quick.id]);
 		await ok('DELETE', `/food-entries/${quick.id}`);
-		expect(await ok('GET', '/food-entries?from=2026-10-21')).toEqual([]);
+		expect(await ok('GET', '/food-entries?from=2026-10-21')).toEqual({ total: 0, items: [] });
 		const row = (await phone('food_entries')).find(entry => entry.id === logged.id);
 		expect(row!.serving).toBe('{"measure":{"name":"cup","quantity":1,"servings":0.8},"quantity":0.5}');
 	});
@@ -208,7 +208,7 @@ describe('nutrition agent API', () => {
 		await ok('PUT', '/body-metrics/2026-10-20/waist', { value: 86 });
 		const metric = await ok('PUT', '/body-metrics/2026-10-20/waist', { value: 85.5 });
 		expect(metric).toMatchObject({ id: '2026-10-20/waist', day: '2026-10-20', kind: 'waist', value: 85.5 });
-		expect((await ok('GET', '/body-metrics?kind=waist')).length).toBe(1);
+		expect((await ok('GET', '/body-metrics?kind=waist')).total).toBe(1);
 		expect((await status('PUT', '/body-metrics/2026-10-20/elbow', { value: 1 })).status).toBe(400);
 
 		const targets = Array.from({ length: 7 }, () => ({ energy: 2000, protein: 160, fat: 60, carbs: 200 }));

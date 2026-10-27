@@ -69,6 +69,8 @@ export function openDb(space: Space, driver: SqlDriver) {
 
 	return {
 		all,
+		count: (table: SyncedTable, where?: string, params: SqlValue[] = []) =>
+			Number(driver.exec(`SELECT COUNT(*) AS n FROM ${table}${where ? ` WHERE ${where}` : ''}`, params)[0]!.n),
 		get: <T extends SyncedTable>(table: T, id: string): RowOf<T> | undefined => all(table, 'id = ?', [id])[0],
 		find<T extends SyncedTable>(table: T, id: string, label: string): RowOf<T> {
 			const row = all(table, 'id = ?', [id])[0];
