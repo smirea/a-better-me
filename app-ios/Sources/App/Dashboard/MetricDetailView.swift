@@ -5,7 +5,6 @@ struct MetricDetailView: View {
     let route: DashboardRoute
     let initialTab: String?
 
-    @Environment(LocalStore.self) private var store
     @Environment(ExerciseCatalog.self) private var catalog
     private var values = DashboardValues()
     @State private var tabID: String?
@@ -34,7 +33,7 @@ struct MetricDetailView: View {
                     .padding(.horizontal, 20)
                 controls.padding(.horizontal, 20)
                 legend(tab).padding(.horizontal, 20)
-                footer(detail.footer, plot).padding(.horizontal, 20)
+                footer(detail.footer, plot, tab: tab).padding(.horizontal, 20)
             }
             .padding(.bottom, 30)
         }
@@ -63,6 +62,14 @@ struct MetricDetailView: View {
         .sheet(isPresented: $loggingWeight) { BodyWeightLogSheet() }
         .sheet(isPresented: $loggingMetrics) { BodyMetricsLogSheet() }
         .sheet(item: $shownExercise) { ExerciseDetailSheet(exerciseID: $0.id) }
+    }
+
+    private func history(_ plot: MetricPlot, tab: MetricTab, title: String = "History") -> some View {
+        TruncatedList(title, items: plot.months.flatMap(\.rows)) { row in
+            MonthRowView(row: row)
+        } destination: {
+            MetricHistoryView(route: route, tab: tab.id, range: range, averaging: averaging, title: title == "History" ? "\(tab.title) History" : title)
+        }
     }
 
     private func fitToData(_ tab: MetricTab) -> Bool { fitOverrides[tab.id] ?? (tab.style == .line) }
@@ -238,24 +245,24 @@ struct MetricDetailView: View {
     }
 
     @ViewBuilder
-    private func footer(_ footer: MetricDetail.Footer, _ plot: MetricPlot) -> some View {
+    private func footer(_ footer: MetricDetail.Footer, _ plot: MetricPlot, tab: MetricTab) -> some View {
         switch footer {
         case .months:
-            MonthList(months: plot.months)
+            history(plot, tab: tab)
         case let .expenditure(summary):
             ExpenditureInsights(summary: summary)
-            MonthList(months: plot.months)
+            history(plot, tab: tab)
         case let .weightTrend(summary):
             WeightTrendInsights(summary: summary, unit: plot.unit)
-            MonthList(months: plot.months)
+            history(plot, tab: tab)
         case .energyBalance:
             EnergyBalanceInsights(rows: plot.balanceRows, isExpenditure: plot.isExpenditureBalance)
-            MonthList(months: plot.months)
+            history(plot, tab: tab)
         case .weighIns:
-            MonthList(months: plot.months) { store.delete(BodyWeight.self, id: $0) }
+            history(plot, tab: tab, title: "Weigh-Ins")
         case let .nutrient(summary):
             NutrientTodaySection(summary: summary)
-            MonthList(months: plot.months)
+            history(plot, tab: tab)
         case let .macros(days):
             MacroSplitList(days: days)
         case let .topExercises(top):
@@ -418,49 +425,77 @@ private struct ShownExercise: Identifiable {
 }
 
 /// Lazy by month, so a long range builds only the months scrolled into view.
-private struct MonthList: View {
-    let months: [MonthSection]
-    var delete: ((UUID) -> Void)?
+/// Every entry of a metric, newest first and grouped by month, pushed from the detail screen's history.
+private struct MetricHistoryView: View {
+    let route: DashboardRoute
+    let tab: MetricTab.ID
+    let range: ChartRange
+    let averaging: Averaging
+    let title: String
+    private var values = DashboardValues()
+
+    init(route: DashboardRoute, tab: MetricTab.ID, range: ChartRange, averaging: Averaging, title: String) {
+        self.route = route
+        self.tab = tab
+        self.range = range
+        self.averaging = averaging
+        self.title = title
+    }
 
     var body: some View {
-        LazyVStack(alignment: .leading, spacing: 20) {
-            ForEach(months) { month in
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(month.title).font(AppFont.title())
-                    VStack(spacing: 0) {
-                        ForEach(Array(month.rows.enumerated()), id: \.element.id) { index, row in
-                            if index > 0 { Divider().overlay(Theme.separator) }
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(row.text).font(AppFont.headline(15))
-                                    Text(row.subtitle)
-                                        .font(AppFont.caption(13))
-                                        .foregroundStyle(Theme.textSecondary)
-                                }
-                                Spacer()
-                                if let tag = row.tag {
-                                    Label {
-                                        Text(tag.text).foregroundStyle(Theme.textSecondary)
-                                    } icon: {
-                                        Image(systemName: tag.symbol).foregroundStyle(tag.color)
-                                    }
-                                    .font(AppFont.caption(13))
-                                }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 20) {
+                ForEach(values.plot(route, tab: tab, range: range, averaging: averaging).months) { month in
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(month.title).font(AppFont.title())
+                        VStack(spacing: 0) {
+                            ForEach(Array(month.rows.enumerated()), id: \.element.id) { index, row in
+                                if index > 0 { Divider().overlay(Theme.separator) }
+                                MonthRowView(row: row)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(14)
-                            .contentShape(.rect)
-                            .contextMenu {
-                                if let id = row.deletableID, let delete {
-                                    Button("Delete Weigh-In", systemImage: "trash", role: .destructive) { delete(id) }
-                                }
-                            }
-                            .accessibilityElement(children: .combine)
                         }
+                        .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
                     }
-                    .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 30)
         }
+        .background(Theme.background)
+        .detailTitle(title)
+    }
+}
+
+private struct MonthRowView: View {
+    @Environment(LocalStore.self) private var store
+    let row: MonthRow
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(row.text).font(AppFont.headline(15))
+                Text(row.subtitle)
+                    .font(AppFont.caption(13))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            Spacer()
+            if let tag = row.tag {
+                Label {
+                    Text(tag.text).foregroundStyle(Theme.textSecondary)
+                } icon: {
+                    Image(systemName: tag.symbol).foregroundStyle(tag.color)
+                }
+                .font(AppFont.caption(13))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .contentShape(.rect)
+        .contextMenu {
+            if let id = row.deletableID {
+                Button("Delete Weigh-In", systemImage: "trash", role: .destructive) { store.delete(BodyWeight.self, id: id) }
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 }

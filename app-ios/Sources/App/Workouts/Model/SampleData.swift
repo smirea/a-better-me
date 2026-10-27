@@ -2,11 +2,9 @@
 import Foundation
 import GRDB
 
-/// Launch with `-seedSampleData` to fill an empty store with two templates and ten weeks of progressing history,
-/// so history, progression, and Levels can be checked in the simulator.
+/// Two templates and ten weeks of progressing history for the dev seed (`DevSeed`), so history, progression, and Levels
+/// can be checked in the simulator.
 enum SampleData {
-    static let launchArgument = "-seedSampleData"
-
     private static let upper: [(ExerciseID, startKg: Double, reps: Int)] = [
         ("19f5c6f170d8808bb424e98de4472a7e", 70, 8), // Barbell bench press
         ("30d5c6f170d880e7a00ee1e7319b720d", 55, 10), // Dual handle cable lat pulldown
@@ -30,12 +28,6 @@ enum SampleData {
     @MainActor
     static func seedIfRequested(_ store: LocalStore) {
         let arguments = ProcessInfo.processInfo.arguments
-        if arguments.contains(launchArgument) {
-            store.write { db in
-                guard try WorkoutTemplate.fetchCount(db) == 0 else { return }
-                for record in records() { try record.insert(db) }
-            }
-        }
         if arguments.contains(groundworkArgument) {
             store.insert(Program(name: "Groundwork PPL", color: .teal, cycles: 6, days: [ProgramDay(), ProgramDay(templateID: nil)]))
             store.insert(GymProfile(name: "Garage", icon: "house", equipment: ["19e5c6f170d8801cac93cf6853bd86b8": GymEquipment(load: .weights(options: [WeightOption(kg: 20)]))]))
@@ -56,15 +48,21 @@ enum SampleData {
         }
     }
 
+    static func insert(in db: Database) throws {
+        for record in records() { try record.insert(db) }
+    }
+
     private static func records() -> [any SyncedRecord] {
         let templates = [("Upper", upper), ("Lower", lower)].map { name, lifts in
-            WorkoutTemplate(name: name, blocks: lifts.map { id, _, reps in
+            var template = WorkoutTemplate(name: name, blocks: lifts.map { id, _, reps in
                 WorkoutBlock(exercises: [BlockExercise(
                     exerciseID: id,
                     sets: [WorkoutSet(type: .warmUp)] + (0..<3).map { _ in WorkoutSet(target: SetTarget(repsMin: reps, repsMax: reps + 2, rir: 2)) },
                     restSeconds: 150
                 )])
             })
+            template.id = DevSeed.id("template/\(name)")
+            return template
         }
         var sessions: [WorkoutSession] = []
         let calendar = Calendar.current
@@ -73,6 +71,7 @@ enum SampleData {
             for (day, (template, lifts)) in [(0, (templates[0], upper)), (2, (templates[1], lower)), (4, (templates[0], upper))] {
                 let startedAt = calendar.date(byAdding: .day, value: week * 7 + day, to: start)!.addingTimeInterval(18 * 3600)
                 var session = WorkoutSession(startingFrom: template)
+                session.id = DevSeed.id("session/\(week)/\(day)")
                 session.startedAt = startedAt
                 session.blocks = zip(session.blocks, lifts).map { block, lift in
                     var block = block

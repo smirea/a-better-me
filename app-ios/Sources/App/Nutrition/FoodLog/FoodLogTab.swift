@@ -2,7 +2,6 @@ import SwiftUI
 
 /// MacroFactor's Food Log: a week strip, the day's macro summary, and a timeline of hours that pages between days.
 struct FoodLogTab: View {
-    @Environment(LocalStore.self) private var store
     @State private var state = FoodLogState()
     @State private var showingCalendar = false
 
@@ -40,11 +39,6 @@ struct FoodLogTab: View {
         .sheet(item: $state.editing) { EntryEditor(entry: $0) }
         .sheet(item: $state.note) { NoteEditor(draft: $0) }
         .sheet(isPresented: $showingCalendar) { CalendarSheet().environment(state) }
-        .task {
-            #if DEBUG
-            FoodLogSeed.seedIfRequested(store)
-            #endif
-        }
     }
 }
 
