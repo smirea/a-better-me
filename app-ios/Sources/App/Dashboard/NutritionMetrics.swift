@@ -74,18 +74,18 @@ enum NutritionMetrics {
     /// BMR one at the trend weight on the start day, which needs the profile's height and birth date. Nil without
     /// either: the Dashboard says what is missing instead of guessing.
     static func expenditureSetup(
-        log: [NutritionLogDay], weighIns: [DatedValue], trend: [DatedValue], settings: NutritionSettings.Expenditure,
+        intake: [DatedValue], weighIns: [DatedValue], trend: [DatedValue], settings: NutritionSettings.Expenditure,
         profile: ProfileSettings, calendar: Calendar
     ) -> ExpenditureSetup? {
-        guard let start = expenditureStart(log: log, weighIns: weighIns, settings: settings, calendar: calendar) else { return nil }
+        guard let start = expenditureStart(intake: intake, weighIns: weighIns, settings: settings, calendar: calendar) else { return nil }
         if let initial = settings.initialKcal { return ExpenditureSetup(start: start, initialKcal: initial) }
         let weightKg = trend.first { calendar.isDate($0.date, inSameDayAs: start) }?.value ?? trend.first?.value
         guard let weightKg, let initial = initialEstimate(profile: profile, settings: settings, weightKg: weightKg, on: start, calendar: calendar) else { return nil }
         return ExpenditureSetup(start: start, initialKcal: initial)
     }
 
-    static func expenditureStart(log: [NutritionLogDay], weighIns: [DatedValue], settings: NutritionSettings.Expenditure, calendar: Calendar) -> Date? {
-        let firstIntake = intake(log, calendar: calendar).first?.date
+    static func expenditureStart(intake: [DatedValue], weighIns: [DatedValue], settings: NutritionSettings.Expenditure, calendar: Calendar) -> Date? {
+        let firstIntake = intake.map(\.date).min()
         let firstWeighIn = weighIns.map(\.date).min().map { calendar.startOfDay(for: $0) }
         return settings.calculationStart?.date(in: calendar) ?? [firstIntake, firstWeighIn].compactMap { $0 }.min()
     }
@@ -111,20 +111,20 @@ enum NutritionMetrics {
         return NutritionEngine.InitialExpenditure.estimate(bmr: bmr, activity: activity, exercise: exercise)
     }
 
-    /// A static expenditure replaces every day's estimate, never holds, and needs no initial estimate.
+    /// A static expenditure replaces every day's estimate, never holds, and needs no initial estimate. The Dashboard and
+    /// Strategy both call this, so the expenditure a check-in freezes is the one the Dashboard shows.
     static func expenditure(
-        log: [NutritionLogDay], weighIns: [DatedValue], trend: [DatedValue], settings: NutritionSettings.Expenditure,
+        intake: [DatedValue], weighIns: [DatedValue], trend: [DatedValue], settings: NutritionSettings.Expenditure,
         profile: ProfileSettings, now: Date, calendar: Calendar
     ) -> [NutritionEngine.ExpenditureDay] {
         if let fixed = settings.staticKcal {
-            guard let start = expenditureStart(log: log, weighIns: weighIns, settings: settings, calendar: calendar), start <= now else { return [] }
+            guard let start = expenditureStart(intake: intake, weighIns: weighIns, settings: settings, calendar: calendar), start <= now else { return [] }
             return NutritionEngine.eachDay(from: start, through: now, calendar: calendar).map { .init(date: $0, kcal: fixed, isHolding: false) }
         }
-        guard let setup = expenditureSetup(log: log, weighIns: weighIns, trend: trend, settings: settings, profile: profile, calendar: calendar),
+        guard let setup = expenditureSetup(intake: intake, weighIns: weighIns, trend: trend, settings: settings, profile: profile, calendar: calendar),
               setup.start <= now else { return [] }
-        let intake = intake(log, calendar: calendar).map { NutritionEngine.IntakeDay(date: $0.date, kcal: $0.value) }
         return NutritionEngine.Expenditure.daily(
-            intake: intake, trend: trend, weighIns: weighIns, initial: setup.initialKcal, from: setup.start, through: now, calendar: calendar
+            intake: intake.map { NutritionEngine.IntakeDay(date: $0.date, kcal: $0.value) }, trend: trend, weighIns: weighIns, initial: setup.initialKcal, from: setup.start, through: now, calendar: calendar
         )
     }
 

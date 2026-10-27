@@ -48,7 +48,7 @@ extension DashboardData {
 
     func computedExpenditure(profile: ProfileSettings) -> [NutritionEngine.ExpenditureDay] {
         NutritionMetrics.expenditure(
-            log: log, weighIns: weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, trend: trend,
+            intake: NutritionMetrics.intake(log, calendar: calendar), weighIns: weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, trend: trend,
             settings: nutritionSettings.expenditure, profile: profile, now: now, calendar: calendar
         )
     }

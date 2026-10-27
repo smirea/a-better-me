@@ -162,27 +162,27 @@ struct NutritionMetricsTests {
         let weighIns = [DatedValue(date: day("2026-10-03"), value: 80)]
         let trend = NutritionEngine.TrendWeight.daily(weighIns: weighIns, through: day("2026-10-06"), calendar: utc)
         var settings = NutritionSettings.Expenditure()
-        let none = NutritionMetrics.expenditureSetup(log: log, weighIns: weighIns, trend: trend, settings: settings, profile: ProfileSettings(), calendar: utc)
+        let none = NutritionMetrics.expenditureSetup(intake: NutritionMetrics.intake(log, calendar: utc), weighIns: weighIns, trend: trend, settings: settings, profile: ProfileSettings(), calendar: utc)
         #expect(none == nil)
         var profile = ProfileSettings()
         profile.heightCm = 180
         profile.birthDate = CalendarDay("1990-06-01")
-        let bmr = try #require(NutritionMetrics.expenditureSetup(log: log, weighIns: weighIns, trend: trend, settings: settings, profile: profile, calendar: utc))
+        let bmr = try #require(NutritionMetrics.expenditureSetup(intake: NutritionMetrics.intake(log, calendar: utc), weighIns: weighIns, trend: trend, settings: settings, profile: profile, calendar: utc))
         #expect(bmr.start == start("2026-10-03"))
         // MacroFactor BMR at 80 kg, 180 cm, 36 years: 129.6 × 80^0.55 + 0.011 × 180² − 1.96 × 36 = 1729.0, × 1.55.
         #expect(bmr.initialKcal == 2680)
         settings.activity = .mostlySedentary
         settings.exercise = .zero
-        let sedentary = try #require(NutritionMetrics.expenditureSetup(log: log, weighIns: weighIns, trend: trend, settings: settings, profile: profile, calendar: utc))
+        let sedentary = try #require(NutritionMetrics.expenditureSetup(intake: NutritionMetrics.intake(log, calendar: utc), weighIns: weighIns, trend: trend, settings: settings, profile: profile, calendar: utc))
         // 1729.0 × 1.2.
         #expect(sedentary.initialKcal == 2075)
         settings.initialKcal = 2500
         settings.calculationStart = CalendarDay("2026-10-04")
-        let manual = NutritionMetrics.expenditureSetup(log: log, weighIns: weighIns, trend: trend, settings: settings, profile: ProfileSettings(), calendar: utc)
+        let manual = NutritionMetrics.expenditureSetup(intake: NutritionMetrics.intake(log, calendar: utc), weighIns: weighIns, trend: trend, settings: settings, profile: ProfileSettings(), calendar: utc)
         #expect(manual == .init(start: start("2026-10-04"), initialKcal: 2500))
         settings.staticKcal = 2300
         settings.initialKcal = nil
-        let fixed = NutritionMetrics.expenditure(log: log, weighIns: weighIns, trend: trend, settings: settings, profile: ProfileSettings(), now: day("2026-10-06"), calendar: utc)
+        let fixed = NutritionMetrics.expenditure(intake: NutritionMetrics.intake(log, calendar: utc), weighIns: weighIns, trend: trend, settings: settings, profile: ProfileSettings(), now: day("2026-10-06"), calendar: utc)
         #expect(fixed.map(\.kcal) == [2300, 2300, 2300])
         #expect(NutritionMetrics.strategy(fixed, settings: settings) == .fixed)
     }
