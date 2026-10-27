@@ -1,9 +1,11 @@
 import SwiftUI
 
 /// Create Food and Edit Food: MacroFactor's wizard (§6.1) folded into one Form. Nutrients use its Food Detail layout,
-/// every registry nutrient grouped as the app groups them. `onCreateAndAdd` adds the logger's "Create & Add".
+/// every registry nutrient grouped as the app groups them. `onCreate` hears about a new food, and `onCreateAndAdd`
+/// adds the logger's "Create & Add".
 struct FoodEditor: View {
     private let foodID: String?
+    private let onCreate: ((Food) -> Void)?
     private let onCreateAndAdd: ((Food) -> Void)?
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -12,10 +14,12 @@ struct FoodEditor: View {
     @State private var choosingIcon = false
     @State private var confirmingDelete = false
     @State private var expanded: Set<NutrientSection>
+    @FocusState private var focus: FoodDraft.Field?
 
     /// Edits `food`, or creates a food from `draft` (blank, or a duplicate's copy).
-    init(food: Food? = nil, draft: FoodDraft? = nil, onCreateAndAdd: ((Food) -> Void)? = nil) {
+    init(food: Food? = nil, draft: FoodDraft? = nil, onCreate: ((Food) -> Void)? = nil, onCreateAndAdd: ((Food) -> Void)? = nil) {
         foodID = food?.id
+        self.onCreate = onCreate
         self.onCreateAndAdd = onCreateAndAdd
         let initial = draft ?? food.map(FoodDraft.init) ?? FoodDraft()
         _draft = State(initialValue: initial)
@@ -41,6 +45,7 @@ struct FoodEditor: View {
             }
             .themedList()
             .scrollDismissesKeyboard(.interactively)
+            .focusToolbar(draft.focusOrder(expanded: expanded), focus: $focus)
             .detailTitle(foodID == nil ? "Create Food" : "Edit Food")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -79,12 +84,15 @@ struct FoodEditor: View {
                     .controlSize(.small)
             }
             TextField("Food Name", text: $draft.name)
+                .focused($focus, equals: .name)
                 .accessibilityLabel("Food Name")
             FieldIssue(issues[.name])
             TextField("Brand Name", text: $draft.brand)
+                .focused($focus, equals: .brand)
                 .accessibilityLabel("Brand Name")
             TextField("Barcode", text: $draft.barcode)
                 .keyboardType(.numberPad)
+                .focused($focus, equals: .barcode)
                 .accessibilityLabel("Barcode")
         }
     }
@@ -102,6 +110,7 @@ struct FoodEditor: View {
                 HStack {
                     TextField("Serving Weight", text: $draft.servingWeight)
                         .keyboardType(.decimalPad)
+                        .focused($focus, equals: .servingWeight)
                         .accessibilityLabel("Serving Weight")
                     Picker("Unit", selection: $draft.servingWeightUnit) {
                         ForEach(SizeUnit.allCases) { Text($0.rawValue).tag($0) }
@@ -113,10 +122,12 @@ struct FoodEditor: View {
                 HStack {
                     TextField("1", text: $draft.servingQuantity)
                         .keyboardType(.decimalPad)
+                        .focused($focus, equals: .servingQuantity)
                         .frame(width: 64)
                         .accessibilityLabel("Serving Quantity")
                     Divider()
                     TextField("portion", text: $draft.servingName)
+                        .focused($focus, equals: .servingName)
                         .accessibilityLabel("Serving Name")
                 }
                 FieldIssue(issues[.servingQuantity] ?? issues[.servingName])
@@ -131,13 +142,16 @@ struct FoodEditor: View {
                     HStack {
                         TextField("1", text: $measure.quantity)
                             .keyboardType(.decimalPad)
+                            .focused($focus, equals: .measureQuantity(measure.id))
                             .frame(width: 44)
                             .accessibilityLabel("Quantity")
                         TextField("slice", text: $measure.name)
+                            .focused($focus, equals: .measureName(measure.id))
                             .accessibilityLabel("Serving Name")
                         Text("=").foregroundStyle(Theme.textSecondary)
                         TextField("0", text: $measure.size)
                             .keyboardType(.decimalPad)
+                            .focused($focus, equals: .measureSize(measure.id))
                             .multilineTextAlignment(.trailing)
                             .frame(width: 64)
                             .accessibilityLabel("Size in \(draft.measureSizeUnit)")
@@ -154,7 +168,7 @@ struct FoodEditor: View {
     @ViewBuilder
     private func nutrients(_ section: NutrientSection, issues: [FoodDraft.Field: String]) -> some View {
         let rows = ForEach(section.nutrients) { nutrient in
-            NutrientInputRow(nutrient: nutrient, text: nutrientText(nutrient.id), energyUnit: $draft.energyUnit, isMacro: section == .macros)
+            NutrientInputRow(nutrient: nutrient, text: nutrientText(nutrient.id), energyUnit: $draft.energyUnit, isMacro: section == .macros, focus: $focus)
             FieldIssue(issues[.nutrient(nutrient.id)])
         }
         if section == .macros {
@@ -188,6 +202,7 @@ struct FoodEditor: View {
         } else {
             let food = valid.newFood()
             store.saveFood(food)
+            onCreate?(food)
             if adding { onCreateAndAdd?(food) }
         }
         dismiss()
@@ -200,6 +215,7 @@ private struct NutrientInputRow: View {
     @Binding var text: String
     @Binding var energyUnit: NutritionSettings.EnergyUnit
     let isMacro: Bool
+    let focus: FocusState<FoodDraft.Field?>.Binding
 
     var body: some View {
         HStack {
@@ -209,6 +225,7 @@ private struct NutrientInputRow: View {
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: 120)
+                .focused(focus, equals: .nutrient(nutrient.id))
                 .accessibilityLabel(nutrient.name)
             if nutrient.id == .energy {
                 Picker("Energy Unit", selection: $energyUnit) {
@@ -221,6 +238,16 @@ private struct NutrientInputRow: View {
                 Text(nutrient.unit.rawValue).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary).frame(width: 36, alignment: .leading)
             }
         }
+    }
+}
+
+extension FoodDraft {
+    /// Every field top to bottom; a collapsed breakdown's nutrients are skipped.
+    func focusOrder(expanded: Set<NutrientSection>) -> FocusOrder<Field> {
+        let serving: [Field] = basis == .serving ? [.servingWeight, .servingQuantity, .servingName] : []
+        let measures = measures.flatMap { [Field.measureQuantity($0.id), .measureName($0.id), .measureSize($0.id)] }
+        let nutrients = NutrientSection.allCases.filter { $0 == .macros || expanded.contains($0) }.flatMap { $0.nutrients.map { Field.nutrient($0.id) } }
+        return FocusOrder([.name, .brand, .barcode] + serving + measures + nutrients)
     }
 }
 

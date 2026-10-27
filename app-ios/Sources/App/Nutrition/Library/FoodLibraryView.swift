@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// A create or edit sheet for a food or recipe.
+/// A create or edit sheet for a food or recipe. `created` hears which kind a new item was, and `add`, the logger's
+/// plate, gives a new food or recipe the editor's Create & Add.
 struct LibraryEditorSheet: Identifiable {
     enum Kind {
         case newFood(FoodDraft), editFood(Food), newRecipe(RecipeDraft), editRecipe(Recipe)
@@ -8,14 +9,22 @@ struct LibraryEditorSheet: Identifiable {
 
     let id = UUID()
     let kind: Kind
+    var created: ((FoodLibraryView.Tab) -> Void)?
+    var add: ((FoodPortion) -> Void)?
 
-    init(_ kind: Kind) { self.kind = kind }
+    init(_ kind: Kind, created: ((FoodLibraryView.Tab) -> Void)? = nil, add: ((FoodPortion) -> Void)? = nil) {
+        self.kind = kind
+        self.created = created
+        self.add = add
+    }
 
     @MainActor @ViewBuilder var editor: some View {
         switch kind {
-        case let .newFood(draft): FoodEditor(draft: draft)
+        case let .newFood(draft):
+            FoodEditor(draft: draft, onCreate: { _ in created?(.foods) }, onCreateAndAdd: add.map { add in { add(FoodPortion($0.snapshot)) } })
         case let .editFood(food): FoodEditor(food: food)
-        case let .newRecipe(draft): RecipeEditor(draft: draft)
+        case let .newRecipe(draft):
+            RecipeEditor(draft: draft, onCreate: { _ in created?(.recipes) }, onCreateAndAdd: add.map { add in { add(FoodPortion($0.snapshot)) } })
         case let .editRecipe(recipe): RecipeEditor(recipe: recipe)
         }
     }
@@ -23,8 +32,9 @@ struct LibraryEditorSheet: Identifiable {
 
 /// MacroFactor's Library: Recipes | Foods | Favorites, each filtered by the search field, with Create Food and
 /// Create Recipe under +. Settings pushes it as is. The logger embeds it in its Library tab and passes `onOpen` to
-/// show its own food detail for a tapped row and `onAdd` for each row's + (the default serving onto the plate).
-/// Without `onOpen`, a food opens its editor and a recipe its detail page.
+/// show its own food detail for a tapped row and `onAdd` for each row's + (the default serving onto the plate) and
+/// for Create & Add. Without `onOpen`, a food opens its editor and a recipe its detail page. Creating a food or recipe
+/// shows its segment.
 struct FoodLibraryView: View {
     enum Tab: String, CaseIterable, Identifiable {
         case recipes = "Recipes", foods = "Foods", favorites = "Favorites"
@@ -94,8 +104,8 @@ struct FoodLibraryView: View {
             }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    Button("Create Food", systemImage: "carrot") { sheet = LibraryEditorSheet(.newFood(FoodDraft())) }
-                    Button("Create Recipe", systemImage: "frying.pan") { sheet = LibraryEditorSheet(.newRecipe(RecipeDraft())) }
+                    Button("Create Food", systemImage: "carrot") { create(.newFood(FoodDraft())) }
+                    Button("Create Recipe", systemImage: "frying.pan") { create(.newRecipe(RecipeDraft())) }
                 } label: {
                     Label("Create", systemImage: "plus")
                 }
@@ -132,7 +142,7 @@ struct FoodLibraryView: View {
             .contextMenu {
                 Button("Edit", systemImage: "pencil") { sheet = LibraryEditorSheet(.editFood(food)) }
                 Button("Favorite", systemImage: "heart") { favorite(FoodPortion(food.snapshot)) }
-                Button("Duplicate", systemImage: "plus.square.on.square") { sheet = LibraryEditorSheet(.newFood(FoodDraft(food).duplicate())) }
+                Button("Duplicate", systemImage: "plus.square.on.square") { create(.newFood(FoodDraft(food).duplicate())) }
                 Button("Delete", systemImage: "trash", role: .destructive) { pendingDelete = .food(food) }
             }
         }
@@ -147,7 +157,7 @@ struct FoodLibraryView: View {
             .contextMenu {
                 Button("Edit", systemImage: "pencil") { sheet = LibraryEditorSheet(.editRecipe(recipe)) }
                 Button("Favorite", systemImage: "heart") { favorite(FoodPortion(recipe.snapshot)) }
-                Button("Duplicate", systemImage: "plus.square.on.square") { sheet = LibraryEditorSheet(.newRecipe(RecipeDraft(recipe).duplicate())) }
+                Button("Duplicate", systemImage: "plus.square.on.square") { create(.newRecipe(RecipeDraft(recipe).duplicate())) }
                 Button("Delete", systemImage: "trash", role: .destructive) { pendingDelete = .recipe(recipe) }
             }
         }
@@ -173,6 +183,10 @@ struct FoodLibraryView: View {
             }
         }
         .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 8))
+    }
+
+    private func create(_ kind: LibraryEditorSheet.Kind) {
+        sheet = LibraryEditorSheet(kind, created: { tab = $0 }, add: onAdd)
     }
 
     private func deleteButton(_ item: Item, title: String = "Delete") -> some View {

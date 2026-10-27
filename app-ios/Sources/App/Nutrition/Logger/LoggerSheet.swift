@@ -196,8 +196,7 @@ private struct LoggerBanner: View {
     }
 
     private func value(_ id: NutrientID, day: NutrientAmounts) -> BannerValue {
-        var plate = session.plate.totals
-        if let pending = session.pending { plate = plate + pending.amounts }
+        let plate = session.plateWithPending
         let target = NutritionPlan.effective(on: session.time.day, in: plans)?.target(on: session.time.day).amount(id)
         return BannerValue(day: day[id] ?? 0, plate: plate[id] ?? 0, target: target)
     }
@@ -215,6 +214,13 @@ private struct LoggerBanner: View {
             ProgressView(value: value.progress ?? 0).progressViewStyle(.bar(id.color, height: 3))
         }
         .frame(maxWidth: 110, alignment: .leading)
+    }
+}
+
+extension LoggerSession {
+    /// The plate as the banner counts it: with the food detail's amount or the Quick Add being typed.
+    var plateWithPending: NutrientAmounts {
+        pending.map { plate.totals + $0.amounts } ?? plate.totals
     }
 }
 

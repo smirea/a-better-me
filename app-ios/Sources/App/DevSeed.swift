@@ -4,9 +4,9 @@ import Foundation
 import GRDB
 
 /// Debug simulator builds fill each empty area of the store at launch with enough history to show what a few months of
-/// use looks like: 30 workouts, an active program, 45 days of food and weigh-ins, and a nutrition plan. Lists then hold
-/// 20 to 50 rows, so a screen that only works with three rows shows it. Launch with `-noSeed` for an empty store, or
-/// with `-seedSampleData` to seed a Debug build on a device.
+/// use looks like: 30 workouts, an active program, 45 days of food and weigh-ins, a food library, and a nutrition plan.
+/// Lists then hold 20 to 50 rows, so a screen that only works with three rows shows it. Launch with `-noSeed` for an
+/// empty store, or with `-seedSampleData` to seed a Debug build on a device.
 enum DevSeed {
     static let disableArgument = "-noSeed"
     static let deviceArgument = "-seedSampleData"
@@ -34,13 +34,17 @@ enum DevSeed {
     @MainActor
     static func run(_ store: LocalStore) {
         guard isEnabled else { return }
-        store.write { db in
-            if try WorkoutTemplate.fetchCount(db) == 0 { try SampleData.insert(in: db) }
-            if try Program.fetchCount(db) == 0 { try DashboardSeed.insertProgram(in: db) }
-            if try FoodEntry.fetchCount(db) == 0, try BodyWeight.fetchCount(db) == 0 {
-                try DashboardSeed.insertNutrition(in: db)
-                try FoodLogSeed.insert(in: db)
-            }
+        store.write { try seed(in: $0) }
+    }
+
+    /// Fills each empty area, so running it again changes nothing.
+    static func seed(in db: Database) throws {
+        if try WorkoutTemplate.fetchCount(db) == 0 { try SampleData.insert(in: db) }
+        if try Program.fetchCount(db) == 0 { try DashboardSeed.insertProgram(in: db) }
+        if try Recipe.fetchCount(db) == 0, try FoodFavorite.fetchCount(db) == 0 { try LibrarySeed.insert(in: db) }
+        if try FoodEntry.fetchCount(db) == 0, try BodyWeight.fetchCount(db) == 0 {
+            try DashboardSeed.insertNutrition(in: db)
+            try FoodLogSeed.insert(in: db)
         }
     }
 }

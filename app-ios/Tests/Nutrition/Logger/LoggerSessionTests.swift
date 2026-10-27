@@ -201,4 +201,14 @@ struct LoggerSessionTests {
         #expect(jpeg.starts(with: [0xFF, 0xD8]))
         #expect(MealPhotoImage.jpeg(from: Data("not an image".utf8)) == nil)
     }
+
+    @Test func theBannerCountsWhatIsBeingTypedOnTopOfThePlate() async throws {
+        let logger = try await session()
+        logger.add(LoggerPick(try #require(QuickAddDraft(energy: "300", protein: "20").portion)))
+        #expect(logger.plateWithPending[.energy] == 300)
+        logger.pending = QuickAddDraft(protein: "10", fat: "5").portion
+        #expect(logger.plateWithPending == [.energy: 385, .protein: 30, .fat: 5])
+        logger.logPlate()
+        #expect(logger.plateWithPending == [:])
+    }
 }
