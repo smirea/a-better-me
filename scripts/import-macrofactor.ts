@@ -85,6 +85,8 @@ const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 const UNSUPPORTED = ['Favorites', 'Food Log Notes', 'Micronutrient Goals'];
 /** WeighIns.sameMomentTolerance: another weigh-in this close is the same one. */
 const SAME_MOMENT_MS = 60_000;
+/** The export has no time of day, so a weigh-in already stored that day at this weight is the same reading. */
+const SAME_WEIGHT_KG = 0.05;
 
 /** A UUID (version 8, RFC 9562) hashed from the source row, so importing the row again lands on the same id. */
 export function stableId(...parts: (string | number)[]): string {
@@ -118,6 +120,47 @@ const number = (cell: Cell | undefined) => {
 };
 const text = (cell: Cell | undefined) =>
 	cell === undefined || cell === null ? undefined : String(cell).trim() || undefined;
+
+/** RFC 4180 CSV as a sheet: quoted fields may hold commas, `""`, and newlines; an empty field is null. */
+export function parseCsv(source: string): Sheet {
+	const rows: Sheet = [];
+	let row: Cell[] = [];
+	let field = '';
+	let quoted = false;
+	const body = source.replace(/^\uFEFF/, '');
+	const endField = () => {
+		row.push(field === '' ? null : field);
+		field = '';
+	};
+	for (let index = 0; index < body.length; index++) {
+		const char = body[index]!;
+		if (quoted) {
+			if (char === '"' && body[index + 1] === '"') {
+				field += '"';
+				index++;
+			} else if (char === '"') quoted = false;
+			else field += char;
+		} else if (char === '"') quoted = true;
+		else if (char === ',') endField();
+		else if (char === '\n' || char === '\r') {
+			if (char === '\r' && body[index + 1] === '\n') index++;
+			endField();
+			rows.push(row);
+			row = [];
+		} else field += char;
+	}
+	if (field !== '' || row.length) {
+		endField();
+		rows.push(row);
+	}
+	return rows;
+}
+
+/** An `.xlsx` export, or the CSV that Granular Export's "Export Food Log" writes, which holds the Food Log sheet alone. */
+export function readExport(path: string): Map<string, Sheet> {
+	if (path.toLowerCase().endsWith('.csv')) return new Map([['Food Log', parseCsv(readFileSync(path, 'utf8'))]]);
+	return readXlsx(readFileSync(path));
+}
 
 /** Excel serials (days since 1899-12-30), `YYYY-MM-DD`, and `M/D/YYYY` text. */
 export function toDay(cell: Cell | undefined): string {
@@ -185,11 +228,15 @@ function occurrences() {
 	};
 }
 
-/** A food the export describes per `quantity` of a named serving, as a base serving of one of that unit. */
+/**
+ * A food the export describes per `quantity` of a named serving, as a base serving of one of that unit. The export's
+ * Serving Weight is already one unit's weight (1 for `g`, 28.35 for `oz`, 4.4 for one large olive logged as 10), so it
+ * is not divided by the quantity.
+ */
 function perUnit(amounts: Amounts, unit: string, quantity: number, grams: number | undefined): Nutrition {
 	return {
 		nutrients: scaled(amounts, 1 / quantity),
-		...(grams && grams > 0 && { baseGrams: grams / quantity }),
+		...(grams && grams > 0 && { baseGrams: grams }),
 		measures: [{ name: unit, quantity: 1, servings: 1 }],
 	};
 }
@@ -582,7 +629,7 @@ export async function importMacroFactor(options: {
 	const api = client(options.server, options.token);
 	const root = await api('GET', '');
 	if (!root.authenticated) throw new Error('The server did not accept the token');
-	const parsed = parseExports(options.files.map(file => readXlsx(readFileSync(file))));
+	const parsed = parseExports(options.files.map(readExport));
 	const counts: Counts = {};
 	const writes: (() => Promise<unknown>)[] = [];
 
@@ -622,15 +669,31 @@ export async function importMacroFactor(options: {
 	reconcile('food_entries', parsed.entries, entries, post('/food-entries'), patch('/food-entries'));
 
 	const weights = await every(api, '/body-weights');
-	const moments = weights.map(row => ({ id: row.id, at: Date.parse(String(row.measuredAt)) }));
+	const fatFills = new Map<string, Row>();
 	for (const [id, row] of parsed.weights) {
 		const at = Date.parse(String(row.measuredAt));
-		if (moments.some(other => other.id !== id && Math.abs(other.at - at) < SAME_MOMENT_MS)) {
-			parsed.weights.delete(id);
-			parsed.skipped.body_weights = (parsed.skipped.body_weights ?? 0) + 1;
-		}
+		const day = String(row.measuredAt).slice(0, 10);
+		const twin = weights.find(
+			other =>
+				other.id !== id &&
+				(Math.abs(Date.parse(String(other.measuredAt)) - at) < SAME_MOMENT_MS ||
+					(String(other.measuredAt).slice(0, 10) === day &&
+						Math.abs(Number(other.weightKg) - Number(row.weightKg)) < SAME_WEIGHT_KG)),
+		);
+		if (!twin) continue;
+		parsed.weights.delete(id);
+		if (row.bodyFatPercent !== null && twin.bodyFatPercent === null) {
+			fatFills.set(String(twin.id), { ...twin, bodyFatPercent: row.bodyFatPercent });
+		} else parsed.skipped.body_weights = (parsed.skipped.body_weights ?? 0) + 1;
 	}
-	reconcile('body_weights', parsed.weights, byId(weights), post('/body-weights'), patch('/body-weights'));
+	const existingWeights = byId(weights);
+	reconcile(
+		'body_weights',
+		new Map([...parsed.weights, ...fatFills]),
+		existingWeights,
+		post('/body-weights'),
+		patch('/body-weights'),
+	);
 	reconcile(
 		'body_metrics',
 		parsed.metrics,
