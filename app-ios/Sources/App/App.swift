@@ -24,6 +24,8 @@ struct BetterMeApp: App {
         WatchBridge.shared.start(store: store, history: history, catalog: catalog)
         WorkoutHealth.shared.start(store: store, catalog: catalog)
         NutritionHealth.shared.start(store: store)
+        WidgetPublisher.shared.start(store: store)
+        QuickActionInbox.shared.install()
         #if DEBUG
         DevSeed.run(store)
         SampleData.seedIfRequested(store)

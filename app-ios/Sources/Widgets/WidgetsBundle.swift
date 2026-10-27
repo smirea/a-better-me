@@ -9,5 +9,10 @@ struct BetterMeWidgets: WidgetBundle {
 
     var body: some Widget {
         WorkoutLiveActivity()
+        CurrentAndRemainingWidget()
+        NutrientFocusWidget()
+        NutrientCollectionWidget()
+        QuickActionsWidget()
+        QuickActionControl()
     }
 }

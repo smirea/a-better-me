@@ -1,17 +1,19 @@
 import SwiftUI
 
 extension Nutrient {
-    var color: Color {
+    var tint: NutrientTint {
         switch (id, group) {
-        case (.energy, _): Theme.calories
-        case (_, .protein): Theme.protein
-        case (_, .fats): Theme.fat
-        case (_, .carbohydrates): Theme.carbs
-        case (_, .vitamins): Theme.vitamins
-        case (_, .minerals): Theme.minerals
-        case (_, .general): Theme.calories
+        case (.energy, _): .calories
+        case (_, .protein): .protein
+        case (_, .fats): .fat
+        case (_, .carbohydrates): .carbs
+        case (_, .vitamins): .vitamins
+        case (_, .minerals): .minerals
+        case (_, .general): .calories
         }
     }
+
+    var color: Color { tint.color }
 }
 
 extension NutrientID {
