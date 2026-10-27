@@ -54,7 +54,7 @@ The owner's workout and nutrition data, as the iOS app holds it. Every write her
 - **Foods and recipes** are what the owner logs from: custom foods, cached USDA and Open Food Facts foods, and recipes, whose nutrition derives from their ingredients. Log one with \`POST /food-entries\` and \`foodId\` or \`recipeId\`.
 - **Strategy**: a nutrition plan sets the goal, coaching program, and seven daily targets (Monday first) from its day until the next plan's. Per-nutrient goals set micronutrient bounds from a day on.
 - **Body metrics** are visual body fat, tape measurements, and steps, one value per day and kind, beside the weigh-ins.
-- **Insights** are what the app computes instead of storing, recomputed on every call: \`GET /weight-trend\` (MacroFactor's trend weight), \`GET /expenditure\` (the TDEE estimate), and \`GET /training-summary\` (sets per muscle, volume, and bests over a range). Pass \`tz\`, the owner's time zone, so days match the phone's. \`GET /export\` returns every stored row at once.
+- **Insights** are what the app computes instead of storing, recomputed on every call: \`GET /weight-trend\` (MacroFactor's trend weight), \`GET /expenditure\` (the TDEE estimate), and \`GET /training-summary\` (sets per muscle, volume, and bests over a range). Pass \`tz\`, the owner's time zone, so days match the phone's; \`GET /api?tz=\` takes it too, and without it today is the UTC day. Apple Health weigh-ins stay on the phone, so these use the app's weigh-ins only. \`GET /export\` returns every stored row at once.
 
 ## Conventions
 
@@ -136,7 +136,8 @@ export async function handleAgent(request: Request, host: AgentHost): Promise<Re
 		let raw: unknown;
 		if (route.body) {
 			try {
-				raw = await request.json();
+				const text = await request.text();
+				raw = text.trim() ? JSON.parse(text) : {};
 			} catch {
 				return error(400, 'The body must be JSON');
 			}

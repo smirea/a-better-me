@@ -141,11 +141,11 @@ describe('agent API insights', () => {
 			name: 'Split',
 			cycles: 2,
 			activate: true,
-			days: [{}, { template: { name: 'Legs', blocks: [] } }],
+			days: [{}, { template: { name: 'Legs', blocks: [{ exercises: [{ exerciseID: BENCH, sets: [{}] }] }] } }],
 		});
 		const rest = created.days[0].id;
 		expect(created.upNext.dayId).toBe(rest);
-		const ticked = await ok('POST', `/programs/${created.id}/days/${rest}/rest-done`, {});
+		const ticked = await ok('POST', `/programs/${created.id}/days/${rest}/rest-done`);
 		expect(ticked.days[0]).toEqual({ id: rest, restDoneInCycle: 1 });
 		expect(ticked.upNext.dayId).toBe(created.days[1].id);
 		expect((await ok('POST', `/programs/${created.id}/days/${rest}/rest-done`, { done: false })).days[0]).toEqual({
@@ -158,6 +158,10 @@ describe('agent API insights', () => {
 		expect(copy).toMatchObject({ name: 'Split Copy', active: false, currentCycle: 1 });
 		expect(copy.templates.map((t: any) => [t.name, t.programId])).toEqual([['Legs', copy.id]]);
 		expect(copy.templates[0].id).not.toBe(created.templates[0].id);
+		const ids = (blocks: any[]) => [blocks[0].id, blocks[0].exercises[0].id, blocks[0].exercises[0].sets[0].id];
+		const [original, copied] = [ids(created.templates[0].blocks), ids(copy.templates[0].blocks)];
+		expect(copied.filter(id => original.includes(id))).toEqual([]);
+		expect(copy.templates[0].blocks[0].exercises[0].exerciseID).toBe(BENCH);
 		expect(copy.days[1].templateID).toBe(copy.templates[0].id);
 		expect((await ok('GET', `/programs/${created.id}`)).active).toBe(true);
 	});
@@ -169,6 +173,15 @@ describe('agent API insights', () => {
 		const [row] = await phone('settings');
 		expect(row!.workout).toBe('{"rest":{"enabled":false,"scaling":{"betweenSides":40}},"rirTracking":false}');
 		expect((await call('PATCH', '/settings', { workout: { warmUp: { automation: 'always' } } })).status).toBe(400);
+
+		const gym = crypto.randomUUID();
+		await ok('PATCH', '/settings', { workout: { plateCalculator: { [gym]: { offsetWeight: true } } } });
+		const plates = await ok('PATCH', '/settings', {
+			workout: { plateCalculator: { [gym.toUpperCase()]: { includeBumperPlates: true } } },
+		});
+		expect(plates.workout.plateCalculator).toEqual({
+			[gym.toUpperCase()]: { offsetWeight: true, includeBumperPlates: true },
+		});
 
 		await ok('PATCH', `/exercises/${BENCH}/settings`, {
 			overrides: { expandRepRange: false, warmUpAutomation: 'scheme' },

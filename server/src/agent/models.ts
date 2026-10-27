@@ -1079,7 +1079,7 @@ export const WeightTrend = z
 	})
 	.meta({
 		id: 'WeightTrend',
-		description: "MacroFactor's Weight Trend V1 over the app's weigh-ins, as the Dashboard draws it.",
+		description: "MacroFactor's Weight Trend V1 over the app's weigh-ins.",
 	});
 
 export const ExpenditureSeries = z

@@ -59,9 +59,9 @@ export const insightRoutes: Route[] = [
 		method: 'GET',
 		path: '/weight-trend',
 		tag: 'Insights',
-		summary: 'The daily trend weight, as the Dashboard draws it, with its weekly rate and projection',
+		summary: 'The daily trend weight, with its weekly rate and projection',
 		description:
-			"MacroFactor's Weight Trend V1 over the weigh-ins logged in the app or here: an exponential moving average with gaps interpolated. Pass `tz` so a weigh-in lands on the day the phone puts it on.",
+			"MacroFactor's Weight Trend V1 over the weigh-ins logged in the app or here: an exponential moving average with gaps interpolated. The Dashboard also merges Apple Health weigh-ins, which never reach the server, so the numbers match it only when every weigh-in is logged in the app. Pass `tz` so a weigh-in lands on the day the phone puts it on.",
 		query: range,
 		response: M.WeightTrend,
 		run({ db, query, now }) {
@@ -74,9 +74,9 @@ export const insightRoutes: Route[] = [
 		method: 'GET',
 		path: '/expenditure',
 		tag: 'Insights',
-		summary: 'The daily energy expenditure (TDEE) estimate, as the Dashboard and the check-in compute it',
+		summary: 'The daily energy expenditure (TDEE) estimate, by the algorithm the Dashboard and the check-in use',
 		description:
-			'Recomputed from the weigh-ins, the food log, and `settings.nutrition.expenditure` on every call, so an edit to a past day is reflected at once.',
+			'Recomputed from the app weigh-ins (not Apple Health), the food log, and `settings.nutrition.expenditure` on every call, so an edit to a past day is reflected at once.',
 		query: range,
 		response: M.ExpenditureSeries,
 		run({ db, query, now }) {

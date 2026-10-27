@@ -150,6 +150,36 @@ function deepMerge(base: Record<string, unknown>, patch: Record<string, unknown>
 	return merged;
 }
 
+/** Swift writes a gym's `plateCalculator` key as `uuidString`, uppercase, while row ids are lowercase. */
+function workoutPatch(current: Record<string, unknown>, patch: z.output<typeof M.SettingsPatch>['workout']) {
+	if (!patch?.plateCalculator) return deepMerge(current, patch ?? {});
+	const stored = (current.plateCalculator ?? {}) as Record<string, Record<string, unknown>>;
+	const byGym = Object.fromEntries(Object.entries(stored).map(([gym, options]) => [gym.toUpperCase(), options]));
+	for (const [gym, options] of Object.entries(patch.plateCalculator)) {
+		byGym[gym.toUpperCase()] = { ...byGym[gym.toUpperCase()], ...options };
+	}
+	return deepMerge({ ...current, plateCalculator: byGym }, { ...patch, plateCalculator: byGym });
+}
+
+/** `copyingCycleTargets`: a copy gets its own block, exercise, and set ids, and plans carry no logs. */
+function freshBlocks(blocks: M.Blocks): M.Blocks {
+	const fresh = <T extends { id: string; log?: unknown }>({ log: _, ...item }: T) => ({ ...item, id: M.newId() });
+	const sets = (list: z.output<typeof M.WorkoutSet>[]) =>
+		list.map(set => ({ ...fresh(set), subSets: set.subSets.map(fresh) }));
+	return blocks.map(block => ({
+		...block,
+		id: M.newId(),
+		exercises: block.exercises.map(exercise => ({
+			...exercise,
+			id: M.newId(),
+			sets: sets(exercise.sets),
+			...(exercise.cycleTargets && {
+				cycleTargets: exercise.cycleTargets.map(cycle => ({ ...cycle, sets: sets(cycle.sets) })),
+			}),
+		})),
+	})) as M.Blocks;
+}
+
 const withStats = (db: Db) => {
 	const lookup = exerciseLookup(db);
 	return (row: SessionRow) => ({ ...row, stats: sessionStats(row, lookup) });
@@ -819,7 +849,14 @@ export const routes: Route[] = [
 			const days = source.days.map((day): ProgramDay => {
 				const template = day.templateID && db.get('workout_templates', day.templateID);
 				if (!template) return { id: M.newId() };
-				const copy: TemplateRow = { ...template, id: M.newId(), programId, createdAt: now, updatedAt: now };
+				const copy: TemplateRow = {
+					...template,
+					id: M.newId(),
+					blocks: freshBlocks(template.blocks as M.Blocks),
+					programId,
+					createdAt: now,
+					updatedAt: now,
+				};
 				changes.push(db.put('workout_templates', copy));
 				return { id: M.newId(), templateID: copy.id };
 			});
@@ -969,7 +1006,7 @@ export const routes: Route[] = [
 				restCore: rest.core,
 				profile: { ...current.profile, ...body.profile },
 				nutrition: mergeNutrition(current.nutrition, body.nutrition),
-				workout: deepMerge(current.workout, body.workout ?? {}),
+				workout: workoutPatch(current.workout, body.workout),
 			};
 			const exists = db.get('settings', SETTINGS_ID);
 			db.commit(
