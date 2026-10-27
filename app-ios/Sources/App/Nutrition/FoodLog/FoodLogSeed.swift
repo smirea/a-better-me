@@ -30,8 +30,7 @@ enum FoodLogSeed {
 
     static func insert(in db: Database) throws {
         let today = CalendarDay.today
-        let now = Calendar.current.dateComponents([.hour, .minute], from: .now)
-        let nowMinute = now.hour! * 60 + now.minute!
+        let nowMinute = Date.now.minuteOfDay()
         for (offset, meals) in days.enumerated() {
             let day = today.adding(days: -offset)
             for (index, (minute, food, quantity)) in meals.enumerated() where offset > 0 || minute <= nowMinute {

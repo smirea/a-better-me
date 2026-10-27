@@ -19,8 +19,8 @@ struct EntryEditor: View {
     init(entry: FoodEntry) {
         self.entry = entry
         _serving = State(initialValue: entry.serving)
-        _quantity = State(initialValue: FoodLog.amountLabel(entry.serving.quantity))
-        _time = State(initialValue: Calendar.current.date(bySettingHour: entry.minute / 60, minute: entry.minute % 60, second: 0, of: entry.day.date)!)
+        _quantity = State(initialValue: NutritionFormat.quantity(entry.serving.quantity))
+        _time = State(initialValue: entry.day.date(atMinute: entry.minute))
     }
 
     private var amounts: NutrientAmounts { entry.food.amounts(serving) }
@@ -51,12 +51,12 @@ struct EntryEditor: View {
                             .font(AppFont.number(20))
                             .onChange(of: quantity) { _, text in
                                 // The unit picker writes the rounded label of an exact conversion; only typing replaces it.
-                                guard text != FoodLog.amountLabel(serving.quantity) else { return }
+                                guard text != NutritionFormat.quantity(serving.quantity) else { return }
                                 if let value = Double(text.replacingOccurrences(of: ",", with: ".")) { serving.quantity = value }
                             }
                         Picker("Unit", selection: Binding(get: { serving.measure }, set: { measure in
-                            serving = FoodLog.converted(serving, to: measure)
-                            quantity = FoodLog.amountLabel(serving.quantity)
+                            serving = serving.converted(to: measure)
+                            quantity = NutritionFormat.quantity(serving.quantity)
                         })) {
                             ForEach(measures, id: \.self) { Text($0.name).tag($0) }
                         }
@@ -67,10 +67,10 @@ struct EntryEditor: View {
                 if targets.target != nil {
                     Section("Impact on Targets") { ImpactRings(amounts: amounts, targets: targets) }
                 }
-                ForEach(NutrientSections.all) { section in
+                ForEach(NutrientSection.allCases) { section in
                     let shown = section.nutrients.filter { amounts.amount(of: $0.id) != nil }
                     if !shown.isEmpty {
-                        Section(section.title) {
+                        Section(section.rawValue) {
                             ForEach(shown) { nutrient in
                                 NutrientRow(nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id))
                             }
@@ -124,10 +124,7 @@ struct EntryEditor: View {
         .foregroundStyle(Theme.textPrimary)
     }
 
-    private var minute: Int {
-        let parts = Calendar.current.dateComponents([.hour, .minute], from: time)
-        return parts.hour! * 60 + parts.minute!
-    }
+    private var minute: Int { time.minuteOfDay() }
 
     private func save() {
         let serving = serving
@@ -161,7 +158,7 @@ private struct MacroHeader: View {
                         .foregroundStyle(.black)
                         .padding(.horizontal, 6)
                         .background(nutrient.color, in: Capsule())
-                    Text(FoodLog.amountLabel((grams * 10).rounded() / 10)).font(AppFont.number(18))
+                    Text(NutritionFormat.amount(grams)).font(AppFont.number(18))
                     Text(nutrient.name).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
                 }
                 .frame(width: 64)
@@ -178,7 +175,7 @@ private struct ImpactRings: View {
 
     var body: some View {
         HStack {
-            ForEach(FoodLog.macros, id: \.self) { id in
+            ForEach(NutrientID.macros, id: \.self) { id in
                 let nutrient = NutrientRegistry.nutrient(id)!
                 let target = targets.range(id).target ?? 0
                 let share = target > 0 ? (amounts[id] ?? 0) / target : 0

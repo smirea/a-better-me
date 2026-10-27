@@ -203,7 +203,7 @@ private struct StrategyHome: View {
         ) {
             WeekTargetsChart(targets: plan.targets, today: data.today.weekday)
             HStack {
-                StrategyStat(value: StrategyFormat.kcal(todayTarget.energy), caption: "Today · \(StrategyFormat.macros(todayTarget))")
+                StrategyStat(value: StrategyFormat.kcal(todayTarget.energy), caption: "Today · \(NutritionFormat.macros(todayTarget.amounts))")
                 StrategyStat(value: StrategyFormat.kcal(StrategyRules.averageEnergy(plan.targets)), caption: "Daily average")
             }
         } actions: {
@@ -279,7 +279,7 @@ private struct GoalTrendProgress: View {
             if points.count > 1 {
                 Chart {
                     ForEach(points, id: \.day) { point in
-                        LineMark(x: .value("Day", StrategyInputs.date(point.day, .current)), y: .value("Trend", unit.fromKg(point.kg)))
+                        LineMark(x: .value("Day", point.day.date(in: .current)), y: .value("Trend", unit.fromKg(point.kg)))
                             .foregroundStyle(Theme.goal)
                             .interpolationMethod(.monotone)
                     }

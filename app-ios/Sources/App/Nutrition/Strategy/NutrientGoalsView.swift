@@ -84,7 +84,7 @@ private struct NutrientGoalEditor: View {
             Form {
                 DatePicker(
                     "Goal Start Date",
-                    selection: Binding(get: { StrategyInputs.date(draft.startsOn, .current) }, set: { draft.startsOn = CalendarDay($0) }),
+                    selection: Binding(get: { draft.startsOn.date }, set: { draft.startsOn = CalendarDay($0) }),
                     displayedComponents: .date
                 )
                 Section("Goal Type") {
@@ -152,7 +152,7 @@ private struct NutrientGoalEditor: View {
 /// Every nutrient with its range today, grouped as the registry orders them; each opens its goals. Calories and the
 /// macros are left out: their targets come from the program, as in MacroFactor.
 struct NutrientGoalsListView: View {
-    private static let fromProgram: Set<NutrientID> = [.energy, .protein, .fat, .carbs]
+    private static let fromProgram = Set(NutrientID.macros)
 
     @Observe(NutrientGoal.all) private var goals
     @Observe(AppSettings.current) private var settings

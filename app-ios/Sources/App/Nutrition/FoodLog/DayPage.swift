@@ -59,7 +59,7 @@ private struct HourRow: View {
     @Environment(LocalStore.self) private var store
 
     var body: some View {
-        let label = FoodLog.hourLabel(hour.hour)
+        let label = NutritionFormat.hour(hour.hour)
         let isCurrent = day == .today && Calendar.current.component(.hour, from: .now) == hour.hour
         let isSelected = state.selecting && hour.rows.contains { state.selection.contains($0.id) }
         HStack(spacing: 8) {
@@ -111,7 +111,7 @@ private struct HourTotals: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            ForEach(FoodLog.macros, id: \.self) { id in
+            ForEach(NutrientID.macros, id: \.self) { id in
                 HStack(spacing: 4) {
                     Text("\(Int((amounts[id] ?? 0).rounded()))").font(AppFont.medium(12)).monospacedDigit()
                     Group {
@@ -148,7 +148,7 @@ private struct EntryRow: View {
                         .font(.system(size: 20))
                         .foregroundStyle(Theme.textPrimary)
                 } else if showsTime, row.showsTime {
-                    Text(FoodLog.timeLabel(entry.minute)).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
+                    Text(NutritionFormat.time(entry.minute)).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
                 }
             }
             .frame(width: HourRow.gutter)
@@ -182,7 +182,7 @@ struct FoodTile: View {
                 Text(entry.food.displayName).font(AppFont.headline(14)).lineLimit(2)
                 if !hidesDetails {
                     let kcal = Int((entry.amounts[.energy] ?? 0).rounded())
-                    Text("\(kcal)\(Text(calorieGlyph).font(.system(size: 9))) \(FoodLog.macroLabel(entry.amounts)) • \(FoodLog.servingLabel(entry.serving))")
+                    Text("\(kcal)\(Text(calorieGlyph).font(.system(size: 9))) \(NutritionFormat.macros(entry.amounts)) · \(NutritionFormat.serving(entry.serving, of: entry.food))")
                         .font(AppFont.caption(12))
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
@@ -246,8 +246,7 @@ private struct NotesSection: View {
                     Text("\(notes.count) / \(FoodLogNote.limitPerDay)").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
                 }
                 Button("Add Note", systemImage: "plus") {
-                    let now = Calendar.current.dateComponents([.hour, .minute], from: .now)
-                    state.note = NoteDraft(note: FoodLogNote(day: day, minute: now.hour! * 60 + now.minute!, title: ""), isNew: true)
+                    state.note = NoteDraft(note: FoodLogNote(day: day, minute: Date.now.minuteOfDay(), title: ""), isNew: true)
                 }
                 .labelStyle(.iconOnly)
                 .font(.system(size: 13, weight: .bold))
@@ -285,7 +284,7 @@ private struct NoteCard: View {
             }
             HStack(spacing: 6) {
                 Spacer()
-                Text(FoodLog.clockLabel(note.minute)).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
+                Text(NutritionFormat.clock(note.minute)).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
                 Circle().fill(note.color.tint).frame(width: 6, height: 6)
             }
         }

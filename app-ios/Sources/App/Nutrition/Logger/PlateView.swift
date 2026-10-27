@@ -29,10 +29,10 @@ struct PlateView: View {
                             LoggerFoodIcon(food: item.pick.portion.food)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.pick.portion.food.name).font(AppFont.medium(15)).lineLimit(2)
-                                Text(item.pick.portion.amounts.macroLine).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                                Text(NutritionFormat.macroLine(item.pick.portion.amounts)).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
                             }
                             Spacer()
-                            Text(item.pick.portion.serving.label)
+                            Text(NutritionFormat.serving(item.pick.portion.serving))
                                 .font(AppFont.medium(13))
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
@@ -56,14 +56,14 @@ struct PlateView: View {
                 .pickerStyle(.segmented)
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
-                ForEach([NutrientID.energy, .protein, .fat, .carbs], id: \.self) { id in
+                ForEach(NutrientID.macros, id: \.self) { id in
                     macroRow(id, plate: plate[id] ?? 0, day: day[id] ?? 0)
                 }
                 Toggle("Show all nutrients", isOn: $allNutrients).tint(Theme.accent)
                 if allNutrients {
                     let total = withDay ? day + plate : plate
-                    ForEach(NutrientRegistry.all.filter { ![.energy, .protein, .fat, .carbs].contains($0.id) && total.amount(of: $0.id) != nil }) { nutrient in
-                        LabeledContent(nutrient.name, value: FoodDetailView.amount(total.amount(of: nutrient.id) ?? 0, nutrient.unit))
+                    ForEach(NutrientSection.allCases.dropFirst().flatMap(\.nutrients).filter { total.amount(of: $0.id) != nil }) { nutrient in
+                        LabeledContent(nutrient.name, value: NutritionFormat.amount(total.amount(of: nutrient.id) ?? 0, nutrient.unit))
                     }
                 }
             } header: {

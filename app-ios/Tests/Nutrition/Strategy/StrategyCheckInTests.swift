@@ -111,7 +111,7 @@ struct StrategyCheckInTests {
         let today = calendarDay("2026-10-26")
         for offset in 1...70 {
             let day = today.adding(days: -offset)
-            store.insert(BodyWeight(weightKg: 80, measuredAt: StrategyInputs.date(day, utc).addingTimeInterval(12 * 3600)))
+            store.insert(BodyWeight(weightKg: 80, measuredAt: day.date(in: utc).addingTimeInterval(12 * 3600)))
             store.quickAdd([.energy: 2000, .protein: 135, .fat: 60, .carbs: 180], on: day, minute: 720)
         }
         store.savePlan(plan("2026-10-06"))
@@ -153,7 +153,7 @@ struct StrategyInputsTests {
         var settings = NutritionSettings()
         settings.expenditure.initialKcal = 2000
         settings.expenditure.calculationStart = calendarDay("2026-10-24")
-        let weighIn = WeighIn(date: StrategyInputs.date(calendarDay("2026-10-01"), utc), kg: 80, source: .health)
+        let weighIn = WeighIn(date: calendarDay("2026-10-01").date(in: utc), kg: 80, source: .health)
         let inputs = StrategyInputs.make(weighIns: [weighIn], log: IntakeLog(), settings: settings, profile: profile, today: calendarDay("2026-10-26"), calendar: utc)
         #expect(inputs.expenditure.keys.sorted() == [calendarDay("2026-10-24"), calendarDay("2026-10-25"), calendarDay("2026-10-26")])
     }
@@ -161,7 +161,7 @@ struct StrategyInputsTests {
     @Test func aStaticExpenditureWins() {
         var settings = NutritionSettings()
         settings.expenditure.staticKcal = 2400
-        let weighIn = WeighIn(date: StrategyInputs.date(calendarDay("2026-10-20"), utc), kg: 80, source: .health)
+        let weighIn = WeighIn(date: calendarDay("2026-10-20").date(in: utc), kg: 80, source: .health)
         let inputs = StrategyInputs.make(weighIns: [weighIn], log: IntakeLog(), settings: settings, profile: ProfileSettings(), today: calendarDay("2026-10-26"), calendar: utc)
         #expect(inputs.expenditureKcal == 2400)
         #expect(inputs.isStaticExpenditure)

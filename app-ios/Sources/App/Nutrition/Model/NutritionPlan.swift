@@ -36,6 +36,10 @@ struct DayTarget: Hashable, Codable, Sendable {
     var protein: Double
     var fat: Double
     var carbs: Double
+
+    var amounts: NutrientAmounts { [.energy: energy, .protein: protein, .fat: fat, .carbs: carbs] }
+
+    func amount(_ id: NutrientID) -> Double? { amounts[id] }
 }
 
 /// Exactly seven targets, Monday first. Encodes as the bare array.

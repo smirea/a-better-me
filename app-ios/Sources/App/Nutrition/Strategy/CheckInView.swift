@@ -133,17 +133,25 @@ private struct DayReviewRow: View {
 
     @Environment(LocalStore.self) private var store
 
+    private var choices: [NutritionDay.Status] {
+        NutritionDay.Status.allCases.filter { choice in
+            switch choice {
+            case .none: true
+            case .partial: modules.partialLogging || status == .partial
+            case .fasted: modules.fasting || status == .fasted
+            }
+        }
+    }
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(StrategyInputs.date(day, .current).formatted(.dateTime.weekday(.wide).month(.abbreviated).day())).font(AppFont.headline(15))
+                Text(day.date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())).font(AppFont.headline(15))
                 Text(kcal.map(StrategyFormat.kcal) ?? "Not counted").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
             Picker("Status", selection: Binding(get: { status }, set: { value in store.updateDay(day) { $0.status = value } })) {
-                Text("Complete").tag(NutritionDay.Status.none)
-                if modules.partialLogging || status == .partial { Text("Incomplete").tag(NutritionDay.Status.partial) }
-                if modules.fasting || status == .fasted { Text("Fasted").tag(NutritionDay.Status.fasted) }
+                ForEach(choices, id: \.self) { Label($0.title, systemImage: $0.symbol).tag($0) }
             }
             .pickerStyle(.menu)
             .accessibilityLabel("Status of \(StrategyFormat.day(day))")

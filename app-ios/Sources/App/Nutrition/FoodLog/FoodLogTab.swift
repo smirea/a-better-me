@@ -13,7 +13,7 @@ struct FoodLogTab: View {
             }
             .background(Theme.background)
             .safeAreaInset(edge: .bottom) { FoodLogBottomBar() }
-            .screenTitle(FoodLog.dayTitle(state.day, today: .today))
+            .screenTitle(NutritionFormat.dayTitle(state.day))
             .toolbar {
                 if state.day != .today {
                     ToolbarItem {
@@ -138,11 +138,7 @@ private struct DayStatusBadges: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            switch row.status {
-            case .fasted: badge("Fasted", systemImage: "moon.zzz.fill")
-            case .partial: badge("Incomplete", systemImage: "circle.lefthalf.filled")
-            case .none: EmptyView()
-            }
+            if row.status != .none { badge(row.status.title, systemImage: row.status.symbol) }
             if row.override != nil { badge("Edited totals", systemImage: "pencil") }
             Spacer()
         }

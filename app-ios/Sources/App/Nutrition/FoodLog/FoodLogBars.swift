@@ -201,7 +201,7 @@ private struct TimePrompt: View {
         self.title = title
         self.showsDate = showsDate
         self.onDone = onDone
-        _date = State(initialValue: Calendar.current.date(bySettingHour: minute / 60, minute: minute % 60, second: 0, of: day.date)!)
+        _date = State(initialValue: day.date(atMinute: minute))
     }
 
     var body: some View {
@@ -224,8 +224,7 @@ private struct TimePrompt: View {
                 ToolbarItem(placement: .cancellationAction) { Button(role: .cancel) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm) {
-                        let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
-                        onDone(CalendarDay(date), parts.hour! * 60 + parts.minute!)
+                        onDone(CalendarDay(date), date.minuteOfDay())
                         dismiss()
                     }
                 }
@@ -298,9 +297,7 @@ struct DayMenu: View {
             Picker("Day Status", systemImage: "flag", selection: Binding(get: { row.status }, set: { status in
                 store.updateDay(day) { $0.status = status }
             })) {
-                Text("Complete").tag(NutritionDay.Status.none)
-                Text("Incomplete").tag(NutritionDay.Status.partial)
-                Text("Fasted").tag(NutritionDay.Status.fasted)
+                ForEach(NutritionDay.Status.allCases, id: \.self) { Label($0.title, systemImage: $0.symbol).tag($0) }
             }
             .pickerStyle(.menu)
             Section {

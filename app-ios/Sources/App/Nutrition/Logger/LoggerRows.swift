@@ -13,15 +13,6 @@ extension NutrientID {
     }
 }
 
-extension Dictionary where Key == NutrientID, Value == Double {
-    /// "105 kcal  1P 0F 27C", the compact line under a food's name.
-    var macroLine: String {
-        let kcal = Int((self[.energy] ?? 0).rounded())
-        let macros = [NutrientID.protein, .fat, .carbs].map { "\(Int((self[$0] ?? 0).rounded()))\($0.macroLetter)" }
-        return "\(kcal) kcal  " + macros.joined(separator: " ")
-    }
-}
-
 /// A food's icon: the one picked in the library when it has one, otherwise a symbol for where it came from.
 struct LoggerFoodIcon: View {
     let food: FoodSnapshot
@@ -66,7 +57,7 @@ struct LoggerFoodRow: View {
                     LoggerFoodIcon(food: portion.food)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title).font(AppFont.medium(15)).lineLimit(2)
-                        Text("\(portion.amounts.macroLine) • \(portion.serving.label)")
+                        Text("\(NutritionFormat.macroLine(portion.amounts)) · \(NutritionFormat.serving(portion.serving, of: portion.food))")
                             .font(AppFont.caption(12))
                             .foregroundStyle(Theme.textSecondary)
                             .lineLimit(1)

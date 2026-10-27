@@ -235,18 +235,6 @@ extension FoodLibraryView.Item {
     }
 }
 
-extension DayTarget {
-    func amount(_ id: NutrientID) -> Double? {
-        switch id {
-        case .energy: energy
-        case .protein: protein
-        case .fat: fat
-        case .carbs: carbs
-        default: nil
-        }
-    }
-}
-
 /// "Select Date and Time": a wheel of days and an hour. The minute comes from the clock when the plate is logged.
 private struct LogTimePicker: View {
     let session: LoggerSession
@@ -266,10 +254,10 @@ private struct LogTimePicker: View {
             VStack(spacing: 12) {
                 HStack(spacing: 0) {
                     Picker("Day", selection: $day) {
-                        ForEach(days, id: \.self) { Text($0.relativeLabel(today: today)).tag($0) }
+                        ForEach(days, id: \.self) { Text(NutritionFormat.dayTitle($0, today: today)).tag($0) }
                     }
                     Picker("Hour", selection: $hour) {
-                        ForEach(0..<24, id: \.self) { Text(LogTime.hourLabel($0)).tag($0) }
+                        ForEach(0..<24, id: \.self) { Text(NutritionFormat.hour($0)).tag($0) }
                     }
                     .frame(width: 120)
                 }
@@ -325,7 +313,7 @@ private struct LogHourPad: View {
                         session.time.hour = hour
                         dismiss()
                     } label: {
-                        Text(LogTime.hourLabel(hour))
+                        Text(NutritionFormat.hour(hour))
                             .font(AppFont.medium(15))
                             .frame(maxWidth: .infinity)
                             .frame(height: 44)

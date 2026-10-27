@@ -15,7 +15,7 @@ struct QuantityText: Hashable, Sendable {
     static let maxLength = 8
 
     init(_ value: Double) {
-        text = Self.format(value)
+        text = NutritionFormat.quantity(value)
         untouched = value
     }
 
@@ -80,10 +80,5 @@ struct QuantityText: Hashable, Sendable {
         guard sides.count == 2, let top = Double(sides[0]), let bottom = Double(sides[1]), bottom != 0,
               !sides[0].contains("."), !sides[1].contains(".") else { return nil }
         return top / bottom
-    }
-
-    /// Up to two decimals, no grouping, a point whatever the locale, since the keypad types ".".
-    static func format(_ value: Double) -> String {
-        value.formatted(.number.precision(.fractionLength(0...2)).grouping(.never).locale(Locale(identifier: "en_US_POSIX")))
     }
 }

@@ -36,12 +36,12 @@ struct FoodDetailView: View {
             Section("Impact on Targets") {
                 impact
             }
-            ForEach(NutrientGroup.allCases, id: \.self) { group in
-                let rows = NutrientRegistry.all.filter { $0.group == group && food.nutrition.nutrients.amount(of: $0.id) != nil }
+            ForEach(NutrientSection.allCases) { section in
+                let rows = section.nutrients.filter { food.nutrition.nutrients.amount(of: $0.id) != nil }
                 if !rows.isEmpty {
-                    Section(group.title) {
+                    Section(section.rawValue) {
                         ForEach(rows) { nutrient in
-                            LabeledContent(nutrient.name, value: Self.amount(amounts.amount(of: nutrient.id) ?? 0, nutrient.unit))
+                            LabeledContent(nutrient.name, value: NutritionFormat.amount(amounts.amount(of: nutrient.id) ?? 0, nutrient.unit))
                         }
                     }
                 }
@@ -75,7 +75,7 @@ struct FoodDetailView: View {
                     Text("Calories").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
                 }
                 Spacer()
-                ForEach([NutrientID.protein, .fat, .carbs], id: \.self) { id in
+                ForEach(NutrientID.macros.dropFirst(), id: \.self) { id in
                     macro(id)
                 }
             }
@@ -110,7 +110,7 @@ struct FoodDetailView: View {
                 .padding(.horizontal, 6)
                 .padding(.vertical, 1)
                 .background(Theme.macro(id).opacity(0.35), in: .capsule)
-            Text(QuantityText.format(((amounts[id] ?? 0) * 10).rounded() / 10)).font(AppFont.headline(17))
+            Text(NutritionFormat.amount(amounts[id] ?? 0)).font(AppFont.headline(17))
             Text(NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
         }
         .frame(width: 64)
@@ -120,7 +120,7 @@ struct FoodDetailView: View {
     private var impact: some View {
         let target = NutritionPlan.effective(on: session.time.day, in: plans)?.target(on: session.time.day)
         return HStack {
-            ForEach([NutrientID.energy, .protein, .fat, .carbs], id: \.self) { id in
+            ForEach(NutrientID.macros, id: \.self) { id in
                 let goal = target?.amount(id) ?? 0
                 let share = goal > 0 ? (amounts[id] ?? 0) / goal : 0
                 VStack(spacing: 6) {
@@ -140,7 +140,7 @@ struct FoodDetailView: View {
     }
 
     private func choose(_ next: Measure) {
-        let converted = ServingChoices.convert(serving, to: next)
+        let converted = serving.converted(to: next)
         measure = next
         quantity = QuantityText(converted.quantity)
     }
@@ -167,11 +167,6 @@ struct FoodDetailView: View {
         } else {
             session.add(LoggerPick(portion, uncached: pick.uncached))
         }
-    }
-
-    static func amount(_ value: Double, _ unit: NutrientUnit) -> String {
-        let rounded = value >= 10 ? value.rounded() : (value * 10).rounded() / 10
-        return "\(QuantityText.format(rounded)) \(unit.rawValue)"
     }
 }
 

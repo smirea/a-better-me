@@ -5,8 +5,7 @@ enum StrategyFormat {
     static let weekdayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
     static func day(_ day: CalendarDay, year: Bool = false) -> String {
-        let date = StrategyInputs.date(day, .current)
-        return year ? date.formatted(.dateTime.month(.abbreviated).day().year()) : date.formatted(.dateTime.month(.abbreviated).day())
+        year ? day.date.formatted(.dateTime.month(.abbreviated).day().year()) : NutritionFormat.shortDay(day)
     }
 
     static func range(_ start: CalendarDay, _ end: CalendarDay?) -> String {
@@ -21,10 +20,6 @@ enum StrategyFormat {
 
     static func signed(_ value: Double, digits: ClosedRange<Int>) -> String {
         value.formatted(.number.precision(.fractionLength(digits)).sign(strategy: .always()))
-    }
-
-    static func macros(_ target: DayTarget) -> String {
-        "\(Int(target.protein))P \(Int(target.fat))F \(Int(target.carbs))C"
     }
 }
 
@@ -64,7 +59,7 @@ struct WeekTargetsChart: View {
             dayLabel(weekday)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(StrategyFormat.weekdayNames[weekday - 1]): \(Int(target.energy)) kcal, \(StrategyFormat.macros(target))")
+        .accessibilityLabel("\(StrategyFormat.weekdayNames[weekday - 1]): \(Int(target.energy)) kcal, \(NutritionFormat.macros(target.amounts))")
     }
 
     private func block(_ label: String, _ height: Double, _ color: Color) -> some View {

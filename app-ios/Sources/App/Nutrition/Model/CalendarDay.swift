@@ -94,4 +94,17 @@ extension CalendarDay {
     var date: Date {
         Calendar.current.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
     }
+
+    /// The moment `minute` minutes after the day's midnight in `calendar`, as an entry's or note's minute counts.
+    func date(atMinute minute: Int, in calendar: Calendar = .current) -> Date {
+        calendar.date(from: DateComponents(year: year, month: month, day: day, hour: minute / 60, minute: minute % 60))!
+    }
+}
+
+extension Date {
+    /// Minutes since midnight in `calendar`, 0 through 1439.
+    func minuteOfDay(in calendar: Calendar = .current) -> Int {
+        let parts = calendar.dateComponents([.hour, .minute], from: self)
+        return parts.hour! * 60 + parts.minute!
+    }
 }

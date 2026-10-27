@@ -89,13 +89,10 @@ enum DietaryHealth {
     /// What Health should hold for `day`: each entry's mapped nutrients at its minute, or the override's at noon,
     /// since an override replaces the log's totals. Zero amounts are left out.
     static func samples(on day: CalendarDay, entries: [FoodEntry], override: NutrientAmounts?, calendar: Calendar) -> [DietarySample] {
-        func date(_ minute: Int) -> Date {
-            calendar.date(from: DateComponents(year: day.year, month: day.month, day: day.day, hour: minute / 60, minute: minute % 60))!
-        }
         func samples(_ amounts: NutrientAmounts, key: String, minute: Int, food: String?) -> [DietarySample] {
             types.keys.sorted { $0.rawValue < $1.rawValue }.compactMap { nutrient in
                 guard let amount = amounts[nutrient], amount > 0 else { return nil }
-                return DietarySample(key: "\(key)/\(nutrient.rawValue)", day: day, nutrient: nutrient, amount: amount, date: date(minute), food: food)
+                return DietarySample(key: "\(key)/\(nutrient.rawValue)", day: day, nutrient: nutrient, amount: amount, date: day.date(atMinute: minute, in: calendar), food: food)
             }
         }
         if let override {

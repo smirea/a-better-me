@@ -53,7 +53,7 @@ struct FoodRow: View {
                     .font(AppFont.medium(15))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(2)
-                Text("\(LibraryFormat.macros(food.amounts(serving))) · \(LibraryFormat.serving(serving, of: food))")
+                Text("\(NutritionFormat.macroLine(food.amounts(serving))) · \(NutritionFormat.serving(serving, of: food))")
                     .font(AppFont.caption(12))
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)

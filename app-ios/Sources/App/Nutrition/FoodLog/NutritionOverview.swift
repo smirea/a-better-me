@@ -75,8 +75,8 @@ private struct OverviewList: View {
             sex: settings.profile.sex, weightKg: weight?.weightKg ?? settings.profile.bodyWeightKg
         )
         List {
-            ForEach(settings.nutrition.hideAdditionalNutrients ? NutrientSections.lead : NutrientSections.all) { section in
-                Section(section.title) {
+            ForEach(settings.nutrition.hideAdditionalNutrients ? [.macros] : NutrientSection.allCases) { section in
+                Section(section.rawValue) {
                     ForEach(section.nutrients) { nutrient in
                         let row = NutrientRow(
                             nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id),
@@ -114,7 +114,7 @@ struct ContributorsView: View {
             HStack {
                 Text(contributor.name)
                 Spacer()
-                Text(info?.label(contributor.amount) ?? FoodLog.amountLabel(contributor.amount)).monospacedDigit()
+                Text(info.map { NutritionFormat.amount(contributor.amount, $0.unit) } ?? NutritionFormat.amount(contributor.amount)).monospacedDigit()
                     .foregroundStyle(Theme.textSecondary)
             }
         }

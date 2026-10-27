@@ -12,11 +12,6 @@ extension Nutrient {
         case (_, .general): Theme.calories
         }
     }
-
-    /// "1600 kcal", "22.4 g".
-    func label(_ value: Double) -> String {
-        "\(FoodLog.amountLabel(value < 10 ? value : value.rounded())) \(unit.rawValue)"
-    }
 }
 
 /// The calorie glyph that follows a number in compact rows, where MacroFactor writes "149ઠ".
@@ -64,7 +59,7 @@ struct NutrientRow: View {
             HStack {
                 Text(nutrient.name).font(AppFont.medium(15))
                 Spacer()
-                Text(range.target.map { "\(FoodLog.amountLabel(value.rounded())) / \(nutrient.label($0))" } ?? nutrient.label(value))
+                Text(range.target.map { "\(NutritionFormat.amount(value)) / \(NutritionFormat.amount($0, nutrient.unit))" } ?? NutritionFormat.amount(value, nutrient.unit))
                     .font(AppFont.caption(14))
                     .monospacedDigit()
                 Spacer()
@@ -81,7 +76,7 @@ struct NutrientRow: View {
                     HStack {
                         Text(contributor.name).lineLimit(1)
                         Spacer()
-                        Text(nutrient.label(contributor.amount)).monospacedDigit()
+                        Text(NutritionFormat.amount(contributor.amount, nutrient.unit)).monospacedDigit()
                     }
                     .font(AppFont.caption(13))
                     .foregroundStyle(Theme.textSecondary)
@@ -96,34 +91,33 @@ struct NutrientRow: View {
     }
 }
 
-/// The nutrient groups in MacroFactor's Nutrition Overview order, from the registry.
-enum NutrientSections {
-    struct Section: Identifiable {
-        let title: String
-        let nutrients: [Nutrient]
+/// The nutrient sections every nutrient list shows, in MacroFactor's Food Detail order.
+enum NutrientSection: String, CaseIterable, Identifiable {
+    case macros = "Calories & Macros"
+    case carbs = "Carb Breakdown"
+    case fats = "Fat Breakdown"
+    case protein = "Protein Breakdown"
+    case vitamins = "Vitamins"
+    case minerals = "Minerals"
+    case other = "Other"
 
-        var id: String { title }
-    }
+    var id: Self { self }
 
-    static let all: [Section] = {
-        let lead = FoodLog.macros.compactMap(NutrientRegistry.nutrient)
-        func rest(of group: NutrientGroup) -> [Nutrient] {
-            NutrientRegistry.all.filter { $0.group == group && !FoodLog.macros.contains($0.id) }
+    var nutrients: [Nutrient] { Self.table[self] ?? [] }
+
+    private static let table: [NutrientSection: [Nutrient]] = Dictionary(uniqueKeysWithValues: allCases.map { section in
+        let group: NutrientGroup? = switch section {
+        case .macros: nil
+        case .carbs: .carbohydrates
+        case .fats: .fats
+        case .protein: .protein
+        case .vitamins: .vitamins
+        case .minerals: .minerals
+        case .other: .general
         }
-        return [
-            Section(title: "Calories", nutrients: Array(lead.prefix(1))),
-            Section(title: "Macros", nutrients: Array(lead.dropFirst())),
-            Section(title: "Carb Breakdown", nutrients: rest(of: .carbohydrates)),
-            Section(title: "Fat Breakdown", nutrients: rest(of: .fats)),
-            Section(title: "Protein Breakdown", nutrients: rest(of: .protein)),
-            Section(title: "Vitamins", nutrients: rest(of: .vitamins)),
-            Section(title: "Minerals", nutrients: rest(of: .minerals)),
-            Section(title: "Other", nutrients: rest(of: .general)),
-        ]
-    }()
-
-    /// Calories and macros only, when the owner hides additional nutrients.
-    static let lead = Array(all.prefix(2))
+        guard let group else { return (section, NutrientID.macros.compactMap(NutrientRegistry.nutrient)) }
+        return (section, NutrientRegistry.all.filter { $0.group == group && !NutrientID.macros.contains($0.id) })
+    })
 }
 
 /// The ranges a day's rows draw: calories and macros from the plan, every other nutrient from its goal.

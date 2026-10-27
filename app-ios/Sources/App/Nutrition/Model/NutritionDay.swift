@@ -6,13 +6,29 @@ import GRDB
 struct NutritionDay: SyncedRecord {
     static let table = "nutrition_days"
 
-    enum Status: String, Codable, Sendable {
+    enum Status: String, CaseIterable, Codable, Sendable {
         /// Logged as usual: the entries are the intake.
         case none
         /// Marked incomplete; the algorithms skip it.
         case partial
         /// Marked fasted; with no entries it counts as zero calories.
         case fasted
+
+        var title: String {
+            switch self {
+            case .none: "Complete"
+            case .partial: "Incomplete"
+            case .fasted: "Fasted"
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .none: "checkmark.circle"
+            case .partial: "circle.lefthalf.filled"
+            case .fasted: "moon.zzz.fill"
+            }
+        }
     }
 
     var id: CalendarDay

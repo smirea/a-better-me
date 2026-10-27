@@ -21,7 +21,7 @@ enum StrategySeed {
             let calendar = Calendar.current
             for offset in (1...70).reversed() {
                 let day = today.adding(days: -offset)
-                let date = StrategyInputs.date(day, calendar)
+                let date = day.date(in: calendar)
                 if offset % 9 != 0 {
                     let kg = 92 - 0.04 * Double(70 - offset) + 0.4 * sin(Double(offset))
                     try BodyWeight(weightKg: (kg * 10).rounded() / 10, measuredAt: date.addingTimeInterval(7 * 3600)).insert(db)

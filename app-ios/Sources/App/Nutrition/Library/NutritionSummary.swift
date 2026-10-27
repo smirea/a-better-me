@@ -8,10 +8,10 @@ struct MacroSummary: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                ForEach(NutrientSection.macroIDs, id: \.self) { id in
+                ForEach(NutrientID.macros, id: \.self) { id in
                     let nutrient = NutrientRegistry.nutrient(id)
                     VStack(spacing: 2) {
-                        Text(LibraryFormat.amount(amounts[id] ?? 0))
+                        Text(NutritionFormat.amount(amounts[id] ?? 0))
                             .font(AppFont.number(id == .energy ? 26 : 18))
                             .foregroundStyle(Theme.textPrimary)
                         Text(nutrient?.name ?? "")
@@ -46,7 +46,7 @@ struct NutrientBreakdown: View {
                 Section {
                     ForEach(rows, id: \.0.id) { nutrient, amount in
                         LabeledContent(nutrient.name) {
-                            Text(amount.map { LibraryFormat.value($0, of: nutrient) } ?? "–")
+                            Text(amount.map { NutritionFormat.amount($0, nutrient.unit) } ?? "–")
                                 .monospacedDigit()
                         }
                         .font(AppFont.body(15))
