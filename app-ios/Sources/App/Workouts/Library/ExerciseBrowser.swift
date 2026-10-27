@@ -169,7 +169,7 @@ struct ExerciseFilterBar: View {
                     )
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, Theme.margin)
         }
         .scrollIndicators(.hidden)
         .sheet(item: $equipmentSheet) { role in
@@ -273,9 +273,9 @@ struct EquipmentPickerSheet: View {
                                 HStack(spacing: 14) {
                                     EquipmentImage(equipmentID: item.id).frame(width: 32, height: 32)
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(item.name).font(AppFont.medium(15)).foregroundStyle(Theme.textPrimary)
+                                        Text(item.name).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
                                         if availability?.provides(item.id) == false {
-                                            Text("Not available in this gym").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                                            Text("Not available in this gym").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                                         }
                                     }
                                     Spacer()
@@ -317,9 +317,9 @@ struct MuscleFilterRow: View {
                             MuscleTile(muscle: muscle)
                                 .frame(width: 48, height: 48)
                                 .background(Theme.surface)
-                                .clipShape(.rect(cornerRadius: 8))
+                                .clipShape(.rect(cornerRadius: Theme.tinyCornerRadius))
                                 .overlay {
-                                    RoundedRectangle(cornerRadius: 8)
+                                    RoundedRectangle(cornerRadius: Theme.tinyCornerRadius)
                                         .strokeBorder(selection == muscle ? Theme.textPrimary : .clear, lineWidth: 2)
                                 }
                             Text(muscle.displayName)
@@ -334,7 +334,7 @@ struct MuscleFilterRow: View {
                     .accessibilityAddTraits(selection == muscle ? .isSelected : [])
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, Theme.margin)
         }
         .scrollIndicators(.hidden)
     }

@@ -290,7 +290,7 @@ private struct ProgramSettingsColorIcon: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Color").font(AppFont.title(18))
+                    SectionTitle("Color")
                     HStack {
                         ForEach(ProgramColor.allCases, id: \.self) { color in
                             Button { store.editProgram(program.id) { $0.color = color } } label: {
@@ -305,12 +305,12 @@ private struct ProgramSettingsColorIcon: View {
                             .accessibilityAddTraits(color == program.color ? .isSelected : [])
                         }
                     }
-                    Text("Icon").font(AppFont.title(18))
+                    SectionTitle("Icon")
                     ProgramIconGrid(selection: program.icon, color: program.color) { symbol in
                         store.editProgram(program.id) { $0.icon = symbol }
                     }
                 }
-                .padding()
+                .padding(Theme.margin)
             }
             .background(Theme.surface)
             .detailTitle("Color & Icon")
@@ -345,7 +345,7 @@ private struct ProgramSettingsDayOrder: View {
             List {
                 ForEach(Array(order.enumerated()), id: \.element.id) { index, day in
                     HStack {
-                        Text("Day \(index + 1)").font(AppFont.body(15))
+                        Text("Day \(index + 1)").font(AppFont.rowTitle)
                         Spacer()
                         pill(day)
                     }
@@ -381,7 +381,7 @@ private struct ProgramSettingsDayOrder: View {
             .padding(.horizontal, 12)
             .frame(height: 34)
             .overlay {
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: Theme.tinyCornerRadius)
                     .strokeBorder(name == nil ? Theme.textTertiary : Theme.textSecondary, style: StrokeStyle(lineWidth: 1, dash: name == nil ? [4] : []))
             }
     }
@@ -405,8 +405,8 @@ private struct ProgramSettingsDeload: View {
                 } label: {
                     HStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(choice.title(noun: program.cycleNoun)).font(AppFont.headline(15))
-                            Text(choice.summary).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                            Text(choice.title(noun: program.cycleNoun)).font(AppFont.rowTitle)
+                            Text(choice.summary).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                         }
                         Spacer()
                         Image(systemName: choice == program.config.deload ? "largecircle.fill.circle" : "circle").font(AppFont.title())
@@ -447,7 +447,7 @@ private struct ProgramSettingsDuplicate: View {
                     .padding()
                     .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
                     .focused($focused)
-                    .padding()
+                    .padding(Theme.margin)
                 Spacer()
             }
             .background(Theme.surface)

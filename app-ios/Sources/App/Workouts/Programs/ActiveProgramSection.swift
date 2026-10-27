@@ -23,7 +23,7 @@ struct ActiveProgramSection: View {
                 })
             } else {
                 Text("Drag a program block here")
-                    .font(AppFont.caption())
+                    .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
                     .frame(maxWidth: .infinity, minHeight: 72)
                     .overlay {

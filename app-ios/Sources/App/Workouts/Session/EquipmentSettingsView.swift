@@ -78,7 +78,7 @@ struct EquipmentSettingsView: View {
             }
         }
         .themedList()
-        .font(AppFont.medium(15))
+        .font(AppFont.rowTitle)
         .detailTitle("Equipment Settings")
         .onAppear { offsetText = Self.text(of: overrides.plateOffset, unit: unit) }
     }

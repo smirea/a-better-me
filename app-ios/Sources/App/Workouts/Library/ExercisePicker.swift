@@ -88,7 +88,7 @@ private struct SwapSubstitutions: View {
         .safeAreaInset(edge: .bottom) {
             Button("Find Other Replacements", action: findOther)
                 .secondaryPill()
-                .padding(.horizontal)
+                .padding(.horizontal, Theme.margin)
         }
         .sheet(item: $detail) { ref in
             let id = ref.id
@@ -278,7 +278,7 @@ private struct SelectionTray: View {
             if selection.ids.count > 1 {
                 ThemedSection {
                     Toggle(selection.ids.count > 2 ? "Add as a circuit?" : "Add as a superset?", isOn: $selection.asGroup)
-                        .font(AppFont.medium(15))
+                        .font(AppFont.rowTitle)
                         .tint(Theme.accent)
                 }
             }

@@ -46,9 +46,9 @@ struct WeekTargetsSheet: View {
             if periodized, !card.isDeload {
                 Toggle(isOn: $skip) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Skip Exercise").font(AppFont.headline(15))
+                        Text("Skip Exercise").font(AppFont.rowTitle)
                         Text("Exercise will be skipped on \(dayName), \(card.title)")
-                            .font(AppFont.caption())
+                            .font(AppFont.rowDetail)
                             .foregroundStyle(Theme.textSecondary)
                     }
                 }
@@ -102,20 +102,16 @@ struct WeekTargetsSavingOptions: View {
         NavigationStack {
             List {
                 if periodized {
-                    Section {
+                    ThemedSection("Cycle Settings") {
                         ForEach(CycleScope.allCases, id: \.self) { option in
                             radio(title(of: option), selected: scope.cycles == option) { scope.cycles = option }
                         }
-                    } header: {
-                        Text("Cycle Settings").font(AppFont.title(18)).foregroundStyle(Theme.textPrimary).textCase(nil)
                     }
                 }
-                Section {
+                ThemedSection("Exercise Settings") {
                     ForEach(ExerciseScope.allCases, id: \.self) { option in
                         radio(title(of: option), selected: scope.exercises == option) { scope.exercises = option }
                     }
-                } header: {
-                    Text("Exercise Settings").font(AppFont.title(18)).foregroundStyle(Theme.textPrimary).textCase(nil)
                 }
             }
             .listStyle(.plain)
@@ -138,7 +134,7 @@ struct WeekTargetsSavingOptions: View {
     private func radio(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
-                Text(title).font(AppFont.body(15))
+                Text(title).font(AppFont.rowTitle)
                 Spacer()
                 Image(systemName: selected ? "largecircle.fill.circle" : "circle").font(AppFont.title())
             }

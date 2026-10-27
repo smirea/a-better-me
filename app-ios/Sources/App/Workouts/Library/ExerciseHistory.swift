@@ -195,7 +195,7 @@ struct ExerciseHistoryTab: View {
                         Chip(title: records.rawValue, systemImage: "trophy", trailingImage: "chevron.down")
                     }
                 }
-                .padding()
+                .padding(Theme.margin)
             }
             .scrollIndicators(.hidden)
             if entries.isEmpty {
@@ -243,10 +243,10 @@ private struct HistoryRow: View {
                         .frame(width: 40, height: 40)
                         .background(Theme.accent, in: .rect(cornerRadius: Theme.smallCornerRadius))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(entry.date.formatted(date: .long, time: .omitted)).font(AppFont.medium(15))
-                        Text(entry.workoutName).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                        Text(entry.date.formatted(date: .long, time: .omitted)).font(AppFont.rowTitle)
+                        Text(entry.workoutName).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                         if let value = metric.value(of: entry, exercise: exercise) {
-                            Text(metric.format(value, unit: unit)).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                            Text(metric.format(value, unit: unit)).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                         }
                         if showsRecords && !entry.records.isEmpty {
                             HStack(spacing: 10) {
@@ -268,10 +268,7 @@ private struct HistoryRow: View {
             if isExpanded {
                 ForEach(Array(entry.sets.enumerated()), id: \.element.id) { index, set in
                     HStack(spacing: 12) {
-                        Text(set.type.badge ?? "\(entry.sets[...index].count { $0.type != .warmUp })")
-                            .font(AppFont.headline(11))
-                            .frame(width: 22, height: 22)
-                            .background(Theme.surfaceRaised, in: .circle)
+                        SetBadge(type: set.type, number: entry.sets.number(at: index), size: .compact)
                         Text(set.log.map { ExerciseHistory.describe($0, exercise: exercise, unit: unit) } ?? "")
                             .font(AppFont.body(14))
                         Spacer()
@@ -292,7 +289,7 @@ private struct HistoryRow: View {
                 }
             }
         }
-        .padding(.horizontal)
+        .padding(.horizontal, Theme.margin)
         .padding(.vertical, 12)
     }
 }

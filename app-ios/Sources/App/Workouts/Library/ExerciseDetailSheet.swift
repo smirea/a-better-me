@@ -29,7 +29,7 @@ struct ExerciseDetailSheet: View {
                             ForEach(DetailTab.allCases) { Text($0.rawValue).tag($0) }
                         }
                         .pickerStyle(.segmented)
-                        .padding(.horizontal)
+                        .padding(.horizontal, Theme.margin)
                         .padding(.bottom, 8)
                     }
                     .navigationTitle(exercise.name)
@@ -51,7 +51,7 @@ struct ExerciseDetailSheet: View {
                         dismiss()
                     }
                     .primaryPill()
-                    .padding(.horizontal)
+                    .padding(.horizontal, Theme.margin)
                 }
             }
         }
@@ -100,7 +100,7 @@ private struct InstructionsTab: View {
                 ForEach(content.articles) { CollapsibleSection(section: $0, startsExpanded: false) }
             }
         }
-        .padding()
+        .padding(Theme.margin)
         .task(id: source) { content = await source.load() }
     }
 
@@ -203,7 +203,7 @@ private struct DetailsTab: View {
                 }
             }
         }
-        .padding()
+        .padding(Theme.margin)
     }
 
     private var details: [(title: String, value: String)] {
@@ -228,7 +228,7 @@ private struct RatingRow: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(AppFont.medium(14))
-                Text("\(value)/5").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                Text("\(value)/5").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
             RatingBar(value: value)

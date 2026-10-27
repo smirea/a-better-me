@@ -189,7 +189,7 @@ private struct ProgramEditorScreen: View {
                     chip("Remove", systemImage: "minus.circle.fill") { confirming = .remove }.disabled(!canRemove)
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, Theme.margin)
             .padding(.vertical, 8)
         }
         .scrollIndicators(.hidden)
@@ -199,13 +199,13 @@ private struct ProgramEditorScreen: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Rest Day").font(AppFont.title())
+                    Text("Rest Day").font(AppFont.sectionTitle)
                     HStack(spacing: 16) {
                         Image(systemName: "beach.umbrella")
                             .font(AppFont.title(24))
                             .foregroundStyle(Theme.textTertiary)
                         Text("You can convert the rest day into a workout day by adding exercises below")
-                            .font(AppFont.caption())
+                            .font(AppFont.rowDetail)
                             .foregroundStyle(Theme.textSecondary)
                     }
                     .padding()
@@ -213,7 +213,7 @@ private struct ProgramEditorScreen: View {
                     .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textTertiary) }
                 }
                 HStack {
-                    Text("0 Exercises").font(AppFont.title())
+                    Text("0 Exercises").font(AppFont.sectionTitle)
                     Spacer()
                     Button("Add Exercises") { addingToRestDay = true }
                         .font(AppFont.headline(15))
@@ -221,7 +221,7 @@ private struct ProgramEditorScreen: View {
                         .buttonStyle(.plain)
                 }
             }
-            .padding()
+            .padding(Theme.margin)
         }
     }
 
@@ -234,7 +234,7 @@ private struct ProgramEditorScreen: View {
                 }
                 .buttonStyle(.glass)
                 .controlSize(.large)
-                .padding(.horizontal)
+                .padding(.horizontal, Theme.margin)
                 PinnedActionButton("Activate Program") { draft.activate() }
             }
         } else if !program.isActive {
@@ -263,7 +263,7 @@ private struct ProgramEditorGymOptions: View {
             List {
                 if gyms.isEmpty {
                     Text("No gym profiles yet.")
-                        .font(AppFont.caption())
+                        .font(AppFont.rowDetail)
                         .foregroundStyle(Theme.textSecondary)
                 }
                 ForEach(gyms) { gym in
@@ -274,9 +274,9 @@ private struct ProgramEditorGymOptions: View {
                         HStack(spacing: 16) {
                             Image(systemName: gym.icon).frame(width: 24)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(gym.name).font(AppFont.headline(15))
+                                Text(gym.name).font(AppFont.rowTitle)
                                 Text("\(gym.equipment.count) pieces of equipment")
-                                    .font(AppFont.caption())
+                                    .font(AppFont.rowDetail)
                                     .foregroundStyle(Theme.textSecondary)
                             }
                             Spacer()
@@ -294,9 +294,9 @@ private struct ProgramEditorGymOptions: View {
                     HStack(spacing: 16) {
                         Image(systemName: "house.lodge").frame(width: 24)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Manage Gym Profiles").font(AppFont.headline(15))
+                            Text("Manage Gym Profiles").font(AppFont.rowTitle)
                             Text("Add, edit, and remove gyms")
-                                .font(AppFont.caption())
+                                .font(AppFont.rowDetail)
                                 .foregroundStyle(Theme.textSecondary)
                         }
                     }
@@ -304,7 +304,7 @@ private struct ProgramEditorGymOptions: View {
                 .accessibilityLabel("Manage Gym Profiles")
                 .accessibilityHint("Add, edit, and remove gyms")
                 Toggle(isOn: $applyToAll) {
-                    Label("Apply to All Days", systemImage: "checklist").font(AppFont.headline(15))
+                    Label("Apply to All Days", systemImage: "checklist").font(AppFont.rowTitle)
                 }
                 .tint(Theme.accent)
                 .onChange(of: applyToAll) { _, on in

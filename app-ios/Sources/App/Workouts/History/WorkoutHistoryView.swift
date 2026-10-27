@@ -21,7 +21,7 @@ struct WorkoutHistoryView: View {
                     }
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
         }
         .background(Theme.background)
         .overlay {

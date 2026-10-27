@@ -39,7 +39,7 @@ struct WorkoutTab: View {
                             .padding(.horizontal, -20)
                             ForEach(settings.workout.sections.visible) { section($0, templates: templatesByID, finishedDays: finishedDays) }
                         }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, Theme.margin)
                         .padding(.bottom)
                     }
                 }
@@ -153,7 +153,7 @@ struct WorkoutTab: View {
             }
             if templates.isEmpty, libraryPrograms.isEmpty {
                 Text("Workouts you create appear here. Tap + to build one.")
-                    .font(AppFont.caption())
+                    .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
             } else if !libraryCollapsed {
                 ForEach(templates) { template in

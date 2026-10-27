@@ -40,7 +40,7 @@ struct EquipmentLoadEditor: View {
                 }
             }
             .themedList()
-            .font(AppFont.medium(15))
+            .font(AppFont.rowTitle)
             .detailTitle(equipment.name)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

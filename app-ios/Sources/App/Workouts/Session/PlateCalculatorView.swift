@@ -38,13 +38,13 @@ struct PlateCalculatorView: View {
                 }
                 if isExpanded { controls }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.vertical, 10)
             Divider().overlay(Theme.separator)
             Text(sentence)
-                .font(AppFont.caption(12))
+                .font(AppFont.rowDetail)
                 .foregroundStyle(Theme.textSecondary)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Theme.margin)
                 .padding(.vertical, 8)
         }
         .foregroundStyle(Theme.textPrimary)

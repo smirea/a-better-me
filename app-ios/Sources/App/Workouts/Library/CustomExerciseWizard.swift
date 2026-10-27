@@ -157,14 +157,14 @@ struct CustomExerciseWizard: View {
                 case .review: ReviewStep(draft: draft)
                 }
             }
-            .padding()
+            .padding(Theme.margin)
         }
         .scrollDismissesKeyboard(.interactively)
         .background(Theme.background)
         .detailTitle("Create Custom Exercise")
         .safeAreaBar(edge: .top) {
             ProgressView(value: Double(step.rawValue + 1), total: Double(Step.allCases.count))
-                .padding(.horizontal)
+                .padding(.horizontal, Theme.margin)
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 10) {
@@ -179,7 +179,7 @@ struct CustomExerciseWizard: View {
                         .disabled(!canAdvance(step))
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, Theme.margin)
         }
     }
 
@@ -219,7 +219,7 @@ private struct FieldLabel: View {
         HStack {
             Text(title).font(AppFont.medium(14))
             Spacer()
-            if let trailing { Text(trailing).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary) }
+            if let trailing { Text(trailing).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary) }
         }
     }
 }
@@ -340,7 +340,7 @@ private struct MuscleStep: View {
                                 .overlay(alignment: .bottomTrailing) {
                                     if let role {
                                         Text(role == .primary ? "P" : "S")
-                                            .font(AppFont.headline(11))
+                                            .font(AppFont.badge)
                                             .foregroundStyle(Theme.onPrimary)
                                             .frame(width: 18, height: 18)
                                             .background(Theme.textPrimary, in: .circle)
@@ -397,9 +397,9 @@ private struct EquipmentStep: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(role.title).font(AppFont.medium(15))
-                    Text(role.summary).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
-                    Text(role == .resistance ? "Required" : "Optional").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                    Text(role.title).font(AppFont.rowTitle)
+                    Text(role.summary).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+                    Text(role == .resistance ? "Required" : "Optional").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 }
                 Spacer()
                 Button(options.isEmpty ? "Add" : "Change") { picking = role }
@@ -457,7 +457,7 @@ private struct FinalDetailsStep: View {
             .onChange(of: percentText) { _, text in
                 draft.bodyWeightPercent = text.isEmpty ? nil : try? Double(text, format: .number)
             }
-            Text(contributionLine).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+            Text(contributionLine).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             ForEach(JointActionRole.allCases) { role in
                 FieldLabel(title: role.title).padding(.top, 12)
                 Button { choosing = role } label: {
@@ -476,12 +476,12 @@ private struct FinalDetailsStep: View {
                         draft.alternativeNames = String(text.prefix(CustomExerciseDraft.alternativeNamesLimit))
                     }
                 }
-            Text("Separate names with a comma").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+            Text("Separate names with a comma").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Description").font(AppFont.medium(15))
+                    Text("Description").font(AppFont.rowTitle)
                     Text(draft.about.isEmpty ? "Empty" : draft.about)
-                        .font(AppFont.caption(12))
+                        .font(AppFont.rowDetail)
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(3)
                 }
@@ -564,7 +564,7 @@ private struct JointActionPicker: View {
                             if isSelected { selection.removeAll { $0 == action } } else { selection = (selection + [action]).sorted() }
                         } label: {
                             HStack {
-                                Text(action).font(AppFont.body(15)).foregroundStyle(Theme.textPrimary)
+                                Text(action).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
                                 Spacer()
                                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                                     .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textTertiary)
@@ -600,7 +600,7 @@ private struct DescriptionEditor: View {
                 .scrollContentBackground(.hidden)
                 .padding(12)
                 .background(Theme.surfaceRaised, in: .rect(cornerRadius: Theme.smallCornerRadius))
-                .padding()
+                .padding(Theme.margin)
                 .frame(maxHeight: .infinity, alignment: .top)
                 .background(Theme.background)
                 .accessibilityLabel("Description")
@@ -668,7 +668,7 @@ private struct ReviewStep: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(AppFont.medium(14))
-                Text(value.map { "\($0)/5" } ?? "None").font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                Text(value.map { "\($0)/5" } ?? "None").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
             RatingBar(value: value ?? 0)

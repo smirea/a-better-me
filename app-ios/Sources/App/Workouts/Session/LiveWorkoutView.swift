@@ -221,7 +221,7 @@ struct SessionEditor: View {
             }
         }
         .foregroundStyle(Theme.textPrimary)
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Theme.margin)
         .frame(height: 52)
     }
 
@@ -246,7 +246,7 @@ struct SessionEditor: View {
                 }
                 .accessibilityLabel("Add Exercise")
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
         }
         .scrollIndicators(.hidden)
     }
@@ -273,12 +273,12 @@ struct SessionEditor: View {
                     .font(AppFont.caption(14))
                     .foregroundStyle(Theme.textSecondary)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             chips(item: item, isSuperset: blocks[block].isSuperset, hiddenWarmUps: hiddenWarmUpCount(block: block, exercise: index))
             setTable(block: block, exercise: index, fields: SetField.fields(for: exercise))
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Theme.margin)
             if let caption = bodyweightCaption(exercise) {
-                Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary).padding(.horizontal, 20)
+                Text(caption).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).padding(.horizontal, Theme.margin)
             }
             if let note = item.note, !note.isEmpty { noteCard("Session Note", note) }
             if !pinned.isEmpty { noteCard("Pinned Note", pinned) }
@@ -300,7 +300,7 @@ struct SessionEditor: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .card()
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Theme.margin)
     }
 
     private func chips(item: BlockExercise, isSuperset: Bool, hiddenWarmUps: Int) -> some View {
@@ -325,7 +325,7 @@ struct SessionEditor: View {
                     Button("Remove from Workout", systemImage: "trash", role: .destructive) { remove(item.id) }
                 } label: { chipLabel("More", "ellipsis") }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
         }
         .scrollIndicators(.hidden)
     }

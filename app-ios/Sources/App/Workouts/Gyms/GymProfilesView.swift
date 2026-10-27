@@ -35,7 +35,7 @@ struct GymProfilesView: View {
         .safeAreaInset(edge: .bottom) {
             Button("Add New Gym Profile") { adding = true }
                 .secondaryPill()
-                .padding(.horizontal)
+                .padding(.horizontal, Theme.margin)
         }
         .sheet(isPresented: $adding) {
             NewGymSheet(makesDefault: gyms.isEmpty) { editing = $0 }
@@ -56,7 +56,7 @@ private struct GymRow: View {
                 .foregroundStyle(Theme.textPrimary)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(gym.name).font(AppFont.headline(15)).foregroundStyle(Theme.textPrimary)
+                Text(gym.name).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
                 Text(gym.equipment.count == 1 ? "1 piece of equipment" : "\(gym.equipment.count) pieces of equipment")
                     .font(AppFont.caption(13))
                     .foregroundStyle(Theme.textSecondary)
@@ -101,7 +101,7 @@ private struct NewGymSheet: View {
                             HStack(spacing: 14) {
                                 Image(systemName: option.icon).font(.system(size: 18)).frame(width: 28)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(option.title).font(AppFont.headline(15))
+                                    Text(option.title).font(AppFont.rowTitle)
                                     Text(option.summary).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
                                 }
                                 Spacer()
@@ -126,7 +126,7 @@ private struct NewGymSheet: View {
             .safeAreaInset(edge: .bottom) {
                 Button("Create Gym Profile", action: create)
                     .primaryPill()
-                    .padding(.horizontal)
+                    .padding(.horizontal, Theme.margin)
             }
         }
     }

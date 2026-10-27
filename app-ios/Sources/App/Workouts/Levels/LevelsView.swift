@@ -64,10 +64,7 @@ struct LevelsHeader: View {
     let title: String
 
     var body: some View {
-        Text(title)
-            .font(AppFont.title())
-            .foregroundStyle(Theme.textPrimary)
-            .textCase(nil)
+        SectionTitle(title).textCase(nil)
             .padding(.leading, -16)
     }
 }

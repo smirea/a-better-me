@@ -81,7 +81,7 @@ struct NewProgramWizard: View {
                         .underline()
                         .disabled(inputs.muscleFocus.isEmpty)
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, Theme.margin)
             }
         }
         .navigationBarBackButtonHidden(step == .generating)
@@ -287,13 +287,13 @@ private struct WizardPage<Content: View, Footer: View>: View {
                 }
                 content
             }
-            .padding(.horizontal)
+            .padding(.horizontal, Theme.margin)
             .padding(.top, 16)
             .padding(.bottom)
         }
         .background(Theme.background)
         .safeAreaInset(edge: .top, spacing: 0) {
-            ProgressView(value: progress).padding(.horizontal)
+            ProgressView(value: progress).padding(.horizontal, Theme.margin)
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 12) {
@@ -324,12 +324,12 @@ struct WizardOption: View {
                     Image(systemName: icon).font(.system(size: 20, weight: .semibold)).frame(width: 28)
                 }
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(title).font(AppFont.headline(15))
+                    Text(title).font(AppFont.rowTitle)
                     if let subtitle {
-                        Text(subtitle).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                        Text(subtitle).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                     }
                     if let tag {
-                        Text(tag).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                        Text(tag).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -385,7 +385,7 @@ private struct MuscleFocusList: View {
             ForEach(muscles) { muscle in
                 HStack(spacing: 14) {
                     MuscleTile(muscle: muscle).frame(width: 44, height: 50)
-                    Text(muscle.displayName).font(AppFont.headline(15))
+                    Text(muscle.displayName).font(AppFont.rowTitle)
                     Spacer()
                     thumb(.less, muscle)
                     thumb(.more, muscle)
@@ -405,7 +405,7 @@ private struct MuscleFocusList: View {
         }
         .labelStyle(.iconOnly)
         .font(.system(size: 15, weight: .semibold))
-        .foregroundStyle(isOn ? Theme.background : Theme.textPrimary)
+        .foregroundStyle(isOn ? Theme.onPrimary : Theme.textPrimary)
         .frame(width: 36, height: 36)
         .background(isOn ? Theme.textPrimary : Theme.surfaceRaised, in: .circle)
         .opacity(chosen != nil && !isOn ? 0.35 : 1)
@@ -425,25 +425,25 @@ private struct KeepSelections: View {
         card(icon: "cloud.fill") {
             Toggle("Deload", isOn: $deload).labelsHidden().tint(Theme.accent)
         } text: {
-            Text("Deload").font(AppFont.headline(15))
+            Text("Deload").font(AppFont.rowTitle)
             Text("This program's training block will end with a lighter week to promote recovery and readiness for the next phase")
-                .font(AppFont.caption())
+                .font(AppFont.rowDetail)
                 .foregroundStyle(Theme.textSecondary)
-            Text("Recommended").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+            Text("Recommended").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
         }
         card(icon: "chart.bar.fill") {
             RoundIconButton("Edit Lifting Experience", systemImage: "pencil", size: .small) { editingExperience = true }
         } text: {
-            Text("Lifting Experience").font(AppFont.headline(15))
+            Text("Lifting Experience").font(AppFont.rowTitle)
             Text(ExperienceChoice(profile.liftingExperience, pickedNone: pickedNone).title)
-                .font(AppFont.caption())
+                .font(AppFont.rowDetail)
                 .foregroundStyle(Theme.textSecondary)
         }
         card(icon: "checklist") {
             RoundIconButton("Edit Exercise Assessment", systemImage: "pencil", size: .small) { assessing = true }
         } text: {
-            Text("Exercise Assessment").font(AppFont.headline(15))
-            Text(assessmentStatus).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+            Text("Exercise Assessment").font(AppFont.rowTitle)
+            Text(assessmentStatus).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
         }
         .sheet(isPresented: $editingExperience) {
             ExperienceSheet(selected: ExperienceChoice(profile.liftingExperience, pickedNone: pickedNone)) { pickedNone = $0 == .none }
@@ -470,7 +470,7 @@ private struct KeepSelections: View {
             HStack {
                 Image(systemName: icon)
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Theme.background)
+                    .foregroundStyle(Theme.onPrimary)
                     .frame(width: 30, height: 30)
                     .background(Theme.textPrimary, in: .circle)
                 Spacer()
@@ -527,12 +527,12 @@ private struct ExperienceSheet: View {
                             HStack(spacing: 14) {
                                 Image(systemName: "cellularbars", variableValue: choice.bars)
                                     .font(.system(size: 13, weight: .bold))
-                                    .foregroundStyle(Theme.background)
+                                    .foregroundStyle(Theme.onPrimary)
                                     .frame(width: 30, height: 30)
                                     .background(Theme.textPrimary, in: .circle)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(choice.title).font(AppFont.headline(15))
-                                    Text(choice.summary).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                                    Text(choice.title).font(AppFont.rowTitle)
+                                    Text(choice.summary).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                                 }
                                 Spacer()
                                 Image(systemName: choice == selected ? "record.circle.fill" : "circle")
@@ -571,7 +571,7 @@ private struct ColorPickerRow: View {
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(Theme.background)
                     .frame(width: 34, height: 34)
-                    .background(color.swatch, in: RoundedRectangle(cornerRadius: 8))
+                    .background(color.swatch, in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
                     .overlay {
                         RoundedRectangle(cornerRadius: 10)
                             .strokeBorder(Theme.textPrimary, lineWidth: 2)

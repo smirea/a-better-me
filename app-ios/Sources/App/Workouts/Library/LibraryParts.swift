@@ -76,13 +76,13 @@ struct LibraryExerciseRow<Trailing: View>: View {
             ExerciseTile(exercise: exercise, size: .small)
             VStack(alignment: .leading, spacing: 2) {
                 Text(search.highlighted(exercise.name))
-                    .font(AppFont.medium(15))
+                    .font(AppFont.rowTitle)
                     .foregroundStyle(Theme.textPrimary)
                 Text(exercise.muscleLine)
-                    .font(AppFont.caption(12))
+                    .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
                 if let subtitle {
-                    Text(subtitle).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                    Text(subtitle).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

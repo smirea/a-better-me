@@ -22,7 +22,7 @@ extension SessionEditor {
             .font(AppFont.medium(13))
             .foregroundStyle(Theme.textSecondary)
             if item.sets.isEmpty {
-                Text("No sets yet").font(AppFont.caption()).foregroundStyle(Theme.textTertiary).padding(.vertical, 8)
+                Text("No sets yet").font(AppFont.rowDetail).foregroundStyle(Theme.textTertiary).padding(.vertical, 8)
             }
             ForEach(rows, id: \.self) { path in
                 row(path, number: item.sets.number(at: path.set), fields: fields, previous: previous)
@@ -119,7 +119,7 @@ extension SessionEditor {
                 Text(lines.empty).foregroundStyle(Theme.textTertiary)
             }
         }
-        .font(AppFont.caption(12))
+        .font(AppFont.rowDetail)
         .lineLimit(1)
         .minimumScaleFactor(0.8)
     }
@@ -145,9 +145,9 @@ extension SessionEditor {
                 .font(AppFont.medium(16))
                 .foregroundStyle(isFocused && focus?.replacesOnType == true ? Theme.accent : Theme.textPrimary)
                 .frame(maxWidth: .infinity, minHeight: 36)
-                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 8))
+                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
                 .overlay {
-                    if isFocused { RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.textPrimary, lineWidth: 2) }
+                    if isFocused { RoundedRectangle(cornerRadius: Theme.tinyCornerRadius).strokeBorder(Theme.textPrimary, lineWidth: 2) }
                 }
                 .overlay(alignment: .bottomTrailing) {
                     if field.isReps, value.rir != nil || (path.sub == nil && blocks[path.block].exercises[path.exercise].sets[path.set].type != .warmUp) {

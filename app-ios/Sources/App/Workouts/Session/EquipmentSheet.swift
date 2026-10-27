@@ -31,7 +31,7 @@ struct EquipmentSheet<Settings: View>: View {
                         }
                     }
                 }
-                .padding(20)
+                .padding(Theme.margin)
             }
             .background(Theme.background)
             .detailTitle("Equipment")
@@ -59,9 +59,9 @@ struct EquipmentSheet<Settings: View>: View {
                     HStack(spacing: 6) {
                         ForEach(items, id: \.self) { EquipmentImage(equipmentID: $0).frame(width: 28, height: 28) }
                     }
-                    Text(name).font(AppFont.medium(15)).multilineTextAlignment(.leading)
+                    Text(name).font(AppFont.rowTitle).multilineTextAlignment(.leading)
                     if !option.isAvailable {
-                        Text(option.unavailableLabel).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                        Text(option.unavailableLabel).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                     }
                 }
                 Spacer()

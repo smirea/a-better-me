@@ -60,7 +60,7 @@ struct CustomSectionView: View {
             }
             if templates.isEmpty {
                 Text("Workouts you add to this section appear here. Tap ⋮ to add one from your library.")
-                    .font(AppFont.caption())
+                    .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
             } else if !section.collapsed {
                 ForEach(templates) { template in

@@ -12,7 +12,7 @@ struct ExerciseAssessmentView: View {
             Section {
                 ForEach(AssessmentQuestion.all) { question in
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(question.text).font(AppFont.medium(15))
+                        Text(question.text).font(AppFont.rowTitle)
                         Picker(question.text, selection: answer(question)) {
                             Text("No").tag(String?.some(AssessmentQuestion.no))
                             Text("Yes").tag(String?.some(AssessmentQuestion.yes))

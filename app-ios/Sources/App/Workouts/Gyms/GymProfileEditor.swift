@@ -233,7 +233,7 @@ private struct EquipmentRow: View {
         HStack(spacing: 14) {
             EquipmentImage(equipmentID: item.id).frame(width: 40, height: 40)
             VStack(alignment: .leading, spacing: 3) {
-                Text(item.name).font(AppFont.headline(15)).foregroundStyle(Theme.textPrimary)
+                Text(item.name).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
                 if let load {
                     Text(load.summary(in: unit))
                         .font(AppFont.caption(13))
@@ -291,7 +291,7 @@ private struct GymActions: View {
                 Button { onRemove?() } label: { Chip(title: "Remove", systemImage: "minus.circle.fill") }
                     .disabled(onRemove == nil)
             }
-            .padding(.horizontal)
+            .padding(.horizontal, Theme.margin)
             .padding(.vertical, 4)
         }
         .scrollIndicators(.hidden)

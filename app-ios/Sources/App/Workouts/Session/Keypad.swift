@@ -220,7 +220,7 @@ struct Keypad: View {
             Text(title)
                 .font(AppFont.headline(17))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .foregroundStyle(partial == value ? .black : Theme.textPrimary)
+                .foregroundStyle(partial == value ? Theme.onPrimary : Theme.textPrimary)
                 .background(partial == value ? Theme.textPrimary : .clear, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
         }
         .accessibilityLabel(value ? "Partial reps" : "Full reps")
@@ -232,7 +232,7 @@ struct Keypad: View {
         return Button { onKey(isNext ? .next : .done) } label: {
             Image(systemName: isNext ? "arrow.right" : "checkmark")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .foregroundStyle(.black)
+                .foregroundStyle(Theme.onPrimary)
                 .background(Theme.textPrimary, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
         }
         .frame(height: isNext ? Self.keyHeight : Self.keyHeight * 2 + 4)

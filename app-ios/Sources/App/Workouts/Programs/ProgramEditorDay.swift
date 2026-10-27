@@ -134,7 +134,7 @@ struct WeekCardsRow: View {
             .scrollIndicators(.hidden)
             if let note = item.note, !note.isEmpty {
                 Label {
-                    Text(note).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                    Text(note).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 } icon: {
                     Image(systemName: "pin.fill").foregroundStyle(Theme.textPrimary)
                 }
@@ -153,13 +153,13 @@ private struct WeekCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(AppFont.headline(15))
+            Text(title).font(AppFont.rowTitle)
             if let sets {
                 ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
                     TargetLine(set: set, number: sets.number(at: index))
                 }
             } else {
-                Text("Skipped").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                Text("Skipped").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             }
         }
         .padding(12)
@@ -184,7 +184,7 @@ struct ProgramEditorReorderSheet: View {
                     HStack(spacing: 12) {
                         ExerciseTile(exercise: block.exercises.first.flatMap { catalog.exercise($0.exerciseID) }, badge: block.isSuperset ? .superset : nil)
                         Text(block.exercises.map { catalog.name($0.exerciseID) }.joined(separator: " + "))
-                            .font(AppFont.headline(15))
+                            .font(AppFont.rowTitle)
                     }
                 }
                 .onMove { blocks.move(fromOffsets: $0, toOffset: $1) }
@@ -220,7 +220,7 @@ struct ProgramEditorMoveSheet: View {
                             dismiss()
                         } label: {
                             Text("Day \(index + 1) | \(name(of: day))")
-                                .font(AppFont.headline(15))
+                                .font(AppFont.rowTitle)
                                 .foregroundStyle(Theme.textPrimary)
                         }
                     }

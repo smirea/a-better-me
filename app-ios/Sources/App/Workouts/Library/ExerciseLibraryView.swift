@@ -319,7 +319,7 @@ private struct WarmUpSchemeEditor: View {
                             .labelsHidden()
                             .accessibilityValue("\(step.wrappedValue.reps) reps")
                     }
-                    .font(AppFont.medium(15))
+                    .font(AppFont.rowTitle)
                 }
                 .onDelete { steps.remove(atOffsets: $0) }
                 Button("Add Warm-Up Set", systemImage: "plus") {

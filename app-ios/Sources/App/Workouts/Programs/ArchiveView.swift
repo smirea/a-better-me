@@ -10,10 +10,10 @@ struct ArchiveView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Archive").font(AppFont.title())
+                Text("Archive").font(AppFont.sectionTitle)
                 if programs.isEmpty, workouts.isEmpty {
                     Text("Programs and workouts you archive appear here.")
-                        .font(AppFont.caption())
+                        .font(AppFont.rowDetail)
                         .foregroundStyle(Theme.textSecondary)
                 }
                 let byID = Dictionary(templates.map { ($0.id, $0) }) { first, _ in first }
@@ -25,7 +25,7 @@ struct ArchiveView: View {
                         .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, Theme.margin)
             .padding(.bottom)
         }
         .background(Theme.background)

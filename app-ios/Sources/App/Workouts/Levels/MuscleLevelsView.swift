@@ -53,7 +53,7 @@ private struct LiftRow: View {
             ExerciseTile(exercise: exercise)
             VStack(alignment: .leading, spacing: 6) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(exercise.name).font(AppFont.headline(15)).lineLimit(2)
+                    Text(exercise.name).font(AppFont.rowTitle).lineLimit(2)
                     Text(WeeklySets.label(sets)).font(AppFont.caption(14)).foregroundStyle(Theme.textSecondary)
                 }
                 .accessibilityElement(children: .combine)

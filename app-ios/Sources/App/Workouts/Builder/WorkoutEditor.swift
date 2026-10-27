@@ -47,7 +47,7 @@ struct WorkoutEditor: View {
     private func targetMuscles(_ targets: [MuscleTarget]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Target Muscles").font(AppFont.title())
+                Text("Target Muscles").font(AppFont.sectionTitle)
                 Spacer()
                 if let program {
                     Picker("Target Muscles span", selection: program.span) {
@@ -82,10 +82,10 @@ struct WorkoutEditor: View {
         }
         return HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(count == 1 ? "1 Exercise" : "\(count) Exercises").font(AppFont.title())
+                Text(count == 1 ? "1 Exercise" : "\(count) Exercises").font(AppFont.sectionTitle)
                 if program == nil {
                     Text("Estimated workout time is \(minutes) min")
-                        .font(AppFont.caption())
+                        .font(AppFont.rowDetail)
                         .foregroundStyle(Theme.textSecondary)
                 }
             }
@@ -166,9 +166,9 @@ private struct BlockView: View {
         let rounds = block.exercises.map(\.sets.count).max() ?? 0
         return HStack {
             VStack(alignment: .leading, spacing: 0) {
-                Text(block.exercises.count > 2 ? "Circuit" : "Superset").font(AppFont.headline(15))
+                Text(block.exercises.count > 2 ? "Circuit" : "Superset").font(AppFont.rowTitle)
                 Text(rounds == 1 ? "1 round" : "\(rounds) rounds")
-                    .font(AppFont.caption(12))
+                    .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
             }
             Spacer()
@@ -211,7 +211,7 @@ private struct ExerciseRow: View {
             HStack(alignment: .top, spacing: 16) {
                 ExerciseTile(exercise: exercise, badge: inSuperset ? .superset : nil)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(catalog.name(item.exerciseID)).font(AppFont.headline(15))
+                    Text(catalog.name(item.exerciseID)).font(AppFont.rowTitle)
                     if let exercise { MuscleTags(exercise: exercise) }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -228,13 +228,13 @@ private struct ExerciseRow: View {
         return HStack(alignment: .top, spacing: 16) {
             ExerciseTile(exercise: exercise, badge: inSuperset ? .superset : nil)
             VStack(alignment: .leading, spacing: 4) {
-                Text(catalog.name(item.exerciseID)).font(AppFont.headline(15))
+                Text(catalog.name(item.exerciseID)).font(AppFont.rowTitle)
                 if hasTargets {
                     ForEach(Array(item.sets.enumerated()), id: \.element.id) { index, set in
                         TargetLine(set: set, number: item.sets.number(at: index))
                     }
                 } else {
-                    Text("No target set").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                    Text("No target set").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 }
                 if let exercise { MuscleTags(exercise: exercise) }
             }
@@ -303,7 +303,7 @@ struct TargetLine: View {
         HStack(spacing: 6) {
             SetBadge(type: set.type, number: number, size: .compact)
             Text(set.targets.repsText)
-                .font(AppFont.caption())
+                .font(AppFont.rowDetail)
                 .foregroundStyle(Theme.textSecondary)
             Spacer()
             if let rir = set.target?.rir { RIRBadge(rir: rir) }

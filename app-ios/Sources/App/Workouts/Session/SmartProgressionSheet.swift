@@ -48,7 +48,7 @@ struct SmartProgressionSheet: View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "info.circle").font(.title3).padding(.top, 2)
             VStack(alignment: .leading, spacing: 4) {
-                Text("Target rep ranges were adjusted").font(AppFont.headline(15))
+                Text("Target rep ranges were adjusted").font(AppFont.rowTitle)
                 Text("Smart Progression has widened the target rep range of \(adjustedCount) \(adjustedCount == 1 ? "set" : "sets") without making permanent changes to this workout")
                     .font(AppFont.caption())
             }

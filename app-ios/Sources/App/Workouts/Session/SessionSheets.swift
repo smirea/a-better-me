@@ -68,7 +68,7 @@ struct RestTimerSheet: View {
                 .scrollIndicators(.hidden)
                 Spacer(minLength: 0)
             }
-            .padding(20)
+            .padding(Theme.margin)
             .detailTitle("Rest Timer")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -85,7 +85,7 @@ struct RestTimerSheet: View {
                 if let icon { Image(systemName: icon) }
                 Text(title)
             }
-            .font(AppFont.medium(14))
+            .font(AppFont.chip)
             .frame(height: 28)
         }
         .buttonStyle(.glass)
@@ -124,16 +124,16 @@ struct WarmUpSheet: View {
                         HStack(spacing: 12) {
                             SetBadge(type: .warmUp, number: 0)
                             VStack(alignment: .leading) {
-                                Text(row.label).font(AppFont.medium(15))
+                                Text(row.label).font(AppFont.rowTitle)
                                 Text("\(unit.label(kg: row.weightKg))")
-                                    .font(AppFont.caption())
+                                    .font(AppFont.rowDetail)
                                     .foregroundStyle(Theme.textSecondary)
                             }
                             Spacer()
                             Text("\(row.reps)")
-                                .font(AppFont.medium(15))
+                                .font(AppFont.rowTitle)
                                 .frame(width: 44, height: 32)
-                                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 8))
+                                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
                             Button("Add", systemImage: "plus") { add([row]) }
                                 .labelStyle(.iconOnly)
                                 .buttonStyle(.glass)
@@ -164,7 +164,7 @@ struct WarmUpSheet: View {
                         Label {
                             VStack(alignment: .leading) {
                                 Text("Add empty warm-up set")
-                                Text("Add a warm-up set to your workout").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                                Text("Add a warm-up set to your workout").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                             }
                         } icon: { Image(systemName: "plus") }
                     }
@@ -230,9 +230,9 @@ struct NoteSheet: View {
                 }
                 .buttonStyle(.glassProminent)
                 .tint(Theme.textPrimary)
-                .foregroundStyle(.black)
+                .foregroundStyle(Theme.onPrimary)
             }
-            .padding(20)
+            .padding(Theme.margin)
             .detailTitle("Note")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -249,9 +249,9 @@ struct NoteSheet: View {
     private func editor(_ title: String, text: Binding<String>, prompt: String, footer: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(title).font(AppFont.headline(15))
+                Text(title).font(AppFont.rowTitle)
                 Spacer()
-                Text("\(text.wrappedValue.count)/\(Self.limit)").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                Text("\(text.wrappedValue.count)/\(Self.limit)").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             }
             TextField(prompt, text: text, axis: .vertical)
                 .lineLimit(3...8)
@@ -260,7 +260,7 @@ struct NoteSheet: View {
                 .onChange(of: text.wrappedValue) { _, value in
                     if value.count > Self.limit { text.wrappedValue = String(value.prefix(Self.limit)) }
                 }
-            Text(footer).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+            Text(footer).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
         }
     }
 

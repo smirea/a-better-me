@@ -11,10 +11,10 @@ struct ActiveSessionBar: View {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 0) {
-                            Text(session.name).font(AppFont.headline(15)).lineLimit(1)
+                            Text(session.name).font(AppFont.rowTitle).lineLimit(1)
                             let store = LiveSessionStore.shared
                             Text(store.pausedAt != nil ? "Paused" : Duration.seconds(session.elapsed(at: context.date, pausedAt: nil)).formatted(.time(pattern: .hourMinuteSecond)))
-                                .font(AppFont.caption())
+                                .font(AppFont.rowDetail)
                                 .monospacedDigit()
                                 .foregroundStyle(Theme.textSecondary)
                         }
