@@ -56,7 +56,7 @@ struct StrategyInputs {
             statuses: log.status,
             weighInDays: Set(weighIns.map { CalendarDay($0.date, in: calendar) }),
             trendWeightKg: trendSeries.last?.value,
-            expenditureKcal: series.last?.kcal ?? initial,
+            expenditureKcal: settings.expenditure.staticKcal ?? series.last?.kcal ?? initial,
             isStaticExpenditure: settings.expenditure.staticKcal != nil
         )
     }
