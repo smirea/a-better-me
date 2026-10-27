@@ -120,7 +120,28 @@ struct FoodSearchTests {
         ])
         #expect(results[0].portion.serving == Serving(measure: cup, quantity: 2))
         #expect(results[0].food == nil)
-        #expect(names(try search.local("")) == ["history Bananas, raw", "history Yogurt"])
+    }
+
+    @Test func latestListsFoodsByWhenTheyWereLoggedAtTheirLastServing() async throws {
+        let banana = try #require(try catalog.foods([173944])[173944]).snapshot
+        let cup = banana.nutrition.measures[1]
+        let container = yogurt.nutrition.measures[0]
+        let morning = Date(timeIntervalSince1970: 1_700_000_000)
+        let copied = FoodEntry(FoodPortion(yogurt, serving: Serving(measure: container, quantity: 2)), day: monday.adding(days: 3), minute: 420, at: morning.addingTimeInterval(60))
+        try await store.write { db in
+            try FoodEntry(FoodPortion(yogurt), day: monday, minute: 420, at: morning).insert(db)
+            try copied.insert(db)
+            try FoodEntry(FoodPortion(banana, serving: Serving(measure: cup, quantity: 2)), day: monday, minute: 480, at: morning.addingTimeInterval(120)).insert(db)
+            try FoodEntry(FoodPortion(banana), day: monday.adding(days: -1), minute: 900, at: morning.addingTimeInterval(180)).insert(db)
+        }.value
+        let latest = try await search().local("")
+        #expect(names(latest) == ["history Bananas, raw", "history Yogurt"])
+        #expect(latest.map { NutritionFormat.serving($0.portion.serving) } == ["1 medium (7\" to 7-7/8\" long)", "2 container"])
+
+        store.editEntry(copied.id) { $0.serving = Serving(measure: container, quantity: 3) }
+        let edited = try await search().local("")
+        #expect(names(edited) == ["history Yogurt", "history Bananas, raw"])
+        #expect(edited[0].portion.serving.quantity == 3)
     }
 
     @Test func favoritesRecipesAndCustomFoodsMatchTheirNamesAndBrands() async throws {

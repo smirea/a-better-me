@@ -13,18 +13,39 @@ extension NutrientID {
     }
 }
 
-/// The round + that puts a food on the plate without leaving the list, MacroFactor's Multi-Add.
+/// The round + that puts a food on the plate without leaving the list, MacroFactor's Multi-Add: a 26 pt circle in a
+/// 44 pt target that turns into a check for a moment after each add.
 struct AddToPlateButton: View {
     let food: FoodSnapshot
     let add: () -> Void
     @State private var added = 0
+    @State private var showsCheck = false
 
     var body: some View {
-        RoundIconButton("Add \(food.name) to plate", systemImage: "plus", size: .small) {
+        Button {
             added += 1
             add()
+        } label: {
+            Image(systemName: showsCheck ? "checkmark" : "plus")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(showsCheck ? Theme.onPrimary : Theme.textPrimary)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 26, height: 26)
+                .background(showsCheck ? Theme.textPrimary : Theme.surfaceRaised, in: .circle)
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Add \(food.name) to plate")
+        .accessibilityValue(showsCheck ? "Added" : "")
         .sensoryFeedback(.success, trigger: added)
+        .task(id: added) {
+            guard added > 0 else { return }
+            withAnimation(.snappy) { showsCheck = true }
+            try? await Task.sleep(for: .seconds(1.2))
+            guard !Task.isCancelled else { return }
+            withAnimation(.snappy) { showsCheck = false }
+        }
     }
 }
 

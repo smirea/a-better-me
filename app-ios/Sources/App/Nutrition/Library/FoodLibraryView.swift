@@ -172,6 +172,7 @@ struct FoodLibraryView: View {
                 AddToPlateButton(food: food) { onAdd(FoodPortion(food, serving: serving)) }
             }
         }
+        .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 8))
     }
 
     private func deleteButton(_ item: Item, title: String = "Delete") -> some View {

@@ -34,7 +34,7 @@ enum FoodLogSeed {
         for (offset, meals) in days.enumerated() {
             let day = today.adding(days: -offset)
             for (index, (minute, food, quantity)) in meals.enumerated() where offset > 0 || minute <= nowMinute {
-                var entry = FoodEntry(FoodPortion(food, serving: Serving(measure: food.nutrition.measures[0], quantity: quantity)), day: day, minute: minute)
+                var entry = FoodEntry(FoodPortion(food, serving: Serving(measure: food.nutrition.measures[0], quantity: quantity)), day: day, minute: minute, at: Calendar.current.date(bySettingHour: minute / 60, minute: minute % 60, second: 0, of: day.date)!)
                 entry.id = DevSeed.id("food/\(offset)/\(index)")
                 try entry.insert(db)
             }

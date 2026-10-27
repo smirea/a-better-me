@@ -2,10 +2,10 @@ import Foundation
 import GRDB
 import os
 
-/// Where a result comes from, in the order the logger lists them: MacroFactor's From History, then the owner's own
-/// foods, then Common (USDA) and Branded (Open Food Facts).
+/// Where a result comes from, in the order the logger lists them: the hour's Picks above an empty search, MacroFactor's
+/// From History, then the owner's own foods, then Common (USDA) and Branded (Open Food Facts).
 enum FoodSearchGroup: Int, Comparable, Sendable {
-    case history, favorites, custom, recipes, common, branded
+    case picks, history, favorites, custom, recipes, common, branded
 
     static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
 }
@@ -33,9 +33,9 @@ struct FoodSearchResult: Identifiable, Hashable, Sendable {
     static func key(_ food: FoodSnapshot) -> String { food.foodID ?? "\(food.name)|\(food.brand ?? "")" }
 }
 
-/// The owner's side of a search, read once when the logger opens: one history row per food (its latest serving,
-/// newest first), favorites, custom foods, recipes, and the Open Food Facts foods already cached, which keep branded
-/// results working offline.
+/// The owner's side of a search, read once when the logger opens: one history row per food (its latest serving, most
+/// recently logged first), each hour's Picks, favorites, custom foods, recipes, and the Open Food Facts foods already
+/// cached, which keep branded results working offline.
 struct FoodLibrary: Sendable {
     fileprivate struct Item: Sendable {
         let result: FoodSearchResult
@@ -48,11 +48,13 @@ struct FoodLibrary: Sendable {
     }
 
     fileprivate var items: [FoodSearchGroup: [Item]] = [:]
+    fileprivate var picks: [Int: [FoodSearchResult]] = [:]
 
-    static func read(_ db: Database) throws -> FoodLibrary {
-        // Bare columns beside MAX() come from the row holding the max, so each food brings its latest serving.
+    static func read(_ db: Database, today: CalendarDay) throws -> FoodLibrary {
+        // Bare columns beside MAX() come from the row holding the max, so each food brings its latest serving. Logging
+        // or editing an entry sets updated_at, so a copy onto a future day ranks by when it was copied, not by its day.
         let history = try Row.fetchAll(db, sql: """
-            SELECT food, serving, MAX(day || printf('%04d', minute) || created_at) AS latest
+            SELECT food, serving, MAX(updated_at || day || printf('%04d', minute) || created_at || id) AS latest
             FROM food_entries
             WHERE json_extract(food, '$.source') <> 'quick_add'
             GROUP BY COALESCE(json_extract(food, '$.foodID'), json_extract(food, '$.name') || '|' || COALESCE(json_extract(food, '$.brand'), ''))
@@ -61,7 +63,14 @@ struct FoodLibrary: Sendable {
             FoodSearchResult(.history, FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving))
         }
         let foods = try Food.filter(Column("archived") == false).fetchAll(db)
+        let recent = try Row.fetchAll(db, sql: """
+            SELECT food, serving, day, minute, updated_at || created_at || id AS written FROM food_entries
+            WHERE day BETWEEN ? AND ? AND json_extract(food, '$.source') <> 'quick_add'
+            """, arguments: [today.adding(days: -(HourPicks.days - 1)).description, today.description]).map { row in
+            HourPicks.Entry(portion: FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving), day: try row.day("day"), minute: row["minute"], written: row["written"])
+        }
         var library = FoodLibrary()
+        library.picks = HourPicks.picks(recent, today: today).mapValues { $0.map { FoodSearchResult(.picks, $0) } }
         library.items[.history] = history.map(Item.init)
         library.items[.favorites] = try FoodFavorite.fetchAll(db).sorted { $0.createdAt < $1.createdAt }
             .map { Item(FoodSearchResult(.favorites, $0.portion)) }
@@ -87,7 +96,8 @@ final class FoodSearch {
     private(set) var library: FoodLibrary
 
     convenience init(store: LocalStore, catalog: USDACatalog = .bundled, branded: any BrandedFoodSource = FoodDatabaseClient.live) throws {
-        self.init(store: store, catalog: catalog, branded: branded, library: try store.read(FoodLibrary.read))
+        let today = CalendarDay.today
+        self.init(store: store, catalog: catalog, branded: branded, library: try store.read { try FoodLibrary.read($0, today: today) })
     }
 
     private init(store: LocalStore, catalog: USDACatalog, branded: any BrandedFoodSource, library: FoodLibrary) {
@@ -100,22 +110,31 @@ final class FoodSearch {
     /// The search with its history read and the bundled catalog's 7,300 names loaded off the main actor, for a screen
     /// that opens one.
     static func load(store: LocalStore, catalog: USDACatalog? = nil, branded: any BrandedFoodSource = FoodDatabaseClient.live) async throws -> FoodSearch {
-        async let library = store.database.pool.read(FoodLibrary.read)
+        let today = CalendarDay.today
+        async let library = store.database.pool.read { try FoodLibrary.read($0, today: today) }
         let catalog = await Task.detached { catalog ?? .bundled }.value
         return FoodSearch(store: store, catalog: catalog, branded: branded, library: try await library)
     }
 
     /// Rereads the owner's side, after logging or editing foods.
     func reload() throws {
-        library = try store.read(FoodLibrary.read)
+        let today = CalendarDay.today
+        library = try store.read { try FoodLibrary.read($0, today: today) }
     }
 
     /// `reload`, read off the main actor.
     func refresh() async throws {
-        library = try await store.database.pool.read(FoodLibrary.read)
+        let today = CalendarDay.today
+        library = try await store.database.pool.read { try FoodLibrary.read($0, today: today) }
     }
 
-    /// Everything that needs no network. An empty query lists the history, newest first (MacroFactor's Latest).
+    /// The foods usually logged within `hour` (`HourPicks`), at their last serving there.
+    func picks(hour: Int) -> [FoodSearchResult] {
+        library.picks[hour] ?? []
+    }
+
+    /// Everything that needs no network. An empty query lists the history, most recently logged first (MacroFactor's
+    /// Latest).
     func local(_ query: String) throws -> [FoodSearchResult] {
         try index.local(query)
     }

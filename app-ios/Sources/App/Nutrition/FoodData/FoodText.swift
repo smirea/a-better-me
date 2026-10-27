@@ -19,8 +19,35 @@ struct FoodText: Sendable {
     /// The query's search terms, stemmed the same way as names.
     static func terms(_ text: String) -> [String] {
         text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
-            .split { !($0.isLetter || $0.isNumber || $0 == "%") }
+            .split { !isWordCharacter($0) }
             .map { stem(String($0)) }
+    }
+
+    /// The parts of `name` that `terms` matched, for drawing them bold: a whole word when its stem is a term ("Bananas"
+    /// for "banana"), else as many of the word's first letters as the longest term it starts with ("Ban" for "ban").
+    static func matches(in name: String, terms: [String]) -> [Range<String.Index>] {
+        guard !terms.isEmpty else { return [] }
+        var ranges: [Range<String.Index>] = []
+        var index = name.startIndex
+        while index < name.endIndex {
+            guard isWordCharacter(name[index]) else {
+                index = name.index(after: index)
+                continue
+            }
+            let end = name[index...].firstIndex { !isWordCharacter($0) } ?? name.endIndex
+            let word = stem(name[index..<end].folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil))
+            if terms.contains(word) {
+                ranges.append(index..<end)
+            } else if let term = terms.filter({ word.hasPrefix($0) }).max(by: { $0.count < $1.count }) {
+                ranges.append(index..<(name.index(index, offsetBy: term.count, limitedBy: end) ?? end))
+            }
+            index = end
+        }
+        return ranges
+    }
+
+    private static func isWordCharacter(_ character: Character) -> Bool {
+        character.isLetter || character.isNumber || character == "%"
     }
 
     /// Plural and "-ie" endings, so both sides of a match reduce to one form; a query word also matches any word it
