@@ -9,7 +9,7 @@ import { handleAgent } from '../server/src/agent';
 import { handle, type App } from '../server/src/api';
 import { parseConfig } from '../server/src/config';
 import { schema } from '../shared/db/schema';
-import { importMacroFactor, NUTRIENT_COLUMNS, stableId } from './import-macrofactor';
+import { importMacroFactor, NUTRIENT_COLUMNS, parseCsv, stableId } from './import-macrofactor';
 import { writeXlsx, type Sheet } from './xlsx';
 
 /** A made-up account: three days in January 2026 (Excel serials 46030 to 46032), none of it the owner's. */
@@ -146,8 +146,8 @@ const FOOD_LOG_HEADER = [
 	'Protein (g)',
 ];
 const LOG: Sheet = [
-	['2026-01-09', '08:15 AM', 'Test Granola', 'cup', 0.5, 30, 125, 4, 20, 3],
-	['2026-01-09', '08:15 AM', 'Test Granola', 'cup', 0.5, 30, 125, 4, 20, 3],
+	['2026-01-09', '08:15 AM', 'Test Granola', 'cup', 0.5, 60, 125, 4, 20, 3],
+	['2026-01-09', '08:15 AM', 'Test Granola', 'cup', 0.5, 60, 125, 4, 20, 3],
 	['2026-01-09', '12:30 PM', 'Quick Add', 'serving', 1, null, 300, 10, 30, 20],
 	['2026-01-09', '06:00 PM', 'Test Bowl', 'serving', 1, 200, 350, 10, 50, 10],
 ];
@@ -308,6 +308,45 @@ describe('import-macrofactor', () => {
 		});
 		expect(plan.targets.map((target: any) => target.energy)).toEqual([2000, 2000, 2000, 2000, 2000, 2400, 2000]);
 		expect((await get('/settings')).profile).toEqual({ sex: 'male', birthDate: '1990-05-01', heightCm: 180 });
+	});
+
+	test('CSV fields keep quoted commas, quotes, and line breaks, and empty fields are null', () => {
+		expect(
+			parseCsv('\uFEFF"Date","Food Name","Qty"\r\n"2026-01-09","Rice, ""white""\ncooked",""\n2026-01-10,Egg,2\n'),
+		).toEqual([
+			['Date', 'Food Name', 'Qty'],
+			['2026-01-09', 'Rice, "white"\ncooked', null],
+			['2026-01-10', 'Egg', '2'],
+		]);
+	});
+
+	test('the food log CSV imports the same entries as the Quick Export sheet', async () => {
+		const csv = join(directory, 'food-log.csv');
+		const quote = (cell: string | number | null) => (cell === null ? '' : `"${String(cell).replaceAll('"', '""')}"`);
+		writeFileSync(csv, `\uFEFF${[FOOD_LOG_HEADER, ...LOG].map(cells => cells.map(quote).join(',')).join('\r\n')}\r\n`);
+		const { counts } = await run([granular, csv]);
+		expect(counts.food_entries).toEqual(row(0, 0, 4));
+	});
+
+	test('a weigh-in already stored that day at the same weight is the same reading, and gains the export body fat', async () => {
+		await fetch(new URL('/api/body-weights', server.url), {
+			method: 'POST',
+			headers: { authorization: `Bearer ${config.ownerToken}`, 'content-type': 'application/json' },
+			body: JSON.stringify({ weightKg: 95, measuredAt: '2026-02-01T17:00:00Z' }),
+		});
+		const scale = file('scale.xlsx', {
+			'Scale Weight': [
+				['Date', 'Weight (kg)', 'Fat Percent'],
+				[46054, 95, 22],
+			],
+		});
+		const first = await run([scale]);
+		expect(first.counts.body_weights).toEqual(row(0, 1));
+		const day = (await get('/body-weights')).filter((weighIn: any) => weighIn.measuredAt.startsWith('2026-02-01'));
+		expect(day.map((weighIn: any) => [weighIn.measuredAt, weighIn.weightKg, weighIn.bodyFatPercent])).toEqual([
+			['2026-02-01T17:00:00.000Z', 95, 22],
+		]);
+		expect((await run([scale])).counts.body_weights).toEqual(row(0, 0, 0, 1));
 	});
 
 	test('an overlapping export adds only its new rows, and a weigh-in already there is not doubled', async () => {
