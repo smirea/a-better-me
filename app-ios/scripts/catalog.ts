@@ -3,9 +3,9 @@
  * Regenerates the bundled exercise catalog from the installed MacroFactor Workouts app:
  * `bun app-ios/scripts/catalog.ts [path/to/Runner.app]`.
  * Reads the app's own catalog export (`packages/macrofactor/assets/import/app_file.json`), its instruction and
- * article Markdown, and its exercise and equipment images. It writes the JSON and muscle tiles to
- * `Sources/App/Resources/Catalog/`, which the app bundles, and the Markdown and images to `Assets/`, which the app
- * downloads after install, then refreshes the tracked asset version.
+ * article Markdown, and its exercise and equipment images. It writes the JSON and the Markdown pack to
+ * `Sources/App/Resources/Catalog/`, which the app bundles, and the images to `Assets/`, which the app downloads after
+ * install, then refreshes the tracked asset version.
  * The default weight lists MF shows per equipment item (dumbbells 2.5 to 165 lb and so on) are not in the bundle;
  * they come from docs/research/mf-workouts/equipment.md.
  */
@@ -14,6 +14,7 @@ import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ASSETS_DIR } from '../../server/src/assets';
 import { writeVersion } from '../../scripts/assets';
+import { writeMarkdownPack } from './markdown-pack';
 
 const app = resolve(process.argv[2] ?? '/Applications/Runner.app');
 const assets = join(app, 'Wrapper/Runner.app/Frameworks/App.framework/flutter_assets');
@@ -125,13 +126,13 @@ const stripLinks = (markdown: string) => markdown.replace(/\[([^\]]*)\]\([^)]*\)
 
 rmSync(out, { recursive: true, force: true });
 rmSync(ASSETS_DIR, { recursive: true, force: true });
-for (const dir of ['Instructions', 'Articles', 'ExerciseImages', 'EquipmentImages'])
-	mkdirSync(join(ASSETS_DIR, dir), { recursive: true });
+for (const dir of ['ExerciseImages', 'EquipmentImages']) mkdirSync(join(ASSETS_DIR, dir), { recursive: true });
 
 const imageFiles = readdirSync(join(assets, 'assets/exercises'));
 const markdownDir = join(assets, 'assets/markdown');
 const equipmentDir = join(assets, 'assets/equipment');
 
+const markdown = new Map<string, string>();
 const articleIDs = new Set<string>();
 const exercises = [];
 for (const e of source.exercises) {
@@ -153,8 +154,7 @@ for (const e of source.exercises) {
 		);
 	const instructions = Bun.file(join(markdownDir, `${id}.md`));
 	const hasInstructions = await instructions.exists();
-	if (hasInstructions)
-		await Bun.write(join(ASSETS_DIR, 'Instructions', `${id}.md`), stripLinks(await instructions.text()));
+	if (hasInstructions) markdown.set(`Instructions/${id}`, stripLinks(await instructions.text()));
 	const articles = e.exerciseNote as string[];
 	articles.forEach(a => {
 		ref(a, 'exerciseNote');
@@ -203,7 +203,7 @@ const articles = [];
 for (const id of articleIDs) {
 	const file = Bun.file(join(markdownDir, `${id}.md`));
 	if (!(await file.exists())) continue;
-	await Bun.write(join(ASSETS_DIR, 'Articles', `${id}.md`), stripLinks(await file.text()));
+	markdown.set(`Articles/${id}`, stripLinks(await file.text()));
 	articles.push({ id, title: ref(id, 'exerciseNote').name });
 }
 
@@ -337,6 +337,7 @@ await Bun.write(
 );
 await write('equipment.json', equipment);
 await write('articles.json', articles);
+await writeMarkdownPack(out, markdown);
 console.log(
 	`${exercises.length} exercises (${exercises.filter(e => e.images.length).length} with images, ` +
 		`${exercises.filter(e => e.hasInstructions).length} with instructions), ${equipment.length} equipment, ` +

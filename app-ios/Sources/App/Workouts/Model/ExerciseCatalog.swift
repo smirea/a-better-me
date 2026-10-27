@@ -37,17 +37,10 @@ final class ExerciseCatalog {
         }
     }
 
-    /// The file of Markdown with "Setting up", "Exercise technique", and "Description" sections.
-    /// Nil until `AssetStore` downloads it; a view that reads it re-renders when it arrives.
-    func instructionsURL(for exercise: Exercise) -> URL? {
-        exercise.hasInstructions ? AssetStore.shared.url("Instructions/\(exercise.id).md") : nil
-    }
-
-    func articleURL(_ article: Article) -> URL? { AssetStore.shared.url("Articles/\(article.id).md") }
-
-    /// Reads the file, so call it off main or from an action, never from `body`.
+    /// Markdown with "Setting up", "Exercise technique", and "Description" sections. The first call maps the bundled
+    /// pack, so call it off main or from an action, never from `body`.
     func instructions(for exercise: Exercise) -> String? {
-        instructionsURL(for: exercise).flatMap { try? String(contentsOf: $0, encoding: .utf8) }
+        exercise.hasInstructions ? MarkdownPack.bundled.instructions(exercise.id) : nil
     }
 
     /// Called by the app whenever the `CustomExercise` store changes.

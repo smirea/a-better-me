@@ -42,7 +42,7 @@ struct Exercise: Codable, Hashable, Identifiable {
     /// MF's Description from the custom exercise wizard, as Markdown. Catalog exercises keep theirs in the bundle's
     /// instructions, so this is `nil` for them and for custom rows written before it existed.
     var about: String?
-    /// Instructions live in `Instructions/<id>.md`, loaded on demand through `ExerciseCatalog.instructions(for:)`.
+    /// Instructions live in the bundled `MarkdownPack`, loaded on demand through `ExerciseCatalog.instructions(for:)`.
     var hasInstructions = false
     var articleIDs: [String] = []
     /// Bundle resource names of the video's poster frames (start and end positions), without extension.

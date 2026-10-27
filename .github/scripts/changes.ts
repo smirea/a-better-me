@@ -33,4 +33,9 @@ const swift =
 				['package.json', 'bun.lock', 'bun.lockb'].includes(name),
 		));
 
-appendFileSync(output, `bun=${bun}\nswift=${swift}\n`);
+// What `bun scripts/assets.ts upload` packs and how, so CI uploads exactly when the bucket could lack the version.
+const uploadsAssets =
+	full ||
+	paths.some(name => [...assets, 'server/src/assets.ts', 'scripts/assets.ts'].some(path => name.startsWith(path)));
+
+appendFileSync(output, `bun=${bun}\nswift=${swift}\nassets=${uploadsAssets}\n`);

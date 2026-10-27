@@ -25,6 +25,7 @@ jobs:
     outputs:
       bun: ${{ steps.changes.outputs.bun }}
       swift: ${{ steps.changes.outputs.swift }}
+      assets: ${{ steps.changes.outputs.assets }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -159,6 +160,35 @@ jobs:
       - name: Run Swift task
         if: needs.changes.outputs.swift == 'true'
         run: bun .github/scripts/swift.ts "${{ matrix.task }}"
+
+  # Only master's versions reach the bucket. A Release build of an unmerged branch uploads its own through `bun run env:ios`.
+  assets:
+    name: Upload app assets
+    needs: changes
+    if: ${{ github.event_name == 'push' && needs.changes.outputs.assets == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      LEFTHOOK: '0'
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Cloudflare credentials
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Add the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets with 'bun run secrets:github'."
+            exit 1
+          fi
+      - name: Upload
+        run: bun scripts/assets.ts upload
 
   deploy:
     name: Deploy the Worker
