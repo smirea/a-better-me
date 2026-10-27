@@ -51,7 +51,7 @@ extension DashboardData {
         let unit = nutrient?.unit.rawValue ?? ""
         let metricUnit = nutrient.map { MetricUnit($0.unit) } ?? .decimal("")
         let days = TileMetrics.nutrientDays(id, log: log, plans: plans, goals: goals, sex: profile.sex, weightKg: latestWeightKg, calendar: calendar)
-        let color = Theme.macro(id)
+        let color = id.color
         return MetricDetail(title: nutrient?.name ?? id.rawValue, tabs: [MetricTab(
             title: nutrient?.name ?? id.rawValue, points: days.consumed, unit: metricUnit, averageTitle: "Average",
             summary: .total, style: .bar, color: color,
@@ -67,7 +67,7 @@ extension DashboardData {
         let tabs = [(NutrientID.protein, "Protein"), (.fat, "Fat"), (.carbs, "Carbs")].map { id, title in
             MetricTab(
                 title: title, points: logged.map { DatedValue(date: $0.day.date(in: calendar), value: $0.consumed.amount(of: id) ?? 0) },
-                unit: .decimal("g"), averageTitle: "Average \(title)", summary: .total, style: .bar, color: Theme.macro(id)
+                unit: .decimal("g"), averageTitle: "Average \(title)", summary: .total, style: .bar, color: id.color
             )
         }
         return MetricDetail(title: "Macros", tabs: tabs, footer: .macros(logged.reversed().compactMap { day in

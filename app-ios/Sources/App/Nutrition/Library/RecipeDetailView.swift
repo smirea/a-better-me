@@ -199,7 +199,7 @@ struct RecipePrepareView: View {
     private func summaryTile(_ id: NutrientID, perServing: NutrientAmounts, total: NutrientAmounts) -> some View {
         let unit = id == .energy ? "kcal" : "g"
         return HStack(spacing: 8) {
-            Capsule().fill(Theme.macro(id)).frame(width: 4)
+            Capsule().fill(id.color).frame(width: 4)
             RowLabel(
                 title: NutrientRegistry.nutrient(id)?.name ?? "",
                 detail: "\(NutritionFormat.amount(perServing[id] ?? 0)) \(unit)/serv, \(NutritionFormat.amount(total[id] ?? 0)) total"

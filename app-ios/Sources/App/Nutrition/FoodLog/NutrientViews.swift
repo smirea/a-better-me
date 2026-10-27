@@ -14,6 +14,10 @@ extension Nutrient {
     }
 }
 
+extension NutrientID {
+    var color: Color { NutrientRegistry.nutrient(self)?.color ?? Theme.calories }
+}
+
 /// The calorie glyph that follows a number in compact rows, where MacroFactor writes "149ઠ".
 let calorieGlyph = Image(systemName: "flame.fill")
 
@@ -105,9 +109,9 @@ struct MacroHeader: View {
                 VStack(spacing: 2) {
                     Text(hasMacros ? "\(Int((amounts.macroShare(id) * 100).rounded()))%" : "–")
                         .font(AppFont.badge)
-                        .foregroundStyle(Theme.onPrimary)
+                        .foregroundStyle(Theme.textPrimary)
                         .padding(.horizontal, 6)
-                        .background(Theme.macro(id), in: .capsule)
+                        .background(id.color.mix(with: .black, by: 0.5), in: .capsule)
                     Text(NutritionFormat.amount(amounts[id] ?? 0)).font(AppFont.number(18))
                     Text(NutrientRegistry.nutrient(id)?.name ?? "").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 }
@@ -135,7 +139,7 @@ struct ImpactGauges: View {
                         Text(goal > 0 ? "\(Int((share * 100).rounded()))%" : "–").font(AppFont.rowDetail)
                     }
                     .gaugeStyle(.accessoryCircularCapacity)
-                    .tint(Theme.macro(id))
+                    .tint(id.color)
                     Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? "").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 }
                 .frame(maxWidth: .infinity)
