@@ -22,7 +22,7 @@ private struct IngredientSearch: View {
             List {
                 if let session {
                     ThemedSection {
-                        ForEach(session.results.filter { $0.portion.food.foodID != excluding.map(Recipe.key) }) { result in
+                        ForEach(choices(session)) { result in
                             Button {
                                 if let food = result.food { store.saveFood(food) }
                                 add(result.portion)
@@ -40,7 +40,7 @@ private struct IngredientSearch: View {
             }
             .themedList()
             .overlay {
-                if let session, session.results.isEmpty, !session.isSearchingBranded {
+                if let session, choices(session).isEmpty, !session.isSearchingBranded {
                     if query.isEmpty {
                         ContentUnavailableView("Search for a food", systemImage: "magnifyingglass", description: Text("Any food can be an ingredient."))
                     } else {
@@ -61,5 +61,11 @@ private struct IngredientSearch: View {
             guard session == nil, let search = try? await FoodSearch.load(store: store) else { return }
             session = LoggerSession(store: store, search: search, start: LoggerStart())
         }
+    }
+
+    /// The results, without the recipe being edited, which cannot contain itself.
+    private func choices(_ session: LoggerSession) -> [FoodSearchResult] {
+        guard let excluding else { return session.results }
+        return session.results.filter { $0.portion.food.foodID != Recipe.key(excluding) }
     }
 }

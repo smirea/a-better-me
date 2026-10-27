@@ -186,7 +186,7 @@ struct RecipePrepareView: View {
             } else {
                 StepsSection(steps: recipe.steps)
             }
-            ThemedSection {
+            Section {
                 Text("The following nutrition is displayed per serving.").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
             }
             .listRowBackground(Color.clear)
