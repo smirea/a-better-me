@@ -161,12 +161,11 @@ jobs:
         if: needs.changes.outputs.swift == 'true'
         run: bun .github/scripts/swift.ts "${{ matrix.task }}"
 
-  # Packs are content-addressed and the manifest goes last, so uploading a pull request's version is safe, and a Release
-  # build of the branch finds its assets before the merge. Pull requests from forks get no secrets and skip it.
+  # Only master's versions reach the bucket. A Release build of an unmerged branch uploads its own through `bun run env:ios`.
   assets:
     name: Upload app assets
     needs: changes
-    if: ${{ needs.changes.outputs.assets == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    if: ${{ github.event_name == 'push' && needs.changes.outputs.assets == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
