@@ -63,14 +63,25 @@ async function phoneWrites(writes: unknown[]) {
 }
 
 describe('agent API', () => {
-	test('the root explains how to authenticate, and a bad token gets the same instructions', async () => {
-		const open = await (await call('GET', '', undefined, null)).json();
-		expect(open).toMatchObject({ authenticated: false, openapi: 'http://api.test/api/openapi.json' });
-		expect(open.instructions).toContain('Authorization: Bearer abm_');
-
-		const denied = await call('GET', '/templates', undefined, 'abm_unknown');
-		expect(denied.status).toBe(401);
-		expect((await denied.json()).instructions).toContain('Dashboard gear > Settings > API Tokens');
+	test('without a token every route, the root and the OpenAPI document included, is a bare 401', async () => {
+		for (const [path, token] of [
+			['', null],
+			['/openapi.json', null],
+			['/templates', 'abm_unknown'],
+			['/food-database/search?q=egg', null],
+		] as const) {
+			const denied = await call('GET', path, undefined, token);
+			expect({ path, status: denied.status, body: await denied.json() }).toEqual({
+				path,
+				status: 401,
+				body: { ok: false, error: 'Missing, wrong, or revoked token' },
+			});
+		}
+		const document = await call('GET', '/openapi.json', undefined, config.ownerToken);
+		expect({ status: document.status, openapi: (await document.json()).openapi }).toEqual({
+			status: 200,
+			openapi: '3.1.0',
+		});
 	});
 
 	test('a token made on the phone works once synced, and stops working once revoked', async () => {
