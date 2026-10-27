@@ -82,6 +82,28 @@ struct FoodLogStateTests {
         #expect(try await entries(on: monday.adding(days: 1)).isEmpty)
     }
 
+    @Test func undoingAMoveLeavesAnEntryRetimedSinceAlone() async throws {
+        let breakfast = [entry(minute: 482), entry(minute: 485)]
+        try await log(breakfast)
+        let state = FoodLogState()
+
+        state.relocate(breakfast, .move, to: .hour(monday, hour: 12), in: store)
+        store.moveEntries([breakfast[1].id], to: monday, minute: 780)
+        state.undo(in: store)
+        #expect(try await entries(on: monday).map(\.minute) == [482, 780])
+    }
+
+    @Test func aCopyOfAnEntryDeletedBeforeTheWriteIsSkipped() async throws {
+        let breakfast = [entry(minute: 482), entry(minute: 485)]
+        try await log(breakfast)
+        store.deleteEntries([breakfast[0].id])
+
+        let undo = store.relocate(breakfast, .copy, to: .hour(monday, hour: 12))
+        #expect(try await entries(on: monday).map(\.minute) == [485, 720])
+        store.undo(undo)
+        #expect(try await entries(on: monday).map(\.id) == [breakfast[1].id])
+    }
+
     @Test func explodeReplacesALoggedRecipeWithItsIngredientsAtTheSameTime() async throws {
         var recipe = Recipe(name: "Parfait", servings: 2)
         recipe.ingredients = [RecipeIngredient(FoodPortion(yogurt, serving: Serving(measure: yogurt.nutrition.measures[0], quantity: 4)))]

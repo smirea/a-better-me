@@ -44,7 +44,7 @@ struct DayPage: View {
             }
             .scrollIndicators(.hidden)
             .onChange(of: entries) { old, new in
-                guard let added = FoodLog.added(from: old, to: new) else { return }
+                guard Date.now < state.revealsAdditionsUntil, let added = FoodLog.added(from: old, to: new) else { return }
                 withAnimation { proxy.scrollTo(added, anchor: .center) }
             }
         }
@@ -53,9 +53,9 @@ struct DayPage: View {
                 offset: geometry.contentOffset.y + geometry.contentInsets.top,
                 slack: geometry.contentSize.height + geometry.contentInsets.top + geometry.contentInsets.bottom - geometry.containerSize.height
             )
-        } action: { _, collapses in
-            guard let collapses, state.day == day, state.stripCollapsed != collapses else { return }
-            withAnimation(.snappy) { state.stripCollapsed = collapses }
+        } action: { _, scrolled in
+            guard let scrolled else { return }
+            withAnimation(.snappy) { state.setScrolled(scrolled, on: day) }
         }
     }
 }
@@ -131,9 +131,7 @@ private struct HourRow: View {
             .frame(width: Self.gutter, height: 40)
             .contentShape(.rect)
             .onTapGesture { state.selectHour(ids) }
-            .onLongPressGesture(minimumDuration: 0.35) {
-                if addsHere { state.requestLog(minute: hour.hour * 60) }
-            }
+            .gesture(LongPressGesture(minimumDuration: 0.35).onEnded { _ in state.requestLog(minute: hour.hour * 60) }, isEnabled: addsHere)
             .accessibilityElement()
             .accessibilityLabel(label)
             .accessibilityValue(ids.isEmpty ? "No foods" : "\(ids.count) \(ids.count == 1 ? "food" : "foods")")
@@ -164,7 +162,6 @@ private struct HourRow: View {
 }
 
 private extension View {
-    /// The hour's round +, and its paste and move variants, which fill white.
     func hourIcon(isPrimary: Bool) -> some View {
         font(.system(size: 10, weight: .bold))
             .frame(width: 22, height: 22)
@@ -173,7 +170,6 @@ private extension View {
     }
 }
 
-/// An icon-only button drawn as `hourIcon`, with a 32 by 40 pt target.
 private struct HourIconStyle: ButtonStyle {
     let isPrimary: Bool
 
@@ -255,6 +251,7 @@ private struct EntryRow: View {
             .contextMenu {
                 Button("Edit", systemImage: "pencil") { state.editing = entry }
                 Button("Duplicate", systemImage: "plus.square.on.square") {
+                    state.expectAdditions()
                     store.log([entry.portion], on: entry.day, minute: entry.minute)
                 }
                 if entry.food.source == .recipe {

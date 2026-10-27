@@ -66,7 +66,7 @@ struct EntryEditor: View {
                     }
                     DatePicker(
                         "Date & Time", selection: $time,
-                        in: CalendarDay.today.adding(days: -FoodLogState.daysBack).date...CalendarDay.today.adding(days: FoodLogState.daysAhead + 1).date,
+                        in: CalendarDay.today.adding(days: -FoodLogState.daysBack).date...CalendarDay.today.adding(days: FoodLogState.daysAhead).date(atMinute: 24 * 60 - 1),
                         displayedComponents: [.date, .hourAndMinute]
                     )
                 }
@@ -87,8 +87,11 @@ struct EntryEditor: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(role: .confirm) { save() }
-                        .disabled(!((Double(quantity.replacingOccurrences(of: ",", with: ".")) ?? 0) > 0))
+                    Button(role: .confirm) {
+                        write()
+                        dismiss()
+                    }
+                    .disabled(!isValid)
                 }
             }
         }
@@ -107,11 +110,13 @@ struct EntryEditor: View {
             }
             .disabled(favorited)
             action("Duplicate", systemImage: "plus.square.on.square") {
+                state.expectAdditions()
                 store.log([FoodPortion(entry.food, serving: serving)], on: CalendarDay(time), minute: minute)
                 dismiss()
             }
             if entry.food.source == .recipe {
                 action("Explode", systemImage: "square.grid.3x3.square") {
+                    if isValid { write() }
                     state.explode(entry.id, in: store)
                     dismiss()
                 }
@@ -136,7 +141,9 @@ struct EntryEditor: View {
 
     private var minute: Int { time.minuteOfDay() }
 
-    private func save() {
+    private var isValid: Bool { (Double(quantity.replacingOccurrences(of: ",", with: ".")) ?? 0) > 0 }
+
+    private func write() {
         let serving = serving
         let day = CalendarDay(time)
         let minute = minute
@@ -145,6 +152,5 @@ struct EntryEditor: View {
             $0.day = day
             $0.minute = minute
         }
-        dismiss()
     }
 }

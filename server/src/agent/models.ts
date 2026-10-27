@@ -883,10 +883,8 @@ const NutritionSettingsPatch = z
 				hideFoodDetails: z.boolean(),
 				hourlyTotals: z.boolean(),
 				foodTimestamps: z.boolean(),
-				alignment: z.enum(['left', 'right']),
 				addFoodsToHour: z.enum(['plusIcon', 'longPress']),
 				calendarWeekBanner: z.enum(['show', 'showAndPin', 'hide']),
-				calendarScrolling: z.enum(['daily', 'weekly']),
 				premove: z.boolean(),
 			})
 			.partial(),

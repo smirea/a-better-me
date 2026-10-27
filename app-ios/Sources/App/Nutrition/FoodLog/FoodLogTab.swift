@@ -54,7 +54,7 @@ private struct FoodLogHeader: View {
     var body: some View {
         let banner = settings.nutrition.timeline.calendarWeekBanner
         VStack(spacing: 6) {
-            if banner == .showAndPin || banner == .show && !state.stripCollapsed {
+            if banner == .showAndPin || banner == .show && !state.scrolledDays.contains(state.day) {
                 WeekStrip(anchor: state.day, weeks: -(FoodLogState.daysBack / 7 + 1)...(FoodLogState.daysAhead / 7 + 1)) {
                     WeekPills(monday: $0, plans: plans)
                 }

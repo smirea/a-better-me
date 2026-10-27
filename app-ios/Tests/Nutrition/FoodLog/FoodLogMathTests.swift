@@ -130,13 +130,17 @@ struct FoodLogMathTests {
     }
 
     @Test func confirmsWhatWasCopiedOrMovedAndWhere() {
-        #expect(FoodLog.confirmation(.copy, count: 3, to: .today, today: monday) == "Copied 3 foods to Today")
-        #expect(FoodLog.confirmation(.move, count: 1, to: .tomorrow, today: monday) == "Moved 1 food to Tomorrow")
-        #expect(FoodLog.confirmation(.copy, count: 2, to: .now, today: monday) == "Copied 2 foods to Now")
-        #expect(FoodLog.confirmation(.copy, count: 2, to: .days([monday.adding(days: 3)]), today: monday) == "Copied 2 foods to Thu, Oct 29")
-        #expect(FoodLog.confirmation(.copy, count: 5, to: .days([monday, monday.adding(days: 1), monday.adding(days: 2)]), today: monday) == "Copied 5 foods to 3 days")
-        #expect(FoodLog.confirmation(.copy, count: 2, to: .dateTime(monday.adding(days: 1), minute: 900), today: monday) == "Copied 2 foods to Tomorrow at 3:00 PM")
-        #expect(FoodLog.confirmation(.move, count: 3, to: .hour(monday.adding(days: -1), hour: 16), today: monday) == "Moved 3 foods to Yesterday at 4 PM")
+        let now = monday.date(atMinute: 18 * 60 + 5, in: utc)
+        func message(_ action: FoodLogState.Action, _ count: Int, _ target: PasteTarget) -> String {
+            FoodLog.confirmation(action, count: count, to: target, now: now, calendar: utc)
+        }
+        #expect(message(.copy, 3, .today) == "Copied 3 foods to Today")
+        #expect(message(.move, 1, .tomorrow) == "Moved 1 food to Tomorrow")
+        #expect(message(.copy, 2, .now) == "Copied 2 foods to Today at 6:05 PM")
+        #expect(message(.copy, 2, .days([monday.adding(days: 3)])) == "Copied 2 foods to Thu, Oct 29")
+        #expect(message(.copy, 5, .days([monday, monday.adding(days: 1), monday.adding(days: 2)])) == "Copied 5 foods to 3 days")
+        #expect(message(.copy, 2, .dateTime(monday.adding(days: 1), minute: 900)) == "Copied 2 foods to Tomorrow at 3:00 PM")
+        #expect(message(.move, 3, .hour(monday.adding(days: -1), hour: 16)) == "Moved 3 foods to Yesterday at 4 PM")
     }
 
     @Test func anHourPillAddsItsEntriesOrTakesThemAllBack() {

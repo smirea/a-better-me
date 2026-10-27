@@ -56,8 +56,8 @@ struct Chip: View {
     }
 }
 
-/// Rows of its children that wrap when the next one would not fit, each centered on its row, so a bar of actions
-/// never hides one off-screen.
+/// Rows of its children, leading-aligned, that wrap when the next one would not fit, so a bar of actions never hides
+/// one off-screen. A child wider than the row is offered the row's width.
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8
 
@@ -75,7 +75,11 @@ struct FlowLayout: Layout {
     private func frames(_ subviews: Subviews, width: CGFloat) -> [CGRect] {
         var rows: [[CGSize]] = [[]]
         var x: CGFloat = 0
-        for size in subviews.map({ $0.sizeThatFits(.unspecified) }) {
+        let sizes = subviews.map { subview in
+            let ideal = subview.sizeThatFits(.unspecified)
+            return ideal.width > width ? subview.sizeThatFits(ProposedViewSize(width: width, height: nil)) : ideal
+        }
+        for size in sizes {
             if !rows[rows.count - 1].isEmpty, x + size.width > width {
                 rows.append([])
                 x = 0

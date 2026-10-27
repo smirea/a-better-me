@@ -34,7 +34,6 @@ final class FoodLogState {
         var undo: LogUndo?
     }
 
-    /// Create Recipe's editor, prefilled from the selection.
     struct RecipeRequest: Identifiable {
         let id = UUID()
         let draft: RecipeDraft
@@ -50,7 +49,6 @@ final class FoodLogState {
         didSet {
             guard day != oldValue else { return }
             if selecting, pending?.inline != true { endSelection() }
-            if stripCollapsed { stripCollapsed = false }
         }
     }
     /// The shown day's entries in timeline order, so the bars never read the database.
@@ -58,14 +56,21 @@ final class FoodLogState {
     var selecting = false
     var selection: Set<UUID> = []
     var pending: Pending?
-    var logRequest: LogFoodRequest?
+    var logRequest: LogFoodRequest? {
+        didSet {
+            if oldValue != nil, logRequest == nil { expectAdditions() }
+        }
+    }
     var editing: FoodEntry?
     var note: NoteDraft?
     var path: [FoodLogRoute] = []
     var notice: Notice?
     var recipeRequest: RecipeRequest?
-    /// The shown page is scrolled down, so a week strip set to Show folds away.
-    var stripCollapsed = false
+    /// The days whose page is scrolled down, so a week strip set to Show folds away on them.
+    var scrolledDays: Set<CalendarDay> = []
+    /// Until when entries arriving on a page come from the owner (a log, a paste, an Explode) and scroll into view.
+    /// Entries a sync brings leave the page where it is.
+    @ObservationIgnored private(set) var revealsAdditionsUntil = Date.distantPast
 
     var selectedEntries: [FoodEntry] { entries.filter { selection.contains($0.id) } }
 
@@ -78,7 +83,6 @@ final class FoodLogState {
         }
     }
 
-    /// An hour pill's tap: selects the hour's entries, or in select mode adds them, or removes them when all are in.
     func selectHour(_ ids: [UUID]) {
         guard !ids.isEmpty else { return }
         if selecting {
@@ -94,8 +98,8 @@ final class FoodLogState {
         endSelection()
     }
 
-    /// Copies or moves `entries`, ends select mode, and confirms with Undo.
     func relocate(_ entries: [FoodEntry], _ action: Action, to target: PasteTarget, in store: LocalStore) {
+        expectAdditions()
         let undo = store.relocate(entries, action, to: target)
         notice = Notice(message: FoodLog.confirmation(action, count: entries.count, to: target), undo: undo)
         endSelection()
@@ -113,12 +117,23 @@ final class FoodLogState {
     }
 
     func explode(_ id: UUID, in store: LocalStore) {
+        expectAdditions()
         let exploding = store.explode(id)
         Task {
-            if (try? await exploding.value) != true {
-                notice = Notice(message: "Its recipe was deleted, so it can't be exploded")
+            do {
+                if try await exploding.value == false { notice = Notice(message: "Its recipe was deleted, so it can't be exploded") }
+            } catch {
+                notice = Notice(message: "Couldn't explode the recipe")
             }
         }
+    }
+
+    func expectAdditions() {
+        revealsAdditionsUntil = .now.addingTimeInterval(3)
+    }
+
+    func setScrolled(_ scrolled: Bool, on day: CalendarDay) {
+        if scrolled { scrolledDays.insert(day) } else if scrolledDays.contains(day) { scrolledDays.remove(day) }
     }
 
     func endSelection() {
@@ -145,34 +160,54 @@ enum FoodLogRoute: Hashable {
     case contributors(CalendarDay, NutrientID)
 }
 
-/// What takes a copy or move back: removing the copies, or returning the moved entries to their days and minutes.
+/// Where an entry sits on the log.
+struct EntryTime: Hashable {
+    let day: CalendarDay
+    let minute: Int
+}
+
+/// An entry a move took from one time to another.
+struct MovedEntry: Hashable {
+    let id: UUID
+    let from: EntryTime
+    let to: EntryTime
+}
+
+/// What takes a copy or move back: removing the copies, or returning the moved entries to where they were.
 enum LogUndo: Hashable {
     case remove([UUID])
-    case restore([FoodEntry])
+    case restore([MovedEntry])
 }
 
 extension LocalStore {
-    /// Copies or moves `entries` to `target` and returns its undo. Copies are made from the entries in hand, so the
-    /// undo knows their ids.
+    /// Copies or moves `entries` to `target` and returns its undo. Copy ids are chosen here so the undo knows them;
+    /// the copies are made from the rows as the write finds them, so a source a sync deleted is not brought back.
     func relocate(_ entries: [FoodEntry], _ action: FoodLogState.Action, to target: PasteTarget) -> LogUndo {
         let relocations = FoodLog.relocations(entries, to: target, now: .now)
         switch action {
         case .copy:
-            let byID = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0) })
             let copies = relocations.flatMap { relocation in
-                relocation.ids.compactMap { byID[$0] }.map { FoodEntry($0.portion, day: relocation.day, minute: relocation.minute) }
+                relocation.ids.map { (source: $0, id: UUID(), at: EntryTime(day: relocation.day, minute: relocation.minute)) }
             }
             write { db in
                 for copy in copies {
-                    try copy.insert(db)
+                    guard let source = try FoodEntry.fetchOne(db, key: FoodEntry.key(copy.source)) else { continue }
+                    var entry = FoodEntry(source.portion, day: copy.at.day, minute: copy.at.minute)
+                    entry.id = copy.id
+                    try entry.insert(db)
                 }
             }
             return .remove(copies.map(\.id))
         case .move:
+            let from = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, EntryTime(day: $0.day, minute: $0.minute)) })
             for relocation in relocations {
                 moveEntries(relocation.ids, to: relocation.day, minute: relocation.minute)
             }
-            return .restore(entries)
+            return .restore(relocations.flatMap { relocation in
+                relocation.ids.compactMap { id in
+                    from[id].map { MovedEntry(id: id, from: $0, to: EntryTime(day: relocation.day, minute: relocation.minute)) }
+                }
+            })
         }
     }
 
@@ -180,13 +215,15 @@ extension LocalStore {
         switch undo {
         case let .remove(ids):
             deleteEntries(ids)
-        case let .restore(entries):
+        case let .restore(moves):
             write { db in
-                for original in entries {
-                    guard let current = try FoodEntry.fetchOne(db, key: original.key) else { continue }
+                for move in moves {
+                    guard let current = try FoodEntry.fetchOne(db, key: FoodEntry.key(move.id)),
+                          EntryTime(day: current.day, minute: current.minute) == move.to
+                    else { continue }
                     var restored = current
-                    restored.day = original.day
-                    restored.minute = original.minute
+                    restored.day = move.from.day
+                    restored.minute = move.from.minute
                     restored.updatedAt = .now
                     try restored.updateChanges(db, from: current)
                 }

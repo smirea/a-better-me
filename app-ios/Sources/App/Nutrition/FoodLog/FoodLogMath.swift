@@ -163,12 +163,12 @@ enum FoodLog {
         }
     }
 
-    /// "Copied 3 foods to Today": the confirmation shown after a copy, move, or paste.
-    static func confirmation(_ action: FoodLogState.Action, count: Int, to target: PasteTarget, today: CalendarDay = .today) -> String {
+    static func confirmation(_ action: FoodLogState.Action, count: Int, to target: PasteTarget, now: Date = .now, calendar: Calendar = .current) -> String {
+        let today = CalendarDay(now, in: calendar)
         let verb = action == .copy ? "Copied" : "Moved"
         let foods = count == 1 ? "1 food" : "\(count) foods"
         let place = switch target {
-        case .now: "Now"
+        case .now: "Today at \(NutritionFormat.clock(now.minuteOfDay(in: calendar)))"
         case .today: "Today"
         case .tomorrow: "Tomorrow"
         case let .days(days) where days.count == 1: NutritionFormat.dayTitle(days[0], today: today)
