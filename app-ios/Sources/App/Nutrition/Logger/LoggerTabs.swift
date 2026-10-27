@@ -137,14 +137,16 @@ struct LoggerBottomBar<Field: View>: View {
 }
 
 /// Quick Add (`log-06-quick-add.jpg`): energy in kcal or kJ with the macro sum under it, the macros and alcohol in grams,
-/// and an optional name. Quick Add puts it on the plate as one serving; Log Foods logs the plate with it.
+/// and an optional name. Quick Add puts it on the plate as one serving; Log Foods logs the plate with it. The banner
+/// counts what is typed, as it counts a food detail's amount. While the keyboard is up its bar walks the fields and
+/// carries Quick Add, and the bottom buttons step aside so they never cover a field.
 struct QuickAddTab: View {
     let session: LoggerSession
     @Observe(AppSettings.current) private var settings
     @State private var draft = QuickAddDraft()
     @State private var added = 0
     @State private var unitChosen = false
-    @FocusState private var focused: Bool
+    @FocusState private var focus: QuickAddDraft.Field?
 
     var body: some View {
         Form {
@@ -152,7 +154,7 @@ struct QuickAddTab: View {
                 HStack {
                     TextField("Energy", text: $draft.energy)
                         .keyboardType(.decimalPad)
-                        .focused($focused)
+                        .focused($focus, equals: .energy)
                     Picker("Energy unit", selection: $draft.unit) {
                         Text("kcal").tag(NutritionSettings.EnergyUnit.kcal)
                         Text("kJ").tag(NutritionSettings.EnergyUnit.kj)
@@ -162,53 +164,66 @@ struct QuickAddTab: View {
                 }
             }
             ThemedSection {
-                grams("Protein", $draft.protein)
-                grams("Fat", $draft.fat)
-                grams("Carbs", $draft.carbs)
-                grams("Alcohol", $draft.alcohol)
+                grams("Protein", $draft.protein, .protein)
+                grams("Fat", $draft.fat, .fat)
+                grams("Carbs", $draft.carbs, .carbs)
+                grams("Alcohol", $draft.alcohol, .alcohol)
             }
             ThemedSection("Name") {
                 TextField("Quick Add", text: $draft.name)
+                    .focused($focus, equals: .name)
+                    .submitLabel(.done)
             }
         }
         .themedList()
         .scrollDismissesKeyboard(.interactively)
-        .safeAreaInset(edge: .bottom) {
-            HStack(spacing: 10) {
-                Button {
-                    guard let portion = draft.portion else { return }
-                    session.add(LoggerPick(portion))
-                    added += 1
-                    draft = QuickAddDraft(unit: draft.unit)
-                } label: {
-                    Text("Quick Add")
-                }
-                .secondaryPill()
+        .focusToolbar(QuickAddDraft.focusOrder, focus: $focus) {
+            Button("Quick Add", action: quickAdd)
                 .disabled(draft.portion == nil)
-                .sensoryFeedback(.success, trigger: added)
-                LogFoodsButton(session: session, prepare: {
-                    if let portion = draft.portion { session.add(LoggerPick(portion)) }
-                }, hasPending: draft.portion != nil)
-                .buttonSizing(.flexible)
-                .controlSize(.large)
-            }
-            .padding(.horizontal, Theme.margin)
-            .padding(.bottom, 8)
         }
+        .safeAreaInset(edge: .bottom) {
+            if focus == nil {
+                HStack(spacing: 10) {
+                    Button("Quick Add", action: quickAdd)
+                        .secondaryPill()
+                        .disabled(draft.portion == nil)
+                    LogFoodsButton(session: session, prepare: {
+                        if let portion = draft.portion { session.add(LoggerPick(portion)) }
+                    }, hasPending: draft.portion != nil)
+                    .buttonSizing(.flexible)
+                    .controlSize(.large)
+                }
+                .padding(.horizontal, Theme.margin)
+                .padding(.bottom, 8)
+            }
+        }
+        .sensoryFeedback(.success, trigger: added)
+        .onChange(of: draft) { session.pending = draft.portion }
         .onAppear {
+            session.pending = draft.portion
             guard !unitChosen else { return }
             unitChosen = true
             draft.unit = settings.nutrition.energyUnit
-            focused = true
+            focus = .energy
         }
+        .onDisappear { session.pending = nil }
     }
 
-    private func grams(_ title: String, _ text: Binding<String>) -> some View {
+    private func quickAdd() {
+        guard let portion = draft.portion else { return }
+        session.add(LoggerPick(portion))
+        added += 1
+        draft = QuickAddDraft(unit: draft.unit)
+        focus = nil
+    }
+
+    private func grams(_ title: String, _ text: Binding<String>, _ field: QuickAddDraft.Field) -> some View {
         LabeledContent(title) {
             HStack(spacing: 4) {
                 TextField("0", text: text)
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
+                    .focused($focus, equals: field)
                 Text("g").foregroundStyle(Theme.textSecondary)
             }
         }

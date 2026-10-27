@@ -104,7 +104,8 @@ struct RecipeDetailView: View {
     }
 }
 
-private struct ActionLabel: View {
+/// An action as MacroFactor's detail pages lay them out: a glass circle over its title.
+struct ActionLabel: View {
     let title: String
     let systemImage: String
 

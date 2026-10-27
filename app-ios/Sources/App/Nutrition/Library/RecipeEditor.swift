@@ -1,9 +1,11 @@
 import SwiftUI
 
 /// Create Recipe and Edit Recipe: MacroFactor's "Build your recipe" and "Preparation" steps (§6.2) in one Form,
-/// with the derived nutrition per serving or for the whole recipe as the ingredients change.
+/// with the derived nutrition per serving or for the whole recipe as the ingredients change. `onCreate` hears about a
+/// new recipe, and `onCreateAndAdd` adds the logger's "Create & Add".
 struct RecipeEditor: View {
     private let recipeID: UUID?
+    private let onCreate: ((Recipe) -> Void)?
     private let onCreateAndAdd: ((Recipe) -> Void)?
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -15,9 +17,11 @@ struct RecipeEditor: View {
     @State private var confirmingDelete = false
     @State private var perServing = true
     @State private var showAllNutrients = false
+    @FocusState private var focus: RecipeDraft.Field?
 
-    init(recipe: Recipe? = nil, draft: RecipeDraft? = nil, onCreateAndAdd: ((Recipe) -> Void)? = nil) {
+    init(recipe: Recipe? = nil, draft: RecipeDraft? = nil, onCreate: ((Recipe) -> Void)? = nil, onCreateAndAdd: ((Recipe) -> Void)? = nil) {
         recipeID = recipe?.id
+        self.onCreate = onCreate
         self.onCreateAndAdd = onCreateAndAdd
         _draft = State(initialValue: draft ?? recipe.map(RecipeDraft.init) ?? RecipeDraft())
     }
@@ -44,6 +48,7 @@ struct RecipeEditor: View {
             }
             .themedList()
             .scrollDismissesKeyboard(.interactively)
+            .focusToolbar(draft.focusOrder, focus: $focus)
             .detailTitle(recipeID == nil ? "Create Recipe" : "Edit Recipe")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -92,11 +97,13 @@ struct RecipeEditor: View {
                     .controlSize(.small)
             }
             TextField("Recipe Name", text: $draft.name)
+                .focused($focus, equals: .name)
                 .accessibilityLabel("Recipe Name")
             FieldIssue(issues[.name])
             LabeledContent("Serving Quantity") {
                 TextField("1", text: $draft.servings)
                     .keyboardType(.decimalPad)
+                    .focused($focus, equals: .servings)
                     .multilineTextAlignment(.trailing)
                     .accessibilityLabel("Serving Quantity")
             }
@@ -106,6 +113,7 @@ struct RecipeEditor: View {
                     TextField(draft.ingredientGrams > 0 ? NutritionFormat.amount(draft.ingredientGrams) : "Weight after cooking", text: $draft.totalWeight)
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
+                        .focused($focus, equals: .totalWeight)
                         .accessibilityLabel("Total Weight in grams")
                     Text("g").foregroundStyle(Theme.textSecondary)
                 }
@@ -117,7 +125,7 @@ struct RecipeEditor: View {
     private func ingredients(_ issues: [RecipeDraft.Field: String]) -> some View {
         ThemedSection("Ingredients", subtitle: "Weight of ingredients is \(NutritionFormat.amount(draft.ingredientGrams)) g") {
             ForEach($draft.ingredients) { $ingredient in
-                IngredientRow(ingredient: $ingredient)
+                IngredientRow(ingredient: $ingredient, focus: $focus)
                 FieldIssue(issues[.ingredientQuantity(ingredient.id)])
             }
             .onDelete { draft.ingredients.remove(atOffsets: $0) }
@@ -144,14 +152,15 @@ struct RecipeEditor: View {
 
     private func preparation(_ issues: [RecipeDraft.Field: String]) -> some View {
         ThemedSection("Preparation") {
-            minutesField("Preparation Time", text: $draft.prepMinutes)
+            minutesField("Preparation Time", text: $draft.prepMinutes, field: .prepMinutes)
             FieldIssue(issues[.prepMinutes])
-            minutesField("Cooking Time", text: $draft.cookMinutes)
+            minutesField("Cooking Time", text: $draft.cookMinutes, field: .cookMinutes)
             FieldIssue(issues[.cookMinutes])
             TextField("Link to the recipe", text: $draft.link)
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                .focused($focus, equals: .link)
                 .accessibilityLabel("Link")
             FieldIssue(issues[.link])
             VStack(alignment: .trailing, spacing: 4) {
@@ -179,11 +188,12 @@ struct RecipeEditor: View {
         }
     }
 
-    private func minutesField(_ title: String, text: Binding<String>) -> some View {
+    private func minutesField(_ title: String, text: Binding<String>, field: RecipeDraft.Field) -> some View {
         LabeledContent(title) {
             HStack(spacing: 4) {
                 TextField("0", text: text)
                     .keyboardType(.numberPad)
+                    .focused($focus, equals: field)
                     .multilineTextAlignment(.trailing)
                     .accessibilityLabel(title)
                 Text("min").foregroundStyle(Theme.textSecondary)
@@ -207,9 +217,18 @@ struct RecipeEditor: View {
         } else {
             let recipe = valid.newRecipe()
             store.saveRecipe(recipe)
+            onCreate?(recipe)
             if adding { onCreateAndAdd?(recipe) }
         }
         dismiss()
+    }
+}
+
+extension RecipeDraft {
+    /// The fields top to bottom, through each ingredient's quantity; the description and steps take returns, so the
+    /// keyboard bar stops before them.
+    var focusOrder: FocusOrder<Field> {
+        FocusOrder([.name, .servings, .totalWeight] + ingredients.map { .ingredientQuantity($0.id) } + [.prepMinutes, .cookMinutes, .link])
     }
 }
 
@@ -217,6 +236,7 @@ struct RecipeEditor: View {
 /// measure converts the quantity, so the amount stays the same.
 private struct IngredientRow: View {
     @Binding var ingredient: RecipeDraft.Ingredient
+    let focus: FocusState<RecipeDraft.Field?>.Binding
 
     var body: some View {
         let food = ingredient.value.food
@@ -229,6 +249,7 @@ private struct IngredientRow: View {
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .frame(width: 56)
+                .focused(focus, equals: .ingredientQuantity(ingredient.id))
                 .accessibilityLabel("\(food.name) quantity")
             Picker("\(food.name) measure", selection: measure) {
                 ForEach(food.nutrition.allMeasures, id: \.name) { Text($0.name).tag($0.name) }

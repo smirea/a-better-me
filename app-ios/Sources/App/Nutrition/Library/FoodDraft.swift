@@ -40,7 +40,7 @@ struct FoodDraft: Equatable, Sendable {
     }
 
     enum Field: Hashable, Sendable {
-        case name, servingWeight, servingQuantity, servingName
+        case name, brand, barcode, servingWeight, servingQuantity, servingName
         case measureQuantity(UUID), measureName(UUID), measureSize(UUID)
         case nutrient(NutrientID)
     }

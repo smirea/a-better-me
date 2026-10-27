@@ -92,7 +92,8 @@ final class LoggerSession {
         set { chosenTime = newValue }
     }
     var plate = Plate()
-    /// The food detail's serving before it is added, so the banner shows what adding it would leave.
+    /// The food detail's serving before it is added, or the Quick Add being typed, so the banner shows what adding it
+    /// would leave.
     var pending: FoodPortion?
     private(set) var query = ""
     private(set) var results: [FoodSearchResult] = []

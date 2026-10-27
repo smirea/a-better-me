@@ -10,6 +10,11 @@ struct QuickAddDraft: Hashable, Sendable {
     var alcohol = ""
     var name = ""
 
+    enum Field: CaseIterable, Hashable {
+        case energy, protein, fat, carbs, alcohol, name
+    }
+
+    static let focusOrder = FocusOrder(Field.allCases)
     static let kilojoulesPerKcal = 4.184
 
     /// "Macro sum is 250 kcal": 4 kcal per gram of protein and carbs, 9 of fat, 7 of alcohol, in the chosen unit.

@@ -16,6 +16,7 @@ private struct IngredientSearch: View {
     @Observe(AppSettings.current) private var settings
     @State private var session: LoggerSession?
     @State private var query = ""
+    @State private var added = 0
 
     var body: some View {
         NavigationStack {
@@ -23,14 +24,19 @@ private struct IngredientSearch: View {
                 if let session {
                     ThemedSection {
                         ForEach(choices(session)) { result in
-                            Button {
-                                if let food = result.food { store.saveFood(food) }
-                                add(result.portion)
-                                dismiss()
-                            } label: {
-                                FoodRow(food: result.portion.food, serving: result.portion.serving)
+                            HStack(spacing: 12) {
+                                Button {
+                                    pick(result)
+                                    dismiss()
+                                } label: {
+                                    FoodRow(food: result.portion.food, serving: result.portion.serving)
+                                }
+                                .buttonStyle(.plain)
+                                AddIngredientButton(name: result.portion.food.name) {
+                                    pick(result)
+                                    added += 1
+                                }
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                     if session.isSearchingBranded {
@@ -51,16 +57,17 @@ private struct IngredientSearch: View {
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search for a food")
             .onChange(of: query) { session?.setQuery(query, branded: settings.nutrition.searchBranded) }
             .detailTitle("Add Ingredient")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(role: .close) { dismiss() }
-                }
-            }
+            .ingredientPickerToolbar(added: added)
         }
         .task {
             guard session == nil, let search = try? await FoodSearch.load(store: store) else { return }
             session = LoggerSession(store: store, search: search, start: LoggerStart())
         }
+    }
+
+    private func pick(_ result: FoodSearchResult) {
+        if let food = result.food { store.saveFood(food) }
+        add(result.portion)
     }
 
     /// The results, without the recipe being edited, which cannot contain itself.
