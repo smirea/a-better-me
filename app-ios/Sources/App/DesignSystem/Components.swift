@@ -21,15 +21,3 @@ enum NavigationAppearance {
         bar.titleTextAttributes = [.font: UIFont(name: "DMSans-SemiBold", size: 17)!]
     }
 }
-
-/// Placeholder root for a tab whose feature thread has not landed yet.
-struct ComingSoon: View {
-    let title: String
-
-    var body: some View {
-        NavigationStack {
-            ContentUnavailableView("Not built yet", systemImage: "hammer")
-                .screenTitle(title)
-        }
-    }
-}

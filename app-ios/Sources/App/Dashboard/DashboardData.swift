@@ -87,7 +87,12 @@ struct MetricTab: Identifiable {
     var id: String { title }
 
     func format(_ value: Double) -> String {
-        unit == "steps" || unit == "kcal" ? Int(value.rounded()).formatted() : value.dashboardText
+        switch unit {
+        case "steps", "kcal": Int(value.rounded()).formatted()
+        case "ratio": value.formatted(.number.precision(.fractionLength(2)))
+        case "mg", "mcg": TileMetrics.nutrientText(value)
+        default: value.dashboardText
+        }
     }
 }
 

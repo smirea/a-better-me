@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// MacroFactor's Full Body entry: one date and a field per visible measurement, visual body fat always. A field left
-/// empty keeps the day's stored value; clearing a stored value deletes it.
+/// MacroFactor's Full Body entry: one date and a field per visible measurement, visual body fat always. Fields start
+/// with the day's stored values; Save writes only the fields that changed, and clearing one deletes it.
 struct BodyMetricsLogSheet: View {
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -9,6 +9,7 @@ struct BodyMetricsLogSheet: View {
     @Observe(BodyMetric.all) private var metrics
     @State private var date = Date.now
     @State private var texts: [BodyMetricKind: String] = [:]
+    @State private var original: [BodyMetricKind: String] = [:]
     @State private var showingReference = false
 
     private var day: CalendarDay { CalendarDay(date) }
@@ -34,7 +35,7 @@ struct BodyMetricsLogSheet: View {
                                     .foregroundStyle(Theme.textSecondary)
                             }
                             Spacer()
-                            TextField(stored(kind) ?? "--", text: binding(kind))
+                            TextField("--", text: binding(kind))
                                 .keyboardType(.decimalPad)
                                 .multilineTextAlignment(.trailing)
                                 .frame(width: 90)
@@ -59,18 +60,22 @@ struct BodyMetricsLogSheet: View {
                         save()
                         dismiss()
                     }
-                    .disabled(texts.isEmpty)
+                    .disabled(texts == original)
                 }
             }
-            .onChange(of: day) { texts = [:] }
+            .onChange(of: day, initial: true) { load() }
+            .onChange(of: metrics) { if texts == original { load() } }
             .sheet(isPresented: $showingReference) { BodyFatReferenceSheet() }
         }
     }
 
     private func unit(_ kind: BodyMetricKind) -> String { kind.isLength ? heightUnit.lengthLabel : "%" }
 
-    private func stored(_ kind: BodyMetricKind) -> String? {
-        metrics.first { $0.kind == kind && $0.day == day }.map { (kind.isLength ? heightUnit.fromCm($0.value) : $0.value).dashboardText }
+    private func load() {
+        original = Dictionary(uniqueKeysWithValues: metrics.filter { $0.day == day && kinds.contains($0.kind) }.map { metric in
+            (metric.kind, (metric.kind.isLength ? heightUnit.fromCm(metric.value) : metric.value).dashboardText)
+        })
+        texts = original
     }
 
     private func binding(_ kind: BodyMetricKind) -> Binding<String> {
@@ -78,8 +83,8 @@ struct BodyMetricsLogSheet: View {
     }
 
     private func save() {
-        for (kind, text) in texts {
-            let trimmed = text.trimmingCharacters(in: .whitespaces)
+        for kind in kinds where (texts[kind] ?? "") != (original[kind] ?? "") {
+            let trimmed = (texts[kind] ?? "").trimmingCharacters(in: .whitespaces)
             if trimmed.isEmpty {
                 store.setBodyMetric(kind, on: day, value: nil)
             } else if let value = Double(trimmed.replacing(",", with: ".")), value > 0 {

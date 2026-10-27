@@ -23,6 +23,13 @@ struct TileMetricsTests {
         #expect(TileMetrics.tile(consumed: 1234.4, range: NutrientRange(), display: .consumed, unit: "mg").text == "1,234")
     }
 
+    @Test func smallAmountsKeepTheirDecimals() {
+        #expect(TileMetrics.tile(consumed: 0.4, range: NutrientRange(), display: .consumed, unit: "mg").text == "0.4")
+        #expect(TileMetrics.tile(consumed: 1, range: NutrientRange(target: 1.2), display: .remaining, unit: "mg").text == "0.2")
+        #expect(TileMetrics.tile(consumed: 12.34, range: NutrientRange(), display: .consumed, unit: "mcg").text == "12.3")
+        #expect(MetricTab(title: "Waist to Height", points: [], unit: "ratio", averageTitle: "Average", summary: .change, style: .line, color: .white).format(0.4722) == "0.47")
+    }
+
     @Test func macroSplitIsTheShareOfCalories() {
         let split = TileMetrics.split([.protein: 100, .fat: 50, .carbs: 175])
         #expect(split == TileMetrics.MacroSplit(protein: 400.0 / 1550, fat: 450.0 / 1550, carbs: 700.0 / 1550))
