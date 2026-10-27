@@ -19,7 +19,7 @@ struct MuscleLevelsView: View {
                 }
                 .listRowBackground(Color.clear)
             }
-            Section {
+            ThemedSection("Contributing Lifts") {
                 ForEach(weekly.lifts(for: muscle), id: \.exerciseID) { id, sets in
                     if let exercise = catalog.exercise(id) {
                         Button { shownExercise = ShownExercise(id: id) } label: {
@@ -28,9 +28,6 @@ struct MuscleLevelsView: View {
                         .buttonStyle(.plain)
                     }
                 }
-                .listRowBackground(Theme.surface)
-            } header: {
-                LevelsHeader(title: "Contributing Lifts")
             }
         }
         .themedList()

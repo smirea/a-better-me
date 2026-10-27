@@ -557,7 +557,7 @@ private struct JointActionPicker: View {
         let vocabulary = Set(catalog.bundled.flatMap { $0.primaryJointActions + $0.secondaryJointActions }).sorted()
         NavigationStack {
             List {
-                Section {
+                ThemedSection(subtitle: "Choose all that apply") {
                     ForEach(vocabulary.filter { query.isEmpty || $0.localizedStandardContains(query) }, id: \.self) { action in
                         let isSelected = selection.contains(action)
                         Button {
@@ -571,10 +571,7 @@ private struct JointActionPicker: View {
                             }
                         }
                         .accessibilityAddTraits(isSelected ? .isSelected : [])
-                        .listRowBackground(Theme.surface)
                     }
-                } header: {
-                    Text("Choose all that apply").font(AppFont.caption(12)).textCase(nil)
                 }
             }
             .themedList()

@@ -90,7 +90,10 @@ struct FoodEditor: View {
     }
 
     private func serving(_ issues: [FoodDraft.Field: String]) -> some View {
-        Section {
+        ThemedSection(
+            "Nutrition For",
+            footer: draft.basis == .serving ? "With a serving weight, every standard unit of weight is available when you log this food. If a serving is 4 pieces, enter 4 and pieces." : nil
+        ) {
             Picker("Nutrition For", selection: $draft.basis) {
                 ForEach(NutritionBasis.allCases) { Text($0.rawValue).tag($0) }
             }
@@ -118,14 +121,7 @@ struct FoodEditor: View {
                 }
                 FieldIssue(issues[.servingQuantity] ?? issues[.servingName])
             }
-        } header: {
-            SectionTitle("Nutrition For").textCase(nil)
-        } footer: {
-            if draft.basis == .serving {
-                Text("With a serving weight, every standard unit of weight is available when you log this food. If a serving is 4 pieces, enter 4 and pieces.")
-            }
         }
-        .listRowBackground(Theme.surface)
     }
 
     private func otherServings(_ issues: [FoodDraft.Field: String]) -> some View {
@@ -162,16 +158,9 @@ struct FoodEditor: View {
             FieldIssue(issues[.nutrient(nutrient.id)])
         }
         if section == .macros {
-            Section {
+            ThemedSection(section.rawValue, subtitle: "Serving Size: \(draft.basisLabel)") {
                 rows
-            } header: {
-                VStack(alignment: .leading, spacing: 4) {
-                    SectionTitle(section.rawValue)
-                    Text("Serving Size: \(draft.basisLabel)").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-                }
-                .textCase(nil)
             }
-            .listRowBackground(Theme.surface)
         } else {
             ThemedSection {
                 DisclosureGroup(isExpanded: Binding {

@@ -46,9 +46,7 @@ enum Theme {
 
     static let cornerRadius: CGFloat = 16
     static let smallCornerRadius: CGFloat = 10
-    /// Thumbnails, keys, and tags.
     static let tinyCornerRadius: CGFloat = 6
-    /// Every screen's side margin.
     static let margin: CGFloat = 20
 }
 

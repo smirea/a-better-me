@@ -74,7 +74,11 @@ struct RecipeEditor: View {
     }
 
     private func build(_ issues: [RecipeDraft.Field: String], preview: Recipe) -> some View {
-        Section {
+        ThemedSection(
+            "Recipe",
+            footer: preview.cookedGrams.map { "Per serving weight will be \(NutritionFormat.amount($0 / preview.servings)) g. Total Weight is the weight of all servings combined, after cooking; blank uses the ingredients' weight." }
+                ?? "Weight for all servings this recipe makes combined."
+        ) {
             HStack(spacing: 12) {
                 FoodIcon(icon: draft.icon, source: .recipe, size: 36)
                 RowLabel(
@@ -107,20 +111,11 @@ struct RecipeEditor: View {
                 }
             }
             FieldIssue(issues[.totalWeight])
-        } header: {
-            SectionTitle("Recipe").textCase(nil)
-        } footer: {
-            if let cookedGrams = preview.cookedGrams {
-                Text("Per serving weight will be \(NutritionFormat.amount(cookedGrams / preview.servings)) g. Total Weight is the weight of all servings combined, after cooking; blank uses the ingredients' weight.")
-            } else {
-                Text("Weight for all servings this recipe makes combined.")
-            }
         }
-        .listRowBackground(Theme.surface)
     }
 
     private func ingredients(_ issues: [RecipeDraft.Field: String]) -> some View {
-        Section {
+        ThemedSection("Ingredients", subtitle: "Weight of ingredients is \(NutritionFormat.amount(draft.ingredientGrams)) g") {
             ForEach($draft.ingredients) { $ingredient in
                 IngredientRow(ingredient: $ingredient)
                 FieldIssue(issues[.ingredientQuantity(ingredient.id)])
@@ -129,16 +124,7 @@ struct RecipeEditor: View {
             .onMove { draft.ingredients.move(fromOffsets: $0, toOffset: $1) }
             Button("Add Ingredient", systemImage: "plus") { addingIngredient = true }
             FieldIssue(issues[.ingredients])
-        } header: {
-            VStack(alignment: .leading, spacing: 4) {
-                SectionTitle("Ingredients")
-                Text("Weight of ingredients is \(NutritionFormat.amount(draft.ingredientGrams)) g")
-                    .font(AppFont.rowDetail)
-                    .foregroundStyle(Theme.textSecondary)
-            }
-            .textCase(nil)
         }
-        .listRowBackground(Theme.surface)
     }
 
     private func nutrition(_ preview: Recipe) -> some View {

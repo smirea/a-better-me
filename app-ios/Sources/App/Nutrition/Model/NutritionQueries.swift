@@ -27,6 +27,13 @@ extension FoodLogNote {
 }
 
 extension NutritionDay {
+    /// The rows from `start` through `end`; days without one are plain.
+    static func between(_ start: CalendarDay, _ end: CalendarDay) -> DatabaseQuery<[NutritionDay]> {
+        DatabaseQuery([]) { db in
+            try NutritionDay.filter(Column("id") >= start.description && Column("id") <= end.description).fetchAll(db)
+        }
+    }
+
     static func one(_ day: CalendarDay) -> DatabaseQuery<NutritionDay> {
         DatabaseQuery(NutritionDay(id: day)) { try NutritionDay.fetchOne($0, key: key(day)) ?? NutritionDay(id: day) }
     }

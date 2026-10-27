@@ -30,8 +30,14 @@ final class FoodLogState {
     static let daysBack = 730
     static let daysAhead = 365
 
-    var day = CalendarDay.today
-    /// The shown day's entries in timeline order, as its page observes them, so the bars never read the database.
+    /// A selection belongs to the day it was made on, so leaving that day ends it. Paste Inline keeps going: its
+    /// pending copy carries the entries.
+    var day = CalendarDay.today {
+        didSet {
+            if day != oldValue, selecting, pending?.inline != true { endSelection() }
+        }
+    }
+    /// The shown day's entries in timeline order, so the bars never read the database.
     var entries: [FoodEntry] = []
     var selecting = false
     var selection: Set<UUID> = []

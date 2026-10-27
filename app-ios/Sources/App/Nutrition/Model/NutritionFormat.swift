@@ -7,7 +7,6 @@ enum NutritionFormat {
         value.formatted(.number.precision(.fractionLength(abs(value) < 100 ? 0...1 : 0...0)))
     }
 
-    /// "15.6 g", "120 kcal".
     static func amount(_ value: Double, _ unit: NutrientUnit) -> String {
         "\(amount(value)) \(unit.rawValue)"
     }
@@ -23,7 +22,6 @@ enum NutritionFormat {
         NutrientID.macros.dropFirst().map { "\(Int((amounts[$0] ?? 0).rounded()))\($0.macroLetter)" }.joined(separator: " ")
     }
 
-    /// "120 kcal · 1P 0F 31C".
     static func macroLine(_ amounts: NutrientAmounts) -> String {
         "\(Int((amounts[.energy] ?? 0).rounded()).formatted()) kcal · \(macros(amounts))"
     }
@@ -36,7 +34,6 @@ enum NutritionFormat {
         return "\(text) (\(amount(grams)) g)"
     }
 
-    /// "8 AM", "12 PM", "12 AM".
     static func hour(_ hour: Int) -> String {
         "\(hour % 12 == 0 ? 12 : hour % 12) \(hour < 12 ? "AM" : "PM")"
     }
@@ -47,12 +44,10 @@ enum NutritionFormat {
         return String(format: "%d:%02d", hour, minute % 60)
     }
 
-    /// "2:48 PM".
     static func clock(_ minute: Int) -> String {
         "\(time(minute)) \(minute < 720 ? "AM" : "PM")"
     }
 
-    /// "Today", "Yesterday", "Tomorrow", or "Fri, Jul 31".
     static func dayTitle(_ day: CalendarDay, today: CalendarDay = .today) -> String {
         switch day {
         case today: "Today"
@@ -62,7 +57,6 @@ enum NutritionFormat {
         }
     }
 
-    /// "Jul 31".
     static func shortDay(_ day: CalendarDay) -> String {
         day.date.formatted(.dateTime.month(.abbreviated).day())
     }

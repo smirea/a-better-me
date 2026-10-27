@@ -4,7 +4,6 @@ import GRDB
 /// One day of the food log as the Dashboard reads it: what was eaten and what the owner said about the day.
 struct NutritionLogDay: Equatable, Sendable {
     var day: CalendarDay
-    /// The entries' sum with the day's override on top (`NutritionDay.totals`).
     var consumed: NutrientAmounts
     var entryCount: Int
     var status: NutritionDay.Status

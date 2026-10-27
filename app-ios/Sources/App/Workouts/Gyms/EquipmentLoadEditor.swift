@@ -269,7 +269,7 @@ private struct WeightField: View {
     }
 
     static func parse(_ text: String) -> Double? {
-        Double(text.replacing(",", with: ".").trimmingCharacters(in: .whitespaces)).flatMap { $0 >= 0 ? $0 : nil }
+        NumberText.parse(text).flatMap { $0 >= 0 ? $0 : nil }
     }
 
     var body: some View {

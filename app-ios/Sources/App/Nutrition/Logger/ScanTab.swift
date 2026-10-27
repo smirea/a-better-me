@@ -61,7 +61,7 @@ struct ScanTab: View {
             Button("Lookup Barcode") { lookup(typed) }
             Button("Cancel", role: .cancel) {}
         }
-        .alert("Barcode", isPresented: Binding(get: { problem != nil }, set: { if !$0 { problem = nil } })) {
+        .alert("Barcode", isPresented: .isPresent($problem)) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(problem ?? "")

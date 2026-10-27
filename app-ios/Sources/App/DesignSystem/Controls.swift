@@ -4,11 +4,13 @@ import SwiftUI
 /// draws on `Theme.surface`.
 struct ThemedSection<Content: View>: View {
     var title: String?
+    var subtitle: String?
     var footer: String?
     @ViewBuilder let content: Content
 
-    init(_ title: String? = nil, footer: String? = nil, @ViewBuilder content: () -> Content) {
+    init(_ title: String? = nil, subtitle: String? = nil, footer: String? = nil, @ViewBuilder content: () -> Content) {
         self.title = title
+        self.subtitle = subtitle
         self.footer = footer
         self.content = content()
     }
@@ -17,7 +19,11 @@ struct ThemedSection<Content: View>: View {
         Section {
             content
         } header: {
-            if let title { SectionTitle(title).textCase(nil) }
+            VStack(alignment: .leading, spacing: 4) {
+                if let title { SectionTitle(title) }
+                if let subtitle { Text(subtitle).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary) }
+            }
+            .textCase(nil)
         } footer: {
             if let footer { Text(footer) }
         }
@@ -46,7 +52,6 @@ struct Chip: View {
     }
 }
 
-/// A round glass icon button.
 struct RoundIconButton: View {
     enum Size { case small, regular }
 

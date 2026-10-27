@@ -53,7 +53,6 @@ struct StatView: View {
     }
 }
 
-/// The key under a chart: one symbol and title per series.
 struct ChartLegend: View {
     struct Item {
         var title: String
@@ -76,7 +75,7 @@ struct ChartLegend: View {
     }
 }
 
-/// A ring on a raised track, filled clockwise. An `arc` under 1 leaves the gap at the bottom, as the calorie gauge.
+/// An `arc` under 1 leaves the gap at the bottom, as the calorie gauge.
 struct ProgressRing: View {
     let fraction: Double
     let color: Color
@@ -114,7 +113,6 @@ struct CardPicker<Value: Hashable, Options: View>: View {
 }
 
 extension View {
-    /// Values on the trailing edge over dashed grid lines.
     func themedYAxis() -> some View {
         chartYAxis {
             AxisMarks(position: .trailing) { _ in

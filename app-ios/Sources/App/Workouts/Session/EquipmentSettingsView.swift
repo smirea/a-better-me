@@ -61,7 +61,7 @@ struct EquipmentSettingsView: View {
                                 .accessibilityLabel("Offset amount")
                                 .onChange(of: offsetText) { _, text in
                                     let cleared = text.trimmingCharacters(in: .whitespaces).isEmpty
-                                    guard let value = cleared ? 0 : Self.parse(text) else { return }
+                                    guard let value = cleared ? 0 : NumberText.parse(text) else { return }
                                     edit { $0.overrides.plateOffset = OffsetKind(offset).offset(value: value, unit: unit) }
                                 }
                         }
@@ -117,11 +117,6 @@ struct EquipmentSettingsView: View {
         case let .percent(percent): percent.formatted(.number.precision(.fractionLength(0...2)))
         case let .kilograms(kg): unit.format(kg: kg)
         }
-    }
-
-    /// Signed, unlike a load's weight field.
-    private static func parse(_ text: String) -> Double? {
-        Double(text.replacing(",", with: ".").trimmingCharacters(in: .whitespaces))
     }
 
     private func edit(_ change: @escaping @Sendable (inout ExerciseSettings) -> Void) {

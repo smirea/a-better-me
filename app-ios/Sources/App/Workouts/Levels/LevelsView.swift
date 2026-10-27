@@ -42,7 +42,7 @@ private struct LevelsSection: View {
     let weekly: WeeklySets
 
     var body: some View {
-        Section {
+        ThemedSection(title) {
             ForEach(weekly.ranked(muscles), id: \.muscle) { muscle, sets in
                 let row = MuscleLevelRow(muscle: muscle, sets: sets, top: weekly.top)
                 // Untrained muscles have nothing to list, so the reference shows them without a chevron.
@@ -52,19 +52,7 @@ private struct LevelsSection: View {
                     row
                 }
             }
-            .listRowBackground(Theme.surface)
-        } header: {
-            LevelsHeader(title: title)
         }
-    }
-}
-
-struct LevelsHeader: View {
-    let title: String
-
-    var body: some View {
-        SectionTitle(title).textCase(nil)
-            .padding(.leading, -16)
     }
 }
 

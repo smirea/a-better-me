@@ -104,7 +104,7 @@ struct FoodLibraryView: View {
         .sheet(item: $sheet) { $0.editor }
         .navigationDestination(item: $openedRecipe) { RecipeDetailView(recipeID: $0) }
         .sensoryFeedback(.success, trigger: favorited)
-        .confirmationDialog(deleteTitle, isPresented: Binding { pendingDelete != nil } set: { if !$0 { pendingDelete = nil } }, titleVisibility: .visible) {
+        .confirmationDialog(deleteTitle, isPresented: .isPresent($pendingDelete), titleVisibility: .visible) {
             Button(pendingDelete.map { if case .favorite = $0 { "Remove" } else { "Delete" } } ?? "Delete", role: .destructive) {
                 switch pendingDelete {
                 case let .food(food): store.deleteFood(food.id)

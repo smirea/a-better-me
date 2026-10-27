@@ -1,4 +1,3 @@
-import GRDB
 import SwiftUI
 
 /// Every visible nutrient against its target for the day, or as a daily average over the week, month, three months,
@@ -125,14 +124,5 @@ struct ContributorsView: View {
             }
         }
         .detailTitle(info?.name ?? "Contributors")
-    }
-}
-
-extension NutritionDay {
-    /// The rows from `start` through `end`; days without one are plain.
-    static func between(_ start: CalendarDay, _ end: CalendarDay) -> DatabaseQuery<[NutritionDay]> {
-        DatabaseQuery([]) { db in
-            try NutritionDay.filter(Column("id") >= start.description && Column("id") <= end.description).fetchAll(db)
-        }
     }
 }

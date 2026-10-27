@@ -12,6 +12,7 @@ struct FoodLogTab: View {
                 DayPager()
             }
             .background(Theme.background)
+            .background { ShownDayEntries(day: state.day).id(state.day) }
             .safeAreaInset(edge: .bottom) { FoodLogBottomBar() }
             .screenTitle(NutritionFormat.dayTitle(state.day))
             .toolbar {
@@ -67,15 +68,21 @@ private struct WeekPills: View {
 
     @Environment(FoodLogState.self) private var state
     @Observe private var entries: [FoodEntry]
+    @Observe private var rows: [NutritionDay]
 
     init(monday: CalendarDay, plans: [NutritionPlan]) {
         self.monday = monday
         self.plans = plans
         _entries = Observe(FoodEntry.between(monday, monday.adding(days: 6)))
+        _rows = Observe(NutritionDay.between(monday, monday.adding(days: 6)))
     }
 
     var body: some View {
-        let kcal = Dictionary(grouping: entries, by: \.day).mapValues { FoodLog.totals($0)[.energy] ?? 0 }
+        let byDay = Dictionary(grouping: entries, by: \.day)
+        let rowByDay = Dictionary(rows.map { ($0.id, $0) }) { first, _ in first }
+        let kcal = Dictionary(uniqueKeysWithValues: monday.week.map { day in
+            (day, (rowByDay[day] ?? NutritionDay(id: day)).totals(byDay[day] ?? [])[.energy] ?? 0)
+        })
         ForEach(monday.week, id: \.self) { day in
             let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day).energy
             DayPill(

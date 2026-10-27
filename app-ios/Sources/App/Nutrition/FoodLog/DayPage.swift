@@ -38,12 +38,23 @@ struct DayPage: View {
             .padding(.vertical, 12)
         }
         .scrollIndicators(.hidden)
-        .onChange(of: entries, initial: true) { publish() }
-        .onChange(of: state.day) { publish() }
+    }
+}
+
+/// Observes the shown day's entries for the bars. It sits outside the pager so a page never reads `state.day`, which
+/// would re-render every loaded page on each swipe.
+struct ShownDayEntries: View {
+    @Environment(FoodLogState.self) private var state
+    @Observe private var entries: [FoodEntry]
+
+    init(day: CalendarDay) {
+        _entries = Observe(FoodEntry.on(day))
     }
 
-    private func publish() {
-        if state.day == day, state.entries != entries { state.entries = entries }
+    var body: some View {
+        Color.clear.onChange(of: entries, initial: true) {
+            if state.entries != entries { state.entries = entries }
+        }
     }
 }
 
