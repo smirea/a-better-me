@@ -28,6 +28,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>The food logger scans barcodes with the camera.</string>
 	<key>OWNER_TOKEN</key>
 	<string>$(OWNER_TOKEN)</string>
 	<key>SENTRY_DSN_IOS</key>

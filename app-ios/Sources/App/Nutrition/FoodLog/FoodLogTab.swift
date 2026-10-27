@@ -36,10 +36,7 @@ struct FoodLogTab: View {
             }
         }
         .environment(state)
-        // F2's logger replaces this placeholder; every add affordance already builds its request.
-        .sheet(item: $state.logRequest) { _ in
-            ComingSoon(title: "Log Food").presentationDetents([.medium])
-        }
+        .sheet(item: $state.logRequest) { LoggerSheet(start: LoggerStart($0)) }
         .sheet(item: $state.editing) { EntryEditor(entry: $0) }
         .sheet(item: $state.note) { NoteEditor(draft: $0) }
         .sheet(isPresented: $showingCalendar) { CalendarSheet().environment(state) }
