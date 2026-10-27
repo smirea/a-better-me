@@ -18,26 +18,45 @@ struct DayPage: View {
     private var timeline: NutritionSettings.Timeline { settings.nutrition.timeline }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
+        ScrollViewReader { proxy in
+            ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(FoodLog.hours(entries, timeline: timeline)) { hour in
-                        HourRow(day: day, hour: hour, showsTotals: timeline.hourlyTotals)
-                        ForEach(hour.rows) { row in
-                            EntryRow(row: row, showsTime: timeline.foodTimestamps, hidesDetails: timeline.hideFoodDetails)
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(FoodLog.hours(entries, timeline: timeline)) { hour in
+                            HourRow(
+                                day: day, hour: hour, showsTotals: timeline.hourlyTotals,
+                                addsOnLongPress: timeline.addFoodsToHour == .longPress, premove: timeline.premove
+                            )
+                            ForEach(hour.rows) { row in
+                                EntryRow(row: row, showsTime: timeline.foodTimestamps, hidesDetails: timeline.hideFoodDetails)
+                                    .id(row.id)
+                            }
                         }
                     }
+                    .background(alignment: .leading) {
+                        Rectangle().fill(Theme.separator).frame(width: 1).padding(.leading, HourRow.gutter / 2)
+                    }
+                    NotesSection(day: day, notes: notes)
+                        .padding(.top, 28)
                 }
-                .background(alignment: .leading) {
-                    Rectangle().fill(Theme.separator).frame(width: 1).padding(.leading, HourRow.gutter / 2)
-                }
-                NotesSection(day: day, notes: notes)
-                    .padding(.top, 28)
+                .padding(.horizontal, Theme.margin)
+                .padding(.vertical, 8)
             }
-            .padding(.horizontal, Theme.margin)
-            .padding(.vertical, 12)
+            .scrollIndicators(.hidden)
+            .onChange(of: entries) { old, new in
+                guard Date.now < state.revealsAdditionsUntil, let added = FoodLog.added(from: old, to: new) else { return }
+                withAnimation { proxy.scrollTo(added, anchor: .center) }
+            }
         }
-        .scrollIndicators(.hidden)
+        .onScrollGeometryChange(for: Bool?.self) { geometry in
+            FoodLog.collapsesStrip(
+                offset: geometry.contentOffset.y + geometry.contentInsets.top,
+                slack: geometry.contentSize.height + geometry.contentInsets.top + geometry.contentInsets.bottom - geometry.containerSize.height
+            )
+        } action: { _, scrolled in
+            guard let scrolled else { return }
+            withAnimation(.snappy) { state.setScrolled(scrolled, on: day) }
+        }
     }
 }
 
@@ -58,53 +77,111 @@ struct ShownDayEntries: View {
     }
 }
 
-/// The hour pill, its + (a paste button while pasting inline), and the hour's macro totals.
+/// The hour pill, its + (a paste button while pasting inline, a move button under Premove), and the hour's macro
+/// totals. Tapping the pill selects the hour's entries; under the long-press setting, holding it adds food there.
 private struct HourRow: View {
-    static let gutter: CGFloat = 84
+    static let gutter: CGFloat = 64
 
     let day: CalendarDay
     let hour: TimelineHour
     let showsTotals: Bool
+    let addsOnLongPress: Bool
+    let premove: Bool
 
     @Environment(FoodLogState.self) private var state
     @Environment(LocalStore.self) private var store
 
     var body: some View {
         let label = NutritionFormat.hour(hour.hour)
-        let isCurrent = day == .today && Calendar.current.component(.hour, from: .now) == hour.hour
-        let isSelected = state.selecting && hour.rows.contains { state.selection.contains($0.id) }
-        HStack(spacing: 8) {
-            Chip(title: label, trailingImage: isCurrent ? "circlebadge.fill" : nil, isActive: isSelected)
-                .frame(width: Self.gutter)
-            addButton(label)
+        if state.pending?.inline == true {
+            Button { state.paste(to: .hour(day, hour: hour.hour), in: store) } label: {
+                let paste = Image(systemName: "doc.on.clipboard.fill").hourIcon(isPrimary: true).frame(width: 32, height: 40)
+                row(pill: pill(label, isActive: false), control: paste).contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Paste at \(label)")
+        } else {
+            row(pill: interactivePill(label), control: control(label))
+        }
+    }
+
+    private func row(pill: some View, control: some View) -> some View {
+        HStack(spacing: 6) {
+            pill.frame(width: Self.gutter)
+            control
             Spacer(minLength: 8)
             if showsTotals, !hour.rows.isEmpty {
                 HourTotals(amounts: hour.totals)
             }
         }
-        .padding(.vertical, 8)
+        .frame(height: 40)
+    }
+
+    private func pill(_ label: String, isActive: Bool) -> some View {
+        let isCurrent = day == .today && Calendar.current.component(.hour, from: .now) == hour.hour
+        return Chip(title: label, trailingImage: isCurrent ? "circlebadge.fill" : nil, isActive: isActive, size: .small)
+            .fixedSize()
+    }
+
+    private func interactivePill(_ label: String) -> some View {
+        let ids = hour.rows.map(\.entry.id)
+        let isSelected = state.selecting && !ids.isEmpty && ids.allSatisfy(state.selection.contains)
+        let addsHere = addsOnLongPress && !state.selecting
+        return pill(label, isActive: isSelected)
+            .frame(width: Self.gutter, height: 40)
+            .contentShape(.rect)
+            .onTapGesture { state.selectHour(ids) }
+            .gesture(LongPressGesture(minimumDuration: 0.35).onEnded { _ in state.requestLog(minute: hour.hour * 60) }, isEnabled: addsHere)
+            .accessibilityElement()
+            .accessibilityLabel(label)
+            .accessibilityValue(ids.isEmpty ? "No foods" : "\(ids.count) \(ids.count == 1 ? "food" : "foods")")
+            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+            .accessibilityHint(ids.isEmpty ? "" : "Selects this hour's foods")
+            .accessibilityAction { state.selectHour(ids) }
+            .accessibilityActions {
+                if addsHere {
+                    Button("Add food at \(label)") { state.requestLog(minute: hour.hour * 60) }
+                }
+            }
     }
 
     @ViewBuilder
-    private func addButton(_ label: String) -> some View {
-        if let pending = state.pending, pending.inline {
-            Button("Paste at \(label)", systemImage: "doc.on.clipboard.fill") {
-                store.relocate(pending.entries, pending.action, to: .hour(day, hour: hour.hour))
-                state.endSelection()
+    private func control(_ label: String) -> some View {
+        if premove, state.selecting, state.pending == nil {
+            Button("Move to \(label)", systemImage: "arrow.down.to.line") {
+                state.relocate(state.selectedEntries, .move, to: .hour(day, hour: hour.hour), in: store)
             }
-            .labelStyle(.iconOnly)
-            .font(.system(size: 11, weight: .bold))
-            .frame(width: 24, height: 24)
-            .background(Theme.textPrimary, in: Circle())
-            .foregroundStyle(.black)
-        } else {
+            .buttonStyle(HourIconStyle(isPrimary: true))
+            .disabled(state.selection.isEmpty)
+        } else if !addsOnLongPress {
             Button("Add food at \(label)", systemImage: "plus") { state.requestLog(minute: hour.hour * 60) }
-                .labelStyle(.iconOnly)
-                .font(.system(size: 11, weight: .bold))
-                .frame(width: 24, height: 24)
-                .background(Theme.surfaceRaised, in: Circle())
+                .buttonStyle(HourIconStyle(isPrimary: false))
                 .disabled(state.selecting)
         }
+    }
+}
+
+private extension View {
+    func hourIcon(isPrimary: Bool) -> some View {
+        font(.system(size: 10, weight: .bold))
+            .frame(width: 22, height: 22)
+            .background(isPrimary ? Theme.textPrimary : Theme.surfaceRaised, in: Circle())
+            .foregroundStyle(isPrimary ? Color.black : Theme.textPrimary)
+    }
+}
+
+private struct HourIconStyle: ButtonStyle {
+    let isPrimary: Bool
+
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .labelStyle(.iconOnly)
+            .hourIcon(isPrimary: isPrimary)
+            .opacity(configuration.isPressed || !isEnabled ? 0.5 : 1)
+            .frame(width: 32, height: 40)
+            .contentShape(.rect)
     }
 }
 
@@ -131,7 +208,8 @@ private struct HourTotals: View {
     }
 }
 
-/// A food tile with its time, or its check circle in select mode, in the gutter.
+/// A food tile with its time, or its check circle in select mode, in the gutter. Pasting inline hides the circles,
+/// so the destination day's foods don't read as a new selection.
 private struct EntryRow: View {
     let row: TimelineRow
     let showsTime: Bool
@@ -146,7 +224,7 @@ private struct EntryRow: View {
         HStack(spacing: 0) {
             ZStack {
                 Color.clear
-                if state.selecting {
+                if state.selecting, state.pending?.inline != true {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 20))
                         .foregroundStyle(Theme.textPrimary)
@@ -161,20 +239,29 @@ private struct EntryRow: View {
                     .disabled(state.selecting)
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
             .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
+            .overlay {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textSecondary, lineWidth: 1)
+                }
+            }
             .contentShape(.rect(cornerRadius: Theme.smallCornerRadius))
             .onTapGesture { state.select(entry.id) }
             .contextMenu {
                 Button("Edit", systemImage: "pencil") { state.editing = entry }
                 Button("Duplicate", systemImage: "plus.square.on.square") {
+                    state.expectAdditions()
                     store.log([entry.portion], on: entry.day, minute: entry.minute)
+                }
+                if entry.food.source == .recipe {
+                    Button("Explode", systemImage: "square.grid.3x3.square") { state.explode(entry.id, in: store) }
                 }
                 Button("Remove", systemImage: "trash", role: .destructive) { store.deleteEntries([entry.id]) }
             }
             .accessibilityAddTraits(isSelected ? .isSelected : [])
         }
-        .padding(.bottom, 8)
+        .padding(.bottom, 6)
     }
 }
 

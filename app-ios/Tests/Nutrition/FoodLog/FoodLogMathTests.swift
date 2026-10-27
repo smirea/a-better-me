@@ -129,6 +129,73 @@ struct FoodLogMathTests {
         ])
     }
 
+    @Test func confirmsWhatWasCopiedOrMovedAndWhere() {
+        let now = monday.date(atMinute: 18 * 60 + 5, in: utc)
+        func message(_ action: FoodLogState.Action, _ count: Int, _ target: PasteTarget) -> String {
+            FoodLog.confirmation(action, count: count, to: target, now: now, calendar: utc)
+        }
+        #expect(message(.copy, 3, .today) == "Copied 3 foods to Today")
+        #expect(message(.move, 1, .tomorrow) == "Moved 1 food to Tomorrow")
+        #expect(message(.copy, 2, .now) == "Copied 2 foods to Today at 6:05 PM")
+        #expect(message(.copy, 2, .days([monday.adding(days: 3)])) == "Copied 2 foods to Thu, Oct 29")
+        #expect(message(.copy, 5, .days([monday, monday.adding(days: 1), monday.adding(days: 2)])) == "Copied 5 foods to 3 days")
+        #expect(message(.copy, 2, .dateTime(monday.adding(days: 1), minute: 900)) == "Copied 2 foods to Tomorrow at 3:00 PM")
+        #expect(message(.move, 3, .hour(monday.adding(days: -1), hour: 16)) == "Moved 3 foods to Yesterday at 4 PM")
+    }
+
+    @Test func anHourPillAddsItsEntriesOrTakesThemAllBack() {
+        let a = UUID(), b = UUID(), c = UUID()
+        #expect(FoodLog.toggling([a, b], in: [c]) == [a, b, c])
+        #expect(FoodLog.toggling([a, b], in: [a, c]) == [a, b, c])
+        #expect(FoodLog.toggling([a, b], in: [a, b, c]) == [c])
+    }
+
+    @Test func explodesARecipeIntoItsIngredientsAtTheAmountEaten() {
+        let chicken = FoodSnapshot(
+            source: .usda, name: "Chicken", nutrition: FoodNutrition(nutrients: [.energy: 165, .protein: 31], baseGrams: 100, measures: [Measure(name: "g", quantity: 100, servings: 1)])
+        )
+        let pasta = FoodSnapshot(
+            source: .usda, name: "Pasta", nutrition: FoodNutrition(nutrients: [.energy: 105, .carbs: 21], baseGrams: 28.349523125, measures: [Measure(name: "oz", quantity: 1, servings: 1)])
+        )
+        var recipe = Recipe(name: "Chicken Pasta", servings: 2)
+        recipe.ingredients = [
+            RecipeIngredient(FoodPortion(chicken, serving: Serving(measure: chicken.nutrition.measures[0], quantity: 360))),
+            RecipeIngredient(FoodPortion(pasta, serving: Serving(measure: pasta.nutrition.measures[0], quantity: 6))),
+        ]
+
+        let half = FoodLog.exploded(Serving(measure: Measure(name: "serving", quantity: 1, servings: 1), quantity: 0.5), of: recipe)
+        #expect(half.map(\.food.name) == ["Chicken", "Pasta"])
+        #expect(half.map(\.serving.quantity) == [90, 1.5])
+        #expect(half.map(\.serving.measure.name) == ["g", "oz"])
+        #expect(FoodLog.totals(half.map { FoodEntry($0, day: monday, minute: 0) })[.energy]?.rounded() == 306)
+    }
+
+    @Test func draftsARecipeFromTheSelectionAtItsLoggedServings() {
+        let draft = FoodLog.recipeDraft([entry(bowl, minute: 600, quantity: 2), entry(yogurt, minute: 610, quantity: 0.5)])
+        #expect(draft.name == "")
+        #expect(draft.servings == "1")
+        #expect(draft.ingredients.map(\.value.food.name) == ["Bowl", "Yogurt"])
+        #expect(draft.ingredients.map(\.quantity) == ["2", "0.5"])
+        #expect(draft.preview.nutrition.nutrients[.energy] == 690)
+    }
+
+    @Test func findsTheLastEntryAddedToTheDay() {
+        let breakfast = entry(bowl, minute: 480)
+        let lunch = entry(bowl, minute: 750)
+        let snack = entry(yogurt, minute: 900)
+        #expect(FoodLog.added(from: [breakfast], to: [breakfast, lunch, snack]) == snack.id)
+        #expect(FoodLog.added(from: [breakfast, snack], to: [breakfast, lunch, snack]) == lunch.id)
+        #expect(FoodLog.added(from: [breakfast, lunch], to: [breakfast]) == nil)
+        #expect(FoodLog.added(from: [], to: []) == nil)
+    }
+
+    @Test func foldsTheWeekStripOnlyWhenScrolledThroughALongDay() {
+        #expect(FoodLog.collapsesStrip(offset: 0, slack: 600) == false)
+        #expect(FoodLog.collapsesStrip(offset: 60, slack: 600) == true)
+        #expect(FoodLog.collapsesStrip(offset: 60, slack: 80) == nil)
+        #expect(FoodLog.collapsesStrip(offset: 25, slack: 600) == nil)
+    }
+
     @Test func scalesBarsSoTheTargetSitsAtSixtyPercent() {
         #expect(FoodLog.barMaximum(value: 50, range: NutrientRange(target: 120)) == 200)
         #expect(FoodLog.barMaximum(value: 300, range: NutrientRange(target: 120)) == 300)

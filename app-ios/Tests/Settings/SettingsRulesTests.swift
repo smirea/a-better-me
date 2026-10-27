@@ -45,7 +45,7 @@ struct NutritionSettingsPersistenceTests {
         store.updateSettings { settings in
             settings.nutrition.energyUnit = .kj
             settings.nutrition.heightUnit = .centimeters
-            settings.nutrition.timeline.alignment = .right
+            settings.nutrition.timeline.addFoodsToHour = .longPress
             settings.nutrition.logger.optimization = .context
             settings.nutrition.expenditure.staticKcal = 2400
             settings.nutrition.expenditure.algorithm = .v2
@@ -61,7 +61,7 @@ struct NutritionSettingsPersistenceTests {
         var expected = NutritionSettings()
         expected.energyUnit = .kj
         expected.heightUnit = .centimeters
-        expected.timeline.alignment = .right
+        expected.timeline.addFoodsToHour = .longPress
         expected.logger.optimization = .context
         expected.expenditure.staticKcal = 2400
         expected.expenditure.algorithm = .v2
