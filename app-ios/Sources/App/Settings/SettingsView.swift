@@ -48,6 +48,9 @@ struct SettingsView: View {
                 NavigationLink { StrategySettingsView() } label: {
                     SettingLabel(title: "Strategy", detail: nil, systemImage: "circle.hexagongrid")
                 }
+                NavigationLink { FoodLibraryView() } label: {
+                    SettingLabel(title: "Foods & Recipes", detail: nil, systemImage: "carrot")
+                }
             } header: {
                 SectionTitle("Nutrition").textCase(nil)
             }

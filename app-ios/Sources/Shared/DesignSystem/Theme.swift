@@ -21,6 +21,14 @@ enum Theme {
     /// Trained muscles on body maps and progress bars.
     static let muscle = Color(hex: 0x276EF1)
 
+    /// MacroFactor's nutrient colors: calories and the macros on every bar, badge, and ring, then the vitamin and mineral groups.
+    static let calories = Color(hex: 0x68A0FA)
+    static let protein = Color(hex: 0xFF8660)
+    static let fat = Color(hex: 0xFFD05E)
+    static let carbs = Color(hex: 0x5EB987)
+    static let vitamins = Color(hex: 0xB28DF7)
+    static let minerals = Color(hex: 0xFF7EA2)
+
     /// MF's RIR badge colors: 0-1 red, 2-3 amber, 4-5 green, 6+ blue, unknown gray.
     static func rir(_ rir: Int?) -> Color {
         guard let rir else { return Color(hex: 0x6E6E6E) }
