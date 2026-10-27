@@ -51,7 +51,8 @@ export function parseConfig(settings: Settings): Config {
 		if (read('OWNER_TOKEN') === DEV_OWNER_TOKEN) throw new Error('OWNER_TOKEN is the local development token');
 	}
 	const dsn = read('SENTRY_DSN');
-	if (dsn && !DSN.test(dsn)) throw new Error('SENTRY_DSN is not a Sentry DSN (https://<key>@<host>/<project>)');
+	if (environment === 'production' && dsn && !DSN.test(dsn))
+		throw new Error('SENTRY_DSN is not a Sentry DSN (https://<key>@<host>/<project>)');
 	const set = (Object.keys(SPACE_SETTINGS) as SpaceSetting[]).filter(name => String(settings[name] ?? '').trim());
 	if (environment === 'production' && set.length) {
 		throw new Error(`Space settings are development only: ${set.join(', ')}`);
@@ -65,7 +66,7 @@ export function parseConfig(settings: Settings): Config {
 	return {
 		environment,
 		ownerToken: read('OWNER_TOKEN') ?? DEV_OWNER_TOKEN,
-		sentry: dsn ? { dsn, environment } : null,
+		sentry: environment === 'production' && dsn ? { dsn, environment } : null,
 		space,
 		geminiApiKey: read('GEMINI_API_KEY') ?? null,
 	};

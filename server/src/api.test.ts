@@ -189,6 +189,14 @@ describe('handle', () => {
 });
 
 describe('parseConfig', () => {
+	test('development ignores Sentry settings while production still reports', () => {
+		expect(parseConfig({ APP_ENV: 'development', SENTRY_DSN: 'leftover-dev-setting' }).sentry).toBeNull();
+		const dsn = 'https://abc123@o1.ingest.sentry.io/42';
+		expect(
+			parseConfig({ APP_ENV: 'production', OWNER_TOKEN: 'owner', SENTRY_DSN: dsn, GEMINI_API_KEY: 'gemini' }).sentry,
+		).toEqual({ dsn, environment: 'production' });
+	});
+
 	test('space settings apply in development and stop production', () => {
 		expect(parseConfig({ SYNC_PAGE_SIZE: '3' }).space).toEqual({ pageSize: 3 });
 		const production = {
