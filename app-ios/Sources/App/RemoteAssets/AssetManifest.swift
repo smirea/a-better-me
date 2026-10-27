@@ -1,22 +1,33 @@
 import Foundation
 
-/// One asset version's files, as `bun scripts/assets.ts upload` writes `manifests/<version>.json`. Each file's bytes
-/// are the bucket's `blobs/<sha256>`, so files with the same contents share one blob.
+/// One asset version's packs, as `bun scripts/assets.ts upload` writes `manifests/<version>.json`. Each pack is the
+/// bucket's `blobs/<sha256>`: its files back to back, at the offsets listed here.
 struct AssetManifest: Codable, Equatable, Sendable {
+    struct Pack: Codable, Equatable, Sendable {
+        let sha256: String
+        let size: Int
+        let files: [File]
+    }
+
     struct File: Codable, Equatable, Sendable {
         let path: String
-        let sha256: String
+        let offset: Int
         let size: Int
     }
 
     let version: String
-    let files: [File]
+    let packs: [Pack]
 
-    /// A blob's file name is its sha256, so anything but 64 lowercase hex characters could name a path outside `blobs/`.
+    /// A pack's directory name is its sha256 and its files land at their paths inside it, so a hash that is not
+    /// 64 lowercase hex characters or a path with `..` could write outside `blobs/`.
     static func parse(_ data: Data, version: String) throws(AssetError) -> AssetManifest {
         guard let manifest = try? JSONDecoder().decode(AssetManifest.self, from: data),
               manifest.version == version,
-              manifest.files.allSatisfy({ isBlobName($0.sha256) && $0.size >= 0 }) else { throw .badManifest }
+              manifest.packs.allSatisfy({ pack in
+                  isBlobName(pack.sha256) && pack.files.allSatisfy { file in
+                      isSafePath(file.path) && file.offset >= 0 && file.size >= 0 && file.offset + file.size <= pack.size
+                  }
+              }) else { throw .badManifest }
         return manifest
     }
 
@@ -24,25 +35,32 @@ struct AssetManifest: Codable, Equatable, Sendable {
         name.utf8.count == 64 && name.utf8.allSatisfy { (48...57).contains($0) || (97...102).contains($0) }
     }
 
-    /// One file per blob still to download.
-    func missing(present: Set<String>) -> [File] {
+    static func isSafePath(_ path: String) -> Bool {
+        path.split(separator: "/", omittingEmptySubsequences: false).allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
+    }
+
+    /// Each pack still to download, once.
+    func missing(present: Set<String>) -> [Pack] {
         var seen = present
-        return files.filter { seen.insert($0.sha256).inserted }
+        return packs.filter { seen.insert($0.sha256).inserted }
     }
 
     func progress(present: Set<String>) -> AssetProgress {
-        AssetProgress(
-            done: files.count { present.contains($0.sha256) },
-            total: files.count,
-            bytesLeft: missing(present: present).reduce(0) { $0 + $1.size }
+        var seen = Set<String>()
+        let unique = packs.filter { seen.insert($0.sha256).inserted }
+        return AssetProgress(
+            bytesDone: unique.reduce(0) { $0 + (present.contains($1.sha256) ? $1.size : 0) },
+            bytesTotal: unique.reduce(0) { $0 + $1.size }
         )
     }
 }
 
 struct AssetProgress: Equatable, Sendable {
-    let done: Int
-    let total: Int
-    let bytesLeft: Int
+    let bytesDone: Int
+    let bytesTotal: Int
+
+    var fraction: Double { bytesTotal == 0 ? 1 : Double(bytesDone) / Double(bytesTotal) }
+    var bytesLeft: Int { bytesTotal - bytesDone }
 }
 
 enum AssetPhase: Equatable, Sendable {
@@ -56,27 +74,30 @@ enum AssetPhase: Equatable, Sendable {
     case complete
     case failed(String)
 
-    /// The Settings row's one line, such as `Assets 1,200/3,002 · 12.4 MB left`.
+    /// The Settings row's one line, such as `Assets: downloading · 4.2 of 16.4 MB`.
     func statusLine(_ progress: AssetProgress?, locale: Locale = .current) -> String {
-        if self == .off { return "Assets · Off" }
+        let megabytes = { (bytes: Int) in
+            (Double(bytes) / 1_000_000).formatted(.number.precision(.fractionLength(1)).locale(locale))
+        }
         guard let progress else {
             return switch self {
-            case .checking: "Assets · Checking…"
-            case .waitingForWiFi: "Assets · Waiting for Wi-Fi"
-            case .waitingForTap: "Assets · Tap to download"
-            case .failed(let message): "Assets · \(message)"
-            case .off, .downloading, .complete: "Assets"
+            case .off: "Assets: off"
+            case .checking: "Assets: checking…"
+            case .waitingForWiFi: "Assets: waiting for Wi-Fi"
+            case .waitingForTap: "Assets: tap to download"
+            case .downloading: "Assets: downloading"
+            case .complete: "Assets: downloaded"
+            case .failed(let message): "Assets: \(message)"
             }
         }
-        let count = "Assets \(progress.done.formatted(.number.locale(locale)))/\(progress.total.formatted(.number.locale(locale)))"
-        let megabytes = (Double(progress.bytesLeft) / 1_000_000).formatted(.number.precision(.fractionLength(1)).locale(locale))
         return switch self {
-        case .off, .complete: count
-        case .checking: "\(count) · Checking…"
-        case .downloading: "\(count) · \(megabytes) MB left"
-        case .waitingForWiFi: "\(count) · \(megabytes) MB waiting for Wi-Fi"
-        case .waitingForTap: "\(count) · \(megabytes) MB, tap to download"
-        case .failed(let message): "\(count) · \(message)"
+        case .off: "Assets: off"
+        case .checking: "Assets: checking…"
+        case .complete: "Assets: downloaded · \(megabytes(progress.bytesTotal)) MB"
+        case .downloading: "Assets: downloading · \(megabytes(progress.bytesDone)) of \(megabytes(progress.bytesTotal)) MB"
+        case .waitingForWiFi: "Assets: \(megabytes(progress.bytesLeft)) MB waiting for Wi-Fi"
+        case .waitingForTap: "Assets: \(megabytes(progress.bytesLeft)) MB, tap to download"
+        case .failed(let message): "Assets: \(message) · \(megabytes(progress.bytesLeft)) MB left"
         }
     }
 }
@@ -86,7 +107,7 @@ enum AssetError: Error, Equatable {
     case corrupt
     case badManifest
 
-    /// Short enough to share the status line with the counts.
+    /// Short enough to share the status line with the sizes.
     static func message(_ error: any Error) -> String {
         switch error {
         case AssetError.http(let status): "HTTP \(status)"

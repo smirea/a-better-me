@@ -106,47 +106,39 @@ private struct InstructionsTab: View {
         .task(id: source) { content = await source.load() }
     }
 
-    /// Resolving the URLs here re-renders the tab when `AssetStore` downloads a missing file.
     private var source: InstructionSource {
         InstructionSource(
             about: exercise.isCustom ? exercise.about ?? "" : nil,
-            instructions: exercise.isCustom ? nil : catalog.instructionsURL(for: exercise),
-            articles: exercise.articleIDs.compactMap { catalog.articles[$0] }.map { .init(title: $0.title, url: catalog.articleURL($0)) }
+            instructions: exercise.isCustom || !exercise.hasInstructions ? nil : exercise.id,
+            articles: exercise.articleIDs.compactMap { catalog.articles[$0] }
         )
     }
 }
 
-/// The files an exercise's Instructions tab shows, read and parsed off main.
+/// The bundled Markdown an exercise's Instructions tab shows, read and parsed off main.
 struct InstructionSource: Hashable, Sendable {
-    struct ArticleFile: Hashable, Sendable {
-        let title: String
-        let url: URL?
-    }
-
-    /// A custom exercise's own description, which replaces the instructions file.
+    /// A custom exercise's own description, which replaces the bundled instructions.
     let about: String?
-    let instructions: URL?
-    let articles: [ArticleFile]
+    let instructions: ExerciseID?
+    let articles: [Article]
 
     struct Content {
         let source: InstructionSource
         let sections: [MarkdownSection]
-        /// One section per article whose file is on disk.
+        /// One section per article the pack holds.
         let articles: [MarkdownSection]
     }
 
-    @concurrent func load() async -> Content {
-        let markdown = about ?? instructions.flatMap(Self.read) ?? ""
+    @concurrent func load(from pack: MarkdownPack = .bundled) async -> Content {
+        let markdown = about ?? instructions.flatMap(pack.instructions) ?? ""
         return Content(
             source: self,
             sections: MarkdownSection.parse(markdown).map { $0.title.isEmpty ? MarkdownSection(title: "Description", body: $0.body) : $0 },
             articles: articles.compactMap { article in
-                article.url.flatMap(Self.read).map { MarkdownSection(title: article.title, body: $0) }
+                pack.article(article.id).map { MarkdownSection(title: article.title, body: $0) }
             }
         )
     }
-
-    private static func read(_ url: URL) -> String? { try? String(contentsOf: url, encoding: .utf8) }
 }
 
 private struct CollapsibleSection: View {

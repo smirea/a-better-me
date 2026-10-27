@@ -65,11 +65,7 @@ struct SettingsView: View {
                 NavigationLink { DataVisibilityView() } label: {
                     SettingLabel(title: "Data Visibility", detail: nil, systemImage: "eye")
                 }
-                Button { AssetStore.shared.refresh() } label: {
-                    SettingLabel(title: AssetStore.shared.statusLine, detail: nil, systemImage: "icloud.and.arrow.down")
-                }
-                .accessibilityLabel(AssetStore.shared.statusLine)
-                .accessibilityHint("Checks for missing exercise images and downloads them now, on cellular too")
+                AssetsRow()
             } header: {
                 SectionTitle("Data").textCase(nil)
             }
@@ -84,5 +80,22 @@ struct SettingsView: View {
         .themedList()
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+/// Shows a progress bar only while downloading, so a finished download leaves just its size.
+private struct AssetsRow: View {
+    var body: some View {
+        let store = AssetStore.shared
+        Button { store.refresh() } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                SettingLabel(title: store.statusLine, detail: nil, systemImage: "icloud.and.arrow.down")
+                if store.phase == .downloading, let progress = store.progress {
+                    ProgressView(value: progress.fraction).tint(Theme.textPrimary)
+                }
+            }
+        }
+        .accessibilityLabel(store.statusLine)
+        .accessibilityHint("Checks for missing exercise images and downloads them now, on cellular too")
     }
 }

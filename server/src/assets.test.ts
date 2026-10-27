@@ -2,7 +2,7 @@ import { afterAll, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { assetRoutes } from './assets';
+import { assetRoutes, buildAssets } from './assets';
 
 const dir = mkdtempSync(join(tmpdir(), 'assets-'));
 mkdirSync(join(dir, 'Images'));
@@ -10,9 +10,8 @@ writeFileSync(join(dir, 'Images/a.webp'), 'image');
 writeFileSync(join(dir, 'b.md'), '# B\n');
 afterAll(() => rmSync(dir, { recursive: true }));
 
-const IMAGE_SHA = '6105d6cc76af400325e94d588ce511be5bfdbb73b437dc51eca43917d7a43e3d';
-const MARKDOWN_SHA = 'a81d3fbddd441e2d690b9c03c18251323a295c8eb8ebbfb81ca45b63bf8d5a06';
-const VERSION = 'c4cc1dbdc1f554d0';
+const PACK_SHA = 'ae14fe62bfab047974f07a844dff802e965a33f10d63713e40e866bc6a3e5bde';
+const VERSION = '78a7696b1b689b11';
 
 const serve = assetRoutes(dir);
 const get = (path: string) => serve(new Request(`http://localhost${path}`))!;
@@ -22,17 +21,39 @@ test('serves the manifest of the current version', async () => {
 	expect(response.status).toBe(200);
 	expect(await response.json()).toEqual({
 		version: VERSION,
-		files: [
-			{ path: 'Images/a.webp', sha256: IMAGE_SHA, size: 5 },
-			{ path: 'b.md', sha256: MARKDOWN_SHA, size: 4 },
+		packs: [
+			{
+				sha256: PACK_SHA,
+				size: 9,
+				files: [
+					{ path: 'Images/a.webp', offset: 0, size: 5 },
+					{ path: 'b.md', offset: 5, size: 4 },
+				],
+			},
 		],
 	});
 });
 
-test('serves a blob by its sha256', async () => {
-	const response = get(`/assets/blobs/${IMAGE_SHA}`);
+test('serves a pack, its files back to back, by its sha256', async () => {
+	const response = get(`/assets/blobs/${PACK_SHA}`);
 	expect(response.status).toBe(200);
-	expect(await response.text()).toBe('image');
+	expect(await response.text()).toBe('image# B\n');
+});
+
+test('starts a new pack once one reaches 1 MB', () => {
+	const large = mkdtempSync(join(tmpdir(), 'assets-'));
+	try {
+		writeFileSync(join(large, 'a'), 'a'.repeat(600_000));
+		writeFileSync(join(large, 'b'), 'b'.repeat(600_000));
+		writeFileSync(join(large, 'c'), 'c');
+		const { manifest } = buildAssets(large);
+		expect(manifest.packs.map(pack => pack.files.map(file => `${file.path}@${file.offset}`))).toEqual([
+			['a@0', 'b@600000'],
+			['c@0'],
+		]);
+	} finally {
+		rmSync(large, { recursive: true });
+	}
 });
 
 test('answers 404 naming both versions for a stale version', async () => {
@@ -52,5 +73,5 @@ test('answers 404 for an unknown or malformed sha256', async () => {
 
 test('leaves other requests to the API', () => {
 	expect(serve(new Request('http://localhost/status'))).toBeNull();
-	expect(serve(new Request(`http://localhost/assets/blobs/${IMAGE_SHA}`, { method: 'POST' }))).toBeNull();
+	expect(serve(new Request(`http://localhost/assets/blobs/${PACK_SHA}`, { method: 'POST' }))).toBeNull();
 });

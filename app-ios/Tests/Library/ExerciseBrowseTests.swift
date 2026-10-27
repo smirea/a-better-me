@@ -116,27 +116,24 @@ struct DownsamplingTests {
 }
 
 struct InstructionSourceTests {
-    @Test func readsAndSplitsTheInstructionsAndArticles() async throws {
-        let directory = URL.temporaryDirectory.appending(path: "instructions-\(UUID())")
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let instructions = directory.appending(path: "bench.md")
-        try "Lie down.\n## Exercise technique\nPress up.".write(to: instructions, atomically: true, encoding: .utf8)
-        let article = directory.appending(path: "article.md")
-        try "Breathe.".write(to: article, atomically: true, encoding: .utf8)
-
-        let source = InstructionSource(about: nil, instructions: instructions, articles: [
-            .init(title: "Bracing", url: article),
-            .init(title: "Not downloaded", url: nil),
+    @Test func readsAndSplitsTheInstructionsAndArticles() async {
+        let instructions = "Lie down.\n## Exercise technique\nPress up."
+        let pack = MarkdownPack(
+            data: Data((instructions + "Breathe.").utf8),
+            ranges: ["Instructions/bench": [0, instructions.utf8.count], "Articles/bracing": [instructions.utf8.count, 8]]
+        )
+        let source = InstructionSource(about: nil, instructions: "bench", articles: [
+            Article(id: "bracing", title: "Bracing"),
+            Article(id: "missing", title: "Not in the pack"),
         ])
-        let content = await source.load()
+        let content = await source.load(from: pack)
         #expect(content.sections.map(\.title) == ["Description", "Exercise technique"])
         #expect(content.sections.map(\.body) == ["Lie down.", "Press up."])
         #expect(content.articles.map(\.title) == ["Bracing"])
         #expect(content.articles.map(\.body) == ["Breathe."])
     }
 
-    @Test func aCustomDescriptionReplacesTheFile() async {
+    @Test func aCustomDescriptionReplacesTheInstructions() async {
         let content = await InstructionSource(about: "## Setting up\nStand.", instructions: nil, articles: []).load()
         #expect(content.sections.map(\.title) == ["Setting up"])
     }
