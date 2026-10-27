@@ -3,7 +3,10 @@
  * `a-better-me-assets` as content-addressed packs `blobs/<sha256>` plus one `manifests/<version>.json` per version.
  *
  *   bun scripts/assets.ts version   pack app-ios/Assets and rewrite app-ios/Config/Assets.xcconfig (no network)
- *   bun scripts/assets.ts upload    upload the missing packs, then the manifest (needs this Mac's AWS access)
+ *   bun scripts/assets.ts upload    upload the missing packs, then the manifest; a no-op when the bucket has this version
+ *
+ * CI runs `upload` on every change to the assets, with the Cloudflare credentials in its environment. Locally they come
+ * from env-manager prod, which needs this Mac's AWS access.
  *
  * Never prints a credential: it logs counts and sizes only.
  */
@@ -40,7 +43,7 @@ export function writeVersion(): Manifest {
 
 /** R2 takes any Cloudflare API token as S3 credentials: the token's id and the sha256 of its value. */
 async function bucket(): Promise<Bun.S3Client> {
-	const values = readEnv('prod');
+	const values = process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN ? process.env : readEnv('prod');
 	const account = values.CLOUDFLARE_ACCOUNT_ID;
 	const token = values.CLOUDFLARE_API_TOKEN;
 	if (!account || !token) throw new Error('Not set in env-manager prod: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN');
@@ -69,13 +72,18 @@ async function existingBlobs(client: Bun.S3Client): Promise<Set<string>> {
 	return keys;
 }
 
-/** Idempotent. The manifest goes last, so a manifest in the bucket never names a missing blob. */
+/** Idempotent. The manifest goes last, so a manifest in the bucket never names a missing pack, and its presence means
+ * the whole version is uploaded. */
 export async function upload() {
 	const { manifest, blobs } = buildAssets(ASSETS_DIR);
 	if (trackedVersion() !== manifest.version) {
 		throw new Error(`app-ios/Config/Assets.xcconfig is stale for app-ios/Assets. Run bun run assets version.`);
 	}
 	const client = await bucket();
+	if (await client.exists(`manifests/${manifest.version}.json`)) {
+		console.log(`Asset version ${manifest.version} is already uploaded`);
+		return;
+	}
 	const existing = await existingBlobs(client);
 	const missing = manifest.packs.filter(pack => !existing.has(`blobs/${pack.sha256}`));
 	const bytes = missing.reduce((sum, pack) => sum + pack.size, 0);
