@@ -7,6 +7,7 @@ import SyncEngine
 enum Telemetry {
     /// First thing at launch, so a crash during the rest of launch is still reported. Crash capture is on by default.
     static func start() {
+        #if !DEBUG
         guard let dsn = AppEnvironment.sentryDSN, !isTestRun else { return }
         SentrySDK.start { options in
             options.dsn = dsn
@@ -22,12 +23,9 @@ enum Telemetry {
             }
             options.attachScreenshot = true
             options.attachViewHierarchy = true
-            #if DEBUG
-            options.environment = "development"
-            #else
             options.environment = "production"
-            #endif
         }
+        #endif
     }
 
     /// Unit tests run inside the app, and their sync failures against no server are not the owner's.
@@ -36,6 +34,7 @@ enum Telemetry {
     /// Warns once per distinct sync failure and per refused write while the app runs. The client keeps retrying a
     /// failure and lists its last 20 refusals on every change, so reporting each change would repeat the same event.
     @MainActor static func watch(_ client: SyncClient) {
+        #if !DEBUG
         Task { @MainActor in
             var reported = Set<String>()
             for await (status, rejected) in Observations({ (client.status, client.rejected) }) {
@@ -55,6 +54,7 @@ enum Telemetry {
                 }
             }
         }
+        #endif
     }
 
     private static func warn(_ message: String, extras: [String: Any]) {

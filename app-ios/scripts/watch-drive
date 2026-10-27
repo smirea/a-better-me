@@ -51,7 +51,7 @@ async function start() {
     rmSync(dir, { recursive: true, force: true });
     mkdirSync(dir, { recursive: true });
     const destination = `platform=watchOS Simulator,id=${udid}`;
-    const project = ["-project", join(root, "App.xcodeproj"), "-scheme", "WatchDriver", "-destination", destination, "-derivedDataPath", build];
+    const project = ["-project", join(root, "App.xcodeproj"), "-scheme", "WatchDriver", "-destination", destination, "-derivedDataPath", build, "-clonedSourcePackagesDirPath", join(root, "DerivedData", "SourcePackages")];
     console.log("Building the watch driver…");
     const built = Bun.spawnSync(["xcodebuild", "build-for-testing", "-quiet", ...project, "CODE_SIGN_IDENTITY=-"], { stdout: "pipe", stderr: "pipe" });
     if (built.exitCode !== 0) {
