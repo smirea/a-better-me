@@ -91,7 +91,6 @@ struct CustomizeDashboardView: View {
         case .nutrition:
             ForEach(binding(\.nutrition)) { $card in
                 if let id = card.nutrient {
-                    let hasTarget = NutritionMetrics.macros.contains(id) || NutrientRegistry.nutrient(id)?.defaults != nil
                     CardRow(title: NutrientRegistry.nutrient(id)?.name ?? id.rawValue, icon: .nutrient) {
                         Menu {
                             Picker("Nutrient Display", selection: $card.display) {
@@ -100,7 +99,6 @@ struct CustomizeDashboardView: View {
                                 Text("Remaining").tag(NutritionCard.Display.remaining)
                             }
                         } label: { MetricMenuLabel(title: card.display.title) }
-                            .disabled(!hasTarget)
                             .accessibilityLabel("\(NutrientRegistry.nutrient(id)?.name ?? id.rawValue) display")
                     }
                 } else {
