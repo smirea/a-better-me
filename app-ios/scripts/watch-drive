@@ -6,7 +6,9 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "..");
-const usage = `Usage: scripts/watch-drive <watch-udid> <command> [args]
+const usage = `Usage: scripts/watch-drive <watch-udid|phone-udid> <command> [args]
+
+A phone's udid drives the watch in its active pair (./scripts/run --pair-watch makes one).
 
   start                 build the driver, launch the watch app under it, wait until ready
   tree                  the accessibility tree
@@ -23,16 +25,27 @@ const usage = `Usage: scripts/watch-drive <watch-udid> <command> [args]
   systap <bundle-id> <label|id>
   stop                  end the driver`;
 
-const [udid, op, ...args] = Bun.argv.slice(2);
-if (!udid || !op) {
+const [device, op, ...args] = Bun.argv.slice(2);
+if (!device || !op) {
     console.log(usage);
-    process.exit(udid ? 1 : 0);
+    process.exit(device ? 1 : 0);
 }
+// A running driver's folder names its watch, so commands after `start` skip the `simctl` lookup.
+const udid = existsSync(join(root, "DerivedData", `watch-driver-${device}`)) ? device : (pairedWatch(device) ?? device);
 const dir = join(root, "DerivedData", `watch-driver-${udid}`);
-const build = join(root, "DerivedData", "watchdriver");
+// The folder `scripts/run` builds simulators into, which already holds the watch app and the shared code: a fresh
+// driver builds in seconds instead of compiling the watch app again. Two builds at once in it fail on Xcode's lock.
+const build = join(root, "DerivedData", "simulator");
 
 if (op === "start") await start();
 else console.log(await send(op, args));
+
+/** The watch in the phone's active pair, or nothing when `device` isn't a paired phone. */
+function pairedWatch(device: string): string | undefined {
+    const listed = Bun.spawnSync(["xcrun", "simctl", "list", "pairs", "--json"], { stdout: "pipe" });
+    const pairs = Object.values(JSON.parse(listed.stdout.toString()).pairs) as any[];
+    return pairs.find(pair => pair.phone.udid.toLowerCase() === device.toLowerCase() && !/unactive|inactive/.test(pair.state))?.watch.udid;
+}
 
 function alive(pid: number) {
     try {
