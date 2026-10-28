@@ -20,6 +20,14 @@ final class FakeRambleModel {
     }
 }
 
+/// Waits until `condition` holds, so a busy simulator delaying a debounce timer fails nothing; the expectations that
+/// follow still check the result.
+@MainActor
+func eventually(_ condition: () -> Bool) async throws {
+    let deadline = ContinuousClock.now + .seconds(2)
+    while !condition(), ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+}
+
 @MainActor
 struct RambleOutlinerTests {
     let model = FakeRambleModel()
@@ -29,7 +37,7 @@ struct RambleOutlinerTests {
         outliner.update("one")
         outliner.update("one cup")
         outliner.update("one cup of oats")
-        try await Task.sleep(for: .milliseconds(250))
+        try await eventually { !model.answered.isEmpty }
         #expect(model.calls == ["one cup of oats"])
         #expect(model.answered == ["one cup of oats"])
         #expect(outliner.latest?.transcript == "one cup of oats")
@@ -52,10 +60,10 @@ struct RambleOutlinerTests {
         model.delay = .milliseconds(300)
         let outliner = model.outliner()
         outliner.update("a")
-        try await Task.sleep(for: .milliseconds(120))
+        try await eventually { model.calls == ["a"] }
         outliner.update("a b")
         outliner.update("a b c")
-        try await Task.sleep(for: .milliseconds(700))
+        try await eventually { model.answered.count == 2 }
         #expect(model.calls == ["a", "a b c"])
         #expect(model.answered == ["a", "a b c"])
     }
@@ -63,7 +71,7 @@ struct RambleOutlinerTests {
     @Test func settlingOnTheTranscriptLastReadReusesItsAnswer() async throws {
         let outliner = model.outliner()
         outliner.update("two eggs")
-        try await Task.sleep(for: .milliseconds(200))
+        try await eventually { outliner.latest != nil }
         let outline = await outliner.settle("two eggs", timeout: .seconds(1))
         #expect(outline?.items.map(\.name) == ["two eggs"])
         #expect(model.calls == ["two eggs"])
@@ -73,7 +81,7 @@ struct RambleOutlinerTests {
         model.delay = .milliseconds(300)
         let outliner = model.outliner()
         outliner.update("two eggs")
-        try await Task.sleep(for: .milliseconds(100))
+        try await eventually { model.calls == ["two eggs"] }
         let outline = await outliner.settle("two eggs and toast", timeout: .seconds(2))
         #expect(outline?.items.map(\.name) == ["two eggs and toast"])
         #expect(model.calls == ["two eggs", "two eggs and toast"])
@@ -93,10 +101,11 @@ struct RambleOutlinerTests {
         model.failing = true
         let outliner = model.outliner()
         outliner.update("a")
-        try await Task.sleep(for: .milliseconds(200))
+        try await eventually { model.calls == ["a"] }
+        try await Task.sleep(for: .milliseconds(50))
         #expect(!outliner.off)
         outliner.update("a b")
-        try await Task.sleep(for: .milliseconds(200))
+        try await eventually { outliner.off }
         #expect(outliner.off)
         outliner.update("a b c")
         try await Task.sleep(for: .milliseconds(200))

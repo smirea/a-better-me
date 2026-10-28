@@ -4,9 +4,10 @@ import Speech
 import SwiftUI
 import Synchronization
 
-/// Apple's on-device dictation: `SpeechAnalyzer` with a `DictationTranscriber`, so audio never leaves the phone and it
-/// works offline. The language assets download on first use. Only the microphone needs permission. Ported from
-/// procrastimate's `SpeechDictation`.
+/// Apple's on-device speech-to-text: `SpeechAnalyzer` with a `SpeechTranscriber`, which works offline. The language
+/// assets download on first use. Only the microphone needs permission. Ported from procrastimate's `SpeechDictation`,
+/// which uses a `DictationTranscriber`; on spoken food rambles that one garbled food words ("200 mL of air actual
+/// weight" for "200ml of kefir, actually wait") that `SpeechTranscriber` kept (`scripts/food-ramble-speech.ts`).
 @MainActor
 final class SpeechDictation {
     enum Failure: Error {
@@ -18,18 +19,20 @@ final class SpeechDictation {
     private var input: AsyncStream<AnalyzerInput>.Continuation?
     private var analyzer: SpeechAnalyzer?
     private var reader: Task<Void, Never>?
+    #if DEBUG
+    private var playback: Task<Void, Never>?
+    #endif
 
     /// Streams the transcript so far, finalized text followed by the words still being recognized. The tap also writes
-    /// each buffer's peak to `meter` for the waveform.
-    func start(meter: LevelMeter, onText: @escaping @MainActor (String) -> Void) async throws {
-        guard let locale = await DictationTranscriber.supportedLocale(equivalentTo: Locale(identifier: "en-US")) else {
+    /// each buffer's peak to `meter` for the waveform and the audio to `recorder` for the final read.
+    func start(meter: LevelMeter, recorder: RambleRecorder, onText: @escaping @MainActor (String) -> Void) async throws {
+        guard let locale = await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: "en-US")) else {
             throw Failure.unsupported
         }
-        let transcriber = DictationTranscriber(
+        let transcriber = SpeechTranscriber(
             locale: locale,
-            contentHints: [],
-            transcriptionOptions: [.punctuation],
-            reportingOptions: [.volatileResults, .frequentFinalization],
+            transcriptionOptions: [],
+            reportingOptions: [.volatileResults, .fastResults],
             attributeOptions: []
         )
         if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
@@ -53,6 +56,12 @@ final class SpeechDictation {
         self.analyzer = analyzer
         self.input = input
 
+        #if DEBUG
+        if let path = UserDefaults.standard.string(forKey: Self.audioArgument) {
+            playback = try Self.play(URL(fileURLWithPath: path), through: converter, into: input, recorder: recorder, meter: meter)
+            return
+        }
+        #endif
         guard await AVAudioApplication.requestRecordPermission() else {
             cancel()
             throw Failure.denied
@@ -65,7 +74,8 @@ final class SpeechDictation {
             let node = audio.inputNode
             let format = node.outputFormat(forBus: 0)
             guard format.sampleRate > 0, format.channelCount > 0 else { throw Failure.unsupported }
-            try node.installAudioTap(onBus: 0, bufferSize: 1024, format: format, tapProvider: Self.feed(converter, input, meter))
+            try recorder.begin(format)
+            try node.installAudioTap(onBus: 0, bufferSize: 1024, format: format, tapProvider: Self.feed(converter, input, meter, recorder))
             audio.prepare()
             try audio.start()
         } catch {
@@ -79,7 +89,8 @@ final class SpeechDictation {
     nonisolated private static func feed(
         _ converter: AnalyzerInputConverter,
         _ input: AsyncStream<AnalyzerInput>.Continuation,
-        _ meter: LevelMeter
+        _ meter: LevelMeter,
+        _ recorder: RambleRecorder
     ) -> @Sendable (AVReadOnlyAudioPCMBuffer, AVAudioTime) -> Void {
         nonisolated(unsafe) let converter = converter
         return { buffer, time in
@@ -88,10 +99,41 @@ final class SpeechDictation {
                 for index in 0 ..< Int(buffer.frameLength) { peak = max(peak, abs(channel[index])) }
                 meter.set(peak)
             }
-            guard let items = try? converter.convert(AVAudioPCMBuffer(copying: buffer), at: time) else { return }
+            let copy = AVAudioPCMBuffer(copying: buffer)
+            recorder.write(copy)
+            guard let items = try? converter.convert(copy, at: time) else { return }
             for item in items { input.yield(item) }
         }
     }
+
+    #if DEBUG
+    /// DEBUG-only: `-RambleAudio <path>` plays a spoken audio file through the same converter, analyzer, and recorder at
+    /// real-time pace, so the simulator, which has no microphone, drives live speech-to-text and the final read.
+    static let audioArgument = "RambleAudio"
+
+    private static func play(
+        _ url: URL,
+        through converter: AnalyzerInputConverter,
+        into input: AsyncStream<AnalyzerInput>.Continuation,
+        recorder: RambleRecorder,
+        meter: LevelMeter
+    ) throws -> Task<Void, Never> {
+        nonisolated(unsafe) let file = try AVAudioFile(forReading: url)
+        try recorder.begin(file.processingFormat)
+        nonisolated(unsafe) let converter = converter
+        return Task.detached {
+            while file.framePosition < file.length, !Task.isCancelled {
+                guard let read = try? file.read(frameCount: 1600) else { break }
+                let buffer = AVAudioPCMBuffer(copying: read)
+                meter.set(.random(in: 0.08 ... 0.5))
+                recorder.write(buffer)
+                for item in (try? converter.convert(buffer, at: nil)) ?? [] { input.yield(item) }
+                try? await Task.sleep(for: .seconds(Double(buffer.frameLength) / file.processingFormat.sampleRate))
+            }
+            meter.set(0)
+        }
+    }
+    #endif
 
     /// Stops listening and waits until the words already heard are final, so the last of them are not lost.
     func finish() async {
@@ -108,6 +150,10 @@ final class SpeechDictation {
     }
 
     private func halt() {
+        #if DEBUG
+        playback?.cancel()
+        playback = nil
+        #endif
         engine?.inputNode.removeTap(onBus: 0)
         engine?.stop()
         engine = nil

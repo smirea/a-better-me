@@ -16,6 +16,8 @@ final class RambleCapture {
 
     /// Past this the last outline stands.
     static let settleTimeout = Duration.seconds(6)
+    /// The final read uploads the recording and runs the slower, more accurate model.
+    static let finalTimeout = Duration.seconds(12)
 
     private(set) var phase = Phase.idle
     private(set) var transcript = ""
@@ -30,6 +32,7 @@ final class RambleCapture {
     @ObservationIgnored private let client: any RambleOutlining
     @ObservationIgnored private let clock: @Sendable () -> Date
     @ObservationIgnored private let dictation = SpeechDictation()
+    @ObservationIgnored private let recorder = RambleRecorder()
     @ObservationIgnored private var outliner: RambleOutliner?
     @ObservationIgnored private var context: RambleContext?
     @ObservationIgnored private var items: [RambleItem] = []
@@ -84,7 +87,7 @@ final class RambleCapture {
         }
         #endif
         do {
-            try await dictation.start(meter: meter, onText: heard)
+            try await dictation.start(meter: meter, recorder: recorder, onText: heard)
             if phase != .listening { dictation.cancel() }
         } catch SpeechDictation.Failure.denied {
             end(token, notice: "The microphone is off. Turn it on in Settings to ramble.")
@@ -94,7 +97,8 @@ final class RambleCapture {
         }
     }
 
-    /// Stops listening, waits for the last words, then for the outline of exactly what was said.
+    /// Stops listening, waits for the last words, then for the final read of the recording, falling back to the
+    /// outline of exactly the transcript when there is no recording or the final read fails.
     func stop() async {
         guard phase == .listening else { return }
         let token = generation
@@ -103,7 +107,13 @@ final class RambleCapture {
         script?.cancel()
         await dictation.finish()
         guard token == generation else { return }
-        if let outliner, let outline = await outliner.settle(transcript, timeout: Self.settleTimeout) {
+        if let outline = await finalRead() {
+            guard token == generation else { return }
+            // A live read still in flight would otherwise land after this one and replace it.
+            outliner?.stop()
+            items = outline.items
+            await resolve()?.value
+        } else if let outliner, let outline = await outliner.settle(transcript, timeout: Self.settleTimeout) {
             items = outline.items
             await resolve()?.value
         } else if outliner?.off == true {
@@ -112,6 +122,24 @@ final class RambleCapture {
         guard token == generation else { return }
         outliner?.stop()
         phase = .review
+    }
+
+    private func finalRead() async -> RambleOutline? {
+        guard outliner?.off == false, let wav = recorder.wav() else { return nil }
+        var body = request(transcript)
+        body.audio = RambleRequest.Audio(data: wav.base64EncodedString())
+        let read = Task { [client] in try await client.outline(body) }
+        let timeout = Task {
+            try? await Task.sleep(for: Self.finalTimeout)
+            read.cancel()
+        }
+        defer { timeout.cancel() }
+        do {
+            return try await read.value
+        } catch {
+            RambleOutliner.log.error("Ramble final read failed: \(String(describing: error))")
+            return nil
+        }
     }
 
     /// Ends the capture without logging, when the logger closes.
@@ -153,6 +181,7 @@ final class RambleCapture {
         transcript = ""
         rows = []
         items = []
+        recorder.reset()
         choices = [:]
         expanded = []
         notice = nil
