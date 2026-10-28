@@ -21,11 +21,15 @@ final class FakeRambleModel {
 }
 
 /// Waits until `condition` holds, so a busy simulator delaying a debounce timer fails nothing; the expectations that
-/// follow still check the result.
+/// follow still check the result. It counts polls, not wall time: CI once held the main actor for 90 s, and a clock
+/// deadline ran out before the timer it waited on could fire.
 @MainActor
 func eventually(_ condition: () -> Bool) async throws {
-    let deadline = ContinuousClock.now + .seconds(2)
-    while !condition(), ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+    var polls = 0
+    while !condition(), polls < 500 {
+        polls += 1
+        try await Task.sleep(for: .milliseconds(10))
+    }
 }
 
 @MainActor
