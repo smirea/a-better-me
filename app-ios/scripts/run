@@ -157,6 +157,8 @@ async function deploy(target: Target, project: string) {
         if (!values.headless) await command(existsSync(simulator) ? ["open", "-a", simulator, "--args", "-CurrentDeviceUDID", target.id]
             : ["open", "-a", join(dirname(developer), "Applications/DeviceHub.app"), `devices://device/open?id=${target.id}`]);
         await command(["xcrun", "simctl", "install", target.id, app]);
+        // Agents test the granted path by default and revoke what a test needs denied. Health has no simctl service.
+        await command(["xcrun", "simctl", "privacy", target.id, "grant", "all", bundle], true);
         const watch = await installWatchApp(target, app);
         await command(["xcrun", "simctl", "launch", "--terminate-running-process", target.id, bundle]);
         if (watch) await launchWatchApp(watch);
