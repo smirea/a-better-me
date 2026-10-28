@@ -6,6 +6,7 @@ import { handleAgent } from '../agent';
 import { handle, type App } from '../api';
 import { parseConfig } from '../config';
 import { GEMINI_MODEL } from './mealPhoto';
+import { RAMBLE_FINAL_MODEL, RAMBLE_MODEL } from './ramble';
 import { USER_AGENT } from './openFoodFacts';
 
 const driver = bunSqlite(':memory:');
@@ -307,11 +308,25 @@ describe('ramble', () => {
 			'- m1: breakfast, yesterday, Monday 2026-10-26: e1 Oats (0.5 cup); e2 Blueberries (50 g)',
 		);
 		expect(instructions).toContain('- u1 Coffee (1 mug)');
-		expect(sent.contents[0].parts[0].text).toBe(`Ramble: ${body.transcript}`);
+		expect(sent.contents[0].parts).toEqual([{ text: `Ramble: ${body.transcript}` }]);
+		expect(requests[0]!.url).toContain(`/${RAMBLE_MODEL.model}:generateContent`);
 		const [food, copy] = sent.generationConfig.responseJsonSchema.properties.items.items.anyOf;
 		expect(food.properties.ref.enum).toEqual(['', 'e1', 'e2', 'u1']);
 		expect(copy.properties.copy.enum).toEqual(['m1']);
 		expect(copy.required).toEqual(['kind', 'copy']);
+	});
+
+	test('the final read sends the recording before the transcript, to the final model', async () => {
+		stub(() => geminiText('{"items":[]}'));
+		const audio = { data: btoa('RIFF....WAVE'), mediaType: 'audio/wav' };
+		expect((await ramble('gemini-key', { ...body, audio })).status).toBe(200);
+		const sent = await requests[0]!.json();
+		expect(requests[0]!.url).toContain(`/${RAMBLE_FINAL_MODEL.model}:generateContent`);
+		expect(sent.contents[0].parts).toEqual([
+			{ inline_data: { mime_type: 'audio/wav', data: audio.data } },
+			{ text: `Ramble: ${body.transcript}` },
+		]);
+		expect(sent.generationConfig.thinkingConfig).toEqual({ thinkingLevel: RAMBLE_FINAL_MODEL.thinking });
 	});
 
 	test('a copy of no meal, an except outside the copied meal, and a nameless food are dropped', async () => {

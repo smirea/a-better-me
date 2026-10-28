@@ -8,7 +8,7 @@ import { MEALS, TODAY, USUAL } from './food-ramble/history';
  * Scores the ramble outline call on labelled rambles through the production code path.
  *
  *   GEMINI_API_KEY=… bun scripts/food-ramble-eval.ts [-v] [--set dev|holdout] [--runs n] [--only id,…] \
- *     --with gemini-3.5-flash:minimal,gemini-3.8-flash:low
+ *     [--transcripts .cache/food-ramble/Samantha-speech.json [--audio .cache/food-ramble/Samantha]] --with gemini-3.5-flash:minimal,gemini-3.8-flash:low
  *
  * A case passes only when every item matches in order. Each model runs every case `--runs` times, so flaky cases show
  * as a pass rate below 100%. Latency is per successful call.
@@ -22,6 +22,8 @@ const { values } = parseArgs({
 		only: { type: 'string' },
 		with: { type: 'string', default: 'gemini-3.5-flash:minimal' },
 		concurrency: { type: 'string', default: '8' },
+		transcripts: { type: 'string' },
+		audio: { type: 'string' },
 	},
 });
 const key = process.env.GEMINI_API_KEY;
@@ -30,7 +32,20 @@ const only = values.only?.split(',');
 const cases = (values.set === 'holdout' ? HOLDOUT : values.set === 'all' ? [...DEV, ...HOLDOUT] : DEV).filter(
 	c => !only || only.includes(c.id),
 );
+// Speech-to-text output from scripts/food-ramble-speech.ts replaces each case's typed text.
+const spoken: Record<string, string> | null = values.transcripts ? await Bun.file(values.transcripts).json() : null;
+if (spoken) for (const c of cases) c.text = spoken[c.id] ?? c.text;
 const runs = Number(values.runs);
+
+/** `--audio <dir>` sends `<dir>/<case id>.aiff` along with the transcript, as the phone's final read does. */
+async function recording(id: string) {
+	if (!values.audio) return undefined;
+	const aiff = `${values.audio}/${id}.aiff`;
+	const wav = aiff.replace(/\.aiff$/, '.wav');
+	if (!(await Bun.file(wav).exists()))
+		Bun.spawnSync(['afconvert', '-f', 'WAVE', '-d', 'LEI16@16000', '-c', '1', aiff, wav]);
+	return { data: Buffer.from(await Bun.file(wav).arrayBuffer()).toString('base64'), mediaType: 'audio/wav' as const };
+}
 const models: RambleModel[] = values.with.split(',').map(spec => {
 	const [model, thinking] = spec.split(':');
 	return { model: model!, thinking: (thinking as RambleModel['thinking']) ?? null };
@@ -135,7 +150,15 @@ async function score(model: RambleModel, c: Case): Promise<Outcome> {
 	for (let attempt = 0; ; attempt++) {
 		try {
 			const outline = await outlineRamble(
-				{ transcript: c.text, today: TODAY, time: c.time ?? '20:30', meals: MEALS, usual: USUAL, shown: c.shown },
+				{
+					transcript: c.text,
+					today: TODAY,
+					time: c.time ?? '20:30',
+					meals: MEALS,
+					usual: USUAL,
+					shown: c.shown,
+					audio: await recording(c.id),
+				},
 				key!,
 				model,
 			);

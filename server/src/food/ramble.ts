@@ -3,10 +3,15 @@ import { ApiError } from '../agent/db';
 
 export type RambleModel = { model: string; thinking: 'minimal' | 'low' | 'medium' | 'high' | null };
 
-/** Picked by `scripts/food-ramble-eval.ts` (docs/decisions/nutrition.md, Ramble logging). */
+/**
+ * Picked by `scripts/food-ramble-eval.ts` (docs/decisions/nutrition.md, Ramble logging). Live reads take the fastest
+ * model that kept the labelled rambles near 100%; the final read, with the recording, takes the most accurate one,
+ * since the speaker is waiting on it once instead of watching it update.
+ */
 export const RAMBLE_MODEL: RambleModel = { model: 'gemini-3.5-flash', thinking: 'minimal' };
+export const RAMBLE_FINAL_MODEL: RambleModel = { model: 'gemini-3.8-flash', thinking: 'low' };
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-const TIMEOUT_MS = 10_000;
+const TIMEOUT_MS = 15_000;
 
 export const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 const day = z.iso.date();
@@ -34,6 +39,13 @@ export const RambleMeal = z
  */
 export const RambleRequest = z.object({
 	transcript: z.string().max(12_000),
+	/**
+	 * The recording itself, for the final read when the speaker stops. On-device speech-to-text mishears food names
+	 * ("kefir" as "Caffè"); the model hears them right when it knows the owner's foods.
+	 */
+	audio: z
+		.object({ data: z.base64().min(1).max(8_000_000), mediaType: z.enum(['audio/wav', 'audio/flac']) })
+		.optional(),
 	today: day,
 	time: z.string().regex(/^\d{2}:\d{2}$/),
 	meals: z.array(RambleMeal).max(40).default([]),
@@ -112,7 +124,7 @@ export function rambleInstructions(input: z.output<typeof RambleRequest>): strin
 	return `You turn a spoken ramble into food log entries for a calorie tracker, the way Todoist Ramble turns speech into tasks.
 Today is ${weekday(input.today)} ${input.today}, and the time is ${input.time}.
 
-The transcript is live speech-to-text: it has filler, false starts, missing punctuation, and misheard words, and it may stop mid-sentence. List what is clear so far.
+The transcript is live speech-to-text: it has filler, false starts, missing punctuation, and misheard words, and it may stop mid-sentence. List what is clear so far. When the recording comes with it, the recording is what was said: use the transcript only to follow it, and trust the recording for every food name and number. The logged and usual foods below are the speaker's own, so a word that sounds like one of them is probably it.
 
 Corrections come first. When the speaker changes their mind, keep only the final version: "actually", "wait", "no", "I mean", "make that", "not X, Y", "sorry". They may point back at an item ("the oats", "that last one") to change it. "Scratch that", "remove the X", or "I didn't have the X" removes it. Saying an item again with new details updates it. Never output the same item twice. Keep the items in the order they were first said.
 
@@ -257,26 +269,35 @@ export function resolveAliases(
 export async function outlineRamble(
 	request: RambleRequest,
 	apiKey: string,
-	model: RambleModel = RAMBLE_MODEL,
+	model?: RambleModel,
 	signal?: AbortSignal,
 ): Promise<RambleOutline> {
 	const input = RambleRequest.parse(request);
-	if (!input.transcript.trim()) return { items: [] };
+	const { model: name, thinking } = model ?? (input.audio ? RAMBLE_FINAL_MODEL : RAMBLE_MODEL);
+	if (!input.transcript.trim() && !input.audio) return { items: [] };
 	const names = aliases(input);
 	let response: Response;
 	try {
-		response = await fetch(`${GEMINI_URL}/${model.model}:generateContent`, {
+		response = await fetch(`${GEMINI_URL}/${name}:generateContent`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
 			signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(TIMEOUT_MS)]) : AbortSignal.timeout(TIMEOUT_MS),
 			body: JSON.stringify({
 				systemInstruction: { parts: [{ text: rambleInstructions(input) }] },
-				contents: [{ role: 'user', parts: [{ text: `Ramble: ${input.transcript}` }] }],
+				contents: [
+					{
+						role: 'user',
+						parts: [
+							...(input.audio ? [{ inline_data: { mime_type: input.audio.mediaType, data: input.audio.data } }] : []),
+							{ text: `Ramble: ${input.transcript}` },
+						],
+					},
+				],
 				generationConfig: {
 					temperature: 0,
 					responseMimeType: 'application/json',
 					responseJsonSchema: responseSchema(names),
-					...(model.thinking ? { thinkingConfig: { thinkingLevel: model.thinking } } : {}),
+					...(thinking ? { thinkingConfig: { thinkingLevel: thinking } } : {}),
 				},
 			}),
 		});
