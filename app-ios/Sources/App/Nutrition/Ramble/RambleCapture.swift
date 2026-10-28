@@ -42,6 +42,7 @@ final class RambleCapture {
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var resolution = 0
     @ObservationIgnored private var script: Task<Void, Never>?
+    @ObservationIgnored private var startup: Task<Void, Never>?
     @ObservationIgnored private var resolving: Task<Void, Never>?
 
     init(store: LocalStore, index: @escaping @MainActor () -> FoodIndex, client: any RambleOutlining, clock: @escaping @Sendable () -> Date = { .now }) {
@@ -60,6 +61,9 @@ final class RambleCapture {
     }
 
     func start() async {
+        guard phase == .idle || phase == .review else { return }
+        // A startup still awaiting assets or permission finishes, and stops itself, before this one installs the mic.
+        await startup?.value
         guard phase == .idle || phase == .review else { return }
         generation += 1
         let token = generation
@@ -91,15 +95,20 @@ final class RambleCapture {
             return
         }
         #endif
-        do {
-            try await dictation.start(meter: meter, recorder: recorder, onText: heard)
-            if phase != .listening { dictation.cancel() }
-        } catch SpeechDictation.Failure.denied {
-            end(token, notice: "The microphone is off. Turn it on in Settings to ramble.")
-        } catch {
-            RambleOutliner.log.error("Dictation could not start: \(String(describing: error))")
-            end(token, notice: "Dictation isn't available right now.")
+        let startup = Task { [dictation, meter, recorder] in
+            do {
+                try await dictation.start(meter: meter, recorder: recorder, onText: heard)
+                // Stopped, cancelled, or closed while starting: the mic must not stay on.
+                if token != generation || phase != .listening { dictation.cancel() }
+            } catch SpeechDictation.Failure.denied {
+                end(token, notice: "The microphone is off. Turn it on in Settings to ramble.")
+            } catch {
+                RambleOutliner.log.error("Dictation could not start: \(String(describing: error))")
+                end(token, notice: "Dictation isn't available right now.")
+            }
         }
+        self.startup = startup
+        await startup.value
     }
 
     /// Stops listening, waits for the last words, then for the final read of the recording, falling back to the
@@ -112,13 +121,15 @@ final class RambleCapture {
         script?.cancel()
         await dictation.finish()
         guard token == generation else { return }
-        if let outline = await finalRead() {
-            guard token == generation else { return }
+        let final = await finalRead()
+        guard token == generation else { return }
+        if let final {
             // A live read still in flight would otherwise land after this one and replace it.
             outliner?.stop()
-            items = outline.items
+            items = final.items
             await resolve()?.value
         } else if let outliner, let outline = await outliner.settle(transcript, timeout: Self.settleTimeout) {
+            guard token == generation else { return }
             items = outline.items
             await resolve()?.value
         } else if outliner?.off == true {
@@ -167,12 +178,25 @@ final class RambleCapture {
         if case let .food(food) = row.content { choice.option = food.key }
         choice.serving = serving
         choices[row.id] = choice
+        // Applied to the row now, because "Log Foods" in the food detail logs right after this, before a resolution.
+        if let index = rows.firstIndex(where: { $0.id == row.id }), case var .food(food) = rows[index].content {
+            food.pick.portion.serving = serving
+            rows[index].content = .food(food)
+        }
+        resolve()
+    }
+
+    /// The logger's time changed, so foods placed by it move.
+    func replace() {
+        guard !items.isEmpty else { return }
         resolve()
     }
 
     func remove(_ row: RambleRow) {
         choices[row.id] = RambleChoice(name: row.item.name, removed: true)
         rows.removeAll { $0.id == row.id }
+        // A resolution already running read the choices before this one; resolving again drops its answer.
+        resolve()
     }
 
     func toggleOptions(_ row: RambleRow) {
@@ -204,7 +228,8 @@ final class RambleCapture {
         let start = today.adding(days: -(RambleContext.usualDays - 1))
         do {
             let entries = try await store.database.pool.read(FoodEntry.between(start, today).fetch)
-            return RambleContext(entries: entries, today: today)
+            // Grouping and ranking 60 days of entries stays off the main actor.
+            return await Task.detached { RambleContext(entries: entries, today: today) }.value
         } catch {
             RambleOutliner.log.error("Ramble could not read the log: \(String(describing: error))")
             return RambleContext()

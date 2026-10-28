@@ -160,10 +160,11 @@ enum RambleServing {
             return Serving(measure: measure, quantity: amount * weight.factor)
         }
         if let volume = volumes[unit] {
-            if let measure = named(all, volume.words) { return Serving(measure: measure, quantity: amount * measure.quantity) }
+            // A serving's quantity counts the measure's own unit; the measure's quantity is only its reference size.
+            if let measure = named(all, volume.words) { return Serving(measure: measure, quantity: amount) }
             let milliliters = amount * volume.milliliters
             if let measure = all.first(where: { $0.name == "mL" }) { return Serving(measure: measure, quantity: milliliters) }
-            if let cup = named(all, ["cup"]) { return Serving(measure: cup, quantity: cup.quantity * milliliters / 236.5882365) }
+            if let cup = named(all, ["cup"]) { return Serving(measure: cup, quantity: milliliters / 236.5882365) }
             // Water's density stands in for a food that is only weighed (chia seeds per 100 g): 2 tbsp is 30 g, where
             // two of its 100 g servings would be 200 g.
             if let gram = all.first(where: { $0.name == "g" }) { return Serving(measure: gram, quantity: milliliters) }
@@ -171,7 +172,7 @@ enum RambleServing {
         }
         let word = unit.hasSuffix("s") && unit.count > 3 ? String(unit.dropLast()) : unit
         if let measure = all.first(where: { $0.name.lowercased().hasPrefix(word) }) ?? all.first(where: { $0.name.lowercased().contains(word) }) {
-            return Serving(measure: measure, quantity: amount * measure.quantity)
+            return Serving(measure: measure, quantity: amount)
         }
         return defaultServing(nutrition, count: amount)
     }

@@ -112,8 +112,9 @@ function diff(expected: Expected, actual: RambleItem): string[] {
 	const kind = expected.kind ?? 'food';
 	if (actual.kind !== kind) return [`kind ${actual.kind}`];
 	if (expected.name && !nameMatches(expected.name, actual.name)) misses.push(`name "${actual.name}"`);
-	// Amount 0 logs one usual serving, so with no unit it is the same entry as amount 1 ("a banana").
-	const amount = (a: number, u: string) => (a === 0 && !u ? 1 : a);
+	// Amount 0 logs one usual serving, so with no unit it is the same entry as amount 1 ("a banana"). Not with a ref:
+	// there 0 keeps the logged serving ("my usual pancake" is the usual 2) and 1 is one of the default measure.
+	const amount = (a: number, u: string) => (a === 0 && !u && !actual.ref ? 1 : a);
 	const [base, scale] = BASE[unit(actual.unit)] ?? [unit(actual.unit), 1];
 	const wantUnits = expected.unit === undefined ? [] : Array.isArray(expected.unit) ? expected.unit : [expected.unit];
 	const sameQuantity = wantUnits.some(u => {

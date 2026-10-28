@@ -93,7 +93,10 @@ final class LoggerSession {
     private var chosenTime: LogTime?
     var time: LogTime {
         get { chosenTime ?? .now() }
-        set { chosenTime = newValue }
+        set {
+            chosenTime = newValue
+            ramble.replace()
+        }
     }
     var plate = Plate()
     /// The food detail's serving before it is added, or the Quick Add being typed, so the banner shows what adding it

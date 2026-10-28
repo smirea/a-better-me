@@ -90,6 +90,18 @@ struct RambleResolverTests {
         #expect(rows.allSatisfy { $0.day == today && $0.minute == 14 * 60 })
     }
 
+    @Test func aSpokenAmountCountsTheMeasuresUnitNotItsReferenceSize() {
+        let drink = FoodNutrition(nutrients: [.energy: 40], measures: [Measure(name: "mL", quantity: 100, servings: 1)])
+        let cereal = FoodNutrition(nutrients: [.energy: 110], measures: [Measure(name: "cup", quantity: 0.5, servings: 1)])
+        let bread = FoodNutrition(nutrients: [.energy: 160], measures: [Measure(name: "slices", quantity: 2, servings: 1)])
+        let mL = RambleServing.serving(amount: 250, unit: "ml", of: drink, history: nil)
+        let cup = RambleServing.serving(amount: 1, unit: "cup", of: cereal, history: nil)
+        let slices = RambleServing.serving(amount: 3, unit: "slice", of: bread, history: nil)
+        #expect([mL.quantity, mL.servings] == [250, 2.5])
+        #expect([cup.quantity, cup.servings] == [1, 2])
+        #expect([slices.quantity, slices.servings] == [3, 1.5])
+    }
+
     @Test func aFoodWithoutAnAmountTakesItsLatestServingFromHistory() async throws {
         let oats = try fixtureCatalog(rambleCatalog).foods([1])[1]!.snapshot
         store.log([FoodPortion(oats, serving: Serving(measure: oats.nutrition.measures[0], quantity: 0.75))], on: today.adding(days: -2), minute: 480)
