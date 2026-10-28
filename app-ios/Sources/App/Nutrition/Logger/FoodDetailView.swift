@@ -131,8 +131,14 @@ struct FoodDetailView: View {
     }
 
     private func logFoods() {
-        putOnPlate()
-        if let ramble { ramble.logAll() } else { session.logPlate() }
+        guard let ramble else {
+            putOnPlate()
+            return session.logPlate()
+        }
+        session.pending = nil
+        // A later read put another food in this row: logging from a detail that shows the old one would save the new.
+        guard ramble.update(serving) else { return dismiss() }
+        ramble.logAll()
     }
 
     /// A food not yet on the plate shows in the banner as if it were.
@@ -143,7 +149,7 @@ struct FoodDetailView: View {
     private func putOnPlate() {
         session.pending = nil
         if let ramble {
-            ramble.update(serving)
+            _ = ramble.update(serving)
         } else if let editing {
             session.plate.setServing(serving, of: editing)
         } else {
@@ -153,7 +159,8 @@ struct FoodDetailView: View {
 }
 
 struct RambleEdit {
-    let update: (Serving) -> Void
+    /// False when the row's food changed since the detail opened, so the edit was dropped.
+    let update: (Serving) -> Bool
     let logAll: () -> Void
 }
 

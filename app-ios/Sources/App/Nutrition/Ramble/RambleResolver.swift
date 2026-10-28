@@ -101,7 +101,8 @@ struct RambleResolver: Sendable {
     }
 
     private func food(_ item: RambleItem, previous: RambleRow?, choice: RambleChoice?) throws -> RambleRow.Content {
-        if let ref = item.ref, let entry = context.entries[ref] {
+        // The owner's pick outranks a ref the model added later: the row then resolves through search, where it is.
+        if let ref = item.ref, let entry = context.entries[ref], choice?.option.map({ $0 == FoodSearchResult.key(entry.food) }) ?? true {
             var portion = entry.portion
             if item.amount > 0 {
                 portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, of: entry.food.nutrition, history: entry.serving)
@@ -130,7 +131,8 @@ struct RambleResolver: Sendable {
         var portion = result.portion
         let history = result.group == .history ? result.portion.serving : nil
         portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, of: result.portion.food.nutrition, history: history)
-        if let serving = choice?.serving { portion.serving = serving }
+        // A measure belongs to the food it was set on; another food in the row's place keeps its own serving.
+        if let serving = choice?.serving, choice?.option == result.key { portion.serving = serving }
         return .food(.init(pick: LoggerPick(portion, uncached: result.food), key: result.key, options: options, showsOptions: item.options))
     }
 }

@@ -186,6 +186,10 @@ struct RambleResolverTests {
             previous: grown, choices: [0: RambleChoice(name: "pizza", removed: true)]
         )
         #expect(removed.map(\.id) == [1])
+
+        // A serving set on the veggie pizza never moves to the food a fresh search puts first.
+        let lost = [0: RambleChoice(name: "pizza", option: "gone", serving: Serving(measure: slice, quantity: 3))]
+        #expect(describe(try resolver.rows([RambleItem(name: "pizza", amount: 1, unit: "slice")], previous: [], choices: lost)) == describe(first))
     }
 
     @Test func rowsKeepTheirPositionAndPickAsTheRambleGrowsAndCorrects() async throws {

@@ -195,12 +195,14 @@ final class RambleCapture {
         resolve()
     }
 
-    func setServing(_ serving: Serving, of row: RambleRow) {
+    /// False when the row no longer holds the food `row` showed, and nothing changed.
+    @discardableResult
+    func setServing(_ serving: Serving, of row: RambleRow) -> Bool {
         // The detail was opened on `row`; a final read may have put another food at its position since, and a measure
         // never moves to a food it was not made for.
         guard let index = rows.firstIndex(where: { $0.id == row.id }), rows[index].item.identity == row.item.identity,
               case var .food(food) = rows[index].content, case let .food(opened) = row.content, food.key == opened.key
-        else { return }
+        else { return false }
         var choice = choices[row.id].flatMap { $0.name == row.item.identity ? $0 : nil } ?? RambleChoice(name: row.item.identity)
         choice.option = food.key
         choice.serving = serving
@@ -209,6 +211,7 @@ final class RambleCapture {
         food.pick.portion.serving = serving
         rows[index].content = .food(food)
         resolve()
+        return true
     }
 
     /// The logger's time changed, so foods placed by it move.
