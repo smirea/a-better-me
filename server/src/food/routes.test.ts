@@ -308,9 +308,10 @@ describe('ramble', () => {
 		);
 		expect(instructions).toContain('- u1 Coffee (1 mug)');
 		expect(sent.contents[0].parts[0].text).toBe(`Ramble: ${body.transcript}`);
-		const properties = sent.generationConfig.responseJsonSchema.properties.items.items.properties;
-		expect(properties.copy.enum).toEqual(['', 'm1']);
-		expect(properties.ref.enum).toEqual(['', 'e1', 'e2', 'u1']);
+		const [food, copy] = sent.generationConfig.responseJsonSchema.properties.items.items.anyOf;
+		expect(food.properties.ref.enum).toEqual(['', 'e1', 'e2', 'u1']);
+		expect(copy.properties.copy.enum).toEqual(['m1']);
+		expect(copy.required).toEqual(['kind', 'copy']);
 	});
 
 	test('a copy of no meal, an except outside the copied meal, and a nameless food are dropped', async () => {

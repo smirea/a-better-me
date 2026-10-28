@@ -57,6 +57,14 @@ const UNITS: Record<string, string> = {
 };
 const singular = (word: string) =>
 	word.length > 3 && word.endsWith('s') && !word.endsWith('ss') ? word.slice(0, -1) : word;
+const BASE: Record<string, [string, number]> = {
+	g: ['g', 1],
+	kg: ['g', 1000],
+	oz: ['g', 28.3495],
+	lb: ['g', 453.592],
+	ml: ['ml', 1],
+	l: ['ml', 1000],
+};
 const unit = (u: string) => {
 	const lower = u.trim().toLowerCase();
 	return UNITS[lower] ?? singular(lower);
@@ -90,13 +98,25 @@ function diff(expected: Expected, actual: RambleItem): string[] {
 	if (expected.name && !nameMatches(expected.name, actual.name)) misses.push(`name "${actual.name}"`);
 	// Amount 0 logs one usual serving, so with no unit it is the same entry as amount 1 ("a banana").
 	const amount = (a: number, u: string) => (a === 0 && !u ? 1 : a);
-	if (
-		expected.amount !== undefined &&
-		!anyOf(expected.amount, actual.amount, (a, b) => amount(a, actual.unit) === amount(b, actual.unit))
-	)
-		misses.push(`amount ${actual.amount}`);
-	if (expected.unit !== undefined && !anyOf(expected.unit, actual.unit, (a, b) => unit(a) === unit(b)))
-		misses.push(`unit "${actual.unit}"`);
+	const [base, scale] = BASE[unit(actual.unit)] ?? [unit(actual.unit), 1];
+	const wantUnits = expected.unit === undefined ? [] : Array.isArray(expected.unit) ? expected.unit : [expected.unit];
+	const sameQuantity = wantUnits.some(u => {
+		const [wantBase, wantScale] = BASE[unit(u)] ?? [unit(u), 1];
+		const wants = Array.isArray(expected.amount) ? expected.amount : [expected.amount ?? actual.amount];
+		return (
+			wantBase === base &&
+			wants.some(w => Math.abs(amount(w, u) * wantScale - amount(actual.amount, actual.unit) * scale) < 0.01)
+		);
+	});
+	if (!sameQuantity) {
+		if (
+			expected.amount !== undefined &&
+			!anyOf(expected.amount, actual.amount, (a, b) => amount(a, actual.unit) === amount(b, actual.unit))
+		)
+			misses.push(`amount ${actual.amount}`);
+		if (expected.unit !== undefined && !anyOf(expected.unit, actual.unit, (a, b) => unit(a) === unit(b)))
+			misses.push(`unit "${actual.unit}"`);
+	}
 	if (!anyOf(expected.ref ?? null, actual.ref)) misses.push(`ref ${actual.ref}`);
 	if ((expected.copy ?? null) !== actual.copy) misses.push(`copy ${actual.copy}`);
 	if ((expected.except ?? []).toSorted().join() !== actual.except.toSorted().join())
@@ -122,10 +142,15 @@ async function score(model: RambleModel, c: Case): Promise<Outcome> {
 			const ms = performance.now() - started;
 			const misses: string[] = [];
 			if (outline.items.length !== c.items.length) misses.push(`${outline.items.length} items, want ${c.items.length}`);
+			// Order does not change what is logged: each expected item takes the first unclaimed match, else is
+			// compared with the item at its own position.
+			const claimed = new Set<number>();
 			c.items.forEach((expected, i) => {
+				const match = outline.items.findIndex((item, j) => !claimed.has(j) && diff(expected, item).length === 0);
+				if (match >= 0) return claimed.add(match);
 				const actual = outline.items[i];
-				if (!actual) return;
-				for (const miss of diff(expected, actual)) misses.push(`#${i + 1} ${miss}`);
+				if (actual) for (const miss of diff(expected, actual)) misses.push(`#${i + 1} ${miss}`);
+				else misses.push(`#${i + 1} missing`);
 			});
 			if (values.v && misses.length) misses.push(`got ${JSON.stringify(outline.items)}`);
 			return { id: c.id, use: c.use, pass: misses.length === 0, misses, ms };

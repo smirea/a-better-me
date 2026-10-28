@@ -143,45 +143,43 @@ Options shown on screen, by item number:
 ${shown.length ? shown.join('\n') : 'none'}`;
 }
 
+/**
+ * A food and a copy are separate shapes, so a copy cannot leave out the meal it copies: with one shape and empty
+ * fields omitted, the model sometimes answered `{ "kind": "copy", "name": "breakfast" }`.
+ */
 function responseSchema(names: Aliases) {
-	const refs = ['', ...names.entries.keys()];
-	return {
+	const entries = [...names.entries.keys()];
+	const when = {
+		meal: { type: 'string', enum: ['', ...MEALS] },
+		time: { type: 'string' },
+		day: { type: 'integer' },
+	};
+	const food = {
 		type: 'object',
 		properties: {
-			items: {
-				type: 'array',
-				items: {
-					type: 'object',
-					properties: {
-						kind: { type: 'string', enum: ['food', 'copy'] },
-						name: { type: 'string' },
-						amount: { type: 'number' },
-						unit: { type: 'string' },
-						ref: { type: 'string', enum: refs },
-						copy: { type: 'string', enum: ['', ...names.meals.keys()] },
-						except: { type: 'array', items: { type: 'string', enum: refs } },
-						meal: { type: 'string', enum: ['', ...MEALS] },
-						time: { type: 'string' },
-						day: { type: 'integer' },
-						options: { type: 'boolean' },
-					},
-					required: ['kind', 'name'],
-					propertyOrdering: [
-						'kind',
-						'name',
-						'amount',
-						'unit',
-						'ref',
-						'copy',
-						'except',
-						'meal',
-						'time',
-						'day',
-						'options',
-					],
-				},
-			},
+			kind: { type: 'string', enum: ['food'] },
+			name: { type: 'string' },
+			amount: { type: 'number' },
+			unit: { type: 'string' },
+			ref: { type: 'string', enum: ['', ...entries] },
+			...when,
+			options: { type: 'boolean' },
 		},
+		required: ['kind', 'name'],
+	};
+	const copy = {
+		type: 'object',
+		properties: {
+			kind: { type: 'string', enum: ['copy'] },
+			copy: { type: 'string', enum: names.meals.size ? [...names.meals.keys()] : [''] },
+			except: { type: 'array', items: { type: 'string', enum: entries.length ? entries : [''] } },
+			...when,
+		},
+		required: ['kind', 'copy'],
+	};
+	return {
+		type: 'object',
+		properties: { items: { type: 'array', items: names.meals.size ? { anyOf: [food, copy] } : food } },
 		required: ['items'],
 	};
 }
@@ -219,7 +217,11 @@ const clock = (time: string) => {
 	return `${match[1]!.padStart(2, '0')}:${match[2]}`;
 };
 
-/** Maps aliases back to the phone's ids and drops what does not fit: a copy of no meal, an except outside its meal. */
+/**
+ * Maps aliases back to the phone's ids and drops what does not fit: a copy of no meal, an except outside its meal. A
+ * food the speaker gave no meal or time joins the item before it ("lunch at 12:15 was ramen and a coke"), which the
+ * model often leaves out once it omits empty fields.
+ */
 export function resolveAliases(
 	outline: z.output<typeof ModelOutline>,
 	input: z.output<typeof RambleRequest>,
@@ -232,7 +234,9 @@ export function resolveAliases(
 		if (item.kind === 'food' && !item.name.trim()) continue;
 		const inMeal = new Set(meal?.entries.map(entry => entry.id));
 		const previous = items.at(-1);
-		const carried = !item.meal && !item.time && previous?.day === item.day ? previous.meal : '';
+		const follows = item.kind === 'food' && previous?.day === item.day;
+		const carried = follows && !item.meal && !item.time ? previous!.meal : '';
+		const sameMeal = follows && (!item.meal || item.meal === previous!.meal);
 		items.push({
 			kind: item.kind,
 			name: item.kind === 'food' ? item.name.trim() : '',
@@ -243,7 +247,7 @@ export function resolveAliases(
 			except: item.except.map(alias => names.entries.get(alias)!).filter(id => id && inMeal.has(id)),
 			day: Math.min(0, Math.max(-30, item.day)),
 			meal: item.meal || (item.kind === 'copy' ? meal!.meal : carried),
-			time: clock(item.time),
+			time: clock(item.time) || (sameMeal ? previous!.time : ''),
 			options: item.kind === 'food' && item.options,
 		});
 	}
