@@ -16,6 +16,16 @@ extension LocalStore {
         }
     }
 
+    /// Logs each portion at its own day and minute, as one transaction: a ramble's rows.
+    func log(_ portions: [(FoodPortion, day: CalendarDay, minute: Int)]) {
+        let entries = portions.map { FoodEntry($0.0, day: $0.day, minute: $0.minute) }
+        write { db in
+            for entry in entries {
+                try entry.insert(db)
+            }
+        }
+    }
+
     func quickAdd(_ amounts: NutrientAmounts, name: String? = nil, on day: CalendarDay, minute: Int) {
         log([FoodPortion(.quickAdd(amounts, name: name))], on: day, minute: minute)
     }

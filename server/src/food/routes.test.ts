@@ -6,6 +6,7 @@ import { handleAgent } from '../agent';
 import { handle, type App } from '../api';
 import { parseConfig } from '../config';
 import { GEMINI_MODEL } from './mealPhoto';
+import { RAMBLE_FINAL_MODEL, RAMBLE_MODEL } from './ramble';
 import { USER_AGENT } from './openFoodFacts';
 
 const driver = bunSqlite(':memory:');
@@ -238,5 +239,155 @@ describe('meal photo', () => {
 		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(502);
 		stub(() => new Response('quota', { status: 429 }));
 		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(502);
+	});
+});
+
+const ramble = (geminiApiKey: string | null, body: unknown) =>
+	handleAgent(
+		new Request('http://api.test/api/food-database/ramble', {
+			method: 'POST',
+			headers: { authorization: `Bearer ${config.ownerToken}` },
+			body: JSON.stringify(body),
+		}),
+		{ space, driver, ownerToken: config.ownerToken, geminiApiKey },
+	);
+
+describe('ramble', () => {
+	const body = {
+		transcript: "yesterday's breakfast but raspberries instead of blueberries, and my usual coffee",
+		today: '2026-10-27',
+		time: '08:15',
+		meals: [
+			{
+				id: 'meal-uuid',
+				day: '2026-10-26',
+				meal: 'breakfast',
+				entries: [
+					{ id: 'oats-uuid', name: 'Oats', serving: '0.5 cup' },
+					{ id: 'blue-uuid', name: 'Blueberries', serving: '50 g' },
+				],
+			},
+		],
+		usual: [{ id: 'coffee-uuid', name: 'Coffee', serving: '1 mug' }],
+	};
+	const item = { amount: 0, unit: '', ref: '', copy: '', except: [], meal: '', time: '', day: null, options: false };
+
+	test('the model sees aliases, and its answer comes back with the phone ids, defaults filled in', async () => {
+		stub(() =>
+			geminiText(
+				JSON.stringify({
+					items: [
+						{ kind: 'copy', name: '', copy: 'm1', except: ['e2'] },
+						{ kind: 'food', name: 'raspberries', amount: 1, unit: 'Cup', meal: 'breakfast' },
+						{ kind: 'food', name: 'coffee', ref: 'u1', time: '8:05' },
+					],
+				}),
+			),
+		);
+		const response = await ramble('gemini-key', body);
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({
+			items: [
+				{ ...item, kind: 'copy', name: '', ref: null, copy: 'meal-uuid', except: ['blue-uuid'], meal: 'breakfast' },
+				{
+					...item,
+					kind: 'food',
+					name: 'raspberries',
+					amount: 1,
+					unit: 'cup',
+					ref: null,
+					copy: null,
+					meal: 'breakfast',
+				},
+				{ ...item, kind: 'food', name: 'coffee', ref: 'coffee-uuid', copy: null, time: '08:05' },
+			],
+		});
+		const sent = await requests[0]!.json();
+		const instructions: string = sent.systemInstruction.parts[0].text;
+		expect(instructions).toContain(
+			'- m1: breakfast, yesterday, Monday 2026-10-26: e1 Oats (0.5 cup); e2 Blueberries (50 g)',
+		);
+		expect(instructions).toContain('- u1 Coffee (1 mug)');
+		expect(sent.contents[0].parts).toEqual([{ text: `Ramble: ${body.transcript}` }]);
+		expect(requests[0]!.url).toContain(`/${RAMBLE_MODEL.model}:generateContent`);
+		const [food, copy] = sent.generationConfig.responseJsonSchema.properties.items.items.anyOf;
+		expect(food.properties.ref.enum).toEqual(['', 'e1', 'e2', 'u1']);
+		expect(copy.properties.copy.enum).toEqual(['m1']);
+		expect(copy.required).toEqual(['kind', 'copy']);
+	});
+
+	test('the final read sends the recording before the transcript, to the final model', async () => {
+		stub(() => geminiText('{"items":[]}'));
+		const audio = { data: btoa('RIFF....WAVE'), mediaType: 'audio/wav' };
+		expect((await ramble('gemini-key', { ...body, audio })).status).toBe(200);
+		const sent = await requests[0]!.json();
+		expect(requests[0]!.url).toContain(`/${RAMBLE_FINAL_MODEL.model}:generateContent`);
+		expect(sent.contents[0].parts).toEqual([
+			{ inline_data: { mime_type: 'audio/wav', data: audio.data } },
+			{ text: `Ramble: ${body.transcript}` },
+		]);
+		expect(sent.generationConfig.thinkingConfig).toEqual({ thinkingLevel: RAMBLE_FINAL_MODEL.thinking });
+	});
+
+	test('a copy of no meal, an except outside the copied meal, and a nameless food are dropped', async () => {
+		stub(() =>
+			geminiText(
+				JSON.stringify({
+					items: [
+						{ kind: 'copy', name: '', copy: '' },
+						{ kind: 'copy', name: '', copy: 'm1', except: ['u1'] },
+						{ kind: 'food', name: ' ' },
+					],
+				}),
+			),
+		);
+		expect(await (await ramble('gemini-key', body)).json()).toEqual({
+			items: [{ ...item, kind: 'copy', name: '', ref: null, copy: 'meal-uuid', meal: 'breakfast' }],
+		});
+	});
+
+	test('a said day carries to the items after it, copies included, until another is said', async () => {
+		stub(() =>
+			geminiText(
+				JSON.stringify({
+					items: [
+						{ kind: 'food', name: 'pizza', day: -1 },
+						{ kind: 'copy', copy: 'm1' },
+						{ kind: 'food', name: 'beer' },
+						{ kind: 'food', name: 'banana', day: 0 },
+						{ kind: 'food', name: 'coffee' },
+					],
+				}),
+			),
+		);
+		const { items } = await (await ramble('gemini-key', body)).json();
+		expect(items.map((item: { day: number | null }) => item.day)).toEqual([-1, -1, -1, 0, 0]);
+	});
+
+	test('a said day carries to the items after it, copies included, until another is said', async () => {
+		stub(() =>
+			geminiText(
+				JSON.stringify({
+					items: [
+						{ kind: 'food', name: 'pizza', day: -1 },
+						{ kind: 'copy', copy: 'm1' },
+						{ kind: 'food', name: 'beer' },
+						{ kind: 'food', name: 'banana', day: 0 },
+						{ kind: 'food', name: 'coffee' },
+					],
+				}),
+			),
+		);
+		const { items } = await (await ramble('gemini-key', body)).json();
+		expect(items.map((item: { day: number | null }) => item.day)).toEqual([-1, -1, -1, 0, 0]);
+	});
+
+	test('no key is a 503 before calling Gemini, an empty transcript calls nothing, and a bad answer is a 502', async () => {
+		stub(() => geminiText('not json'));
+		expect((await ramble(null, body)).status).toBe(503);
+		expect(await (await ramble('gemini-key', { ...body, transcript: '  ' })).json()).toEqual({ items: [] });
+		expect(requests).toEqual([]);
+		expect((await ramble('gemini-key', body)).status).toBe(502);
+		expect((await ramble('gemini-key', { ...body, time: '8am' })).status).toBe(400);
 	});
 });
