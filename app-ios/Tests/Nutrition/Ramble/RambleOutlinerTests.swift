@@ -93,12 +93,14 @@ struct RambleOutlinerTests {
     }
 
     @Test func settlingGivesUpAtTheTimeout() async throws {
-        model.delay = .seconds(2)
+        // A model that never answers: settling returns only because of its timeout, however long CI stalls it.
+        model.delay = .seconds(3600)
         let outliner = model.outliner()
-        let started = ContinuousClock.now
         let outline = await outliner.settle("toast", timeout: .milliseconds(150))
         #expect(outline == nil)
-        #expect(ContinuousClock.now - started < .seconds(1))
+        #expect(model.calls == ["toast"])
+        #expect(model.answered.isEmpty)
+        outliner.stop()
     }
 
     @Test func twoFailuresInARowTurnItOffForTheCapture() async throws {
