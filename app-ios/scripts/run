@@ -17,6 +17,7 @@ const { values } = parseArgs({
         headless: { type: "boolean" },
         "pair-watch": { type: "boolean" },
         delete: { type: "boolean" },
+        "grant-permissions": { type: "boolean" },
         team: { type: "string", default: process.env.SWIFT_RUN_DEVELOPMENT_TEAM },
         help: { type: "boolean", short: "h" },
     },
@@ -144,7 +145,8 @@ async function deploy(target: Target, project: string) {
         throw new Error(`Build failed. See ${log}. For a physical device, check signing in Xcode or use --team.`);
     } finally { closeSync(fd); }
     const products = join(build, "Build/Products", { device: "Debug-iphoneos", simulator: "Debug-iphonesimulator", mac: "Debug" }[target.kind]);
-    const apps = readdirSync(products).filter(file => file.endsWith(".app"));
+    // UI test runners build into the same folder.
+    const apps = readdirSync(products).filter(file => file.endsWith(".app") && !file.endsWith("-Runner.app"));
     if (apps.length !== 1) throw new Error(`Expected one app in ${products}; found ${apps.length}.`);
     const app = join(products, apps[0]);
     const plist = join(app, target.kind === "mac" ? "Contents/Info.plist" : "Info.plist");
@@ -156,9 +158,11 @@ async function deploy(target: Target, project: string) {
         const simulator = join(developer, "Applications/Simulator.app");
         if (!values.headless) await command(existsSync(simulator) ? ["open", "-a", simulator, "--args", "-CurrentDeviceUDID", target.id]
             : ["open", "-a", join(dirname(developer), "Applications/DeviceHub.app"), `devices://device/open?id=${target.id}`]);
+        const fresh = await command(["xcrun", "simctl", "get_app_container", target.id, bundle], true).then(() => false, () => true);
         await command(["xcrun", "simctl", "install", target.id, app]);
-        // Agents test the granted path by default and revoke what a test needs denied. Health has no simctl service.
-        await command(["xcrun", "simctl", "privacy", target.id, "grant", "all", bundle], true);
+        // Agents test the granted path by default and revoke what a test needs denied. `simctl privacy grant all`
+        // looked like the tool for this, but it also resets the app's Health access, so the UI test answers every prompt.
+        if (fresh || values["grant-permissions"]) await grantPermissions(target, project, build);
         const watch = await installWatchApp(target, app);
         await command(["xcrun", "simctl", "launch", "--terminate-running-process", target.id, bundle]);
         if (watch) await launchWatchApp(watch);
@@ -170,6 +174,20 @@ async function deploy(target: Target, project: string) {
         await command(["open", "-n", app]);
     }
     console.log(`App is running on ${target.name}.`);
+}
+
+/** Answers the app's launch-time permission prompts (Health's sheet, notifications, camera, microphone, speech) with
+ * `UITests/App/PermissionsGrant`, which `simctl privacy` can't do for Health. A failure leaves the prompts for later. */
+async function grantPermissions(target: Target, project: string, build: string) {
+    console.log("Granting every permission…");
+    try {
+        await withBuildLock(build, () => command([
+            "xcodebuild", "test", "-quiet", "-project", project, "-scheme", "GrantPermissions", "-destination", target.destination,
+            "-derivedDataPath", build, "CODE_SIGN_IDENTITY=-", "-only-testing:AppUITests/PermissionsGrant/testGrantAll",
+        ], true));
+    } catch (error: any) {
+        console.error(`Granting permissions failed; answer the prompts by hand or rerun with --grant-permissions.\n${error.message.slice(-2000)}`);
+    }
 }
 
 /** Pairs a watch when asked, then boots the phone and its watch side by side while the app builds, so cold boots stay
@@ -263,14 +281,15 @@ async function launchWatchApp(watch: { udid: string; name: string; bundle: strin
 
 async function main() {
     if (values.help) {
-        console.log(`Usage: ${runCommand} [-t simulator|mac|<target-name-or-id>] [--targets] [--watch|-w] [--no-watch] [--headless] [--pair-watch] [--delete] [--team TEAM_ID]
+        console.log(`Usage: ${runCommand} [-t simulator|mac|<target-name-or-id>] [--targets] [--watch|-w] [--no-watch] [--headless] [--pair-watch] [--delete] [--grant-permissions] [--team TEAM_ID]
 
 Defaults to a connected iOS device, then a booted simulator, then an available simulator, then My Mac.
 SWIFT_RUN_DEFAULT_TARGET overrides this choice when -t/--target is omitted. --targets marks the effective default with *.
 Watching is enabled by default. Saves rebuild and restart the app. Ctrl-C stops watching.
 --headless skips opening Simulator.app or Device Hub; the simulator still boots and runs the app.
 --pair-watch pairs a watch with the simulator first, reusing its pair if it has one, and runs the watch app on it.
---delete shuts down and deletes the simulator and its paired watches instead of running.`);
+--delete shuts down and deletes the simulator and its paired watches instead of running.
+--grant-permissions answers every permission prompt again; a fresh install always does.`);
         return;
     }
     const all = await targets();

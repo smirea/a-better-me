@@ -76,13 +76,18 @@ struct RootView: View {
             catalog.setCustom(exercises)
         }
         .onChange(of: loggedWeights, initial: true) { health.update(logged: loggedWeights) }
-        .healthDataAccessRequest(store: health.store, shareTypes: HealthData.shareTypes, readTypes: HealthData.readTypes, trigger: health.requestTrigger) { _ in
-            Task { await health.load() }
+        .healthDataAccessRequest(store: health.store, shareTypes: AppPermissions.healthShare, readTypes: AppPermissions.healthRead, trigger: health.requestTrigger) { _ in
+            Task {
+                await health.load()
+                await AppPermissions.requestRest()
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await health.refresh() } }
         }
-        .task { await health.refresh() }
+        .task {
+            if await !health.refresh() { await AppPermissions.requestRest() }
+        }
         .task { await GymSeed.run(store, equipment: catalog.equipment) }
         .onOpenURL { url in
             if url == LiveActivityLink.liveWorkout { presenter.isExpanded = true }
