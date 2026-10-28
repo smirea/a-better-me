@@ -91,6 +91,7 @@ struct RambleTab: View {
                     .font(AppFont.caption(14))
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(2)
+                    .truncationMode(.head)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
                     .transition(.opacity)
@@ -228,7 +229,7 @@ private struct RambleRowView: View {
                     .background(Theme.surfaceRaised, in: .circle)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(NutritionFormat.dayTitle(copy.meal.day))'s \(copy.meal.meal.title)").font(AppFont.rowTitle).lineLimit(1)
-                    Text(copy.entries.map(\.food.name).joined(separator: ", "))
+                    Text(copy.entries.map(\.food.name).joined(separator: " · "))
                         .font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).lineLimit(2)
                     let total = copy.entries.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts }
                     Text("\(Text(macroLine: total)) · \(copy.entries.count == 1 ? "1 food" : "\(copy.entries.count) foods")")
