@@ -60,6 +60,9 @@ final class WatchDriver: XCTestCase {
         case "crown":
             XCUIDevice.shared.rotateDigitalCrown(delta: Double(args[0])!, velocity: .default)
             return "rotated \(args[0])"
+        case "home":
+            XCUIDevice.shared.press(.home)
+            return "pressed the crown"
         case "swipe":
             switch args.first {
             case "left": app.swipeLeft()

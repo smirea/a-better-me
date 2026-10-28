@@ -1,5 +1,6 @@
 import HealthKitUI
 import SwiftUI
+import UIKit
 
 enum AppTab: Hashable {
     case dashboard, nutrition, workout, more, add
@@ -20,6 +21,15 @@ enum AddSheet: Identifiable {
     }
 }
 
+/// The sheets the root presents: "+", and the screens a quick action opens.
+private enum RootSheet: Hashable, Identifiable {
+    case add(AddSheet)
+    case logger(LoggerStart)
+    case weight
+
+    var id: Self { self }
+}
+
 struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(ExerciseCatalog.self) private var catalog
@@ -30,7 +40,8 @@ struct RootView: View {
     @Observe(BodyWeight.all) private var loggedWeights
     @State private var health = HealthData()
     @State private var tab = AppTab.dashboard
-    @State private var adding: AddSheet?
+    @State private var sheet: RootSheet?
+    @State private var inbox = QuickActionInbox.shared
 
     var body: some View {
         TabView(selection: $tab) {
@@ -47,10 +58,16 @@ struct RootView: View {
         .onChange(of: tab) { previous, current in
             // "+" acts like a button: it opens the previous tab's sheet and keeps that tab selected.
             guard current == .add else { return }
-            adding = AddSheet(for: previous)
+            sheet = .add(AddSheet(for: previous))
             tab = previous
         }
-        .sheet(item: $adding) { AddSheetView(sheet: $0) }
+        .sheet(item: $sheet) { sheet in
+            switch sheet {
+            case .add(let add): AddSheetView(sheet: add)
+            case .logger(let start): LoggerSheet(start: start)
+            case .weight: BodyWeightLogSheet()
+            }
+        }
         // A session's insert and the observation that shows it land a moment apart, so the cover waits for both.
         .fullScreenCover(isPresented: Binding(get: { presenter.isExpanded && activeSessionID != nil }, set: { presenter.isExpanded = $0 })) {
             LiveWorkoutView()
@@ -69,8 +86,39 @@ struct RootView: View {
         .task { await GymSeed.run(store, equipment: catalog.equipment) }
         .onOpenURL { url in
             if url == LiveActivityLink.liveWorkout { presenter.isExpanded = true }
+            if let action = QuickAction(url: url) { inbox.pending = action }
+        }
+        .onChange(of: inbox.pending, initial: true) { _, action in
+            guard let action else { return }
+            inbox.pending = nil
+            Task { await open(action) }
         }
         .environment(health)
+    }
+
+    private func open(_ action: QuickAction) async {
+        // Tabs present their own sheets (the logger, the calendar, editors) from state the root can't reach, so the
+        // root dismisses everything UIKit stacked above it.
+        let root = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow?.rootViewController }.first
+        if presenter.isExpanded || sheet != nil || root?.presentedViewController != nil {
+            presenter.isExpanded = false
+            sheet = nil
+            root?.dismiss(animated: true)
+            // SwiftUI drops a presentation requested while another is still animating away.
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+        switch action {
+        case .dashboard: tab = .dashboard
+        case .foodLog: tab = .nutrition
+        case .weight: sheet = .weight
+        case .newWorkout:
+            tab = .workout
+            sheet = .add(.workout)
+        case .emptyWorkout: presenter.startOrResume({ .empty }, in: store)
+        case .search, .barcode, .quickAdd, .ramble, .foods, .recipes, .favorites:
+            tab = .nutrition
+            sheet = action.logger.map(RootSheet.logger)
+        }
     }
 }
 

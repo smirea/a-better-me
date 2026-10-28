@@ -10,6 +10,7 @@ A Better Me's concepts, goals, paradigms, and high-level system decisions, one f
 - [iOS](ios.md): platform targets, SwiftData persistence, the design system, code layout, and verification.
 - [Nutrition](nutrition.md): the MacroFactor half, its navigation shell, food data sources and photo logging, the domain model and the log's snapshot rule, nutrient ids and the registry, the one settings tree and writing food to Apple Health, what is computed instead of stored, the MacroFactor import, and what it defers.
 - [Live workout surfaces](live-workout.md): the Apple Watch app, which runs workouts without the phone, the Live Activity, and Apple Health.
+- [Widgets](widgets.md): the Home Screen and Lock Screen widgets, the Control Center control, the nutrition snapshot in the app group, and quick action routing.
 - [Sync](sync.md): offline first, the sync engine's one space, the shared SQLite schema and its validators, the owner token, the write rules, local servers, and the iOS client.
 - [Agent API](agent-api.md): the REST and OpenAPI surface for automation, its entry point, and bot tokens.
 - [Hosting](hosting.md): the Cloudflare Worker, the Durable Object space, the R2 backups, secrets, and the CI deploy.

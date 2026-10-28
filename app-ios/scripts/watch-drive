@@ -4,9 +4,12 @@
 // written for it as a file and waits for its answer.
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { withBuildLock } from "./build-lock.ts";
 
 const root = resolve(import.meta.dir, "..");
-const usage = `Usage: scripts/watch-drive <watch-udid> <command> [args]
+const usage = `Usage: scripts/watch-drive <watch-udid|phone-udid> <command> [args]
+
+A phone's udid drives the watch in its active pair (./scripts/run --pair-watch makes one).
 
   start                 build the driver, launch the watch app under it, wait until ready
   tree                  the accessibility tree
@@ -14,6 +17,7 @@ const usage = `Usage: scripts/watch-drive <watch-udid> <command> [args]
   longpress <label|id>
   tapxy <x> <y>         tap at points from the top left
   crown <delta>         rotate the Digital Crown (1.0 is about one full turn)
+  home                  press the Digital Crown: the watch face, then the Smart Stack with crown -1
   swipe left|right|up|down
   shot [path]           screenshot, default DerivedData/watch-driver-<udid>/shot.png
   launch [args...]      relaunch the watch app with launch arguments
@@ -23,16 +27,33 @@ const usage = `Usage: scripts/watch-drive <watch-udid> <command> [args]
   systap <bundle-id> <label|id>
   stop                  end the driver`;
 
-const [udid, op, ...args] = Bun.argv.slice(2);
-if (!udid || !op) {
+const [device, op, ...args] = Bun.argv.slice(2);
+if (!device || !op) {
     console.log(usage);
-    process.exit(udid ? 1 : 0);
+    process.exit(device ? 1 : 0);
 }
+// A ready driver's folder names its watch, so commands after `start` skip the `simctl` lookup.
+const udid = existsSync(join(root, "DerivedData", `watch-driver-${device}`, "ready")) ? device : resolveWatch(device);
 const dir = join(root, "DerivedData", `watch-driver-${udid}`);
-const build = join(root, "DerivedData", "watchdriver");
+// The folder `scripts/run` builds simulators into, which already holds the watch app and the shared code: a fresh
+// driver builds in seconds instead of compiling the watch app again. `withBuildLock` keeps the two from building at once.
+const build = join(root, "DerivedData", "simulator");
 
 if (op === "start") await start();
 else console.log(await send(op, args));
+
+/** `device` when it is a watch simulator, else the watch in that phone's active pair. */
+function resolveWatch(device: string): string {
+    const list = (kind: string) => JSON.parse(Bun.spawnSync(["xcrun", "simctl", "list", kind, "--json"], { stdout: "pipe" }).stdout.toString());
+    const id = device.toLowerCase();
+    const watches = Object.entries(list("devices").devices as Record<string, any[]>)
+        .filter(([runtime]) => runtime.includes("watchOS")).flatMap(([, devices]) => devices.map(watch => watch.udid.toLowerCase()));
+    if (watches.includes(id)) return device;
+    const pair = (Object.values(list("pairs").pairs) as any[]).find(pair => pair.phone.udid.toLowerCase() === id && !/unactive|inactive/.test(pair.state));
+    if (pair) return pair.watch.udid;
+    console.error(`${device} is neither a watch simulator nor a phone with a paired watch. Pair one with ./scripts/run -t ${device} --pair-watch.`);
+    process.exit(1);
+}
 
 function alive(pid: number) {
     try {
@@ -53,7 +74,8 @@ async function start() {
     const destination = `platform=watchOS Simulator,id=${udid}`;
     const project = ["-project", join(root, "App.xcodeproj"), "-scheme", "WatchDriver", "-destination", destination, "-derivedDataPath", build, "-clonedSourcePackagesDirPath", join(root, "DerivedData", "SourcePackages")];
     console.log("Building the watch driver…");
-    const built = Bun.spawnSync(["xcodebuild", "build-for-testing", "-quiet", ...project, "CODE_SIGN_IDENTITY=-"], { stdout: "pipe", stderr: "pipe" });
+    const built = await withBuildLock(build, async () =>
+        Bun.spawnSync(["xcodebuild", "build-for-testing", "-quiet", ...project, "CODE_SIGN_IDENTITY=-"], { stdout: "pipe", stderr: "pipe" }));
     if (built.exitCode !== 0) {
         console.error(built.stdout.toString(), built.stderr.toString());
         throw new Error("Building the watch driver failed.");
@@ -81,7 +103,8 @@ async function start() {
 async function send(op: string, args: string[]) {
     if (!existsSync(join(dir, "ready"))) throw new Error(`No driver for ${udid}. Run: scripts/watch-drive ${udid} start`);
     if (op === "stop") op = "quit";
-    if (op === "shot" && args.length === 0) args = [join(dir, "shot.png")];
+    // The driver runs with `/` as its working directory, so a relative path is resolved here.
+    if (op === "shot") args = [args.length ? resolve(args[0]) : join(dir, "shot.png")];
     const index = readdirSync(dir).filter(file => file.startsWith("cmd-")).length;
     writeFileSync(join(dir, `cmd-${index}.json`), JSON.stringify({ op, args }));
     const output = join(dir, `out-${index}.txt`);
