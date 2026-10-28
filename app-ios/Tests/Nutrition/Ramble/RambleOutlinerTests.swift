@@ -81,12 +81,14 @@ struct RambleOutlinerTests {
         #expect(model.calls == ["two eggs"])
     }
 
-    @Test func settlingOnNewerWordsAbortsTheStaleRequestAndSendsTheFinal() async throws {
+    // The settle's timeout is not under test here, so it never races the model's delay on a stalled CI runner; the time
+    // limit catches a settle that never returns.
+    @Test(.timeLimit(.minutes(5))) func settlingOnNewerWordsAbortsTheStaleRequestAndSendsTheFinal() async throws {
         model.delay = .milliseconds(300)
         let outliner = model.outliner()
         outliner.update("two eggs")
         try await eventually { model.calls == ["two eggs"] }
-        let outline = await outliner.settle("two eggs and toast", timeout: .seconds(2))
+        let outline = await outliner.settle("two eggs and toast", timeout: .seconds(3600))
         #expect(outline?.items.map(\.name) == ["two eggs and toast"])
         #expect(model.calls == ["two eggs", "two eggs and toast"])
         #expect(model.answered == ["two eggs and toast"])

@@ -57,6 +57,7 @@ struct FoodLibraryView: View {
     @State private var query = ""
     @State private var sheet: LibraryEditorSheet?
     @State private var openedRecipe: UUID?
+    @State private var preparedRecipe: UUID?
     @State private var pendingDelete: Item?
     @State private var favorited = false
 
@@ -113,6 +114,9 @@ struct FoodLibraryView: View {
         }
         .sheet(item: $sheet) { $0.editor }
         .navigationDestination(item: $openedRecipe) { RecipeDetailView(recipeID: $0) }
+        .navigationDestination(item: $preparedRecipe) { id in
+            if let recipe = recipes.first(where: { $0.id == id }) { RecipePrepareView(recipe: recipe) }
+        }
         .sensoryFeedback(.success, trigger: favorited)
         .confirmationDialog(deleteTitle, isPresented: .isPresent($pendingDelete), titleVisibility: .visible) {
             Button(pendingDelete.map { if case .favorite = $0 { "Remove" } else { "Delete" } } ?? "Delete", role: .destructive) {
@@ -158,6 +162,7 @@ struct FoodLibraryView: View {
             }
             .swipeActions {
                 deleteButton(.recipe(recipe))
+                Button("Prepare", systemImage: "frying.pan") { preparedRecipe = recipe.id }.tint(Theme.surfaceRaised)
                 editButton(.editRecipe(recipe))
             }
             .contextMenu {

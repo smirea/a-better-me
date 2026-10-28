@@ -53,14 +53,21 @@ struct FoodLibrary: Sendable {
     static func read(_ db: Database, today: CalendarDay) throws -> FoodLibrary {
         // Bare columns beside MAX() come from the row holding the max, so each food brings its latest serving. Logging
         // or editing an entry sets updated_at, so a copy onto a future day ranks by when it was copied, not by its day.
+        let settings = try AppSettings.fetchOne(db, key: AppSettings.key(AppSettings.rowID))?.nutrition ?? NutritionSettings()
         let history = try Row.fetchAll(db, sql: """
             SELECT food, serving, MAX(updated_at || day || printf('%04d', minute) || created_at || id) AS latest
             FROM food_entries
             WHERE json_extract(food, '$.source') <> 'quick_add'
             GROUP BY COALESCE(json_extract(food, '$.foodID'), json_extract(food, '$.name') || '|' || COALESCE(json_extract(food, '$.brand'), ''))
             ORDER BY latest DESC
-            """).map { row in
-            FoodSearchResult(.history, FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving))
+            """).compactMap { row -> FoodSearchResult? in
+            let result = FoodSearchResult(.history, FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving))
+            // `latest` leads with the entry's updated_at, a fixed-width instant; a second MAX() would break the bare columns.
+            let latest: String = row["latest"]
+            if let hidden = settings.hiddenHistory[result.key], let logged = Instant.parse(String(latest.prefix(24))), logged <= hidden {
+                return nil
+            }
+            return result
         }
         let foods = try Food.filter(Column("archived") == false).fetchAll(db)
         let recent = try Row.fetchAll(db, sql: """
@@ -70,8 +77,7 @@ struct FoodLibrary: Sendable {
             HourPicks.Entry(portion: FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving), day: try row.day("day"), minute: row["minute"], written: row["written"])
         }
         var library = FoodLibrary()
-        let hidden = try AppSettings.fetchOne(db, key: AppSettings.key(AppSettings.rowID))?.nutrition.hiddenPicks ?? [:]
-        library.picks = HourPicks.picks(recent, today: today, hidden: hidden).mapValues { $0.map { FoodSearchResult(.picks, $0) } }
+        library.picks = HourPicks.picks(recent, today: today, hidden: settings.hiddenPicks).mapValues { $0.map { FoodSearchResult(.picks, $0) } }
         library.items[.history] = history.map(Item.init)
         library.items[.favorites] = try FoodFavorite.fetchAll(db).sorted { $0.createdAt < $1.createdAt }
             .map { Item(FoodSearchResult(.favorites, $0.portion)) }
