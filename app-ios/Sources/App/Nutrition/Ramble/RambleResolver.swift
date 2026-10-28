@@ -68,8 +68,8 @@ struct RambleResolver: Sendable {
     let index: FoodIndex
     let context: RambleContext
     let today: CalendarDay
-    /// The minute it is now, for a row with no time, meal, or source.
-    let now: Int
+    /// Where a food goes when the speaker gave it no day, meal, or time: the logger's chosen hour, else now.
+    let fallback: (day: CalendarDay, minute: Int)
 
     func rows(_ items: [RambleItem], previous: [RambleRow], choices: [Int: RambleChoice]) throws -> [RambleRow] {
         let previous = Dictionary(previous.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
@@ -83,18 +83,19 @@ struct RambleResolver: Sendable {
     }
 
     private func row(_ id: Int, _ item: RambleItem, previous: RambleRow?, choice: RambleChoice?) throws -> RambleRow {
-        let day = today.adding(days: item.day)
         let minute = item.minute ?? item.meal?.defaultMinute
+        let unplaced = item.kind == .food && item.day == 0 && minute == nil
+        let day = unplaced ? fallback.day : today.adding(days: item.day)
         switch item.kind {
         case .copy:
             guard let mealID = item.copy, let meal = context.meals.first(where: { $0.id == mealID }) else {
-                return RambleRow(id: id, item: item, day: day, minute: minute ?? now, content: .unmatched)
+                return RambleRow(id: id, item: item, day: day, minute: minute ?? fallback.minute, content: .unmatched)
             }
             let except = Set(item.except)
             let entries = (context.mealEntries[mealID] ?? []).filter { !except.contains($0.key) }
             return RambleRow(id: id, item: item, day: day, minute: minute, content: .copy(.init(meal: meal, entries: entries)))
         case .food:
-            return RambleRow(id: id, item: item, day: day, minute: minute ?? now, content: try food(item, previous: previous, choice: choice))
+            return RambleRow(id: id, item: item, day: day, minute: minute ?? fallback.minute, content: try food(item, previous: previous, choice: choice))
         }
     }
 

@@ -33,6 +33,8 @@ final class RambleCapture {
     @ObservationIgnored private let clock: @Sendable () -> Date
     @ObservationIgnored private let dictation = SpeechDictation()
     @ObservationIgnored private let recorder = RambleRecorder()
+    /// The logger's chosen time, where foods said with no day, meal, or time go; nil follows the clock.
+    @ObservationIgnored var chosenTime: @MainActor () -> LogTime? = { nil }
     @ObservationIgnored private var outliner: RambleOutliner?
     @ObservationIgnored private var context: RambleContext?
     @ObservationIgnored private var items: [RambleItem] = []
@@ -82,6 +84,9 @@ final class RambleCapture {
         }
         #if DEBUG
         if let script = UserDefaults.standard.string(forKey: Self.scriptArgument) {
+            if let audio = UserDefaults.standard.string(forKey: Self.audioArgument) {
+                do { try recorder.load(URL(fileURLWithPath: audio)) } catch { RambleOutliner.log.error("No ramble audio: \(String(describing: error))") }
+            }
             speak(script, token: token, heard: heard)
             return
         }
@@ -226,7 +231,8 @@ final class RambleCapture {
         resolution += 1
         let token = resolution
         let now = clock()
-        let resolver = RambleResolver(index: index(), context: context ?? RambleContext(), today: CalendarDay(now), now: now.minuteOfDay())
+        let fallback = chosenTime().map { ($0.day, $0.hour * 60) } ?? (CalendarDay(now), now.minuteOfDay())
+        let resolver = RambleResolver(index: index(), context: context ?? RambleContext(), today: CalendarDay(now), fallback: fallback)
         let items = items, previous = rows, choices = choices
         let task = Task { [weak self] in
             let resolved = await Task.detached { try? resolver.rows(items, previous: previous, choices: choices) }.value
@@ -246,6 +252,8 @@ final class RambleCapture {
     /// DEBUG-only: `-RambleTranscript "…"` arrives a word at a time like live speech, through the same outliner, so the
     /// simulator, which has no microphone, drives the whole pipeline. The capture keeps listening until stopped.
     static let scriptArgument = "RambleTranscript"
+    /// `-RambleAudio <path>` with it: the recording the final read sends.
+    static let audioArgument = "RambleAudio"
 
     private func speak(_ script: String, token: Int, heard: @escaping @MainActor (String) -> Void) {
         let words = script.split(separator: " ")

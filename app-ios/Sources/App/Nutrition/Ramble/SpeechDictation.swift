@@ -4,7 +4,8 @@ import Speech
 import SwiftUI
 import Synchronization
 
-/// Apple's on-device speech-to-text: `SpeechAnalyzer` with a `SpeechTranscriber`, which works offline. The language
+/// Apple's on-device speech-to-text: `SpeechAnalyzer` with a `SpeechTranscriber`, else a `DictationTranscriber` where the
+/// first is missing, which works offline. The language
 /// assets download on first use. Only the microphone needs permission. Ported from procrastimate's `SpeechDictation`,
 /// which uses a `DictationTranscriber`; on spoken food rambles that one garbled food words ("200 mL of air actual
 /// weight" for "200ml of kefir, actually wait") that `SpeechTranscriber` kept (`scripts/food-ramble-speech.ts`).
@@ -19,32 +20,39 @@ final class SpeechDictation {
     private var input: AsyncStream<AnalyzerInput>.Continuation?
     private var analyzer: SpeechAnalyzer?
     private var reader: Task<Void, Never>?
-    #if DEBUG
-    private var playback: Task<Void, Never>?
-    #endif
 
     /// Streams the transcript so far, finalized text followed by the words still being recognized. The tap also writes
     /// each buffer's peak to `meter` for the waveform and the audio to `recorder` for the final read.
     func start(meter: LevelMeter, recorder: RambleRecorder, onText: @escaping @MainActor (String) -> Void) async throws {
-        guard let locale = await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: "en-US")) else {
+        let english = Locale(identifier: "en-US")
+        let module: any SpeechModule
+        let results: AsyncThrowingStream<(isFinal: Bool, text: AttributedString), Error>
+        // SpeechTranscriber is missing on some hardware and on the simulator; dictation is the fallback.
+        if SpeechTranscriber.isAvailable, let locale = await SpeechTranscriber.supportedLocale(equivalentTo: english) {
+            let transcriber = SpeechTranscriber(locale: locale, transcriptionOptions: [], reportingOptions: [.volatileResults, .fastResults], attributeOptions: [])
+            module = transcriber
+            results = Self.texts(transcriber.results) { ($0.isFinal, $0.text) }
+        } else if let locale = await DictationTranscriber.supportedLocale(equivalentTo: english) {
+            let transcriber = DictationTranscriber(
+                locale: locale, contentHints: [], transcriptionOptions: [.punctuation],
+                reportingOptions: [.volatileResults, .frequentFinalization], attributeOptions: []
+            )
+            module = transcriber
+            results = Self.texts(transcriber.results) { ($0.isFinal, $0.text) }
+        } else {
             throw Failure.unsupported
         }
-        let transcriber = SpeechTranscriber(
-            locale: locale,
-            transcriptionOptions: [],
-            reportingOptions: [.volatileResults, .fastResults],
-            attributeOptions: []
-        )
-        if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
+        RambleOutliner.log.info("Ramble listens with \(String(describing: type(of: module)))")
+        if let request = try await AssetInventory.assetInstallationRequest(supporting: [module]) {
             try await request.downloadAndInstall()
         }
-        let converter = try await AnalyzerInputConverter.converter(compatibleWith: [transcriber])
+        let converter = try await AnalyzerInputConverter.converter(compatibleWith: [module])
         let (stream, input) = AsyncStream.makeStream(of: AnalyzerInput.self)
-        let analyzer = SpeechAnalyzer(modules: [transcriber])
+        let analyzer = SpeechAnalyzer(modules: [module])
         reader = Task {
             var finalized = AttributedString()
             do {
-                for try await result in transcriber.results {
+                for try await result in results {
                     if result.isFinal { finalized += result.text }
                     onText(String((result.isFinal ? finalized : finalized + result.text).characters))
                 }
@@ -56,12 +64,6 @@ final class SpeechDictation {
         self.analyzer = analyzer
         self.input = input
 
-        #if DEBUG
-        if let path = UserDefaults.standard.string(forKey: Self.audioArgument) {
-            playback = try Self.play(URL(fileURLWithPath: path), through: converter, into: input, recorder: recorder, meter: meter)
-            return
-        }
-        #endif
         guard await AVAudioApplication.requestRecordPermission() else {
             cancel()
             throw Failure.denied
@@ -85,6 +87,24 @@ final class SpeechDictation {
         engine = audio
     }
 
+    /// The two transcribers' result streams as one shape.
+    nonisolated private static func texts<Results: AsyncSequence & Sendable>(
+        _ results: Results,
+        _ text: @escaping @Sendable (Results.Element) -> (isFinal: Bool, text: AttributedString)
+    ) -> AsyncThrowingStream<(isFinal: Bool, text: AttributedString), Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    for try await result in results { continuation.yield(text(result)) }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     /// The tap runs on the audio thread. The converter is only ever used there once the tap is installed.
     nonisolated private static func feed(
         _ converter: AnalyzerInputConverter,
@@ -106,35 +126,6 @@ final class SpeechDictation {
         }
     }
 
-    #if DEBUG
-    /// DEBUG-only: `-RambleAudio <path>` plays a spoken audio file through the same converter, analyzer, and recorder at
-    /// real-time pace, so the simulator, which has no microphone, drives live speech-to-text and the final read.
-    static let audioArgument = "RambleAudio"
-
-    private static func play(
-        _ url: URL,
-        through converter: AnalyzerInputConverter,
-        into input: AsyncStream<AnalyzerInput>.Continuation,
-        recorder: RambleRecorder,
-        meter: LevelMeter
-    ) throws -> Task<Void, Never> {
-        nonisolated(unsafe) let file = try AVAudioFile(forReading: url)
-        try recorder.begin(file.processingFormat)
-        nonisolated(unsafe) let converter = converter
-        return Task.detached {
-            while file.framePosition < file.length, !Task.isCancelled {
-                guard let read = try? file.read(frameCount: 1600) else { break }
-                let buffer = AVAudioPCMBuffer(copying: read)
-                meter.set(.random(in: 0.08 ... 0.5))
-                recorder.write(buffer)
-                for item in (try? converter.convert(buffer, at: nil)) ?? [] { input.yield(item) }
-                try? await Task.sleep(for: .seconds(Double(buffer.frameLength) / file.processingFormat.sampleRate))
-            }
-            meter.set(0)
-        }
-    }
-    #endif
-
     /// Stops listening and waits until the words already heard are final, so the last of them are not lost.
     func finish() async {
         let analyzer = self.analyzer
@@ -150,10 +141,6 @@ final class SpeechDictation {
     }
 
     private func halt() {
-        #if DEBUG
-        playback?.cancel()
-        playback = nil
-        #endif
         engine?.inputNode.removeTap(onBus: 0)
         engine?.stop()
         engine = nil

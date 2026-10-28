@@ -55,6 +55,18 @@ nonisolated final class RambleRecorder: Sendable {
         }
     }
 
+    #if DEBUG
+    /// DEBUG-only: a spoken file in place of the mic, for `-RambleAudio`; the simulator has no speech model to listen
+    /// with, so a scripted transcript stands in for the live words while the final read hears this.
+    func load(_ url: URL) throws {
+        let file = try AVAudioFile(forReading: url)
+        try begin(file.processingFormat)
+        while file.framePosition < file.length {
+            write(AVAudioPCMBuffer(copying: try file.read(frameCount: 4096)))
+        }
+    }
+    #endif
+
     func reset() {
         state.withLock { $0 = State() }
     }

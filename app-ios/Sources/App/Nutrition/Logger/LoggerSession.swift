@@ -130,6 +130,7 @@ final class LoggerSession {
         library = start.library
         chosenTime = start.time
         results = (try? search.local("")) ?? []
+        ramble.chosenTime = { [weak self] in self?.chosenTime }
     }
 
     /// Local results at once, then Open Food Facts after a pause in typing when `branded` is on. A failed branded

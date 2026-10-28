@@ -38,7 +38,7 @@ struct RambleResolverTests {
     func resolver(context: RambleContext = RambleContext()) async throws -> RambleResolver {
         try await store.write { _ in }.value
         let search = try FoodSearch(store: store, catalog: try fixtureCatalog(rambleCatalog), branded: StubBranded())
-        return RambleResolver(index: search.index, context: context, today: today, now: 14 * 60)
+        return RambleResolver(index: search.index, context: context, today: today, fallback: (today, 14 * 60))
     }
 
     func food(_ row: RambleRow) -> RambleRow.Food? {
@@ -201,6 +201,13 @@ struct RambleResolverTests {
         ], previous: [], choices: [:])
         #expect(rows.map { "\($0.day) \($0.minute ?? -1)" } == ["2026-10-28 480", "2026-10-27 1140", "2026-10-28 795", "2026-10-28 930", "2026-10-28 840"])
         #expect(describe([rows[4]]) == ["unmatched nothing like it"])
+    }
+
+    @Test func aFoodWithNothingSaidGoesToTheLoggersChosenHour() async throws {
+        let base = try await resolver()
+        let chosen = RambleResolver(index: base.index, context: base.context, today: today, fallback: (today.adding(days: -2), 9 * 60))
+        let rows = try chosen.rows([RambleItem(name: "oats"), RambleItem(name: "oats", meal: .dinner)], previous: [], choices: [:])
+        #expect(rows.map { "\($0.day) \($0.minute ?? -1)" } == ["2026-10-26 540", "2026-10-28 1140"])
     }
 }
 
