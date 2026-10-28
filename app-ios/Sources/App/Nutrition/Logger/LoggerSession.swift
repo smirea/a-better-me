@@ -127,12 +127,12 @@ final class LoggerSession {
 
     init(
         store: LocalStore, search: FoodSearch, start: LoggerStart, recognizer: any MealRecognizer = MealPhotoClient.live,
-        rambler: any RambleOutlining = RambleClient.live
+        rambler: any RambleOutlining = RambleClient.live, listener: (any RambleLiveConnecting)? = RambleLiveClient.live
     ) {
         self.store = store
         self.search = search
         self.recognizer = recognizer
-        ramble = RambleCapture(store: store, index: { search.index }, client: rambler)
+        ramble = RambleCapture(store: store, index: { search.index }, client: rambler, listener: listener)
         tab = start.tab
         library = start.library
         chosenTime = start.time

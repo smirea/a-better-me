@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import Observation
 
@@ -30,6 +31,14 @@ final class RambleCapture {
     @ObservationIgnored private let store: LocalStore
     @ObservationIgnored private let index: @MainActor () -> FoodIndex
     @ObservationIgnored private let client: any RambleOutlining
+    /// Gemini Live hears the audio and builds the list itself; nil, or a session that fails, listens on the device and
+    /// reads the transcript with `client`.
+    @ObservationIgnored private let listener: (any RambleLiveConnecting)?
+    @ObservationIgnored private var stream: (any RambleLiveStream)?
+    /// Consumes the Live session's events in order; it ends after `done` or `failed`.
+    @ObservationIgnored private var events: Task<Void, Never>?
+    /// The Live session answered every word of this listen, so its list stands without a text read.
+    @ObservationIgnored private var answered = false
     @ObservationIgnored private let clock: @Sendable () -> Date
     @ObservationIgnored private let dictation = SpeechDictation()
     @ObservationIgnored private let recorder = RambleRecorder()
@@ -47,10 +56,14 @@ final class RambleCapture {
     @ObservationIgnored private var stopping: Task<Void, Never>?
     @ObservationIgnored private var resolving: Task<Void, Never>?
 
-    init(store: LocalStore, index: @escaping @MainActor () -> FoodIndex, client: any RambleOutlining, clock: @escaping @Sendable () -> Date = { .now }) {
+    init(
+        store: LocalStore, index: @escaping @MainActor () -> FoodIndex, client: any RambleOutlining,
+        listener: (any RambleLiveConnecting)? = nil, clock: @escaping @Sendable () -> Date = { .now }
+    ) {
         self.store = store
         self.index = index
         self.client = client
+        self.listener = listener
         self.clock = clock
     }
 
@@ -99,6 +112,15 @@ final class RambleCapture {
             return
         }
         #endif
+        if let listener {
+            listen(listener, token: token, base: base)
+            await startup?.value
+            return
+        }
+        await listenOnDevice(token: token, heard: heard)
+    }
+
+    private func listenOnDevice(token: Int, heard: @escaping @MainActor (String) -> Void) async {
         let startup = Task { [dictation, meter, recorder] in
             do {
                 try await dictation.start(meter: meter, recorder: recorder, onText: heard)
@@ -113,6 +135,68 @@ final class RambleCapture {
         }
         self.startup = startup
         await startup.value
+    }
+
+    /// Streams the mic to Gemini Live, whose list follows the speaker with no text reads. The items before this listen
+    /// stay ahead of the session's own, which knows only what it hears. A session that fails while listening hands the
+    /// rest of the listen to on-device speech and the text reads.
+    private func listen(_ listener: any RambleLiveConnecting, token: Int, base: String) {
+        let before = items
+        answered = false
+        let (events, sink) = AsyncStream.makeStream(of: RambleLiveEvent.self)
+        let stream = listener.connect(request(transcript)) { sink.yield($0) }
+        self.stream = stream
+        recorder.stream { stream.send($0) }
+        self.events = Task { [weak self] in
+            for await event in events {
+                guard let self, token == generation else { return }
+                switch event {
+                case let .transcript(text):
+                    transcript = Self.join(base, text)
+                case let .outline(outline):
+                    items = before + outline.items
+                    resolve()
+                case let .done(text, outline):
+                    transcript = Self.join(base, text)
+                    items = before + outline.items
+                    answered = true
+                    resolve()
+                    return
+                case let .failed(message):
+                    RambleOutliner.log.error("Ramble live session failed: \(message)")
+                    self.stream = nil
+                    recorder.stream(to: nil)
+                    guard phase == .listening else { return }
+                    dictation.cancel()
+                    let rest = transcript
+                    startup = Task { await self.listenOnDevice(token: token) { [weak self] words in
+                        guard let self, token == generation, phase == .listening || phase == .finishing else { return }
+                        transcript = Self.join(rest, words)
+                        outliner?.update(transcript)
+                    } }
+                    return
+                }
+            }
+        }
+        #if DEBUG
+        if let audio = UserDefaults.standard.string(forKey: Self.audioArgument) {
+            replay(URL(fileURLWithPath: audio), token: token)
+            return
+        }
+        #endif
+        startup = Task { [dictation, meter, recorder] in
+            do {
+                try await dictation.start(meter: meter, recorder: recorder, onText: nil)
+                if token != generation || phase != .listening { dictation.cancel() }
+            } catch SpeechDictation.Failure.denied {
+                stream.cancel()
+                end(token, notice: "The microphone is off. Turn it on in Settings to ramble.")
+            } catch {
+                RambleOutliner.log.error("The mic could not start: \(String(describing: error))")
+                stream.cancel()
+                end(token, notice: "Dictation isn't available right now.")
+            }
+        }
     }
 
     /// Stops listening, waits for the last words, then for the final read of the recording, falling back to the
@@ -140,6 +224,8 @@ final class RambleCapture {
         script?.cancel()
         await dictation.finish()
         guard token == generation else { return }
+        await finishLive()
+        guard token == generation else { return }
         let final = await finalRead()
         guard token == generation else { return }
         if let final {
@@ -147,7 +233,7 @@ final class RambleCapture {
             outliner?.stop()
             items = final.items
             await resolve()?.value
-        } else {
+        } else if !answered {
             let outline = await outliner?.settle(transcript, timeout: Self.settleTimeout)
             guard token == generation else { return }
             if let outline {
@@ -162,8 +248,24 @@ final class RambleCapture {
         phase = .review
     }
 
+    /// Ends the Live session's audio and waits for its answer to every word it heard, up to `settleTimeout`.
+    private func finishLive() async {
+        recorder.stream(to: nil)
+        guard let stream, let events else { return }
+        stream.stop()
+        let timeout = Task {
+            try? await Task.sleep(for: Self.settleTimeout)
+            events.cancel()
+        }
+        await events.value
+        timeout.cancel()
+        stream.cancel()
+        self.stream = nil
+        self.events = nil
+    }
+
     private func finalRead() async -> RambleOutline? {
-        guard outliner?.off == false, let wav = recorder.wav() else { return nil }
+        guard outliner?.off != true, let wav = recorder.wav() else { return nil }
         var body = request(transcript)
         body.audio = RambleRequest.Audio(data: wav.base64EncodedString())
         let read = Task { [client] in try await client.outline(body) }
@@ -185,6 +287,10 @@ final class RambleCapture {
         generation += 1
         script?.cancel()
         dictation.cancel()
+        recorder.stream(to: nil)
+        stream?.cancel()
+        stream = nil
+        events?.cancel()
         outliner?.stop()
         resolving?.cancel()
     }
@@ -314,6 +420,27 @@ final class RambleCapture {
     static let scriptArgument = "RambleTranscript"
     /// `-RambleAudio <path>` with it: the recording the final read sends.
     static let audioArgument = "RambleAudio"
+
+    /// `-RambleAudio <path>` alone, with Gemini Live: the file plays into the session in real time in place of the mic.
+    private func replay(_ url: URL, token: Int) {
+        script = Task { [weak self, recorder, meter] in
+            do {
+                let file = try AVAudioFile(forReading: url)
+                try recorder.begin(file.processingFormat)
+                let frames = AVAudioFrameCount(file.processingFormat.sampleRate / 10)
+                while file.framePosition < file.length {
+                    try await Task.sleep(for: .milliseconds(100))
+                    guard let self, token == generation, !Task.isCancelled else { return }
+                    let buffer = AVAudioPCMBuffer(copying: try file.read(frameCount: frames))
+                    meter.set(.random(in: 0.08 ... 0.5))
+                    recorder.write(buffer)
+                }
+            } catch {
+                RambleOutliner.log.error("No ramble audio: \(String(describing: error))")
+            }
+            meter.set(0)
+        }
+    }
 
     private func speak(_ script: String, token: Int, heard: @escaping @MainActor (String) -> Void) {
         let words = script.split(separator: " ")

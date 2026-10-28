@@ -24,7 +24,11 @@ export type App<Upgraded = never> = {
 	report: Report;
 	engine(request: Request): Promise<Response | Upgraded>;
 	agent(request: Request): Promise<Response>;
+	/** `GET /api/food-database/ramble/live`, a WebSocket to Gemini Live (`food/ramble-live.ts`), after the owner check. */
+	ramble?(request: Request): Promise<Response | Upgraded>;
 };
+
+export const RAMBLE_LIVE_ROUTE = 'GET /api/food-database/ramble/live';
 
 const error = (status: number, message: string) => Response.json({ ok: false, error: message }, { status });
 
@@ -51,6 +55,13 @@ export async function isOwner(request: Request, token: string): Promise<boolean>
 export async function handle<Upgraded = never>(request: Request, app: App<Upgraded>): Promise<Response | Upgraded> {
 	const url = new URL(request.url);
 	const route = `${request.method} ${url.pathname}`;
+	if (route === RAMBLE_LIVE_ROUTE) {
+		if (!(await isOwner(request, app.config.ownerToken))) return error(401, 'Missing or wrong owner token');
+		if (!app.config.geminiApiKey) return error(503, 'Ramble logging needs GEMINI_API_KEY on the server');
+		if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket')
+			return error(426, 'Expected a WebSocket upgrade');
+		return app.ramble ? app.ramble(request) : error(501, 'This host has no live ramble');
+	}
 	if (route !== 'POST /api/sync' && route !== 'GET /api/live') {
 		if (url.pathname !== '/api' && !url.pathname.startsWith('/api/')) return error(404, 'Not found');
 		return reportFailure(route, await app.agent(request), app.report);
