@@ -88,7 +88,13 @@ function diff(expected: Expected, actual: RambleItem): string[] {
 	const kind = expected.kind ?? 'food';
 	if (actual.kind !== kind) return [`kind ${actual.kind}`];
 	if (expected.name && !nameMatches(expected.name, actual.name)) misses.push(`name "${actual.name}"`);
-	if (expected.amount !== undefined && !anyOf(expected.amount, actual.amount)) misses.push(`amount ${actual.amount}`);
+	// Amount 0 logs one usual serving, so with no unit it is the same entry as amount 1 ("a banana").
+	const amount = (a: number, u: string) => (a === 0 && !u ? 1 : a);
+	if (
+		expected.amount !== undefined &&
+		!anyOf(expected.amount, actual.amount, (a, b) => amount(a, actual.unit) === amount(b, actual.unit))
+	)
+		misses.push(`amount ${actual.amount}`);
 	if (expected.unit !== undefined && !anyOf(expected.unit, actual.unit, (a, b) => unit(a) === unit(b)))
 		misses.push(`unit "${actual.unit}"`);
 	if (!anyOf(expected.ref ?? null, actual.ref)) misses.push(`ref ${actual.ref}`);

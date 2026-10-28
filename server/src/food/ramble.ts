@@ -47,8 +47,8 @@ export type RambleRequest = z.input<typeof RambleRequest>;
 
 /**
  * One line of the ramble's list. `food` is searched on the phone by `name`; `ref` names a logged entry to reuse
- * instead. `copy` is a whole logged meal minus `except`. Amount 0 means none was said, so the phone uses the food's
- * usual serving. `day` is an offset from today, `time` a 24-hour clock or empty.
+ * instead. `copy` is a whole logged meal minus `except`. Amount 0 means none was said, so the phone logs one of the
+ * food's usual serving; a unit always comes with an amount. `day` is an offset from today, `time` a 24-hour clock or empty.
  */
 export const RambleItem = z
 	.object({
@@ -119,7 +119,7 @@ Corrections come first. When the speaker changes their mind, keep only the final
 Each item is one of two kinds.
 - "food": one food or drink.
   - name: the food to search a food database for, in the speaker's words without the amount, the meal, or filler: "oats", "blueberries", "chia seeds", "kefir", "pepperoni pizza", "2% milk". Keep words that tell foods apart (brand, flavor, cut, cooked or raw). Fix obvious speech-to-text mishearings of food names.
-  - amount and unit: the amount, after corrections. Fractions are decimals: "half a cup" is 0.5 cup, "a cup and a half" is 1.5 cup. unit is g, kg, oz, lb, ml, l, fl oz, cup, tbsp, or tsp when the speaker used one of those, written that way ("grams" is g, "tablespoons" is tbsp). For counted foods unit is the counted thing in the singular ("slice", "egg", "scoop", "bar", "piece"), or "" when the count is of the food itself ("2 bananas" is amount 2, unit ""). "a" or "an" counts 1. amount 0 and unit "" when no amount was said.
+  - amount and unit: the amount, after corrections. Fractions are decimals: "half a cup" is 0.5 cup, "a cup and a half" is 1.5 cup. unit is g, kg, oz, lb, ml, l, fl oz, cup, tbsp, or tsp when the speaker used one of those, written that way ("grams" is g, "tablespoons" is tbsp). For counted foods unit is the counted thing in the singular ("slice", "egg", "scoop", "bar", "piece"), or "" when the count is of the food itself ("2 bananas" is amount 2, unit ""). Leave the amount out when none was said; a bare "a" or "an" ("a banana", "a beer") is no amount, but "a cup of", "a slice of" is 1 cup, 1 slice.
   - ref: the id of a logged entry when the speaker means a food they logged before: "my usual pancake", "the same coffee", "the oats from yesterday". Prefer a usual food (u…) for "my usual" or "my regular". Otherwise "". With a ref, name is still the food's name, and amount stays 0 unless they said a new amount.
 - "copy": a whole logged meal again: "the same breakfast as yesterday", "yesterday's lunch", "the steak dinner from last night". copy is that meal's id (m…). Only when the speaker means the whole meal; one food from a meal ("the pancakes from Sunday") is a food item with that entry's ref. When they leave foods out, replace them, or change one's amount ("but with raspberries instead of blueberries", "without the syrup"), except lists the ids of those entries (e…), and each replacement is its own food item right after the copy. Otherwise copy and except are empty for a food item.
 
@@ -127,7 +127,9 @@ For every item:
 - meal: breakfast, lunch, dinner, or snack when the speaker said it or it follows from what they said ("at 3pm" alone is not a meal); otherwise "". A meal said once applies to the items that follow it until another is said. For a copy, meal is the meal it is logged as now ("for lunch, the steak dinner from last night" is lunch), which defaults to the copied meal's.
 - time: a 24-hour "HH:MM" only when the speaker said a clock time ("a bar at 3pm" is "15:00"); otherwise "".
 - day: when it was eaten, as days from today: 0 today, -1 yesterday. It is 0 unless the speaker says they ate it on an earlier day ("yesterday I had…"). A copied meal's day never sets it: "yesterday's breakfast" logged now is day 0.
-- options: true when the speaker says the match for that food is wrong or asks to see its options ("that pizza is not right", "show me options for the pizza"). When they then pick one ("let's go with the pepperoni"), set name to it, to the option's exact text when it is in the shown options, and options to false.
+- options: true when the speaker says the match for that food is wrong or asks to see its options ("that pizza is not right", "show me options for the pizza"). When they then pick one ("let's go with the pepperoni"), set name to it, to the option's exact text when it is in the shown options, and options to false. A pick changes only the item it is for.
+
+Leave out every field that is empty, 0, or false: a food item with only a name is { "kind": "food", "name": "pizza" }. Leaving them out keeps the answer short, and the list updates live while the speaker talks.
 
 Ignore chatter that is not about food, and "that's it" or "done" at the end.
 
@@ -229,16 +231,18 @@ export function resolveAliases(
 		if (item.kind === 'copy' && !meal) continue;
 		if (item.kind === 'food' && !item.name.trim()) continue;
 		const inMeal = new Set(meal?.entries.map(entry => entry.id));
+		const previous = items.at(-1);
+		const carried = !item.meal && !item.time && previous?.day === item.day ? previous.meal : '';
 		items.push({
 			kind: item.kind,
 			name: item.kind === 'food' ? item.name.trim() : '',
-			amount: item.kind === 'food' ? item.amount : 0,
+			amount: item.kind === 'food' ? item.amount || (item.unit.trim() ? 1 : 0) : 0,
 			unit: item.kind === 'food' ? item.unit.trim().toLowerCase() : '',
 			ref: (item.kind === 'food' && names.entries.get(item.ref)) || null,
 			copy: meal?.id ?? null,
 			except: item.except.map(alias => names.entries.get(alias)!).filter(id => id && inMeal.has(id)),
 			day: Math.min(0, Math.max(-30, item.day)),
-			meal: item.meal || (item.kind === 'copy' ? meal!.meal : ''),
+			meal: item.meal || (item.kind === 'copy' ? meal!.meal : carried),
 			time: clock(item.time),
 			options: item.kind === 'food' && item.options,
 		});

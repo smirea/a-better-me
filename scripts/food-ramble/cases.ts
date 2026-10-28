@@ -124,7 +124,7 @@ export const DEV: Case[] = [
 				unit: ['', 'bar'],
 				ref: [null, 'u-bar', 'ys-bar'],
 				time: '15:00',
-				meal: ['', 'snack'],
+				meal: ['', 'snack', 'lunch'],
 			},
 		],
 	},
@@ -227,7 +227,7 @@ export const DEV: Case[] = [
 		text: 'the steak dinner from last night but with a sweet potato instead of the baked potato',
 		items: [
 			{ kind: 'copy', copy: 'yd', meal: 'dinner', except: ['yd-potato'] },
-			{ name: ['sweet potato'], amount: 1, unit: ['', 'potato', 'sweet potato'], meal: 'dinner' },
+			{ name: ['sweet potato'], amount: 1, unit: ['', 'potato', 'sweet potato', 'medium'], meal: 'dinner' },
 		],
 	},
 	{
