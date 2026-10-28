@@ -209,7 +209,8 @@ private struct HourTotals: View {
 }
 
 /// A food tile with its time, or its check circle in select mode, in the gutter. Pasting inline hides the circles,
-/// so the destination day's foods don't read as a new selection.
+/// so the destination day's foods don't read as a new selection. Swiping a tile left reveals Remove and Copy, as
+/// MacroFactor's does; it has no full swipe, because a left swipe that misses the blank space was meant to page.
 private struct EntryRow: View {
     let row: TimelineRow
     let showsTime: Bool
@@ -259,6 +260,10 @@ private struct EntryRow: View {
                 }
                 Button("Remove", systemImage: "trash", role: .destructive) { store.deleteEntries([entry.id]) }
             }
+            .rowSwipeActions(trailing: state.selecting ? [] : [
+                .destructive("Remove") { store.deleteEntries([entry.id]) },
+                SwipeAction(title: "Copy", systemImage: "doc.on.doc") { state.copy(entry) },
+            ])
             .accessibilityAddTraits(isSelected ? .isSelected : [])
         }
         .padding(.bottom, 6)

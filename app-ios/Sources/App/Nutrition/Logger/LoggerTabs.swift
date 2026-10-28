@@ -15,7 +15,7 @@ struct SearchTab: View {
         List {
             if session.query.isEmpty {
                 if let hour = session.picksHour, !picks.isEmpty {
-                    ThemedSection("\(NutritionFormat.hour(hour)) Picks") { rows(picks, terms) }
+                    ThemedSection("\(NutritionFormat.hour(hour)) Picks") { rows(picks, terms, picksHour: hour) }
                 }
                 ThemedSection("Latest") { rows(session.results, terms) }
             } else {
@@ -70,7 +70,9 @@ struct SearchTab: View {
         return groups
     }
 
-    private func rows(_ results: [FoodSearchResult], _ terms: [String]) -> some View {
+    /// Swiping a row right adds it to the plate, MacroFactor's Multi-Add; swiping a Pick left takes it out of that
+    /// hour's Picks.
+    private func rows(_ results: [FoodSearchResult], _ terms: [String], picksHour: Int? = nil) -> some View {
         ForEach(results) { result in
             HStack(spacing: 4) {
                 Button {
@@ -84,6 +86,17 @@ struct SearchTab: View {
             }
             .listRowInsets(EdgeInsets(top: 2, leading: Theme.margin, bottom: 2, trailing: 8))
             .listRowBackground(Color.clear)
+            .swipeActions(edge: .leading) {
+                Button("Add to Plate", systemImage: "plus") { session.add(LoggerPick(result)) }.tint(Theme.accent)
+            }
+            .swipeActions(edge: .trailing) {
+                if let picksHour {
+                    Button("Remove from Picks", systemImage: "trash", role: .destructive) {
+                        Task { await session.hidePick(result.portion.food, hour: picksHour) }
+                    }
+                    .tint(Theme.destructive)
+                }
+            }
         }
     }
 }

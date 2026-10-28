@@ -33,7 +33,8 @@ extension SessionEditor {
         .foregroundStyle(Theme.textPrimary)
     }
 
-    /// Warm-ups have no number; every other set counts from 1, so "W, D, +, 2, 3" as in the reference.
+    /// Warm-ups have no number; every other set counts from 1, so "W, D, +, 2, 3" as in the reference. Swiping a row
+    /// left removes it, as MacroFactor Workouts' sets do.
     private func row(_ path: RowPath, number: Int, fields: [SetField], previous: [WorkoutSet]) -> some View {
         let isLogged = blocks.log(at: path) != nil
         let value = entry(path, previous: previous)
@@ -49,6 +50,8 @@ extension SessionEditor {
                 .accessibilityLabel(isLogged ? "Uncheck set" : "Check set")
         }
         .opacity(isLogged && focus?.row != path ? 0.45 : 1)
+        .background(Theme.background)
+        .rowSwipeActions(trailing: [.destructive(path.sub == nil ? "Remove Set" : "Remove") { removeRow(path) }], fullSwipe: true)
     }
 
     @ViewBuilder

@@ -96,6 +96,13 @@ final class FoodLogState {
         }
     }
 
+    /// A tile's Copy swipe: that entry alone, waiting for a paste target.
+    func copy(_ entry: FoodEntry) {
+        selecting = true
+        selection = [entry.id]
+        pending = Pending(action: .copy, entries: [entry])
+    }
+
     func createRecipe() {
         recipeRequest = RecipeRequest(draft: FoodLog.recipeDraft(selectedEntries))
         endSelection()

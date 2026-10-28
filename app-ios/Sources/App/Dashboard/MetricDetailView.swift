@@ -444,6 +444,7 @@ private struct MonthRowView: View {
                 Button("Delete Weigh-In", systemImage: "trash", role: .destructive) { store.delete(BodyWeight.self, id: id) }
             }
         }
+        .rowSwipeActions(trailing: row.deletableID.map { id in [.destructive("Delete Weigh-In") { store.delete(BodyWeight.self, id: id) }] } ?? [])
         .accessibilityElement(children: .combine)
     }
 }

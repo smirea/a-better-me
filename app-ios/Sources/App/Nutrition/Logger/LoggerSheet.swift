@@ -142,12 +142,13 @@ private struct LoggerContent: View {
 }
 
 /// The logger's top band: exit, the time chip, each banner nutrient as what the plate leaves of the day's target, and
-/// the plate.
+/// the plate. Swiping the bars steps through Nutrition Display, as swiping MacroFactor's banner does.
 private struct LoggerBanner: View {
     let session: LoggerSession
     let exit: () -> Void
     let chooseTime: () -> Void
     let openPlate: () -> Void
+    @Environment(LocalStore.self) private var store
     @Observe(AppSettings.current) private var settings
     @Observe(NutritionPlan.all) private var plans
     @Observe<[FoodEntry]> private var entries: [FoodEntry]
@@ -185,6 +186,17 @@ private struct LoggerBanner: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(.rect)
+                .gesture(DragGesture(minimumDistance: 20).onEnded { drag in
+                    guard abs(drag.translation.width) > 30, abs(drag.translation.width) > abs(drag.translation.height) else { return }
+                    let next = options.nutritionDisplay.cycled(by: drag.translation.width < 0 ? 1 : -1)
+                    store.updateSettings { $0.nutrition.logger.nutritionDisplay = next }
+                })
+                .sensoryFeedback(.selection, trigger: options.nutritionDisplay)
+                .accessibilityAdjustableAction { direction in
+                    let next = options.nutritionDisplay.cycled(by: direction == .increment ? 1 : -1)
+                    store.updateSettings { $0.nutrition.logger.nutritionDisplay = next }
+                }
                 Button(action: openPlate) {
                     HStack(spacing: 6) {
                         Image(systemName: "fork.knife")
