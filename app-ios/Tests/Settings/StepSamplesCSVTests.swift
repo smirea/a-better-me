@@ -15,7 +15,7 @@ struct StepSamplesCSVTests {
                 bundleID: "com.apple.health.DEF", productType: nil, deviceModel: nil, userEntered: true
             ),
         ]
-        let csv = StepSamplesCSV.text(samples, timeZone: TimeZone(identifier: "America/Los_Angeles")!)
+        let csv = StepSamplesCSV.header + StepSamplesCSV.rows(samples, timeZone: TimeZone(identifier: "America/Los_Angeles")!)
         #expect(csv == #"""
         start,end,steps,source,bundle_id,product_type,device_model,user_entered
         2026-10-14T10:46:40-07:00,2026-10-14T10:47:40-07:00,112,"Stefan's Watch, Ultra",com.apple.health.ABC,"Watch7,5",Watch,false
