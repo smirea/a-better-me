@@ -12,6 +12,9 @@ import { schema } from '../../shared/db/schema';
 import { handle } from './api';
 import { BACKUP_CRON, backup } from './backup';
 import { parseConfig, type Config, type Settings } from './config';
+import { serveLiveRamble } from './food/ramble-live';
+
+declare const WebSocketPair: typeof import('@cloudflare/workers-types').WebSocketPair;
 
 /** The Cloudflare entry `wrangler.jsonc` names. The Bun server in `index.ts` serves the same `handle`. */
 
@@ -32,6 +35,7 @@ class OwnerSpace extends SpaceObject<Env> {
 	override async fetch(request: Request): Promise<Response> {
 		const { pathname } = new URL(request.url);
 		if (pathname === '/dump') return Response.json(this.space.dump());
+		if (pathname === '/ramble-live') return this.rambleLive();
 		if (pathname !== '/api' && !pathname.startsWith('/api/')) return super.fetch(request);
 		const before = this.space.head();
 		const response = await handleAgent(request, {
@@ -51,6 +55,28 @@ class OwnerSpace extends SpaceObject<Env> {
 			}
 		}
 		return response;
+	}
+
+	/**
+	 * Here rather than in the stateless Worker: a Durable Object's CPU budget resets with every message, while a
+	 * Worker's covers the socket's whole life. The socket is accepted directly, not hibernated, so it stays out of
+	 * `getWebSockets()`, which the sync nudge reads.
+	 */
+	private rambleLive(): Response {
+		const { 0: client, 1: server } = new WebSocketPair();
+		server.accept();
+		const ramble = serveLiveRamble(
+			{ send: text => server.send(text), close: (code, reason) => server.close(code, reason) },
+			configOf(this.env).geminiApiKey!,
+		);
+		// Binary frames arrive as Blobs here; reading one is async, so a chain keeps the frames and the stop in order.
+		let order = Promise.resolve();
+		server.addEventListener('message', event => {
+			const data = event.data as string | ArrayBuffer | Blob;
+			order = order.then(async () => ramble.message(data instanceof Blob ? await data.arrayBuffer() : data));
+		});
+		server.addEventListener('close', () => ramble.close());
+		return new Response(null, { status: 101, webSocket: client } as ResponseInit);
 	}
 }
 
@@ -110,6 +136,11 @@ async function fetch(request: Request, env: Env): Promise<Response> {
 				return owner(env).fetch(new Request(url, request));
 			},
 			agent: request => owner(env).fetch(request),
+			ramble(request) {
+				const url = new URL(request.url);
+				url.pathname = '/ramble-live';
+				return owner(env).fetch(new Request(url, request));
+			},
 		});
 	} catch (error) {
 		console.error(error);

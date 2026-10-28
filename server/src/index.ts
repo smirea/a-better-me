@@ -8,6 +8,7 @@ import { handleAgent } from './agent';
 import { handle } from './api';
 import { ASSETS_DIR, assetRoutes } from './assets';
 import { parseConfig } from './config';
+import { serveLiveRamble } from './food/ramble-live';
 import env from './env';
 
 const config = parseConfig(env);
@@ -41,7 +42,9 @@ async function nudging(run: () => Promise<Response>): Promise<Response> {
 // No auth: the files are already in git, and the Worker never serves them.
 const assets = assetRoutes(ASSETS_DIR);
 
-const server = Bun.serve({
+type Socket = { ramble?: ReturnType<typeof serveLiveRamble> } | undefined;
+
+const server = Bun.serve<Socket>({
 	development: config.environment === 'development',
 	idleTimeout: 120,
 	port: env.API_PORT,
@@ -50,6 +53,10 @@ const server = Bun.serve({
 		handle<undefined>(request, {
 			config,
 			report: Sentry,
+			async ramble(request) {
+				if (server.upgrade(request, { data: {} })) return undefined;
+				return Response.json({ ok: false, error: 'Expected a WebSocket upgrade' }, { status: 400 });
+			},
 			async engine(request) {
 				if (request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
 					// Echo the subprotocol only when offered: the Swift client offers none and fails the handshake on an echo.
@@ -58,7 +65,7 @@ const server = Bun.serve({
 						?.split(',')
 						.some(p => p.trim() === LIVE_PROTOCOL);
 					const headers = offered ? { 'Sec-WebSocket-Protocol': LIVE_PROTOCOL } : undefined;
-					if (server.upgrade(request, { headers })) return undefined;
+					if (server.upgrade(request, { headers, data: undefined })) return undefined;
 					return Response.json({ ok: false, error: 'Expected a WebSocket upgrade' }, { status: 400 });
 				}
 				return nudging(() => handleSync(space, request));
@@ -69,10 +76,18 @@ const server = Bun.serve({
 				),
 		}),
 	websocket: {
-		open: ws => void ws.subscribe('live'),
+		open(ws) {
+			if (!ws.data) return void ws.subscribe('live');
+			ws.data.ramble = serveLiveRamble(
+				{ send: text => ws.send(text), close: (code, reason) => ws.close(code, reason) },
+				config.geminiApiKey!,
+			);
+		},
 		message(ws, message) {
+			if (ws.data?.ramble) return ws.data.ramble.message(message);
 			if (message === 'ping') ws.send('pong');
 		},
+		close: ws => ws.data?.ramble?.close(),
 	},
 	error: error => {
 		console.error(error);

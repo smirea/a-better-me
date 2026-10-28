@@ -1,5 +1,6 @@
 import { parseArgs } from 'node:util';
-import { outlineRamble, type RambleItem, type RambleModel } from '../server/src/food/ramble';
+import { outlineRamble, type RambleItem, type RambleModel, type RambleOutline } from '../server/src/food/ramble';
+import { LIVE_SAMPLE_RATE, openLiveRamble, RAMBLE_LIVE_MODEL } from '../server/src/food/ramble-live';
 import { DEV, type Case, type Expected } from './food-ramble/cases';
 import { HOLDOUT } from './food-ramble/holdout';
 import { MEALS, TODAY, USUAL } from './food-ramble/history';
@@ -9,6 +10,7 @@ import { MEALS, TODAY, USUAL } from './food-ramble/history';
  *
  *   GEMINI_API_KEY=… bun scripts/food-ramble-eval.ts [-v] [--set dev|holdout] [--runs n] [--only id,…] \
  *     [--transcripts .cache/food-ramble/Samantha-speech.json [--audio .cache/food-ramble/Samantha]] --with gemini-3.5-flash:minimal,gemini-3.8-flash:low
+ *   … --engine live --audio .cache/food-ramble/Samantha [--final [--final-with model:thinking]] [--save live.json]
  *
  * A case passes only when every item matches in order. Each model runs every case `--runs` times, so flaky cases show
  * as a pass rate below 100%. Latency is per successful call.
@@ -25,6 +27,10 @@ const { values } = parseArgs({
 		transcripts: { type: 'string' },
 		audio: { type: 'string' },
 		live: { type: 'boolean', default: false },
+		engine: { type: 'string', default: 'text' },
+		final: { type: 'boolean', default: false },
+		'final-with': { type: 'string' },
+		save: { type: 'string' },
 	},
 });
 const key = process.env.GEMINI_API_KEY;
@@ -47,10 +53,12 @@ async function recording(id: string) {
 		Bun.spawnSync(['afconvert', '-f', 'WAVE', '-d', 'LEI16@16000', '-c', '1', aiff, wav]);
 	return { data: Buffer.from(await Bun.file(wav).arrayBuffer()).toString('base64'), mediaType: 'audio/wav' as const };
 }
-const models: RambleModel[] = values.with.split(',').map(spec => {
-	const [model, thinking] = spec.split(':');
+const spec = (text: string): RambleModel => {
+	const [model, thinking] = text.split(':');
 	return { model: model!, thinking: (thinking as RambleModel['thinking']) ?? null };
-});
+};
+const finalModel = values['final-with'] ? spec(values['final-with']) : undefined;
+const models: RambleModel[] = values.with.split(',').map(spec);
 
 const UNITS: Record<string, string> = {
 	gram: 'g',
@@ -150,6 +158,25 @@ function diff(expected: Expected, actual: RambleItem, text: string): string[] {
 
 type Outcome = { id: string; use: Case['use']; pass: boolean; misses: string[]; ms: number | null; error?: string };
 
+function check(c: Case, outline: RambleOutline): string[] {
+	const misses: string[] = [];
+	if (outline.items.length !== c.items.length) misses.push(`${outline.items.length} items, want ${c.items.length}`);
+	// Order does not change what is logged: each expected item takes the first unclaimed match, else is compared with
+	// the item at its own position.
+	const claimed = new Set<number>();
+	c.items.forEach((expected, i) => {
+		const match = outline.items.findIndex((item, j) => !claimed.has(j) && diff(expected, item, c.text).length === 0);
+		if (match >= 0) return claimed.add(match);
+		const actual = outline.items[i];
+		if (actual) for (const miss of diff(expected, actual, c.text)) misses.push(`#${i + 1} ${miss}`);
+		else misses.push(`#${i + 1} missing`);
+	});
+	if (values.v && misses.length) misses.push(`got ${JSON.stringify(outline.items)}`);
+	return misses;
+}
+
+const retryable = (error: unknown) => /\b(409|429|500|502|503|504|1011)\b|unreachable|ABORTED/.test(String(error));
+
 async function score(model: RambleModel, c: Case): Promise<Outcome> {
 	const started = performance.now();
 	for (let attempt = 0; ; attempt++) {
@@ -167,32 +194,87 @@ async function score(model: RambleModel, c: Case): Promise<Outcome> {
 				key!,
 				model,
 			);
-			const ms = performance.now() - started;
-			const misses: string[] = [];
-			if (outline.items.length !== c.items.length) misses.push(`${outline.items.length} items, want ${c.items.length}`);
-			// Order does not change what is logged: each expected item takes the first unclaimed match, else is
-			// compared with the item at its own position.
-			const claimed = new Set<number>();
-			c.items.forEach((expected, i) => {
-				const match = outline.items.findIndex(
-					(item, j) => !claimed.has(j) && diff(expected, item, c.text).length === 0,
-				);
-				if (match >= 0) return claimed.add(match);
-				const actual = outline.items[i];
-				if (actual) for (const miss of diff(expected, actual, c.text)) misses.push(`#${i + 1} ${miss}`);
-				else misses.push(`#${i + 1} missing`);
-			});
-			if (values.v && misses.length) misses.push(`got ${JSON.stringify(outline.items)}`);
-			return { id: c.id, use: c.use, pass: misses.length === 0, misses, ms };
+			const misses = check(c, outline);
+			return { id: c.id, use: c.use, pass: misses.length === 0, misses, ms: performance.now() - started };
 		} catch (error) {
-			const message = String(error);
-			if (attempt < 3 && /\b(429|500|502|503|504)\b|unreachable/.test(message)) {
+			if (attempt < 3 && retryable(error)) {
 				await Bun.sleep(2000 * (attempt + 1));
 				continue;
 			}
-			return { id: c.id, use: c.use, pass: false, misses: [], ms: null, error: message.slice(0, 300) };
+			return { id: c.id, use: c.use, pass: false, misses: [], ms: null, error: String(error).slice(0, 300) };
 		}
 	}
+}
+
+/**
+ * `--engine live` streams `<--audio>/<case id>.wav` to a Gemini Live session in real time, 100 ms a frame, and
+ * scores what its tool calls built. `--final` also scores the final read on the same session: Live's transcript plus
+ * the recording through `outlineRamble` with the final model. Latency is from the end of the audio.
+ */
+async function scoreLive(model: string, c: Case): Promise<{ live: Outcome; final?: Outcome; transcript: string }> {
+	const wav = await recording(c.id);
+	if (!wav) throw new Error('--engine live needs --audio');
+	const pcm = new Uint8Array(Buffer.from(wav.data, 'base64')).subarray(44);
+	const frame = (LIVE_SAMPLE_RATE / 10) * 2;
+	const request = { today: TODAY, time: c.time ?? '20:30', meals: MEALS, usual: USUAL, shown: c.shown };
+	for (let attempt = 0; ; attempt++) {
+		try {
+			const session = await openLiveRamble(request, key!, { transcript() {}, outline() {}, error() {} }, model);
+			const start = performance.now();
+			for (let at = 0; at < pcm.length; at += frame) {
+				session.audio(pcm.subarray(at, at + frame));
+				const due = start + ((at + frame) / 2 / LIVE_SAMPLE_RATE) * 1000;
+				await Bun.sleep(Math.max(0, due - performance.now()));
+			}
+			const ended = performance.now();
+			const result = await session.finish();
+			const ms = performance.now() - ended;
+			session.close();
+			const misses = check(c, result.outline);
+			const live = { id: c.id, use: c.use, pass: misses.length === 0, misses, ms };
+			if (!values.final) return { live, transcript: result.transcript };
+			let final: Outcome;
+			try {
+				const outline = await outlineRamble(
+					{ ...request, transcript: result.transcript, audio: wav },
+					key!,
+					finalModel,
+				);
+				const finalMisses = check(c, outline);
+				final = { id: c.id, use: c.use, pass: !finalMisses.length, misses: finalMisses, ms: performance.now() - ended };
+			} catch (error) {
+				final = { id: c.id, use: c.use, pass: false, misses: [], ms: null, error: String(error).slice(0, 300) };
+			}
+			return { live, final, transcript: result.transcript };
+		} catch (error) {
+			if (attempt < 3 && retryable(error)) {
+				await Bun.sleep(2000 * (attempt + 1));
+				continue;
+			}
+			const failed = { id: c.id, use: c.use, pass: false, misses: [], ms: null, error: String(error).slice(0, 300) };
+			return { live: failed, final: values.final ? failed : undefined, transcript: '' };
+		}
+	}
+}
+
+/** Word error rate of `heard` against the typed `said`, by word edit distance. */
+function wer(said: string, heard: string) {
+	const norm = (text: string) =>
+		text
+			.toLowerCase()
+			.replace(/[^\p{L}\p{N}%.' ]+/gu, ' ')
+			.split(/\s+/)
+			.filter(Boolean);
+	const a = norm(said);
+	const b = norm(heard);
+	let row = Array.from({ length: b.length + 1 }, (_, j) => j);
+	for (let i = 1; i <= a.length; i++) {
+		const next = [i];
+		for (let j = 1; j <= b.length; j++)
+			next[j] = Math.min(row[j]! + 1, next[j - 1]! + 1, row[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+		row = next;
+	}
+	return { errors: row[b.length]!, words: a.length };
 }
 
 async function pool<T, R>(items: T[], size: number, work: (item: T) => Promise<R>): Promise<R[]> {
@@ -262,10 +344,7 @@ if (values.live) {
 }
 
 const summary: string[] = [];
-for (const model of models) {
-	const name = `${model.model}${model.thinking ? `:${model.thinking}` : ''}`;
-	const jobs = Array.from({ length: runs }, () => cases).flat();
-	const outcomes = await pool(jobs, Number(values.concurrency), c => score(model, c));
+function report(name: string, outcomes: Outcome[], extra = '') {
 	const latencies = outcomes.flatMap(o => (o.ms === null ? [] : [o.ms])).toSorted((a, b) => a - b);
 	const uses = [...new Set(cases.map(c => c.use))];
 	const byUse = uses.map(use => {
@@ -274,7 +353,7 @@ for (const model of models) {
 	});
 	const passed = outcomes.filter(o => o.pass).length;
 	const errors = outcomes.filter(o => o.error).length;
-	const line = `${name.padEnd(34)} pass ${pct(passed, outcomes.length).padStart(4)} (${passed}/${outcomes.length})  errors ${errors}  p50 ${percentile(latencies, 0.5).toFixed(0)}ms  p90 ${percentile(latencies, 0.9).toFixed(0)}ms  | ${byUse.join('  ')}`;
+	const line = `${name.padEnd(34)} pass ${pct(passed, outcomes.length).padStart(4)} (${passed}/${outcomes.length})  errors ${errors}  p50 ${percentile(latencies, 0.5).toFixed(0)}ms  p90 ${percentile(latencies, 0.9).toFixed(0)}ms  | ${byUse.join('  ')}${extra}`;
 	summary.push(line);
 	console.log(`\n${line}`);
 	const failures = new Map<string, string[]>();
@@ -282,4 +361,38 @@ for (const model of models) {
 		failures.set(o.id, [...(failures.get(o.id) ?? []), o.error ?? o.misses.join('; ')]);
 	for (const [id, misses] of failures) console.log(`  ✗ ${id} (${misses.length}/${runs}): ${misses[0]}`);
 }
-if (models.length > 1) console.log(`\n${summary.join('\n')}`);
+
+const jobs = Array.from({ length: runs }, () => cases).flat();
+if (values.engine === 'live') {
+	const said = new Map(cases.map(c => [c.id, c.text]));
+	for (const model of values.with === 'gemini-3.5-flash:minimal' ? [RAMBLE_LIVE_MODEL] : values.with.split(',')) {
+		const results = await pool(jobs, Number(values.concurrency), c => scoreLive(model, c));
+		const typed = new Map([...DEV, ...HOLDOUT].map(c => [c.id, c.text]));
+		const counts = results.map(r => wer(typed.get(r.live.id) ?? said.get(r.live.id)!, r.transcript));
+		const errors = counts.reduce((sum, w) => sum + w.errors, 0);
+		const total = counts.reduce((sum, w) => sum + w.words, 0);
+		report(
+			model,
+			results.map(r => r.live),
+			`  | transcript WER ${pct(errors, total)}`,
+		);
+		if (values.final)
+			report(
+				`${model} + final`,
+				results.map(r => r.final!),
+			);
+		if (values.v) for (const r of results) console.log(`  ${r.live.id}: ${r.transcript}`);
+		// `--save <file>` keeps Live's transcripts, so `--transcripts <file> --audio <dir>` scores the final read later.
+		if (values.save)
+			await Bun.write(
+				values.save,
+				`${JSON.stringify(Object.fromEntries(results.map(r => [r.live.id, r.transcript])), null, '\t')}\n`,
+			);
+	}
+} else
+	for (const model of models)
+		report(
+			`${model.model}${model.thinking ? `:${model.thinking}` : ''}`,
+			await pool(jobs, Number(values.concurrency), c => score(model, c)),
+		);
+if (summary.length > 1) console.log(`\n${summary.join('\n')}`);

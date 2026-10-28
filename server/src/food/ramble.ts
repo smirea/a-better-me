@@ -96,9 +96,9 @@ const dayLabel = (iso: string, today: string) => {
  * The model sees short aliases (`m1`, `e1`, `u1`) instead of the phone's UUIDs: it copies them more reliably, and the
  * schema limits every reference to the aliases that exist, so it cannot invent one.
  */
-type Aliases = { meals: Map<string, string>; entries: Map<string, string> };
+export type Aliases = { meals: Map<string, string>; entries: Map<string, string> };
 
-function aliases(input: z.output<typeof RambleRequest>): Aliases {
+export function aliases(input: z.output<typeof RambleRequest>): Aliases {
 	const meals = new Map<string, string>();
 	const entries = new Map<string, string>();
 	input.meals.forEach((meal, i) => {
@@ -112,7 +112,12 @@ function aliases(input: z.output<typeof RambleRequest>): Aliases {
 const logged = (entry: z.output<typeof RambleLogged>) =>
 	entry.serving ? `${entry.name} (${entry.serving})` : entry.name;
 
-export function rambleInstructions(input: z.output<typeof RambleRequest>): string {
+const TRANSCRIPT = `The transcript is live speech-to-text: it has filler, false starts, missing punctuation, and misheard words, and it may stop mid-sentence. List what is clear so far: an item appears once its food is named, so a trailing "two slices of", "200 grams of", or "I drank" is not an item yet, and a copy appears once the meal it repeats is clear ("for lunch the steak" may still become "the steak dinner from last night"). When the recording comes with it, the recording is what was said: use the transcript only to follow it, and trust the recording for every food name and number. The logged and usual foods below are the speaker's own, so a word that sounds like one of them is probably it.`;
+const OMIT_EMPTY = `Leave out every field that is empty, 0, or false, except day 0 for a said "today": a food item with only a name is { "kind": "food", "name": "pizza" }. Leaving them out keeps the answer short, and the list updates live while the speaker talks.`;
+const LIVE_LISTENING = `You are listening to the speaker live. Never speak; only call tools. An item is clear once its food is named, so a trailing "two slices of", "200 grams of", or "I drank" is not an item yet, and a copy is clear once the meal it repeats is ("for lunch the steak" may still become "the steak dinner from last night"). The logged and usual foods below are the speaker's own, so a word that sounds like one of them is probably it.`;
+const LIVE_TOOLS = `Call tools as soon as each item is clear, while the speaker is still talking: add_food for a "food" item and add_copy for a "copy", each with a short id you choose (1, 2, 3, ...); edit_item when the speaker corrects or points back at an item you added, passing only what changes; remove_item when they remove one. Pass only the fields that were said, except day 0 for a said "today". Each call is final: never add an item again that you already added.`;
+
+export function rambleInstructions(input: z.output<typeof RambleRequest>, live = false): string {
 	let e = 0;
 	const meals = input.meals.map((meal, i) => {
 		const entries = meal.entries.map(entry => `e${++e} ${logged(entry)}`).join('; ');
@@ -125,7 +130,7 @@ export function rambleInstructions(input: z.output<typeof RambleRequest>): strin
 	return `You turn a spoken ramble into food log entries for a calorie tracker, the way Todoist Ramble turns speech into tasks.
 Today is ${weekday(input.today)} ${input.today}, and the time is ${input.time}.
 
-The transcript is live speech-to-text: it has filler, false starts, missing punctuation, and misheard words, and it may stop mid-sentence. List what is clear so far: an item appears once its food is named, so a trailing "two slices of", "200 grams of", or "I drank" is not an item yet, and a copy appears once the meal it repeats is clear ("for lunch the steak" may still become "the steak dinner from last night"). When the recording comes with it, the recording is what was said: use the transcript only to follow it, and trust the recording for every food name and number. The logged and usual foods below are the speaker's own, so a word that sounds like one of them is probably it.
+${live ? LIVE_LISTENING : TRANSCRIPT}
 
 Corrections come first. When the speaker changes their mind, keep only the final version: "actually", "wait", "no", "I mean", "make that", "not X, Y", "sorry". They may point back at an item ("the oats", "that last one") to change it. "Scratch that", "remove the X", or "I didn't have the X" removes it. Saying an item again with new details updates it. Never output the same item twice. Keep the items in the order they were first said.
 
@@ -142,7 +147,7 @@ For every item:
 - day: the day it was eaten, only when the speaker names it, as days from today: 0 for "today", -1 for "yesterday I had…". Leave it out otherwise; the app then logs on the day the speaker has open. A copied meal's day never sets it: "yesterday's breakfast" logged now has no day. A day said once applies to the items that follow it.
 - options: true when the speaker says the match for that food is wrong or asks to see its options ("that pizza is not right", "show me options for the pizza"). When they pick one, by name, description, brand, or position ("let's go with the pepperoni", "the plain nonfat one, not the vanilla", "the second one"), set name to it, to the option's exact text when it is in the shown options, and options to false. A pick changes only the item it is for.
 
-Leave out every field that is empty, 0, or false, except day 0 for a said "today": a food item with only a name is { "kind": "food", "name": "pizza" }. Leaving them out keeps the answer short, and the list updates live while the speaker talks.
+${live ? LIVE_TOOLS : OMIT_EMPTY}
 
 Ignore chatter that is not about food, and "that's it" or "done" at the end.
 
@@ -197,7 +202,7 @@ function responseSchema(names: Aliases) {
 	};
 }
 
-const ModelItem = z.object({
+export const ModelItem = z.object({
 	kind: z.enum(['food', 'copy']),
 	name: z.string().default(''),
 	amount: z.number().min(0).default(0),
@@ -210,7 +215,7 @@ const ModelItem = z.object({
 	day: z.int().optional(),
 	options: z.boolean().default(false),
 });
-const ModelOutline = z.object({ items: z.array(ModelItem) });
+export const ModelOutline = z.object({ items: z.array(ModelItem) });
 
 const GeminiAnswer = z.object({
 	candidates: z

@@ -21,9 +21,36 @@ final class SpeechDictation {
     private var analyzer: SpeechAnalyzer?
     private var reader: Task<Void, Never>?
 
-    /// Streams the transcript so far, finalized text followed by the words still being recognized. The tap also writes
-    /// each buffer's peak to `meter` for the waveform and the audio to `recorder` for the final read.
-    func start(meter: LevelMeter, recorder: RambleRecorder, onText: @escaping @MainActor (String) -> Void) async throws {
+    /// Streams the transcript so far to `onText`, finalized text followed by the words still being recognized; nil
+    /// listens without transcribing, for Gemini Live. The tap also writes each buffer's peak to `meter` for the waveform
+    /// and the audio to `recorder`, for the final read and for Gemini Live.
+    func start(meter: LevelMeter, recorder: RambleRecorder, onText: (@MainActor (String) -> Void)?) async throws {
+        var feed: (converter: AnalyzerInputConverter, input: AsyncStream<AnalyzerInput>.Continuation)?
+        if let onText { feed = try await transcribe(onText) }
+        guard await AVAudioApplication.requestRecordPermission() else {
+            cancel()
+            throw Failure.denied
+        }
+        let audio = AVAudioEngine()
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.record, mode: .measurement, options: [.duckOthers])
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+            let node = audio.inputNode
+            let format = node.outputFormat(forBus: 0)
+            guard format.sampleRate > 0, format.channelCount > 0 else { throw Failure.unsupported }
+            try recorder.begin(format)
+            try node.installAudioTap(onBus: 0, bufferSize: 1024, format: format, tapProvider: Self.feed(feed, meter, recorder))
+            audio.prepare()
+            try audio.start()
+        } catch {
+            cancel()
+            throw error
+        }
+        engine = audio
+    }
+
+    private func transcribe(_ onText: @escaping @MainActor (String) -> Void) async throws -> (converter: AnalyzerInputConverter, input: AsyncStream<AnalyzerInput>.Continuation) {
         let english = Locale(identifier: "en-US")
         let module: any SpeechModule
         let results: AsyncThrowingStream<(isFinal: Bool, text: AttributedString), Error>
@@ -63,28 +90,7 @@ final class SpeechDictation {
         try await analyzer.start(inputSequence: stream)
         self.analyzer = analyzer
         self.input = input
-
-        guard await AVAudioApplication.requestRecordPermission() else {
-            cancel()
-            throw Failure.denied
-        }
-        let audio = AVAudioEngine()
-        let session = AVAudioSession.sharedInstance()
-        do {
-            try session.setCategory(.record, mode: .measurement, options: [.duckOthers])
-            try session.setActive(true, options: .notifyOthersOnDeactivation)
-            let node = audio.inputNode
-            let format = node.outputFormat(forBus: 0)
-            guard format.sampleRate > 0, format.channelCount > 0 else { throw Failure.unsupported }
-            try recorder.begin(format)
-            try node.installAudioTap(onBus: 0, bufferSize: 1024, format: format, tapProvider: Self.feed(converter, input, meter, recorder))
-            audio.prepare()
-            try audio.start()
-        } catch {
-            cancel()
-            throw error
-        }
-        engine = audio
+        return (converter, input)
     }
 
     /// The two transcribers' result streams as one shape.
@@ -107,12 +113,11 @@ final class SpeechDictation {
 
     /// The tap runs on the audio thread. The converter is only ever used there once the tap is installed.
     nonisolated private static func feed(
-        _ converter: AnalyzerInputConverter,
-        _ input: AsyncStream<AnalyzerInput>.Continuation,
+        _ feed: (converter: AnalyzerInputConverter, input: AsyncStream<AnalyzerInput>.Continuation)?,
         _ meter: LevelMeter,
         _ recorder: RambleRecorder
     ) -> @Sendable (AVReadOnlyAudioPCMBuffer, AVAudioTime) -> Void {
-        nonisolated(unsafe) let converter = converter
+        nonisolated(unsafe) let feed = feed
         return { buffer, time in
             if case let .float(channel) = buffer.channelData(0) {
                 var peak: Float = 0
@@ -121,8 +126,8 @@ final class SpeechDictation {
             }
             let copy = AVAudioPCMBuffer(copying: buffer)
             recorder.write(copy)
-            guard let items = try? converter.convert(copy, at: time) else { return }
-            for item in items { input.yield(item) }
+            guard let feed, let items = try? feed.converter.convert(copy, at: time) else { return }
+            for item in items { feed.input.yield(item) }
         }
     }
 
