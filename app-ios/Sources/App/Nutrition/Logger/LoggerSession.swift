@@ -188,7 +188,9 @@ final class LoggerSession {
 
     /// Logs every ramble row at its own day and minute in one transaction, caching USDA and Open Food Facts foods first,
     /// as `logPlate` does.
-    func logRamble() {
+    /// Waits for the ramble to settle first, so a log never takes rows a final read or a resolution is about to change.
+    func logRamble() async {
+        await ramble.settled()
         let planned = ramble.planned
         guard !planned.isEmpty else { return }
         for item in planned {

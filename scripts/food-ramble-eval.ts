@@ -107,7 +107,7 @@ function anyOf<T>(want: T | T[], got: T, same: (a: T, b: T) => boolean = (a, b) 
 }
 
 /** The fields of `actual` that differ from `expected`, empty when it matches. */
-function diff(expected: Expected, actual: RambleItem): string[] {
+function diff(expected: Expected, actual: RambleItem, text: string): string[] {
 	const misses: string[] = [];
 	const kind = expected.kind ?? 'food';
 	if (actual.kind !== kind) return [`kind ${actual.kind}`];
@@ -140,7 +140,10 @@ function diff(expected: Expected, actual: RambleItem): string[] {
 		misses.push(`except [${actual.except}]`);
 	if (expected.meal !== undefined && !anyOf(expected.meal, actual.meal)) misses.push(`meal "${actual.meal}"`);
 	if ((expected.time ?? '') !== actual.time) misses.push(`time "${actual.time}"`);
-	if ((expected.day ?? 0) !== actual.day) misses.push(`day ${actual.day}`);
+	// A labelled day was said and must come back. Otherwise the phone's open day applies, unless "today" was said.
+	const today = actual.day === 0 && /\btoday\b/i.test(text);
+	if (expected.day === undefined ? actual.day !== null && !today : expected.day !== actual.day)
+		misses.push(`day ${actual.day}`);
 	if ((expected.options ?? false) !== actual.options) misses.push(`options ${actual.options}`);
 	return misses;
 }
@@ -171,10 +174,12 @@ async function score(model: RambleModel, c: Case): Promise<Outcome> {
 			// compared with the item at its own position.
 			const claimed = new Set<number>();
 			c.items.forEach((expected, i) => {
-				const match = outline.items.findIndex((item, j) => !claimed.has(j) && diff(expected, item).length === 0);
+				const match = outline.items.findIndex(
+					(item, j) => !claimed.has(j) && diff(expected, item, c.text).length === 0,
+				);
 				if (match >= 0) return claimed.add(match);
 				const actual = outline.items[i];
-				if (actual) for (const miss of diff(expected, actual)) misses.push(`#${i + 1} ${miss}`);
+				if (actual) for (const miss of diff(expected, actual, c.text)) misses.push(`#${i + 1} ${miss}`);
 				else misses.push(`#${i + 1} missing`);
 			});
 			if (values.v && misses.length) misses.push(`got ${JSON.stringify(outline.items)}`);

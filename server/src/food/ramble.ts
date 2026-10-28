@@ -60,7 +60,8 @@ export type RambleRequest = z.input<typeof RambleRequest>;
 /**
  * One line of the ramble's list. `food` is searched on the phone by `name`; `ref` names a logged entry to reuse
  * instead. `copy` is a whole logged meal minus `except`. Amount 0 means none was said, so the phone logs one of the
- * food's usual serving; a unit always comes with an amount. `day` is an offset from today, `time` a 24-hour clock or empty.
+ * food's usual serving; a unit always comes with an amount. `day` is an offset from today, or null when the speaker named no day and the phone's open day applies; `time` is a
+ * 24-hour clock or empty.
  */
 export const RambleItem = z
 	.object({
@@ -71,7 +72,7 @@ export const RambleItem = z
 		ref: z.string().nullable(),
 		copy: z.string().nullable(),
 		except: z.array(z.string()),
-		day: z.int().min(-30).max(0),
+		day: z.int().min(-30).max(0).nullable(),
 		meal: z.enum(['', ...MEALS]),
 		time: z.string().regex(/^(\d{2}:\d{2})?$/),
 		options: z.boolean(),
@@ -138,7 +139,7 @@ Each item is one of two kinds.
 For every item:
 - meal: breakfast, lunch, dinner, or snack when the speaker said it or it follows from what they said ("at 3pm" alone is not a meal); otherwise "". A meal said once applies to the items that follow it until another is said. For a copy, meal is the meal it is logged as now ("for lunch, the steak dinner from last night" is lunch), which defaults to the copied meal's.
 - time: a 24-hour "HH:MM" only when the speaker said a clock time ("a bar at 3pm" is "15:00"); otherwise "".
-- day: when it was eaten, as days from today: 0 today, -1 yesterday. It is 0 unless the speaker says they ate it on an earlier day ("yesterday I had…"). A copied meal's day never sets it: "yesterday's breakfast" logged now is day 0.
+- day: the day it was eaten, only when the speaker names it, as days from today: 0 for "today", -1 for "yesterday I had…". Leave it out otherwise; the app then logs on the day the speaker has open. A copied meal's day never sets it: "yesterday's breakfast" logged now has no day. A day said once applies to the items that follow it.
 - options: true when the speaker says the match for that food is wrong or asks to see its options ("that pizza is not right", "show me options for the pizza"). When they pick one, by name, description, brand, or position ("let's go with the pepperoni", "the plain nonfat one, not the vanilla", "the second one"), set name to it, to the option's exact text when it is in the shown options, and options to false. A pick changes only the item it is for.
 
 Leave out every field that is empty, 0, or false: a food item with only a name is { "kind": "food", "name": "pizza" }. Leaving them out keeps the answer short, and the list updates live while the speaker talks.
@@ -206,7 +207,7 @@ const ModelItem = z.object({
 	except: z.array(z.string()).default([]),
 	meal: z.enum(['', ...MEALS]).default(''),
 	time: z.string().default(''),
-	day: z.int().default(0),
+	day: z.int().optional(),
 	options: z.boolean().default(false),
 });
 const ModelOutline = z.object({ items: z.array(ModelItem) });
@@ -246,7 +247,8 @@ export function resolveAliases(
 		if (item.kind === 'food' && !item.name.trim()) continue;
 		const inMeal = new Set(meal?.entries.map(entry => entry.id));
 		const previous = items.at(-1);
-		const follows = item.kind === 'food' && previous?.day === item.day;
+		const said = item.day === undefined ? null : Math.min(0, Math.max(-30, item.day));
+		const follows = item.kind === 'food' && previous !== undefined && (said === null || said === previous.day);
 		const carried = follows && !item.meal && !item.time ? previous!.meal : '';
 		const sameMeal = follows && (!item.meal || item.meal === previous!.meal);
 		items.push({
@@ -257,7 +259,7 @@ export function resolveAliases(
 			ref: (item.kind === 'food' && names.entries.get(item.ref)) || null,
 			copy: meal?.id ?? null,
 			except: item.except.map(alias => names.entries.get(alias)!).filter(id => id && inMeal.has(id)),
-			day: Math.min(0, Math.max(-30, item.day)),
+			day: said ?? (follows ? previous!.day : null),
 			meal: item.meal || (item.kind === 'copy' ? meal!.meal : carried),
 			time: clock(item.time) || (sameMeal ? previous!.time : ''),
 			options: item.kind === 'food' && item.options,

@@ -71,15 +71,15 @@ struct RambleItem: Decodable, Hashable, Sendable {
     var ref: String?
     var copy: String?
     var except: [String]
-    /// Days from today, 0 or less.
-    var day: Int
+    /// Days from today, 0 or less; nil when the speaker named no day, so the row follows the logger's day.
+    var day: Int?
     var meal: RambleMealKind?
     var minute: Int?
     var options: Bool
 
     init(
         kind: Kind = .food, name: String = "", amount: Double = 0, unit: String = "", ref: String? = nil, copy: String? = nil,
-        except: [String] = [], day: Int = 0, meal: RambleMealKind? = nil, minute: Int? = nil, options: Bool = false
+        except: [String] = [], day: Int? = nil, meal: RambleMealKind? = nil, minute: Int? = nil, options: Bool = false
     ) {
         self.kind = kind
         self.name = name
@@ -107,11 +107,14 @@ struct RambleItem: Decodable, Hashable, Sendable {
         ref = try container.decodeIfPresent(String.self, forKey: .ref)
         copy = try container.decodeIfPresent(String.self, forKey: .copy)
         except = try container.decode([String].self, forKey: .except)
-        day = try container.decode(Int.self, forKey: .day)
+        day = try container.decodeIfPresent(Int.self, forKey: .day)
         meal = RambleMealKind(rawValue: try container.decode(String.self, forKey: .meal))
         minute = Self.minute(try container.decode(String.self, forKey: .time))
         options = try container.decode(Bool.self, forKey: .options)
     }
+
+    /// What a row's own choices (a pick, a serving, a removal) hold to: a food's name, or a copy's meal.
+    var identity: String { kind == .copy ? "copy \(copy ?? "")" : name }
 
     static func minute(_ clock: String) -> Int? {
         let parts = clock.split(separator: ":")

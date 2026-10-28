@@ -115,10 +115,10 @@ struct RambleOutlinerTests {
 }
 
 struct RambleItemDecodingTests {
-    @Test func theServersEmptyStringsBecomeNilAndItsClockAMinute() throws {
+    @Test func theServersEmptyStringsAndUnsaidDayBecomeNilAndItsClockAMinute() throws {
         let json = #"""
         {"items":[
-          {"kind":"food","name":"oats","amount":0.5,"unit":"cup","ref":null,"copy":null,"except":[],"day":0,"meal":"breakfast","time":"","options":false},
+          {"kind":"food","name":"oats","amount":0.5,"unit":"cup","ref":null,"copy":null,"except":[],"day":null,"meal":"breakfast","time":"","options":false},
           {"kind":"copy","name":"","amount":0,"unit":"","ref":null,"copy":"2026-10-27-breakfast","except":["e1"],"day":-1,"meal":"","time":"15:30","options":false}
         ]}
         """#

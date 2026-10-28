@@ -270,7 +270,7 @@ describe('ramble', () => {
 		],
 		usual: [{ id: 'coffee-uuid', name: 'Coffee', serving: '1 mug' }],
 	};
-	const item = { amount: 0, unit: '', ref: '', copy: '', except: [], meal: '', time: '', day: 0, options: false };
+	const item = { amount: 0, unit: '', ref: '', copy: '', except: [], meal: '', time: '', day: null, options: false };
 
 	test('the model sees aliases, and its answer comes back with the phone ids, defaults filled in', async () => {
 		stub(() =>

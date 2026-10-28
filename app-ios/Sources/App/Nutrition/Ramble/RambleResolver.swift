@@ -3,6 +3,7 @@ import Foundation
 /// What the owner changed on a row: an option they picked, a serving they typed, or the row removed. It holds while
 /// the model keeps the row's name, so a re-read of the ramble never undoes a tap.
 struct RambleChoice: Hashable, Sendable {
+    /// The item's `identity` when the choice was made; a different item at the row's position drops it.
     var name: String
     /// `FoodSearchResult.key` of the picked option.
     var option: String?
@@ -68,14 +69,15 @@ struct RambleResolver: Sendable {
     let index: FoodIndex
     let context: RambleContext
     let today: CalendarDay
-    /// Where a food goes when the speaker gave it no day, meal, or time: the logger's chosen hour, else now.
+    /// The logger's chosen day and hour, else today and now: the day of a row whose speaker named none, and the minute of
+    /// a food with no meal or time.
     let fallback: (day: CalendarDay, minute: Int)
 
     func rows(_ items: [RambleItem], previous: [RambleRow], choices: [Int: RambleChoice]) throws -> [RambleRow] {
         let previous = Dictionary(previous.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
         var rows: [RambleRow] = []
         for (position, item) in items.enumerated() {
-            let choice = choices[position].flatMap { $0.name == item.name ? $0 : nil }
+            let choice = choices[position].flatMap { $0.name == item.identity ? $0 : nil }
             if choice?.removed == true { continue }
             rows.append(try row(position, item, previous: previous[position], choice: choice))
         }
@@ -84,8 +86,7 @@ struct RambleResolver: Sendable {
 
     private func row(_ id: Int, _ item: RambleItem, previous: RambleRow?, choice: RambleChoice?) throws -> RambleRow {
         let minute = item.minute ?? item.meal?.defaultMinute
-        let unplaced = item.kind == .food && item.day == 0 && minute == nil
-        let day = unplaced ? fallback.day : today.adding(days: item.day)
+        let day = item.day.map { today.adding(days: $0) } ?? fallback.day
         switch item.kind {
         case .copy:
             guard let mealID = item.copy, let meal = context.meals.first(where: { $0.id == mealID }) else {

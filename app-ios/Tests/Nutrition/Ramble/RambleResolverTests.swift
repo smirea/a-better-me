@@ -218,8 +218,25 @@ struct RambleResolverTests {
     @Test func aFoodWithNothingSaidGoesToTheLoggersChosenHour() async throws {
         let base = try await resolver()
         let chosen = RambleResolver(index: base.index, context: base.context, today: today, fallback: (today.adding(days: -2), 9 * 60))
-        let rows = try chosen.rows([RambleItem(name: "oats"), RambleItem(name: "oats", meal: .dinner)], previous: [], choices: [:])
-        #expect(rows.map { "\($0.day) \($0.minute ?? -1)" } == ["2026-10-26 540", "2026-10-28 1140"])
+        let rows = try chosen.rows([
+            RambleItem(name: "oats"),
+            RambleItem(name: "oats", meal: .dinner),
+            RambleItem(name: "oats", day: 0),
+        ], previous: [], choices: [:])
+        // A said meal keeps the logger's day; a said "today" overrides it.
+        #expect(rows.map { "\($0.day) \($0.minute ?? -1)" } == ["2026-10-26 540", "2026-10-26 1140", "2026-10-28 540"])
+    }
+
+    @Test func aRemovedCopyDoesNotHideADifferentMealSaidInItsPlace() async throws {
+        let yogurt = FoodSnapshot(source: .custom, name: "Greek Yogurt", nutrition: FoodNutrition(nutrients: [.energy: 100], measures: [Measure(name: "container", quantity: 1, servings: 1)]))
+        let yesterday = today.adding(days: -1)
+        let entries = [FoodEntry(FoodPortion(yogurt), day: yesterday, minute: 8 * 60), FoodEntry(FoodPortion(yogurt), day: yesterday, minute: 12 * 60)]
+        let resolver = try await resolver(context: RambleContext(entries: entries, today: today))
+        let breakfast = RambleItem(kind: .copy, copy: "\(yesterday)-breakfast")
+        let removed = [0: RambleChoice(name: breakfast.identity, removed: true)]
+        #expect(try resolver.rows([breakfast], previous: [], choices: removed).isEmpty)
+        let lunch = try resolver.rows([RambleItem(kind: .copy, copy: "\(yesterday)-lunch")], previous: [], choices: removed)
+        #expect(describe(lunch) == ["copy \(yesterday)-lunch: Greek Yogurt"])
     }
 }
 

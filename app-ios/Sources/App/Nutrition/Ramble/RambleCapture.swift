@@ -43,6 +43,7 @@ final class RambleCapture {
     @ObservationIgnored private var resolution = 0
     @ObservationIgnored private var script: Task<Void, Never>?
     @ObservationIgnored private var startup: Task<Void, Never>?
+    @ObservationIgnored private var stopping: Task<Void, Never>?
     @ObservationIgnored private var resolving: Task<Void, Never>?
 
     init(store: LocalStore, index: @escaping @MainActor () -> FoodIndex, client: any RambleOutlining, clock: @escaping @Sendable () -> Date = { .now }) {
@@ -62,9 +63,11 @@ final class RambleCapture {
 
     func start() async {
         guard phase == .idle || phase == .review else { return }
-        // A startup still awaiting assets or permission finishes, and stops itself, before this one installs the mic.
+        // A startup still awaiting assets or permission finishes, and stops itself, before this one installs the mic;
+        // closing the logger meanwhile cancels this one too.
+        let before = generation
         await startup?.value
-        guard phase == .idle || phase == .review else { return }
+        guard generation == before, phase == .idle || phase == .review else { return }
         generation += 1
         let token = generation
         phase = .listening
@@ -115,6 +118,21 @@ final class RambleCapture {
     /// outline of exactly the transcript when there is no recording or the final read fails.
     func stop() async {
         guard phase == .listening else { return }
+        let stopping = Task { await finish() }
+        self.stopping = stopping
+        await stopping.value
+    }
+
+    /// Every row as it will be logged: listening stops and the final read lands, and the latest resolution with it.
+    func settled() async {
+        if phase == .listening { await stop() } else if phase == .finishing { await stopping?.value }
+        while let task = resolving {
+            await task.value
+            if resolving == task { break }
+        }
+    }
+
+    private func finish() async {
         let token = generation
         phase = .finishing
         meter.set(0)
@@ -128,12 +146,15 @@ final class RambleCapture {
             outliner?.stop()
             items = final.items
             await resolve()?.value
-        } else if let outliner, let outline = await outliner.settle(transcript, timeout: Self.settleTimeout) {
+        } else {
+            let outline = await outliner?.settle(transcript, timeout: Self.settleTimeout)
             guard token == generation else { return }
-            items = outline.items
-            await resolve()?.value
-        } else if outliner?.off == true {
-            notice = "The ramble couldn't be read. The foods so far stay."
+            if let outline {
+                items = outline.items
+                await resolve()?.value
+            } else if outliner?.off == true {
+                notice = "The ramble couldn't be read. The foods so far stay."
+            }
         }
         guard token == generation else { return }
         outliner?.stop()
@@ -168,21 +189,24 @@ final class RambleCapture {
     }
 
     func pick(_ option: FoodSearchResult, in row: RambleRow) {
-        choices[row.id] = RambleChoice(name: row.item.name, option: option.key)
+        choices[row.id] = RambleChoice(name: row.item.identity, option: option.key)
         expanded.remove(row.id)
         resolve()
     }
 
     func setServing(_ serving: Serving, of row: RambleRow) {
-        var choice = choices[row.id].flatMap { $0.name == row.item.name ? $0 : nil } ?? RambleChoice(name: row.item.name)
-        if case let .food(food) = row.content { choice.option = food.key }
+        // The detail was opened on `row`; a final read may have put another food at its position since, and a measure
+        // never moves to a food it was not made for.
+        guard let index = rows.firstIndex(where: { $0.id == row.id }), rows[index].item.identity == row.item.identity,
+              case var .food(food) = rows[index].content, case let .food(opened) = row.content, food.key == opened.key
+        else { return }
+        var choice = choices[row.id].flatMap { $0.name == row.item.identity ? $0 : nil } ?? RambleChoice(name: row.item.identity)
+        choice.option = food.key
         choice.serving = serving
         choices[row.id] = choice
-        // Applied to the row now, because "Log Foods" in the food detail logs right after this, before a resolution.
-        if let index = rows.firstIndex(where: { $0.id == row.id }), case var .food(food) = rows[index].content {
-            food.pick.portion.serving = serving
-            rows[index].content = .food(food)
-        }
+        // Applied to the row now as well, so a log right after it never waits on a resolution to see it.
+        food.pick.portion.serving = serving
+        rows[index].content = .food(food)
         resolve()
     }
 
@@ -193,7 +217,7 @@ final class RambleCapture {
     }
 
     func remove(_ row: RambleRow) {
-        choices[row.id] = RambleChoice(name: row.item.name, removed: true)
+        choices[row.id] = RambleChoice(name: row.item.identity, removed: true)
         rows.removeAll { $0.id == row.id }
         // A resolution already running read the choices before this one; resolving again drops its answer.
         resolve()

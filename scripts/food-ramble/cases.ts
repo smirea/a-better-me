@@ -3,6 +3,7 @@ import { MILK_TOP5, PIZZA_TOP10, PIZZA_TOP5 } from './history';
 /**
  * A labelled item. Absent keys are not scored, except `ref`, `except`, `day`, `time`, and `options`, which default to
  * "none said" (null, [], 0, '', false) so an invented reference counts as a miss. A list means any of these values.
+ * `day` is the day the speaker named; leave it out when they named none, which expects no day back.
  * `name` lists accepted names: one matches when the output contains all its words and at most two more.
  */
 export type Expected = {
@@ -163,6 +164,16 @@ export const DEV: Case[] = [
 			{ name: ['banana'], amount: 1, unit: ['', 'banana'], meal: 'breakfast' },
 			{ name: ['peanut butter toast'], amount: 2, unit: 'slice', meal: 'breakfast' },
 			{ name: ['chili'], amount: 1, unit: 'bowl', meal: 'dinner' },
+		],
+	},
+	{
+		id: 'day-6',
+		use: 'day',
+		text: 'today I had a banana and a coffee, and yesterday I forgot to log a slice of cheesecake',
+		items: [
+			{ name: ['banana'], day: 0 },
+			{ name: ['coffee', 'coffee with oat milk'], day: 0, ref: [null, 'u-coffee', '2b-coffee'] },
+			{ name: ['cheesecake'], amount: 1, unit: 'slice', day: -1 },
 		],
 	},
 	{

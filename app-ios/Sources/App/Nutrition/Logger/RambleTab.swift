@@ -108,7 +108,7 @@ struct RambleTab: View {
                     let count = capture.planned.count
                     Button {
                         saved += 1
-                        session.logRamble()
+                        Task { await session.logRamble() }
                     } label: {
                         Text(count == 1 ? "Add 1 Food" : "Add \(count) Foods")
                             .font(AppFont.headline(16))
