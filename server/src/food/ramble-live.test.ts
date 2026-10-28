@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import { aliases } from './ramble';
-import { LiveItems, LiveRambleRequest, Turns } from './ramble-live';
+import { LiveItems, LiveRambleRequest, openLiveRamble, Turns } from './ramble-live';
 
 const input = LiveRambleRequest.parse({
 	today: '2026-10-28',
@@ -129,5 +129,66 @@ describe('Turns', () => {
 			'split',
 			null,
 		]);
+	});
+});
+
+/** Stands in for Gemini's socket: it records what the session sends, kind by kind, and answers the setup. */
+class FakeGemini {
+	static last: FakeGemini;
+	sent: string[] = [];
+	binaryType = '';
+	onopen = () => {};
+	onmessage = (_: { data: string }) => {};
+	onclose = (_: { code: number; reason: string }) => {};
+	constructor() {
+		FakeGemini.last = this;
+		queueMicrotask(() => this.onopen());
+	}
+	send(raw: string) {
+		const message = JSON.parse(raw);
+		if (message.setup) return queueMicrotask(() => this.reply({ setupComplete: {} }));
+		const realtime = message.realtimeInput ?? {};
+		this.sent.push(
+			realtime.activityStart ? 'start' : realtime.activityEnd ? 'end' : realtime.audio ? 'audio' : 'other',
+		);
+	}
+	reply(message: object) {
+		this.onmessage({ data: JSON.stringify(message) });
+	}
+	close() {}
+}
+
+describe('openLiveRamble', () => {
+	const real = globalThis.WebSocket;
+	afterEach(() => {
+		globalThis.WebSocket = real;
+	});
+
+	test('a turn waits until Gemini answers the one before, and its answer counts once', async () => {
+		globalThis.WebSocket = FakeGemini as never;
+		const session = await openLiveRamble(input, 'key', { transcript() {}, outline() {}, error() {} });
+		const gemini = FakeGemini.last;
+		const speak = (frames: number) => {
+			for (let i = 0; i < frames; i++) session.audio(frame(2000));
+		};
+		const pause = () => {
+			for (let i = 0; i < 4; i++) session.audio(frame(0));
+		};
+		speak(4);
+		pause();
+		expect(gemini.sent).toEqual(['start', 'audio', 'audio', 'audio', 'audio', 'audio', 'audio', 'audio', 'end']);
+		gemini.sent = [];
+		speak(4);
+		pause();
+		speak(4);
+		expect(gemini.sent).toEqual([]);
+		gemini.reply({ serverContent: { generationComplete: true } });
+		expect(gemini.sent.filter(kind => kind !== 'audio')).toEqual(['start', 'end']);
+		gemini.sent = [];
+		gemini.reply({ serverContent: { turnComplete: true } });
+		expect(gemini.sent).toEqual([]);
+		gemini.reply({ serverContent: { turnComplete: true } });
+		expect(gemini.sent.filter(kind => kind !== 'audio')).toEqual(['start']);
+		session.close();
 	});
 });

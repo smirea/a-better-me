@@ -195,7 +195,7 @@ final class RambleCapture {
         }
         startup = Task { [dictation, meter, recorder] in
             do {
-                try await dictation.start(meter: meter, recorder: recorder, onText: heard)
+                try await dictation.start(meter: meter, recorder: recorder, onText: heard, display: true)
                 if token != generation || phase != .listening { dictation.cancel() }
             } catch SpeechDictation.Failure.denied {
                 stream.cancel()

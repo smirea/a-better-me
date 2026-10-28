@@ -287,28 +287,62 @@ export async function openLiveRamble(
 	 * 3:00 p.m."), so each turn closed waits for its answer, and what follows is held here and sent once it lands.
 	 */
 	let answering = false;
+	/** Gemini sometimes never answers a turn; past this with no message from it, the held turns go on without one. */
+	let answerTimer: ReturnType<typeof setTimeout> | undefined;
 	const held: string[] = [];
 	let afterGeneration = false;
 	/** No words of the current turn are in the transcript yet. */
 	let fresh = true;
 	const unanswered = () => turns.speaking || answering || held.length > 0;
-	const send = (message: string) => {
-		if (answering || held.length) return void held.push(message);
-		socket!.send(message);
-		if (message === ACTIVITY_END) answering = true;
+	const waitForAnswer = () => {
+		clearTimeout(answerTimer);
+		answerTimer = setTimeout(answered, UNANSWERED_QUIET_MS);
 	};
-	/** A turn's audio until it holds `MIN_VOICED_MS` of speech; a turn that closes before then is dropped. */
+	const write = (message: string) => {
+		socket!.send(message);
+		if (message === ACTIVITY_START) fresh = true;
+		if (message !== ACTIVITY_END) return;
+		answering = true;
+		afterGeneration = false;
+		waitForAnswer();
+	};
+	const send = (message: string) => {
+		if (answering || held.length) held.push(message);
+		else write(message);
+	};
+	function answered() {
+		clearTimeout(answerTimer);
+		answering = false;
+		while (held.length && !answering) write(held.shift()!);
+	}
+	/**
+	 * A turn opened after silence holds its audio until it has `MIN_VOICED_MS` of speech and is dropped if it closes
+	 * first. A turn split from a long one is speech already, so it opens at once.
+	 */
 	let opening: string[] | null = null;
 	const close = () => {
 		if (opening) opening = null;
 		else send(ACTIVITY_END);
 	};
-	const flush = () => {
-		while (held.length && !answering) {
-			const message = held.shift()!;
-			socket!.send(message);
-			if (message === ACTIVITY_END) answering = true;
-		}
+	/** The phone's frames arrive in whatever size its mic tap delivers; turns are judged on 100 ms. */
+	const FRAME_BYTES = (LIVE_SAMPLE_RATE / 10) * 2;
+	let partial = new Uint8Array(0);
+	const frame = (pcm: Uint8Array) => {
+		const turn = turns.frame(pcm);
+		if (turn === 'end' || turn === 'split') close();
+		if (turn === 'start') opening = [];
+		if (turn === 'split') send(ACTIVITY_START);
+		// Audio outside a turn is silence Gemini would ignore.
+		if (!turns.speaking) return;
+		const audio = JSON.stringify({
+			realtimeInput: { audio: { data: base64(pcm), mimeType: `audio/pcm;rate=${LIVE_SAMPLE_RATE}` } },
+		});
+		if (!opening) return send(audio);
+		opening.push(audio);
+		if (turns.voicedMs < MIN_VOICED_MS) return;
+		send(ACTIVITY_START);
+		for (const message of opening) send(message);
+		opening = null;
 	};
 	let quiet: ReturnType<typeof setTimeout> | undefined;
 	let cap: ReturnType<typeof setTimeout> | undefined;
@@ -347,11 +381,8 @@ export async function openLiveRamble(
 		// An answer ends in generationComplete, then turnComplete, and sometimes the first alone; the turnComplete after
 		// a generationComplete belongs to the same answer, not the turn sent since.
 		const generated = message.serverContent?.generationComplete;
-		if (generated || (message.serverContent?.turnComplete && !afterGeneration)) {
-			fresh = true;
-			answering = false;
-			flush();
-		}
+		if (answering) waitForAnswer();
+		if (generated || (message.serverContent?.turnComplete && !afterGeneration)) answered();
 		if (generated) afterGeneration = true;
 		else if (message.serverContent?.turnComplete) afterGeneration = false;
 		const calls = message.toolCall?.functionCalls ?? [];
@@ -405,26 +436,19 @@ export async function openLiveRamble(
 	return {
 		audio(pcm) {
 			if (ending) return;
-			const turn = turns.frame(pcm);
-			if (turn === 'end' || turn === 'split') close();
-			if (turn === 'start' || turn === 'split') opening = [];
-			// Audio outside a turn is silence Gemini would ignore.
-			if (!turns.speaking) return;
-			const audio = JSON.stringify({
-				realtimeInput: { audio: { data: base64(pcm), mimeType: `audio/pcm;rate=${LIVE_SAMPLE_RATE}` } },
-			});
-			if (!opening) return send(audio);
-			opening.push(audio);
-			if (turns.voicedMs < MIN_VOICED_MS) return;
-			send(ACTIVITY_START);
-			for (const message of opening) send(message);
-			opening = null;
+			const joined = new Uint8Array(partial.length + pcm.length);
+			joined.set(partial);
+			joined.set(pcm, partial.length);
+			let at = 0;
+			for (; at + FRAME_BYTES <= joined.length; at += FRAME_BYTES) frame(joined.subarray(at, at + FRAME_BYTES));
+			partial = joined.slice(at);
 		},
 		finish() {
 			return new Promise<LiveResult>(resolve => {
 				done = resolve;
 				if (ending) return;
 				ending = true;
+				if (partial.length >= 2) frame(partial);
 				if (turns.speaking) {
 					turns.speaking = false;
 					close();
@@ -436,6 +460,7 @@ export async function openLiveRamble(
 		close() {
 			clearTimeout(quiet);
 			clearTimeout(cap);
+			clearTimeout(answerTimer);
 			socket.close();
 		},
 	};

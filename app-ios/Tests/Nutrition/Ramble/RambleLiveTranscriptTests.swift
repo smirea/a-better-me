@@ -21,4 +21,14 @@ struct RambleLiveTranscriptTests {
         shown.heardOnDevice("two eggs and toast with butter")
         #expect(shown.text == "Two eggs and toast. with butter")
     }
+
+    @Test func aNumberSpelledInMoreWordsDoesNotShiftLaterTurns() {
+        var shown = RambleLiveTranscript()
+        shown.heardOnDevice("two hundred grams of steak and a cup of broccoli")
+        shown.heardByGemini("200 g of steak")
+        #expect(shown.text == "200 g of steak and a cup of broccoli")
+        shown.heardOnDevice("two hundred grams of steak and a cup of broccoli and rice")
+        shown.heardByGemini("200 g of steak and a cup of broccoli.")
+        #expect(shown.text == "200 g of steak and a cup of broccoli. and rice")
+    }
 }

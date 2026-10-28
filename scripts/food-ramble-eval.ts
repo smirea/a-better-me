@@ -59,8 +59,10 @@ const spec = (text: string): RambleModel => {
 	const [model, thinking] = text.split(':');
 	return { model: model!, thinking: (thinking as RambleModel['thinking']) ?? null };
 };
-const [pauseMs, dipAfterMs, maxMs] = values.turns?.split(':').map(Number) ?? [];
-const timing = values.turns ? { pauseMs: pauseMs!, dipAfterMs: dipAfterMs!, maxMs: maxMs! } : TURN_TIMING;
+const turnTimes = values.turns?.split(':').map(Number);
+if (turnTimes && (turnTimes.length !== 3 || !turnTimes.every(Number.isFinite)))
+	throw new Error('--turns is pauseMs:dipAfterMs:maxMs, three numbers');
+const timing = turnTimes ? { pauseMs: turnTimes[0]!, dipAfterMs: turnTimes[1]!, maxMs: turnTimes[2]! } : TURN_TIMING;
 const finalModel = values['final-with'] ? spec(values['final-with']) : undefined;
 const models: RambleModel[] = values.with.split(',').map(spec);
 
@@ -281,7 +283,8 @@ function early(results: LiveScore[]) {
 	const long = results.filter(r => r.audioMs >= 5_000);
 	const during = long.filter(r => r.first !== null && r.first < r.audioMs);
 	const share = during.map(r => r.first! / r.audioMs).toSorted((a, b) => a - b);
-	return `row while talking ${pct(during.length, long.length)} of ${long.length} long  first at ${pct(percentile(share, 0.5), 1)} of the audio`;
+	const first = share.length ? pct(percentile(share, 0.5), 1) : 'n/a';
+	return `row while talking ${pct(during.length, long.length)} of ${long.length} long  first at ${first} of the audio`;
 }
 
 /** Word error rate of `heard` against the typed `said`, by word edit distance. */
