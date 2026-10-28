@@ -18,10 +18,13 @@ const { values } = parseArgs({
         "pair-watch": { type: "boolean" },
         delete: { type: "boolean" },
         "grant-permissions": { type: "boolean" },
+        health: { type: "string" },
         team: { type: "string", default: process.env.SWIFT_RUN_DEVELOPMENT_TEAM },
         help: { type: "boolean", short: "h" },
     },
 });
+if (values.health !== undefined && values.health !== "on" && values.health !== "off") throw new Error("--health takes on or off.");
+const healthArguments = values.health ? ["-health", values.health] : [];
 
 type Target = {
     kind: "device" | "simulator" | "mac";
@@ -32,9 +35,10 @@ type Target = {
     runtime?: string;
 };
 
-async function command(args: string[], capture = false, log?: number) {
+async function command(args: string[], capture = false, log?: number, env?: Record<string, string>) {
     const child = Bun.spawn(args, {
         cwd: root,
+        env: env ? { ...process.env, ...env } : undefined,
         stdin: "ignore",
         stdout: log ?? (capture ? "pipe" : "inherit"),
         stderr: log ?? (capture ? "pipe" : "inherit"),
@@ -162,9 +166,9 @@ async function deploy(target: Target, project: string) {
         await command(["xcrun", "simctl", "install", target.id, app]);
         // Agents test the granted path by default and revoke what a test needs denied. `simctl privacy grant all`
         // looked like the tool for this, but it also resets the app's Health access, so the UI test answers every prompt.
-        if (fresh || values["grant-permissions"]) await grantPermissions(target, project, build);
+        if (fresh || values["grant-permissions"] || values.health === "on") await grantPermissions(target, project, build);
         const watch = await installWatchApp(target, app);
-        await command(["xcrun", "simctl", "launch", "--terminate-running-process", target.id, bundle]);
+        await command(["xcrun", "simctl", "launch", "--terminate-running-process", target.id, bundle, ...healthArguments]);
         if (watch) await launchWatchApp(watch);
     } else if (target.kind === "device") {
         await command(["xcrun", "devicectl", "device", "install", "app", "--device", target.id, app]);
@@ -184,7 +188,7 @@ async function grantPermissions(target: Target, project: string, build: string) 
         await withBuildLock(build, () => command([
             "xcodebuild", "test", "-quiet", "-project", project, "-scheme", "GrantPermissions", "-destination", target.destination,
             "-derivedDataPath", build, "CODE_SIGN_IDENTITY=-", "-only-testing:AppUITests/PermissionsGrant/testGrantAll",
-        ], true));
+        ], true, undefined, { TEST_RUNNER_APP_ARGUMENTS: healthArguments.join(" ") }));
     } catch (error: any) {
         console.error(`Granting permissions failed; answer the prompts by hand or rerun with --grant-permissions.\n${error.message.slice(-2000)}`);
     }
@@ -281,7 +285,7 @@ async function launchWatchApp(watch: { udid: string; name: string; bundle: strin
 
 async function main() {
     if (values.help) {
-        console.log(`Usage: ${runCommand} [-t simulator|mac|<target-name-or-id>] [--targets] [--watch|-w] [--no-watch] [--headless] [--pair-watch] [--delete] [--grant-permissions] [--team TEAM_ID]
+        console.log(`Usage: ${runCommand} [-t simulator|mac|<target-name-or-id>] [--targets] [--watch|-w] [--no-watch] [--headless] [--pair-watch] [--delete] [--grant-permissions] [--health on|off] [--team TEAM_ID]
 
 Defaults to a connected iOS device, then a booted simulator, then an available simulator, then My Mac.
 SWIFT_RUN_DEFAULT_TARGET overrides this choice when -t/--target is omitted. --targets marks the effective default with *.
@@ -289,7 +293,9 @@ Watching is enabled by default. Saves rebuild and restart the app. Ctrl-C stops 
 --headless skips opening Simulator.app or Device Hub; the simulator still boots and runs the app.
 --pair-watch pairs a watch with the simulator first, reusing its pair if it has one, and runs the watch app on it.
 --delete shuts down and deletes the simulator and its paired watches instead of running.
---grant-permissions answers every permission prompt again; a fresh install always does.`);
+--grant-permissions answers every permission prompt again; a fresh install always does.
+--health on turns Apple Health on in the simulator build and answers its sheet; --health off turns it off. Debug
+simulator builds start with it off, and the app keeps the last choice.`);
         return;
     }
     const all = await targets();

@@ -8,13 +8,17 @@ final class PermissionsGrant: XCTestCase {
     private let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
 
     func testGrantAll() {
+        // `scripts/run` passes `-health on|off` as `TEST_RUNNER_APP_ARGUMENTS`; xcodebuild drops the prefix.
+        app.launchArguments = ProcessInfo.processInfo.environment["APP_ARGUMENTS"]?.split(separator: " ").map(String.init) ?? []
         app.launch()
         var pressedPrimary = false
         var pickedRange = false
         var quietSince = Date.now
         let deadline = Date.now.addingTimeInterval(120)
-        // Without a Health sheet (already granted) it waits long enough for the launch-time request to show one.
-        while Date.now < deadline, Date.now.timeIntervalSince(quietSince) < (pressedPrimary ? 4 : 10) {
+        // Without a Health sheet (already granted, or Health off) it waits long enough for the launch-time request to
+        // show one, longer when Health is on because a cold launch right after a build can be slow to show its sheet.
+        let healthWait: TimeInterval = app.launchArguments.contains("on") ? 30 : 10
+        while Date.now < deadline, Date.now.timeIntervalSince(quietSince) < (pressedPrimary ? 4 : healthWait) {
             RunLoop.current.run(until: .now.addingTimeInterval(0.5))
             // Alerts that aren't permission prompts, such as "Open in …?", are left alone.
             let alert = springboard.alerts.firstMatch
