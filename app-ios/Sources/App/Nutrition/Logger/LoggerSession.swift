@@ -110,6 +110,9 @@ final class LoggerSession {
     /// Counts logged plates; the sheet closes on a change.
     private(set) var logged = 0
     @ObservationIgnored private var remote: Task<Void, Never>?
+    /// `FoodSearch` is not observable, so reading this is how `picks` redraws after a reload that leaves `results` as
+    /// it was, such as hiding a Pick.
+    private var searchReloads = 0
 
     /// The hour the logger was opened for or the time chip picked, whose Picks show above Latest. Nil while the time
     /// follows the clock.
@@ -117,6 +120,7 @@ final class LoggerSession {
 
     /// "8 AM Picks" (`HourPicks`) while the query is empty.
     var picks: [FoodSearchResult] {
+        _ = searchReloads
         guard query.isEmpty, let picksHour else { return [] }
         return search.picks(hour: picksHour)
     }
@@ -210,10 +214,16 @@ final class LoggerSession {
         try? await store.write { _ in }.value
         do {
             try await search.refresh()
+            searchReloads += 1
             results = try search.local(query)
         } catch {
             FoodSearch.log.error("Reloading search failed: \(String(describing: error))")
         }
+    }
+
+    func hidePick(_ food: FoodSnapshot, hour: Int) async {
+        store.updateSettings { $0.nutrition.hiddenPicks[hour, default: []].insert(FoodSearchResult.key(food)) }
+        await reloadSearch()
     }
 
     func favorite(_ portion: FoodPortion, uncached: Food?) async {

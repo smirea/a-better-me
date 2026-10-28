@@ -70,7 +70,8 @@ struct FoodLibrary: Sendable {
             HourPicks.Entry(portion: FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving), day: try row.day("day"), minute: row["minute"], written: row["written"])
         }
         var library = FoodLibrary()
-        library.picks = HourPicks.picks(recent, today: today).mapValues { $0.map { FoodSearchResult(.picks, $0) } }
+        let hidden = try AppSettings.fetchOne(db, key: AppSettings.key(AppSettings.rowID))?.nutrition.hiddenPicks ?? [:]
+        library.picks = HourPicks.picks(recent, today: today, hidden: hidden).mapValues { $0.map { FoodSearchResult(.picks, $0) } }
         library.items[.history] = history.map(Item.init)
         library.items[.favorites] = try FoodFavorite.fetchAll(db).sorted { $0.createdAt < $1.createdAt }
             .map { Item(FoodSearchResult(.favorites, $0.portion)) }

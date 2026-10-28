@@ -47,6 +47,18 @@ struct HourPicksTests {
         #expect(picks[6]?.map(\.food.name) == ["Coffee"])
     }
 
+    @Test func aHiddenFoodLeavesOnlyItsHourAndTheNextOneMovesUp() {
+        let entries = [
+            entry("Oats", daysAgo: 1, 7, 0), entry("Oats", daysAgo: 2, 7, 0), entry("Oats", daysAgo: 3, 7, 0),
+            entry("Banana", daysAgo: 1, 7, 5), entry("Banana", daysAgo: 2, 7, 5),
+            entry("Toast", daysAgo: 1, 7, 10), entry("Yogurt", daysAgo: 2, 7, 15),
+            entry("Oats", daysAgo: 1, 19, 0),
+        ]
+        let picks = HourPicks.picks(entries, today: today, hidden: [7: ["custom-Oats"]])
+        #expect(picks[7]?.map(\.food.name) == ["Banana", "Toast", "Yogurt"])
+        #expect(picks[19]?.map(\.food.name) == ["Oats"])
+    }
+
     @Test func theLaterWriteWinsWithinOneMinuteWhateverTheOrder() {
         let first = entry("Oats", daysAgo: 0, 8, 0, quantity: 1, written: "2026-10-27T08:00:01.000Z")
         let second = entry("Oats", daysAgo: 0, 8, 0, quantity: 2, written: "2026-10-27T08:00:02.000Z")

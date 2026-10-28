@@ -138,7 +138,10 @@ struct FoodLibraryView: View {
             row(food.snapshot, serving: nil) {
                 if let onOpen { onOpen(.food(food)) } else { sheet = LibraryEditorSheet(.editFood(food)) }
             }
-            .swipeActions { deleteButton(.food(food)) }
+            .swipeActions {
+                deleteButton(.food(food))
+                editButton(.editFood(food))
+            }
             .contextMenu {
                 Button("Edit", systemImage: "pencil") { sheet = LibraryEditorSheet(.editFood(food)) }
                 Button("Favorite", systemImage: "heart") { favorite(FoodPortion(food.snapshot)) }
@@ -153,7 +156,10 @@ struct FoodLibraryView: View {
             row(recipe.snapshot, serving: nil) {
                 if let onOpen { onOpen(.recipe(recipe)) } else { openedRecipe = recipe.id }
             }
-            .swipeActions { deleteButton(.recipe(recipe)) }
+            .swipeActions {
+                deleteButton(.recipe(recipe))
+                editButton(.editRecipe(recipe))
+            }
             .contextMenu {
                 Button("Edit", systemImage: "pencil") { sheet = LibraryEditorSheet(.editRecipe(recipe)) }
                 Button("Favorite", systemImage: "heart") { favorite(FoodPortion(recipe.snapshot)) }
@@ -173,6 +179,7 @@ struct FoodLibraryView: View {
         }
     }
 
+    /// In the logger a row also swipes right onto the plate, as Search's rows do.
     private func row(_ food: FoodSnapshot, serving: Serving?, open: @escaping () -> Void) -> some View {
         let serving = serving ?? FoodPortion(food).serving
         return HStack {
@@ -183,10 +190,19 @@ struct FoodLibraryView: View {
             }
         }
         .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 8))
+        .swipeActions(edge: .leading) {
+            if let onAdd {
+                Button("Add to Plate", systemImage: "plus") { onAdd(FoodPortion(food, serving: serving)) }.tint(Theme.accent)
+            }
+        }
     }
 
     private func create(_ kind: LibraryEditorSheet.Kind) {
         sheet = LibraryEditorSheet(kind, created: { tab = $0 }, add: onAdd)
+    }
+
+    private func editButton(_ kind: LibraryEditorSheet.Kind) -> some View {
+        Button("Edit", systemImage: "pencil") { sheet = LibraryEditorSheet(kind) }.tint(Theme.surfaceRaised)
     }
 
     private func deleteButton(_ item: Item, title: String = "Delete") -> some View {

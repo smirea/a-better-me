@@ -33,7 +33,14 @@ struct NutritionSettings: Codable, Hashable, Sendable {
         var timeSelection = TimeSelection.datePicker
         var optimization = Optimization.speed
 
-        enum NutritionDisplay: String, Codable, Sendable { case plateOnly, dayAndPlate, remainingAfterPlate }
+        enum NutritionDisplay: String, Codable, CaseIterable, Sendable {
+            case plateOnly, dayAndPlate, remainingAfterPlate
+
+            func cycled(by step: Int) -> Self {
+                let all = Self.allCases
+                return all[(all.firstIndex(of: self)! + step + all.count) % all.count]
+            }
+        }
         enum TimeSelection: String, Codable, Sendable { case datePicker, timePad }
         /// Speed opens a tapped search result's detail with the keypad; context closes search and shows the plate.
         enum Optimization: String, Codable, Sendable { case speed, context }
@@ -103,4 +110,6 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     var hiddenNutrients: Set<NutrientID> = []
     /// The tape measurements the Dashboard and editors offer; scale weight and visual body fat always show.
     var visibleBodyMetrics: Set<BodyMetricKind> = []
+    /// Foods swiped out of an hour's Picks (`HourPicks`), by `FoodSearchResult.key`.
+    var hiddenPicks: [Int: Set<String>] = [:]
 }
