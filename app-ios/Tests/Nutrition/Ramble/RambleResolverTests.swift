@@ -102,6 +102,18 @@ struct RambleResolverTests {
         #expect([slices.quantity, slices.servings] == [3, 1.5])
     }
 
+    @Test func theOwnersPickHoldsWhenALaterReadAddsARefToAnotherFood() async throws {
+        let yogurt = FoodSnapshot(source: .custom, name: "Greek Yogurt", nutrition: FoodNutrition(nutrients: [.energy: 100], measures: [Measure(name: "container", quantity: 1, servings: 1)]))
+        let entry = FoodEntry(FoodPortion(yogurt), day: today.adding(days: -1), minute: 8 * 60)
+        let resolver = try await resolver(context: RambleContext(entries: [entry], today: today))
+        let first = try resolver.rows([RambleItem(name: "pizza", amount: 1, unit: "slice")], previous: [], choices: [:])
+        let veggie = try #require(food(first[0])?.options.first { $0.portion.food.name == "Pizza, veggie" })
+        let choices = [0: RambleChoice(name: "pizza", option: veggie.key)]
+        let picked = try resolver.rows([RambleItem(name: "pizza", amount: 1, unit: "slice")], previous: first, choices: choices)
+        let reffed = try resolver.rows([RambleItem(name: "pizza", amount: 2, unit: "slice", ref: entry.key)], previous: picked, choices: choices)
+        #expect(describe(reffed) == ["Pizza, veggie: 2 slice"])
+    }
+
     @Test func aFoodWithoutAnAmountTakesItsLatestServingFromHistory() async throws {
         let oats = try fixtureCatalog(rambleCatalog).foods([1])[1]!.snapshot
         store.log([FoodPortion(oats, serving: Serving(measure: oats.nutrition.measures[0], quantity: 0.75))], on: today.adding(days: -2), minute: 480)

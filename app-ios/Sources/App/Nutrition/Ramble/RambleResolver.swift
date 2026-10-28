@@ -101,8 +101,16 @@ struct RambleResolver: Sendable {
     }
 
     private func food(_ item: RambleItem, previous: RambleRow?, choice: RambleChoice?) throws -> RambleRow.Content {
-        // The owner's pick outranks a ref the model added later: the row then resolves through search, where it is.
-        if let ref = item.ref, let entry = context.entries[ref], choice?.option.map({ $0 == FoodSearchResult.key(entry.food) }) ?? true {
+        let earlier: RambleRow.Food? = if case let .food(food) = previous?.content { food } else { nil }
+        let refEntry = item.ref.flatMap { context.entries[$0] }
+        // The owner's pick outranks a ref the model added later; the row already holds that food, so it stays.
+        if let refEntry, let option = choice?.option, option != FoodSearchResult.key(refEntry.food), let earlier, earlier.key == option {
+            var pick = earlier.pick
+            pick.portion.serving = choice?.serving
+                ?? RambleServing.serving(amount: item.amount, unit: item.unit, of: pick.portion.food.nutrition, history: pick.portion.serving)
+            return .food(.init(pick: pick, key: earlier.key, options: earlier.options, showsOptions: item.options))
+        }
+        if let entry = refEntry, choice?.option.map({ $0 == FoodSearchResult.key(entry.food) }) ?? true {
             var portion = entry.portion
             if item.amount > 0 {
                 portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, of: entry.food.nutrition, history: entry.serving)
@@ -111,7 +119,6 @@ struct RambleResolver: Sendable {
             let pick = LoggerPick(portion)
             return .food(.init(pick: pick, key: FoodSearchResult.key(entry.food), options: [], showsOptions: false))
         }
-        let earlier: RambleRow.Food? = if case let .food(food) = previous?.content { food } else { nil }
         let options: [FoodSearchResult]
         let spoken: FoodSearchResult?
         if let earlier, previous?.item.name == item.name, !earlier.options.isEmpty {

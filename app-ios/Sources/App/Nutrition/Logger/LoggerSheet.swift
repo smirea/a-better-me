@@ -81,7 +81,7 @@ private struct LoggerContent: View {
                         if case let .food(food) = row.content {
                             FoodDetailView(session: session, editing: nil, pick: food.pick, ramble: RambleEdit(
                                 update: { session.ramble.setServing($0, of: row) },
-                                logAll: { Task { await session.logRamble() } }
+                                logAll: { Task { await session.logRamble(opened: row) } }
                             ))
                         }
                     }
