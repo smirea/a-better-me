@@ -31,6 +31,8 @@ const FINISH_CAP_MS = 6_000;
 const SETUP_TIMEOUT_MS = 8_000;
 /** Above this RMS a 16-bit frame holds speech. */
 const VOICED_RMS = 300;
+/** Silence that ends a turn, so Gemini answers what it heard while the speaker goes on. */
+const PAUSE_MS = 600;
 
 export const LiveRambleRequest = RambleRequest.omit({ transcript: true, audio: true });
 export type LiveRambleRequest = z.input<typeof LiveRambleRequest>;
@@ -206,10 +208,14 @@ export async function openLiveRamble(
 	let transcript = '';
 	let ending = false;
 	/**
-	 * Speech the model has not finished a turn on. True from the start and again with every voiced frame: Gemini
-	 * transcribes a turn only once it hears a pause, so the words since the last turn arrive after the audio ends.
+	 * Turns are ours, not Gemini's: its own activity detection stopped listening for good after the first pause on some
+	 * voices (the Eddy TTS voice lost everything after "I'm having one cup of"). A turn opens on a voiced frame and
+	 * closes after `PAUSE_MS` of silence or at the stop; Gemini transcribes and answers each one when it closes.
 	 */
-	let unanswered = true;
+	let speaking = false;
+	let silentMs = 0;
+	let open = 0;
+	const unanswered = () => speaking || open > 0;
 	let quiet: ReturnType<typeof setTimeout> | undefined;
 	let cap: ReturnType<typeof setTimeout> | undefined;
 	let done: ((result: LiveResult) => void) | undefined;
@@ -224,7 +230,7 @@ export async function openLiveRamble(
 	/** Each message after the end of the audio restarts the wait, so the last tool calls are never cut off. */
 	const settle = () => {
 		clearTimeout(quiet);
-		if (!unanswered) quiet = setTimeout(finished, QUIET_AFTER_END_MS);
+		if (!unanswered()) quiet = setTimeout(finished, QUIET_AFTER_END_MS);
 	};
 
 	let setUp = () => {};
@@ -241,10 +247,9 @@ export async function openLiveRamble(
 			// Each turn's transcription starts bare, so a sentence after a pause would run into the one before it.
 			const gap = /[.!?,]$/.test(transcript) && !/^\s/.test(heard) ? ' ' : '';
 			transcript += gap + heard;
-			unanswered = true;
 			events.transcript(transcript);
 		}
-		if (message.serverContent?.turnComplete) unanswered = false;
+		if (message.serverContent?.turnComplete) open = Math.max(0, open - 1);
 		const calls = message.toolCall?.functionCalls ?? [];
 		if (calls.length) {
 			const functionResponses = calls.map(call => ({
@@ -284,6 +289,7 @@ export async function openLiveRamble(
 				systemInstruction: { parts: [{ text: rambleInstructions({ ...input, transcript: '' }, true) }] },
 				tools: tools(names),
 				inputAudioTranscription: {},
+				realtimeInputConfig: { automaticActivityDetection: { disabled: true } },
 			},
 		}),
 	);
@@ -292,11 +298,20 @@ export async function openLiveRamble(
 		live.close();
 	}, SETUP_TIMEOUT_MS);
 	await ready.finally(() => clearTimeout(timeout));
+	const endTurn = () => {
+		speaking = false;
+		open++;
+		live.send(JSON.stringify({ realtimeInput: { activityEnd: {} } }));
+	};
 
 	return {
 		audio(pcm) {
 			if (ending) return;
-			if (voiced(pcm)) unanswered = true;
+			if (voiced(pcm)) {
+				silentMs = 0;
+				if (!speaking) live.send(JSON.stringify({ realtimeInput: { activityStart: {} } }));
+				speaking = true;
+			} else if (speaking && (silentMs += (pcm.byteLength / 2 / LIVE_SAMPLE_RATE) * 1000) >= PAUSE_MS) endTurn();
 			live.send(
 				JSON.stringify({
 					realtimeInput: {
@@ -310,7 +325,7 @@ export async function openLiveRamble(
 				done = resolve;
 				if (ending) return;
 				ending = true;
-				live.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } }));
+				if (speaking) endTurn();
 				cap = setTimeout(finished, FINISH_CAP_MS);
 				settle();
 			});
