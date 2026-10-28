@@ -144,6 +144,23 @@ struct FoodSearchTests {
         #expect(edited[0].portion.serving.quantity == 3)
     }
 
+    @Test func aFoodRemovedFromHistoryStaysOutUntilItIsLoggedAgain() async throws {
+        let banana = try #require(try catalog.foods([173944])[173944]).snapshot
+        let morning = Date(timeIntervalSince1970: 1_700_000_000)
+        try await store.write { db in
+            try FoodEntry(FoodPortion(yogurt), day: monday, minute: 420, at: morning).insert(db)
+            try FoodEntry(FoodPortion(banana), day: monday, minute: 480, at: morning.addingTimeInterval(60)).insert(db)
+        }.value
+        store.updateSettings { $0.nutrition.hiddenHistory[FoodSearchResult.key(banana)] = morning.addingTimeInterval(120) }
+        #expect(names(try await search().local("")) == ["history Yogurt"])
+        #expect(names(try await search().local("banana")).first == "common Bananas, raw")
+
+        try await store.write { db in
+            try FoodEntry(FoodPortion(banana), day: monday, minute: 900, at: morning.addingTimeInterval(180)).insert(db)
+        }.value
+        #expect(names(try await search().local("")) == ["history Bananas, raw", "history Yogurt"])
+    }
+
     @Test func favoritesRecipesAndCustomFoodsMatchTheirNamesAndBrands() async throws {
         var recipe = Recipe(name: "Overnight oats", servings: 2)
         recipe.ingredients = [RecipeIngredient(FoodPortion(yogurt))]

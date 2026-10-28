@@ -15,7 +15,7 @@ struct SearchTab: View {
         List {
             if session.query.isEmpty {
                 if let hour = session.picksHour, !picks.isEmpty {
-                    ThemedSection("\(NutritionFormat.hour(hour)) Picks") { rows(picks, terms, picksHour: hour) }
+                    ThemedSection("\(NutritionFormat.hour(hour)) Picks") { rows(picks, terms) }
                 }
                 ThemedSection("Latest") { rows(session.results, terms) }
             } else {
@@ -70,9 +70,9 @@ struct SearchTab: View {
         return groups
     }
 
-    /// Swiping a row right adds it to the plate, MacroFactor's Multi-Add; swiping a Pick left takes it out of that
-    /// hour's Picks.
-    private func rows(_ results: [FoodSearchResult], _ terms: [String], picksHour: Int? = nil) -> some View {
+    /// Swiping a row right adds it to the plate, MacroFactor's Multi-Add. Swiping a Pick left takes it out of that
+    /// hour's Picks, and swiping a history row left takes it out of the history until it is logged again.
+    private func rows(_ results: [FoodSearchResult], _ terms: [String]) -> some View {
         ForEach(results) { result in
             HStack(spacing: 4) {
                 Button {
@@ -90,11 +90,21 @@ struct SearchTab: View {
                 Button("Add to Plate", systemImage: "plus") { session.add(LoggerPick(result)) }.tint(Theme.accent)
             }
             .swipeActions(edge: .trailing) {
-                if let picksHour {
-                    Button("Remove from Picks", systemImage: "trash", role: .destructive) {
-                        Task { await session.hidePick(result.portion.food, hour: picksHour) }
+                switch result.group {
+                case .picks:
+                    if let hour = session.picksHour {
+                        Button("Remove from Picks", systemImage: "trash", role: .destructive) {
+                            Task { await session.hidePick(result.portion.food, hour: hour) }
+                        }
+                        .tint(Theme.destructive)
+                    }
+                case .history:
+                    Button("Remove from History", systemImage: "trash", role: .destructive) {
+                        Task { await session.hideFromHistory(result.portion.food) }
                     }
                     .tint(Theme.destructive)
+                default:
+                    EmptyView()
                 }
             }
         }

@@ -226,6 +226,11 @@ final class LoggerSession {
         await reloadSearch()
     }
 
+    func hideFromHistory(_ food: FoodSnapshot, at date: Date = .now) async {
+        store.updateSettings { $0.nutrition.hiddenHistory[FoodSearchResult.key(food)] = date }
+        await reloadSearch()
+    }
+
     func favorite(_ portion: FoodPortion, uncached: Food?) async {
         if let uncached { store.saveFood(uncached) }
         store.addFavorite(portion)

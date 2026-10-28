@@ -112,4 +112,7 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     var visibleBodyMetrics: Set<BodyMetricKind> = []
     /// Foods swiped out of an hour's Picks (`HourPicks`), by `FoodSearchResult.key`.
     var hiddenPicks: [Int: Set<String>] = [:]
+    /// Foods swiped out of the logger's history (Latest and From History), by `FoodSearchResult.key`, with when. Logging
+    /// one again after that brings it back, as in MacroFactor.
+    var hiddenHistory: [String: Date] = [:]
 }
