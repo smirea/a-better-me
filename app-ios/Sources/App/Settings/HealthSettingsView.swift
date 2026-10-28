@@ -30,6 +30,12 @@ struct HealthSettingsView: View {
                         .font(AppFont.rowDetail)
                 }
             }
+            ThemedSection("Export", footer: "Every step sample Health holds, one row per sample with the device that counted it, before Health removes the overlap between iPhone and Watch.") {
+                ShareLink(item: StepSamplesFile(), preview: SharePreview("Step samples")) {
+                    RowLabel(title: "Step Samples", detail: "CSV", systemImage: "square.and.arrow.up")
+                }
+                .accessibilityLabel("Export Step Samples")
+            }
         }
         .themedList()
         .detailTitle("Apple Health")
