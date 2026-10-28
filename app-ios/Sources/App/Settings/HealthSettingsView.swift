@@ -44,6 +44,9 @@ struct HealthSettingsView: View {
     }
 
     private var footer: String {
+        if !HealthStore.isAvailable, HKHealthStore.isHealthDataAvailable() {
+            return "Health is off in Debug simulator builds. Launch with -health on to turn it on."
+        }
         if nutrition.isEnabled, !energyAllowed {
             return "Health does not allow A Better Me to write dietary energy. Allow it in the Health app under Sharing > Apps."
         }
@@ -51,7 +54,7 @@ struct HealthSettingsView: View {
     }
 
     private func enable() async {
-        guard HKHealthStore.isHealthDataAvailable() else { return }
+        guard HealthStore.isAvailable else { return }
         let status = try? await healthStore.statusForAuthorizationRequest(toShare: DietaryHealth.shareTypes, read: [])
         if status == .shouldRequest {
             requestTrigger.toggle()

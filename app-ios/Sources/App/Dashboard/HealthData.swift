@@ -31,7 +31,7 @@ final class HealthData {
     /// Loads, or flips `requestTrigger` when any type the app uses is still undecided, and returns whether it asked.
     @discardableResult
     func refresh() async -> Bool {
-        guard HKHealthStore.isHealthDataAvailable() else { return false }
+        guard HealthStore.isAvailable else { return false }
         do {
             if try await store.statusForAuthorizationRequest(toShare: AppPermissions.healthShare, read: AppPermissions.healthRead) == .shouldRequest {
                 requestTrigger.toggle()

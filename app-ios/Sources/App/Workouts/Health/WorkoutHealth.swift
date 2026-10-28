@@ -43,7 +43,7 @@ final class WorkoutHealth {
     }
 
     func start(store: LocalStore, catalog: ExerciseCatalog) {
-        guard self.store == nil, HKHealthStore.isHealthDataAvailable() else { return }
+        guard self.store == nil, HealthStore.isAvailable else { return }
         self.store = store
         self.catalog = catalog
         // Set at launch, since the system relaunches the app in the background to hand it a mirrored session.

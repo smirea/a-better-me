@@ -141,7 +141,7 @@ struct HealthDietaryStore: DietaryStore {
     static let sampleKey = "ABMSample"
 
     func samples(on day: CalendarDay) async throws -> [StoredDietarySample] {
-        guard HKHealthStore.isHealthDataAvailable() else { return [] }
+        guard HealthStore.isAvailable else { return [] }
         // The day key marks the app's own samples, so no source predicate: `HKSource.default()` throws in an unsigned
         // test host.
         let predicate = HKQuery.predicateForObjects(withMetadataKey: Self.dayKey, allowedValues: [day.description])
@@ -161,7 +161,7 @@ struct HealthDietaryStore: DietaryStore {
     }
 
     func writtenDays() async throws -> Set<CalendarDay> {
-        guard HKHealthStore.isHealthDataAvailable() else { return [] }
+        guard HealthStore.isAvailable else { return [] }
         let predicate = HKQuery.predicateForObjects(withMetadataKey: Self.dayKey)
         let query = HKSampleQueryDescriptor(
             predicates: DietaryHealth.types.values.map { .quantitySample(type: HKQuantityType($0), predicate: predicate) },
