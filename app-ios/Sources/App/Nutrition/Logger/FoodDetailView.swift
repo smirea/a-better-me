@@ -9,6 +9,8 @@ struct FoodDetailView: View {
     /// The plate item being edited, nil for a food not yet on the plate.
     let editing: UUID?
     let pick: LoggerPick
+    /// A Ramble row: Update hands the serving back instead of touching the plate, and Log Foods logs the ramble.
+    var ramble: RambleEdit?
     @Environment(\.dismiss) private var dismiss
     @Observe(AppSettings.current) private var settings
     @Observe(NutritionPlan.all) private var plans
@@ -20,10 +22,11 @@ struct FoodDetailView: View {
     @State private var recipeSheet: LibraryEditorSheet?
     @State private var preparing: Recipe?
 
-    init(session: LoggerSession, editing: UUID?, pick: LoggerPick) {
+    init(session: LoggerSession, editing: UUID?, pick: LoggerPick, ramble: RambleEdit? = nil) {
         self.session = session
         self.editing = editing
         self.pick = pick
+        self.ramble = ramble
         _measure = State(initialValue: pick.portion.serving.measure)
         _quantity = State(initialValue: QuantityText(pick.portion.serving.quantity))
         _food = State(initialValue: pick.portion.food)
@@ -60,7 +63,7 @@ struct FoodDetailView: View {
                 quantity: $quantity, measure: measure,
                 detail: ServingChoices.detail(serving, food.nutrition),
                 choices: ServingChoices(food.nutrition, favorites: settings.nutrition.favoriteMeasures, current: measure),
-                confirmTitle: editing == nil ? "Add" : "Update",
+                confirmTitle: editing == nil && ramble == nil ? "Add" : "Update",
                 choose: choose, logFoods: logFoods, confirm: confirm
             )
         }
@@ -129,22 +132,29 @@ struct FoodDetailView: View {
 
     private func logFoods() {
         putOnPlate()
-        session.logPlate()
+        if let ramble { ramble.logAll() } else { session.logPlate() }
     }
 
     /// A food not yet on the plate shows in the banner as if it were.
     private func preview() {
-        if editing == nil { session.pending = portion }
+        if editing == nil, ramble == nil { session.pending = portion }
     }
 
     private func putOnPlate() {
         session.pending = nil
-        if let editing {
+        if let ramble {
+            ramble.update(serving)
+        } else if let editing {
             session.plate.setServing(serving, of: editing)
         } else {
             session.add(LoggerPick(portion, uncached: pick.uncached))
         }
     }
+}
+
+struct RambleEdit {
+    let update: (Serving) -> Void
+    let logAll: () -> Void
 }
 
 /// A recipe's Prepare, Edit, and Duplicate in the logger. Duplicate offers Create & Add onto the plate, and an edit

@@ -4,6 +4,7 @@ enum LoggerRoute: Hashable {
     case food(LoggerPick)
     case plateItem(UUID)
     case plate
+    case rambleRow(Int)
 }
 
 /// MacroFactor's logger (research spec §5): one full-height sheet with the banner (exit, time chip, what the plate
@@ -29,7 +30,7 @@ struct LoggerSheet: View {
         }
         .background(Theme.background)
         .presentationDetents([.large])
-        .interactiveDismissDisabled(session?.plate.isEmpty == false)
+        .interactiveDismissDisabled(session?.hasUnlogged == true)
         .task {
             guard session == nil else { return }
             do {
@@ -75,16 +76,24 @@ private struct LoggerContent: View {
                     case let .plateItem(id):
                         if let item = session.plate.item(id) { FoodDetailView(session: session, editing: id, pick: item.pick) }
                     case .plate: PlateView(session: session, open: { path.append(.plateItem($0)) }).id(session.time.day)
+                    case let .rambleRow(id):
+                        if let row = session.ramble.rows.first(where: { $0.id == id }), case let .food(food) = row.content {
+                            FoodDetailView(session: session, editing: nil, pick: food.pick, ramble: RambleEdit(
+                                update: { session.ramble.setServing($0, of: row) },
+                                logAll: session.logRamble
+                            ))
+                        }
                     }
                 }
             }
         }
         .onChange(of: session.logged) { close() }
+        .onDisappear { session.ramble.cancel() }
         .confirmationDialog("Exit the Plate?", isPresented: $confirmingExit, titleVisibility: .visible) {
             Button("Exit", role: .destructive, action: close)
             Button("Stay", role: .cancel) {}
         } message: {
-            Text("Foods you added to your plate will be cleared.")
+            Text(session.plate.isEmpty ? "The foods from your ramble will be cleared." : "Foods you added to your plate will be cleared.")
         }
         .sheet(isPresented: $choosingTime) {
             switch settings.nutrition.logger.timeSelection {
@@ -100,6 +109,7 @@ private struct LoggerContent: View {
         switch session.tab {
         case .scan: ScanTab(session: session, open: detail).toolbar(.hidden, for: .navigationBar)
         case .photo: PhotoTab(session: session, showPlate: openPlate).toolbar(.hidden, for: .navigationBar)
+        case .ramble: RambleTab(session: session, open: { path.append(.rambleRow($0)) }).toolbar(.hidden, for: .navigationBar)
         case .search: SearchTab(session: session, open: open).toolbar(.hidden, for: .navigationBar)
         case .quickAdd: QuickAddTab(session: session).toolbar(.hidden, for: .navigationBar)
         case .library:
@@ -116,7 +126,7 @@ private struct LoggerContent: View {
     }
 
     private func exit() {
-        if session.plate.isEmpty { close() } else { confirmingExit = true }
+        if session.hasUnlogged { confirmingExit = true } else { close() }
     }
 
     /// Optimize for context: a tapped result goes on the plate, and the plate shows.

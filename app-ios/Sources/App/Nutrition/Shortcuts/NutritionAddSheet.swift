@@ -3,9 +3,9 @@ import SwiftUI
 /// A Nutrition "+" shortcut (research spec §2, `nav-03-choose-shortcuts.jpg`). AI, Describe, Photos, and Metrics are not
 /// built, so they are not offered.
 enum NutritionShortcut: String, Codable, CaseIterable, Sendable, ShortcutItem {
-    case yourFoods, search, barcode, quickAdd, recipes, favorites, editDay, weight
+    case yourFoods, search, barcode, quickAdd, ramble, recipes, favorites, editDay, weight
 
-    static let defaults: [NutritionShortcut] = [.yourFoods, .search, .barcode, .quickAdd, .recipes, .favorites, .editDay, .weight]
+    static let defaults: [NutritionShortcut] = [.yourFoods, .search, .barcode, .quickAdd, .ramble, .recipes, .favorites, .editDay, .weight]
     /// The first four are the round buttons, as MacroFactor tags them "Top Shortcut".
     static let topCount = 4
 
@@ -15,6 +15,7 @@ enum NutritionShortcut: String, Codable, CaseIterable, Sendable, ShortcutItem {
         case .search: "Search"
         case .barcode: "Barcode"
         case .quickAdd: "Quick Add"
+        case .ramble: "Ramble"
         case .recipes: "Recipes"
         case .favorites: "Favorites"
         case .editDay: "Edit Day"
@@ -28,6 +29,7 @@ enum NutritionShortcut: String, Codable, CaseIterable, Sendable, ShortcutItem {
         case .search: "Search foods to log"
         case .barcode: "Scan a barcode to log"
         case .quickAdd: "Log calories and macros"
+        case .ramble: "Say what you ate"
         case .recipes: "Browse and log your recipes"
         case .favorites: "Log a saved serving"
         case .editDay: "Edit today's nutrition totals"
@@ -41,6 +43,7 @@ enum NutritionShortcut: String, Codable, CaseIterable, Sendable, ShortcutItem {
         case .search: "magnifyingglass"
         case .barcode: "barcode.viewfinder"
         case .quickAdd: "bolt.fill"
+        case .ramble: "waveform"
         case .recipes: "frying.pan"
         case .favorites: "heart.fill"
         case .editDay: "square.and.pencil"
@@ -55,6 +58,7 @@ enum NutritionShortcut: String, Codable, CaseIterable, Sendable, ShortcutItem {
         case .search: LoggerStart(tab: .search)
         case .barcode: LoggerStart(tab: .scan)
         case .quickAdd: LoggerStart(tab: .quickAdd)
+        case .ramble: LoggerStart(tab: .ramble)
         case .recipes: LoggerStart(tab: .library, library: .recipes)
         case .favorites: LoggerStart(tab: .library, library: .favorites)
         case .editDay, .weight: nil
