@@ -12,6 +12,8 @@ Full rules in [`docs/decisions/workflow.md`](docs/decisions/workflow.md).
 - After opening a PR, run `bun scripts/pr-ship.ts [--merge]` in the foreground until it exits 0. Its exit code names the next step.
 - Never skip git hooks. Fix the failure instead.
 - Run only the relevant tests locally; CI runs the full suite.
+- Development speed is a goal. When friction shows up (a manual step, a prompt you click through, a slow command, a flaky tool), fix it in the same thread if it is small; otherwise open a GitHub issue with what you found and a proposed fix, and say so in your reply.
+- Set up for the default path. Dev and test environments start the way the owner uses the app, with every permission granted and realistic data seeded; an agent testing a denied or empty state revokes or clears it itself.
 
 # Stack
 
