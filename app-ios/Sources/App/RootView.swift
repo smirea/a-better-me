@@ -115,7 +115,7 @@ struct RootView: View {
             tab = .workout
             sheet = .add(.workout)
         case .emptyWorkout: presenter.startOrResume({ .empty }, in: store)
-        case .search, .barcode, .quickAdd, .foods, .recipes, .favorites:
+        case .search, .barcode, .quickAdd, .ramble, .foods, .recipes, .favorites:
             tab = .nutrition
             sheet = action.logger.map(RootSheet.logger)
         }

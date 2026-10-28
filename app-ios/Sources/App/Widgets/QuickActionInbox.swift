@@ -20,6 +20,7 @@ extension QuickAction {
         case .search: NutritionShortcut.search.logger
         case .barcode: NutritionShortcut.barcode.logger
         case .quickAdd: NutritionShortcut.quickAdd.logger
+        case .ramble: NutritionShortcut.ramble.logger
         case .foods: NutritionShortcut.yourFoods.logger
         case .recipes: NutritionShortcut.recipes.logger
         case .favorites: NutritionShortcut.favorites.logger

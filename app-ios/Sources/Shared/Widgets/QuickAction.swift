@@ -1,15 +1,16 @@
 import Foundation
 
-/// A screen a Quick Actions widget or the Control Center control opens: MacroFactor's quick action targets without AI,
-/// which isn't built, plus the Workouts half's "+" and an empty workout.
+/// A screen a Quick Actions widget or the Control Center control opens: MacroFactor's quick action targets, with Ramble
+/// in AI's place, plus the Workouts half's "+" and an empty workout.
 enum QuickAction: String, CaseIterable, Codable, Sendable {
-    case search, barcode, quickAdd, foods, recipes, favorites, weight, foodLog, dashboard, newWorkout, emptyWorkout
+    case search, barcode, quickAdd, ramble, foods, recipes, favorites, weight, foodLog, dashboard, newWorkout, emptyWorkout
 
     var title: String {
         switch self {
         case .search: "Search"
         case .barcode: "Barcode"
         case .quickAdd: "Quick Add"
+        case .ramble: "Ramble"
         case .foods: "Your Foods"
         case .recipes: "Recipes"
         case .favorites: "Favorites"
@@ -26,6 +27,7 @@ enum QuickAction: String, CaseIterable, Codable, Sendable {
         case .search: "magnifyingglass"
         case .barcode: "barcode.viewfinder"
         case .quickAdd: "bolt.fill"
+        case .ramble: "waveform"
         case .foods: "fork.knife"
         case .recipes: "frying.pan"
         case .favorites: "heart.fill"
@@ -61,6 +63,7 @@ extension QuickAction: AppEnum {
         .search: DisplayRepresentation(title: "Search", image: .init(systemName: "magnifyingglass")),
         .barcode: DisplayRepresentation(title: "Barcode", image: .init(systemName: "barcode.viewfinder")),
         .quickAdd: DisplayRepresentation(title: "Quick Add", image: .init(systemName: "bolt.fill")),
+        .ramble: DisplayRepresentation(title: "Ramble", image: .init(systemName: "waveform")),
         .foods: DisplayRepresentation(title: "Your Foods", image: .init(systemName: "fork.knife")),
         .recipes: DisplayRepresentation(title: "Recipes", image: .init(systemName: "frying.pan")),
         .favorites: DisplayRepresentation(title: "Favorites", image: .init(systemName: "heart.fill")),
