@@ -28,17 +28,20 @@ final class HealthData {
     private static let stepCount = HKQuantityType(.stepCount)
     private static let log = Logger(subsystem: "com.stefan.a-better-me", category: "health")
 
-    func refresh() async {
-        guard HKHealthStore.isHealthDataAvailable() else { return }
+    /// Loads, or flips `requestTrigger` when any type the app uses is still undecided, and returns whether it asked.
+    @discardableResult
+    func refresh() async -> Bool {
+        guard HKHealthStore.isHealthDataAvailable() else { return false }
         do {
-            if try await store.statusForAuthorizationRequest(toShare: Self.shareTypes, read: Self.readTypes) == .shouldRequest {
+            if try await store.statusForAuthorizationRequest(toShare: AppPermissions.healthShare, read: AppPermissions.healthRead) == .shouldRequest {
                 requestTrigger.toggle()
-            } else {
-                await load()
+                return true
             }
+            await load()
         } catch {
             Self.log.error("HealthKit authorization status failed: \(String(describing: error))")
         }
+        return false
     }
 
     func load() async {
