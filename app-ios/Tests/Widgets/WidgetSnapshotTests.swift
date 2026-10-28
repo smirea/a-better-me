@@ -33,6 +33,7 @@ struct WidgetSnapshotTests {
         #expect(snapshot.days[1].ranges["p"] == NutritionSnapshot.Range(target: 160))
         #expect(snapshot.progress("k", on: today)?.remainingLabel == "2,020 kcal left")
         #expect(snapshot.pinned == ["k", "p", "f", "c"])
+        #expect(snapshot.nutrients.prefix(2).map(\.short) == ["cal", "alcohol"])
     }
 
     @Test func leavesOutHiddenNutrientsButKeepsTheMacros() async throws {
@@ -45,7 +46,7 @@ struct WidgetSnapshotTests {
 }
 
 struct NutrientProgressTests {
-    private let fiber = NutritionSnapshot.Nutrient(id: "291", name: "Fiber", unit: "g", tint: .carbs)
+    private let fiber = NutritionSnapshot.Nutrient(id: "291", name: "Fiber", short: "fiber", unit: "g", tint: .carbs)
 
     private func progress(_ consumed: Double, _ range: NutritionSnapshot.Range, overages: Bool = true) -> NutrientProgress {
         NutrientProgress(nutrient: fiber, consumed: consumed, range: range, showOverages: overages)

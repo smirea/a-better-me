@@ -81,7 +81,7 @@ final class WidgetPublisher {
             return NutritionSnapshot.Day(day: day.description, consumed: consumed, ranges: ranges)
         }
         return NutritionSnapshot(
-            nutrients: nutrients.map { NutritionSnapshot.Nutrient(id: $0.id.rawValue, name: $0.name, unit: $0.unit.rawValue, tint: $0.tint) },
+            nutrients: nutrients.map { NutritionSnapshot.Nutrient(id: $0.id.rawValue, name: $0.name, short: $0.short, unit: $0.unit.rawValue, tint: $0.tint) },
             pinned: settings.nutrition.pinnedNutrients.filter { !hidden.contains($0) || NutrientID.macros.contains($0) }.map(\.rawValue),
             showOverages: settings.nutrition.showOverages,
             days: days

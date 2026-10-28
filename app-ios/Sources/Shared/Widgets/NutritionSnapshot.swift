@@ -7,6 +7,8 @@ struct NutritionSnapshot: Codable, Equatable, Sendable {
         /// The registry id: `k`, `p`, `f`, `c`, or a USDA nutrient number.
         let id: String
         let name: String
+        /// The registry's short name ("cal", "prot", "net carbs") for the Lock Screen's tight slots.
+        let short: String
         let unit: String
         let tint: NutrientTint
     }

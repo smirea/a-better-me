@@ -186,16 +186,25 @@ private struct NutrientCollectionView: View {
         if !all.isEmpty, case .ready = entry.state {
             switch family {
             case .accessoryRectangular:
-                HStack(spacing: 6) {
-                    ForEach(all, id: \.nutrient.id) { progress in
-                        Gauge(value: progress.fraction) {
-                            EmptyView()
-                        } currentValueLabel: {
-                            Text(progress.initial)
+                Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 2) {
+                    ForEach(0..<2, id: \.self) { row in
+                        GridRow {
+                            ForEach(all.dropFirst(row * 2).prefix(2), id: \.nutrient.id) { progress in
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Text(progress.nutrient.short).font(AppFont.caption(11)).foregroundStyle(.secondary)
+                                    Text(progress.goal == nil ? NutrientProgress.number(progress.consumed)
+                                        : "\(NutrientProgress.number(progress.remaining ?? 0)) \(progress.isOver ? "over" : "left")")
+                                        .font(AppFont.headline(14))
+                                        .monospacedDigit()
+                                        .widgetAccentable()
+                                }
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                            }
                         }
-                        .gaugeStyle(.accessoryCircularCapacity)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             case .systemMedium:
                 HStack(alignment: .top, spacing: 10) {
                     ForEach(all, id: \.nutrient.id) { progress in
