@@ -8,6 +8,7 @@ struct HealthSettingsView: View {
     private let healthStore = HealthStore.shared
     @State private var requestTrigger = false
     @State private var energyAllowed = false
+    @State private var exportingSteps = false
     private let nutrition = NutritionHealth.shared
 
     var body: some View {
@@ -31,14 +32,16 @@ struct HealthSettingsView: View {
                 }
             }
             ThemedSection("Export", footer: "Every step sample Health holds, one row per sample with the device that counted it, before Health removes the overlap between iPhone and Watch.") {
-                ShareLink(item: StepSamplesFile(), preview: SharePreview("Step samples")) {
+                Button { exportingSteps = true } label: {
                     RowLabel(title: "Step Samples", detail: "CSV", systemImage: "square.and.arrow.up")
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Export Step Samples")
             }
         }
         .themedList()
         .detailTitle("Apple Health")
+        .sheet(isPresented: $exportingSteps) { StepSamplesExportSheet() }
         .healthDataAccessRequest(store: healthStore, shareTypes: DietaryHealth.shareTypes, readTypes: [], trigger: requestTrigger) { @Sendable _ in
             // HealthKit calls back off the main thread, where a main-actor closure traps.
             Task { @MainActor in
