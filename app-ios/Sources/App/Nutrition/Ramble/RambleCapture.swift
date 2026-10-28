@@ -39,6 +39,7 @@ final class RambleCapture {
     @ObservationIgnored private var events: Task<Void, Never>?
     /// The Live session answered every word of this listen, so its list stands without a text read.
     @ObservationIgnored private var answered = false
+    @ObservationIgnored private var shown = RambleLiveTranscript()
     @ObservationIgnored private let clock: @Sendable () -> Date
     @ObservationIgnored private let dictation = SpeechDictation()
     @ObservationIgnored private let recorder = RambleRecorder()
@@ -138,11 +139,13 @@ final class RambleCapture {
     }
 
     /// Streams the mic to Gemini Live, whose list follows the speaker with no text reads. The items before this listen
-    /// stay ahead of the session's own, which knows only what it hears. A session that fails while listening hands the
-    /// rest of the listen to on-device speech and the text reads.
+    /// stay ahead of the session's own, which knows only what it hears. On-device speech shows the words until Gemini's
+    /// transcript of their turn arrives, and reads nothing. A session that fails while listening hands the rest of the
+    /// listen to on-device speech and the text reads.
     private func listen(_ listener: any RambleLiveConnecting, token: Int, base: String) {
         let before = items
         answered = false
+        shown = RambleLiveTranscript()
         let (events, sink) = AsyncStream.makeStream(of: RambleLiveEvent.self)
         let stream = listener.connect(request(transcript)) { sink.yield($0) }
         self.stream = stream
@@ -152,7 +155,8 @@ final class RambleCapture {
                 guard let self, token == generation else { return }
                 switch event {
                 case let .transcript(text):
-                    transcript = Self.join(base, text)
+                    shown.heardByGemini(text)
+                    transcript = Self.join(base, shown.text)
                 case let .outline(outline):
                     items = before + outline.items
                     resolve()
@@ -184,9 +188,14 @@ final class RambleCapture {
             return
         }
         #endif
+        let heard: @MainActor (String) -> Void = { [weak self] words in
+            guard let self, token == generation, phase == .listening, self.stream != nil else { return }
+            shown.heardOnDevice(words)
+            transcript = Self.join(base, shown.text)
+        }
         startup = Task { [dictation, meter, recorder] in
             do {
-                try await dictation.start(meter: meter, recorder: recorder, onText: nil)
+                try await dictation.start(meter: meter, recorder: recorder, onText: heard)
                 if token != generation || phase != .listening { dictation.cancel() }
             } catch SpeechDictation.Failure.denied {
                 stream.cancel()

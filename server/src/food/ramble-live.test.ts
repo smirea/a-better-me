@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { aliases } from './ramble';
-import { LiveItems, LiveRambleRequest } from './ramble-live';
+import { LiveItems, LiveRambleRequest, Turns } from './ramble-live';
 
 const input = LiveRambleRequest.parse({
 	today: '2026-10-28',
@@ -81,6 +81,53 @@ describe('LiveItems', () => {
 				except: [],
 				meal: 'breakfast',
 			},
+		]);
+	});
+});
+
+/** 100 ms of 16 kHz PCM at a steady loudness. */
+const frame = (level: number) => new Uint8Array(new Int16Array(1600).fill(level).buffer);
+const play = (turns: Turns, levels: number[]) => levels.map(level => turns.frame(frame(level)));
+
+describe('Turns', () => {
+	test('a turn opens on speech and closes after a pause', () => {
+		const turns = new Turns({ pauseMs: 300, dipAfterMs: 3_000, maxMs: 5_000 });
+		expect(play(turns, [0, 2000, 2000, 0, 0, 0, 0, 2000])).toEqual([
+			null,
+			'start',
+			null,
+			null,
+			null,
+			'end',
+			null,
+			'start',
+		]);
+	});
+
+	test('a long turn splits at the first dip between words', () => {
+		const turns = new Turns({ pauseMs: 300, dipAfterMs: 500, maxMs: 5_000 });
+		expect(play(turns, [2000, 2000, 2000, 1500, 2000, 2000, 800, 2000])).toEqual([
+			'start',
+			null,
+			null,
+			null,
+			null,
+			null,
+			'split',
+			null,
+		]);
+	});
+
+	test('a turn with no dip splits at the cap', () => {
+		const turns = new Turns({ pauseMs: 300, dipAfterMs: 300, maxMs: 500 });
+		expect(play(turns, [2000, 2000, 2000, 2000, 2000, 2000, 2000])).toEqual([
+			'start',
+			null,
+			null,
+			null,
+			null,
+			'split',
+			null,
 		]);
 	});
 });

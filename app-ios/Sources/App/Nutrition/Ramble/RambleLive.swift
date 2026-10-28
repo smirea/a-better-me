@@ -93,3 +93,25 @@ struct RambleLiveClient: RambleLiveConnecting {
         }
     }
 }
+
+/// The transcript while Gemini Live listens: Gemini's words for the turns it has answered, then the device's words
+/// past as many as Gemini's hold, so text keeps pace with the speaker although Gemini transcribes a turn only once it
+/// closes. Both spell most numbers in as many words, and the next turn corrects the rest.
+struct RambleLiveTranscript: Equatable {
+    private(set) var gemini = ""
+    private var device: [Substring] = []
+
+    var text: String {
+        let rest = device.dropFirst(gemini.split(whereSeparator: \.isWhitespace).count).joined(separator: " ")
+        if gemini.isEmpty { return rest }
+        return rest.isEmpty ? gemini : "\(gemini) \(rest)"
+    }
+
+    mutating func heardOnDevice(_ text: String) {
+        device = text.split(whereSeparator: \.isWhitespace)
+    }
+
+    mutating func heardByGemini(_ text: String) {
+        gemini = text
+    }
+}

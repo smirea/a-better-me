@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 import { outlineRamble, type RambleItem, type RambleModel, type RambleOutline } from '../server/src/food/ramble';
-import { LIVE_SAMPLE_RATE, openLiveRamble, RAMBLE_LIVE_MODEL } from '../server/src/food/ramble-live';
+import { LIVE_SAMPLE_RATE, openLiveRamble, RAMBLE_LIVE_MODEL, TURN_TIMING } from '../server/src/food/ramble-live';
 import { DEV, type Case, type Expected } from './food-ramble/cases';
 import { HOLDOUT } from './food-ramble/holdout';
 import { MEALS, TODAY, USUAL } from './food-ramble/history';
@@ -10,7 +10,8 @@ import { MEALS, TODAY, USUAL } from './food-ramble/history';
  *
  *   GEMINI_API_KEY=… bun scripts/food-ramble-eval.ts [-v] [--set dev|holdout] [--runs n] [--only id,…] \
  *     [--transcripts .cache/food-ramble/Samantha-speech.json [--audio .cache/food-ramble/Samantha]] --with gemini-3.5-flash:minimal,gemini-3.8-flash:low
- *   … --engine live --audio .cache/food-ramble/Samantha [--final [--final-with model:thinking]] [--save live.json]
+ *   … --engine live --audio .cache/food-ramble/Samantha [--final [--final-with model:thinking]] [--save live.json] \
+ *     [--turns pauseMs:dipAfterMs:maxMs]
  *
  * A case passes only when every item matches in order. Each model runs every case `--runs` times, so flaky cases show
  * as a pass rate below 100%. Latency is per successful call.
@@ -31,6 +32,7 @@ const { values } = parseArgs({
 		final: { type: 'boolean', default: false },
 		'final-with': { type: 'string' },
 		save: { type: 'string' },
+		turns: { type: 'string' },
 	},
 });
 const key = process.env.GEMINI_API_KEY;
@@ -57,6 +59,8 @@ const spec = (text: string): RambleModel => {
 	const [model, thinking] = text.split(':');
 	return { model: model!, thinking: (thinking as RambleModel['thinking']) ?? null };
 };
+const [pauseMs, dipAfterMs, maxMs] = values.turns?.split(':').map(Number) ?? [];
+const timing = values.turns ? { pauseMs: pauseMs!, dipAfterMs: dipAfterMs!, maxMs: maxMs! } : TURN_TIMING;
 const finalModel = values['final-with'] ? spec(values['final-with']) : undefined;
 const models: RambleModel[] = values.with.split(',').map(spec);
 
@@ -211,16 +215,31 @@ async function score(model: RambleModel, c: Case): Promise<Outcome> {
  * scores what its tool calls built. `--final` also scores the final read on the same session: Live's transcript plus
  * the recording through `outlineRamble` with the final model. Latency is from the end of the audio.
  */
-async function scoreLive(model: string, c: Case): Promise<{ live: Outcome; final?: Outcome; transcript: string }> {
+type LiveScore = {
+	live: Outcome;
+	final?: Outcome;
+	transcript: string;
+	/** When the first row appeared, and how long the audio ran, in ms from its start. */
+	first: number | null;
+	audioMs: number;
+};
+
+async function scoreLive(model: string, c: Case): Promise<LiveScore> {
 	const wav = await recording(c.id);
 	if (!wav) throw new Error('--engine live needs --audio');
 	const pcm = new Uint8Array(Buffer.from(wav.data, 'base64')).subarray(44);
 	const frame = (LIVE_SAMPLE_RATE / 10) * 2;
 	const request = { today: TODAY, time: c.time ?? '20:30', meals: MEALS, usual: USUAL, shown: c.shown };
+	const audioMs = (pcm.length / 2 / LIVE_SAMPLE_RATE) * 1000;
 	for (let attempt = 0; ; attempt++) {
 		try {
-			const session = await openLiveRamble(request, key!, { transcript() {}, outline() {}, error() {} }, model);
-			const start = performance.now();
+			let first: number | null = null;
+			let start = performance.now();
+			const outline = (o: RambleOutline) => {
+				if (first === null && o.items.length) first = performance.now() - start;
+			};
+			const session = await openLiveRamble(request, key!, { transcript() {}, outline, error() {} }, model, timing);
+			start = performance.now();
 			for (let at = 0; at < pcm.length; at += frame) {
 				session.audio(pcm.subarray(at, at + frame));
 				const due = start + ((at + frame) / 2 / LIVE_SAMPLE_RATE) * 1000;
@@ -232,7 +251,7 @@ async function scoreLive(model: string, c: Case): Promise<{ live: Outcome; final
 			session.close();
 			const misses = check(c, result.outline);
 			const live = { id: c.id, use: c.use, pass: misses.length === 0, misses, ms };
-			if (!values.final) return { live, transcript: result.transcript };
+			if (!values.final) return { live, transcript: result.transcript, first, audioMs };
 			let final: Outcome;
 			try {
 				const outline = await outlineRamble(
@@ -245,16 +264,24 @@ async function scoreLive(model: string, c: Case): Promise<{ live: Outcome; final
 			} catch (error) {
 				final = { id: c.id, use: c.use, pass: false, misses: [], ms: null, error: String(error).slice(0, 300) };
 			}
-			return { live, final, transcript: result.transcript };
+			return { live, final, transcript: result.transcript, first, audioMs };
 		} catch (error) {
 			if (attempt < 3 && retryable(error)) {
 				await Bun.sleep(2000 * (attempt + 1));
 				continue;
 			}
 			const failed = { id: c.id, use: c.use, pass: false, misses: [], ms: null, error: String(error).slice(0, 300) };
-			return { live: failed, final: values.final ? failed : undefined, transcript: '' };
+			return { live: failed, final: values.final ? failed : undefined, transcript: '', first: null, audioMs };
 		}
 	}
+}
+
+/** How many rambles of 5 s or more showed a row while still being spoken, and how far into the audio the first came. */
+function early(results: LiveScore[]) {
+	const long = results.filter(r => r.audioMs >= 5_000);
+	const during = long.filter(r => r.first !== null && r.first < r.audioMs);
+	const share = during.map(r => r.first! / r.audioMs).toSorted((a, b) => a - b);
+	return `row while talking ${pct(during.length, long.length)} of ${long.length} long  first at ${pct(percentile(share, 0.5), 1)} of the audio`;
 }
 
 /** Word error rate of `heard` against the typed `said`, by word edit distance. */
@@ -374,7 +401,7 @@ if (values.engine === 'live') {
 		report(
 			model,
 			results.map(r => r.live),
-			`  | transcript WER ${pct(errors, total)}`,
+			`  | transcript WER ${pct(errors, total)}  | ${early(results)}`,
 		);
 		if (values.final)
 			report(

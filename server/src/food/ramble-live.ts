@@ -24,15 +24,31 @@ const LIVE_URL =
 	'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 /**
  * After the audio ends, how long Gemini may stay silent before the items are taken as they are, once every word heard
- * was answered. Words still unanswered wait for their turn to complete, up to `FINISH_CAP_MS`.
+ * was answered. A turn still unanswered waits `UNANSWERED_QUIET_MS` from Gemini's last message, since Gemini
+ * sometimes never answers a turn, and at most `FINISH_CAP_MS` in all.
  */
 const QUIET_AFTER_END_MS = 800;
+const UNANSWERED_QUIET_MS = 2_000;
 const FINISH_CAP_MS = 6_000;
 const SETUP_TIMEOUT_MS = 8_000;
+const ACTIVITY_START = JSON.stringify({ realtimeInput: { activityStart: {} } });
+const ACTIVITY_END = JSON.stringify({ realtimeInput: { activityEnd: {} } });
 /** Above this RMS a 16-bit frame holds speech. */
 const VOICED_RMS = 300;
-/** Silence that ends a turn, so Gemini answers what it heard while the speaker goes on. */
-const PAUSE_MS = 600;
+
+export type TurnTiming = {
+	/** Silence that ends a turn, so Gemini answers what it heard while the speaker goes on. */
+	pauseMs: number;
+	/** Past this a turn ends at the next dip between words, so rows appear while someone talks without pausing. */
+	dipAfterMs: number;
+	/** Past this a turn ends on the next frame, dip or not. */
+	maxMs: number;
+};
+export const TURN_TIMING: TurnTiming = { pauseMs: 350, dipAfterMs: 3_000, maxMs: 5_000 };
+/** A frame this far below the turn's mean loudness is a gap between words. */
+const DIP = 0.5;
+/** Less speech than this in a turn, such as the tail of a word after a split, Gemini transcribes as invented Spanish. */
+const MIN_VOICED_MS = 300;
 
 export const LiveRambleRequest = RambleRequest.omit({ transcript: true, audio: true });
 export type LiveRambleRequest = z.input<typeof LiveRambleRequest>;
@@ -159,17 +175,74 @@ function base64(bytes: Uint8Array) {
 	return btoa(text);
 }
 
-function voiced(pcm: Uint8Array): boolean {
+function rms(pcm: Uint8Array): number {
 	const samples = new Int16Array(pcm.buffer, pcm.byteOffset, Math.floor(pcm.byteLength / 2));
-	if (!samples.length) return false;
+	if (!samples.length) return 0;
 	let sum = 0;
 	for (const sample of samples) sum += sample * sample;
-	return Math.sqrt(sum / samples.length) > VOICED_RMS;
+	return Math.sqrt(sum / samples.length);
+}
+
+/**
+ * Where the turns of the speech fall. Turns are ours, not Gemini's: its own activity detection stopped listening for
+ * good after the first pause on some voices (the Eddy TTS voice lost everything after "I'm having one cup of"). A turn
+ * opens on a voiced frame and closes on a pause, on a dip between words once it runs long, or at the stop; Gemini
+ * transcribes and answers each one when it closes.
+ */
+export class Turns {
+	speaking = false;
+	private silentMs = 0;
+	private turnMs = 0;
+	private loudness = 0;
+	voicedMs = 0;
+	private frames = 0;
+
+	constructor(private readonly timing: TurnTiming = TURN_TIMING) {}
+
+	/**
+	 * What the frame does to the turn, before the frame is sent. A long turn splits at the frame, which opens the next
+	 * one, so no audio falls between turns.
+	 */
+	frame(pcm: Uint8Array): 'start' | 'end' | 'split' | null {
+		const ms = (pcm.byteLength / 2 / LIVE_SAMPLE_RATE) * 1000;
+		const level = rms(pcm);
+		if (!this.speaking) {
+			if (level <= VOICED_RMS) return null;
+			this.open(level, ms);
+			return 'start';
+		}
+		this.silentMs = level > VOICED_RMS ? 0 : this.silentMs + ms;
+		if (this.silentMs >= this.timing.pauseMs) {
+			this.speaking = false;
+			return 'end';
+		}
+		const dip = this.turnMs >= this.timing.dipAfterMs && level < DIP * (this.loudness / this.frames);
+		if (dip || this.turnMs >= this.timing.maxMs) {
+			this.open(level, ms);
+			return 'split';
+		}
+		this.count(level, ms);
+		return null;
+	}
+
+	private open(level: number, ms: number) {
+		this.speaking = true;
+		this.silentMs = this.turnMs = this.loudness = this.frames = this.voicedMs = 0;
+		this.count(level, ms);
+	}
+
+	private count(level: number, ms: number) {
+		this.turnMs += ms;
+		if (level <= VOICED_RMS) return;
+		this.loudness += level;
+		this.frames++;
+		this.voicedMs += ms;
+	}
 }
 
 type LiveMessage = {
 	setupComplete?: unknown;
-	serverContent?: { inputTranscription?: { text?: string }; turnComplete?: boolean };
+	serverContent?: { inputTranscription?: { text?: string }; generationComplete?: boolean; turnComplete?: boolean };
 	toolCall?: { functionCalls?: Array<{ id: string; name: string; args?: Args }> };
 	goAway?: unknown;
 };
@@ -201,21 +274,42 @@ export async function openLiveRamble(
 	apiKey: string,
 	events: LiveEvents,
 	model = RAMBLE_LIVE_MODEL,
+	timing = TURN_TIMING,
 ): Promise<LiveRamble> {
 	const input = LiveRambleRequest.parse(request);
 	const names = aliases({ ...input, transcript: '' });
 	const items = new LiveItems();
 	let transcript = '';
 	let ending = false;
+	const turns = new Turns(timing);
 	/**
-	 * Turns are ours, not Gemini's: its own activity detection stopped listening for good after the first pause on some
-	 * voices (the Eddy TTS voice lost everything after "I'm having one cup of"). A turn opens on a voiced frame and
-	 * closes after `PAUSE_MS` of silence or at the stop; Gemini transcribes and answers each one when it closes.
+	 * Gemini drops a turn spoken while it answers the one before ("200 g of steak … at 3:00 p.m." came back as "200by
+	 * 3:00 p.m."), so each turn closed waits for its answer, and what follows is held here and sent once it lands.
 	 */
-	let speaking = false;
-	let silentMs = 0;
-	let open = 0;
-	const unanswered = () => speaking || open > 0;
+	let answering = false;
+	const held: string[] = [];
+	let afterGeneration = false;
+	/** No words of the current turn are in the transcript yet. */
+	let fresh = true;
+	const unanswered = () => turns.speaking || answering || held.length > 0;
+	const send = (message: string) => {
+		if (answering || held.length) return void held.push(message);
+		socket!.send(message);
+		if (message === ACTIVITY_END) answering = true;
+	};
+	/** A turn's audio until it holds `MIN_VOICED_MS` of speech; a turn that closes before then is dropped. */
+	let opening: string[] | null = null;
+	const close = () => {
+		if (opening) opening = null;
+		else send(ACTIVITY_END);
+	};
+	const flush = () => {
+		while (held.length && !answering) {
+			const message = held.shift()!;
+			socket!.send(message);
+			if (message === ACTIVITY_END) answering = true;
+		}
+	};
 	let quiet: ReturnType<typeof setTimeout> | undefined;
 	let cap: ReturnType<typeof setTimeout> | undefined;
 	let done: ((result: LiveResult) => void) | undefined;
@@ -230,7 +324,7 @@ export async function openLiveRamble(
 	/** Each message after the end of the audio restarts the wait, so the last tool calls are never cut off. */
 	const settle = () => {
 		clearTimeout(quiet);
-		if (!unanswered()) quiet = setTimeout(finished, QUIET_AFTER_END_MS);
+		quiet = setTimeout(finished, unanswered() ? UNANSWERED_QUIET_MS : QUIET_AFTER_END_MS);
 	};
 
 	let setUp = () => {};
@@ -244,12 +338,22 @@ export async function openLiveRamble(
 		if (message.setupComplete) return setUp();
 		const heard = message.serverContent?.inputTranscription?.text;
 		if (heard) {
-			// Each turn's transcription starts bare, so a sentence after a pause would run into the one before it.
-			const gap = /[.!?,]$/.test(transcript) && !/^\s/.test(heard) ? ' ' : '';
+			// Each turn's transcription starts bare, and a turn may split mid-sentence, so the next would run into it.
+			const gap = fresh && transcript && !/^\s/.test(heard) ? ' ' : '';
 			transcript += gap + heard;
+			fresh = false;
 			events.transcript(transcript);
 		}
-		if (message.serverContent?.turnComplete) open = Math.max(0, open - 1);
+		// An answer ends in generationComplete, then turnComplete, and sometimes the first alone; the turnComplete after
+		// a generationComplete belongs to the same answer, not the turn sent since.
+		const generated = message.serverContent?.generationComplete;
+		if (generated || (message.serverContent?.turnComplete && !afterGeneration)) {
+			fresh = true;
+			answering = false;
+			flush();
+		}
+		if (generated) afterGeneration = true;
+		else if (message.serverContent?.turnComplete) afterGeneration = false;
 		const calls = message.toolCall?.functionCalls ?? [];
 		if (calls.length) {
 			const functionResponses = calls.map(call => ({
@@ -261,7 +365,7 @@ export async function openLiveRamble(
 			events.outline(items.outline(input, names));
 		}
 		if (ending) {
-			if (message.serverContent?.turnComplete && !calls.length) finished();
+			if (message.serverContent?.turnComplete && !unanswered()) finished();
 			else settle();
 		}
 	};
@@ -279,8 +383,7 @@ export async function openLiveRamble(
 			if (attempt >= 1) throw error;
 		}
 	}
-	const live = socket;
-	live.send(
+	socket.send(
 		JSON.stringify({
 			setup: {
 				model: `models/${model}`,
@@ -295,37 +398,37 @@ export async function openLiveRamble(
 	);
 	const timeout = setTimeout(() => {
 		refused(new Error('Gemini Live did not set up in time'));
-		live.close();
+		socket.close();
 	}, SETUP_TIMEOUT_MS);
 	await ready.finally(() => clearTimeout(timeout));
-	const endTurn = () => {
-		speaking = false;
-		open++;
-		live.send(JSON.stringify({ realtimeInput: { activityEnd: {} } }));
-	};
 
 	return {
 		audio(pcm) {
 			if (ending) return;
-			if (voiced(pcm)) {
-				silentMs = 0;
-				if (!speaking) live.send(JSON.stringify({ realtimeInput: { activityStart: {} } }));
-				speaking = true;
-			} else if (speaking && (silentMs += (pcm.byteLength / 2 / LIVE_SAMPLE_RATE) * 1000) >= PAUSE_MS) endTurn();
-			live.send(
-				JSON.stringify({
-					realtimeInput: {
-						audio: { data: base64(pcm), mimeType: `audio/pcm;rate=${LIVE_SAMPLE_RATE}` },
-					},
-				}),
-			);
+			const turn = turns.frame(pcm);
+			if (turn === 'end' || turn === 'split') close();
+			if (turn === 'start' || turn === 'split') opening = [];
+			// Audio outside a turn is silence Gemini would ignore.
+			if (!turns.speaking) return;
+			const audio = JSON.stringify({
+				realtimeInput: { audio: { data: base64(pcm), mimeType: `audio/pcm;rate=${LIVE_SAMPLE_RATE}` } },
+			});
+			if (!opening) return send(audio);
+			opening.push(audio);
+			if (turns.voicedMs < MIN_VOICED_MS) return;
+			send(ACTIVITY_START);
+			for (const message of opening) send(message);
+			opening = null;
 		},
 		finish() {
 			return new Promise<LiveResult>(resolve => {
 				done = resolve;
 				if (ending) return;
 				ending = true;
-				if (speaking) endTurn();
+				if (turns.speaking) {
+					turns.speaking = false;
+					close();
+				}
 				cap = setTimeout(finished, FINISH_CAP_MS);
 				settle();
 			});
@@ -333,7 +436,7 @@ export async function openLiveRamble(
 		close() {
 			clearTimeout(quiet);
 			clearTimeout(cap);
-			live.close();
+			socket.close();
 		},
 	};
 }
