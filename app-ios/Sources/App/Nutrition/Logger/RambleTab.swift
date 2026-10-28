@@ -6,7 +6,7 @@ import SwiftUI
 struct RambleTab: View {
     let session: LoggerSession
     /// Opens a food row's detail to change its serving.
-    let open: (Int) -> Void
+    let open: (RambleRow) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var saved = 0
 
@@ -20,7 +20,7 @@ struct RambleTab: View {
                         hints.transition(.opacity)
                     }
                     ForEach(capture.rows) { row in
-                        RambleRowView(row: row, capture: capture, open: { open(row.id) })
+                        RambleRowView(row: row, capture: capture, open: { open(row) })
                             .id(row.id)
                             .transition(arrival)
                     }

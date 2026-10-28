@@ -190,7 +190,10 @@ final class LoggerSession {
     /// as `logPlate` does.
     /// Waits for the ramble to settle first, so a log never takes rows a final read or a resolution is about to change.
     func logRamble() async {
+        let capture = ramble.generation
         await ramble.settled()
+        // Exit while it settled cancels the capture; nothing it held is logged then.
+        guard ramble.generation == capture else { return }
         let planned = ramble.planned
         guard !planned.isEmpty else { return }
         for item in planned {

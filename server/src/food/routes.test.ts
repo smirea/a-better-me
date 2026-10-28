@@ -346,6 +346,42 @@ describe('ramble', () => {
 		});
 	});
 
+	test('a said day carries to the items after it, copies included, until another is said', async () => {
+		stub(() =>
+			geminiText(
+				JSON.stringify({
+					items: [
+						{ kind: 'food', name: 'pizza', day: -1 },
+						{ kind: 'copy', copy: 'm1' },
+						{ kind: 'food', name: 'beer' },
+						{ kind: 'food', name: 'banana', day: 0 },
+						{ kind: 'food', name: 'coffee' },
+					],
+				}),
+			),
+		);
+		const { items } = await (await ramble('gemini-key', body)).json();
+		expect(items.map((item: { day: number | null }) => item.day)).toEqual([-1, -1, -1, 0, 0]);
+	});
+
+	test('a said day carries to the items after it, copies included, until another is said', async () => {
+		stub(() =>
+			geminiText(
+				JSON.stringify({
+					items: [
+						{ kind: 'food', name: 'pizza', day: -1 },
+						{ kind: 'copy', copy: 'm1' },
+						{ kind: 'food', name: 'beer' },
+						{ kind: 'food', name: 'banana', day: 0 },
+						{ kind: 'food', name: 'coffee' },
+					],
+				}),
+			),
+		);
+		const { items } = await (await ramble('gemini-key', body)).json();
+		expect(items.map((item: { day: number | null }) => item.day)).toEqual([-1, -1, -1, 0, 0]);
+	});
+
 	test('no key is a 503 before calling Gemini, an empty transcript calls nothing, and a bad answer is a 502', async () => {
 		stub(() => geminiText('not json'));
 		expect((await ramble(null, body)).status).toBe(503);

@@ -4,7 +4,8 @@ enum LoggerRoute: Hashable {
     case food(LoggerPick)
     case plateItem(UUID)
     case plate
-    case rambleRow(Int)
+    /// The row as it was when its detail opened, so an edit never lands on a food a later read put in its place.
+    case rambleRow(RambleRow)
 }
 
 /// MacroFactor's logger (research spec §5): one full-height sheet with the banner (exit, time chip, what the plate
@@ -76,8 +77,8 @@ private struct LoggerContent: View {
                     case let .plateItem(id):
                         if let item = session.plate.item(id) { FoodDetailView(session: session, editing: id, pick: item.pick) }
                     case .plate: PlateView(session: session, open: { path.append(.plateItem($0)) }).id(session.time.day)
-                    case let .rambleRow(id):
-                        if let row = session.ramble.rows.first(where: { $0.id == id }), case let .food(food) = row.content {
+                    case let .rambleRow(row):
+                        if case let .food(food) = row.content {
                             FoodDetailView(session: session, editing: nil, pick: food.pick, ramble: RambleEdit(
                                 update: { session.ramble.setServing($0, of: row) },
                                 logAll: { Task { await session.logRamble() } }

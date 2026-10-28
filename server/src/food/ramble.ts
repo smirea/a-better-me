@@ -142,7 +142,7 @@ For every item:
 - day: the day it was eaten, only when the speaker names it, as days from today: 0 for "today", -1 for "yesterday I had…". Leave it out otherwise; the app then logs on the day the speaker has open. A copied meal's day never sets it: "yesterday's breakfast" logged now has no day. A day said once applies to the items that follow it.
 - options: true when the speaker says the match for that food is wrong or asks to see its options ("that pizza is not right", "show me options for the pizza"). When they pick one, by name, description, brand, or position ("let's go with the pepperoni", "the plain nonfat one, not the vanilla", "the second one"), set name to it, to the option's exact text when it is in the shown options, and options to false. A pick changes only the item it is for.
 
-Leave out every field that is empty, 0, or false: a food item with only a name is { "kind": "food", "name": "pizza" }. Leaving them out keeps the answer short, and the list updates live while the speaker talks.
+Leave out every field that is empty, 0, or false, except day 0 for a said "today": a food item with only a name is { "kind": "food", "name": "pizza" }. Leaving them out keeps the answer short, and the list updates live while the speaker talks.
 
 Ignore chatter that is not about food, and "that's it" or "done" at the end.
 
@@ -248,7 +248,8 @@ export function resolveAliases(
 		const inMeal = new Set(meal?.entries.map(entry => entry.id));
 		const previous = items.at(-1);
 		const said = item.day === undefined ? null : Math.min(0, Math.max(-30, item.day));
-		const follows = item.kind === 'food' && previous !== undefined && (said === null || said === previous.day);
+		const day = said ?? previous?.day ?? null;
+		const follows = item.kind === 'food' && previous !== undefined && day === previous.day;
 		const carried = follows && !item.meal && !item.time ? previous!.meal : '';
 		const sameMeal = follows && (!item.meal || item.meal === previous!.meal);
 		items.push({
@@ -259,7 +260,7 @@ export function resolveAliases(
 			ref: (item.kind === 'food' && names.entries.get(item.ref)) || null,
 			copy: meal?.id ?? null,
 			except: item.except.map(alias => names.entries.get(alias)!).filter(id => id && inMeal.has(id)),
-			day: said ?? (follows ? previous!.day : null),
+			day,
 			meal: item.meal || (item.kind === 'copy' ? meal!.meal : carried),
 			time: clock(item.time) || (sameMeal ? previous!.time : ''),
 			options: item.kind === 'food' && item.options,

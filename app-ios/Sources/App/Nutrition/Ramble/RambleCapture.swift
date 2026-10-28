@@ -39,7 +39,8 @@ final class RambleCapture {
     @ObservationIgnored private var context: RambleContext?
     @ObservationIgnored private var items: [RambleItem] = []
     @ObservationIgnored private var choices: [Int: RambleChoice] = [:]
-    @ObservationIgnored private var generation = 0
+    /// Advances on every listen and on cancel, so work begun for an earlier one drops its result.
+    @ObservationIgnored private(set) var generation = 0
     @ObservationIgnored private var resolution = 0
     @ObservationIgnored private var script: Task<Void, Never>?
     @ObservationIgnored private var startup: Task<Void, Never>?
