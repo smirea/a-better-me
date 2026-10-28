@@ -24,6 +24,7 @@ const { values } = parseArgs({
 		concurrency: { type: 'string', default: '8' },
 		transcripts: { type: 'string' },
 		audio: { type: 'string' },
+		live: { type: 'boolean', default: false },
 	},
 });
 const key = process.env.GEMINI_API_KEY;
@@ -205,6 +206,54 @@ async function pool<T, R>(items: T[], size: number, work: (item: T) => Promise<R
 const percentile = (sorted: number[], p: number) =>
 	sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] ?? 0;
 const pct = (n: number, d: number) => `${((100 * n) / Math.max(1, d)).toFixed(0)}%`;
+
+/**
+ * `--live` replays each ramble of 12 words or more as the phone would read it, a prefix every 4 words, and counts
+ * churn: a row already on screen that changes food or vanishes although the new words hold no correction.
+ */
+const CORRECTION =
+	/\b(actually|actual|wait|no|not|instead|replace|remove|scratch|sorry|mean|make (it|that)|without|but|skip|change|go with|one|should be|options|wrong)\b/i;
+async function live(model: RambleModel) {
+	const replays = cases.filter(c => c.text.split(/\s+/).length >= 12);
+	const results = await pool(replays, Number(values.concurrency), async c => {
+		const words = c.text.split(/\s+/);
+		let shown: RambleItem[] = [];
+		let churn = 0;
+		let reads = 0;
+		for (let end = 4; end < words.length + 4; end += 4) {
+			const prefix = words.slice(0, Math.min(end, words.length)).join(' ');
+			const added = words.slice(Math.max(0, end - 4), end).join(' ');
+			const outline = await outlineRamble(
+				{ transcript: prefix, today: TODAY, time: c.time ?? '20:30', meals: MEALS, usual: USUAL, shown: c.shown },
+				key!,
+				model,
+			);
+			reads++;
+			if (!CORRECTION.test(added))
+				shown.forEach((before, i) => {
+					const after = outline.items[i];
+					const same =
+						after && after.kind === before.kind && (after.copy ?? after.name) === (before.copy ?? before.name);
+					if (!same && !outline.items.some(item => (item.copy ?? item.name) === (before.copy ?? before.name))) {
+						churn++;
+						if (values.v)
+							console.log(`  ~ ${c.id} @${end}: "${before.copy ?? before.name}" → "${after?.copy ?? after?.name}"`);
+					}
+				});
+			shown = outline.items;
+		}
+		return { churn, reads };
+	});
+	const churn = results.reduce((sum, r) => sum + r.churn, 0);
+	const reads = results.reduce((sum, r) => sum + r.reads, 0);
+	console.log(
+		`${model.model}:${model.thinking}  live replays ${replays.length}, reads ${reads}, churned rows ${churn} (${pct(churn, reads)} of reads), rambles with churn ${results.filter(r => r.churn).length}`,
+	);
+}
+if (values.live) {
+	for (const model of models) await live(model);
+	process.exit(0);
+}
 
 const summary: string[] = [];
 for (const model of models) {
