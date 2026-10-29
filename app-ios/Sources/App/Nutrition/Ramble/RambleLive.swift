@@ -93,3 +93,45 @@ struct RambleLiveClient: RambleLiveConnecting {
         }
     }
 }
+
+/// The transcript while Gemini Live listens: Gemini's words for the turns it has answered, then the device's words
+/// for the speech since, so text keeps pace with the speaker although Gemini transcribes a turn only once it closes.
+/// Each Gemini turn moves the boundary to just past its last word in the device's words, or, when the two heard that
+/// word differently ("fifty", "50"), by as many words as the turn added.
+struct RambleLiveTranscript: Equatable {
+    private(set) var gemini = ""
+    private var device: [Substring] = []
+    /// The device words Gemini's transcript covers.
+    private var covered = 0
+
+    var text: String {
+        let rest = device.dropFirst(covered).joined(separator: " ")
+        if gemini.isEmpty { return rest }
+        return rest.isEmpty ? gemini : "\(gemini) \(rest)"
+    }
+
+    mutating func heardOnDevice(_ text: String) {
+        device = text.split(whereSeparator: \.isWhitespace)
+    }
+
+    mutating func heardByGemini(_ text: String) {
+        let added = Self.words(text).count - Self.words(gemini).count
+        gemini = text
+        guard added > 0 else { return }
+        let start = min(covered, device.count)
+        let window = device[start ..< min(device.count, start + added * 2 + 2)].map(Self.key)
+        if let last = Self.words(text).last.map(Self.key), let match = window.lastIndex(of: last) {
+            covered = start + match + 1
+        } else {
+            covered += added
+        }
+    }
+
+    private static func words(_ text: String) -> [Substring] {
+        text.split(whereSeparator: \.isWhitespace)
+    }
+
+    private static func key(_ word: Substring) -> String {
+        word.lowercased().filter { $0.isLetter || $0.isNumber }
+    }
+}

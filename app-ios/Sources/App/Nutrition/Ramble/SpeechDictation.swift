@@ -21,12 +21,13 @@ final class SpeechDictation {
     private var analyzer: SpeechAnalyzer?
     private var reader: Task<Void, Never>?
 
-    /// Streams the transcript so far to `onText`, finalized text followed by the words still being recognized; nil
-    /// listens without transcribing, for Gemini Live. The tap also writes each buffer's peak to `meter` for the waveform
-    /// and the audio to `recorder`, for the final read and for Gemini Live.
-    func start(meter: LevelMeter, recorder: RambleRecorder, onText: (@MainActor (String) -> Void)?) async throws {
-        var feed: (converter: AnalyzerInputConverter, input: AsyncStream<AnalyzerInput>.Continuation)?
-        if let onText { feed = try await transcribe(onText) }
+    /// Streams the transcript so far to `onText`, finalized text followed by the words still being recognized. The tap
+    /// also writes each buffer's peak to `meter` for the waveform and the audio to `recorder`, for the final read and
+    /// for Gemini Live. With `display`, for Gemini Live, the mic starts first and the transcript only shows: words are
+    /// not held back while the speech assets load, and a transcriber that cannot start is logged, not thrown.
+    func start(meter: LevelMeter, recorder: RambleRecorder, onText: @escaping @MainActor (String) -> Void, display: Bool = false) async throws {
+        let feed = TapFeed()
+        if !display { feed.set(try await transcribe(onText)) }
         guard await AVAudioApplication.requestRecordPermission() else {
             cancel()
             throw Failure.denied
@@ -48,6 +49,24 @@ final class SpeechDictation {
             throw error
         }
         engine = audio
+        guard display else { return }
+        Task {
+            do {
+                let transcribing = try await transcribe(onText)
+                // Stopped while the transcriber started: its stream ends with no audio.
+                guard engine === audio else {
+                    transcribing.input.finish()
+                    reader?.cancel()
+                    analyzer = nil
+                    input = nil
+                    reader = nil
+                    return
+                }
+                feed.set(transcribing)
+            } catch {
+                RambleOutliner.log.error("Ramble shows no on-device words: \(String(describing: error))")
+            }
+        }
     }
 
     private func transcribe(_ onText: @escaping @MainActor (String) -> Void) async throws -> (converter: AnalyzerInputConverter, input: AsyncStream<AnalyzerInput>.Continuation) {
@@ -113,12 +132,11 @@ final class SpeechDictation {
 
     /// The tap runs on the audio thread. The converter is only ever used there once the tap is installed.
     nonisolated private static func feed(
-        _ feed: (converter: AnalyzerInputConverter, input: AsyncStream<AnalyzerInput>.Continuation)?,
+        _ feed: TapFeed,
         _ meter: LevelMeter,
         _ recorder: RambleRecorder
     ) -> @Sendable (AVReadOnlyAudioPCMBuffer, AVAudioTime) -> Void {
-        nonisolated(unsafe) let feed = feed
-        return { buffer, time in
+        { buffer, time in
             if case let .float(channel) = buffer.channelData(0) {
                 var peak: Float = 0
                 for index in 0 ..< Int(buffer.frameLength) { peak = max(peak, abs(channel[index])) }
@@ -126,7 +144,7 @@ final class SpeechDictation {
             }
             let copy = AVAudioPCMBuffer(copying: buffer)
             recorder.write(copy)
-            guard let feed, let items = try? feed.converter.convert(copy, at: time) else { return }
+            guard let feed = feed.get(), let items = try? feed.converter.convert(copy, at: time) else { return }
             for item in items { feed.input.yield(item) }
         }
     }
@@ -154,6 +172,21 @@ final class SpeechDictation {
         analyzer = nil
         reader = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+}
+
+/// The transcriber the audio tap feeds, set before the tap is installed or, for Gemini Live, once it starts.
+nonisolated final class TapFeed: @unchecked Sendable {
+    typealias Feed = (converter: AnalyzerInputConverter, input: AsyncStream<AnalyzerInput>.Continuation)
+    private let lock = NSLock()
+    private var feed: Feed?
+
+    func set(_ feed: Feed) {
+        lock.withLock { self.feed = feed }
+    }
+
+    func get() -> Feed? {
+        lock.withLock { feed }
     }
 }
 
