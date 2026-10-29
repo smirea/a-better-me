@@ -34,3 +34,6 @@ __pycache__
 
 # the Bun server's SQLite file, one per checkout
 .data
+
+# orchestrator session files and task images, kept in the main checkout
+.orchestrator
