@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+# Calls ProcrastiMate's production agent API as the AI account. A Better Me's tasks live there, in the
+# "a better me" project; the credentials live in the ProcrastiMate checkout, not in this repo's env.
+#   pm <METHOD> <path> [curl args...]                   raw call, e.g. pm GET /view
+#   pm complete <task id> <pr url> [note]               comment "<pr url>\n<note>", then complete; safe to rerun
+#   pm file <project name or id> <title> [notes] [--section id] [--parent id]
+#                                                       add a task unless an open one in the project has this title;
+#                                                       prints "<id> <public link>"; safe to rerun
+#   pm link <task id>...                                print "<id> <public read-only link>" per task
+#   pm images <task id> <dir>                           download the task's images as <dir>/<task id>-<n>.<ext>, print paths
+#   pm merged <pr url> <worktree> <task id>... [--note text]
+#                                                       complete each task with the PR, then tear down the worktree; safe to rerun
+#   pm new <project name or id> <session file>          open tasks whose id prefix the session file doesn't mention
+#   pm tasks <project name or id>                       open tasks with section, parent, priority, label names, notes
+#   pm comments <task id>                               the task's comments, oldest first
+#   pm label <task id> +<name>|-<name>...               add or remove labels by name, keeping the others
+set -euo pipefail
+
+# The main checkout of this repo, where teardown runs.
+root=$(cd "$(git rev-parse --git-common-dir)/.." && pwd)
+procrastimate=$HOME/code/procrastimate
+[[ -f "$procrastimate/.env.local" ]] || { echo "pm: no $procrastimate/.env.local; run 'env-manager down' there (never 'up')" >&2; exit 1; }
+set -a
+source "$procrastimate/.env.local"
+set +a
+: "${APP_BOT_API_URL:?missing in $procrastimate/.env.local; run 'env-manager down' there (never 'up')}"
+: "${APP_BOT_TOKEN:?missing in $procrastimate/.env.local; run 'env-manager down' there (never 'up')}"
+
+api() {
+	local method=$1 path=$2
+	shift 2
+	# Reads retry on transient errors; writes don't, because a retried write can land twice.
+	local retry=()
+	[[ $method == GET ]] && retry=(--retry 3 --retry-all-errors)
+	curl -sS --fail-with-body ${retry[@]+"${retry[@]}"} -X "$method" \
+		-H "Authorization: Bearer $APP_BOT_TOKEN" \
+		-H 'Content-Type: application/json' \
+		"$APP_BOT_API_URL$path" "$@"
+}
+
+project_id() {
+	api GET /view | jq -r --arg p "$1" '[.projects[] | select(.id == $p or .name == $p)]
+		| if length == 1 then .[0].id else error("expected one project named \($p), found \(length)") end'
+}
+
+link() {
+	jq -n --arg id "$1" '{target:{kind:"task",id:$id}}' | api POST /links -d @- | jq -r .url
+}
+
+case ${1:-} in
+complete)
+	task=$2 pr=$3 note=${4:-}
+	if ! api GET "/comments?id=$task" | jq -e --arg pr "$pr" '.comments[] | select(.body | startswith($pr))' >/dev/null; then
+		jq -n --arg t "$task" --arg b "$pr${note:+$'\n'$note}" '{taskId:$t,body:$b}' | api POST /comments -d @- >/dev/null
+	fi
+	if api GET /view | jq -e --arg t "$task" '.tasks[] | select(.id == $t and .completedAt == null)' >/dev/null; then
+		api POST "/tasks/complete?id=$task" >/dev/null
+	fi
+	echo "completed $task"
+	;;
+file)
+	project=$(project_id "$2") title=$3
+	shift 3
+	notes='' section='' parent=''
+	while (($#)); do
+		case $1 in
+		--section) section=$2 && shift 2 ;;
+		--parent) parent=$2 && shift 2 ;;
+		--*) echo "pm file: unknown flag '$1'" >&2 && exit 1 ;;
+		*)
+			[[ -z $notes ]] || { echo "pm file: notes given twice: '$notes' and '$1'" >&2; exit 1; }
+			notes=$1 && shift
+			;;
+		esac
+	done
+	find() {
+		api GET /view | jq -r --arg p "$project" --arg t "$title" \
+			'[.tasks[] | select(.projectId == $p and .title == $t and .completedAt == null)][0].id // empty'
+	}
+	id=$(find)
+	if [[ -z $id ]]; then
+		body=$(jq -n --arg p "$project" --arg t "$title" --arg n "$notes" --arg s "$section" --arg par "$parent" \
+			'{projectId:$p,title:$t} + (if $n != "" then {notes:$n} else {} end)
+				+ (if $s != "" then {sectionId:$s} else {} end) + (if $par != "" then {parentId:$par} else {} end)')
+		# A failed POST may still have created the task, so look again before the one retry.
+		id=$(api POST /tasks -d "$body" | jq -r .id) || id=$(find)
+		[[ -n $id ]] || id=$(api POST /tasks -d "$body" | jq -r .id)
+	fi
+	echo "$id $(link "$id")"
+	;;
+link)
+	shift
+	for task in "$@"; do
+		url=$(link "$task")
+		echo "$task $url"
+	done
+	;;
+images)
+	task=$2 dir=$3
+	mkdir -p "$dir"
+	n=0
+	for image in $(api GET /view | jq -r --arg t "$task" '.tasks[] | select(.id == $t) | .images[].id'); do
+		n=$((n + 1))
+		api GET "/images?id=$image&size=full" -o "$dir/$task-$n.tmp"
+		ext=$(file -b --mime-type "$dir/$task-$n.tmp" | sed 's|image/||; s|jpeg|jpg|')
+		mv "$dir/$task-$n.tmp" "$dir/$task-$n.$ext"
+		echo "$dir/$task-$n.$ext"
+	done
+	;;
+merged)
+	pr=$2 worktree=$3
+	shift 3
+	note='' tasks=()
+	while (($#)); do
+		case $1 in
+		--note) note=$2 && shift 2 ;;
+		*) tasks+=("$1") && shift ;;
+		esac
+	done
+	((${#tasks[@]})) || { echo "pm merged: no task ids" >&2; exit 1; }
+	for task in "${tasks[@]}"; do "$0" complete "$task" "$pr" "$note"; done
+	# Teardown removes the worktree, so a rerun after it finished finds nothing left to remove.
+	if [[ -d $worktree ]]; then
+		(cd "$root" && bun scripts/teardown-worktree.ts "$worktree" | tail -1)
+	fi
+	;;
+new)
+	project=$2 session=$3
+	"$0" tasks "$project" | { grep -E '^[0-9a-f-]{8,} ' || true; } | while read -r id _; do
+		grep -q "${id:0:8}" "$session" || echo "$id"
+	done
+	;;
+tasks)
+	api GET /view | jq -r --arg p "$2" '
+		([.projects[] | select(.id == $p or .name == $p)] | if length == 1 then .[0].id
+			else error("expected one project named \($p), found \(length)") end) as $pid
+		| (.labels | map({(.id): .name}) | add // {}) as $labels
+		| (.sections | map({(.id): .name}) | add // {}) as $sections
+		| .tasks[] | select(.projectId == $pid and .completedAt == null)
+		| "\(.id) p\(.priority) section=\($sections[.sectionId // ""] // "-") parent=\(.parentId // "-")"
+			+ " labels=\([.labelIds[] | $labels[.]] | join(",")) images=\(.images | length)"
+			+ "\n  \(.title)" + (if .notes then "\n  " + (.notes | gsub("\n"; "\n  ")) else "" end)'
+	;;
+comments)
+	api GET "/comments?id=$2" | jq -r '.comments | sort_by(.createdAt)[]
+		| "[\(.createdAt / 1000 | todate) \(.author.name) (\(.author.kind))] \(.body)"'
+	;;
+label)
+	task=$2
+	shift 2
+	view=$(api GET /view)
+	ids=$(jq -c --arg t "$task" '.tasks[] | select(.id == $t) | .labelIds' <<<"$view")
+	[[ -n $ids ]] || { echo "no task $task" >&2; exit 1; }
+	for change in "$@"; do
+		[[ $change == [+-]?* ]] || { echo "label changes look like +name or -name, got '$change'" >&2; exit 1; }
+		name=${change:1}
+		id=$(jq -r --arg n "$name" '.labels[] | select(.name == $n) | .id' <<<"$view")
+		[[ -n $id ]] || { echo "no label '$name'; the AI account can't create labels, ask Stefan to" >&2; exit 1; }
+		case ${change:0:1} in
+		+) ids=$(jq -c --arg id "$id" '. + [$id] | unique' <<<"$ids") ;;
+		-) ids=$(jq -c --arg id "$id" 'map(select(. != $id))' <<<"$ids") ;;
+		esac
+	done
+	jq -n --argjson ids "$ids" '{labelIds:$ids}' | api PATCH "/tasks?id=$task" -d @- | jq -c '{id,labelIds}'
+	;;
+*)
+	api "$@"
+	;;
+esac
