@@ -93,6 +93,8 @@ struct MetricTab: Identifiable {
     var stats: ((DateInterval) -> [Stat])?
     /// What an Energy Balance tab compares intake with.
     var balance: BalanceReference?
+    /// A daily target drawn as a dashed rule; bars at or above it take the goal color.
+    var goal: Double?
 
     var id: String { title }
 }
@@ -107,6 +109,7 @@ struct MetricDetail {
         case energyBalance
         case nutrient(NutrientSummary)
         case macros([(date: Date, split: TileMetrics.MacroSplit)])
+        case steps(StepGoal.Summary)
     }
 
     var title: String
@@ -226,9 +229,8 @@ struct DashboardData {
         return CardValues(values: entries, text: entries.last?.dashboardText)
     }
 
-    var stepsCard: CardValues {
-        let days = lastDays(steps)
-        return CardValues(values: days, text: steps.isEmpty ? nil : days.last!.wholeText)
+    var stepGoal: StepGoal.Summary {
+        StepGoal.summary(steps, goal: profile.dailyStepGoal, today: now, calendar: calendar)
     }
 
     var weighInHabit: HabitValues {
@@ -322,8 +324,8 @@ struct DashboardData {
         case .steps:
             return MetricDetail(title: "Steps", tabs: [MetricTab(
                 title: "Steps", points: steps, unit: .whole("steps"), averageTitle: "Average Steps",
-                summary: .total, style: .bar, color: Theme.accent
-            )], footer: .months)
+                summary: .total, style: .bar, color: Theme.accent, goal: Double(profile.dailyStepGoal)
+            )], footer: .steps(stepGoal))
         case let .muscle(muscle, _):
             return MetricDetail(title: muscle.displayName, tabs: [MuscleMetric.sets, .volume].map { metric in
                 MetricTab(
@@ -365,7 +367,7 @@ struct DashboardValues: DynamicProperty {
     @Environment(\.dashboardContext) var context
 
     private enum Name: Hashable {
-        case muscleCard(MuscleCard), exerciseCard(ExerciseCard), workoutsCard, trendCard, scaleWeightCard, stepsCard
+        case muscleCard(MuscleCard), exerciseCard(ExerciseCard), workoutsCard, trendCard, scaleWeightCard, stepGoal
         case weighInHabit, workoutHabit, records(ExerciseRecord.Kind), trained
         case cycle(DashboardMetrics.CycleScope, Program?, [WorkoutTemplate])
         case detail(DashboardRoute), plot(DashboardRoute, MetricTab.ID?, ChartRange, Averaging)
@@ -437,7 +439,7 @@ struct DashboardValues: DynamicProperty {
     var workoutsCard: CardValues { memo(.workoutsCard) { $0.workoutsCard } }
     var trendCard: CardValues { memo(.trendCard, usesHealth: true) { $0.trendCard } }
     var scaleWeightCard: CardValues { memo(.scaleWeightCard, usesHealth: true) { $0.scaleWeightCard } }
-    var stepsCard: CardValues { memo(.stepsCard, usesNutrition: true) { $0.stepsCard } }
+    var stepGoal: StepGoal.Summary { memo(.stepGoal, usesNutrition: true) { $0.stepGoal } }
     var weighInHabit: HabitValues { memo(.weighInHabit, usesHealth: true) { $0.weighInHabit } }
     var workoutHabit: HabitValues { memo(.workoutHabit) { $0.workoutHabit } }
     var trainedExercises: [ExerciseID] { memo(.trained) { $0.trainedExercises } }

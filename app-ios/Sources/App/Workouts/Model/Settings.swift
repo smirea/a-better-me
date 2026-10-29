@@ -85,6 +85,8 @@ struct ProfileSettings: Codable, Hashable {
     /// The BMR and nutrient-default inputs Nutrition reads.
     var heightCm: Double?
     var birthDate: CalendarDay?
+    /// The Dashboard's daily step goal; see `StepGoal`.
+    var dailyStepGoal = StepGoal.defaultGoal
 }
 
 enum BodySex: String, Codable {

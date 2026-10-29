@@ -13,6 +13,7 @@ struct MetricDetailView: View {
     @State private var fitOverrides: [MetricTab.ID: Bool] = [:]
     @State private var loggingWeight = false
     @State private var loggingMetrics = false
+    @State private var editingStepGoal = false
     @State private var shownExercise: ShownExercise?
 
     init(route: DashboardRoute, initialTab: String? = nil) {
@@ -27,6 +28,7 @@ struct MetricDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if detail.tabs.count > 1 { tabs(detail.tabs, selected: tab) }
+                if case let .steps(goal) = detail.footer { StepGoalHeader(summary: goal).padding(.horizontal, Theme.margin) }
                 summary(tab, plot).padding(.horizontal, Theme.margin)
                 chart(tab, plot)
                     .frame(height: 320)
@@ -53,6 +55,11 @@ struct MetricDetailView: View {
                     .accessibilityLabel("Nutrient Goals")
                 }
             }
+            if route == .steps {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Step Goal", systemImage: "target") { editingStepGoal = true }
+                }
+            }
             if case .bodyMetric = route {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Log Measurements", systemImage: "plus") { loggingMetrics = true }
@@ -61,6 +68,9 @@ struct MetricDetailView: View {
         }
         .sheet(isPresented: $loggingWeight) { BodyWeightLogSheet() }
         .sheet(isPresented: $loggingMetrics) { BodyMetricsLogSheet() }
+        .sheet(isPresented: $editingStepGoal) {
+            if case let .steps(goal) = values.detail(route).footer { StepGoalSheet(goal: goal.goal) }
+        }
         .sheet(item: $shownExercise) { ExerciseDetailSheet(exerciseID: $0.id) }
     }
 
@@ -114,7 +124,7 @@ struct MetricDetailView: View {
     private func chart(_ tab: MetricTab, _ plot: MetricPlot) -> some View {
         let points = plot.drawn
         let fit = fitToData(tab)
-        let values = (points + plot.overlay).map(\.value)
+        let values = (points + plot.overlay).map(\.value) + (tab.goal.map { [$0] } ?? [])
         let high = max(values.max() ?? 0, 1)
         let low = fit ? values.min() ?? 0 : 0
         let pad = fit ? max((high - low) * 0.1, 0.5) : high * 0.1
@@ -126,11 +136,16 @@ struct MetricDetailView: View {
                         .lineStyle(StrokeStyle(lineWidth: line.dashed ? 1.5 : 2, dash: line.dashed ? [2, 3] : []))
                 }
             }
+            if let goal = tab.goal {
+                RuleMark(y: .value("Goal", goal))
+                    .foregroundStyle(Theme.goal)
+                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
+            }
             ForEach(points, id: \.date) { point in
                 switch tab.style {
                 case .bar:
                     BarMark(x: .value("Date", point.date, unit: plot.drawnUnit), y: .value(tab.title, point.value))
-                        .foregroundStyle(tab.color)
+                        .foregroundStyle(tab.goal.map { point.value >= $0 ? Theme.goal : tab.color } ?? tab.color)
                 case .line:
                     LineMark(x: .value("Date", point.date), y: .value(tab.title, point.value), series: .value("Series", tab.title))
                         .foregroundStyle(tab.color)
@@ -197,6 +212,9 @@ struct MetricDetailView: View {
         if !tab.holding.isEmpty {
             items.append(ChartLegend.Item(title: "Holding", symbol: "square", color: tab.color))
         }
+        if tab.goal != nil {
+            items.append(ChartLegend.Item(title: "Goal", symbol: "line.horizontal.3", color: Theme.goal))
+        }
         return ChartLegend(items: items)
     }
 
@@ -221,6 +239,9 @@ struct MetricDetailView: View {
             history(plot, tab: tab)
         case let .macros(days):
             MacroSplitList(days: days)
+        case let .steps(goal):
+            StepGoalInsights(summary: goal)
+            history(plot, tab: tab)
         case let .topExercises(top):
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -289,6 +310,8 @@ struct MetricPlot {
         let rows: [MonthRow] = switch footer {
         case .months, .weightTrend, .nutrient, .macros:
             pointRows()
+        case let .steps(goal):
+            pointRows { $0.value >= Double(goal.goal) ? MonthRow.Tag(text: "Goal", symbol: "checkmark", color: Theme.goal) : nil }
         case .expenditure:
             pointRows { tab.holding.contains($0.date) ? MonthRow.Tag(text: "Holding", symbol: "square", color: tab.color) : nil }
         case .energyBalance:
