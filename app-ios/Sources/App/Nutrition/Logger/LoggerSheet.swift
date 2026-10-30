@@ -53,7 +53,7 @@ private struct LoggerContent: View {
 
     var body: some View {
         // Ramble takes the whole screen: its own band holds close, its macros, and the other ways to log.
-        let rambling = session.tab == .ramble && path.isEmpty
+        let rambling = session.tab == .ramble && path.allSatisfy { if case .rambleRow = $0 { true } else { false } }
         VStack(spacing: 0) {
             if !rambling {
                 LoggerBanner(session: session, exit: exit, chooseTime: { choosingTime = true }, openPlate: openPlate)

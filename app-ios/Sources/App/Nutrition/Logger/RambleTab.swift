@@ -30,7 +30,7 @@ struct RambleTab: View {
     var body: some View {
         VStack(spacing: 0) {
             RambleSummary(
-                planned: capture.planned, missing: capture.rows.count { $0.content == .unmatched }, close: close, switchTo: switchTo
+                planned: capture.shownPlanned, missing: capture.notFound, close: close, switchTo: switchTo
             )
             ScrollViewReader { proxy in
                 ScrollView {
@@ -517,7 +517,6 @@ private struct RambleLine: View {
         // Set as the row is created, so its first frame already holds what was said; rows coming back into view after a
         // tab switch are not new.
         let live = capture.phase == .listening || capture.phase == .finishing
-        _parsedUntil = State(initialValue: live ? .now + Self.parsedFor + (incoming ? Self.landing : .zero) : nil)
         _landed = State(initialValue: !(live && incoming))
     }
 
@@ -531,16 +530,15 @@ private struct RambleLine: View {
     @State private var removing = false
     /// A row's first moments are the model settling on what it heard ("dinner" becomes "pork loin"), not a correction.
     @State private var born = ContinuousClock.now
-    /// Until then the row shows what was said even when its search already matched, so the parse and the match read as
-    /// two steps.
-    @State private var parsedUntil: ContinuousClock.Instant?
     @State private var allOptions = false
 
-    static let parsedFor = Duration.milliseconds(1000)
     /// The flight's words land, and the row's content shows, this long after the row appears.
     static let landing = Duration.milliseconds(550)
 
-    private var parsing: Bool { row.content == .searching || parsedUntil != nil }
+    /// No local match, and the online search is still looking.
+    private var onlineSearch: Bool { row.content == .unmatched && capture.searchingOnline.contains(row.item.name.lowercased()) }
+
+    private var parsing: Bool { row.content == .searching || (!reduceMotion && capture.parsing.contains(row.key)) }
 
     /// What the row says; a change to it is a correction worth showing.
     private struct Face: Equatable {
@@ -589,9 +587,7 @@ private struct RambleLine: View {
             trailing: [.destructive("Remove", action: removeByOwner)] + (row.content.isFood ? [SwipeAction(title: "Amount", systemImage: "scalemass", action: open)] : [])
         )
         .onAppear {
-            guard parsedUntil != nil else { return }
             if reduceMotion {
-                parsedUntil = nil
                 landed = true
             } else if !landed {
                 withAnimation(.easeOut(duration: 0.2).delay(0.35)) { landed = true }
@@ -599,7 +595,15 @@ private struct RambleLine: View {
                     try? await Task.sleep(for: Self.landing)
                     light()
                 }
-            } else {
+            } else if capture.phase == .listening || capture.phase == .finishing {
+                light()
+            }
+        }
+        .onChange(of: capture.edited) {
+            guard capture.editedKey == row.key else { return }
+            // After the detail's page slides away, so the change shows on the list.
+            Task {
+                try? await Task.sleep(for: .milliseconds(350))
                 light()
             }
         }
@@ -609,14 +613,6 @@ private struct RambleLine: View {
             if settled, old.resolved, new.title != old.title { was = old.title }
             if new.resolved != old.resolved, old.title == new.title { return }
             light()
-        }
-        .onChange(of: row.content == .searching) { _, searching in
-            if searching, parsedUntil == nil, !reduceMotion { parsedUntil = .now + Self.parsedFor }
-        }
-        .task(id: parsedUntil) {
-            guard let until = parsedUntil else { return }
-            try? await Task.sleep(until: until)
-            withAnimation(.smooth(duration: 0.35)) { parsedUntil = nil }
         }
         .task(id: was) {
             guard was != nil else { return }
@@ -672,7 +668,7 @@ private struct RambleLine: View {
         case .searching: "parsing"
         case let .food(food): "food \(food.key)"
         case .copy: "copy"
-        case .unmatched: "unmatched"
+        case .unmatched: onlineSearch ? "online" : "unmatched"
         }
     }
 
@@ -687,7 +683,11 @@ private struct RambleLine: View {
                 switch row.content {
                 case let .food(food): FoodIcon(food: food.pick.portion.food)
                 case .copy: Image(systemName: "square.on.square").font(.system(size: 14, weight: .semibold))
-                case .searching, .unmatched: Image(systemName: "questionmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.textTertiary)
+                case .searching, .unmatched:
+                    Image(systemName: onlineSearch ? "globe" : "questionmark")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(onlineSearch ? Theme.accent : Theme.textTertiary)
+                        .symbolEffect(.pulse, options: .repeating, isActive: onlineSearch)
                 }
             }
         }
@@ -719,7 +719,7 @@ private struct RambleLine: View {
                             ))
                     }
                 case let .copy(copy): Text(copy.entries.map(\.food.name).joined(separator: " · "))
-                case .searching, .unmatched: Text("Not found. Tap to search for it.")
+                case .searching, .unmatched: Text(onlineSearch ? "Searching online…" : "Not found. Tap to search for it.")
                 }
             }
         }

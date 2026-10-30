@@ -138,6 +138,7 @@ final class LoggerSession {
         chosenTime = start.time
         results = (try? search.local("")) ?? []
         ramble.chosenTime = { [weak self] in self?.chosenTime }
+        ramble.searchOnline = { [search] name in (try? await search.search(name, branded: true)) ?? [] }
     }
 
     /// Local results at once, then Open Food Facts after a pause in typing when `branded` is on. A failed branded

@@ -70,6 +70,10 @@ struct RambleResolverTests {
             [RambleItem(name: "pizza veggie", amount: 1, unit: "slice")], previous: [], choices: [:]
         ), choices: [:])
         #expect(describe(renamed) == ["Pizza, veggie: 2 slice"])
+        var online = resolver
+        online.online = ["bok choy": try resolver.index.local("milk")]
+        let found = try online.rows([RambleItem(name: "Bok choy", amount: 1, unit: "cup")], previous: [], choices: [:])
+        #expect(describe(found) == ["Milk: 1 cup"])
         let unmatched = try resolver.rows([RambleItem(name: "bok choy", amount: 1, unit: "cup")], previous: [], choices: [:])
         let again = try resolver.rows([RambleItem(name: "bok choy", amount: 2, unit: "cup")], previous: unmatched, choices: [:], search: false)
         #expect(describe(again) == ["unmatched bok choy"])
@@ -113,8 +117,8 @@ struct RambleResolverTests {
         #expect(describe(rows) == [
             "Oats: 0.5 cup",
             "Blueberries: 50 g",
-            // Only weighed, so water's density stands in: 2 tbsp is 29.57 mL.
-            "Chia seeds: 29.57 g",
+            // Only weighed, so water's density stands in: 2 tbsp is 29.57 mL, shown to the gram.
+            "Chia seeds: 30 g",
             // A volume the food has no measure for stays in the spoken unit, sized from its cup.
             "Kefir: 200 mL",
             "Bread, sourdough: 2 slice",

@@ -149,6 +149,8 @@ struct RambleResolver: Sendable {
     /// The logger's chosen day and hour, else today and now: the day of a row whose speaker named none, and the minute of
     /// a food with no meal or time.
     let fallback: (day: CalendarDay, minute: Int)
+    /// What the online search found for names the local one did not, by lowercased name.
+    var online: [String: [FoodSearchResult]] = [:]
 
     func rows(_ items: [RambleItem], previous: [RambleRow], choices: [Int: RambleChoice], search: Bool = true) throws -> [RambleRow] {
         let previous = Dictionary(previous.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
@@ -179,7 +181,9 @@ struct RambleResolver: Sendable {
 
     private func food(_ item: RambleItem, previous: RambleRow?, choice: RambleChoice?, search: Bool) throws -> RambleRow.Content {
         // Searching the same name again finds nothing again; going back to `.searching` on every read made the row flicker.
-        if previous?.content == .unmatched, previous?.item.name == item.name, item.ref == nil { return .unmatched }
+        if previous?.content == .unmatched, previous?.item.name == item.name, item.ref == nil, online[item.name.lowercased()] == nil {
+            return .unmatched
+        }
         let earlier: RambleRow.Food? = if case let .food(food) = previous?.content { food } else { nil }
         let refEntry = item.ref.flatMap { context.entries[$0] }
         // The owner's pick outranks a ref the model added later; the row already holds that food, so it stays.
@@ -215,7 +219,8 @@ struct RambleResolver: Sendable {
                 food.pick.portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, of: food.pick.portion.food.nutrition, history: food.pick.portion.serving)
                 return .food(food)
             }
-            options = Array(try index.local(item.name).prefix(Self.optionLimit))
+            let local = try index.local(item.name)
+            options = Array((local.isEmpty ? online[item.name.lowercased()] ?? [] : local).prefix(Self.optionLimit))
             spoken = nil
         }
         let chosen = choice?.option.flatMap { key in options.first { $0.key == key } }
@@ -290,7 +295,7 @@ enum RambleServing {
             }
             // Water's density stands in for a food that is only weighed (chia seeds per 100 g): 2 tbsp is 30 g, where
             // two of its 100 g servings would be 200 g.
-            if let gram = all.first(where: { $0.name == "g" }) { return Serving(measure: gram, quantity: milliliters) }
+            if let gram = all.first(where: { $0.name == "g" }) { return Serving(measure: gram, quantity: milliliters.rounded()) }
             return defaultServing(nutrition, count: amount)
         }
         let word = unit.hasSuffix("s") && unit.count > 3 ? String(unit.dropLast()) : unit
