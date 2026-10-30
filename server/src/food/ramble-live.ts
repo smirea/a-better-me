@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { outlineRamble, RambleRequest, type RambleKeys, type RambleModel, type RambleOutline } from './ramble';
+import { outlineRamble, RambleRequest, type RambleModel, type RambleOutline } from './ramble';
+
+/** Live Ramble hears with xAI and reads with Gemini. */
+export type RambleKeys = { gemini: string; xai: string };
 
 /**
  * Live Ramble: the phone's audio streams to xAI's speech-to-text, and the text model reads the whole transcript again
@@ -23,6 +26,9 @@ export type ReadTiming = {
 	/** After the stop, at most this long for the outline of the last words; then the latest outline stands. */
 	settleCapMs: number;
 };
+const DANGLING =
+	/(?:\d[\d.,]*|\b(?:a|an|of|and|some|the|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|hundred|half|couple|few))[\s,.-]*$/i;
+
 export const READ_TIMING: ReadTiming = { debounceMs: 250, inflight: 2, settleCapMs: 6_000 };
 
 export const LiveRambleRequest = RambleRequest;
@@ -242,7 +248,10 @@ export class Reader {
 		if (this.#final !== undefined) return this.#last(text);
 		this.#latest = text;
 		clearTimeout(this.#timer);
-		this.#timer = setTimeout(() => this.#issue(), this.timing.debounceMs);
+		// Words that stop mid-amount ("dinner, 200", "two cups of") read as a food that is not there yet ("200 dinner
+		// rolls"), so they wait longer for the next word.
+		const wait = DANGLING.test(text) ? this.timing.debounceMs * 4 : this.timing.debounceMs;
+		this.#timer = setTimeout(() => this.#issue(), wait);
 	}
 
 	/** The outline of exactly `text`, the transcript's last words, or the latest outline after `settleCapMs`. */
@@ -325,7 +334,7 @@ export type LiveRamble = {
 	close(): void;
 };
 
-export type LiveOptions = { transcribe: Transcribe; models?: readonly RambleModel[]; timing?: ReadTiming };
+export type LiveOptions = { transcribe: Transcribe; model?: RambleModel; timing?: ReadTiming };
 
 /**
  * One listen. The request's `transcript` is what earlier listens of the same ramble heard, so every read covers the
@@ -335,7 +344,7 @@ export async function openLiveRamble(
 	request: LiveRambleRequest,
 	keys: RambleKeys,
 	events: LiveEvents,
-	{ transcribe, models, timing }: LiveOptions,
+	{ transcribe, model, timing }: LiveOptions,
 ): Promise<LiveRamble> {
 	const context = LiveRambleRequest.parse(request);
 	const base = context.transcript;
@@ -352,7 +361,7 @@ export async function openLiveRamble(
 		events.error(error);
 	};
 	const reader = new Reader(
-		text => outlineRamble({ ...context, transcript: text }, keys, { models }),
+		text => outlineRamble({ ...context, transcript: text }, keys.gemini, { model }),
 		{ outline: events.outline, error: fail },
 		timing,
 	);
@@ -404,11 +413,7 @@ export async function openLiveRamble(
  */
 export type LiveSocket = { send(text: string): void; close(code?: number, reason?: string): void };
 
-export function serveLiveRamble(
-	socket: LiveSocket,
-	keys: RambleKeys & { xai: string },
-	options?: Partial<LiveOptions>,
-) {
+export function serveLiveRamble(socket: LiveSocket, keys: RambleKeys, options?: Partial<LiveOptions>) {
 	let session: LiveRamble | undefined;
 	let opening = false;
 	let held: Uint8Array[] = [];
@@ -478,7 +483,7 @@ export function serveLiveRamble(
 				},
 				{
 					transcribe: options?.transcribe ?? xaiTranscriber(keys.xai),
-					models: options?.models,
+					model: options?.model,
 					timing: options?.timing,
 				},
 			).then(live => {

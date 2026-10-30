@@ -35,7 +35,7 @@ export type Config = {
 	space: SpaceOptions;
 	/** Photo logging's and Ramble's Gemini key. Null in development without one, where the photo route answers 503. */
 	geminiApiKey: string | null;
-	/** Ramble's speech-to-text and fallback reads. Null in development without one, where live Ramble answers 503. */
+	/** Ramble's speech-to-text. Null in development without one, where live Ramble answers 503. */
 	xaiApiKey: string | null;
 };
 

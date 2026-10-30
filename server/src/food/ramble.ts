@@ -1,28 +1,15 @@
 import { z } from 'zod';
 import { ApiError } from '../agent/db';
 
-export type RambleModel = {
-	provider: 'gemini' | 'xai';
-	model: string;
-	thinking?: 'minimal' | 'low' | 'medium' | 'high';
-};
-export type RambleKeys = { gemini: string | null; xai: string | null };
+export type RambleModel = { model: string; thinking?: 'minimal' | 'low' | 'medium' | 'high' };
 
 /**
  * Picked by `scripts/ramble-lab/replay.ts` (docs/decisions/nutrition.md, Ramble logging): the fastest model that kept
- * the labelled rambles near 100% when read live, with no final read. Each read tries them in order, so Grok answers
- * when Gemini cannot (an outage, the project's spend cap); it reads as fast but kept fewer rambles right.
+ * the labelled rambles near 100% when read live, with no final read.
  */
-export const RAMBLE_MODELS: readonly RambleModel[] = [
-	{ provider: 'gemini', model: 'gemini-3.5-flash', thinking: 'minimal' },
-	{ provider: 'xai', model: 'grok-4.20-0309-non-reasoning' },
-];
+export const RAMBLE_MODEL: RambleModel = { model: 'gemini-3.5-flash', thinking: 'minimal' };
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-const XAI_URL = 'https://api.x.ai/v1/chat/completions';
 const TIMEOUT_MS = 15_000;
-/** A model that failed sits out this long, so a live ramble during an outage reads with the next one at once. */
-const REST_MS = 30_000;
-const resting = new Map<string, number>();
 
 export const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 const day = z.iso.date();
@@ -238,10 +225,6 @@ const GeminiAnswer = z.object({
 		)
 		.optional(),
 });
-const XaiAnswer = z.object({
-	choices: z.array(z.object({ message: z.object({ content: z.string().nullish() }) })).optional(),
-});
-
 const clock = (time: string) => {
 	const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
 	if (!match || Number(match[1]) > 23 || Number(match[2]) > 59) return '';
@@ -256,7 +239,11 @@ const nameWords = (name: string) =>
 			.filter(word => word.length > 2)
 			.map(word => word.replace(/s$/, '')),
 	);
-/** Grok marked foods for options unasked, which opened their lists over the transcript mid-ramble. */
+/** A trailing "snack was one" read once as a food named "one": a name of only numbers is no food yet. */
+const NUMBERS =
+	/^(?:\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten|half|a half|dozen)(?:\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|half|dozen))*$/i;
+
+/** Options a model marks unasked open their lists over the transcript mid-ramble. */
 const ASKS_FOR_OPTIONS = /\b(options?|choices?|alternatives?|wrong|not right|show me|other ones?)\b/i;
 
 /** A ref names a food the speaker logged, so it shares a word with the item ("my usual pancake", "Protein pancake"). */
@@ -267,8 +254,7 @@ const sameFood = (name: string, logged: string) => {
 
 /**
  * Maps aliases back to the phone's ids and drops what does not fit: a copy of no meal, an except outside its meal, a
- * ref to an entry that shares no word with the item's name (Grok once pointed "apple" at a logged banana), options
- * the speaker never asked for. A
+ * ref to an entry that shares no word with the item's name, options the speaker never asked for. A
  * food the speaker gave no meal or time joins the item before it ("lunch at 12:15 was ramen and a coke"), which the
  * model often leaves out once it omits empty fields.
  */
@@ -284,7 +270,7 @@ export function resolveAliases(
 	for (const item of outline.items) {
 		const meal = item.kind === 'copy' ? input.meals[[...names.meals.keys()].indexOf(item.copy)] : undefined;
 		if (item.kind === 'copy' && !meal) continue;
-		if (item.kind === 'food' && !item.name.trim()) continue;
+		if (item.kind === 'food' && (!item.name.trim() || NUMBERS.test(item.name.trim()))) continue;
 		const inMeal = new Set(meal?.entries.map(entry => entry.id));
 		const previous = items.at(-1);
 		const said = item.day === undefined ? null : Math.min(0, Math.max(-30, item.day));
@@ -314,103 +300,50 @@ export function resolveAliases(
 	}
 }
 
-/** The model's answer as text: the JSON the schema asked for. */
-async function ask(spec: RambleModel, key: string, system: string, user: string, schema: object, signal: AbortSignal) {
-	const label = spec.provider === 'gemini' ? 'Gemini' : 'Grok';
-	let response: Response;
-	try {
-		response =
-			spec.provider === 'gemini'
-				? await fetch(`${GEMINI_URL}/${spec.model}:generateContent`, {
-						method: 'POST',
-						headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-						signal,
-						body: JSON.stringify({
-							systemInstruction: { parts: [{ text: system }] },
-							contents: [{ role: 'user', parts: [{ text: user }] }],
-							generationConfig: {
-								temperature: 0,
-								responseMimeType: 'application/json',
-								responseJsonSchema: schema,
-								...(spec.thinking ? { thinkingConfig: { thinkingLevel: spec.thinking } } : {}),
-							},
-						}),
-					})
-				: await fetch(XAI_URL, {
-						method: 'POST',
-						headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-						signal,
-						body: JSON.stringify({
-							model: spec.model,
-							temperature: 0,
-							messages: [
-								{ role: 'system', content: system },
-								{ role: 'user', content: user },
-							],
-							response_format: { type: 'json_schema', json_schema: { name: 'outline', schema } },
-						}),
-					});
-	} catch (error) {
-		throw new ApiError(502, `${label} is unreachable: ${String(error)}`);
-	}
-	if (!response.ok) throw new ApiError(502, `${label} answered ${response.status}: ${await response.text()}`);
-	const json = await response.json().catch(() => null);
-	const text =
-		spec.provider === 'gemini'
-			? GeminiAnswer.safeParse(json)
-					.data?.candidates?.[0]?.content?.parts.filter(part => !part.thought)
-					.map(part => part.text ?? '')
-					.join('')
-			: XaiAnswer.safeParse(json).data?.choices?.[0]?.message.content;
-	if (!text) throw new ApiError(502, `${label} returned no answer`);
-	return { label, text };
-}
-
-/**
- * The outline of the whole transcript so far. Each model in `models` with a key is tried in turn until one answers,
- * skipping one that failed in the last `REST_MS` unless every one did; the last failure is thrown.
- */
+/** The outline of the whole transcript so far. */
 export async function outlineRamble(
 	request: RambleRequest,
-	keys: RambleKeys,
-	{ models = RAMBLE_MODELS, signal }: { models?: readonly RambleModel[]; signal?: AbortSignal } = {},
+	apiKey: string,
+	{ model = RAMBLE_MODEL, signal }: { model?: RambleModel; signal?: AbortSignal } = {},
 ): Promise<RambleOutline> {
 	const input = RambleRequest.parse(request);
 	if (!input.transcript.trim()) return { items: [] };
 	const names = aliases(input);
-	const keyed = models.filter(spec => keys[spec.provider]);
-	if (!keyed.length) throw new ApiError(503, 'Ramble logging needs GEMINI_API_KEY or XAI_API_KEY on the server');
-	const now = Date.now();
-	const awake = keyed.filter(spec => (resting.get(spec.model) ?? 0) <= now);
-	let failure: unknown;
-	for (const spec of awake.length ? awake : keyed) {
-		const timeout = AbortSignal.timeout(TIMEOUT_MS);
-		try {
-			const { label, text } = await ask(
-				spec,
-				keys[spec.provider]!,
-				rambleInstructions(input),
-				`Ramble: ${input.transcript}`,
-				responseSchema(names),
-				signal ? AbortSignal.any([signal, timeout]) : timeout,
-			);
-			let json: unknown;
-			try {
-				json = JSON.parse(text);
-			} catch {
-				throw new ApiError(502, `${label}'s answer is not JSON: ${text.slice(0, 200)}`);
-			}
-			const parsed = ModelOutline.safeParse(json);
-			if (!parsed.success)
-				throw new ApiError(502, `${label}'s answer does not fit the schema: ${parsed.error.message}`);
-			resting.delete(spec.model);
-			return resolveAliases(parsed.data, input, names);
-		} catch (error) {
-			if (signal?.aborted) throw error;
-			console.error(`ramble read failed on ${spec.model}: ${String(error).slice(0, 300)}`);
-			resting.set(spec.model, Date.now() + REST_MS);
-			failure = error;
-		}
+	const timeout = AbortSignal.timeout(TIMEOUT_MS);
+	let response: Response;
+	try {
+		response = await fetch(`${GEMINI_URL}/${model.model}:generateContent`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
+			signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+			body: JSON.stringify({
+				systemInstruction: { parts: [{ text: rambleInstructions(input) }] },
+				contents: [{ role: 'user', parts: [{ text: `Ramble: ${input.transcript}` }] }],
+				generationConfig: {
+					temperature: 0,
+					responseMimeType: 'application/json',
+					responseJsonSchema: responseSchema(names),
+					...(model.thinking ? { thinkingConfig: { thinkingLevel: model.thinking } } : {}),
+				},
+			}),
+		});
+	} catch (error) {
+		throw new ApiError(502, `Gemini is unreachable: ${String(error)}`);
 	}
-	throw failure;
+	if (!response.ok) throw new ApiError(502, `Gemini answered ${response.status}: ${await response.text()}`);
+	const answer = GeminiAnswer.safeParse(await response.json().catch(() => null));
+	const text = answer.data?.candidates?.[0]?.content?.parts
+		.filter(part => !part.thought)
+		.map(part => part.text ?? '')
+		.join('');
+	if (!text) throw new ApiError(502, 'Gemini returned no answer');
+	let json: unknown;
+	try {
+		json = JSON.parse(text);
+	} catch {
+		throw new ApiError(502, `Gemini's answer is not JSON: ${text.slice(0, 200)}`);
+	}
+	const parsed = ModelOutline.safeParse(json);
+	if (!parsed.success) throw new ApiError(502, `Gemini's answer does not fit the schema: ${parsed.error.message}`);
+	return resolveAliases(parsed.data, input, names);
 }

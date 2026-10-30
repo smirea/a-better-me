@@ -66,6 +66,32 @@ struct RambleResolverTests {
             RambleItem(name: "egg", amount: 2),
         ], previous: first, choices: [:], search: false)
         #expect(describe(parsed) == ["Oats: 0.5 cup", "searching dates", "searching egg"])
+        let renamed = try resolver.rows([RambleItem(name: "pizza", amount: 2, unit: "slice")], previous: try resolver.rows(
+            [RambleItem(name: "pizza veggie", amount: 1, unit: "slice")], previous: [], choices: [:]
+        ), choices: [:])
+        #expect(describe(renamed) == ["Pizza, veggie: 2 slice"])
+        let unmatched = try resolver.rows([RambleItem(name: "bok choy", amount: 1, unit: "cup")], previous: [], choices: [:])
+        let again = try resolver.rows([RambleItem(name: "bok choy", amount: 2, unit: "cup")], previous: unmatched, choices: [:], search: false)
+        #expect(describe(again) == ["unmatched bok choy"])
+    }
+
+    @Test func aServingMenuOffersHalfToDoubleTheFoodsServingsAnd100Grams() async throws {
+        let resolver = try await resolver()
+        let rows = try resolver.rows([RambleItem(name: "oats", amount: 0.5, unit: "cup")], previous: [], choices: [:])
+        guard case let .food(food) = rows[0].content else { Issue.record("no oats"); return }
+        let choices = RambleServing.choices(food.pick.portion.serving, of: food.pick.portion.food.nutrition)
+        #expect(choices.map { NutritionFormat.serving($0) } == ["0.25 cup", "0.5 cup", "0.75 cup", "1 cup", "100 g"])
+    }
+
+    @Test func eachNewHourOrDayStartsASection() {
+        let row = { (key: Int, day: String, minute: Int?) in
+            RambleRow(id: key, item: RambleItem(name: "x"), day: calendarDay(day), minute: minute, content: .unmatched, key: key)
+        }
+        let headers = RambleTab.headers([
+            row(1, "2026-10-28", 8 * 60), row(2, "2026-10-28", 8 * 60 + 30), row(3, "2026-10-28", 12 * 60 + 30),
+            row(4, "2026-10-27", 19 * 60), row(5, "2026-10-27", nil),
+        ], today: today)
+        #expect(headers == [1: "8 AM", 3: "12 PM", 4: "Yesterday · 7 PM", 5: "Yesterday · Their own times"])
     }
 
     @Test func spokenAmountsBecomeServingsInTheFoodsOwnMeasures() async throws {

@@ -16,7 +16,7 @@ nonisolated final class RambleRecorder: Sendable {
 
     /// Before a listen: the converter follows the mic's format, which can change between listens.
     func begin(_ input: AVAudioFormat) throws {
-        guard let converter = AVAudioConverter(from: input, to: Self.format) else { throw SpeechDictation.Failure.unsupported }
+        guard let converter = AVAudioConverter(from: input, to: Self.format) else { throw RambleMic.Failure.unsupported }
         state.withLock { $0.converter = converter }
     }
 

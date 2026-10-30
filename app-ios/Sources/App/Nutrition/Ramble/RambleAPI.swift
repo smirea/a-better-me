@@ -123,38 +123,3 @@ struct RambleItem: Decodable, Hashable, Sendable {
 struct RambleOutline: Decodable, Hashable, Sendable {
     var items: [RambleItem]
 }
-
-protocol RambleOutlining: Sendable {
-    func outline(_ request: RambleRequest) async throws -> RambleOutline
-}
-
-struct RambleError: LocalizedError {
-    let message: String
-    var errorDescription: String? { message }
-}
-
-/// `POST /api/food-database/ramble` with the bundled owner token, as `MealPhotoClient` posts photos.
-struct RambleClient: RambleOutlining {
-    static let live = RambleClient(endpoint: AppEnvironment.apiURL.appending(path: "api/food-database/ramble"), token: AppEnvironment.ownerToken)
-
-    let endpoint: URL
-    let token: String
-    var session = URLSession.shared
-
-    private struct Failure: Decodable { let error: String }
-
-    func outline(_ body: RambleRequest) async throws -> RambleOutline {
-        // The server gives each model 15 seconds, and Grok answers when Gemini cannot.
-        var request = URLRequest(url: endpoint, timeoutInterval: 35)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(body)
-        let (data, response) = try await session.data(for: request)
-        guard let response = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
-        guard response.statusCode == 200 else {
-            throw RambleError(message: (try? JSONDecoder().decode(Failure.self, from: data))?.error ?? "The server answered \(response.statusCode).")
-        }
-        return try JSONDecoder().decode(RambleOutline.self, from: data)
-    }
-}

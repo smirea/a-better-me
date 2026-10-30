@@ -1,6 +1,7 @@
 import AVFoundation
 import Foundation
 import Observation
+import os
 
 /// One Ramble in the logger: the mic, the transcript, the model's outline kept current while it is spoken, and the
 /// rows resolved from it. Nothing is logged until `LoggerSession.logRamble`. Talking again after a stop continues the
@@ -14,6 +15,8 @@ final class RambleCapture {
         case finishing
         case review
     }
+
+    nonisolated static let log = Logger(subsystem: "com.stefan.a-better-me", category: "ramble")
 
     /// Past this the last outline stands.
     static let settleTimeout = Duration.seconds(6)
@@ -37,71 +40,63 @@ final class RambleCapture {
     private(set) var struck: Set<Int> = []
     /// Where each row's food was first said: a row taken back strikes these, not the words that took it back.
     @ObservationIgnored private var named: [Int: Range<Int>] = [:]
+    /// The struck words of each food that left, by name: the model sometimes drops a food mid-sentence and brings it back
+    /// a read later, and then its words are not taken back.
+    @ObservationIgnored private var gone: [String: Range<Int>] = [:]
     private(set) var notice: String?
-    /// Rows whose full option list shows, by tap.
-    private(set) var expanded: Set<Int> = []
     let meter = LevelMeter()
 
     var transcript: String { heard.text }
 
     @ObservationIgnored private let store: LocalStore
     @ObservationIgnored private let index: @MainActor () -> FoodIndex
-    @ObservationIgnored private let client: any RambleOutlining
-    /// The server transcribes the audio and keeps the outline current itself; nil, or a session that fails, listens on
-    /// the device and reads the transcript with `client`.
-    @ObservationIgnored private let listener: (any RambleLiveConnecting)?
+    /// The server transcribes the audio and keeps the outline current.
+    @ObservationIgnored private let listener: any RambleLiveConnecting
     @ObservationIgnored private var stream: (any RambleLiveStream)?
     /// Consumes the live session's events in order; it ends after `done` or `failed`.
     @ObservationIgnored private var events: Task<Void, Never>?
     /// The options last sent to the live session.
     @ObservationIgnored private var shown: [RambleRequest.Shown] = []
     @ObservationIgnored private let clock: @Sendable () -> Date
-    @ObservationIgnored private let dictation = SpeechDictation()
+    @ObservationIgnored private let mic = RambleMic()
     @ObservationIgnored private let recorder = RambleRecorder()
     /// The logger's chosen time, where foods said with no day, meal, or time go; nil follows the clock.
     @ObservationIgnored var chosenTime: @MainActor () -> LogTime? = { nil }
-    @ObservationIgnored private var outliner: RambleOutliner?
     @ObservationIgnored private var context: RambleContext?
-    /// The owner's choices and expanded rows are by position, so they move with their items when an answer numbers the
+    /// The owner's choices are by position, so they move with their items when an answer numbers the
     /// items differently: a read that hears a food the last one missed must not bring back a row removed meanwhile.
     @ObservationIgnored private var items: [RambleItem] = [] {
         didSet {
-            guard !choices.isEmpty || !expanded.isEmpty else { return }
+            guard !choices.isEmpty else { return }
             let aligned = RambleAlignment.align(oldValue.map(\.identity), items.map(\.identity)).filter(\.value.same)
             let moved = Dictionary(uniqueKeysWithValues: aligned.map { ($0.value.old, $0.key) })
             choices = Dictionary(uniqueKeysWithValues: choices.compactMap { old, choice in moved[old].map { ($0, choice) } })
-            let open = Set(expanded.compactMap { moved[$0] })
-            if open != expanded { expanded = open }
         }
     }
     @ObservationIgnored private var choices: [Int: RambleChoice] = [:]
+    /// The live session's last outline, for `held`.
+    @ObservationIgnored private var lastOutline: [RambleItem] = []
     /// Advances on every listen and on cancel, so work begun for an earlier one drops its result.
     @ObservationIgnored private(set) var generation = 0
     @ObservationIgnored private var resolution = 0
     @ObservationIgnored private var keys = 0
-    @ObservationIgnored private var script: Task<Void, Never>?
+    @ObservationIgnored private var replaying: Task<Void, Never>?
     @ObservationIgnored private var startup: Task<Void, Never>?
     @ObservationIgnored private var stopping: Task<Void, Never>?
     @ObservationIgnored private var resolving: Task<Void, Never>?
 
     init(
-        store: LocalStore, index: @escaping @MainActor () -> FoodIndex, client: any RambleOutlining,
-        listener: (any RambleLiveConnecting)? = nil, clock: @escaping @Sendable () -> Date = { .now }
+        store: LocalStore, index: @escaping @MainActor () -> FoodIndex, listener: any RambleLiveConnecting,
+        clock: @escaping @Sendable () -> Date = { .now }
     ) {
         self.store = store
         self.index = index
-        self.client = client
         self.listener = listener
         self.clock = clock
     }
 
     var planned: [RamblePlanned] { rows.flatMap(\.planned) }
     var isEmpty: Bool { rows.isEmpty }
-
-    func showsAllOptions(_ row: RambleRow) -> Bool {
-        guard case let .food(food) = row.content else { return false }
-        return food.showsOptions || expanded.contains(row.id)
-    }
 
     func start() async {
         guard phase == .idle || phase == .review else { return }
@@ -117,60 +112,14 @@ final class RambleCapture {
         meter.set(0)
         if context == nil { context = await loadContext() }
         guard token == generation, phase == .listening else { return }
-        #if DEBUG
-        if let script = UserDefaults.standard.string(forKey: Self.scriptArgument) {
-            speak(script, token: token, onText: readTranscript(token: token))
-            return
-        }
-        #endif
-        if let listener {
-            listen(listener, token: token)
-            await startup?.value
-            return
-        }
-        listenOnDevice(token: token)
+        listen(token: token)
         await startup?.value
     }
 
-    /// Reads the transcript with `client` as it grows; the closure takes the words heard since this listen began.
-    private func readTranscript(token: Int) -> @MainActor (String) -> Void {
-        let base = heard.committed
-        outliner = RambleOutliner(request: { [weak self] text in
-            guard let self else { throw CancellationError() }
-            return try await client.outline(request(text))
-        }, onOutline: { [weak self] _, outline in
-            guard let self, token == generation else { return }
-            items = outline.items
-            resolve()
-        })
-        return { [weak self] words in
-            guard let self, token == generation, phase == .listening || phase == .finishing else { return }
-            heard = RambleHeard(committed: Self.join(base, words))
-            outliner?.update(transcript)
-        }
-    }
-
-    /// On-device speech-to-text, with the outline read from the transcript by `client`.
-    private func listenOnDevice(token: Int) {
-        let heard = readTranscript(token: token)
-        startup = Task { [dictation, meter, recorder] in
-            do {
-                try await dictation.start(meter: meter, recorder: recorder, onText: heard)
-                // Stopped, cancelled, or closed while starting: the mic must not stay on.
-                if token != generation || phase != .listening { dictation.cancel() }
-            } catch SpeechDictation.Failure.denied {
-                end(token, notice: "The microphone is off. Turn it on in Settings to ramble.")
-            } catch {
-                RambleOutliner.log.error("Dictation could not start: \(String(describing: error))")
-                end(token, notice: "Dictation isn't available right now.")
-            }
-        }
-    }
-
-    /// Streams the mic to the live session, which transcribes it and reads the whole ramble as it grows. A session that
-    /// fails while listening hands the rest of the listen to on-device speech and the text reads.
-    private func listen(_ listener: any RambleLiveConnecting, token: Int) {
+    /// Streams the mic to the live session, which transcribes it and reads the whole ramble as it grows.
+    private func listen(token: Int) {
         shown = currentShown()
+        lastOutline = items
         let (events, sink) = AsyncStream.makeStream(of: RambleLiveEvent.self)
         let stream = listener.connect(request(heard.committed)) { sink.yield($0) }
         self.stream = stream
@@ -182,8 +131,10 @@ final class RambleCapture {
                 case let .heard(words):
                     heard = words
                 case let .outline(outline):
-                    guard outline.items != items else { continue }
-                    items = outline.items
+                    let shown = Self.held(outline.items, showing: items, last: lastOutline)
+                    lastOutline = outline.items
+                    guard shown != items else { continue }
+                    items = shown
                     resolve()
                 case let .done(text, outline):
                     heard = RambleHeard(committed: text)
@@ -191,21 +142,13 @@ final class RambleCapture {
                     resolve()
                     return
                 case let .failed(message):
-                    RambleOutliner.log.error("Ramble live session failed: \(message)")
+                    Self.log.error("Ramble live session failed: \(message)")
                     self.stream = nil
                     recorder.stream(to: nil)
+                    mic.stop()
+                    replaying?.cancel()
                     heard = RambleHeard(committed: heard.text)
-                    guard phase == .listening else {
-                        // Stopped: the last words still get one read, through the text route.
-                        if let outline = try? await client.outline(request(heard.text)), token == generation {
-                            items = outline.items
-                        } else {
-                            notice = "The last words couldn't be read. The foods so far stay."
-                        }
-                        return
-                    }
-                    dictation.cancel()
-                    listenOnDevice(token: token)
+                    end(token, notice: "The ramble stopped listening. The foods so far stay.")
                     return
                 }
             }
@@ -216,17 +159,18 @@ final class RambleCapture {
             return
         }
         #endif
-        startup = Task { [dictation, meter, recorder] in
+        startup = Task { [mic, meter, recorder] in
             do {
-                try await dictation.start(meter: meter, recorder: recorder, onText: nil)
-                if token != generation || phase != .listening { dictation.cancel() }
-            } catch SpeechDictation.Failure.denied {
+                try await mic.start(meter: meter, recorder: recorder)
+                // Stopped, cancelled, or closed while starting: the mic must not stay on.
+                if token != generation || phase != .listening { mic.stop() }
+            } catch RambleMic.Failure.denied {
                 stream.cancel()
                 end(token, notice: "The microphone is off. Turn it on in Settings to ramble.")
             } catch {
-                RambleOutliner.log.error("The mic could not start: \(String(describing: error))")
+                Self.log.error("The mic could not start: \(String(describing: error))")
                 stream.cancel()
-                end(token, notice: "Dictation isn't available right now.")
+                end(token, notice: "The microphone isn't available right now.")
             }
         }
     }
@@ -252,27 +196,14 @@ final class RambleCapture {
         let token = generation
         phase = .finishing
         meter.set(0)
-        script?.cancel()
+        replaying?.cancel()
         let stopped = ContinuousClock.now
-        if stream != nil {
-            dictation.cancel()
-            await finishLive()
-        } else {
-            await dictation.finish()
-            guard token == generation else { return }
-            let outline = await outliner?.settle(transcript, timeout: Self.settleTimeout)
-            guard token == generation else { return }
-            if let outline {
-                items = outline.items
-            } else if outliner?.off == true {
-                notice = "The ramble couldn't be read. The foods so far stay."
-            }
-        }
+        mic.stop()
+        await finishLive()
         guard token == generation else { return }
         await resolve()?.value
-        RambleOutliner.log.info("Ramble stop: settled after \(ContinuousClock.now - stopped)")
-        guard token == generation else { return }
-        outliner?.stop()
+        Self.log.info("Ramble stop: settled after \(ContinuousClock.now - stopped)")
+        guard token == generation, phase == .finishing else { return }
         phase = .review
     }
 
@@ -295,19 +226,17 @@ final class RambleCapture {
     /// Ends the capture without logging, when the logger closes.
     func cancel() {
         generation += 1
-        script?.cancel()
-        dictation.cancel()
+        replaying?.cancel()
+        mic.stop()
         recorder.stream(to: nil)
         stream?.cancel()
         stream = nil
         events?.cancel()
-        outliner?.stop()
         resolving?.cancel()
     }
 
     func pick(_ option: FoodSearchResult, in row: RambleRow) {
         choices[row.id] = RambleChoice(name: row.item.identity, option: option.key)
-        expanded.remove(row.id)
         resolve()
     }
 
@@ -345,13 +274,11 @@ final class RambleCapture {
 
     func remove(_ row: RambleRow) {
         choices[row.id] = RambleChoice(name: row.item.identity, removed: true)
+        // The owner took the whole row back: every word of it, corrections included, is struck.
+        if let span = spans[row.key] { struck.formUnion(span) }
         rows.removeAll { $0.id == row.id }
         // A resolution already running read the choices before this one; resolving again drops its answer.
         resolve()
-    }
-
-    func toggleOptions(_ row: RambleRow) {
-        if expanded.remove(row.id) == nil { expanded.insert(row.id) }
     }
 
     /// After the rows are logged, so a new ramble starts empty.
@@ -362,10 +289,11 @@ final class RambleCapture {
         rows = []
         items = []
         choices = [:]
-        expanded = []
+        lastOutline = []
         shown = []
         struck = []
         named = [:]
+        gone = [:]
         notice = nil
     }
 
@@ -376,15 +304,21 @@ final class RambleCapture {
         }
         for (key, span) in next where named[key] == nil { named[key] = span }
         let kept = Set(rows.map(\.key))
-        let gone = old.filter { !kept.contains($0.key) }.compactMap { named[$0.key] }.flatMap { $0 }
-        if !gone.isEmpty { struck.formUnion(gone) }
+        for row in old where !kept.contains(row.key) {
+            guard let span = named[row.key] else { continue }
+            struck.formUnion(span)
+            gone[row.item.identity] = span
+        }
+        for row in rows {
+            guard let span = gone.removeValue(forKey: row.item.identity) else { continue }
+            struck.subtract(span)
+        }
         if next != spans { spans = next }
     }
 
     private func end(_ token: Int, notice: String) {
         guard token == generation else { return }
         self.notice = notice
-        outliner?.stop()
         phase = rows.isEmpty && heard.isEmpty ? .idle : .review
     }
 
@@ -396,7 +330,7 @@ final class RambleCapture {
             // Grouping and ranking 60 days of entries stays off the main actor.
             return await Task.detached { RambleContext(entries: entries, today: today) }.value
         } catch {
-            RambleOutliner.log.error("Ramble could not read the log: \(String(describing: error))")
+            Self.log.error("Ramble could not read the log: \(String(describing: error))")
             return RambleContext()
         }
     }
@@ -404,8 +338,7 @@ final class RambleCapture {
     private func currentShown() -> [RambleRequest.Shown] {
         rows.compactMap { row -> RambleRequest.Shown? in
             guard case let .food(food) = row.content, !food.options.isEmpty else { return nil }
-            let count = expanded.contains(row.id) ? RambleResolver.optionLimit : RambleResolver.collapsedOptions
-            return RambleRequest.Shown(item: row.id, options: food.options.prefix(count).map { String($0.portion.food.displayName.prefix(200)) })
+            return RambleRequest.Shown(item: row.id, options: food.options.prefix(RambleResolver.collapsedOptions).map { String($0.portion.food.displayName.prefix(200)) })
         }
     }
 
@@ -444,6 +377,23 @@ final class RambleCapture {
         return task
     }
 
+    /// The outline's items and every shown item the last outline still had, in their places: an item leaves only when
+    /// two outlines in a row lack it, since the model sometimes drops a food mid-sentence ("remove the pear, make the")
+    /// and brings it back a read later. A spoken removal still lands, one read later.
+    nonisolated static func held(_ new: [RambleItem], showing: [RambleItem], last: [RambleItem]) -> [RambleItem] {
+        let aligned = RambleAlignment.align(showing.map(\.identity), new.map(\.identity))
+        let continued = Set(aligned.values.map(\.old))
+        let before = Set(last.map(\.identity))
+        var result = new
+        var inserted = 0
+        for (i, item) in showing.enumerated() where !continued.contains(i) && before.contains(item.identity) {
+            let at = aligned.filter { $0.value.old > i }.map(\.key).min() ?? new.count
+            result.insert(item, at: at + inserted)
+            inserted += 1
+        }
+        return result
+    }
+
     /// The live session reads picks against the options on screen, so it hears of every change to them.
     private func sendShown() {
         guard let stream else { return }
@@ -453,20 +403,13 @@ final class RambleCapture {
         stream.show(now)
     }
 
-    private static func join(_ base: String, _ words: String) -> String {
-        guard !base.isEmpty else { return words }
-        return words.isEmpty ? base : "\(base) \(words)"
-    }
-
     #if DEBUG
-    /// DEBUG-only: `-RambleTranscript "…"` arrives a word at a time like live speech, through on-device reads, so the
-    /// simulator, which has no microphone, drives the text pipeline. The capture keeps listening until stopped.
-    static let scriptArgument = "RambleTranscript"
-    /// `-RambleAudio <path>`: the file plays into the live session in real time in place of the mic.
+    /// DEBUG-only: `-RambleAudio <path>`, a 16 kHz WAV played into the live session in real time in place of the mic,
+    /// since the simulator has none. The capture keeps listening until stopped.
     static let audioArgument = "RambleAudio"
 
     private func replay(_ url: URL, token: Int) {
-        script = Task { [weak self, recorder, meter] in
+        replaying = Task { [weak self, recorder, meter] in
             do {
                 let file = try AVAudioFile(forReading: url)
                 try recorder.begin(file.processingFormat)
@@ -479,7 +422,7 @@ final class RambleCapture {
                     recorder.write(buffer)
                 }
             } catch {
-                RambleOutliner.log.error("No ramble audio: \(String(describing: error))")
+                Self.log.error("No ramble audio: \(String(describing: error))")
             }
             meter.set(0)
         }
@@ -490,19 +433,6 @@ final class RambleCapture {
         var peak: Float = 0
         for index in 0 ..< Int(buffer.frameLength) { peak = max(peak, abs(channel[index])) }
         return peak
-    }
-
-    private func speak(_ script: String, token: Int, onText: @escaping @MainActor (String) -> Void) {
-        let words = script.split(separator: " ")
-        self.script = Task { [weak self] in
-            for count in 1 ... max(words.count, 1) {
-                try? await Task.sleep(for: .milliseconds(160))
-                guard let self, !Task.isCancelled, token == generation else { return }
-                meter.set(.random(in: 0.08 ... 0.5))
-                onText(words.prefix(count).joined(separator: " "))
-            }
-            self?.meter.set(0)
-        }
     }
     #endif
 }

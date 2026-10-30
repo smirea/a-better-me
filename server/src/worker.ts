@@ -43,7 +43,6 @@ class OwnerSpace extends SpaceObject<Env> {
 			driver: this.driver,
 			ownerToken: configOf(this.env).ownerToken,
 			geminiApiKey: configOf(this.env).geminiApiKey,
-			xaiApiKey: configOf(this.env).xaiApiKey,
 		});
 		const head = this.space.head();
 		if (head > before) {
@@ -68,7 +67,7 @@ class OwnerSpace extends SpaceObject<Env> {
 		server.accept();
 		const ramble = serveLiveRamble(
 			{ send: text => server.send(text), close: (code, reason) => server.close(code, reason) },
-			{ gemini: configOf(this.env).geminiApiKey, xai: configOf(this.env).xaiApiKey! },
+			{ gemini: configOf(this.env).geminiApiKey!, xai: configOf(this.env).xaiApiKey! },
 		);
 		// Binary frames arrive as Blobs here; reading one is async, so a chain keeps the frames and the stop in order.
 		let order = Promise.resolve();

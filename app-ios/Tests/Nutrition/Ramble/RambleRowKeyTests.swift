@@ -19,6 +19,13 @@ struct RambleRowKeyTests {
         #expect(after == [1, 3])
     }
 
+    @Test func aRenamedRowContinuesTheRelatedRowNotTheOneTakenBackBeforeIt() {
+        var next = 0
+        let (first, _) = keys(["apple", "pear", "dates"], after: [], next: &next)
+        let (_, after) = keys(["apple", "date"], after: first, next: &next)
+        #expect(after == [1, 3])
+    }
+
     @Test func aRenamedRowKeepsItsKeyAndANewOneTakesTheNext() {
         var next = 0
         let (first, _) = keys(["chicken salad", "coke", "fries"], after: [], next: &next)
@@ -26,11 +33,11 @@ struct RambleRowKeyTests {
         #expect(after == [1, 2, 3, 4])
     }
 
-    @Test func aReplacedRowAtTheEndKeepsItsKey() {
+    @Test func anUnrelatedReplacementIsANewRow() {
         var next = 0
         let (first, _) = keys(["burrito bowl"], after: [], next: &next)
         let (second, keys2) = keys(["tacos"], after: first, next: &next)
-        #expect(keys2 == [1])
+        #expect(keys2 == [2])
         let (_, keys3) = keys([], after: second, next: &next)
         #expect(keys3 == [])
     }
@@ -44,8 +51,8 @@ struct RambleRowKeyTests {
         #expect(align(["eggs", "toast", "coffee"], ["water", "eggs", "toast", "coffee"]) == ["new", "0", "1", "2"])
     }
 
-    @Test func aGapPairsItsItemsInOrderAndTheRestAreNew() {
-        #expect(align(["salad", "coke", "fries"], ["salad", "diet coke", "lemonade", "fries"]) == ["0", "1~", "new", "2"])
+    @Test func aGapPairsRelatedItemsAndTheRestAreNew() {
+        #expect(align(["salad", "coke", "fries"], ["salad", "lemonade", "diet coke", "fries"]) == ["0", "new", "1~", "2"])
         #expect(align([], ["oats"]) == ["new"])
         #expect(align(["oats", "oats"], ["oats"]) == ["0"])
     }
@@ -58,5 +65,22 @@ struct RambleLinedUpTests {
         }
         let lined = rows.lined(up: [RambleItem(name: "apple"), RambleItem(name: "dates", amount: 3)])
         #expect(lined.sorted { $0.id < $1.id }.map { "\($0.id) \($0.item.name)" } == ["0 apple", "1 dates"])
+    }
+}
+
+struct RambleHeldTests {
+    func names(_ new: [String], showing: [String], last: [String]) -> [String] {
+        let items = { (names: [String]) in names.map { RambleItem(name: $0) } }
+        return RambleCapture.held(items(new), showing: items(showing), last: items(last)).map(\.name)
+    }
+
+    @Test func aFoodDroppedByOneOutlineStaysInItsPlace() {
+        #expect(names(["apple", "pear"], showing: ["apple", "pear", "dates"], last: ["apple", "pear", "dates"]) == ["apple", "pear", "dates"])
+        #expect(names(["apple"], showing: ["apple", "pear", "dates"], last: ["apple", "pear", "dates"]) == ["apple", "pear", "dates"])
+    }
+
+    @Test func aFoodTwoOutlinesLackIsGoneAndARenameIsNotKeptBesideItsNewName() {
+        #expect(names(["apple", "dates"], showing: ["apple", "pear", "dates"], last: ["apple", "dates"]) == ["apple", "dates"])
+        #expect(names(["salad", "diet coke"], showing: ["salad", "coke"], last: ["salad", "coke"]) == ["salad", "diet coke"])
     }
 }

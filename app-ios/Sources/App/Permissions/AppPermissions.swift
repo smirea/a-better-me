@@ -1,6 +1,5 @@
 import AVFoundation
 import HealthKit
-import Speech
 import UserNotifications
 
 /// Every permission the app uses, asked for together on first launch. It is the owner's own app, so everything is
@@ -17,11 +16,5 @@ enum AppPermissions {
         _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
         _ = await AVCaptureDevice.requestAccess(for: .video)
         _ = await AVAudioApplication.requestRecordPermission()
-        _ = await speechAuthorization()
-    }
-
-    /// Nonisolated because Speech calls back on a background queue, and a closure formed on the main actor traps there.
-    nonisolated private static func speechAuthorization() async -> SFSpeechRecognizerAuthorizationStatus {
-        await withCheckedContinuation { continuation in SFSpeechRecognizer.requestAuthorization { continuation.resume(returning: $0) } }
     }
 }

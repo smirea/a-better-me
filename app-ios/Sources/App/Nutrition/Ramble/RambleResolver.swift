@@ -68,8 +68,8 @@ struct RambleRow: Identifiable, Hashable, Sendable {
 /// Lines a new list of items up with the old one by `RambleItem.identity`.
 enum RambleAlignment {
     /// For each new position that continues an old one, that old position, and whether it is the same item. Items in
-    /// common, in order, are the same; in each gap between them the new items take the old ones' places one for one,
-    /// as the same rows changed ("a coke" became "a diet coke").
+    /// common, in order, are the same; in each gap between them a new item takes the place of an old one it shares a word
+    /// with, as the same row changed ("a coke" became "a diet coke"), and the rest are new.
     static func align(_ old: [String], _ new: [String]) -> [Int: (old: Int, same: Bool)] {
         var common = [[Int]](repeating: [Int](repeating: 0, count: new.count + 1), count: old.count + 1)
         for i in old.indices.reversed() {
@@ -79,8 +79,14 @@ enum RambleAlignment {
         }
         var aligned: [Int: (old: Int, same: Bool)] = [:]
         var removed: [Int] = [], added: [Int] = []
+        // A changed item continues the removed one it is related to ("diet coke" the "coke", "date" the "dates"); an
+        // unrelated one is a new row, so a food taken back never hands its row, and its struck name, to the next.
         func pair() {
-            for (j, i) in zip(added, removed) { aligned[j] = (i, false) }
+            var left = removed
+            for j in added {
+                guard let match = left.firstIndex(where: { RambleResolver.related(old[$0], new[j]) }) else { continue }
+                aligned[j] = (left.remove(at: match), false)
+            }
             removed = []
             added = []
         }
@@ -172,6 +178,8 @@ struct RambleResolver: Sendable {
     }
 
     private func food(_ item: RambleItem, previous: RambleRow?, choice: RambleChoice?, search: Bool) throws -> RambleRow.Content {
+        // Searching the same name again finds nothing again; going back to `.searching` on every read made the row flicker.
+        if previous?.content == .unmatched, previous?.item.name == item.name, item.ref == nil { return .unmatched }
         let earlier: RambleRow.Food? = if case let .food(food) = previous?.content { food } else { nil }
         let refEntry = item.ref.flatMap { context.entries[$0] }
         // The owner's pick outranks a ref the model added later; the row already holds that food, so it stays.
@@ -211,8 +219,15 @@ struct RambleResolver: Sendable {
             spoken = nil
         }
         let chosen = choice?.option.flatMap { key in options.first { $0.key == key } }
-        let kept = earlier.flatMap { earlier in previous?.item.name == item.name ? options.first { $0.key == earlier.key } : nil }
-        guard let result = chosen ?? spoken ?? kept ?? options.first else { return .unmatched }
+        // A rename the speaker did not mean as another food ("halibut" read again as "Greenland halibut", or an amount
+        // correction) keeps the food the row showed while the new search still finds it.
+        let kept = earlier.flatMap { earlier in
+            previous.map { Self.related($0.item.name, item.name) } == true ? options.first { $0.key == earlier.key } : nil
+        }
+        // The search matches by prefix, so "peas" also finds "Pears, raw"; an option sharing a word with what was said
+        // comes first.
+        let best = options.first { Self.related(item.name, $0.portion.food.displayName) } ?? options.first
+        guard let result = chosen ?? spoken ?? kept ?? best else { return .unmatched }
         var portion = result.portion
         let history = result.group == .history ? result.portion.serving : nil
         portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, of: result.portion.food.nutrition, history: history)
@@ -243,6 +258,15 @@ enum RambleServing {
         "tbsp": (14.78676478125, ["tbsp", "tablespoon"]),
         "tsp": (4.92892159375, ["tsp", "teaspoon"]),
     ]
+
+    /// What a row's serving menu offers: half, one and a half, or twice the serving, the food's own servings, and 100 g.
+    static func choices(_ current: Serving, of nutrition: FoodNutrition) -> [Serving] {
+        var all = [0.5, 1, 1.5, 2].map { Serving(measure: current.measure, quantity: current.quantity * $0) }
+        all += nutrition.measures.map { Serving(measure: $0, quantity: $0.quantity) }
+        if let gram = nutrition.allMeasures.first(where: { $0.name == "g" }) { all.append(Serving(measure: gram, quantity: 100)) }
+        var seen = Set<String>()
+        return all.filter { seen.insert(NutritionFormat.serving($0)).inserted }
+    }
 
     static func serving(amount: Double, unit: String, of nutrition: FoodNutrition, history: Serving?) -> Serving {
         let fallback = history ?? defaultServing(nutrition, count: 1)
