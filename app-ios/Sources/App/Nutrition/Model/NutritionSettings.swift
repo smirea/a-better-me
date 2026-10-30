@@ -60,8 +60,9 @@ struct NutritionSettings: Codable, Hashable, Sendable {
         var priorWeight: PriorWeight?
         var priorProgress: PriorProgress?
         var algorithm = Algorithm.v3
-        var stepInformedUpdates = false
-        var predictiveGoalAdjustment = false
+        /// On by default, unlike MacroFactor's opt-in: both improved the engine's predictions (docs/decisions/nutrition.md).
+        var stepInformedUpdates = true
+        var predictiveGoalAdjustment = true
 
         enum BMREquation: String, Codable, Sendable { case macroFactor, cunningham }
         /// Daily steps: under 5,000, 5,000 to 15,000, over 15,000.

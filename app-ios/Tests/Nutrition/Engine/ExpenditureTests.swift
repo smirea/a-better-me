@@ -51,6 +51,33 @@ struct ExpenditureTests {
         #expect(result.map { ($0.kcal * 100).rounded() / 100 } == [2500, 2500, 2500, 2500, 2400, 2320])
     }
 
+    @Test func aRiseInTheWeeksMeanStepsRaisesTheEstimateAtOnce() {
+        let trend = Engine.TrendWeight.daily(weighIns: weighIns, through: days[44], calendar: utc)
+        let steps = days.enumerated().map { DatedValue(date: $1, value: $0 < 29 ? 6000 : 13000) }
+        let result = Engine.Expenditure.daily(
+            intake: intake, trend: trend, weighIns: weighIns, initial: 2000, from: days[30], through: days[31], calendar: utc,
+            modifiers: .init(steps: steps)
+        )
+        #expect(result.map { ($0.kcal * 100).rounded() / 100 } == [2039.4, 2078.21])
+        let off = Engine.Expenditure.daily(intake: intake, trend: trend, weighIns: weighIns, initial: 2000, from: days[30], through: days[31], calendar: utc)
+        #expect(off.map(\.kcal) == [2000, 2000])
+    }
+
+    @Test func aGoalRateScalesTheEstimateRampedOverTwoWeeks() {
+        let trend = Engine.TrendWeight.daily(weighIns: weighIns, through: days[44], calendar: utc)
+        let modifiers = Engine.Expenditure.Modifiers(goalRates: [DatedValue(date: days[30], value: -1)])
+        let model = Engine.Expenditure.Model(gain: 0, startupGain: 0)
+        let ramp = Engine.Expenditure.daily(
+            intake: intake, trend: trend, weighIns: weighIns, initial: 2000, from: days[29], through: days[44], calendar: utc, model: model, modifiers: modifiers
+        )
+        #expect(ramp.map { ($0.kcal * 100).rounded() / 100 }[0...2] == [2000, 1994.29, 1988.57])
+        #expect((ramp[14].kcal * 100).rounded() / 100 == 1920)
+        let before = Engine.Expenditure.daily(
+            intake: intake, trend: trend, weighIns: weighIns, initial: 2000, from: days[44], through: days[44], calendar: utc, model: model, modifiers: modifiers
+        )
+        #expect((before[0].kcal * 100).rounded() / 100 == 1920)
+    }
+
     @Test func noTrendMeansEveryDayHolds() {
         let result = Engine.Expenditure.daily(intake: intake, trend: [], weighIns: [], initial: 2300, from: days[0], through: days[1], calendar: utc)
         #expect(result.map(\.kcal) == [2300, 2300])

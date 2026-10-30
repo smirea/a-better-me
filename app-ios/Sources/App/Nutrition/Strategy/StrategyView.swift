@@ -30,10 +30,14 @@ struct StrategyDataReader<Content: View>: View {
         var log: IntakeLog
         var settings: NutritionSettings
         var profile: ProfileSettings
+        var plans: [NutritionPlan]
+        var steps: [DatedValue]
         var today: CalendarDay
 
         func inputs() -> StrategyInputs {
-            StrategyInputs.make(weighIns: weighIns, log: log, settings: settings, profile: profile, today: today, calendar: .current)
+            StrategyInputs.make(
+                weighIns: weighIns, log: log, settings: settings, profile: profile, plans: plans, steps: steps, today: today, calendar: .current
+            )
         }
     }
 
@@ -42,12 +46,16 @@ struct StrategyDataReader<Content: View>: View {
     @Observe(NutritionPlan.all) private var plans
     @Observe(IntakeLog.all) private var log
     @Observe(AppSettings.current) private var settings
+    @Observe(BodyMetric.series(.steps)) private var importedSteps
     @State private var inputs: StrategyInputs?
 
     var body: some View {
         // Reading `scenePhase` re-renders on return to the app, so `today` moves past midnight.
         let _ = scenePhase
-        let sources = Sources(weighIns: health.weighIns, log: log, settings: settings.nutrition, profile: settings.profile, today: .today)
+        let sources = Sources(
+            weighIns: health.weighIns, log: log, settings: settings.nutrition, profile: settings.profile, plans: plans,
+            steps: NutritionMetrics.steps(health: health.steps, imported: importedSteps, calendar: .current), today: .today
+        )
         // The first frame derives synchronously rather than drawing blank; later changes go through `onChange`.
         content(StrategyData(plans: plans, settings: settings, inputs: inputs ?? sources.inputs()))
             .onChange(of: sources, initial: true) { _, sources in

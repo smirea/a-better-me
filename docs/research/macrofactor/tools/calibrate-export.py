@@ -15,6 +15,7 @@ SHEETS = {
     'Weight Trend': 'trendLb',
     'Expenditure': 'expenditure',
     'Calories & Macros': 'intakeKcal',
+    'Steps': 'steps',
 }
 
 sheets = read_sheets(sys.argv[1])

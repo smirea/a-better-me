@@ -105,7 +105,7 @@ enum NutritionMetrics {
     /// Strategy both call this, so the expenditure a check-in freezes is the one the Dashboard shows.
     static func expenditure(
         intake: [DatedValue], weighIns: [DatedValue], trend: [DatedValue], settings: NutritionSettings.Expenditure,
-        profile: ProfileSettings, now: Date, calendar: Calendar
+        profile: ProfileSettings, plans: [NutritionPlan], steps: [DatedValue], now: Date, calendar: Calendar
     ) -> [NutritionEngine.ExpenditureDay] {
         if let fixed = settings.staticKcal {
             guard let start = expenditureStart(intake: intake, weighIns: weighIns, settings: settings, calendar: calendar), start <= now else { return [] }
@@ -114,7 +114,16 @@ enum NutritionMetrics {
         guard let setup = expenditureSetup(intake: intake, weighIns: weighIns, trend: trend, settings: settings, profile: profile, calendar: calendar),
               setup.start <= now else { return [] }
         return NutritionEngine.Expenditure.daily(
-            intake: intake.map { NutritionEngine.IntakeDay(date: $0.date, kcal: $0.value) }, trend: trend, weighIns: weighIns, initial: setup.initialKcal, from: setup.start, through: now, calendar: calendar
+            intake: intake.map { NutritionEngine.IntakeDay(date: $0.date, kcal: $0.value) }, trend: trend, weighIns: weighIns, initial: setup.initialKcal, from: setup.start, through: now, calendar: calendar,
+            modifiers: modifiers(settings: settings, plans: plans, steps: steps, calendar: calendar)
+        )
+    }
+
+    /// The modifiers the Expenditure settings turn on: the merged daily steps, and each plan's goal rate from its day.
+    static func modifiers(settings: NutritionSettings.Expenditure, plans: [NutritionPlan], steps: [DatedValue], calendar: Calendar) -> NutritionEngine.Expenditure.Modifiers {
+        NutritionEngine.Expenditure.Modifiers(
+            steps: settings.stepInformedUpdates ? steps : [],
+            goalRates: settings.predictiveGoalAdjustment ? plans.map { DatedValue(date: $0.id.date(in: calendar), value: $0.goal.ratePercentPerWeek) } : []
         )
     }
 

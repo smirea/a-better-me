@@ -12,6 +12,7 @@ struct Export: Decodable {
     var trendLb: [Point]
     var expenditure: [Point]
     var intakeKcal: [Point]
+    var steps: [Point]
     var incomplete: [String]
     var fasting: [String]
 }
@@ -183,6 +184,19 @@ struct Calibrate {
         }
         show("no startup (needs 28 days of trend):", NutritionEngine.Expenditure.Model(minWindow: 28, startupGain: 0.015))
         show("shipped:                             ", .v3)
+        let steps = series(export.steps)
+        print("\nStep-Informed Updates over the full history, predictive validity at the engine's density")
+        func stepped(_ kcalPerStep: Double) -> [DatedValue] {
+            var model = NutritionEngine.Expenditure.Model.v3
+            model.kcalPerStep = kcalPerStep
+            return NutritionEngine.Expenditure.daily(
+                intake: intake, trend: trend, weighIns: scale, initial: initial, from: start, through: end, calendar: calendar, model: model,
+                modifiers: .init(steps: steps)
+            ).map { DatedValue(date: $0.date, value: $0.kcal) }
+        }
+        for kcalPerStep in [0, 0.01, 0.02, 0.03, 0.04, 0.06] {
+            print(String(format: "  %.2f kcal/step:", kcalPerStep), Predictive(expenditure: stepped(kcalPerStep), intake: counted, trend: trend, kcalPerLb: NutritionEngine.kcalPerLb))
+        }
         if CommandLine.arguments.contains("--grid") {
             for minWindow in [3, 5, 7, 14] {
                 for startupGain in [0.05, 0.1, 0.2, 0.3, 0.5] {

@@ -46,7 +46,16 @@ export function expenditureFor(db: Db, timeZone: string, now: string) {
 	const intake = new Map(
 		logDays(db, {}).flatMap(day => (day.countedKcal === null ? [] : [[day.day, day.countedKcal] as const])),
 	);
-	return { today, trend, result: expenditure({ intake, weighIns: points, trend, today, ...nutritionInputs(db) }) };
+	const plans = db.all('nutrition_plans');
+	const steps = db
+		.all('body_metrics')
+		.filter(row => row.kind === 'steps')
+		.map(row => ({ day: row.day, value: row.value }));
+	return {
+		today,
+		trend,
+		result: expenditure({ intake, weighIns: points, trend, today, plans, steps, ...nutritionInputs(db) }),
+	};
 }
 
 const best = (a: number | null, b: number | null) => (a === null ? b : b === null ? a : Math.max(a, b));
@@ -76,7 +85,7 @@ export const insightRoutes: Route[] = [
 		tag: 'Insights',
 		summary: 'The daily energy expenditure (TDEE) estimate, by the algorithm the Dashboard and the check-in use',
 		description:
-			'Recomputed from the app weigh-ins (not Apple Health), the food log, and `settings.nutrition.expenditure` on every call, so an edit to a past day is reflected at once.',
+			'Recomputed from the app weigh-ins (not Apple Health), the food log, the plans, the imported steps (not Apple Health), and `settings.nutrition.expenditure` on every call, so an edit to a past day is reflected at once.',
 		query: range,
 		response: M.ExpenditureSeries,
 		run({ db, query, now }) {
