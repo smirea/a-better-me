@@ -182,17 +182,11 @@ private struct LoggerBanner: View {
         let day = dayRow.totals(entries)
         GlassEffectContainer {
             HStack(spacing: 10) {
-                Button("Close", systemImage: "xmark", action: exit)
-                    .labelStyle(.iconOnly)
-                    .frame(width: 44, height: 44)
-                    .glassEffect(.regular.interactive(), in: .circle)
+                RoundIconButton("Close", systemImage: "xmark", action: exit)
                 Button(action: chooseTime) {
-                    Text(session.time.label())
-                        .font(AppFont.headline(14))
-                        .padding(.horizontal, 14)
-                        .frame(height: 44)
+                    Text(session.time.label()).font(AppFont.headline(14))
                 }
-                .glassEffect(.regular.interactive(), in: .capsule)
+                .chipButton()
                 .accessibilityLabel("Log time, \(session.time.label())")
                 VStack(alignment: .leading, spacing: 5) {
                     ForEach(options.bannerNutrients, id: \.self) { id in
@@ -211,25 +205,31 @@ private struct LoggerBanner: View {
                     let next = options.nutritionDisplay.cycled(by: direction == .increment ? 1 : -1)
                     store.updateSettings { $0.nutrition.logger.nutritionDisplay = next }
                 }
-                Button(action: openPlate) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "fork.knife")
-                        if !session.plate.isEmpty {
-                            Text("\(session.plate.items.count)").font(AppFont.headline(15)).contentTransition(.numericText())
-                        }
-                    }
-                    .padding(.horizontal, 14)
-                    .frame(height: 44)
-                }
-                .glassEffect(session.plate.isEmpty ? .regular.interactive() : .regular.tint(Theme.textPrimary.opacity(0.3)).interactive(), in: .capsule)
-                .accessibilityLabel("Your Plate, \(session.plate.items.count) foods")
+                plateButton
             }
         }
-        .buttonStyle(.plain)
         .padding(.horizontal, Theme.margin)
         .padding(.top, 14)
         .padding(.bottom, 6)
         .animation(.snappy, value: session.plate.items.count)
+    }
+
+    /// White once the plate holds a food, so the way to review and log it stands out.
+    @ViewBuilder private var plateButton: some View {
+        let button = Button(action: openPlate) {
+            HStack(spacing: 6) {
+                Image(systemName: "fork.knife")
+                if !session.plate.isEmpty {
+                    Text("\(session.plate.items.count)").font(AppFont.headline(15)).contentTransition(.numericText())
+                }
+            }
+        }
+        .accessibilityLabel("Your Plate, \(session.plate.items.count) foods")
+        if session.plate.isEmpty {
+            button.chipButton()
+        } else {
+            button.prominentButton().buttonBorderShape(.capsule)
+        }
     }
 
     private func value(_ id: NutrientID, day: NutrientAmounts) -> BannerValue {

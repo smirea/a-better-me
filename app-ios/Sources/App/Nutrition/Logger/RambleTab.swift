@@ -262,11 +262,11 @@ struct RambleTab: View {
                             .symbolEffect(.variableColor.iterative, options: .repeating)
                     }
                 }
-                .foregroundStyle(Theme.onPrimary)
-                .frame(width: 60, height: 60)
-                .glassEffect(.regular.tint(Theme.accent).interactive(), in: .circle)
+                .frame(width: 36, height: 36)
             }
-            .buttonStyle(.plain)
+            .prominentButton(tint: Theme.accent)
+            .buttonBorderShape(.circle)
+            .controlSize(.large)
             .disabled(capture.phase != .listening)
             .accessibilityLabel(capture.phase == .listening ? "Stop listening" : "Reading the ramble")
             .frame(maxWidth: capture.planned.isEmpty || capture.phase == .listening ? .infinity : nil)
@@ -276,10 +276,11 @@ struct RambleTab: View {
             } label: {
                 Image(systemName: "mic.fill")
                     .font(.title3.weight(.semibold))
-                    .frame(width: 60, height: 60)
-                    .glassEffect(.regular.interactive(), in: .circle)
+                    .frame(width: 36, height: 36)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .controlSize(.large)
             .accessibilityLabel(capture.isEmpty ? "Start talking" : "Keep talking")
             .frame(maxWidth: capture.planned.isEmpty ? .infinity : nil)
         }
@@ -299,10 +300,7 @@ private struct RambleSummary: View {
         let amounts = planned.reduce(into: NutrientAmounts()) { $0 = $0 + $1.pick.portion.amounts }
         let kcal = Int((amounts[.energy] ?? 0).rounded())
         HStack(spacing: 12) {
-            Button("Close", systemImage: "xmark", action: close)
-                .labelStyle(.iconOnly)
-                .frame(width: 44, height: 44)
-                .glassEffect(.regular.interactive(), in: .circle)
+            RoundIconButton("Close", systemImage: "xmark", action: close)
             VStack(spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text("\(kcal)").font(AppFont.number(26)).contentTransition(.numericText(value: Double(kcal)))
@@ -328,10 +326,10 @@ private struct RambleSummary: View {
                     Button(tab.title, systemImage: tab.systemImage) { switchTo(tab) }
                 }
             } label: {
-                Image(systemName: "square.grid.2x2")
-                    .frame(width: 44, height: 44)
-                    .glassEffect(.regular.interactive(), in: .circle)
+                Image(systemName: "square.grid.2x2").frame(width: 22, height: 22)
             }
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
             .accessibilityLabel("Other ways to log")
         }
         .padding(.horizontal, Theme.margin)
