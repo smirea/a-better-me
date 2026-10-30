@@ -177,9 +177,7 @@ private struct ExercisePickerList: View {
                 ToolbarSpacer(.fixed, placement: .bottomBar)
                 ToolbarItem(placement: .bottomBar) {
                     Button("Done") { finish(with: selection.ids) }
-                        .buttonStyle(.glassProminent)
-                        .tint(Theme.textPrimary)
-                        .foregroundStyle(Theme.onPrimary)
+                        .prominentButton()
                         .font(AppFont.headline())
                 }
             }

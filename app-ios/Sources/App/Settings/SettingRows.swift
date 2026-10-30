@@ -53,7 +53,7 @@ struct SettingChoice<Value: Hashable>: View {
             } label: {
                 Text("Edit")
             }
-            .rowAction()
+            .chipButton()
             .accessibilityLabel("Edit \(title)")
         } label: {
             RowLabel(title: title, detail: options.first { $0.value == selection }?.title ?? "", systemImage: systemImage)
@@ -73,13 +73,6 @@ struct ResetRowButton: View {
 
     var body: some View {
         Button(title, role: .destructive, action: action).frame(maxWidth: .infinity)
-    }
-}
-
-extension View {
-    /// The capsule beside a row's value that edits or sets it.
-    func rowAction() -> some View {
-        buttonStyle(.glass).buttonBorderShape(.capsule).font(AppFont.chip)
     }
 }
 

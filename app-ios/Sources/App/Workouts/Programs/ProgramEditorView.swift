@@ -229,12 +229,9 @@ private struct ProgramEditorScreen: View {
     private func bottomButtons(_ program: Program, template: WorkoutTemplate?) -> some View {
         if let draft {
             VStack(spacing: 8) {
-                Button { draft.save() } label: {
-                    Text("Save to Library").font(AppFont.headline()).frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.glass)
-                .controlSize(.large)
-                .padding(.horizontal, Theme.margin)
+                Button("Save to Library") { draft.save() }
+                    .secondaryPill()
+                    .padding(.horizontal, Theme.margin)
                 PinnedActionButton("Activate Program") { draft.activate() }
             }
         } else if !program.isActive {

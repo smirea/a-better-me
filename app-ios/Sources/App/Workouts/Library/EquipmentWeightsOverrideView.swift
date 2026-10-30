@@ -47,8 +47,7 @@ struct EquipmentWeightsOverrideView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         Button("Edit") { editing = item }
-                            .font(AppFont.chip)
-                            .buttonStyle(.glass)
+                            .chipButton()
                             .controlSize(.small)
                     }
                 }

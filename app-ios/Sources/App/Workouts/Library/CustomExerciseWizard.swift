@@ -403,8 +403,7 @@ private struct EquipmentStep: View {
                 }
                 Spacer()
                 Button(options.isEmpty ? "Add" : "Change") { picking = role }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
+                    .chipButton()
                     .accessibilityLabel(options.isEmpty ? "Add \(role.title)" : "Change \(role.title)")
             }
             EquipmentOptions(title: "", names: options.map(\.name), ids: options.map(\.ids))
@@ -487,8 +486,7 @@ private struct FinalDetailsStep: View {
                 }
                 Spacer()
                 Button("Edit") { editingDescription = true }
-                    .font(AppFont.chip)
-                    .buttonStyle(.glass)
+                    .chipButton()
                     .accessibilityLabel("Edit Description")
             }
             .padding(.top, 16)

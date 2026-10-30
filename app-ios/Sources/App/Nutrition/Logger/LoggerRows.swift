@@ -63,9 +63,7 @@ struct LogFoodsButton: View {
             session.logPlate()
         }
         .font(AppFont.headline(15))
-        .buttonStyle(.glassProminent)
-        .tint(Theme.textPrimary)
-        .foregroundStyle(Theme.onPrimary)
+        .prominentButton()
         .disabled(session.plate.isEmpty && !hasPending)
     }
 }

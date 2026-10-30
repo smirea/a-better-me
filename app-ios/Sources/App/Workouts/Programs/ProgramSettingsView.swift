@@ -179,8 +179,7 @@ struct ProgramSettingsView: View {
 
     private func editButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button("Edit", action: action)
-            .font(AppFont.chip)
-            .buttonStyle(.glass)
+            .chipButton()
             .accessibilityLabel("Edit \(title)")
     }
 

@@ -77,7 +77,7 @@ struct ProfileSettingsView: View {
         } else {
             LabeledContent {
                 Button("Set") { store.updateSettings { $0.profile.birthDate = CalendarDay("1990-01-01") } }
-                    .rowAction()
+                    .chipButton()
                     .accessibilityLabel("Set Date of Birth")
             } label: {
                 RowLabel(title: "Date of Birth", detail: "Not set", systemImage: "birthday.cake")

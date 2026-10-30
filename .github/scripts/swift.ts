@@ -18,6 +18,7 @@ const xcodeArgs = [
 
 switch (Bun.argv[2]) {
 	case 'checks':
+		await $`bun app-ios/scripts/lint-swift.ts`;
 		await $`xcodebuild build ${xcodeArgs} -configuration Debug -destination ${'generic/platform=iOS Simulator'}`.cwd(
 			directory,
 		);

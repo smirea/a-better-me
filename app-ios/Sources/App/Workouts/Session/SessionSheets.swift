@@ -223,14 +223,8 @@ struct NoteSheet: View {
                     editor("Pinned Note", text: $pinnedText, prompt: "Pinned note about this exercise", footer: "Pinned to exercise, not saved to your workout history")
                 }
                 Spacer()
-                Button {
-                    save()
-                } label: {
-                    Text("Save").font(AppFont.headline()).frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.glassProminent)
-                .tint(Theme.textPrimary)
-                .foregroundStyle(Theme.onPrimary)
+                Button("Save", action: save)
+                    .primaryPill()
             }
             .padding(Theme.margin)
             .detailTitle("Note")

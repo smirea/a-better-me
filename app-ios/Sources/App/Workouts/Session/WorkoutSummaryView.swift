@@ -227,8 +227,7 @@ struct WorkoutSummaryView: View {
             if let value { Text(value).font(AppFont.rowTitle) }
             if let edit {
                 Button("Edit", action: edit)
-                    .font(AppFont.chip)
-                    .buttonStyle(.glass)
+                    .chipButton()
                     .accessibilityLabel("Edit \(title)")
             }
         }
@@ -338,12 +337,8 @@ struct WorkoutSummaryView: View {
                 }
                 .tint(Theme.accent)
             }
-            Button(action: close) {
-                Text("Done").font(AppFont.headline()).frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .buttonStyle(.glassProminent)
-            .tint(Theme.textPrimary)
-            .foregroundStyle(Theme.onPrimary)
+            Button("Done", action: close)
+                .primaryPill()
         }
         .padding(.horizontal, Theme.margin)
         .padding(.vertical, 12)

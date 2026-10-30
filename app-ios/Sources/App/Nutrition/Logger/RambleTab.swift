@@ -229,9 +229,7 @@ struct RambleTab: View {
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .contentTransition(.numericText())
                     }
-                    .buttonStyle(.glassProminent)
-                    .tint(Theme.textPrimary)
-                    .foregroundStyle(Theme.onPrimary)
+                    .prominentButton()
                     .buttonBorderShape(.capsule)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
