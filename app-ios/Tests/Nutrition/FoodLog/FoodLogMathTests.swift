@@ -139,8 +139,18 @@ struct FoodLogMathTests {
         #expect(message(.copy, 2, .now) == "Copied 2 foods to Today at 6:05 PM")
         #expect(message(.copy, 2, .days([monday.adding(days: 3)])) == "Copied 2 foods to Thu, Oct 29")
         #expect(message(.copy, 5, .days([monday, monday.adding(days: 1), monday.adding(days: 2)])) == "Copied 5 foods to 3 days")
-        #expect(message(.copy, 2, .dateTime(monday.adding(days: 1), minute: 900)) == "Copied 2 foods to Tomorrow at 3:00 PM")
+        #expect(message(.copy, 2, .dateTime(monday.adding(days: 1), minute: 900)) == "Copied 2 foods to Tomorrow at 3 PM")
+        #expect(message(.move, 1, .dateTime(monday, minute: 11 * 60)) == "Moved 1 food to Today at 11 AM")
+        #expect(message(.move, 1, .dateTime(monday, minute: 8 * 60 + 30)) == "Moved 1 food to Today at 8:30 AM")
         #expect(message(.move, 3, .hour(monday.adding(days: -1), hour: 16)) == "Moved 3 foods to Yesterday at 4 PM")
+    }
+
+    @Test func aMomentDropsTheMinutesOnTheHour() {
+        #expect(NutritionFormat.moment(0) == "12 AM")
+        #expect(NutritionFormat.moment(8 * 60) == "8 AM")
+        #expect(NutritionFormat.moment(8 * 60 + 30) == "8:30 AM")
+        #expect(NutritionFormat.moment(12 * 60) == "12 PM")
+        #expect(NutritionFormat.moment(23 * 60 + 5) == "11:05 PM")
     }
 
     @Test func anHourPillAddsItsEntriesOrTakesThemAllBack() {

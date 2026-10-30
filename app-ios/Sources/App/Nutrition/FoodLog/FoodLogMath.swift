@@ -168,13 +168,13 @@ enum FoodLog {
         let verb = action == .copy ? "Copied" : "Moved"
         let foods = count == 1 ? "1 food" : "\(count) foods"
         let place = switch target {
-        case .now: "Today at \(NutritionFormat.clock(now.minuteOfDay(in: calendar)))"
+        case .now: "Today at \(NutritionFormat.moment(now.minuteOfDay(in: calendar)))"
         case .today: "Today"
         case .tomorrow: "Tomorrow"
         case let .days(days) where days.count == 1: NutritionFormat.dayTitle(days[0], today: today)
         case let .days(days): "\(days.count) days"
-        case let .dateTime(day, minute): "\(NutritionFormat.dayTitle(day, today: today)) at \(NutritionFormat.clock(minute))"
-        case let .hour(day, hour): "\(NutritionFormat.dayTitle(day, today: today)) at \(NutritionFormat.hour(hour))"
+        case let .dateTime(day, minute): "\(NutritionFormat.dayTitle(day, today: today)) at \(NutritionFormat.moment(minute))"
+        case let .hour(day, hour): "\(NutritionFormat.dayTitle(day, today: today)) at \(NutritionFormat.moment(hour * 60))"
         }
         return "\(verb) \(foods) to \(place)"
     }
