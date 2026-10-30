@@ -219,7 +219,11 @@ struct RambleResolver: Sendable {
             spoken = nil
         }
         let chosen = choice?.option.flatMap { key in options.first { $0.key == key } }
-        let kept = earlier.flatMap { earlier in previous?.item.name == item.name ? options.first { $0.key == earlier.key } : nil }
+        // A rename the speaker did not mean as another food ("halibut" read again as "Greenland halibut", or an amount
+        // correction) keeps the food the row showed while the new search still finds it.
+        let kept = earlier.flatMap { earlier in
+            previous.map { Self.related($0.item.name, item.name) } == true ? options.first { $0.key == earlier.key } : nil
+        }
         // The search matches by prefix, so "peas" also finds "Pears, raw"; an option sharing a word with what was said
         // comes first.
         let best = options.first { Self.related(item.name, $0.portion.food.displayName) } ?? options.first

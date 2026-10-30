@@ -66,6 +66,10 @@ struct RambleResolverTests {
             RambleItem(name: "egg", amount: 2),
         ], previous: first, choices: [:], search: false)
         #expect(describe(parsed) == ["Oats: 0.5 cup", "searching dates", "searching egg"])
+        let renamed = try resolver.rows([RambleItem(name: "pizza", amount: 2, unit: "slice")], previous: try resolver.rows(
+            [RambleItem(name: "pizza veggie", amount: 1, unit: "slice")], previous: [], choices: [:]
+        ), choices: [:])
+        #expect(describe(renamed) == ["Pizza, veggie: 2 slice"])
         let unmatched = try resolver.rows([RambleItem(name: "bok choy", amount: 1, unit: "cup")], previous: [], choices: [:])
         let again = try resolver.rows([RambleItem(name: "bok choy", amount: 2, unit: "cup")], previous: unmatched, choices: [:], search: false)
         #expect(describe(again) == ["unmatched bok choy"])

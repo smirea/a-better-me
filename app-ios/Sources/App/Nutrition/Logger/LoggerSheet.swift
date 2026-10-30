@@ -118,7 +118,11 @@ private struct LoggerContent: View {
         case .ramble:
             RambleTab(
                 session: session, open: { path.append(.rambleRow($0)) }, close: exit,
-                switchTo: { tab in withAnimation(.snappy) { session.tab = tab } }
+                switchTo: { tab in withAnimation(.snappy) { session.tab = tab } },
+                search: { name in
+                    session.setQuery(name, branded: settings.nutrition.searchBranded)
+                    withAnimation(.snappy) { session.tab = .search }
+                }
             )
             .toolbar(.hidden, for: .navigationBar)
         case .search: SearchTab(session: session, open: open).toolbar(.hidden, for: .navigationBar)

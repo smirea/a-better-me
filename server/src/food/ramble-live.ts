@@ -26,6 +26,9 @@ export type ReadTiming = {
 	/** After the stop, at most this long for the outline of the last words; then the latest outline stands. */
 	settleCapMs: number;
 };
+const DANGLING =
+	/(?:\d[\d.,]*|\b(?:a|an|of|and|some|the|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|hundred|half|couple|few))[\s,.-]*$/i;
+
 export const READ_TIMING: ReadTiming = { debounceMs: 250, inflight: 2, settleCapMs: 6_000 };
 
 export const LiveRambleRequest = RambleRequest;
@@ -245,7 +248,10 @@ export class Reader {
 		if (this.#final !== undefined) return this.#last(text);
 		this.#latest = text;
 		clearTimeout(this.#timer);
-		this.#timer = setTimeout(() => this.#issue(), this.timing.debounceMs);
+		// Words that stop mid-amount ("dinner, 200", "two cups of") read as a food that is not there yet ("200 dinner
+		// rolls"), so they wait longer for the next word.
+		const wait = DANGLING.test(text) ? this.timing.debounceMs * 4 : this.timing.debounceMs;
+		this.#timer = setTimeout(() => this.#issue(), wait);
 	}
 
 	/** The outline of exactly `text`, the transcript's last words, or the latest outline after `settleCapMs`. */

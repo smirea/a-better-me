@@ -13,6 +13,8 @@ struct RambleTab: View {
     let close: () -> Void
     /// Leaves Ramble for another way to log.
     let switchTo: (LoggerTab) -> Void
+    /// Leaves for Search with a food the ramble found no match for.
+    let search: (String) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var saved = 0
     /// Words on their way from the transcript to a row.
@@ -47,7 +49,10 @@ struct RambleTab: View {
                             RambleLine(
                                 row: row, capture: capture, incoming: live && capture.spans[row.key] != nil,
                                 focus: focused == nil ? .none : focused == row.key ? .lifted : .dimmed,
-                                tap: { withAnimation(.spring(duration: 0.38, bounce: 0.2)) { focused = focused == row.key ? nil : row.key } },
+                                tap: {
+                                    if row.content == .unmatched { return search(row.item.name) }
+                                    withAnimation(.spring(duration: 0.38, bounce: 0.2)) { focused = focused == row.key ? nil : row.key }
+                                },
                                 open: { open(row) }
                             )
                             .id(row.key)
@@ -550,7 +555,7 @@ private struct RambleLine: View {
             line
             if focus == .lifted, case let .food(food) = row.content, !parsing {
                 alternatives(food)
-                    .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .top)), removal: .opacity))
+                    .transition(.opacity.animation(.easeOut(duration: 0.2).delay(0.12)))
             }
         }
         .padding(.horizontal, focus == .lifted ? 10 : 0)
@@ -563,6 +568,7 @@ private struct RambleLine: View {
             }
             .padding(.horizontal, focus == .lifted ? 0 : -8)
         }
+        .clipShape(.rect(cornerRadius: focus == .lifted ? Theme.cornerRadius : 0))
         .scaleEffect(focus == .lifted ? 1.02 : 1)
         .opacity(focus == .dimmed ? 0.35 : 1)
         .blur(radius: focus == .dimmed ? 1.5 : 0)
@@ -570,7 +576,7 @@ private struct RambleLine: View {
         .anchorPreference(key: RambleAnchors.self, value: .bounds) { RambleAnchors.Value(rows: [row.key: $0]) }
         .rowSwipeActions(
             leading: row.content.isFood ? [SwipeAction(title: "Swap", systemImage: "arrow.left.arrow.right", tint: Theme.accent, action: tap)] : [],
-            trailing: [.destructive("Remove", action: removeByOwner)] + (row.content.isFood ? [SwipeAction(title: "Amount", systemImage: "number", action: open)] : [])
+            trailing: [.destructive("Remove", action: removeByOwner)] + (row.content.isFood ? [SwipeAction(title: "Amount", systemImage: "scalemass", action: open)] : [])
         )
         .onAppear {
             guard parsedUntil != nil else { return }
@@ -683,7 +689,7 @@ private struct RambleLine: View {
         Text(text.isEmpty ? "A meal" : text)
             .font(AppFont.rowTitle)
             .foregroundStyle(parsing ? Theme.accent : Theme.textPrimary)
-            .lineLimit(1)
+            .lineLimit(focus == .lifted ? 2 : 1)
     }
 
     @ViewBuilder private var detail: some View {
@@ -703,7 +709,7 @@ private struct RambleLine: View {
                             ))
                     }
                 case let .copy(copy): Text(copy.entries.map(\.food.name).joined(separator: " · "))
-                case .searching, .unmatched: Text("Nothing matched. Add it from Search.")
+                case .searching, .unmatched: Text("Not found. Tap to search for it.")
                 }
             }
         }
@@ -747,7 +753,7 @@ private struct RambleLine: View {
                 .foregroundStyle(Theme.textTertiary)
                 .padding(.top, 4)
                 .padding(.bottom, 2)
-            ForEach(Array(shown.enumerated()), id: \.element.id) { index, option in
+            ForEach(shown) { option in
                 Button {
                     capture.pick(option, in: row)
                     tap()
@@ -762,7 +768,7 @@ private struct RambleLine: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(option.key == food.key ? .isSelected : [])
-                .transition(.opacity.combined(with: .offset(y: -6 * Double(index + 1))))
+                .transition(.opacity)
             }
             if !allOptions, food.options.count > 5 {
                 Button("Show \(food.options.count - 5) More") { withAnimation(.snappy) { allOptions = true } }

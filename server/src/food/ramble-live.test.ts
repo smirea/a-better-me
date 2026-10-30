@@ -63,6 +63,17 @@ describe('Reader', () => {
 		expect(shown).toEqual([['eggs', 'toast', 'coffee']]);
 	});
 
+	test('words that stop mid-amount wait four debounces for the food, so "dinner, 200" is not read as dinner rolls', async () => {
+		const { calls, read } = reads();
+		const reader = new Reader(read, { outline: () => {}, error: () => {} }, { ...timing, debounceMs: 10 });
+		reader.heard('dinner, 200');
+		await tick(20);
+		expect(calls).toEqual([]);
+		reader.heard('dinner, 200 grams of tofu');
+		await tick(20);
+		expect(calls.map(call => call.text)).toEqual(['dinner, 200 grams of tofu']);
+	});
+
 	test('the stop reads the last words at once, past the in-flight limit, and settles on their answer', async () => {
 		const { calls, read } = reads();
 		const reader = new Reader(read, { outline: () => {}, error: () => {} }, { ...timing, inflight: 1 });
