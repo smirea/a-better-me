@@ -44,8 +44,6 @@ final class RambleCapture {
     /// a read later, and then its words are not taken back.
     @ObservationIgnored private var gone: [String: Range<Int>] = [:]
     private(set) var notice: String?
-    /// Rows whose full option list shows, by tap.
-    private(set) var expanded: Set<Int> = []
     let meter = LevelMeter()
 
     var transcript: String { heard.text }
@@ -65,16 +63,14 @@ final class RambleCapture {
     /// The logger's chosen time, where foods said with no day, meal, or time go; nil follows the clock.
     @ObservationIgnored var chosenTime: @MainActor () -> LogTime? = { nil }
     @ObservationIgnored private var context: RambleContext?
-    /// The owner's choices and expanded rows are by position, so they move with their items when an answer numbers the
+    /// The owner's choices are by position, so they move with their items when an answer numbers the
     /// items differently: a read that hears a food the last one missed must not bring back a row removed meanwhile.
     @ObservationIgnored private var items: [RambleItem] = [] {
         didSet {
-            guard !choices.isEmpty || !expanded.isEmpty else { return }
+            guard !choices.isEmpty else { return }
             let aligned = RambleAlignment.align(oldValue.map(\.identity), items.map(\.identity)).filter(\.value.same)
             let moved = Dictionary(uniqueKeysWithValues: aligned.map { ($0.value.old, $0.key) })
             choices = Dictionary(uniqueKeysWithValues: choices.compactMap { old, choice in moved[old].map { ($0, choice) } })
-            let open = Set(expanded.compactMap { moved[$0] })
-            if open != expanded { expanded = open }
         }
     }
     @ObservationIgnored private var choices: [Int: RambleChoice] = [:]
@@ -101,11 +97,6 @@ final class RambleCapture {
 
     var planned: [RamblePlanned] { rows.flatMap(\.planned) }
     var isEmpty: Bool { rows.isEmpty }
-
-    func showsAllOptions(_ row: RambleRow) -> Bool {
-        guard case let .food(food) = row.content else { return false }
-        return food.showsOptions || expanded.contains(row.id)
-    }
 
     func start() async {
         guard phase == .idle || phase == .review else { return }
@@ -246,7 +237,6 @@ final class RambleCapture {
 
     func pick(_ option: FoodSearchResult, in row: RambleRow) {
         choices[row.id] = RambleChoice(name: row.item.identity, option: option.key)
-        expanded.remove(row.id)
         resolve()
     }
 
@@ -291,10 +281,6 @@ final class RambleCapture {
         resolve()
     }
 
-    func toggleOptions(_ row: RambleRow) {
-        if expanded.remove(row.id) == nil { expanded.insert(row.id) }
-    }
-
     /// After the rows are logged, so a new ramble starts empty.
     func reset() {
         cancel()
@@ -304,7 +290,6 @@ final class RambleCapture {
         items = []
         choices = [:]
         lastOutline = []
-        expanded = []
         shown = []
         struck = []
         named = [:]
@@ -353,8 +338,7 @@ final class RambleCapture {
     private func currentShown() -> [RambleRequest.Shown] {
         rows.compactMap { row -> RambleRequest.Shown? in
             guard case let .food(food) = row.content, !food.options.isEmpty else { return nil }
-            let count = expanded.contains(row.id) ? RambleResolver.optionLimit : RambleResolver.collapsedOptions
-            return RambleRequest.Shown(item: row.id, options: food.options.prefix(count).map { String($0.portion.food.displayName.prefix(200)) })
+            return RambleRequest.Shown(item: row.id, options: food.options.prefix(RambleResolver.collapsedOptions).map { String($0.portion.food.displayName.prefix(200)) })
         }
     }
 

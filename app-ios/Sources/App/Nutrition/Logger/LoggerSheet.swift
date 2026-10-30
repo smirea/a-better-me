@@ -52,12 +52,17 @@ private struct LoggerContent: View {
     @State private var choosingTime = false
 
     var body: some View {
+        // Ramble takes the whole screen: its own band holds close, its macros, and the other ways to log.
+        let rambling = session.tab == .ramble && path.isEmpty
         VStack(spacing: 0) {
-            LoggerBanner(session: session, exit: exit, chooseTime: { choosingTime = true }, openPlate: openPlate)
-                .id(session.time.day)
+            if !rambling {
+                LoggerBanner(session: session, exit: exit, chooseTime: { choosingTime = true }, openPlate: openPlate)
+                    .id(session.time.day)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
             // Above the stack, so the Library's own navigation bar (title, sort, create, filter) sits under the tabs;
             // a pushed detail or the plate covers them, as in MacroFactor.
-            if path.isEmpty {
+            if path.isEmpty, !rambling {
                 Picker("Logger tab", selection: $session.tab) {
                     ForEach(LoggerTab.allCases, id: \.self) { tab in
                         Text(tab.title).tag(tab)
@@ -110,7 +115,12 @@ private struct LoggerContent: View {
         switch session.tab {
         case .scan: ScanTab(session: session, open: detail).toolbar(.hidden, for: .navigationBar)
         case .photo: PhotoTab(session: session, showPlate: openPlate).toolbar(.hidden, for: .navigationBar)
-        case .ramble: RambleTab(session: session, open: { path.append(.rambleRow($0)) }).toolbar(.hidden, for: .navigationBar)
+        case .ramble:
+            RambleTab(
+                session: session, open: { path.append(.rambleRow($0)) }, close: exit,
+                switchTo: { tab in withAnimation(.snappy) { session.tab = tab } }
+            )
+            .toolbar(.hidden, for: .navigationBar)
         case .search: SearchTab(session: session, open: open).toolbar(.hidden, for: .navigationBar)
         case .quickAdd: QuickAddTab(session: session).toolbar(.hidden, for: .navigationBar)
         case .library:
