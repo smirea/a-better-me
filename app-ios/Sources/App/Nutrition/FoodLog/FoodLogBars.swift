@@ -21,8 +21,16 @@ struct FoodLogBottomBar: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Theme.margin)
         .padding(.bottom, 8)
+        // The day pages scroll inside the pager, out of reach of a bar's scroll edge effect, so the timeline fades
+        // out here instead; hour pills showing through the glass buttons made the selection's actions hard to read.
+        .background {
+            LinearGradient(colors: [Theme.background.opacity(0), Theme.background], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.2))
+                .padding(.top, -24)
+                .ignoresSafeArea(edges: .bottom)
+        }
         .animation(.snappy, value: state.notice)
     }
 }
@@ -100,8 +108,14 @@ private struct SelectionBar: View {
         FlowLayout {
             BarTitle(title: "Select", count: count, systemImage: "xmark") { state.endSelection() }
             Group {
-                if count == 1 {
-                    Button("Edit") { state.editing = state.selectedEntries.first }
+                if count == 1, let entry = state.selectedEntries.first {
+                    Button("Edit") { state.editing = entry }
+                    if entry.food.source == .recipe {
+                        Button("Explode") {
+                            state.explode(entry.id, in: store)
+                            state.endSelection()
+                        }
+                    }
                 }
                 Button("Copy") { state.pending = .init(action: .copy, entries: state.selectedEntries) }
                 Button("Move") { state.pending = .init(action: .move, entries: state.selectedEntries) }

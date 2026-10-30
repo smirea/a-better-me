@@ -86,6 +86,12 @@ final class FoodLogState {
         }
     }
 
+    /// A long press: select mode with the entry selected, never toggling it off.
+    func startSelection(at id: UUID) {
+        selecting = true
+        selection.insert(id)
+    }
+
     func selectHour(_ ids: [UUID]) {
         guard !ids.isEmpty else { return }
         if selecting {
