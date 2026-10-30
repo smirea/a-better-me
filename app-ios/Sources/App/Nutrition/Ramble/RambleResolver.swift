@@ -50,6 +50,9 @@ struct RambleRow: Identifiable, Hashable, Sendable {
     /// Nil for a copy without a time or meal, whose foods keep their own minutes.
     var minute: Int?
     var content: Content
+    /// The row on screen this one continues, so a correction animates as a change and a removal as a removal, where
+    /// `id` would shift every row after a removed one onto its neighbour (`keyed(after:next:)`).
+    var key = 0
 
     var planned: [RamblePlanned] {
         switch content {
@@ -57,6 +60,62 @@ struct RambleRow: Identifiable, Hashable, Sendable {
         case let .copy(copy): copy.entries.map { RamblePlanned(pick: LoggerPick($0.portion), day: day, minute: minute ?? $0.minute) }
         case .unmatched: []
         }
+    }
+}
+
+/// Lines a new list of items up with the old one by `RambleItem.identity`.
+enum RambleAlignment {
+    /// For each new position that continues an old one, that old position, and whether it is the same item. Items in
+    /// common, in order, are the same; in each gap between them the new items take the old ones' places one for one,
+    /// as the same rows changed ("a coke" became "a diet coke").
+    static func align(_ old: [String], _ new: [String]) -> [Int: (old: Int, same: Bool)] {
+        var common = [[Int]](repeating: [Int](repeating: 0, count: new.count + 1), count: old.count + 1)
+        for i in old.indices.reversed() {
+            for j in new.indices.reversed() {
+                common[i][j] = old[i] == new[j] ? common[i + 1][j + 1] + 1 : max(common[i + 1][j], common[i][j + 1])
+            }
+        }
+        var aligned: [Int: (old: Int, same: Bool)] = [:]
+        var removed: [Int] = [], added: [Int] = []
+        func pair() {
+            for (j, i) in zip(added, removed) { aligned[j] = (i, false) }
+            removed = []
+            added = []
+        }
+        var i = 0, j = 0
+        while i < old.count || j < new.count {
+            if i < old.count, j < new.count, old[i] == new[j] {
+                pair()
+                aligned[j] = (i, true)
+                i += 1
+                j += 1
+            } else if j == new.count || (i < old.count && common[i + 1][j] >= common[i][j + 1]) {
+                removed.append(i)
+                i += 1
+            } else {
+                added.append(j)
+                j += 1
+            }
+        }
+        pair()
+        return aligned
+    }
+}
+
+extension [RambleRow] {
+    /// These rows keyed by the `old` ones they continue on screen (`RambleAlignment`); the rest take keys after `next`.
+    func keyed(after old: [RambleRow], next: inout Int) -> [RambleRow] {
+        let aligned = RambleAlignment.align(old.map(\.item.identity), map(\.item.identity))
+        var rows = self
+        for j in rows.indices {
+            if let match = aligned[j] {
+                rows[j].key = old[match.old].key
+            } else {
+                next += 1
+                rows[j].key = next
+            }
+        }
+        return rows
     }
 }
 
@@ -173,8 +232,12 @@ enum RambleServing {
             // A serving's quantity counts the measure's own unit; the measure's quantity is only its reference size.
             if let measure = named(all, volume.words) { return Serving(measure: measure, quantity: amount) }
             let milliliters = amount * volume.milliliters
-            if let measure = all.first(where: { $0.name == "mL" }) { return Serving(measure: measure, quantity: milliliters) }
-            if let cup = named(all, ["cup"]) { return Serving(measure: cup, quantity: milliliters / 236.5882365) }
+            // The spoken unit, sized from a volume the food has: "2 tbsp" of oats, where "0.12 cup" read as if the
+            // correction to 2 tablespoons never landed.
+            if let (known, size) = volumeMeasure(all) {
+                let spoken = Measure(name: ["ml": "mL", "l": "L"][unit] ?? unit, quantity: 1, servings: known.servings / known.quantity * volume.milliliters / size)
+                return Serving(measure: spoken, quantity: amount)
+            }
             // Water's density stands in for a food that is only weighed (chia seeds per 100 g): 2 tbsp is 30 g, where
             // two of its 100 g servings would be 200 g.
             if let gram = all.first(where: { $0.name == "g" }) { return Serving(measure: gram, quantity: milliliters) }
@@ -185,6 +248,15 @@ enum RambleServing {
             return Serving(measure: measure, quantity: amount)
         }
         return defaultServing(nutrition, count: amount)
+    }
+
+    /// A volume measure of the food and its milliliters per unit of its quantity.
+    private static func volumeMeasure(_ measures: [Measure]) -> (Measure, Double)? {
+        if let measure = measures.first(where: { $0.name == "mL" }) { return (measure, 1) }
+        for volume in volumes.values.sorted(by: { $0.milliliters > $1.milliliters }) {
+            if let measure = named(measures, volume.words) { return (measure, volume.milliliters) }
+        }
+        return nil
     }
 
     private static func defaultServing(_ nutrition: FoodNutrition, count: Double) -> Serving {

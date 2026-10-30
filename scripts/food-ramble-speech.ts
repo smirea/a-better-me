@@ -11,9 +11,14 @@ import { HOLDOUT } from './food-ramble/holdout';
  * names as contextual strings. Feed a result to the eval with `--transcripts`, so the score includes real speech-to-text errors.
  *
  *   bun scripts/food-ramble-speech.ts [--voices Samantha,Eddy] → .cache/food-ramble/<voice>-<transcriber>[-hints].json
+ *
+ * `--paused` only speaks them, with a 700 ms pause at each comma and period, into `.cache/food-ramble/<voice>-paused/`
+ * for `food-ramble-eval.ts --engine live`: `say` never pauses, so its rambles split every turn mid-sentence.
  */
 
-const { values } = parseArgs({ options: { voices: { type: 'string', default: 'Samantha' } } });
+const { values } = parseArgs({
+	options: { voices: { type: 'string', default: 'Samantha' }, paused: { type: 'boolean', default: false } },
+});
 const root = join(import.meta.dir, '..');
 const cache = join(root, '.cache/food-ramble');
 mkdirSync(cache, { recursive: true });
@@ -31,16 +36,18 @@ writeFileSync(hintsFile, hints.join('\n'));
 
 const cases = [...DEV, ...HOLDOUT];
 for (const voice of values.voices.split(',')) {
-	const dir = join(cache, voice.replace(/\W+/g, '-'));
+	const dir = join(cache, voice.replace(/\W+/g, '-') + (values.paused ? '-paused' : ''));
 	mkdirSync(dir, { recursive: true });
 	const files = cases.map(c => {
 		const file = join(dir, `${c.id}.aiff`);
 		if (!existsSync(file)) {
-			const said = Bun.spawnSync(['say', '-v', voice, '-o', file, c.text]);
+			const text = values.paused ? c.text.replace(/([,.]) /g, '$1 [[slnc 700]] ') : c.text;
+			const said = Bun.spawnSync(['say', '-v', voice, '-o', file, text]);
 			if (said.exitCode !== 0) throw new Error(`say failed for ${c.id}: ${said.stderr}`);
 		}
 		return file;
 	});
+	if (values.paused) continue;
 	for (const [label, transcriber, hintsArg] of [
 		['dictation', 'dictation', '-'],
 		['dictation-hints', 'dictation', hintsFile],

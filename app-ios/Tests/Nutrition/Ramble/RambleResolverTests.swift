@@ -70,14 +70,15 @@ struct RambleResolverTests {
             RambleItem(name: "oats", amount: 0.2, unit: "kg"),
             RambleItem(name: "egg", amount: 1, unit: "egg"),
             RambleItem(name: "blueberries"),
+            RambleItem(name: "oats", amount: 2, unit: "tbsp"),
         ], previous: [], choices: [:])
         #expect(describe(rows) == [
             "Oats: 0.5 cup",
             "Blueberries: 50 g",
             // Only weighed, so water's density stands in: 2 tbsp is 29.57 mL.
             "Chia seeds: 29.57 g",
-            // 200 mL of a food measured in cups.
-            "Kefir: 0.85 cup",
+            // A volume the food has no measure for stays in the spoken unit, sized from its cup.
+            "Kefir: 200 mL",
             "Bread, sourdough: 2 slice",
             "Egg: 2 medium",
             "Milk: 250 mL",
@@ -85,8 +86,10 @@ struct RambleResolverTests {
             "Oats: 200 g",
             "Egg: 1 medium",
             "Blueberries: 1 cup",
+            "Oats: 2 tbsp",
         ])
-        #expect(rows.map(\.id) == Array(0..<11))
+        if case let .food(oats) = rows[11].content { #expect(abs(oats.pick.portion.serving.servings - 0.81 * 2 / 16) < 0.0001) }
+        #expect(rows.map(\.id) == Array(0..<12))
         #expect(rows.allSatisfy { $0.day == today && $0.minute == 14 * 60 })
     }
 
