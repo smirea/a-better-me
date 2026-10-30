@@ -256,6 +256,9 @@ const nameWords = (name: string) =>
 			.filter(word => word.length > 2)
 			.map(word => word.replace(/s$/, '')),
 	);
+/** Grok marked foods for options unasked, which opened their lists over the transcript mid-ramble. */
+const ASKS_FOR_OPTIONS = /\b(options?|choices?|alternatives?|wrong|not right|show me|other ones?)\b/i;
+
 /** A ref names a food the speaker logged, so it shares a word with the item ("my usual pancake", "Protein pancake"). */
 const sameFood = (name: string, logged: string) => {
 	const said = nameWords(name);
@@ -264,7 +267,8 @@ const sameFood = (name: string, logged: string) => {
 
 /**
  * Maps aliases back to the phone's ids and drops what does not fit: a copy of no meal, an except outside its meal, a
- * ref to an entry that shares no word with the item's name (Grok once pointed "apple" at a logged banana). A
+ * ref to an entry that shares no word with the item's name (Grok once pointed "apple" at a logged banana), options
+ * the speaker never asked for. A
  * food the speaker gave no meal or time joins the item before it ("lunch at 12:15 was ramen and a coke"), which the
  * model often leaves out once it omits empty fields.
  */
@@ -299,7 +303,7 @@ export function resolveAliases(
 			day,
 			meal: item.meal || (item.kind === 'copy' ? meal!.meal : carried),
 			time: clock(item.time) || (sameMeal ? previous!.time : ''),
-			options: item.kind === 'food' && item.options,
+			options: item.kind === 'food' && item.options && ASKS_FOR_OPTIONS.test(input.transcript),
 			said: item.said.trim(),
 		});
 	}

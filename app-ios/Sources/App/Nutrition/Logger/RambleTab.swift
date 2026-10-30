@@ -22,7 +22,7 @@ struct RambleTab: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 4) {
-                    if capture.rows.isEmpty, capture.phase != .review {
+                    if capture.rows.isEmpty, capture.words.words.isEmpty, capture.phase != .review {
                         hints.transition(.opacity)
                     }
                     ForEach(capture.rows, id: \.key) { row in
@@ -450,7 +450,8 @@ private struct RambleRowView: View {
         .onAppear {
             // Rows coming back into view after a tab switch are not new.
             guard capture.phase == .listening || capture.phase == .finishing else { return }
-            if row.content == .searching, !reduceMotion { parsedUntil = .now + Self.parsedFor }
+            // A new row shows what was said for a moment even when its search already matched, as its words land.
+            if !reduceMotion { parsedUntil = .now + Self.parsedFor + .milliseconds(300) }
             if incoming, !reduceMotion {
                 landed = false
                 withAnimation(.easeOut(duration: 0.25).delay(0.3)) { landed = true }
@@ -676,6 +677,7 @@ private struct RambleRowView: View {
             if !all, unsure(food) {
                 ForEach(others.prefix(2)) { option in
                     Button {
+                        light()
                         capture.pick(option, in: row)
                     } label: {
                         Text(Self.difference(option.portion.food.displayName, from: food.pick.portion.food.displayName))
