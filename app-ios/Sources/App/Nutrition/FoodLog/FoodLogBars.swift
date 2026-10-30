@@ -30,7 +30,9 @@ struct FoodLogBottomBar: View {
             LinearGradient(colors: [Theme.background.opacity(0), Theme.background], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.2))
                 .padding(.top, -24)
                 .ignoresSafeArea(edges: .bottom)
+                .allowsHitTesting(false)
         }
+        .sensoryFeedback(.selection, trigger: state.selection)
         .animation(.snappy, value: state.notice)
     }
 }
@@ -326,7 +328,7 @@ struct DayMenu: View {
 
     var body: some View {
         Menu("More", systemImage: "ellipsis") {
-            Button("Nutrition Overview", systemImage: "list.bullet.rectangle") { state.path.append(.overview(day)) }
+            Button("Nutrition Overview", systemImage: "list.bullet.rectangle") { state.path.append(FoodLogRoute.overview(day)) }
             Button("Copy Day", systemImage: "doc.on.doc") {
                 state.selecting = true
                 state.selection = Set(entries.map(\.id))

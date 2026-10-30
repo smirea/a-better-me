@@ -145,12 +145,12 @@ private struct DaySummary: View {
                 }
             }
             .contentShape(Rectangle())
-            .onTapGesture { state.path.append(.overview(day)) }
+            .onTapGesture { state.path.append(FoodLogRoute.overview(day)) }
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isButton)
             .accessibilityHint("Opens the Nutrition Overview")
             if target == nil {
-                Button { state.path.append(.strategy) } label: {
+                Button { state.path.append(FoodLogRoute.strategy) } label: {
                     HStack(spacing: 4) {
                         Text("No targets for this day")
                             .foregroundStyle(Theme.textSecondary)

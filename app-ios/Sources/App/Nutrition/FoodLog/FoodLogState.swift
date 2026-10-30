@@ -66,7 +66,8 @@ final class FoodLogState {
     }
     var editing: FoodEntry?
     var note: NoteDraft?
-    var path: [FoodLogRoute] = []
+    /// Untyped, so screens pushed here push their own routes too: Strategy, from a day without a plan, pushes `StrategyRoute`.
+    var path = NavigationPath()
     var notice: Notice?
     var recipeRequest: RecipeRequest?
     /// The days whose page is scrolled down, so a week strip set to Show folds away on them.
