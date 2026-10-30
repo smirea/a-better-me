@@ -44,6 +44,13 @@ struct ExpenditureTests {
         #expect(result == [Engine.ExpenditureDay(date: utc.startOfDay(for: days[30]), kcal: 2500, isHolding: true)])
     }
 
+    @Test func aNewUserUpdatesOverTheTrendThereIsAtTheStartupGain() {
+        let trend = Engine.TrendWeight.daily(weighIns: weighIns, through: days[44], calendar: utc)
+        let result = Engine.Expenditure.daily(intake: intake, trend: trend, weighIns: weighIns, initial: 2500, from: days[0], through: days[5], calendar: utc)
+        #expect(result.map(\.isHolding) == [true, true, true, true, false, false])
+        #expect(result.map { ($0.kcal * 100).rounded() / 100 } == [2500, 2500, 2500, 2500, 2400, 2320])
+    }
+
     @Test func noTrendMeansEveryDayHolds() {
         let result = Engine.Expenditure.daily(intake: intake, trend: [], weighIns: [], initial: 2300, from: days[0], through: days[1], calendar: utc)
         #expect(result.map(\.kcal) == [2300, 2300])

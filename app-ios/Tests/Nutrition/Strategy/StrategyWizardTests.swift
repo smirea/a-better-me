@@ -2,7 +2,8 @@ import Foundation
 import Testing
 @testable import App
 
-/// The research spec's §7.1 sample: a 197 lb lifter at 2210 kcal, losing 0.76% a week, Fri and Sat high days.
+/// The research spec's §7.1 sample: a 197 lb lifter at 2210 kcal, losing 0.76% a week, Fri and Sat high days. MacroFactor
+/// planned it at 3500 kcal/lb (1421 and 1564 kcal days); the engine plans at `NutritionEngine.kcalPerLb`.
 private let weightKg = 197 * Engine.kgPerLb
 private let today = calendarDay("2026-10-26")
 
@@ -15,7 +16,7 @@ private func target(_ energy: Double, _ protein: Double, _ fat: Double, _ carbs:
 }
 
 struct StrategyWizardTests {
-    @Test func theSpecSampleReproducesMacroFactorsProgram() {
+    @Test func theSpecSamplePlansAtTheEnginesDensity() {
         var model = wizard()
         model.goal.change(kind: .lose, currentWeightKg: weightKg)
         model.goal.targetWeightKg = 85
@@ -35,13 +36,13 @@ struct StrategyWizardTests {
         #expect(plan.kind == .setup)
         #expect(plan.goal == NutritionGoal(kind: .lose, targetWeightKg: 85, ratePercentPerWeek: -0.7594, startedOn: today))
         #expect(plan.coaching.highDays == [5, 6])
-        #expect(plan.targets[1] == target(1421, 151, 46, 99))
-        #expect(plan.targets[4] == target(1421, 151, 46, 99))
-        #expect(plan.targets[5] == target(1564, 151, 54, 116))
-        #expect(plan.targets[6] == target(1564, 151, 54, 116))
-        #expect(plan.targets[7] == target(1421, 151, 46, 99))
+        #expect(plan.targets[1] == target(1525, 151, 52, 111))
+        #expect(plan.targets[4] == target(1525, 151, 52, 111))
+        #expect(plan.targets[5] == target(1678, 151, 60, 130))
+        #expect(plan.targets[6] == target(1678, 151, 60, 130))
+        #expect(plan.targets[7] == target(1525, 151, 52, 111))
         #expect(model.designNotes.map(\.title) == ["Estimated Expenditure", "Average Target", "Calorie Shift", "Target Protein", "Diet Type"])
-        #expect(model.designNotes[1].value == "1462 kcal")
+        #expect(model.designNotes[1].value == "1569 kcal")
     }
 
     @Test func extraHighProteinSwitchesToKetoAndSaysSo() {
@@ -52,14 +53,14 @@ struct StrategyWizardTests {
         model.shiftCalories = true
         model.coaching.highDays = [5, 6]
         model.coaching.protein = .extraHigh
-        #expect(model.plan(isFirst: true).targets[1] == target(1421, 212, 44, 42))
+        #expect(model.plan(isFirst: true).targets[1] == target(1525, 212, 53, 49))
         #expect(model.designNotes.last?.value == "Keto")
     }
 
     @Test func goalTilesMatchTheWizard() {
         var goal = GoalDraft(kind: .lose, currentWeightKg: weightKg)
         #expect(goal.ratePercent == 0.5)
-        #expect(goal.initialBudget(StrategyBasis(weightKg: weightKg, expenditureKcal: 2210, standardFloorKcal: 1361)) == 1725)
+        #expect(goal.initialBudget(StrategyBasis(weightKg: weightKg, expenditureKcal: 2210, standardFloorKcal: 1361)) == 1800)
         #expect(goal.band == .standard)
         goal.ratePercent = 0.27
         #expect(goal.band == .slower)
@@ -74,9 +75,9 @@ struct StrategyWizardTests {
     }
 
     @Test(arguments: [
-        (NutritionGoal.Kind.lose, 0.7594, target(1462, 151, 48, 104)),
+        (NutritionGoal.Kind.lose, 0.7594, target(1569, 151, 54, 117)),
         (.maintain, 0, target(2210, 151, 90, 194)),
-        (.gain, 0.25, target(2456, 151, 104, 224)),
+        (.gain, 0.25, target(2421, 151, 102, 219)),
     ])
     func coachedEvenWeekForEachGoal(kind: NutritionGoal.Kind, rate: Double, expected: DayTarget) {
         var model = wizard()
@@ -124,7 +125,7 @@ struct StrategyWizardTests {
         model.goal.ratePercent = 0.7594
         #expect(model.coaching.style == .collaborative)
         model.leave(.style)
-        #expect(model.plan(isFirst: false).targets.days.map(\.energy) == Array(repeating: 1462, count: 7))
+        #expect(model.plan(isFirst: false).targets.days.map(\.energy) == Array(repeating: 1569, count: 7))
         #expect(model.plan(isFirst: false).targets[1].protein == 150)
     }
 
@@ -176,8 +177,8 @@ struct StrategyWizardTests {
         let plan = edit.plan(isFirst: false)
         #expect(plan.goal.startedOn == calendarDay("2026-10-01"))
         #expect(plan.goal.ratePercentPerWeek == -0.5)
-        #expect(plan.targets[1].energy == 1670)
-        #expect(plan.targets[5].energy == 1837)
+        #expect(plan.targets[1].energy == 1738)
+        #expect(plan.targets[5].energy == 1912)
 
         var manual = current
         manual.coaching.style = .manual

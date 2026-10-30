@@ -25,19 +25,22 @@ extension NutritionEngine {
             var window = 28
             /// Share of the gap between the raw energy-balance estimate and the current estimate closed per day.
             var gain = 0.015
-            /// Energy of a kilogram of weight change. 3000 kcal/lb fit best; the 3500 kcal/lb rule assumes a leaner change.
-            var kcalPerKg = 3000 / NutritionEngine.kgPerLb
+            var kcalPerKg = NutritionEngine.kcalPerLb / NutritionEngine.kgPerLb
             /// An update on a day needs this many logged days and weigh-ins in the seven days before it.
             var loggedDaysRequired = 3
             var weighInsRequired = 1
             var gateWindow = 7
+            /// A new user's trend is shorter than `window`: the estimate updates over the trend there is once it spans
+            /// this many days, closing `startupGain` of the gap per day, so the initial guess is replaced within weeks.
+            var minWindow = 3
+            var startupGain = 0.2
 
             static let v3 = Model()
             /// The reading of MacroFactor's help before calibration: a 21-day box, 3500 kcal/lb, and no smoothing.
             static let baseline = Model(window: 21, gain: 1, kcalPerKg: 3500 / NutritionEngine.kgPerLb)
         }
 
-        /// `trend` is `TrendWeight.daily` and must cover `window` days before `start`; a day it does not cover holds.
+        /// `trend` is `TrendWeight.daily`, contiguous from the first weigh-in.
         /// The estimate for a day uses data through the day before, so today's log never moves today's number.
         static func daily(
             intake: [IntakeDay], trend: [DatedValue], weighIns: [DatedValue], initial: Double,
@@ -53,16 +56,19 @@ extension NutritionEngine {
             let kcal = days.map { logged[$0] }
             let hasWeighIn = days.map { weighInDays.contains($0) }
             let trendOn = days.map { trendByDay[$0] }
+            let firstTrend = trendOn.firstIndex { $0 != nil } ?? days.count
             var estimate = initial
             return (lookback..<max(lookback, days.count)).map { i in
                 let gate = i - model.gateWindow..<i
                 let canUpdate = gate.filter { kcal[$0] != nil }.count >= model.loggedDaysRequired
                     && gate.filter { hasWeighIn[$0] }.count >= model.weighInsRequired
-                let intakeDays = (i - model.window..<i).reversed().compactMap { kcal[$0] }
-                if canUpdate, !intakeDays.isEmpty, let endTrend = trendOn[i - 1], let startTrend = trendOn[i - model.window - 1] {
+                let window = min(model.window, i - 1 - firstTrend)
+                guard window >= model.minWindow else { return ExpenditureDay(date: days[i], kcal: estimate, isHolding: true) }
+                let intakeDays = (i - window..<i).reversed().compactMap { kcal[$0] }
+                if canUpdate, !intakeDays.isEmpty, let endTrend = trendOn[i - 1], let startTrend = trendOn[i - window - 1] {
                     let meanIntake = intakeDays.reduce(0, +) / Double(intakeDays.count)
-                    let raw = meanIntake - (endTrend - startTrend) * model.kcalPerKg / Double(model.window)
-                    estimate += model.gain * (raw - estimate)
+                    let raw = meanIntake - (endTrend - startTrend) * model.kcalPerKg / Double(window)
+                    estimate += (window < model.window ? model.startupGain : model.gain) * (raw - estimate)
                     return ExpenditureDay(date: days[i], kcal: estimate, isHolding: false)
                 }
                 return ExpenditureDay(date: days[i], kcal: estimate, isHolding: true)

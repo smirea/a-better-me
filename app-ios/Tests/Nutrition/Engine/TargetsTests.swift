@@ -3,8 +3,9 @@ import Testing
 @testable import App
 
 
-/// A synthetic profile that reproduces every number MacroFactor's program wizard showed for one sample (a lifter
-/// with Fri and Sat high days): 197 lb at 2210 kcal with a rate the wizard would display as 0.76%.
+/// MacroFactor's program wizard sample (a lifter with Fri and Sat high days): 197 lb at 2210 kcal with a rate the wizard
+/// would display as 0.76%. The wizard planned it at 3500 kcal/lb (1421 and 1564 kcal days); the engine plans at its own
+/// density, `NutritionEngine.kcalPerLb`, so its deficit is smaller.
 private let weightKg = 197 * Engine.kgPerLb
 private let expenditure = 2210.0
 private let lose = Engine.Goal(kind: .lose, ratePercentPerWeek: 0.7594)
@@ -13,9 +14,9 @@ private let floor = Engine.CalorieFloor.standard(kcal: 1361)
 struct TargetsTests {
     @Test func initialDailyBudgetRoundsToTwentyFive() {
         let half = Engine.Goal(kind: .lose, ratePercentPerWeek: 0.5)
-        #expect(Engine.Targets.initialDailyBudget(expenditure: expenditure, goal: half, weightKg: weightKg) == 1725)
+        #expect(Engine.Targets.initialDailyBudget(expenditure: expenditure, goal: half, weightKg: weightKg) == 1800)
         #expect(Engine.Targets.initialDailyBudget(expenditure: expenditure, goal: Engine.Goal(kind: .maintain, ratePercentPerWeek: 0), weightKg: weightKg) == 2200)
-        #expect(Engine.Targets.initialDailyBudget(expenditure: expenditure, goal: Engine.Goal(kind: .gain, ratePercentPerWeek: 0.5), weightKg: weightKg) == 2700)
+        #expect(Engine.Targets.initialDailyBudget(expenditure: expenditure, goal: Engine.Goal(kind: .gain, ratePercentPerWeek: 0.5), weightKg: weightKg) == 2625)
     }
 
     @Test func balancedModerateProteinWithTwoHighDays() {
@@ -23,19 +24,19 @@ struct TargetsTests {
         let plan = Engine.Targets.weekly(program: program, goal: lose, expenditure: expenditure, weightKg: weightKg)
         #expect(plan.diet == .balanced)
         #expect(!plan.proteinReduced)
-        #expect(plan.days[.monday] == Engine.DayTarget(kcal: 1421, proteinG: 151, fatG: 46, carbsG: 99))
+        #expect(plan.days[.monday] == Engine.DayTarget(kcal: 1525, proteinG: 151, fatG: 52, carbsG: 111))
         #expect(plan.days[.sunday] == plan.days[.monday])
-        #expect(plan.days[.friday] == Engine.DayTarget(kcal: 1564, proteinG: 151, fatG: 54, carbsG: 116))
+        #expect(plan.days[.friday] == Engine.DayTarget(kcal: 1678, proteinG: 151, fatG: 60, carbsG: 130))
         #expect(plan.days[.saturday] == plan.days[.friday])
-        #expect((plan.averageKcal * 100).rounded() / 100 == 1461.86)
+        #expect((plan.averageKcal * 100).rounded() / 100 == 1568.71)
     }
 
     @Test func extraHighProteinFallsBackToKetoWhenFatWouldDropUnderItsFloor() {
         let program = Engine.CoachedProgram(diet: .balanced, protein: .extraHigh, floor: floor, highDays: [.friday, .saturday])
         let plan = Engine.Targets.weekly(program: program, goal: lose, expenditure: expenditure, weightKg: weightKg)
         #expect(plan.diet == .keto)
-        #expect(plan.days[.monday] == Engine.DayTarget(kcal: 1421, proteinG: 212, fatG: 44, carbsG: 42))
-        #expect(plan.days[.friday] == Engine.DayTarget(kcal: 1564, proteinG: 212, fatG: 56, carbsG: 52))
+        #expect(plan.days[.monday] == Engine.DayTarget(kcal: 1525, proteinG: 212, fatG: 53, carbsG: 49))
+        #expect(plan.days[.friday] == Engine.DayTarget(kcal: 1678, proteinG: 212, fatG: 64, carbsG: 60))
     }
 
     @Test func proteinLevelsAreGramsPerPound() {
@@ -46,7 +47,7 @@ struct TargetsTests {
     @Test func evenDistributionGivesEveryDayTheAverage() {
         let program = Engine.CoachedProgram(diet: .balanced, protein: .moderate, floor: floor)
         let plan = Engine.Targets.weekly(program: program, goal: lose, expenditure: expenditure, weightKg: weightKg)
-        #expect(Set(plan.days.values.map(\.kcal)) == [1462])
+        #expect(Set(plan.days.values.map(\.kcal)) == [1569])
         #expect(plan.days.count == 7)
     }
 
@@ -99,9 +100,9 @@ struct CheckInTests {
         let program = Engine.CoachedProgram(diet: .balanced, protein: .moderate, floor: floor)
         let half = Engine.Goal(kind: .lose, ratePercentPerWeek: 0.5)
         let fresh = Engine.CheckIn.plan(program: program, goal: half, expenditure: expenditure, trendWeightKg: weightKg, previousAverageKcal: nil)
-        #expect(Set(fresh.days.values.map(\.kcal)) == [1718])
+        #expect(Set(fresh.days.values.map(\.kcal)) == [1788])
         let smoothed = Engine.CheckIn.plan(program: program, goal: half, expenditure: expenditure, trendWeightKg: weightKg, previousAverageKcal: 1900)
-        #expect(Set(smoothed.days.values.map(\.kcal)) == [1809])
+        #expect(Set(smoothed.days.values.map(\.kcal)) == [1844])
     }
 
     @Test func maintenanceNudgesOutsideTheBand() {
@@ -111,6 +112,6 @@ struct CheckInTests {
         #expect(Engine.CheckIn.effectiveGoal(goal, trendWeightKg: 84) == Engine.Goal(kind: .gain, ratePercentPerWeek: 0.15, targetWeightKg: 85))
         let program = Engine.CoachedProgram(diet: .balanced, protein: .moderate, floor: floor)
         let plan = Engine.CheckIn.plan(program: program, goal: goal, expenditure: expenditure, trendWeightKg: 86, previousAverageKcal: nil)
-        #expect(Set(plan.days.values.map(\.kcal)) == [2068])
+        #expect(Set(plan.days.values.map(\.kcal)) == [2088])
     }
 }

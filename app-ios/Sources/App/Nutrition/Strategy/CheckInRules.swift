@@ -55,6 +55,17 @@ enum CheckInRules {
         )
     }
 
+    /// The week's counted days under half the mean of its other counted days, MacroFactor's partial-logging flag
+    /// (macrofactor.com/algorithm-accuracy), which it names the largest source of expenditure error. Fasted days (0 kcal)
+    /// are never flagged, and a day needs two others to compare with.
+    static func likelyIncomplete(intake: [CalendarDay: Double], today: CalendarDay) -> Set<CalendarDay> {
+        let eaten = (1...7).map { today.adding(days: -$0) }.compactMap { day in intake[day].flatMap { $0 > 0 ? (day, $0) : nil } }
+        return Set(eaten.filter { day, kcal in
+            let others = eaten.filter { $0.0 != day }.map(\.1)
+            return others.count >= 2 && kcal < 0.5 * others.reduce(0, +) / Double(others.count)
+        }.map(\.0))
+    }
+
     /// The new week from today, or nil for a manual program. A coached week is rebuilt by the engine; a collaborative
     /// week keeps the owner's split and moves to the engine's new budget.
     static func checkedIn(_ current: NutritionPlan, basis: StrategyBasis, today: CalendarDay) -> NutritionPlan? {

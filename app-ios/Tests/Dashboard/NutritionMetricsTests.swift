@@ -127,7 +127,7 @@ struct NutritionMetricsTests {
         let insights = try #require(NutritionMetrics.weightInsights(trend: trend, now: day("2026-10-22", 20), calendar: utc))
         #expect(abs(insights.currentKg - 89.37) < 1e-9)
         #expect(abs(insights.weeklyChangeKg! - -0.21) < 1e-9)
-        #expect(abs(insights.energyBalanceKcal! - -231.4853) < 1e-3)
+        #expect(abs(insights.energyBalanceKcal! - -198.4160) < 1e-3)
         #expect(abs(insights.projectionKg! - 88.47) < 1e-9)
         #expect(NutritionMetrics.weightInsights(trend: trend, now: day("2026-10-23"), calendar: utc) == nil)
     }

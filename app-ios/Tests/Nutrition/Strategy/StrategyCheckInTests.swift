@@ -78,6 +78,16 @@ struct StrategyCheckInTests {
         #expect(CheckInRules.nextCheckInDay(today: calendarDay("2026-10-22"), weekday: 1) == calendarDay("2026-10-26"))
     }
 
+    @Test func flagsADayUnderHalfTheWeeksOtherDaysButNeverAFast() {
+        let today = calendarDay("2026-03-09")
+        let intake: [CalendarDay: Double] = [
+            today.adding(days: -1): 2000, today.adding(days: -2): 2200, today.adding(days: -3): 900,
+            today.adding(days: -4): 0, today.adding(days: -5): 1800, today.adding(days: -8): 100,
+        ]
+        #expect(CheckInRules.likelyIncomplete(intake: intake, today: today) == [today.adding(days: -3)])
+        #expect(CheckInRules.likelyIncomplete(intake: [today.adding(days: -1): 2000, today.adding(days: -2): 500], today: today).isEmpty)
+    }
+
     @Test func theSettingsChooseTheModules() {
         var settings = NutritionSettings()
         #expect(CheckInRules.modules(settings) == [.review, .update])
@@ -93,13 +103,13 @@ struct StrategyCheckInTests {
         let basis = StrategyBasis(weightKg: 80, expenditureKcal: 2000, standardFloorKcal: 1200)
         let today = calendarDay("2026-10-26")
         let coached = CheckInRules.checkedIn(plan("2026-10-06"), basis: basis, today: today)
-        #expect(coached?.targets == WeekTargets(every: target(1630, 135, 61, 132)))
+        #expect(coached?.targets == WeekTargets(every: target(1661, 135, 63, 135)))
         #expect(coached?.kind == .checkIn)
         #expect(coached?.id == today)
         #expect(coached?.expenditureKcal == 2000)
         #expect(coached?.trendWeightKg == 80)
         let collaborative = CheckInRules.checkedIn(plan("2026-10-06", .collaborative, targets: target(1700, 150, 50, 160)), basis: basis, today: today)
-        #expect(collaborative?.targets == WeekTargets(every: target(1630, 150, 47, 151)))
+        #expect(collaborative?.targets == WeekTargets(every: target(1661, 150, 49, 156)))
         #expect(CheckInRules.checkedIn(plan("2026-10-06", .manual), basis: basis, today: today) == nil)
     }
 
@@ -138,7 +148,7 @@ struct StrategyCheckInTests {
 
         let saved = try store.read(NutritionPlan.all.fetch)
         #expect(saved.map(\.kind) == [.setup, .checkIn])
-        #expect(saved.last?.targets[1] == target(1630, 135, 61, 132))
+        #expect(saved.last?.targets[1] == target(1661, 135, 63, 135))
         #expect(saved.last?.expenditureKcal == 2000)
         #expect(saved.last?.trendWeightKg == 80)
         #expect(!CheckInRules.isDue(NutritionPlan.effective(on: today, in: saved), today: today, weekday: settings.checkInWeekday))
