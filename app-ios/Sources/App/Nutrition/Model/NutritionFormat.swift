@@ -49,6 +49,11 @@ enum NutritionFormat {
         "\(time(minute)) \(minute < 720 ? "AM" : "PM")"
     }
 
+    /// "8 AM" on the hour, as the timeline's hour labels read, and "8:30 AM" otherwise.
+    static func moment(_ minute: Int) -> String {
+        minute % 60 == 0 ? hour(minute / 60) : clock(minute)
+    }
+
     static func dayTitle(_ day: CalendarDay, today: CalendarDay = .today) -> String {
         switch day {
         case today: "Today"
