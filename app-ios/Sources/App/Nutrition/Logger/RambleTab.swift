@@ -29,7 +29,9 @@ struct RambleTab: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            RambleSummary(planned: capture.planned, close: close, switchTo: switchTo)
+            RambleSummary(
+                planned: capture.planned, missing: capture.rows.count { $0.content == .unmatched }, close: close, switchTo: switchTo
+            )
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
@@ -289,6 +291,8 @@ struct RambleTab: View {
 /// The top band: close, the ramble's calories and macros so far, rolling as foods land, and the other ways to log.
 private struct RambleSummary: View {
     let planned: [RamblePlanned]
+    /// Foods said but not found, which the totals leave out.
+    let missing: Int
     let close: () -> Void
     let switchTo: (LoggerTab) -> Void
     @State private var pulse = 0.0
@@ -310,6 +314,12 @@ private struct RambleSummary: View {
                     macro("P", .protein, amounts, Theme.protein)
                     macro("F", .fat, amounts, Theme.fat)
                     macro("C", .carbs, amounts, Theme.carbs)
+                }
+                if missing > 0 {
+                    Text(missing == 1 ? "1 food not found" : "\(missing) foods not found")
+                        .font(AppFont.badge)
+                        .foregroundStyle(Theme.amber)
+                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
             }
             .scaleEffect(1 + 0.06 * pulse)
@@ -610,8 +620,8 @@ private struct RambleLine: View {
         }
         .task(id: was) {
             guard was != nil else { return }
-            try? await Task.sleep(for: .seconds(2.2))
-            withAnimation(.easeOut(duration: 0.4)) { was = nil }
+            try? await Task.sleep(for: .seconds(1.4))
+            withAnimation(.easeOut(duration: 0.3)) { was = nil }
         }
         .sensoryFeedback(.selection, trigger: face)
         .sensoryFeedback(.impact(weight: .medium), trigger: removing) { _, new in new }
@@ -744,11 +754,12 @@ private struct RambleLine: View {
         }
     }
 
-    /// The other matches, best first, to swap to; the current one is checked.
+    /// The other matches, best first, to swap to.
     private func alternatives(_ food: RambleRow.Food) -> some View {
-        let shown = allOptions ? food.options : Array(food.options.prefix(5))
+        let others = food.options.filter { $0.key != food.key }
+        let shown = allOptions ? others : Array(others.prefix(4))
         return VStack(alignment: .leading, spacing: 0) {
-            Text(food.options.count > 1 ? "Other matches" : "No other matches")
+            Text(others.isEmpty ? "No other matches" : "Other matches")
                 .font(AppFont.badge)
                 .foregroundStyle(Theme.textTertiary)
                 .padding(.top, 4)
@@ -759,19 +770,18 @@ private struct RambleLine: View {
                     tap()
                 } label: {
                     HStack(spacing: 10) {
-                        Image(systemName: option.key == food.key ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(option.key == food.key ? Theme.accent : Theme.textTertiary)
+                        Image(systemName: "arrow.left.arrow.right.circle")
+                            .foregroundStyle(Theme.textTertiary)
                         FoodRow(food: option.portion.food, serving: RambleServing.serving(amount: row.item.amount, unit: row.item.unit, of: option.portion.food.nutrition, history: option.portion.serving))
                     }
                     .frame(minHeight: 44)
                     .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
-                .accessibilityAddTraits(option.key == food.key ? .isSelected : [])
                 .transition(.opacity)
             }
-            if !allOptions, food.options.count > 5 {
-                Button("Show \(food.options.count - 5) More") { withAnimation(.snappy) { allOptions = true } }
+            if !allOptions, others.count > 4 {
+                Button("Show \(others.count - 4) More") { withAnimation(.snappy) { allOptions = true } }
                     .font(AppFont.badge)
                     .foregroundStyle(Theme.textSecondary)
                     .frame(minHeight: 36)
