@@ -193,7 +193,6 @@ struct BalanceChart: View {
     let line: [DatedValue]
     let lineColor: Color
     let domain: DateInterval
-    var showsAxis = false
     /// The reference line's name; set only where the chart isn't a card's link, which a tap must still follow.
     var scrubbing: String?
 
