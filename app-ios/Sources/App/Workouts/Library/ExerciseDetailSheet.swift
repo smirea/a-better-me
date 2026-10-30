@@ -143,11 +143,12 @@ struct InstructionSource: Hashable, Sendable {
 
 private struct CollapsibleSection: View {
     let section: MarkdownSection
-    @State private var isExpanded: Bool
+    @AppStorage private var isExpanded: Bool
 
+    /// Keyed by title, so collapsing "Execution" or an article collapses it on every exercise that shows it.
     init(section: MarkdownSection, startsExpanded: Bool) {
         self.section = section
-        _isExpanded = State(initialValue: startsExpanded)
+        _isExpanded = AppStorage(wrappedValue: startsExpanded, "workouts.instructions.expanded.\(section.title)")
     }
 
     var body: some View {
