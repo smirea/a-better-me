@@ -289,7 +289,7 @@ struct MetricPlot {
     var second: Double?
     var overlay: [DatedValue]
     var overlayValues: [Date: Double]
-    /// Where the chart's scrubbing snaps for each drawn point: the point itself on a line, the bar's middle on bars.
+    /// Where scrubbing draws the rule for each drawn point.
     var scrubDates: [Date]
     var holding: Set<Date>
     /// The tab's own stats when it has them, else the average and the second stat.
@@ -314,9 +314,12 @@ struct MetricPlot {
         self.unit = unit
         overlay = tab.overlay.map { drawing.bucket($0.points.inside(interval), calendar: calendar).map { DatedValue(date: max($0.date, interval.start), value: $0.value) } } ?? []
         overlayValues = Dictionary(overlay.map { ($0.date, $0.value) }, uniquingKeysWith: { first, _ in first })
+        // A bar spans its whole calendar day, week, or month even when its date is clamped to the range's start, so
+        // the rule goes to the middle of the bar's part inside the range.
         scrubDates = tab.style == .line ? drawn.map(\.date) : drawn.map { point in
-            let end = calendar.date(byAdding: drawing.component, value: 1, to: point.date)!
-            return point.date.addingTimeInterval(end.timeIntervalSince(point.date) / 2)
+            let bin = calendar.dateInterval(of: drawing.component, for: point.date)!
+            let start = max(bin.start, interval.start)
+            return start.addingTimeInterval(min(bin.end, interval.end).timeIntervalSince(start) / 2)
         }
         holding = drawing == .daily ? tab.holding : []
         average = (drawing == averaging ? drawn : averaging.bucket(daily, calendar: calendar)).average

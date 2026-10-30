@@ -2,7 +2,6 @@ import Charts
 import SwiftUI
 import UIKit
 
-/// What a scrubbed chart shows for the selected point: a date or slot title over one line per series.
 struct ChartCallout {
     struct Line {
         var label: String?
@@ -82,12 +81,13 @@ private struct ChartScrubOverlay<X: Plottable & Equatable>: View {
                 .position(x: x, y: plot.midY)
             ChartCalloutView(callout: callout)
                 .onGeometryChange(for: CGSize.self) { $0.size } action: { calloutSize = $0 }
+                .opacity(calloutSize == .zero ? 0 : 1)
                 .position(center)
         }
         .allowsHitTesting(false)
     }
 
-    /// Binary search over the points' plotted positions, which grow with their order.
+    /// Binary search: `xs` are in plotted order, so their positions grow.
     private func nearest(_ x: CGFloat) -> Int? {
         guard !xs.isEmpty else { return nil }
         func position(_ index: Int) -> CGFloat { proxy.position(forX: xs[index]) ?? 0 }
@@ -172,7 +172,7 @@ private struct ScrubRecognizer: UIGestureRecognizerRepresentable {
         private static func scrollsHorizontally(around view: UIView?) -> Bool {
             var ancestor = view?.superview
             while let current = ancestor {
-                if let scroll = current as? UIScrollView, scroll.isPagingEnabled || scroll.contentSize.width > scroll.bounds.width + 1 {
+                if let scroll = current as? UIScrollView, scroll.contentSize.width > scroll.bounds.width + 1 {
                     return true
                 }
                 ancestor = current.superview
