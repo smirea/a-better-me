@@ -40,6 +40,8 @@ final class RambleCapture {
     /// `parsedFor`, and a row searching again for a renamed food. The parse and the match read as two steps, and the
     /// totals leave the row out until its match shows.
     private(set) var parsing: Set<Int> = []
+    /// `parsing`, until a quarter second after its match shows, so the totals roll once the match is readable.
+    private(set) var uncounted: Set<Int> = []
     /// Names the online search is looking for, whose rows say so.
     private(set) var searchingOnline: Set<String> = []
     /// Advances when the owner changes a row from its detail or its menu, with that row's key, so the row lights up as
@@ -116,7 +118,7 @@ final class RambleCapture {
 
     var planned: [RamblePlanned] { rows.flatMap(\.planned) }
     /// What the summary counts: the rows whose match shows.
-    var shownPlanned: [RamblePlanned] { rows.filter { !parsing.contains($0.key) }.flatMap(\.planned) }
+    var shownPlanned: [RamblePlanned] { rows.filter { !uncounted.contains($0.key) }.flatMap(\.planned) }
 
     /// Foods said but found neither locally nor online, once their parse and the online search are done.
     var notFound: Int {
@@ -325,6 +327,7 @@ final class RambleCapture {
         askedOnline = []
         searchingOnline = []
         parsing = []
+        uncounted = []
         shown = []
         struck = []
         named = [:]
@@ -342,9 +345,12 @@ final class RambleCapture {
         }
         guard !held.isEmpty else { return }
         parsing.formUnion(held.map(\.key))
+        uncounted.formUnion(held.map(\.key))
         Task { [weak self] in
             try? await Task.sleep(for: Self.parsedFor)
             self?.parsing.subtract(held.map(\.key))
+            try? await Task.sleep(for: .milliseconds(250))
+            self?.uncounted.subtract(held.map(\.key))
         }
     }
 

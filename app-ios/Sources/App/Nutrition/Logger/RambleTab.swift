@@ -436,7 +436,8 @@ private struct Fly: ViewModifier, @MainActor Animatable {
         )
         return content
             .scaleEffect(1 + 0.12 * sin(t * .pi) - 0.15 * t)
-            .opacity(t < 0.6 ? 1 : (1 - t) / 0.4)
+            // Correcting words land on a row whose text is changing, so they are gone before they reach it.
+            .opacity(trailing ? (t < 0.4 ? 1 : max(0, (0.75 - t) / 0.35)) : (t < 0.6 ? 1 : (1 - t) / 0.4))
             .position(point)
     }
 }
@@ -738,14 +739,21 @@ private struct RambleLine: View {
 
     /// The serving, right-aligned: a menu of the food's measures, and Custom for the serving keyboard.
     @ViewBuilder private var serving: some View {
-        let label = Text(face.serving)
-            .font(AppFont.medium(14))
-            .monospacedDigit()
-            .lineLimit(1)
-            .padding(.horizontal, 10)
-            .frame(minHeight: 32)
-            .background(Theme.surfaceRaised, in: .capsule)
-            .contentTransition(.opacity)
+        // The old amount fades out before the new one fades in, so they never overlap.
+        let label = ZStack {
+            Text(face.serving)
+                .font(AppFont.medium(14))
+                .monospacedDigit()
+                .lineLimit(1)
+                .id(face.serving)
+                .transition(.asymmetric(
+                    insertion: .opacity.animation(.easeIn(duration: 0.18).delay(0.14)),
+                    removal: .opacity.animation(.easeOut(duration: 0.12))
+                ))
+        }
+        .padding(.horizontal, 10)
+        .frame(minHeight: 32)
+        .background(Theme.surfaceRaised, in: .capsule)
         if !parsing, case let .food(food) = row.content {
             let current = food.pick.portion.serving
             Menu {
