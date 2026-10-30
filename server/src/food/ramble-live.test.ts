@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, spyOn, test } from 'bun:test';
 import type { RambleOutline } from './ramble';
-import { Reader, serveLiveRamble, type Transcribe, type TranscriberEvents } from './ramble-live';
+import {
+	Reader,
+	serveLiveRamble,
+	wordsAfter,
+	xaiTranscriber,
+	type Heard,
+	type SttSocket,
+	type Transcribe,
+	type TranscriberEvents,
+} from './ramble-live';
 
 const context = { transcript: '', today: '2026-10-28', time: '08:15' };
 const outline = (...names: string[]): RambleOutline => ({
@@ -90,6 +99,81 @@ describe('Reader', () => {
 		calls[1]!.fail();
 		await tick();
 		expect(errors.map(e => e.message)).toEqual(['both models failed']);
+	});
+	test('words committed after the stop are read as the last words, and closing ends a settle at once', async () => {
+		const { calls, read } = reads();
+		const reader = new Reader(read, { outline: () => {}, error: () => {} }, timing);
+		const settled = reader.settle('eggs');
+		reader.heard('eggs and toast');
+		await tick();
+		expect(calls.map(call => call.text)).toEqual(['eggs', 'eggs and toast']);
+		calls[0]!.answer();
+		calls[1]!.answer();
+		expect((await settled).items.map(item => item.name)).toEqual(['eggs', 'toast']);
+		const closing = new Reader(read, { outline: () => {}, error: () => {} }, timing);
+		const started = Date.now();
+		const settling = closing.settle('coffee');
+		closing.close();
+		expect(await settling).toEqual(outline());
+		expect(Date.now() - started).toBeLessThan(timing.settleCapMs);
+	});
+});
+
+describe('xaiTranscriber', () => {
+	/** A socket shaped like a Worker's: listeners only, no `onmessage`. */
+	function workerSocket() {
+		const listeners: Record<string, ((event: never) => void)[]> = {};
+		const sent: unknown[] = [];
+		const socket: SttSocket = {
+			binaryType: 'blob',
+			send: data => sent.push(data),
+			close: () => listeners.close?.forEach(listener => listener({ code: 1000, reason: '' } as never)),
+			addEventListener: (type: string, listener: (event: never) => void) => (listeners[type] ??= []).push(listener),
+		};
+		const say = (message: object) =>
+			listeners.message?.forEach(listener => listener({ data: JSON.stringify(message) } as never));
+		return { socket, sent, say };
+	}
+
+	test("a Worker's socket starts, partials replace the tail, and a pause's repeat of the utterance adds only its new words", async () => {
+		const { socket, sent, say } = workerSocket();
+		const heard: Heard[] = [];
+		let done = false;
+		const starting = xaiTranscriber(
+			'key',
+			async () => socket,
+		)({
+			heard: words => heard.push(words),
+			done: () => (done = true),
+			error: error => {
+				throw error;
+			},
+		});
+		await tick();
+		say({ type: 'transcript.created' });
+		const stt = await starting;
+		stt.audio(new Uint8Array(4));
+		say({ type: 'transcript.partial', text: 'two eggs', is_final: false });
+		say({ type: 'transcript.partial', text: 'two eggs,', is_final: true });
+		say({ type: 'transcript.partial', text: 'and toast', is_final: false });
+		say({ type: 'transcript.partial', text: 'Two eggs and toast.', is_final: true, speech_final: true });
+		stt.end();
+		say({ type: 'transcript.done', text: 'Two eggs and toast. Coffee.' });
+		expect(heard).toEqual([
+			{ committed: '', partial: 'two eggs' },
+			{ committed: 'two eggs,', partial: '' },
+			{ committed: 'two eggs,', partial: 'and toast' },
+			{ committed: 'two eggs, and toast.', partial: '' },
+			{ committed: 'two eggs, and toast. Coffee.', partial: '' },
+		]);
+		expect(done).toBe(true);
+		expect(sent).toEqual([new Uint8Array(4), '{"type":"audio.done"}']);
+	});
+
+	test('a prefix matches by words, case and punctuation aside', () => {
+		expect(wordsAfter('Two eggs and toast.', 'two eggs,')).toBe('and toast.');
+		expect(wordsAfter('Three eggs and toast.', 'two eggs,')).toBeNull();
+		expect(wordsAfter('eggs', '')).toBe('eggs');
 	});
 });
 

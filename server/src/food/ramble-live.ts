@@ -45,18 +45,28 @@ const sameWords = (a: string, b: string) => {
 
 declare const WebSocketPair: unknown;
 
+/** The socket calls the transcriber needs. A Worker's socket is only an `EventTarget`: it has no `onmessage`. */
+export type SttSocket = {
+	binaryType: string;
+	send(data: string | Uint8Array<ArrayBuffer>): void;
+	close(): void;
+	addEventListener(type: 'message', listener: (event: { data: unknown }) => void): void;
+	addEventListener(type: 'close', listener: (event: { code: number; reason: string }) => void): void;
+};
+export type Dial = (url: URL, headers: Record<string, string>) => Promise<SttSocket>;
+
 /** Bun takes handshake headers in the WebSocket constructor; a Worker can only send them with a fetch upgrade. */
-async function dial(url: URL, headers: Record<string, string>): Promise<WebSocket> {
+const dial: Dial = async (url, headers) => {
 	if (typeof WebSocketPair === 'undefined') {
-		const Dialer = WebSocket as unknown as new (url: URL, options: { headers: Record<string, string> }) => WebSocket;
+		const Dialer = WebSocket as unknown as new (url: URL, options: { headers: Record<string, string> }) => SttSocket;
 		return new Dialer(url, { headers });
 	}
 	const response = await fetch(url.href.replace(/^wss:/, 'https:'), { headers: { ...headers, Upgrade: 'websocket' } });
-	const socket = (response as Response & { webSocket?: WebSocket & { accept(): void } }).webSocket;
+	const socket = (response as Response & { webSocket?: SttSocket & { accept(): void } }).webSocket;
 	if (!socket) throw new Error(`xAI refused the speech-to-text socket: ${response.status} ${await response.text()}`);
 	socket.accept();
 	return socket;
-}
+};
 
 type SttMessage = {
 	type?: string;
@@ -77,12 +87,30 @@ export type Transcriber = {
 export type TranscriberEvents = { heard(heard: Heard): void; done(): void; error(error: Error): void };
 export type Transcribe = (events: TranscriberEvents) => Promise<Transcriber>;
 
+const words = (text: string) => text.split(/\s+/).filter(Boolean);
+const wordKey = (word: string) => word.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+/**
+ * What `text` adds after `prefix`, when `text` begins with its words, case and punctuation aside ("two eggs," then
+ * "Two eggs and toast."); null when it does not.
+ */
+export function wordsAfter(text: string, prefix: string): string | null {
+	const head = words(prefix).map(wordKey).filter(Boolean);
+	const all = words(text);
+	let at = 0;
+	for (const key of head) {
+		while (at < all.length && !wordKey(all[at]!)) at++;
+		if (at >= all.length || wordKey(all[at]!) !== key) return null;
+		at++;
+	}
+	return all.slice(at).join(' ');
+}
+
 /**
  * xAI's streaming speech-to-text. A partial replaces the words after the last final; `is_final` commits a chunk, and
  * `speech_final` repeats the whole utterance at a pause, of which only what follows the chunks already committed is
  * new. `transcript.done` answers `audio.done` with the whole transcript.
  */
-export function xaiTranscriber(key: string): Transcribe {
+export function xaiTranscriber(key: string, connect: Dial = dial): Transcribe {
 	return async events => {
 		const url = new URL(STT_URL);
 		url.search = new URLSearchParams({
@@ -94,14 +122,12 @@ export function xaiTranscriber(key: string): Transcribe {
 			endpointing: String(ENDPOINTING_MS),
 			filler_words: 'true',
 		}).toString();
-		const socket = await dial(url, { Authorization: `Bearer ${key}` });
+		const socket = await connect(url, { Authorization: `Bearer ${key}` });
 		socket.binaryType = 'arraybuffer';
 		let committed = '';
 		let utterance = '';
 		let ending = false;
 		let over = false;
-		const after = (text: string, prefix: string) =>
-			prefix && text.toLowerCase().startsWith(prefix.toLowerCase()) ? text.slice(prefix.length).trim() : text;
 		const finish = (error?: Error) => {
 			if (over) return;
 			over = true;
@@ -110,14 +136,17 @@ export function xaiTranscriber(key: string): Transcribe {
 			socket.close();
 		};
 		const ready = new Promise<void>((resolve, reject) => {
-			const timeout = setTimeout(
-				() => reject(new Error('xAI speech-to-text did not start in time')),
-				STT_READY_TIMEOUT_MS,
-			);
-			socket.onmessage = event => {
+			const timeout = setTimeout(() => {
+				const error = new Error('xAI speech-to-text did not start in time');
+				reject(error);
+				finish(error);
+			}, STT_READY_TIMEOUT_MS);
+			socket.addEventListener('message', event => {
+				if (over) return;
 				let message: SttMessage;
 				try {
-					message = JSON.parse(typeof event.data === 'string' ? event.data : new TextDecoder().decode(event.data));
+					const data = event.data;
+					message = JSON.parse(typeof data === 'string' ? data : new TextDecoder().decode(data as ArrayBuffer));
 				} catch {
 					return;
 				}
@@ -125,7 +154,7 @@ export function xaiTranscriber(key: string): Transcribe {
 					clearTimeout(timeout);
 					return resolve();
 				}
-				if (message.type === 'error' || /error/.test(message.type ?? '')) {
+				if (/error/.test(message.type ?? '')) {
 					const error = new Error(`xAI speech-to-text failed: ${message.message ?? message.error ?? message.type}`);
 					clearTimeout(timeout);
 					reject(error);
@@ -134,16 +163,16 @@ export function xaiTranscriber(key: string): Transcribe {
 				const text = (message.text ?? '').trim();
 				if (message.type === 'transcript.done') {
 					// The whole transcript; when it revised words already committed, it stands over them.
-					if (text)
-						committed = text.toLowerCase().startsWith(committed.toLowerCase())
-							? joined(committed, after(text, committed))
-							: text;
+					if (text) {
+						const rest = wordsAfter(text, committed);
+						committed = rest === null ? text : joined(committed, rest);
+					}
 					events.heard({ committed, partial: '' });
 					return finish();
 				}
 				if (message.type !== 'transcript.partial') return;
 				if (message.speech_final) {
-					committed = joined(committed, after(text, utterance));
+					committed = joined(committed, wordsAfter(text, utterance) ?? text);
 					utterance = '';
 					events.heard({ committed, partial: '' });
 				} else if (message.is_final) {
@@ -151,13 +180,13 @@ export function xaiTranscriber(key: string): Transcribe {
 					committed = joined(committed, text);
 					events.heard({ committed, partial: '' });
 				} else events.heard({ committed, partial: text });
-			};
-			socket.onclose = event => {
+			});
+			socket.addEventListener('close', event => {
 				clearTimeout(timeout);
-				reject(new Error(`xAI speech-to-text closed: ${event.code} ${event.reason}`));
-				if (ending) finish();
-				else finish(new Error(`xAI speech-to-text closed: ${event.code} ${event.reason}`));
-			};
+				const error = new Error(`xAI speech-to-text closed: ${event.code} ${event.reason}`);
+				reject(error);
+				finish(ending ? undefined : error);
+			});
 		});
 		await ready;
 		return {
@@ -209,26 +238,35 @@ export class Reader {
 
 	heard(text: string) {
 		if (this.#closed || text === this.#latest) return;
+		// Words the transcriber commits after the stop are the last words now.
+		if (this.#final !== undefined) return this.#last(text);
 		this.#latest = text;
 		clearTimeout(this.#timer);
 		this.#timer = setTimeout(() => this.#issue(), this.timing.debounceMs);
 	}
 
 	/** The outline of exactly `text`, the transcript's last words, or the latest outline after `settleCapMs`. */
-	settle(text: string): Promise<RambleOutline> {
-		this.#final = text;
-		this.#latest = text;
-		clearTimeout(this.#timer);
+	async settle(text: string): Promise<RambleOutline> {
 		const settled = new Promise<void>(resolve => (this.#settled = resolve));
-		if (!text.trim() || sameWords(this.#applied, text)) this.#settle();
-		else if (!sameWords(this.#issued, text)) this.#issue(true);
-		const cap = new Promise<void>(resolve => setTimeout(resolve, this.timing.settleCapMs));
-		return Promise.race([settled, cap]).then(() => this.#outline);
+		this.#last(text);
+		let cap: ReturnType<typeof setTimeout> | undefined;
+		await Promise.race([settled, new Promise<void>(resolve => (cap = setTimeout(resolve, this.timing.settleCapMs)))]);
+		clearTimeout(cap);
+		return this.#outline;
 	}
 
 	close() {
 		this.#closed = true;
 		clearTimeout(this.#timer);
+		this.#settle();
+	}
+
+	#last(text: string) {
+		this.#final = text;
+		this.#latest = text;
+		clearTimeout(this.#timer);
+		if (!text.trim() || sameWords(this.#applied, text)) this.#settle();
+		else if (!sameWords(this.#issued, text)) this.#issue(true);
 	}
 
 	#settle() {
@@ -252,8 +290,9 @@ export class Reader {
 				if (mine > this.#newest) {
 					this.#newest = mine;
 					this.#applied = text;
+					// The phone re-resolves every outline it gets, so one that only re-reads the same list is not sent.
+					if (JSON.stringify(outline) !== JSON.stringify(this.#outline)) this.events.outline(outline);
 					this.#outline = outline;
-					this.events.outline(outline);
 				}
 				if (this.#final !== undefined && sameWords(this.#applied, this.#final)) return this.#settle();
 				this.#issue(this.#final !== undefined);
@@ -327,6 +366,9 @@ export async function openLiveRamble(
 		},
 		done: () => sttDone(),
 		error: fail,
+	}).catch(error => {
+		reader.close();
+		throw error;
 	});
 	const started = Date.now();
 	return {
@@ -338,8 +380,8 @@ export async function openLiveRamble(
 			const stopped = Date.now();
 			stt.end();
 			await Promise.race([transcribed, new Promise(resolve => setTimeout(resolve, 2_000))]);
+			const outline = await reader.settle(heardText(heard));
 			const transcript = heardText(heard);
-			const outline = await reader.settle(transcript);
 			// The Worker logs keep how long the speaker waited after the stop, for tuning against real voices.
 			console.log(
 				`ramble live: ${transcript.split(/\s+/).filter(Boolean).length} words over ${Math.round((stopped - started) / 1000)}s, ${reader.reads} reads, ${outline.items.length} items, settled ${Date.now() - stopped}ms after the stop`,

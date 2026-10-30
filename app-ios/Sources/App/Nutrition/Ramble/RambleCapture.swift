@@ -17,9 +17,6 @@ final class RambleCapture {
 
     /// Past this the last outline stands.
     static let settleTimeout = Duration.seconds(6)
-    /// How long a new row shows the words it was parsed from before its search result replaces them, so the parse and
-    /// the match read as two steps.
-    static let searchDwell = Duration.milliseconds(800)
 
     private(set) var phase = Phase.idle
     /// What the speaker said this ramble, every listen included.
@@ -185,6 +182,7 @@ final class RambleCapture {
                 case let .heard(words):
                     heard = words
                 case let .outline(outline):
+                    guard outline.items != items else { continue }
                     items = outline.items
                     resolve()
                 case let .done(text, outline):
@@ -197,7 +195,15 @@ final class RambleCapture {
                     self.stream = nil
                     recorder.stream(to: nil)
                     heard = RambleHeard(committed: heard.text)
-                    guard phase == .listening else { return }
+                    guard phase == .listening else {
+                        // Stopped: the last words still get one read, through the text route.
+                        if let outline = try? await client.outline(request(heard.text)), token == generation {
+                            items = outline.items
+                        } else {
+                            notice = "The last words couldn't be read. The foods so far stay."
+                        }
+                        return
+                    }
                     dictation.cancel()
                     listenOnDevice(token: token)
                     return
@@ -412,8 +418,8 @@ final class RambleCapture {
         )
     }
 
-    /// Shows the latest items at once as the words they were parsed from, then their search results off the main actor,
-    /// no sooner than `searchDwell` after a row first showed its words. An older resolution finishing late is dropped.
+    /// Shows the latest items at once as the words they were parsed from, then their search results off the main actor.
+    /// An older resolution finishing late is dropped.
     @discardableResult
     private func resolve() -> Task<Void, Never>? {
         resolution += 1
@@ -427,11 +433,8 @@ final class RambleCapture {
             if keyed != rows { rows = keyed }
         }
         let previous = rows
-        let searching = previous.contains { $0.content == .searching }
-        let shownAt = ContinuousClock.now
         let task = Task { [weak self] in
             let resolved = await Task.detached { try? resolver.rows(items, previous: previous, choices: choices) }.value
-            if searching { try? await Task.sleep(until: shownAt + Self.searchDwell) }
             guard let self, let resolved, token == resolution, !Task.isCancelled else { return }
             let keyed = resolved.keyed(after: rows, next: &keys)
             if keyed != rows { rows = keyed }

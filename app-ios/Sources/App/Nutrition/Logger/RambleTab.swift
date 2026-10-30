@@ -380,6 +380,13 @@ private struct RambleRowView: View {
     @State private var removing = false
     /// A row's first moments are the model settling on what it heard ("dinner" becomes "pork loin"), not a correction.
     @State private var born = ContinuousClock.now
+    /// Until then the row shows what was said even when its search already matched a food, so the parse and the match
+    /// read as two steps.
+    @State private var parsedUntil: ContinuousClock.Instant?
+
+    static let parsedFor = Duration.milliseconds(800)
+
+    private var parsing: Bool { row.content == .searching || parsedUntil != nil }
 
     /// What the row says; a change to it is a correction worth showing.
     private struct Face: Equatable {
@@ -421,7 +428,7 @@ private struct RambleRowView: View {
                 }
             }
             // While the speaker talks a row stays one line, unless they asked to see its options.
-            if case let .food(food) = row.content, food.options.count > 1, capture.phase != .listening || food.showsOptions {
+            if !parsing, case let .food(food) = row.content, food.options.count > 1, capture.phase != .listening || food.showsOptions {
                 options(food)
             }
         }
@@ -432,7 +439,7 @@ private struct RambleRowView: View {
             shape.fill(Theme.surface)
                 .overlay { shape.fill(Theme.accent.opacity(0.16 * glow)) }
                 .overlay { shape.strokeBorder(Theme.accent.opacity(0.7 * glow), lineWidth: 1) }
-                .overlay { if row.content == .searching { Sheen().clipShape(shape) } }
+                .overlay { if parsing { Sheen().clipShape(shape) } }
                 .overlay { if removing { shape.fill(Theme.destructive.opacity(0.35)) } }
         }
         .offset(x: removing ? -14 : 0)
@@ -441,6 +448,7 @@ private struct RambleRowView: View {
         .onAppear {
             // Rows coming back into view after a tab switch are not new.
             guard capture.phase == .listening || capture.phase == .finishing else { return }
+            if row.content == .searching, !reduceMotion { parsedUntil = .now + Self.parsedFor }
             if incoming, !reduceMotion {
                 landed = false
                 withAnimation(.easeOut(duration: 0.25).delay(0.3)) { landed = true }
@@ -463,6 +471,14 @@ private struct RambleRowView: View {
             if new.resolved != old.resolved, old.title == new.title { return }
             light()
         }
+        .onChange(of: row.content == .searching) { _, searching in
+            if searching, parsedUntil == nil, !reduceMotion { parsedUntil = .now + Self.parsedFor }
+        }
+        .task(id: parsedUntil) {
+            guard let until = parsedUntil else { return }
+            try? await Task.sleep(until: until)
+            withAnimation(.smooth(duration: 0.35)) { parsedUntil = nil }
+        }
         .task(id: was) {
             guard was != nil else { return }
             try? await Task.sleep(for: .seconds(2.2))
@@ -477,7 +493,8 @@ private struct RambleRowView: View {
 
     /// What the row shows; another food is another stage, so a pick crossfades instead of morphing one name into the other.
     private var stage: String {
-        switch row.content {
+        if parsing { return "searching" }
+        return switch row.content {
         case .searching: "searching"
         case let .food(food): "food \(food.key)"
         case .copy: "copy"
@@ -489,11 +506,20 @@ private struct RambleRowView: View {
         withAnimation(.easeOut(duration: 0.18)) { removing = true }
         Task {
             try? await Task.sleep(for: .milliseconds(180))
-            capture.remove(row)
+            // A read landing meanwhile may have moved the row to another position; its key still finds it.
+            if let current = capture.rows.first(where: { $0.key == row.key }) { capture.remove(current) }
         }
     }
 
     @ViewBuilder private var main: some View {
+        if parsing {
+            parsed
+        } else {
+            matched
+        }
+    }
+
+    @ViewBuilder private var matched: some View {
         switch row.content {
         case let .food(food):
             Button(action: open) {
