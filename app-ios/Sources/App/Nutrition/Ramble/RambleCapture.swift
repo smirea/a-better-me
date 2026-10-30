@@ -428,7 +428,7 @@ final class RambleCapture {
         let fallback = chosenTime().map { ($0.day, $0.hour * 60) } ?? (CalendarDay(now), now.minuteOfDay())
         let resolver = RambleResolver(index: index(), context: context ?? RambleContext(), today: CalendarDay(now), fallback: fallback)
         let items = items, choices = choices
-        if let parsed = try? resolver.rows(items, previous: rows, choices: choices, search: false) {
+        if let parsed = try? resolver.rows(items, previous: rows.lined(up: items), choices: choices, search: false) {
             let keyed = parsed.keyed(after: rows, next: &keys)
             if keyed != rows { rows = keyed }
         }

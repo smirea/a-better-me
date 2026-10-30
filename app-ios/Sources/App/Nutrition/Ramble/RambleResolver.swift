@@ -105,6 +105,15 @@ enum RambleAlignment {
 }
 
 extension [RambleRow] {
+    /// These rows at the positions of the `items` they continue (`RambleAlignment`), for the resolver, which reads the
+    /// previous row by position: after "remove the pear" the dates move into the pear's place and must find their own row.
+    func lined(up items: [RambleItem]) -> [RambleRow] {
+        RambleAlignment.align(map(\.item.identity), items.map(\.identity)).map { position, match in
+            let row = self[match.old]
+            return RambleRow(id: position, item: row.item, day: row.day, minute: row.minute, content: row.content, key: row.key)
+        }
+    }
+
     /// These rows keyed by the `old` ones they continue on screen (`RambleAlignment`); the rest take keys after `next`.
     func keyed(after old: [RambleRow], next: inout Int) -> [RambleRow] {
         let aligned = RambleAlignment.align(old.map(\.item.identity), map(\.item.identity))

@@ -442,6 +442,8 @@ private struct RambleRowView: View {
                 .overlay { if parsing { Sheen().clipShape(shape) } }
                 .overlay { if removing { shape.fill(Theme.destructive.opacity(0.35)) } }
         }
+        // Options leaving as the row shrinks stay inside it.
+        .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
         .offset(x: removing ? -14 : 0)
         .scaleEffect(reduceMotion ? 1 : 1 + 0.012 * glow)
         .anchorPreference(key: RambleAnchors.self, value: .bounds) { RambleAnchors.Value(rows: [row.key: $0]) }

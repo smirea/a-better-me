@@ -50,3 +50,13 @@ struct RambleRowKeyTests {
         #expect(align(["oats", "oats"], ["oats"]) == ["0"])
     }
 }
+
+struct RambleLinedUpTests {
+    @Test func aRowMovedUpByARemovalIsReadAtItsNewPosition() {
+        let rows = ["apple", "pear", "dates"].enumerated().map {
+            RambleRow(id: $0, item: RambleItem(name: $1), day: calendarDay("2026-10-29"), minute: nil, content: .unmatched)
+        }
+        let lined = rows.lined(up: [RambleItem(name: "apple"), RambleItem(name: "dates", amount: 3)])
+        #expect(lined.sorted { $0.id < $1.id }.map { "\($0.id) \($0.item.name)" } == ["0 apple", "1 dates"])
+    }
+}
