@@ -1,10 +1,19 @@
 import Foundation
 
-/// What the Gemini Live session reports (`serveLiveRamble` in `server/src/food/ramble-live.ts`).
+/// What the speaker has said so far: `committed` is final, `partial` the words still being heard, which may change.
+struct RambleHeard: Equatable, Sendable {
+    var committed = ""
+    var partial = ""
+
+    var text: String { [committed, partial].filter { !$0.isEmpty }.joined(separator: " ") }
+    var isEmpty: Bool { committed.isEmpty && partial.isEmpty }
+}
+
+/// What the live session reports (`serveLiveRamble` in `server/src/food/ramble-live.ts`).
 enum RambleLiveEvent: Sendable, Equatable {
-    case transcript(String)
+    case heard(RambleHeard)
     case outline(RambleOutline)
-    /// After the stop: Gemini answered every word it heard.
+    /// After the stop: the outline of every word heard.
     case done(transcript: String, outline: RambleOutline)
     case failed(String)
 }
@@ -12,13 +21,15 @@ enum RambleLiveEvent: Sendable, Equatable {
 /// One streaming session: 16 kHz mono 16-bit PCM in, events out.
 protocol RambleLiveStream: Sendable {
     func send(_ pcm: Data)
+    /// The options the rows show now, so a pick spoken next ("the second one") names one of them.
+    func show(_ shown: [RambleRequest.Shown])
     func stop()
     func cancel()
 }
 
 protocol RambleLiveConnecting: Sendable {
-    /// Opens the session with the ramble's context and returns at once; audio sent before Gemini is ready is held on
-    /// the server. A refused or dropped session arrives as `.failed`.
+    /// Opens the session with the ramble's context, whose transcript is what earlier listens heard, and returns at once;
+    /// audio sent before the server listens is held there. A refused or dropped session arrives as `.failed`.
     func connect(_ context: RambleRequest, onEvent: @escaping @Sendable (RambleLiveEvent) -> Void) -> any RambleLiveStream
 }
 
@@ -34,7 +45,8 @@ struct RambleLiveClient: RambleLiveConnecting {
 
     private struct Message: Decodable {
         let type: String
-        let text: String?
+        let committed: String?
+        let partial: String?
         let transcript: String?
         let outline: RambleOutline?
         let message: String?
@@ -47,9 +59,7 @@ struct RambleLiveClient: RambleLiveConnecting {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         let task = session.webSocketTask(with: request)
         task.resume()
-        var body = context
-        body.transcript = ""
-        if let json = try? JSONEncoder().encode(body), let text = String(data: json, encoding: .utf8) {
+        if let json = try? JSONEncoder().encode(context), let text = String(data: json, encoding: .utf8) {
             task.send(.string(text)) { _ in }
         }
         Task {
@@ -59,7 +69,7 @@ struct RambleLiveClient: RambleLiveConnecting {
                           let message = try? JSONDecoder().decode(Message.self, from: Data(text.utf8))
                     else { continue }
                     switch message.type {
-                    case "transcript": onEvent(.transcript(message.text ?? ""))
+                    case "heard": onEvent(.heard(RambleHeard(committed: message.committed ?? "", partial: message.partial ?? "")))
                     case "outline": if let outline = message.outline { onEvent(.outline(outline)) }
                     case "done":
                         onEvent(.done(transcript: message.transcript ?? "", outline: message.outline ?? RambleOutline(items: [])))
@@ -80,8 +90,18 @@ struct RambleLiveClient: RambleLiveConnecting {
     private struct Socket: RambleLiveStream {
         let task: URLSessionWebSocketTask
 
+        private struct Show: Encodable {
+            var type = "shown"
+            let shown: [RambleRequest.Shown]
+        }
+
         func send(_ pcm: Data) {
             task.send(.data(pcm)) { _ in }
+        }
+
+        func show(_ shown: [RambleRequest.Shown]) {
+            guard let json = try? JSONEncoder().encode(Show(shown: shown)), let text = String(data: json, encoding: .utf8) else { return }
+            task.send(.string(text)) { _ in }
         }
 
         func stop() {
@@ -91,47 +111,5 @@ struct RambleLiveClient: RambleLiveConnecting {
         func cancel() {
             task.cancel(with: .goingAway, reason: nil)
         }
-    }
-}
-
-/// The transcript while Gemini Live listens: Gemini's words for the turns it has answered, then the device's words
-/// for the speech since, so text keeps pace with the speaker although Gemini transcribes a turn only once it closes.
-/// Each Gemini turn moves the boundary to just past its last word in the device's words, or, when the two heard that
-/// word differently ("fifty", "50"), by as many words as the turn added.
-struct RambleLiveTranscript: Equatable {
-    private(set) var gemini = ""
-    private var device: [Substring] = []
-    /// The device words Gemini's transcript covers.
-    private var covered = 0
-
-    var text: String {
-        let rest = device.dropFirst(covered).joined(separator: " ")
-        if gemini.isEmpty { return rest }
-        return rest.isEmpty ? gemini : "\(gemini) \(rest)"
-    }
-
-    mutating func heardOnDevice(_ text: String) {
-        device = text.split(whereSeparator: \.isWhitespace)
-    }
-
-    mutating func heardByGemini(_ text: String) {
-        let added = Self.words(text).count - Self.words(gemini).count
-        gemini = text
-        guard added > 0 else { return }
-        let start = min(covered, device.count)
-        let window = device[start ..< min(device.count, start + added * 2 + 2)].map(Self.key)
-        if let last = Self.words(text).last.map(Self.key), let match = window.lastIndex(of: last) {
-            covered = start + match + 1
-        } else {
-            covered += added
-        }
-    }
-
-    private static func words(_ text: String) -> [Substring] {
-        text.split(whereSeparator: \.isWhitespace)
-    }
-
-    private static func key(_ word: Substring) -> String {
-        word.lowercased().filter { $0.isLetter || $0.isNumber }
     }
 }

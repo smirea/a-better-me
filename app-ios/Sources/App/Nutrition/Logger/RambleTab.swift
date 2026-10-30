@@ -1,16 +1,20 @@
 import SwiftUI
 
-/// Ramble: say what you ate and the foods arrive one at a time as the server's model reads the words, each matched
-/// against the logger's own search and the log. Every row can be checked, swapped for another option, re-weighed, or
-/// removed, and nothing is logged until Add (docs/decisions/nutrition.md, Ramble logging).
+/// Ramble: say what you ate and the foods arrive one at a time as the server's model reads the words. The words an item
+/// was parsed from light up in the transcript and fly into its row, which shows what was said until the search
+/// matches a food. Every row can be checked, swapped for another option, re-weighed, or removed, and nothing is
+/// logged until Add (docs/decisions/nutrition.md, Ramble logging).
 struct RambleTab: View {
     let session: LoggerSession
     /// Opens a food row's detail to change its serving.
     let open: (RambleRow) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var saved = 0
+    /// Words on their way from the transcript to a row.
+    @State private var flights: [Flight] = []
 
     private var capture: RambleCapture { session.ramble }
+    private var live: Bool { capture.phase == .listening || capture.phase == .finishing }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -20,7 +24,7 @@ struct RambleTab: View {
                         hints.transition(.opacity)
                     }
                     ForEach(capture.rows, id: \.key) { row in
-                        RambleRowView(row: row, capture: capture, open: { open(row) })
+                        RambleRowView(row: row, capture: capture, incoming: live && capture.spans[row.key] != nil, open: { open(row) })
                             .id(row.key)
                             .transition(arrival)
                     }
@@ -42,6 +46,18 @@ struct RambleTab: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
+        .overlayPreferenceValue(RambleAnchors.self) { anchors in
+            GeometryReader { geometry in
+                ForEach(flights) { flight in
+                    if let to = anchors.rows[flight.key].map({ geometry[$0] }),
+                       let from = flight.words.compactMap({ anchors.words[$0].map { geometry[$0] } }).reduce(nil, { $0?.union($1) ?? $1 }) {
+                        FlightView(flight: flight, from: from, to: to)
+                    }
+                }
+            }
+            .allowsHitTesting(false)
+        }
+        .onChange(of: capture.rows) { old, new in launch(from: old, to: new) }
         .animation(reduceMotion ? nil : .spring(duration: 0.42, bounce: 0.18), value: capture.rows)
         .animation(.snappy(duration: 0.25), value: capture.phase)
         .animation(.snappy(duration: 0.22), value: capture.expanded)
@@ -52,6 +68,30 @@ struct RambleTab: View {
         }
         .onDisappear {
             Task { await capture.stop() }
+        }
+    }
+
+    /// A row that appears while the speaker talks gets its words from the transcript; one whose quote changes, by a
+    /// spoken correction, gets the correcting words.
+    private func launch(from old: [RambleRow], to new: [RambleRow]) {
+        guard live, !reduceMotion else { return }
+        let before = Dictionary(old.map { ($0.key, $0) }, uniquingKeysWith: { $1 })
+        for row in new {
+            guard let span = capture.spans[row.key] else { continue }
+            let kind: Flight.Kind
+            if let earlier = before[row.key] {
+                guard earlier.item.said != row.item.said, earlier.item != row.item else { continue }
+                kind = .correction
+            } else {
+                kind = .parse
+            }
+            let text = capture.words.words[span].map(\.text).joined(separator: " ")
+            let flight = Flight(key: row.key, words: span, text: text, kind: kind)
+            flights.append(flight)
+            Task {
+                try? await Task.sleep(for: Flight.duration + .milliseconds(100))
+                flights.removeAll { $0.id == flight.id }
+            }
         }
     }
 
@@ -90,16 +130,9 @@ struct RambleTab: View {
 
     private var footer: some View {
         VStack(spacing: 6) {
-            if capture.phase == .listening || capture.phase == .finishing, !capture.transcript.isEmpty {
-                Text(Self.tail(capture.transcript))
-                    .font(AppFont.caption(14))
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(2)
-                    .truncationMode(.head)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
+            if !capture.words.words.isEmpty, live || capture.phase == .review {
+                RambleTranscript(words: capture.words, spans: capture.spans, struck: capture.struck, live: live)
                     .transition(.opacity)
-                    .accessibilityLabel("Transcript, \(capture.transcript)")
             }
             if capture.phase == .listening {
                 RambleWaveform(meter: capture.meter, active: true)
@@ -107,7 +140,7 @@ struct RambleTab: View {
                     .transition(.opacity)
             }
             if capture.phase == .finishing {
-                Label("Checking the recording", systemImage: "sparkles")
+                Label("Catching the last words", systemImage: "sparkles")
                     .font(AppFont.badge)
                     .foregroundStyle(Theme.accent)
                     .symbolEffect(.pulse, options: .repeating)
@@ -140,7 +173,7 @@ struct RambleTab: View {
         .padding(.top, 24)
         // The rows scroll under the transcript; the fade keeps its words readable.
         .background {
-            LinearGradient(stops: [.init(color: Theme.background.opacity(0), location: 0), .init(color: Theme.background, location: 0.35)], startPoint: .top, endPoint: .bottom)
+            LinearGradient(stops: [.init(color: Theme.background.opacity(0), location: 0), .init(color: Theme.background, location: 0.2)], startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
         }
@@ -183,39 +216,174 @@ struct RambleTab: View {
             .frame(maxWidth: capture.planned.isEmpty ? .infinity : nil)
         }
     }
+}
 
-    /// The last 140 characters, from a word's start.
-    static func tail(_ text: String) -> String {
-        guard text.count > 140 else { return text }
-        let cut = text.suffix(140)
-        guard let space = cut.firstIndex(of: " ") else { return "… " + cut }
-        return "… " + cut[cut.index(after: space)...]
+/// Where the transcript's words and the rows are on screen, for the words flying between them.
+struct RambleAnchors: PreferenceKey {
+    struct Value {
+        var words: [Int: Anchor<CGRect>] = [:]
+        var rows: [Int: Anchor<CGRect>] = [:]
+    }
+
+    static let defaultValue = Value()
+
+    static func reduce(value: inout Value, nextValue: () -> Value) {
+        let next = nextValue()
+        value.words.merge(next.words) { $1 }
+        value.rows.merge(next.rows) { $1 }
+    }
+}
+
+private struct Flight: Identifiable, Equatable {
+    enum Kind { case parse, correction }
+
+    static let duration = Duration.milliseconds(650)
+
+    let id = UUID()
+    /// The row's `RambleRow.key`.
+    let key: Int
+    let words: Range<Int>
+    let text: String
+    let kind: Kind
+}
+
+/// The words of a flight: they lift out of the transcript as a highlighted chip, arc up into the row, and fade as the
+/// row's own content takes their place.
+private struct FlightView: View {
+    let flight: Flight
+    let from: CGRect
+    let to: CGRect
+    @State private var progress = 0.0
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if flight.kind == .correction {
+                Image(systemName: "arrow.uturn.backward").font(.system(size: 10, weight: .bold))
+            }
+            Text(flight.text).lineLimit(1)
+        }
+        .font(AppFont.medium(14))
+        .foregroundStyle(flight.kind == .parse ? Theme.textPrimary : Theme.onPrimary)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(flight.kind == .parse ? Theme.accent.opacity(0.35) : Theme.accent, in: .capsule)
+        .overlay { Capsule().strokeBorder(Theme.accent, lineWidth: 1) }
+        .fixedSize()
+        .modifier(Fly(progress: progress, from: from, to: to))
+        .onAppear {
+            withAnimation(.timingCurve(0.3, 0, 0.2, 1, duration: Double(Flight.duration.components.attoseconds) / 1e18)) { progress = 1 }
+        }
+    }
+}
+
+private struct Fly: ViewModifier, @MainActor Animatable {
+    var progress: Double
+    let from: CGRect
+    let to: CGRect
+
+    var animatableData: Double {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        let start = CGPoint(x: from.midX, y: from.midY)
+        let end = CGPoint(x: to.minX + min(110, to.width * 0.3), y: to.midY)
+        // Up and over: the control point sits above the higher end, so the chip lifts before it travels.
+        let control = CGPoint(x: (start.x + end.x) / 2, y: min(start.y, end.y) - 60)
+        let t = progress
+        let point = CGPoint(
+            x: (1 - t) * (1 - t) * start.x + 2 * (1 - t) * t * control.x + t * t * end.x,
+            y: (1 - t) * (1 - t) * start.y + 2 * (1 - t) * t * control.y + t * t * end.y
+        )
+        return content
+            .scaleEffect(1 + 0.12 * sin(t * .pi) - 0.15 * t)
+            .opacity(t < 0.8 ? 1 : (1 - t) / 0.2)
+            .position(point)
+    }
+}
+
+/// The transcript, a view per word: committed words settle in, the words still being heard stay dim, the words of a
+/// row are highlighted, and the words of a row taken back are struck through.
+private struct RambleTranscript: View {
+    let words: RambleWords
+    let spans: [Int: Range<Int>]
+    let struck: Set<Int>
+    let live: Bool
+
+    var body: some View {
+        let highlighted = Set(spans.values.flatMap { $0 })
+        ScrollView {
+            FlowLayout(spacing: 0) {
+                ForEach(words.words.indices, id: \.self) { index in
+                    let word = words.words[index]
+                    let lit = highlighted.contains(index)
+                    let gone = !lit && struck.contains(index)
+                    Text(word.text)
+                        .font(AppFont.body(16))
+                        .strikethrough(gone, color: Theme.textTertiary)
+                        .foregroundStyle(lit ? Theme.textPrimary : gone || word.partial ? Theme.textTertiary : Theme.textSecondary)
+                        .padding(.horizontal, 2.5)
+                        .padding(.vertical, 1)
+                        .background {
+                            if lit { RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.accent.opacity(0.28)) }
+                        }
+                        .padding(.vertical, 1.5)
+                        .anchorPreference(key: RambleAnchors.self, value: .bounds) { lit ? RambleAnchors.Value(words: [index: $0]) : RambleAnchors.Value() }
+                        .transition(.opacity.combined(with: .blurReplace))
+                        .contentTransition(.interpolate)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .animation(.easeOut(duration: 0.25), value: words)
+            .animation(.easeOut(duration: 0.3), value: spans)
+            .animation(.easeOut(duration: 0.3), value: struck)
+        }
+        .defaultScrollAnchor(.bottom)
+        .scrollIndicators(.hidden)
+        .frame(maxHeight: live ? 104 : 56)
+        .fixedSize(horizontal: false, vertical: true)
+        .mask {
+            LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.22)], startPoint: .top, endPoint: .bottom)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Transcript, \(words.words.map(\.text).joined(separator: " "))")
     }
 }
 
 private struct RambleRowView: View {
     let row: RambleRow
     let capture: RambleCapture
+    /// Its words are flying in from the transcript, so its content shows as they land.
+    let incoming: Bool
     let open: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var morph
     /// 1 just after the row arrived or changed, easing to 0.
     @State private var glow = 0.0
     /// What a correction replaced, struck through until it fades.
     @State private var was: String?
+    @State private var landed = true
+    /// The owner tapped Remove; the row flushes red before it goes.
+    @State private var removing = false
+    /// A row's first moments are the model settling on what it heard ("dinner" becomes "pork loin"), not a correction.
+    @State private var born = ContinuousClock.now
 
     /// What the row says; a change to it is a correction worth showing.
     private struct Face: Equatable {
         var title: String
         var detail: String
         var placement: String
+        var resolved: Bool
     }
 
     private var face: Face {
         let placement = "\(row.day) \(row.minute ?? -1) \(row.item.meal?.title ?? "")"
         return switch row.content {
-        case let .food(food): Face(title: food.pick.portion.food.displayName, detail: NutritionFormat.serving(food.pick.portion.serving), placement: placement)
-        case let .copy(copy): Face(title: Self.title(copy), detail: copy.entries.map(\.food.name).joined(separator: " · "), placement: placement)
-        case .unmatched: Face(title: row.item.name, detail: "", placement: placement)
+        case let .food(food): Face(title: food.pick.portion.food.displayName, detail: NutritionFormat.serving(food.pick.portion.serving), placement: placement, resolved: true)
+        case let .copy(copy): Face(title: Self.title(copy), detail: copy.entries.map(\.food.name).joined(separator: " · "), placement: placement, resolved: true)
+        case .searching: Face(title: row.item.name, detail: Self.spoken(row.item), placement: placement, resolved: false)
+        case .unmatched: Face(title: row.item.name, detail: "", placement: placement, resolved: true)
         }
     }
 
@@ -223,8 +391,10 @@ private struct RambleRowView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 12) {
                 main
+                    .opacity(landed ? 1 : 0)
+                    .blur(radius: landed ? 0 : 4)
                 if capture.phase != .listening {
-                    Button("Remove", systemImage: "minus.circle") { capture.remove(row) }
+                    Button("Remove", systemImage: "minus.circle") { removeByOwner() }
                         .labelStyle(.iconOnly)
                         .foregroundStyle(Theme.textSecondary)
                         .frame(width: 44, height: 44)
@@ -243,17 +413,35 @@ private struct RambleRowView: View {
             shape.fill(Theme.surface)
                 .overlay { shape.fill(Theme.accent.opacity(0.16 * glow)) }
                 .overlay { shape.strokeBorder(Theme.accent.opacity(0.7 * glow), lineWidth: 1) }
-                .overlay { if capture.phase == .finishing { Sheen().clipShape(shape) } }
+                .overlay { if row.content == .searching { Sheen().clipShape(shape) } }
+                .overlay { if removing { shape.fill(Theme.destructive.opacity(0.35)) } }
         }
+        .offset(x: removing ? -14 : 0)
         .scaleEffect(reduceMotion ? 1 : 1 + 0.012 * glow)
-        // Rows coming back into view after a tab switch are not new.
-        .onAppear { if capture.phase == .listening || capture.phase == .finishing { light() } }
+        .anchorPreference(key: RambleAnchors.self, value: .bounds) { RambleAnchors.Value(rows: [row.key: $0]) }
+        .onAppear {
+            // Rows coming back into view after a tab switch are not new.
+            guard capture.phase == .listening || capture.phase == .finishing else { return }
+            if incoming, !reduceMotion {
+                landed = false
+                withAnimation(.easeOut(duration: 0.25).delay(0.45)) { landed = true }
+                Task {
+                    try? await Task.sleep(for: .milliseconds(450))
+                    light()
+                }
+            } else {
+                light()
+            }
+        }
         .onChange(of: face) { old, new in
-            if old.title != new.title {
+            // A row searching for its food is not corrected by finding it.
+            let settled = ContinuousClock.now - born >= .seconds(1.5)
+            if settled, old.resolved, new.title != old.title {
                 was = old.title
-            } else if old.detail != new.detail, !old.detail.isEmpty {
+            } else if settled, old.resolved, new.resolved, old.detail != new.detail, !old.detail.isEmpty {
                 was = old.detail
             }
+            if new.resolved != old.resolved, old.title == new.title { return }
             light()
         }
         .task(id: was) {
@@ -262,8 +450,17 @@ private struct RambleRowView: View {
             withAnimation(.easeOut(duration: 0.4)) { was = nil }
         }
         .sensoryFeedback(.selection, trigger: face)
+        .sensoryFeedback(.impact(weight: .medium), trigger: removing) { _, new in new }
         .contextMenu {
-            Button("Remove", systemImage: "trash", role: .destructive) { capture.remove(row) }
+            Button("Remove", systemImage: "trash", role: .destructive) { removeByOwner() }
+        }
+    }
+
+    private func removeByOwner() {
+        withAnimation(.easeOut(duration: 0.18)) { removing = true }
+        Task {
+            try? await Task.sleep(for: .milliseconds(180))
+            capture.remove(row)
         }
     }
 
@@ -273,9 +470,11 @@ private struct RambleRowView: View {
             Button(action: open) {
                 HStack(spacing: 12) {
                     FoodIcon(food: food.pick.portion.food)
+                        .transition(.scale(scale: 0.4).combined(with: .opacity))
                     VStack(alignment: .leading, spacing: 2) {
                         Text(food.pick.portion.food.displayName).font(AppFont.rowTitle).lineLimit(1)
                             .contentTransition(.interpolate)
+                            .matchedGeometryEffect(id: "title", in: morph)
                         corrected
                         Text("\(Text(macroLine: food.pick.portion.amounts)) · \(NutritionFormat.serving(food.pick.portion.serving))")
                             .font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).lineLimit(1)
@@ -307,6 +506,8 @@ private struct RambleRowView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .accessibilityElement(children: .combine)
+        case .searching:
+            parsed
         case .unmatched:
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.item.name.isEmpty ? "A meal" : row.item.name).font(AppFont.rowTitle).lineLimit(1)
@@ -316,6 +517,52 @@ private struct RambleRowView: View {
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         }
     }
+
+    /// What the words said, as chips, while the search looks for the food.
+    private var parsed: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.accent)
+                .frame(width: 28, height: 28)
+                .background(Theme.accent.opacity(0.14), in: .circle)
+                .symbolEffect(.pulse, options: .repeating)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(row.item.name).font(AppFont.rowTitle).lineLimit(1)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(Theme.accent.opacity(0.16), in: .capsule)
+                    .matchedGeometryEffect(id: "title", in: morph)
+                FlowLayout(spacing: 4) {
+                    if let amount = Self.amount(row.item) { chip(amount) }
+                    if let meal = row.item.meal { chip(meal.title) }
+                    if let minute = row.item.minute { chip(NutritionFormat.clock(minute)) }
+                    if let day = row.item.day, day != 0 { chip(NutritionFormat.dayTitle(row.day)) }
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Finding \(row.item.name)")
+    }
+
+    private func chip(_ text: String) -> some View {
+        Text(text)
+            .font(AppFont.badge)
+            .foregroundStyle(Theme.textSecondary)
+            .padding(.horizontal, 7)
+            .frame(height: 20)
+            .background(Theme.surfaceRaised, in: .capsule)
+            .transition(.scale(scale: 0.6).combined(with: .opacity))
+    }
+
+    private static func amount(_ item: RambleItem) -> String? {
+        guard item.amount > 0 else { return nil }
+        let number = item.amount.formatted(.number.precision(.fractionLength(0 ... 2)))
+        return item.unit.isEmpty ? "×\(number)" : "\(number) \(item.unit)"
+    }
+
+    private static func spoken(_ item: RambleItem) -> String { amount(item) ?? "" }
 
     /// The words a correction replaced, struck through.
     @ViewBuilder private var corrected: some View {
@@ -353,24 +600,52 @@ private struct RambleRowView: View {
         }
     }
 
+    /// A match the search was unsure of, not one of the owner's own foods, shows the next options as chips to tap.
+    private func unsure(_ food: RambleRow.Food) -> Bool {
+        guard let pick = food.options.first(where: { $0.key == food.key }) else { return false }
+        return pick.group >= .common
+    }
+
     @ViewBuilder private func options(_ food: RambleRow.Food) -> some View {
         let all = capture.showsAllOptions(row)
-        Button {
-            capture.toggleOptions(row)
-        } label: {
-            HStack(spacing: 4) {
-                Text(all ? "Hide options" : "\(food.options.count) options")
-                Image(systemName: "chevron.down").rotationEffect(.degrees(all ? 180 : 0))
+        let others = food.options.filter { $0.key != food.key }
+        HStack(spacing: 6) {
+            if !all, unsure(food) {
+                ForEach(others.prefix(2)) { option in
+                    Button {
+                        capture.pick(option, in: row)
+                    } label: {
+                        Text(option.portion.food.displayName)
+                            .font(AppFont.badge)
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                            .padding(.horizontal, 10)
+                            .frame(height: 26)
+                            .background(Theme.surfaceRaised, in: .capsule)
+                            .overlay { Capsule().strokeBorder(Theme.separator, lineWidth: 1) }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Use \(option.portion.food.displayName)")
+                    .transition(.asymmetric(insertion: .scale(scale: 0.7).combined(with: .opacity), removal: .offset(y: 10).combined(with: .opacity)))
+                }
             }
-            .font(AppFont.badge)
-            .foregroundStyle(Theme.textSecondary)
-            .padding(.horizontal, 10)
-            .frame(height: 26)
-            .background(Theme.surfaceRaised, in: .capsule)
-            .frame(minHeight: 32)
-            .contentShape(.rect)
+            Button {
+                capture.toggleOptions(row)
+            } label: {
+                HStack(spacing: 4) {
+                    Text(all ? "Hide options" : unsure(food) ? "\(max(0, others.count - 2)) more" : "\(food.options.count) options")
+                    Image(systemName: "chevron.down").rotationEffect(.degrees(all ? 180 : 0))
+                }
+                .font(AppFont.badge)
+                .foregroundStyle(Theme.textSecondary)
+                .padding(.horizontal, 10)
+                .frame(height: 26)
+                .background(Theme.surfaceRaised, in: .capsule)
+                .frame(minHeight: 32)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
         .padding(.leading, 40)
         if all {
             VStack(spacing: 0) {
@@ -381,6 +656,7 @@ private struct RambleRowView: View {
                         HStack(spacing: 10) {
                             Image(systemName: option.key == food.key ? "checkmark.circle.fill" : "circle")
                                 .foregroundStyle(option.key == food.key ? Theme.textPrimary : Theme.textTertiary)
+                                .contentTransition(.symbolEffect(.replace))
                             FoodRow(food: option.portion.food, serving: option.portion.serving)
                         }
                         .frame(minHeight: 44)
@@ -408,19 +684,19 @@ private struct Leave: ViewModifier {
     }
 }
 
-/// A band of light passing over a row while the final read checks it.
+/// A band of light passing over a row while its food is searched for.
 private struct Sheen: View {
     @State private var at = -1.0
 
     var body: some View {
         GeometryReader { proxy in
-            LinearGradient(colors: [.clear, Theme.accent.opacity(0.14), .clear], startPoint: .leading, endPoint: .trailing)
+            LinearGradient(colors: [.clear, Theme.accent.opacity(0.16), .clear], startPoint: .leading, endPoint: .trailing)
                 .frame(width: proxy.size.width * 0.5)
                 .offset(x: at * proxy.size.width)
         }
         .allowsHitTesting(false)
         .onAppear {
-            withAnimation(.easeInOut(duration: 1.3).repeatForever(autoreverses: false)) { at = 1.5 }
+            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: false)) { at = 1.5 }
         }
         .transition(.opacity)
     }

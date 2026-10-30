@@ -1,17 +1,28 @@
 import { z } from 'zod';
 import { ApiError } from '../agent/db';
 
-export type RambleModel = { model: string; thinking: 'minimal' | 'low' | 'medium' | 'high' | null };
+export type RambleModel = {
+	provider: 'gemini' | 'xai';
+	model: string;
+	thinking?: 'minimal' | 'low' | 'medium' | 'high';
+};
+export type RambleKeys = { gemini: string | null; xai: string | null };
 
 /**
- * Picked by `scripts/food-ramble-eval.ts` (docs/decisions/nutrition.md, Ramble logging). Live reads take the fastest
- * model that kept the labelled rambles near 100%; the final read, with the recording, takes the most accurate one,
- * since the speaker is waiting on it once instead of watching it update.
+ * Picked by `scripts/ramble-lab/replay.ts` (docs/decisions/nutrition.md, Ramble logging): the fastest model that kept
+ * the labelled rambles near 100% when read live, with no final read. Each read tries them in order, so Grok answers
+ * when Gemini cannot (an outage, the project's spend cap); it reads as fast but kept fewer rambles right.
  */
-export const RAMBLE_MODEL: RambleModel = { model: 'gemini-3.5-flash', thinking: 'minimal' };
-export const RAMBLE_FINAL_MODEL: RambleModel = { model: 'gemini-3.8-flash', thinking: 'low' };
+export const RAMBLE_MODELS: readonly RambleModel[] = [
+	{ provider: 'gemini', model: 'gemini-3.5-flash', thinking: 'minimal' },
+	{ provider: 'xai', model: 'grok-4.20-0309-non-reasoning' },
+];
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const XAI_URL = 'https://api.x.ai/v1/chat/completions';
 const TIMEOUT_MS = 15_000;
+/** A model that failed sits out this long, so a live ramble during an outage reads with the next one at once. */
+const REST_MS = 30_000;
+const resting = new Map<string, number>();
 
 export const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 const day = z.iso.date();
@@ -39,13 +50,6 @@ export const RambleMeal = z
  */
 export const RambleRequest = z.object({
 	transcript: z.string().max(12_000),
-	/**
-	 * The recording itself, for the final read when the speaker stops. On-device speech-to-text mishears food names
-	 * ("kefir" as "Caffè"); the model hears them right when it knows the owner's foods.
-	 */
-	audio: z
-		.object({ data: z.base64().min(1).max(8_000_000), mediaType: z.enum(['audio/wav', 'audio/flac']) })
-		.optional(),
 	today: day,
 	time: z.string().regex(/^\d{2}:\d{2}$/),
 	meals: z.array(RambleMeal).max(40).default([]),
@@ -60,8 +64,9 @@ export type RambleRequest = z.input<typeof RambleRequest>;
 /**
  * One line of the ramble's list. `food` is searched on the phone by `name`; `ref` names a logged entry to reuse
  * instead. `copy` is a whole logged meal minus `except`. Amount 0 means none was said, so the phone logs one of the
- * food's usual serving; a unit always comes with an amount. `day` is an offset from today, or null when the speaker named no day and the phone's open day applies; `time` is a
- * 24-hour clock or empty.
+ * food's usual serving; a unit always comes with an amount. `day` is an offset from today, or null when the speaker
+ * named no day and the phone's open day applies; `time` is a 24-hour clock or empty. `said` quotes the transcript's
+ * words the item came from, which the phone highlights and flies into the row; it may be empty or misquoted.
  */
 export const RambleItem = z
 	.object({
@@ -76,6 +81,7 @@ export const RambleItem = z
 		meal: z.enum(['', ...MEALS]),
 		time: z.string().regex(/^(\d{2}:\d{2})?$/),
 		options: z.boolean(),
+		said: z.string(),
 	})
 	.meta({ id: 'RambleItem' });
 export type RambleItem = z.output<typeof RambleItem>;
@@ -112,12 +118,11 @@ export function aliases(input: z.output<typeof RambleRequest>): Aliases {
 const logged = (entry: z.output<typeof RambleLogged>) =>
 	entry.serving ? `${entry.name} (${entry.serving})` : entry.name;
 
-const TRANSCRIPT = `The transcript is live speech-to-text: it has filler, false starts, missing punctuation, and misheard words, and it may stop mid-sentence. List what is clear so far: an item appears once its food is named, so a trailing "two slices of", "200 grams of", or "I drank" is not an item yet, and a copy appears once the meal it repeats is clear ("for lunch the steak" may still become "the steak dinner from last night"). When the recording comes with it, the recording is what was said: use the transcript only to follow it, and trust the recording for every food name and number. The logged and usual foods below are the speaker's own, so a word that sounds like one of them is probably it.`;
+const TRANSCRIPT = `The transcript is live speech-to-text: it has filler, false starts, missing punctuation, and misheard words, and it may stop mid-sentence. List what is clear so far: an item appears once its food is named, so a trailing "two slices of", "200 grams of", or "I drank" is not an item yet, and a copy appears once the meal it repeats is clear ("for lunch the steak" may still become "the steak dinner from last night"). The logged and usual foods below are the speaker's own, so a word that sounds like one of them is probably it.`;
 const OMIT_EMPTY = `Leave out every field that is empty, 0, or false, except day 0 for a said "today": a food item with only a name is { "kind": "food", "name": "pizza" }. Leaving them out keeps the answer short, and the list updates live while the speaker talks.`;
-const LIVE_LISTENING = `You are listening to the speaker live. Never speak; only call tools. An item is clear once its food is named, so a trailing "two slices of", "200 grams of", or "I drank" is not an item yet, and a copy is clear once the meal it repeats is ("for lunch the steak" may still become "the steak dinner from last night"). The logged and usual foods below are the speaker's own, so a word that sounds like one of them is probably it. The audio arrives in turns that may end mid-sentence, and each turn continues the one before it: an item at the end of a turn may still grow ("peanut butter" may become "peanut butter toast", "an iced coffee" may become "an iced coffee, no, a latte"). When the next turn changes an item, edit it; never leave the shorter version or add the longer one beside it.`;
-const LIVE_TOOLS = `Call tools as soon as each item is clear, while the speaker is still talking: add_food for a "food" item and add_copy for a "copy", each with a short id you choose (1, 2, 3, ...); edit_item when the speaker corrects or points back at an item you added, passing only what changes; remove_item when they remove one. Pass only the fields that were said, except day 0 for a said "today". Never add an item again that you already added; edit it instead.`;
+const SAID = `Each item also has "said": the words of the transcript it came from, copied exactly as written there (same spelling, digits, and punctuation), shortest span that holds its food and amount, e.g. "2 tablespoons of chia seeds". For an item changed by a correction, quote the correcting words ("actually make that 250"). The app highlights these words, so never paraphrase.`;
 
-export function rambleInstructions(input: z.output<typeof RambleRequest>, live = false): string {
+export function rambleInstructions(input: z.output<typeof RambleRequest>): string {
 	let e = 0;
 	const meals = input.meals.map((meal, i) => {
 		const entries = meal.entries.map(entry => `e${++e} ${logged(entry)}`).join('; ');
@@ -130,7 +135,7 @@ export function rambleInstructions(input: z.output<typeof RambleRequest>, live =
 	return `You turn a spoken ramble into food log entries for a calorie tracker, the way Todoist Ramble turns speech into tasks.
 Today is ${weekday(input.today)} ${input.today}, and the time is ${input.time}.
 
-${live ? LIVE_LISTENING : TRANSCRIPT}
+${TRANSCRIPT}
 
 Corrections come first. When the speaker changes their mind, keep only the final version: "actually", "wait", "no", "I mean", "make that", "not X, Y", "sorry". They may point back at an item ("the oats", "that last one") to change it. "Scratch that", "remove the X", or "I didn't have the X" removes it. Saying an item again with new details updates it. Never output the same item twice. Keep the items in the order they were first said.
 
@@ -147,7 +152,9 @@ For every item:
 - day: the day it was eaten, only when the speaker names it, as days from today: 0 for "today", -1 for "yesterday I had…". Leave it out otherwise; the app then logs on the day the speaker has open. A copied meal's day never sets it: "yesterday's breakfast" logged now has no day. A day said once applies to the items that follow it.
 - options: true when the speaker says the match for that food is wrong or asks to see its options ("that pizza is not right", "show me options for the pizza"). When they pick one, by name, description, brand, or position ("let's go with the pepperoni", "the plain nonfat one, not the vanilla", "the second one"), set name to it, to the option's exact text when it is in the shown options, and options to false. A pick changes only the item it is for.
 
-${live ? LIVE_TOOLS : OMIT_EMPTY}
+${OMIT_EMPTY}
+
+${SAID}
 
 Ignore chatter that is not about food, and "that's it" or "done" at the end.
 
@@ -182,8 +189,9 @@ function responseSchema(names: Aliases) {
 			ref: { type: 'string', enum: ['', ...entries] },
 			...when,
 			options: { type: 'boolean' },
+			said: { type: 'string' },
 		},
-		required: ['kind', 'name'],
+		required: ['kind', 'name', 'said'],
 	};
 	const copy = {
 		type: 'object',
@@ -192,8 +200,9 @@ function responseSchema(names: Aliases) {
 			copy: { type: 'string', enum: names.meals.size ? [...names.meals.keys()] : [''] },
 			except: { type: 'array', items: { type: 'string', enum: entries.length ? entries : [''] } },
 			...when,
+			said: { type: 'string' },
 		},
-		required: ['kind', 'copy'],
+		required: ['kind', 'copy', 'said'],
 	};
 	return {
 		type: 'object',
@@ -214,6 +223,7 @@ export const ModelItem = z.object({
 	time: z.string().default(''),
 	day: z.int().optional(),
 	options: z.boolean().default(false),
+	said: z.string().default(''),
 });
 export const ModelOutline = z.object({ items: z.array(ModelItem) });
 
@@ -227,6 +237,9 @@ const GeminiAnswer = z.object({
 			}),
 		)
 		.optional(),
+});
+const XaiAnswer = z.object({
+	choices: z.array(z.object({ message: z.object({ content: z.string().nullish() }) })).optional(),
 });
 
 const clock = (time: string) => {
@@ -269,63 +282,109 @@ export function resolveAliases(
 			meal: item.meal || (item.kind === 'copy' ? meal!.meal : carried),
 			time: clock(item.time) || (sameMeal ? previous!.time : ''),
 			options: item.kind === 'food' && item.options,
+			said: item.said.trim(),
 		});
 	}
 	return { items };
 }
 
-export async function outlineRamble(
-	request: RambleRequest,
-	apiKey: string,
-	model?: RambleModel,
-	signal?: AbortSignal,
-): Promise<RambleOutline> {
-	const input = RambleRequest.parse(request);
-	const { model: name, thinking } = model ?? (input.audio ? RAMBLE_FINAL_MODEL : RAMBLE_MODEL);
-	if (!input.transcript.trim() && !input.audio) return { items: [] };
-	const names = aliases(input);
+/** The model's answer as text: the JSON the schema asked for. */
+async function ask(spec: RambleModel, key: string, system: string, user: string, schema: object, signal: AbortSignal) {
+	const label = spec.provider === 'gemini' ? 'Gemini' : 'Grok';
 	let response: Response;
 	try {
-		response = await fetch(`${GEMINI_URL}/${name}:generateContent`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
-			signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(TIMEOUT_MS)]) : AbortSignal.timeout(TIMEOUT_MS),
-			body: JSON.stringify({
-				systemInstruction: { parts: [{ text: rambleInstructions(input) }] },
-				contents: [
-					{
-						role: 'user',
-						parts: [
-							...(input.audio ? [{ inline_data: { mime_type: input.audio.mediaType, data: input.audio.data } }] : []),
-							{ text: `Ramble: ${input.transcript}` },
-						],
-					},
-				],
-				generationConfig: {
-					temperature: 0,
-					responseMimeType: 'application/json',
-					responseJsonSchema: responseSchema(names),
-					...(thinking ? { thinkingConfig: { thinkingLevel: thinking } } : {}),
-				},
-			}),
-		});
+		response =
+			spec.provider === 'gemini'
+				? await fetch(`${GEMINI_URL}/${spec.model}:generateContent`, {
+						method: 'POST',
+						headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+						signal,
+						body: JSON.stringify({
+							systemInstruction: { parts: [{ text: system }] },
+							contents: [{ role: 'user', parts: [{ text: user }] }],
+							generationConfig: {
+								temperature: 0,
+								responseMimeType: 'application/json',
+								responseJsonSchema: schema,
+								...(spec.thinking ? { thinkingConfig: { thinkingLevel: spec.thinking } } : {}),
+							},
+						}),
+					})
+				: await fetch(XAI_URL, {
+						method: 'POST',
+						headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
+						signal,
+						body: JSON.stringify({
+							model: spec.model,
+							temperature: 0,
+							messages: [
+								{ role: 'system', content: system },
+								{ role: 'user', content: user },
+							],
+							response_format: { type: 'json_schema', json_schema: { name: 'outline', schema } },
+						}),
+					});
 	} catch (error) {
-		throw new ApiError(502, `Gemini is unreachable: ${String(error)}`);
+		throw new ApiError(502, `${label} is unreachable: ${String(error)}`);
 	}
-	if (!response.ok) throw new ApiError(502, `Gemini answered ${response.status}: ${await response.text()}`);
-	const answer = GeminiAnswer.safeParse(await response.json().catch(() => null));
-	const text = answer.data?.candidates?.[0]?.content?.parts
-		.filter(part => !part.thought)
-		.map(part => part.text ?? '')
-		.join('');
-	if (!text) throw new ApiError(502, 'Gemini returned no answer');
-	let json: unknown;
-	try {
-		json = JSON.parse(text);
-	} catch {
-		throw new ApiError(502, `Gemini's answer is not JSON: ${text.slice(0, 200)}`);
+	if (!response.ok) throw new ApiError(502, `${label} answered ${response.status}: ${await response.text()}`);
+	const json = await response.json().catch(() => null);
+	const text =
+		spec.provider === 'gemini'
+			? GeminiAnswer.safeParse(json)
+					.data?.candidates?.[0]?.content?.parts.filter(part => !part.thought)
+					.map(part => part.text ?? '')
+					.join('')
+			: XaiAnswer.safeParse(json).data?.choices?.[0]?.message.content;
+	if (!text) throw new ApiError(502, `${label} returned no answer`);
+	return { label, text };
+}
+
+/**
+ * The outline of the whole transcript so far. Each model in `models` with a key is tried in turn until one answers,
+ * skipping one that failed in the last `REST_MS` unless every one did; the last failure is thrown.
+ */
+export async function outlineRamble(
+	request: RambleRequest,
+	keys: RambleKeys,
+	{ models = RAMBLE_MODELS, signal }: { models?: readonly RambleModel[]; signal?: AbortSignal } = {},
+): Promise<RambleOutline> {
+	const input = RambleRequest.parse(request);
+	if (!input.transcript.trim()) return { items: [] };
+	const names = aliases(input);
+	const keyed = models.filter(spec => keys[spec.provider]);
+	if (!keyed.length) throw new ApiError(503, 'Ramble logging needs GEMINI_API_KEY or XAI_API_KEY on the server');
+	const now = Date.now();
+	const awake = keyed.filter(spec => (resting.get(spec.model) ?? 0) <= now);
+	let failure: unknown;
+	for (const spec of awake.length ? awake : keyed) {
+		const timeout = AbortSignal.timeout(TIMEOUT_MS);
+		try {
+			const { label, text } = await ask(
+				spec,
+				keys[spec.provider]!,
+				rambleInstructions(input),
+				`Ramble: ${input.transcript}`,
+				responseSchema(names),
+				signal ? AbortSignal.any([signal, timeout]) : timeout,
+			);
+			let json: unknown;
+			try {
+				json = JSON.parse(text);
+			} catch {
+				throw new ApiError(502, `${label}'s answer is not JSON: ${text.slice(0, 200)}`);
+			}
+			const parsed = ModelOutline.safeParse(json);
+			if (!parsed.success)
+				throw new ApiError(502, `${label}'s answer does not fit the schema: ${parsed.error.message}`);
+			resting.delete(spec.model);
+			return resolveAliases(parsed.data, input, names);
+		} catch (error) {
+			if (signal?.aborted) throw error;
+			console.error(`ramble read failed on ${spec.model}: ${String(error).slice(0, 300)}`);
+			resting.set(spec.model, Date.now() + REST_MS);
+			failure = error;
+		}
 	}
-	const parsed = ModelOutline.safeParse(json);
-	if (!parsed.success) throw new ApiError(502, `Gemini's answer does not fit the schema: ${parsed.error.message}`);
-	return resolveAliases(parsed.data, input, names);
+	throw failure;
 }

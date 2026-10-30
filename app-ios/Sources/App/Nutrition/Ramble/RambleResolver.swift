@@ -40,6 +40,8 @@ struct RambleRow: Identifiable, Hashable, Sendable {
     enum Content: Hashable, Sendable {
         case food(Food)
         case copy(Copy)
+        /// Parsed from the words, not yet searched: the row shows what was said until its match lands.
+        case searching
         /// No food in the search matched the name.
         case unmatched
     }
@@ -58,7 +60,7 @@ struct RambleRow: Identifiable, Hashable, Sendable {
         switch content {
         case let .food(food): [RamblePlanned(pick: food.pick, day: day, minute: minute ?? 0)]
         case let .copy(copy): copy.entries.map { RamblePlanned(pick: LoggerPick($0.portion), day: day, minute: minute ?? $0.minute) }
-        case .unmatched: []
+        case .searching, .unmatched: []
         }
     }
 }
@@ -120,7 +122,8 @@ extension [RambleRow] {
 }
 
 /// Turns the model's outline into rows over the local search and the log, off the main actor. Pure: the same outline,
-/// context, choices, and previous rows give the same rows.
+/// context, choices, and previous rows give the same rows. With `search` off it never searches, so it is cheap enough
+/// for the main actor: a food it would have to search for is `.searching`.
 struct RambleResolver: Sendable {
     static let optionLimit = 10
     static let collapsedOptions = 5
@@ -132,18 +135,18 @@ struct RambleResolver: Sendable {
     /// a food with no meal or time.
     let fallback: (day: CalendarDay, minute: Int)
 
-    func rows(_ items: [RambleItem], previous: [RambleRow], choices: [Int: RambleChoice]) throws -> [RambleRow] {
+    func rows(_ items: [RambleItem], previous: [RambleRow], choices: [Int: RambleChoice], search: Bool = true) throws -> [RambleRow] {
         let previous = Dictionary(previous.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
         var rows: [RambleRow] = []
         for (position, item) in items.enumerated() {
             let choice = choices[position].flatMap { $0.name == item.identity ? $0 : nil }
             if choice?.removed == true { continue }
-            rows.append(try row(position, item, previous: previous[position], choice: choice))
+            rows.append(try row(position, item, previous: previous[position], choice: choice, search: search))
         }
         return rows
     }
 
-    private func row(_ id: Int, _ item: RambleItem, previous: RambleRow?, choice: RambleChoice?) throws -> RambleRow {
+    private func row(_ id: Int, _ item: RambleItem, previous: RambleRow?, choice: RambleChoice?, search: Bool) throws -> RambleRow {
         let minute = item.minute ?? item.meal?.defaultMinute
         let day = item.day.map { today.adding(days: $0) } ?? fallback.day
         switch item.kind {
@@ -155,11 +158,11 @@ struct RambleResolver: Sendable {
             let entries = (context.mealEntries[mealID] ?? []).filter { !except.contains($0.key) }
             return RambleRow(id: id, item: item, day: day, minute: minute, content: .copy(.init(meal: meal, entries: entries)))
         case .food:
-            return RambleRow(id: id, item: item, day: day, minute: minute ?? fallback.minute, content: try food(item, previous: previous, choice: choice))
+            return RambleRow(id: id, item: item, day: day, minute: minute ?? fallback.minute, content: try food(item, previous: previous, choice: choice, search: search))
         }
     }
 
-    private func food(_ item: RambleItem, previous: RambleRow?, choice: RambleChoice?) throws -> RambleRow.Content {
+    private func food(_ item: RambleItem, previous: RambleRow?, choice: RambleChoice?, search: Bool) throws -> RambleRow.Content {
         let earlier: RambleRow.Food? = if case let .food(food) = previous?.content { food } else { nil }
         let refEntry = item.ref.flatMap { context.entries[$0] }
         // The owner's pick outranks a ref the model added later; the row already holds that food, so it stays.
@@ -188,6 +191,7 @@ struct RambleResolver: Sendable {
             options = earlier.options
             spoken = shown
         } else {
+            guard search else { return .searching }
             options = Array(try index.local(item.name).prefix(Self.optionLimit))
             spoken = nil
         }

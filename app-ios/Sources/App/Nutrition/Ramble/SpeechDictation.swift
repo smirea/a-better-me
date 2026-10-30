@@ -8,7 +8,8 @@ import Synchronization
 /// first is missing, which works offline. The language
 /// assets download on first use. Only the microphone needs permission. Ported from procrastimate's `SpeechDictation`,
 /// which uses a `DictationTranscriber`; on spoken food rambles that one garbled food words ("200 mL of air actual
-/// weight" for "200ml of kefir, actually wait") that `SpeechTranscriber` kept (`scripts/food-ramble-speech.ts`).
+/// weight" for "200ml of kefir, actually wait") that `SpeechTranscriber` kept. The live session transcribes on the
+/// server, so there it only runs the mic; this transcribes when the session cannot.
 @MainActor
 final class SpeechDictation {
     enum Failure: Error {
@@ -21,13 +22,12 @@ final class SpeechDictation {
     private var analyzer: SpeechAnalyzer?
     private var reader: Task<Void, Never>?
 
-    /// Streams the transcript so far to `onText`, finalized text followed by the words still being recognized. The tap
-    /// also writes each buffer's peak to `meter` for the waveform and the audio to `recorder`, for the final read and
-    /// for Gemini Live. With `display`, for Gemini Live, the mic starts first and the transcript only shows: words are
-    /// not held back while the speech assets load, and a transcriber that cannot start is logged, not thrown.
-    func start(meter: LevelMeter, recorder: RambleRecorder, onText: @escaping @MainActor (String) -> Void, display: Bool = false) async throws {
+    /// Streams the transcript so far to `onText`, finalized text followed by the words still being recognized; with no
+    /// `onText`, only the mic runs. The tap also writes each buffer's peak to `meter` for the waveform and the audio to
+    /// `recorder`, for the live session.
+    func start(meter: LevelMeter, recorder: RambleRecorder, onText: (@MainActor (String) -> Void)?) async throws {
         let feed = TapFeed()
-        if !display { feed.set(try await transcribe(onText)) }
+        if let onText { feed.set(try await transcribe(onText)) }
         guard await AVAudioApplication.requestRecordPermission() else {
             cancel()
             throw Failure.denied
@@ -49,24 +49,6 @@ final class SpeechDictation {
             throw error
         }
         engine = audio
-        guard display else { return }
-        Task {
-            do {
-                let transcribing = try await transcribe(onText)
-                // Stopped while the transcriber started: its stream ends with no audio.
-                guard engine === audio else {
-                    transcribing.input.finish()
-                    reader?.cancel()
-                    analyzer = nil
-                    input = nil
-                    reader = nil
-                    return
-                }
-                feed.set(transcribing)
-            } catch {
-                RambleOutliner.log.error("Ramble shows no on-device words: \(String(describing: error))")
-            }
-        }
     }
 
     private func transcribe(_ onText: @escaping @MainActor (String) -> Void) async throws -> (converter: AnalyzerInputConverter, input: AsyncStream<AnalyzerInput>.Continuation) {
@@ -175,7 +157,7 @@ final class SpeechDictation {
     }
 }
 
-/// The transcriber the audio tap feeds, set before the tap is installed or, for Gemini Live, once it starts.
+/// The transcriber the audio tap feeds, set before the tap is installed.
 nonisolated final class TapFeed: @unchecked Sendable {
     typealias Feed = (converter: AnalyzerInputConverter, input: AsyncStream<AnalyzerInput>.Continuation)
     private let lock = NSLock()
