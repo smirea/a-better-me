@@ -61,9 +61,8 @@ export const foodRoutes: Route[] = [
 			"Gemini reads the whole transcript so far and returns every item after the speaker's corrections, in spoken order: a `food` to search for by `name` (or reuse a logged entry by `ref`), or a `copy` of a logged meal minus `except`. The phone sends the recent meals and usual foods the speaker can point back at, and the options it shows per item. Send the full transcript each time; the answer replaces the last one. 503 when the server has no Gemini key.",
 		body: RambleRequest,
 		response: RambleOutline,
-		run({ body, geminiApiKey }) {
-			if (!geminiApiKey) throw new ApiError(503, 'Ramble logging needs GEMINI_API_KEY on the server');
-			return outlineRamble(body, geminiApiKey);
+		run({ body, geminiApiKey, xaiApiKey }) {
+			return outlineRamble(body, { gemini: geminiApiKey, xai: xaiApiKey });
 		},
 	}),
 ];

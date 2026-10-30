@@ -9,6 +9,7 @@ type Context<Query, Body> = {
 	body: Body;
 	now: string;
 	geminiApiKey: string | null;
+	xaiApiKey: string | null;
 };
 
 /** One operation: the router dispatches on it and the OpenAPI document is generated from it, so the two never drift. */

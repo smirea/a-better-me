@@ -193,7 +193,13 @@ describe('parseConfig', () => {
 		expect(parseConfig({ APP_ENV: 'development', SENTRY_DSN: 'leftover-dev-setting' }).sentry).toBeNull();
 		const dsn = 'https://abc123@o1.ingest.sentry.io/42';
 		expect(
-			parseConfig({ APP_ENV: 'production', OWNER_TOKEN: 'owner', SENTRY_DSN: dsn, GEMINI_API_KEY: 'gemini' }).sentry,
+			parseConfig({
+				APP_ENV: 'production',
+				OWNER_TOKEN: 'owner',
+				SENTRY_DSN: dsn,
+				GEMINI_API_KEY: 'gemini',
+				XAI_API_KEY: 'xai',
+			}).sentry,
 		).toEqual({ dsn, environment: 'production' });
 	});
 
@@ -204,6 +210,7 @@ describe('parseConfig', () => {
 			OWNER_TOKEN: 'secret',
 			SENTRY_DSN: 'https://abc123@o1.ingest.sentry.io/42',
 			GEMINI_API_KEY: 'gemini',
+			XAI_API_KEY: 'xai',
 		};
 		expect(parseConfig(production).space).toEqual({});
 		expect(() => parseConfig({ ...production, SYNC_PAGE_SIZE: '3' })).toThrow(
@@ -211,14 +218,15 @@ describe('parseConfig', () => {
 		);
 	});
 
-	test('production refuses to start without the Gemini key that photo logging needs', () => {
+	test('production refuses to start without the Gemini and xAI keys that photo logging and Ramble need', () => {
 		expect(() =>
 			parseConfig({
 				APP_ENV: 'production',
 				OWNER_TOKEN: 'secret',
 				SENTRY_DSN: 'https://abc123@o1.ingest.sentry.io/42',
 			}),
-		).toThrow('Missing production settings: GEMINI_API_KEY');
+		).toThrow('Missing production settings: GEMINI_API_KEY, XAI_API_KEY');
 		expect(parseConfig({}).geminiApiKey).toBeNull();
+		expect(parseConfig({}).xaiApiKey).toBeNull();
 	});
 });

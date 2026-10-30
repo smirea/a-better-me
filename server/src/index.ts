@@ -72,7 +72,13 @@ const server = Bun.serve<Socket>({
 			},
 			agent: request =>
 				nudging(() =>
-					handleAgent(request, { space, driver, ownerToken: config.ownerToken, geminiApiKey: config.geminiApiKey }),
+					handleAgent(request, {
+						space,
+						driver,
+						ownerToken: config.ownerToken,
+						geminiApiKey: config.geminiApiKey,
+						xaiApiKey: config.xaiApiKey,
+					}),
 				),
 		}),
 	websocket: {
@@ -80,7 +86,7 @@ const server = Bun.serve<Socket>({
 			if (!ws.data) return void ws.subscribe('live');
 			ws.data.ramble = serveLiveRamble(
 				{ send: text => ws.send(text), close: (code, reason) => ws.close(code, reason) },
-				config.geminiApiKey!,
+				{ gemini: config.geminiApiKey, xai: config.xaiApiKey! },
 			);
 		},
 		message(ws, message) {

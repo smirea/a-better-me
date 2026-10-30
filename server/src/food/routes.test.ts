@@ -6,7 +6,7 @@ import { handleAgent } from '../agent';
 import { handle, type App } from '../api';
 import { parseConfig } from '../config';
 import { GEMINI_MODEL } from './mealPhoto';
-import { RAMBLE_FINAL_MODEL, RAMBLE_MODEL } from './ramble';
+import { RAMBLE_MODELS } from './ramble';
 import { USER_AGENT } from './openFoodFacts';
 
 const driver = bunSqlite(':memory:');
@@ -242,14 +242,14 @@ describe('meal photo', () => {
 	});
 });
 
-const ramble = (geminiApiKey: string | null, body: unknown) =>
+const ramble = (geminiApiKey: string | null, body: unknown, xaiApiKey: string | null = null) =>
 	handleAgent(
 		new Request('http://api.test/api/food-database/ramble', {
 			method: 'POST',
 			headers: { authorization: `Bearer ${config.ownerToken}` },
 			body: JSON.stringify(body),
 		}),
-		{ space, driver, ownerToken: config.ownerToken, geminiApiKey },
+		{ space, driver, ownerToken: config.ownerToken, geminiApiKey, xaiApiKey },
 	);
 
 describe('ramble', () => {
@@ -270,15 +270,26 @@ describe('ramble', () => {
 		],
 		usual: [{ id: 'coffee-uuid', name: 'Coffee', serving: '1 mug' }],
 	};
-	const item = { amount: 0, unit: '', ref: '', copy: '', except: [], meal: '', time: '', day: null, options: false };
+	const item = {
+		amount: 0,
+		unit: '',
+		ref: '',
+		copy: '',
+		except: [],
+		meal: '',
+		time: '',
+		day: null,
+		options: false,
+		said: '',
+	};
 
 	test('the model sees aliases, and its answer comes back with the phone ids, defaults filled in', async () => {
 		stub(() =>
 			geminiText(
 				JSON.stringify({
 					items: [
-						{ kind: 'copy', name: '', copy: 'm1', except: ['e2'] },
-						{ kind: 'food', name: 'raspberries', amount: 1, unit: 'Cup', meal: 'breakfast' },
+						{ kind: 'copy', name: '', copy: 'm1', except: ['e2'], said: "yesterday's breakfast" },
+						{ kind: 'food', name: 'raspberries', amount: 1, unit: 'Cup', meal: 'breakfast', said: ' raspberries ' },
 						{ kind: 'food', name: 'coffee', ref: 'u1', time: '8:05' },
 					],
 				}),
@@ -288,7 +299,16 @@ describe('ramble', () => {
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({
 			items: [
-				{ ...item, kind: 'copy', name: '', ref: null, copy: 'meal-uuid', except: ['blue-uuid'], meal: 'breakfast' },
+				{
+					...item,
+					kind: 'copy',
+					name: '',
+					ref: null,
+					copy: 'meal-uuid',
+					except: ['blue-uuid'],
+					meal: 'breakfast',
+					said: "yesterday's breakfast",
+				},
 				{
 					...item,
 					kind: 'food',
@@ -298,6 +318,7 @@ describe('ramble', () => {
 					ref: null,
 					copy: null,
 					meal: 'breakfast',
+					said: 'raspberries',
 				},
 				{ ...item, kind: 'food', name: 'coffee', ref: 'coffee-uuid', copy: null, time: '08:05' },
 			],
@@ -309,24 +330,37 @@ describe('ramble', () => {
 		);
 		expect(instructions).toContain('- u1 Coffee (1 mug)');
 		expect(sent.contents[0].parts).toEqual([{ text: `Ramble: ${body.transcript}` }]);
-		expect(requests[0]!.url).toContain(`/${RAMBLE_MODEL.model}:generateContent`);
+		expect(requests[0]!.url).toContain(`/${RAMBLE_MODELS[0]!.model}:generateContent`);
 		const [food, copy] = sent.generationConfig.responseJsonSchema.properties.items.items.anyOf;
 		expect(food.properties.ref.enum).toEqual(['', 'e1', 'e2', 'u1']);
 		expect(copy.properties.copy.enum).toEqual(['m1']);
-		expect(copy.required).toEqual(['kind', 'copy']);
+		expect(copy.required).toEqual(['kind', 'copy', 'said']);
 	});
 
-	test('the final read sends the recording before the transcript, to the final model', async () => {
-		stub(() => geminiText('{"items":[]}'));
-		const audio = { data: btoa('RIFF....WAVE'), mediaType: 'audio/wav' };
-		expect((await ramble('gemini-key', { ...body, audio })).status).toBe(200);
-		const sent = await requests[0]!.json();
-		expect(requests[0]!.url).toContain(`/${RAMBLE_FINAL_MODEL.model}:generateContent`);
-		expect(sent.contents[0].parts).toEqual([
-			{ inline_data: { mime_type: 'audio/wav', data: audio.data } },
-			{ text: `Ramble: ${body.transcript}` },
+	test('when Gemini fails, Grok reads the same ramble with the same schema', async () => {
+		stub(url =>
+			url.hostname === 'api.x.ai'
+				? Response.json({
+						choices: [{ message: { content: '{"items":[{"kind":"food","name":"coffee","said":"coffee"}]}' } }],
+					})
+				: new Response('spend cap', { status: 429 }),
+		);
+		const response = await ramble('gemini-key', body, 'xai-key');
+		expect(await response.json()).toEqual({
+			items: [{ ...item, kind: 'food', name: 'coffee', ref: null, copy: null, said: 'coffee' }],
+		});
+		expect(requests.map(request => new URL(request.url).hostname)).toEqual([
+			'generativelanguage.googleapis.com',
+			'api.x.ai',
 		]);
-		expect(sent.generationConfig.thinkingConfig).toEqual({ thinkingLevel: RAMBLE_FINAL_MODEL.thinking });
+		const sent = await requests[1]!.json();
+		expect(sent.model).toBe(RAMBLE_MODELS[1]!.model);
+		expect(sent.messages[1]).toEqual({ role: 'user', content: `Ramble: ${body.transcript}` });
+		expect(sent.response_format.json_schema.schema.properties.items.items.anyOf[0].required).toEqual([
+			'kind',
+			'name',
+			'said',
+		]);
 	});
 
 	test('a copy of no meal, an except outside the copied meal, and a nameless food are dropped', async () => {
@@ -346,22 +380,22 @@ describe('ramble', () => {
 		});
 	});
 
-	test('a said day carries to the items after it, copies included, until another is said', async () => {
+	test('a ref to a logged entry that shares no word with the food is dropped, so the food is searched', async () => {
 		stub(() =>
 			geminiText(
 				JSON.stringify({
 					items: [
-						{ kind: 'food', name: 'pizza', day: -1 },
-						{ kind: 'copy', copy: 'm1' },
-						{ kind: 'food', name: 'beer' },
-						{ kind: 'food', name: 'banana', day: 0 },
-						{ kind: 'food', name: 'coffee' },
+						{ kind: 'food', name: 'apple', ref: 'u1' },
+						{ kind: 'food', name: 'black coffee', ref: 'u1' },
 					],
 				}),
 			),
 		);
 		const { items } = await (await ramble('gemini-key', body)).json();
-		expect(items.map((item: { day: number | null }) => item.day)).toEqual([-1, -1, -1, 0, 0]);
+		expect(items.map((item: { name: string; ref: string | null }) => [item.name, item.ref])).toEqual([
+			['apple', null],
+			['black coffee', 'coffee-uuid'],
+		]);
 	});
 
 	test('a said day carries to the items after it, copies included, until another is said', async () => {

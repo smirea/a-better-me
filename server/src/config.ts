@@ -5,7 +5,7 @@ import type { SpaceOptions } from 'sync-engine/core';
  * bindings, so this file imports neither. Secrets stay optional in the env schema so `env-manager gen --local` works
  * offline and in CI; production refuses to start without them instead of failing on the first request that reads one.
  */
-export const REQUIRED_IN_PRODUCTION = ['OWNER_TOKEN', 'SENTRY_DSN', 'GEMINI_API_KEY'] as const;
+export const REQUIRED_IN_PRODUCTION = ['OWNER_TOKEN', 'SENTRY_DSN', 'GEMINI_API_KEY', 'XAI_API_KEY'] as const;
 
 /** The owner bearer of every local server and the tests. Never valid in production. */
 export const DEV_OWNER_TOKEN = 'insecure-local-dev-owner-token';
@@ -33,8 +33,10 @@ export type Config = {
 	ownerToken: string;
 	sentry: SentryTarget | null;
 	space: SpaceOptions;
-	/** Photo logging's Gemini key. Null in development without one, where the photo route answers 503. */
+	/** Photo logging's and Ramble's Gemini key. Null in development without one, where the photo route answers 503. */
 	geminiApiKey: string | null;
+	/** Ramble's speech-to-text and fallback reads. Null in development without one, where live Ramble answers 503. */
+	xaiApiKey: string | null;
 };
 
 const DSN = /^https:\/\/[0-9a-f]+@[^/@\s]+\/\d+$/;
@@ -69,5 +71,6 @@ export function parseConfig(settings: Settings): Config {
 		sentry: environment === 'production' && dsn ? { dsn, environment } : null,
 		space,
 		geminiApiKey: read('GEMINI_API_KEY') ?? null,
+		xaiApiKey: read('XAI_API_KEY') ?? null,
 	};
 }

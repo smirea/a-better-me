@@ -1,202 +1,256 @@
-import { afterEach, describe, expect, test } from 'bun:test';
-import { aliases } from './ramble';
-import { LiveItems, LiveRambleRequest, openLiveRamble, Turns } from './ramble-live';
+import { afterEach, describe, expect, spyOn, test } from 'bun:test';
+import type { RambleOutline } from './ramble';
+import {
+	Reader,
+	serveLiveRamble,
+	wordsAfter,
+	xaiTranscriber,
+	type Heard,
+	type SttSocket,
+	type Transcribe,
+	type TranscriberEvents,
+} from './ramble-live';
 
-const input = LiveRambleRequest.parse({
-	today: '2026-10-28',
-	time: '08:15',
-	meals: [
-		{
-			id: 'meal-a',
-			day: '2026-10-27',
-			meal: 'breakfast',
-			entries: [
-				{ id: 'oats-a', name: 'Oatmeal', serving: '1 cup' },
-				{ id: 'berries-a', name: 'Blueberries', serving: '50 g' },
-			],
-		},
-	],
-	usual: [{ id: 'pancake-a', name: 'Protein pancake', serving: '2 pancakes' }],
-});
-const names = aliases({ ...input, transcript: '' });
-const brief = (items: LiveItems) =>
-	items.outline(input, names).items.map(({ kind, name, amount, unit, ref, copy, except, meal }) => ({
-		kind,
+const context = { transcript: '', today: '2026-10-28', time: '08:15' };
+const outline = (...names: string[]): RambleOutline => ({
+	items: names.map(name => ({
+		kind: 'food',
 		name,
-		amount,
-		unit,
-		ref,
-		copy,
-		except,
-		meal,
-	}));
-
-describe('LiveItems', () => {
-	test('a correction edits the food it points at', () => {
-		const items = new LiveItems();
-		items.apply('add_food', { id: '1', name: 'oats', amount: 1, unit: 'cup', meal: 'breakfast' });
-		items.apply('add_food', { id: '2', name: 'kefir', amount: 200, unit: 'ml' });
-		expect(items.apply('edit_item', { id: '1', amount: 0.5 })).toEqual({ ok: true });
-		expect(brief(items)).toEqual([
-			{ kind: 'food', name: 'oats', amount: 0.5, unit: 'cup', ref: null, copy: null, except: [], meal: 'breakfast' },
-			{ kind: 'food', name: 'kefir', amount: 200, unit: 'ml', ref: null, copy: null, except: [], meal: 'breakfast' },
-		]);
-	});
-
-	test('a repeated add updates the food instead of adding a twin', () => {
-		const items = new LiveItems();
-		items.apply('add_food', { id: '1', name: 'Pizza' });
-		expect(items.apply('add_food', { id: '2', name: 'pizza', amount: 2, unit: 'slice' })).toEqual({
-			id: '1',
-			note: 'Already in the list. Do not add it again; use edit_item to change it.',
-		});
-		expect(brief(items).map(item => [item.name, item.amount, item.unit])).toEqual([['pizza', 2, 'slice']]);
-	});
-
-	test('a copy maps its aliases to the phone ids, and a removed item is gone', () => {
-		const items = new LiveItems();
-		items.apply('add_copy', { id: '1', copy: 'm1', except: ['e2'] });
-		items.apply('add_food', { id: '2', name: 'raspberries', amount: 1, unit: 'cup' });
-		items.apply('add_food', { id: '3', name: 'pancake', ref: 'u1' });
-		items.apply('remove_item', { id: '3' });
-		expect(items.apply('edit_item', { id: '9', amount: 1 })).toEqual({ error: 'No item has that id.' });
-		expect(brief(items)).toEqual([
-			{
-				kind: 'copy',
-				name: '',
-				amount: 0,
-				unit: '',
-				ref: null,
-				copy: 'meal-a',
-				except: ['berries-a'],
-				meal: 'breakfast',
-			},
-			{
-				kind: 'food',
-				name: 'raspberries',
-				amount: 1,
-				unit: 'cup',
-				ref: null,
-				copy: null,
-				except: [],
-				meal: 'breakfast',
-			},
-		]);
-	});
+		amount: 0,
+		unit: '',
+		ref: null,
+		copy: null,
+		except: [],
+		day: null,
+		meal: '',
+		time: '',
+		options: false,
+		said: name,
+	})),
 });
+const tick = (ms = 0) => new Promise(resolve => setTimeout(resolve, ms));
 
-/** 100 ms of 16 kHz PCM at a steady loudness. */
-const frame = (level: number) => new Uint8Array(new Int16Array(1600).fill(level).buffer);
-const play = (turns: Turns, levels: number[]) => levels.map(level => turns.frame(frame(level)));
-
-describe('Turns', () => {
-	test('a turn opens on speech and closes after a pause', () => {
-		const turns = new Turns({ pauseMs: 300, dipAfterMs: 3_000, maxMs: 5_000 });
-		expect(play(turns, [0, 2000, 2000, 0, 0, 0, 0, 2000])).toEqual([
-			null,
-			'start',
-			null,
-			null,
-			null,
-			'end',
-			null,
-			'start',
-		]);
-	});
-
-	test('a long turn splits at the first dip between words', () => {
-		const turns = new Turns({ pauseMs: 300, dipAfterMs: 500, maxMs: 5_000 });
-		expect(play(turns, [2000, 2000, 2000, 1500, 2000, 2000, 800, 2000])).toEqual([
-			'start',
-			null,
-			null,
-			null,
-			null,
-			null,
-			'split',
-			null,
-		]);
-	});
-
-	test('quiet speech opens a turn and is raised for Gemini, while steady room noise never does', () => {
-		const quiet = new Turns({ pauseMs: 300, dipAfterMs: 3_000, maxMs: 5_000 });
-		expect(play(quiet, [5, 150, 150, 5, 5, 5, 150])).toEqual([null, 'start', null, null, null, 'end', 'start']);
-		expect(quiet.gain).toBe(16);
-		const noise = new Turns({ pauseMs: 300, dipAfterMs: 3_000, maxMs: 5_000 });
-		expect(play(noise, Array(50).fill(40))).toEqual(Array(50).fill(null));
-	});
-
-	test('a turn with no dip splits at the cap', () => {
-		const turns = new Turns({ pauseMs: 300, dipAfterMs: 300, maxMs: 500 });
-		expect(play(turns, [2000, 2000, 2000, 2000, 2000, 2000, 2000])).toEqual([
-			'start',
-			null,
-			null,
-			null,
-			null,
-			'split',
-			null,
-		]);
-	});
-});
-
-/** Stands in for Gemini's socket: it records what the session sends, kind by kind, and answers the setup. */
-class FakeGemini {
-	static last: FakeGemini;
-	sent: string[] = [];
-	binaryType = '';
-	onopen = () => {};
-	onmessage = (_: { data: string }) => {};
-	onclose = (_: { code: number; reason: string }) => {};
-	constructor() {
-		FakeGemini.last = this;
-		queueMicrotask(() => this.onopen());
-	}
-	send(raw: string) {
-		const message = JSON.parse(raw);
-		if (message.setup) return queueMicrotask(() => this.reply({ setupComplete: {} }));
-		const realtime = message.realtimeInput ?? {};
-		this.sent.push(
-			realtime.activityStart ? 'start' : realtime.activityEnd ? 'end' : realtime.audio ? 'audio' : 'other',
+/** A read per call that answers only when told to, with the foods its text names. */
+function reads() {
+	const calls: { text: string; answer(): void; fail(): void }[] = [];
+	const read = (text: string) =>
+		new Promise<RambleOutline>((resolve, reject) =>
+			calls.push({
+				text,
+				answer: () => resolve(outline(...text.split(' and '))),
+				fail: () => reject(new Error('both models failed')),
+			}),
 		);
-	}
-	reply(message: object) {
-		this.onmessage({ data: JSON.stringify(message) });
-	}
-	close() {}
+	return { calls, read };
 }
 
-describe('openLiveRamble', () => {
-	const real = globalThis.WebSocket;
-	afterEach(() => {
-		globalThis.WebSocket = real;
+describe('Reader', () => {
+	const timing = { debounceMs: 5, inflight: 2, settleCapMs: 500 };
+
+	test('a burst of words is one read, and an older answer landing after a newer one is dropped', async () => {
+		const { calls, read } = reads();
+		const shown: string[][] = [];
+		const reader = new Reader(read, { outline: o => shown.push(o.items.map(i => i.name)), error: () => {} }, timing);
+		reader.heard('eggs');
+		reader.heard('eggs and toast');
+		await tick(20);
+		reader.heard('eggs and toast and coffee');
+		await tick(20);
+		expect(calls.map(call => call.text)).toEqual(['eggs and toast', 'eggs and toast and coffee']);
+		calls[1]!.answer();
+		calls[0]!.answer();
+		await tick();
+		expect(shown).toEqual([['eggs', 'toast', 'coffee']]);
 	});
 
-	test('a turn waits until Gemini answers the one before, and its answer counts once', async () => {
-		globalThis.WebSocket = FakeGemini as never;
-		const session = await openLiveRamble(input, 'key', { transcript() {}, outline() {}, error() {} });
-		const gemini = FakeGemini.last;
-		const speak = (frames: number) => {
-			for (let i = 0; i < frames; i++) session.audio(frame(2000));
+	test('the stop reads the last words at once, past the in-flight limit, and settles on their answer', async () => {
+		const { calls, read } = reads();
+		const reader = new Reader(read, { outline: () => {}, error: () => {} }, { ...timing, inflight: 1 });
+		reader.heard('eggs');
+		await tick(20);
+		const settled = reader.settle('eggs and toast');
+		await tick();
+		expect(calls.map(call => call.text)).toEqual(['eggs', 'eggs and toast']);
+		calls[1]!.answer();
+		expect((await settled).items.map(item => item.name)).toEqual(['eggs', 'toast']);
+	});
+
+	test('the last words already read settle at once, punctuation aside', async () => {
+		const { calls, read } = reads();
+		const reader = new Reader(read, { outline: () => {}, error: () => {} }, timing);
+		reader.heard('two eggs');
+		await tick(20);
+		calls[0]!.answer();
+		await tick();
+		expect((await reader.settle('Two eggs.')).items.map(item => item.name)).toEqual(['two eggs']);
+		expect(calls).toHaveLength(1);
+	});
+
+	test('a failed read is read again, and a second failure in a row ends the ramble', async () => {
+		const { calls, read } = reads();
+		const errors: Error[] = [];
+		const reader = new Reader(read, { outline: () => {}, error: e => errors.push(e) }, timing);
+		reader.heard('eggs');
+		await tick(20);
+		calls[0]!.fail();
+		await tick();
+		expect(calls.map(call => call.text)).toEqual(['eggs', 'eggs']);
+		expect(errors).toEqual([]);
+		calls[1]!.fail();
+		await tick();
+		expect(errors.map(e => e.message)).toEqual(['both models failed']);
+	});
+	test('words committed after the stop are read as the last words, and closing ends a settle at once', async () => {
+		const { calls, read } = reads();
+		const reader = new Reader(read, { outline: () => {}, error: () => {} }, timing);
+		const settled = reader.settle('eggs');
+		reader.heard('eggs and toast');
+		await tick();
+		expect(calls.map(call => call.text)).toEqual(['eggs', 'eggs and toast']);
+		calls[0]!.answer();
+		calls[1]!.answer();
+		expect((await settled).items.map(item => item.name)).toEqual(['eggs', 'toast']);
+		const closing = new Reader(read, { outline: () => {}, error: () => {} }, timing);
+		const started = Date.now();
+		const settling = closing.settle('coffee');
+		closing.close();
+		expect(await settling).toEqual(outline());
+		expect(Date.now() - started).toBeLessThan(timing.settleCapMs);
+	});
+});
+
+describe('xaiTranscriber', () => {
+	/** A socket shaped like a Worker's: listeners only, no `onmessage`. */
+	function workerSocket() {
+		const listeners: Record<string, ((event: never) => void)[]> = {};
+		const sent: unknown[] = [];
+		const socket: SttSocket = {
+			binaryType: 'blob',
+			send: data => sent.push(data),
+			close: () => listeners.close?.forEach(listener => listener({ code: 1000, reason: '' } as never)),
+			addEventListener: (type: string, listener: (event: never) => void) => (listeners[type] ??= []).push(listener),
 		};
-		const pause = () => {
-			for (let i = 0; i < 4; i++) session.audio(frame(0));
+		const say = (message: object) =>
+			listeners.message?.forEach(listener => listener({ data: JSON.stringify(message) } as never));
+		return { socket, sent, say };
+	}
+
+	test("a Worker's socket starts, partials replace the tail, and a pause's repeat of the utterance adds only its new words", async () => {
+		const { socket, sent, say } = workerSocket();
+		const heard: Heard[] = [];
+		let done = false;
+		const starting = xaiTranscriber(
+			'key',
+			async () => socket,
+		)({
+			heard: words => heard.push(words),
+			done: () => (done = true),
+			error: error => {
+				throw error;
+			},
+		});
+		await tick();
+		say({ type: 'transcript.created' });
+		const stt = await starting;
+		stt.audio(new Uint8Array(4));
+		say({ type: 'transcript.partial', text: 'two eggs', is_final: false });
+		say({ type: 'transcript.partial', text: 'two eggs,', is_final: true });
+		say({ type: 'transcript.partial', text: 'and toast', is_final: false });
+		say({ type: 'transcript.partial', text: 'Two eggs and toast.', is_final: true, speech_final: true });
+		stt.end();
+		say({ type: 'transcript.done', text: 'Two eggs and toast. Coffee.' });
+		expect(heard).toEqual([
+			{ committed: '', partial: 'two eggs' },
+			{ committed: 'two eggs,', partial: '' },
+			{ committed: 'two eggs,', partial: 'and toast' },
+			{ committed: 'two eggs, and toast.', partial: '' },
+			{ committed: 'two eggs, and toast. Coffee.', partial: '' },
+		]);
+		expect(done).toBe(true);
+		expect(sent).toEqual([new Uint8Array(4), '{"type":"audio.done"}']);
+	});
+
+	test('a prefix matches by words, case and punctuation aside', () => {
+		expect(wordsAfter('Two eggs and toast.', 'two eggs,')).toBe('and toast.');
+		expect(wordsAfter('Three eggs and toast.', 'two eggs,')).toBeNull();
+		expect(wordsAfter('eggs', '')).toBe('eggs');
+	});
+});
+
+/** A transcriber the test speaks through. */
+function fakeStt() {
+	let events: TranscriberEvents | undefined;
+	const audio: number[] = [];
+	const transcribe: Transcribe = async given => {
+		events = given;
+		return {
+			audio: pcm => audio.push(pcm.byteLength),
+			end: () => setTimeout(() => events!.done(), 1),
+			close: () => {},
 		};
-		speak(4);
-		pause();
-		expect(gemini.sent).toEqual(['start', 'audio', 'audio', 'audio', 'audio', 'audio', 'audio', 'audio', 'end']);
-		gemini.sent = [];
-		speak(4);
-		pause();
-		speak(4);
-		expect(gemini.sent).toEqual([]);
-		gemini.reply({ serverContent: { generationComplete: true } });
-		expect(gemini.sent.filter(kind => kind !== 'audio')).toEqual(['start', 'end']);
-		gemini.sent = [];
-		gemini.reply({ serverContent: { turnComplete: true } });
-		expect(gemini.sent).toEqual([]);
-		gemini.reply({ serverContent: { turnComplete: true } });
-		expect(gemini.sent.filter(kind => kind !== 'audio')).toEqual(['start']);
-		session.close();
+	};
+	return { transcribe, audio, say: (committed: string, partial = '') => events!.heard({ committed, partial }) };
+}
+
+let sent: { url: string; transcript: string }[] = [];
+afterEach(() => {
+	(globalThis.fetch as unknown as { mockRestore?: () => void }).mockRestore?.();
+	sent = [];
+});
+/** Gemini answers each read with one food per "and" of its transcript. */
+function stubGemini() {
+	spyOn(globalThis, 'fetch').mockImplementation((async (input: RequestInfo | URL, init?: RequestInit) => {
+		const body = JSON.parse(String(init?.body));
+		const transcript = String(body.contents[0].parts[0].text).replace(/^Ramble: /, '');
+		sent.push({ url: String(input), transcript });
+		const items = transcript.split(' and ').map(name => ({ kind: 'food', name, said: name }));
+		return Response.json({ candidates: [{ content: { parts: [{ text: JSON.stringify({ items }) }] } }] });
+	}) as typeof fetch);
+}
+
+describe('serveLiveRamble', () => {
+	test('audio before ready is held, words stream back, and the stop answers the outline of every word', async () => {
+		stubGemini();
+		const stt = fakeStt();
+		const messages: Record<string, unknown>[] = [];
+		const closes: number[] = [];
+		const live = serveLiveRamble(
+			{ send: text => messages.push(JSON.parse(text)), close: code => closes.push(code ?? 0) },
+			{ gemini: 'gemini-key', xai: 'xai-key' },
+			{ transcribe: stt.transcribe, timing: { debounceMs: 1, inflight: 2, settleCapMs: 500 } },
+		);
+		live.message(JSON.stringify({ ...context, transcript: 'oats' }));
+		live.message(new Uint8Array(3200));
+		await tick();
+		expect(messages).toEqual([{ type: 'ready' }]);
+		expect(stt.audio).toEqual([3200]);
+		stt.say('and eggs', 'and toast');
+		await tick(20);
+		live.message(JSON.stringify({ type: 'shown', shown: [{ item: 1, options: ['Egg, whole, boiled'] }] }));
+		live.message(JSON.stringify({ type: 'stop' }));
+		await tick(20);
+		expect(messages.filter(m => m.type === 'heard')).toEqual([
+			{ type: 'heard', committed: 'oats and eggs', partial: 'and toast' },
+		]);
+		expect(sent.map(s => s.transcript)).toEqual(['oats and eggs and toast']);
+		expect(messages.at(-1)).toEqual({
+			type: 'done',
+			transcript: 'oats and eggs and toast',
+			outline: outline('oats', 'eggs', 'toast'),
+		});
+		expect(closes).toEqual([1000]);
+	});
+
+	test('a bad context is an error that closes the socket', () => {
+		const messages: Record<string, unknown>[] = [];
+		const closes: number[] = [];
+		const live = serveLiveRamble(
+			{ send: text => messages.push(JSON.parse(text)), close: code => closes.push(code ?? 0) },
+			{ gemini: 'gemini-key', xai: 'xai-key' },
+			{ transcribe: fakeStt().transcribe },
+		);
+		live.message(JSON.stringify({ today: 'soon' }));
+		expect(messages[0]!.type).toBe('error');
+		expect(closes).toEqual([1011]);
 	});
 });

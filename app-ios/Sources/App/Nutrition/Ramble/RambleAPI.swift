@@ -46,14 +46,6 @@ struct RambleRequest: Encodable, Hashable, Sendable {
     var meals: [RambleMeal]
     var usual: [RambleLogged]
     var shown: [Shown]
-    /// Only on the final read: the recording, which the server's model hears more accurately than the transcript.
-    var audio: Audio?
-
-    struct Audio: Encodable, Hashable, Sendable {
-        /// Base64.
-        var data: String
-        var mediaType = "audio/wav"
-    }
 }
 
 /// One line of the model's list, parsed at the boundary: the server's empty strings become nil and its clock a minute.
@@ -76,10 +68,13 @@ struct RambleItem: Decodable, Hashable, Sendable {
     var meal: RambleMealKind?
     var minute: Int?
     var options: Bool
+    /// The transcript's words this item came from, as the model quoted them; it may be empty or misquoted.
+    var said: String
 
     init(
         kind: Kind = .food, name: String = "", amount: Double = 0, unit: String = "", ref: String? = nil, copy: String? = nil,
-        except: [String] = [], day: Int? = nil, meal: RambleMealKind? = nil, minute: Int? = nil, options: Bool = false
+        except: [String] = [], day: Int? = nil, meal: RambleMealKind? = nil, minute: Int? = nil, options: Bool = false,
+        said: String = ""
     ) {
         self.kind = kind
         self.name = name
@@ -92,10 +87,11 @@ struct RambleItem: Decodable, Hashable, Sendable {
         self.meal = meal
         self.minute = minute
         self.options = options
+        self.said = said
     }
 
     private enum CodingKeys: String, CodingKey {
-        case kind, name, amount, unit, ref, copy, except, day, meal, time, options
+        case kind, name, amount, unit, ref, copy, except, day, meal, time, options, said
     }
 
     init(from decoder: any Decoder) throws {
@@ -111,6 +107,7 @@ struct RambleItem: Decodable, Hashable, Sendable {
         meal = RambleMealKind(rawValue: try container.decode(String.self, forKey: .meal))
         minute = Self.minute(try container.decode(String.self, forKey: .time))
         options = try container.decode(Bool.self, forKey: .options)
+        said = try container.decodeIfPresent(String.self, forKey: .said) ?? ""
     }
 
     /// What a row's own choices (a pick, a serving, a removal) hold to: a food's name, or a copy's meal.
@@ -147,8 +144,8 @@ struct RambleClient: RambleOutlining {
     private struct Failure: Decodable { let error: String }
 
     func outline(_ body: RambleRequest) async throws -> RambleOutline {
-        // The server gives Gemini 15 seconds, and the final read uploads the recording.
-        var request = URLRequest(url: endpoint, timeoutInterval: 25)
+        // The server gives each model 15 seconds, and Grok answers when Gemini cannot.
+        var request = URLRequest(url: endpoint, timeoutInterval: 35)
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
