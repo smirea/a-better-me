@@ -11,7 +11,7 @@ import { MEALS, TODAY, USUAL } from './food-ramble/history';
  *   GEMINI_API_KEY=… bun scripts/food-ramble-eval.ts [-v] [--set dev|holdout] [--runs n] [--only id,…] \
  *     [--transcripts .cache/food-ramble/Samantha-speech.json [--audio .cache/food-ramble/Samantha]] --with gemini-3.5-flash:minimal,gemini-3.8-flash:low
  *   … --engine live --audio .cache/food-ramble/Samantha [--final [--final-at-stop] [--final-with model:thinking]] \
- *     [--save live.json] [--turns pauseMs:dipAfterMs:maxMs]
+ *     [--save live.json] [--turns pauseMs:dipAfterMs:maxMs] [--gain 0.05]
  *
  * A case passes only when every item matches in order. Each model runs every case `--runs` times, so flaky cases show
  * as a pass rate below 100%. Latency is per successful call.
@@ -34,6 +34,7 @@ const { values } = parseArgs({
 		save: { type: 'string' },
 		turns: { type: 'string' },
 		'final-at-stop': { type: 'boolean', default: false },
+		gain: { type: 'string' },
 	},
 });
 const key = process.env.GEMINI_API_KEY;
@@ -47,6 +48,9 @@ const spoken: Record<string, string> | null = values.transcripts ? await Bun.fil
 if (spoken) for (const c of cases) c.text = spoken[c.id] ?? c.text;
 const runs = Number(values.runs);
 
+/** Where the samples start: afconvert pads the header to 4 KB, so not at byte 44. */
+const pcmStart = (wav: Uint8Array) => Buffer.from(wav).indexOf('data') + 8;
+
 /** `--audio <dir>` sends `<dir>/<case id>.aiff` along with the transcript, as the phone's final read does. */
 async function recording(id: string) {
 	if (!values.audio) return undefined;
@@ -54,7 +58,14 @@ async function recording(id: string) {
 	const wav = aiff.replace(/\.aiff$/, '.wav');
 	if (!(await Bun.file(wav).exists()))
 		Bun.spawnSync(['afconvert', '-f', 'WAVE', '-d', 'LEI16@16000', '-c', '1', aiff, wav]);
-	return { data: Buffer.from(await Bun.file(wav).arrayBuffer()).toString('base64'), mediaType: 'audio/wav' as const };
+	const bytes = new Uint8Array(await Bun.file(wav).arrayBuffer());
+	// `--gain 0.05` plays the recording as quietly as a phone mic in measurement mode, with no gain control, hears it.
+	if (values.gain) {
+		const start = pcmStart(bytes);
+		const samples = new Int16Array(bytes.buffer, start, (bytes.length - start) >> 1);
+		for (let i = 0; i < samples.length; i++) samples[i] = Math.round(samples[i]! * Number(values.gain));
+	}
+	return { data: Buffer.from(bytes).toString('base64'), mediaType: 'audio/wav' as const };
 }
 const spec = (text: string): RambleModel => {
 	const [model, thinking] = text.split(':');
@@ -231,7 +242,8 @@ type LiveScore = {
 async function scoreLive(model: string, c: Case): Promise<LiveScore> {
 	const wav = await recording(c.id);
 	if (!wav) throw new Error('--engine live needs --audio');
-	const pcm = new Uint8Array(Buffer.from(wav.data, 'base64')).subarray(44);
+	const bytes = new Uint8Array(Buffer.from(wav.data, 'base64'));
+	const pcm = bytes.subarray(pcmStart(bytes));
 	const frame = (LIVE_SAMPLE_RATE / 10) * 2;
 	const request = { today: TODAY, time: c.time ?? '20:30', meals: MEALS, usual: USUAL, shown: c.shown };
 	const audioMs = (pcm.length / 2 / LIVE_SAMPLE_RATE) * 1000;
