@@ -169,7 +169,7 @@ struct EnergyBalanceFocusCard: View {
         let lineColor = reference == .expenditure ? Theme.accent : Theme.fat
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader("Energy Balance")
-            BalanceChart(bars: balance.bars, line: balance.line, lineColor: lineColor, domain: balance.interval)
+            BalanceChart(bars: balance.bars, line: balance.line, lineColor: lineColor, domain: balance.interval, scrubbing: reference.rawValue)
                 .frame(height: 110)
             Text("Last 30 Days").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -194,6 +194,8 @@ struct BalanceChart: View {
     let lineColor: Color
     let domain: DateInterval
     var showsAxis = false
+    /// The reference line's name; set only where the chart isn't a card's link, which a tap must still follow.
+    var scrubbing: String?
 
     var body: some View {
         let high = max((bars + line).map(\.value).max() ?? 0, 1)
@@ -212,7 +214,30 @@ struct BalanceChart: View {
         .chartYScale(domain: 0...(high * 1.1))
         .chartXAxis(.hidden)
         .chartYAxis(.hidden)
+        .modifier(BalanceScrub(bars: bars, line: line, lineColor: lineColor, reference: scrubbing))
         .accessibilityLabel("Energy balance chart")
+    }
+}
+
+private struct BalanceScrub: ViewModifier {
+    let bars: [DatedValue]
+    let line: [DatedValue]
+    let lineColor: Color
+    let reference: String?
+
+    func body(content: Content) -> some View {
+        if let reference {
+            content.chartScrubbing(bars.map { $0.date.addingTimeInterval(12 * 3600) }, placement: .beside) { index in
+                let bar = bars[index]
+                var lines = [ChartCallout.Line(label: "Nutrition", value: "\(bar.value.wholeText) kcal", color: Theme.calories)]
+                if let value = line.first(where: { $0.date == bar.date })?.value {
+                    lines.append(ChartCallout.Line(label: reference, value: "\(value.wholeText) kcal", color: lineColor))
+                }
+                return ChartCallout(title: bar.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()), lines: lines)
+            }
+        } else {
+            content
+        }
     }
 }
 

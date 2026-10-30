@@ -275,6 +275,7 @@ private struct GoalTrendProgress: View {
     }
 
     var body: some View {
+        let points = points
         VStack(alignment: .leading, spacing: 8) {
             if points.count > 1 {
                 Chart {
@@ -291,6 +292,12 @@ private struct GoalTrendProgress: View {
                 }
                 .chartYScale(domain: .automatic(includesZero: false))
                 .chartXAxis(.hidden)
+                .chartScrubbing(points.map { $0.day.date(in: .current) }) { index in
+                    ChartCallout(
+                        title: StrategyFormat.day(points[index].day, year: true),
+                        lines: [ChartCallout.Line(label: "Trend", value: StrategyFormat.weight(points[index].kg, unit), color: Theme.goal)]
+                    )
+                }
                 .frame(height: 90)
                 .accessibilityLabel("Trend weight since the goal began")
             }
