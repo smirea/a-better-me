@@ -95,9 +95,9 @@ private struct LoggerContent: View {
         }
         .onChange(of: session.logged) { close() }
         .onDisappear { session.ramble.cancel() }
-        .confirmationDialog("Exit the Plate?", isPresented: $confirmingExit, titleVisibility: .visible) {
+        .alert("Exit the Plate?", isPresented: $confirmingExit) {
             Button("Exit", role: .destructive, action: close)
-            Button("Stay", role: .cancel) {}
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text(session.plate.isEmpty ? "The foods from your ramble will be cleared." : "Foods you added to your plate will be cleared.")
         }

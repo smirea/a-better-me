@@ -61,11 +61,12 @@ struct FoodEditor: View {
                 }
             }
             .sheet(isPresented: $choosingIcon) { FoodIconPicker(selection: $draft.icon) }
-            .confirmationDialog("Delete Custom Food", isPresented: $confirmingDelete, titleVisibility: .visible) {
+            .alert("Delete Custom Food", isPresented: $confirmingDelete) {
                 Button("Delete", role: .destructive) {
                     if let foodID { store.deleteFood(foodID) }
                     dismiss()
                 }
+                Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Are you sure you want to delete \(draft.name)? Logged entries keep their copy. This action cannot be undone.")
             }

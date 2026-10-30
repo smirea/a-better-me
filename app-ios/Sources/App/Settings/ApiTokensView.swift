@@ -44,13 +44,11 @@ struct ApiTokensView: View {
         } message: {
             Text("Name it after the agent that will use it.")
         }
-        .confirmationDialog(
-            "Revoke \(revoking?.name ?? "")?", isPresented: .isPresent($revoking),
-            titleVisibility: .visible
-        ) {
+        .alert("Revoke \(revoking?.name ?? "")?", isPresented: .isPresent($revoking)) {
             Button("Revoke", role: .destructive) {
                 if let revoking { store.delete(ApiToken.self, id: revoking.id) }
             }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("Agents using it lose access after the next sync.")
         }

@@ -77,11 +77,12 @@ struct RecipeDetailView: View {
         .sheet(item: $sheet) { $0.editor }
         .navigationDestination(isPresented: $preparing) { RecipePrepareView(recipe: recipe) }
         .sensoryFeedback(.success, trigger: favorited)
-        .confirmationDialog("Delete Recipe", isPresented: $confirmingDelete, titleVisibility: .visible) {
+        .alert("Delete Recipe", isPresented: $confirmingDelete) {
             Button("Delete", role: .destructive) {
                 store.deleteRecipe(recipe.id)
                 dismiss()
             }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("Are you sure you want to delete \(recipe.name)? Logged entries keep their copy. This action cannot be undone.")
         }

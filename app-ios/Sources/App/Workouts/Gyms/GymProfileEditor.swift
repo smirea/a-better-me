@@ -133,8 +133,9 @@ struct GymProfileEditor: View {
         .nameAlert("Rename Gym", isPresented: $renaming, initial: gym.name, placeholder: "Gym name") { name in
             edit { $0.name = name }
         }
-        .confirmationDialog("Remove \(gym.name)?", isPresented: $confirmingRemove, titleVisibility: .visible) {
+        .alert("Remove \(gym.name)?", isPresented: $confirmingRemove) {
             Button("Remove", role: .destructive) { remove(gym, wasDefault: isDefault) }
+            Button("Cancel", role: .cancel) {}
         }
         .sheet(item: $editingLoad) { item in
             if let load = GymDefaults.effectiveLoad(item.id, in: gym) {

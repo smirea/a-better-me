@@ -86,19 +86,21 @@ struct WorkoutDetailView: View {
             .nameAlert("Name", isPresented: $renaming, initial: template.name) { name in
                 store.editTemplate(templateID) { $0.name = name }
             }
-            .confirmationDialog("Reset \(template.name)?", isPresented: $confirmingReset, titleVisibility: .visible) {
+            .alert("Reset \(template.name)?", isPresented: $confirmingReset) {
                 Button("Reset Workout", role: .destructive) {
                     LiveSessionStore.shared.reset()
                     presenter.replaceInProgress(with: WorkoutSession(startingFrom: template), in: store)
                 }
+                Button("Cancel", role: .cancel) {}
             } message: {
                 Text("The workout in progress starts over from this plan. Its time, logged sets, and changes are discarded.")
             }
-            .confirmationDialog("Delete \(template.name)?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+            .alert("Delete \(template.name)?", isPresented: $confirmingDelete) {
                 Button("Delete Workout", role: .destructive) {
                     dismiss()
                     store.delete(WorkoutTemplate.self, id: templateID)
                 }
+                Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Past sessions of this workout stay in your history.")
             }

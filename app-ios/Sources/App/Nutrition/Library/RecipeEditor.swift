@@ -67,11 +67,12 @@ struct RecipeEditor: View {
             .sheet(isPresented: $addingIngredient) {
                 ingredientPicker.content(recipeID) { draft.ingredients.append(RecipeDraft.Ingredient(RecipeIngredient($0))) }
             }
-            .confirmationDialog("Delete Recipe", isPresented: $confirmingDelete, titleVisibility: .visible) {
+            .alert("Delete Recipe", isPresented: $confirmingDelete) {
                 Button("Delete", role: .destructive) {
                     if let recipeID { store.deleteRecipe(recipeID) }
                     dismiss()
                 }
+                Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Are you sure you want to delete \(draft.name)? Logged entries keep their copy. This action cannot be undone.")
             }
