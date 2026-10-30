@@ -415,7 +415,9 @@ private struct FlightView: View {
         }
         .modifier(Fly(progress: progress, from: from, to: to, margin: flight.kind == .correction))
         .onAppear {
-            withAnimation(.timingCurve(0.3, 0, 0.2, 1, duration: Double(Flight.duration.components.attoseconds) / 1e18)) { progress = 1 }
+            // A correction changes its row at once, so its badge arrives quickly.
+            let seconds = flight.kind == .correction ? 0.3 : Double(Flight.duration.components.attoseconds) / 1e18
+            withAnimation(.timingCurve(0.3, 0, 0.2, 1, duration: seconds)) { progress = 1 }
         }
     }
 }
@@ -433,11 +435,12 @@ private struct Fly: ViewModifier, @MainActor Animatable {
     }
 
     func body(content: Content) -> some View {
-        let start = CGPoint(x: margin ? from.minX : from.midX, y: from.midY)
+        // A correction starts in the margin beside its words, so the badge never covers them.
+        let start = CGPoint(x: margin ? min(from.minX, to.minX) - 10 : from.midX, y: from.midY)
         let end = margin ? CGPoint(x: to.minX + 14, y: to.midY) : CGPoint(x: to.minX + min(110, to.width * 0.3), y: to.midY)
         // Up and over for words; for a correction, out to the margin, then straight up it.
         let control = margin
-            ? CGPoint(x: to.minX - 10, y: start.y)
+            ? CGPoint(x: start.x, y: (start.y + to.midY) / 2)
             : CGPoint(x: (start.x + end.x) / 2, y: min(start.y, end.y) - 60)
         let t = progress
         let point = CGPoint(
