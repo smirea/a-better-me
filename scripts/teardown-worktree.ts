@@ -1,12 +1,13 @@
 /**
  * Removes an agent's worktree once its PR is merged: `bun scripts/teardown-worktree.ts <worktree path | branch> [--force]`.
  * A worktree on a detached HEAD has no branch: pass its path or directory name with --force instead.
- * Run it from the main checkout. Stops its servers, deletes the worktree with its SQLite file, its branches, and the simulator named after its branch, and
- * updates the default branch.
+ * Run it from the main checkout. Stops its servers, deletes the simulators it claimed with
+ * their paired watches, the worktree with its SQLite file, and its branches, and updates the default branch.
  */
 import { existsSync, realpathSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { readOverride, run, worktrees } from './lib';
+import { devices, owner, remove } from './simulators';
 
 const args = process.argv.slice(2);
 const force = args.includes('--force');
@@ -45,19 +46,15 @@ if (worktree) {
 			.filter(Boolean);
 		if (pids.length) run(['kill', ...new Set(pids)], { allowFail: true });
 	}
+	for (const device of devices().filter(device => owner(device)?.worktree === worktree)) {
+		remove(device, root);
+		console.log(`Deleted simulator ${device.name}.`);
+	}
 	run(['git', 'worktree', 'remove', '--force', worktree]);
 	console.log(`Removed worktree ${worktree}.`);
 }
 
 if (branch && !detached) {
-	// docs/decisions/ios.md names each worktree's simulator after its branch; `--delete` also removes its paired watches.
-	const simulators = JSON.parse(run(['xcrun', 'simctl', 'list', 'devices', '--json'], { allowFail: true }) || '{}')
-		.devices as Record<string, { name: string; udid: string }[]> | undefined;
-	for (const device of Object.values(simulators ?? {}).flat()) {
-		if (device.name !== branch) continue;
-		run(['bun', join(root, 'app-ios/scripts/run'), '-t', device.udid, '--delete'], { allowFail: true, cwd: root });
-		console.log(`Deleted simulator ${device.name} ${device.udid}.`);
-	}
 	run(['git', 'branch', '-D', branch], { allowFail: true });
 	run(['git', 'push', 'origin', '--delete', branch], { allowFail: true });
 }
