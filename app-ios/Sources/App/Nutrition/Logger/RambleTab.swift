@@ -278,7 +278,7 @@ private struct FlightView: View {
         .background(flight.kind == .parse ? Theme.accent.opacity(0.35) : Theme.accent, in: .capsule)
         .overlay { Capsule().strokeBorder(Theme.accent, lineWidth: 1) }
         .fixedSize()
-        .modifier(Fly(progress: progress, from: from, to: to))
+        .modifier(Fly(progress: progress, from: from, to: to, trailing: flight.kind == .correction))
         .onAppear {
             withAnimation(.timingCurve(0.3, 0, 0.2, 1, duration: Double(Flight.duration.components.attoseconds) / 1e18)) { progress = 1 }
         }
@@ -289,6 +289,7 @@ private struct Fly: ViewModifier, @MainActor Animatable {
     var progress: Double
     let from: CGRect
     let to: CGRect
+    let trailing: Bool
 
     var animatableData: Double {
         get { progress }
@@ -297,7 +298,8 @@ private struct Fly: ViewModifier, @MainActor Animatable {
 
     func body(content: Content) -> some View {
         let start = CGPoint(x: from.midX, y: from.midY)
-        let end = CGPoint(x: to.minX + min(110, to.width * 0.3), y: to.midY)
+        // Correcting words land at the row's trailing edge, clear of the text they change.
+        let end = CGPoint(x: trailing ? to.maxX - 80 : to.minX + min(110, to.width * 0.3), y: to.midY)
         // Up and over: the control point sits above the higher end, so the chip lifts before it travels.
         let control = CGPoint(x: (start.x + end.x) / 2, y: min(start.y, end.y) - 60)
         let t = progress
@@ -370,6 +372,19 @@ private struct RambleRowView: View {
     /// Its words are flying in from the transcript, so its content shows as they land.
     let incoming: Bool
     let open: () -> Void
+
+    init(row: RambleRow, capture: RambleCapture, incoming: Bool, open: @escaping () -> Void) {
+        self.row = row
+        self.capture = capture
+        self.incoming = incoming
+        self.open = open
+        // Set as the row is created, so its first frame already holds what was said; rows coming back into view after a
+        // tab switch are not new.
+        let live = capture.phase == .listening || capture.phase == .finishing
+        _parsedUntil = State(initialValue: live ? .now + Self.parsedFor + (incoming ? Self.landing : .zero) : nil)
+        _landed = State(initialValue: !(live && incoming))
+    }
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// 1 just after the row arrived or changed, easing to 0.
     @State private var glow = 0.0
@@ -384,7 +399,7 @@ private struct RambleRowView: View {
     /// read as two steps.
     @State private var parsedUntil: ContinuousClock.Instant?
 
-    static let parsedFor = Duration.milliseconds(800)
+    static let parsedFor = Duration.milliseconds(1000)
     /// The flight's words land, and the row's content shows, this long after the row appears.
     static let landing = Duration.milliseconds(550)
 
@@ -450,12 +465,11 @@ private struct RambleRowView: View {
         .scaleEffect(reduceMotion ? 1 : 1 + 0.012 * glow)
         .anchorPreference(key: RambleAnchors.self, value: .bounds) { RambleAnchors.Value(rows: [row.key: $0]) }
         .onAppear {
-            // Rows coming back into view after a tab switch are not new.
-            guard capture.phase == .listening || capture.phase == .finishing else { return }
-            // A new row shows what was said for a moment even when its search already matched, as its words land.
-            if !reduceMotion { parsedUntil = .now + Self.parsedFor + (incoming ? Self.landing : .zero) }
-            if incoming, !reduceMotion {
-                landed = false
+            guard parsedUntil != nil else { return }
+            if reduceMotion {
+                parsedUntil = nil
+                landed = true
+            } else if !landed {
                 withAnimation(.easeOut(duration: 0.2).delay(0.35)) { landed = true }
                 Task {
                     try? await Task.sleep(for: Self.landing)
@@ -532,9 +546,17 @@ private struct RambleRowView: View {
                         Text(food.pick.portion.food.displayName).font(AppFont.rowTitle).lineLimit(1)
                             .contentTransition(.interpolate)
                         corrected
-                        Text("\(Text(macroLine: food.pick.portion.amounts)) · \(NutritionFormat.serving(food.pick.portion.serving))")
-                            .font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).lineLimit(1)
-                            .contentTransition(.numericText())
+                        // The old amount fades out before the new one fades in, so their digits never overlap.
+                        let serving = NutritionFormat.serving(food.pick.portion.serving)
+                        ZStack(alignment: .leading) {
+                            Text("\(Text(macroLine: food.pick.portion.amounts)) · \(serving)")
+                                .font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                                .id(serving)
+                                .transition(.asymmetric(
+                                    insertion: .opacity.animation(.easeIn(duration: 0.18).delay(0.14)),
+                                    removal: .opacity.animation(.easeOut(duration: 0.12))
+                                ))
+                        }
                         placement
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)

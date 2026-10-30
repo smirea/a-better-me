@@ -40,6 +40,9 @@ final class RambleCapture {
     private(set) var struck: Set<Int> = []
     /// Where each row's food was first said: a row taken back strikes these, not the words that took it back.
     @ObservationIgnored private var named: [Int: Range<Int>] = [:]
+    /// The struck words of each food that left, by name: the model sometimes drops a food mid-sentence and brings it back
+    /// a read later, and then its words are not taken back.
+    @ObservationIgnored private var gone: [String: Range<Int>] = [:]
     private(set) var notice: String?
     /// Rows whose full option list shows, by tap.
     private(set) var expanded: Set<Int> = []
@@ -276,6 +279,8 @@ final class RambleCapture {
 
     func remove(_ row: RambleRow) {
         choices[row.id] = RambleChoice(name: row.item.identity, removed: true)
+        // The owner took the whole row back: every word of it, corrections included, is struck.
+        if let span = spans[row.key] { struck.formUnion(span) }
         rows.removeAll { $0.id == row.id }
         // A resolution already running read the choices before this one; resolving again drops its answer.
         resolve()
@@ -297,6 +302,7 @@ final class RambleCapture {
         shown = []
         struck = []
         named = [:]
+        gone = [:]
         notice = nil
     }
 
@@ -307,8 +313,15 @@ final class RambleCapture {
         }
         for (key, span) in next where named[key] == nil { named[key] = span }
         let kept = Set(rows.map(\.key))
-        let gone = old.filter { !kept.contains($0.key) }.compactMap { named[$0.key] }.flatMap { $0 }
-        if !gone.isEmpty { struck.formUnion(gone) }
+        for row in old where !kept.contains(row.key) {
+            guard let span = named[row.key] else { continue }
+            struck.formUnion(span)
+            gone[row.item.identity] = span
+        }
+        for row in rows {
+            guard let span = gone.removeValue(forKey: row.item.identity) else { continue }
+            struck.subtract(span)
+        }
         if next != spans { spans = next }
     }
 

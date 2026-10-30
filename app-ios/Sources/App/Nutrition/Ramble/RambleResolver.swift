@@ -68,8 +68,8 @@ struct RambleRow: Identifiable, Hashable, Sendable {
 /// Lines a new list of items up with the old one by `RambleItem.identity`.
 enum RambleAlignment {
     /// For each new position that continues an old one, that old position, and whether it is the same item. Items in
-    /// common, in order, are the same; in each gap between them the new items take the old ones' places one for one,
-    /// as the same rows changed ("a coke" became "a diet coke").
+    /// common, in order, are the same; in each gap between them a new item takes the place of an old one it shares a word
+    /// with, as the same row changed ("a coke" became "a diet coke"), and the rest are new.
     static func align(_ old: [String], _ new: [String]) -> [Int: (old: Int, same: Bool)] {
         var common = [[Int]](repeating: [Int](repeating: 0, count: new.count + 1), count: old.count + 1)
         for i in old.indices.reversed() {
@@ -79,8 +79,14 @@ enum RambleAlignment {
         }
         var aligned: [Int: (old: Int, same: Bool)] = [:]
         var removed: [Int] = [], added: [Int] = []
+        // A changed item continues the removed one it is related to ("diet coke" the "coke", "date" the "dates"); an
+        // unrelated one is a new row, so a food taken back never hands its row, and its struck name, to the next.
         func pair() {
-            for (j, i) in zip(added, removed) { aligned[j] = (i, false) }
+            var left = removed
+            for j in added {
+                guard let match = left.firstIndex(where: { RambleResolver.related(old[$0], new[j]) }) else { continue }
+                aligned[j] = (left.remove(at: match), false)
+            }
             removed = []
             added = []
         }
