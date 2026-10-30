@@ -62,6 +62,11 @@ final class RambleCapture {
     @ObservationIgnored private let recorder = RambleRecorder()
     /// The logger's chosen time, where foods said with no day, meal, or time go; nil follows the clock.
     @ObservationIgnored var chosenTime: @MainActor () -> LogTime? = { nil }
+    /// The logger's search with Open Food Facts, for a name the bundled catalog and the owner's foods do not know: most of
+    /// those are branded or composite foods ("Diet Coke", "pad thai"). Asked once per name.
+    @ObservationIgnored var searchOnline: @MainActor (String) async -> [FoodSearchResult] = { _ in [] }
+    @ObservationIgnored private var online: [String: [FoodSearchResult]] = [:]
+    @ObservationIgnored private var askedOnline: Set<String> = []
     @ObservationIgnored private var context: RambleContext?
     /// The owner's choices are by position, so they move with their items when an answer numbers the
     /// items differently: a read that hears a food the last one missed must not bring back a row removed meanwhile.
@@ -290,6 +295,8 @@ final class RambleCapture {
         items = []
         choices = [:]
         lastOutline = []
+        online = [:]
+        askedOnline = []
         shown = []
         struck = []
         named = [:]
@@ -359,19 +366,22 @@ final class RambleCapture {
         let token = resolution
         let now = clock()
         let fallback = chosenTime().map { ($0.day, $0.hour * 60) } ?? (CalendarDay(now), now.minuteOfDay())
-        let resolver = RambleResolver(index: index(), context: context ?? RambleContext(), today: CalendarDay(now), fallback: fallback)
+        var resolver = RambleResolver(index: index(), context: context ?? RambleContext(), today: CalendarDay(now), fallback: fallback)
+        resolver.online = online
         let items = items, choices = choices
         if let parsed = try? resolver.rows(items, previous: rows.lined(up: items), choices: choices, search: false) {
             let keyed = parsed.keyed(after: rows, next: &keys)
             if keyed != rows { rows = keyed }
         }
         let previous = rows
+        let searcher = resolver
         let task = Task { [weak self] in
-            let resolved = await Task.detached { try? resolver.rows(items, previous: previous, choices: choices) }.value
+            let resolved = await Task.detached { try? searcher.rows(items, previous: previous, choices: choices) }.value
             guard let self, let resolved, token == resolution, !Task.isCancelled else { return }
             let keyed = resolved.keyed(after: rows, next: &keys)
             if keyed != rows { rows = keyed }
             sendShown()
+            askOnline()
         }
         resolving = task
         return task
@@ -392,6 +402,21 @@ final class RambleCapture {
             inserted += 1
         }
         return result
+    }
+
+    /// Searches online for each unmatched name not asked yet, and resolves again when one finds something.
+    private func askOnline() {
+        for row in rows where row.content == .unmatched {
+            let name = row.item.name.lowercased()
+            guard askedOnline.insert(name).inserted else { continue }
+            Task { [weak self] in
+                guard let self else { return }
+                let found = await searchOnline(row.item.name)
+                guard !found.isEmpty else { return }
+                online[name] = found
+                resolve()
+            }
+        }
     }
 
     /// The live session reads picks against the options on screen, so it hears of every change to them.
