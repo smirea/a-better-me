@@ -79,7 +79,19 @@ struct GoalProgressView: View {
             }
         }
         .themedYAxis()
+        .chartScrubbing(bars.indices.map { String($0) }) { callout(bars[$0]) }
         .accessibilityLabel("Goal progress waterfall")
+    }
+
+    private func callout(_ bar: NutritionMetrics.WaterfallBar) -> ChartCallout {
+        let unit = context.unit
+        func weight(_ kg: Double) -> String { "\(unit.fromKg(kg).dashboardText) \(unit.rawValue)" }
+        return switch bar.kind {
+        case .start: ChartCallout(title: "Month \(bar.month)", lines: [ChartCallout.Line(label: "Distance", value: weight(bar.high), color: color(bar.kind))])
+        case .remaining: ChartCallout(title: "Left", lines: [ChartCallout.Line(label: "Distance", value: weight(max(bar.low < 0 ? bar.low : bar.high, 0)), color: color(bar.kind))])
+        case .towards, .away:
+            ChartCallout(title: "Month \(bar.month)", lines: [ChartCallout.Line(label: bar.kind == .towards ? "Towards" : "Away", value: weight(bar.high - bar.low), color: color(bar.kind))])
+        }
     }
 
     private func color(_ kind: NutritionMetrics.WaterfallBar.Kind) -> Color {

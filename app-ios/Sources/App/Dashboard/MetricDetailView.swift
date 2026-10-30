@@ -171,7 +171,22 @@ struct MetricDetailView: View {
                     .foregroundStyle(Theme.textSecondary)
             }
         }
+        .chartScrubbing(plot.scrubDates) { index in callout(tab, plot, index) }
         .accessibilityLabel("\(tab.title) chart")
+    }
+
+    private func callout(_ tab: MetricTab, _ plot: MetricPlot, _ index: Int) -> ChartCallout {
+        let point = plot.drawn[index]
+        let title = switch plot.drawnUnit {
+        case .weekOfYear: "Week of \(point.date.formatted(.dateTime.month(.abbreviated).day()))"
+        case .month: point.date.formatted(.dateTime.month(.wide).year())
+        default: point.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        }
+        var lines = [ChartCallout.Line(label: tab.overlay == nil ? nil : tab.seriesTitle ?? tab.title, value: "\(tab.unit.format(point.value)) \(tab.unit.label)", color: tab.color)]
+        if let line = tab.overlay, let value = plot.overlayValues[point.date] {
+            lines.append(ChartCallout.Line(label: line.title, value: "\(tab.unit.format(value)) \(tab.unit.label)", color: line.color))
+        }
+        return ChartCallout(title: title, lines: lines)
     }
 
     private var controls: some View {
@@ -273,6 +288,9 @@ struct MetricPlot {
     var average: Double?
     var second: Double?
     var overlay: [DatedValue]
+    var overlayValues: [Date: Double]
+    /// Where the chart's scrubbing snaps for each drawn point: the point itself on a line, the bar's middle on bars.
+    var scrubDates: [Date]
     var holding: Set<Date>
     /// The tab's own stats when it has them, else the average and the second stat.
     var stats: [MetricTab.Stat]
@@ -295,6 +313,11 @@ struct MetricPlot {
         drawnUnit = drawing.component
         self.unit = unit
         overlay = tab.overlay.map { drawing.bucket($0.points.inside(interval), calendar: calendar).map { DatedValue(date: max($0.date, interval.start), value: $0.value) } } ?? []
+        overlayValues = Dictionary(overlay.map { ($0.date, $0.value) }, uniquingKeysWith: { first, _ in first })
+        scrubDates = tab.style == .line ? drawn.map(\.date) : drawn.map { point in
+            let end = calendar.date(byAdding: drawing.component, value: 1, to: point.date)!
+            return point.date.addingTimeInterval(end.timeIntervalSince(point.date) / 2)
+        }
         holding = drawing == .daily ? tab.holding : []
         average = (drawing == averaging ? drawn : averaging.bucket(daily, calendar: calendar)).average
         second = tab.summary.second(of: daily.map(\.value))
