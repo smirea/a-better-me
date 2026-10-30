@@ -380,6 +380,24 @@ describe('ramble', () => {
 		});
 	});
 
+	test('a ref to a logged entry that shares no word with the food is dropped, so the food is searched', async () => {
+		stub(() =>
+			geminiText(
+				JSON.stringify({
+					items: [
+						{ kind: 'food', name: 'apple', ref: 'u1' },
+						{ kind: 'food', name: 'black coffee', ref: 'u1' },
+					],
+				}),
+			),
+		);
+		const { items } = await (await ramble('gemini-key', body)).json();
+		expect(items.map((item: { name: string; ref: string | null }) => [item.name, item.ref])).toEqual([
+			['apple', null],
+			['black coffee', 'coffee-uuid'],
+		]);
+	});
+
 	test('a said day carries to the items after it, copies included, until another is said', async () => {
 		stub(() =>
 			geminiText(

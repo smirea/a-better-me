@@ -248,8 +248,23 @@ const clock = (time: string) => {
 	return `${match[1]!.padStart(2, '0')}:${match[2]}`;
 };
 
+const nameWords = (name: string) =>
+	new Set(
+		name
+			.toLowerCase()
+			.split(/[^\p{L}]+/u)
+			.filter(word => word.length > 2)
+			.map(word => word.replace(/s$/, '')),
+	);
+/** A ref names a food the speaker logged, so it shares a word with the item ("my usual pancake", "Protein pancake"). */
+const sameFood = (name: string, logged: string) => {
+	const said = nameWords(name);
+	return [...nameWords(logged)].some(word => said.has(word));
+};
+
 /**
- * Maps aliases back to the phone's ids and drops what does not fit: a copy of no meal, an except outside its meal. A
+ * Maps aliases back to the phone's ids and drops what does not fit: a copy of no meal, an except outside its meal, a
+ * ref to an entry that shares no word with the item's name (Grok once pointed "apple" at a logged banana). A
  * food the speaker gave no meal or time joins the item before it ("lunch at 12:15 was ramen and a coke"), which the
  * model often leaves out once it omits empty fields.
  */
@@ -259,6 +274,9 @@ export function resolveAliases(
 	names: Aliases,
 ): RambleOutline {
 	const items: RambleItem[] = [];
+	const logged = new Map(
+		[...input.meals.flatMap(meal => meal.entries), ...input.usual].map(entry => [entry.id, entry.name]),
+	);
 	for (const item of outline.items) {
 		const meal = item.kind === 'copy' ? input.meals[[...names.meals.keys()].indexOf(item.copy)] : undefined;
 		if (item.kind === 'copy' && !meal) continue;
@@ -275,7 +293,7 @@ export function resolveAliases(
 			name: item.kind === 'food' ? item.name.trim() : '',
 			amount: item.kind === 'food' ? item.amount || (item.unit.trim() ? 1 : 0) : 0,
 			unit: item.kind === 'food' ? item.unit.trim().toLowerCase() : '',
-			ref: (item.kind === 'food' && names.entries.get(item.ref)) || null,
+			ref: (item.kind === 'food' && refTo(names.entries.get(item.ref), item.name)) || null,
 			copy: meal?.id ?? null,
 			except: item.except.map(alias => names.entries.get(alias)!).filter(id => id && inMeal.has(id)),
 			day,
@@ -286,6 +304,10 @@ export function resolveAliases(
 		});
 	}
 	return { items };
+
+	function refTo(id: string | undefined, name: string) {
+		return id && sameFood(name, logged.get(id) ?? '') ? id : null;
+	}
 }
 
 /** The model's answer as text: the JSON the schema asked for. */
