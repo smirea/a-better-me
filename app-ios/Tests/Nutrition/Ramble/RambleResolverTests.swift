@@ -66,6 +66,9 @@ struct RambleResolverTests {
             RambleItem(name: "egg", amount: 2),
         ], previous: first, choices: [:], search: false)
         #expect(describe(parsed) == ["Oats: 0.5 cup", "searching dates", "searching egg"])
+        let unmatched = try resolver.rows([RambleItem(name: "bok choy", amount: 1, unit: "cup")], previous: [], choices: [:])
+        let again = try resolver.rows([RambleItem(name: "bok choy", amount: 2, unit: "cup")], previous: unmatched, choices: [:], search: false)
+        #expect(describe(again) == ["unmatched bok choy"])
     }
 
     @Test func spokenAmountsBecomeServingsInTheFoodsOwnMeasures() async throws {

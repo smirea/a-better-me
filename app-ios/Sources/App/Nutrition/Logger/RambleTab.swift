@@ -309,7 +309,7 @@ private struct Fly: ViewModifier, @MainActor Animatable {
         )
         return content
             .scaleEffect(1 + 0.12 * sin(t * .pi) - 0.15 * t)
-            .opacity(t < 0.8 ? 1 : (1 - t) / 0.2)
+            .opacity(t < 0.6 ? 1 : (1 - t) / 0.4)
             .position(point)
     }
 }

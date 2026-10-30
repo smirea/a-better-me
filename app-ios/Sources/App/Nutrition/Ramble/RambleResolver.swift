@@ -178,6 +178,8 @@ struct RambleResolver: Sendable {
     }
 
     private func food(_ item: RambleItem, previous: RambleRow?, choice: RambleChoice?, search: Bool) throws -> RambleRow.Content {
+        // Searching the same name again finds nothing again; going back to `.searching` on every read made the row flicker.
+        if previous?.content == .unmatched, previous?.item.name == item.name, item.ref == nil { return .unmatched }
         let earlier: RambleRow.Food? = if case let .food(food) = previous?.content { food } else { nil }
         let refEntry = item.ref.flatMap { context.entries[$0] }
         // The owner's pick outranks a ref the model added later; the row already holds that food, so it stays.
