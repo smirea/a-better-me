@@ -79,7 +79,8 @@ final class RambleCapture {
     /// those are branded or composite foods ("Diet Coke", "pad thai"). Asked once per name.
     @ObservationIgnored var searchOnline: @MainActor (String) async -> [FoodSearchResult] = { _ in [] }
     @ObservationIgnored private var online: [String: [FoodSearchResult]] = [:]
-    @ObservationIgnored private var askedOnline: Set<String> = []
+    /// Names the local search did not know, asked online, which the rows show as their own stage.
+    private(set) var askedOnline: Set<String> = []
     @ObservationIgnored private var context: RambleContext?
     /// The owner's choices are by position, so they move with their items when an answer numbers the
     /// items differently: a read that hears a food the last one missed must not bring back a row removed meanwhile.

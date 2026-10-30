@@ -538,6 +538,10 @@ private struct RambleLine: View {
     /// No local match, and the online search is still looking.
     private var onlineSearch: Bool { row.content == .unmatched && capture.searchingOnline.contains(row.item.name.lowercased()) }
 
+    /// The local search knew nothing and the online one was asked: shown as its own stage while the row holds what was
+    /// said, even when the answer came back sooner.
+    private var wentOnline: Bool { capture.askedOnline.contains(row.item.name.lowercased()) }
+
     private var parsing: Bool { row.content == .searching || (!reduceMotion && capture.parsing.contains(row.key)) }
 
     /// What the row says; a change to it is a correction worth showing.
@@ -619,6 +623,8 @@ private struct RambleLine: View {
             try? await Task.sleep(for: .seconds(1.4))
             withAnimation(.easeOut(duration: 0.3)) { was = nil }
         }
+        .animation(.smooth(duration: 0.3), value: wentOnline)
+        .animation(.smooth(duration: 0.35), value: parsing)
         .sensoryFeedback(.selection, trigger: face)
         .sensoryFeedback(.impact(weight: .medium), trigger: removing) { _, new in new }
     }
@@ -675,10 +681,11 @@ private struct RambleLine: View {
     @ViewBuilder private var icon: some View {
         Group {
             if parsing {
-                Image(systemName: "magnifyingglass")
+                Image(systemName: wentOnline ? "globe" : "magnifyingglass")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Theme.accent)
                     .symbolEffect(.pulse, options: .repeating)
+                    .contentTransition(.symbolEffect(.replace))
             } else {
                 switch row.content {
                 case let .food(food): FoodIcon(food: food.pick.portion.food)
@@ -705,7 +712,8 @@ private struct RambleLine: View {
     @ViewBuilder private var detail: some View {
         Group {
             if parsing {
-                Text("Finding a match…")
+                Text(wentOnline ? "Searching online…" : "Finding a match…")
+                    .contentTransition(.opacity)
             } else {
                 switch row.content {
                 case let .food(food):
