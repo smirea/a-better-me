@@ -356,6 +356,29 @@ describe('ramble', () => {
 		});
 	});
 
+	test('the same food listed twice at one meal and time is one item with the newer details, a food at another meal is not', async () => {
+		stub(() =>
+			geminiText(
+				JSON.stringify({
+					items: [
+						{ kind: 'food', name: 'tofu', amount: 200, unit: 'g', meal: 'dinner', said: '200 grams of tofu' },
+						{ kind: 'food', name: 'rice', amount: 1, unit: 'cup', meal: 'dinner' },
+						{ kind: 'food', name: 'Tofu', amount: 150, unit: 'g', meal: 'dinner', said: 'tofu 150 grams instead' },
+						{ kind: 'food', name: 'tofu', amount: 100, unit: 'g', meal: 'lunch' },
+					],
+				}),
+			),
+		);
+		const { items } = await (await ramble('gemini-key', body)).json();
+		expect(
+			items.map((item: { name: string; amount: number; meal: string }) => [item.name, item.amount, item.meal]),
+		).toEqual([
+			['Tofu', 150, 'dinner'],
+			['rice', 1, 'dinner'],
+			['tofu', 100, 'lunch'],
+		]);
+	});
+
 	test('a ref to a logged entry that shares no word with the food is dropped, so the food is searched', async () => {
 		stub(() =>
 			geminiText(

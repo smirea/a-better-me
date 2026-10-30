@@ -293,7 +293,18 @@ export function resolveAliases(
 			said: item.said.trim(),
 		});
 	}
-	return { items };
+	// The instructions say a food said again updates the first, but mid-correction ("tofu 150 grams instead") the model
+	// sometimes lists it twice for a read; the same food at the same meal, day, and time is one item, with the newer
+	// details in the first one's place.
+	const merged: RambleItem[] = [];
+	for (const item of items) {
+		const key = (other: RambleItem) =>
+			[other.kind, other.name.toLowerCase(), other.day, other.meal, other.time, other.ref].join('|');
+		const same = item.kind === 'food' ? merged.findIndex(other => key(other) === key(item)) : -1;
+		if (same >= 0) merged[same] = item;
+		else merged.push(item);
+	}
+	return { items: merged };
 
 	function refTo(id: string | undefined, name: string) {
 		return id && sameFood(name, logged.get(id) ?? '') ? id : null;
