@@ -127,8 +127,7 @@ private struct SelectionBar: View {
                     Button("Create Recipe") { state.createRecipe() }
                 }
             }
-            .buttonStyle(.glass)
-            .font(AppFont.chip)
+            .chipButton()
             .disabled(count == 0)
         }
         .alert("Remove Foods", isPresented: $confirmingRemove) {
@@ -186,8 +185,7 @@ private struct PasteBar: View {
                     Button("To Date & Time") { prompt = .dateTime }
                     Button("Paste Inline") { state.pending?.inline = true }
                 }
-                .buttonStyle(.glass)
-                .font(AppFont.chip)
+                .chipButton()
             }
         }
         .sheet(item: $prompt) { prompt in
@@ -226,12 +224,8 @@ private struct BarTitle: View {
                     Text("\(count) \(count == 1 ? "Food" : "Foods")").font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
                 }
             }
-            .padding(.leading, 6)
-            .padding(.trailing, 12)
-            .frame(height: 44)
-            .glassEffect(.regular.interactive(), in: .capsule)
         }
-        .buttonStyle(.plain)
+        .chipButton()
         .accessibilityLabel(systemImage == "xmark" ? "End selection" : "Back")
     }
 }
