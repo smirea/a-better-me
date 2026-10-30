@@ -392,20 +392,28 @@ private struct FlightView: View {
     @State private var progress = 0.0
 
     var body: some View {
-        HStack(spacing: 4) {
-            if flight.kind == .correction {
-                Image(systemName: "arrow.uturn.backward").font(.system(size: 10, weight: .bold))
+        Group {
+            if flight.kind == .parse {
+                Text(flight.text)
+                    .lineLimit(1)
+                    .font(AppFont.medium(14))
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Theme.accent.opacity(0.35), in: .capsule)
+                    .overlay { Capsule().strokeBorder(Theme.accent, lineWidth: 1) }
+                    .fixedSize()
+            } else {
+                // A correction's row sits above other rows, so its cue is a badge small enough to travel up the
+                // margin, clear of their text; its words light up in the transcript meanwhile.
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Theme.onPrimary)
+                    .frame(width: 20, height: 20)
+                    .background(Theme.accent, in: .circle)
             }
-            Text(flight.text).lineLimit(1)
         }
-        .font(AppFont.medium(14))
-        .foregroundStyle(flight.kind == .parse ? Theme.textPrimary : Theme.onPrimary)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(flight.kind == .parse ? Theme.accent.opacity(0.35) : Theme.accent, in: .capsule)
-        .overlay { Capsule().strokeBorder(Theme.accent, lineWidth: 1) }
-        .fixedSize()
-        .modifier(Fly(progress: progress, from: from, to: to, trailing: flight.kind == .correction))
+        .modifier(Fly(progress: progress, from: from, to: to, margin: flight.kind == .correction))
         .onAppear {
             withAnimation(.timingCurve(0.3, 0, 0.2, 1, duration: Double(Flight.duration.components.attoseconds) / 1e18)) { progress = 1 }
         }
@@ -416,7 +424,8 @@ private struct Fly: ViewModifier, @MainActor Animatable {
     var progress: Double
     let from: CGRect
     let to: CGRect
-    let trailing: Bool
+    /// Up the leading margin to the row's icon, rather than an arc over the rows.
+    let margin: Bool
 
     var animatableData: Double {
         get { progress }
@@ -424,20 +433,20 @@ private struct Fly: ViewModifier, @MainActor Animatable {
     }
 
     func body(content: Content) -> some View {
-        let start = CGPoint(x: from.midX, y: from.midY)
-        // Correcting words land at the row's trailing edge, clear of the text they change.
-        let end = CGPoint(x: trailing ? to.maxX - 80 : to.minX + min(110, to.width * 0.3), y: to.midY)
-        // Up and over: the control point sits above the higher end, so the chip lifts before it travels.
-        let control = CGPoint(x: (start.x + end.x) / 2, y: min(start.y, end.y) - 60)
+        let start = CGPoint(x: margin ? from.minX : from.midX, y: from.midY)
+        let end = margin ? CGPoint(x: to.minX + 14, y: to.midY) : CGPoint(x: to.minX + min(110, to.width * 0.3), y: to.midY)
+        // Up and over for words; for a correction, out to the margin, then straight up it.
+        let control = margin
+            ? CGPoint(x: to.minX - 10, y: start.y)
+            : CGPoint(x: (start.x + end.x) / 2, y: min(start.y, end.y) - 60)
         let t = progress
         let point = CGPoint(
             x: (1 - t) * (1 - t) * start.x + 2 * (1 - t) * t * control.x + t * t * end.x,
             y: (1 - t) * (1 - t) * start.y + 2 * (1 - t) * t * control.y + t * t * end.y
         )
         return content
-            .scaleEffect(1 + 0.12 * sin(t * .pi) - 0.15 * t)
-            // Correcting words land on a row whose text is changing, so they are gone before they reach it.
-            .opacity(trailing ? (t < 0.4 ? 1 : max(0, (0.75 - t) / 0.35)) : (t < 0.6 ? 1 : (1 - t) / 0.4))
+            .scaleEffect(margin ? 1 + 0.5 * max(0, t - 0.8) / 0.2 : 1 + 0.12 * sin(t * .pi) - 0.15 * t)
+            .opacity(margin ? (t < 0.85 ? 1 : (1 - t) / 0.15) : (t < 0.6 ? 1 : (1 - t) / 0.4))
             .position(point)
     }
 }
