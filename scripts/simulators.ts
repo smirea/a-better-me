@@ -47,8 +47,8 @@ export function remove(device: Device, repoRoot: string) {
 }
 
 const CPU_LIMIT = 70;
-// Under the 600-second tool limit with room left for the build that follows.
-const CPU_WAIT_MS = 4 * 60_000;
+// Short enough that the wait plus an incremental build fits the 600-second tool limit.
+const CPU_WAIT_MS = 3 * 60_000;
 
 /** Total CPU use across all cores, in percent, from the second of two `top` samples (the first covers all uptime). */
 export function cpuUsage(): number {
@@ -60,7 +60,7 @@ export function cpuUsage(): number {
 
 /**
  * Every booted simulator slows every other agent's build, so an agent boots one only while the Mac has room: total CPU at
- * or under 70%. It says it is waiting, and after four minutes exits 3, the code `pr-ship` uses for "rerun", so the
+ * or under 70%. It says it is waiting, and after three minutes exits 3, the code `pr-ship` uses for "rerun", so the
  * agent's tool call never hits the 600-second limit.
  */
 export async function waitForCpu(what: string) {
@@ -70,7 +70,7 @@ export async function waitForCpu(what: string) {
 	console.log(`CPU is at ${usage}% (limit ${CPU_LIMIT}%), so ${what} waits for the Mac to cool down…`);
 	while (usage > CPU_LIMIT) {
 		if (Date.now() > deadline) {
-			console.log(`CPU is still at ${usage}% after 4 minutes. Rerun the same command to keep waiting.`);
+			console.log(`CPU is still at ${usage}% after 3 minutes. Rerun the same command to keep waiting.`);
 			process.exit(3);
 		}
 		await Bun.sleep(20_000);
