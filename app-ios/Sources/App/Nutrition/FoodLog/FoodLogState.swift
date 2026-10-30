@@ -66,7 +66,8 @@ final class FoodLogState {
     }
     var editing: FoodEntry?
     var note: NoteDraft?
-    var path: [FoodLogRoute] = []
+    /// Untyped, so screens pushed here push their own routes too: Strategy, from a day without a plan, pushes `StrategyRoute`.
+    var path = NavigationPath()
     var notice: Notice?
     var recipeRequest: RecipeRequest?
     /// The days whose page is scrolled down, so a week strip set to Show folds away on them.
@@ -84,6 +85,12 @@ final class FoodLogState {
             selecting = true
             selection = [id]
         }
+    }
+
+    /// A long press: select mode with the entry selected, never toggling it off.
+    func startSelection(at id: UUID) {
+        selecting = true
+        selection.insert(id)
     }
 
     func selectHour(_ ids: [UUID]) {
@@ -168,6 +175,7 @@ struct NoteDraft: Identifiable, Hashable {
 enum FoodLogRoute: Hashable {
     case overview(CalendarDay)
     case contributors(CalendarDay, NutrientID)
+    case strategy
 }
 
 /// Where an entry sits on the log.

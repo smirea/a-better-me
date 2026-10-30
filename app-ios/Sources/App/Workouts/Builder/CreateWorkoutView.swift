@@ -44,7 +44,7 @@ struct CreateWorkoutView: View {
                     case .editor: editor
                     }
                 }
-                .confirmationDialog("Exit the editor?", isPresented: $confirmingExit, titleVisibility: .visible) {
+                .alert("Exit the editor?", isPresented: $confirmingExit) {
                     Button("Exit", role: .destructive) { dismiss() }
                     Button("Stay", role: .cancel) {}
                 } message: {

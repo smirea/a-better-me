@@ -148,7 +148,7 @@ private struct HourRow: View {
     @ViewBuilder
     private func control(_ label: String) -> some View {
         if premove, state.selecting, state.pending == nil {
-            Button("Move to \(label)", systemImage: "arrow.down.to.line") {
+            Button("Move to \(label)", systemImage: "arrow.left") {
                 state.relocate(state.selectedEntries, .move, to: .hour(day, hour: hour.hour), in: store)
             }
             .buttonStyle(HourIconStyle(isPrimary: true))
@@ -209,8 +209,10 @@ private struct HourTotals: View {
 }
 
 /// A food tile with its time, or its check circle in select mode, in the gutter. Pasting inline hides the circles,
-/// so the destination day's foods don't read as a new selection. Swiping a tile left reveals Remove and Copy, as
-/// MacroFactor's does; it has no full swipe, because a left swipe that misses the blank space was meant to page.
+/// so the destination day's foods don't read as a new selection. Tapping the tile or its circle toggles it, and a
+/// long press starts select mode on it: the selection's bar holds its actions, so there is no context menu. Swiping
+/// a tile left reveals Remove and Copy, as MacroFactor's does; it has no full swipe, because a left swipe that misses
+/// the blank space was meant to page.
 private struct EntryRow: View {
     let row: TimelineRow
     let showsTime: Bool
@@ -222,10 +224,11 @@ private struct EntryRow: View {
     var body: some View {
         let entry = row.entry
         let isSelected = state.selection.contains(entry.id)
+        let showsCircle = state.selecting && state.pending?.inline != true
         HStack(spacing: 0) {
             ZStack {
                 Color.clear
-                if state.selecting, state.pending?.inline != true {
+                if showsCircle {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 20))
                         .foregroundStyle(Theme.textPrimary)
@@ -247,25 +250,16 @@ private struct EntryRow: View {
                     RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textSecondary, lineWidth: 1)
                 }
             }
-            .contentShape(.rect(cornerRadius: Theme.smallCornerRadius))
-            .onTapGesture { state.select(entry.id) }
-            .contextMenu {
-                Button("Edit", systemImage: "pencil") { state.editing = entry }
-                Button("Duplicate", systemImage: "plus.square.on.square") {
-                    state.expectAdditions()
-                    store.log([entry.portion], on: entry.day, minute: entry.minute)
-                }
-                if entry.food.source == .recipe {
-                    Button("Explode", systemImage: "square.grid.3x3.square") { state.explode(entry.id, in: store) }
-                }
-                Button("Remove", systemImage: "trash", role: .destructive) { store.deleteEntries([entry.id]) }
-            }
             .rowSwipeActions(trailing: state.selecting ? [] : [
                 .destructive("Remove") { store.deleteEntries([entry.id]) },
                 SwipeAction(title: "Copy", systemImage: "doc.on.doc") { state.copy(entry) },
             ])
             .accessibilityAddTraits(isSelected ? .isSelected : [])
+            .accessibilityAction(named: isSelected ? "Deselect" : "Select") { state.select(entry.id) }
         }
+        .contentShape(.rect)
+        .onTapGesture { state.select(entry.id) }
+        .onLongPressGesture(minimumDuration: 0.35) { state.startSelection(at: entry.id) }
         .padding(.bottom, 6)
     }
 }

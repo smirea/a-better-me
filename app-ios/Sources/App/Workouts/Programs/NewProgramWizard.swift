@@ -47,7 +47,7 @@ struct NewProgramWizard: View {
                     }
                 }
         }
-        .confirmationDialog("Exit the Program Builder?", isPresented: $confirmingExit, titleVisibility: .visible) {
+        .alert("Exit the Program Builder?", isPresented: $confirmingExit) {
             Button("Discard Program", role: .destructive) {
                 if let draftID { store.deleteProgram(draftID) }
                 draftID = nil

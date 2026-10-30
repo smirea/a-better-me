@@ -190,12 +190,13 @@ struct ExerciseSettingsView: View {
         } message: {
             Text("Pinned to this exercise and shown every time you work out.")
         }
-        .confirmationDialog("Delete this exercise?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+        .alert("Delete this exercise?", isPresented: $confirmingDelete) {
             Button("Delete Exercise", role: .destructive) {
                 store.delete(CustomExercise.self, id: exerciseID)
                 store.delete(ExerciseSettings.self, id: exerciseID)
                 dismiss()
             }
+            Button("Cancel", role: .cancel) {}
         }
     }
 
