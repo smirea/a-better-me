@@ -10,7 +10,7 @@ const sources = join(import.meta.dir, '../Sources');
 // The iPhone app's tint is white; the watch app and widgets set their own, so the rules cover `App/` only.
 const rules = [
 	{
-		pattern: /\.buttonStyle\(\.glassProminent\)/,
+		pattern: /\bbuttonStyle\(\s*(\.glassProminent|GlassProminentButtonStyle)\b/,
 		allowedIn: ['App/DesignSystem/Buttons.swift'],
 		fix: 'use .prominentButton() (or .prominentButton(tint:)) or .primaryPill(); the native style draws white text on the white tint',
 	},
