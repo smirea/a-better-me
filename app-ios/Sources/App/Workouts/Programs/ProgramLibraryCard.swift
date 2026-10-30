@@ -75,7 +75,14 @@ struct ProgramCard: View {
     let program: Program
     let templates: [UUID: WorkoutTemplate]
     let accessory: ProgramDayAccessory
-    @State private var collapsed = false
+    @AppStorage private var collapsed: Bool
+
+    init(program: Program, templates: [UUID: WorkoutTemplate], accessory: ProgramDayAccessory) {
+        self.program = program
+        self.templates = templates
+        self.accessory = accessory
+        _collapsed = AppStorage(wrappedValue: false, "workouts.collapsed.program.\(program.id.uuidString)")
+    }
 
     var body: some View {
         VStack(spacing: 0) {

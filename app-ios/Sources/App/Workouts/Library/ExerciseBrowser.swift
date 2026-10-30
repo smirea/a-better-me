@@ -13,9 +13,13 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
 
     @Environment(ExerciseCatalog.self) private var catalog
     @Observe(GymProfile.all) private var gyms
-    @State private var expanded: Set<ExerciseCategory> = []
+    @AppStorage("workouts.exerciseBrowser.expanded") private var expandedCategories = ""
     @State private var results = ViewMemo<BrowseKey, (scoped: [Exercise], groups: [ExerciseGroup])>()
     private static var collapsedCount: Int { 5 }
+
+    private var expanded: Set<ExerciseCategory> {
+        Set(expandedCategories.split(separator: ",").compactMap { ExerciseCategory(rawValue: String($0)) })
+    }
 
     private struct BrowseKey: Equatable {
         let scope: BrowseScope
@@ -56,7 +60,9 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
                         Spacer()
                         if hidden > 0 {
                             Button(isExpanded ? "See Less" : "See \(hidden) More") {
-                                if isExpanded { expanded.remove(group.category) } else { expanded.insert(group.category) }
+                                var categories = expanded
+                                if isExpanded { categories.remove(group.category) } else { categories.insert(group.category) }
+                                expandedCategories = categories.map(\.rawValue).sorted().joined(separator: ",")
                             }
                             .font(AppFont.medium(13))
                             .underline()

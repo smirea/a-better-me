@@ -17,7 +17,7 @@ struct WorkoutTab: View {
     @State private var creatingWorkout = false
     @State private var creatingProgram = false
     @State private var creatingSection = false
-    @State private var libraryCollapsed = false
+    @AppStorage("workouts.collapsed.library") private var libraryCollapsed = false
     @State private var summary: WorkoutSession?
     @State private var path = NavigationPath()
 
