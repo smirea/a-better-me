@@ -13,7 +13,6 @@ export type AgentHost = {
 	driver: SqlDriver;
 	ownerToken: string;
 	geminiApiKey?: string | null;
-	xaiApiKey?: string | null;
 };
 
 export const TOKEN_PREFIX = 'abm_';
@@ -155,7 +154,6 @@ export async function handleAgent(request: Request, host: AgentHost): Promise<Re
 			body: route.body?.parse(raw),
 			now: new Date().toISOString(),
 			geminiApiKey: host.geminiApiKey ?? null,
-			xaiApiKey: host.xaiApiKey ?? null,
 		});
 		return Response.json(result);
 	} catch (caught) {

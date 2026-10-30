@@ -13,14 +13,14 @@ import { transcriptAt, type LabCase, type SttRun } from './types';
  * pipeline would run them, through the server's `outlineRamble`. No final read: what the last read returns is what
  * gets logged.
  *
- *   bun scripts/ramble-lab/replay.ts --stt <dir of SttRun json | typed> --parsers gemini:gemini-3.5-flash-lite,… \
+ *   bun scripts/ramble-lab/replay.ts --stt <dir of SttRun json | typed> --parsers gemini-3.5-flash:minimal,… \
  *     [--trigger final|partial] [--debounce 250] [--set lab|dev|all] [--only ids] [--wps 2.6] [--save out.json] [-v]
  */
 
 const { values } = parseArgs({
 	options: {
 		stt: { type: 'string', default: 'typed' },
-		parsers: { type: 'string', default: 'gemini:gemini-3.5-flash-lite' },
+		parsers: { type: 'string', default: 'gemini-3.5-flash:minimal' },
 		trigger: { type: 'string', default: 'partial' },
 		debounce: { type: 'string', default: '250' },
 		inflight: { type: 'string', default: '1' },

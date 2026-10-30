@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { outlineRamble, RambleRequest, type RambleKeys, type RambleModel, type RambleOutline } from './ramble';
+import { outlineRamble, RambleRequest, type RambleModel, type RambleOutline } from './ramble';
+
+/** Live Ramble hears with xAI and reads with Gemini. */
+export type RambleKeys = { gemini: string; xai: string };
 
 /**
  * Live Ramble: the phone's audio streams to xAI's speech-to-text, and the text model reads the whole transcript again
@@ -325,7 +328,7 @@ export type LiveRamble = {
 	close(): void;
 };
 
-export type LiveOptions = { transcribe: Transcribe; models?: readonly RambleModel[]; timing?: ReadTiming };
+export type LiveOptions = { transcribe: Transcribe; model?: RambleModel; timing?: ReadTiming };
 
 /**
  * One listen. The request's `transcript` is what earlier listens of the same ramble heard, so every read covers the
@@ -335,7 +338,7 @@ export async function openLiveRamble(
 	request: LiveRambleRequest,
 	keys: RambleKeys,
 	events: LiveEvents,
-	{ transcribe, models, timing }: LiveOptions,
+	{ transcribe, model, timing }: LiveOptions,
 ): Promise<LiveRamble> {
 	const context = LiveRambleRequest.parse(request);
 	const base = context.transcript;
@@ -352,7 +355,7 @@ export async function openLiveRamble(
 		events.error(error);
 	};
 	const reader = new Reader(
-		text => outlineRamble({ ...context, transcript: text }, keys, { models }),
+		text => outlineRamble({ ...context, transcript: text }, keys.gemini, { model }),
 		{ outline: events.outline, error: fail },
 		timing,
 	);
@@ -404,11 +407,7 @@ export async function openLiveRamble(
  */
 export type LiveSocket = { send(text: string): void; close(code?: number, reason?: string): void };
 
-export function serveLiveRamble(
-	socket: LiveSocket,
-	keys: RambleKeys & { xai: string },
-	options?: Partial<LiveOptions>,
-) {
+export function serveLiveRamble(socket: LiveSocket, keys: RambleKeys, options?: Partial<LiveOptions>) {
 	let session: LiveRamble | undefined;
 	let opening = false;
 	let held: Uint8Array[] = [];
@@ -478,7 +477,7 @@ export function serveLiveRamble(
 				},
 				{
 					transcribe: options?.transcribe ?? xaiTranscriber(keys.xai),
-					models: options?.models,
+					model: options?.model,
 					timing: options?.timing,
 				},
 			).then(live => {

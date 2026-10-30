@@ -385,6 +385,8 @@ private struct RambleRowView: View {
     @State private var parsedUntil: ContinuousClock.Instant?
 
     static let parsedFor = Duration.milliseconds(800)
+    /// The flight's words land, and the row's content shows, this long after the row appears.
+    static let landing = Duration.milliseconds(550)
 
     private var parsing: Bool { row.content == .searching || parsedUntil != nil }
 
@@ -451,12 +453,12 @@ private struct RambleRowView: View {
             // Rows coming back into view after a tab switch are not new.
             guard capture.phase == .listening || capture.phase == .finishing else { return }
             // A new row shows what was said for a moment even when its search already matched, as its words land.
-            if !reduceMotion { parsedUntil = .now + Self.parsedFor + .milliseconds(300) }
+            if !reduceMotion { parsedUntil = .now + Self.parsedFor + (incoming ? Self.landing : .zero) }
             if incoming, !reduceMotion {
                 landed = false
-                withAnimation(.easeOut(duration: 0.25).delay(0.3)) { landed = true }
+                withAnimation(.easeOut(duration: 0.2).delay(0.35)) { landed = true }
                 Task {
-                    try? await Task.sleep(for: .milliseconds(300))
+                    try? await Task.sleep(for: Self.landing)
                     light()
                 }
             } else {
@@ -466,11 +468,8 @@ private struct RambleRowView: View {
         .onChange(of: face) { old, new in
             // A row searching for its food is not corrected by finding it.
             let settled = ContinuousClock.now - born >= .seconds(1.5)
-            if settled, old.resolved, new.title != old.title {
-                was = old.title
-            } else if settled, old.resolved, new.resolved, old.detail != new.detail, !old.detail.isEmpty {
-                was = old.detail
-            }
+            // A changed amount rolls its numbers in place; only another food strikes the old one through.
+            if settled, old.resolved, new.title != old.title { was = old.title }
             if new.resolved != old.resolved, old.title == new.title { return }
             light()
         }

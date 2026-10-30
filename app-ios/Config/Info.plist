@@ -32,8 +32,6 @@
 	<string>The food logger scans barcodes with the camera.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Ramble listens while you describe what you ate.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Ramble turns what you say into foods on the phone.</string>
 	<key>OWNER_TOKEN</key>
 	<string>$(OWNER_TOKEN)</string>
 	<key>SENTRY_DSN_IOS</key>

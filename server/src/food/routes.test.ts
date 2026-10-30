@@ -6,7 +6,7 @@ import { handleAgent } from '../agent';
 import { handle, type App } from '../api';
 import { parseConfig } from '../config';
 import { GEMINI_MODEL } from './mealPhoto';
-import { RAMBLE_MODELS } from './ramble';
+import { RAMBLE_MODEL } from './ramble';
 import { USER_AGENT } from './openFoodFacts';
 
 const driver = bunSqlite(':memory:');
@@ -242,14 +242,14 @@ describe('meal photo', () => {
 	});
 });
 
-const ramble = (geminiApiKey: string | null, body: unknown, xaiApiKey: string | null = null) =>
+const ramble = (geminiApiKey: string | null, body: unknown) =>
 	handleAgent(
 		new Request('http://api.test/api/food-database/ramble', {
 			method: 'POST',
 			headers: { authorization: `Bearer ${config.ownerToken}` },
 			body: JSON.stringify(body),
 		}),
-		{ space, driver, ownerToken: config.ownerToken, geminiApiKey, xaiApiKey },
+		{ space, driver, ownerToken: config.ownerToken, geminiApiKey },
 	);
 
 describe('ramble', () => {
@@ -330,37 +330,11 @@ describe('ramble', () => {
 		);
 		expect(instructions).toContain('- u1 Coffee (1 mug)');
 		expect(sent.contents[0].parts).toEqual([{ text: `Ramble: ${body.transcript}` }]);
-		expect(requests[0]!.url).toContain(`/${RAMBLE_MODELS[0]!.model}:generateContent`);
+		expect(requests[0]!.url).toContain(`/${RAMBLE_MODEL.model}:generateContent`);
 		const [food, copy] = sent.generationConfig.responseJsonSchema.properties.items.items.anyOf;
 		expect(food.properties.ref.enum).toEqual(['', 'e1', 'e2', 'u1']);
 		expect(copy.properties.copy.enum).toEqual(['m1']);
 		expect(copy.required).toEqual(['kind', 'copy', 'said']);
-	});
-
-	test('when Gemini fails, Grok reads the same ramble with the same schema', async () => {
-		stub(url =>
-			url.hostname === 'api.x.ai'
-				? Response.json({
-						choices: [{ message: { content: '{"items":[{"kind":"food","name":"coffee","said":"coffee"}]}' } }],
-					})
-				: new Response('spend cap', { status: 429 }),
-		);
-		const response = await ramble('gemini-key', body, 'xai-key');
-		expect(await response.json()).toEqual({
-			items: [{ ...item, kind: 'food', name: 'coffee', ref: null, copy: null, said: 'coffee' }],
-		});
-		expect(requests.map(request => new URL(request.url).hostname)).toEqual([
-			'generativelanguage.googleapis.com',
-			'api.x.ai',
-		]);
-		const sent = await requests[1]!.json();
-		expect(sent.model).toBe(RAMBLE_MODELS[1]!.model);
-		expect(sent.messages[1]).toEqual({ role: 'user', content: `Ramble: ${body.transcript}` });
-		expect(sent.response_format.json_schema.schema.properties.items.items.anyOf[0].required).toEqual([
-			'kind',
-			'name',
-			'said',
-		]);
 	});
 
 	test('a copy of no meal, an except outside the copied meal, and a nameless food are dropped', async () => {
