@@ -117,6 +117,11 @@ final class RambleCapture {
     /// What the summary counts: the rows whose match shows.
     var shownPlanned: [RamblePlanned] { rows.filter { !parsing.contains($0.key) }.flatMap(\.planned) }
 
+    /// Foods said but found neither locally nor online, once their parse and the online search are done.
+    var notFound: Int {
+        rows.count { $0.content == .unmatched && !parsing.contains($0.key) && !searchingOnline.contains($0.item.name.lowercased()) }
+    }
+
     /// The words land 0.55 s after the row appears, and what was said shows for a second after that.
     static let parsedFor = Duration.milliseconds(1550)
     var isEmpty: Bool { rows.isEmpty }

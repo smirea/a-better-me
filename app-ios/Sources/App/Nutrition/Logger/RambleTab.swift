@@ -30,7 +30,7 @@ struct RambleTab: View {
     var body: some View {
         VStack(spacing: 0) {
             RambleSummary(
-                planned: capture.shownPlanned, missing: capture.rows.count { $0.content == .unmatched }, close: close, switchTo: switchTo
+                planned: capture.shownPlanned, missing: capture.notFound, close: close, switchTo: switchTo
             )
             ScrollViewReader { proxy in
                 ScrollView {
