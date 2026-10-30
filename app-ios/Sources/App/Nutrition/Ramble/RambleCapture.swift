@@ -10,7 +10,7 @@ final class RambleCapture {
     enum Phase: Equatable, Sendable {
         case idle
         case listening
-        /// Stopped; catching the last words and waiting on the final outline.
+        /// Stopped; catching the last words and waiting on the final outline. The rows can be edited and added meanwhile.
         case finishing
         case review
     }
@@ -47,15 +47,28 @@ final class RambleCapture {
     @ObservationIgnored var chosenTime: @MainActor () -> LogTime? = { nil }
     @ObservationIgnored private var outliner: RambleOutliner?
     @ObservationIgnored private var context: RambleContext?
-    @ObservationIgnored private var items: [RambleItem] = []
+    /// The owner's choices and expanded rows are by position, so they move with their items when an answer numbers the
+    /// items differently: a final read that hears a food Live missed must not bring back a row removed while it ran.
+    @ObservationIgnored private var items: [RambleItem] = [] {
+        didSet {
+            guard !choices.isEmpty || !expanded.isEmpty else { return }
+            let aligned = RambleAlignment.align(oldValue.map(\.identity), items.map(\.identity)).filter(\.value.same)
+            let moved = Dictionary(uniqueKeysWithValues: aligned.map { ($0.value.old, $0.key) })
+            choices = Dictionary(uniqueKeysWithValues: choices.compactMap { old, choice in moved[old].map { ($0, choice) } })
+            let open = Set(expanded.compactMap { moved[$0] })
+            if open != expanded { expanded = open }
+        }
+    }
     @ObservationIgnored private var choices: [Int: RambleChoice] = [:]
     /// Advances on every listen and on cancel, so work begun for an earlier one drops its result.
     @ObservationIgnored private(set) var generation = 0
     @ObservationIgnored private var resolution = 0
+    @ObservationIgnored private var keys = 0
     @ObservationIgnored private var script: Task<Void, Never>?
     @ObservationIgnored private var startup: Task<Void, Never>?
     @ObservationIgnored private var stopping: Task<Void, Never>?
     @ObservationIgnored private var resolving: Task<Void, Never>?
+    @ObservationIgnored private var reading: Task<RambleOutline?, Never>?
 
     init(
         store: LocalStore, index: @escaping @MainActor () -> FoodIndex, client: any RambleOutlining,
@@ -208,7 +221,7 @@ final class RambleCapture {
         }
     }
 
-    /// Stops listening, waits for the last words, then for the final read of the recording, falling back to the
+    /// Stops listening, waits for the last words and the final read of the recording at once, falling back to the
     /// outline of exactly the transcript when there is no recording or the final read fails.
     func stop() async {
         guard phase == .listening else { return }
@@ -231,11 +244,17 @@ final class RambleCapture {
         phase = .finishing
         meter.set(0)
         script?.cancel()
-        await dictation.finish()
+        // Beside Live, on-device speech only shows words, and finalizing it would hold up the final read.
+        if stream != nil { dictation.cancel() } else { await dictation.finish() }
         guard token == generation else { return }
+        let stopped = ContinuousClock.now
+        let read = finalRead()
+        reading = read
         await finishLive()
+        let live = ContinuousClock.now - stopped
         guard token == generation else { return }
-        let final = await finalRead()
+        let final = await read?.value
+        RambleOutliner.log.info("Ramble stop: Live done after \(live), final read after \(ContinuousClock.now - stopped)")
         guard token == generation else { return }
         if let final {
             // A live read still in flight would otherwise land after this one and replace it.
@@ -273,21 +292,26 @@ final class RambleCapture {
         self.events = nil
     }
 
-    private func finalRead() async -> RambleOutline? {
+    /// The recording alone, sent the moment listening stops. With the words heard so far it dropped the foods said
+    /// after them (Live's transcript lags the audio), and waiting for Live's last words cost a second; the recording
+    /// alone scored as well as recording and transcript.
+    private func finalRead() -> Task<RambleOutline?, Never>? {
         guard outliner?.off != true, let wav = recorder.wav() else { return nil }
-        var body = request(transcript)
+        var body = request("")
         body.audio = RambleRequest.Audio(data: wav.base64EncodedString())
-        let read = Task { [client] in try await client.outline(body) }
-        let timeout = Task {
-            try? await Task.sleep(for: Self.finalTimeout)
-            read.cancel()
-        }
-        defer { timeout.cancel() }
-        do {
-            return try await read.value
-        } catch {
-            RambleOutliner.log.error("Ramble final read failed: \(String(describing: error))")
-            return nil
+        return Task { [client] in
+            let read = Task { try await client.outline(body) }
+            let timeout = Task {
+                try? await Task.sleep(for: Self.finalTimeout)
+                read.cancel()
+            }
+            defer { timeout.cancel() }
+            do {
+                return try await withTaskCancellationHandler { try await read.value } onCancel: { read.cancel() }
+            } catch {
+                RambleOutliner.log.error("Ramble final read failed: \(String(describing: error))")
+                return nil
+            }
         }
     }
 
@@ -302,6 +326,7 @@ final class RambleCapture {
         events?.cancel()
         outliner?.stop()
         resolving?.cancel()
+        reading?.cancel()
     }
 
     func pick(_ option: FoodSearchResult, in row: RambleRow) {
@@ -412,7 +437,8 @@ final class RambleCapture {
         let task = Task { [weak self] in
             let resolved = await Task.detached { try? resolver.rows(items, previous: previous, choices: choices) }.value
             guard let self, let resolved, token == resolution, !Task.isCancelled else { return }
-            if resolved != rows { rows = resolved }
+            let keyed = resolved.keyed(after: rows, next: &keys)
+            if keyed != rows { rows = keyed }
         }
         resolving = task
         return task

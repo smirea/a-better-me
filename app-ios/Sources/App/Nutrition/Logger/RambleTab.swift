@@ -19,9 +19,9 @@ struct RambleTab: View {
                     if capture.rows.isEmpty, capture.phase != .review {
                         hints.transition(.opacity)
                     }
-                    ForEach(capture.rows) { row in
+                    ForEach(capture.rows, id: \.key) { row in
                         RambleRowView(row: row, capture: capture, open: { open(row) })
-                            .id(row.id)
+                            .id(row.key)
                             .transition(arrival)
                     }
                     if let notice = capture.notice {
@@ -38,7 +38,7 @@ struct RambleTab: View {
             }
             .onChange(of: capture.rows.count) { old, new in
                 guard new > old, let last = capture.rows.last else { return }
-                withAnimation(.smooth) { proxy.scrollTo(last.id, anchor: .bottom) }
+                withAnimation(.smooth) { proxy.scrollTo(last.key, anchor: .bottom) }
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
@@ -56,7 +56,11 @@ struct RambleTab: View {
     }
 
     private var arrival: AnyTransition {
-        .asymmetric(insertion: .modifier(active: Arrive(progress: 0), identity: Arrive(progress: 1)), removal: .opacity)
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: .modifier(active: Arrive(progress: 0), identity: Arrive(progress: 1)),
+            removal: .modifier(active: Leave(progress: 1), identity: Leave(progress: 0))
+        )
     }
 
     private var hints: some View {
@@ -102,9 +106,16 @@ struct RambleTab: View {
                     .frame(height: 40)
                     .transition(.opacity)
             }
+            if capture.phase == .finishing {
+                Label("Checking the recording", systemImage: "sparkles")
+                    .font(AppFont.badge)
+                    .foregroundStyle(Theme.accent)
+                    .symbolEffect(.pulse, options: .repeating)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
             HStack(spacing: 12) {
                 micButton
-                if capture.phase == .review, !capture.planned.isEmpty {
+                if capture.phase == .review || capture.phase == .finishing, !capture.planned.isEmpty {
                     let count = capture.planned.count
                     Button {
                         saved += 1
@@ -126,6 +137,13 @@ struct RambleTab: View {
         }
         .padding(.horizontal, Theme.margin)
         .padding(.bottom, 8)
+        .padding(.top, 24)
+        // The rows scroll under the transcript; the fade keeps its words readable.
+        .background {
+            LinearGradient(stops: [.init(color: Theme.background.opacity(0), location: 0), .init(color: Theme.background, location: 0.35)], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+        }
     }
 
     @ViewBuilder private var micButton: some View {
@@ -138,7 +156,9 @@ struct RambleTab: View {
                     if capture.phase == .listening {
                         RoundedRectangle(cornerRadius: 5, style: .continuous).frame(width: 18, height: 18)
                     } else {
-                        ProgressView().tint(Theme.onPrimary)
+                        Image(systemName: "waveform")
+                            .font(.title3.weight(.semibold))
+                            .symbolEffect(.variableColor.iterative, options: .repeating)
                     }
                 }
                 .foregroundStyle(Theme.onPrimary)
@@ -148,7 +168,7 @@ struct RambleTab: View {
             .buttonStyle(.plain)
             .disabled(capture.phase != .listening)
             .accessibilityLabel(capture.phase == .listening ? "Stop listening" : "Reading the ramble")
-            .frame(maxWidth: capture.phase == .review ? nil : .infinity)
+            .frame(maxWidth: capture.planned.isEmpty || capture.phase == .listening ? .infinity : nil)
         case .idle, .review:
             Button {
                 Task { await capture.start() }
@@ -177,12 +197,33 @@ private struct RambleRowView: View {
     let row: RambleRow
     let capture: RambleCapture
     let open: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// 1 just after the row arrived or changed, easing to 0.
+    @State private var glow = 0.0
+    /// What a correction replaced, struck through until it fades.
+    @State private var was: String?
+
+    /// What the row says; a change to it is a correction worth showing.
+    private struct Face: Equatable {
+        var title: String
+        var detail: String
+        var placement: String
+    }
+
+    private var face: Face {
+        let placement = "\(row.day) \(row.minute ?? -1) \(row.item.meal?.title ?? "")"
+        return switch row.content {
+        case let .food(food): Face(title: food.pick.portion.food.displayName, detail: NutritionFormat.serving(food.pick.portion.serving), placement: placement)
+        case let .copy(copy): Face(title: Self.title(copy), detail: copy.entries.map(\.food.name).joined(separator: " · "), placement: placement)
+        case .unmatched: Face(title: row.item.name, detail: "", placement: placement)
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 12) {
                 main
-                if capture.phase == .review || capture.phase == .idle {
+                if capture.phase != .listening {
                     Button("Remove", systemImage: "minus.circle") { capture.remove(row) }
                         .labelStyle(.iconOnly)
                         .foregroundStyle(Theme.textSecondary)
@@ -197,7 +238,30 @@ private struct RambleRowView: View {
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 10)
-        .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+        .background {
+            let shape = RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
+            shape.fill(Theme.surface)
+                .overlay { shape.fill(Theme.accent.opacity(0.16 * glow)) }
+                .overlay { shape.strokeBorder(Theme.accent.opacity(0.7 * glow), lineWidth: 1) }
+                .overlay { if capture.phase == .finishing { Sheen().clipShape(shape) } }
+        }
+        .scaleEffect(reduceMotion ? 1 : 1 + 0.012 * glow)
+        // Rows coming back into view after a tab switch are not new.
+        .onAppear { if capture.phase == .listening || capture.phase == .finishing { light() } }
+        .onChange(of: face) { old, new in
+            if old.title != new.title {
+                was = old.title
+            } else if old.detail != new.detail, !old.detail.isEmpty {
+                was = old.detail
+            }
+            light()
+        }
+        .task(id: was) {
+            guard was != nil else { return }
+            try? await Task.sleep(for: .seconds(2.2))
+            withAnimation(.easeOut(duration: 0.4)) { was = nil }
+        }
+        .sensoryFeedback(.selection, trigger: face)
         .contextMenu {
             Button("Remove", systemImage: "trash", role: .destructive) { capture.remove(row) }
         }
@@ -211,8 +275,11 @@ private struct RambleRowView: View {
                     FoodIcon(food: food.pick.portion.food)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(food.pick.portion.food.displayName).font(AppFont.rowTitle).lineLimit(1)
+                            .contentTransition(.interpolate)
+                        corrected
                         Text("\(Text(macroLine: food.pick.portion.amounts)) · \(NutritionFormat.serving(food.pick.portion.serving))")
                             .font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                            .contentTransition(.numericText())
                         placement
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -228,7 +295,8 @@ private struct RambleRowView: View {
                     .frame(width: 28, height: 28)
                     .background(Theme.surfaceRaised, in: .circle)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(NutritionFormat.dayTitle(copy.meal.day))'s \(copy.meal.meal.title)").font(AppFont.rowTitle).lineLimit(1)
+                    Text(Self.title(copy)).font(AppFont.rowTitle).lineLimit(1)
+                    corrected
                     Text(copy.entries.map(\.food.name).joined(separator: " · "))
                         .font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).lineLimit(2)
                     let total = copy.entries.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts }
@@ -242,10 +310,33 @@ private struct RambleRowView: View {
         case .unmatched:
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.item.name.isEmpty ? "A meal" : row.item.name).font(AppFont.rowTitle).lineLimit(1)
+                corrected
                 Text("Nothing matched. Add it from Search.").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             }
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         }
+    }
+
+    /// The words a correction replaced, struck through.
+    @ViewBuilder private var corrected: some View {
+        if let was {
+            Text(was)
+                .font(AppFont.rowDetail)
+                .strikethrough(color: Theme.accent)
+                .foregroundStyle(Theme.textTertiary)
+                .lineLimit(1)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                .accessibilityLabel("Was \(was)")
+        }
+    }
+
+    private static func title(_ copy: RambleRow.Copy) -> String {
+        "\(NutritionFormat.dayTitle(copy.meal.day))'s \(copy.meal.meal.title)"
+    }
+
+    private func light() {
+        glow = 1
+        withAnimation(.easeOut(duration: 1.6)) { glow = 0 }
     }
 
     /// When it is logged, unless that is just now today.
@@ -301,6 +392,37 @@ private struct RambleRowView: View {
             .padding(.leading, 40)
             .transition(.opacity)
         }
+    }
+}
+
+/// A row leaving: it shrinks, blurs, and drifts away to the side.
+private struct Leave: ViewModifier {
+    let progress: Double
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(1 - progress)
+            .blur(radius: progress * 8)
+            .scaleEffect(1 - progress * 0.08)
+            .offset(x: -progress * 40)
+    }
+}
+
+/// A band of light passing over a row while the final read checks it.
+private struct Sheen: View {
+    @State private var at = -1.0
+
+    var body: some View {
+        GeometryReader { proxy in
+            LinearGradient(colors: [.clear, Theme.accent.opacity(0.14), .clear], startPoint: .leading, endPoint: .trailing)
+                .frame(width: proxy.size.width * 0.5)
+                .offset(x: at * proxy.size.width)
+        }
+        .allowsHitTesting(false)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.3).repeatForever(autoreverses: false)) { at = 1.5 }
+        }
+        .transition(.opacity)
     }
 }
 

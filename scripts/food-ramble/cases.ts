@@ -366,4 +366,54 @@ export const DEV: Case[] = [
 		text: 'for lunch a burrito bowl, and remove the burrito bowl, I had tacos, three of them',
 		items: [{ name: ['tacos', 'taco'], amount: 3, unit: ['', 'taco'], meal: 'lunch' }],
 	},
+	{
+		id: 'correct-6',
+		use: 'correct',
+		time: MORNING,
+		text: "i had 3 cups of oats for breakfast, 1 cup of blueberries, oh actually nevermind it's 2 tablespoons of oats",
+		items: [
+			{ name: ['oats', 'oatmeal'], amount: 2, unit: 'tbsp', meal: BREAKFAST },
+			{ name: ['blueberries'], amount: 1, unit: 'cup', meal: BREAKFAST },
+		],
+	},
+	{
+		id: 'correct-7',
+		use: 'correct',
+		text: 'for lunch I had a chicken salad, a coke and some fries, actually the coke was a diet coke',
+		items: [
+			{ name: ['chicken salad'], meal: 'lunch' },
+			{ name: ['diet coke'], meal: 'lunch' },
+			{ name: ['fries', 'french fries'], meal: 'lunch' },
+		],
+	},
+	{
+		id: 'correct-8',
+		use: 'correct',
+		time: MORNING,
+		text: 'two eggs, a slice of toast and a black coffee, oh wait, scratch the toast',
+		items: [
+			{ name: ['eggs', 'egg'], amount: 2, unit: ['', 'egg'], meal: BREAKFAST },
+			{ name: ['black coffee', 'coffee'], meal: BREAKFAST },
+		],
+	},
+	{
+		id: 'correct-9',
+		use: 'correct',
+		text: 'a banana and 200 grams of greek yogurt, no actually make the yogurt 150 grams, and 30 grams of almonds',
+		items: [
+			{ name: ['banana'], amount: 1, unit: ['', 'banana'] },
+			{ name: ['greek yogurt'], amount: 150, unit: 'g' },
+			{ name: ['almonds', 'almond'], amount: 30, unit: 'g' },
+		],
+	},
+	{
+		id: 'correct-10',
+		use: 'correct',
+		text: 'dinner was 150 grams of salmon with 1 cup of rice and some broccoli, oh no the rice was 2 cups',
+		items: [
+			{ name: ['salmon'], amount: 150, unit: 'g', meal: 'dinner' },
+			{ name: ['rice', 'white rice'], amount: 2, unit: 'cup', meal: 'dinner' },
+			{ name: ['broccoli'], meal: 'dinner' },
+		],
+	},
 ];

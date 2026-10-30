@@ -10,8 +10,8 @@ import { MEALS, TODAY, USUAL } from './food-ramble/history';
  *
  *   GEMINI_API_KEY=… bun scripts/food-ramble-eval.ts [-v] [--set dev|holdout] [--runs n] [--only id,…] \
  *     [--transcripts .cache/food-ramble/Samantha-speech.json [--audio .cache/food-ramble/Samantha]] --with gemini-3.5-flash:minimal,gemini-3.8-flash:low
- *   … --engine live --audio .cache/food-ramble/Samantha [--final [--final-with model:thinking]] [--save live.json] \
- *     [--turns pauseMs:dipAfterMs:maxMs]
+ *   … --engine live --audio .cache/food-ramble/Samantha [--final [--final-at-stop] [--final-with model:thinking]] \
+ *     [--save live.json] [--turns pauseMs:dipAfterMs:maxMs]
  *
  * A case passes only when every item matches in order. Each model runs every case `--runs` times, so flaky cases show
  * as a pass rate below 100%. Latency is per successful call.
@@ -33,6 +33,7 @@ const { values } = parseArgs({
 		'final-with': { type: 'string' },
 		save: { type: 'string' },
 		turns: { type: 'string' },
+		'final-at-stop': { type: 'boolean', default: false },
 	},
 });
 const key = process.env.GEMINI_API_KEY;
@@ -215,7 +216,8 @@ async function score(model: RambleModel, c: Case): Promise<Outcome> {
 /**
  * `--engine live` streams `<--audio>/<case id>.wav` to a Gemini Live session in real time, 100 ms a frame, and
  * scores what its tool calls built. `--final` also scores the final read on the same session: Live's transcript plus
- * the recording through `outlineRamble` with the final model. Latency is from the end of the audio.
+ * the recording through `outlineRamble` with the final model, or with `--final-at-stop` the recording alone, sent at
+ * the end of the audio while Live answers its last turn. Latency is from the end of the audio to the later of the two.
  */
 type LiveScore = {
 	live: Outcome;
@@ -248,6 +250,13 @@ async function scoreLive(model: string, c: Case): Promise<LiveScore> {
 				await Bun.sleep(Math.max(0, due - performance.now()));
 			}
 			const ended = performance.now();
+			// `--final-at-stop` starts the final read at the stop with the recording alone, as the phone does.
+			const early = values['final-at-stop']
+				? outlineRamble({ ...request, transcript: '', audio: wav }, key!, finalModel).then(
+						outline => ({ outline, ms: performance.now() - ended }),
+						(error: unknown) => ({ error }),
+					)
+				: undefined;
 			const result = await session.finish();
 			const ms = performance.now() - ended;
 			session.close();
@@ -256,13 +265,16 @@ async function scoreLive(model: string, c: Case): Promise<LiveScore> {
 			if (!values.final) return { live, transcript: result.transcript, first, audioMs };
 			let final: Outcome;
 			try {
-				const outline = await outlineRamble(
-					{ ...request, transcript: result.transcript, audio: wav },
-					key!,
-					finalModel,
-				);
-				const finalMisses = check(c, outline);
-				final = { id: c.id, use: c.use, pass: !finalMisses.length, misses: finalMisses, ms: performance.now() - ended };
+				const read = early
+					? await early
+					: {
+							outline: await outlineRamble({ ...request, transcript: result.transcript, audio: wav }, key!, finalModel),
+							ms: performance.now() - ended,
+						};
+				if ('error' in read) throw read.error;
+				const finalMisses = check(c, read.outline);
+				const ready = Math.max(read.ms, ms);
+				final = { id: c.id, use: c.use, pass: !finalMisses.length, misses: finalMisses, ms: ready };
 			} catch (error) {
 				final = { id: c.id, use: c.use, pass: false, misses: [], ms: null, error: String(error).slice(0, 300) };
 			}
