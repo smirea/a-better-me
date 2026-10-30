@@ -31,8 +31,21 @@ final class RambleCapture {
         }
     }
     private(set) var rows: [RambleRow] = [] {
-        didSet { respan(leaving: oldValue) }
+        didSet {
+            respan(leaving: oldValue)
+            holdParsed(after: oldValue)
+        }
     }
+    /// Rows, by key, still showing what was said before their match: a new row while the speaker talks, for
+    /// `parsedFor`, and a row searching again for a renamed food. The parse and the match read as two steps, and the
+    /// totals leave the row out until its match shows.
+    private(set) var parsing: Set<Int> = []
+    /// Names the online search is looking for, whose rows say so.
+    private(set) var searchingOnline: Set<String> = []
+    /// Advances when the owner changes a row from its detail or its menu, with that row's key, so the row lights up as
+    /// the list shows again.
+    private(set) var edited = 0
+    @ObservationIgnored private(set) var editedKey: Int?
     /// The transcript as words, and the words each row was parsed from, by `RambleRow.key`.
     private(set) var words = RambleWords()
     private(set) var spans: [Int: Range<Int>] = [:]
@@ -101,6 +114,11 @@ final class RambleCapture {
     }
 
     var planned: [RamblePlanned] { rows.flatMap(\.planned) }
+    /// What the summary counts: the rows whose match shows.
+    var shownPlanned: [RamblePlanned] { rows.filter { !parsing.contains($0.key) }.flatMap(\.planned) }
+
+    /// The words land 0.55 s after the row appears, and what was said shows for a second after that.
+    static let parsedFor = Duration.milliseconds(1550)
     var isEmpty: Bool { rows.isEmpty }
 
     func start() async {
@@ -256,6 +274,8 @@ final class RambleCapture {
         choice.option = food.key
         choice.serving = serving
         choices[row.id] = choice
+        editedKey = row.key
+        edited += 1
         // Applied to the row now as well, so a log right after it never waits on a resolution to see it.
         food.pick.portion.serving = serving
         rows[index].content = .food(food)
@@ -297,11 +317,29 @@ final class RambleCapture {
         lastOutline = []
         online = [:]
         askedOnline = []
+        searchingOnline = []
+        parsing = []
         shown = []
         struck = []
         named = [:]
         gone = [:]
         notice = nil
+    }
+
+    private func holdParsed(after old: [RambleRow]) {
+        let before = Dictionary(old.map { ($0.key, $0) }, uniquingKeysWith: { $1 })
+        let live = phase == .listening || phase == .finishing
+        let held = rows.filter { row in
+            guard !parsing.contains(row.key) else { return false }
+            guard let earlier = before[row.key] else { return live }
+            return row.content == .searching && earlier.content != .searching
+        }
+        guard !held.isEmpty else { return }
+        parsing.formUnion(held.map(\.key))
+        Task { [weak self] in
+            try? await Task.sleep(for: Self.parsedFor)
+            self?.parsing.subtract(held.map(\.key))
+        }
     }
 
     private func respan(leaving old: [RambleRow] = []) {
@@ -409,9 +447,11 @@ final class RambleCapture {
         for row in rows where row.content == .unmatched {
             let name = row.item.name.lowercased()
             guard askedOnline.insert(name).inserted else { continue }
+            searchingOnline.insert(name)
             Task { [weak self] in
                 guard let self else { return }
                 let found = await searchOnline(row.item.name)
+                searchingOnline.remove(name)
                 guard !found.isEmpty else { return }
                 online[name] = found
                 resolve()
