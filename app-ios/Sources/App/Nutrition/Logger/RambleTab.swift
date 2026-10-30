@@ -392,22 +392,32 @@ private struct FlightView: View {
     @State private var progress = 0.0
 
     var body: some View {
-        HStack(spacing: 4) {
-            if flight.kind == .correction {
-                Image(systemName: "arrow.uturn.backward").font(.system(size: 10, weight: .bold))
+        Group {
+            if flight.kind == .parse {
+                Text(flight.text)
+                    .lineLimit(1)
+                    .font(AppFont.medium(14))
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Theme.accent.opacity(0.35), in: .capsule)
+                    .overlay { Capsule().strokeBorder(Theme.accent, lineWidth: 1) }
+                    .fixedSize()
+            } else {
+                // A correction's row sits above other rows, so its cue is a badge small enough to travel up the
+                // margin, clear of their text; its words light up in the transcript meanwhile.
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Theme.onPrimary)
+                    .frame(width: 20, height: 20)
+                    .background(Theme.accent, in: .circle)
             }
-            Text(flight.text).lineLimit(1)
         }
-        .font(AppFont.medium(14))
-        .foregroundStyle(flight.kind == .parse ? Theme.textPrimary : Theme.onPrimary)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(flight.kind == .parse ? Theme.accent.opacity(0.35) : Theme.accent, in: .capsule)
-        .overlay { Capsule().strokeBorder(Theme.accent, lineWidth: 1) }
-        .fixedSize()
-        .modifier(Fly(progress: progress, from: from, to: to, trailing: flight.kind == .correction))
+        .modifier(Fly(progress: progress, from: from, to: to, margin: flight.kind == .correction))
         .onAppear {
-            withAnimation(.timingCurve(0.3, 0, 0.2, 1, duration: Double(Flight.duration.components.attoseconds) / 1e18)) { progress = 1 }
+            // A correction changes its row at once, so its badge arrives quickly.
+            let seconds = flight.kind == .correction ? 0.3 : Double(Flight.duration.components.attoseconds) / 1e18
+            withAnimation(.timingCurve(0.3, 0, 0.2, 1, duration: seconds)) { progress = 1 }
         }
     }
 }
@@ -416,7 +426,8 @@ private struct Fly: ViewModifier, @MainActor Animatable {
     var progress: Double
     let from: CGRect
     let to: CGRect
-    let trailing: Bool
+    /// Up the leading margin to the row's icon, rather than an arc over the rows.
+    let margin: Bool
 
     var animatableData: Double {
         get { progress }
@@ -424,19 +435,21 @@ private struct Fly: ViewModifier, @MainActor Animatable {
     }
 
     func body(content: Content) -> some View {
-        let start = CGPoint(x: from.midX, y: from.midY)
-        // Correcting words land at the row's trailing edge, clear of the text they change.
-        let end = CGPoint(x: trailing ? to.maxX - 80 : to.minX + min(110, to.width * 0.3), y: to.midY)
-        // Up and over: the control point sits above the higher end, so the chip lifts before it travels.
-        let control = CGPoint(x: (start.x + end.x) / 2, y: min(start.y, end.y) - 60)
+        // A correction starts in the margin beside its words, so the badge never covers them.
+        let start = CGPoint(x: margin ? min(from.minX, to.minX) - 10 : from.midX, y: from.midY)
+        let end = margin ? CGPoint(x: to.minX + 14, y: to.midY) : CGPoint(x: to.minX + min(110, to.width * 0.3), y: to.midY)
+        // Up and over for words; for a correction, out to the margin, then straight up it.
+        let control = margin
+            ? CGPoint(x: start.x, y: (start.y + to.midY) / 2)
+            : CGPoint(x: (start.x + end.x) / 2, y: min(start.y, end.y) - 60)
         let t = progress
         let point = CGPoint(
             x: (1 - t) * (1 - t) * start.x + 2 * (1 - t) * t * control.x + t * t * end.x,
             y: (1 - t) * (1 - t) * start.y + 2 * (1 - t) * t * control.y + t * t * end.y
         )
         return content
-            .scaleEffect(1 + 0.12 * sin(t * .pi) - 0.15 * t)
-            .opacity(t < 0.6 ? 1 : (1 - t) / 0.4)
+            .scaleEffect(margin ? 1 + 0.5 * max(0, t - 0.8) / 0.2 : 1 + 0.12 * sin(t * .pi) - 0.15 * t)
+            .opacity(margin ? (t < 0.85 ? 1 : (1 - t) / 0.15) : (t < 0.6 ? 1 : (1 - t) / 0.4))
             .position(point)
     }
 }
@@ -538,6 +551,10 @@ private struct RambleLine: View {
     /// No local match, and the online search is still looking.
     private var onlineSearch: Bool { row.content == .unmatched && capture.searchingOnline.contains(row.item.name.lowercased()) }
 
+    /// The local search knew nothing and the online one was asked: shown as its own stage while the row holds what was
+    /// said, even when the answer came back sooner.
+    private var wentOnline: Bool { capture.askedOnline.contains(row.item.name.lowercased()) }
+
     private var parsing: Bool { row.content == .searching || (!reduceMotion && capture.parsing.contains(row.key)) }
 
     /// What the row says; a change to it is a correction worth showing.
@@ -619,6 +636,8 @@ private struct RambleLine: View {
             try? await Task.sleep(for: .seconds(1.4))
             withAnimation(.easeOut(duration: 0.3)) { was = nil }
         }
+        .animation(.smooth(duration: 0.3), value: wentOnline)
+        .animation(.smooth(duration: 0.35), value: parsing)
         .sensoryFeedback(.selection, trigger: face)
         .sensoryFeedback(.impact(weight: .medium), trigger: removing) { _, new in new }
     }
@@ -675,10 +694,11 @@ private struct RambleLine: View {
     @ViewBuilder private var icon: some View {
         Group {
             if parsing {
-                Image(systemName: "magnifyingglass")
+                Image(systemName: wentOnline ? "globe" : "magnifyingglass")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Theme.accent)
                     .symbolEffect(.pulse, options: .repeating)
+                    .contentTransition(.symbolEffect(.replace))
             } else {
                 switch row.content {
                 case let .food(food): FoodIcon(food: food.pick.portion.food)
@@ -705,7 +725,8 @@ private struct RambleLine: View {
     @ViewBuilder private var detail: some View {
         Group {
             if parsing {
-                Text("Finding a match…")
+                Text(wentOnline ? "Searching online…" : "Finding a match…")
+                    .contentTransition(.opacity)
             } else {
                 switch row.content {
                 case let .food(food):
@@ -730,14 +751,21 @@ private struct RambleLine: View {
 
     /// The serving, right-aligned: a menu of the food's measures, and Custom for the serving keyboard.
     @ViewBuilder private var serving: some View {
-        let label = Text(face.serving)
-            .font(AppFont.medium(14))
-            .monospacedDigit()
-            .lineLimit(1)
-            .padding(.horizontal, 10)
-            .frame(minHeight: 32)
-            .background(Theme.surfaceRaised, in: .capsule)
-            .contentTransition(.opacity)
+        // The old amount fades out before the new one fades in, so they never overlap.
+        let label = ZStack {
+            Text(face.serving)
+                .font(AppFont.medium(14))
+                .monospacedDigit()
+                .lineLimit(1)
+                .id(face.serving)
+                .transition(.asymmetric(
+                    insertion: .opacity.animation(.easeIn(duration: 0.18).delay(0.14)),
+                    removal: .opacity.animation(.easeOut(duration: 0.12))
+                ))
+        }
+        .padding(.horizontal, 10)
+        .frame(minHeight: 32)
+        .background(Theme.surfaceRaised, in: .capsule)
         if !parsing, case let .food(food) = row.content {
             let current = food.pick.portion.serving
             Menu {
