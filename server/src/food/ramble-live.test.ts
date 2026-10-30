@@ -118,6 +118,14 @@ describe('Turns', () => {
 		]);
 	});
 
+	test('quiet speech opens a turn and is raised for Gemini, while steady room noise never does', () => {
+		const quiet = new Turns({ pauseMs: 300, dipAfterMs: 3_000, maxMs: 5_000 });
+		expect(play(quiet, [5, 150, 150, 5, 5, 5, 150])).toEqual([null, 'start', null, null, null, 'end', 'start']);
+		expect(quiet.gain).toBe(16);
+		const noise = new Turns({ pauseMs: 300, dipAfterMs: 3_000, maxMs: 5_000 });
+		expect(play(noise, Array(50).fill(40))).toEqual(Array(50).fill(null));
+	});
+
 	test('a turn with no dip splits at the cap', () => {
 		const turns = new Turns({ pauseMs: 300, dipAfterMs: 300, maxMs: 500 });
 		expect(play(turns, [2000, 2000, 2000, 2000, 2000, 2000, 2000])).toEqual([

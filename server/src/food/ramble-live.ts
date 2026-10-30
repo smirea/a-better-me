@@ -33,8 +33,22 @@ const FINISH_CAP_MS = 6_000;
 const SETUP_TIMEOUT_MS = 8_000;
 const ACTIVITY_START = JSON.stringify({ realtimeInput: { activityStart: {} } });
 const ACTIVITY_END = JSON.stringify({ realtimeInput: { activityEnd: {} } });
-/** Above this RMS a 16-bit frame holds speech. */
-const VOICED_RMS = 300;
+/**
+ * Whether a 16-bit frame holds speech is judged against the speaker's own levels, not a fixed RMS: the phone records
+ * in measurement mode, with no gain control, and a voice there sat near the 300 the TTS rambles were tuned on, so turns
+ * opened late and broke mid-word, and Gemini made foods up from the pieces. A frame is voiced above `FLOOR_RATIO` times
+ * the noise floor and `PEAK_RATIO` times the loudest recent speech, and never at or below `MIN_VOICED_RMS`.
+ */
+const MIN_VOICED_RMS = 60;
+const FLOOR_RATIO = 4;
+const PEAK_RATIO = 0.05;
+/** Per 100 ms: the floor rises this share of the way toward a louder frame, so steady speech never becomes it. */
+const FLOOR_RISE = 0.002;
+/** Per 100 ms: the peak decays by this factor, halving in about 35 s. */
+const PEAK_DECAY = 0.998;
+/** Quiet speech is raised toward this peak RMS before Gemini hears it, at most `MAX_GAIN` times. */
+const TARGET_PEAK = 5_000;
+const MAX_GAIN = 16;
 
 export type TurnTiming = {
 	/** Silence that ends a turn, so Gemini answers what it heard while the speaker goes on. */
@@ -175,6 +189,14 @@ function base64(bytes: Uint8Array) {
 	return btoa(text);
 }
 
+function amplify(pcm: Uint8Array, gain: number): Uint8Array {
+	if (gain === 1) return pcm;
+	const samples = new Int16Array(pcm.buffer, pcm.byteOffset, Math.floor(pcm.byteLength / 2));
+	const out = new Int16Array(samples.length);
+	for (let i = 0; i < samples.length; i++) out[i] = Math.max(-32_768, Math.min(32_767, Math.round(samples[i]! * gain)));
+	return new Uint8Array(out.buffer);
+}
+
 function rms(pcm: Uint8Array): number {
 	const samples = new Int16Array(pcm.buffer, pcm.byteOffset, Math.floor(pcm.byteLength / 2));
 	if (!samples.length) return 0;
@@ -191,6 +213,8 @@ function rms(pcm: Uint8Array): number {
  */
 export class Turns {
 	speaking = false;
+	floor = MIN_VOICED_RMS / FLOOR_RATIO;
+	peak = 0;
 	private silentMs = 0;
 	private turnMs = 0;
 	private loudness = 0;
@@ -206,12 +230,16 @@ export class Turns {
 	frame(pcm: Uint8Array): 'start' | 'end' | 'split' | null {
 		const ms = (pcm.byteLength / 2 / LIVE_SAMPLE_RATE) * 1000;
 		const level = rms(pcm);
+		this.floor = level < this.floor ? level : this.floor + (level - this.floor) * FLOOR_RISE;
+		this.peak *= PEAK_DECAY;
+		const voiced = this.voiced(level);
+		if (voiced) this.peak = Math.max(this.peak, level);
 		if (!this.speaking) {
-			if (level <= VOICED_RMS) return null;
+			if (!voiced) return null;
 			this.open(level, ms);
 			return 'start';
 		}
-		this.silentMs = level > VOICED_RMS ? 0 : this.silentMs + ms;
+		this.silentMs = voiced ? 0 : this.silentMs + ms;
 		if (this.silentMs >= this.timing.pauseMs) {
 			this.speaking = false;
 			return 'end';
@@ -225,6 +253,15 @@ export class Turns {
 		return null;
 	}
 
+	/** How much to raise the audio Gemini hears, from the loudest recent speech. */
+	get gain(): number {
+		return this.peak ? Math.min(MAX_GAIN, Math.max(1, TARGET_PEAK / this.peak)) : 1;
+	}
+
+	private voiced(level: number) {
+		return level > Math.max(MIN_VOICED_RMS, this.floor * FLOOR_RATIO, this.peak * PEAK_RATIO);
+	}
+
 	private open(level: number, ms: number) {
 		this.speaking = true;
 		this.silentMs = this.turnMs = this.loudness = this.frames = this.voicedMs = 0;
@@ -233,7 +270,7 @@ export class Turns {
 
 	private count(level: number, ms: number) {
 		this.turnMs += ms;
-		if (level <= VOICED_RMS) return;
+		if (!this.voiced(level)) return;
 		this.loudness += level;
 		this.frames++;
 		this.voicedMs += ms;
@@ -335,7 +372,9 @@ export async function openLiveRamble(
 		// Audio outside a turn is silence Gemini would ignore.
 		if (!turns.speaking) return;
 		const audio = JSON.stringify({
-			realtimeInput: { audio: { data: base64(pcm), mimeType: `audio/pcm;rate=${LIVE_SAMPLE_RATE}` } },
+			realtimeInput: {
+				audio: { data: base64(amplify(pcm, turns.gain)), mimeType: `audio/pcm;rate=${LIVE_SAMPLE_RATE}` },
+			},
 		});
 		if (!opening) return send(audio);
 		opening.push(audio);
@@ -351,6 +390,10 @@ export async function openLiveRamble(
 	const finished = () => {
 		if (settled || !done) return;
 		settled = true;
+		// The phone's mic levels decide the turns; the Worker logs keep them for tuning against real voices.
+		console.log(
+			`ramble live: peak ${Math.round(turns.peak)} floor ${Math.round(turns.floor)} gain ${turns.gain.toFixed(1)}, ${transcript.split(/\s+/).filter(Boolean).length} words, ${items.outline(input, names).items.length} items`,
+		);
 		clearTimeout(quiet);
 		clearTimeout(cap);
 		done({ transcript, outline: items.outline(input, names) });
