@@ -71,6 +71,25 @@ struct RambleResolverTests {
         #expect(describe(again) == ["unmatched bok choy"])
     }
 
+    @Test func aServingMenuOffersHalfToDoubleTheFoodsServingsAnd100Grams() async throws {
+        let resolver = try await resolver()
+        let rows = try resolver.rows([RambleItem(name: "oats", amount: 0.5, unit: "cup")], previous: [], choices: [:])
+        guard case let .food(food) = rows[0].content else { Issue.record("no oats"); return }
+        let choices = RambleServing.choices(food.pick.portion.serving, of: food.pick.portion.food.nutrition)
+        #expect(choices.map { NutritionFormat.serving($0) } == ["0.25 cup", "0.5 cup", "0.75 cup", "1 cup", "100 g"])
+    }
+
+    @Test func eachNewHourOrDayStartsASection() {
+        let row = { (key: Int, day: String, minute: Int?) in
+            RambleRow(id: key, item: RambleItem(name: "x"), day: calendarDay(day), minute: minute, content: .unmatched, key: key)
+        }
+        let headers = RambleTab.headers([
+            row(1, "2026-10-28", 8 * 60), row(2, "2026-10-28", 8 * 60 + 30), row(3, "2026-10-28", 12 * 60 + 30),
+            row(4, "2026-10-27", 19 * 60), row(5, "2026-10-27", nil),
+        ], today: today)
+        #expect(headers == [1: "8 AM", 3: "12 PM", 4: "Yesterday · 7 PM", 5: "Yesterday · Their own times"])
+    }
+
     @Test func spokenAmountsBecomeServingsInTheFoodsOwnMeasures() async throws {
         let resolver = try await resolver()
         let rows = try resolver.rows([

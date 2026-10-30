@@ -725,7 +725,7 @@ private struct RambleLine: View {
         if !parsing, case let .food(food) = row.content {
             let current = food.pick.portion.serving
             Menu {
-                ForEach(Self.servings(current, of: food.pick.portion.food.nutrition), id: \.self) { serving in
+                ForEach(RambleServing.choices(current, of: food.pick.portion.food.nutrition), id: \.self) { serving in
                     Toggle(NutritionFormat.serving(serving), isOn: Binding(get: { serving == current }, set: { _ in capture.setServing(serving, of: row) }))
                 }
                 Divider()
@@ -736,15 +736,6 @@ private struct RambleLine: View {
         } else if !face.serving.isEmpty, row.content != .unmatched {
             label.foregroundStyle(parsing ? Theme.accent : Theme.textSecondary)
         }
-    }
-
-    /// What a serving is most often changed to: half, one and a half, or twice it, the food's own servings, and 100 g.
-    static func servings(_ current: Serving, of nutrition: FoodNutrition) -> [Serving] {
-        var all = [0.5, 1, 1.5, 2].map { Serving(measure: current.measure, quantity: current.quantity * $0) }
-        all += nutrition.measures.map { Serving(measure: $0, quantity: $0.quantity) }
-        if let gram = nutrition.allMeasures.first(where: { $0.name == "g" }) { all.append(Serving(measure: gram, quantity: 100)) }
-        var seen = Set<String>()
-        return all.filter { seen.insert(NutritionFormat.serving($0)).inserted }
     }
 
     /// The other matches, best first, to swap to; the current one is checked.

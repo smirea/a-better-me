@@ -255,6 +255,15 @@ enum RambleServing {
         "tsp": (4.92892159375, ["tsp", "teaspoon"]),
     ]
 
+    /// What a row's serving menu offers: half, one and a half, or twice the serving, the food's own servings, and 100 g.
+    static func choices(_ current: Serving, of nutrition: FoodNutrition) -> [Serving] {
+        var all = [0.5, 1, 1.5, 2].map { Serving(measure: current.measure, quantity: current.quantity * $0) }
+        all += nutrition.measures.map { Serving(measure: $0, quantity: $0.quantity) }
+        if let gram = nutrition.allMeasures.first(where: { $0.name == "g" }) { all.append(Serving(measure: gram, quantity: 100)) }
+        var seen = Set<String>()
+        return all.filter { seen.insert(NutritionFormat.serving($0)).inserted }
+    }
+
     static func serving(amount: Double, unit: String, of nutrition: FoodNutrition, history: Serving?) -> Serving {
         let fallback = history ?? defaultServing(nutrition, count: 1)
         guard amount > 0 else { return fallback }
