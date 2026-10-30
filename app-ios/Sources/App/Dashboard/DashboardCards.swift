@@ -34,16 +34,27 @@ struct DashboardCard<Chart: View>: View {
 struct MiniBars: View {
     let values: [Double]
     let color: Color
+    /// One per value, overriding `color`.
+    var colors: [Color]?
+    /// Drawn as a dashed rule, and the scale reaches it.
+    var goal: Double?
 
     var body: some View {
         Canvas { context, size in
             guard !values.isEmpty else { return }
-            let top = max(values.max() ?? 0, 1)
+            let top = max(values.max() ?? 0, goal ?? 0, 1)
             let band = size.width / CGFloat(values.count)
             for (index, value) in values.enumerated() {
                 let height = size.height * value / top
                 let bar = CGRect(x: band * (CGFloat(index) + 0.15), y: size.height - height, width: band * 0.7, height: height)
-                context.fill(RoundedRectangle(cornerRadius: 2).path(in: bar), with: .color(color))
+                context.fill(RoundedRectangle(cornerRadius: 2).path(in: bar), with: .color(colors?[index] ?? color))
+            }
+            if let goal {
+                let y = size.height * (1 - goal / top)
+                var rule = Path()
+                rule.move(to: CGPoint(x: 0, y: y))
+                rule.addLine(to: CGPoint(x: size.width, y: y))
+                context.stroke(rule, with: .color(Theme.textTertiary), style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
             }
         }
     }

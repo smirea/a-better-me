@@ -235,10 +235,13 @@ private struct StepsCardView: View {
     private var values = DashboardValues()
 
     var body: some View {
-        let days = values.stepsCard
+        let goal = values.stepGoal
         NavigationLink(value: DashboardRoute.steps) {
-            DashboardCard(title: "Steps", period: "Last 7 Days", value: days.text, unit: "steps") {
-                MiniBars(values: days.values, color: Theme.accent)
+            DashboardCard(
+                title: "Steps", period: goal.streak > 0 ? "\(goal.streak)-day streak" : "Last 7 Days",
+                value: goal.hasSteps ? goal.today.wholeText : nil, unit: "steps"
+            ) {
+                MiniBars(values: goal.week.map(\.steps), color: Theme.accent, colors: goal.week.map(\.tier.color), goal: Double(goal.goal))
             }
         }
     }
