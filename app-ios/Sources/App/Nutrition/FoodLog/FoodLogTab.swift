@@ -36,8 +36,10 @@ struct FoodLogTab: View {
                 switch route {
                 case let .overview(day): NutritionOverview(day: day)
                 case let .contributors(day, nutrient): ContributorsView(day: day, nutrient: nutrient)
+                case .strategy: StrategyView()
                 }
             }
+            .navigationDestination(for: StrategyRoute.self) { $0.destination }
         }
         .environment(state)
         .sheet(item: $state.logRequest) { LoggerSheet(start: LoggerStart($0)) }
@@ -104,8 +106,9 @@ private struct WeekPills: View {
     }
 }
 
-/// The day's four macro lines in two pages: eaten against target, then what is left. Without a plan it shows what
-/// was eaten. Tapping it opens the Nutrition Overview.
+/// The day's four macro lines in two pages, swiped between as in MacroFactor: eaten against target, then what is left.
+/// A day no plan covers has nothing to fill a bar against, so it shows what was eaten and a link to set targets.
+/// Tapping the lines opens the Nutrition Overview.
 private struct DaySummary: View {
     let day: CalendarDay
     let plans: [NutritionPlan]
@@ -146,6 +149,20 @@ private struct DaySummary: View {
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isButton)
             .accessibilityHint("Opens the Nutrition Overview")
+            if target == nil {
+                Button { state.path.append(.strategy) } label: {
+                    HStack(spacing: 4) {
+                        Text("No targets for this day")
+                            .foregroundStyle(Theme.textSecondary)
+                        Text("Set Targets")
+                        Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold))
+                    }
+                    .font(AppFont.rowDetail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(.horizontal, Theme.margin)
     }
@@ -187,9 +204,11 @@ private struct MacroColumns: View {
                         .font(AppFont.headline(12))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                    ProgressView(value: fill(line))
-                        .progressViewStyle(.bar(color, height: 3))
-                        .scaleEffect(x: page == .remaining ? -1 : 1)
+                    if line.target != nil {
+                        ProgressView(value: fill(line))
+                            .progressViewStyle(.bar(color, height: 3))
+                            .scaleEffect(x: page == .remaining ? -1 : 1)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -214,7 +233,7 @@ private struct MacroColumns: View {
     private func fill(_ line: MacroLine) -> Double {
         switch page {
         case .consumed: line.progress
-        case .remaining: line.target == nil ? 0 : 1 - line.progress
+        case .remaining: 1 - line.progress
         }
     }
 }

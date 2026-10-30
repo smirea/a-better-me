@@ -174,6 +174,7 @@ struct NoteDraft: Identifiable, Hashable {
 enum FoodLogRoute: Hashable {
     case overview(CalendarDay)
     case contributors(CalendarDay, NutrientID)
+    case strategy
 }
 
 /// Where an entry sits on the log.
