@@ -4,6 +4,8 @@ import SwiftUI
 struct FoodLogTab: View {
     @State private var state = FoodLogState()
     @State private var showingCalendar = false
+    /// Its own animated state, so the Today button morphs into the toolbar's glass when a swipe pages the day.
+    @State private var showsToday = false
 
     var body: some View {
         NavigationStack(path: $state.path) {
@@ -16,17 +18,19 @@ struct FoodLogTab: View {
             .safeAreaInset(edge: .bottom) { FoodLogBottomBar() }
             .screenTitle(NutritionFormat.dayTitle(state.day))
             .toolbar {
-                if state.day != .today {
-                    ToolbarItem {
-                        Button("Today", systemImage: "arrow.uturn.backward") { state.day = .today }
-                    }
+                ToolbarItem {
+                    Button("Today", systemImage: "arrow.uturn.backward") { state.day = .today }
                 }
+                .hidden(!showsToday)
                 ToolbarItem {
                     Button("Calendar", systemImage: "calendar") { showingCalendar = true }
                 }
                 ToolbarItem {
                     DayMenu(day: state.day).id(state.day)
                 }
+            }
+            .onChange(of: state.day != .today, initial: true) { _, away in
+                withAnimation { showsToday = away }
             }
             .navigationDestination(for: FoodLogRoute.self) { route in
                 switch route {

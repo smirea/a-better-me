@@ -2,9 +2,9 @@ import SwiftUI
 import UIKit
 
 extension View {
-    /// The reference app's wide all-caps tab titles, drawn by the native navigation bar.
+    /// A tab root's title, large and leading on the same row as its toolbar buttons.
     func screenTitle(_ title: String) -> some View {
-        navigationTitle(title.uppercased()).navigationBarTitleDisplayMode(.large)
+        navigationTitle(title).toolbarTitleDisplayMode(.inlineLarge)
     }
 
     /// A pushed screen's or sheet's title, inline.
@@ -29,10 +29,10 @@ extension View {
 }
 
 enum NavigationAppearance {
-    /// Native bars keep Liquid Glass. Only their title fonts change to match the reference app.
+    /// Native bars keep Liquid Glass. Only their title fonts change to the app's.
     static func apply() {
         let bar = UINavigationBar.appearance()
-        bar.largeTitleTextAttributes = [.font: UIFont(name: AppFont.displayName, size: 28)!]
+        bar.largeTitleTextAttributes = [.font: UIFont(name: "DMSans-Bold", size: 30)!]
         bar.titleTextAttributes = [.font: UIFont(name: "DMSans-SemiBold", size: 17)!]
     }
 }

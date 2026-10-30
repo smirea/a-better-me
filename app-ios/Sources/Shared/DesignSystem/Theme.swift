@@ -53,7 +53,7 @@ enum Theme {
 /// Static instances cut from the reference app's variable fonts by `scripts/make-fonts.py`. iOS ignores variation
 /// axes on these fonts, so each weight is its own file.
 enum AppFont {
-    /// Wide all-caps screen titles such as "DASHBOARD" and "MORE".
+    /// Wide all-caps labels on the watch and the Live Activity, such as "PAUSED".
     static func display(_ size: CGFloat = 26) -> Font { .custom(displayName, fixedSize: size) }
 
     static func title(_ size: CGFloat = 20) -> Font { .custom("DMSans-Bold", size: size) }
