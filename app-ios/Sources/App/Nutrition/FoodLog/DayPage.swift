@@ -166,7 +166,7 @@ private extension View {
         font(.system(size: 10, weight: .bold))
             .frame(width: 22, height: 22)
             .background(isPrimary ? Theme.textPrimary : Theme.surfaceRaised, in: Circle())
-            .foregroundStyle(isPrimary ? Color.black : Theme.textPrimary)
+            .foregroundStyle(isPrimary ? Theme.onPrimary : Theme.textPrimary)
     }
 }
 
@@ -290,7 +290,7 @@ private struct NotesSection: View {
                 }
                 .labelStyle(.iconOnly)
                 .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(.black)
+                .foregroundStyle(Theme.onPrimary)
                 .frame(width: 28, height: 28)
                 .background(Theme.textPrimary, in: Circle())
                 .disabled(notes.count >= FoodLogNote.limitPerDay || state.selecting)

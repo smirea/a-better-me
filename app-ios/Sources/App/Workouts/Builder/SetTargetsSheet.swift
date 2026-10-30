@@ -134,12 +134,9 @@ struct SetTargetsSheet: View {
         } else {
             VStack(spacing: 4) {
                 ForEach(actions.filter { $0.placement == .aboveSave }) { action in
-                    Button { perform(action) } label: {
-                        Text(action.title).font(AppFont.headline()).frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.glass)
-                    .controlSize(.large)
-                    .padding(.horizontal, Theme.margin)
+                    Button(action.title) { perform(action) }
+                        .secondaryPill()
+                        .padding(.horizontal, Theme.margin)
                 }
                 PinnedActionButton("Save") { save() }
                 ForEach(actions.filter { $0.placement == .belowSave }) { action in

@@ -79,8 +79,7 @@ struct FoodEditor: View {
                 RowLabel(title: draft.name.isEmpty ? "Custom Food" : draft.name, detail: draft.brand.isEmpty ? "Brand Unknown" : draft.brand)
                 Spacer()
                 Button("Edit Icon") { choosingIcon = true }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
+                    .chipButton()
                     .controlSize(.small)
             }
             TextField("Food Name", text: $draft.name)

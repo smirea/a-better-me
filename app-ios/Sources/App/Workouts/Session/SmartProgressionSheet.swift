@@ -58,8 +58,7 @@ struct SmartProgressionSheet: View {
             } label: {
                 Text("Info").font(AppFont.headline(14))
             }
-            .buttonStyle(.glassProminent)
-            .tint(Theme.muscle)
+            .prominentButton(tint: Theme.muscle)
             .accessibilityLabel("Adjusted targets info")
         }
         .padding(14)

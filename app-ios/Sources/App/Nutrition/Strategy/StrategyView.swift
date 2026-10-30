@@ -168,7 +168,7 @@ private struct StrategyHome: View {
             Text(canStart ? "Set a goal and we'll design your Calorie and macro targets." : "Log a weigh-in from the Dashboard first, so your goal can start from your weight.")
         } actions: {
             Button("New Goal") { open(.newGoal) }
-                .buttonStyle(.glassProminent)
+                .prominentButton()
                 .disabled(!canStart)
         }
         .padding(.top, 80)
@@ -181,8 +181,7 @@ private struct StrategyHome: View {
             } label: {
                 Text("Start Check-In").font(AppFont.headline()).frame(maxWidth: .infinity)
             }
-            .buttonStyle(.glassProminent)
-            .tint(Theme.goal)
+            .prominentButton(tint: Theme.goal)
             .controlSize(.large)
         }
     }

@@ -37,11 +37,7 @@ struct ScanTab: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(alignment: .topTrailing) {
-            Button("Manual Barcode", systemImage: "keyboard") { typing = true }
-                .labelStyle(.iconOnly)
-                .frame(width: 44, height: 44)
-                .glassEffect(.regular.interactive(), in: .circle)
-                .buttonStyle(.plain)
+            RoundIconButton("Manual Barcode", systemImage: "keyboard") { typing = true }
                 .padding(16)
         }
         .overlay(alignment: .bottomTrailing) {

@@ -287,7 +287,7 @@ struct QuantityKeypad: View {
                 .font(AppFont.headline(15))
                 .frame(maxWidth: .infinity)
                 .frame(height: Self.keyHeight)
-                .foregroundStyle(prominent ? .black : Theme.textPrimary)
+                .foregroundStyle(prominent ? Theme.onPrimary : Theme.textPrimary)
                 .background(prominent ? Theme.textPrimary : Theme.surface, in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
         }
         .buttonStyle(.plain)

@@ -92,8 +92,7 @@ struct RecipeEditor: View {
                 )
                 Spacer()
                 Button("Edit Icon") { choosingIcon = true }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
+                    .chipButton()
                     .controlSize(.small)
             }
             TextField("Recipe Name", text: $draft.name)

@@ -52,7 +52,7 @@ private struct WarmUpSchemeView: View {
                 ForEach(RestCategory.allCases) { category in
                     LabeledContent {
                         Button("Edit") { editing = category }
-                            .rowAction()
+                            .chipButton()
                             .accessibilityLabel("Edit \(category.displayName) scheme")
                     } label: {
                         RowLabel(title: category.displayName, detail: summary(steps(category)))

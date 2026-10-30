@@ -135,9 +135,8 @@ struct StrategyCard<Content: View, Actions: View>: View {
                     HStack(spacing: 8) { actions }
                 }
                 .scrollIndicators(.hidden)
-                .buttonStyle(.glass)
+                .chipButton()
                 .controlSize(.small)
-                .font(AppFont.chip)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

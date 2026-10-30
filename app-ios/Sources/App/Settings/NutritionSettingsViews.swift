@@ -262,7 +262,7 @@ struct ExpenditureSettingsView: View {
         } else {
             LabeledContent {
                 Button("Edit") { store.updateSettings { $0.nutrition.expenditure.calculationStart = .today } }
-                    .rowAction()
+                    .chipButton()
                     .accessibilityLabel("Edit Calculation Start Date")
             } label: {
                 RowLabel(title: "Calculation Start Date", detail: "Default: your first logged day", systemImage: "calendar")

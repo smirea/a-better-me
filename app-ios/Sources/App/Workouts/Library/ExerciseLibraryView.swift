@@ -366,8 +366,7 @@ private struct SettingsRow<Accessory: View>: View {
                 .lineLimit(3)
                 .frame(maxWidth: .infinity, alignment: .leading)
             accessory
-                .font(AppFont.chip)
-                .buttonStyle(.glass)
+                .chipButton()
                 .controlSize(.small)
         }
         .contentShape(.rect)
