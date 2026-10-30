@@ -337,7 +337,7 @@ describe('ramble', () => {
 		expect(copy.required).toEqual(['kind', 'copy', 'said']);
 	});
 
-	test('a copy of no meal, an except outside the copied meal, and a nameless food are dropped', async () => {
+	test('a copy of no meal, an except outside the copied meal, and a nameless or number-only food are dropped', async () => {
 		stub(() =>
 			geminiText(
 				JSON.stringify({
@@ -345,6 +345,8 @@ describe('ramble', () => {
 						{ kind: 'copy', name: '', copy: '' },
 						{ kind: 'copy', name: '', copy: 'm1', except: ['u1'] },
 						{ kind: 'food', name: ' ' },
+						{ kind: 'food', name: 'one' },
+						{ kind: 'food', name: 'two 3' },
 					],
 				}),
 			),

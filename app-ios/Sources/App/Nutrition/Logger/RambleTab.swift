@@ -85,8 +85,8 @@ struct RambleTab: View {
             let kind: Flight.Kind
             if let earlier = before[row.key] {
                 // Only words said after the item's own are a correction; a requote of the same words is the model settling.
-                guard earlier.item != row.item, let was = capture.words.span(of: earlier.item.said), span.lowerBound > was.lowerBound
-                else { continue }
+                let changed = earlier.item.name != row.item.name || earlier.item.amount != row.item.amount || earlier.item.unit != row.item.unit
+                guard changed, let was = capture.words.span(of: earlier.item.said), span.lowerBound > was.lowerBound else { continue }
                 kind = .correction
             } else {
                 kind = .parse

@@ -239,6 +239,10 @@ const nameWords = (name: string) =>
 			.filter(word => word.length > 2)
 			.map(word => word.replace(/s$/, '')),
 	);
+/** A trailing "snack was one" read once as a food named "one": a name of only numbers is no food yet. */
+const NUMBERS =
+	/^(?:\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten|half|a half|dozen)(?:\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|half|dozen))*$/i;
+
 /** Options a model marks unasked open their lists over the transcript mid-ramble. */
 const ASKS_FOR_OPTIONS = /\b(options?|choices?|alternatives?|wrong|not right|show me|other ones?)\b/i;
 
@@ -266,7 +270,7 @@ export function resolveAliases(
 	for (const item of outline.items) {
 		const meal = item.kind === 'copy' ? input.meals[[...names.meals.keys()].indexOf(item.copy)] : undefined;
 		if (item.kind === 'copy' && !meal) continue;
-		if (item.kind === 'food' && !item.name.trim()) continue;
+		if (item.kind === 'food' && (!item.name.trim() || NUMBERS.test(item.name.trim()))) continue;
 		const inMeal = new Set(meal?.entries.map(entry => entry.id));
 		const previous = items.at(-1);
 		const said = item.day === undefined ? null : Math.min(0, Math.max(-30, item.day));

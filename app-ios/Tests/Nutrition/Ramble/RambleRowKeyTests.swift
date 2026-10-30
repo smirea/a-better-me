@@ -67,3 +67,20 @@ struct RambleLinedUpTests {
         #expect(lined.sorted { $0.id < $1.id }.map { "\($0.id) \($0.item.name)" } == ["0 apple", "1 dates"])
     }
 }
+
+struct RambleHeldTests {
+    func names(_ new: [String], showing: [String], last: [String]) -> [String] {
+        let items = { (names: [String]) in names.map { RambleItem(name: $0) } }
+        return RambleCapture.held(items(new), showing: items(showing), last: items(last)).map(\.name)
+    }
+
+    @Test func aFoodDroppedByOneOutlineStaysInItsPlace() {
+        #expect(names(["apple", "pear"], showing: ["apple", "pear", "dates"], last: ["apple", "pear", "dates"]) == ["apple", "pear", "dates"])
+        #expect(names(["apple"], showing: ["apple", "pear", "dates"], last: ["apple", "pear", "dates"]) == ["apple", "pear", "dates"])
+    }
+
+    @Test func aFoodTwoOutlinesLackIsGoneAndARenameIsNotKeptBesideItsNewName() {
+        #expect(names(["apple", "dates"], showing: ["apple", "pear", "dates"], last: ["apple", "dates"]) == ["apple", "dates"])
+        #expect(names(["salad", "diet coke"], showing: ["salad", "coke"], last: ["salad", "coke"]) == ["salad", "diet coke"])
+    }
+}

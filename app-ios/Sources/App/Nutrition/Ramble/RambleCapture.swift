@@ -78,6 +78,8 @@ final class RambleCapture {
         }
     }
     @ObservationIgnored private var choices: [Int: RambleChoice] = [:]
+    /// The live session's last outline, for `held`.
+    @ObservationIgnored private var lastOutline: [RambleItem] = []
     /// Advances on every listen and on cancel, so work begun for an earlier one drops its result.
     @ObservationIgnored private(set) var generation = 0
     @ObservationIgnored private var resolution = 0
@@ -126,6 +128,7 @@ final class RambleCapture {
     /// Streams the mic to the live session, which transcribes it and reads the whole ramble as it grows.
     private func listen(token: Int) {
         shown = currentShown()
+        lastOutline = items
         let (events, sink) = AsyncStream.makeStream(of: RambleLiveEvent.self)
         let stream = listener.connect(request(heard.committed)) { sink.yield($0) }
         self.stream = stream
@@ -137,8 +140,10 @@ final class RambleCapture {
                 case let .heard(words):
                     heard = words
                 case let .outline(outline):
-                    guard outline.items != items else { continue }
-                    items = outline.items
+                    let shown = Self.held(outline.items, showing: items, last: lastOutline)
+                    lastOutline = outline.items
+                    guard shown != items else { continue }
+                    items = shown
                     resolve()
                 case let .done(text, outline):
                     heard = RambleHeard(committed: text)
@@ -298,6 +303,7 @@ final class RambleCapture {
         rows = []
         items = []
         choices = [:]
+        lastOutline = []
         expanded = []
         shown = []
         struck = []
@@ -385,6 +391,23 @@ final class RambleCapture {
         }
         resolving = task
         return task
+    }
+
+    /// The outline's items and every shown item the last outline still had, in their places: an item leaves only when
+    /// two outlines in a row lack it, since the model sometimes drops a food mid-sentence ("remove the pear, make the")
+    /// and brings it back a read later. A spoken removal still lands, one read later.
+    nonisolated static func held(_ new: [RambleItem], showing: [RambleItem], last: [RambleItem]) -> [RambleItem] {
+        let aligned = RambleAlignment.align(showing.map(\.identity), new.map(\.identity))
+        let continued = Set(aligned.values.map(\.old))
+        let before = Set(last.map(\.identity))
+        var result = new
+        var inserted = 0
+        for (i, item) in showing.enumerated() where !continued.contains(i) && before.contains(item.identity) {
+            let at = aligned.filter { $0.value.old > i }.map(\.key).min() ?? new.count
+            result.insert(item, at: at + inserted)
+            inserted += 1
+        }
+        return result
     }
 
     /// The live session reads picks against the options on screen, so it hears of every change to them.
