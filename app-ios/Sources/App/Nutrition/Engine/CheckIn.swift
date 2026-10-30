@@ -16,7 +16,7 @@ extension NutritionEngine {
         ) -> WeeklyPlan {
             let asked = Targets.dailyBudget(expenditure: expenditure, goal: effectiveGoal(goal, trendWeightKg: trendWeightKg), weightKg: trendWeightKg)
             let smoothed = previousAverageKcal.map { $0 + budgetSmoothing * (asked - $0) } ?? asked
-            let fixedGoal = Goal(kind: smoothed < expenditure ? .lose : .gain, ratePercentPerWeek: abs(expenditure - smoothed) * 7 / Targets.kcalPerLbPerWeek * kgPerLb / trendWeightKg * 100)
+            let fixedGoal = Goal(kind: smoothed < expenditure ? .lose : .gain, ratePercentPerWeek: abs(expenditure - smoothed) * 7 / kcalPerLb * kgPerLb / trendWeightKg * 100)
             return Targets.weekly(program: program, goal: fixedGoal, expenditure: expenditure, weightKg: trendWeightKg)
         }
 

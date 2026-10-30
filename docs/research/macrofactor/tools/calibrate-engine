@@ -15,4 +15,4 @@ swiftc -O \
   "$root"/app-ios/Sources/App/Nutrition/Engine/*.swift \
   "$dir/calibrate-engine.swift" \
   -o "$root/app-ios/DerivedData/calibrate-engine"
-"$root/app-ios/DerivedData/calibrate-engine" "$scratch/calibrate.json"
+"$root/app-ios/DerivedData/calibrate-engine" "$scratch/calibrate.json" "${@:2}"

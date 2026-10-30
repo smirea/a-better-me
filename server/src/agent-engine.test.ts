@@ -97,6 +97,18 @@ describe('expenditure', () => {
 		).toEqual([2502.4208]);
 	});
 
+	test('a new user updates over the trend there is, at the startup gain', () => {
+		const result = expenditureDays(intake, trendOf(weighIns), new Set(days), 2500, days[0]!, days[5]!);
+		expect(result.map(day => [round([day.kcal], 2)[0], day.holding])).toEqual([
+			[2500, true],
+			[2500, true],
+			[2500, true],
+			[2500, true],
+			[2400, false],
+			[2320, false],
+		]);
+	});
+
 	test('holds without three counted days or a weigh-in in the week before', () => {
 		const sparse = new Map([...intake].filter(([day]) => Number(day.slice(8)) % 4 === 0));
 		const held = expenditureDays(sparse, trendOf(weighIns), new Set(days), 2500, days[30]!, days[32]!);

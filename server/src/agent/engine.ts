@@ -10,7 +10,8 @@ export type DayValue = { day: Day; value: number };
 
 const DAY_MS = 86_400_000;
 export const KG_PER_LB = 0.45359237;
-const KCAL_PER_LB_PER_WEEK = 3500;
+/** `NutritionEngine.kcalPerLb`: one energy density for the expenditure and the weight insights. */
+const KCAL_PER_LB = 3000;
 
 const epochDay = (day: Day) => Date.parse(`${day}T00:00:00Z`) / DAY_MS;
 export const addDays = (day: Day, count: number): Day =>
@@ -107,7 +108,7 @@ export function weightInsights(trend: TrendDay[], today: Day) {
 	return {
 		trendKg: current,
 		weeklyChangeKg: weekly,
-		energyBalanceKcal: weekly === null ? null : ((weekly / KG_PER_LB) * KCAL_PER_LB_PER_WEEK) / 7,
+		energyBalanceKcal: weekly === null ? null : ((weekly / KG_PER_LB) * KCAL_PER_LB) / 7,
 		projectedKgIn30Days: weekly === null ? null : current + (weekly * 30) / 7,
 	};
 }
@@ -124,11 +125,15 @@ export type ExpenditureDay = { day: Day; kcal: number; holding: boolean };
 
 const WINDOW = 28;
 const GATE = 7;
-const KCAL_PER_KG = 3000 / KG_PER_LB;
+const KCAL_PER_KG = KCAL_PER_LB / KG_PER_LB;
+const GAIN = 0.015;
+const MIN_WINDOW = 3;
+const STARTUP_GAIN = 0.2;
 
 /**
  * `NutritionEngine.Expenditure.daily` with the `v3` model: a day's estimate uses data through the day before, and
- * updates only when the seven days before hold three counted days and one weigh-in.
+ * updates only when the seven days before hold three counted days and one weigh-in. While the trend is shorter than
+ * the window, it updates over the trend there is, faster.
  */
 export function expenditureDays(
 	intake: Map<Day, number>,
@@ -139,17 +144,21 @@ export function expenditureDays(
 	through: Day,
 ): ExpenditureDay[] {
 	let estimate = initial;
+	const firstTrend = [...trend.keys()].toSorted()[0];
 	const back = (day: Day, count: number) => Array.from({ length: count }, (_, index) => addDays(day, -index - 1));
 	return eachDay(from, through).map(day => {
+		const span = firstTrend === undefined ? -1 : Math.min(WINDOW, daysBetween(firstTrend, day) - 1);
+		if (span < MIN_WINDOW) return { day, kcal: estimate, holding: true };
 		const gate = back(day, GATE);
 		const canUpdate = gate.filter(d => intake.has(d)).length >= 3 && gate.some(d => weighInDays.has(d));
-		const window = back(day, WINDOW);
+		const window = back(day, span);
 		const eaten = window.flatMap(d => (intake.has(d) ? [intake.get(d)!] : []));
 		const endTrend = trend.get(window[0]!);
 		const startTrend = trend.get(addDays(window.at(-1)!, -1));
 		if (canUpdate && eaten.length && endTrend !== undefined && startTrend !== undefined) {
 			const mean = eaten.reduce((sum, kcal) => sum + kcal, 0) / eaten.length;
-			estimate += 0.015 * (mean - ((endTrend - startTrend) * KCAL_PER_KG) / WINDOW - estimate);
+			const gain = span < WINDOW ? STARTUP_GAIN : GAIN;
+			estimate += gain * (mean - ((endTrend - startTrend) * KCAL_PER_KG) / span - estimate);
 			return { day, kcal: estimate, holding: false };
 		}
 		return { day, kcal: estimate, holding: true };

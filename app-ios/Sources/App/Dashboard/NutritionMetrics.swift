@@ -163,7 +163,7 @@ enum NutritionMetrics {
         var currentKg: Double
         /// Per week, over the last three weeks of trend.
         var weeklyChangeKg: Double?
-        /// Per day, negative for a deficit: the weekly change at 3500 kcal per lb.
+        /// Per day, negative for a deficit: the weekly change at `NutritionEngine.kcalPerLb`.
         var energyBalanceKcal: Double?
         var projectionKg: Double?
     }
@@ -171,7 +171,7 @@ enum NutritionMetrics {
     static let insightWeeks = 3
 
     /// MacroFactor's tiles agree with energy = weekly change × 3500 / 7 kcal per lb and projection = trend + weekly
-    /// change × 30 / 7 (docs/research/macrofactor/README.md §3.4).
+    /// change × 30 / 7; the energy uses the engine's density instead, so it agrees with the Energy Balance card (docs/research/macrofactor/README.md §3.4).
     static func weightInsights(trend: [DatedValue], now: Date, calendar: Calendar) -> WeightInsights? {
         let byDay = Dictionary(trend.map { (calendar.startOfDay(for: $0.date), $0.value) }, uniquingKeysWith: { $1 })
         let today = calendar.startOfDay(for: now)
@@ -180,7 +180,7 @@ enum NutritionMetrics {
         return WeightInsights(
             currentKg: current,
             weeklyChangeKg: weekly,
-            energyBalanceKcal: weekly.map { $0 / NutritionEngine.kgPerLb * NutritionEngine.Targets.kcalPerLbPerWeek / 7 },
+            energyBalanceKcal: weekly.map { $0 / NutritionEngine.kgPerLb * NutritionEngine.kcalPerLb / 7 },
             projectionKg: weekly.map { current + $0 * 30 / 7 }
         )
     }

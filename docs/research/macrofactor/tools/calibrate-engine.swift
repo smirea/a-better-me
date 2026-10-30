@@ -59,6 +59,41 @@ struct Error: CustomStringConvertible {
     var description: String { String(format: "mean %.4f  max %.4f  (%d days)", mean, max, count) }
 }
 
+/// MacroFactor's accuracy measure (macrofactor.com/algorithm-accuracy): over each 30-day window, the energy balance an
+/// expenditure series and the logged intake imply against the trend's actual change. Unlogged days are counted at the
+/// logged days' mean balance, and a window needs 24 logged days.
+struct Predictive: CustomStringConvertible {
+    var medianKcal: Double, r: Double, over10Percent: Double, fittedKcalPerLb: Double, count: Int
+
+    init(expenditure: [DatedValue], intake: [Date: Double], trend: [DatedValue], kcalPerLb: Double, days span: Int = 30) {
+        let kcalPerKg = kcalPerLb / NutritionEngine.kgPerLb
+        let estimate = Dictionary(expenditure.map { ($0.date, $0.value) }, uniquingKeysWith: { $1 })
+        let trendOn = Dictionary(trend.map { ($0.date, $0.value) }, uniquingKeysWith: { $1 })
+        var balances: [Double] = [], changes: [Double] = [], levels: [Double] = []
+        for start in expenditure.map(\.date) {
+            let window = (0..<span).map { calendar.date(byAdding: .day, value: $0, to: start)! }
+            let logged = window.compactMap { day in intake[day].flatMap { kcal in estimate[day].map { kcal - $0 } } }
+            guard logged.count >= 24, let first = trendOn[start],
+                  let last = trendOn[calendar.date(byAdding: .day, value: span, to: start)!], let level = estimate[start] else { continue }
+            balances.append(logged.reduce(0, +) / Double(logged.count))
+            changes.append((last - first) / Double(span))
+            levels.append(level)
+        }
+        count = balances.count
+        let errors = zip(balances, changes).map { abs($0 - $1 * kcalPerKg) }
+        medianKcal = errors.sorted()[errors.count / 2]
+        over10Percent = Double(zip(errors, levels).filter { $0 >= 0.1 * $1 }.count) / Double(count)
+        let mb = balances.reduce(0, +) / Double(count), mc = changes.reduce(0, +) / Double(count)
+        let cov = zip(balances, changes).map { ($0 - mb) * ($1 - mc) }.reduce(0, +)
+        r = cov / (balances.map { pow($0 - mb, 2) }.reduce(0, +) * changes.map { pow($0 - mc, 2) }.reduce(0, +)).squareRoot()
+        fittedKcalPerLb = zip(balances, changes).map { $0 * $1 }.reduce(0, +) / changes.map { $0 * $0 }.reduce(0, +) * NutritionEngine.kgPerLb
+    }
+
+    var description: String {
+        String(format: "median %.0f kcal/day  r %.3f  >=10%% off %.0f%%  fitted %.0f kcal/lb  (%d windows)", medianKcal, r, over10Percent * 100, fittedKcalPerLb, count)
+    }
+}
+
 func compare(_ model: [DatedValue], _ reference: [DatedValue]) -> Error {
     let byDay = Dictionary(model.map { ($0.date, $0.value) }, uniquingKeysWith: { $1 })
     return Error(reference.compactMap { point in byDay[point.date].map { ($0, point.value) } })
@@ -102,5 +137,58 @@ struct Calibrate {
         let holdingModel = days.dropFirst().map(\.isHolding)
         let agree = zip(holdingRef, holdingModel).filter { $0 == $1 }.count
         print("  holding days agree with an unchanged export value on \(agree) of \(holdingRef.count) days")
+
+        let counted = Dictionary(intake.filter { !$0.isIncomplete }.map { ($0.date, $0.kcal) }, uniquingKeysWith: { $1 })
+        let engine = run(.v3, trend)
+        // A TDEE formula recomputed daily: the seed scaled by the MacroFactor Equation as the trend moves.
+        let bmr = { (kg: Double) in NutritionEngine.BMR.macroFactor(weightKg: kg, heightCm: 180, ageYears: 35, sex: .male) }
+        let trendByDay = Dictionary(trend.map { ($0.date, $0.value) }, uniquingKeysWith: { $1 })
+        let formula = expenditureRef.compactMap { point in trendByDay[point.date].map { DatedValue(date: point.date, value: initial * bmr($0) / bmr(trendByDay[start]!)) } }
+        for density in [3000.0, 3500.0] {
+            print("\nPredictive validity at \(Int(density)) kcal/lb, 30-day windows against the engine's trend")
+            print("  MacroFactor's expenditure:", Predictive(expenditure: expenditureRef, intake: counted, trend: trend, kcalPerLb: density))
+            print("  the engine:               ", Predictive(expenditure: engine, intake: counted, trend: trend, kcalPerLb: density))
+            print("  formula, scaled daily:    ", Predictive(expenditure: formula, intake: counted, trend: trend, kcalPerLb: density))
+        }
+
+        // A new user: weigh-ins and intake begin on a day of the owner's history and the initial estimate is off by
+        // `offset`; the error is against MacroFactor's full-history column over the first 60 days, and days 30 to 59.
+        let lastIntake = intake.map(\.date).max()!
+        let starts = stride(from: 0, to: 400, by: 7).map { calendar.date(byAdding: .day, value: $0, to: start)! }
+            .filter { calendar.date(byAdding: .day, value: 60, to: $0)! <= lastIntake }
+            .filter { day in counted.keys.filter { $0 >= day && $0 < calendar.date(byAdding: .day, value: 60, to: day)! }.count >= 40 }
+        let reference = Dictionary(expenditureRef.map { ($0.date, $0.value) }, uniquingKeysWith: { $1 })
+        func startup(_ model: NutritionEngine.Expenditure.Model) -> (Double, Double) {
+            var all: [Double] = [], late: [Double] = []
+            for day in starts {
+                let weighIns = scale.filter { $0.date >= day }
+                let fresh = NutritionEngine.TrendWeight.daily(weighIns: weighIns, through: end, calendar: calendar)
+                for offset in [-500.0, -250, 250, 500] {
+                    let result = NutritionEngine.Expenditure.daily(
+                        intake: intake.filter { $0.date >= day }, trend: fresh, weighIns: weighIns, initial: reference[day]! + offset,
+                        from: day, through: calendar.date(byAdding: .day, value: 59, to: day)!, calendar: calendar, model: model)
+                    for (index, point) in result.enumerated() {
+                        let error = abs(point.kcal - reference[point.date]!)
+                        all.append(error)
+                        if index >= 30 { late.append(error) }
+                    }
+                }
+            }
+            return (all.reduce(0, +) / Double(all.count), late.reduce(0, +) / Double(late.count))
+        }
+        print("\nA new user, \(starts.count) start days × 4 initial errors, mean error against MacroFactor's column")
+        func show(_ label: String, _ model: NutritionEngine.Expenditure.Model) {
+            let (all, late) = startup(model)
+            print(String(format: "  %@ days 0-59 %.0f  days 30-59 %.0f", label, all, late))
+        }
+        show("no startup (needs 28 days of trend):", NutritionEngine.Expenditure.Model(minWindow: 28, startupGain: 0.015))
+        show("shipped:                             ", .v3)
+        if CommandLine.arguments.contains("--grid") {
+            for minWindow in [3, 5, 7, 14] {
+                for startupGain in [0.05, 0.1, 0.2, 0.3, 0.5] {
+                    show("min \(minWindow) gain \(startupGain):", NutritionEngine.Expenditure.Model(minWindow: minWindow, startupGain: startupGain))
+                }
+            }
+        }
     }
 }

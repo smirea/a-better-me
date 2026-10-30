@@ -80,8 +80,6 @@ extension NutritionEngine {
     }
 
     enum Targets {
-        /// The deficit or surplus one pound a week costs, the 3500 kcal rule MacroFactor's wizard reproduces.
-        static let kcalPerLbPerWeek = 3500.0
         /// High days get this much more than the other days; the week's total is unchanged (measured: 1564 vs 1421).
         static let highDayShift = 1.1
         /// Fat never goes below this many grams per pound of body weight (measured: 44 g at the owner's weight). The
@@ -92,7 +90,7 @@ extension NutritionEngine {
         /// The unrounded daily calorie budget a goal asks for at the current expenditure and weight.
         static func dailyBudget(expenditure: Double, goal: Goal, weightKg: Double) -> Double {
             let weeklyLb = goal.ratePercentPerWeek / 100 * weightKg / kgPerLb
-            let delta = weeklyLb * kcalPerLbPerWeek / 7
+            let delta = weeklyLb * kcalPerLb / 7
             return switch goal.kind {
             case .lose: expenditure - delta
             case .maintain: expenditure

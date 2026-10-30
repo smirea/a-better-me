@@ -100,8 +100,12 @@ private struct CheckInPage: View {
                 : modules.partialLogging ? "Mark days you logged incompletely so they are left out." : "Mark days you fasted so they count as zero.")
                 .font(AppFont.body(15))
                 .foregroundStyle(Theme.textSecondary)
+            let flagged = modules.partialLogging ? CheckInRules.likelyIncomplete(intake: data.inputs.intake, today: data.today) : []
             ForEach((1...7).map { data.today.adding(days: -$0) }.reversed(), id: \.self) { day in
-                DayReviewRow(day: day, kcal: data.inputs.intake[day], status: data.inputs.statuses[day] ?? .none, modules: modules)
+                DayReviewRow(
+                    day: day, kcal: data.inputs.intake[day], status: data.inputs.statuses[day] ?? .none, modules: modules,
+                    looksIncomplete: flagged.contains(day)
+                )
             }
         case .update:
             Text("Program Update").font(AppFont.title(22))
@@ -130,6 +134,7 @@ private struct DayReviewRow: View {
     let kcal: Double?
     let status: NutritionDay.Status
     let modules: NutritionSettings.CoachingModules
+    let looksIncomplete: Bool
 
     @Environment(LocalStore.self) private var store
 
@@ -145,7 +150,12 @@ private struct DayReviewRow: View {
 
     var body: some View {
         HStack {
-            RowLabel(title: day.date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()), detail: kcal.map(StrategyFormat.kcal) ?? "Not counted")
+            VStack(alignment: .leading, spacing: 2) {
+                RowLabel(title: day.date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()), detail: kcal.map(StrategyFormat.kcal) ?? "Not counted")
+                if looksIncomplete {
+                    Text("Under half your other days. Incomplete?").font(AppFont.caption()).foregroundStyle(Theme.amber)
+                }
+            }
             Spacer()
             Picker("Status", selection: Binding(get: { status }, set: { value in store.updateDay(day) { $0.status = value } })) {
                 ForEach(choices, id: \.self) { Label($0.title, systemImage: $0.symbol).tag($0) }
