@@ -80,7 +80,9 @@ struct RambleTab: View {
             guard let span = capture.spans[row.key] else { continue }
             let kind: Flight.Kind
             if let earlier = before[row.key] {
-                guard earlier.item.said != row.item.said, earlier.item != row.item else { continue }
+                // Only words said after the item's own are a correction; a requote of the same words is the model settling.
+                guard earlier.item != row.item, let was = capture.words.span(of: earlier.item.said), span.lowerBound > was.lowerBound
+                else { continue }
                 kind = .correction
             } else {
                 kind = .parse
@@ -358,7 +360,6 @@ private struct RambleRowView: View {
     let incoming: Bool
     let open: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Namespace private var morph
     /// 1 just after the row arrived or changed, easing to 0.
     @State private var glow = 0.0
     /// What a correction replaced, struck through until it fades.
@@ -390,8 +391,14 @@ private struct RambleRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 12) {
-                main
-                    .opacity(landed ? 1 : 0)
+                // One slot: what was said blurs into the food it matched, never both laid out at once.
+                ZStack(alignment: .leading) {
+                    main
+                        .id(stage)
+                        .transition(.blurReplace)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .opacity(landed ? 1 : 0)
                     .blur(radius: landed ? 0 : 4)
                 if capture.phase != .listening {
                     Button("Remove", systemImage: "minus.circle") { removeByOwner() }
@@ -456,6 +463,15 @@ private struct RambleRowView: View {
         }
     }
 
+    private var stage: Int {
+        switch row.content {
+        case .searching: 0
+        case .food: 1
+        case .copy: 2
+        case .unmatched: 3
+        }
+    }
+
     private func removeByOwner() {
         withAnimation(.easeOut(duration: 0.18)) { removing = true }
         Task {
@@ -474,7 +490,6 @@ private struct RambleRowView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(food.pick.portion.food.displayName).font(AppFont.rowTitle).lineLimit(1)
                             .contentTransition(.interpolate)
-                            .matchedGeometryEffect(id: "title", in: morph)
                         corrected
                         Text("\(Text(macroLine: food.pick.portion.amounts)) · \(NutritionFormat.serving(food.pick.portion.serving))")
                             .font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).lineLimit(1)
@@ -532,7 +547,6 @@ private struct RambleRowView: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
                     .background(Theme.accent.opacity(0.16), in: .capsule)
-                    .matchedGeometryEffect(id: "title", in: morph)
                 FlowLayout(spacing: 4) {
                     if let amount = Self.amount(row.item) { chip(amount) }
                     if let meal = row.item.meal { chip(meal.title) }
@@ -600,6 +614,14 @@ private struct RambleRowView: View {
         }
     }
 
+    /// What sets an option apart from the pick: database names share their leading parts ("Apples, raw, without skin"
+    /// beside "Apples, raw, with skin"), and a chip only has room for the rest.
+    static func difference(_ option: String, from pick: String) -> String {
+        let parts = option.components(separatedBy: ", ")
+        let shared = zip(parts, pick.components(separatedBy: ", ")).prefix { $0 == $1 }.count
+        return shared == 0 || shared == parts.count ? option : "…" + parts[shared...].joined(separator: ", ")
+    }
+
     /// A match the search was unsure of, not one of the owner's own foods, shows the next options as chips to tap.
     private func unsure(_ food: RambleRow.Food) -> Bool {
         guard let pick = food.options.first(where: { $0.key == food.key }) else { return false }
@@ -615,7 +637,7 @@ private struct RambleRowView: View {
                     Button {
                         capture.pick(option, in: row)
                     } label: {
-                        Text(option.portion.food.displayName)
+                        Text(Self.difference(option.portion.food.displayName, from: food.pick.portion.food.displayName))
                             .font(AppFont.badge)
                             .foregroundStyle(Theme.textPrimary)
                             .lineLimit(1)
