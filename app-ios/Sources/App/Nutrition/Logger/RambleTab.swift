@@ -12,6 +12,8 @@ struct RambleTab: View {
     @State private var saved = 0
     /// Words on their way from the transcript to a row.
     @State private var flights: [Flight] = []
+    /// Rows whose words were just parsed, by key, with the flight that lit them; their words stay highlighted a moment.
+    @State private var fresh: [Int: UUID] = [:]
 
     private var capture: RambleCapture { session.ramble }
     private var live: Bool { capture.phase == .listening || capture.phase == .finishing }
@@ -49,8 +51,10 @@ struct RambleTab: View {
         .overlayPreferenceValue(RambleAnchors.self) { anchors in
             GeometryReader { geometry in
                 ForEach(flights) { flight in
+                    // A row scrolled out of view, above the list or under the transcript, gets no flight.
                     if let to = anchors.rows[flight.key].map({ geometry[$0] }),
-                       let from = flight.words.compactMap({ anchors.words[$0].map { geometry[$0] } }).reduce(nil, { $0?.union($1) ?? $1 }) {
+                       let from = flight.words.compactMap({ anchors.words[$0].map { geometry[$0] } }).reduce(nil, { $0?.union($1) ?? $1 }),
+                       to.minY >= 0, to.maxY <= from.minY {
                         FlightView(flight: flight, from: from, to: to)
                     }
                 }
@@ -90,9 +94,12 @@ struct RambleTab: View {
             let text = capture.words.words[span].map(\.text).joined(separator: " ")
             let flight = Flight(key: row.key, words: span, text: text, kind: kind)
             flights.append(flight)
+            fresh[row.key] = flight.id
             Task {
                 try? await Task.sleep(for: Flight.duration + .milliseconds(100))
                 flights.removeAll { $0.id == flight.id }
+                try? await Task.sleep(for: .seconds(2.5))
+                if fresh[row.key] == flight.id { fresh[row.key] = nil }
             }
         }
     }
@@ -133,7 +140,7 @@ struct RambleTab: View {
     private var footer: some View {
         VStack(spacing: 6) {
             if !capture.words.words.isEmpty, live || capture.phase == .review {
-                RambleTranscript(words: capture.words, spans: capture.spans, struck: capture.struck, live: live)
+                RambleTranscript(words: capture.words, spans: capture.spans, fresh: Set(fresh.keys), struck: capture.struck, live: live)
                     .transition(.opacity)
             }
             if capture.phase == .listening {
@@ -239,7 +246,7 @@ struct RambleAnchors: PreferenceKey {
 private struct Flight: Identifiable, Equatable {
     enum Kind { case parse, correction }
 
-    static let duration = Duration.milliseconds(650)
+    static let duration = Duration.milliseconds(550)
 
     let id = UUID()
     /// The row's `RambleRow.key`.
@@ -306,32 +313,35 @@ private struct Fly: ViewModifier, @MainActor Animatable {
 }
 
 /// The transcript, a view per word: committed words settle in, the words still being heard stay dim, the words of a
-/// row are highlighted, and the words of a row taken back are struck through.
+/// row stand out, the ones just parsed highlighted, and the words of a row taken back are struck through.
 private struct RambleTranscript: View {
     let words: RambleWords
     let spans: [Int: Range<Int>]
+    /// Row keys whose words were just parsed.
+    let fresh: Set<Int>
     let struck: Set<Int>
     let live: Bool
 
     var body: some View {
-        let highlighted = Set(spans.values.flatMap { $0 })
+        let parsed = Set(spans.values.flatMap { $0 })
+        let highlighted = Set(spans.filter { fresh.contains($0.key) }.values.flatMap { $0 })
         ScrollView {
             FlowLayout(spacing: 0) {
                 ForEach(words.words.indices, id: \.self) { index in
                     let word = words.words[index]
                     let lit = highlighted.contains(index)
-                    let gone = !lit && struck.contains(index)
+                    let gone = !parsed.contains(index) && struck.contains(index)
                     Text(word.text)
                         .font(AppFont.body(16))
                         .strikethrough(gone, color: Theme.textTertiary)
-                        .foregroundStyle(lit ? Theme.textPrimary : gone || word.partial ? Theme.textTertiary : Theme.textSecondary)
+                        .foregroundStyle(parsed.contains(index) ? Theme.textPrimary : gone || word.partial ? Theme.textTertiary : Theme.textSecondary)
                         .padding(.horizontal, 2.5)
                         .padding(.vertical, 1)
                         .background {
                             if lit { RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.accent.opacity(0.28)) }
                         }
                         .padding(.vertical, 1.5)
-                        .anchorPreference(key: RambleAnchors.self, value: .bounds) { lit ? RambleAnchors.Value(words: [index: $0]) : RambleAnchors.Value() }
+                        .anchorPreference(key: RambleAnchors.self, value: .bounds) { parsed.contains(index) ? RambleAnchors.Value(words: [index: $0]) : RambleAnchors.Value() }
                         .transition(.opacity.combined(with: .blurReplace))
                         .contentTransition(.interpolate)
                 }
@@ -339,6 +349,7 @@ private struct RambleTranscript: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .animation(.easeOut(duration: 0.25), value: words)
             .animation(.easeOut(duration: 0.3), value: spans)
+            .animation(.easeOut(duration: 0.6), value: fresh)
             .animation(.easeOut(duration: 0.3), value: struck)
         }
         .defaultScrollAnchor(.bottom)
@@ -409,7 +420,8 @@ private struct RambleRowView: View {
                         .transition(.opacity)
                 }
             }
-            if case let .food(food) = row.content, food.options.count > 1 {
+            // While the speaker talks a row stays one line, unless they asked to see its options.
+            if case let .food(food) = row.content, food.options.count > 1, capture.phase != .listening || food.showsOptions {
                 options(food)
             }
         }
@@ -431,9 +443,9 @@ private struct RambleRowView: View {
             guard capture.phase == .listening || capture.phase == .finishing else { return }
             if incoming, !reduceMotion {
                 landed = false
-                withAnimation(.easeOut(duration: 0.25).delay(0.45)) { landed = true }
+                withAnimation(.easeOut(duration: 0.25).delay(0.3)) { landed = true }
                 Task {
-                    try? await Task.sleep(for: .milliseconds(450))
+                    try? await Task.sleep(for: .milliseconds(300))
                     light()
                 }
             } else {
@@ -463,12 +475,13 @@ private struct RambleRowView: View {
         }
     }
 
-    private var stage: Int {
+    /// What the row shows; another food is another stage, so a pick crossfades instead of morphing one name into the other.
+    private var stage: String {
         switch row.content {
-        case .searching: 0
-        case .food: 1
-        case .copy: 2
-        case .unmatched: 3
+        case .searching: "searching"
+        case let .food(food): "food \(food.key)"
+        case .copy: "copy"
+        case .unmatched: "unmatched"
         }
     }
 
@@ -671,7 +684,8 @@ private struct RambleRowView: View {
         .padding(.leading, 40)
         if all {
             VStack(spacing: 0) {
-                ForEach(food.options) { option in
+                // The model asking to see options shows the first few; the owner's tap shows them all.
+                ForEach(food.options.prefix(capture.expanded.contains(row.id) ? RambleResolver.optionLimit : RambleResolver.collapsedOptions)) { option in
                     Button {
                         capture.pick(option, in: row)
                     } label: {

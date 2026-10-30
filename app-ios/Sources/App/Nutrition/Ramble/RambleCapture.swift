@@ -19,7 +19,7 @@ final class RambleCapture {
     static let settleTimeout = Duration.seconds(6)
     /// How long a new row shows the words it was parsed from before its search result replaces them, so the parse and
     /// the match read as two steps.
-    static let searchDwell = Duration.milliseconds(450)
+    static let searchDwell = Duration.milliseconds(800)
 
     private(set) var phase = Phase.idle
     /// What the speaker said this ramble, every listen included.
@@ -398,7 +398,7 @@ final class RambleCapture {
     private func currentShown() -> [RambleRequest.Shown] {
         rows.compactMap { row -> RambleRequest.Shown? in
             guard case let .food(food) = row.content, !food.options.isEmpty else { return nil }
-            let count = showsAllOptions(row) ? RambleResolver.optionLimit : RambleResolver.collapsedOptions
+            let count = expanded.contains(row.id) ? RambleResolver.optionLimit : RambleResolver.collapsedOptions
             return RambleRequest.Shown(item: row.id, options: food.options.prefix(count).map { String($0.portion.food.displayName.prefix(200)) })
         }
     }

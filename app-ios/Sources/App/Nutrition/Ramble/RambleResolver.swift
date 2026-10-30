@@ -191,7 +191,13 @@ struct RambleResolver: Sendable {
             options = earlier.options
             spoken = shown
         } else {
-            guard search else { return .searching }
+            // A row renamed by a correction ("coke" to "diet coke") keeps its food, at the new amount, until the search for
+            // its new name lands. Rows are positions, so after a removal another food sits here; it shares no word.
+            guard search else {
+                guard var food = earlier, let before = previous?.item.name, Self.related(before, item.name) else { return .searching }
+                food.pick.portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, of: food.pick.portion.food.nutrition, history: food.pick.portion.serving)
+                return .food(food)
+            }
             options = Array(try index.local(item.name).prefix(Self.optionLimit))
             spoken = nil
         }
@@ -204,6 +210,13 @@ struct RambleResolver: Sendable {
         // A measure belongs to the food it was set on; another food in the row's place keeps its own serving.
         if let serving = choice?.serving, choice?.option == result.key { portion.serving = serving }
         return .food(.init(pick: LoggerPick(portion, uncached: result.food), key: result.key, options: options, showsOptions: item.options))
+    }
+}
+
+extension RambleResolver {
+    static func related(_ a: String, _ b: String) -> Bool {
+        let words = { (text: String) in Set(text.lowercased().split(whereSeparator: { !$0.isLetter }).map { $0.hasSuffix("s") ? String($0.dropLast()) : String($0) }) }
+        return !words(a).isDisjoint(with: words(b))
     }
 }
 

@@ -33,3 +33,11 @@ struct RambleWordsTests {
         #expect(words.span(of: "") == nil)
     }
 }
+
+struct RambleRelatedTests {
+    @Test func aRenameKeepsItsMatchOnlyWhenTheNamesShareAWord() {
+        #expect(RambleResolver.related("coke", "diet coke"))
+        #expect(RambleResolver.related("dates", "medjool date"))
+        #expect(!RambleResolver.related("pear", "dates"))
+    }
+}

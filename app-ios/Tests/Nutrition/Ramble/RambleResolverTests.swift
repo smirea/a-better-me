@@ -51,9 +51,21 @@ struct RambleResolverTests {
             switch row.content {
             case let .food(food): "\(food.pick.portion.food.name): \(NutritionFormat.serving(food.pick.portion.serving))"
             case let .copy(copy): "copy \(copy.meal.id): \(copy.entries.map(\.food.name).joined(separator: ", "))"
+            case .searching: "searching \(row.item.name)"
             case .unmatched: "unmatched \(row.item.name)"
             }
         }
+    }
+
+    @Test func withoutSearchANewFoodWaitsAndARenamedOneKeepsItsMatchAtTheNewAmount() async throws {
+        let resolver = try await resolver()
+        let first = try resolver.rows([RambleItem(name: "oats", amount: 1, unit: "cup"), RambleItem(name: "pear")], previous: [], choices: [:])
+        let parsed = try resolver.rows([
+            RambleItem(name: "rolled oats", amount: 0.5, unit: "cup"),
+            RambleItem(name: "dates", amount: 3),
+            RambleItem(name: "egg", amount: 2),
+        ], previous: first, choices: [:], search: false)
+        #expect(describe(parsed) == ["Oats: 0.5 cup", "searching dates", "searching egg"])
     }
 
     @Test func spokenAmountsBecomeServingsInTheFoodsOwnMeasures() async throws {
