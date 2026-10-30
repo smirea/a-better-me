@@ -182,7 +182,7 @@ struct NutritionMetricsTests {
         #expect(manual == .init(start: start("2026-10-04"), initialKcal: 2500))
         settings.staticKcal = 2300
         settings.initialKcal = nil
-        let fixed = NutritionMetrics.expenditure(intake: NutritionMetrics.intake(log, calendar: utc), weighIns: weighIns, trend: trend, settings: settings, profile: ProfileSettings(), now: day("2026-10-06"), calendar: utc)
+        let fixed = NutritionMetrics.expenditure(intake: NutritionMetrics.intake(log, calendar: utc), weighIns: weighIns, trend: trend, settings: settings, profile: ProfileSettings(), plans: [], steps: [], now: day("2026-10-06"), calendar: utc)
         #expect(fixed.map(\.kcal) == [2300, 2300, 2300])
         #expect(NutritionMetrics.strategy(fixed, settings: settings) == .fixed)
     }

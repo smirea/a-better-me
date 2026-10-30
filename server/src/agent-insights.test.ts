@@ -259,7 +259,8 @@ describe('agent API insights', () => {
 		await ok('PATCH', '/settings', { nutrition: { expenditure: { initialKcal: 2500 } } });
 		const tdee = await ok('GET', '/expenditure?from=2026-10-19&to=2026-10-19');
 		expect(tdee).toMatchObject({ start: '2026-10-19', initialKcal: 2500 });
-		expect(tdee.days).toEqual([{ day: '2026-10-19', kcal: 2500, holding: true }]);
+		// The plan losing 0.5% a week since 2026-10-01 scales the initial estimate by 1 - 0.04 × 0.5.
+		expect(tdee.days).toEqual([{ day: '2026-10-19', kcal: 2450, holding: true }]);
 
 		const root = await ok('GET', '?tz=America/Los_Angeles');
 		expect(root.state).toMatchObject({

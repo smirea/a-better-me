@@ -97,6 +97,35 @@ describe('expenditure', () => {
 		).toEqual([2502.4208]);
 	});
 
+	test("a rise in the week's mean steps raises the estimate at once", () => {
+		const steps = new Map(days.map((day, index) => [day, index < 29 ? 6000 : 13000]));
+		const result = expenditureDays(intake, trendOf(weighIns), new Set(days), 2000, days[30]!, days[31]!, {
+			steps,
+			goalRates: [],
+		});
+		expect(
+			round(
+				result.map(day => day.kcal),
+				2,
+			),
+		).toEqual([2039.4, 2078.21]);
+	});
+
+	test('a goal rate scales the estimate, ramped over two weeks', () => {
+		const modifiers = { steps: new Map(), goalRates: [{ day: days[30]!, value: -1 }] };
+		const sparse = new Map<string, number>();
+		const ramp = expenditureDays(sparse, trendOf(weighIns), new Set(days), 2000, days[29]!, days[44]!, modifiers);
+		expect(
+			round(
+				ramp.slice(0, 3).map(day => day.kcal),
+				2,
+			),
+		).toEqual([2000, 1994.29, 1988.57]);
+		expect(round([ramp[14]!.kcal], 2)).toEqual([1920]);
+		const after = expenditureDays(sparse, trendOf(weighIns), new Set(days), 2000, days[44]!, days[44]!, modifiers);
+		expect(round([after[0]!.kcal], 2)).toEqual([1920]);
+	});
+
 	test('a new user updates over the trend there is, at the startup gain', () => {
 		const result = expenditureDays(intake, trendOf(weighIns), new Set(days), 2500, days[0]!, days[5]!);
 		expect(result.map(day => [round([day.kcal], 2)[0], day.holding])).toEqual([

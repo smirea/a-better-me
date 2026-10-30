@@ -35,7 +35,8 @@ struct StrategyInputs {
 
 
     static func make(
-        weighIns: [WeighIn], log: IntakeLog, settings: NutritionSettings, profile: ProfileSettings, today: CalendarDay, calendar: Calendar
+        weighIns: [WeighIn], log: IntakeLog, settings: NutritionSettings, profile: ProfileSettings, plans: [NutritionPlan] = [],
+        steps: [DatedValue] = [], today: CalendarDay, calendar: Calendar
     ) -> StrategyInputs {
         let end = today.date(in: calendar)
         let weights = weighIns.map { DatedValue(date: $0.date, value: $0.kg) }
@@ -43,7 +44,8 @@ struct StrategyInputs {
         let counted = log.days.compactMapValues(\.energy).filter { $0.key <= today }
         let intake = counted.keys.sorted().map { DatedValue(date: $0.date(in: calendar), value: counted[$0]!) }
         let series = NutritionMetrics.expenditure(
-            intake: intake, weighIns: weights, trend: trendSeries, settings: settings.expenditure, profile: profile, now: end, calendar: calendar
+            intake: intake, weighIns: weights, trend: trendSeries, settings: settings.expenditure, profile: profile, plans: plans, steps: steps,
+            now: end, calendar: calendar
         )
         let initial = NutritionMetrics.expenditureSetup(
             intake: intake, weighIns: weights, trend: trendSeries, settings: settings.expenditure, profile: profile, calendar: calendar

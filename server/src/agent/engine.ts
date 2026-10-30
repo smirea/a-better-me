@@ -129,6 +129,14 @@ const KCAL_PER_KG = KCAL_PER_LB / KG_PER_LB;
 const GAIN = 0.015;
 const MIN_WINDOW = 3;
 const STARTUP_GAIN = 0.2;
+const KCAL_PER_STEP = 0.04;
+const STEP_WINDOW = 7;
+const STEP_DAYS = 4;
+const GOAL_RATE_FACTOR = 0.04;
+const GOAL_RAMP_DAYS = 14;
+
+/** `Expenditure.Modifiers`: daily steps, and each plan's goal rate (percent per week, negative losing) from its day. */
+export type Modifiers = { steps: Map<Day, number>; goalRates: DayValue[] };
 
 /**
  * `NutritionEngine.Expenditure.daily` with the `v3` model: a day's estimate uses data through the day before, and
@@ -142,11 +150,26 @@ export function expenditureDays(
 	initial: number,
 	from: Day,
 	through: Day,
+	modifiers: Modifiers = { steps: new Map(), goalRates: [] },
 ): ExpenditureDay[] {
 	let estimate = initial;
+	let appliedGoal = 1;
 	const firstTrend = [...trend.keys()].toSorted()[0];
 	const back = (day: Day, count: number) => Array.from({ length: count }, (_, index) => addDays(day, -index - 1));
+	const rates = modifiers.goalRates.toSorted((a, b) => a.day.localeCompare(b.day));
+	const rateOn = (day: Day) => rates.findLast(rate => rate.day <= day)?.value ?? 0;
+	const meanSteps = (day: Day) => {
+		const values = back(day, STEP_WINDOW).flatMap(d => (modifiers.steps.has(d) ? [modifiers.steps.get(d)!] : []));
+		return values.length >= STEP_DAYS ? values.reduce((sum, steps) => sum + steps, 0) / values.length : undefined;
+	};
 	return eachDay(from, through).map(day => {
+		const ramp = [day, ...back(day, GOAL_RAMP_DAYS - 1)].reduce((sum, d) => sum + rateOn(d), 0) / GOAL_RAMP_DAYS;
+		const factor = 1 + GOAL_RATE_FACTOR * ramp;
+		estimate *= factor / appliedGoal;
+		appliedGoal = factor;
+		const now = meanSteps(day);
+		const before = meanSteps(addDays(day, -1));
+		if (now !== undefined && before !== undefined) estimate += KCAL_PER_STEP * (now - before);
 		const span = firstTrend === undefined ? -1 : Math.min(WINDOW, daysBetween(firstTrend, day) - 1);
 		if (span < MIN_WINDOW) return { day, kcal: estimate, holding: true };
 		const gate = back(day, GATE);
@@ -172,6 +195,8 @@ export type ExpenditureSettings = {
 	calculationStart?: Day | null;
 	activity?: string | null;
 	exercise?: string | null;
+	stepInformedUpdates?: boolean;
+	predictiveGoalAdjustment?: boolean;
 };
 
 const ACTIVITY: Record<string, number> = { mostlySedentary: 1.2, moderatelyActive: 1.4, veryActive: 1.6 };
@@ -211,9 +236,11 @@ export function expenditure(input: {
 	trend: TrendDay[];
 	settings: ExpenditureSettings;
 	profile: Profile;
+	plans?: { id: Day; goal: unknown }[];
+	steps?: DayValue[];
 	today: Day;
 }): Expenditure {
-	const { intake, weighIns, trend, settings, profile, today } = input;
+	const { intake, weighIns, trend, settings, profile, today, plans = [], steps = [] } = input;
 	const firsts = [...intake.keys(), ...weighIns.map(w => w.day)].toSorted();
 	const start = settings.calculationStart ?? firsts[0];
 	if (!start) return { strategy: null, missing: 'No weigh-ins or logged days yet.', days: [] };
@@ -234,7 +261,18 @@ export function expenditure(input: {
 		};
 	}
 	const trendByDay = new Map(trend.map(day => [day.day, day.trendKg]));
-	const days = expenditureDays(intake, trendByDay, new Set(weighIns.map(w => w.day)), initial, start, today);
+	// Both modifiers default on, as `NutritionSettings.Expenditure` does.
+	const modifiers: Modifiers = {
+		steps: new Map(settings.stepInformedUpdates === false ? [] : steps.map(s => [s.day, s.value])),
+		goalRates:
+			settings.predictiveGoalAdjustment === false
+				? []
+				: plans.map(plan => ({
+						day: plan.id,
+						value: (plan.goal as { ratePercentPerWeek: number }).ratePercentPerWeek,
+					})),
+	};
+	const days = expenditureDays(intake, trendByDay, new Set(weighIns.map(w => w.day)), initial, start, today, modifiers);
 	return { strategy: days.at(-1)!.holding ? 'holding' : 'updating', start, initialKcal: initial, days };
 }
 
