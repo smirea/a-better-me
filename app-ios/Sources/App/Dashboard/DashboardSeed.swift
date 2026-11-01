@@ -4,22 +4,31 @@ import GRDB
 
 /// The dev seed's (`DevSeed`) active program and nutrition history.
 enum DashboardSeed {
-    /// Turns the sample Upper and Lower templates into an active program and files this week's sample sessions under
-    /// its first cycle, so the Cycle Workouts rings have a plan and progress.
+    /// Gives the sample Upper and Lower templates program-owned copies, makes those an active program, and files this
+    /// week's sample sessions under its first cycle, so the Cycle Workouts rings have a plan and progress.
     static func insertProgram(in db: Database) throws {
-        let templates = try WorkoutTemplate.fetchAll(db)
-        guard let upper = templates.first(where: { $0.id == DevSeed.id("template/Upper") }),
-              let lower = templates.first(where: { $0.id == DevSeed.id("template/Lower") }) else { return }
-        var days = [ProgramDay(templateID: upper.id), ProgramDay(templateID: lower.id), ProgramDay(), ProgramDay(templateID: upper.id)]
-        for index in days.indices { days[index].id = DevSeed.id("program/day/\(index)") }
-        var program = Program(name: "Upper Lower", color: .blue, cycles: 4, days: days)
+        let library = try WorkoutTemplate.fetchAll(db)
+        var program = Program(name: "Upper Lower", color: .blue, cycles: 4)
         program.id = DevSeed.id("program")
         program.isActive = true
+        let owned = try ["Upper", "Lower"].compactMap { name -> WorkoutTemplate? in
+            guard let source = library.first(where: { $0.id == DevSeed.id("template/\(name)") }) else { return nil }
+            var template = WorkoutTemplate(name: source.name, blocks: source.blocks.copyingCycleTargets())
+            template.id = DevSeed.id("program/template/\(name)")
+            template.programID = program.id
+            try template.insert(db)
+            return template
+        }
+        guard owned.count == 2 else { return }
+        let (upper, lower) = (owned[0], owned[1])
+        var days = [ProgramDay(templateID: upper.id), ProgramDay(templateID: lower.id), ProgramDay(), ProgramDay(templateID: upper.id)]
+        for index in days.indices { days[index].id = DevSeed.id("program/day/\(index)") }
+        program.days = days
         try program.insert(db)
         let calendar = Calendar.current
         for session in try WorkoutSession.fetchAll(db) where calendar.isDate(session.startedAt, equalTo: .now, toGranularity: .weekOfYear) {
             var filed = session
-            let day = days.first { $0.templateID == session.templateID } ?? days[0]
+            let day = session.name == lower.name ? days[1] : days[0]
             filed.program = ProgramPosition(programID: program.id, dayID: day.id, cycle: 1)
             try filed.updateChanges(db, from: session)
         }
