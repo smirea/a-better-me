@@ -183,7 +183,11 @@ describe('handle', () => {
 			).status,
 		).toBe(503);
 		expect(reports).toEqual([
-			['exception', 'Error: POST /api/sync answered 503', { extra: { route: 'POST /api/sync', status: 503 } }],
+			[
+				'exception',
+				'Error: POST /api/sync answered 503',
+				{ extra: { route: 'POST /api/sync', status: 503, body: 'boom' } },
+			],
 		]);
 	});
 });

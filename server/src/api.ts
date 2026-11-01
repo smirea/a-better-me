@@ -74,11 +74,15 @@ export async function handle<Upgraded = never>(request: Request, app: App<Upgrad
 	return reportFailure(route, response, app.report);
 }
 
-/** A 5xx is a server bug. A thrown error never reaches here: Bun's SDK and the Worker's catch report it. */
-function reportFailure(route: string, response: Response, report: Report): Response {
+/**
+ * A 5xx is a server bug. A thrown error never reaches here: Bun's SDK and the Worker's catch report it. The body holds
+ * the reason (an upstream's own error, for a 502), which is otherwise lost once the phone discards it.
+ */
+async function reportFailure(route: string, response: Response, report: Report): Promise<Response> {
 	if (response.status >= 500) {
+		const body = (await response.clone().text()).slice(0, 4_000);
 		report.captureException(new Error(`${route} answered ${response.status}`), {
-			extra: { route, status: response.status },
+			extra: { route, status: response.status, body },
 		});
 	}
 	return response;
