@@ -38,9 +38,5 @@
 	<string>$(OWNER_TOKEN)</string>
 	<key>SENTRY_DSN_IOS</key>
 	<string>$(SENTRY_DSN_IOS)</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>workout-processing</string>
-	</array>
 </dict>
 </plist>
