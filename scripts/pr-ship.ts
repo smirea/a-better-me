@@ -1,12 +1,13 @@
 /**
  * Drives the current branch's open PR to a verdict: `bun scripts/pr-ship.ts [--merge] [--budget seconds]`.
- * Waits for CI, then exits with what to do next. It stops before its budget (default 540s,
- * under the 600s tool limit), so rerun it in the foreground until it exits 0; never end the turn while a PR waits.
+ * Waits for CI and for Codex's first review, then exits with what to do next. It stops before its budget (default
+ * 540s, under the 600s tool limit), so rerun it in the foreground until it exits 0; never end the turn while a PR waits.
+ * Codex reviews on its own when a PR opens, so after the first review it never waits for another.
  *
  *   0  ready, or merged with --merge
  *   1  something to fix: failing checks or unresolved review threads (printed)
  *   2  conflicts with the base branch: rebase onto it, push, rerun
- *   3  budget spent while checks still run: rerun
+ *   3  budget spent while checks or Codex still run: rerun
  */
 import { parseArgs } from 'node:util';
 import { run } from './lib';
@@ -38,6 +39,7 @@ type Pr = {
 	baseRefName: string;
 	mergeable: string;
 	statusCheckRollup: Check[];
+	comments: { body: string }[];
 };
 
 // The last line names the code, so a `| tail` that swallows the exit status still shows it.
@@ -52,7 +54,13 @@ const [owner, repo] = run(['gh', 'repo', 'view', '--json', 'nameWithOwner', '-q'
 function view(): Pr {
 	try {
 		return JSON.parse(
-			run(['gh', 'pr', 'view', '--json', 'number,url,state,headRefOid,baseRefName,mergeable,statusCheckRollup']),
+			run([
+				'gh',
+				'pr',
+				'view',
+				'--json',
+				'number,url,state,headRefOid,baseRefName,mergeable,statusCheckRollup,comments',
+			]),
 		);
 	} catch (error) {
 		if (error instanceof Error && error.message.includes('no pull requests found')) {
@@ -70,6 +78,14 @@ function checks(pr: Pr) {
 		url: check.detailsUrl ?? check.targetUrl ?? '',
 	}));
 	return { all, failed: all.filter(check => check.done && !check.ok), pending: all.filter(check => !check.done) };
+}
+
+// The summary's has_unresolved_findings never clears after the threads resolve, so findings come from the threads.
+function codexRunning(pr: Pr): boolean {
+	const summary = pr.comments.find(comment => comment.body.includes('codex-review-state:v1'));
+	const state = summary?.body.match(/codex-review-state:v1 (\{.*?\}) -->/)?.[1];
+	if (!state) return true;
+	return (JSON.parse(state).code_review as { status: string | null }).status !== 'completed';
 }
 
 function unresolvedThreads(number: number) {
@@ -128,7 +144,11 @@ while (true) {
 		exit(1, `Unresolved review threads:\n${threads.join('\n')}\nFix or answer each, resolve the thread, push, rerun.`);
 	}
 
-	const waiting = [...(all.length ? [] : ['checks to start']), ...pending.map(check => check.name)];
+	const waiting = [
+		...(all.length ? [] : ['checks to start']),
+		...pending.map(check => check.name),
+		...(codexRunning(pr) ? ['Codex review'] : []),
+	];
 	if (!waiting.length && pr.mergeable === 'MERGEABLE') {
 		if (!values.merge) exit(0, `Ready to merge: ${pr.url}`);
 		run(['gh', 'pr', 'merge', String(pr.number), '--merge']);

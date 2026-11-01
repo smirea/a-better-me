@@ -1,6 +1,6 @@
 /**
- * What the repository scripts share: a process runner, the dotenv and env-manager readers, and the worktree list. No npm imports:
- * `setup-worktree` runs before `bun install`.
+ * What the repository scripts share: a process runner, the dotenv and env-manager readers, and the proxy to the shared
+ * agent commands. No npm imports: the `setup-worktree` proxy runs before `bun install`.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -71,21 +71,21 @@ export function readEnv(env: string): Values {
 	return parseDotenv(section);
 }
 
-/** A worktree's `.env.override`, which `setup-worktree` writes with its ports, or null without one. */
+/** A worktree's `.env.override`, which `agent-t3-worktree setup` writes with its ports, or null without one. */
 export function readOverride(worktree: string): Values | null {
 	const file = join(worktree, '.env.override');
 	return existsSync(file) ? parseDotenv(readFileSync(file, 'utf8')) : null;
 }
 
-export type Worktree = { path: string; branch?: string };
+/** `~/bin/<name>`, one of the agent worktree and simulator commands that `~/code/scripts` installs for every repo. */
+export function agentCommand(name: 'agent-t3-worktree' | 'agent-simulator'): string {
+	const path = join(process.env.HOME ?? '', 'bin', name);
+	if (!existsSync(path)) throw new Error(`${path} is missing. Install it: bun ~/code/scripts/src/setup.ts`);
+	return path;
+}
 
-/** Every worktree of the repository `cwd` is in. Throws when `git` fails, so a bad checkout never reads as "none". */
-export function worktrees(cwd: string): Worktree[] {
-	return run(['git', '-C', cwd, 'worktree', 'list', '--porcelain'])
-		.split('\n\n')
-		.flatMap(block => {
-			const path = block.match(/^worktree (.+)$/m)?.[1];
-			const branch = block.match(/^branch refs\/heads\/(.+)$/m)?.[1];
-			return path ? [{ path, branch }] : [];
-		});
+/** Hands this script's arguments to a shared agent command and exits with its status. */
+export function proxy(name: Parameters<typeof agentCommand>[0], args: string[]): never {
+	const result = spawnSync(agentCommand(name), args, { stdio: 'inherit' });
+	process.exit(result.status ?? 1);
 }
