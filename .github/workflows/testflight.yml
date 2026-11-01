@@ -31,16 +31,29 @@ jobs:
     outputs:
       build: ${{ steps.gate.outputs.build }}
     steps:
-      # Checked before the wait, so a missing secret fails in seconds instead of after the archive.
+      # Checked before the wait, so a missing secret fails in seconds instead of after the archive. Each secret is
+      # named: GitHub holds a workflow that reads `toJSON(secrets)` for approval as possibly malicious.
       - name: Repository secrets
         env:
-          SECRETS: ${{ toJSON(secrets) }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          API_URL: ${{ secrets.API_URL }}
+          OWNER_TOKEN: ${{ secrets.OWNER_TOKEN }}
+          SENTRY_DSN_IOS: ${{ secrets.SENTRY_DSN_IOS }}
+          ASSETS_URL: ${{ secrets.ASSETS_URL }}
+          ASSETS_ACCESS_KEY_ID: ${{ secrets.ASSETS_ACCESS_KEY_ID }}
+          ASSETS_SECRET_ACCESS_KEY: ${{ secrets.ASSETS_SECRET_ACCESS_KEY }}
         run: |
-          missing=$(jq -r '[ "ASC_KEY_ID", "ASC_ISSUER_ID", "ASC_PRIVATE_KEY_B64", "SENTRY_AUTH_TOKEN",
-            "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "API_URL", "OWNER_TOKEN", "SENTRY_DSN_IOS", "ASSETS_URL",
-            "ASSETS_ACCESS_KEY_ID", "ASSETS_SECRET_ACCESS_KEY" ] - (keys) | join(", ")' <<< "$SECRETS")
-          if [ -n "$missing" ]; then
-            echo "::error::Missing repository secrets: $missing. Run bun run secrets:github."
+          missing=()
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_PRIVATE_KEY_B64 SENTRY_AUTH_TOKEN CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN API_URL OWNER_TOKEN SENTRY_DSN_IOS ASSETS_URL ASSETS_ACCESS_KEY_ID ASSETS_SECRET_ACCESS_KEY; do
+            test -n "${!name}" || missing+=("$name")
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing repository secrets: ${missing[*]}. Run bun run secrets:github."
             exit 1
           fi
 
