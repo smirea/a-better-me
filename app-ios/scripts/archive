@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# Archives the Release app and uploads it to App Store Connect (TestFlight) with an App Store Connect API key.
+# Usage: ./scripts/archive [--export-only]
+# Needs ASC_KEY_ID, ASC_ISSUER_ID, and ASC_KEY_PATH (the AuthKey_<id>.p8 file, kept outside the repo). Release's settings
+# and SENTRY_AUTH_TOKEN come from `bun run env:ios`: env-manager prod locally, the process environment in CI.
+# BUILD_NUMBER overrides the build number, which defaults to the current UTC time as year.MMdd.HHmmss: always higher,
+# and within CFBundleVersion's three period-separated integers with a first integer of at most four digits.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+destination=upload
+case "${1:-}" in
+    "") ;;
+    --export-only) destination=export ;;
+    *) echo "usage: $0 [--export-only]" >&2; exit 64 ;;
+esac
+
+: "${ASC_KEY_ID:?Set ASC_KEY_ID to the App Store Connect API key id}"
+: "${ASC_ISSUER_ID:?Set ASC_ISSUER_ID to the App Store Connect issuer id}"
+: "${ASC_KEY_PATH:?Set ASC_KEY_PATH to the AuthKey_<id>.p8 path}"
+test -f "$ASC_KEY_PATH" || { echo "No key at $ASC_KEY_PATH" >&2; exit 1; }
+key_path=$(cd "$(dirname "$ASC_KEY_PATH")" && pwd)/$(basename "$ASC_KEY_PATH")
+repo=$(git rev-parse --show-toplevel)
+case "$key_path" in
+    "$repo"/*) echo "Keep the API key outside the repository: $key_path" >&2; exit 1 ;;
+esac
+
+read -r year monthday time < <(date -u '+%Y %m%d %H%M%S')
+build_number=${BUILD_NUMBER:-$year.$((10#$monthday)).$((10#$time))}
+out=build/archive
+archive=$out/App.xcarchive
+options=$out/ExportOptions.plist
+
+rm -rf "$out"
+mkdir -p "$out"
+cat > "$options" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store-connect</string>
+    <key>destination</key>
+    <string>$destination</string>
+    <key>teamID</key>
+    <string>FNYFHG5SV7</string>
+    <key>signingStyle</key>
+    <string>automatic</string>
+    <key>manageAppVersionAndBuildNumber</key>
+    <false/>
+</dict>
+</plist>
+PLIST
+
+bun run --cwd .. env:ios
+
+echo "Archiving build $build_number"
+# Unsigned archive: automatic signing here asks for an Apple Development certificate, and each fresh CI runner would
+# mint another "Created via API" one until the account hits its cap, as procrastimate found. Export signs every bundle
+# with Apple Distribution. The App target's upload-dsyms phase sends the dSYMs to Sentry during the archive.
+xcodebuild archive -project App.xcodeproj -scheme App -configuration Release \
+    -destination 'generic/platform=iOS' -archivePath "$archive" -clonedSourcePackagesDirPath .build/SourcePackages \
+    CURRENT_PROJECT_VERSION="$build_number" \
+    CODE_SIGNING_ALLOWED=NO \
+    CODE_SIGNING_REQUIRED=NO \
+    CODE_SIGN_IDENTITY=""
+
+# Export keeps only the entitlements a bundle is already signed with, so an unsigned archive would ship without
+# HealthKit and the app group. Ad-hoc signing each bundle with its target's entitlements, innermost first, carries them
+# through; Xcode refuses ad-hoc signing at archive time for targets with capabilities. Each bundle is named after its
+# target, as is its Config/<target>.entitlements.
+app=$archive/Products/Applications/App.app
+codesign --force --deep --sign - "$app"
+while IFS= read -r bundle; do
+    name=$(basename "${bundle%.*}")
+    entitlements=Config/$name.entitlements
+    test -f "$entitlements" || { echo "No $entitlements for $bundle" >&2; exit 1; }
+    codesign --force --sign - --entitlements "$entitlements" "$bundle"
+done < <(find "$app" \( -name '*.app' -o -name '*.appex' \) -print | awk '{ print length, $0 }' | sort -rn | cut -d' ' -f2-)
+
+xcodebuild -exportArchive -archivePath "$archive" -exportOptionsPlist "$options" -exportPath "$out/export" \
+    -allowProvisioningUpdates \
+    -authenticationKeyPath "$key_path" \
+    -authenticationKeyID "$ASC_KEY_ID" \
+    -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+if [ "$destination" = upload ]; then
+    echo "Uploaded build $build_number. It shows in TestFlight once App Store Connect finishes processing."
+else
+    echo "Exported $out/export/App.ipa (build $build_number)"
+fi

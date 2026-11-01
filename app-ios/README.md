@@ -40,6 +40,18 @@ Open `App.xcodeproj` and select the shared `App` scheme to debug. Use the launch
 
 Build logs are in `DerivedData/<target>/build.log`, where `<target>` is `device` or `simulator`. Temporary app state resets after relaunch.
 
+## TestFlight
+
+`.github/workflows/testflight.yml` archives and uploads every app change on `master`. To upload from this Mac instead, put the App Store Connect key outside the repo, then:
+
+```sh
+export ASC_KEY_ID=<key id> ASC_ISSUER_ID=<issuer id> ASC_KEY_PATH=~/.appstoreconnect/AuthKey_<id>.p8
+./scripts/archive                # archive Release and upload to App Store Connect
+./scripts/archive --export-only  # write build/archive/export/App.ipa without uploading
+```
+
+The values are in env-manager `prod` (`ASC_*`). See [iOS decisions](../docs/decisions/ios.md#testflight).
+
 ## Environment
 
 The parent `.env` declares this folder as an env-manager target. Edit local values in the parent `.env.local`, then regenerate from here or the repo root:
