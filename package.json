@@ -9,7 +9,7 @@
 		"postinstall": "lefthook install",
 		"lint": "oxlint --fix && oxfmt",
 		"lint:ci": "oxlint && oxfmt --check",
-		"typecheck": "bun run --cwd app-web build && bun check",
+		"typecheck": "bun check",
 		"test": "bun test --pass-with-no-tests",
 		"build": "bun update sync-engine && bun run --cwd app-web build && bun build server/src/index.ts --target bun --outdir server/dist && wrangler deploy --dry-run --outdir server/dist/worker",
 		"start": "concurrently --raw -k -s first \"bun run start:server\" \"bun run start:client\"",
