@@ -1,3 +1,5 @@
 {
-	"extends": "../tsconfig.json"
+	"extends": "../tsconfig.json",
+	// The root's include resolves against the root, so without its own the server project would span the repo.
+	"include": ["**/*"]
 }
