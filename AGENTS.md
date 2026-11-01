@@ -8,7 +8,7 @@
 Full rules in [`docs/decisions/workflow.md`](docs/decisions/workflow.md).
 
 - One PR per thread, never stacked. Rebase only when GitHub reports a real conflict.
-- In a fresh git worktree, run `bun scripts/setup-worktree.ts [branch]` first. T3 Code threads already ran it, so check for `node_modules` and `.env.override` first, and never pass `[branch]` there: T3 owns the branch name. `bun scripts/teardown-worktree.ts <worktree | branch>` removes it from the main checkout once the PR is merged.
+- Worktree setup is automatic: T3 Code runs `agent-t3-worktree setup` when it creates a worktree, and the session-start and pre-commit checks rerun it when something is missing. Never run it by hand, and never rename a T3 worktree's branch. A merged worktree is removed when its thread settles or by `bun scripts/worktree-gc.ts`; `bun scripts/teardown-worktree.ts <worktree | branch>` removes one right away.
 - After opening a PR, run `bun scripts/pr-ship.ts [--merge]` in the foreground until it exits 0. Its exit code names the next step.
 - Never skip git hooks. Fix the failure instead.
 - Run only the relevant tests locally; CI runs the full suite.

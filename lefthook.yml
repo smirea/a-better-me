@@ -1,21 +1,26 @@
 pre-commit:
-  parallel: true
-  commands:
-    # One command: both fixers rewrite the same staged files, and in parallel one would overwrite the other's edit.
-    fix:
-      run: >-
-        bunx oxlint --fix --no-error-on-unmatched-pattern {staged_files}
-        && bunx oxfmt --no-error-on-unmatched-pattern {staged_files}
-      stage_fixed: true
-    typecheck:
-      glob: '*.{js,mjs,mts,ts,tsx,json,jsonc}'
-      run: bun check
-    test:
-      glob: '*.{js,mjs,mts,ts,tsx}'
-      run: bun --no-env-file scripts/test-changed.ts {staged_files}
-    swift-lint:
-      glob: '*.swift'
-      run: bun app-ios/scripts/lint-swift.ts
+  jobs:
+    # Heals a worktree whose setup is missing or stale. CI and cloud agents don't have the command.
+    - name: worktree-check
+      run: '[ ! -x "$HOME/bin/agent-t3-worktree" ] || "$HOME/bin/agent-t3-worktree" check --heal'
+    - group:
+        parallel: true
+        jobs:
+          # One command: both fixers rewrite the same staged files, and in parallel one would overwrite the other's edit.
+          - name: fix
+            run: >-
+              bunx oxlint --fix --no-error-on-unmatched-pattern {staged_files}
+              && bunx oxfmt --no-error-on-unmatched-pattern {staged_files}
+            stage_fixed: true
+          - name: typecheck
+            glob: '*.{js,mjs,mts,ts,tsx,json,jsonc}'
+            run: bun check
+          - name: test
+            glob: '*.{js,mjs,mts,ts,tsx}'
+            run: bun --no-env-file scripts/test-changed.ts {staged_files}
+          - name: swift-lint
+            glob: '*.swift'
+            run: bun app-ios/scripts/lint-swift.ts
 
 pre-push:
   commands:

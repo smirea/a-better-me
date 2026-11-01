@@ -19,7 +19,7 @@ dist
 # other
 .DS_Store
 
-# per-worktree ports written by scripts/setup-worktree.ts
+# per-worktree ports written by agent-t3-worktree setup
 .env.override
 
 # local PowerSync config written by scripts/local-stack.ts

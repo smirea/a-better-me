@@ -4,7 +4,7 @@ import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync }
 import { basename, dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { withBuildLock } from "./build-lock.ts";
-import { claim, waitForCpu } from "../../scripts/simulators.ts";
+import { agentCommand } from "../../scripts/lib.ts";
 
 const root = resolve(import.meta.dir, "..");
 const runCommand = "./scripts/run";
@@ -34,7 +34,6 @@ type Target = {
     destination: string;
     state: string;
     runtime?: string;
-    dataPath?: string;
 };
 
 async function command(args: string[], capture = false, log?: number, env?: Record<string, string>) {
@@ -83,7 +82,7 @@ async function targets(): Promise<Target[]> {
             result.push({
                 kind: "simulator", name: device.name, id: device.udid,
                 destination: `platform=iOS Simulator,id=${device.udid}`,
-                state: device.state.toLowerCase(), runtime: `iOS ${version.replaceAll("-", ".")}`, dataPath: device.dataPath,
+                state: device.state.toLowerCase(), runtime: `iOS ${version.replaceAll("-", ".")}`,
             });
         }
     }
@@ -321,9 +320,13 @@ simulator builds start with it off, and the app keeps the last choice.`);
     if (values.delete) return deleteSimulator(target);
     console.log(`Selected ${target.name} (${target.kind}${target.runtime ? `, ${target.runtime}` : ""}).`);
     if (target.kind === "simulator") {
-        if (target.dataPath) claim({ dataPath: target.dataPath }, root);
-        // Only agents run headless; the owner's own runs never wait.
-        if (values.headless && target.state !== "booted") await waitForCpu(`booting ${target.name}`);
+        const simulator = agentCommand("agent-simulator");
+        await command([simulator, "claim", target.id]);
+        // Only agents run headless; the owner's own runs never wait. Exit 3 means the Mac stayed busy: rerun.
+        if (values.headless) {
+            const wait = Bun.spawnSync([simulator, "wait", target.id], { cwd: root, stdio: ["ignore", "inherit", "inherit"] });
+            if (wait.exitCode) process.exit(wait.exitCode);
+        }
     }
     const projects = readdirSync(root).filter(file => file.endsWith(".xcodeproj"));
     if (projects.length !== 1) throw new Error("Expected one Xcode project in the repository root.");
