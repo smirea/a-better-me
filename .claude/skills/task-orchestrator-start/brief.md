@@ -14,7 +14,7 @@ You own this job end to end, through the merge. Stefan authorized you to merge y
 
 ## iOS: boot a simulator only to look at the app
 
-The Mac runs many jobs at once, and each booted simulator slows all of them. Climb this ladder and stop at the first rung that proves the change, but a change to what the user sees always reaches rung 3 (`docs/decisions/ios.md`: done means you drove the changed screen and looked at a screenshot).
+The Mac runs many jobs at once, and each booted simulator slows all of them. Climb this ladder and stop at the first rung that proves the change, but a change to what the user sees or taps always reaches rung 3, and you tap it (`docs/decisions/ios.md`, Verification).
 
 1. Pure logic lives in plain functions with Swift Testing suites under `app-ios/Tests/<Feature>/`. Write the test there; CI's Swift `tests` task runs it. Run it locally (`xcodebuild test -scheme App -only-testing:AppTests/<Suite>`) only when you also need rung 3, so the simulator boots once.
 2. Does the app compile: from the repo root, `xcodebuild build -project app-ios/App.xcodeproj -scheme App -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO -clonedSourcePackagesDirPath app-ios/DerivedData/SourcePackages` (no boot). Use it after every rebase too.
@@ -36,9 +36,18 @@ The Mac runs many jobs at once, and each booted simulator slows all of them. Cli
 - The machine is loaded, so run only the tests that cover the change; pre-commit and pre-push already run `scripts/test-changed.ts`. A timeout that passes when rerun alone is load; a failure that repeats is yours.
 - Git hooks can't be skipped (a Claude Code hook blocks it). A failing hook gets its cause fixed, in this PR or as a followup. A flaky test is a bad test: fix why it flakes, or report it as a followup with the failing output, and never add retries or sleeps. "Fails only in this environment" is a followup too, not a reason to move on.
 
+## Done means
+
+- You proved the change the way Stefan will use it: the tap and what it does, the command he runs, the page at desktop and phone widths. A screenshot proves a layout, not a behavior, so drive the interaction (`docs/decisions/ios.md`, Verification).
+- "The simulator can't test this" holds only for the device-only checks the iOS section lists. Anything else is a problem to solve, not a result.
+- Never make a path the default, or merge it, before it has worked once end to end.
+- A change to entitlements, `Info.plist`, app extensions, signing, or on-device stored data can crash the installed app at launch while every test passes. Install master's build on your simulator (from a throwaway `git worktree add`), then yours over it, and launch with the existing data. A Release-only setting you can't build locally gets a `tooling` followup and a line in `verification`.
+- The report's `verification` says what you ran, what you saw, and what you could not verify.
+
 ## PR
 
 - Open one PR whose description starts with the `# Tasks being addressed` section the brief gives you, verbatim. Attach screenshots with `gh pr create --attach <file>` (UI changes only, 2 to 4). Then call `link_pull_request` with the PR URL.
+- `pr-ship` merges without waiting for a review bot, so the review is yours to get. Before the first `pr-ship --merge`, run one independent reviewer subagent in the foreground on `git diff origin/master...HEAD`, with the brief's tasks as its context. Fix its real findings, and give a concrete reason in `summary` for each one you dismiss. Review again only what changed beyond those fixes.
 - Then loop `bun scripts/pr-ship.ts --merge` in the foreground with a 600000 ms tool timeout. Its last line is `pr-ship exit <n>`:
   - `0`: merged.
   - `1`: fix the failing checks, or fix or answer each review thread and resolve it. Then push and rerun. If a failing check also fails on master or other PRs, rerun it once with `gh run rerun --failed`; if it fails again, fix it in this PR only when the fix is small and clearly yours to make, otherwise end with `blocked` and the run link.
@@ -55,10 +64,11 @@ The Mac runs many jobs at once, and each booted simulator slows all of them. Cli
 
 ## Scope and report
 
+- Write the code yourself. Subagents only review or research, in the foreground.
 - Note bugs, weird interactions, bad UX, jank, or performance issues you find along the way as followups instead of fixing out-of-scope work. Report only real bugs and clearly useful gaps, not every edge case you can imagine. Dev-tooling friction (a slow command, a flaky tool, a manual step) is a followup with `"type": "tooling"` unless the fix is small enough to make in this PR.
 - Don't message the orchestrator mid-job. If you need input, end with `needs_input`, and keep your worktree as it is.
 - End with only this JSON:
 
 ```json
-{"status": "merged" | "needs_input" | "blocked", "pr": "<url or null>", "branch": "...", "worktree": "<absolute path>", "tasks": {"done": ["<id>"], "not_done": [{"id": "...", "reason": "..."}]}, "summary": "<2-4 sentences: what changed, clients covered, verification>", "questions": "<for needs_input/blocked>", "followups": [{"title": "...", "description": "...", "type": "bug" | "feature" | "tooling", "relatedTaskId": "..."}]}
+{"status": "merged" | "needs_input" | "blocked", "pr": "<url or null>", "branch": "...", "worktree": "<absolute path>", "tasks": {"done": ["<id>"], "not_done": [{"id": "...", "reason": "..."}]}, "summary": "<2-4 sentences: what changed, clients covered>", "verification": "<what you ran, what you saw, what you could not verify>", "questions": "<for needs_input/blocked>", "followups": [{"title": "...", "description": "...", "type": "bug" | "feature" | "tooling", "relatedTaskId": "..."}]}
 ```
