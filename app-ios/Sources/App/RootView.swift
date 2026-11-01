@@ -86,6 +86,7 @@ struct RootView: View {
             if phase == .active { Task { await health.refresh() } }
         }
         .task {
+            AppPermissions.launchStarted()
             if await !health.refresh() { await AppPermissions.requestRest() }
         }
         .task { await GymSeed.run(store, equipment: catalog.equipment) }
