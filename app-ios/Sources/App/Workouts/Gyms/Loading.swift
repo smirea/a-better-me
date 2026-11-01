@@ -18,6 +18,19 @@ enum Loading: Hashable {
         case let .steps(steps): up ? steps.first { Hundredths(of: $0) > Hundredths(of: value) } : steps.last { Hundredths(of: $0) < Hundredths(of: value) }
         }
     }
+
+    /// The first `limit` totals `step(from:up:)` walks through upward from zero, up to `ceiling`.
+    func totals(upTo ceiling: Double, limit: Int) -> [Double] {
+        switch self {
+        case let .plates(plates): return plates.totals(upTo: ceiling, limit: limit)
+        case let .steps(steps):
+            var totals: [Double] = []
+            for step in steps where totals.count < limit && step <= ceiling && Hundredths(of: step) > Hundredths(of: totals.last ?? 0) {
+                totals.append(step)
+            }
+            return totals
+        }
+    }
 }
 
 struct PlateLoading: Hashable {
@@ -65,6 +78,20 @@ struct PlateLoading: Hashable {
         }
         let next = up ? totals.first { $0 > current } : totals.last { $0 < current }
         return next.map { Double($0) / 100 }
+    }
+
+    /// One knapsack for the whole walk: stepping 400 times rebuilt it per step, which blocked launch for seconds while
+    /// the watch's home list listed every workout's loadable weights.
+    func totals(upTo ceiling: Double, limit: Int) -> [Double] {
+        let ceiling = Hundredths(of: ceiling).value
+        let window = max(0, (Double(ceiling) / 100 - baseWeight) / Double(sides)) + (plates.first?.weight ?? 0)
+        let totals = reachableSides(upTo: Hundredths(of: window).value + 1).lazy
+            .map { Hundredths(of: self.total($0)).value }
+            .filter { total in
+                total > 0 && total <= ceiling && Hundredths(of: self.total(greedy(upTo: total).reduce(0, +))).value == total
+            }
+            .prefix(limit)
+        return totals.map { Double($0) / 100 }
     }
 
     /// MF loaded a 4,955 lb entry as 10 x 45 a side and nothing else, so a sleeve holds 10 plates.

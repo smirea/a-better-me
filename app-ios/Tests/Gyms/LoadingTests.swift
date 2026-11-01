@@ -106,6 +106,34 @@ struct LoadableStepTests {
         #expect(loading.step(from: 0, up: true) == 45)
     }
 
+    @Test func totalsListWhatTheStepperWalksThrough() {
+        #expect(Loading.plates(bar([45, 25])).totals(upTo: 240, limit: 400) == [45, 95, 135, 185, 225])
+        #expect(Loading.plates(bar([45, 25])).totals(upTo: 240, limit: 3) == [45, 95, 135])
+        #expect(Loading.steps([22.5, 25, 25, 30, 35]).totals(upTo: 30, limit: 400) == [22.5, 25, 30])
+    }
+
+    @Test func totalsMatchStepByStepWalk() {
+        let kg = WeightUnit.kg
+        let loadings: [(Loading, Double)] = [
+            (.plates(bar([2.5, 5, 10, 25, 35, 45])), 400),
+            (.plates(bar([45, 25], counts: [1, nil])), 400),
+            (.plates(bar([45], counts: [1])), 400),
+            (.plates(PlateLoading(base: .machine, baseWeight: 0, plates: [.init(weight: 45, perSide: nil), .init(weight: 10, perSide: 4)], sides: 1)), 400),
+            (.plates(PlateLoading(base: .bar, baseWeight: kg.fromKg(lb.toKg(45)), plates: [45.0, 25, 2.5].map { .init(weight: kg.fromKg(lb.toKg($0)), perSide: nil) }, sides: 2)), 200),
+            (.plates(PlateLoading(base: .bar, baseWeight: lb.fromKg(20), plates: [25, 1.25].map { .init(weight: lb.fromKg($0), perSide: nil) }, sides: 2)), 400),
+            (.steps([5, 10, 15, 20, 25, 30]), 400),
+        ]
+        for (loading, ceiling) in loadings {
+            var walked: [Double] = []
+            var value = 0.0
+            while walked.count < 400, let next = loading.step(from: value, up: true), next <= ceiling {
+                walked.append(next)
+                value = next
+            }
+            #expect(loading.totals(upTo: ceiling, limit: 400) == walked)
+        }
+    }
+
     @Test func pinStackSnapsToItsIncrement() throws {
         let catalog = [item("stack", "Pin Loaded Machines")].keyed
         let stack = EquipmentLoad.ranges(options: [WeightRange(minKg: 0, maxKg: lb.toKg(500), incrementKg: lb.toKg(10))])
