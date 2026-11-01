@@ -3,14 +3,15 @@
  * Never prints a value: it logs key names only and hands values to child processes on stdin.
  *
  *   bun scripts/secrets.ts push        the Worker secrets from env-manager prod, once the Worker exists
- *   bun scripts/secrets.ts github      the Cloudflare deploy credentials as repository secrets
+ *   bun scripts/secrets.ts github      the deploy and TestFlight credentials and Release's iOS settings as repository secrets
  *   bun scripts/secrets.ts check       drift between env-manager prod, the Worker, and GitHub
  *   bun scripts/secrets.ts verify      CI, before deploying: the Worker has every required secret (no AWS)
  *   bun scripts/secrets.ts ios         uploads the app's assets, then writes Release's API_URL, OWNER_TOKEN, SENTRY_DSN_IOS,
  *                                      asset bucket settings, and the dSYM upload's SENTRY_AUTH_TOKEN from env-manager prod
  *                                      into app-ios/Config/Env.xcconfig
  *
- * Every command but `verify` reads env-manager with `env-manager print`, which needs this Mac's AWS access.
+ * Every command but `verify` reads env-manager with `env-manager print`, which needs this Mac's AWS access. `ios` reads
+ * the process environment instead when it holds every setting, as the TestFlight workflow's does.
  */
 import { spawnSync } from 'node:child_process';
 import { chmodSync, writeFileSync } from 'node:fs';
@@ -31,6 +32,14 @@ const IOS_RELEASE_SETTINGS = [
 ] as const;
 /** Build settings only: `scripts/upload-dsyms` reads it, and Info.plist never exposes it, so it stays off the phone. */
 const IOS_BUILD_SECRETS = ['SENTRY_AUTH_TOKEN'] as const;
+/** `app-ios/scripts/archive` signs the export and uploads to App Store Connect with this key. */
+const TESTFLIGHT_SECRETS = ['ASC_KEY_ID', 'ASC_ISSUER_ID', 'ASC_PRIVATE_KEY_B64'] as const;
+const GITHUB_SECRETS = [
+	...CLOUDFLARE_SECRETS,
+	...TESTFLIGHT_SECRETS,
+	...IOS_RELEASE_SETTINGS,
+	...IOS_BUILD_SECRETS,
+] as const;
 const IOS_CONFIG_PATH = new URL('../app-ios/Config/Env.xcconfig', import.meta.url).pathname;
 
 function require(values: Values, names: readonly string[], env: string): Values {
@@ -67,7 +76,7 @@ function push() {
 }
 
 function github() {
-	const secrets = require(readEnv('prod'), CLOUDFLARE_SECRETS, 'prod');
+	const secrets = require(readEnv('prod'), GITHUB_SECRETS, 'prod');
 	for (const [name, value] of Object.entries(secrets)) {
 		run(['gh', 'secret', 'set', name, '--repo', REPO], { stdin: value });
 		console.log(`Set GitHub secret ${name}`);
@@ -84,7 +93,7 @@ function check() {
 	);
 	const rows = [
 		...WORKER_SECRETS.map(name => ({ name, where: 'Worker', ok: Boolean(values[name]) && onWorker.has(name) })),
-		...CLOUDFLARE_SECRETS.map(name => ({ name, where: 'GitHub', ok: Boolean(values[name]) && onGithub.has(name) })),
+		...GITHUB_SECRETS.map(name => ({ name, where: 'GitHub', ok: Boolean(values[name]) && onGithub.has(name) })),
 	];
 	for (const row of rows) console.log(`${row.ok ? 'ok   ' : 'DRIFT'} ${row.where} ${row.name}`);
 	if (rows.some(row => !row.ok)) process.exit(1);
@@ -108,7 +117,9 @@ function verify() {
  */
 async function ios() {
 	await upload();
-	const settings = require(readEnv('prod'), [...IOS_RELEASE_SETTINGS, ...IOS_BUILD_SECRETS], 'prod');
+	const names = [...IOS_RELEASE_SETTINGS, ...IOS_BUILD_SECRETS];
+	const fromProcess = names.every(name => process.env[name]);
+	const settings = require(fromProcess ? (process.env as Values) : readEnv('prod'), names, 'prod');
 	// `$()` keeps an xcconfig from reading `//` as the start of a comment.
 	const lines = Object.entries(settings).map(
 		([name, value]) => `${name}[config=Release] = ${value.replaceAll('//', '/$()/')}`,

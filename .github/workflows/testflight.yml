@@ -1,0 +1,136 @@
+name: TestFlight
+
+# Archives Release on the xcode-27 runner and uploads it to App Store Connect, so TestFlight builds never need the
+# owner's Mac. Never runs on pull requests. Pushes share one concurrency group and cancel the run in progress. The
+# debounce job waits ten minutes, then skips the archive only when a newer commit touched the paths below, because that
+# commit has its own run; a later web or server commit leaves this run to archive. A manual dispatch does not wait.
+on:
+  push:
+    branches: [master]
+    paths:
+      - app-ios/**
+      - scripts/secrets.ts
+      - .github/workflows/testflight.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testflight
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  debounce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      build: ${{ steps.gate.outputs.build }}
+    steps:
+      # Checked before the wait, so a missing secret fails in seconds instead of after the archive.
+      - name: Repository secrets
+        env:
+          SECRETS: ${{ toJSON(secrets) }}
+        run: |
+          missing=$(jq -r '[ "ASC_KEY_ID", "ASC_ISSUER_ID", "ASC_PRIVATE_KEY_B64", "SENTRY_AUTH_TOKEN",
+            "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "API_URL", "OWNER_TOKEN", "SENTRY_DSN_IOS", "ASSETS_URL",
+            "ASSETS_ACCESS_KEY_ID", "ASSETS_SECRET_ACCESS_KEY" ] - (keys) | join(", ")' <<< "$SECRETS")
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets: $missing. Run bun run secrets:github."
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Debounce pushes to master
+        id: gate
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          sleep 600
+          git fetch --no-tags origin master
+          head=$(git rev-parse origin/master)
+          if [ "$head" = "$GITHUB_SHA" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # First-parent diffs, so a merge commit counts the files it brought onto master. Keep in sync with `paths`.
+          touched=$(git log --first-parent --diff-merges=first-parent --name-only --pretty=format: "${GITHUB_SHA}..${head}" \
+            | grep -E '^(app-ios/|scripts/secrets\.ts$|\.github/workflows/testflight\.yml$)' || true)
+          if [ -n "$touched" ]; then
+            printf 'master is %s, and a newer commit touches the app, so its run archives:\n%s\n' "$head" "$touched"
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "build=true" >> "$GITHUB_OUTPUT"
+
+  upload:
+    needs: debounce
+    if: needs.debounce.outputs.build == 'true'
+    runs-on: xcode-27
+    timeout-minutes: 45
+    env:
+      LEFTHOOK: '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install dependencies
+        run: |
+          bun install --frozen-lockfile
+          bun run env:generate
+
+      - name: Select Xcode 27
+        run: |
+          xcode=$(ls -d /Applications/Xcode_27*.app | sort -V | tail -1)
+          test -n "$xcode" || { echo 'The app targets iOS 27 and needs Xcode 27 on the runner.'; exit 1; }
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: app-ios/.build/SourcePackages
+          key: testflight-source-packages-${{ hashFiles('app-ios/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+
+      # Lives outside the repository, as the archive script requires, and is deleted when the job ends.
+      - name: App Store Connect API key
+        env:
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          umask 077
+          echo "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+
+      - name: Archive and upload
+        working-directory: app-ios
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          API_URL: ${{ secrets.API_URL }}
+          OWNER_TOKEN: ${{ secrets.OWNER_TOKEN }}
+          SENTRY_DSN_IOS: ${{ secrets.SENTRY_DSN_IOS }}
+          ASSETS_URL: ${{ secrets.ASSETS_URL }}
+          ASSETS_ACCESS_KEY_ID: ${{ secrets.ASSETS_ACCESS_KEY_ID }}
+          ASSETS_SECRET_ACCESS_KEY: ${{ secrets.ASSETS_SECRET_ACCESS_KEY }}
+        run: ./scripts/archive
+
+      - name: Remove the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
