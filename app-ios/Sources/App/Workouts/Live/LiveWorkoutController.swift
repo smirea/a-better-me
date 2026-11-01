@@ -336,14 +336,7 @@ final class LiveWorkoutController {
         guard let loading = answer.loading else { return nil }
         let key = LoadableKey(loading: loading, unit: unit)
         if let cached = loadableKg[key] { return cached }
-        let ceiling = unit == .kg ? 500.0 : 1100.0
-        var weights: [Double] = []
-        var value = 0.0
-        while weights.count < 400, let next = loading.step(from: value, up: true), next <= ceiling {
-            weights.append(next)
-            value = next
-        }
-        let kg = weights.map(unit.toKg)
+        let kg = loading.totals(upTo: unit == .kg ? 500 : 1100, limit: 400).map(unit.toKg)
         loadableKg[key] = kg
         return kg
     }
