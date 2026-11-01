@@ -1,2 +1,4 @@
 [test]
 preload = ["./scripts/test-timezone.ts"]
+# Xcode clones sync-engine, tests included, into DerivedData, and they need packages this repo doesn't install.
+pathIgnorePatterns = ["**/DerivedData/**"]
