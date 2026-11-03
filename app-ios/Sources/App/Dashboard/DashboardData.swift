@@ -515,6 +515,4 @@ extension ExerciseChartMetric {
 
 extension Double {
     var dashboardText: String { formatted(.number.precision(.fractionLength(0...1))) }
-    /// Rounded to a whole number with grouping: "2,345".
-    var wholeText: String { Int(rounded()).formatted() }
 }

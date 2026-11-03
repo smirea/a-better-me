@@ -1,10 +1,5 @@
 import Foundation
 
-struct DatedValue: Hashable {
-    var date: Date
-    var value: Double
-}
-
 enum ChartRange: String, CaseIterable, Identifiable {
     case oneWeek = "1W", oneMonth = "1M", threeMonths = "3M", sixMonths = "6M", oneYear = "1Y", all = "All"
 

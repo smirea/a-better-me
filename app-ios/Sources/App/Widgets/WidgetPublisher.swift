@@ -3,8 +3,9 @@ import os
 import UIKit
 import WidgetKit
 
-/// Keeps the nutrition widgets' snapshot current: one observation over the log, the plans, the goals, and the
-/// settings rebuilds it off the main thread, and a changed snapshot is written to the app group and reloads the widgets.
+/// Keeps the widgets' snapshots current. One observation over the log, the plans, the goals, and the settings rebuilds
+/// the nutrition snapshot off the main thread; the steps snapshot joins Health's days, which `HealthData` hands over,
+/// with the imported days and the goal. A changed snapshot is written to the app group and reloads its widgets.
 @MainActor
 final class WidgetPublisher {
     static let shared = WidgetPublisher()
@@ -14,6 +15,10 @@ final class WidgetPublisher {
     private var observation: AnyDatabaseCancellable?
     private var activation: (any NSObjectProtocol)?
     private var published: NutritionSnapshot?
+    private var stepsObservation: AnyDatabaseCancellable?
+    private var stepInputs: StepInputs?
+    private var healthSteps: [DatedValue] = []
+    private var publishedSteps: StepsSnapshot?
     private var writing: Task<Void, Never>?
 
     func start(store: LocalStore) {
@@ -33,20 +38,46 @@ final class WidgetPublisher {
             onError: { Self.log.error("Observing the widget snapshot failed: \(String(describing: $0))") },
             onChange: { [weak self] in self?.publish($0) }
         )
+        stepsObservation = ValueObservation.tracking { try StepInputs($0) }.removeDuplicates().start(
+            in: store.database.pool,
+            onError: { Self.log.error("Observing the steps snapshot failed: \(String(describing: $0))") },
+            onChange: { [weak self] in
+                self?.stepInputs = $0
+                self?.publishSteps()
+            }
+        )
+    }
+
+    func update(healthSteps: [DatedValue]) {
+        self.healthSteps = healthSteps
+        publishSteps()
+    }
+
+    private func publishSteps() {
+        guard let stepInputs else { return }
+        let steps = NutritionMetrics.steps(health: healthSteps, imported: stepInputs.imported, calendar: .current)
+        let snapshot = StepsSnapshot(goal: stepInputs.goal, steps: steps)
+        guard snapshot != publishedSteps else { return }
+        publishedSteps = snapshot
+        write(kinds: WidgetKind.allSteps) { try snapshot.save() }
     }
 
     private func publish(_ snapshot: NutritionSnapshot) {
         guard snapshot != published else { return }
         published = snapshot
+        write(kinds: WidgetKind.nutrition) { try snapshot.save() }
+    }
+
+    private func write(kinds: [String], _ save: @escaping @Sendable () throws -> Void) {
         let previous = writing
         writing = Task.detached(priority: .utility) {
             // Chained, so a slow write can't land after a newer one and leave stale totals on disk.
             await previous?.value
             do {
-                try snapshot.save()
-                for kind in WidgetKind.nutrition { WidgetCenter.shared.reloadTimelines(ofKind: kind) }
+                try save()
+                for kind in kinds { WidgetCenter.shared.reloadTimelines(ofKind: kind) }
             } catch {
-                Self.log.error("Writing the widget snapshot failed: \(String(describing: error))")
+                Self.log.error("Writing a widget snapshot failed: \(String(describing: error))")
             }
         }
     }
@@ -86,5 +117,16 @@ final class WidgetPublisher {
             showOverages: settings.nutrition.showOverages,
             days: days
         )
+    }
+}
+
+/// What the steps snapshot reads from the database: the goal and the steps imported from MacroFactor.
+private struct StepInputs: Equatable {
+    let goal: Int
+    let imported: [BodyMetric]
+
+    init(_ db: Database) throws {
+        goal = try AppSettings.current.fetch(db).profile.dailyStepGoal
+        imported = try BodyMetric.series(.steps).fetch(db)
     }
 }

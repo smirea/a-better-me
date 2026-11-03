@@ -73,7 +73,10 @@ final class HealthData {
             self.logged = logged
             weighIns = WeighIns.merge(logged: logged, health: weights)
         }
-        if steps != self.steps { self.steps = steps }
+        if steps != self.steps {
+            self.steps = steps
+            WidgetPublisher.shared.update(healthSteps: steps)
+        }
         revision += 1
     }
 
@@ -114,9 +117,13 @@ enum HealthSeed {
     static let launchArgument = "-seedHealthSamples"
 
     static let isRequested = ProcessInfo.processInfo.arguments.contains(launchArgument)
+    @MainActor private static var started = false
 
+    /// Activation and the Health sheet's answer both load at launch, so only the first call writes.
+    @MainActor
     static func writeIfRequested(_ store: HKHealthStore) async throws {
-        guard isRequested else { return }
+        guard isRequested, !started else { return }
+        started = true
         let bodyMass = HKQuantityType(.bodyMass)
         let stepCount = HKQuantityType(.stepCount)
         let existing = try await HKSampleQueryDescriptor(predicates: [.quantitySample(type: bodyMass)], sortDescriptors: [], limit: 1).result(for: store)

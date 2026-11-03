@@ -1,9 +1,9 @@
 import Foundation
 
 /// A screen a Quick Actions widget or the Control Center control opens: MacroFactor's quick action targets, with Ramble
-/// in AI's place, plus the Workouts half's "+" and an empty workout.
+/// in AI's place, plus the Steps screen, the Workouts half's "+", and an empty workout.
 enum QuickAction: String, CaseIterable, Codable, Sendable {
-    case search, barcode, quickAdd, ramble, foods, recipes, favorites, weight, foodLog, dashboard, newWorkout, emptyWorkout
+    case search, barcode, quickAdd, ramble, foods, recipes, favorites, weight, foodLog, dashboard, steps, newWorkout, emptyWorkout
 
     var title: String {
         switch self {
@@ -17,6 +17,7 @@ enum QuickAction: String, CaseIterable, Codable, Sendable {
         case .weight: "Weight"
         case .foodLog: "Food Log"
         case .dashboard: "Dashboard"
+        case .steps: "Steps"
         case .newWorkout: "New Workout"
         case .emptyWorkout: "Empty Workout"
         }
@@ -34,6 +35,7 @@ enum QuickAction: String, CaseIterable, Codable, Sendable {
         case .weight: "scalemass.fill"
         case .foodLog: "list.bullet.rectangle"
         case .dashboard: "square.grid.2x2"
+        case .steps: "figure.walk"
         case .newWorkout: "plus"
         case .emptyWorkout: "dumbbell.fill"
         }
@@ -70,6 +72,7 @@ extension QuickAction: AppEnum {
         .weight: DisplayRepresentation(title: "Weight", image: .init(systemName: "scalemass.fill")),
         .foodLog: DisplayRepresentation(title: "Food Log", image: .init(systemName: "list.bullet.rectangle")),
         .dashboard: DisplayRepresentation(title: "Dashboard", image: .init(systemName: "square.grid.2x2")),
+        .steps: DisplayRepresentation(title: "Steps", image: .init(systemName: "figure.walk")),
         .newWorkout: DisplayRepresentation(title: "New Workout", image: .init(systemName: "plus")),
         .emptyWorkout: DisplayRepresentation(title: "Empty Workout", image: .init(systemName: "dumbbell.fill")),
     ]
