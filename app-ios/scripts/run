@@ -4,6 +4,7 @@ import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync }
 import { basename, dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { withBuildLock } from "./build-lock.ts";
+import { refreshOwnPackages } from "./own-packages.ts";
 import { agentCommand } from "../../scripts/lib.ts";
 
 const root = resolve(import.meta.dir, "..");
@@ -332,6 +333,7 @@ simulator builds start with it off, and the app keeps the last choice.`);
     if (projects.length !== 1) throw new Error("Expected one Xcode project in the repository root.");
     const project = projects[0];
     mkdirSync(join(root, "DerivedData"), { recursive: true });
+    await refreshOwnPackages(join(root, "DerivedData", "SourcePackages"));
     const watch = values.watch && !values["no-watch"];
     let previous = snapshot(project);
     const launch = async () => {

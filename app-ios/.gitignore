@@ -7,3 +7,6 @@ Config/LocalSecrets.xcconfig
 Config/Env.xcconfig
 
 .DS_Store
+
+# Own packages track their branch; scripts/own-packages.ts refreshes local pins.
+App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
