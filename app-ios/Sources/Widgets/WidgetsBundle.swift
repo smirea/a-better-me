@@ -12,6 +12,8 @@ struct BetterMeWidgets: WidgetBundle {
         CurrentAndRemainingWidget()
         NutrientFocusWidget()
         NutrientCollectionWidget()
+        StepsWidget()
+        StepsWeekWidget()
         QuickActionsWidget()
         QuickActionControl()
     }

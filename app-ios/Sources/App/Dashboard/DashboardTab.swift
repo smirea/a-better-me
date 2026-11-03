@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct DashboardTab: View {
+    @Binding var path: [DashboardRoute]
     @Environment(\.scenePhase) private var scenePhase
     @Environment(ExerciseCatalog.self) private var catalog
     @State private var nutrition = NutritionData()
@@ -13,7 +14,7 @@ struct DashboardTab: View {
     var body: some View {
         // Reading `scenePhase` rebuilds the context when the scene becomes active, so a new day shows on return.
         let _ = scenePhase
-        NavigationStack {
+        NavigationStack(path: $path) {
             DashboardHome(layout: settings.dashboard)
                 .navigationDestination(for: DashboardRoute.self) { route in
                     switch route {

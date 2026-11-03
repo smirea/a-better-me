@@ -15,6 +15,9 @@ enum WidgetKind {
     static let nutrientFocus = "nutrition.nutrientFocus"
     static let nutrientCollection = "nutrition.nutrientCollection"
     static let nutrition = [currentAndRemaining, nutrientFocus, nutrientCollection]
+    static let steps = "steps.today"
+    static let stepsWeek = "steps.week"
+    static let allSteps = [steps, stepsWeek]
     static let quickActions = "quickActions"
     static let quickActionControl = "quickActionControl"
 }

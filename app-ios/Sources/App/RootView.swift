@@ -40,13 +40,14 @@ struct RootView: View {
     @Observe(BodyWeight.all) private var loggedWeights
     @State private var health = HealthData()
     @State private var tab = AppTab.dashboard
+    @State private var dashboardPath: [DashboardRoute] = []
     @State private var sheet: RootSheet?
     @State private var inbox = QuickActionInbox.shared
 
     var body: some View {
         TabView(selection: $tab) {
             // The tab bar's selection keeps the accent, so each tab's content restores the app's white tint.
-            Tab("Dashboard", systemImage: "square.grid.2x2", value: .dashboard) { DashboardTab().tint(Theme.textPrimary) }
+            Tab("Dashboard", systemImage: "square.grid.2x2", value: .dashboard) { DashboardTab(path: $dashboardPath).tint(Theme.textPrimary) }
             Tab("Nutrition", systemImage: "fork.knife", value: .nutrition) { FoodLogTab().tint(Theme.textPrimary) }
             Tab("Workout", systemImage: "dumbbell", value: .workout) { WorkoutTab().tint(Theme.textPrimary) }
             Tab("More", systemImage: "ellipsis", value: .more) { MoreTab().tint(Theme.textPrimary) }
@@ -115,6 +116,9 @@ struct RootView: View {
         }
         switch action {
         case .dashboard: tab = .dashboard
+        case .steps:
+            tab = .dashboard
+            dashboardPath = [.steps]
         case .foodLog: tab = .nutrition
         case .weight: sheet = .weight
         case .newWorkout:

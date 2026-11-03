@@ -24,7 +24,7 @@ extension QuickAction {
         case .foods: NutritionShortcut.yourFoods.logger
         case .recipes: NutritionShortcut.recipes.logger
         case .favorites: NutritionShortcut.favorites.logger
-        case .weight, .foodLog, .dashboard, .newWorkout, .emptyWorkout: nil
+        case .weight, .foodLog, .dashboard, .steps, .newWorkout, .emptyWorkout: nil
         }
     }
 }

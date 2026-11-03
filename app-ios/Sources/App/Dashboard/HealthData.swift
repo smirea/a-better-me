@@ -31,7 +31,10 @@ final class HealthData {
     /// Loads, or flips `requestTrigger` when any type the app uses is still undecided, and returns whether it asked.
     @discardableResult
     func refresh() async -> Bool {
-        guard HealthStore.isAvailable else { return false }
+        guard HealthStore.isAvailable else {
+            WidgetPublisher.shared.update(healthSteps: [])
+            return false
+        }
         do {
             if try await store.statusForAuthorizationRequest(toShare: AppPermissions.healthShare, read: AppPermissions.healthRead) == .shouldRequest {
                 requestTrigger.toggle()
@@ -55,7 +58,9 @@ final class HealthData {
         do {
             async let weights = readWeights()
             async let steps = readSteps()
-            update(weights: try await weights, steps: try await steps, logged: logged)
+            let read = try await steps
+            update(weights: try await weights, steps: read, logged: logged)
+            WidgetPublisher.shared.update(healthSteps: read)
         } catch {
             Self.log.error("Reading HealthKit failed: \(String(describing: error))")
         }
@@ -114,9 +119,13 @@ enum HealthSeed {
     static let launchArgument = "-seedHealthSamples"
 
     static let isRequested = ProcessInfo.processInfo.arguments.contains(launchArgument)
+    @MainActor private static var started = false
 
+    /// Activation and the Health sheet's answer both load at launch, so only the first call writes.
+    @MainActor
     static func writeIfRequested(_ store: HKHealthStore) async throws {
-        guard isRequested else { return }
+        guard isRequested, !started else { return }
+        started = true
         let bodyMass = HKQuantityType(.bodyMass)
         let stepCount = HKQuantityType(.stepCount)
         let existing = try await HKSampleQueryDescriptor(predicates: [.quantitySample(type: bodyMass)], sortDescriptors: [], limit: 1).result(for: store)
