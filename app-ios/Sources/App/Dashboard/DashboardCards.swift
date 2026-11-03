@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 struct DashboardCard<Chart: View>: View {
@@ -27,6 +28,7 @@ struct DashboardCard<Chart: View>: View {
         .card()
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
+        .feedback(self)
     }
 }
 

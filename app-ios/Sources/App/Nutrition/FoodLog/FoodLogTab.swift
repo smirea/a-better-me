@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// MacroFactor's Food Log: a week strip, the day's macro summary, and a timeline of hours that pages between days.
@@ -47,6 +48,7 @@ struct FoodLogTab: View {
         .sheet(item: $state.recipeRequest) { RecipeEditor(draft: $0.draft) }
         .sheet(item: $state.note) { NoteEditor(draft: $0) }
         .sheet(isPresented: $showingCalendar) { CalendarSheet().environment(state) }
+        .feedback(self)
     }
 }
 
@@ -70,6 +72,7 @@ private struct FoodLogHeader: View {
         }
         .padding(.bottom, 6)
         .background(Theme.header)
+        .feedback(self)
     }
 }
 
@@ -165,6 +168,7 @@ private struct DaySummary: View {
             }
         }
         .padding(.horizontal, Theme.margin)
+        .feedback(self)
     }
 }
 

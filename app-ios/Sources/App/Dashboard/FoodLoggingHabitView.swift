@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// MacroFactor's Food Logging habit page: today, the streak, a month of day rings, and one heat map per year.
@@ -51,6 +52,7 @@ struct FoodLoggingHabitView: View {
         .background(Theme.background)
         .detailTitle("Food Logging")
         .sheet(item: $editing) { NutritionDayEntrySheet(day: $0.day, log: nutrition.log) }
+        .feedback(self)
     }
 
     private func step(_ shown: Date, by months: Int) {

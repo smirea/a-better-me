@@ -12,6 +12,7 @@
 		B0000000000000000000000C /* Watch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = B00000000000000000000003 /* Watch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C0000000000000000000000C /* Widgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C00000000000000000000003 /* Widgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E00000000000000000000003 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = E00000000000000000000002 /* Sentry-Dynamic */; };
+		FB0000000000000000000003 /* Feetback in Frameworks */ = {isa = PBXBuildFile; productRef = FB0000000000000000000002 /* Feetback */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -105,6 +106,7 @@
 				A00000000000000000000023 /* SyncEngine in Frameworks */,
 				A00000000000000000000024 /* GRDB in Frameworks */,
 				E00000000000000000000003 /* Sentry-Dynamic in Frameworks */,
+				FB0000000000000000000003 /* Feetback in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -203,6 +205,7 @@
 				A00000000000000000000021 /* SyncEngine */,
 				A00000000000000000000022 /* GRDB */,
 				E00000000000000000000002 /* Sentry-Dynamic */,
+				FB0000000000000000000002 /* Feetback */,
 			);
 			productName = App;
 			productReference = A00000000000000000000006 /* App.app */;
@@ -332,6 +335,7 @@
 			packageReferences = (
 				A00000000000000000000020 /* XCRemoteSwiftPackageReference "sync-engine" */,
 				E00000000000000000000001 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				FB0000000000000000000001 /* XCRemoteSwiftPackageReference "feedback-engine" */,
 			);
 			productRefGroup = A00000000000000000000003 /* Products */;
 			projectDirPath = "";
@@ -867,6 +871,14 @@
 				version = 9.30.2;
 			};
 		};
+		FB0000000000000000000001 /* XCRemoteSwiftPackageReference "feedback-engine" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/smirea/feedback-engine";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -884,6 +896,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E00000000000000000000001 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = "Sentry-Dynamic";
+		};
+		FB0000000000000000000002 /* Feetback */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FB0000000000000000000001 /* XCRemoteSwiftPackageReference "feedback-engine" */;
+			productName = Feetback;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

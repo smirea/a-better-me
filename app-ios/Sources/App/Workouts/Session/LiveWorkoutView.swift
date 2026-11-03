@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The full-screen live workout. The root view presents it over the tab bar while `LiveWorkoutPresenter.isExpanded`.
@@ -76,11 +77,14 @@ struct SessionEditor: View {
     }
 
     var body: some View {
-        if isShowingSummary {
-            WorkoutSummaryView(session: session, isFinishing: true)
-        } else {
-            editor
+        Group {
+            if isShowingSummary {
+                WorkoutSummaryView(session: session, isFinishing: true)
+            } else {
+                editor
+            }
         }
+        .feedback(self)
     }
 
     private var editor: some View {

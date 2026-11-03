@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// One day's timeline: an hour pill per hour with its + and totals, the entries under their hour, then the notes.
@@ -57,6 +58,7 @@ struct DayPage: View {
             guard let scrolled else { return }
             withAnimation(.snappy) { state.setScrolled(scrolled, on: day) }
         }
+        .feedback(self)
     }
 }
 
@@ -92,17 +94,20 @@ private struct HourRow: View {
     @Environment(LocalStore.self) private var store
 
     var body: some View {
-        let label = NutritionFormat.hour(hour.hour)
-        if state.pending?.inline == true {
-            Button { state.paste(to: .hour(day, hour: hour.hour), in: store) } label: {
-                let paste = Image(systemName: "doc.on.clipboard.fill").hourIcon(isPrimary: true).frame(width: 32, height: 40)
-                row(pill: pill(label, isActive: false), control: paste).contentShape(.rect)
+        Group {
+            let label = NutritionFormat.hour(hour.hour)
+            if state.pending?.inline == true {
+                Button { state.paste(to: .hour(day, hour: hour.hour), in: store) } label: {
+                    let paste = Image(systemName: "doc.on.clipboard.fill").hourIcon(isPrimary: true).frame(width: 32, height: 40)
+                    row(pill: pill(label, isActive: false), control: paste).contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Paste at \(label)")
+            } else {
+                row(pill: interactivePill(label), control: control(label))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Paste at \(label)")
-        } else {
-            row(pill: interactivePill(label), control: control(label))
         }
+        .feedback(self)
     }
 
     private func row(pill: some View, control: some View) -> some View {
@@ -261,6 +266,7 @@ private struct EntryRow: View {
         .onTapGesture { state.select(entry.id) }
         .onLongPressGesture(minimumDuration: 0.35) { state.startSelection(at: entry.id) }
         .padding(.bottom, 6)
+        .feedback(self)
     }
 }
 
@@ -324,6 +330,7 @@ private struct NoteCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .card()
         .contentShape(Rectangle())
+        .feedback(self)
     }
 }
 

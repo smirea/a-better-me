@@ -1,9 +1,10 @@
+import Feetback
 import SwiftUI
 
 @main
 struct BetterMeApp: App {
     @State private var catalog: ExerciseCatalog
-    @State private var presenter = LiveWorkoutPresenter()
+    @State private var presenter: LiveWorkoutPresenter
     @State private var store: LocalStore
     @State private var history: SessionHistory
 
@@ -14,6 +15,8 @@ struct BetterMeApp: App {
         AssetStore.shared.start()
         _ = NutrientRegistry.all
         let catalog = ExerciseCatalog()
+        let presenter = LiveWorkoutPresenter()
+        _presenter = State(initialValue: presenter)
         _catalog = State(initialValue: catalog)
         let store = LocalStore()
         _store = State(initialValue: store)
@@ -27,6 +30,12 @@ struct BetterMeApp: App {
         WidgetPublisher.shared.start(store: store)
         QuickActionInbox.shared.install()
         #if DEBUG
+        Feetback.enable()
+        Feetback.context("Sync") { (api: AppEnvironment.apiURL.absoluteString, pendingWrites: store.pendingWrites) }
+        Feetback.context("Workout") {
+            (inProgressShown: presenter.isExpanded, finishedSessions: history.sessions.count, customExercises: catalog.custom.count)
+        }
+        Feetback.context("Assets") { AssetStore.shared.statusLine }
         DevSeed.run(store)
         SampleData.seedIfRequested(store)
         store.seedGeneratedProgramIfRequested(catalog: catalog)

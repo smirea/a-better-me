@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The Workout tab: the week strip (or the full calendar), then Active Program, Workout Library, and Your Sections in
@@ -65,6 +66,7 @@ struct WorkoutTab: View {
             NewProgramWizard()
         }
         .newSectionAlert(isPresented: $creatingSection)
+        .feedback(self)
     }
 
     private func pill(_ day: CalendarDay, days: LoggedDays, progress: DayRing?) -> some View {

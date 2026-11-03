@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The catch-all tab: Levels, Strategy, the workout history, and the one settings tree for both halves.
@@ -50,6 +51,7 @@ struct MoreTab: View {
             .navigationDestination(for: Muscle.self) { MuscleLevelsView(muscle: $0) }
             .navigationDestination(for: StrategyRoute.self) { $0.destination }
         }
+        .feedback(self)
     }
 
     private func row(_ route: MoreRoute, _ title: String, _ systemImage: String) -> some View {

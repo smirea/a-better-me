@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The library's sort menu, MacroFactor's "Sort". Created and Modified start with the most recent.
@@ -62,6 +63,7 @@ struct FoodRow: View {
         }
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
+        .feedback(self)
     }
 
     private var title: Text {

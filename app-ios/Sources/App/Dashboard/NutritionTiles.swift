@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 struct NutritionCardView: View {
@@ -7,21 +8,24 @@ struct NutritionCardView: View {
     init(card: NutritionCard) { self.card = card }
 
     var body: some View {
-        if let id = card.nutrient, let nutrient = NutrientRegistry.nutrient(id) {
-            let tile = values.nutrientTile(card)
-            NavigationLink(value: DashboardRoute.nutrient(id)) {
-                DashboardCard(title: nutrient.name, period: "Today", value: tile.text, unit: tile.unit) {
-                    TileBar(value: tile.consumed, range: tile.range, color: id.color)
+        Group {
+            if let id = card.nutrient, let nutrient = NutrientRegistry.nutrient(id) {
+                let tile = values.nutrientTile(card)
+                NavigationLink(value: DashboardRoute.nutrient(id)) {
+                    DashboardCard(title: nutrient.name, period: "Today", value: tile.text, unit: tile.unit) {
+                        TileBar(value: tile.consumed, range: tile.range, color: id.color)
+                    }
                 }
-            }
-        } else if card.nutrient == nil {
-            let macros = values.macrosCard
-            NavigationLink(value: DashboardRoute.macros) {
-                DashboardCard(title: "Macros", period: "Last 7 Days", value: macros.text, unit: "kcal avg") {
-                    MiniStackedBars(days: macros.days, colors: [Theme.protein, Theme.fat, Theme.carbs])
+            } else if card.nutrient == nil {
+                let macros = values.macrosCard
+                NavigationLink(value: DashboardRoute.macros) {
+                    DashboardCard(title: "Macros", period: "Last 7 Days", value: macros.text, unit: "kcal avg") {
+                        MiniStackedBars(days: macros.days, colors: [Theme.protein, Theme.fat, Theme.carbs])
+                    }
                 }
             }
         }
+        .feedback(self)
     }
 }
 
@@ -32,21 +36,24 @@ struct BodyMetricCardView: View {
     init(card: BodyMetricCard) { self.card = card }
 
     var body: some View {
-        if card == .scaleWeight {
-            let entries = values.scaleWeightCard
-            NavigationLink(value: DashboardRoute.scaleWeight) {
-                DashboardCard(title: "Scale Weight", period: "Last 7 Entries", value: entries.text, unit: values.context.unit.rawValue) {
-                    MiniLine(values: entries.values, color: Theme.green)
+        Group {
+            if card == .scaleWeight {
+                let entries = values.scaleWeightCard
+                NavigationLink(value: DashboardRoute.scaleWeight) {
+                    DashboardCard(title: "Scale Weight", period: "Last 7 Entries", value: entries.text, unit: values.context.unit.rawValue) {
+                        MiniLine(values: entries.values, color: Theme.green)
+                    }
                 }
-            }
-        } else {
-            let entries = values.bodyMetricCard(card)
-            NavigationLink(value: DashboardRoute.bodyMetric(card)) {
-                DashboardCard(title: card.title, period: "Last 7 Entries", value: entries.text, unit: values.bodyMetricUnit(card)) {
-                    MiniLine(values: entries.values, color: Theme.green)
+            } else {
+                let entries = values.bodyMetricCard(card)
+                NavigationLink(value: DashboardRoute.bodyMetric(card)) {
+                    DashboardCard(title: card.title, period: "Last 7 Entries", value: entries.text, unit: values.bodyMetricUnit(card)) {
+                        MiniLine(values: entries.values, color: Theme.green)
+                    }
                 }
             }
         }
+        .feedback(self)
     }
 }
 

@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Settings > Exercises: the picker's list and filters with MF's All, Performed, Deprioritized (Do Not Recommend),
@@ -46,6 +47,7 @@ struct ExerciseLibraryView: View {
         }
         .navigationDestination(item: $opened) { ExerciseSettingsView(exerciseID: $0.id) }
         .sheet(isPresented: $creating) { CustomExerciseWizard() }
+        .feedback(self)
     }
 }
 
