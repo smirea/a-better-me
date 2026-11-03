@@ -1,3 +1,4 @@
+import Feetback
 import GRDB
 import SwiftUI
 
@@ -29,6 +30,11 @@ struct Observe<Value: Sendable & Equatable>: DynamicProperty {
     func update() {
         MainActor.assumeIsolated { tracker.start(query, in: store) }
     }
+}
+
+/// Shake-to-feedback reports the observed value instead of skipping the wrapper.
+extension Observe: FeedbackRepresentable {
+    var feedbackValue: Any { wrappedValue }
 }
 
 @MainActor @Observable

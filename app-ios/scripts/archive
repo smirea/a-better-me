@@ -53,6 +53,7 @@ cat > "$options" <<PLIST
 PLIST
 
 bun run --cwd .. env:ios
+bun scripts/own-packages.ts .build/SourcePackages
 
 echo "Archiving build $build_number"
 # Unsigned archive: automatic signing here asks for an Apple Development certificate, and each fresh CI runner would

@@ -16,6 +16,8 @@ const xcodeArgs = [
 	'CODE_SIGNING_ALLOWED=NO',
 ];
 
+await $`bun scripts/own-packages.ts .build/SourcePackages`.cwd(directory);
+
 switch (Bun.argv[2]) {
 	case 'checks':
 		await $`bun app-ios/scripts/lint-swift.ts`;
