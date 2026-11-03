@@ -19,7 +19,7 @@ final class WidgetPublisher {
     private var stepInputs: StepInputs?
     /// Nil until Health answers, so a launch that never reads it (in the background, or locked) keeps the last file.
     private var healthSteps: [DatedValue]?
-    private var publishedSteps: StepsSnapshot?
+    private var publishedSteps: StepSources?
     private var writing: Task<Void, Never>?
 
     func start(store: LocalStore) {
@@ -56,11 +56,11 @@ final class WidgetPublisher {
 
     private func publishSteps() {
         guard let stepInputs, let healthSteps else { return }
-        let steps = NutritionMetrics.steps(health: healthSteps, imported: stepInputs.imported, calendar: .current)
-        let snapshot = StepsSnapshot(goal: stepInputs.goal, steps: steps)
-        guard snapshot != publishedSteps else { return }
-        publishedSteps = snapshot
-        write(kinds: WidgetKind.allSteps) { try snapshot.save() }
+        let sources = StepSources(health: healthSteps, inputs: stepInputs)
+        guard sources != publishedSteps else { return }
+        publishedSteps = sources
+        // Merging and keying years of days is data work, so it runs in the write's task.
+        write(kinds: WidgetKind.allSteps) { try sources.snapshot().save() }
     }
 
     private func publish(_ snapshot: NutritionSnapshot) {
@@ -122,12 +122,23 @@ final class WidgetPublisher {
 }
 
 /// What the steps snapshot reads from the database: the goal and the steps imported from MacroFactor.
-private struct StepInputs: Equatable {
+private struct StepInputs: Equatable, Sendable {
     let goal: Int
     let imported: [BodyMetric]
 
     init(_ db: Database) throws {
         goal = try AppSettings.current.fetch(db).profile.dailyStepGoal
         imported = try BodyMetric.series(.steps).fetch(db)
+    }
+}
+
+private struct StepSources: Equatable, Sendable {
+    let health: [DatedValue]
+    let inputs: StepInputs
+
+    func snapshot() -> StepsSnapshot {
+        let calendar = Calendar.current
+        let steps = NutritionMetrics.steps(health: health, imported: inputs.imported, calendar: calendar)
+        return StepsSnapshot(goal: inputs.goal, steps: steps, calendar: calendar)
     }
 }
