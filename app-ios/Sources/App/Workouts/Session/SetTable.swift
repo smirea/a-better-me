@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The set table, its keypad, and the edits they make to `blocks`.
@@ -52,6 +53,7 @@ extension SessionEditor {
         .opacity(isLogged && focus?.row != path ? 0.45 : 1)
         .background(Theme.background)
         .rowSwipeActions(trailing: [.destructive(path.sub == nil ? "Remove Set" : "Remove") { removeRow(path) }], fullSwipe: true)
+        .feedback("SetRow", data: (number: number, row: path, entry: value, logged: isLogged))
     }
 
     @ViewBuilder

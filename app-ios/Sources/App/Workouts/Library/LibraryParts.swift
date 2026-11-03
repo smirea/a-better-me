@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 extension ExerciseMetric {
@@ -89,6 +90,7 @@ struct LibraryExerciseRow<Trailing: View>: View {
             trailing
         }
         .contentShape(.rect)
+        .feedback(self)
     }
 }
 

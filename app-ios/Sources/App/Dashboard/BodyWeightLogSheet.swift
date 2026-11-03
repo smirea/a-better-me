@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 struct BodyWeightLogSheet: View {
@@ -63,5 +64,6 @@ struct BodyWeightLogSheet: View {
             }
         }
         .presentationDetents([.medium])
+        .feedback(self)
     }
 }

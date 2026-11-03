@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 struct DashboardTab: View {
@@ -73,6 +74,7 @@ private struct DashboardHome: View {
                 .accessibilityLabel("Customize Dashboard")
             }
         }
+        .feedback(self)
     }
 
     private var primaryFocus: some View {
@@ -150,6 +152,7 @@ private struct CycleFocus: View {
             hasProgram: program != nil,
             scope: $scope
         )
+        .feedback(self)
     }
 }
 
@@ -159,6 +162,7 @@ private struct RecordsFocus: View {
 
     var body: some View {
         RecentRecordsCard(records: values.recentRecords(kind), kind: $kind)
+        .feedback(self)
     }
 }
 
@@ -169,33 +173,36 @@ private struct InsightCardView: View {
     init(card: InsightCard) { self.card = card }
 
     var body: some View {
-        switch card {
-        case .workouts:
-            let sets = values.workoutsCard
-            NavigationLink(value: DashboardRoute.workouts) {
-                DashboardCard(title: "Workouts", period: "Last 7 Workouts", value: sets.text, unit: "sets") {
-                    MiniBars(values: sets.values, color: Theme.accent)
+        Group {
+            switch card {
+            case .workouts:
+                let sets = values.workoutsCard
+                NavigationLink(value: DashboardRoute.workouts) {
+                    DashboardCard(title: "Workouts", period: "Last 7 Workouts", value: sets.text, unit: "sets") {
+                        MiniBars(values: sets.values, color: Theme.accent)
+                    }
                 }
-            }
-        case .weightTrend:
-            let trend = values.trendCard
-            NavigationLink(value: DashboardRoute.weightTrend) {
-                DashboardCard(title: "Weight Trend", period: "Last 7 Days", value: trend.text, unit: values.context.unit.rawValue) {
-                    MiniLine(values: trend.values, color: Theme.weightTrend)
+            case .weightTrend:
+                let trend = values.trendCard
+                NavigationLink(value: DashboardRoute.weightTrend) {
+                    DashboardCard(title: "Weight Trend", period: "Last 7 Days", value: trend.text, unit: values.context.unit.rawValue) {
+                        MiniLine(values: trend.values, color: Theme.weightTrend)
+                    }
                 }
-            }
-        case .expenditure:
-            let card = values.expenditureCard
-            NavigationLink(value: DashboardRoute.expenditure) {
-                DashboardCard(title: "Expenditure", period: "Last 7 Days", value: card.text, unit: "kcal") {
-                    MiniLine(values: card.values, color: Theme.accent)
+            case .expenditure:
+                let card = values.expenditureCard
+                NavigationLink(value: DashboardRoute.expenditure) {
+                    DashboardCard(title: "Expenditure", period: "Last 7 Days", value: card.text, unit: "kcal") {
+                        MiniLine(values: card.values, color: Theme.accent)
+                    }
                 }
+            case .energyBalance:
+                EnergyBalanceInsightCard(balance: values.balance(.expenditure, days: 7))
+            case .goalProgress:
+                GoalProgressInsightCard(progress: values.goalProgress(.scale))
             }
-        case .energyBalance:
-            EnergyBalanceInsightCard(balance: values.balance(.expenditure, days: 7))
-        case .goalProgress:
-            GoalProgressInsightCard(progress: values.goalProgress(.scale))
         }
+        .feedback(self)
     }
 }
 
@@ -206,29 +213,32 @@ private struct HabitCardView: View {
     init(card: HabitCard) { self.card = card }
 
     var body: some View {
-        switch card {
-        case .weighIn:
-            let habit = values.weighInHabit
-            NavigationLink(value: DashboardRoute.scaleWeight) {
-                DashboardCard(title: "Weigh-In", period: "Last 30 Days", value: habit.text, unit: "this week") {
-                    DotGrid(days: habit.days, color: Theme.green)
+        Group {
+            switch card {
+            case .weighIn:
+                let habit = values.weighInHabit
+                NavigationLink(value: DashboardRoute.scaleWeight) {
+                    DashboardCard(title: "Weigh-In", period: "Last 30 Days", value: habit.text, unit: "this week") {
+                        DotGrid(days: habit.days, color: Theme.green)
+                    }
                 }
-            }
-        case .workouts:
-            let habit = values.workoutHabit
-            NavigationLink(value: DashboardRoute.workouts) {
-                DashboardCard(title: "Workouts", period: "Last 30 Days", value: habit.text, unit: "this week") {
-                    DotGrid(days: habit.days, color: Theme.accent)
+            case .workouts:
+                let habit = values.workoutHabit
+                NavigationLink(value: DashboardRoute.workouts) {
+                    DashboardCard(title: "Workouts", period: "Last 30 Days", value: habit.text, unit: "this week") {
+                        DotGrid(days: habit.days, color: Theme.accent)
+                    }
                 }
-            }
-        case .foodLogging:
-            let habit = values.foodLogging.habit
-            NavigationLink(value: DashboardRoute.foodLogging) {
-                DashboardCard(title: "Food Logging", period: "Last 30 Days", value: habit.text, unit: "this week") {
-                    DotGrid(days: habit.days, color: Theme.calories)
+            case .foodLogging:
+                let habit = values.foodLogging.habit
+                NavigationLink(value: DashboardRoute.foodLogging) {
+                    DashboardCard(title: "Food Logging", period: "Last 30 Days", value: habit.text, unit: "this week") {
+                        DotGrid(days: habit.days, color: Theme.calories)
+                    }
                 }
             }
         }
+        .feedback(self)
     }
 }
 
@@ -245,6 +255,7 @@ private struct StepsCardView: View {
                 MiniBars(values: goal.week.map(\.steps), color: Theme.accent, colors: goal.week.map(\.tier.color), goal: Double(goal.goal))
             }
         }
+        .feedback(self)
     }
 }
 
@@ -280,6 +291,7 @@ struct MuscleCardView: View {
                 MiniBars(values: days.values, color: Theme.muscle)
             }
         }
+        .feedback(self)
     }
 }
 
@@ -297,6 +309,7 @@ struct ExerciseCardView: View {
                 MiniLine(values: points.values, color: Theme.exercise)
             }
         }
+        .feedback(self)
     }
 }
 

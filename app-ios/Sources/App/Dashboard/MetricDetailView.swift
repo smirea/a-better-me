@@ -1,3 +1,4 @@
+import Feetback
 import Charts
 import SwiftUI
 
@@ -72,6 +73,7 @@ struct MetricDetailView: View {
             if case let .steps(goal) = values.detail(route).footer { StepGoalSheet(goal: goal.goal) }
         }
         .sheet(item: $shownExercise) { ExerciseDetailSheet(exerciseID: $0.id) }
+        .feedback(self)
     }
 
     private func history(_ plot: MetricPlot, tab: MetricTab, title: String = "History") -> some View {

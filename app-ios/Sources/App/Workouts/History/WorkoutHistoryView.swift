@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Every finished workout, newest first and grouped by day. A row opens its summary.
@@ -31,6 +32,7 @@ struct WorkoutHistoryView: View {
         }
         .detailTitle("Workout History")
         .fullScreenCover(item: $selected) { WorkoutSummaryView(session: $0) }
+        .feedback(self)
     }
 }
 
@@ -76,6 +78,7 @@ private struct HistoryRow: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(session.name), \(session.startedAt.formatted(date: .abbreviated, time: .shortened))")
+        .feedback(self)
     }
 }
 

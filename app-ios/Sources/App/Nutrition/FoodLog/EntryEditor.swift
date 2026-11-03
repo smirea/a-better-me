@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The pencil's sheet over the timeline: the entry's calories and macros, Remove, Favorite, Duplicate, and for a
@@ -97,6 +98,7 @@ struct EntryEditor: View {
             }
         }
         .presentationDetents([.large])
+        .feedback(self)
     }
 
     private var actions: some View {
