@@ -17,7 +17,8 @@ final class WidgetPublisher {
     private var published: NutritionSnapshot?
     private var stepsObservation: AnyDatabaseCancellable?
     private var stepInputs: StepInputs?
-    private var healthSteps: [DatedValue] = []
+    /// Nil until Health answers, so a launch that never reads it (in the background, or locked) keeps the last file.
+    private var healthSteps: [DatedValue]?
     private var publishedSteps: StepsSnapshot?
     private var writing: Task<Void, Never>?
 
@@ -54,7 +55,7 @@ final class WidgetPublisher {
     }
 
     private func publishSteps() {
-        guard let stepInputs else { return }
+        guard let stepInputs, let healthSteps else { return }
         let steps = NutritionMetrics.steps(health: healthSteps, imported: stepInputs.imported, calendar: .current)
         let snapshot = StepsSnapshot(goal: stepInputs.goal, steps: steps)
         guard snapshot != publishedSteps else { return }

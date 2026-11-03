@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct DatedValue: Hashable, Sendable {
+struct DatedValue: Codable, Hashable, Sendable {
     var date: Date
     var value: Double
 }

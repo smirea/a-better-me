@@ -31,7 +31,10 @@ final class HealthData {
     /// Loads, or flips `requestTrigger` when any type the app uses is still undecided, and returns whether it asked.
     @discardableResult
     func refresh() async -> Bool {
-        guard HealthStore.isAvailable else { return false }
+        guard HealthStore.isAvailable else {
+            WidgetPublisher.shared.update(healthSteps: [])
+            return false
+        }
         do {
             if try await store.statusForAuthorizationRequest(toShare: AppPermissions.healthShare, read: AppPermissions.healthRead) == .shouldRequest {
                 requestTrigger.toggle()
@@ -55,7 +58,9 @@ final class HealthData {
         do {
             async let weights = readWeights()
             async let steps = readSteps()
-            update(weights: try await weights, steps: try await steps, logged: logged)
+            let read = try await steps
+            update(weights: try await weights, steps: read, logged: logged)
+            WidgetPublisher.shared.update(healthSteps: read)
         } catch {
             Self.log.error("Reading HealthKit failed: \(String(describing: error))")
         }
@@ -73,10 +78,7 @@ final class HealthData {
             self.logged = logged
             weighIns = WeighIns.merge(logged: logged, health: weights)
         }
-        if steps != self.steps {
-            self.steps = steps
-            WidgetPublisher.shared.update(healthSteps: steps)
-        }
+        if steps != self.steps { self.steps = steps }
         revision += 1
     }
 

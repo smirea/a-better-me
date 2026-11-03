@@ -33,7 +33,7 @@ struct StepsEntry: TimelineEntry {
 }
 
 /// Health's own counts for the last month, merged over the app's snapshot. Health stays readable only while the
-/// phone is unlocked, so a locked refresh shows the snapshot plus whatever the last unlocked one read.
+/// phone is unlocked, so each read is kept in the app group and a locked refresh uses the last one instead.
 struct StepsProvider: TimelineProvider {
     private static let refresh: TimeInterval = 15 * 60
     private static let store = HKHealthStore()
@@ -53,14 +53,22 @@ struct StepsProvider: TimelineProvider {
     /// Now, then midnight, which starts the new day at zero if the next refresh runs late.
     static func timeline(now: Date, calendar: Calendar = .current) async -> Timeline<StepsEntry> {
         let snapshot = StepsSnapshot.load() ?? StepsSnapshot(goal: StepGoal.defaultGoal, days: [:])
-        let live = await live(now: now, calendar: calendar)
+        let live = await live(now: now, calendar: calendar) ?? lastRead()
         let midnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))!
         let entries = [now, midnight].map { StepsEntry(date: $0, summary: snapshot.summary(live: live, now: $0, calendar: calendar)) }
         return Timeline(entries: entries, policy: .after(now.addingTimeInterval(refresh)))
     }
 
-    private static func live(now: Date, calendar: Calendar) async -> [DatedValue] {
-        guard HKHealthStore.isHealthDataAvailable() else { return [] }
+    private static var lastReadURL: URL? { AppGroup.url("Widgets/steps-live.json") }
+
+    private static func lastRead() -> [DatedValue] {
+        guard let url = lastReadURL, let data = try? Data(contentsOf: url) else { return [] }
+        return (try? JSONDecoder().decode([DatedValue].self, from: data)) ?? []
+    }
+
+    /// Nil when Health can't be read, as while the phone is locked.
+    private static func live(now: Date, calendar: Calendar) async -> [DatedValue]? {
+        guard HKHealthStore.isHealthDataAvailable() else { return nil }
         let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))!
         let start = calendar.date(byAdding: .day, value: -30, to: end)!
         let query = HKStatisticsCollectionQueryDescriptor(
@@ -75,10 +83,14 @@ struct StepsProvider: TimelineProvider {
                 guard let sum = statistics.sumQuantity()?.doubleValue(for: .count()), sum > 0 else { return }
                 days.append(DatedValue(date: statistics.startDate, value: sum))
             }
+            if let url = lastReadURL {
+                try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try? JSONEncoder().encode(days).write(to: url, options: .atomic)
+            }
             return days
         } catch {
             log.info("Steps widget read no Health data: \(String(describing: error))")
-            return []
+            return nil
         }
     }
 }
