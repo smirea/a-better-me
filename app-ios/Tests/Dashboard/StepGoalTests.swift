@@ -74,7 +74,7 @@ struct StepsPlotTests {
         #expect(week.streak?.first == day("2026-10-27", 12))
         #expect(week.streak?.last == day("2026-10-28", 12))
         #expect(week.months.isEmpty)
-        #expect(week.barCenters.first == day("2026-10-22", 12))
+        #expect(week.scrubDates.first == day("2026-10-22", 12))
     }
 
     @Test func weeklyBarsAverageFlightsAndDropTheStreak() {
@@ -82,7 +82,7 @@ struct StepsPlotTests {
         #expect(month.flightsTotal == 60)
         #expect(month.flights == [day("2026-09-29", 0): 40, day("2026-10-19", 0): 3, day("2026-10-26", 0): 8.5])
         #expect(month.streak == nil)
-        #expect(month.barCenters == [day("2026-10-22", 12), day("2026-10-29", 12)])
+        #expect(month.scrubDates == [day("2026-10-22", 12), day("2026-10-29", 12)])
         // The range ends Oct 28, inside the last week, so the domain runs to that week's end.
         #expect(month.xDomain == day("2026-09-29", 0)...day("2026-11-02", 0))
     }

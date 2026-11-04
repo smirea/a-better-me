@@ -185,7 +185,7 @@ struct MetricDetailView: View {
         .chartOverlay { proxy in
             if let stepGoal {
                 StepBarLabels(
-                    proxy: proxy, points: points, centers: plot.barCenters, flights: plot.flights,
+                    proxy: proxy, points: points, centers: plot.scrubDates, flights: plot.flights,
                     streak: plot.streak, streakLength: stepGoal.streak
                 )
             }
@@ -311,10 +311,9 @@ struct MetricPlot {
     var second: Double?
     var overlay: [DatedValue]
     var overlayValues: [Date: Double]
-    /// Where scrubbing draws the rule for each drawn point.
+    /// Where scrubbing draws the rule for each drawn point: a bar's middle is that of its whole day, week, or month,
+    /// where Swift Charts draws it even when the range cuts it.
     var scrubDates: [Date]
-    /// The middle of each drawn bar's whole day, week, or month, where Swift Charts draws it even when the range cuts it.
-    var barCenters: [Date]
     /// The range, widened for bars to the whole bins they are drawn over, so a month cut by the range's end stays in
     /// the plot instead of covering the axis.
     var xDomain: ClosedRange<Date>
@@ -346,15 +345,8 @@ struct MetricPlot {
         self.unit = unit
         overlay = tab.overlay.map { drawing.bucket($0.points.inside(interval), calendar: calendar).map { DatedValue(date: max($0.date, interval.start), value: $0.value) } } ?? []
         overlayValues = Dictionary(overlay.map { ($0.date, $0.value) }, uniquingKeysWith: { first, _ in first })
-        // A bar spans its whole calendar day, week, or month even when its date is clamped to the range's start, so
-        // the rule goes to the middle of the bar's part inside the range.
-        scrubDates = tab.style == .line ? drawn.map(\.date) : drawn.map { point in
-            let bin = calendar.dateInterval(of: drawing.component, for: point.date)!
-            let start = max(bin.start, interval.start)
-            return start.addingTimeInterval(min(bin.end, interval.end).timeIntervalSince(start) / 2)
-        }
         let bins = drawn.map { calendar.dateInterval(of: drawing.component, for: $0.date)! }
-        barCenters = bins.map { $0.start.addingTimeInterval($0.duration / 2) }
+        scrubDates = tab.style == .line ? drawn.map(\.date) : bins.map { $0.start.addingTimeInterval($0.duration / 2) }
         xDomain = tab.style == .bar
             ? min(bins.first?.start ?? interval.start, interval.start)...max(bins.last?.end ?? interval.end, interval.end)
             : interval.start...interval.end
