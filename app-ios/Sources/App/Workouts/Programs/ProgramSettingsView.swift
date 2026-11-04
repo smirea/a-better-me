@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Program Settings (milestone-2.md §2.5). Every row writes as it changes; the editor behind it follows the store.
@@ -117,6 +118,7 @@ struct ProgramSettingsView: View {
                 }
             }
         }
+        .feedback(self)
     }
 
     private var confirmationTitle: String {
@@ -320,6 +322,7 @@ private struct ProgramSettingsColorIcon: View {
                 }
             }
         }
+        .feedback(self)
     }
 }
 
@@ -370,6 +373,7 @@ private struct ProgramSettingsDayOrder: View {
                 }
             }
         }
+        .feedback(self)
     }
 
     private func pill(_ day: ProgramDay) -> some View {
@@ -427,6 +431,7 @@ private struct ProgramSettingsDeload: View {
             }
         }
         .presentationDetents([.medium])
+        .feedback(self)
     }
 }
 
@@ -467,5 +472,6 @@ private struct ProgramSettingsDuplicate: View {
             .onAppear { focused = true }
         }
         .presentationDetents([.medium])
+        .feedback(self)
     }
 }

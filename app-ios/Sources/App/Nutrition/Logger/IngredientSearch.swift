@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 extension IngredientPicker {
@@ -63,6 +64,7 @@ private struct IngredientSearch: View {
             guard session == nil, let search = try? await FoodSearch.load(store: store) else { return }
             session = LoggerSession(store: store, search: search, start: LoggerStart())
         }
+        .feedback(self)
     }
 
     private func pick(_ result: FoodSearchResult) {

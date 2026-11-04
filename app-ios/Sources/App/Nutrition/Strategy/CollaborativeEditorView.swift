@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// MacroFactor's Collaborative editor: the week's chart with day buttons, then the selected day's calories, protein,
@@ -34,6 +35,7 @@ struct CollaborativeEditorView: View {
             ratio
             Text("Weekly budget: \(week.weeklyKcal.formatted()) kcal").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
         }
+        .feedback(self)
     }
 
     private var calories: some View {

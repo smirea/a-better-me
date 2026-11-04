@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The filterable, category-grouped exercise list shared by the picker and Settings > Exercises. The owner of the
@@ -85,6 +86,7 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
             }
             .padding(.bottom, 6)
         }
+        .feedback(self)
     }
 }
 
@@ -197,6 +199,7 @@ struct ExerciseFilterBar: View {
                     }
             }
         }
+        .feedback(self)
     }
 
     private var gymMenu: some View {
@@ -303,6 +306,7 @@ struct EquipmentPickerSheet: View {
                 }
             }
         }
+        .feedback(self)
     }
 }
 

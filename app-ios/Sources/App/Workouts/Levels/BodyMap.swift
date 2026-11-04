@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 enum BodySide {
@@ -26,5 +27,6 @@ struct BodyMap: View {
                 }
             }
         }
+        .feedback(self)
     }
 }

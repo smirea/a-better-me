@@ -227,6 +227,7 @@ struct SessionEditor: View {
         .foregroundStyle(Theme.textPrimary)
         .padding(.horizontal, Theme.margin)
         .frame(height: 52)
+        .feedback("Top Bar", data: mode)
     }
 
     // MARK: Exercise strip
@@ -253,6 +254,7 @@ struct SessionEditor: View {
             .padding(.horizontal, Theme.margin)
         }
         .scrollIndicators(.hidden)
+        .feedback("Exercise Strip")
     }
 
     private func stripTile(_ item: BlockExercise) -> some View {
@@ -280,6 +282,7 @@ struct SessionEditor: View {
             .padding(.horizontal, Theme.margin)
             chips(item: item, isSuperset: blocks[block].isSuperset, hiddenWarmUps: hiddenWarmUpCount(block: block, exercise: index))
             setTable(block: block, exercise: index, fields: SetField.fields(for: exercise))
+                .feedback("Set Table", data: (exercise: catalog.name(item.exerciseID), sets: item.sets.count))
                 .padding(.horizontal, Theme.margin)
             if let caption = bodyweightCaption(exercise) {
                 Text(caption).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).padding(.horizontal, Theme.margin)
@@ -287,6 +290,7 @@ struct SessionEditor: View {
             if let note = item.note, !note.isEmpty { noteCard("Session Note", note) }
             if !pinned.isEmpty { noteCard("Pinned Note", pinned) }
         }
+        .feedback("Current Exercise", data: item)
     }
 
     /// Bodyweight Contribution: "Body weight 80 kg · 65% counted (52 kg)", for exercises that lift part of the body.
@@ -304,6 +308,8 @@ struct SessionEditor: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .card()
+        .accessibilityElement(children: .combine)
+        .feedback(title, data: text)
         .padding(.horizontal, Theme.margin)
     }
 

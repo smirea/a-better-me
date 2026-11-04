@@ -1,4 +1,5 @@
 import GRDB
+import Feetback
 import SwiftUI
 
 extension Recipe {
@@ -25,7 +26,7 @@ struct RecipeDetailView: View {
 
     var body: some View {
         if let recipe {
-            content(recipe)
+            content(recipe).feedback(self)
         } else {
             // Deleting from the editor sheet leaves this page behind; it pops once its recipe is gone.
             ContentUnavailableView("Recipe deleted", systemImage: "trash")
@@ -196,6 +197,7 @@ struct RecipePrepareView: View {
         }
         .themedList()
         .detailTitle(recipe.name)
+        .feedback(self)
     }
 
     private func summaryTile(_ id: NutrientID, perServing: NutrientAmounts, total: NutrientAmounts) -> some View {

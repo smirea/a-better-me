@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 struct WarmUpSettingsView: View {
@@ -38,6 +39,7 @@ struct WarmUpSettingsView: View {
         }
         .themedList()
         .detailTitle("Warm-Up")
+        .feedback(self)
     }
 }
 
@@ -68,6 +70,7 @@ private struct WarmUpSchemeView: View {
         .sheet(item: $editing) { category in
             WarmUpSchemeEditor(category: category, steps: steps(category))
         }
+        .feedback(self)
     }
 
     private func steps(_ category: RestCategory) -> [WarmUpStep] {
@@ -137,6 +140,7 @@ private struct WarmUpSchemeEditor: View {
             }
         }
         .presentationDetents([.large])
+        .feedback(self)
     }
 
     private func save(to categories: [RestCategory]) {

@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Edits one item's load. `onSave(nil)` means Reset to Default. Independent of gym profiles, so Exercise Overrides'
@@ -54,6 +55,7 @@ struct EquipmentLoadEditor: View {
                 }
             }
         }
+        .feedback(self)
     }
 }
 

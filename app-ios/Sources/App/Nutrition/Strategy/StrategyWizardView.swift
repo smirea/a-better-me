@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The New Goal, Edit Goal, New Program, and Edit Program wizards (MacroFactor's full-screen "Set New Goal" and "Set
@@ -24,6 +25,7 @@ struct StrategyWizardView: View {
                 .navigationDestination(for: StrategyWizardModel.Step.self) { page($0) }
         }
         .tint(Theme.textPrimary)
+        .feedback(self)
     }
 
     private func page(_ step: StrategyWizardModel.Step) -> some View {
@@ -259,6 +261,7 @@ private struct GoalWeightRateStep: View {
                 rate
             }
         }
+        .feedback(self)
     }
 
     private var rate: some View {
@@ -328,6 +331,7 @@ private struct ManualTargetsStep: View {
             field("Fat", "g", \.fat, day)
             field("Carbs", "g", \.carbs, day)
         }
+        .feedback(self)
     }
 
     private func field(_ title: String, _ unit: String, _ path: WritableKeyPath<DayTarget, Double>, _ day: Int) -> some View {

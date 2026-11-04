@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// A library workout: the editor with Workout Options and a pinned Start Workout. Edits save as they happen. The editor
@@ -26,7 +27,7 @@ struct WorkoutDetailView: View {
     var body: some View {
         // After a delete the pop is still animating, so the screen stays blank instead of showing a missing row.
         if let template {
-            editor(template)
+            editor(template).feedback(self)
         } else {
             Color.clear
         }

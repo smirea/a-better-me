@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 extension Nutrient {
@@ -92,6 +93,7 @@ struct NutrientRow: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+        .feedback(self)
     }
 }
 
@@ -121,6 +123,7 @@ struct MacroHeader: View {
             }
         }
         .accessibilityElement(children: .combine)
+        .feedback(self)
     }
 }
 
@@ -148,6 +151,7 @@ struct ImpactGauges: View {
             }
         }
         .padding(.vertical, 4)
+        .feedback(self)
     }
 }
 

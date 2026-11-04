@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// "Create Program" (research spec milestone-2.md §1.1): one question per step, then the program editor with Save to
@@ -64,6 +65,7 @@ struct NewProgramWizard: View {
             Text("We only support select spreadsheet formats with a .xlsx extension. If the program spreadsheet wasn't exported from MacroFactor Workouts or explicitly advertised to work with MacroFactor Workouts, it will likely fail to import. Only upload content you have permission to use.")
         }
         .unmatchedExercisesAlert($unmatched)
+        .feedback(self)
     }
 
     private func page(_ step: WizardStep) -> some View {
@@ -140,6 +142,7 @@ struct NewProgramWizard: View {
                 Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
                     .font(.system(size: 56, weight: .semibold))
                     .padding(.top, 80)
+                    .accessibilityHidden(true)
                 Text("We will create a personalized training program tailored to your goals. Or, you can import or build your own.")
                     .font(AppFont.title())
                     .multilineTextAlignment(.center)
@@ -304,6 +307,7 @@ private struct WizardPage<Content: View, Footer: View>: View {
             .background(Theme.background)
         }
         .detailTitle("Create Program")
+        .feedback(self)
     }
 }
 
@@ -513,6 +517,7 @@ private struct ExperienceSheet: View {
             }
         }
         .presentationDetents([.height(380)])
+        .feedback(self)
     }
 }
 

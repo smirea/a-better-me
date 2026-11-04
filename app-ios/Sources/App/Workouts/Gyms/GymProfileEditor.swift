@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// One gym's name, icon, and equipment with its weights. Every change writes straight to the profile.
@@ -30,6 +31,7 @@ struct GymProfileEditor: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .feedback(self)
     }
 
     private func content(_ gym: GymProfile) -> some View {
@@ -260,6 +262,7 @@ private struct EquipmentRow: View {
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
         }
         .padding(.vertical, 4)
+        .feedback(self)
     }
 }
 

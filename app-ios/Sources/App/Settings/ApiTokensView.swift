@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Settings > API Tokens: bot tokens for an agent, such as an AI coach, to read and manage workouts through the API.
@@ -53,6 +54,7 @@ struct ApiTokensView: View {
             Text("Agents using it lose access after the next sync.")
         }
         .sheet(item: $created) { CreatedTokenSheet(created: $0) }
+        .feedback(self)
     }
 }
 
@@ -99,6 +101,7 @@ private struct CreatedTokenSheet: View {
             }
         }
         .interactiveDismissDisabled()
+        .feedback(self)
     }
 
     private func copyButton(_ title: String, value: String) -> some View {

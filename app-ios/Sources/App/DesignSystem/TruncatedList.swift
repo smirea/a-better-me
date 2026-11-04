@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// A section for a list that grows with use (weigh-ins, entries, past sessions). The card shows five and a half rows,
@@ -10,12 +11,18 @@ struct TruncatedList<Item: Identifiable, Row: View, Destination: View>: View {
     let items: [Item]
     @ViewBuilder let row: (Item) -> Row
     @ViewBuilder let destination: () -> Destination
+    /// Feedback names the call site, since this file says nothing about which list it is.
+    private let source: (file: String, line: Int)
 
-    init(_ title: String, items: [Item], @ViewBuilder row: @escaping (Item) -> Row, @ViewBuilder destination: @escaping () -> Destination) {
+    init(
+        _ title: String, items: [Item], @ViewBuilder row: @escaping (Item) -> Row, @ViewBuilder destination: @escaping () -> Destination,
+        file: String = #fileID, line: Int = #line
+    ) {
         self.title = title
         self.items = items
         self.row = row
         self.destination = destination
+        source = (file, line)
     }
 
     var body: some View {
@@ -41,6 +48,7 @@ struct TruncatedList<Item: Identifiable, Row: View, Destination: View>: View {
             }
             .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
         }
+        .feedback(title, data: "\(items.count) rows", file: source.file, line: source.line)
     }
 }
 

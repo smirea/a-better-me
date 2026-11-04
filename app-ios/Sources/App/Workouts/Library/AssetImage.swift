@@ -26,6 +26,7 @@ struct EquipmentImage: View {
         AssetImage(path: "EquipmentImages/\(equipmentID).webp", contentMode: .fit) {
             Image(systemName: "dumbbell").resizable().scaledToFit().foregroundStyle(Theme.textTertiary).padding(4)
         }
+        .accessibilityHidden(true)
     }
 }
 

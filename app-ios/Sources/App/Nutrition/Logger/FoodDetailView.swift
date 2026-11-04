@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The food detail (`log-03-food-detail.jpg`): the serving's calories and macros with each macro's share of calories,
@@ -74,6 +75,7 @@ struct FoodDetailView: View {
         .navigationDestination(isPresented: .isPresent($preparing)) {
             if let preparing { RecipePrepareView(recipe: preparing) }
         }
+        .feedback(self)
     }
 
     /// The same unit of the edited recipe, whose grams per serving may have changed, at the typed quantity.
@@ -254,6 +256,7 @@ struct QuantityKeypad: View {
         .padding(.top, 10)
         .padding(.bottom, 4)
         .background(Theme.header)
+        .feedback(self)
     }
 
     private func chip(_ option: Measure) -> some View {

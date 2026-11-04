@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The top of the Steps screen: today against the goal, and the current streak.
@@ -9,8 +10,12 @@ struct StepGoalHeader: View {
         let remaining = Double(summary.goal) - summary.today
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(summary.today.wholeText).font(AppFont.number(30))
-                Text("/ \(Double(summary.goal).wholeText) steps").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+                // The card reads as one VoiceOver element, so these tags are what a feedback tap can single out.
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(summary.today.wholeText).font(AppFont.number(30))
+                    Text("/ \(Double(summary.goal).wholeText) steps").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+                }
+                .feedback("Today's Steps", data: (today: summary.today, goal: summary.goal))
                 Spacer(minLength: 0)
                 StreakBadge(days: summary.streak)
             }
@@ -22,12 +27,14 @@ struct StepGoalHeader: View {
                 }
             }
             .frame(height: 10)
+            .feedback("Goal Progress Bar", data: fraction)
             Text(remaining > 0 ? "\(remaining.wholeText) to go today" : "Goal reached today")
                 .font(AppFont.rowDetail)
                 .foregroundStyle(Theme.textSecondary)
         }
         .card()
         .accessibilityElement(children: .combine)
+        .feedback(self)
     }
 }
 
@@ -39,6 +46,7 @@ struct StreakBadge: View {
             .font(AppFont.chip)
             .foregroundStyle(days > 0 ? Theme.goal : Theme.textTertiary)
             .accessibilityLabel("\(days) day streak")
+            .feedback(self)
     }
 }
 
@@ -80,6 +88,7 @@ struct StepWeekBars: View {
             .accessibilityHidden(true)
         }
         .card()
+        .feedback(self)
     }
 
     private var bracket: some View {
@@ -126,6 +135,7 @@ struct StepGoalInsights: View {
                 InsightTile(value: "\(summary.metLast30)", unit: "of 30", title: "Goal Days", text: "Days in the last 30 that reached the goal."),
             ])
         }
+        .feedback(self)
     }
 }
 
@@ -159,5 +169,6 @@ struct StepGoalSheet: View {
             }
         }
         .presentationDetents([.height(320)])
+        .feedback(self)
     }
 }

@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The Instructions · Details · History sheet. `action` adds the bottom button ("Add Exercise" from the picker).
@@ -55,6 +56,7 @@ struct ExerciseDetailSheet: View {
                 }
             }
         }
+        .feedback(self)
     }
 }
 
@@ -91,6 +93,7 @@ private struct InstructionsTab: View {
                         }
                     }
                     .clipShape(.rect(cornerRadius: Theme.smallCornerRadius))
+                    .feedback("Photo", data: (frame: frame, of: exercise.images.count))
             }
             if let content = content?.source == source ? content : nil {
                 if content.sections.isEmpty && exercise.articleIDs.isEmpty {
@@ -102,6 +105,7 @@ private struct InstructionsTab: View {
         }
         .padding(Theme.margin)
         .task(id: source) { content = await source.load() }
+        .feedback(self)
     }
 
     private var source: InstructionSource {
@@ -163,6 +167,7 @@ private struct CollapsibleSection: View {
             }
             if isExpanded { MarkdownBlocks(markdown: section.body) }
         }
+        .feedback(self)
     }
 }
 
@@ -188,6 +193,7 @@ private struct DetailsTab: View {
                     if let rom = exercise.rangeOfMotion { RatingRow(title: "Range of Motion", value: rom) }
                     if let stability = exercise.stability { RatingRow(title: "Stability", value: stability) }
                 }
+                .feedback("Properties", data: (rangeOfMotion: exercise.rangeOfMotion, stability: exercise.stability))
             }
             EquipmentOptions(title: "Resistance Equipment", names: exercise.resistanceEquipment, ids: exercise.resistanceEquipmentIDs)
             EquipmentOptions(title: "Support Equipment", names: exercise.supportEquipment, ids: exercise.supportEquipmentIDs)
@@ -200,11 +206,14 @@ private struct DetailsTab: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 10)
+                    .accessibilityElement(children: .combine)
                     Divider().overlay(Theme.separator)
                 }
             }
+            .feedback("Details")
         }
         .padding(Theme.margin)
+        .feedback(self)
     }
 
     private var details: [(title: String, value: String)] {
@@ -235,6 +244,7 @@ private struct RatingRow: View {
             RatingBar(value: value)
         }
         .padding(.vertical, 8)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -264,8 +274,10 @@ struct EquipmentOptions: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
                     .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.surfaceRaised) }
+                    .feedback("Equipment Option", data: ids[safe: index] ?? [])
                 }
             }
+            .feedback(self)
         }
     }
 }

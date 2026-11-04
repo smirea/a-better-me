@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Settings > Data Visibility: one page for which nutrients and body measurements the app shows. Hiding never deletes
@@ -16,6 +17,7 @@ struct DataVisibilityView: View {
         }
         .themedList()
         .detailTitle("Data Visibility")
+        .feedback(self)
     }
 }
 
@@ -51,6 +53,7 @@ private struct NutrientVisibilityView: View {
         }
         .themedList()
         .detailTitle("Nutrient Visibility")
+        .feedback(self)
     }
 }
 
@@ -86,6 +89,7 @@ private struct BodyMetricsVisibilityView: View {
         }
         .themedList()
         .detailTitle("Body Metrics Visibility")
+        .feedback(self)
     }
 }
 

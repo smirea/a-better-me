@@ -1,5 +1,6 @@
 import HealthKit
 import HealthKitUI
+import Feetback
 import SwiftUI
 
 /// Settings > Apple Health: what the app reads and writes. Reads and workouts need no switch; writing food does,
@@ -50,6 +51,7 @@ struct HealthSettingsView: View {
             }
         }
         .onAppear(perform: refreshAccess)
+        .feedback(self)
     }
 
     private var footer: String {

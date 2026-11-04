@@ -200,6 +200,7 @@ struct ExerciseSettingsView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        .feedback(self)
     }
 
     @ViewBuilder
@@ -346,6 +347,7 @@ private struct WarmUpSchemeEditor: View {
                 Button("Save") { save(steps) }
             }
         }
+        .feedback(self)
     }
 
     private func save(_ scheme: [WarmUpStep]?) {

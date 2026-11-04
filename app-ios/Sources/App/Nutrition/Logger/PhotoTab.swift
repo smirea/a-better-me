@@ -1,4 +1,5 @@
 import PhotosUI
+import Feetback
 import SwiftUI
 import UIKit
 
@@ -93,6 +94,7 @@ struct PhotoTab: View {
         } message: {
             Text(alert ?? "")
         }
+        .feedback(self)
     }
 
     private var alert: String? {

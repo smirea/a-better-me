@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 enum LoggerRoute: Hashable {
@@ -40,6 +41,7 @@ struct LoggerSheet: View {
                 failure = String(describing: error)
             }
         }
+        .feedback(self)
     }
 }
 
@@ -212,6 +214,7 @@ private struct LoggerBanner: View {
         .padding(.top, 14)
         .padding(.bottom, 6)
         .animation(.snappy, value: session.plate.items.count)
+        .feedback(self)
     }
 
     /// White once the plate holds a food, so the way to review and log it stands out.
@@ -326,6 +329,7 @@ private struct LogTimePicker: View {
         }
         .presentationDetents([.height(380)])
         .presentationBackground(Theme.surface)
+        .feedback(self)
     }
 
     /// A month back through a week ahead, plus the chosen day when it lies outside them.
@@ -366,5 +370,6 @@ private struct LogHourPad: View {
         }
         .presentationDetents([.height(400)])
         .presentationBackground(Theme.surface)
+        .feedback(self)
     }
 }

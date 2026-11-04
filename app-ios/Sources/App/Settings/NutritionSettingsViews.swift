@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Settings > Food Log, MacroFactor's §9.2 page. Food Tiles are left to the units that draw the tiles, since their
@@ -85,6 +86,7 @@ struct FoodLogSettingsView: View {
         }
         .themedList()
         .detailTitle("Food Log")
+        .feedback(self)
     }
 }
 
@@ -105,6 +107,7 @@ private struct HourRangeView: View {
         }
         .themedList()
         .detailTitle("Hour Range")
+        .feedback(self)
     }
 }
 
@@ -144,6 +147,7 @@ private struct LoggerBannerView: View {
         }
         .themedList()
         .detailTitle("Logger Banner")
+        .feedback(self)
     }
 }
 
@@ -158,6 +162,7 @@ private struct FavoriteMeasuresView: View {
         }
         .themedList()
         .detailTitle("Favorite Measurements")
+        .feedback(self)
     }
 
     private func section(_ title: String, _ measures: [String]) -> some View {
@@ -245,6 +250,7 @@ struct ExpenditureSettingsView: View {
         }
         .themedList()
         .detailTitle("Expenditure")
+        .feedback(self)
     }
 
     @ViewBuilder private func calculationStart(_ start: CalendarDay?) -> some View {
@@ -334,6 +340,7 @@ private struct BMREquationView: View {
         }
         .themedList()
         .detailTitle("BMR Equation")
+        .feedback(self)
     }
 
     private func orNotSet<Value>(_ options: [SettingOption<Value>]) -> [SettingOption<Value?>] {
@@ -369,6 +376,7 @@ struct StrategySettingsView: View {
         }
         .themedList()
         .detailTitle("Strategy")
+        .feedback(self)
     }
 }
 

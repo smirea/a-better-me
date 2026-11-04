@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 struct ExerciseHistoryEntry: Identifiable {
@@ -223,6 +224,7 @@ struct ExerciseHistoryTab: View {
                 Divider().overlay(Theme.separator)
             }
         }
+        .feedback(self)
     }
 }
 
@@ -291,5 +293,6 @@ private struct HistoryRow: View {
         }
         .padding(.horizontal, Theme.margin)
         .padding(.vertical, 12)
+        .feedback(self)
     }
 }

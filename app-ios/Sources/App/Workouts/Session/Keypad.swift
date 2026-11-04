@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// One input column of the set table, chosen from the exercise's `metrics`.
@@ -183,6 +184,7 @@ struct Keypad: View {
         .font(AppFont.title(22))
         .foregroundStyle(Theme.textPrimary)
         .background(Theme.header)
+        .feedback(self)
     }
 
     private var rirChips: some View {

@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Every visible nutrient against its target for the day, or as a daily average over the week, month, three months,
@@ -42,6 +43,7 @@ struct NutritionOverview: View {
                 .background(Theme.background)
             }
             .detailTitle("Nutrition Overview")
+        .feedback(self)
     }
 }
 
@@ -124,5 +126,6 @@ struct ContributorsView: View {
             }
         }
         .detailTitle(info?.name ?? "Contributors")
+        .feedback(self)
     }
 }

@@ -1,4 +1,5 @@
 import Charts
+import Feetback
 import SwiftUI
 
 enum NutritionShown: String, CaseIterable {
@@ -26,6 +27,7 @@ struct WeeklyNutritionFocus: View {
             week: values.week, today: CalendarDay(context.today, in: context.calendar), calendar: context.calendar,
             overages: values.nutritionSettings.showOverages
         )
+        .feedback(self)
     }
 }
 
@@ -34,6 +36,7 @@ struct DailyNutritionFocus: View {
 
     var body: some View {
         DailyNutritionCard(day: values.todayNutrition, overages: values.nutritionSettings.showOverages)
+            .feedback(self)
     }
 }
 
@@ -171,6 +174,7 @@ struct EnergyBalanceFocusCard: View {
             SectionHeader("Energy Balance")
             BalanceChart(bars: balance.bars, line: balance.line, lineColor: lineColor, domain: balance.interval, scrubbing: reference.rawValue)
                 .frame(height: 110)
+                .feedback("Energy Balance Chart", data: (reference: reference, bars: balance.bars))
             Text("Last 30 Days").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             HStack(alignment: .top) {
@@ -184,6 +188,7 @@ struct EnergyBalanceFocusCard: View {
                 ForEach(BalanceReference.allCases, id: \.self) { Text($0.rawValue).tag($0) }
             }
         }
+        .feedback(self)
     }
 }
 

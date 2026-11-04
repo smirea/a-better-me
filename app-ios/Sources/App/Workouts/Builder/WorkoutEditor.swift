@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The workout detail body that a library workout and Create Workout share: Target Muscles, the exercise list, and every
@@ -42,6 +43,7 @@ struct WorkoutEditor: View {
                 ExerciseDetailSheet(exerciseID: exerciseID)
             }
         }
+        .feedback(self)
     }
 
     private func targetMuscles(_ targets: [MuscleTarget]) -> some View {
@@ -157,6 +159,7 @@ private struct BlockView: View {
                     ExerciseRow(item: item, inSuperset: true, blocks: $blocks, sheet: $sheet, program: program)
                 }
             }
+            .feedback(self)
         } else if let item = block.exercises.first {
             ExerciseRow(item: item, inSuperset: false, blocks: $blocks, sheet: $sheet, program: program)
         }
@@ -198,11 +201,14 @@ private struct ExerciseRow: View {
     @Environment(ExerciseCatalog.self) private var catalog
 
     var body: some View {
-        if let program {
-            programRow(program)
-        } else {
-            workoutRow
+        Group {
+            if let program {
+                programRow(program)
+            } else {
+                workoutRow
+            }
         }
+        .feedback(self)
     }
 
     private func programRow(_ program: ProgramDayContext) -> some View {

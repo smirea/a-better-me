@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Calories, Protein, Fat, and Carbs side by side.
@@ -28,6 +29,7 @@ struct MacroSummary: View {
             }
         }
         .padding(.vertical, 4)
+        .feedback(self)
     }
 }
 

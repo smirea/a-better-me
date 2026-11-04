@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Finished sessions by day, for the week strip and the month calendar.
@@ -95,6 +96,7 @@ struct MonthCalendar<Pill: View>: View {
             .scrollTargetLayout()
         }
         .scrollPosition(id: $position, anchor: .center)
+        .feedback(self)
     }
 }
 

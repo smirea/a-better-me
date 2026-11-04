@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// A note's full-height editor: its color, title, body, and time. Saving needs a title; an existing note can be
@@ -69,6 +70,7 @@ struct NoteEditor: View {
         }
         .presentationDetents([.large])
         .onAppear { if isNew { titleFocused = true } }
+        .feedback(self)
     }
 
     private func save() {

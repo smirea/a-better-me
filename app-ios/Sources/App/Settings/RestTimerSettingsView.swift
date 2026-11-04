@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 struct RestTimerSettingsView: View {
@@ -51,6 +52,7 @@ struct RestTimerSettingsView: View {
         }
         .themedList()
         .detailTitle("Rest Timer")
+        .feedback(self)
     }
 }
 
@@ -73,6 +75,7 @@ private struct RestNotificationSettingsView: View {
         }
         .themedList()
         .detailTitle("Notifications")
+        .feedback(self)
     }
 }
 
@@ -100,5 +103,6 @@ private struct RestDurationSettingsView: View {
         }
         .themedList()
         .detailTitle("Timer Duration")
+        .feedback(self)
     }
 }

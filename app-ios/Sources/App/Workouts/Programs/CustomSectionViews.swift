@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 extension View {
@@ -88,6 +89,7 @@ struct CustomSectionView: View {
         } message: {
             Text("Are you sure you want to delete this section?")
         }
+        .feedback(self)
     }
 }
 
@@ -146,5 +148,6 @@ private struct SectionWorkoutsSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .feedback(self)
     }
 }

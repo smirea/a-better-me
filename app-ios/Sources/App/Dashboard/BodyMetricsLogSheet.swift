@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// MacroFactor's Full Body entry: one date and a field per visible measurement, visual body fat always. Fields start
@@ -62,6 +63,7 @@ struct BodyMetricsLogSheet: View {
             .onChange(of: metrics) { if values == original { load() } }
             .sheet(isPresented: $showingReference) { BodyFatReferenceSheet() }
         }
+        .feedback(self)
     }
 
     private func unit(_ kind: BodyMetricKind) -> String { kind.isLength ? heightUnit.lengthLabel : "%" }
@@ -124,5 +126,6 @@ private struct BodyFatReferenceSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .feedback(self)
     }
 }

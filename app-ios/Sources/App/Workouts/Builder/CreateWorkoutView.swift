@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Create Workout: the method step (build or import .xlsx), the name step, the gym step, and the editor. An import skips
@@ -58,6 +59,7 @@ struct CreateWorkoutView: View {
             Text("We only support select spreadsheet formats with a .xlsx extension. If the workout spreadsheet wasn't exported from MacroFactor Workouts or explicitly advertised to work with MacroFactor Workouts, it will likely fail to import. Only upload content you have permission to use. Use the program importer, not this single day workout importer, in order to import a program.")
         }
         .unmatchedExercisesAlert($unmatched)
+        .feedback(self)
     }
 
     private var methodStep: some View {

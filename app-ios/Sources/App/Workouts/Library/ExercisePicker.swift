@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// What the picker returns: the chosen exercises in selection order, and whether to group them ("Add as a superset?").
@@ -44,6 +45,7 @@ struct ExercisePicker: View {
             choseGym = true
             filter.gymID = gyms.first { $0.id == gymID }?.id ?? defaultGym?.id
         }
+        .feedback(self)
     }
 }
 
@@ -94,6 +96,7 @@ private struct SwapSubstitutions: View {
             let id = ref.id
             ExerciseDetailSheet(exerciseID: id, action: ("Swap Exercise", { pick(id) }))
         }
+        .feedback(self)
     }
 
     private func substitutes(for current: Exercise?) -> [Exercise] {
@@ -282,6 +285,7 @@ private struct SelectionTray: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .feedback(self)
     }
 }
 

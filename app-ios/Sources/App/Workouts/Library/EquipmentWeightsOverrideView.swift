@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Exercise Overrides > Equipment Weights: per-item loads for one exercise that replace the gym profile's. Only items
@@ -60,6 +61,7 @@ struct EquipmentWeightsOverrideView: View {
                 EquipmentLoadEditor(equipment: item, load: load, unit: unit) { save($0, for: item.id) }
             }
         }
+        .feedback(self)
     }
 
     private func items(of exercise: Exercise?) -> [Equipment] {

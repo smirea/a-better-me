@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Levels, pushed from More: average weekly sets per muscle as a body heat map and two ranked lists.
@@ -33,6 +34,7 @@ struct LevelsView: View {
         }
         .themedList()
         .detailTitle("Levels")
+        .feedback(self)
     }
 }
 
@@ -79,6 +81,7 @@ struct MuscleLevelRow: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+        .feedback(self)
     }
 }
 

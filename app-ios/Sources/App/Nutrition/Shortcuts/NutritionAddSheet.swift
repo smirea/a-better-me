@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// A Nutrition "+" shortcut (research spec §2, `nav-03-choose-shortcuts.jpg`). AI, Describe, Photos, and Metrics are not
@@ -80,7 +81,7 @@ struct NutritionAddSheet: View {
         if let logger {
             LoggerSheet(start: logger)
         } else {
-            shortcuts
+            shortcuts.feedback(self)
         }
     }
 
@@ -166,6 +167,7 @@ private struct CustomizeNutritionShortcuts: View {
                 }
             }
         }
+        .feedback(self)
     }
 
     private func toggle(_ shortcut: NutritionShortcut, on: Bool, top: Bool) -> some View {

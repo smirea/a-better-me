@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// A list section on the card surface with the app's section title. Lists use it instead of `Section` so every row
@@ -19,15 +20,18 @@ struct ThemedSection<Content: View>: View {
         Section {
             content
         } header: {
-            VStack(alignment: .leading, spacing: 4) {
-                if let title { SectionTitle(title) }
-                if let subtitle { Text(subtitle).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary) }
+            if title != nil || subtitle != nil {
+                VStack(alignment: .leading, spacing: 4) {
+                    if let title { SectionTitle(title) }
+                    if let subtitle { Text(subtitle).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary) }
+                }
+                .textCase(nil)
             }
-            .textCase(nil)
         } footer: {
             if let footer { Text(footer) }
         }
-        .listRowBackground(Theme.surface)
+        // The background fills the whole cell, unlike the row's content, so a tap on a row's padding selects the row.
+        .listRowBackground(Theme.surface.feedback(title.map { "\($0) Row" } ?? "Row"))
     }
 }
 

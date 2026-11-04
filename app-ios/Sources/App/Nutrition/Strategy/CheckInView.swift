@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The weekly check-in: the Weigh-In and Review Your Week modules the settings allow (MacroFactor's Weigh-In, Partial
@@ -22,6 +23,7 @@ struct CheckInView: View {
                 .navigationDestination(for: Module.self) { page($0) }
         }
         .tint(Theme.textPrimary)
+        .feedback(self)
     }
 
     private func page(_ module: Module) -> some View {
@@ -73,6 +75,7 @@ private struct CheckInPage: View {
         }
         .detailTitle("Check-In")
         .sheet(isPresented: $loggingWeight) { BodyWeightLogSheet() }
+        .feedback(self)
     }
 
     @ViewBuilder
@@ -164,5 +167,6 @@ private struct DayReviewRow: View {
             .accessibilityLabel("Status of \(StrategyFormat.day(day))")
         }
         .card()
+        .feedback(self)
     }
 }

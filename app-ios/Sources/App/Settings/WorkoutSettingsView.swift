@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Settings > Workout. Also the live workout's "Workout settings" sheet root, so it brings no NavigationStack of its own.
@@ -68,6 +69,7 @@ struct WorkoutSettingsView: View {
         }
         .themedList()
         .detailTitle("Workout")
+        .feedback(self)
     }
 }
 
@@ -110,5 +112,6 @@ private struct SmartProgressionSettingsView: View {
         }
         .themedList()
         .detailTitle("Smart Progression")
+        .feedback(self)
     }
 }

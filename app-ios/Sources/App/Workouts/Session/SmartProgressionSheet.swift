@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The wand chip's sheet: the adjusted-targets banner, the Event Log of every fill, and a shortcut to Workout settings.
@@ -42,6 +43,7 @@ struct SmartProgressionSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .feedback(self)
     }
 
     private var banner: some View {
@@ -116,6 +118,7 @@ struct WorkoutTargetsView: View {
         .navigationTitle("Workout Targets")
         .navigationSubtitle(exerciseName)
         .navigationBarTitleDisplayMode(.inline)
+        .feedback(self)
     }
 
     private func row(_ set: WorkoutSet, number: Int, reps: String?) -> some View {
