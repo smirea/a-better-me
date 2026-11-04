@@ -37,3 +37,6 @@ __pycache__
 
 # orchestrator session files and task images, kept in the main checkout
 .orchestrator
+
+# agent-device saves this into the cwd when it cannot read a screen (e.g. the Health sheet)
+snapshot-fallback.png
