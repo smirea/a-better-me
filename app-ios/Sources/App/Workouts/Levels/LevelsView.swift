@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Levels, pushed from More: average weekly sets per muscle as a body heat map and two ranked lists.

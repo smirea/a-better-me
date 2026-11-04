@@ -1,5 +1,5 @@
 import GRDB
-import Feetback
+import Feedback
 import SwiftUI
 
 extension Recipe {

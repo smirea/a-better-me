@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Settings > Units: one list for both halves. The clock follows the system's 24-Hour Time, and nothing in the app

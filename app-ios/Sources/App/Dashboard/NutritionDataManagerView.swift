@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// MacroFactor's Nutrition Data Manager: every day with intake or a mark, newest month first. Its entry sheet writes the

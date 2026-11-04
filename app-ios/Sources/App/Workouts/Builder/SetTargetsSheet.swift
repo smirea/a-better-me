@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The Targets sheet: set types, reps min and max, RIR, and per-set rest. The template editor and the live session's

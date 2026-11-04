@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The pencil's sheet over the timeline: the entry's calories and macros, Remove, Favorite, Duplicate, and for a

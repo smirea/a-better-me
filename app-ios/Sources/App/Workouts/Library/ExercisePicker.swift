@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// What the picker returns: the chosen exercises in selection order, and whether to group them ("Add as a superset?").

@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The weekly check-in: the Weigh-In and Review Your Week modules the settings allow (MacroFactor's Weigh-In, Partial

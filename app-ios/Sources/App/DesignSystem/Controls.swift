@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// A list section on the card surface with the app's section title. Lists use it instead of `Section` so every row

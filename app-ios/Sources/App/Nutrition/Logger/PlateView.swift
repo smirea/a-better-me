@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Your Plate (`log-04-your-plate.jpg`): each food with its quantity chip, the plate's nutrition alone or with the

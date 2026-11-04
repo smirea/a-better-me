@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Every visible nutrient against its target for the day, or as a daily average over the week, month, three months,

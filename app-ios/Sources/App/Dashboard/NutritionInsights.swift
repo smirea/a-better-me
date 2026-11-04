@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The "Insights & Data" blocks under the nutrition detail charts (docs/research/macrofactor/README.md §3.2-3.5).

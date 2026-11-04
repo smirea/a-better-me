@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The Instructions · Details · History sheet. `action` adds the bottom button ("Add Exercise" from the picker).

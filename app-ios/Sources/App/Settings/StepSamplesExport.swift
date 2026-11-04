@@ -1,6 +1,6 @@
 import Foundation
 import HealthKit
-import Feetback
+import Feedback
 import SwiftUI
 
 /// One raw HealthKit step sample, before Health de-duplicates overlapping iPhone and Watch samples by source priority.

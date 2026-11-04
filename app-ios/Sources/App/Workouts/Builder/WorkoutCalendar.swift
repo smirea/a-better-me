@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Finished sessions by day, for the week strip and the month calendar.

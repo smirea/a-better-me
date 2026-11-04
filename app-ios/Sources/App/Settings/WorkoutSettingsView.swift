@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Settings > Workout. Also the live workout's "Workout settings" sheet root, so it brings no NavigationStack of its own.

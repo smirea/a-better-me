@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Program Settings (milestone-2.md §2.5). Every row writes as it changes; the editor behind it follows the store.

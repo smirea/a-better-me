@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Sits above the tab bar while a session is in progress and reopens it. Empty otherwise.

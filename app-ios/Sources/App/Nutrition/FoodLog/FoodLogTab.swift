@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// MacroFactor's Food Log: a week strip, the day's macro summary, and a timeline of hours that pages between days.

@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The catch-all tab: Levels, Strategy, the workout history, and the one settings tree for both halves.

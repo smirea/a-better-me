@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Settings > API Tokens: bot tokens for an agent, such as an AI coach, to read and manage workouts through the API.

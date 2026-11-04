@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Settings > Data Visibility: one page for which nutrients and body measurements the app shows. Hiding never deletes

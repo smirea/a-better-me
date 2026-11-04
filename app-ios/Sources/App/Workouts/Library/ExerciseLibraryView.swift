@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Settings > Exercises: the picker's list and filters with MF's All, Performed, Deprioritized (Do Not Recommend),

@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The food icons a custom food or recipe can pick. A food stores the icon's name; it draws as the emoji.

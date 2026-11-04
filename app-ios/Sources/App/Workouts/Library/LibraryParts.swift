@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 extension ExerciseMetric {

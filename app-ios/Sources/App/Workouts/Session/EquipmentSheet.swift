@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The live workout's Equipment chip: which resistance option and which support option this exercise uses, as in

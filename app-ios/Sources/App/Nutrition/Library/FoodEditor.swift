@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Create Food and Edit Food: MacroFactor's wizard (§6.1) folded into one Form. Nutrients use its Food Detail layout,

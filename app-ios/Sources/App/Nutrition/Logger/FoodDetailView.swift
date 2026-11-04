@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The food detail (`log-03-food-detail.jpg`): the serving's calories and macros with each macro's share of calories,

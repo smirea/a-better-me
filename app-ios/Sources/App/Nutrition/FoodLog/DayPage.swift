@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// One day's timeline: an hour pill per hour with its + and totals, the entries under their hour, then the notes.

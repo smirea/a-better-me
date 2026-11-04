@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Customize Sections (`workout-tab-09-customize-sections.jpg`): Default Sections in tab order with Active Program's

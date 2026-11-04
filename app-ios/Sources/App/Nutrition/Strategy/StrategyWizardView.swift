@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The New Goal, Edit Goal, New Program, and Edit Program wizards (MacroFactor's full-screen "Set New Goal" and "Set

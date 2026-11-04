@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The wand chip's sheet: the adjusted-targets banner, the Event Log of every fill, and a shortcut to Workout settings.

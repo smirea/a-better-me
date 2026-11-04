@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Opens the program editor, on a day when `dayID` is set. Every stack that shows program cards registers it.

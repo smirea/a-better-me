@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// One muscle's average weekly sets and the lifts that contributed them, pushed from a Levels row.

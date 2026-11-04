@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Settings > Food Log, MacroFactor's §9.2 page. Food Tiles are left to the units that draw the tiles, since their
