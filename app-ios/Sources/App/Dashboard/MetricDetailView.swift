@@ -173,7 +173,7 @@ struct MetricDetailView: View {
                 }
             }
         }
-        .chartXScale(domain: plot.interval.start...plot.interval.end)
+        .chartXScale(domain: plot.xDomain)
         .chartYScale(domain: max(low - pad, fit ? -.infinity : 0)...(high + pad))
         .themedYAxis()
         .chartXAxis {
@@ -182,10 +182,10 @@ struct MetricDetailView: View {
                     .foregroundStyle(Theme.textSecondary)
             }
         }
-        .chartBackground { proxy in
+        .chartOverlay { proxy in
             if let stepGoal {
                 StepBarLabels(
-                    proxy: proxy, points: points, centers: plot.scrubDates, flights: plot.flights,
+                    proxy: proxy, points: points, centers: plot.barCenters, flights: plot.flights,
                     streak: plot.streak, streakLength: stepGoal.streak
                 )
             }
@@ -313,6 +313,11 @@ struct MetricPlot {
     var overlayValues: [Date: Double]
     /// Where scrubbing draws the rule for each drawn point.
     var scrubDates: [Date]
+    /// The middle of each drawn bar's whole day, week, or month, where Swift Charts draws it even when the range cuts it.
+    var barCenters: [Date]
+    /// The range, widened for bars to the whole bins they are drawn over, so a month cut by the range's end stays in
+    /// the plot instead of covering the axis.
+    var xDomain: ClosedRange<Date>
     var holding: Set<Date>
     /// The tab's own stats when it has them, else the average and the second stat.
     var stats: [MetricTab.Stat]
@@ -348,6 +353,11 @@ struct MetricPlot {
             let start = max(bin.start, interval.start)
             return start.addingTimeInterval(min(bin.end, interval.end).timeIntervalSince(start) / 2)
         }
+        let bins = drawn.map { calendar.dateInterval(of: drawing.component, for: $0.date)! }
+        barCenters = bins.map { $0.start.addingTimeInterval($0.duration / 2) }
+        xDomain = tab.style == .bar
+            ? min(bins.first?.start ?? interval.start, interval.start)...max(bins.last?.end ?? interval.end, interval.end)
+            : interval.start...interval.end
         holding = drawing == .daily ? tab.holding : []
         average = (drawing == averaging ? drawn : averaging.bucket(daily, calendar: calendar)).average
         second = tab.summary.second(of: daily.map(\.value))

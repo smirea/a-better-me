@@ -51,7 +51,7 @@ enum BarLabelStyle: Equatable {
 
     /// The longest label of the style must fit a bar's slot, so every bar of a range reads the same way.
     static func fitting(_ values: [Double], slot: CGFloat, width: (String) -> CGFloat) -> BarLabelStyle {
-        for style in [BarLabelStyle.full, .compact] where values.allSatisfy({ width(style.text($0)) + 2 <= slot }) {
+        for style in [BarLabelStyle.full, .compact] where values.allSatisfy({ width(style.text($0)) <= slot }) {
             return style
         }
         return .hidden
@@ -67,16 +67,18 @@ enum BarLabelStyle: Equatable {
 }
 
 /// The Steps chart's counts over each bar, with the flights climbed under them, and the bracket over the current
-/// streak. Drawn behind the marks from the chart's own positions, so a label sits on its bar at any range.
+/// streak, placed from the chart's own positions so a label sits on its bar at any range. Each label masks the goal
+/// line where it crosses it.
 struct StepBarLabels: View {
     static let countFont = UIFont(name: "DMSans-SemiBold", size: 11) ?? .systemFont(ofSize: 11, weight: .semibold)
     static let flightsFont = UIFont(name: "DMSans-Regular", size: 10) ?? .systemFont(ofSize: 10)
+    static let bracketFont = UIFont(name: "DMSans-SemiBold", size: 12) ?? .systemFont(ofSize: 12, weight: .semibold)
     /// The plot's top share left free for the labels and the bracket.
     static let headroom = 0.2
 
     let proxy: ChartProxy
     let points: [DatedValue]
-    /// Each bar's middle, as scrubbing uses.
+    /// Each bar's middle, so the narrowest gap between two is the room a label has.
     let centers: [Date]
     /// Flights per drawn bar, keyed like `points`.
     let flights: [Date: Double]
@@ -100,14 +102,20 @@ struct StepBarLabels: View {
                         }
                     }
                 }
-                if let streak, let left = proxy.position(forX: streak.first), let right = proxy.position(forX: streak.last) {
-                    bracket(from: plot.minX + left - slot * 0.4, to: plot.minX + right + slot * 0.4, y: plot.minY + 10)
+                if let streak, let first = proxy.position(forX: streak.first), let last = proxy.position(forX: streak.last) {
+                    let left = plot.minX + first - slot * 0.4
+                    let right = plot.minX + last + slot * 0.4
+                    if right - left >= Self.width(streakText, Self.bracketFont) + 28 {
+                        bracket(from: left, to: right, y: plot.minY + 10)
+                    }
                 }
             }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
+
+    private var streakText: String { streakLength == 1 ? "1 day" : "\(streakLength) days" }
 
     private func label(_ count: String, flights: Double, slot: CGFloat) -> some View {
         let flightsText = flights.wholeText
@@ -123,6 +131,8 @@ struct StepBarLabels: View {
         }
         .lineLimit(1)
         .fixedSize()
+        .padding(.horizontal, 1)
+        .background(Theme.background, in: .rect(cornerRadius: 3))
     }
 
     private func bracket(from left: CGFloat, to right: CGFloat, y: CGFloat) -> some View {
@@ -134,8 +144,8 @@ struct StepBarLabels: View {
                 path.addQuadCurve(to: CGPoint(x: right, y: y + 8), control: CGPoint(x: right, y: y))
             }
             .stroke(Theme.goal, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-            Text(streakLength == 1 ? "1 day" : "\(streakLength) days")
-                .font(AppFont.headline(12))
+            Text(streakText)
+                .font(Font(Self.bracketFont))
                 .foregroundStyle(Theme.goal)
                 .padding(.horizontal, 5)
                 .background(Theme.background)
