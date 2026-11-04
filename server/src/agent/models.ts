@@ -121,13 +121,10 @@ export const WorkoutSet = z
 		target: SetTarget.optional(),
 		restSeconds: count.optional().meta({ description: "Overrides the exercise's rest after this set." }),
 		log: SetLog.optional(),
-		skipped: z
-			.literal(true)
-			.optional()
-			.meta({
-				description:
-					'Passed over in a live workout: counted as done for what comes next, but never logged. Absent unless set.',
-			}),
+		skipped: z.literal(true).optional().meta({
+			description:
+				'Passed over in a live workout: counted as done for what comes next, but never logged. Absent unless set.',
+		}),
 		subSets: z.array(SubSet).default([]).meta({ description: 'Only for `drop` and `myo` sets.' }),
 	})
 	.meta({ id: 'WorkoutSet' });
