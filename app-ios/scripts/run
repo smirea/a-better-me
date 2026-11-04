@@ -26,7 +26,8 @@ const { values } = parseArgs({
     },
 });
 if (values.health !== undefined && values.health !== "on" && values.health !== "off") throw new Error("--health takes on or off.");
-const healthArguments = values.health ? ["-health", values.health] : [];
+// Health on also seeds the simulator's Health store, once per type, so its Dashboard cards start with data.
+const healthArguments = values.health === "on" ? ["-health", "on", "-seedHealthSamples"] : values.health ? ["-health", values.health] : [];
 
 type Target = {
     kind: "device" | "simulator" | "mac";
@@ -308,7 +309,8 @@ Watching is enabled by default. Saves rebuild and restart the app. Ctrl-C stops 
 --pair-watch pairs a watch with the simulator first, reusing its pair if it has one, and runs the watch app on it.
 --delete shuts down and deletes the simulator and its paired watches instead of running.
 --grant-permissions answers every permission prompt again; a run does it anyway when the last launch left one open.
---health on turns Apple Health on in the simulator build and answers its sheet; --health off turns it off. Debug
+--health on turns Apple Health on in the simulator build, seeds 60 days of weights, steps, and flights into an
+empty Health store, and answers its sheet; --health off turns it off. Debug
 simulator builds start with it off, and the app keeps the last choice.`);
         return;
     }
