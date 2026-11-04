@@ -184,6 +184,20 @@ describe('agent API', () => {
 		expect(history.items[0].stats.bestEstimatedOneRepMaxKg).toBeCloseTo(126.67, 2);
 	});
 
+	test('a gym lists the exercises its plurals and bodyweight allow, as the app does', async () => {
+		const gym = await ok('POST', '/gyms', {
+			name: 'Pull-Up Corner',
+			equipment: { '19e5c6f170d8808593d8ecf408c4f749': {}, '25e5c6f170d8808e8276fa6902887bff': {} },
+		});
+		const names = async (q: string) =>
+			(await ok('GET', `/exercises?gymId=${gym.id}&q=${q}&limit=500`)).items.map((e: { name: string }) => e.name);
+		expect(await names('chin-up')).toContain('Chin-Up');
+		expect(await names('dumbbell')).toContain('Dumbbell Turkish Get-Up');
+		expect(await names('dumbbell')).toContain('Standing Dumbbell Overhead Press');
+		expect(await names('barbell')).not.toContain('Barbell Back Squat');
+		await ok('DELETE', `/gyms/${gym.id}`);
+	});
+
 	test('bad input is refused before it can reach the phone', async () => {
 		const unknown = await call('POST', '/templates', {
 			name: 'X',

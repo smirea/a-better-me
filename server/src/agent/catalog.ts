@@ -20,6 +20,20 @@ export const EQUIPMENT = equipmentJson as unknown as Equipment[];
 export const EQUIPMENT_BY_ID = new Map(EQUIPMENT.map(item => [item.id, item]));
 const BY_ID = new Map(CATALOG_EXERCISES.map(exercise => [exercise.id, exercise]));
 
+/**
+ * What a gym provides, as the app's `GymAvailability` decides it: a listed plural ("Dumbbells") also provides the
+ * singular exercises name ("Dumbbell"), and Bodyweight items are never listed because every gym has them.
+ */
+export function gymProvides(listed: string[]) {
+	const provided = new Set(listed);
+	for (const id of listed) {
+		const singular = EQUIPMENT_BY_ID.get(id)?.pluralOf;
+		if (typeof singular === 'string') provided.add(singular);
+	}
+	for (const item of EQUIPMENT) if (item.category === 'Bodyweight') provided.add(item.id);
+	return provided;
+}
+
 export const catalogExercise = (id: string) => BY_ID.get(id);
 
 /** Catalog and custom exercises by id, reading the custom ones once per request. */

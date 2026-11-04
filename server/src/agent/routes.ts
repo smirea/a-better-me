@@ -6,6 +6,7 @@ import {
 	catalogExercise,
 	EQUIPMENT,
 	EQUIPMENT_BY_ID,
+	gymProvides,
 	exerciseLookup,
 	type Exercise,
 } from './catalog';
@@ -286,8 +287,8 @@ function settings(db: Db): z.output<typeof M.Settings> {
 	};
 }
 
-function hasEquipment(gym: Record<string, unknown>, exercise: Exercise) {
-	const has = (options: string[][]) => !options.length || options.some(ids => ids.every(id => id in gym));
+function hasEquipment(provided: Set<string>, exercise: Exercise) {
+	const has = (options: string[][]) => !options.length || options.some(ids => ids.every(id => provided.has(id)));
 	return has(exercise.resistanceEquipmentIDs) && has(exercise.supportEquipmentIDs);
 }
 
@@ -315,7 +316,8 @@ export const routes: Route[] = [
 		response: z.object({ total: z.int(), items: z.array(M.Exercise) }),
 		run({ db, query }) {
 			const gym =
-				query.gymId && (db.find('gym_profiles', query.gymId.toLowerCase(), 'gym').equipment as Record<string, unknown>);
+				query.gymId &&
+				gymProvides(Object.keys(db.find('gym_profiles', query.gymId.toLowerCase(), 'gym').equipment as object));
 			const needle = query.q?.toLowerCase();
 			const matches = [
 				...CATALOG_EXERCISES.map(e => ({ ...e, custom: false, archived: false })),
