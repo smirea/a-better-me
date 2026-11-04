@@ -29,7 +29,7 @@ struct LoadableProgressionTests {
         let previous = [WorkoutSet(type: .drop, log: logged(205, 10, 0))]
         let result = SmartProgression.suggest(sets: [drop], previous: previous, settings: ProgressionSettings(), loadable: barbell, rirTracking: true, unit: lb)
         // The increment alone gives 175, which needs 20 lb a side past the 45s.
-        #expect(result[drop.id]?.autoText(unit: lb) == "170 lb x 8-12 / 2 RIR")
+        #expect(result[drop.id]?.autoText(unit: lb) == "170 lb · 8-12 / 2 RIR")
         #expect(result[drop.id]?.prefill == SetSuggestion.Values(weight: 170, reps: 12, rir: 2))
         // Half of 170 is the unloadable 85; 80 is closer than 95.
         #expect(result[drop.subSets[0].id]?.weight == 80)

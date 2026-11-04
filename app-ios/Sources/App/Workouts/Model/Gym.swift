@@ -48,7 +48,7 @@ struct GymProfile: SyncedRecord {
 }
 
 struct GymEquipment: Codable, Hashable {
-    /// `nil` uses the catalog's weights for this item.
+    /// `nil` uses the display unit's standard weights for this item (`GymDefaults`).
     var load: EquipmentLoad?
 }
 

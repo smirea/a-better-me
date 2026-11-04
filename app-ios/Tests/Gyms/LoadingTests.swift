@@ -168,7 +168,7 @@ struct EquipmentResolutionTests {
             "barbell": GymEquipment(load: .weights(options: [WeightOption(kg: lb.toKg(45))])),
             Loading.weightPlatesID: GymEquipment(load: .weights(options: [WeightOption(kg: lb.toKg(45)), WeightOption(kg: lb.toKg(25))])),
         ])
-        let loads = GymLoads(gym: gym, overrides: [:], catalog: catalog)
+        let loads = GymLoads(gym: gym, overrides: [:], unit: lb, catalog: catalog)
         let loading = Loading.resolve(option: [Loading.weightPlatesID, "barbell"], catalog: catalog, unit: lb, load: loads.load)
         #expect(loading?.plates?.plan(for: 185).sentence(unit: "lb") == "70 lb on both sides + 45 lb bar weight = 185 lb")
     }
@@ -178,7 +178,7 @@ struct EquipmentResolutionTests {
             "barbell": GymEquipment(load: .weights(options: [WeightOption(kg: lb.toKg(45))])),
             Loading.weightPlatesID: GymEquipment(load: .weights(options: [WeightOption(kg: lb.toKg(45))])),
         ])
-        let loads = GymLoads(gym: gym, overrides: ["barbell": .weights(options: [WeightOption(kg: lb.toKg(35))])], catalog: catalog)
+        let loads = GymLoads(gym: gym, overrides: ["barbell": .weights(options: [WeightOption(kg: lb.toKg(35))])], unit: lb, catalog: catalog)
         let loading = Loading.resolve(option: ["barbell"], catalog: catalog, unit: lb, load: loads.load)
         #expect(loading?.plates?.plan(for: 125).sentence(unit: "lb") == "45 lb on both sides + 35 lb bar weight = 125 lb")
     }
@@ -188,14 +188,14 @@ struct EquipmentResolutionTests {
             "calf-raise": GymEquipment(load: nil),
             Loading.weightPlatesID: GymEquipment(load: .weights(options: [WeightOption(kg: lb.toKg(45))])),
         ])
-        let loads = GymLoads(gym: gym, overrides: [:], catalog: catalog)
+        let loads = GymLoads(gym: gym, overrides: [:], unit: .kg, catalog: catalog)
         let plates = Loading.resolve(option: ["calf-raise"], catalog: catalog, unit: .kg, load: loads.load)?.plates
         #expect(plates?.sides == 1)
         #expect(plates?.plan(for: 50).sentence(unit: "kg") == "20.41 kg on one side + 22.7 kg base weight = 50 kg - missing 6.89 kg")
     }
 
     @Test func gymWithoutPlatesLoadsOnlyTheBar() {
-        let loads = GymLoads(gym: GymProfile(name: "Bar Only", equipment: ["barbell": GymEquipment(load: .weights(options: [WeightOption(kg: lb.toKg(45))]))]), overrides: [:], catalog: catalog)
+        let loads = GymLoads(gym: GymProfile(name: "Bar Only", equipment: ["barbell": GymEquipment(load: .weights(options: [WeightOption(kg: lb.toKg(45))]))]), overrides: [:], unit: lb, catalog: catalog)
         let plates = Loading.resolve(option: ["barbell", Loading.weightPlatesID], catalog: catalog, unit: lb, load: loads.load)?.plates
         #expect(plates?.plates == [])
         #expect(plates?.plan(for: 95).sentence(unit: "lb") == "0 lb on both sides + 45 lb bar weight = 95 lb - missing 50 lb")
@@ -206,7 +206,7 @@ struct EquipmentResolutionTests {
             "leg-press": GymEquipment(load: .base(kg: lb.toKg(100))),
             Loading.weightPlatesID: GymEquipment(load: .weights(options: [WeightOption(kg: lb.toKg(45)), WeightOption(kg: lb.toKg(25))])),
         ])
-        let loads = GymLoads(gym: gym, overrides: [:], catalog: catalog)
+        let loads = GymLoads(gym: gym, overrides: [:], unit: lb, catalog: catalog)
         let plates = Loading.resolve(option: ["leg-press"], catalog: catalog, unit: lb, perSide: true, load: loads.load)?.plates
         #expect(plates?.plan(for: 140).sentence(unit: "lb") == "90 lb on one side + 50 lb base weight = 140 lb")
     }

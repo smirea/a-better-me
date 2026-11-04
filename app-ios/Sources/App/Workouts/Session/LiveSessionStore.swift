@@ -1,4 +1,5 @@
 import Foundation
+import os
 import UIKit
 import UserNotifications
 
@@ -134,14 +135,20 @@ final class LiveSessionStore {
         restEndTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(timer.remaining(at: .now)))
             guard !Task.isCancelled, let self, self.rest == timer else { return }
-            if self.alerts.vibrate { UINotificationFeedbackGenerator().notificationOccurred(.success) }
+            let haptic = RestEndHaptic.device(vibrate: self.alerts.vibrate, watchRecords: WorkoutHealth.shared.watchRecords)
+            Self.log.info("Rest ended, haptic on \(String(describing: haptic), privacy: .public)")
+            if haptic == .phone { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
             self.rest = nil
         }
         scheduleNotification(at: timer.endsAt)
     }
 
-    /// The haptic covers a phone in hand; the notification covers a locked phone or the app in the background.
+    static let log = Logger(subsystem: "com.stefan.a-better-me", category: "Rest")
+
+    /// The haptic covers a phone in hand; the notification covers a locked phone or the app in the background. While
+    /// the watch records the workout it taps instead, and a phone notification would reach the watch as a second tap.
     private func scheduleNotification(at date: Date) {
+        guard !WorkoutHealth.shared.watchRecords else { return }
         let center = UNUserNotificationCenter.current()
         Task {
             guard (try? await center.requestAuthorization(options: [.alert, .sound])) == true, rest?.endsAt == date else { return }

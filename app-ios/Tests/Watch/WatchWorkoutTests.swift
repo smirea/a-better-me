@@ -38,7 +38,7 @@ struct WatchWorkoutTests {
         #expect(workout.rest == LiveRest(endsAt: Self.start.addingTimeInterval(180), duration: 120))
         #expect(workout.currentRow == RowPath(block: 0, exercise: 0, set: 1))
         #expect(workout.set(at: RowPath(block: 0, exercise: 0, set: 1)).position == "Set 2 of 2")
-        #expect(workout.set(at: RowPath(block: 0, exercise: 0, set: 1)).previous == "102.1 kg x 4 @ 1 RIR")
+        #expect(workout.set(at: RowPath(block: 0, exercise: 0, set: 1)).previous == "102.1 kg · 4 @ 1 RIR")
     }
 
     @Test func supersetMembersAlternateAndRestOnlyAfterTheRound() {

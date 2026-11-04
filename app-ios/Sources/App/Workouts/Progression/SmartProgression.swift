@@ -19,14 +19,13 @@ struct SetSuggestion: Hashable {
 
     var isEmpty: Bool { weight == nil && repsMin == nil && repsMax == nil }
 
-    /// "40 lb x 8 / 0 RIR", "30 lb x 8-12 / 2 RIR", "20 lb / 0 RIR".
+    /// "40 lb · 8 / 0 RIR", "8-12 / 2 RIR", "20 lb / 0 RIR". The owner reads the reps as implied by their place, so
+    /// there is no "x"; the dot matches the watch's lines.
     func autoText(unit: WeightUnit) -> String? {
-        var parts: [String] = []
-        if let weight { parts.append("\(SetSuggestion.format(weight)) \(unit.rawValue)") }
-        if let reps = SetSuggestion.repsText(min: repsMin, max: repsMax) { parts.append("x \(reps)") }
-        guard !parts.isEmpty else { return nil }
-        if let rir { parts.append("/ \(rir) RIR") }
-        return parts.joined(separator: " ")
+        let weight = weight.map { "\(SetSuggestion.format($0)) \(unit.rawValue)" }
+        let main = [weight, SetSuggestion.repsText(min: repsMin, max: repsMax)].compactMap { $0 }.joined(separator: " · ")
+        guard !main.isEmpty else { return nil }
+        return rir.map { "\(main) / \($0) RIR" } ?? main
     }
 
     static func repsText(min: Int?, max: Int?) -> String? {

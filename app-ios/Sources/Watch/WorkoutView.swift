@@ -47,16 +47,11 @@ private struct MainPage: View {
         .task(id: workout.rest) {
             restOver = false
             guard let rest = workout.rest else { return }
-            let left = rest.endsAt.timeIntervalSinceNow
-            if left > 10 {
-                try? await Task.sleep(for: .seconds(left - 10))
-                guard !Task.isCancelled else { return }
-                WKInterfaceDevice.current().play(.click)
-            }
             try? await Task.sleep(for: .seconds(max(0, rest.endsAt.timeIntervalSinceNow)))
             guard !Task.isCancelled else { return }
             restOver = true
-            WKInterfaceDevice.current().play(.notification)
+            let haptic = RestEndHaptic.device(vibrate: workout.rules.rest.vibrate, watchRecords: WatchModel.shared.recording != nil)
+            if haptic == .watch { WKInterfaceDevice.current().play(.click) }
         }
     }
 }

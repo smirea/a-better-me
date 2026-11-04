@@ -57,7 +57,7 @@ struct EquipmentWeightsOverrideView: View {
         .themedList()
         .detailTitle("Weights")
         .sheet(item: $editing) { item in
-            if let load = overrides[item.id] ?? gym.flatMap({ GymDefaults.effectiveLoad(item.id, in: $0) }) ?? GymDefaults.load(for: item.id) {
+            if let load = overrides[item.id] ?? gym.flatMap({ GymDefaults.effectiveLoad(item.id, in: $0, unit: unit) }) ?? GymDefaults.load(for: item.id, unit: unit) {
                 EquipmentLoadEditor(equipment: item, load: load, unit: unit) { save($0, for: item.id) }
             }
         }
@@ -70,7 +70,7 @@ struct EquipmentWeightsOverrideView: View {
         var seen = Set<EquipmentID>()
         return exercise.resistanceEquipmentIDs.joined()
             .map(listing.listedID)
-            .filter { seen.insert($0).inserted && GymDefaults.load(for: $0) != nil }
+            .filter { seen.insert($0).inserted && GymDefaults.load(for: $0, unit: settings.weightUnit) != nil }
             .compactMap { catalog.equipment[$0] }
     }
 

@@ -14,8 +14,7 @@ enum GymSeed {
         guard !Task.isCancelled else { return }
         store.write { db in
             guard try GymProfile.fetchCount(db) == 0 else { return }
-            let unit = try AppSettings.fetchOne(db, key: AppSettings.rowID)?.weightUnit ?? .lb
-            var gym = GymProfile(name: "Your Gym", icon: GymTemplate.commercial.icon, equipment: GymTemplate.commercial.equipment(from: equipment, unit: unit))
+            var gym = GymProfile(name: "Your Gym", icon: GymTemplate.commercial.icon, equipment: GymTemplate.commercial.equipment(from: equipment))
             gym.id = gymID
             gym.isDefault = true
             try gym.insert(db)

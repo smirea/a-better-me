@@ -33,13 +33,17 @@ struct PlateCalculatorShapesTests {
         #expect(section == CustomWorkoutSection(id: UUID(uuidString: "3B3E8D9A-5E7B-4F4E-9E8C-2B0B7E2F9D11")!, name: "Travel"))
     }
 
-    @Test func aKgOwnerSelectingOrResettingAnItemStoresTheKgList() {
-        guard case let .weights(plates)? = GymDefaults.storedLoad(for: Loading.weightPlatesID, unit: .kg) else {
+    @Test func theDefaultPlatesFollowTheDisplayUnit() {
+        guard case let .weights(plates)? = GymDefaults.load(for: Loading.weightPlatesID, unit: .kg) else {
             Issue.record("no kg plates")
             return
         }
         #expect(plates.map(\.kg) == [1.25, 2.5, 5, 10, 15, 20, 25])
-        #expect(GymDefaults.storedLoad(for: Loading.weightPlatesID, unit: .lb) == nil)
+        guard case let .weights(lbPlates)? = GymDefaults.load(for: Loading.weightPlatesID, unit: .lb) else {
+            Issue.record("no lb plates")
+            return
+        }
+        #expect(lbPlates.map { WeightUnit.lb.fromKg($0.kg) }.map { ($0 * 100).rounded() / 100 }.contains(45))
     }
 
     @Test func overridesAndBlocksWithoutTheNewKeysDecode() throws {

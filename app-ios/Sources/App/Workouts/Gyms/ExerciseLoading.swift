@@ -58,7 +58,7 @@ final class LoadingCache {
               let weight = SetField.fields(for: exercise).first(where: \.isWeight),
               let option = exercise.chosenEquipment(item.equipment, in: availability) else { return nil }
         let overrides = ExerciseSettings.of(item.exerciseID, in: exerciseSettings)?.overrides
-        let loads = GymLoads(gym: gym, overrides: overrides?.equipment ?? [:], catalog: catalog.equipment)
+        let loads = GymLoads(gym: gym, overrides: overrides?.equipment ?? [:], unit: settings.weightUnit, catalog: catalog.equipment)
         return Loading.resolve(
             option: option, catalog: catalog.equipment, unit: settings.weightUnit, perSide: weight == .weight(perSide: true),
             calculator: gym.map { settings.workout.plateCalculator(for: $0.id) } ?? PlateCalculatorOptions(),
