@@ -7,6 +7,16 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     /// Height and tape measurements; both are stored in centimeters.
     enum HeightUnit: String, Codable, Sendable { case feetAndInches, centimeters }
 
+    enum DistanceUnit: String, Codable, Sendable {
+        case miles, kilometers
+
+        /// One decimal, as Pedometer++ shows it: "3.3 mi", or "3.3mi" with no separator inside a bar.
+        func text(meters: Double, separator: String = " ") -> String {
+            let value = meters / (self == .miles ? 1609.344 : 1000)
+            return value.formatted(.number.precision(.fractionLength(1))) + separator + (self == .miles ? "mi" : "km")
+        }
+    }
+
     struct Timeline: Codable, Hashable, Sendable {
         /// The hours always shown, inclusive; hours with entries outside them still show.
         var firstHour = 8
@@ -86,6 +96,7 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     /// Display only: every stored energy is kcal.
     var energyUnit = EnergyUnit.kcal
     var heightUnit = HeightUnit.feetAndInches
+    var distanceUnit = DistanceUnit.miles
     /// ISO weekday, Monday 1.
     var checkInWeekday = 1
     /// Skips the check-in's optional modules and goes straight to the program update.

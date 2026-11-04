@@ -109,7 +109,7 @@ struct MetricDetail {
         case energyBalance
         case nutrient(NutrientSummary)
         case macros([(date: Date, split: TileMetrics.MacroSplit)])
-        case steps(StepGoal.Summary, flights: [DatedValue])
+        case steps(StepGoal.Summary, flights: [DatedValue], meters: [DatedValue])
     }
 
     var title: String
@@ -172,6 +172,7 @@ struct DashboardData {
     var bodyMetrics: [BodyMetric] = []
     var profile = ProfileSettings()
     var flights: [DatedValue] = []
+    var meters: [DatedValue] = []
 
     var trend: [DatedValue] {
         WeightTrend.daily(weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, through: now, calendar: calendar)
@@ -326,7 +327,7 @@ struct DashboardData {
             return MetricDetail(title: "Steps", tabs: [MetricTab(
                 title: "Steps", points: steps, unit: .whole("steps"), averageTitle: "Average Steps",
                 summary: .total, style: .bar, color: Theme.coral, goal: Double(profile.dailyStepGoal)
-            )], footer: .steps(stepGoal, flights: flights))
+            )], footer: .steps(stepGoal, flights: flights, meters: meters))
         case let .muscle(muscle, _):
             return MetricDetail(title: muscle.displayName, tabs: [MuscleMetric.sets, .volume].map { metric in
                 MetricTab(
@@ -403,7 +404,10 @@ struct DashboardValues: DynamicProperty {
                 sessions: sessions, weighIns: readsHealth ? health.weighIns : [], steps: readsHealth ? health.steps : [],
                 unit: context.unit, catalog: catalog.exercise, now: today, calendar: context.calendar
             )
-            if readsHealth { data.flights = health.flights }
+            if readsHealth {
+                data.flights = health.flights
+                data.meters = health.distance
+            }
             if usesNutrition {
                 data.steps = NutritionMetrics.steps(health: health.steps, imported: nutrition.importedSteps, calendar: context.calendar)
                 data.log = nutrition.log

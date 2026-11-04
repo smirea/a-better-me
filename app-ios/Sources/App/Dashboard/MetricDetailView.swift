@@ -7,6 +7,7 @@ struct MetricDetailView: View {
     let initialTab: String?
 
     @Environment(ExerciseCatalog.self) private var catalog
+    @Observe(AppSettings.current) private var settings
     private var values = DashboardValues()
     @State private var tabID: String?
     @State private var range = ChartRange.oneWeek
@@ -29,18 +30,24 @@ struct MetricDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if detail.tabs.count > 1 { tabs(detail.tabs, selected: tab) }
-                // Steps leads with its streak and labels its bars, so it drops the summary, the legend, and the list.
-                if case let .steps(goal, _) = detail.footer {
-                    StepsHeader(summary: goal, flights: plot.flightsTotal, rangeLabel: plot.rangeLabel).padding(.horizontal, Theme.margin)
+                // Steps leads with the chart and labels its bars, so it drops the summary, the legend, and the list.
+                if let steps = plot.steps {
+                    VStack(spacing: 10) {
+                        chart(tab, plot, footer: detail.footer)
+                            .frame(height: 460)
+                            .feedback("\(tab.title) Chart", data: (range: plot.rangeLabel, averaging: averaging, points: plot.drawn, steps: steps))
+                        StepsRangeSummary(steps: steps, unit: settings.nutrition.distanceUnit)
+                    }
+                    .padding(.horizontal, Theme.margin)
                 } else {
                     summary(tab, plot)
                         .feedback("Summary", data: (stats: plot.stats, range: plot.rangeLabel))
                         .padding(.horizontal, Theme.margin)
+                    chart(tab, plot, footer: detail.footer)
+                        .frame(height: 320)
+                        .feedback("\(tab.title) Chart", data: (range: plot.rangeLabel, averaging: averaging, points: plot.drawn))
+                        .padding(.horizontal, Theme.margin)
                 }
-                chart(tab, plot, footer: detail.footer)
-                    .frame(height: 320)
-                    .feedback("\(tab.title) Chart", data: (range: plot.rangeLabel, averaging: averaging, points: plot.drawn, flights: plot.flights))
-                    .padding(.horizontal, Theme.margin)
                 controls.padding(.horizontal, Theme.margin)
                 if case .steps = detail.footer {} else { legend(tab).padding(.horizontal, Theme.margin) }
                 footer(detail.footer, plot, tab: tab).padding(.horizontal, Theme.margin)
@@ -77,7 +84,7 @@ struct MetricDetailView: View {
         .sheet(isPresented: $loggingWeight) { BodyWeightLogSheet() }
         .sheet(isPresented: $loggingMetrics) { BodyMetricsLogSheet() }
         .sheet(isPresented: $editingStepGoal) {
-            if case let .steps(goal, _) = values.detail(route).footer { StepGoalSheet(goal: goal.goal) }
+            if case let .steps(goal, _, _) = values.detail(route).footer { StepGoalSheet(goal: goal.goal) }
         }
         .sheet(item: $shownExercise) { ExerciseDetailSheet(exerciseID: $0.id) }
         .feedback(self)
@@ -133,7 +140,7 @@ struct MetricDetailView: View {
     private func chart(_ tab: MetricTab, _ plot: MetricPlot, footer: MetricDetail.Footer) -> some View {
         let points = plot.drawn
         var stepGoal: StepGoal.Summary?
-        if case let .steps(goal, _) = footer { stepGoal = goal }
+        if case let .steps(goal, _, _) = footer { stepGoal = goal }
         let fit = stepGoal == nil && fitToData(tab)
         let values = (points + plot.overlay).map(\.value) + (tab.goal.map { [$0] } ?? [])
         let high = max(values.max() ?? 0, 1)
@@ -150,13 +157,19 @@ struct MetricDetailView: View {
             if let goal = tab.goal {
                 RuleMark(y: .value("Goal", goal))
                     .foregroundStyle(Theme.goal)
-                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
+                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: stepGoal == nil ? [4, 4] : []))
             }
             ForEach(points, id: \.date) { point in
                 switch tab.style {
                 case .bar:
-                    BarMark(x: .value("Date", point.date, unit: plot.drawnUnit), y: .value(tab.title, point.value))
-                        .foregroundStyle(stepGoal.map { StepGoal.tier(point.value, goal: $0.goal).color } ?? tab.color)
+                    if let stepGoal {
+                        BarMark(x: .value("Date", point.date, unit: plot.drawnUnit), y: .value(tab.title, point.value), width: .ratio(StepBarLabels.barRatio))
+                            .foregroundStyle(StepGoal.tier(point.value, goal: stepGoal.goal).color)
+                            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 8, topTrailingRadius: 8, style: .continuous))
+                    } else {
+                        BarMark(x: .value("Date", point.date, unit: plot.drawnUnit), y: .value(tab.title, point.value))
+                            .foregroundStyle(tab.color)
+                    }
                 case .line:
                     LineMark(x: .value("Date", point.date), y: .value(tab.title, point.value), series: .value("Series", tab.title))
                         .foregroundStyle(tab.color)
@@ -176,21 +189,27 @@ struct MetricDetailView: View {
         .chartXScale(domain: plot.xDomain)
         .chartYScale(domain: max(low - pad, fit ? -.infinity : 0)...(high + pad))
         .themedYAxis()
+        .chartYAxis(stepGoal == nil ? .automatic : .hidden)
         .chartXAxis {
             AxisMarks(values: .automatic(desiredCount: range == .oneWeek ? 7 : 5)) { _ in
                 AxisValueLabel(format: range == .oneWeek ? .dateTime.weekday(.abbreviated) : .dateTime.month(.abbreviated).day())
-                    .foregroundStyle(Theme.textSecondary)
+                    .font(stepGoal == nil ? nil : AppFont.medium(range == .oneWeek ? 16 : 13))
+                    .foregroundStyle(stepGoal == nil ? Theme.textSecondary : Theme.textPrimary)
             }
         }
         .chartOverlay { proxy in
-            if let stepGoal {
-                StepBarLabels(
-                    proxy: proxy, points: points, centers: plot.scrubDates, flights: plot.flights,
-                    streak: plot.streak, streakLength: stepGoal.streak
-                )
+            if let stepGoal, let steps = plot.steps {
+                StepBarLabels(proxy: proxy, points: points, centers: plot.scrubDates, goal: stepGoal.goal, bars: points.map { point in
+                    StepBar(
+                        steps: point.value,
+                        flights: steps.flights[point.date].map(\.wholeText) ?? "",
+                        distance: steps.meters[point.date].map { settings.nutrition.distanceUnit.text(meters: $0, separator: "") } ?? ""
+                    )
+                })
             }
         }
-        .chartScrubbing(plot.scrubDates) { index in callout(tab, plot, index) }
+        // Nothing sits above the Steps chart but the title, which a callout above the plot would cover.
+        .chartScrubbing(plot.scrubDates, placement: stepGoal == nil ? .above : .beside) { index in callout(tab, plot, index) }
         .accessibilityLabel("\(tab.title) chart")
     }
 
@@ -205,8 +224,11 @@ struct MetricDetailView: View {
         if let line = tab.overlay, let value = plot.overlayValues[point.date] {
             lines.append(ChartCallout.Line(label: line.title, value: "\(tab.unit.format(value)) \(tab.unit.label)", color: line.color))
         }
-        if let flights = plot.flights[point.date] {
+        if let flights = plot.steps?.flights[point.date] {
             lines.append(ChartCallout.Line(label: nil, value: "\(flights.wholeText) \(flights == 1 ? "flight" : "flights")", color: Theme.textSecondary))
+        }
+        if let meters = plot.steps?.meters[point.date] {
+            lines.append(ChartCallout.Line(label: nil, value: settings.nutrition.distanceUnit.text(meters: meters), color: Theme.textSecondary))
         }
         return ChartCallout(title: title, lines: lines)
     }
@@ -326,11 +348,7 @@ struct MetricPlot {
     /// Energy Balance's 3- to 90-day mean differences.
     var balanceRows: [(days: Int, mean: Double?)] = []
     var isExpenditureBalance = false
-    /// Steps' flights climbed per drawn bar, averaged like the steps, and their total over the range.
-    var flights: [Date: Double] = [:]
-    var flightsTotal = 0.0
-    /// The middles of the current streak's first and last days inside the range, when the bars are days.
-    var streak: (first: Date, last: Date)?
+    var steps: StepsPlot?
 
     init(tab: MetricTab, footer: MetricDetail.Footer, range: ChartRange, averaging: Averaging, now: Date, calendar: Calendar, unit: WeightUnit) {
         let interval = range.interval(endingAt: now, earliest: tab.points.first?.date, calendar: calendar)
@@ -379,20 +397,18 @@ struct MetricPlot {
                 }
             }
         }
-        if case let .steps(summary, flights) = footer {
-            if drawing == .daily, let days = summary.streakDays {
-                let first = max(days.lowerBound, interval.start)
-                let last = min(days.upperBound, calendar.date(byAdding: .day, value: -1, to: interval.end)!)
-                if first <= last {
-                    streak = (calendar.date(byAdding: .hour, value: 12, to: first)!, calendar.date(byAdding: .hour, value: 12, to: last)!)
-                }
+        if case let .steps(summary, flights, meters) = footer {
+            func perBar(_ days: [DatedValue]) -> [Date: Double] {
+                Dictionary(drawing.bucket(days.inside(interval), calendar: calendar).map { (max($0.date, interval.start), $0.value) }, uniquingKeysWith: { first, _ in first })
             }
-            let inside = flights.inside(interval)
-            self.flights = Dictionary(
-                drawing.bucket(inside, calendar: calendar).map { (max($0.date, interval.start), $0.value) },
-                uniquingKeysWith: { first, _ in first }
+            let total = daily.map(\.value).reduce(0, +)
+            // Days before the first recorded one are no history rather than misses, as the All range already starts there.
+            let first = max(interval.start, tab.points.first.map { calendar.startOfDay(for: $0.date) } ?? interval.start)
+            let days = max(calendar.dateComponents([.day], from: first, to: interval.end).day!, 1)
+            steps = StepsPlot(
+                flights: perBar(flights), meters: perBar(meters), total: total,
+                distance: meters.inside(interval).map(\.value).reduce(0, +), goalShare: total / Double(summary.goal * days)
             )
-            flightsTotal = inside.map(\.value).reduce(0, +)
         }
         if case .energyBalance = footer {
             let differences = NutritionMetrics.differences(intake: tab.points, reference: tab.overlay?.points ?? [], calendar: calendar)
@@ -420,6 +436,20 @@ struct MetricPlot {
         let last = calendar.date(byAdding: .day, value: -1, to: interval.end)!
         return (interval.start..<last.addingTimeInterval(1)).formatted(.interval.month(.abbreviated).day().year())
     }
+}
+
+/// What Steps adds to its plot: each drawn bar's flights and distance in meters, averaged like the steps, and the
+/// range's totals for the bracket under the chart.
+struct StepsPlot: Equatable {
+    var flights: [Date: Double]
+    var meters: [Date: Double]
+    /// Over the range's days, which averaging would distort.
+    var total: Double
+    var distance: Double
+    /// The total over the goal times the range's days from the first recorded one, today included.
+    var goalShare: Double
+
+    var tier: StepGoal.Tier { StepGoal.tier(goalShare, goal: 1) }
 }
 
 struct MonthSection: Identifiable {

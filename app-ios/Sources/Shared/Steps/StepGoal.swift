@@ -40,8 +40,6 @@ enum StepGoal {
         /// The last seven days, oldest first, today last.
         var week: [Day]
         var streak: Int
-        /// The first and last day of the current streak.
-        var streakDays: ClosedRange<Date>?
         var best: Int
         var metLast30: Int
         var hasSteps: Bool
@@ -82,7 +80,7 @@ enum StepGoal {
             return Day(date: date, steps: value, tier: tier(value, goal: goal), inStreak: streakDays?.contains(date) == true)
         }
         return Summary(
-            goal: goal, today: byDay[start] ?? 0, week: week, streak: streak, streakDays: streakDays, best: best,
+            goal: goal, today: byDay[start] ?? 0, week: week, streak: streak, best: best,
             metLast30: (-29...0).count { met(day($0)) }, hasSteps: !byDay.isEmpty
         )
     }
