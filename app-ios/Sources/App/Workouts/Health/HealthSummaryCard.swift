@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Workout Complete's Apple Health section: the saved summary, or the live numbers while the workout still records.
@@ -45,6 +46,7 @@ struct HealthSummaryCard: View {
                 row("Active Energy", icon: "flame.fill", value: numbers.activeEnergyKcal.map { "\(Int($0.rounded())) kcal" })
                 row("Total Energy", icon: "flame", value: numbers.totalEnergyKcal.map { "\(Int($0.rounded())) kcal" })
             }
+            .feedback(self)
             .padding(.horizontal, Theme.margin)
         }
     }

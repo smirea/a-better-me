@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 struct CustomizeDashboardView: View {
@@ -47,6 +48,7 @@ struct CustomizeDashboardView: View {
         .sheet(item: $editing) { section in
             AddRemoveSheet(section: section, layout: Binding(get: { draft ?? settings.dashboard }, set: { draft = $0 }))
         }
+        .feedback(self)
     }
 
     private func binding<Value>(_ path: WritableKeyPath<DashboardLayout, Value>) -> Binding<Value> {
@@ -317,6 +319,7 @@ private struct PrimaryFocusPicker: View {
                         .frame(width: 150)
                         .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
                         .overlay(RoundedRectangle(cornerRadius: Theme.smallCornerRadius).stroke(Theme.textPrimary.opacity(index != nil ? 0.9 : 0.2)))
+                        .feedback("Focus Page", data: (card: card, position: index))
                         HStack(spacing: 18) {
                             Button("Move \(card.title) Left", systemImage: "arrow.left") { move(card, by: -1) }
                                 .disabled(index.map { $0 == 0 } ?? true)
@@ -420,6 +423,7 @@ private struct AddRemoveSheet: View {
                 }
             }
         }
+        .feedback("AddRemoveSheet", data: section)
     }
 
     @ViewBuilder

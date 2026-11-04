@@ -149,7 +149,9 @@ private struct DaySummary: View {
             }
             .contentShape(Rectangle())
             .onTapGesture { state.path.append(FoodLogRoute.overview(day)) }
-            .accessibilityElement(children: .combine)
+            // Combining the paged TabView reads only its page indicator, so the label spells the lines out.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(lines.map(\.spoken).joined(separator: ", "))
             .accessibilityAddTraits(.isButton)
             .accessibilityHint("Opens the Nutrition Overview")
             if target == nil {
@@ -215,6 +217,7 @@ private struct MacroColumns: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .feedback(line.nutrient.dashboardLabel, data: line)
             }
         }
         .padding(.bottom, lines.first?.target == nil ? 0 : 30)
@@ -309,5 +312,6 @@ private struct CalendarSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .feedback(self)
     }
 }

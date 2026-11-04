@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// One muscle's average weekly sets and the lifts that contributed them, pushed from a Levels row.
@@ -33,6 +34,7 @@ struct MuscleLevelsView: View {
         .themedList()
         .detailTitle(muscle.displayName)
         .sheet(item: $shownExercise) { ExerciseDetailSheet(exerciseID: $0.id) }
+        .feedback(self)
     }
 }
 
@@ -62,5 +64,6 @@ private struct LiftRow: View {
                 .foregroundStyle(Theme.textTertiary)
         }
         .contentShape(.rect)
+        .feedback(self)
     }
 }

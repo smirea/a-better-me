@@ -1,4 +1,5 @@
 import Charts
+import Feetback
 import SwiftUI
 
 /// Chart series colors with no other meaning in the app.
@@ -72,6 +73,7 @@ struct ChartLegend: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
         .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
+        .feedback(self)
     }
 }
 

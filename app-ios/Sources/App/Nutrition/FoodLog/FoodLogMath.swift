@@ -27,6 +27,12 @@ struct MacroLine: Hashable, Identifiable {
     let remaining: Double?
 
     var id: NutrientID { nutrient }
+
+    var spoken: String {
+        let unit = nutrient == .energy ? "calories" : "grams"
+        guard let target else { return "\(nutrient.dashboardLabel) \(Int(consumed.rounded())) \(unit)" }
+        return "\(nutrient.dashboardLabel) \(Int(consumed.rounded())) of \(Int(target.rounded())) \(unit)"
+    }
     /// The bar's fill, 0 through 1.
     var progress: Double {
         guard let target, target > 0 else { return 0 }

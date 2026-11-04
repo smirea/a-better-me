@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The Exercise Assessment questionnaire: seven yes-or-no questions saved into `ProfileSettings.assessment` as they are
@@ -26,6 +27,7 @@ struct ExerciseAssessmentView: View {
         }
         .themedList()
         .detailTitle("Exercise Assessment")
+        .feedback(self)
     }
 
     private func answer(_ question: AssessmentQuestion) -> Binding<String?> {

@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The live workout's Equipment chip: which resistance option and which support option this exercise uses, as in
@@ -48,6 +49,7 @@ struct EquipmentSheet<Settings: View>: View {
                 PinnedActionButton("Done") { dismiss() }
             }
         }
+        .feedback(self)
     }
 
     private func row(_ option: EquipmentChoiceOption, isSelected: Bool, select: @escaping () -> Void) -> some View {

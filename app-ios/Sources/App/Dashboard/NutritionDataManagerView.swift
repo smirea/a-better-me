@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// MacroFactor's Nutrition Data Manager: every day with intake or a mark, newest month first. Its entry sheet writes the
@@ -32,13 +33,15 @@ struct NutritionDataManagerView: View {
             }
         }
         .sheet(item: $editing) { NutritionDayEntrySheet(day: $0.day, log: nutrition.log) }
+        .feedback(self)
     }
 
     private func row(_ day: NutritionLogDay, calendar: Calendar) -> some View {
-        Button { editing = EditedLogDay(day: day.day) } label: {
+        let title = day.entryCount > 0 || day.hasOverride ? "\((day.consumed[.energy] ?? 0).wholeText) kcal" : "No intake"
+        return Button { editing = EditedLogDay(day: day.day) } label: {
             HStack {
                 RowLabel(
-                    title: day.entryCount > 0 || day.hasOverride ? "\((day.consumed[.energy] ?? 0).wholeText) kcal" : "No intake",
+                    title: title,
                     detail: [day.day.date(in: calendar).formatted(.dateTime.weekday().month().day().year()), day.status == .none ? nil : day.status.title].compactMap { $0 }.joined(separator: " · "),
                     systemImage: day.hasOverride ? "square.and.pencil" : day.entryCount > 0 ? "fork.knife" : "moon.zzz"
                 )
@@ -52,6 +55,7 @@ struct NutritionDataManagerView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Edit \(day.day.date(in: calendar).formatted(.dateTime.month(.wide).day()))")
+        .accessibilityValue([title, day.status == .none ? nil : day.status.title].compactMap { $0 }.joined(separator: ", "))
     }
 }
 
@@ -131,6 +135,7 @@ struct NutritionDayEntrySheet: View {
             .onChange(of: incomplete) { _, on in if on { fasting = false } }
             .onChange(of: day, initial: true) { _, _ in load() }
         }
+        .feedback(self)
     }
 
     private func placeholder(_ id: NutrientID) -> String {

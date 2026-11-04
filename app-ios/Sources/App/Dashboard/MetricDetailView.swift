@@ -30,9 +30,12 @@ struct MetricDetailView: View {
             VStack(alignment: .leading, spacing: 16) {
                 if detail.tabs.count > 1 { tabs(detail.tabs, selected: tab) }
                 if case let .steps(goal) = detail.footer { StepGoalHeader(summary: goal).padding(.horizontal, Theme.margin) }
-                summary(tab, plot).padding(.horizontal, Theme.margin)
+                summary(tab, plot)
+                    .feedback("Summary", data: (stats: plot.stats, range: plot.rangeLabel))
+                    .padding(.horizontal, Theme.margin)
                 chart(tab, plot)
                     .frame(height: 320)
+                    .feedback("\(tab.title) Chart", data: (range: plot.rangeLabel, averaging: averaging, points: plot.drawn))
                     .padding(.horizontal, Theme.margin)
                 controls.padding(.horizontal, Theme.margin)
                 legend(tab).padding(.horizontal, Theme.margin)
@@ -275,6 +278,7 @@ struct MetricDetailView: View {
                     }
                 }
                 .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+                .feedback("Top Exercises", data: top)
             }
         }
     }
@@ -422,6 +426,7 @@ private struct TopExerciseRow: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .contentShape(.rect)
+        .feedback(self)
     }
 }
 
@@ -467,6 +472,7 @@ private struct MetricHistoryView: View {
         }
         .background(Theme.background)
         .detailTitle(title)
+        .feedback(self)
     }
 }
 
@@ -497,5 +503,6 @@ private struct MonthRowView: View {
         }
         .rowSwipeActions(trailing: row.deletableID.map { id in [.destructive("Delete Weigh-In") { store.delete(BodyWeight.self, id: id) }] } ?? [])
         .accessibilityElement(children: .combine)
+        .feedback(self)
     }
 }

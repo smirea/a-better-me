@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The Workout tab's Active Program (research spec milestone-2.md §2.2): the position link, the program card with its
@@ -35,6 +36,7 @@ struct ActiveProgramSection: View {
         .sheet(isPresented: $choosingCycle) {
             if let program { GoToCycleSheet(program: program) }
         }
+        .feedback(self)
     }
 }
 
@@ -77,5 +79,6 @@ private struct GoToCycleSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .feedback(self)
     }
 }

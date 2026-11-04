@@ -101,5 +101,6 @@ private struct AssetsRow: View {
         }
         .accessibilityLabel(store.statusLine)
         .accessibilityHint("Checks for missing exercise images and downloads them now, on cellular too")
+        .feedback(self)
     }
 }

@@ -135,6 +135,7 @@ struct WorkoutTab: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .card()
                 }
+                .feedback("Your Sections")
             } else {
                 VStack(alignment: .leading, spacing: 28) {
                     ForEach(custom) { CustomSectionView(section: $0, library: templates) }
@@ -167,6 +168,7 @@ struct WorkoutTab: View {
                 }
             }
         }
+        .feedback("Workout Library", data: (templates: templates.count, programs: libraryPrograms.count, collapsed: libraryCollapsed))
     }
 
     /// "1 program, 0 workouts", the ⋮ menu's Archive subtitle.

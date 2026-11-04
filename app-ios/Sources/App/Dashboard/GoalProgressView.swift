@@ -1,4 +1,5 @@
 import Charts
+import Feetback
 import SwiftUI
 
 /// MacroFactor's Goal Progress detail: a monthly waterfall of the distance to the target on scale or trend weight.
@@ -23,7 +24,7 @@ struct GoalProgressView: View {
                         )
                     } else {
                         header(bars)
-                        chart(bars).frame(height: 320)
+                        chart(bars).frame(height: 320).feedback("Goal Progress Chart", data: bars)
                         legend
                     }
                     insights(progress)
@@ -38,6 +39,7 @@ struct GoalProgressView: View {
         }
         .background(Theme.background)
         .detailTitle("Goal Progress")
+        .feedback(self)
     }
 
     private var tabStrip: some View {

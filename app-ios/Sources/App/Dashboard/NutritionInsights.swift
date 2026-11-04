@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The "Insights & Data" blocks under the nutrition detail charts (docs/research/macrofactor/README.md §3.2-3.5).
@@ -25,6 +26,7 @@ struct ExpenditureInsights: View {
                 ("Scale Weight", "scalemass", .scaleWeight),
             ])
         }
+        .feedback(self)
     }
 
     static let missing = "Log your weight and nutrition, and add your height and birth date in Settings, to start the estimate."
@@ -82,6 +84,7 @@ struct WeightTrendInsights: View {
             ])
             DataSources(sources: [("Scale Weight", "scalemass", .scaleWeight)])
         }
+        .feedback(self)
     }
 
     private func signed(_ value: Double) -> String {
@@ -109,7 +112,9 @@ struct EnergyBalanceInsights: View {
                 }
             }
             .card()
+            .feedback("Balance Changes", data: rows)
         }
+        .feedback(self)
     }
 }
 
@@ -181,6 +186,7 @@ private struct ChangeRows: View {
             }
         }
         .card()
+        .feedback(self)
     }
 }
 
@@ -235,6 +241,7 @@ struct InsightTiles: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+        .feedback(self)
     }
 }
 
@@ -262,5 +269,6 @@ private struct DataSources: View {
             }
             .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
         }
+        .feedback(self)
     }
 }

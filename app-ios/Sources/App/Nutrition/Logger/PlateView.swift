@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Your Plate (`log-04-your-plate.jpg`): each food with its quantity chip, the plate's nutrition alone or with the
@@ -92,6 +93,7 @@ struct PlateView: View {
         }
         .animation(.snappy, value: editing)
         .detailTitle("Your Plate")
+        .feedback(self)
     }
 
     private func row(_ item: Plate.Item) -> some View {
@@ -194,5 +196,6 @@ private struct PlateServingEditor: View {
                 done()
             }
         )
+        .feedback(self)
     }
 }

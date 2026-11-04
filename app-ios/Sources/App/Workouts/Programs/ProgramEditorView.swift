@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Actions the New Program wizard pins under a program it has just generated or started from scratch and not yet kept.
@@ -64,7 +65,7 @@ private struct ProgramEditorScreen: View {
     var body: some View {
         // After Delete Program the pop is still animating, so the screen stays blank instead of showing a missing row.
         if let program {
-            editor(program)
+            editor(program).feedback(self)
         } else {
             Color.clear
         }
@@ -320,5 +321,6 @@ private struct ProgramEditorGymOptions: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .feedback(self)
     }
 }

@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// How full a day pill's outline is drawn, and in which color: the day's calories against target, a logged workout,
@@ -92,6 +93,7 @@ struct WeekStrip<Week: View>: View {
                 .padding(.trailing, 8)
             }
         }
+        .feedback(self)
     }
 
     private func offset(of day: CalendarDay) -> Int {

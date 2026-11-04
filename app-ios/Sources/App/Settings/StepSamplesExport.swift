@@ -1,5 +1,6 @@
 import Foundation
 import HealthKit
+import Feetback
 import SwiftUI
 
 /// One raw HealthKit step sample, before Health de-duplicates overlapping iPhone and Watch samples by source priority.
@@ -135,6 +136,7 @@ struct StepSamplesExportSheet: View {
                 phase = .failed("Export failed: \(error.localizedDescription)")
             }
         }
+        .feedback(self)
     }
 
     private var isRunning: Bool {

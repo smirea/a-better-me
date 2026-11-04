@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The bar under the timeline: the search field, or in select mode the selection's actions, or a copy or move's
@@ -34,6 +35,7 @@ struct FoodLogBottomBar: View {
         }
         .sensoryFeedback(.selection, trigger: state.selection)
         .animation(.snappy, value: state.notice)
+        .feedback(self)
     }
 }
 
@@ -61,6 +63,7 @@ private struct NoticeBar: View {
             try? await Task.sleep(for: .seconds(5))
             if state.notice?.id == notice.id { state.notice = nil }
         }
+        .feedback(self)
     }
 }
 
@@ -89,6 +92,7 @@ private struct SearchBar: View {
                 .glassEffect(.regular.interactive(), in: .circle)
         }
         .buttonStyle(.plain)
+        .feedback(self)
     }
 }
 
@@ -145,6 +149,7 @@ private struct SelectionBar: View {
                 state.relocate(entries, .move, to: .dateTime(day, minute: minute), in: store)
             }
         }
+        .feedback(self)
     }
 }
 
@@ -198,6 +203,7 @@ private struct PasteBar: View {
                 DatesPrompt { paste(.days($0)) }
             }
         }
+        .feedback(self)
     }
 
     private func paste(_ target: PasteTarget) {
@@ -273,6 +279,7 @@ private struct TimePrompt: View {
             }
         }
         .presentationDetents(showsDate ? [.large] : [.height(320)])
+        .feedback(self)
     }
 }
 
@@ -300,6 +307,7 @@ private struct DatesPrompt: View {
                 }
         }
         .presentationDetents([.large])
+        .feedback(self)
     }
 }
 

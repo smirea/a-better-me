@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The Targets sheet: set types, reps min and max, RIR, and per-set rest. The template editor and the live session's
@@ -121,6 +122,7 @@ struct SetTargetsSheet: View {
                 }
             }
         }
+        .feedback(self)
     }
 
     @ViewBuilder private var bottomButtons: some View {
@@ -352,6 +354,7 @@ private struct SetTypePicker: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .feedback(self)
     }
 }
 
@@ -414,6 +417,7 @@ private struct RIRPicker: View {
             }
         }
         .presentationDetents([.height(160)])
+        .feedback(self)
     }
 }
 
@@ -456,5 +460,6 @@ private struct RestPicker: View {
             }
         }
         .presentationDetents([.height(360)])
+        .feedback(self)
     }
 }

@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 enum StrategyFormat {
@@ -39,6 +40,7 @@ struct WeekTargetsChart: View {
                 column(weekday, scale: height / largest)
             }
         }
+        .feedback(self)
     }
 
     private func column(_ weekday: Int, scale: CGFloat) -> some View {
@@ -141,6 +143,7 @@ struct StrategyCard<Content: View, Actions: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .card()
+        .feedback(self)
     }
 }
 

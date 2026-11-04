@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// What the recipe editor's Add Ingredient opens. MacroFactor opens its logger there, so the logger replaces this
@@ -59,6 +60,7 @@ private struct LibraryIngredientPicker: View {
             .detailTitle("Add Ingredient")
             .ingredientPickerToolbar(added: added)
         }
+        .feedback(self)
     }
 
     private func pickRow(_ food: FoodSnapshot) -> some View {

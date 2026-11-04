@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Search (`log-02-search-results.jpg`): the hour's Picks and Latest when the field is empty, otherwise the groups
@@ -56,6 +57,7 @@ struct SearchTab: View {
             if session.plate.isEmpty { focused = true }
         }
         .onChange(of: text) { session.setQuery(text, branded: settings.nutrition.searchBranded) }
+        .feedback(self)
     }
 
     private var groups: [(FoodSearchGroup, [FoodSearchResult])] {
@@ -156,6 +158,7 @@ struct LoggerBottomBar<Field: View>: View {
         }
         .padding(.horizontal, Theme.margin)
         .padding(.bottom, 8)
+        .feedback(self)
     }
 }
 
@@ -230,6 +233,7 @@ struct QuickAddTab: View {
             focus = .energy
         }
         .onDisappear { session.pending = nil }
+        .feedback(self)
     }
 
     private func quickAdd() {

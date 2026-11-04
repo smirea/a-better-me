@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The food icons a custom food or recipe can pick. A food stores the icon's name; it draws as the emoji.
@@ -212,6 +213,7 @@ struct FoodIconPicker: View {
                 }
             }
         }
+        .feedback(self)
     }
 
     private func matches(_ icon: FoodIconChoice) -> Bool {

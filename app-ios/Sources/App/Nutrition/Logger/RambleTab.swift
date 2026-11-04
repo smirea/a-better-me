@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Ramble: say what you ate and the foods arrive one at a time as the server's model reads the words. It takes the
@@ -121,6 +122,7 @@ struct RambleTab: View {
         .onDisappear {
             Task { await capture.stop() }
         }
+        .feedback(self)
     }
 
     /// Each row that starts a new hour, or a new day, gets that hour as a header, as the Food Log groups its foods.
@@ -339,6 +341,7 @@ private struct RambleSummary: View {
             pulse = 1
             withAnimation(.spring(duration: 0.5, bounce: 0.4)) { pulse = 0 }
         }
+        .feedback(self)
     }
 
     private func macro(_ letter: String, _ id: NutrientID, _ amounts: NutrientAmounts, _ color: Color) -> some View {
@@ -499,6 +502,7 @@ private struct RambleTranscript: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Transcript, \(words.words.map(\.text).joined(separator: " "))")
+        .feedback(self)
     }
 }
 
@@ -636,6 +640,7 @@ private struct RambleLine: View {
         .animation(.smooth(duration: 0.35), value: parsing)
         .sensoryFeedback(.selection, trigger: face)
         .sensoryFeedback(.impact(weight: .medium), trigger: removing) { _, new in new }
+        .feedback(self)
     }
 
     private var line: some View {

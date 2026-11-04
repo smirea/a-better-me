@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Settings > Units: one list for both halves. The clock follows the system's 24-Hour Time, and nothing in the app
@@ -28,6 +29,7 @@ struct UnitsSettingsView: View {
         }
         .themedList()
         .detailTitle("Units")
+        .feedback(self)
     }
 }
 
@@ -54,6 +56,7 @@ struct ProfileSettingsView: View {
         }
         .themedList()
         .detailTitle("Profile")
+        .feedback(self)
     }
 
     /// Tallest first, with the stored height kept as it is when it falls between two choices of the unit.

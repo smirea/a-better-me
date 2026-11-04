@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// One way to load or set up an exercise: its name and the equipment it takes, like `Exercise.resistanceEquipment`
@@ -143,6 +144,7 @@ struct CustomExerciseWizard: View {
                 }
                 .navigationDestination(for: Step.self) { step($0) }
         }
+        .feedback(self)
     }
 
     private func step(_ step: Step) -> some View {
@@ -278,6 +280,7 @@ private struct BuildStep: View {
                 summary: \.summary
             )
         }
+        .feedback(self)
     }
 }
 
@@ -320,6 +323,7 @@ private struct MuscleStep: View {
             .font(AppFont.medium(14))
             .foregroundStyle(Theme.textPrimary)
         }
+        .feedback(self)
     }
 
     private func grid(_ title: String, _ muscles: [Muscle]) -> some View {
@@ -391,6 +395,7 @@ private struct EquipmentStep: View {
                 }
             )
         }
+        .feedback(self)
     }
 
     private func section(_ role: EquipmentRole, options: [EquipmentOption]) -> some View {
@@ -509,6 +514,7 @@ private struct FinalDetailsStep: View {
         .sheet(isPresented: $editingDescription) {
             DescriptionEditor(text: $draft.about)
         }
+        .feedback(self)
     }
 
     private func rating(_ title: String, value: Binding<Int>) -> some View {
@@ -581,6 +587,7 @@ private struct JointActionPicker: View {
                 }
             }
         }
+        .feedback(self)
     }
 }
 
@@ -606,6 +613,7 @@ private struct DescriptionEditor: View {
                     }
                 }
         }
+        .feedback(self)
     }
 }
 
@@ -657,6 +665,7 @@ private struct ReviewStep: View {
                 summary("Description", about)
             }
         }
+        .feedback(self)
     }
 
     private func rating(_ title: String, _ value: Int?) -> some View {

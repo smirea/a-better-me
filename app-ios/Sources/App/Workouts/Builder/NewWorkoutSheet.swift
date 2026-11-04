@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The tab bar's "+" Shortcuts sheet (research spec §2, `nav-plus-01.jpg`): round shortcut buttons, the active
@@ -62,6 +63,7 @@ struct NewWorkoutSheet: View {
         .fullScreenCover(isPresented: $creatingProgram) {
             NewProgramWizard { dismiss() }
         }
+        .feedback(self)
     }
 
     private func perform(_ shortcut: Shortcut) {
@@ -114,6 +116,7 @@ private struct UpNextCard: View {
         }
         .padding(14)
         .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textTertiary) }
+        .feedback(self)
     }
 }
 
@@ -164,6 +167,7 @@ private struct CustomizeShortcutsSheet: View {
                 }
             }
         }
+        .feedback(self)
     }
 
     private func visibility(_ item: Shortcut, visible: Bool) -> some View {

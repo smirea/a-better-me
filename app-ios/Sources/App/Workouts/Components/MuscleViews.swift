@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The small 4 pt tags under exercise rows: filled for primary muscles, outlined for secondary ones.
@@ -80,6 +81,7 @@ struct MuscleTileCard: View {
         .padding(4)
         .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
         .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.surfaceRaised) }
+        .feedback(self)
     }
 }
 

@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Target Muscles in the program editor: the selected day, or every day of the week or cycle.
@@ -144,6 +145,7 @@ struct WeekCardsRow: View {
                 .accessibilityLabel("Program Note: \(note)")
             }
         }
+        .feedback(self)
     }
 }
 
@@ -167,6 +169,7 @@ private struct WeekCardView: View {
         .frame(minHeight: 96, alignment: .topLeading)
         .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textTertiary) }
         .contentShape(Rectangle())
+        .feedback(self)
     }
 }
 
@@ -198,6 +201,7 @@ struct ProgramEditorReorderSheet: View {
                 }
             }
         }
+        .feedback(self)
     }
 }
 
@@ -236,6 +240,7 @@ struct ProgramEditorMoveSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .feedback(self)
     }
 
     private func name(of day: ProgramDay) -> String {

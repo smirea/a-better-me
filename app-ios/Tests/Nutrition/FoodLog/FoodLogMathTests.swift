@@ -69,6 +69,15 @@ struct FoodLogMathTests {
         #expect(untargeted.map(\.progress) == [0, 0, 0, 0])
     }
 
+    @Test func spellsOutTheSummaryLinesForVoiceOver() {
+        let totals = FoodLog.totals([entry(bowl, minute: 600), entry(yogurt, minute: 700, quantity: 2)])
+        let target = DayTarget(energy: 2000, protein: 50, fat: 70, carbs: 200)
+        #expect(FoodLog.summary(totals, target: target, showOverages: true).map(\.spoken) == [
+            "Calories 660 of 2000 calories", "Protein 55 of 50 grams", "Fat 22 of 70 grams", "Carbs 66 of 200 grams",
+        ])
+        #expect(FoodLog.summary(totals, target: nil, showOverages: true).first?.spoken == "Calories 660 calories")
+    }
+
     @Test func ringsFillWithCaloriesAgainstTheTarget() {
         #expect(FoodLog.ringProgress(kcal: 500, target: 2000) == 0.25)
         #expect(FoodLog.ringProgress(kcal: 2500, target: 2000) == 1)

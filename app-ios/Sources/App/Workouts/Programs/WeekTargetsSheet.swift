@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The targets of one exercise in one week card: `SetTargetsSheet` with Skip Exercise, Save To All Weeks, Save, and More
@@ -129,6 +130,7 @@ struct WeekTargetsSavingOptions: View {
             }
         }
         .presentationDetents([.large])
+        .feedback(self)
     }
 
     private func radio(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {

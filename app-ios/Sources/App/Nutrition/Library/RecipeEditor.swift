@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Create Recipe and Edit Recipe: MacroFactor's "Build your recipe" and "Preparation" steps (§6.2) in one Form,
@@ -77,6 +78,7 @@ struct RecipeEditor: View {
                 Text("Are you sure you want to delete \(draft.name)? Logged entries keep their copy. This action cannot be undone.")
             }
         }
+        .feedback(self)
     }
 
     private func build(_ issues: [RecipeDraft.Field: String], preview: Recipe) -> some View {
@@ -257,6 +259,7 @@ private struct IngredientRow: View {
             .labelsHidden()
             .fixedSize()
         }
+        .feedback(self)
     }
 
     private var measure: Binding<String> {

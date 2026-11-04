@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// One exercise's equipment settings from the live workout: the bar weight the calculator loads on, the calculator's
@@ -81,6 +82,7 @@ struct EquipmentSettingsView: View {
         .font(AppFont.rowTitle)
         .detailTitle("Equipment Settings")
         .onAppear { offsetText = Self.text(of: overrides.plateOffset, unit: unit) }
+        .feedback(self)
     }
 
     private enum OffsetKind: CaseIterable {

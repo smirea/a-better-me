@@ -144,6 +144,7 @@ struct NutrientTodaySection: View {
             .card()
         }
         .sheet(isPresented: $showingAbout) { AboutNutrientGoalsSheet() }
+        .feedback(self)
     }
 
     private var amountText: String {
@@ -174,6 +175,7 @@ private struct AboutNutrientGoalsSheet: View {
             }
         }
         .presentationDetents([.medium])
+        .feedback(self)
     }
 }
 
@@ -199,12 +201,15 @@ struct MacroSplitList: View {
                         .clipShape(.capsule)
                     }
                     .frame(height: 6)
+                    .accessibilityHidden(true)
                 }
                 .padding(.vertical, 10)
                 .padding(.horizontal, 14)
+                .accessibilityElement(children: .combine)
             }
         }
         .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+        .feedback("Macro Split", data: "\(days.count) days")
     }
 }
 
@@ -233,6 +238,7 @@ struct AllNutritionView: View {
         }
         .background(Theme.background)
         .detailTitle("Nutrition")
+        .feedback(self)
     }
 }
 
@@ -263,6 +269,7 @@ struct AllBodyMetricsView: View {
             }
         }
         .sheet(isPresented: $logging) { BodyMetricsLogSheet() }
+        .feedback(self)
     }
 }
 

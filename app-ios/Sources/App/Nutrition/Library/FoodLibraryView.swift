@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// A create or edit sheet for a food or recipe. `created` hears which kind a new item was, and `add`, the logger's
@@ -132,6 +133,7 @@ struct FoodLibraryView: View {
         } message: {
             Text(deleteMessage)
         }
+        .feedback(self)
     }
 
     /// Cached USDA and Open Food Facts rows are database copies that a refresh overwrites, so only the owner's own

@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// "Workout Complete" right after finishing, or a past session's summary from history and the calendar.
@@ -108,6 +109,7 @@ struct WorkoutSummaryView: View {
         .sheet(isPresented: $isShowingChanges) {
             if let template { WorkoutChangesSheet(changes: WorkoutChanges(before: template.blocks, after: SessionFlow.plan(from: blocks)), undone: $undone) }
         }
+        .feedback(self)
     }
 
     /// "Today 3:01 PM" as in the reference, the date otherwise.
@@ -184,6 +186,8 @@ struct WorkoutSummaryView: View {
                     .padding(14)
                     .frame(width: 160, height: 130)
                     .overlay(RoundedRectangle(cornerRadius: Theme.cornerRadius).strokeBorder(Theme.surfaceRaised, lineWidth: 1.5))
+                    .accessibilityElement(children: .combine)
+                    .feedback("Record", data: record)
                 }
             }
             .padding(.horizontal, Theme.margin)
@@ -217,6 +221,7 @@ struct WorkoutSummaryView: View {
                 detailRow("Edit Workout", icon: "dumbbell.fill", subtitle: "Go to the workout editor") { isEditing = true }
             }
         }
+        .feedback("Workout Details")
         .padding(.horizontal, Theme.margin)
     }
 
@@ -232,6 +237,7 @@ struct WorkoutSummaryView: View {
             }
         }
         .frame(minHeight: 60)
+        .feedback(title, data: value ?? subtitle)
     }
 
     private func exerciseDetails(_ blocks: [WorkoutBlock], stats: [ExerciseID: ExerciseStats], records: [ExerciseRecord]) -> some View {
@@ -254,6 +260,7 @@ struct WorkoutSummaryView: View {
                 }
             }
         }
+        .feedback("Exercise Details")
     }
 
     private func exerciseRow(_ item: BlockExercise, records: [ExerciseRecord]) -> some View {
@@ -301,6 +308,7 @@ struct WorkoutSummaryView: View {
                 }
             }
         }
+        .feedback("Exercise", data: (name: catalog.name(item.exerciseID), stats: stats, records: records))
     }
 
     private func setLine(_ set: WorkoutSet, number: Int) -> some View {
@@ -315,6 +323,7 @@ struct WorkoutSummaryView: View {
                     }
                     .padding(.horizontal, Theme.margin)
                     .frame(height: 40)
+                    .accessibilityElement(children: .combine)
                 }
             }
         }
@@ -343,6 +352,7 @@ struct WorkoutSummaryView: View {
         .padding(.horizontal, Theme.margin)
         .padding(.vertical, 12)
         .background(Theme.background)
+        .feedback("Finish Bar", data: (updatePlan: updatePlan, hasTemplate: template != nil))
     }
 }
 
@@ -368,6 +378,7 @@ private struct StartTimeSheet: View {
                 }
         }
         .presentationDetents([.medium])
+        .feedback(self)
     }
 }
 
@@ -403,6 +414,7 @@ private struct DurationSheet: View {
             }
         }
         .presentationDetents([.medium])
+        .feedback(self)
     }
 }
 
@@ -451,6 +463,7 @@ private struct WorkoutChangesSheet: View {
                 }
             }
         }
+        .feedback(self)
     }
 
     /// An undone section stays listed, struck through, with Redo in place of Undo.

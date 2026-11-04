@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Settings > Gym Profiles, and the picker's Manage Gym Profiles. Push it inside a navigation stack.
@@ -41,6 +42,7 @@ struct GymProfilesView: View {
             NewGymSheet(makesDefault: gyms.isEmpty) { editing = $0 }
         }
         .navigationDestination(item: $editing) { GymProfileEditor(gymID: $0) }
+        .feedback(self)
     }
 }
 
@@ -74,6 +76,7 @@ private struct GymRow: View {
                 .buttonStyle(.plain)
         }
         .padding(.vertical, 6)
+        .feedback(self)
     }
 }
 
@@ -129,6 +132,7 @@ private struct NewGymSheet: View {
                     .padding(.horizontal, Theme.margin)
             }
         }
+        .feedback(self)
     }
 
     private func create() {

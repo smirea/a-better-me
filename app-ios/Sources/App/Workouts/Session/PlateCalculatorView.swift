@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The weight keypad's plate calculator: one sleeve of the bar with its plates, the legend, and MF's sentence. The
@@ -49,6 +50,7 @@ struct PlateCalculatorView: View {
         }
         .foregroundStyle(Theme.textPrimary)
         .background(Theme.header)
+        .feedback(self)
     }
 
     @ViewBuilder

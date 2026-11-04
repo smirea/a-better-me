@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// One nutrient's goals (MacroFactor's target icon on a nutrient detail): the active goal and its range, the dated
@@ -54,6 +55,7 @@ struct NutrientGoalsView: View {
         .sheet(item: $editing) { draft in
             NutrientGoalEditor(nutrient: nutrient, draft: draft, original: goals.first { $0.startsOn == draft.startsOn })
         }
+        .feedback(self)
     }
 
     private func rangeText(on day: CalendarDay) -> String {
@@ -119,6 +121,7 @@ private struct NutrientGoalEditor: View {
                 }
             }
         }
+        .feedback(self)
     }
 
     private func bound(_ title: String, _ path: WritableKeyPath<NutrientRange, Double?>) -> some View {
@@ -173,6 +176,7 @@ struct NutrientGoalsListView: View {
         }
         .themedList()
         .detailTitle("Nutrient Goals")
+        .feedback(self)
     }
 
     /// "Floor 25 · Target 38 · Ceiling 100 g", or "No targets".

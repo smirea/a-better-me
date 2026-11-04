@@ -56,5 +56,6 @@ struct ExerciseTile: View {
         .foregroundStyle(Theme.textSecondary)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.surfaceRaised)
+        .accessibilityHidden(true)
     }
 }

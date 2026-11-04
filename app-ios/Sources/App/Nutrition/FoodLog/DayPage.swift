@@ -309,6 +309,7 @@ private struct NotesSection: View {
                     .disabled(state.selecting)
             }
         }
+        .feedback(self)
     }
 }
 

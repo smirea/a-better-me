@@ -1,4 +1,5 @@
 import Charts
+import Feetback
 import SwiftUI
 
 /// Everything Strategy's screens read, built once per change of the plans, weigh-ins, log, or settings.
@@ -143,6 +144,7 @@ private struct StrategyHome: View {
         .sheet(isPresented: $checkingIn) {
             CheckInView()
         }
+        .feedback(self)
     }
 
     private var menu: some View {
@@ -318,6 +320,7 @@ private struct GoalTrendProgress: View {
                 .tint(Theme.goal)
             }
         }
+        .feedback(self)
     }
 }
 
@@ -340,6 +343,7 @@ private struct GoalHistoryRow: View {
         }
         .card()
         .accessibilityElement(children: .combine)
+        .feedback(self)
     }
 
     private var kindName: String {
@@ -372,6 +376,7 @@ struct PlanRow: View {
         }
         .card()
         .accessibilityElement(children: .combine)
+        .feedback(self)
     }
 
     private var kindName: String {
@@ -397,5 +402,6 @@ struct PlanHistoryView: View {
         .listStyle(.plain)
         .themedList()
         .detailTitle("Program History")
+        .feedback(self)
     }
 }

@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// The header's stopwatch, countdown, and draining bar. Tapping it opens the Rest Timer sheet.
@@ -77,6 +78,7 @@ struct RestTimerSheet: View {
             }
         }
         .presentationDetents([.height(280)])
+        .feedback(self)
     }
 
     private func pill(_ title: String, icon: String? = nil, label: String, action: @escaping () -> Void) -> some View {
@@ -178,6 +180,7 @@ struct WarmUpSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .feedback(self)
     }
 
     private func add(_ rows: [WarmUpRow]) {
@@ -238,6 +241,7 @@ struct NoteSheet: View {
             sessionText = sessionNote ?? ""
             pinnedText = settings?.pinnedNote ?? ""
         }
+        .feedback(self)
     }
 
     private func editor(_ title: String, text: Binding<String>, prompt: String, footer: String) -> some View {

@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Create Food and Edit Food: MacroFactor's wizard (§6.1) folded into one Form. Nutrients use its Food Detail layout,
@@ -71,6 +72,7 @@ struct FoodEditor: View {
                 Text("Are you sure you want to delete \(draft.name)? Logged entries keep their copy. This action cannot be undone.")
             }
         }
+        .feedback(self)
     }
 
     private func identity(_ issues: [FoodDraft.Field: String]) -> some View {

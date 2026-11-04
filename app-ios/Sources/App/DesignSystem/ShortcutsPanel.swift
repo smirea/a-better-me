@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 protocol ShortcutItem: Hashable {
@@ -49,6 +50,7 @@ struct ShortcutsPanel<Item: ShortcutItem, Banner: View>: View {
                 Button("Customize Shortcuts", systemImage: "slider.horizontal.3", action: customize)
             }
         }
+        .feedback(self)
     }
 
     private func round(_ item: Item) -> some View {

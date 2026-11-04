@@ -1,3 +1,4 @@
+import Feetback
 import SwiftUI
 
 /// Opens the program editor, on a day when `dayID` is set. Every stack that shows program cards registers it.
@@ -95,6 +96,7 @@ struct ProgramCard: View {
             }
         }
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+        .feedback(self)
     }
 
     private var header: some View {
@@ -192,5 +194,6 @@ struct TemplateCard: View {
         }
         .card()
         .contentShape(Rectangle())
+        .feedback(self)
     }
 }

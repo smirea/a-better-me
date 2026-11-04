@@ -274,6 +274,7 @@ struct DashboardSectionView<Cards: View>: View {
             }
             .buttonStyle(.plain)
         }
+        .feedback(self)
         .padding(.horizontal, Theme.margin)
     }
 }
@@ -327,6 +328,7 @@ struct AllMusclesView: View {
         }
         .background(Theme.background)
         .detailTitle("Muscle Groups")
+        .feedback(self)
     }
 }
 
@@ -342,6 +344,7 @@ struct AllExercisesView: View {
         }
         .background(Theme.background)
         .detailTitle("Exercises")
+        .feedback(self)
     }
 }
 

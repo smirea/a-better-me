@@ -1,4 +1,5 @@
 import AVFoundation
+import Feetback
 import SwiftUI
 import VisionKit
 
@@ -62,6 +63,7 @@ struct ScanTab: View {
         } message: {
             Text(problem ?? "")
         }
+        .feedback(self)
     }
 
     private func lookup(_ text: String) {
