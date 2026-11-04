@@ -15,6 +15,9 @@ enum Theme {
     static let onPrimary = background
 
     static let accent = Color(hex: 0x0649DC)
+    /// The accent before it went blue. Expenditure, steps short of the goal, and caution banners keep it, so they still
+    /// read as warm against the blue calorie bars and the green goal.
+    static let coral = Color(hex: 0xF28969)
     static let lavender = Color(hex: 0xACA0D2)
     static let green = Color(hex: 0x7FC48B)
     /// Logged days in the workout calendar, and the 2-3 RIR badge.

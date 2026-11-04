@@ -238,7 +238,8 @@ enum CardIcon {
 
     var color: Color {
         switch self {
-        case .workouts, .workoutDots, .steps, .expenditure: Theme.accent
+        case .workouts, .workoutDots: Theme.accent
+        case .steps, .expenditure: Theme.coral
         case .trend: Theme.weightTrend
         case .weighInDots, .scale: Theme.green
         case .muscle: Theme.muscle
