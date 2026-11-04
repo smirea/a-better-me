@@ -6,5 +6,7 @@
     <array>
         <string>workout-processing</string>
     </array>
+    <key>WKSupportsLiveActivityLaunchAttributeTypes</key>
+    <array/>
 </dict>
 </plist>
