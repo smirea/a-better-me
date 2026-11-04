@@ -193,7 +193,7 @@ private struct InsightCardView: View {
                 let card = values.expenditureCard
                 NavigationLink(value: DashboardRoute.expenditure) {
                     DashboardCard(title: "Expenditure", period: "Last 7 Days", value: card.text, unit: "kcal") {
-                        MiniLine(values: card.values, color: Theme.accent)
+                        MiniLine(values: card.values, color: Theme.coral)
                     }
                 }
             case .energyBalance:
@@ -252,7 +252,7 @@ private struct StepsCardView: View {
                 title: "Steps", period: goal.streak > 0 ? "\(goal.streak)-day streak" : "Last 7 Days",
                 value: goal.hasSteps ? goal.today.wholeText : nil, unit: "steps"
             ) {
-                MiniBars(values: goal.week.map(\.steps), color: Theme.accent, colors: goal.week.map(\.tier.color), goal: Double(goal.goal))
+                MiniBars(values: goal.week.map(\.steps), color: Theme.coral, colors: goal.week.map(\.tier.color), goal: Double(goal.goal))
             }
         }
         .feedback(self)

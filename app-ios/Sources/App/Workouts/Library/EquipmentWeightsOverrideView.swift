@@ -33,7 +33,7 @@ struct EquipmentWeightsOverrideView: View {
                 } icon: {
                     Image(systemName: "info.circle.fill")
                 }
-                .listRowBackground(Theme.accent.opacity(0.25))
+                .listRowBackground(Theme.coral.opacity(0.25))
             }
             ThemedSection("\(exercise?.name ?? "Exercise") Weights") {
                 ForEach(items(of: exercise)) { item in

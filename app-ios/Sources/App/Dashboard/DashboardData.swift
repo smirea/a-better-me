@@ -303,7 +303,7 @@ struct DashboardData {
         case .expenditure:
             return MetricDetail(title: "Expenditure", tabs: [MetricTab(
                 title: "Expenditure", points: expenditurePoints, unit: .whole("kcal"), averageTitle: "Average",
-                summary: .change, style: .line, color: Theme.accent,
+                summary: .change, style: .line, color: Theme.coral,
                 holding: Set(expenditure.filter(\.isHolding).map(\.date))
             )], footer: .expenditure(ExpenditureSummary(
                 changes: NutritionMetrics.changes(expenditurePoints, now: now, calendar: calendar),
@@ -312,7 +312,7 @@ struct DashboardData {
             )))
         case .energyBalance:
             return MetricDetail(title: "Energy Balance", tabs: [
-                balanceTab(.expenditure, title: "Expenditure", points: expenditurePoints, color: Theme.accent),
+                balanceTab(.expenditure, title: "Expenditure", points: expenditurePoints, color: Theme.coral),
                 balanceTab(.targets, title: "Calorie Targets", points: energyTargets, color: Theme.fat),
             ], footer: .energyBalance)
         case .scaleWeight:
@@ -324,7 +324,7 @@ struct DashboardData {
         case .steps:
             return MetricDetail(title: "Steps", tabs: [MetricTab(
                 title: "Steps", points: steps, unit: .whole("steps"), averageTitle: "Average Steps",
-                summary: .total, style: .bar, color: Theme.accent, goal: Double(profile.dailyStepGoal)
+                summary: .total, style: .bar, color: Theme.coral, goal: Double(profile.dailyStepGoal)
             )], footer: .steps(stepGoal))
         case let .muscle(muscle, _):
             return MetricDetail(title: muscle.displayName, tabs: [MuscleMetric.sets, .volume].map { metric in

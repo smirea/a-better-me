@@ -14,7 +14,7 @@ struct ConfettiOverlay: View {
         var color: Color
     }
 
-    private static let colors = [Theme.accent, Theme.lavender, Theme.green, Theme.amber, Theme.muscle, Theme.textPrimary]
+    private static let colors = [Theme.accent, Theme.coral, Theme.lavender, Theme.green, Theme.amber, Theme.muscle, Theme.textPrimary]
 
     private let pieces: [Piece] = {
         var generator = SystemRandomNumberGenerator()

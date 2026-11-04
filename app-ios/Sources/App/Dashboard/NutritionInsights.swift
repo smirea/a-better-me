@@ -10,7 +10,7 @@ struct ExpenditureInsights: View {
         let strategy = summary.strategy
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader("Insights & Data")
-            ChangeRows(title: "Expenditure Changes", changes: changes, color: Theme.accent, tolerance: 0.5) {
+            ChangeRows(title: "Expenditure Changes", changes: changes, color: Theme.coral, tolerance: 0.5) {
                 "\($0.wholeText) kcal"
             }
             InsightTiles(tiles: [
@@ -145,7 +145,7 @@ struct BalanceTag: View {
         }
     }
 
-    var color: Color { isExpenditure ? Theme.accent : Theme.fat }
+    var color: Color { isExpenditure ? Theme.coral : Theme.fat }
 
     var body: some View {
         Label {

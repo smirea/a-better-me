@@ -169,7 +169,7 @@ struct EnergyBalanceFocusCard: View {
 
     var body: some View {
         let balance = values.balance(reference, days: 30)
-        let lineColor = reference == .expenditure ? Theme.accent : Theme.fat
+        let lineColor = reference == .expenditure ? Theme.coral : Theme.fat
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader("Energy Balance")
             BalanceChart(bars: balance.bars, line: balance.line, lineColor: lineColor, domain: balance.interval, scrubbing: reference.rawValue)
@@ -255,7 +255,7 @@ struct EnergyBalanceInsightCard: View {
                 title: "Energy Balance", period: "Last 7 Days", value: mean.map { abs($0).wholeText },
                 unit: (mean ?? 0) > 0 ? "kcal surplus" : "kcal deficit"
             ) {
-                BalanceChart(bars: balance.bars, line: balance.line, lineColor: Theme.accent, domain: balance.interval)
+                BalanceChart(bars: balance.bars, line: balance.line, lineColor: Theme.coral, domain: balance.interval)
             }
         }
     }
