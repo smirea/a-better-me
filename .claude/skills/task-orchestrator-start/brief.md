@@ -63,7 +63,6 @@ The Mac runs many jobs at once, and each booted simulator slows all of them. Cli
 
 ## Scope and report
 
-- Write the code yourself. Subagents only review or research, in the foreground.
 - Note bugs, weird interactions, bad UX, jank, or performance issues you find along the way as followups instead of fixing out-of-scope work. Report only real bugs and clearly useful gaps, not every edge case you can imagine. Dev-tooling friction (a slow command, a flaky tool, a manual step) is a followup with `"type": "tooling"` unless the fix is small enough to make in this PR.
 - Don't message the orchestrator mid-job. If you need input, end with `needs_input`, and keep your worktree as it is.
 - End with only this JSON:
