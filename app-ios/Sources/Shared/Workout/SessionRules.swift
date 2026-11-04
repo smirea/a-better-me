@@ -227,7 +227,7 @@ extension SessionFlow {
     static func rowAfter(_ path: RowPath, step: Step, in blocks: [WorkoutBlock]) -> RowPath? {
         let exerciseID = step.next ?? blocks[path.block].exercises[path.exercise].id
         guard let at = blocks.locate(exerciseID) else { return nil }
-        let open = blocks.rows(block: at.block, exercise: at.item).filter { blocks.log(at: $0) == nil }
+        let open = blocks.rows(block: at.block, exercise: at.item).filter { blocks.log(at: $0) == nil && !blocks.isSkipped(at: $0) }
         let later = open.first { row in
             guard at.block == path.block else { return false }
             return at.item == path.exercise ? (row.set, row.sub ?? -1) > (path.set, path.sub ?? -1) : row.set >= path.set

@@ -283,15 +283,22 @@ extension SessionEditor {
         item.restSeconds(after: set, exercise: catalog.exercise(item.exerciseID), settings: .of(item.exerciseID, in: exerciseSettings), defaults: defaults)
     }
 
-    /// The header checkbox logs every open row with its values, or reopens all of them when everything is logged.
+    /// The header checkbox logs every open row with its values, or reopens all of them when everything is logged or
+    /// skipped. Skipped rows are never logged by it: reopening clears their skip, and logging the rest passes them by.
     private func toggleAll(block: Int, exercise index: Int, previous: [WorkoutSet]) {
         let rows = blocks.rows(block: block, exercise: index)
         if blocks[block].exercises[index].isDone {
-            for path in rows { toggle(path, previous: previous) }
+            for path in rows {
+                if blocks.log(at: path) != nil {
+                    toggle(path, previous: previous)
+                } else {
+                    blocks.setSkipped(false, at: path)
+                }
+            }
             return
         }
         let now = Date.now
-        for path in rows where blocks.log(at: path) == nil {
+        for path in rows where blocks.log(at: path) == nil && !blocks.isSkipped(at: path) {
             blocks.setLog(entry(path, previous: previous).log(at: now), at: path)
             drafts[blocks.rowID(at: path)] = nil
         }

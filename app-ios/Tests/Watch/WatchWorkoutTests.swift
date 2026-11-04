@@ -89,6 +89,15 @@ struct WatchWorkoutTests {
         #expect(workout.currentRow == RowPath(block: 1, exercise: 1, set: 0))
     }
 
+    @Test func upNextPassesOverASkippedSetInTheSameExercise() {
+        var workout = Self.workout()
+        workout.blocks.addSet(to: Self.id(2), id: Self.id(23))
+        workout.apply(Self.event(.skip(rowID: Self.id(22)), after: 10))
+
+        #expect(workout.currentRow == RowPath(block: 0, exercise: 0, set: 0))
+        #expect(workout.upNextRow == RowPath(block: 0, exercise: 0, set: 2))
+    }
+
     @Test func undoingASkipReopensTheSetAndLoggingClearsIt() {
         var workout = Self.workout()
         workout.apply(Self.event(.skip(rowID: Self.id(21)), after: 30))
