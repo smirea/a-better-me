@@ -14,7 +14,7 @@ enum Theme {
     /// Text and icons on a white fill: primary pills and selected chips.
     static let onPrimary = background
 
-    static let accent = Color(hex: 0xF28969)
+    static let accent = Color(hex: 0x0649DC)
     static let lavender = Color(hex: 0xACA0D2)
     static let green = Color(hex: 0x7FC48B)
     /// Logged days in the workout calendar, and the 2-3 RIR badge.
