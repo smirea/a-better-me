@@ -153,7 +153,7 @@ struct Controls: View {
             Link(destination: LiveActivityLink.liveWorkout) {
                 Text("Finish")
                     .font(AppFont.headline(15))
-                    .foregroundStyle(Theme.background)
+                    .foregroundStyle(Theme.textPrimary)
                     .padding(.horizontal, 18)
                     .frame(height: 40)
                     .background(Theme.accent, in: Capsule())
@@ -173,7 +173,7 @@ struct ControlButton: View {
         Button(intent: intent) {
             Image(systemName: systemImage)
                 .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(prominent ? Theme.background : Theme.textPrimary)
+                .foregroundStyle(Theme.textPrimary)
                 .frame(width: 44, height: 40)
                 .background(prominent ? Theme.accent : Theme.surfaceRaised, in: Capsule())
         }

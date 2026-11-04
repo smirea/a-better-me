@@ -160,7 +160,7 @@ struct SetDots: View {
                 let isCurrent = index == current
                 Text(set.type.badge ?? "\(sets.number(at: index))")
                     .font(AppFont.headline(10))
-                    .foregroundStyle(isCurrent ? .black : set.isDone ? .black : Theme.textSecondary)
+                    .foregroundStyle(isCurrent ? .black : set.isDone ? Theme.textPrimary : Theme.textSecondary)
                     .frame(width: 18, height: 18)
                     .background(isCurrent ? Theme.textPrimary : set.isDone ? Theme.accent : Theme.surfaceRaised, in: Circle())
             }

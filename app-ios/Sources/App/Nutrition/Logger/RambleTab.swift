@@ -407,7 +407,7 @@ private struct FlightView: View {
                 // margin, clear of their text; its words light up in the transcript meanwhile.
                 Image(systemName: "arrow.uturn.backward")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Theme.onPrimary)
+                    .foregroundStyle(Theme.textPrimary)
                     .frame(width: 20, height: 20)
                     .background(Theme.accent, in: .circle)
             }

@@ -61,7 +61,7 @@ private struct HistoryRow: View {
         let secondary = exercises.flatMap(\.secondaryMuscles).uniqued().filter { !primary.contains($0) }
         HStack(spacing: 14) {
             Image(systemName: "dumbbell.fill")
-                .foregroundStyle(Theme.onPrimary)
+                .foregroundStyle(Theme.textPrimary)
                 .frame(width: 40, height: 40)
                 .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
             VStack(alignment: .leading, spacing: 4) {
