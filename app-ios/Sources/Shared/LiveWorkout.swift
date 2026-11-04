@@ -72,7 +72,10 @@ struct LiveHealthMetrics: Codable, Hashable, Sendable {
 enum LiveWorkoutCommand: Codable, Hashable, Sendable {
     /// Checks a row with `values`, then runs rest and auto-next as on the phone.
     case log(rowID: UUID, values: LiveValues)
+    /// Clears the row's log, or its set's skip.
     case unlog(rowID: UUID)
+    /// Passes over the row's set without logging it, then moves on as after a log, without a rest.
+    case skip(rowID: UUID)
     /// Moves the phone's current exercise.
     case select(exerciseID: UUID)
     /// Appends a copy of the exercise's last working set with this id.

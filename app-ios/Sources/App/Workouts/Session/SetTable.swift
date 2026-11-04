@@ -38,11 +38,18 @@ extension SessionEditor {
     /// left removes it, as MacroFactor Workouts' sets do.
     private func row(_ path: RowPath, number: Int, fields: [SetField], previous: [WorkoutSet]) -> some View {
         let isLogged = blocks.log(at: path) != nil
+        let isSkipped = !isLogged && blocks.isSkipped(at: path)
         let value = entry(path, previous: previous)
         return HStack(spacing: 8) {
             badge(path, number: number)
-            referenceText(path, previous: previous)
-                .frame(maxWidth: .infinity)
+            Group {
+                if isSkipped {
+                    Text("Skipped").font(AppFont.rowDetail).foregroundStyle(Theme.textTertiary)
+                } else {
+                    referenceText(path, previous: previous)
+                }
+            }
+            .frame(maxWidth: .infinity)
             ForEach(fields, id: \.self) { field in
                 cell(path, field: field, value: value)
             }
@@ -50,11 +57,11 @@ extension SessionEditor {
                 .frame(width: Self.checkboxWidth)
                 .accessibilityLabel(isLogged ? "Uncheck set" : "Check set")
         }
-        .opacity(isLogged && focus?.row != path ? 0.45 : 1)
+        .opacity((isLogged || isSkipped) && focus?.row != path ? 0.45 : 1)
         .background(Theme.background)
         .id(path)
         .rowSwipeActions(trailing: [.destructive(path.sub == nil ? "Remove Set" : "Remove") { removeRow(path) }], fullSwipe: true)
-        .feedback("SetRow", data: (number: number, row: path, entry: value, logged: isLogged))
+        .feedback("SetRow", data: (number: number, row: path, entry: value, logged: isLogged, skipped: isSkipped))
     }
 
     @ViewBuilder
@@ -78,6 +85,13 @@ extension SessionEditor {
                 }
                 if set.type.hasSubSets {
                     Button(set.type == .drop ? "Add Drop" : "Add Myo Rep Set", systemImage: "plus") { addSubSet(path) }
+                }
+                if mode == .live, set.log == nil {
+                    if set.skipped == true {
+                        Button("Unskip Set", systemImage: "arrow.uturn.backward") { perform(.unlog(rowID: set.id), at: .now) }
+                    } else {
+                        Button("Skip Set", systemImage: "forward.end") { perform(.skip(rowID: set.id), at: .now) }
+                    }
                 }
                 Button("Remove Set", systemImage: "trash", role: .destructive) { removeRow(path) }
             } label: {
@@ -248,8 +262,14 @@ extension SessionEditor {
             drafts[id] = SetEntry(values, keeping: entry(path, previous: previous))
             toggle(path, previous: previous, at: date)
         case .unlog(let id):
-            guard let path = blocks.path(of: id), blocks.log(at: path) != nil else { return }
+            guard let path = blocks.path(of: id) else { return }
+            guard blocks.log(at: path) != nil else { return blocks.setSkipped(false, at: path) }
             toggle(path, previous: previousSets(for: path))
+        case .skip(let id):
+            guard let path = blocks.path(of: id), blocks.log(at: path) == nil, !blocks.isSkipped(at: path) else { return }
+            blocks.setSkipped(true, at: path)
+            guard mode == .live, let next = SessionFlow.afterSkipping(path, in: blocks, settings: defaults.workout.flow), next != current else { return }
+            withAnimation { current = next }
         case .select(let exerciseID):
             if blocks.locate(exerciseID) != nil { withAnimation { current = exerciseID } }
         case .addSet(let exerciseID, let setID):

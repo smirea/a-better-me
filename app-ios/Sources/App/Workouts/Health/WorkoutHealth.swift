@@ -32,8 +32,6 @@ final class WorkoutHealth {
     /// relaunched mid-workout doesn't start a second recording.
     @ObservationIgnored private var startedOnWatch = UserDefaults.standard.stringArray(forKey: startedOnWatchKey)?.compactMap(UUID.init) ?? []
     private static let startedOnWatchKey = "sessionsStartedOnWatch"
-    /// When this phone's own recording started, so a watch that speaks up late doesn't throw away most of it.
-    @ObservationIgnored private var phoneRecordingStartedAt: Date?
 
     /// How long the phone waits to hear that the watch records before recording on its own.
     private static let watchStartTimeout: Duration = .seconds(10)
@@ -127,7 +125,6 @@ final class WorkoutHealth {
                 let recording = try await WorkoutRecording.start(in: healthStore)
                 guard sessionID == id, recorder == nil else { return recording.discard() }
                 adopt(.phone(recording))
-                phoneRecordingStartedAt = .now
                 if isPaused { recording.pause() }
             } catch {
                 WorkoutRecording.log.error("Starting the phone's workout session failed: \(String(describing: error))")
@@ -135,19 +132,16 @@ final class WorkoutHealth {
         }
     }
 
-    /// The watch says it records. If the phone already gave up on it and records itself, one copy goes so the workout
-    /// lands in Health once. Within the first minute the phone's goes: the watch measures heart rate and stays with the
-    /// owner when the phone is left behind. Later the watch's goes, since it only covers the rest of the workout.
+    /// The watch says it records. If the phone already gave up on it and records itself, the phone's copy goes so the
+    /// workout lands in Health once: the watch measures heart rate, stays with the owner when the phone is left behind,
+    /// and backdates its session to the workout's start when it takes over late. The phone used to keep its copy after
+    /// the first minute and stop the watch's, which left the watch's stats page without heart rate for the whole workout.
     func watchStartedRecording() {
         switch recorder {
         case nil where sessionID != nil: recorder = .watch
         case .phone(let recording):
-            if let started = phoneRecordingStartedAt, Date.now.timeIntervalSince(started) > 60 {
-                WatchBridge.shared.deliver(.discardRecording(sessionID: sessionID ?? UUID()))
-            } else {
-                recording.discard()
-                recorder = .watch
-            }
+            recording.discard()
+            recorder = .watch
         default: break
         }
     }

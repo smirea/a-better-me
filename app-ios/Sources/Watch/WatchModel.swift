@@ -21,6 +21,8 @@ final class WatchModel: NSObject {
     /// 220 minus the owner's age from Health, else a 30-year-old's.
     private(set) var maxHeartRate = 190.0
     private(set) var isPhoneReachable = false
+    /// Rows logged or skipped on this watch in the current workout, newest last, so Undo reverses a skip as well.
+    private(set) var actedRows: [UUID] = []
 
     @ObservationIgnored let healthStore = HKHealthStore()
     /// Set once a message arrives over the recording's data channel, which proves the phone holds its mirror. Until
@@ -32,12 +34,15 @@ final class WatchModel: NSObject {
     /// A save outlives the delivery that triggered it; the refresh task stays held until it lands.
     @ObservationIgnored private var savesInFlight = 0
     @ObservationIgnored private var savedRecording: UUID?
+    @ObservationIgnored private var isStartingRecording = false
+    /// Sessions the phone told this watch not to record: discarded, or recorded on the phone by an older build.
+    @ObservationIgnored private var standDown: Set<UUID> = []
 
     var metrics: LiveHealthMetrics? { stats?.live }
 
     func activate() {
         restore()
-        if let workout, !workout.isFinished { recover() }
+        recordIfNeeded()
         Task { await loadMaxHeartRate() }
         guard WCSession.isSupported() else { return }
         WCSession.default.delegate = self
@@ -51,6 +56,7 @@ final class WatchModel: NSObject {
     func requestState() {
         sendOverConnectivity(.hello, queued: false)
         flush()
+        recordIfNeeded()
     }
 
     func hold(_ task: WKWatchConnectivityRefreshBackgroundTask) {
@@ -73,25 +79,23 @@ final class WatchModel: NSObject {
         let start = replica.start(plan, at: .now)
         health = [:]
         savedRecording = nil
+        actedRows = []
         deliver(start)
         WKInterfaceDevice.current().play(.start)
-        Task {
-            await authorize()
-            guard recording == nil, workout?.sessionID == start.sessionID else { return }
-            do {
-                adopt(try await WorkoutRecording.start(in: healthStore))
-            } catch {
-                WorkoutRecording.log.error("Starting the workout session failed: \(String(describing: error))")
-            }
-        }
+        beginRecording(from: start.at, askingForAccess: true)
     }
 
     /// Applies what the owner did here at once and queues it for the phone.
     func act(_ kind: WatchEvent.Kind) {
         guard workout != nil, let event = replica.record(kind, at: .now) else { return }
+        switch kind {
+        case .log(let rowID, _), .skip(let rowID): actedRows.append(rowID)
+        default: break
+        }
         deliver(event)
         switch kind {
         case .log: WKInterfaceDevice.current().play(.success)
+        case .skip: WKInterfaceDevice.current().play(.directionUp)
         case .finish: WKInterfaceDevice.current().play(.stop)
         case .discard:
             recording?.discard()
@@ -109,10 +113,19 @@ final class WatchModel: NSObject {
 
     private func close() {
         replica.close()
+        actedRows = []
         refresh()
     }
 
-    var lastLoggedRow: UUID? {
+    /// What Undo reverses: the latest row this watch logged or skipped that still is, else the latest logged row.
+    var undoRow: UUID? {
+        guard let workout else { return nil }
+        let blocks = workout.blocks
+        let acted = actedRows.last { id in blocks.path(of: id).map { blocks.log(at: $0) != nil || blocks.isSkipped(at: $0) } ?? false }
+        return acted ?? lastLoggedRow
+    }
+
+    private var lastLoggedRow: UUID? {
         guard let workout else { return nil }
         return workout.blocks.allRows
             .compactMap { path in workout.blocks.log(at: path).map { (path, $0.completedAt) } }
@@ -138,6 +151,7 @@ final class WatchModel: NSObject {
         if let workout { recording?.session.follow(paused: workout.pausedAt != nil) }
         if let workout, workout.isFinished { saveRecording(for: workout) }
         persist()
+        recordIfNeeded()
     }
 
     // MARK: Recording
@@ -148,31 +162,43 @@ final class WatchModel: NSObject {
             // The phone relaunched and asks again; it needs to hear that this watch already records.
             return sendOverConnectivity(.recordingStarted, queued: true)
         }
-        Task {
-            await authorize()
-            guard recording == nil else { return }
-            do {
-                adopt(try await WorkoutRecording.start(in: healthStore))
-            } catch {
-                WorkoutRecording.log.error("Starting the workout session failed: \(String(describing: error))")
-            }
-        }
+        beginRecording(from: .now, askingForAccess: true)
     }
 
-    /// Takes back the recording HealthKit kept running while this app was relaunched. HealthKit only sometimes calls
-    /// `handleActiveWorkoutRecovery`, so launch asks too. When no recording survived, a new one covers the rest of the
-    /// workout.
-    func recover() {
+    /// Records the workout on screen whenever nothing on this watch does. Heart rate only comes from a session running
+    /// here, and a workout the phone started before this app was installed, or before it could launch it, had none, so
+    /// the stats page stayed blank. The new session starts at the workout's start, and the phone hands its own
+    /// recording over when it hears `recordingStarted`. Health access is asked for only while the app is on screen;
+    /// in the background (a relaunch, `handleActiveWorkoutRecovery`) only an access already settled counts.
+    func recordIfNeeded() {
+        guard recording == nil, let workout, !workout.isFinished, !standDown.contains(workout.sessionID) else { return }
+        beginRecording(from: workout.startedAt, askingForAccess: WKApplication.shared().applicationState == .active)
+    }
+
+    /// Takes back the session HealthKit kept running across a relaunch, else starts one from `date`.
+    private func beginRecording(from date: Date, askingForAccess: Bool) {
+        guard !isStartingRecording else { return }
+        isStartingRecording = true
         Task {
-            guard recording == nil else { return }
+            defer { isStartingRecording = false }
             if let recovered = try? await WorkoutRecording.recover(in: healthStore) {
                 guard recording == nil else { return }
                 adopt(recovered)
                 try? await recovered.session.startMirroringToCompanionDevice()
-            } else if let workout, !workout.isFinished,
-                      (try? await healthStore.statusForAuthorizationRequest(toShare: WorkoutRecording.shareTypes, read: WorkoutRecording.readTypes)) == .unnecessary {
-                guard recording == nil, let started = try? await WorkoutRecording.start(in: healthStore) else { return }
-                adopt(started)
+                return
+            }
+            if askingForAccess {
+                await authorize()
+            } else {
+                guard HKHealthStore.isHealthDataAvailable(),
+                      (try? await healthStore.statusForAuthorizationRequest(toShare: WorkoutRecording.shareTypes, read: WorkoutRecording.readTypes)) == .unnecessary
+                else { return }
+            }
+            guard recording == nil else { return }
+            do {
+                adopt(try await WorkoutRecording.start(in: healthStore, at: date))
+            } catch {
+                WorkoutRecording.log.error("Starting the workout session failed: \(String(describing: error))")
             }
         }
     }
@@ -288,9 +314,9 @@ final class WatchModel: NSObject {
         case .home(let home):
             self.home = home
             persist()
-        case .discardRecording:
-            // The phone keeps its own recording of this workout. A workout discarded on the phone arrives as a copy
-            // of no workout instead.
+        case .discardRecording(let sessionID):
+            // The session was discarded on the phone, or an older phone build keeps its own recording of it.
+            standDown.insert(sessionID)
             recording?.discard()
             recording = nil
             stats = nil
@@ -310,12 +336,13 @@ final class WatchModel: NSObject {
     private struct Saved: Codable {
         var home: WatchHome?
         var replica: WatchReplica
+        var actedRows: [UUID]?
     }
 
     private static let file = URL.applicationSupportDirectory.appending(path: "watch-state.json")
 
     private func persist() {
-        let saved = Saved(home: home, replica: replica)
+        let saved = Saved(home: home, replica: replica, actedRows: actedRows)
         do {
             try FileManager.default.createDirectory(at: .applicationSupportDirectory, withIntermediateDirectories: true)
             try JSONEncoder().encode(saved).write(to: Self.file, options: .atomic)
@@ -328,6 +355,7 @@ final class WatchModel: NSObject {
         guard let data = try? Data(contentsOf: Self.file), let saved = try? JSONDecoder().decode(Saved.self, from: data) else { return }
         home = saved.home
         replica = saved.replica
+        actedRows = saved.actedRows ?? []
         workout = replica.workout
     }
 }

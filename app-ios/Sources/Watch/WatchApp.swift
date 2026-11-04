@@ -45,7 +45,7 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
     }
 
     func handleActiveWorkoutRecovery() {
-        WatchModel.shared.recover()
+        WatchModel.shared.recordIfNeeded()
     }
 }
 

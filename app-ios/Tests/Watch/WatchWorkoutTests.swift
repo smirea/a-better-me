@@ -68,6 +68,49 @@ struct WatchWorkoutTests {
         #expect(twice.completedSets == 1)
     }
 
+    @Test func skippingASetMovesOnWithoutLoggingOrResting() {
+        var workout = Self.workout()
+        workout.apply(Self.event(.skip(rowID: Self.id(21)), after: 30))
+
+        #expect(workout.blocks[0].exercises[0].sets[0].log == nil)
+        #expect(workout.blocks[0].exercises[0].sets[0].skipped == true)
+        #expect(workout.rest == nil)
+        #expect(workout.currentRow == RowPath(block: 0, exercise: 0, set: 1))
+        #expect(workout.completedSets == 0)
+
+        workout.apply(Self.event(.skip(rowID: Self.id(22)), after: 40))
+        #expect(workout.currentRow == RowPath(block: 1, exercise: 0, set: 0))
+    }
+
+    @Test func skippingASupersetMemberGoesToItsPartner() {
+        var workout = Self.workout()
+        workout.apply(Self.event(.select(exerciseID: Self.id(4)), after: 0))
+        workout.apply(Self.event(.skip(rowID: Self.id(41)), after: 10))
+        #expect(workout.currentRow == RowPath(block: 1, exercise: 1, set: 0))
+    }
+
+    @Test func undoingASkipReopensTheSetAndLoggingClearsIt() {
+        var workout = Self.workout()
+        workout.apply(Self.event(.skip(rowID: Self.id(21)), after: 30))
+        workout.apply(Self.event(.unlog(rowID: Self.id(21)), after: 35))
+        #expect(workout.blocks[0].exercises[0].sets[0].skipped == nil)
+        #expect(workout.currentRow == RowPath(block: 0, exercise: 0, set: 0))
+
+        workout.apply(Self.event(.skip(rowID: Self.id(21)), after: 40))
+        workout.blocks.setLog(SetLog(weightKg: 100, reps: 5, completedAt: Self.start), at: RowPath(block: 0, exercise: 0, set: 0))
+        #expect(workout.blocks[0].exercises[0].sets[0].skipped == nil)
+        #expect(workout.completedSets == 1)
+    }
+
+    @Test func aSkippedSetIsOnlyEncodedWhenSkipped() throws {
+        let plain = String(decoding: try JSONEncoder().encode(WorkoutSet(id: Self.id(1))), as: UTF8.self)
+        #expect(!plain.contains("skipped"))
+        var set = WorkoutSet(id: Self.id(1))
+        set.skipped = true
+        #expect(try JSONDecoder().decode(WorkoutSet.self, from: JSONEncoder().encode(set)).skipped == true)
+        #expect(set.planned.skipped == nil)
+    }
+
     @Test func pauseFreezesRestAndResumeAddsThePause() {
         var workout = Self.workout()
         workout.apply(Self.event(.log(rowID: Self.id(21), values: LiveValues(weightKg: 100, reps: 5)), after: 60))
