@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Search (`log-02-search-results.jpg`): the hour's Picks and Latest when the field is empty, otherwise the groups

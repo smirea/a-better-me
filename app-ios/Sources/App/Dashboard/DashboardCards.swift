@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 struct DashboardCard<Chart: View>: View {

@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// One exercise's equipment settings from the live workout: the bar weight the calculator loads on, the calculator's

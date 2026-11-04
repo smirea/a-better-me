@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Every finished workout, newest first and grouped by day. A row opens its summary.

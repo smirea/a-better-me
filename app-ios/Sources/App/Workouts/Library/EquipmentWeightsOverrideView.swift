@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Exercise Overrides > Equipment Weights: per-item loads for one exercise that replace the gym profile's. Only items

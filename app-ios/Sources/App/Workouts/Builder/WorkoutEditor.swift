@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The workout detail body that a library workout and Create Workout share: Target Muscles, the exercise list, and every

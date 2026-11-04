@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// One nutrient's goals (MacroFactor's target icon on a nutrient detail): the active goal and its range, the dated

@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The library's sort menu, MacroFactor's "Sort". Created and Modified start with the most recent.

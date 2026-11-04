@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The small 4 pt tags under exercise rows: filled for primary muscles, outlined for secondary ones.

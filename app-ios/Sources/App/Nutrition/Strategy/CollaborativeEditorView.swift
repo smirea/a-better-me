@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// MacroFactor's Collaborative editor: the week's chart with day buttons, then the selected day's calories, protein,

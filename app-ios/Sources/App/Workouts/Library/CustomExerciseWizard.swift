@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// One way to load or set up an exercise: its name and the equipment it takes, like `Exercise.resistanceEquipment`

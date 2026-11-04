@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The targets of one exercise in one week card: `SetTargetsSheet` with Skip Exercise, Save To All Weeks, Save, and More

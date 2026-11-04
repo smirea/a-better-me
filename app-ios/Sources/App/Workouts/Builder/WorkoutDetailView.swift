@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// A library workout: the editor with Workout Options and a pinned Start Workout. Edits save as they happen. The editor

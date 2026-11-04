@@ -1,5 +1,5 @@
 import Charts
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Chart series colors with no other meaning in the app.

@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// A section for a list that grows with use (weigh-ins, entries, past sessions). The card shows five and a half rows,

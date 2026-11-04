@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Target Muscles in the program editor: the selected day, or every day of the week or cycle.

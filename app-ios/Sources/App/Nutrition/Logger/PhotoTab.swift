@@ -1,5 +1,5 @@
 import PhotosUI
-import Feetback
+import Feedback
 import SwiftUI
 import UIKit
 

@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The bar under the timeline: the search field, or in select mode the selection's actions, or a copy or move's

@@ -1,5 +1,5 @@
 import Charts
-import Feetback
+import Feedback
 import SwiftUI
 
 enum NutritionShown: String, CaseIterable {

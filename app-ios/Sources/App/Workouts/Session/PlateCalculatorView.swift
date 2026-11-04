@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The weight keypad's plate calculator: one sleeve of the bar with its plates, the legend, and MF's sentence. The

@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The header's stopwatch, countdown, and draining bar. Tapping it opens the Rest Timer sheet.

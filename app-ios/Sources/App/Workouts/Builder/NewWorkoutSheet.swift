@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The tab bar's "+" Shortcuts sheet (research spec §2, `nav-plus-01.jpg`): round shortcut buttons, the active

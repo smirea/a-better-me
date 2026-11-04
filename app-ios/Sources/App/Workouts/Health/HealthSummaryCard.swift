@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Workout Complete's Apple Health section: the saved summary, or the live numbers while the workout still records.

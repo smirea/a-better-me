@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The set table, its keypad, and the edits they make to `blocks`.

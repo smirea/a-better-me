@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 @main
@@ -29,12 +29,12 @@ struct BetterMeApp: App {
         NutritionHealth.shared.start(store: store)
         WidgetPublisher.shared.start(store: store)
         QuickActionInbox.shared.install()
-        Feetback.enable()
-        Feetback.context("Sync") { (api: AppEnvironment.apiURL.absoluteString, pendingWrites: store.pendingWrites) }
-        Feetback.context("Workout") {
+        Feedback.enable()
+        Feedback.context("Sync") { (api: AppEnvironment.apiURL.absoluteString, pendingWrites: store.pendingWrites) }
+        Feedback.context("Workout") {
             (inProgressShown: presenter.isExpanded, finishedSessions: history.sessions.count, customExercises: catalog.custom.count)
         }
-        Feetback.context("Assets") { AssetStore.shared.statusLine }
+        Feedback.context("Assets") { AssetStore.shared.statusLine }
         #if DEBUG
         DevSeed.run(store)
         SampleData.seedIfRequested(store)

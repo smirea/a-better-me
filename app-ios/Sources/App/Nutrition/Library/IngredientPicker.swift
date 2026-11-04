@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// What the recipe editor's Add Ingredient opens. MacroFactor opens its logger there, so the logger replaces this

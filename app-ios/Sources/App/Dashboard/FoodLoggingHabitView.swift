@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// MacroFactor's Food Logging habit page: today, the streak, a month of day rings, and one heat map per year.

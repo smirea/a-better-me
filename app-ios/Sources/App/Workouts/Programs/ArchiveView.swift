@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// "Workout Archive" (research spec milestone-2.md §2.6): archived programs as cards with their days, then archived

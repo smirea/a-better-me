@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// One input column of the set table, chosen from the exercise's `metrics`.

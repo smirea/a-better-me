@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// MacroFactor's Full Body entry: one date and a field per visible measurement, visual body fat always. Fields start

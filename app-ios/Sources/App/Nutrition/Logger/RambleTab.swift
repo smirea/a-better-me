@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Ramble: say what you ate and the foods arrive one at a time as the server's model reads the words. It takes the

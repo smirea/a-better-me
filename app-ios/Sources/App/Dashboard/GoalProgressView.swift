@@ -1,5 +1,5 @@
 import Charts
-import Feetback
+import Feedback
 import SwiftUI
 
 /// MacroFactor's Goal Progress detail: a monthly waterfall of the distance to the target on scale or trend weight.

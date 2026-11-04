@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// How full a day pill's outline is drawn, and in which color: the day's calories against target, a logged workout,

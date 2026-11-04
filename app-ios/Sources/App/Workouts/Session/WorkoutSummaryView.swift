@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// "Workout Complete" right after finishing, or a past session's summary from history and the calendar.

@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// A note's full-height editor: its color, title, body, and time. Saving needs a title; an existing note can be

@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 struct WarmUpSettingsView: View {

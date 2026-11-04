@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The Exercise Assessment questionnaire: seven yes-or-no questions saved into `ProfileSettings.assessment` as they are

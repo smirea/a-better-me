@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Settings > Gym Profiles, and the picker's Manage Gym Profiles. Push it inside a navigation stack.

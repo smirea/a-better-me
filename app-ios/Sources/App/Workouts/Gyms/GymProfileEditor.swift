@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// One gym's name, icon, and equipment with its weights. Every change writes straight to the profile.

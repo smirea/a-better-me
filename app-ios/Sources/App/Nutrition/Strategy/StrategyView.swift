@@ -1,5 +1,5 @@
 import Charts
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Everything Strategy's screens read, built once per change of the plans, weigh-ins, log, or settings.

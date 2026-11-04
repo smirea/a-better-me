@@ -1,6 +1,6 @@
 import HealthKit
 import HealthKitUI
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Settings > Apple Health: what the app reads and writes. Reads and workouts need no switch; writing food does,

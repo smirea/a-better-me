@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// The filterable, category-grouped exercise list shared by the picker and Settings > Exercises. The owner of the

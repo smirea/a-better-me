@@ -1,4 +1,4 @@
-import Feetback
+import Feedback
 import SwiftUI
 
 /// Create Workout: the method step (build or import .xlsx), the name step, the gym step, and the editor. An import skips
