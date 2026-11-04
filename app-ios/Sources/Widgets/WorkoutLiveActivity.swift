@@ -61,8 +61,7 @@ struct WorkoutLiveActivity: Widget {
     }
 }
 
-/// The Lock Screen banner, or on a paired watch's Smart Stack (`.small`) the heading and clock, as MF Workouts shows
-/// its Live Activity there. The small family has no room for the controls.
+/// The Lock Screen banner, or the compact card on a paired watch's Smart Stack (`.small`).
 private struct ActivityBanner: View {
     let phase: Phase
     @Environment(\.activityFamily) private var family
@@ -70,15 +69,7 @@ private struct ActivityBanner: View {
     var body: some View {
         switch family {
         case .small:
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .top, spacing: 8) {
-                    Thumbnail(set: phase.shownSet, size: 32)
-                    Spacer(minLength: 0)
-                    PhaseClock(phase: phase).font(AppFont.number(15))
-                }
-                Heading(phase: phase)
-            }
-            .padding(12)
+            SmartStackBanner(phase: phase).padding(.horizontal, 10).padding(.vertical, 6)
         default:
             LockScreenBanner(phase: phase).padding(16)
         }

@@ -43,11 +43,11 @@ struct Heading: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(caption)
+            Text(phase.caption)
                 .font(AppFont.caption(13))
-                .foregroundStyle(captionColor)
+                .foregroundStyle(phase.captionColor)
                 .lineLimit(1)
-            Text(phase.shownSet?.exerciseName ?? phase.status.name)
+            Text(phase.title)
                 .font(AppFont.headline(16))
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(2)
@@ -55,24 +55,28 @@ struct Heading: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+}
 
-    private var caption: String {
-        switch phase {
+extension Phase {
+    var caption: String {
+        switch self {
         case .set(_, let set): set.position
-        case .rest: phase.shownSet.map { "Up next · \($0.position)" } ?? "Rest"
+        case .rest: shownSet.map { "Up next · \($0.position)" } ?? "Rest"
         case .paused: "Paused"
         case .allDone(let status): "All \(status.totalSets) sets logged"
         case .finished: "Workout complete"
         }
     }
 
-    private var captionColor: Color {
-        switch phase {
+    var captionColor: Color {
+        switch self {
         case .paused: Theme.amber
         case .rest, .allDone: Theme.accent
         case .set, .finished: Theme.textSecondary
         }
     }
+
+    var title: String { shownSet?.exerciseName ?? status.name }
 }
 
 /// "REST" over −15, the countdown, and +15.
@@ -188,7 +192,7 @@ struct StatPills: View {
     let unit: WeightUnit
 
     var body: some View {
-        let stats = stats
+        let stats = set.stats(unit: unit)
         HStack(spacing: 6) {
             ForEach(stats.indices, id: \.self) { index in
                 VStack(spacing: 0) {
@@ -211,26 +215,28 @@ struct StatPills: View {
             }
         }
     }
+}
 
-    private var stats: [(value: String, unit: String)] {
-        let values = set.values
-        return set.fields.compactMap { field in
+extension LiveSet {
+    /// The value and caps unit of each field the row logs, RIR aside since it is a badge.
+    func stats(unit: WeightUnit) -> [(value: String, unit: String)] {
+        fields.compactMap { field in
             switch field {
-            case .weight: (values.weightKg.map(weight) ?? "–", unit.rawValue.uppercased())
+            case .weight: (values.weightKg.map { Self.weight($0, unit: unit) } ?? "–", unit.rawValue.uppercased())
             case .reps: (values.reps.map(String.init) ?? "–", "REPS")
             case .duration: (values.durationSeconds.map { $0.minuteSecond } ?? "–", "TIME")
-            case .distance: distance(values.distanceMeters)
+            case .distance: Self.distance(values.distanceMeters)
             case .rir: nil
             }
         }
     }
 
     /// One decimal at most, so 85 kg reads "187.4" in a pill sized for "140".
-    private func weight(_ kg: Double) -> String {
+    private static func weight(_ kg: Double, unit: WeightUnit) -> String {
         unit.fromKg(kg).formatted(.number.precision(.fractionLength(0...1)))
     }
 
-    private func distance(_ meters: Double?) -> (String, String) {
+    private static func distance(_ meters: Double?) -> (String, String) {
         guard let meters else { return ("–", "M") }
         if meters < 1000 { return (meters.formatted(.number.precision(.fractionLength(0))), "M") }
         return ((meters / 1000).formatted(.number.precision(.fractionLength(0...2))), "KM")
