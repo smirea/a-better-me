@@ -33,9 +33,8 @@ struct LoadingCacheTests {
         #expect(answer.loading?.plates?.baseWeight == 15)
         settings.weightUnit = .lb
         let lb = try #require(cache.answer(for: bench, gym: gym, catalog: catalog, settings: settings, exerciseSettings: [override]).loading?.plates)
-        // Unstored loads follow the unit: the lb bars are 15, 33, and 45 lb, none of them the 15 kg choice, so the
-        // heaviest loads.
-        #expect((lb.baseWeight * 100).rounded() == 4500)
+        // Unstored loads follow the unit: the lb bars are 15, 33, and 45 lb, and the 33 lb (14.97 kg) one is the 15 kg choice.
+        #expect((lb.baseWeight * 100).rounded() == 3300)
     }
 
     @Test func eachGymKeepsItsOwnAnswers() {
