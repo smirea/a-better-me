@@ -137,6 +137,39 @@ struct RoundIconButton: View {
     private var glyph: CGFloat { size == .small ? 16 : 22 }
 }
 
+/// A filter field in a glass capsule for a screen's bottom edge, placed with `safeAreaInset(edge: .bottom)`. A
+/// `.bottomBar` search toolbar item sits where the in-progress workout bar floats once the tab bar is hidden, while a
+/// safe area inset stays above it.
+struct GlassSearchField: View {
+    @Binding var text: String
+    let prompt: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(Theme.textSecondary)
+            TextField(prompt, text: $text)
+                .submitLabel(.search)
+                .autocorrectionDisabled()
+                .accessibilityLabel(prompt)
+            if !text.isEmpty {
+                Button("Clear search", systemImage: "xmark.circle.fill") { text = "" }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.rect)
+            }
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, text.isEmpty ? 16 : 2)
+        .frame(height: 48)
+        .glassEffect(.regular.interactive(), in: .capsule)
+        .padding(.horizontal, Theme.margin)
+        .padding(.bottom, 8)
+        .feedback(self)
+    }
+}
+
 /// A thin capsule bar for a nutrient or goal's progress: `ProgressView(value:).progressViewStyle(.bar(color))`.
 struct BarProgressStyle: ProgressViewStyle {
     var color: Color

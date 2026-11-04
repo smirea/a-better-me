@@ -121,9 +121,8 @@ struct GymProfileEditor: View {
         .scrollDismissesKeyboard(.immediately)
         .navigationTitle(gym.name)
         .toolbarVisibility(.hidden, for: .tabBar)
-        .searchable(text: $query, prompt: "Filter equipment by name")
+        .safeAreaInset(edge: .bottom) { GlassSearchField(text: $query, prompt: "Filter equipment by name") }
         .toolbar {
-            DefaultToolbarItem(kind: .search, placement: .bottomBar)
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("Gym Options", systemImage: "ellipsis") {
                     Button("Set as Default", systemImage: "star") { store.setDefaultGym(gym.id) }

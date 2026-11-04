@@ -29,7 +29,7 @@ struct EquipmentSettingsView: View {
             if let plates = loading?.plates, let baseID = plates.baseID, plates.baseWeights.count > 1 {
                 ThemedSection("Bar Weight", footer: "The \(catalog.equipment[baseID]?.name ?? "bar") weight the plate calculator loads on for this exercise.") {
                     Picker("Bar Weight", selection: Binding(
-                        get: { overrides.barWeightKg?[baseID].flatMap { chosen in plates.baseWeights.first { abs(unit.toKg($0) - chosen) < 0.005 } } },
+                        get: { overrides.barWeightKg?[baseID].flatMap { Loading.matchingBar($0, among: plates.baseWeights, kg: unit.toKg) } },
                         set: { weight in
                             edit { settings in
                                 var bars = settings.overrides.barWeightKg ?? [:]

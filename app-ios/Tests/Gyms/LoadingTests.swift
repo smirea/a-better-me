@@ -288,6 +288,17 @@ struct PlateCalculatorOptionTests {
         #expect(unlisted.baseWeight == 45)
     }
 
+    @Test func theChosenBarSurvivesAUnitSwitch() throws {
+        let kgBarbell = EquipmentLoad.weights(options: [7.0, 15, 20].map { WeightOption(kg: $0) })
+        let inLb = try #require(Loading.resolve(option: ["barbell"], catalog: catalog, unit: lb, barWeightKg: ["barbell": 15]) { ["barbell": barbell][$0] }?.plates)
+        #expect(inLb.baseWeight == 33)
+        let inKg = try #require(Loading.resolve(option: ["barbell"], catalog: catalog, unit: .kg, barWeightKg: ["barbell": lb.toKg(33)]) { ["barbell": kgBarbell][$0] }?.plates)
+        #expect(inKg.baseWeight == 15)
+        #expect(Loading.matchingBar(lb.toKg(15), among: [7.0, 15, 20], kg: { $0 }) == 7)
+        #expect(Loading.matchingBar(lb.toKg(45), among: [7.0, 15, 20], kg: { $0 }) == 20)
+        #expect(Loading.matchingBar(10, among: [7.0, 15, 20], kg: { $0 }) == nil)
+    }
+
     @Test func bumperPlatesJoinThePlatesOnlyWhenIncluded() throws {
         let loads: [EquipmentID: EquipmentLoad] = [
             "barbell": barbell,

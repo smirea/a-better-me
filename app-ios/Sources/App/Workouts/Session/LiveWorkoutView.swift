@@ -108,6 +108,12 @@ struct SessionEditor: View {
                     guard let row else { return }
                     withAnimation(.snappy(duration: 0.25)) { proxy.scrollTo(row, anchor: .center) }
                 }
+                // Opening the keypad shrinks the list after the focus change scrolled, so that scroll targeted the
+                // full-height list and left a low row under the keypad. Scrolling again once the height settles fixes it.
+                .onGeometryChange(for: CGFloat.self, of: \.size.height) { _, _ in
+                    guard let row = focus?.row else { return }
+                    withAnimation(.snappy(duration: 0.25)) { proxy.scrollTo(row, anchor: .center) }
+                }
             }
             if let focus {
                 plateCalculator(for: focus)
