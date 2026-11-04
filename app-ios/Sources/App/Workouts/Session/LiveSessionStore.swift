@@ -145,10 +145,11 @@ final class LiveSessionStore {
 
     static let log = Logger(subsystem: "com.stefan.a-better-me", category: "Rest")
 
-    /// The haptic covers a phone in hand; the notification covers a locked phone or the app in the background. While
-    /// the watch records the workout it taps instead, and a phone notification would reach the watch as a second tap.
+    /// The haptic covers a phone in hand; the notification covers a locked phone or the app in the background. When the
+    /// watch taps instead, a phone notification would reach the watch as a second tap. With Vibrate off the watch stays
+    /// quiet, so the notification still carries Play Sound.
     private func scheduleNotification(at date: Date) {
-        guard !WorkoutHealth.shared.watchRecords else { return }
+        guard RestEndHaptic.device(vibrate: alerts.vibrate, watchRecords: WorkoutHealth.shared.watchRecords) != .watch else { return }
         let center = UNUserNotificationCenter.current()
         Task {
             guard (try? await center.requestAuthorization(options: [.alert, .sound])) == true, rest?.endsAt == date else { return }
