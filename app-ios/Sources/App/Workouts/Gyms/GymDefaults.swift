@@ -1,13 +1,12 @@
 import Foundation
 
-/// MF's default load per equipment item, generated from the research capture by `scripts/gym-defaults.ts`. Items
-/// without one (benches, racks, most accessories) have nothing to edit.
+/// The standard load per equipment item in each unit. An item a gym stores no load for reads the display unit's set,
+/// so a kg owner always gets kg plates and bars, also on a gym created in lb or through the agent API. The lb set is
+/// MF's defaults, generated from the research capture by `scripts/gym-defaults.ts`; the kg set uses MF's kg bar
+/// presets and our own plate, dumbbell, and stack steps. Items without one (benches, racks) have nothing to edit.
 enum GymDefaults {
-    static let loads = decode("equipment-loads")
-
-    /// The loads a gym created while the unit is kg stores explicitly, so switching units later never changes its
-    /// plates. Bars and base weights are MF's kg presets; the rest are ours (see `scripts/gym-defaults.ts`).
-    static let kgLoads = decode("equipment-loads-kg")
+    private static let lbLoads = decode("equipment-loads")
+    private static let kgLoads = decode("equipment-loads-kg")
 
     private static func decode(_ name: String) -> [EquipmentID: EquipmentLoad] {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
@@ -20,15 +19,11 @@ enum GymDefaults {
         }
     }
 
-    static func load(for id: EquipmentID) -> EquipmentLoad? { loads[id] }
-
-    /// What a gym stores for an item it selects or resets while the unit is `unit`: the kg list for a kg owner, nothing
-    /// (MF's lb defaults) for a lb owner.
-    static func storedLoad(for id: EquipmentID, unit: WeightUnit) -> EquipmentLoad? {
-        unit == .kg ? kgLoads[id] : nil
+    static func load(for id: EquipmentID, unit: WeightUnit) -> EquipmentLoad? {
+        (unit == .kg ? kgLoads : lbLoads)[id]
     }
 
-    static func effectiveLoad(_ id: EquipmentID, in gym: GymProfile) -> EquipmentLoad? {
-        gym.equipment[id]?.load ?? load(for: id)
+    static func effectiveLoad(_ id: EquipmentID, in gym: GymProfile, unit: WeightUnit) -> EquipmentLoad? {
+        gym.equipment[id]?.load ?? load(for: id, unit: unit)
     }
 }

@@ -52,6 +52,7 @@ extension SessionEditor {
         }
         .opacity(isLogged && focus?.row != path ? 0.45 : 1)
         .background(Theme.background)
+        .id(path)
         .rowSwipeActions(trailing: [.destructive(path.sub == nil ? "Remove Set" : "Remove") { removeRow(path) }], fullSwipe: true)
         .feedback("SetRow", data: (number: number, row: path, entry: value, logged: isLogged))
     }
@@ -129,7 +130,7 @@ extension SessionEditor {
         .minimumScaleFactor(0.8)
     }
 
-    /// "40 kg x 8", "40 kg x 8 + 2" with partials, or the weight or the reps alone when only one was logged.
+    /// "40 kg · 8", "40 kg · 8 + 2" with partials, or the weight or the reps alone when only one was logged.
     static func summary(of log: SetLog, unit: WeightUnit) -> String {
         let weight = log.weightKg.map { "\(unit.label(kg: $0))" }
         let reps = log.reps.map { full in
@@ -137,7 +138,7 @@ extension SessionEditor {
         }
         let duration = log.durationSeconds.map { $0.minuteSecond }
         let distance = log.distanceMeters.map { Measurement(value: $0, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated)) }
-        return [weight, reps ?? duration, distance].compactMap { $0 }.joined(separator: " x ")
+        return [weight, reps ?? duration, distance].compactMap { $0 }.joined(separator: " · ")
     }
 
     private func cell(_ path: RowPath, field: SetField, value: SetEntry) -> some View {
@@ -217,6 +218,7 @@ extension SessionEditor {
     /// `date` is when the set was done: now for a tap, earlier for a set the watch logged while the phone was away.
     private func toggle(_ path: RowPath, previous: [WorkoutSet], at date: Date = .now) {
         let id = blocks.rowID(at: path)
+        let keypadOpen = focus != nil
         if let log = blocks.log(at: path) {
             drafts[id] = SetEntry(log)
             blocks.setLog(nil, at: path)
@@ -229,6 +231,13 @@ extension SessionEditor {
         let step = SessionFlow.afterCompleting(path, in: blocks, settings: defaults.workout.flow, rest: restSeconds)
         if let seconds = step.restSeconds { store.startRest(seconds: seconds, alerts: defaults.workout.rest, from: date) }
         if let next = step.next, next != current { withAnimation { current = next } }
+        if keypadOpen { focus = SessionFlow.rowAfter(path, step: step, in: blocks).flatMap { firstFieldFocus($0) } }
+    }
+
+    private func firstFieldFocus(_ path: RowPath) -> KeypadFocus? {
+        let exercise = catalog.exercise(blocks[path.block].exercises[path.exercise].exerciseID)
+        guard let field = SetField.fields(for: exercise).first else { return nil }
+        return KeypadFocus(row: path, field: field, entry: entry(path, previous: previousSets(for: path)), unit: unit)
     }
 
     func perform(_ command: LiveWorkoutCommand, at date: Date) {
@@ -423,8 +432,8 @@ extension SessionEditor {
             focus = nextFocus(after: state)
             return
         case .done:
-            focus = nil
             if blocks.log(at: state.row) == nil { toggle(state.row, previous: previousSets(for: state.row)) }
+            if focus?.row == state.row { focus = nil }
             return
         }
         let before = entry(state.row, previous: previousSets(for: state.row))

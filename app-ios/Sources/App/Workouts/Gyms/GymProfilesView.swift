@@ -137,7 +137,7 @@ private struct NewGymSheet: View {
 
     private func create() {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        var gym = GymProfile(name: trimmed.isEmpty ? "Your Gym" : trimmed, icon: template.icon, equipment: template.equipment(from: catalog.equipment, unit: settings.weightUnit))
+        var gym = GymProfile(name: trimmed.isEmpty ? "Your Gym" : trimmed, icon: template.icon, equipment: template.equipment(from: catalog.equipment))
         gym.isDefault = makesDefault
         store.insert(gym)
         dismiss()

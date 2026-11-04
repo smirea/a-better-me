@@ -90,18 +90,25 @@ struct SessionEditor: View {
     private var editor: some View {
         VStack(spacing: 0) {
             header
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    exerciseStrip
-                    if let position = currentPosition {
-                        exerciseContent(block: position.block, exercise: position.exercise)
-                    } else {
-                        ContentUnavailableView("No exercises", systemImage: "dumbbell", description: Text("Add an exercise to start logging."))
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        exerciseStrip
+                        if let position = currentPosition {
+                            exerciseContent(block: position.block, exercise: position.exercise)
+                        } else {
+                            ContentUnavailableView("No exercises", systemImage: "dumbbell", description: Text("Add an exercise to start logging."))
+                        }
                     }
+                    .padding(.vertical, 12)
                 }
-                .padding(.vertical, 12)
+                .scrollDismissesKeyboard(.never)
+                // Checking a set moves the keypad to the next row, which the keypad would otherwise cover.
+                .onChange(of: focus?.row) { _, row in
+                    guard let row else { return }
+                    withAnimation(.snappy(duration: 0.25)) { proxy.scrollTo(row, anchor: .center) }
+                }
             }
-            .scrollDismissesKeyboard(.never)
             if let focus {
                 plateCalculator(for: focus)
                 keypad(for: focus)
@@ -130,6 +137,8 @@ struct SessionEditor: View {
         }
         .onChange(of: current) { _, current in
             if mode == .live { store.currentExercise = current }
+            // Logging a superset member moves the keypad along with the screen, so only a focus left behind closes.
+            if let focus, blocks.indices.contains(focus.row.block), blocks[focus.row.block].exercises[safe: focus.row.exercise]?.id == current { return }
             focus = nil
         }
         .onAppear {
@@ -236,8 +245,11 @@ struct SessionEditor: View {
         ScrollView(.horizontal) {
             HStack(spacing: 4) {
                 ForEach(blocks.flatMap(\.exercises)) { item in
-                    Button { current = item.id } label: { stripTile(item) }
+                    Button {
+                        if item.id == current { sheet = .info(item.exerciseID) } else { current = item.id }
+                    } label: { stripTile(item) }
                         .accessibilityLabel(catalog.name(item.exerciseID))
+                        .accessibilityHint(item.id == current ? "Shows exercise info" : "")
                 }
                 Button { sheet = .add } label: {
                     VStack(spacing: 6) {
@@ -304,7 +316,7 @@ struct SessionEditor: View {
     private func noteCard(_ title: String, _ text: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title).font(AppFont.headline(14))
-            Text(text).font(AppFont.body(14)).foregroundStyle(Theme.textSecondary)
+            MarkdownBlocks(markdown: text, color: Theme.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .card()

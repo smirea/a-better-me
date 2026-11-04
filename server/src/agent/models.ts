@@ -395,7 +395,12 @@ export const EquipmentLoad = z
 			"Exactly one key: `weights` (dumbbells, plates, bars), `ranges` (pin-stack machines), `base` (a loadable machine's own weight), or `bands`.",
 	});
 const GymEquipment = z
-	.object({ load: EquipmentLoad.optional().meta({ description: "Omit to use the catalog's weights." }) })
+	.object({
+		load: EquipmentLoad.optional().meta({
+			description:
+				"Omit to use the standard weights of the owner's display unit (kg plates and bars in kg, MF's lb defaults in lb). Set it only for equipment that differs.",
+		}),
+	})
 	.meta({ id: 'GymEquipment' });
 const EquipmentMap = z
 	.record(z.string(), GymEquipment)

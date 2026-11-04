@@ -93,7 +93,7 @@ struct GymProfileEditor: View {
                     ForEach(section.items) { item in
                         EquipmentRow(
                             item: item,
-                            load: GymDefaults.effectiveLoad(item.id, in: gym),
+                            load: GymDefaults.effectiveLoad(item.id, in: gym, unit: settings.weightUnit),
                             isSelected: gym.equipment[item.id] != nil,
                             unit: settings.weightUnit,
                             onToggle: { setSelected([item.id], gym.equipment[item.id] == nil) },
@@ -140,11 +140,11 @@ struct GymProfileEditor: View {
             Button("Cancel", role: .cancel) {}
         }
         .sheet(item: $editingLoad) { item in
-            if let load = GymDefaults.effectiveLoad(item.id, in: gym) {
+            if let load = GymDefaults.effectiveLoad(item.id, in: gym, unit: settings.weightUnit) {
                 EquipmentLoadEditor(equipment: item, load: load, unit: settings.weightUnit) { saved in
-                    let (id, unit) = (item.id, settings.weightUnit)
+                    let id = item.id
                     edit { gym in
-                        if saved != nil || gym.equipment[id] != nil { gym.equipment[id] = GymEquipment(load: saved ?? GymDefaults.storedLoad(for: id, unit: unit)) }
+                        if saved != nil || gym.equipment[id] != nil { gym.equipment[id] = GymEquipment(load: saved) }
                     }
                 }
             }
@@ -181,13 +181,12 @@ struct GymProfileEditor: View {
 
     /// Selecting keeps an item's custom load; deselecting drops it with the key.
     private func setSelected(_ ids: [EquipmentID], _ selected: Bool) {
-        let unit = settings.weightUnit
         edit { gym in
             for id in ids {
                 if !selected {
                     gym.equipment[id] = nil
                 } else if gym.equipment[id] == nil {
-                    gym.equipment[id] = GymEquipment(load: GymDefaults.storedLoad(for: id, unit: unit))
+                    gym.equipment[id] = GymEquipment(load: nil)
                 }
             }
         }
@@ -202,7 +201,7 @@ struct GymProfileEditor: View {
     }
 
     private func bumperDetail(_ gym: GymProfile) -> String {
-        guard gym.equipment[Loading.bumperPlatesID] != nil, let load = GymDefaults.effectiveLoad(Loading.bumperPlatesID, in: gym) else {
+        guard gym.equipment[Loading.bumperPlatesID] != nil, let load = GymDefaults.effectiveLoad(Loading.bumperPlatesID, in: gym, unit: settings.weightUnit) else {
             return "No bumper plate weights available in this gym"
         }
         return "Available Bumper Plates: \(load.summary(in: settings.weightUnit))"

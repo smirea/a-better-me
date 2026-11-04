@@ -10,7 +10,7 @@ struct SmartProgressionTests {
         let result = CurlFixture.suggest(sets: sets)
         let drop = result[sets[0].id]!
         #expect(drop.weight == 40)
-        #expect(drop.autoText(unit: lb) == "40 lb x 8 / 0 RIR")
+        #expect(drop.autoText(unit: lb) == "40 lb · 8 / 0 RIR")
         #expect(drop.adjustedReps == 8...9)
         #expect(drop.prefill == SetSuggestion.Values(weight: 40, reps: 9, rir: 0))
     }
@@ -19,7 +19,7 @@ struct SmartProgressionTests {
         let result = CurlFixture.suggest(sets: sets)
         for set in sets.dropFirst() {
             let suggestion = result[set.id]!
-            #expect(suggestion.autoText(unit: lb) == "30 lb x 8-12 / 2 RIR")
+            #expect(suggestion.autoText(unit: lb) == "30 lb · 8-12 / 2 RIR")
             #expect(suggestion.adjustedReps == nil)
             #expect(suggestion.prefill == SetSuggestion.Values(weight: 30, reps: 12, rir: 2))
         }
@@ -83,7 +83,7 @@ struct SmartProgressionTests {
     @Test func noTargetKeepsThePreviousLog() {
         let sets = [WorkoutSet()]
         let result = CurlFixture.suggest(sets: sets, previous: [WorkoutSet(log: CurlFixture.logged(35, 10, 1))])
-        #expect(result[sets[0].id]!.autoText(unit: lb) == "35 lb x 10")
+        #expect(result[sets[0].id]!.autoText(unit: lb) == "35 lb · 10")
         #expect(result[sets[0].id]!.prefill == SetSuggestion.Values(weight: 35, reps: 10, rir: 1))
     }
 
@@ -95,7 +95,7 @@ struct SmartProgressionTests {
         expected[sets[1].id]!.prefill.weight = 25
         let changed = SmartProgression.applyInSession(sets: sets, current: expected, settings: ProgressionSettings(), loadable: CurlFixture.loadable, rirTracking: true, unit: lb)
         #expect(Set(changed.keys) == [sets[1].id])
-        #expect(changed[sets[1].id]!.autoText(unit: lb) == "30 lb x 8-12 / 2 RIR")
+        #expect(changed[sets[1].id]!.autoText(unit: lb) == "30 lb · 8-12 / 2 RIR")
         #expect(changed[sets[1].id]!.prefill == SetSuggestion.Values(weight: 30, reps: 12, rir: 2))
     }
 

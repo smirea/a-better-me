@@ -45,7 +45,7 @@ struct LiveSet: Codable, Hashable, Sendable, Identifiable {
     var values: LiveValues
     /// "8–10 reps · 2 RIR"
     var target: String?
-    /// Last time's log of this row, "135 lb × 8".
+    /// Last time's log of this row, "135 lb · 8".
     var previous: String?
 }
 

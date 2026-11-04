@@ -47,26 +47,28 @@ extension Exercise {
     var hasEquipmentChoice: Bool { resistanceEquipmentIDs.count > 1 || supportEquipmentIDs.count > 1 }
 }
 
-/// The load each item has for one exercise: its Equipment Weights override, else the gym's load, else MF's default.
-/// An item the gym doesn't select loads nothing unless the exercise overrides it, so a gym without plates has no
-/// plates to put on the bar.
+/// The load each item has for one exercise: its Equipment Weights override, else the gym's load, else the display
+/// unit's default. An item the gym doesn't select loads nothing unless the exercise overrides it, so a gym without
+/// plates has no plates to put on the bar.
 struct GymLoads {
     var gym: GymProfile?
     var overrides: [EquipmentID: EquipmentLoad]
+    var unit: WeightUnit
     private let pluralOfSingular: [EquipmentID: EquipmentID]
 
-    init(gym: GymProfile?, overrides: [EquipmentID: EquipmentLoad], catalog: [EquipmentID: Equipment]) {
+    init(gym: GymProfile?, overrides: [EquipmentID: EquipmentLoad], unit: WeightUnit, catalog: [EquipmentID: Equipment]) {
         self.gym = gym
         self.overrides = overrides
+        self.unit = unit
         pluralOfSingular = Dictionary(catalog.values.compactMap { item in item.pluralOf.map { ($0, item.id) } }) { first, _ in first }
     }
 
     func load(_ id: EquipmentID) -> EquipmentLoad? {
         let listed = pluralOfSingular[id] ?? id
         if let override = overrides[listed] { return override }
-        guard let gym else { return GymDefaults.load(for: listed) }
+        guard let gym else { return GymDefaults.load(for: listed, unit: unit) }
         guard gym.equipment[listed] != nil else { return nil }
-        return GymDefaults.effectiveLoad(listed, in: gym)
+        return GymDefaults.effectiveLoad(listed, in: gym, unit: unit)
     }
 }
 
@@ -147,7 +149,7 @@ extension Loading {
         if context.calculator.includeBumperPlates { listed += options(bumperPlatesID, isBumper: true) }
         if !context.calculator.allowMixedUnits {
             // Without Utilize Mixed Unit Plates only plates native to the display unit go on. A list with none of them
-            // (the generated defaults are lb, so a kg owner's untouched gym) keeps every plate, since none would be worse.
+            // (plates the owner entered in the other unit) keeps every plate, since none would be worse.
             let native = listed.filter { $0.0.nativeUnit == nil || $0.0.nativeUnit == unit }
             if !native.isEmpty { listed = native }
         }

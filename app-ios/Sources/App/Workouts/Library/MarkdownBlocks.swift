@@ -33,6 +33,7 @@ struct MarkdownSection: Identifiable {
 /// out here line by line, with inline styling left to `AttributedString`.
 struct MarkdownBlocks: View {
     let markdown: String
+    var color = Theme.textPrimary.opacity(0.9)
 
     private enum Block: Hashable {
         case heading(String)
@@ -58,7 +59,7 @@ struct MarkdownBlocks: View {
             }
         }
         .font(AppFont.body(14))
-        .foregroundStyle(Theme.textPrimary.opacity(0.9))
+        .foregroundStyle(color)
         .fixedSize(horizontal: false, vertical: true)
     }
 

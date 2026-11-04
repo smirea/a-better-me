@@ -65,9 +65,9 @@ struct GymAvailabilityTests {
     }
 
     @Test func templatesSelectTheListedPluralOfAFlaggedSingular() {
-        #expect(Set(GymTemplate.garage.equipment(from: catalog, unit: .lb).keys) == ["ankle-weights", "barbell", "plates", "flat-bench", "power-rack"])
-        #expect(Set(GymTemplate.home.equipment(from: catalog, unit: .lb).keys) == ["dumbbells", "flat-bench"])
-        #expect(Set(GymTemplate.everything.equipment(from: catalog, unit: .lb).keys) == ["dumbbells", "ankle-weights", "barbell", "plates", "flat-bench", "power-rack"])
+        #expect(Set(GymTemplate.garage.equipment(from: catalog).keys) == ["ankle-weights", "barbell", "plates", "flat-bench", "power-rack"])
+        #expect(Set(GymTemplate.home.equipment(from: catalog).keys) == ["dumbbells", "flat-bench"])
+        #expect(Set(GymTemplate.everything.equipment(from: catalog).keys) == ["dumbbells", "ankle-weights", "barbell", "plates", "flat-bench", "power-rack"])
     }
 }
 
@@ -75,24 +75,24 @@ struct GymDefaultsTests {
     private let lb = 0.45359237
 
     @Test func bundledLoadsDecodeWithTheCapturedDefaults() throws {
-        let dumbbells = try #require(GymDefaults.load(for: "19e5c6f170d8808593d8ecf408c4f749"))
+        let dumbbells = try #require(GymDefaults.load(for: "19e5c6f170d8808593d8ecf408c4f749", unit: .lb))
         guard case .weights(let options) = dumbbells else { Issue.record("Dumbbells load is \(dumbbells)"); return }
         #expect(options.count == 38)
         #expect(abs(options[0].kg - 2.5 * lb) < 1e-9)
         #expect(options[0].count == nil)
         #expect(abs(options[37].kg - 165 * lb) < 1e-9)
 
-        #expect(GymDefaults.load(for: "19e5c6f170d88007ba63e3e18e4933f8") == .ranges(options: [WeightRange(minKg: 0, maxKg: 500 * lb, incrementKg: 10 * lb)]))
-        #expect(GymDefaults.load(for: "19e5c6f170d880d3914cc4c2631393cd") == .base(kg: 100 * lb))
-        #expect(GymDefaults.load(for: "25b5c6f170d880619592ca5ba65fc1b3")?.summary(in: .lb) == "Orange, Red, Blue, Green, Black, Purple, Red, Silver")
-        #expect(GymDefaults.load(for: "19e5c6f170d880d3914cc4c2631393cd")?.summary(in: .lb) == "100\u{00A0}lb")
+        #expect(GymDefaults.load(for: "19e5c6f170d88007ba63e3e18e4933f8", unit: .lb) == .ranges(options: [WeightRange(minKg: 0, maxKg: 500 * lb, incrementKg: 10 * lb)]))
+        #expect(GymDefaults.load(for: "19e5c6f170d880d3914cc4c2631393cd", unit: .lb) == .base(kg: 100 * lb))
+        #expect(GymDefaults.load(for: "25b5c6f170d880619592ca5ba65fc1b3", unit: .lb)?.summary(in: .lb) == "Orange, Red, Blue, Green, Black, Purple, Red, Silver")
+        #expect(GymDefaults.load(for: "19e5c6f170d880d3914cc4c2631393cd", unit: .lb)?.summary(in: .lb) == "100\u{00A0}lb")
     }
 
     @Test func aGymLoadOverridesTheDefault() {
         let hackSquat = "19e5c6f170d880d3914cc4c2631393cd"
         var profile = gym(hackSquat)
-        #expect(GymDefaults.effectiveLoad(hackSquat, in: profile) == .base(kg: 100 * lb))
+        #expect(GymDefaults.effectiveLoad(hackSquat, in: profile, unit: .lb) == .base(kg: 100 * lb))
         profile.equipment[hackSquat] = GymEquipment(load: .base(kg: 20))
-        #expect(GymDefaults.effectiveLoad(hackSquat, in: profile) == .base(kg: 20))
+        #expect(GymDefaults.effectiveLoad(hackSquat, in: profile, unit: .lb) == .base(kg: 20))
     }
 }

@@ -38,6 +38,14 @@ final class WorkoutHealth {
     /// How long the phone waits to hear that the watch records before recording on its own.
     private static let watchStartTimeout: Duration = .seconds(10)
 
+    /// The watch runs this workout's session, so the watch app is alive on the wrist for the whole workout.
+    var watchRecords: Bool {
+        switch recorder {
+        case .mirror, .watch: true
+        case .phone, nil: false
+        }
+    }
+
     var mirror: WorkoutRecording? {
         if case .mirror(let recording) = recorder { recording } else { nil }
     }

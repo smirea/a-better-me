@@ -196,10 +196,24 @@ extension SessionFlow {
         var logged = blocks
         logged.setLog(SetLog(completedAt: .now), at: path)
         let step = afterCompleting(path, in: logged, settings: rules) { _, _ in 0 }
+        if let row = rowAfter(path, step: step, in: logged) { return row }
         let exerciseID = step.next ?? logged[path.block].exercises[path.exercise].id
         guard let at = logged.locate(exerciseID) else { return nil }
-        return logged.firstOpenRow(block: at.block, exercise: at.item)
-            ?? nextIncomplete(after: at.block, in: logged).flatMap { logged.locate($0) }.flatMap { logged.firstOpenRow(block: $0.block, exercise: $0.item) }
+        return nextIncomplete(after: at.block, in: logged).flatMap { logged.locate($0) }.flatMap { logged.firstOpenRow(block: $0.block, exercise: $0.item) }
+    }
+
+    /// Where the editor's keypad goes once `path` is logged, in the exercise `step` moves to (else the same one): its
+    /// next open row after `path`, a superset member's open row from the same round on, or the next exercise's first
+    /// open row; failing that, the exercise's first open row, so a skipped warm-up comes last. `nil` once it is done.
+    static func rowAfter(_ path: RowPath, step: Step, in blocks: [WorkoutBlock]) -> RowPath? {
+        let exerciseID = step.next ?? blocks[path.block].exercises[path.exercise].id
+        guard let at = blocks.locate(exerciseID) else { return nil }
+        let open = blocks.rows(block: at.block, exercise: at.item).filter { blocks.log(at: $0) == nil }
+        let later = open.first { row in
+            guard at.block == path.block else { return false }
+            return at.item == path.exercise ? (row.set, row.sub ?? -1) > (path.set, path.sub ?? -1) : row.set >= path.set
+        }
+        return later ?? open.first
     }
 }
 
