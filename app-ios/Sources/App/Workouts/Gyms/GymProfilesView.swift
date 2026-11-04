@@ -8,13 +8,16 @@ struct GymProfilesView: View {
     @Observe(GymProfile.defaultGym) private var defaultGym
     @State private var editing: UUID?
     @State private var adding = false
+    @State private var deleting: GymProfile?
 
     var body: some View {
         List {
             ThemedSection(gyms.count == 1 ? "1 Gym" : "\(gyms.count) Gyms") {
                 ForEach(gyms) { gym in
                     let isDefault = gym.id == defaultGym?.id
-                    GymRow(gym: gym, isDefault: isDefault) { editing = gym.id }
+                    Button { editing = gym.id } label: { GymRow(gym: gym, isDefault: isDefault) }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Opens the gym profile")
                         .listRowBackground(Theme.background)
                         .swipeActions(edge: .leading) {
                             if !isDefault {
@@ -22,10 +25,20 @@ struct GymProfilesView: View {
                                     .tint(Theme.accent)
                             }
                         }
+                        .swipeActions(edge: .trailing) {
+                            if !isDefault {
+                                Button("Delete", systemImage: "trash") { deleting = gym }
+                                    .tint(.red)
+                            }
+                            Button("Edit", systemImage: "pencil") { editing = gym.id }
+                                .tint(Theme.surfaceRaised)
+                        }
                         .contextMenu {
                             Button("Set as Default", systemImage: "star") { store.setDefaultGym(gym.id) }
                                 .disabled(isDefault)
                             Button("Edit", systemImage: "pencil") { editing = gym.id }
+                            Button("Delete", systemImage: "trash", role: .destructive) { deleting = gym }
+                                .disabled(isDefault)
                         }
                 }
             }
@@ -37,6 +50,15 @@ struct GymProfilesView: View {
             Button("Add New Gym Profile") { adding = true }
                 .secondaryPill()
                 .padding(.horizontal, Theme.margin)
+                .padding(.bottom, 8)
+        }
+        .alert("Delete \(deleting?.name ?? "gym")?", isPresented: Binding { deleting != nil } set: { if !$0 { deleting = nil } }) {
+            Button("Delete", role: .destructive) {
+                if let deleting { store.delete(GymProfile.self, id: deleting.id) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Its equipment and weights are removed.")
         }
         .sheet(isPresented: $adding) {
             NewGymSheet(makesDefault: gyms.isEmpty) { editing = $0 }
@@ -49,7 +71,6 @@ struct GymProfilesView: View {
 private struct GymRow: View {
     let gym: GymProfile
     let isDefault: Bool
-    let onEdit: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
@@ -67,15 +88,9 @@ private struct GymRow: View {
                 }
             }
             Spacer()
-            Button("Edit \(gym.name)", systemImage: "pencil", action: onEdit)
-                .labelStyle(.iconOnly)
-                .font(AppFont.headline(13))
-                .foregroundStyle(Theme.textPrimary)
-                .frame(width: 30, height: 30)
-                .background(Theme.surfaceRaised, in: .circle)
-                .buttonStyle(.plain)
         }
         .padding(.vertical, 6)
+        .contentShape(.rect)
         .feedback(self)
     }
 }
@@ -130,6 +145,7 @@ private struct NewGymSheet: View {
                 Button("Create Gym Profile", action: create)
                     .primaryPill()
                     .padding(.horizontal, Theme.margin)
+                    .padding(.bottom, 8)
             }
         }
         .feedback(self)
