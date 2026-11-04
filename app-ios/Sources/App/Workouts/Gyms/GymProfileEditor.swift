@@ -8,7 +8,6 @@ struct GymProfileEditor: View {
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(\.dismiss) private var dismiss
     @Observe private var gym: GymProfile?
-    @Observe(GymProfile.all) private var gyms
     @Observe(GymProfile.defaultGym) private var defaultGym
     @Observe(AppSettings.current) private var settings
     @State private var selectedOnly = false
@@ -44,7 +43,7 @@ struct GymProfileEditor: View {
                     onIcon: { icon in edit { $0.icon = icon } },
                     onRename: { renaming = true },
                     onDuplicate: { duplicate(gym) },
-                    onRemove: gyms.count > 1 ? { confirmingRemove = true } : nil
+                    onDelete: isDefault ? nil : { confirmingRemove = true }
                 )
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
@@ -129,15 +128,19 @@ struct GymProfileEditor: View {
                 Menu("Gym Options", systemImage: "ellipsis") {
                     Button("Set as Default", systemImage: "star") { store.setDefaultGym(gym.id) }
                         .disabled(isDefault)
+                    Button("Delete Gym", systemImage: "trash", role: .destructive) { confirmingRemove = true }
+                        .disabled(isDefault)
                 }
             }
         }
         .nameAlert("Rename Gym", isPresented: $renaming, initial: gym.name, placeholder: "Gym name") { name in
             edit { $0.name = name }
         }
-        .alert("Remove \(gym.name)?", isPresented: $confirmingRemove) {
-            Button("Remove", role: .destructive) { remove(gym, wasDefault: isDefault) }
+        .alert("Delete \(gym.name)?", isPresented: $confirmingRemove) {
+            Button("Delete", role: .destructive) { delete(gym) }
             Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Its equipment and weights are removed.")
         }
         .sheet(item: $editingLoad) { item in
             if let load = GymDefaults.effectiveLoad(item.id, in: gym, unit: settings.weightUnit) {
@@ -215,11 +218,8 @@ struct GymProfileEditor: View {
         }
     }
 
-    private func remove(_ gym: GymProfile, wasDefault: Bool) {
+    private func delete(_ gym: GymProfile) {
         store.delete(GymProfile.self, id: gym.id)
-        if wasDefault, let next = gyms.first(where: { $0.id != gym.id }) {
-            store.setDefaultGym(next.id)
-        }
         dismiss()
     }
 }
@@ -270,8 +270,9 @@ private struct GymActions: View {
     let onIcon: (String) -> Void
     let onRename: () -> Void
     let onDuplicate: () -> Void
-    /// Nil for the last gym, because removing it would only bring the seeded gym back on the next launch.
-    let onRemove: (() -> Void)?
+    /// Nil for the default gym. Another gym takes the default first, which also keeps the last gym, since removing it
+    /// would only bring the seeded gym back on the next launch.
+    let onDelete: (() -> Void)?
 
     static let icons: [(symbol: String, name: String)] = [
         ("house.fill", "House"), ("building.2.fill", "Buildings"), ("building.columns.fill", "Columns"),
@@ -292,8 +293,8 @@ private struct GymActions: View {
                 }
                 Button(action: onRename) { Chip(title: "Rename Gym", systemImage: "square.and.pencil") }
                 Button(action: onDuplicate) { Chip(title: "Duplicate", systemImage: "plus.square.on.square") }
-                Button { onRemove?() } label: { Chip(title: "Remove", systemImage: "minus.circle.fill") }
-                    .disabled(onRemove == nil)
+                Button { onDelete?() } label: { Chip(title: "Delete", systemImage: "trash") }
+                    .disabled(onDelete == nil)
             }
             .padding(.horizontal, Theme.margin)
             .padding(.vertical, 4)
