@@ -1,141 +1,161 @@
+import Charts
 import Feedback
 import SwiftUI
 
-/// The top of the Steps screen: today against the goal, and the current streak.
-struct StepGoalHeader: View {
+/// Above the Steps chart, as Pedometer++ leads with it: the current streak with the best one and the last 30 days
+/// under it, and the flights climbed over the chart's range.
+struct StepsHeader: View {
     let summary: StepGoal.Summary
+    let flights: Double
+    let rangeLabel: String
 
     var body: some View {
-        let fraction = min(summary.today / Double(summary.goal), 1)
-        let remaining = Double(summary.goal) - summary.today
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                // The card reads as one VoiceOver element, so these tags are what a feedback tap can single out.
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(summary.today.wholeText).font(AppFont.number(30))
-                    Text("/ \(Double(summary.goal).wholeText) steps").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Current Streak").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Image(systemName: "flame.fill").font(AppFont.headline(17)).foregroundStyle(summary.streak > 0 ? Theme.goal : Theme.textTertiary)
+                        Text("\(summary.streak)").font(AppFont.number())
+                        Text(summary.streak == 1 ? "day" : "days").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                    }
                 }
-                .feedback("Today's Steps", data: (today: summary.today, goal: summary.goal))
-                Spacer(minLength: 0)
-                StreakBadge(days: summary.streak)
-            }
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Theme.surfaceRaised)
-                    Capsule().fill(StepGoal.tier(summary.today, goal: summary.goal).color)
-                        .frame(width: max(proxy.size.width * fraction, fraction > 0 ? 10 : 0))
+                .accessibilityElement(children: .combine)
+                .feedback("Current Streak", data: summary.streakDays)
+                Spacer(minLength: 12)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Flights Climbed").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Image(systemName: "figure.stairs").font(AppFont.headline(15)).foregroundStyle(Theme.textSecondary)
+                        Text(flights.wholeText).font(AppFont.number())
+                        Text(flights == 1 ? "flight" : "flights").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                    }
+                    Text(rangeLabel).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                 }
+                .accessibilityElement(children: .combine)
+                .feedback("Flights Climbed", data: (flights: flights, range: rangeLabel))
             }
-            .frame(height: 10)
-            .feedback("Goal Progress Bar", data: fraction)
-            Text(remaining > 0 ? "\(remaining.wholeText) to go today" : "Goal reached today")
+            Text("Best streak \(summary.best) \(summary.best == 1 ? "day" : "days") · Goal met \(summary.metLast30) of the last 30 days")
                 .font(AppFont.rowDetail)
                 .foregroundStyle(Theme.textSecondary)
+                .feedback("Best Streak and Goal Days", data: (best: summary.best, metLast30: summary.metLast30))
         }
-        .card()
-        .accessibilityElement(children: .combine)
         .feedback(self)
     }
 }
 
-struct StreakBadge: View {
-    let days: Int
+/// How much of a count fits over a bar. Pedometer++ labels a bar only when its count fits the bar's width, so a dense
+/// range shortens the counts and then drops them.
+enum BarLabelStyle: Equatable {
+    case full, compact, hidden
 
-    var body: some View {
-        Label(days == 1 ? "1 day" : "\(days) days", systemImage: "flame.fill")
-            .font(AppFont.chip)
-            .foregroundStyle(days > 0 ? Theme.goal : Theme.textTertiary)
-            .accessibilityLabel("\(days) day streak")
-            .feedback(self)
+    /// The longest label of the style must fit a bar's slot, so every bar of a range reads the same way.
+    static func fitting(_ values: [Double], slot: CGFloat, width: (String) -> CGFloat) -> BarLabelStyle {
+        for style in [BarLabelStyle.full, .compact] where values.allSatisfy({ width(style.text($0)) <= slot }) {
+            return style
+        }
+        return .hidden
+    }
+
+    func text(_ value: Double) -> String {
+        switch self {
+        case .full: value.wholeText
+        case .compact: value.formatted(.number.notation(.compactName).precision(.significantDigits(2)))
+        case .hidden: ""
+        }
     }
 }
 
-/// The last seven days as Pedometer++ draws them: each bar colored by how close it came to the goal, its count above,
-/// and a bracket over the days of the current streak.
-struct StepWeekBars: View {
-    let summary: StepGoal.Summary
+/// The Steps chart's counts over each bar, with the flights climbed under them, and the bracket over the current
+/// streak, placed from the chart's own positions so a label sits on its bar at any range. Each label masks the goal
+/// line where it crosses it.
+struct StepBarLabels: View {
+    static let countFont = UIFont(name: "DMSans-SemiBold", size: 11) ?? .systemFont(ofSize: 11, weight: .semibold)
+    static let flightsFont = UIFont(name: "DMSans-Regular", size: 10) ?? .systemFont(ofSize: 10)
+    static let bracketFont = UIFont(name: "DMSans-SemiBold", size: 12) ?? .systemFont(ofSize: 12, weight: .semibold)
+    /// The plot's top share left free for the labels and the bracket.
+    static let headroom = 0.2
+
+    let proxy: ChartProxy
+    let points: [DatedValue]
+    /// Each bar's middle, so the narrowest gap between two is the room a label has.
+    let centers: [Date]
+    /// Flights per drawn bar, keyed like `points`.
+    let flights: [Date: Double]
+    /// Days of the current streak inside the range, when the bars are days.
+    let streak: (first: Date, last: Date)?
+    let streakLength: Int
 
     var body: some View {
-        let top = max(summary.week.map(\.steps).max() ?? 0, Double(summary.goal), 1)
-        VStack(spacing: 6) {
-            bracket.frame(height: 22)
-            HStack(alignment: .bottom, spacing: 6) {
-                ForEach(summary.week) { day in
-                    VStack(spacing: 4) {
-                        Text(day.steps > 0 ? day.steps.wholeText : "")
-                            .font(AppFont.caption(11))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                        RoundedRectangle(cornerRadius: Theme.tinyCornerRadius)
-                            .fill(day.tier.color)
-                            .frame(height: max(130 * day.steps / top, day.steps > 0 ? 4 : 0))
+        GeometryReader { geometry in
+            if let frame = proxy.plotFrame {
+                let plot = geometry[frame]
+                let xs = centers.map { proxy.position(forX: $0) }
+                let slot = zip(xs.dropFirst(), xs).compactMap { next, x in next.flatMap { a in x.map { a - $0 } } }.min() ?? plot.width
+                let style = BarLabelStyle.fitting(points.map(\.value), slot: slot) { Self.width($0, Self.countFont) }
+                if style != .hidden {
+                    ForEach(Array(points.enumerated()), id: \.element.date) { index, point in
+                        if let x = xs[index], let y = proxy.position(forY: point.value) {
+                            label(style.text(point.value), flights: flights[point.date] ?? 0, slot: slot)
+                                .frame(width: max(slot, 1), height: 40, alignment: .bottom)
+                                .position(x: plot.minX + x, y: plot.minY + y - 22)
+                        }
                     }
-                    .frame(maxWidth: .infinity)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(day.date.formatted(.dateTime.weekday(.wide))), \(day.steps.wholeText) steps")
                 }
-            }
-            .frame(height: 150, alignment: .bottom)
-            HStack(spacing: 6) {
-                ForEach(summary.week) { day in
-                    VStack(spacing: 0) {
-                        Text(day.date.formatted(.dateTime.weekday(.abbreviated)).uppercased()).font(AppFont.headline(12))
-                        Text(day.date.formatted(.dateTime.day())).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                if let streak, let first = proxy.position(forX: streak.first), let last = proxy.position(forX: streak.last) {
+                    let left = plot.minX + first - slot * 0.4
+                    let right = plot.minX + last + slot * 0.4
+                    if right - left >= Self.width(streakText, Self.bracketFont) + 28 {
+                        bracket(from: left, to: right, y: plot.minY + 10)
                     }
-                    .frame(maxWidth: .infinity)
                 }
-            }
-            .accessibilityHidden(true)
-        }
-        .card()
-        .feedback(self)
-    }
-
-    private var bracket: some View {
-        GeometryReader { proxy in
-            let indices = summary.week.indices.filter { summary.week[$0].inStreak }
-            if let first = indices.first, let last = indices.last {
-                let column = (proxy.size.width + 6) / 7
-                let left = column * CGFloat(first) + 4
-                let right = column * CGFloat(last + 1) - 10
-                let mid = proxy.size.height / 2
-                Path { path in
-                    path.move(to: CGPoint(x: left, y: proxy.size.height))
-                    path.addQuadCurve(to: CGPoint(x: left + 6, y: mid), control: CGPoint(x: left, y: mid))
-                    path.addLine(to: CGPoint(x: right - 6, y: mid))
-                    path.addQuadCurve(to: CGPoint(x: right, y: proxy.size.height), control: CGPoint(x: right, y: mid))
-                }
-                .stroke(Theme.goal, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                Text(summary.streak == 1 ? "1 day" : "\(summary.streak) days")
-                    .font(AppFont.headline(13))
-                    .foregroundStyle(Theme.goal)
-                    .padding(.horizontal, 6)
-                    .background(Theme.surface)
-                    .position(x: (left + right) / 2, y: mid)
             }
         }
+        .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
-}
 
-/// Below the chart on the Steps screen: the week, then the streak numbers.
-struct StepGoalInsights: View {
-    let summary: StepGoal.Summary
+    private var streakText: String { streakLength == 1 ? "1 day" : "\(streakLength) days" }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader("Last 7 Days")
-            StepWeekBars(summary: summary)
-            InsightTiles(tiles: [
-                InsightTile(
-                    value: "\(summary.streak)", unit: summary.streak == 1 ? "day" : "days", title: "Current Streak",
-                    text: "Days in a row at \(Double(summary.goal).wholeText) steps or more. Today joins once it gets there."
-                ),
-                InsightTile(value: "\(summary.best)", unit: summary.best == 1 ? "day" : "days", title: "Best Streak", text: "Your longest run of days at the goal."),
-                InsightTile(value: "\(summary.metLast30)", unit: "of 30", title: "Goal Days", text: "Days in the last 30 that reached the goal."),
-            ])
+    private func label(_ count: String, flights: Double, slot: CGFloat) -> some View {
+        let flightsText = flights.wholeText
+        return VStack(spacing: 1) {
+            Text(count).font(Font(Self.countFont)).foregroundStyle(Theme.textPrimary)
+            if flights > 0, Self.width(flightsText, Self.flightsFont) + 11 <= slot {
+                HStack(spacing: 1) {
+                    Image(systemName: "figure.stairs").font(.system(size: 8, weight: .semibold))
+                    Text(flightsText).font(Font(Self.flightsFont))
+                }
+                .foregroundStyle(Theme.textSecondary)
+            }
         }
-        .feedback(self)
+        .lineLimit(1)
+        .fixedSize()
+        .padding(.horizontal, 1)
+        .background(Theme.background, in: .rect(cornerRadius: 3))
+    }
+
+    private func bracket(from left: CGFloat, to right: CGFloat, y: CGFloat) -> some View {
+        ZStack {
+            Path { path in
+                path.move(to: CGPoint(x: left, y: y + 8))
+                path.addQuadCurve(to: CGPoint(x: left + 6, y: y), control: CGPoint(x: left, y: y))
+                path.addLine(to: CGPoint(x: max(right - 6, left + 6), y: y))
+                path.addQuadCurve(to: CGPoint(x: right, y: y + 8), control: CGPoint(x: right, y: y))
+            }
+            .stroke(Theme.goal, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+            Text(streakText)
+                .font(Font(Self.bracketFont))
+                .foregroundStyle(Theme.goal)
+                .padding(.horizontal, 5)
+                .background(Theme.background)
+                .fixedSize()
+                .position(x: (left + right) / 2, y: y)
+        }
+    }
+
+    private static func width(_ text: String, _ font: UIFont) -> CGFloat {
+        ceil((text as NSString).size(withAttributes: [.font: font]).width)
     }
 }
 
