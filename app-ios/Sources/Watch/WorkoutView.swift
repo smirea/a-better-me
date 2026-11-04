@@ -43,6 +43,14 @@ private struct MainPage: View {
                 }
             }
             .watchGlow(workout.rest != nil && !restOver ? Theme.lavender : Theme.accent)
+            .toolbar {
+                // Paused shows the clock large in the middle.
+                if workout.pausedAt == nil {
+                    ToolbarItem(placement: .topBarLeading) {
+                        WorkoutClock(workout: workout, size: 15).foregroundStyle(Theme.amber)
+                    }
+                }
+            }
         }
         .task(id: workout.rest) {
             restOver = false

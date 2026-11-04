@@ -9,13 +9,14 @@ struct FlowRules: Codable, Hashable, Sendable {
 }
 
 extension WorkoutSet {
-    /// The main row and every drop or myo sub-row are logged.
-    var isDone: Bool { isCompleted && subSets.allSatisfy { $0.log != nil } }
+    /// The main row and every drop or myo sub-row are logged, or the set was skipped.
+    var isDone: Bool { skipped == true || isCompleted && subSets.allSatisfy { $0.log != nil } }
 
     /// The set as a plan: targets and structure without anything lifted.
     var planned: WorkoutSet {
         var set = self
         set.log = nil
+        set.skipped = nil
         set.subSets = subSets.map { SubSet(id: $0.id, target: $0.target) }
         return set
     }
@@ -82,6 +83,13 @@ enum SessionFlow {
         Int((Double(seconds) * Double(percent) / 100).rounded(.down))
     }
 
+    /// Where the screen goes once the set at `path` is skipped: where logging its last row would go, without a rest.
+    static func afterSkipping(_ path: RowPath, in blocks: [WorkoutBlock], settings: FlowRules) -> BlockExercise.ID? {
+        let set = blocks[path.block].exercises[path.exercise].sets[path.set]
+        let last = RowPath(block: path.block, exercise: path.exercise, set: path.set, sub: set.subSets.isEmpty ? nil : set.subSets.count - 1)
+        return afterCompleting(last, in: blocks, settings: settings) { _, _ in 0 }.next
+    }
+
     /// The first unfinished exercise after `block`, wrapping around to the start.
     static func nextIncomplete(after block: Int, in blocks: [WorkoutBlock]) -> BlockExercise.ID? {
         let order = Array(blocks.indices.dropFirst(block + 1)) + Array(blocks.indices.prefix(block + 1))
@@ -131,7 +139,9 @@ extension [WorkoutBlock] {
         return path.sub.map { set.subSets[$0].target } ?? set.target
     }
 
+    /// Logging any row of a skipped set clears its skip.
     mutating func setLog(_ log: SetLog?, at path: RowPath) {
+        if log != nil { self[path.block].exercises[path.exercise].sets[path.set].skipped = nil }
         if let sub = path.sub {
             self[path.block].exercises[path.exercise].sets[path.set].subSets[sub].log = log
         } else {
@@ -175,7 +185,16 @@ extension [WorkoutBlock] {
     }
 
     func firstOpenRow(block: Int, exercise: Int) -> RowPath? {
-        rows(block: block, exercise: exercise).first { log(at: $0) == nil }
+        rows(block: block, exercise: exercise).first { log(at: $0) == nil && !isSkipped(at: $0) }
+    }
+
+    /// Whether the row's set was skipped. Skipping marks the whole set, sub-rows included.
+    func isSkipped(at path: RowPath) -> Bool {
+        self[path.block].exercises[path.exercise].sets[path.set].skipped == true
+    }
+
+    mutating func setSkipped(_ skipped: Bool, at path: RowPath) {
+        self[path.block].exercises[path.exercise].sets[path.set].skipped = skipped ? true : nil
     }
 }
 
@@ -208,7 +227,7 @@ extension SessionFlow {
     static func rowAfter(_ path: RowPath, step: Step, in blocks: [WorkoutBlock]) -> RowPath? {
         let exerciseID = step.next ?? blocks[path.block].exercises[path.exercise].id
         guard let at = blocks.locate(exerciseID) else { return nil }
-        let open = blocks.rows(block: at.block, exercise: at.item).filter { blocks.log(at: $0) == nil }
+        let open = blocks.rows(block: at.block, exercise: at.item).filter { blocks.log(at: $0) == nil && !blocks.isSkipped(at: $0) }
         let later = open.first { row in
             guard at.block == path.block else { return false }
             return at.item == path.exercise ? (row.set, row.sub ?? -1) > (path.set, path.sub ?? -1) : row.set >= path.set

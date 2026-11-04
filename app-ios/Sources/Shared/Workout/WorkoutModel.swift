@@ -65,6 +65,9 @@ struct WorkoutSet: Codable, Hashable, Identifiable {
     var restSeconds: Int?
     /// What was actually done. Always `nil` in templates.
     var log: SetLog?
+    /// Passed over in a live workout: the flow moves on as if it were done, and it stays unlogged. Logging it clears
+    /// the mark. Optional so sessions stored before it decode, and absent from the JSON unless set.
+    var skipped: Bool?
     /// The drops of a drop set or the mini-sets of a myo set. Always empty for other types.
     var subSets: [SubSet] = []
 

@@ -45,7 +45,10 @@ struct WatchEvent: Codable, Hashable, Sendable, Identifiable {
         /// A workout started on the watch, as it started: the phone inserts this session.
         case start(WatchWorkout)
         case log(rowID: UUID, values: LiveValues)
+        /// Clears the row's log, or its set's skip.
         case unlog(rowID: UUID)
+        /// Passes over the row's set without logging it.
+        case skip(rowID: UUID)
         /// A copy of the exercise's last working set, with the id the watch gave it.
         case addSet(exerciseID: BlockExercise.ID, setID: UUID)
         case select(exerciseID: BlockExercise.ID)
@@ -121,9 +124,17 @@ extension WatchWorkout {
             if let next = step.next { current = next }
             if current == nil { current = blocks[path.block].exercises[path.exercise].id }
         case .unlog(let rowID):
-            guard let path = blocks.path(of: rowID), let log = blocks.log(at: path) else { return }
-            prefill[rowID] = LiveValues(log)
-            blocks.setLog(nil, at: path)
+            guard let path = blocks.path(of: rowID) else { return }
+            if let log = blocks.log(at: path) {
+                prefill[rowID] = LiveValues(log)
+                blocks.setLog(nil, at: path)
+            } else {
+                blocks.setSkipped(false, at: path)
+            }
+        case .skip(let rowID):
+            guard let path = blocks.path(of: rowID), blocks.log(at: path) == nil, !blocks.isSkipped(at: path) else { return }
+            blocks.setSkipped(true, at: path)
+            if let next = SessionFlow.afterSkipping(path, in: blocks, settings: rules) { current = next }
         case .addSet(let exerciseID, let setID):
             guard let at = blocks.locate(exerciseID), blocks.path(of: setID) == nil else { return }
             let item = blocks[at.block].exercises[at.item]

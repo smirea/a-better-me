@@ -190,6 +190,7 @@ final class LiveWorkoutController {
             // The draft goes in before the write, so the copy that shows the row open already shows the undone values.
             if let path = session.blocks.path(of: rowID), let log = session.blocks.log(at: path) { live.drafts[rowID] = SetEntry(log) }
             perform(.unlog(rowID: rowID), at: event.at)
+        case .skip(let rowID): perform(.skip(rowID: rowID), at: event.at)
         case .addSet(let exerciseID, let setID): perform(.addSet(exerciseID: exerciseID, setID: setID), at: event.at)
         case .select(let exerciseID): perform(.select(exerciseID: exerciseID), at: event.at)
         case .adjustRest(let seconds): perform(.adjustRest(seconds: seconds), at: event.at)
@@ -220,7 +221,12 @@ final class LiveWorkoutController {
                     session.blocks.setLog(SetLog(values, at: event.at), at: path)
                 }
             case .unlog(let rowID):
-                if let path = session.blocks.path(of: rowID) { session.blocks.setLog(nil, at: path) }
+                if let path = session.blocks.path(of: rowID) {
+                    session.blocks.setLog(nil, at: path)
+                    session.blocks.setSkipped(false, at: path)
+                }
+            case .skip(let rowID):
+                if let path = session.blocks.path(of: rowID), session.blocks.log(at: path) == nil { session.blocks.setSkipped(true, at: path) }
             case .addSet(let exerciseID, let setID):
                 session.blocks.addSet(to: exerciseID, id: setID)
             case .pause:
@@ -386,7 +392,7 @@ final class LiveWorkoutController {
             let paused = live.resume(at: date)
             return store.modify(WorkoutSession.self, id: session.id) { $0.pausedSeconds += paused }
         case .finish: return finish(session, in: store, at: date)
-        case .log, .unlog, .select, .addSet: break
+        case .log, .unlog, .skip, .select, .addSet: break
         }
         if let editor { return editor(command, date) }
         apply(command, to: session, in: store, at: date)
@@ -424,6 +430,9 @@ final class LiveWorkoutController {
                 if let next = step.next { live.currentExercise = next }
             case .draft(let rowID, let value):
                 live.drafts[rowID] = value
+            case .skipped(let path, let blocks):
+                guard inputs.session?.id == session.id, !finishedSessions.contains(session.id) else { return }
+                if let next = SessionFlow.afterSkipping(path, in: blocks, settings: inputs.settings.workout.flow) { live.currentExercise = next }
             }
         }
     }
@@ -449,6 +458,7 @@ private struct Fill: Sendable {
         case none
         case logged(rowID: UUID, path: RowPath, blocks: [WorkoutBlock])
         case draft(rowID: UUID, SetEntry)
+        case skipped(path: RowPath, blocks: [WorkoutBlock])
     }
 
     var drafts: [UUID: SetEntry]
@@ -465,9 +475,17 @@ private struct Fill: Sendable {
             blocks.setLog(SetEntry(values, keeping: entry(path, in: blocks)).log(at: at), at: path)
             return .logged(rowID: rowID, path: path, blocks: blocks)
         case .unlog(let rowID):
-            guard let path = blocks.path(of: rowID), let log = blocks.log(at: path) else { return .none }
+            guard let path = blocks.path(of: rowID) else { return .none }
+            guard let log = blocks.log(at: path) else {
+                blocks.setSkipped(false, at: path)
+                return .none
+            }
             blocks.setLog(nil, at: path)
             return .draft(rowID: rowID, SetEntry(log))
+        case .skip(let rowID):
+            guard let path = blocks.path(of: rowID), blocks.log(at: path) == nil, !blocks.isSkipped(at: path) else { return .none }
+            blocks.setSkipped(true, at: path)
+            return .skipped(path: path, blocks: blocks)
         case .addSet(let exerciseID, let setID):
             blocks.addSet(to: exerciseID, id: setID)
             return .none
@@ -519,7 +537,8 @@ extension WatchEvent {
         switch kind {
         case .start: return true
         case .log(let rowID, _): return blocks.path(of: rowID).map { blocks.log(at: $0) != nil } ?? true
-        case .unlog(let rowID): return blocks.path(of: rowID).map { blocks.log(at: $0) == nil } ?? true
+        case .unlog(let rowID): return blocks.path(of: rowID).map { blocks.log(at: $0) == nil && !blocks.isSkipped(at: $0) } ?? true
+        case .skip(let rowID): return blocks.path(of: rowID).map { blocks.log(at: $0) != nil || blocks.isSkipped(at: $0) } ?? true
         case .addSet(_, let setID): return blocks.path(of: setID) != nil
         case .select(let exerciseID): return workout.current == exerciseID
         case .pause: return workout.pausedAt != nil

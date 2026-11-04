@@ -39,8 +39,8 @@ struct ControlsPage: View {
                         control("End", icon: "xmark", tint: Theme.destructive) { confirmingEnd = true }
                     }
                     GridRow {
-                        control("Undo Set", icon: "arrow.uturn.backward", tint: Theme.lavender, disabled: model.lastLoggedRow == nil) {
-                            if let row = model.lastLoggedRow { model.act(.unlog(rowID: row)) }
+                        control("Undo", icon: "arrow.uturn.backward", tint: Theme.lavender, disabled: model.undoRow == nil) {
+                            if let row = model.undoRow { model.act(.unlog(rowID: row)) }
                             done()
                         }
                         control("Add Set", icon: "plus", tint: Theme.green, disabled: addSetExercise == nil) {

@@ -2,7 +2,7 @@ import SwiftUI
 import WatchKit
 
 /// The set to do next: the exercise, its sets as dots, and a pill per value. Tap a pill and turn the Digital Crown to
-/// change it; the big button logs the set with those values.
+/// change it; the big button logs the set with those values, and the one beside it skips the set unlogged.
 struct SetView: View {
     let workout: WatchWorkout
     let path: RowPath
@@ -48,14 +48,24 @@ struct SetView: View {
         }
         .toolbar {
             ToolbarItem(placement: .bottomBar) {
-                Button(action: logSet) {
-                    Label(logTitle, systemImage: "checkmark")
-                        .font(AppFont.headline(16))
-                        .frame(maxWidth: .infinity)
+                HStack(spacing: 6) {
+                    Button(action: skipSet) {
+                        Image(systemName: "forward.end.fill").font(.system(size: 15, weight: .semibold))
+                    }
+                    .buttonStyle(.glass)
+                    .frame(width: 52)
+                    .accessibilityLabel("Skip set")
+                    Button(action: logSet) {
+                        Label(logTitle, systemImage: "checkmark")
+                            .font(AppFont.headline(16))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .tint(Theme.accent)
+                    .accessibilityLabel("Log set")
                 }
-                .buttonStyle(.glassProminent)
-                .tint(Theme.accent)
-                .accessibilityLabel("Log set")
             }
         }
         .onAppear { load() }
@@ -84,6 +94,10 @@ struct SetView: View {
 
     private func logSet() {
         WatchModel.shared.act(.log(rowID: row.id, values: values))
+    }
+
+    private func skipSet() {
+        WatchModel.shared.act(.skip(rowID: row.id))
     }
 
     private func load() {
@@ -149,7 +163,7 @@ struct MemberBadge: View {
     }
 }
 
-/// One dot per set: logged ones filled, the current one white with its number, warm-ups marked W.
+/// One dot per set: logged ones filled, skipped ones dim, the current one white with its number, warm-ups marked W.
 struct SetDots: View {
     let sets: [WorkoutSet]
     let current: Int
@@ -158,11 +172,14 @@ struct SetDots: View {
         HStack(spacing: 4) {
             ForEach(Array(sets.prefix(8).enumerated()), id: \.element.id) { index, set in
                 let isCurrent = index == current
+                let isSkipped = set.skipped == true && !set.isCompleted
                 Text(set.type.badge ?? "\(sets.number(at: index))")
                     .font(AppFont.headline(10))
-                    .foregroundStyle(isCurrent ? .black : set.isDone ? Theme.textPrimary : Theme.textSecondary)
+                    .foregroundStyle(isCurrent ? .black : isSkipped ? Theme.textTertiary : set.isDone ? Theme.textPrimary : Theme.textSecondary)
+                    .strikethrough(isSkipped && !isCurrent)
                     .frame(width: 18, height: 18)
-                    .background(isCurrent ? Theme.textPrimary : set.isDone ? Theme.accent : Theme.surfaceRaised, in: Circle())
+                    .background(isCurrent ? Theme.textPrimary : set.isDone && !isSkipped ? Theme.accent : Theme.surfaceRaised, in: Circle())
+                    .opacity(isSkipped && !isCurrent ? 0.6 : 1)
             }
         }
         .accessibilityElement(children: .ignore)
