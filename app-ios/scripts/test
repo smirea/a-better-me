@@ -1,0 +1,70 @@
+#!/usr/bin/env bun
+// Runs the AppTests Swift Testing suites on this worktree's simulator: waits for room on the Mac, boots it, builds,
+// and installs the test host itself before xcodebuild launches it (see the Live Activity note below).
+import { spawnSync } from "node:child_process";
+import { join, resolve } from "node:path";
+import { withBuildLock } from "./build-lock.ts";
+import { agentCommand } from "../../scripts/lib.ts";
+
+const root = resolve(import.meta.dir, "..");
+const argv = Bun.argv.slice(2);
+const split = argv.includes("--") ? argv.indexOf("--") : argv.length;
+const passthrough = argv.slice(split + 1);
+let target: string | undefined;
+const suites: string[] = [];
+for (let i = 0; i < split; i++) {
+    const arg = argv[i]!;
+    if (arg === "-h" || arg === "--help") {
+        console.log(`Usage: scripts/test [-t <udid>] [Suite | Target/Suite/test ...] [-- xcodebuild arguments]
+
+Runs AppTests on the worktree's simulator (\`agent-simulator udid\`), or -t's. A bare name is an AppTests suite, so
+\`scripts/test LoadingCacheTests\` runs -only-testing:AppTests/LoadingCacheTests; no names run every suite. Exits 3
+when the Mac stayed too busy to boot: rerun.`);
+        process.exit(0);
+    }
+    if (arg === "-t" || arg === "--target") target = argv[++i];
+    else if (arg.startsWith("-")) throw new Error(`Unknown option ${arg}. Pass xcodebuild arguments after --.`);
+    else suites.push(arg);
+}
+
+function sh(args: string[], capture = false) {
+    const result = spawnSync(args[0]!, args.slice(1), { cwd: root, encoding: "utf8", stdio: ["ignore", capture ? "pipe" : "inherit", "inherit"] });
+    if (result.status !== 0) process.exit(result.status ?? 1);
+    return (result.stdout ?? "").trim();
+}
+
+/** The app's process on the simulator, or undefined when it isn't running. */
+function appProcess(udid: string) {
+    const jobs = spawnSync("xcrun", ["simctl", "spawn", udid, "launchctl", "list"], { encoding: "utf8" }).stdout ?? "";
+    return jobs.split("\n").find(line => line.includes("UIKitApplication:com.stefan.a-better-me["))?.split("\t")[0];
+}
+
+const simulator = agentCommand("agent-simulator");
+const udid = target ?? sh([simulator, "udid"], true);
+sh([simulator, "claim", udid]);
+sh([simulator, "wait", udid]);
+sh(["xcrun", "simctl", "bootstatus", udid, "-b"], true);
+
+const only = suites.map(suite => `-only-testing:${suite.includes("/") ? suite : `AppTests/${suite}`}`);
+// The folder `scripts/run` builds into, so a test run after a launch only compiles the tests.
+const build = join(root, "DerivedData", "simulator");
+const xcodebuild = (action: string) => spawnSync("xcodebuild", [
+    action, "-quiet", "-project", "App.xcodeproj", "-scheme", "App", "-configuration", "Debug",
+    "-destination", `platform=iOS Simulator,id=${udid}`, "-derivedDataPath", build,
+    "-clonedSourcePackagesDirPath", join(root, "DerivedData", "SourcePackages"), "CODE_SIGN_IDENTITY=-",
+    ...only, ...passthrough,
+], { cwd: root, stdio: "inherit" }).status ?? 1;
+const code = await withBuildLock(build, async () => {
+    const built = xcodebuild("build-for-testing");
+    if (built) return built;
+    // Installing a new build ends the Live Activity the old one started (an in-progress workout keeps one), and
+    // liveactivitiesd then launches the app in the background to deliver that. xcodebuild's own launch in the same
+    // moment came back with no process: "Simulator device failed to launch com.stefan.a-better-me. No such process"
+    // (#141). So this installs first and lets that launch happen, and xcodebuild's install finds no activity to end.
+    const before = appProcess(udid);
+    sh(["xcrun", "simctl", "install", udid, join(build, "Build/Products/Debug-iphonesimulator/App.app")]);
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline && [undefined, before].includes(appProcess(udid))) Bun.sleepSync(200);
+    return xcodebuild("test-without-building");
+});
+process.exit(code);
