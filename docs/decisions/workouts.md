@@ -66,17 +66,15 @@ Milestone 2 builds what milestone 1 cut, so the app does everything the owner us
 - **Weights are stored in kilograms.** Display units come from settings, the way the reference app does it.
 - Field-level detail lives in the code (`app-ios/Sources/App/Workouts/Model/`) and is mirrored in the research spec's "Data model implied" section. Do not copy it here.
 
-## Feature ownership
+## Code layout
 
-Milestone 1 is split so that parallel agents never edit the same files.
-
-- **Coordinator (groundwork, merged first).** The app shell and tab bar, the design system (`Sources/App/DesignSystem/`), the domain model, persistence, and derived metrics (`Sources/App/Workouts/Model/`), shared row parts (`Sources/App/Workouts/Components/`: muscle tags and tiles, RIR and set badges), the catalog loader and data, and More's settings. Shared types change only through the coordinator, or through a worker PR that says so in its description.
-- **Cross-feature views have a fixed signature and one owner.** The groundwork ships each as a placeholder with its final signature, so callers build against it before the owner lands it. The exercise picker and detail sheet (`Library/ExercisePicker.swift`) belong to the library. The Targets sheet (`Builder/SetTargetsSheet.swift`) belongs to the builder; the live session presents it with warm-ups allowed. The live workout and the summary (`Session/LiveWorkoutView.swift`, `Session/WorkoutSummaryView.swift`) belong to the live session; the builder starts workouts and history and the calendar open summaries.
+- **Shared code.** The app shell and tab bar, the design system (`Sources/App/DesignSystem/`), the domain model, persistence, and derived metrics (`Sources/App/Workouts/Model/`), shared row parts (`Sources/App/Workouts/Components/`: muscle tags and tiles, RIR and set badges), the catalog loader and data, and More's settings.
+- **Cross-feature views live in one feature's folder.** The exercise picker and detail sheet (`Library/ExercisePicker.swift`) belong to the library. The Targets sheet (`Builder/SetTargetsSheet.swift`) belongs to the builder; the live session presents it with warm-ups allowed. The live workout and the summary (`Session/LiveWorkoutView.swift`, `Session/WorkoutSummaryView.swift`) belong to the live session; the builder starts workouts and history and the calendar open summaries.
 - **One presenter owns the full-screen workout.** `LiveWorkoutPresenter` (in `Components/`) says whether the in-progress session fills the screen. The builder calls `start`, the live session minimizes by setting `isExpanded` to false and the bottom accessory sets it back, and the root view presents the cover.
 - **Exercise library.** `Sources/App/Workouts/Library/`: Settings > Exercises, search, filters, the picker, the detail sheet with its Instructions, Details, and History tabs, Exercise Settings, and creating custom exercises.
 - **Workout builder.** `Sources/App/Workouts/Builder/`: the Workout tab (week strip, Workout Library), the workout detail editor, the Targets sheet, supersets, and the "+" sheet with Empty Workout and New Workout.
 - **Live session and history.** `Sources/App/Workouts/Session/` and `Sources/App/Workouts/History/`: the live workout and its keypad, rest timer, warm-up scheme, finishing, the Workout Complete summary, Update Workout Plan, the in-progress bottom accessory, and Workout History.
-- **Levels.** `Sources/App/Workouts/Levels/`: the Levels screen (pushed from More), the muscle detail with Contributing Lifts, and the front and back body heat map. The summary's body figures reuse that heat map once both land, and the coordinator wires them together.
+- **Levels.** `Sources/App/Workouts/Levels/`: the Levels screen (pushed from More), the muscle detail with Contributing Lifts, and the front and back body heat map. The summary's body figures reuse that heat map.
 
 ## Exercise library
 
