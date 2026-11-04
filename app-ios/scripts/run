@@ -161,6 +161,9 @@ async function deploy(target: Target, project: string) {
     if (target.kind === "simulator") {
         await thisBoot;
         target.state = "booted";
+        // A phone `HKWorkoutSession` makes healthd check Health's Motion access (Fitness Tracking, on by default on an
+        // iPhone) and, without it, open Settings. Simulators start without it and have no switch to turn it on.
+        await command(["xcrun", "simctl", "privacy", target.id, "grant", "motion", "com.apple.Health"], true);
         const developer = process.env.DEVELOPER_DIR ?? (await command(["xcode-select", "-p"], true)).trim();
         const simulator = join(developer, "Applications/Simulator.app");
         if (!values.headless) await command(existsSync(simulator) ? ["open", "-a", simulator, "--args", "-CurrentDeviceUDID", target.id]
