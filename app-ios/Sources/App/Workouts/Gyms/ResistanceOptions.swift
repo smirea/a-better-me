@@ -114,6 +114,12 @@ extension Loading {
         return firstSteps(items)
     }
 
+    /// The listed bar weight closest to a stored choice, within half a kilogram. A choice is stored in kg as the unit
+    /// showed it, so a 15 kg bar must still pick the 33 lb (14.97 kg) bar after a switch to lb, and back.
+    static func matchingBar<Option>(_ choiceKg: Double, among options: [Option], kg: (Option) -> Double) -> Option? {
+        options.filter { abs(kg($0) - choiceKg) <= 0.5 }.min { abs(kg($0) - choiceKg) < abs(kg($1) - choiceKg) }
+    }
+
     private struct PlateContext {
         var unit: WeightUnit
         var perSide: Bool
@@ -133,7 +139,7 @@ extension Loading {
         switch load(base.id) {
         case let .weights(options)?:
             baseWeights = Set(options.map(\.kg)).sorted().map(unit.fromKg)
-            let chosen = context.barWeightKg[base.id].flatMap { choice in options.first { abs($0.kg - choice) < 0.005 }?.kg }
+            let chosen = context.barWeightKg[base.id].flatMap { matchingBar($0, among: options, kg: \.kg)?.kg }
             baseKg = chosen ?? options.map(\.kg).max()
         case let .base(kg)?:
             baseKg = kg
