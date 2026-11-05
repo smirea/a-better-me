@@ -158,7 +158,7 @@ export const screens: Screen[] = [
 		after: [...tapButton('Close'), ...discardWorkout],
 	},
 	{ name: 'levels-muscle', steps: [...more('Levels'), ...tap('Lats, 12 sets')] },
-	{ name: 'gym-editor', steps: [...more('Gym Profiles'), ...tap('Your Gym, 81 pieces of equipment, Default')] },
+	{ name: 'gym-editor', steps: [...more('Gym Profiles'), ...tap('Your Gym')] },
 	{ name: 'gym-new', steps: [...more('Gym Profiles'), ...tap('Add New Gym Profile')] },
 	{ name: 'exercises-custom', steps: [...more('Exercises'), ...tap('Create Custom Exercise')] },
 	{
