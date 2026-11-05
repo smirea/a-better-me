@@ -2,6 +2,7 @@ import { afterEach, describe, expect, spyOn, test } from 'bun:test';
 import type { RambleOutline } from './ramble';
 import {
 	Reader,
+	scriptedTranscriber,
 	serveLiveRamble,
 	wordsAfter,
 	xaiTranscriber,
@@ -128,6 +129,31 @@ describe('Reader', () => {
 		expect(await settling).toEqual(outline());
 		expect(Date.now() - started).toBeLessThan(timing.settleCapMs);
 	});
+});
+
+test('a scripted transcriber hears its text a word at a time, committed through each clause, and all of it at the stop', async () => {
+	const heard: Heard[] = [];
+	let done = false;
+	const stt = await scriptedTranscriber(
+		'Two eggs, toast and',
+		1,
+	)({
+		heard: h => heard.push(h),
+		done: () => (done = true),
+		error: error => {
+			throw error;
+		},
+	});
+	await Bun.sleep(30);
+	expect(heard.slice(0, 4)).toEqual([
+		{ committed: '', partial: 'Two' },
+		{ committed: 'Two eggs,', partial: '' },
+		{ committed: 'Two eggs,', partial: 'toast' },
+		{ committed: 'Two eggs,', partial: 'toast and' },
+	]);
+	stt.end();
+	expect(heard.at(-1)).toEqual({ committed: 'Two eggs, toast and', partial: '' });
+	expect(done).toBe(true);
 });
 
 describe('xaiTranscriber', () => {

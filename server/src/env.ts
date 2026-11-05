@@ -16,6 +16,7 @@ const env = z.object({
   SYNC_PAGE_SIZE: optional(z.coerce.number().int().min(0)),
   SYNC_RETENTION_MS: optional(z.coerce.number().int().min(0)),
   SYNC_COMPACT_EVERY_MS: optional(z.coerce.number().int().min(0)),
+  RAMBLE_SCRIPT: optional(z.string()),
 }).parse(process.env);
 
 export default env;

@@ -112,6 +112,38 @@ export function wordsAfter(text: string, prefix: string): string | null {
 }
 
 /**
+ * Hears `script` instead of the audio, a word every third of a second from the session's start, committed through
+ * each word that ends a sentence or clause; the stop commits the rest. A development server uses it (`RAMBLE_SCRIPT`)
+ * so a simulator, which has no voice, rambles through the real reads and the phone's real matching.
+ */
+export function scriptedTranscriber(script: string, msPerWord = 333): Transcribe {
+	return async events => {
+		const all = words(script);
+		let count = 0;
+		const emit = () => {
+			const heard = all.slice(0, count);
+			const end = heard.findLastIndex(word => /[.,?!]$/.test(word)) + 1;
+			events.heard({ committed: heard.slice(0, end).join(' '), partial: heard.slice(end).join(' ') });
+		};
+		const timer = setInterval(() => {
+			if (count >= all.length) return clearInterval(timer);
+			count++;
+			emit();
+		}, msPerWord);
+		return {
+			audio() {},
+			end() {
+				clearInterval(timer);
+				count = all.length;
+				events.heard({ committed: all.join(' '), partial: '' });
+				events.done();
+			},
+			close: () => clearInterval(timer),
+		};
+	};
+}
+
+/**
  * xAI's streaming speech-to-text. A partial replaces the words after the last final; `is_final` commits a chunk, and
  * `speech_final` repeats the whole utterance at a pause, of which only what follows the chunks already committed is
  * new. `transcript.done` answers `audio.done` with the whole transcript.
