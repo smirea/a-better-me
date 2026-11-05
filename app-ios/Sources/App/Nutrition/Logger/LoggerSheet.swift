@@ -67,7 +67,7 @@ private struct LoggerContent: View {
             if path.isEmpty, !rambling {
                 Picker("Logger tab", selection: $session.tab) {
                     ForEach(LoggerTab.allCases, id: \.self) { tab in
-                        Text(tab.title).tag(tab)
+                        Text(tab.segment).accessibilityLabel(tab.title).tag(tab)
                     }
                 }
                 .pickerStyle(.segmented)
