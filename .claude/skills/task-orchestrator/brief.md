@@ -5,7 +5,6 @@ You own this job end to end, through the merge. Stefan authorized you to merge y
 ## Setup
 
 - Read `AGENTS.md`, `docs/decisions/README.md`, the area files the brief names, and the `AGENTS.md` of every folder you change (`app-ios/`, `server/`, `shared/`, `app-web/`). They are binding. A decision your work introduces or revises goes in its area file in this PR.
-- This file and those docs can go stale. When an instruction is wrong (a script that moved, a flag that changed, a tool you do have), do what is right, fix the instruction in this PR, and say so in your report's `summary`.
 - Setup is automatic and heals itself: T3 ran `agent-t3-worktree setup` when it created your worktree, and the session-start hook and pre-commit rerun it when something is missing. Don't run it by hand. T3 owns the branch name; never rename it.
 - Your server runs on your own ports from `.env.override` over a SQLite file in your worktree's `.data/`; nothing is shared. `bun run start:server` is enough for the iOS app's sync, and Debug builds sign in with the bundled development token.
 - Never read or copy the main checkout's env files, and never run `env-manager up`, `down`, or `env set` before your PR merges. A new setting goes in the root `.env` schema with a harmless default, since worktrees and CI build from the defaults (`env-manager gen --local`). Its real values go up only after `pr-ship` exits 0, from your worktree: see "After the merge".
