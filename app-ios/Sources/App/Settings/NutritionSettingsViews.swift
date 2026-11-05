@@ -266,7 +266,7 @@ private struct BMREquationView: View {
 
     var body: some View {
         Form {
-            ThemedSection("BMR Equation") {
+            ThemedSection {
                 SettingChoice(
                     title: "Equation", systemImage: "function", selection: store.binding(settings, \.nutrition.expenditure.bmrEquation),
                     options: [
