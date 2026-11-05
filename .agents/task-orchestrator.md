@@ -5,7 +5,7 @@ teardown: agent-t3-worktree teardown
 ship: pr-ship --merge
 ---
 
-Repo config for the global `task-orchestrator` skill (`~/code/ai-files/skills/task-orchestrator/`). Its `pm check` validates this file.
+Repo config for the global `task-orchestrator` skill (`~/code/ai-files/skills/task-orchestrator/`). Its `procrastimate check` validates this file.
 
 # Orchestrator
 
