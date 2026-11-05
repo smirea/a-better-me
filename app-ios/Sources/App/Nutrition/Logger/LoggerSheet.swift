@@ -87,7 +87,12 @@ private struct LoggerContent: View {
                     case let .rambleRow(row):
                         if case let .food(food) = row.content {
                             FoodDetailView(session: session, editing: nil, pick: food.pick, ramble: RambleEdit(
-                                update: { session.ramble.setServing($0, of: row) }
+                                update: { session.ramble.setServing($0, of: row) },
+                                day: row.day,
+                                others: session.ramble.rows
+                                    .filter { $0.id != row.id && $0.day == row.day }
+                                    .flatMap(\.planned)
+                                    .reduce(into: NutrientAmounts()) { $0 = $0 + $1.pick.portion.amounts }
                             ))
                         }
                     }

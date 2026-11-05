@@ -42,7 +42,8 @@ struct FoodDetailView: View {
             ThemedSection {
                 header
             }
-            ImpactGauges(amounts: amounts, day: session.time.day, adding: restOfPlate).id(session.time.day)
+            let day = ramble?.day ?? session.time.day
+            ImpactGauges(amounts: amounts, day: day, adding: ramble?.others ?? restOfPlate).id(day)
             ForEach(NutrientSection.allCases) { section in
                 let rows = section.nutrients.filter { food.nutrition.nutrients.amount(of: $0.id) != nil }
                 if !rows.isEmpty {
@@ -162,6 +163,9 @@ struct FoodDetailView: View {
 struct RambleEdit {
     /// False when the row's food changed since the detail opened, so the edit was dropped.
     let update: (Serving) -> Bool
+    /// The row's day, and what the ramble's other rows log there, for the impact gauges.
+    let day: CalendarDay
+    let others: NutrientAmounts
 }
 
 /// A recipe's Prepare, Edit, and Duplicate in the logger. Duplicate offers Create & Add onto the plate, and an edit
