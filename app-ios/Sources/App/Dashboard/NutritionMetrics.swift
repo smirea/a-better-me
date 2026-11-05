@@ -60,8 +60,8 @@ enum NutritionMetrics {
         log.compactMap { day in day.intake.energy.map { DatedValue(date: day.day.date(in: calendar), value: $0) } }
     }
 
-    /// The start is the setting's, else the first counted day or weigh-in. The initial estimate is the owner's, else the
-    /// BMR one at the trend weight on the start day, which needs the profile's height and birth date. Nil without
+    /// The start is the setting's, else the first counted day, else the last weigh-in. The initial estimate is the owner's,
+    /// else the BMR one at the trend weight on the start day, which needs the profile's height and birth date. Nil without
     /// either: the Dashboard says what is missing instead of guessing.
     static func expenditureSetup(
         intake: [DatedValue], weighIns: [DatedValue], trend: [DatedValue], settings: NutritionSettings.Expenditure,
@@ -74,10 +74,12 @@ enum NutritionMetrics {
         return ExpenditureSetup(start: start, initialKcal: initial)
     }
 
+    /// Not the first weigh-in: the estimate cannot update before intake is logged, and Health can hold weigh-ins from
+    /// years before the first log, which seeded the owner's estimate from a 2015 weight and age and held it there for eleven years.
     static func expenditureStart(intake: [DatedValue], weighIns: [DatedValue], settings: NutritionSettings.Expenditure, calendar: Calendar) -> Date? {
-        let firstIntake = intake.map(\.date).min()
-        let firstWeighIn = weighIns.map(\.date).min().map { calendar.startOfDay(for: $0) }
-        return settings.calculationStart?.date(in: calendar) ?? [firstIntake, firstWeighIn].compactMap { $0 }.min()
+        let firstIntake = intake.map(\.date).min().map { calendar.startOfDay(for: $0) }
+        let lastWeighIn = weighIns.map(\.date).max().map { calendar.startOfDay(for: $0) }
+        return settings.calculationStart?.date(in: calendar) ?? firstIntake ?? lastWeighIn
     }
 
     /// An unanswered activity or exercise question reads as the cell the engine's factor table is anchored on:

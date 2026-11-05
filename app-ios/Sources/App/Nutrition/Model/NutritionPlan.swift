@@ -93,7 +93,8 @@ struct NutritionPlan: SyncedRecord {
     var goal: NutritionGoal
     var coaching: CoachingProgram
     var targets: WeekTargets
-    /// What a check-in computed and used. Every other expenditure and trend value is recomputed, never stored.
+    /// What a check-in, or a coached or collaborative plan from the wizards, computed its targets from. Every other
+    /// expenditure and trend value is recomputed, never stored.
     var expenditureKcal: Double?
     var trendWeightKg: Double?
     var createdAt: Date

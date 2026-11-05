@@ -98,20 +98,15 @@ struct WeekTargetsChart: View {
     }
 }
 
-/// The Strategy wizards' and the check-in's header: the step's phase, when it has one, over its progress.
+/// The check-in's header: its progress through the modules.
 struct WizardProgress: View {
-    var phase: String?
     let value: Double
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if let phase {
-                Text(phase.uppercased()).font(AppFont.badge).foregroundStyle(Theme.textSecondary)
-            }
-            ProgressView(value: value).progressViewStyle(.bar(Theme.textPrimary))
-        }
-        .padding(.horizontal, Theme.margin)
-        .padding(.bottom, 8)
+        ProgressView(value: value)
+            .progressViewStyle(.bar(Theme.textPrimary))
+            .padding(.horizontal, Theme.margin)
+            .padding(.bottom, 8)
     }
 }
 

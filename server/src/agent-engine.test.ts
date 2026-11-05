@@ -185,4 +185,31 @@ describe('expenditure', () => {
 		});
 		expect(expenditure({ intake, weighIns, trend, settings: {}, profile: {}, today: days[2]! }).strategy).toBeNull();
 	});
+
+	test('starts at the first log, not at weigh-ins from years before it, and without a log at the last weigh-in', () => {
+		const profile = { sex: 'male', heightCm: 180, birthDate: '1990-06-01' };
+		const early = [
+			{ day: '2015-03-01', value: 80 },
+			{ day: '2023-07-15', value: 80 },
+		];
+		const trend = weightTrend(early, '2023-07-20');
+		const logged = expenditure({
+			intake: new Map([['2023-07-18', 2000]]),
+			weighIns: early,
+			trend,
+			settings: {},
+			profile,
+			today: '2023-07-20',
+		});
+		expect(logged).toMatchObject({ start: '2023-07-18', initialKcal: 2689 });
+		const unlogged = expenditure({
+			intake: new Map(),
+			weighIns: early,
+			trend,
+			settings: {},
+			profile,
+			today: '2023-07-20',
+		});
+		expect(unlogged).toMatchObject({ start: '2023-07-15' });
+	});
 });
