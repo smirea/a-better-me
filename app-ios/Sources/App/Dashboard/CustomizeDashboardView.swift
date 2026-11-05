@@ -39,10 +39,11 @@ struct CustomizeDashboardView: View {
         .detailTitle("Customize Dashboard")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save", role: .confirm) {
+                Button(role: .confirm) {
                     if let draft { store.updateSettings { $0.dashboard = draft.saved } }
                     dismiss()
                 }
+                .accessibilityLabel("Save")
             }
         }
         .sheet(item: $editing) { section in
