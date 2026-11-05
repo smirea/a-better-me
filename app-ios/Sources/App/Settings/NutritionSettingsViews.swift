@@ -10,7 +10,7 @@ struct FoodLogSettingsView: View {
     var body: some View {
         let timeline = settings.nutrition.timeline
         Form {
-            ThemedSection("Nutrient Reporting") {
+            ThemedSection {
                 SettingChoice(
                     title: "Nutrient Reporting", systemImage: "minus.forwardslash.plus", selection: store.binding(settings, \.nutrition.showOverages),
                     options: [
