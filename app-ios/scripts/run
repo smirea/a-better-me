@@ -161,6 +161,9 @@ async function deploy(target: Target, project: string) {
     if (target.kind === "simulator") {
         await thisBoot;
         target.state = "booted";
+        // gc shuts down a booted simulator whose claim is 15 minutes old once no process names its UDID, as happens
+        // between the commands below. A slow build or a long --watch session ages the claim taken at startup (#144).
+        await command([agentCommand("agent-simulator"), "claim", target.id], true);
         // A phone `HKWorkoutSession` makes healthd check Health's Motion access (Fitness Tracking, on by default on an
         // iPhone) and, without it, open Settings. Simulators start without it and have no switch to turn it on.
         await command(["xcrun", "simctl", "privacy", target.id, "grant", "motion", "com.apple.Health"], true);

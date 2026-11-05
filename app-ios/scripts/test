@@ -4,6 +4,7 @@
 import { spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { withBuildLock } from "./build-lock.ts";
+import { refreshOwnPackages } from "./own-packages.ts";
 import { agentCommand } from "../../scripts/lib.ts";
 
 const root = resolve(import.meta.dir, "..");
@@ -19,7 +20,7 @@ for (let i = 0; i < split; i++) {
 
 Runs AppTests on the worktree's simulator (\`agent-simulator udid\`), or -t's. A bare name is an AppTests suite, so
 \`scripts/test LoadingCacheTests\` runs -only-testing:AppTests/LoadingCacheTests; no names run every suite. Exits 3
-when the Mac stayed too busy to boot: rerun.`);
+when the Mac stayed too busy to boot: rerun. Ends with the pass and fail counts and the result bundle's path.`);
         process.exit(0);
     }
     if (arg === "-t" || arg === "--target") target = argv[++i];
@@ -48,23 +49,42 @@ sh(["xcrun", "simctl", "bootstatus", udid, "-b"], true);
 const only = suites.map(suite => `-only-testing:${suite.includes("/") ? suite : `AppTests/${suite}`}`);
 // The folder `scripts/run` builds into, so a test run after a launch only compiles the tests.
 const build = join(root, "DerivedData", "simulator");
-const xcodebuild = (action: string) => spawnSync("xcodebuild", [
+// A result bundle path must be new, so the build step can't take one; the test step always writes one to summarize.
+const bundleFlag = passthrough.indexOf("-resultBundlePath");
+const bundle = bundleFlag >= 0 ? resolve(root, passthrough[bundleFlag + 1]!) : join(build, "Logs", "Test", `scripts-test-${Date.now()}.xcresult`);
+const buildPassthrough = bundleFlag >= 0 ? passthrough.toSpliced(bundleFlag, 2) : passthrough;
+const xcodebuild = (action: string, extra: string[]) => spawnSync("xcodebuild", [
     action, "-quiet", "-project", "App.xcodeproj", "-scheme", "App", "-configuration", "Debug",
     "-destination", `platform=iOS Simulator,id=${udid}`, "-derivedDataPath", build,
     "-clonedSourcePackagesDirPath", join(root, "DerivedData", "SourcePackages"), "CODE_SIGN_IDENTITY=-",
-    ...only, ...passthrough,
+    ...only, ...extra,
 ], { cwd: root, stdio: "inherit" }).status ?? 1;
+await refreshOwnPackages(join(root, "DerivedData", "SourcePackages"));
 const code = await withBuildLock(build, async () => {
-    const built = xcodebuild("build-for-testing");
+    const built = xcodebuild("build-for-testing", buildPassthrough);
     if (built) return built;
     // Installing a new build ends the Live Activity the old one started (an in-progress workout keeps one), and
     // liveactivitiesd then launches the app in the background to deliver that. xcodebuild's own launch in the same
     // moment came back with no process: "Simulator device failed to launch com.stefan.a-better-me. No such process"
     // (#141). So this installs first and lets that launch happen, and xcodebuild's install finds no activity to end.
+    // The build can outlast gc's 15-minute idle window, and nothing names the UDID until the test starts (#144).
+    sh([simulator, "claim", udid]);
     const before = appProcess(udid);
     sh(["xcrun", "simctl", "install", udid, join(build, "Build/Products/Debug-iphonesimulator/App.app")]);
     const deadline = Date.now() + 3000;
     while (Date.now() < deadline && [undefined, before].includes(appProcess(udid))) Bun.sleepSync(200);
-    return xcodebuild("test-without-building");
+    return xcodebuild("test-without-building", [...buildPassthrough, "-resultBundlePath", bundle]);
 });
+
+type Summary = { result: string; passedTests: number; failedTests: number; skippedTests: number; testFailures?: { testIdentifierString: string; failureText: string }[] };
+const read = spawnSync("xcrun", ["xcresulttool", "get", "test-results", "summary", "--path", bundle], { encoding: "utf8" });
+if (read.status === 0) {
+    const summary = JSON.parse(read.stdout) as Summary;
+    for (const failure of summary.testFailures ?? []) console.log(`✗ ${failure.testIdentifierString}: ${failure.failureText}`);
+    console.log(`${summary.result}: ${summary.passedTests} passed, ${summary.failedTests} failed, ${summary.skippedTests} skipped (${bundle})`);
+    if (!code && summary.passedTests + summary.failedTests === 0) {
+        console.error(`No tests ran: check the names ${suites.join(", ") || "(all suites)"}.`);
+        process.exit(1);
+    }
+}
 process.exit(code);
