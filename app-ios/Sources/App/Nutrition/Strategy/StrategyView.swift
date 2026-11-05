@@ -217,16 +217,16 @@ private struct StrategyHome: View {
                 let balance = StrategyRules.balanceText(maintenanceKcal: maintenance, averageKcal: average, unit: data.unit)
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top) {
-                        StrategyStat(value: StrategyFormat.kcal(maintenance), caption: "Maintenance")
-                        StrategyStat(value: balance.value, caption: balance.title)
+                        StatView(value: StrategyFormat.kcal(maintenance), caption: "Maintenance")
+                        StatView(value: balance.value, caption: balance.title)
                     }
                     Text(balance.text).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
                 }
             }
             WeekTargetsChart(targets: plan.targets, today: data.today.weekday)
             HStack {
-                StrategyStat(value: StrategyFormat.kcal(todayTarget.energy), caption: "Today · \(NutritionFormat.macros(todayTarget.amounts))")
-                StrategyStat(value: StrategyFormat.kcal(average), caption: "Daily average")
+                StatView(value: StrategyFormat.kcal(todayTarget.energy), caption: "Today · \(NutritionFormat.macros(todayTarget.amounts))")
+                StatView(value: StrategyFormat.kcal(average), caption: "Daily average")
             }
         } actions: {
             Button("New Program", systemImage: "arrow.clockwise") { open(.newProgram) }
@@ -239,10 +239,10 @@ private struct StrategyHome: View {
         let weeklyKg = (data.inputs.trendWeightKg ?? goal.targetWeightKg ?? 0) * goal.ratePercentPerWeek / 100
         return StrategyCard(title: "\(StrategyRules.goalName(goal.kind)) Goal", subtitle: StrategyFormat.range(period?.start ?? goal.startedOn, nil)) {
             HStack(alignment: .top) {
-                StrategyStat(value: StrategyFormat.weight(goal.targetWeightKg, data.unit), caption: "Goal Weight")
+                StatView(value: StrategyFormat.weight(goal.targetWeightKg, data.unit), caption: "Goal Weight")
                 if goal.kind != .maintain {
-                    StrategyStat(value: "\(StrategyFormat.signed(data.unit.fromKg(weeklyKg), digits: 2...2)) \(data.unit.rawValue)", caption: "Goal Rate / week")
-                    StrategyStat(value: "\(StrategyFormat.signed(goal.ratePercentPerWeek, digits: 0...2)) %", caption: "Goal Rate / week")
+                    StatView(value: "\(StrategyFormat.signed(data.unit.fromKg(weeklyKg), digits: 2...2)) \(data.unit.rawValue)", caption: "Goal Rate / week")
+                    StatView(value: "\(StrategyFormat.signed(goal.ratePercentPerWeek, digits: 0...2)) %", caption: "Goal Rate / week")
                 }
             }
             if let period { GoalTrendProgress(period: period, inputs: data.inputs, unit: data.unit) }
@@ -266,12 +266,12 @@ private struct StrategyHome: View {
         return StrategyCard(title: "This Week", subtitle: subtitle) {
             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 12) {
                 GridRow {
-                    StrategyStat(value: data.inputs.expenditureKcal.map(StrategyFormat.kcal) ?? "—", caption: data.inputs.isStaticExpenditure ? "Static Expenditure" : "Expenditure")
-                    StrategyStat(value: StrategyFormat.weight(data.inputs.trendWeightKg, data.unit), caption: "Trend Weight")
+                    StatView(value: data.inputs.expenditureKcal.map(StrategyFormat.kcal) ?? "—", caption: data.inputs.isStaticExpenditure ? "Static Expenditure" : "Expenditure")
+                    StatView(value: StrategyFormat.weight(data.inputs.trendWeightKg, data.unit), caption: "Trend Weight")
                 }
                 GridRow {
-                    StrategyStat(value: summary.averageIntakeKcal.map(StrategyFormat.kcal) ?? "—", caption: "Average Intake · \(summary.loggedDays)/7 days")
-                    StrategyStat(
+                    StatView(value: summary.averageIntakeKcal.map(StrategyFormat.kcal) ?? "—", caption: "Average Intake · \(summary.loggedDays)/7 days")
+                    StatView(
                         value: summary.trendChangeKg.map { "\(StrategyFormat.signed(data.unit.fromKg($0), digits: 2...2)) \(data.unit.rawValue)" } ?? "—",
                         caption: "Trend Change · \(summary.weighIns) weigh-ins"
                     )

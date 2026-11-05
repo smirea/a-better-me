@@ -136,17 +136,3 @@ extension StrategyCard where Actions == EmptyView {
     }
 }
 
-/// A big number over a caption, MacroFactor's stat style.
-struct StrategyStat: View {
-    let value: String
-    let caption: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value).font(AppFont.number(20)).lineLimit(1).minimumScaleFactor(0.7)
-            Text(caption).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-    }
-}
