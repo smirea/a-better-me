@@ -106,24 +106,6 @@ struct RecipeDetailView: View {
     }
 }
 
-/// An action as MacroFactor's detail pages lay them out: a glass circle over its title.
-struct ActionLabel: View {
-    let title: String
-    let systemImage: String
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Image(systemName: systemImage)
-                .font(.system(size: 16, weight: .semibold))
-                .frame(width: 40, height: 40)
-                .glassEffect(.regular.interactive(), in: .circle)
-            Text(title).font(AppFont.caption(11))
-        }
-        .foregroundStyle(Theme.textPrimary)
-        .frame(maxWidth: .infinity)
-    }
-}
-
 /// The numbered steps.
 private struct StepsSection: View {
     let steps: [String]

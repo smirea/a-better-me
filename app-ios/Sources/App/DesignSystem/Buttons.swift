@@ -58,3 +58,46 @@ extension View {
         }
     }
 }
+
+/// A detail page's action as MacroFactor lays them out in a row: an icon in a raised circle over its title. The entry
+/// editor's Remove and Duplicate and the recipe page's Prepare and Edit.
+struct ActionLabel: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.system(size: 16, weight: .semibold))
+                .frame(width: 40, height: 40)
+                .background(Theme.surfaceRaised, in: .circle)
+            Text(title).font(AppFont.rowDetail)
+        }
+        .foregroundStyle(Theme.textPrimary)
+        .frame(maxWidth: .infinity)
+    }
+}
+
+/// The small circle at a row's trailing edge that acts on the row without opening it: add a food to the plate, add or
+/// swap an exercise, take one out of a selection. It fills white while on. The hit area is the full 44 pt.
+struct RowActionButton: View {
+    let title: String
+    let systemImage: String
+    var isOn = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(isOn ? Theme.onPrimary : Theme.textPrimary)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 28, height: 28)
+                .background(isOn ? Theme.textPrimary : Theme.surfaceRaised, in: .circle)
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+    }
+}

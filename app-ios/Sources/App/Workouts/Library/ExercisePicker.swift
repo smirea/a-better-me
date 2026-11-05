@@ -265,12 +265,7 @@ private struct SelectionTray: View {
             ThemedSection("Your Exercises") {
                 ForEach(selection.ids.compactMap(catalog.exercise)) { exercise in
                     LibraryExerciseRow(exercise: exercise) {
-                        Button("Remove", systemImage: "trash") { selection.toggle(exercise.id) }
-                            .labelStyle(.iconOnly)
-                            .foregroundStyle(Theme.textPrimary)
-                            .frame(width: 30, height: 30)
-                            .background(Theme.surfaceRaised, in: .circle)
-                            .buttonStyle(.plain)
+                        RowActionButton(title: "Remove", systemImage: "trash") { selection.toggle(exercise.id) }
                     }
                 }
                 .onMove { selection.ids.move(fromOffsets: $0, toOffset: $1) }
@@ -294,13 +289,7 @@ private struct AddButton: View {
 
     var body: some View {
         let isSelected = selection.ids.contains(id)
-        Button(isSelected ? "Remove" : "Add", systemImage: isSelected ? "checkmark" : "plus") { selection.toggle(id) }
-            .labelStyle(.iconOnly)
-            .font(AppFont.headline(13))
-            .foregroundStyle(isSelected ? Theme.onPrimary : Theme.textPrimary)
-            .frame(width: 30, height: 30)
-            .background(isSelected ? Theme.textPrimary : Theme.surfaceRaised, in: .circle)
-            .buttonStyle(.plain)
+        RowActionButton(title: isSelected ? "Remove" : "Add", systemImage: isSelected ? "checkmark" : "plus", isOn: isSelected) { selection.toggle(id) }
     }
 }
 
@@ -308,13 +297,7 @@ private struct SwapButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button("Swap", systemImage: "arrow.left.arrow.right", action: action)
-            .labelStyle(.iconOnly)
-            .font(AppFont.headline(12))
-            .foregroundStyle(Theme.textPrimary)
-            .frame(width: 30, height: 30)
-            .background(Theme.surfaceRaised, in: .circle)
-            .buttonStyle(.plain)
+        RowActionButton(title: "Swap", systemImage: "arrow.left.arrow.right", action: action)
     }
 }
 

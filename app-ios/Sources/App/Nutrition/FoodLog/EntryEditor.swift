@@ -129,17 +129,7 @@ struct EntryEditor: View {
     }
 
     private func action(_ title: String, systemImage: String, run: @escaping () -> Void) -> some View {
-        Button(action: run) {
-            VStack(spacing: 6) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 16, weight: .semibold))
-                    .frame(width: 40, height: 40)
-                    .background(Theme.surfaceRaised, in: Circle())
-                Text(title).font(AppFont.rowDetail)
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .foregroundStyle(Theme.textPrimary)
+        Button(action: run) { ActionLabel(title: title, systemImage: systemImage) }
     }
 
     private var minute: Int { time.minuteOfDay() }
