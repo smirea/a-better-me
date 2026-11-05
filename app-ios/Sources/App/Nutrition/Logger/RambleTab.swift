@@ -854,7 +854,7 @@ private struct RambleLine: View {
 
     private static func spoken(_ item: RambleItem) -> String? {
         guard item.amount > 0 else { return nil }
-        let number = item.amount.formatted(.number.precision(.fractionLength(0 ... 2)))
+        let number = NutritionFormat.quantity(item.amount)
         return item.unit.isEmpty ? "×\(number)" : "\(number) \(item.unit)"
     }
 

@@ -220,7 +220,7 @@ struct StrategyWizardView: View {
             }
             if let basis = model.basis {
                 StrategyCard(title: "Initial Daily Budget") {
-                    Text("\(model.goal.initialBudget(basis).formatted()) kcal").font(AppFont.number())
+                    Text("\(Double(model.goal.initialBudget(basis)).wholeText) kcal").font(AppFont.number())
                 }
             }
             if let end = model.goal.projectedEnd(from: model.today, currentWeightKg: model.weightKg) {
@@ -277,7 +277,7 @@ private struct GoalWeightRateStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 10) {
-                tile(model.basis.map { "\(model.goal.initialBudget($0).formatted()) kcal" } ?? "—", "initial daily budget", highlighted: true)
+                tile(model.basis.map { "\(Double(model.goal.initialBudget($0)).wholeText) kcal" } ?? "—", "initial daily budget", highlighted: true)
                 tile(model.goal.projectedEnd(from: model.today, currentWeightKg: model.weightKg).map { StrategyFormat.day($0, year: true) } ?? "—", "projected end date", highlighted: false)
             }
             Text("What is your target weight?").font(AppFont.title(20))

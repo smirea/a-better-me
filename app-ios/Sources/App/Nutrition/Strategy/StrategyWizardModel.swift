@@ -183,7 +183,7 @@ struct StrategyWizardModel {
         guard let basis, let week = coachedWeek else { return [] }
         let saved = savedGoal
         let rate = abs(saved.ratePercentPerWeek).formatted(.number.precision(.fractionLength(0...2)))
-        let average = Int(week.averageKcal.rounded())
+        let average = week.averageKcal.wholeText
         let goalText = switch saved.kind {
         case .lose: "Your goal is to lose weight at a rate of \(rate)% of body weight per week"
         case .maintain: "Your goal is to maintain your weight"

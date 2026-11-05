@@ -382,7 +382,7 @@ struct PlanRow: View {
             VStack(alignment: .trailing, spacing: 3) {
                 Text(StrategyFormat.kcal(StrategyRules.averageEnergy(plan.targets))).font(AppFont.rowTitle).monospacedDigit()
                 if let expenditure = plan.expenditureKcal {
-                    Text("Expenditure \(Int(expenditure.rounded()))").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                    Text("Expenditure \(expenditure.wholeText)").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
                 }
             }
         }

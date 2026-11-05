@@ -45,7 +45,7 @@ struct StrategyWizardTests {
         #expect(notes.map(\.title) == ["Maintenance Calories", "Daily Deficit", "Average Target", "Calorie Shift", "Target Protein", "Diet Type"])
         #expect(notes[0].value == "2,210 kcal")
         #expect(notes[1].value == "−641 kcal")
-        #expect(notes[2].value == "1569 kcal")
+        #expect(notes[2].value == "1,569 kcal")
         #expect(plan.expenditureKcal == 2210)
         #expect(plan.trendWeightKg == weightKg)
     }
