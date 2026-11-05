@@ -194,7 +194,7 @@ struct ExerciseFilterBar: View {
                 GymProfilesView()
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
-                            Button("Close", systemImage: "xmark") { managingGyms = false }
+                            Button(role: .close) { managingGyms = false }
                         }
                     }
             }
@@ -289,8 +289,7 @@ struct EquipmentPickerSheet: View {
                                         }
                                     }
                                     Spacer()
-                                    Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
-                                        .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textTertiary)
+                                    SelectionMark(isOn: isSelected)
                                 }
                             }
                         }
@@ -302,7 +301,7 @@ struct EquipmentPickerSheet: View {
             .detailTitle(title)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }

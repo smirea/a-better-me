@@ -65,13 +65,12 @@ struct ProgramSettingsView: View {
                     .padding(.vertical, 10)
             }
             .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Theme.surface)
+            .themedList()
             .detailTitle("Program Settings")
             .navigationSubtitle(program.name)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
             .sheet(item: $page) { page in
@@ -318,7 +317,7 @@ private struct ProgramSettingsColorIcon: View {
             .navigationSubtitle("\(program.color.title), \(ProgramIcon.title(of: program.icon))")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done", role: .confirm) { dismiss() }
                 }
             }
         }
@@ -355,8 +354,7 @@ private struct ProgramSettingsDayOrder: View {
                 .onMove { order.move(fromOffsets: $0, toOffset: $1) }
             }
             .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Theme.surface)
+            .themedList()
             .environment(\.editMode, .constant(.active))
             .detailTitle("Day Order")
             .navigationSubtitle("\(order.count)-Day Cycle")
@@ -412,7 +410,7 @@ private struct ProgramSettingsDeload: View {
                             Text(choice.summary).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                         }
                         Spacer()
-                        Image(systemName: choice == program.config.deload ? "largecircle.fill.circle" : "circle").font(AppFont.title())
+                        SelectionMark(isOn: choice == program.config.deload)
                     }
                     .foregroundStyle(Theme.textPrimary)
                     .contentShape(Rectangle())
@@ -421,12 +419,11 @@ private struct ProgramSettingsDeload: View {
                 .accessibilityAddTraits(choice == program.config.deload ? .isSelected : [])
             }
             .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Theme.surface)
+            .themedList()
             .detailTitle("Deload")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }
@@ -458,7 +455,7 @@ private struct ProgramSettingsDuplicate: View {
             .detailTitle("Program Name")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
             .safeAreaInset(edge: .bottom) {

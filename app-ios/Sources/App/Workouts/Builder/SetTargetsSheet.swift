@@ -87,15 +87,14 @@ struct SetTargetsSheet: View {
             }
             .disabled(readOnlyNote != nil)
             .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Theme.surface)
+            .themedList()
             .scrollDismissesKeyboard(.interactively)
             .environment(\.defaultMinListRowHeight, 40)
             .detailTitle(subtitle == nil ? "Targets" : catalog.name(draft.exerciseID))
             .navigationSubtitle(subtitle ?? catalog.name(draft.exerciseID))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .keyboard) {
                     Button("Done") { focus = nil }.frame(maxWidth: .infinity, alignment: .trailing)
@@ -339,8 +338,7 @@ private struct SetTypePicker: View {
                             Text(type.summary).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                         }
                         Spacer()
-                        Image(systemName: type == selected ? "largecircle.fill.circle" : "circle")
-                            .font(AppFont.title())
+                        SelectionMark(isOn: type == selected)
                     }
                     .foregroundStyle(Theme.textPrimary)
                 }
@@ -349,7 +347,7 @@ private struct SetTypePicker: View {
             .detailTitle("Set Type")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }
@@ -406,7 +404,7 @@ private struct RIRPicker: View {
             .detailTitle("RIR Targets")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button("Clear", systemImage: "trash") {
@@ -455,7 +453,7 @@ private struct RestPicker: View {
             .detailTitle("Rest Timer")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }

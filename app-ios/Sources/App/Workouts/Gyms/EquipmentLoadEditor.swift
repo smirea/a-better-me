@@ -45,10 +45,10 @@ struct EquipmentLoadEditor: View {
             .detailTitle(equipment.name)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save", systemImage: "checkmark") {
+                    Button("Save", role: .confirm) {
                         onSave(draft)
                         dismiss()
                     }

@@ -84,7 +84,7 @@ private struct SwapSubstitutions: View {
         .detailTitle("Swap")
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Close", systemImage: "xmark") { dismiss() }
+                Button(role: .close) { dismiss() }
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -158,7 +158,7 @@ private struct ExercisePickerList: View {
         .searchable(text: $query, prompt: "Search for an exercise")
         .toolbar {
             ToolbarItemGroup(placement: .topBarLeading) {
-                Button("Close", systemImage: "xmark") { dismiss() }
+                Button(role: .close) { dismiss() }
                 Button("Create Custom Exercise", systemImage: "plus") { creating = true }
             }
             ToolbarItem(placement: .principal) {
@@ -284,7 +284,7 @@ private struct SelectionTray: View {
                 }
             }
         }
-        .scrollContentBackground(.hidden)
+        .themedList()
         .feedback(self)
     }
 }

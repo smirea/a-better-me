@@ -403,9 +403,7 @@ private struct AddRemoveSheet: View {
                 content
             }
             .themedList()
-            .navigationTitle(section.title)
-            .navigationSubtitle("Add or remove tiles")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(section.title, subtitle: "Add or remove tiles")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm) { dismiss() }

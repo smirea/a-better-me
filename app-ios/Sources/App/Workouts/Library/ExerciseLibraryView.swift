@@ -344,7 +344,7 @@ private struct WarmUpSchemeEditor: View {
         .detailTitle("Warm-Up Scheme")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") { save(steps) }
+                Button("Save", role: .confirm) { save(steps) }
             }
         }
         .feedback(self)

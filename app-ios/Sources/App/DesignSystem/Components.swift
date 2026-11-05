@@ -7,9 +7,14 @@ extension View {
         navigationTitle(title).toolbarTitleDisplayMode(.inlineLarge)
     }
 
-    /// A pushed screen's or sheet's title, inline.
-    func detailTitle(_ title: String) -> some View {
-        navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+    /// A pushed screen's or sheet's title, inline, with an optional line under it.
+    @ViewBuilder
+    func detailTitle(_ title: String, subtitle: String? = nil) -> some View {
+        if let subtitle {
+            navigationTitle(title).navigationSubtitle(subtitle).navigationBarTitleDisplayMode(.inline)
+        } else {
+            navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+        }
     }
 
     /// The app's card: content on the raised surface with the large radius.

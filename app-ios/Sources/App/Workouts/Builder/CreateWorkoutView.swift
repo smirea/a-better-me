@@ -33,7 +33,7 @@ struct CreateWorkoutView: View {
             methodStep
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Close", systemImage: "xmark") {
+                        Button(role: .close) {
                             if blocks.isEmpty { dismiss() } else { confirmingExit = true }
                         }
                     }

@@ -130,9 +130,7 @@ private struct WarmUpSchemeEditor: View {
                 .padding(.horizontal, Theme.margin)
                 .padding(.bottom, 8)
             }
-            .navigationTitle("Default Scheme")
-            .navigationSubtitle(category.displayName)
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Default Scheme", subtitle: category.displayName)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .close) { dismiss() }

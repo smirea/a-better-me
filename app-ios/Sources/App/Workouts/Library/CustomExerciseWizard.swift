@@ -139,7 +139,7 @@ struct CustomExerciseWizard: View {
             step(.build)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Close", systemImage: "xmark") { dismiss() }
+                        Button(role: .close) { dismiss() }
                     }
                 }
                 .navigationDestination(for: Step.self) { step($0) }
@@ -583,7 +583,7 @@ private struct JointActionPicker: View {
             .detailTitle(title)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done", role: .confirm) { dismiss() }
                 }
             }
         }
@@ -609,7 +609,7 @@ private struct DescriptionEditor: View {
                 .detailTitle("Description")
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
+                        Button("Done", role: .confirm) { dismiss() }
                     }
                 }
         }

@@ -37,7 +37,7 @@ struct NewProgramWizard: View {
             page(.splash)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Close", systemImage: "xmark") { dismiss() }
+                        Button(role: .close) { dismiss() }
                     }
                 }
                 .navigationDestination(for: WizardRoute.self) { route in
@@ -254,7 +254,7 @@ struct NewProgramWizard: View {
         .navigationBarBackButtonHidden()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Close", systemImage: "xmark") { confirmingExit = true }
+                Button(role: .close) { confirmingExit = true }
             }
         }
     }
@@ -414,7 +414,7 @@ private struct KeepSelections: View {
                 ExerciseAssessmentView()
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
-                            Button("Done", systemImage: "checkmark") { assessing = false }
+                            Button("Done", role: .confirm) { assessing = false }
                         }
                     }
             }
@@ -496,9 +496,7 @@ private struct ExperienceSheet: View {
                                     Text(choice.summary).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                                 }
                                 Spacer()
-                                Image(systemName: choice == selected ? "record.circle.fill" : "circle")
-                                    .font(.system(size: 22))
-                                    .foregroundStyle(choice == selected ? Theme.textPrimary : Theme.textTertiary)
+                                SelectionMark(isOn: choice == selected)
                             }
                             .contentShape(Rectangle())
                         }
@@ -507,12 +505,11 @@ private struct ExperienceSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Theme.surface)
+            .themedList()
             .detailTitle("Lifting Experience")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }

@@ -225,7 +225,7 @@ struct SessionEditor: View {
                 Spacer()
                 RestTimerPill { sheet = .restTimer }
             case .editPast:
-                Button("Close", systemImage: "xmark") {
+                Button(role: .close) {
                     if blocks == session.blocks { dismiss() } else { confirmingExit = true }
                 }
                 .labelStyle(.iconOnly)
@@ -450,7 +450,7 @@ struct SessionEditor: View {
         NavigationStack {
             content().toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { sheet = nil }
+                    Button(role: .close) { sheet = nil }
                 }
             }
         }

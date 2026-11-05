@@ -26,9 +26,7 @@ struct WizardOption: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: selected ? "record.circle.fill" : "circle")
-                    .font(.system(size: 22))
-                    .foregroundStyle(selected ? Theme.textPrimary : Theme.textTertiary)
+                SelectionMark(isOn: selected)
             }
             .multilineTextAlignment(.leading)
             .padding(14)
@@ -42,5 +40,27 @@ struct WizardOption: View {
         .buttonStyle(.plain)
         .opacity(isEnabled ? 1 : 0.5)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+/// The radio or checkbox at a choice row's trailing edge: white when on, tertiary when off, one size everywhere.
+struct SelectionMark: View {
+    enum Style { case radio, check }
+
+    let isOn: Bool
+    var style = Style.radio
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: 22))
+            .foregroundStyle(isOn ? Theme.textPrimary : Theme.textTertiary)
+            .accessibilityHidden(true)
+    }
+
+    private var symbol: String {
+        switch style {
+        case .radio: isOn ? "record.circle.fill" : "circle"
+        case .check: isOn ? "checkmark.square.fill" : "square"
+        }
     }
 }

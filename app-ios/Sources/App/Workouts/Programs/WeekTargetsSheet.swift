@@ -116,13 +116,12 @@ struct WeekTargetsSavingOptions: View {
                 }
             }
             .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Theme.surface)
+            .themedList()
             .detailTitle("Saving Options")
             .navigationSubtitle(setCount == 1 ? "1 set" : "\(setCount) sets")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -138,7 +137,7 @@ struct WeekTargetsSavingOptions: View {
             HStack {
                 Text(title).font(AppFont.rowTitle)
                 Spacer()
-                Image(systemName: selected ? "largecircle.fill.circle" : "circle").font(AppFont.title())
+                SelectionMark(isOn: selected)
             }
             .foregroundStyle(Theme.textPrimary)
             .contentShape(Rectangle())

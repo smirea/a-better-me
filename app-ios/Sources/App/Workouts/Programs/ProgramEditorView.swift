@@ -278,7 +278,7 @@ private struct ProgramEditorGymOptions: View {
                                     .foregroundStyle(Theme.textSecondary)
                             }
                             Spacer()
-                            Image(systemName: gym.id == selected ? "largecircle.fill.circle" : "circle").font(AppFont.title())
+                            SelectionMark(isOn: gym.id == selected)
                         }
                         .foregroundStyle(Theme.textPrimary)
                         .contentShape(Rectangle())
@@ -310,13 +310,12 @@ private struct ProgramEditorGymOptions: View {
                 }
             }
             .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Theme.surface)
+            .themedList()
             .detailTitle("Gym Options")
             .navigationSubtitle("Impacts exercise selection")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }

@@ -35,7 +35,7 @@ struct SmartProgressionSheet: View {
             .navigationDestination(isPresented: $isShowingSettings) { WorkoutSettingsView() }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button("Workout Settings", systemImage: "slider.horizontal.3") { isShowingSettings = true }
@@ -115,9 +115,7 @@ struct WorkoutTargetsView: View {
                 }
             }
         }
-        .navigationTitle("Workout Targets")
-        .navigationSubtitle(exerciseName)
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Workout Targets", subtitle: exerciseName)
         .feedback(self)
     }
 

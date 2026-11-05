@@ -123,8 +123,7 @@ private struct NewGymSheet: View {
                                     Text(option.summary).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
                                 }
                                 Spacer()
-                                Image(systemName: template == option ? "largecircle.fill.circle" : "circle")
-                                    .foregroundStyle(template == option ? Theme.textPrimary : Theme.textTertiary)
+                                SelectionMark(isOn: template == option)
                             }
                             .foregroundStyle(Theme.textPrimary)
                             .contentShape(.rect)
@@ -138,7 +137,7 @@ private struct NewGymSheet: View {
             .detailTitle("New Gym Profile")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
             .safeAreaInset(edge: .bottom) {

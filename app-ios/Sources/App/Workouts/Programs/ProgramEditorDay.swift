@@ -197,7 +197,7 @@ struct ProgramEditorReorderSheet: View {
             .detailTitle("Re-Order")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done", role: .confirm) { dismiss() }
                 }
             }
         }
@@ -235,7 +235,7 @@ struct ProgramEditorMoveSheet: View {
             .navigationSubtitle("Relocate the exercise in your program")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }
