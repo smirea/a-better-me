@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 // Calls ProcrastiMate's production agent API as the AI account. A Better Me's tasks live there, in the
-// "a better me" project; the credentials live in the ProcrastiMate checkout, not in this repo's env.
+// "a better me" project. Run it from the main checkout: its root .env.local holds the token (env-manager's
+// scripts target), which worktrees leave empty.
 //   pm.ts <METHOD> <path> [json body | - for stdin]     raw call, e.g. pm.ts GET /view
 //   pm.ts complete <task id> <pr url> [note]            comment "<pr url>\n<note>", then complete; safe to rerun
 //   pm.ts file <project name or id> <title> [notes] [--section id] [--parent id]
@@ -16,7 +17,9 @@
 //   pm.ts comments <task id>                            the task's comments, oldest first
 //   pm.ts label <task id> +<name>|-<name>...            add or remove labels by name, keeping the others
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
+import { parseArgs } from 'node:util';
+import env from '../../../../scripts/env';
 
 type Named = { id: string; name: string };
 type Attachment = { id: string; name?: string; bytes?: number };
@@ -35,17 +38,7 @@ type Task = {
 type View = { projects: Named[]; labels: Named[]; sections: Named[]; tasks: Task[] };
 type Comment = { body: string; createdAt: number; author: { name: string; kind: string } };
 
-const envFile = join(process.env.HOME!, 'code/procrastimate/.env.local');
-const fix = `run 'env-manager down' in ${dirname(envFile)} (never 'up')`;
-if (!existsSync(envFile)) fail(`no ${envFile}; ${fix}`);
-const env = Object.fromEntries(
-	[...readFileSync(envFile, 'utf8').matchAll(/^(\w+)=(?:'([^']*)'|"([^"]*)"|([^\s#]*))/gm)].map(m => [
-		m[1],
-		m[2] ?? m[3] ?? m[4],
-	]),
-);
-const apiUrl = env.APP_BOT_API_URL || fail(`APP_BOT_API_URL missing in ${envFile}; ${fix}`);
-const token = env.APP_BOT_TOKEN || fail(`APP_BOT_TOKEN missing in ${envFile}; ${fix}`);
+const root = join(import.meta.dir, '../../../..');
 
 function fail(message: string): never {
 	console.error(`pm: ${message}`);
@@ -56,9 +49,9 @@ async function call(method: string, path: string, body?: unknown): Promise<Respo
 	// Reads retry on transient errors; writes don't, because a retried write can land twice.
 	for (let attempt = 0; ; attempt++) {
 		try {
-			const res = await fetch(apiUrl + path, {
+			const res = await fetch(env.PROCRASTIMATE_API_URL + path, {
 				method,
-				headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+				headers: { Authorization: `Bearer ${env.PROCRASTIMATE_TOKEN}`, 'Content-Type': 'application/json' },
 				body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
 			});
 			if (res.ok) return res;
@@ -95,18 +88,6 @@ async function complete(task: string, pr: string, note: string) {
 	console.log(`completed ${task}`);
 }
 
-function flags(args: string[], names: string[]) {
-	const values: Record<string, string> = {};
-	const rest: string[] = [];
-	for (let i = 0; i < args.length; i++) {
-		const arg = args[i]!;
-		if (!arg.startsWith('--')) rest.push(arg);
-		else if (names.includes(arg.slice(2)) && args[i + 1] !== undefined) values[arg.slice(2)] = args[++i]!;
-		else fail(`unknown flag or missing value: '${arg}'`);
-	}
-	return { values, rest };
-}
-
 const [command = '', ...args] = Bun.argv.slice(2);
 await run().catch((error: Error) => fail(error.message));
 
@@ -119,17 +100,21 @@ async function run() {
 			break;
 		}
 		case 'file': {
-			const [project, title, ...more] = args;
-			if (!project || !title) fail('usage: pm.ts file <project> <title> [notes] [--section id] [--parent id]');
-			const { values, rest } = flags(more, ['section', 'parent']);
-			if (rest.length > 1) fail(`notes given more than once: ${rest.map(r => `'${r}'`).join(', ')}`);
+			const { values, positionals } = parseArgs({
+				args,
+				allowPositionals: true,
+				options: { section: { type: 'string' }, parent: { type: 'string' } },
+			});
+			const [project, title, notes, ...extra] = positionals;
+			if (!project || !title || extra.length)
+				fail('usage: pm.ts file <project> <title> [notes] [--section id] [--parent id]');
 			const pid = projectId(await view(), project);
 			const find = async () =>
 				(await view()).tasks.find(t => t.projectId === pid && t.title === title && t.completedAt === null)?.id;
 			const body = {
 				projectId: pid,
 				title,
-				...(rest[0] && { notes: rest[0] }),
+				...(notes && { notes }),
 				...(values.section && { sectionId: values.section }),
 				...(values.parent && { parentId: values.parent }),
 			};
@@ -171,15 +156,17 @@ async function run() {
 			break;
 		}
 		case 'merged': {
-			const [pr, worktree, ...more] = args;
-			const { values, rest: tasks } = flags(more, ['note']);
+			const { values, positionals } = parseArgs({
+				args,
+				allowPositionals: true,
+				options: { note: { type: 'string' } },
+			});
+			const [pr, worktree, ...tasks] = positionals;
 			if (!pr || !worktree || tasks.length === 0)
 				fail('usage: pm.ts merged <pr url> <worktree> <task id>... [--note text]');
 			for (const task of tasks) await complete(task, pr, values.note ?? '');
 			// Teardown removes the worktree, so a rerun after it finished finds nothing left to remove.
 			if (existsSync(worktree)) {
-				const commonDir = Bun.spawnSync(['git', 'rev-parse', '--path-format=absolute', '--git-common-dir']);
-				const root = dirname(commonDir.stdout.toString().trim());
 				const teardown = Bun.spawnSync(['bun', 'scripts/teardown-worktree.ts', worktree], {
 					cwd: root,
 					stderr: 'inherit',
