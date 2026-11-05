@@ -33,7 +33,8 @@ struct SettingOption<Value: Hashable>: Identifiable {
     var id: Value { value }
 }
 
-/// A value shown under its title with an Edit menu beside it, like the reference app's Edit buttons.
+/// A setting with its current value trailing as a menu, the way a native menu picker reads: the title on the left, the
+/// value and an up-down chevron on the right, and a tap lists every option with its detail.
 struct SettingChoice<Value: Hashable>: View {
     let title: String
     var systemImage: String?
@@ -51,13 +52,22 @@ struct SettingChoice<Value: Hashable>: View {
                     }
                 }
             } label: {
-                Text("Edit")
+                HStack(spacing: 4) {
+                    Text(current)
+                    Image(systemName: "chevron.up.chevron.down").imageScale(.small)
+                }
+                .font(AppFont.rowTitle)
+                .foregroundStyle(Theme.textSecondary)
             }
-            .chipButton()
-            .accessibilityLabel("Edit \(title)")
+            .accessibilityLabel(title)
+            .accessibilityValue(current)
         } label: {
-            RowLabel(title: title, detail: options.first { $0.value == selection }?.title ?? "", systemImage: systemImage)
+            RowLabel(title: title, systemImage: systemImage)
         }
+    }
+
+    private var current: String {
+        options.first { $0.value == selection }?.title ?? ""
     }
 }
 
