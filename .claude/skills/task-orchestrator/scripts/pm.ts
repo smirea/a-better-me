@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Calls ProcrastiMate's production agent API as the AI account. A Better Me's tasks live there, in the
-// "a better me" project. Run it from the main checkout: its root .env.local holds the token (env-manager's
-// scripts target), which worktrees leave empty.
+// "a better me" project. The token is env-manager's PROCRASTIMATE_TOKEN in the main checkout's .env.local;
+// worktrees leave it empty.
 //   pm.ts <METHOD> <path> [json body | - for stdin]     raw call, e.g. pm.ts GET /view
 //   pm.ts complete <task id> <pr url> [note]            comment "<pr url>\n<note>", then complete; safe to rerun
 //   pm.ts file <project name or id> <title> [notes] [--section id] [--parent id]
@@ -19,7 +19,12 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
-import env from '../../../../scripts/env';
+
+const root = join(import.meta.dir, '../../../..');
+// Bun reads .env.local only from the cwd. Loading this checkout's own lets pm.ts run from any folder, while a
+// worktree's copy still gets that worktree's empty token.
+process.loadEnvFile(join(root, '.env.local'));
+const { default: env } = await import('../../../../scripts/env');
 
 type Named = { id: string; name: string };
 type Attachment = { id: string; name?: string; bytes?: number };
@@ -37,8 +42,6 @@ type Task = {
 };
 type View = { projects: Named[]; labels: Named[]; sections: Named[]; tasks: Task[] };
 type Comment = { body: string; createdAt: number; author: { name: string; kind: string } };
-
-const root = join(import.meta.dir, '../../../..');
 
 function fail(message: string): never {
 	console.error(`pm: ${message}`);
