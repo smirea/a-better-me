@@ -80,19 +80,19 @@ struct FoodLibraryView: View {
         }
         .themedList()
         .overlay { emptyState }
-        .safeAreaBar(edge: .top) {
-            Picker("Library", selection: $tab) {
-                Text("Recipes").tag(Tab.recipes)
-                Text("Foods").tag(Tab.foods)
-                Image(systemName: "heart.fill").accessibilityLabel("Favorites").tag(Tab.favorites)
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, Theme.margin)
-            .padding(.bottom, 8)
-        }
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Filter \(tab.rawValue.lowercased())")
         .detailTitle("Foods & Recipes")
         .toolbar {
+            // The picker takes the title's place, so the bar holds the segments, sort, and create on one row.
+            ToolbarItem(placement: .principal) {
+                Picker("Library", selection: $tab) {
+                    Text("Recipes").tag(Tab.recipes)
+                    Text("Foods").tag(Tab.foods)
+                    Image(systemName: "heart.fill").accessibilityLabel("Favorites").tag(Tab.favorites)
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
             if tab != .favorites {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
