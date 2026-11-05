@@ -30,7 +30,13 @@ struct BetterMeApp: App {
         WidgetPublisher.shared.start(store: store)
         QuickActionInbox.shared.install()
         Feedback.enable()
-        Feedback.context("Sync") { (api: AppEnvironment.apiURL.absoluteString, pendingWrites: store.pendingWrites) }
+        Feedback.context("Sync") {
+            let position = store.syncPosition
+            return (
+                api: AppEnvironment.apiURL.absoluteString, pendingWrites: store.pendingWrites, cursor: position.cursor,
+                space: position.space
+            )
+        }
         Feedback.context("Workout") {
             (inProgressShown: presenter.isExpanded, finishedSessions: history.sessions.count, customExercises: catalog.custom.count)
         }

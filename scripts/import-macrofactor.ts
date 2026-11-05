@@ -1,7 +1,7 @@
 /**
  * Imports MacroFactor exports into A Better Me through the agent API:
  *
- *     bun scripts/import-macrofactor.ts --server <url> --token <token> <files...> [--dry-run]
+ *     OWNER_TOKEN=<token> bun scripts/import-macrofactor.ts --server <url> <files...> [--dry-run]
  *
  * Takes any number of Granular Export and Quick Export `.xlsx` files. Every row gets an id derived from its source row,
  * so a second run, or a second file that overlaps the first, converges instead of duplicating. The mapping and what is
@@ -581,9 +581,9 @@ const same = (existing: Row, desired: Row) =>
 
 export type Counts = Record<string, { created: number; updated: number; unchanged: number; skipped: number }>;
 
-type Client = (method: string, path: string, body?: unknown) => Promise<any>;
+export type Client = (method: string, path: string, body?: unknown) => Promise<any>;
 
-function client(server: string, token: string): Client {
+export function client(server: string, token: string): Client {
 	const base = `${server.replace(/\/+$/, '').replace(/\/api$/, '')}/api`;
 	return async (method, path, body) => {
 		const response = await fetch(`${base}${path}`, {
@@ -596,9 +596,8 @@ function client(server: string, token: string): Client {
 	};
 }
 
-async function every(api: Client, path: string): Promise<Row[]> {
+export async function every(api: Client, path: string, size = 1000): Promise<Row[]> {
 	const rows: Row[] = [];
-	const size = 1000;
 	for (let offset = 0; ; offset += size) {
 		const page: { total: number; items: Row[] } = await api(
 			'GET',
@@ -610,7 +609,7 @@ async function every(api: Client, path: string): Promise<Row[]> {
 }
 
 /** Runs `tasks` a few at a time, the server's Durable Object serializing them anyway. */
-async function pool(tasks: (() => Promise<unknown>)[], width = 8) {
+export async function pool(tasks: (() => Promise<unknown>)[], width = 8) {
 	let next = 0;
 	await Promise.all(
 		Array.from({ length: width }, async () => {
@@ -745,7 +744,7 @@ export async function importMacroFactor(options: {
 	return { counts, warnings: parsed.warnings };
 }
 
-function format(counts: Counts) {
+export function format(counts: Counts) {
 	const columns = ['created', 'updated', 'unchanged', 'skipped'] as const;
 	const width = Math.max(...Object.keys(counts).map(name => name.length), 5);
 	const lines = [['table'.padEnd(width), ...columns.map(column => column.padStart(9))].join(' ')];
@@ -759,13 +758,15 @@ if (import.meta.main) {
 		allowPositionals: true,
 		options: { server: { type: 'string' }, token: { type: 'string' }, 'dry-run': { type: 'boolean', default: false } },
 	});
-	if (!values.server || !values.token || !positionals.length) {
-		console.error('Usage: bun scripts/import-macrofactor.ts --server <url> --token <token> <files...> [--dry-run]');
+	// The token comes from the environment by default, so it never shows in the process list.
+	const token = values.token ?? process.env.OWNER_TOKEN;
+	if (!values.server || !token || !positionals.length) {
+		console.error('Usage: OWNER_TOKEN=<token> bun scripts/import-macrofactor.ts --server <url> <files...> [--dry-run]');
 		process.exit(2);
 	}
 	const { counts, warnings } = await importMacroFactor({
 		server: values.server,
-		token: values.token,
+		token,
 		files: positionals,
 		dryRun: values['dry-run'],
 	});

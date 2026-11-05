@@ -26,6 +26,7 @@ final class LocalStore {
                 token: { AppEnvironment.ownerToken }
             )
             try LegacyImport.run(database.pool, tables: syncSchema.tables, migrate: client.migrate)
+            try SpaceResync.backUpIfNeeded(database.pool)
         } catch {
             fatalError("Could not open the local database at \(LocalDatabase.url.path): \(error)")
         }
@@ -38,6 +39,12 @@ final class LocalStore {
         database = try LocalDatabase(at: url)
         client = SyncClient(database: database.pool, schema: syncSchema, endpoint: URL(string: "http://localhost")!, token: { nil })
         try client.migrate()
+    }
+
+    /// The pull cursor and the server space it belongs to, for the feedback capture.
+    var syncPosition: (cursor: Int, space: String) {
+        let space = (try? database.pool.read { try String.fetchOne($0, sql: "SELECT value FROM _meta WHERE key = 'space'") }) ?? nil
+        return (client.head, space ?? "none")
     }
 
     // MARK: Writes

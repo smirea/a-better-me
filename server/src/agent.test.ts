@@ -211,6 +211,19 @@ describe('agent API', () => {
 
 		await ok('POST', '/sessions', { name: 'Live', startedAt: '2026-10-24T10:00:00Z' });
 		expect((await call('POST', '/sessions', { name: 'Again', startedAt: '2026-10-24T10:05:00Z' })).status).toBe(409);
+
+		const imported = {
+			id: 'A1B2C3D4-0000-4000-8000-000000000001',
+			name: 'Imported',
+			startedAt: '2026-01-09T17:00:00Z',
+			endedAt: '2026-01-09T18:00:00Z',
+		};
+		expect((await ok('POST', '/sessions', imported)).id).toBe('a1b2c3d4-0000-4000-8000-000000000001');
+		const again = await call('POST', '/sessions', imported);
+		expect(again.status).toBe(409);
+		expect((await again.json()).error).toBe(
+			'workout_sessions a1b2c3d4-0000-4000-8000-000000000001 already exists. PATCH it instead.',
+		);
 	});
 
 	test('program sessions follow the deload and the run, as the app does', async () => {

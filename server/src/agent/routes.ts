@@ -646,7 +646,7 @@ export const routes: Route[] = [
 			const gymId = body.gymId === undefined ? (template?.gymId ?? null) : (body.gymId?.toLowerCase() ?? null);
 			assertGym(db, gymId);
 			const row: SessionRow = {
-				id: M.newId(),
+				id: fresh(db, 'workout_sessions', body.id),
 				name,
 				templateId: template?.id ?? null,
 				startedAt: body.startedAt,

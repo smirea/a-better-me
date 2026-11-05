@@ -4,7 +4,7 @@
  * per day, the entries' summed calories and macros against the export's own daily totals, and each table's rows
  * against the export's rows. Exit 1 when anything disagrees.
  *
- *   bun scripts/verify-macrofactor-import.ts --server <url> --token <token> <granular.xlsx> <food-log.csv>
+ *   OWNER_TOKEN=<token> bun scripts/verify-macrofactor-import.ts --server <url> <granular.xlsx> <food-log.csv>
  */
 import { parseArgs } from 'node:util';
 import { parseExports, readExport } from './import-macrofactor';
@@ -15,14 +15,15 @@ const { values, positionals } = parseArgs({
 	allowPositionals: true,
 	options: { server: { type: 'string' }, token: { type: 'string' } },
 });
-if (!values.server || !values.token || !positionals.length) {
-	console.error('Usage: bun scripts/verify-macrofactor-import.ts --server <url> --token <token> <files...>');
+const token = values.token ?? process.env.OWNER_TOKEN;
+if (!values.server || !token || !positionals.length) {
+	console.error('Usage: OWNER_TOKEN=<token> bun scripts/verify-macrofactor-import.ts --server <url> <files...>');
 	process.exit(2);
 }
 
 async function get(path: string): Promise<any> {
 	const response = await fetch(new URL(`/api${path}`, values.server), {
-		headers: { authorization: `Bearer ${values.token}` },
+		headers: { authorization: `Bearer ${token}` },
 	});
 	if (!response.ok) throw new Error(`GET ${path}: ${response.status}`);
 	return response.json();
