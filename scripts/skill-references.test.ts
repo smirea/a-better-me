@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 
 // Children follow the orchestrator's playbook to the letter, so a path it names that moved costs a whole job.
 const root = join(import.meta.dir, '..');
-const skill = join(root, '.claude/skills/task-orchestrator-start');
+const skill = join(root, '.claude/skills/task-orchestrator');
 const files = [join(skill, 'SKILL.md'), join(skill, 'brief.md')];
 const REPO_PATH = /(?<=^|[\s`(])((?:\.claude|app-ios|app-web|docs|scripts|server|shared)\/[\w./-]*[\w/])/gm;
 
