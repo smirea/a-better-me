@@ -312,7 +312,7 @@ Watching is enabled by default. Saves rebuild and restart the app. Ctrl-C stops 
 --pair-watch pairs a watch with the simulator first, reusing its pair if it has one, and runs the watch app on it.
 --delete shuts down and deletes the simulator and its paired watches instead of running.
 --grant-permissions answers every permission prompt again; a run does it anyway when the last launch left one open.
---health on turns Apple Health on in the simulator build, seeds 60 days of weights, steps, and flights into an
+--health on turns Apple Health on in the simulator build, seeds 60 days of weights, steps, flights, and distance into an
 empty Health store, and answers its sheet; --health off turns it off. Debug
 simulator builds start with it off, and the app keeps the last choice.`);
         return;

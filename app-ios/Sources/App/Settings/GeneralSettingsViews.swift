@@ -1,8 +1,8 @@
 import Feedback
 import SwiftUI
 
-/// Settings > Units: one list for both halves. The clock follows the system's 24-Hour Time, and nothing in the app
-/// measures distance, so MacroFactor's Clock and Distance rows are left out.
+/// Settings > Units: one list for both halves. The clock follows the system's 24-Hour Time, so MacroFactor's Clock row
+/// is left out.
 struct UnitsSettingsView: View {
     @Environment(LocalStore.self) private var store
     @Observe(AppSettings.current) private var settings
@@ -24,6 +24,10 @@ struct UnitsSettingsView: View {
                         SettingOption(value: .feetAndInches, title: "Feet and Inches"),
                         SettingOption(value: .centimeters, title: "Centimeters", detail: "Also body measurements"),
                     ]
+                )
+                SettingChoice(
+                    title: "Distance", systemImage: "point.bottomleft.forward.to.point.topright.scurvepath", selection: store.binding(settings, \.nutrition.distanceUnit),
+                    options: [SettingOption(value: .miles, title: "Miles"), SettingOption(value: .kilometers, title: "Kilometers")]
                 )
             }
         }
