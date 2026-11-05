@@ -106,13 +106,8 @@ struct NutrientProgress: Hashable, Sendable {
 
     var isOver: Bool { (remaining ?? 0) < 0 }
 
-    /// "1,240", "22.4": whole numbers from 10 up, one decimal below.
-    static func number(_ value: Double) -> String {
-        let magnitude = abs(value)
-        return magnitude >= 10 || magnitude == magnitude.rounded()
-            ? magnitude.rounded().formatted(.number.precision(.fractionLength(0)))
-            : magnitude.formatted(.number.precision(.fractionLength(0...1)))
-    }
+    /// "1,240", "6.7": the size of the amount, since the labels say whether it is left or over.
+    static func number(_ value: Double) -> String { abs(value).niceText }
 
     var consumedLabel: String { Self.number(consumed) }
 

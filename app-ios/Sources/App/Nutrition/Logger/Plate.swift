@@ -49,33 +49,6 @@ struct Plate: Hashable, Sendable {
     func item(_ id: UUID) -> Item? { items.first { $0.id == id } }
 }
 
-/// One nutrient of the banner: the day's amount before the plate, the plate's, and the day's target when a plan sets
-/// one.
-struct BannerValue: Hashable, Sendable {
-    var day: Double
-    var plate: Double
-    var target: Double?
-
-    /// The bar's fill: the day with the plate against the target, nil without a target.
-    var progress: Double? {
-        guard let target, target > 0 else { return nil }
-        return min(1, (day + plate) / target)
-    }
-
-    /// The number the banner prints. Remaining falls back to the day's total when there is no target, and stops at
-    /// zero unless overages show.
-    func amount(_ display: NutritionSettings.Logger.NutritionDisplay, showOverages: Bool) -> Double {
-        switch display {
-        case .plateOnly: return plate
-        case .dayAndPlate: return day + plate
-        case .remainingAfterPlate:
-            guard let target else { return day + plate }
-            let left = target - day - plate
-            return showOverages ? left : max(0, left)
-        }
-    }
-}
-
 /// When the plate is logged: a calendar day and an hour, MacroFactor's hour-granular time chip. The minute comes from
 /// the clock when logging, so foods logged one after another keep their order.
 struct LogTime: Hashable, Sendable {

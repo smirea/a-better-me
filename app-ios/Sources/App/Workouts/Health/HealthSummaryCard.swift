@@ -41,10 +41,10 @@ struct HealthSummaryCard: View {
                         .font(AppFont.rowDetail)
                         .foregroundStyle(Theme.textSecondary)
                 }
-                row("Average Heart Rate", icon: "heart.fill", value: numbers.averageHeartRate.map { "\(Int($0.rounded())) bpm" })
-                row("Max Heart Rate", icon: "bolt.heart.fill", value: numbers.maxHeartRate.map { "\(Int($0.rounded())) bpm" })
-                row("Active Energy", icon: "flame.fill", value: numbers.activeEnergyKcal.map { "\(Int($0.rounded())) kcal" })
-                row("Total Energy", icon: "flame", value: numbers.totalEnergyKcal.map { "\(Int($0.rounded())) kcal" })
+                row("Average Heart Rate", icon: "heart.fill", value: numbers.averageHeartRate.map { "\($0.wholeText) bpm" })
+                row("Max Heart Rate", icon: "bolt.heart.fill", value: numbers.maxHeartRate.map { "\($0.wholeText) bpm" })
+                row("Active Energy", icon: "flame.fill", value: numbers.activeEnergyKcal.map { "\($0.wholeText) kcal" })
+                row("Total Energy", icon: "flame", value: numbers.totalEnergyKcal.map { "\($0.wholeText) kcal" })
             }
             .feedback(self)
             .padding(.horizontal, Theme.margin)

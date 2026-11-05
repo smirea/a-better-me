@@ -125,7 +125,8 @@ struct PlateView: View {
         let goal = target?.amount(id)
         let unit = id == .energy ? "kcal" : "g"
         let amount = (withDay ? day[id] ?? 0 : 0) + (plate[id] ?? 0)
-        let caption = withDay ? "\(Int(amount.rounded()))\(goal.map { " / \(Int($0.rounded()))" } ?? "") \(unit) with plate" : "\(NutritionFormat.amount(amount)) \(unit) in plate"
+        let number = { NutritionFormat.amount($0, of: id) }
+        let caption = withDay ? "\(number(amount))\(goal.map { " / \(number($0))" } ?? "") \(unit) with plate" : "\(number(amount)) \(unit) in plate"
         return VStack(alignment: .leading, spacing: 6) {
             Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.rowTitle)
             Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
@@ -157,7 +158,7 @@ private struct QuantityChip: View {
     }
 }
 
-/// The quantity keypad over the plate for one item: Update sets its amount, Log Foods sets it and logs the plate.
+/// The quantity keypad over the plate for one item: Update sets its amount.
 private struct PlateServingEditor: View {
     let session: LoggerSession
     let item: Plate.Item
@@ -186,10 +187,6 @@ private struct PlateServingEditor: View {
             choose: { next in
                 quantity = QuantityText(serving.converted(to: next).quantity)
                 measure = next
-            },
-            logFoods: {
-                session.plate.setServing(serving, of: item.id)
-                session.logPlate()
             },
             confirm: {
                 session.plate.setServing(serving, of: item.id)

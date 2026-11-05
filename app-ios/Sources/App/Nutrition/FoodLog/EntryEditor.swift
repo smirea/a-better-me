@@ -72,7 +72,7 @@ struct EntryEditor: View {
                         displayedComponents: [.date, .hourAndMinute]
                     )
                 }
-                ThemedSection("Impact on Targets") { ImpactGauges(amounts: amounts, target: targets.target) }
+                ImpactGauges(amounts: amounts, day: CalendarDay(time), excluding: entry.id).id(CalendarDay(time))
                 ForEach(NutrientSection.allCases) { section in
                     let shown = section.nutrients.filter { amounts.amount(of: $0.id) != nil }
                     if !shown.isEmpty {

@@ -899,7 +899,6 @@ const NutritionSettingsPatch = z
 			.partial(),
 		logger: z
 			.object({
-				bannerNutrients: z.array(nutrientID),
 				nutritionDisplay: z.enum(['plateOnly', 'dayAndPlate', 'remainingAfterPlate']),
 				timeSelection: z.enum(['datePicker', 'timePad']),
 				optimization: z.enum(['speed', 'context']),

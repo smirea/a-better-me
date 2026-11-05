@@ -1,20 +1,20 @@
 import Feedback
 import SwiftUI
 
-/// The food detail (`log-03-food-detail.jpg`): the serving's calories and macros with each macro's share of calories,
-/// Favorite, the impact on the day's targets, every nutrient the food reports, and the quantity keypad pinned under
-/// them. A recipe adds Prepare, Edit, and Duplicate, as the library's recipe page does. A plate item opens here too,
-/// with Update and Remove.
+/// The food detail (`log-03-food-detail.jpg`): a card with the name, Favorite, and the serving's calories and macros
+/// with each macro's share of calories, the impact on the day's targets, every nutrient the food reports, and the
+/// quantity keypad pinned under them. A recipe adds Prepare, Edit, and Duplicate, as the library's recipe page does. A
+/// plate item opens here too, with Update and Remove. The logger's banner stays above it with its close button, so the
+/// detail has no navigation bar of its own; a Ramble row's detail, which has no banner, keeps the back button.
 struct FoodDetailView: View {
     let session: LoggerSession
     /// The plate item being edited, nil for a food not yet on the plate.
     let editing: UUID?
     let pick: LoggerPick
-    /// A Ramble row: Update hands the serving back instead of touching the plate, and Log Foods logs the ramble.
+    /// A Ramble row: Update hands the serving back instead of touching the plate.
     var ramble: RambleEdit?
     @Environment(\.dismiss) private var dismiss
     @Observe(AppSettings.current) private var settings
-    @Observe(NutritionPlan.all) private var plans
     @State private var measure: Measure
     @State private var quantity: QuantityText
     @State private var favorited = 0
@@ -42,9 +42,7 @@ struct FoodDetailView: View {
             ThemedSection {
                 header
             }
-            ThemedSection("Impact on Targets") {
-                impact
-            }
+            ImpactGauges(amounts: amounts, day: session.time.day, adding: restOfPlate).id(session.time.day)
             ForEach(NutrientSection.allCases) { section in
                 let rows = section.nutrients.filter { food.nutrition.nutrients.amount(of: $0.id) != nil }
                 if !rows.isEmpty {
@@ -57,15 +55,16 @@ struct FoodDetailView: View {
             }
         }
         .themedList()
+        .contentMargins(.top, ramble == nil ? 8 : 0, for: .scrollContent)
         .contentMargins(.bottom, 12, for: .scrollContent)
-        .detailTitle(food.name)
+        .toolbar(ramble == nil ? .hidden : .automatic, for: .navigationBar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             QuantityKeypad(
                 quantity: $quantity, measure: measure,
                 detail: ServingChoices.detail(serving, food.nutrition),
                 choices: ServingChoices(food.nutrition, favorites: settings.nutrition.favoriteMeasures, current: measure),
                 confirmTitle: editing == nil && ramble == nil ? "Add" : "Update",
-                choose: choose, logFoods: logFoods, confirm: confirm
+                choose: choose, confirm: confirm
             )
         }
         .onAppear(perform: preview)
@@ -87,38 +86,49 @@ struct FoodDetailView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 14) {
-            if let brand = food.brand, !brand.isEmpty {
-                Text(brand).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
-            }
-            MacroHeader(amounts: amounts)
-            HStack(spacing: 0) {
-                if pick.portion.food.source == .recipe, let id = pick.portion.food.foodID.flatMap(UUID.init(uuidString:)) {
-                    RecipeActions(recipeID: id, session: session, prepare: { preparing = $0 }, present: { recipeSheet = $0 }, edited: recipeEdited)
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(food.name).font(AppFont.headline(18)).lineLimit(2)
+                    if let brand = food.brand, !brand.isEmpty {
+                        Text(brand).font(AppFont.caption()).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                    }
                 }
-                Button {
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
+                RoundIconButton(favorited > 0 ? "Saved" : "Favorite", systemImage: favorited > 0 ? "heart.fill" : "heart", size: .small) {
                     favorited += 1
                     Task { await session.favorite(portion, uncached: pick.uncached) }
-                } label: {
-                    ActionLabel(title: favorited > 0 ? "Saved" : "Favorite", systemImage: favorited > 0 ? "heart.fill" : "heart")
                 }
                 .disabled(serving.quantity <= 0 || favorited > 0)
                 .sensoryFeedback(.success, trigger: favorited)
-                if let editing {
-                    Button {
-                        session.plate.remove(editing)
-                        dismiss()
-                    } label: {
-                        ActionLabel(title: "Remove", systemImage: "trash")
+            }
+            MacroHeader(amounts: amounts)
+            let recipeID = pick.portion.food.source == .recipe ? pick.portion.food.foodID.flatMap(UUID.init(uuidString:)) : nil
+            if recipeID != nil || editing != nil {
+                FlowLayout {
+                    if let recipeID {
+                        RecipeActions(recipeID: recipeID, session: session, prepare: { preparing = $0 }, present: { recipeSheet = $0 }, edited: recipeEdited)
+                    }
+                    if let editing {
+                        Button("Remove", systemImage: "trash") {
+                            session.plate.remove(editing)
+                            dismiss()
+                        }
                     }
                 }
+                .chipButton()
+                .labelStyle(.titleAndIcon)
+                .controlSize(.small)
             }
-            .buttonStyle(.borderless)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 4)
     }
 
-    private var impact: some View {
-        ImpactGauges(amounts: amounts, target: NutritionPlan.effective(on: session.time.day, in: plans)?.target(on: session.time.day))
+    /// The plate without the item being edited, which the gauges count as the food itself.
+    private var restOfPlate: NutrientAmounts {
+        var plate = session.plate
+        if let editing { plate.remove(editing) }
+        return plate.totals
     }
 
     private func choose(_ next: Measure) {
@@ -130,17 +140,6 @@ struct FoodDetailView: View {
     private func confirm() {
         putOnPlate()
         dismiss()
-    }
-
-    private func logFoods() {
-        guard let ramble else {
-            putOnPlate()
-            return session.logPlate()
-        }
-        session.pending = nil
-        // A later read put another food in this row: logging from a detail that shows the old one would save the new.
-        guard ramble.update(serving) else { return dismiss() }
-        ramble.logAll()
     }
 
     /// A food not yet on the plate shows in the banner as if it were.
@@ -163,7 +162,6 @@ struct FoodDetailView: View {
 struct RambleEdit {
     /// False when the row's food changed since the detail opened, so the edit was dropped.
     let update: (Serving) -> Bool
-    let logAll: () -> Void
 }
 
 /// A recipe's Prepare, Edit, and Duplicate in the logger. Duplicate offers Create & Add onto the plate, and an edit
@@ -188,20 +186,19 @@ private struct RecipeActions: View {
 
     var body: some View {
         if let recipe {
-            Button { prepare(recipe) } label: { ActionLabel(title: "Prepare", systemImage: "frying.pan") }
-            Button { present(LibraryEditorSheet(.editRecipe(recipe))) } label: { ActionLabel(title: "Edit", systemImage: "pencil") }
+            Button("Prepare", systemImage: "frying.pan") { prepare(recipe) }
+            Button("Edit", systemImage: "pencil") { present(LibraryEditorSheet(.editRecipe(recipe))) }
                 .onChange(of: recipe.updatedAt) { edited(recipe.snapshot) }
-            Button {
+            Button("Duplicate", systemImage: "plus.square.on.square") {
                 present(LibraryEditorSheet(.newRecipe(RecipeDraft(recipe).duplicate()), add: { session.add(LoggerPick($0)) }))
-            } label: {
-                ActionLabel(title: "Duplicate", systemImage: "plus.square.on.square")
             }
         }
     }
 }
 
 /// MacroFactor's quantity keypad: the quantity and its unit, the unit chips, and keys for digits, a point, a fraction
-/// slash, and the space of a mixed number, beside Log Foods and Add. The system keyboard has no "/" or " 1/2".
+/// slash, and the space of a mixed number, beside the hide key and Add. The system keyboard has no "/" or " 1/2". The
+/// hide key folds it into a glass button with the quantity, which brings it back, so the nutrients under it can be read.
 struct QuantityKeypad: View {
     @Binding var quantity: QuantityText
     let measure: Measure
@@ -209,12 +206,35 @@ struct QuantityKeypad: View {
     let choices: ServingChoices
     let confirmTitle: String
     let choose: (Measure) -> Void
-    let logFoods: () -> Void
     let confirm: () -> Void
+    @State private var hidden = false
 
     private static let keyHeight: CGFloat = 46
 
     var body: some View {
+        Group {
+            if hidden {
+                Button { withAnimation(.snappy) { hidden = false } } label: {
+                    Label("\(quantity.text.isEmpty ? "0" : quantity.text) \(measure.name)", systemImage: "keyboard")
+                        .font(AppFont.headline(16))
+                        .monospacedDigit()
+                }
+                .buttonStyle(.glass)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .accessibilityLabel("Show keypad, \(quantity.text) \(measure.name)")
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.horizontal, Theme.margin)
+                .padding(.bottom, 8)
+                .transition(.scale(0.6, anchor: .bottomTrailing).combined(with: .opacity))
+            } else {
+                pad.transition(.move(edge: .bottom))
+            }
+        }
+        .feedback(self)
+    }
+
+    private var pad: some View {
         VStack(spacing: 10) {
             HStack {
                 Text(quantity.text.isEmpty ? " " : quantity.text)
@@ -246,8 +266,10 @@ struct QuantityKeypad: View {
                 GridRow {
                     key(.point, "Point") { Text(".") }
                     digit(0)
-                    action("Log Foods", prominent: false, perform: logFoods)
-                    action(confirmTitle, prominent: true, perform: confirm)
+                    keyButton("Hide keypad", action: { withAnimation(.snappy) { hidden = true } }) {
+                        Image(systemName: "keyboard.chevron.compact.down")
+                    }
+                    confirmButton
                 }
             }
             .font(AppFont.title(20))
@@ -256,7 +278,6 @@ struct QuantityKeypad: View {
         .padding(.top, 10)
         .padding(.bottom, 4)
         .background(Theme.header)
-        .feedback(self)
     }
 
     private func chip(_ option: Measure) -> some View {
@@ -273,7 +294,11 @@ struct QuantityKeypad: View {
     }
 
     private func key(_ key: QuantityText.Key, _ label: String, @ViewBuilder content: () -> some View) -> some View {
-        Button { quantity.type(key) } label: {
+        keyButton(label, action: { quantity.type(key) }, content: content)
+    }
+
+    private func keyButton(_ label: String, action: @escaping () -> Void, @ViewBuilder content: () -> some View) -> some View {
+        Button(action: action) {
             content()
                 .frame(maxWidth: .infinity)
                 .frame(height: Self.keyHeight)
@@ -284,14 +309,14 @@ struct QuantityKeypad: View {
         .accessibilityLabel(label)
     }
 
-    private func action(_ title: String, prominent: Bool, perform: @escaping () -> Void) -> some View {
-        Button(action: perform) {
-            Text(title)
+    private var confirmButton: some View {
+        Button(action: confirm) {
+            Text(confirmTitle)
                 .font(AppFont.headline(15))
                 .frame(maxWidth: .infinity)
                 .frame(height: Self.keyHeight)
-                .foregroundStyle(prominent ? Theme.onPrimary : Theme.textPrimary)
-                .background(prominent ? Theme.textPrimary : Theme.surface, in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
+                .foregroundStyle(Theme.onPrimary)
+                .background(Theme.textPrimary, in: RoundedRectangle(cornerRadius: Theme.tinyCornerRadius))
         }
         .buttonStyle(.plain)
         .disabled(quantity.value.map { $0 <= 0 } ?? true)

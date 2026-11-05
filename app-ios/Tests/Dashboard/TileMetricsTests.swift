@@ -18,7 +18,7 @@ struct TileMetricsTests {
 
     @Test func tileWithoutATargetFallsBackToConsumed() {
         let floorOnly = NutrientRange(floor: 10)
-        #expect(TileMetrics.tile(consumed: 12.5, range: floorOnly, display: .remaining, unit: .g).text == "12.5")
+        #expect(TileMetrics.tile(consumed: 12.5, range: floorOnly, display: .remaining, unit: .g).text == "13")
         #expect(TileMetrics.tile(consumed: 12.5, range: floorOnly, display: .percent, unit: .g).unit == "g")
         #expect(TileMetrics.tile(consumed: 1234.4, range: NutrientRange(), display: .consumed, unit: .mg).text == "1,234")
     }
@@ -26,7 +26,8 @@ struct TileMetricsTests {
     @Test func smallAmountsKeepTheirDecimals() {
         #expect(TileMetrics.tile(consumed: 0.4, range: NutrientRange(), display: .consumed, unit: .mg).text == "0.4")
         #expect(TileMetrics.tile(consumed: 1, range: NutrientRange(target: 1.2), display: .remaining, unit: .mg).text == "0.2")
-        #expect(TileMetrics.tile(consumed: 12.34, range: NutrientRange(), display: .consumed, unit: .mcg).text == "12.3")
+        #expect(TileMetrics.tile(consumed: 12.34, range: NutrientRange(), display: .consumed, unit: .mcg).text == "12")
+        #expect(TileMetrics.tile(consumed: 0.03, range: NutrientRange(), display: .consumed, unit: .mg).text == "<0.1")
         #expect(MetricUnit.ratio.format(0.4722) == "0.47")
     }
 

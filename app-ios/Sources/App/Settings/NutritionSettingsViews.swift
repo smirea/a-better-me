@@ -63,7 +63,7 @@ struct FoodLogSettingsView: View {
             }
             ThemedSection("Logger Options") {
                 NavigationLink { LoggerBannerView() } label: {
-                    RowLabel(title: "Logger Banner", detail: "Customize the nutrients in the logger banner", systemImage: "rectangle.topthird.inset.filled")
+                    RowLabel(title: "Logger Banner", detail: "Choose what the logger banner counts", systemImage: "rectangle.topthird.inset.filled")
                 }
                 SettingChoice(
                     title: "Time Selection", systemImage: "clock.arrow.2.circlepath", selection: store.binding(settings, \.nutrition.logger.timeSelection),
@@ -115,25 +115,8 @@ private struct LoggerBannerView: View {
     @Environment(LocalStore.self) private var store
     @Observe(AppSettings.current) private var settings
 
-    private static let nutrients: [NutrientID] = [.energy, .protein, .fat, .carbs]
-
     var body: some View {
-        let shown = settings.nutrition.logger.bannerNutrients
         Form {
-            ThemedSection("Nutrients") {
-                ForEach(Self.nutrients, id: \.self) { id in
-                    Toggle(NutrientRegistry.nutrient(id)?.name ?? id.rawValue, isOn: Binding(
-                        get: { shown.contains(id) },
-                        set: { on in
-                            store.updateSettings { settings in
-                                settings.nutrition.logger.bannerNutrients = Self.nutrients.filter { $0 == id ? on : shown.contains($0) }
-                            }
-                        }
-                    ))
-                    .tint(Theme.accent)
-                    .disabled(shown == [id])
-                }
-            }
             ThemedSection {
                 SettingChoice(
                     title: "Nutrition Display", selection: store.binding(settings, \.nutrition.logger.nutritionDisplay),

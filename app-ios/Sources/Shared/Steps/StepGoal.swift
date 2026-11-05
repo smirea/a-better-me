@@ -85,8 +85,3 @@ enum StepGoal {
         )
     }
 }
-
-extension Double {
-    /// Rounded to a whole number with grouping: "2,345".
-    var wholeText: String { Int(rounded()).formatted() }
-}

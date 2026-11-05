@@ -51,7 +51,12 @@ struct FoodLogMathTests {
         #expect(shown.map(\.nutrient) == [.energy, .protein, .fat, .carbs])
         #expect(shown.map(\.consumed) == [660, 55, 22, 66])
         #expect(shown.map(\.remaining) == [1340, -5, 48, 134])
-        #expect(shown.map(\.progress) == [0.33, 1, 22.0 / 70, 0.33])
+        #expect(shown.map { $0.fill(.eaten) } == [
+            MacroLine.Fill(eaten: 0.33, plate: 0), MacroLine.Fill(eaten: 1, plate: 0),
+            MacroLine.Fill(eaten: 22.0 / 70, plate: 0), MacroLine.Fill(eaten: 0.33, plate: 0),
+        ])
+        #expect(shown.map { $0.text(.eaten) } == ["660 / 2,000", "55 / 50", "22 / 70", "66 / 200"])
+        #expect(shown.map { $0.text(.remaining) } == ["1,340 left", "-5 left", "48 left", "134 left"])
 
         let clamped = FoodLog.summary(totals, target: target, showOverages: false)
         #expect(clamped.map(\.remaining) == [1340, 0, 48, 134])
@@ -66,14 +71,15 @@ struct FoodLogMathTests {
 
         let untargeted = FoodLog.summary(totals, target: nil, showOverages: true)
         #expect(untargeted.map(\.remaining) == [nil, nil, nil, nil])
-        #expect(untargeted.map(\.progress) == [0, 0, 0, 0])
+        #expect(untargeted.map { $0.fill(.eaten) } == [nil, nil, nil, nil])
+        #expect(untargeted.map { $0.text(.remaining) } == ["660", "55", "22", "66"])
     }
 
     @Test func spellsOutTheSummaryLinesForVoiceOver() {
         let totals = FoodLog.totals([entry(bowl, minute: 600), entry(yogurt, minute: 700, quantity: 2)])
         let target = DayTarget(energy: 2000, protein: 50, fat: 70, carbs: 200)
         #expect(FoodLog.summary(totals, target: target, showOverages: true).map(\.spoken) == [
-            "Calories 660 of 2000 calories", "Protein 55 of 50 grams", "Fat 22 of 70 grams", "Carbs 66 of 200 grams",
+            "Calories 660 of 2,000 calories", "Protein 55 of 50 grams", "Fat 22 of 70 grams", "Carbs 66 of 200 grams",
         ])
         #expect(FoodLog.summary(totals, target: nil, showOverages: true).first?.spoken == "Calories 660 calories")
     }
@@ -242,7 +248,7 @@ struct FoodLogMathTests {
         #expect(NutritionFormat.serving(Serving(measure: Measure(name: "cup", quantity: 1, servings: 2.4), quantity: 1.25)) == "1.25 cup")
         #expect(NutritionFormat.serving(Serving(measure: Measure(name: "g", quantity: 1, servings: 0.01), quantity: 150)) == "150 g")
         #expect(NutritionFormat.quantity(1.0 / 3) == "0.33")
-        #expect(NutritionFormat.macros([.energy: 199.6, .protein: 12, .fat: 8.4, .carbs: 19.5]) == "12P 8F 20C")
+        #expect(NutritionFormat.macros([.energy: 199.6, .protein: 12, .fat: 8.4, .carbs: 19.5]) == "12P 8.4F 20C")
         #expect(NutritionFormat.dayTitle(monday, today: monday) == "Today")
         #expect(NutritionFormat.dayTitle(monday, today: monday.adding(days: 1)) == "Yesterday")
         #expect(NutritionFormat.dayTitle(monday, today: monday.adding(days: -1)) == "Tomorrow")

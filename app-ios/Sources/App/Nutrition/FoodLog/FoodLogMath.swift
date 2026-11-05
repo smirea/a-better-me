@@ -18,25 +18,71 @@ struct TimelineHour: Hashable, Identifiable {
     var totals: NutrientAmounts { FoodLog.totals(rows.map(\.entry)) }
 }
 
-/// One of the four summary lines: an amount eaten against the day's target, when a plan sets one.
+/// One of the day's four macro lines: what was eaten, what the logger's plate adds on top (nil outside the logger),
+/// and the day's target when a plan sets one. `MacroTotalsBars` draws them on the Food Log and in the logger's banner.
 struct MacroLine: Hashable, Identifiable {
+    /// Eaten against the target, what is left, or only what the plate adds.
+    enum Page: Hashable { case eaten, remaining, plate }
+
+    /// A bar's two segments as fractions of its track, eaten first and the plate after it.
+    struct Fill: Hashable {
+        var eaten: Double
+        var plate: Double
+    }
+
     let nutrient: NutrientID
     let consumed: Double
+    var plate: Double?
     let target: Double?
-    /// Target minus consumed, never below zero unless overages show.
+    /// Target minus consumed and the plate, never below zero unless overages show.
     let remaining: Double?
 
     var id: NutrientID { nutrient }
+    var total: Double { consumed + (plate ?? 0) }
 
     var spoken: String {
         let unit = nutrient == .energy ? "calories" : "grams"
-        guard let target else { return "\(nutrient.dashboardLabel) \(Int(consumed.rounded())) \(unit)" }
-        return "\(nutrient.dashboardLabel) \(Int(consumed.rounded())) of \(Int(target.rounded())) \(unit)"
+        let amount = { NutritionFormat.amount($0, of: nutrient) }
+        let eaten = target.map { "\(amount(total)) of \(amount($0))" } ?? amount(total)
+        let plate = (plate ?? 0) > 0 ? ", \(amount(plate ?? 0)) on the plate" : ""
+        return "\(nutrient.dashboardLabel) \(eaten) \(unit)\(plate)"
     }
-    /// The bar's fill, 0 through 1.
-    var progress: Double {
-        guard let target, target > 0 else { return 0 }
-        return min(1, max(0, consumed / target))
+
+    /// What the plate adds as a share of the target, or without one as a share of the day with the plate.
+    var plateShare: Double? {
+        let plate = plate ?? 0
+        if let target, target > 0 { return plate / target }
+        return total > 0 ? plate / total : nil
+    }
+
+    func text(_ page: Page) -> String {
+        let amount = { NutritionFormat.amount($0, of: nutrient) }
+        switch (page, target, remaining) {
+        case (.plate, _, _): return "+\(amount(plate ?? 0))"
+        case let (.remaining, _, remaining?): return "\(amount(remaining)) left"
+        case let (.eaten, target?, _): return "\(amount(total)) / \(amount(target))"
+        default: return amount(total)
+        }
+    }
+
+    /// Against the target when there is one. The remaining page fills what is left after the plate, with the part the
+    /// plate takes beside it, and draws mirrored. Without a target the bar is the day with the plate, so the plate's
+    /// share of the day shows; outside the logger there is no plate, so there is no bar, since an empty track reads
+    /// as broken.
+    func fill(_ page: Page) -> Fill? {
+        let plate = max(0, plate ?? 0)
+        if let target, target > 0 {
+            let clamp = { (value: Double) in min(1, max(0, value / target)) }
+            guard page == .remaining else {
+                let eaten = clamp(consumed)
+                return Fill(eaten: eaten, plate: min(1 - eaten, clamp(plate)))
+            }
+            let left = clamp(target - total)
+            return Fill(eaten: left, plate: min(1 - left, clamp(min(plate, target - consumed))))
+        }
+        guard self.plate != nil else { return nil }
+        guard total > 0 else { return Fill(eaten: 0, plate: 0) }
+        return Fill(eaten: max(0, consumed) / total, plate: plate / total)
     }
 }
 
@@ -92,13 +138,15 @@ enum FoodLog {
         showOverages ? target - consumed : max(0, target - consumed)
     }
 
-    static func summary(_ amounts: NutrientAmounts, target: DayTarget?, showOverages: Bool) -> [MacroLine] {
+    /// The day's four macro lines. The logger passes its plate, which the lines count on top of the day.
+    static func summary(_ amounts: NutrientAmounts, plate: NutrientAmounts? = nil, target: DayTarget?, showOverages: Bool) -> [MacroLine] {
         NutrientID.macros.map { id in
             let consumed = amounts[id] ?? 0
+            let added = plate.map { $0[id] ?? 0 }
             let target = target?.amount(id)
             return MacroLine(
-                nutrient: id, consumed: consumed, target: target,
-                remaining: target.map { remaining(consumed: consumed, target: $0, showOverages: showOverages) }
+                nutrient: id, consumed: consumed, plate: added, target: target,
+                remaining: target.map { remaining(consumed: consumed + (added ?? 0), target: $0, showOverages: showOverages) }
             )
         }
     }

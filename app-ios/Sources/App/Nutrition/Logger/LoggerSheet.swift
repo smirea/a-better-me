@@ -87,8 +87,7 @@ private struct LoggerContent: View {
                     case let .rambleRow(row):
                         if case let .food(food) = row.content {
                             FoodDetailView(session: session, editing: nil, pick: food.pick, ramble: RambleEdit(
-                                update: { session.ramble.setServing($0, of: row) },
-                                logAll: { Task { await session.logRamble(opened: row) } }
+                                update: { session.ramble.setServing($0, of: row) }
                             ))
                         }
                     }
@@ -157,8 +156,9 @@ private struct LoggerContent: View {
     }
 }
 
-/// The logger's top band: exit, the time chip, each banner nutrient as what the plate leaves of the day's target, and
-/// the plate. Swiping the bars steps through Nutrition Display, as swiping MacroFactor's banner does.
+/// The logger's top band: exit, the time chip, and the plate over the day's calories and macros with the plate counted
+/// in, drawn as the Food Log's summary is. Swiping the totals steps through Nutrition Display, as swiping
+/// MacroFactor's banner does.
 private struct LoggerBanner: View {
     let session: LoggerSession
     let exit: () -> Void
@@ -180,35 +180,36 @@ private struct LoggerBanner: View {
     }
 
     var body: some View {
-        let options = settings.nutrition.logger
-        let day = dayRow.totals(entries)
-        GlassEffectContainer {
-            HStack(spacing: 10) {
-                RoundIconButton("Close", systemImage: "xmark", action: exit)
-                Button(action: chooseTime) {
-                    Text(session.time.label()).font(AppFont.headline(14))
-                }
-                .chipButton()
-                .accessibilityLabel("Log time, \(session.time.label())")
-                VStack(alignment: .leading, spacing: 5) {
-                    ForEach(options.bannerNutrients, id: \.self) { id in
-                        bar(id, value(id, day: day), display: options.nutritionDisplay)
+        let display = settings.nutrition.logger.nutritionDisplay
+        let day = session.time.day
+        let lines = FoodLog.summary(
+            dayRow.totals(entries), plate: session.plateWithPending,
+            target: NutritionPlan.effective(on: day, in: plans)?.target(on: day), showOverages: settings.nutrition.showOverages
+        )
+        VStack(spacing: 10) {
+            GlassEffectContainer {
+                HStack(spacing: 10) {
+                    RoundIconButton("Close", systemImage: "xmark", action: exit)
+                    Button(action: chooseTime) {
+                        Text(session.time.label()).font(AppFont.headline(14))
                     }
+                    .chipButton()
+                    .accessibilityLabel("Log time, \(session.time.label())")
+                    Spacer(minLength: 0)
+                    plateButton
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(.rect)
+            }
+            MacroTotalsBars(lines: lines, page: display.page)
                 .gesture(DragGesture(minimumDistance: 20).onEnded { drag in
                     guard abs(drag.translation.width) > 30, abs(drag.translation.width) > abs(drag.translation.height) else { return }
-                    let next = options.nutritionDisplay.cycled(by: drag.translation.width < 0 ? 1 : -1)
-                    store.updateSettings { $0.nutrition.logger.nutritionDisplay = next }
+                    store.updateSettings { $0.nutrition.logger.nutritionDisplay = display.cycled(by: drag.translation.width < 0 ? 1 : -1) }
                 })
-                .sensoryFeedback(.selection, trigger: options.nutritionDisplay)
+                .sensoryFeedback(.selection, trigger: display)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(lines.map(\.spoken).joined(separator: ", "))
                 .accessibilityAdjustableAction { direction in
-                    let next = options.nutritionDisplay.cycled(by: direction == .increment ? 1 : -1)
-                    store.updateSettings { $0.nutrition.logger.nutritionDisplay = next }
+                    store.updateSettings { $0.nutrition.logger.nutritionDisplay = display.cycled(by: direction == .increment ? 1 : -1) }
                 }
-                plateButton
-            }
         }
         .padding(.horizontal, Theme.margin)
         .padding(.top, 14)
@@ -234,26 +235,15 @@ private struct LoggerBanner: View {
             button.prominentButton().buttonBorderShape(.capsule)
         }
     }
+}
 
-    private func value(_ id: NutrientID, day: NutrientAmounts) -> BannerValue {
-        let plate = session.plateWithPending
-        let target = NutritionPlan.effective(on: session.time.day, in: plans)?.target(on: session.time.day).amount(id)
-        return BannerValue(day: day[id] ?? 0, plate: plate[id] ?? 0, target: target)
-    }
-
-    private func bar(_ id: NutrientID, _ value: BannerValue, display: NutritionSettings.Logger.NutritionDisplay) -> some View {
-        let amount = Int(value.amount(display, showOverages: settings.nutrition.showOverages).rounded())
-        let prefix = id == .energy ? "" : "\(id.macroLetter) "
-        let suffix = switch display {
-        case .plateOnly: " in plate"
-        case .dayAndPlate: value.target.map { " / \(Int($0.rounded()))" } ?? ""
-        case .remainingAfterPlate: value.target == nil ? "" : " left"
+extension NutritionSettings.Logger.NutritionDisplay {
+    var page: MacroLine.Page {
+        switch self {
+        case .plateOnly: .plate
+        case .dayAndPlate: .eaten
+        case .remainingAfterPlate: .remaining
         }
-        return VStack(alignment: .leading, spacing: 2) {
-            Text("\(prefix)\(amount)\(suffix)").font(AppFont.caption(11)).monospacedDigit()
-            ProgressView(value: value.progress ?? 0).progressViewStyle(.bar(id.color, height: 3))
-        }
-        .frame(maxWidth: 110, alignment: .leading)
     }
 }
 
