@@ -106,19 +106,9 @@ struct WorkoutTab: View {
         case .library:
             library(templates: byID)
         case .yourSections:
-            let custom = settings.workout.sections.custom
-            if custom.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    SectionHeader("Your Sections")
-                    NoSectionsLabel()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .card()
-                }
-                .feedback("Your Sections")
-            } else {
-                VStack(alignment: .leading, spacing: 28) {
-                    ForEach(custom) { CustomSectionView(section: $0, library: templates) }
-                }
+            // No sections yet draws nothing: Workout Options holds New Section, and Customize Sections explains them.
+            VStack(alignment: .leading, spacing: 28) {
+                ForEach(settings.workout.sections.custom) { CustomSectionView(section: $0, library: templates) }
             }
         }
     }
