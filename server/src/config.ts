@@ -20,7 +20,7 @@ const SPACE_SETTINGS = {
 export type Environment = 'development' | 'production';
 
 type SpaceSetting = keyof typeof SPACE_SETTINGS;
-type TextSetting = 'APP_ENV' | (typeof REQUIRED_IN_PRODUCTION)[number];
+type TextSetting = 'APP_ENV' | 'RAMBLE_SCRIPT' | (typeof REQUIRED_IN_PRODUCTION)[number];
 
 /** The generated `env.ts` parses the space settings to numbers; Worker bindings arrive as strings. */
 export type Settings = Partial<Record<TextSetting, string> & Record<SpaceSetting, string | number>>;
@@ -37,6 +37,8 @@ export type Config = {
 	geminiApiKey: string | null;
 	/** Ramble's speech-to-text. Null in development without one, where live Ramble answers 503. */
 	xaiApiKey: string | null;
+	/** What live Ramble hears instead of the microphone on a development server (`scriptedTranscriber`). */
+	rambleScript: string | null;
 };
 
 const DSN = /^https:\/\/[0-9a-f]+@[^/@\s]+\/\d+$/;
@@ -59,6 +61,7 @@ export function parseConfig(settings: Settings): Config {
 	if (environment === 'production' && set.length) {
 		throw new Error(`Space settings are development only: ${set.join(', ')}`);
 	}
+	if (environment === 'production' && read('RAMBLE_SCRIPT')) throw new Error('RAMBLE_SCRIPT is development only');
 	const space: SpaceOptions = {};
 	for (const name of set) {
 		const value = Number(settings[name]);
@@ -72,5 +75,6 @@ export function parseConfig(settings: Settings): Config {
 		space,
 		geminiApiKey: read('GEMINI_API_KEY') ?? null,
 		xaiApiKey: read('XAI_API_KEY') ?? null,
+		rambleScript: read('RAMBLE_SCRIPT') ?? null,
 	};
 }

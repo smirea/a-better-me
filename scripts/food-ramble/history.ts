@@ -98,3 +98,27 @@ export const MILK_TOP5 = [
 	'Milk, nonfat, fluid, with added vitamin A and vitamin D (fat free or skim)',
 	'Milk, chocolate, fluid, commercial, reduced fat',
 ];
+
+/**
+ * The owner's morning on November 5 2026, moved to `TODAY`: 365 nonfat milk, chia seeds, and rolled oats scanned for
+ * breakfast, and generic USDA oats and milk among the foods logged most, as the Today feedback found them.
+ */
+export const SCANNED: { meals: typeof MEALS; usual: typeof USUAL } = {
+	meals: [
+		{
+			id: 'sb',
+			day: TODAY,
+			meal: 'breakfast',
+			entries: [
+				entry('sb-milk', 'Organic Nonfat Milk By 365', '200 g'),
+				entry('sb-chia', 'Organic Black Chia Seeds By Nutiva', '30 g'),
+				entry('sb-oats', 'Organic Old-Fashioned Rolled Oats By 365', '1 serving'),
+			],
+		},
+	],
+	usual: [
+		entry('su-oats', 'Cereals, oats, regular and quick, not fortified, dry', '40 g'),
+		entry('su-milk', 'Milk, fluid, nonfat, calcium fortified (fat free or skim)', '200 g'),
+		entry('su-chia', 'Organic Black Chia Seeds By Nutiva', '30 g'),
+	],
+};

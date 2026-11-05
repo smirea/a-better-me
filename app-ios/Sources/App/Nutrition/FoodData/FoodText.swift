@@ -62,6 +62,12 @@ struct FoodText: Sendable {
         return word
     }
 
+    /// Whether every term is one of the name's words, not just the start of one: a spoken name is said whole, so "oat"
+    /// is not "Oatmeal".
+    func holds(_ terms: [String]) -> Bool {
+        !terms.isEmpty && terms.allSatisfy(words.contains)
+    }
+
     /// How well `terms` name this food, or nil when one of them matches no word. Covering the first part outweighs
     /// everything ("Bananas, raw" for "banana"); a match in the second part counts for less ("Fish, salmon"), whole
     /// words beat prefixes ("Egg" over "Eggplant" for "egg"), and a shorter, plainer name beats a longer one.

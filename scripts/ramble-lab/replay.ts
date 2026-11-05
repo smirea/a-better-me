@@ -89,7 +89,12 @@ const retryable = (error: unknown) =>
 
 let rateLimited = 0;
 async function read(spec: RambleModel, c: LabCase, text: string): Promise<Parsed> {
-	const request = { today: TODAY, time: c.time ?? '20:30', meals: MEALS, usual: USUAL, shown: c.shown };
+	const request = {
+		today: TODAY,
+		time: c.time ?? '20:30',
+		...(c.history ?? { meals: MEALS, usual: USUAL }),
+		shown: c.shown,
+	};
 	for (let attempt = 0; ; attempt++) {
 		try {
 			return await parse(spec, request, text, AbortSignal.timeout(20_000));

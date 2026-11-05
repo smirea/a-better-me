@@ -182,7 +182,7 @@ struct NutrientGoalsListView: View {
     /// "Floor 25 · Target 38 · Ceiling 100 g", or "No targets".
     static func text(_ range: NutrientRange, unit: NutrientUnit?) -> String {
         let parts = [("Floor", range.floor), ("Target", range.target), ("Ceiling", range.ceiling)].compactMap { name, value in
-            value.map { "\(name) \($0.formatted(.number.precision(.fractionLength(0...1))))" }
+            value.map { "\(name) \(unit == .kcal ? $0.wholeText : $0.niceText)" }
         }
         return parts.isEmpty ? "No targets" : parts.joined(separator: " · ") + " \(unit?.rawValue ?? "")"
     }

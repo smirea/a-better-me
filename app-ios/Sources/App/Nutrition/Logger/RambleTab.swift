@@ -31,8 +31,9 @@ struct RambleTab: View {
     var body: some View {
         VStack(spacing: 0) {
             RambleSummary(
-                planned: capture.shownPlanned, missing: capture.notFound, close: close, switchTo: switchTo
+                day: session.time.day, planned: capture.shownPlanned, missing: capture.notFound, close: close, switchTo: switchTo
             )
+            .id(session.time.day)
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
@@ -289,67 +290,85 @@ struct RambleTab: View {
     }
 }
 
-/// The top band: close, the ramble's calories and macros so far, rolling as foods land, and the other ways to log.
+/// The top band: close and the other ways to log over the day's totals with the ramble's foods as the plate, drawn as
+/// the logger's banner draws them (`MacroTotalsBars`), pulsing as foods land.
 private struct RambleSummary: View {
+    let day: CalendarDay
     let planned: [RamblePlanned]
     /// Foods said but not found, which the totals leave out.
     let missing: Int
     let close: () -> Void
     let switchTo: (LoggerTab) -> Void
+    @Environment(LocalStore.self) private var store
+    @Observe(AppSettings.current) private var settings
+    @Observe(NutritionPlan.all) private var plans
+    @Observe<[FoodEntry]> private var entries: [FoodEntry]
+    @Observe<NutritionDay> private var dayRow: NutritionDay
     @State private var pulse = 0.0
 
+    init(day: CalendarDay, planned: [RamblePlanned], missing: Int, close: @escaping () -> Void, switchTo: @escaping (LoggerTab) -> Void) {
+        self.day = day
+        self.planned = planned
+        self.missing = missing
+        self.close = close
+        self.switchTo = switchTo
+        _entries = Observe(FoodEntry.on(day))
+        _dayRow = Observe(NutritionDay.one(day))
+    }
+
     var body: some View {
-        let amounts = planned.reduce(into: NutrientAmounts()) { $0 = $0 + $1.pick.portion.amounts }
-        let kcal = Int((amounts[.energy] ?? 0).rounded())
-        HStack(spacing: 12) {
-            RoundIconButton("Close", systemImage: "xmark", action: close)
-            VStack(spacing: 2) {
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text("\(kcal)").font(AppFont.number(26)).contentTransition(.numericText(value: Double(kcal)))
-                    Text("kcal").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
-                }
-                HStack(spacing: 12) {
-                    macro("P", .protein, amounts, Theme.protein)
-                    macro("F", .fat, amounts, Theme.fat)
-                    macro("C", .carbs, amounts, Theme.carbs)
-                }
+        // A row for another day ("yesterday I had…") logs there, so this day's totals leave it out.
+        let plate = planned.filter { $0.day == day }.reduce(into: NutrientAmounts()) { $0 = $0 + $1.pick.portion.amounts }
+        let kcal = Int(planned.reduce(0) { $0 + ($1.pick.portion.amounts[.energy] ?? 0) }.rounded())
+        let display = settings.nutrition.logger.nutritionDisplay
+        let lines = FoodLog.summary(
+            dayRow.totals(entries), plate: plate,
+            target: NutritionPlan.effective(on: day, in: plans)?.target(on: day), showOverages: settings.nutrition.showOverages
+        )
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                RoundIconButton("Close", systemImage: "xmark", action: close)
+                Spacer(minLength: 0)
                 if missing > 0 {
                     Text(missing == 1 ? "1 food not found" : "\(missing) foods not found")
                         .font(AppFont.badge)
                         .foregroundStyle(Theme.amber)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
-            }
-            .scaleEffect(1 + 0.06 * pulse)
-            .frame(maxWidth: .infinity)
-            .accessibilityElement(children: .combine)
-            Menu {
-                ForEach(LoggerTab.allCases.filter { $0 != .ramble }, id: \.self) { tab in
-                    Button(tab.title, systemImage: tab.systemImage) { switchTo(tab) }
+                Spacer(minLength: 0)
+                Menu {
+                    ForEach(LoggerTab.allCases.filter { $0 != .ramble }, id: \.self) { tab in
+                        Button(tab.title, systemImage: tab.systemImage) { switchTo(tab) }
+                    }
+                } label: {
+                    Image(systemName: "square.grid.2x2").frame(width: 22, height: 22)
                 }
-            } label: {
-                Image(systemName: "square.grid.2x2").frame(width: 22, height: 22)
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+                .accessibilityLabel("Other ways to log")
             }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .accessibilityLabel("Other ways to log")
+            MacroTotalsBars(lines: lines, page: display.page)
+                .scaleEffect(1 + 0.04 * pulse)
+                .gesture(DragGesture(minimumDistance: 20).onEnded { drag in
+                    guard abs(drag.translation.width) > 30, abs(drag.translation.width) > abs(drag.translation.height) else { return }
+                    store.updateSettings { $0.nutrition.logger.nutritionDisplay = display.cycled(by: drag.translation.width < 0 ? 1 : -1) }
+                })
+                .sensoryFeedback(.selection, trigger: display)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(lines.map(\.spoken).joined(separator: ", "))
+                .accessibilityAdjustableAction { direction in
+                    store.updateSettings { $0.nutrition.logger.nutritionDisplay = display.cycled(by: direction == .increment ? 1 : -1) }
+                }
         }
         .padding(.horizontal, Theme.margin)
-        .padding(.vertical, 6)
-        .animation(.snappy(duration: 0.35), value: kcal)
+        .padding(.top, 6)
+        .padding(.bottom, 6)
+        .animation(.snappy(duration: 0.35), value: missing)
         .onChange(of: kcal) {
             pulse = 1
             withAnimation(.spring(duration: 0.5, bounce: 0.4)) { pulse = 0 }
         }
         .feedback(self)
-    }
-
-    private func macro(_ letter: String, _ id: NutrientID, _ amounts: NutrientAmounts, _ color: Color) -> some View {
-        let grams = Int((amounts[id] ?? 0).rounded())
-        return HStack(spacing: 3) {
-            Text(letter).font(.system(size: 10, weight: .heavy)).foregroundStyle(color)
-            Text("\(grams)g").font(AppFont.medium(13)).monospacedDigit().contentTransition(.numericText(value: Double(grams)))
-        }
     }
 }
 
@@ -835,7 +854,7 @@ private struct RambleLine: View {
 
     private static func spoken(_ item: RambleItem) -> String? {
         guard item.amount > 0 else { return nil }
-        let number = item.amount.formatted(.number.precision(.fractionLength(0 ... 2)))
+        let number = NutritionFormat.quantity(item.amount)
         return item.unit.isEmpty ? "×\(number)" : "\(number) \(item.unit)"
     }
 

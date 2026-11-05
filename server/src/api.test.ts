@@ -220,6 +220,10 @@ describe('parseConfig', () => {
 		expect(() => parseConfig({ ...production, SYNC_PAGE_SIZE: '3' })).toThrow(
 			'Space settings are development only: SYNC_PAGE_SIZE',
 		);
+		expect(parseConfig({ RAMBLE_SCRIPT: 'two eggs' }).rambleScript).toBe('two eggs');
+		expect(() => parseConfig({ ...production, RAMBLE_SCRIPT: 'two eggs' })).toThrow(
+			'RAMBLE_SCRIPT is development only',
+		);
 	});
 
 	test('production refuses to start without the Gemini and xAI keys that photo logging and Ramble need', () => {

@@ -222,6 +222,17 @@ struct FoodIndex: Sendable {
         return results
     }
 
+    /// The matches for a food name Ramble heard: the logged foods that hold every spoken word, most recently logged first,
+    /// then `local`'s. The owner's own food outranks a generic one ("oats" is the rolled oats scanned this morning, not
+    /// USDA's or an older generic entry, which `local`'s name score puts first), and a spoken brand or kind the logged
+    /// food lacks ("Fairlife milk", "steel cut oats") passes over it to the search.
+    func spoken(_ name: String) throws -> [FoodSearchResult] {
+        let terms = FoodText.terms(name)
+        let own = (library.items[.history] ?? []).filter { $0.text.holds(terms) }.map(\.result)
+        let keys = Set(own.map(\.key))
+        return own + (try local(name)).filter { !keys.contains($0.key) }
+    }
+
     /// The best local food for a name the photo model gave, or nil. The model is asked for SR Legacy's own description
     /// ("Chicken, broilers or fryers, drumstick, meat and skin, cooked, roasted"), which wins outright when the bundle
     /// has it; plainer names ranked chicken skin above the drumstick. Every remaining word must match, as in typed

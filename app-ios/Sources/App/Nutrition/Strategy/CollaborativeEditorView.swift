@@ -33,14 +33,14 @@ struct CollaborativeEditorView: View {
             calories
             protein
             ratio
-            Text("Weekly budget: \(week.weeklyKcal.formatted()) kcal").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+            Text("Weekly budget: \(Double(week.weeklyKcal).wholeText) kcal").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
         }
         .feedback(self)
     }
 
     private var calories: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Calorie targets: set between 0 and \(maxKcal.formatted()) kcal").font(AppFont.medium(14))
+            Text("Calorie targets: set between 0 and \(Double(maxKcal).wholeText) kcal").font(AppFont.medium(14))
             HStack {
                 TextField("Calories", value: Binding(get: { Int(day.energy) }, set: { week.setCalories(min(maxKcal, max(0, $0)), on: weekday) }), format: .number)
                     .keyboardType(.numberPad)
@@ -63,7 +63,7 @@ struct CollaborativeEditorView: View {
             HStack {
                 Text("Protein").font(AppFont.medium(14))
                 Spacer()
-                Text("\(Int(day.protein)) g · \(perLb.formatted(.number.precision(.fractionLength(2)))) g/lb").font(AppFont.medium(14)).monospacedDigit()
+                Text("\(day.protein.niceText) g · \(perLb.formatted(.number.precision(.fractionLength(2)))) g/lb").font(AppFont.medium(14)).monospacedDigit()
             }
             Slider(
                 value: Binding(get: { min(perLb, CollaborativeWeek.maxProteinPerLb) }, set: { week.setProtein(Int(($0 * weightLb).rounded()), on: weekday) }),
@@ -80,7 +80,7 @@ struct CollaborativeEditorView: View {
             HStack {
                 Text("Carb to Fat Ratio").font(AppFont.medium(14))
                 Spacer()
-                Text("\(Int((week.carbShare(weekday) * 100).rounded())) %").font(AppFont.medium(14)).monospacedDigit()
+                Text("\((week.carbShare(weekday) * 100).wholeText) %").font(AppFont.medium(14)).monospacedDigit()
             }
             Slider(value: Binding(get: { week.carbShare(weekday) }, set: { week.setCarbShare(($0 * 100).rounded() / 100, on: weekday) }), in: 0...1) { Text("Carb to Fat Ratio") }
                 .tint(Theme.carbs)

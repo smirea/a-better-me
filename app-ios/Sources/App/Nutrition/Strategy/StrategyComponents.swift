@@ -13,7 +13,7 @@ enum StrategyFormat {
         "\(day(start, year: true)) – \(end.map { day($0, year: true) } ?? "Now")"
     }
 
-    static func kcal(_ value: Double) -> String { "\(Int(value.rounded()).formatted()) kcal" }
+    static func kcal(_ value: Double) -> String { "\(value.wholeText) kcal" }
 
     static func weight(_ kg: Double?, _ unit: WeightUnit) -> String {
         kg.map { "\(unit.fromKg($0).formatted(.number.precision(.fractionLength(1)))) \(unit.rawValue)" } ?? "—"
@@ -46,7 +46,7 @@ struct WeekTargetsChart: View {
     private func column(_ weekday: Int, scale: CGFloat) -> some View {
         let target = targets[weekday]
         return VStack(spacing: 3) {
-            Text(Int(target.energy).formatted())
+            Text(target.energy.wholeText)
                 .font(AppFont.medium(10))
                 .monospacedDigit()
                 .lineLimit(1)

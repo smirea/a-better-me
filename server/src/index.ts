@@ -8,7 +8,7 @@ import { handleAgent } from './agent';
 import { handle } from './api';
 import { ASSETS_DIR, assetRoutes } from './assets';
 import { parseConfig } from './config';
-import { serveLiveRamble } from './food/ramble-live';
+import { scriptedTranscriber, serveLiveRamble } from './food/ramble-live';
 import env from './env';
 
 const config = parseConfig(env);
@@ -81,6 +81,7 @@ const server = Bun.serve<Socket>({
 			ws.data.ramble = serveLiveRamble(
 				{ send: text => ws.send(text), close: (code, reason) => ws.close(code, reason) },
 				{ gemini: config.geminiApiKey!, xai: config.xaiApiKey! },
+				config.rambleScript ? { transcribe: scriptedTranscriber(config.rambleScript) } : undefined,
 			);
 		},
 		message(ws, message) {

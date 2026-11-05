@@ -379,21 +379,29 @@ describe('ramble', () => {
 		]);
 	});
 
-	test('a ref to a logged entry that shares no word with the food is dropped, so the food is searched', async () => {
+	test('a ref to a logged entry whose name lacks a word of the food is dropped, so the food is searched', async () => {
 		stub(() =>
 			geminiText(
 				JSON.stringify({
 					items: [
 						{ kind: 'food', name: 'apple', ref: 'u1' },
-						{ kind: 'food', name: 'black coffee', ref: 'u1' },
+						{ kind: 'food', name: 'coffees', ref: 'u1' },
+						{ kind: 'food', name: 'Starbucks coffee', ref: 'u1' },
+						{ kind: 'food', name: '365 nonfat milk', ref: 'e2' },
+						{ kind: 'food', name: 'Fairlife nonfat milk', ref: 'e2' },
 					],
 				}),
 			),
 		);
-		const { items } = await (await ramble('gemini-key', body)).json();
+		const milk = { id: 'milk-uuid', name: 'Organic Nonfat Milk By 365', serving: '200 g' };
+		const meal = { id: 'meal-uuid', day: '2026-10-27', meal: 'breakfast', entries: [body.meals[0]!.entries[0]!, milk] };
+		const { items } = await (await ramble('gemini-key', { ...body, meals: [meal] })).json();
 		expect(items.map((item: { name: string; ref: string | null }) => [item.name, item.ref])).toEqual([
 			['apple', null],
-			['black coffee', 'coffee-uuid'],
+			['coffees', 'coffee-uuid'],
+			['Starbucks coffee', null],
+			['365 nonfat milk', 'milk-uuid'],
+			['Fairlife nonfat milk', null],
 		]);
 	});
 
