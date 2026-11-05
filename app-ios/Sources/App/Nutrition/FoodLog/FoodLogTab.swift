@@ -17,6 +17,9 @@ struct FoodLogTab: View {
             .background(Theme.background)
             .background { ShownDayEntries(day: state.day).id(state.day) }
             .safeAreaInset(edge: .bottom) { FoodLogBottomBar() }
+            // Selecting or pasting puts its own bar of actions at the bottom, so the tab bar steps aside for it.
+            .toolbarVisibility(state.selecting || state.pending != nil ? .hidden : .automatic, for: .tabBar)
+            .animation(.snappy, value: state.selecting || state.pending != nil)
             .screenTitle(NutritionFormat.dayTitle(state.day))
             .toolbar {
                 ToolbarItem {
