@@ -82,23 +82,14 @@ struct WorkoutEditor: View {
         let minutes = WorkoutEstimate.minutes(current) { item, set in
             item.restSeconds(after: set, exercise: catalog.exercise(item.exerciseID), settings: .of(item.exerciseID, in: settings), defaults: defaults)
         }
-        return HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(count == 1 ? "1 Exercise" : "\(count) Exercises").font(AppFont.sectionTitle)
-                if program == nil {
-                    Text("Estimated workout time is \(minutes) min")
-                        .font(AppFont.rowDetail)
-                        .foregroundStyle(Theme.textSecondary)
-                }
-            }
-            Spacer()
-            if program != nil {
+        return VStack(alignment: .leading, spacing: 2) {
+            SectionHeader(count == 1 ? "1 Exercise" : "\(count) Exercises") {
                 Button("Add Exercises") { sheet = .picker(.add) }
-                    .font(AppFont.headline(15))
-                    .underline()
-                    .buttonStyle(.plain)
-            } else {
-                RoundIconButton("Add Exercise", systemImage: "plus") { sheet = .picker(.add) }
+            }
+            if program == nil {
+                Text("Estimated workout time is \(minutes) min")
+                    .font(AppFont.rowDetail)
+                    .foregroundStyle(Theme.textSecondary)
             }
         }
         .padding(.top, 12)

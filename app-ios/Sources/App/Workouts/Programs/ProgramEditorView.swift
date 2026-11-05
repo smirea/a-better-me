@@ -206,13 +206,8 @@ private struct ProgramEditorScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textTertiary) }
                 }
-                HStack {
-                    Text("0 Exercises").font(AppFont.sectionTitle)
-                    Spacer()
+                SectionHeader("0 Exercises") {
                     Button("Add Exercises") { addingToRestDay = true }
-                        .font(AppFont.headline(15))
-                        .underline()
-                        .buttonStyle(.plain)
                 }
             }
             .padding(Theme.margin)
