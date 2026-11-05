@@ -35,12 +35,22 @@ struct ExerciseLibraryView: View {
             query: query,
             subtitle: { counts[$0.id].map { "Performed \($0) \($0 == 1 ? "time" : "times")" } },
             onSelect: { opened = ExerciseRef(id: $0.id) },
-            header: { UnderlineTabs(items: LibraryTab.allCases.map { ($0, $0.rawValue) }, selection: $tab) },
             trailing: { _ in Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary) }
         )
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search for an exercise")
-        .detailTitle("Exercises")
+        .detailTitle("Exercises", subtitle: tab == .all ? nil : tab.rawValue)
         .toolbar {
+            // Which exercises the list shows. A row of five tabs above the filter bar and the muscle row made four rows of
+            // controls before the first exercise.
+            ToolbarItem {
+                Menu {
+                    Picker("Show", selection: $tab) {
+                        ForEach(LibraryTab.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                } label: {
+                    Label("Show", systemImage: tab == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
+                }
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button("Create Custom Exercise", systemImage: "plus") { creating = true }
             }
