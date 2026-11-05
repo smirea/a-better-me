@@ -17,12 +17,6 @@ enum NutritionFormat {
         id == .energy ? value.wholeText : value.niceText
     }
 
-    /// A quantity of a measure: up to two decimals, no grouping, and a point whatever the locale, since the keypad
-    /// types ".". "0.33", "1234.57".
-    static func quantity(_ value: Double) -> String {
-        value.formatted(.number.precision(.fractionLength(0...2)).grouping(.never).locale(Locale(identifier: "en_US_POSIX")))
-    }
-
     /// "12P 8.4F 20C": protein, fat, and carbs in grams, as `amount` prints them.
     static func macros(_ amounts: NutrientAmounts) -> String {
         NutrientID.macros.dropFirst().map { "\(amount(amounts[$0] ?? 0))\($0.macroLetter)" }.joined(separator: " ")
@@ -35,7 +29,7 @@ enum NutritionFormat {
 
     /// "1.25 cup", "100 g", or with the food's weight when it knows its grams, "1 large (136 g)".
     static func serving(_ serving: Serving, of food: FoodSnapshot? = nil) -> String {
-        let text = "\(quantity(serving.quantity)) \(serving.measure.name)"
+        let text = "\(NumberText.plain(serving.quantity)) \(serving.measure.name)"
         guard let food, !SizeUnit.allCases.contains(where: { $0.rawValue == serving.measure.name }),
               let grams = RecipeMath.grams(serving, of: food) else { return text }
         return "\(text) (\(amount(grams)) g)"

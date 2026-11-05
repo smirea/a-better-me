@@ -25,7 +25,7 @@ struct PlateCalculatorView: View {
                         ForEach(Array(plan.legend.enumerated()), id: \.offset) { _, line in
                             HStack(spacing: 6) {
                                 swatch(line.weight, isBumper: line.isBumper)
-                                Text("\(line.count) x \(SetField.plain(line.weight))\(line.isBumper ? " bumper" : "")")
+                                Text("\(line.count) x \(NumberText.plain(line.weight))\(line.isBumper ? " bumper" : "")")
                             }
                         }
                     }
@@ -69,18 +69,18 @@ struct PlateCalculatorView: View {
     private var sentence: String {
         let base = plan.sentence(unit: unit.rawValue)
         guard let offset, let requested else { return base }
-        return "\(base) (\(SetField.plain(requested)) \(unit.rawValue) \(offset.label(unit: unit)))"
+        return "\(base) (\(NumberText.plain(requested)) \(unit.rawValue) \(offset.label(unit: unit)))"
     }
 
     private func barMenu(_ onBar: @escaping (Double) -> Void) -> some View {
         Menu {
             Picker("Bar Weight", selection: Binding(get: { plan.loading.baseWeight }, set: onBar)) {
-                ForEach(plan.loading.baseWeights, id: \.self) { Text("\(SetField.plain($0)) \(unit.rawValue)").tag($0) }
+                ForEach(plan.loading.baseWeights, id: \.self) { Text("\(NumberText.plain($0)) \(unit.rawValue)").tag($0) }
             }
         } label: {
-            Chip(title: "\(SetField.plain(plan.loading.baseWeight)) \(unit.rawValue) bar", systemImage: "chevron.up.chevron.down")
+            Chip(title: "\(NumberText.plain(plan.loading.baseWeight)) \(unit.rawValue) bar", systemImage: "chevron.up.chevron.down")
         }
-        .accessibilityLabel("Bar weight, \(SetField.plain(plan.loading.baseWeight)) \(unit.rawValue)")
+        .accessibilityLabel("Bar weight, \(NumberText.plain(plan.loading.baseWeight)) \(unit.rawValue)")
     }
 
     @ViewBuilder
@@ -112,7 +112,7 @@ struct PlateCalculatorView: View {
                             RoundedRectangle(cornerRadius: isExpanded ? 3 : 1).strokeBorder(.black.opacity(0.5), lineWidth: isExpanded ? 2 : 1)
                         }
                         if isExpanded {
-                            Text(SetField.plain(plate.weight))
+                            Text(NumberText.plain(plate.weight))
                                 .font(AppFont.headline(10))
                                 .foregroundStyle(.black)
                                 .fixedSize()

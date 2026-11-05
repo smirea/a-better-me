@@ -8,6 +8,12 @@ enum NumberText {
         return trimmed.isEmpty ? nil : Double(trimmed)
     }
 
+    /// An editable number: up to two decimals, no grouping, and a point whatever the locale, since the keypads type
+    /// ".". "0.33", "1234.57", "45". Set fields, plate weights, and food quantities.
+    static func plain(_ value: Double) -> String {
+        value.formatted(.number.precision(.fractionLength(0...2)).grouping(.never).locale(Locale(identifier: "en_US_POSIX")))
+    }
+
     static func text(_ value: Double?) -> String {
         value.map { $0.formatted(.number.precision(.fractionLength(0...3)).grouping(.never).locale(Locale(identifier: "en_US_POSIX"))) } ?? ""
     }

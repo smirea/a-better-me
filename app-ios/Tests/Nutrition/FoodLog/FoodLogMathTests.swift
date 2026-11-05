@@ -232,8 +232,8 @@ struct FoodLogMathTests {
         let container = Serving(measure: yogurt.nutrition.measures[0], quantity: 2)
         let grams = yogurt.nutrition.allMeasures.first { $0.name == "g" }!
         let ounces = yogurt.nutrition.allMeasures.first { $0.name == "oz" }!
-        #expect(NutritionFormat.quantity(container.converted(to: grams).quantity) == "300")
-        #expect(NutritionFormat.quantity(container.converted(to: ounces).quantity) == "10.58")
+        #expect(NumberText.plain(container.converted(to: grams).quantity) == "300")
+        #expect(NumberText.plain(container.converted(to: ounces).quantity) == "10.58")
         let pounds = yogurt.nutrition.allMeasures.first { $0.name == "lb" }!
         let back = container.converted(to: pounds).converted(to: yogurt.nutrition.measures[0])
         #expect(abs(back.quantity - 2) < 1e-9)
@@ -247,7 +247,7 @@ struct FoodLogMathTests {
         #expect(NutritionFormat.clock(888) == "2:48 PM")
         #expect(NutritionFormat.serving(Serving(measure: Measure(name: "cup", quantity: 1, servings: 2.4), quantity: 1.25)) == "1.25 cup")
         #expect(NutritionFormat.serving(Serving(measure: Measure(name: "g", quantity: 1, servings: 0.01), quantity: 150)) == "150 g")
-        #expect(NutritionFormat.quantity(1.0 / 3) == "0.33")
+        #expect(NumberText.plain(1.0 / 3) == "0.33")
         #expect(NutritionFormat.macros([.energy: 199.6, .protein: 12, .fat: 8.4, .carbs: 19.5]) == "12P 8.4F 20C")
         #expect(NutritionFormat.dayTitle(monday, today: monday) == "Today")
         #expect(NutritionFormat.dayTitle(monday, today: monday.adding(days: 1)) == "Yesterday")

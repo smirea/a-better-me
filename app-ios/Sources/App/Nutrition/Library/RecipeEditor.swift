@@ -146,7 +146,7 @@ struct RecipeEditor: View {
             .pickerStyle(.segmented)
             MacroSummary(
                 amounts: perServing ? preview.nutrition.nutrients : RecipeMath.total(preview.ingredients),
-                caption: perServing ? "Per \(servingLabel(preview))" : "For \(NutritionFormat.quantity(preview.servings)) servings"
+                caption: perServing ? "Per \(servingLabel(preview))" : "For \(NumberText.plain(preview.servings)) servings"
             )
             Toggle("Show all nutrients", isOn: $showAllNutrients).tint(Theme.accent)
         }

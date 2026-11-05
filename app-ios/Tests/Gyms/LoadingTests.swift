@@ -13,7 +13,7 @@ struct PlateCalculatorTests {
     @Test func researchExample185OnA45Bar() {
         let plan = bar([45, 25]).plan(for: 185)
         #expect(plan.perSide == [45, 25])
-        #expect(plan.legend.map { "\($0.count) x \(SetField.plain($0.weight))" } == ["1 x 45", "1 x 25"])
+        #expect(plan.legend.map { "\($0.count) x \(NumberText.plain($0.weight))" } == ["1 x 45", "1 x 25"])
         #expect(plan.sentence(unit: "lb") == "70 lb on both sides + 45 lb bar weight = 185 lb")
     }
 
@@ -76,15 +76,15 @@ struct MixedUnitPlateTests {
     @Test func kgPlatesShownInLbLoadExactlyWhatTheStepperPicked() throws {
         let loading = PlateLoading(base: .bar, baseWeight: lb.fromKg(20), plates: [.init(weight: lb.fromKg(1.25), perSide: nil)], sides: 2)
         let stepped = try #require(loading.step(from: 44.09, up: true))
-        #expect(SetField.plain(stepped) == "49.6")
+        #expect(NumberText.plain(stepped) == "49.6")
         #expect(loading.plan(for: stepped).sentence(unit: "lb") == "2.76 lb on both sides + 44.09 lb bar weight = 49.6 lb")
     }
 
     @Test func stepperReachesTheFullSleeveInKg() {
         let platesInKg = PlateLoading(base: .bar, baseWeight: kg.fromKg(lb.toKg(45)), plates: [45.0, 25].map { .init(weight: kg.fromKg(lb.toKg($0)), perSide: nil) }, sides: 2)
-        #expect(platesInKg.step(from: 420, up: true).map(SetField.plain) == "428.64")
+        #expect(platesInKg.step(from: 420, up: true).map(NumberText.plain) == "428.64")
         let only45 = PlateLoading(base: .bar, baseWeight: kg.fromKg(lb.toKg(45)), plates: [.init(weight: kg.fromKg(lb.toKg(45)), perSide: nil)], sides: 2)
-        #expect(only45.step(from: 142.88, up: true).map(SetField.plain) == "183.7")
+        #expect(only45.step(from: 142.88, up: true).map(NumberText.plain) == "183.7")
     }
 
     @Test func absurdTargetStaysBoundedAndSaysWhatIsMissing() {
@@ -138,8 +138,8 @@ struct LoadableStepTests {
         let catalog = [item("stack", "Pin Loaded Machines")].keyed
         let stack = EquipmentLoad.ranges(options: [WeightRange(minKg: 0, maxKg: lb.toKg(500), incrementKg: lb.toKg(10))])
         let loading = try #require(Loading.resolve(option: ["stack"], catalog: catalog, unit: lb) { _ in stack })
-        #expect(loading.step(from: 183, up: true).map(SetField.plain) == "190")
-        #expect(loading.step(from: 183, up: false).map(SetField.plain) == "180")
+        #expect(loading.step(from: 183, up: true).map(NumberText.plain) == "190")
+        #expect(loading.step(from: 183, up: false).map(NumberText.plain) == "180")
         #expect(loading.step(from: 500, up: true) == nil)
     }
 
@@ -147,9 +147,9 @@ struct LoadableStepTests {
         let catalog = [item("dumbbells", "Free Weights")].keyed
         let rack = EquipmentLoad.weights(options: [25.0, 30, 35, 22.5].map { WeightOption(kg: lb.toKg($0)) })
         let loading = try #require(Loading.resolve(option: ["dumbbells"], catalog: catalog, unit: lb) { _ in rack })
-        #expect(loading.step(from: 25, up: true).map(SetField.plain) == "30")
-        #expect(loading.step(from: 25, up: false).map(SetField.plain) == "22.5")
-        #expect(loading.step(from: 27, up: false).map(SetField.plain) == "25")
+        #expect(loading.step(from: 25, up: true).map(NumberText.plain) == "30")
+        #expect(loading.step(from: 25, up: false).map(NumberText.plain) == "22.5")
+        #expect(loading.step(from: 27, up: false).map(NumberText.plain) == "25")
     }
 }
 
@@ -219,7 +219,7 @@ struct EquipmentResolutionTests {
             Loading.weightPlatesID: .weights(options: [WeightOption(kg: lb.toKg(45))]),
         ]
         let grips = Loading.resolve(option: ["dumbbells", "fat-grips"], catalog: catalog, unit: lb) { loads[$0] }
-        #expect(grips?.step(from: 25, up: true).map(SetField.plain) == "30")
+        #expect(grips?.step(from: 25, up: true).map(NumberText.plain) == "30")
         let belt = Loading.resolve(option: ["belt", Loading.weightPlatesID], catalog: catalog, unit: lb) { loads[$0] }
         #expect(belt?.plates?.plan(for: 90).sentence(unit: "lb") == "90 lb on one side + 0 lb base weight = 90 lb")
     }
@@ -311,7 +311,7 @@ struct PlateCalculatorOptionTests {
         let plan = bumpers.plan(for: 205)
         #expect(plan.sentence(unit: "lb") == "80 lb on both sides + 45 lb bar weight = 205 lb")
         #expect(plan.loaded.map { ($0.weight, $0.isBumper) }.map { "\($0.0) \($0.1)" } == ["55.0 true", "25.0 false"])
-        #expect(plan.legend.map { "\($0.count) x \(SetField.plain($0.weight))\($0.isBumper ? " bumper" : "")" } == ["1 x 55 bumper", "1 x 25"])
+        #expect(plan.legend.map { "\($0.count) x \(NumberText.plain($0.weight))\($0.isBumper ? " bumper" : "")" } == ["1 x 55 bumper", "1 x 25"])
     }
 
     @Test func noBumperPlatesInTheGymAddsNothing() throws {
@@ -338,9 +338,9 @@ struct PlateCalculatorOptionTests {
         let lbOnly = try #require(resolve(loads: loads))
         #expect(lbOnly.plates.map(\.weight) == [45, 25])
         let all = try #require(resolve(calculator: PlateCalculatorOptions(allowMixedUnits: true), loads: loads))
-        #expect(all.plates.map { SetField.plain($0.weight) } == ["45", "44.09", "25", "10", "2.76"])
+        #expect(all.plates.map { NumberText.plain($0.weight) } == ["45", "44.09", "25", "10", "2.76"])
         let kgOnly = try #require(Loading.resolve(option: ["barbell"], catalog: catalog, unit: .kg) { loads[$0] }?.plates)
-        #expect(kgOnly.plates.map { SetField.plain($0.weight) } == ["20", "4.54", "1.25"])
+        #expect(kgOnly.plates.map { NumberText.plain($0.weight) } == ["20", "4.54", "1.25"])
     }
 
     @Test func pinMicroStackStepsThroughEachWeightThenTheNextPin() throws {
@@ -351,9 +351,9 @@ struct PlateCalculatorOptionTests {
         let loading = try #require(Loading.resolve(option: ["stack"], catalog: catalog, unit: lb) { _ in stack })
         var steps: [Double] = [100]
         for _ in 0..<4 { steps.append(try #require(loading.step(from: steps.last!, up: true))) }
-        #expect(steps.map(SetField.plain) == ["100", "102.5", "105", "110", "112.5"])
+        #expect(steps.map(NumberText.plain) == ["100", "102.5", "105", "110", "112.5"])
         #expect(loading.step(from: 505, up: true) == nil)
-        #expect(loading.step(from: 102.5, up: false).map(SetField.plain) == "100")
+        #expect(loading.step(from: 102.5, up: false).map(NumberText.plain) == "100")
     }
 
     @Test func microPlatesCombine() throws {
@@ -364,7 +364,7 @@ struct PlateCalculatorOptionTests {
         let loading = try #require(Loading.resolve(option: ["stack"], catalog: catalog, unit: lb) { _ in stack })
         var steps: [Double] = [100]
         for _ in 0..<4 { steps.append(try #require(loading.step(from: steps.last!, up: true))) }
-        #expect(steps.map(SetField.plain) == ["100", "102.5", "105", "107.5", "110"])
+        #expect(steps.map(NumberText.plain) == ["100", "102.5", "105", "107.5", "110"])
     }
 }
 

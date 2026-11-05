@@ -46,7 +46,7 @@ struct RecipeDetailView: View {
                 actions(recipe, portion: portion)
             }
             ThemedSection("Details") {
-                LabeledContent("Makes", value: "\(NutritionFormat.quantity(recipe.servings)) \(recipe.servings == 1 ? "serving" : "servings")")
+                LabeledContent("Makes", value: "\(NumberText.plain(recipe.servings)) \(recipe.servings == 1 ? "serving" : "servings")")
                 if let cookedGrams = recipe.cookedGrams {
                     LabeledContent("Total Weight", value: "\(NutritionFormat.amount(cookedGrams)) g")
                 }
@@ -174,10 +174,10 @@ struct RecipePrepareView: View {
             }
             ThemedSection("Ingredients") {
                 Stepper(value: $servings, in: 0.5...100, step: 0.5) {
-                    Text("Instructions for \(NutritionFormat.quantity(servings)) \(servings == 1 ? "serving" : "servings")")
+                    Text("Instructions for \(NumberText.plain(servings)) \(servings == 1 ? "serving" : "servings")")
                         .font(AppFont.rowTitle)
                 }
-                .accessibilityValue("\(NutritionFormat.quantity(servings)) servings")
+                .accessibilityValue("\(NumberText.plain(servings)) servings")
                 ForEach(RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: servings)) { ingredient in
                     FoodRow(food: ingredient.food, serving: ingredient.serving)
                 }

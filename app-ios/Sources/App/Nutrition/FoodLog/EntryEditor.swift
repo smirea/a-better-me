@@ -22,7 +22,7 @@ struct EntryEditor: View {
     init(entry: FoodEntry) {
         self.entry = entry
         _serving = State(initialValue: entry.serving)
-        _quantity = State(initialValue: NutritionFormat.quantity(entry.serving.quantity))
+        _quantity = State(initialValue: NumberText.plain(entry.serving.quantity))
         _time = State(initialValue: entry.day.date(atMinute: entry.minute))
     }
 
@@ -55,12 +55,12 @@ struct EntryEditor: View {
                             .font(AppFont.number(20))
                             .onChange(of: quantity) { _, text in
                                 // The unit picker writes the rounded label of an exact conversion; only typing replaces it.
-                                guard text != NutritionFormat.quantity(serving.quantity) else { return }
+                                guard text != NumberText.plain(serving.quantity) else { return }
                                 if let value = Double(text.replacingOccurrences(of: ",", with: ".")) { serving.quantity = value }
                             }
                         Picker("Unit", selection: Binding(get: { serving.measure }, set: { measure in
                             serving = serving.converted(to: measure)
-                            quantity = NutritionFormat.quantity(serving.quantity)
+                            quantity = NumberText.plain(serving.quantity)
                         })) {
                             ForEach(measures, id: \.self) { Text($0.name).tag($0) }
                         }
