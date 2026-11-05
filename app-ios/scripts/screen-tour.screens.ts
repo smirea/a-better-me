@@ -14,7 +14,7 @@ const more = (row: string) => [
 	...(bottomRows.has(row) ? ['scroll bottom', 'wait 500'] : []),
 	...tap(row),
 ];
-// The trailing toolbar button of a tab root (Food Log and Workout name it "More", as the tab is).
+// The trailing toolbar menu of a tab root (Day Options on the Food Log, Workout Options on the Workout tab).
 const trailingToolbarButton = ['press 364 84', 'wait 800'];
 const bottomRows = new Set([
 	'Food Log',
@@ -78,7 +78,7 @@ export const screens: Screen[] = [
 	},
 	{
 		name: 'live-workout',
-		steps: [...tapTab('Workout'), ...trailingToolbarButton, 'press 260 103', 'wait 1200'],
+		steps: [...tapTab('Workout'), ...tapTab('New'), ...tap('Empty Workout'), 'wait 1200'],
 		after: discardWorkout,
 	},
 
@@ -149,12 +149,12 @@ export const screens: Screen[] = [
 		name: 'workout-summary',
 		steps: [...more('Workout History'), ...tap('Upper, Nov 3, 2026 at 10:36 AM'), 'wait 1200'],
 	},
-	{ name: 'workout-create', steps: [...tapTab('Workout'), ...tap('Create'), ...tap('New Workout')] },
-	{ name: 'workout-new-program', steps: [...tapTab('Workout'), ...tap('Create'), ...tap('New Program')] },
+	{ name: 'workout-create', steps: [...tapTab('Workout'), ...tapTab('New'), ...tap('New Workout')] },
+	{ name: 'workout-new-program', steps: [...tapTab('Workout'), ...tapTab('New'), ...tap('New Program')] },
 	{ name: 'workout-go-to-cycle', steps: [...tapTab('Workout'), ...tap('Cycle 1')] },
 	{
 		name: 'live-workout-add-exercise',
-		steps: [...tapTab('Workout'), ...trailingToolbarButton, 'press 260 103', ...tapButton('Add Exercise'), 'wait 1000'],
+		steps: [...tapTab('Workout'), ...tapTab('New'), ...tap('Empty Workout'), ...tapButton('Add Exercise'), 'wait 1000'],
 		after: [...tapButton('Close'), ...discardWorkout],
 	},
 	{ name: 'levels-muscle', steps: [...more('Levels'), ...tap('Lats, 12 sets')] },

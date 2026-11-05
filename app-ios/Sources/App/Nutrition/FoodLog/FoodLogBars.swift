@@ -329,7 +329,7 @@ struct DayMenu: View {
     }
 
     var body: some View {
-        Menu("More", systemImage: "ellipsis") {
+        Menu("Day Options", systemImage: "ellipsis") {
             Button("Nutrition Overview", systemImage: "list.bullet.rectangle") { state.path.append(FoodLogRoute.overview(day)) }
             Button("Copy Day", systemImage: "doc.on.doc") {
                 state.selecting = true

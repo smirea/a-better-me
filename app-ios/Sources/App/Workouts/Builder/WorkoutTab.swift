@@ -11,12 +11,8 @@ struct WorkoutTab: View {
     @Observe(Program.archived) private var archivedPrograms
     @Observe(Program.active) private var activeProgram
     @Environment(SessionHistory.self) private var history
-    @Environment(LocalStore.self) private var store
-    @Environment(LiveWorkoutPresenter.self) private var presenter
     @Observe(AppSettings.current) private var settings
     @State private var showingCalendar = false
-    @State private var creatingWorkout = false
-    @State private var creatingProgram = false
     @State private var creatingSection = false
     @AppStorage("workouts.collapsed.library") private var libraryCollapsed = false
     @State private var summary: WorkoutSession?
@@ -59,12 +55,6 @@ struct WorkoutTab: View {
             }
         }
         .sheet(item: $summary) { WorkoutSummaryView(session: $0) }
-        .fullScreenCover(isPresented: $creatingWorkout) {
-            CreateWorkoutView { path.append($0.id) }
-        }
-        .fullScreenCover(isPresented: $creatingProgram) {
-            NewProgramWizard()
-        }
         .newSectionAlert(isPresented: $creatingSection)
         .feedback(self)
     }
@@ -95,20 +85,9 @@ struct WorkoutTab: View {
             Toggle("Calendar", systemImage: "calendar", isOn: $showingCalendar.animation())
                 .toggleStyle(.button)
         }
-        ToolbarSpacer(.fixed)
         ToolbarItem {
-            Menu("Create", systemImage: "plus") {
+            Menu("Workout Options", systemImage: "ellipsis") {
                 Button("New Section", systemImage: "rectangle.split.1x2") { creatingSection = true }
-                Button("New Program", systemImage: "point.topleft.down.to.point.bottomright.curvepath") { creatingProgram = true }
-                Button("New Workout", systemImage: "dumbbell") { creatingWorkout = true }
-            }
-        }
-        ToolbarSpacer(.fixed)
-        ToolbarItem {
-            Menu("More", systemImage: "ellipsis") {
-                Button("Start Empty Workout", systemImage: "arrow.right.to.line") {
-                    presenter.startOrResume({ .empty }, in: store)
-                }
                 Button("Workout History", systemImage: "list.bullet.rectangle") { path.append(WorkoutTabRoute.history) }
                 Button("Customize Sections", systemImage: "rectangle.3.group") { path.append(WorkoutTabRoute.customizeSections) }
                 Button { path.append(WorkoutTabRoute.archive) } label: {
