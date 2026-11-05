@@ -8,8 +8,8 @@
 Full rules in [`docs/decisions/workflow.md`](docs/decisions/workflow.md).
 
 - One PR per thread, never stacked. Rebase only when GitHub reports a real conflict.
-- Worktree setup is automatic: T3 Code runs `agent-t3-worktree setup` when it creates a worktree, and the session-start and pre-commit checks rerun it when something is missing. Never run it by hand, and never rename a T3 worktree's branch. A merged worktree is removed when its thread settles or by `bun scripts/worktree-gc.ts`; `bun scripts/teardown-worktree.ts <worktree | branch>` removes one right away.
-- After opening a PR, run `bun scripts/pr-ship.ts [--merge]` in the foreground until it exits 0. Its exit code names the next step.
+- Worktree setup is automatic: T3 Code runs `agent-t3-worktree setup` when it creates a worktree, and the session-start and pre-commit checks rerun it when something is missing. Never run it by hand, and never rename a T3 worktree's branch. A merged worktree is removed when its thread settles or by `agent-t3-worktree gc --repo .`; `agent-t3-worktree teardown <worktree | branch>` removes one right away.
+- After opening a PR, run `pr-ship [--merge]` (shared, from `~/code/scripts`) in the foreground until it exits 0. Its exit code names the next step.
 - Never skip git hooks. Fix the failure instead.
 - Run only the relevant tests locally; CI runs the full suite.
 - Development speed is a goal. When friction shows up (a manual step, a prompt you click through, a slow command, a flaky tool), fix it in the same thread if it is small; otherwise open a GitHub issue with what you found and a proposed fix, and say so in your reply.

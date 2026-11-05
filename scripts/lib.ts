@@ -1,6 +1,6 @@
 /**
- * What the repository scripts share: a process runner, the dotenv and env-manager readers, and the proxy to the shared
- * agent commands. No npm imports: the `setup-worktree` proxy runs before `bun install`.
+ * What the repository scripts share: a process runner, the dotenv and env-manager readers, and the path to the shared
+ * agent commands. No npm imports.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -82,10 +82,4 @@ export function agentCommand(name: 'agent-t3-worktree' | 'agent-simulator'): str
 	const path = join(process.env.HOME ?? '', 'bin', name);
 	if (!existsSync(path)) throw new Error(`${path} is missing. Install it: bun ~/code/scripts/src/setup.ts`);
 	return path;
-}
-
-/** Hands this script's arguments to a shared agent command and exits with its status. */
-export function proxy(name: Parameters<typeof agentCommand>[0], args: string[]): never {
-	const result = spawnSync(agentCommand(name), args, { stdio: 'inherit' });
-	process.exit(result.status ?? 1);
 }
