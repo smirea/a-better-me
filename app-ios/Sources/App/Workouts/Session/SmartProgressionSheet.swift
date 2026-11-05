@@ -58,9 +58,9 @@ struct SmartProgressionSheet: View {
             NavigationLink {
                 WorkoutTargetsView(exerciseName: exerciseName, sets: sets, suggestions: suggestions)
             } label: {
-                Text("Info").font(AppFont.headline(14))
+                Text("Info")
             }
-            .prominentButton(tint: Theme.muscle)
+            .chipButton()
             .accessibilityLabel("Adjusted targets info")
         }
         .padding(14)
