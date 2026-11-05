@@ -56,8 +56,7 @@ async function run(c: LabCase): Promise<Result> {
 					transcript: '',
 					today: TODAY,
 					time: c.time ?? '20:30',
-					meals: MEALS,
-					usual: USUAL,
+					...(c.history ?? { meals: MEALS, usual: USUAL }),
 					shown: c.shown ?? [],
 				}),
 			);

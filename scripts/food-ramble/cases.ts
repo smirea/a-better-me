@@ -1,4 +1,4 @@
-import { MILK_TOP5, PIZZA_TOP10, PIZZA_TOP5 } from './history';
+import { MILK_TOP5, PIZZA_TOP10, PIZZA_TOP5, SCANNED, type MEALS, type USUAL } from './history';
 
 /**
  * A labelled item. Absent keys are not scored, except `ref`, `except`, `day`, `time`, and `options`, which default to
@@ -28,6 +28,8 @@ export type Case = {
 	time?: string;
 	text: string;
 	shown?: { item: number; options: string[] }[];
+	/** The log the phone sends with this ramble, in place of the shared `MEALS` and `USUAL`. */
+	history?: { meals: typeof MEALS; usual: typeof USUAL };
 	items: Expected[];
 };
 
@@ -414,6 +416,54 @@ export const DEV: Case[] = [
 			{ name: ['salmon'], amount: 150, unit: 'g', meal: 'dinner' },
 			{ name: ['rice', 'white rice'], amount: 2, unit: 'cup', meal: 'dinner' },
 			{ name: ['broccoli'], meal: 'dinner' },
+		],
+	},
+	// The Today feedback's rambles (November 5 2026). A spoken brand stays in the name, so the phone searches it; a food
+	// named without pointing back gets no ref, so the phone matches it to the owner's own foods, never to a generic
+	// usual one.
+	{
+		id: 'brand-1',
+		use: 'search',
+		time: '12:55',
+		text: 'This morning I had forty grams of rolled oats, thirty grams of chia seeds. And two hundred grams of loaf. Phone three six nine. Two hundred grams of no fat milk from three six five.',
+		items: [
+			{ name: ['rolled oats'], amount: 40, unit: 'g', meal: ['', 'breakfast'] },
+			{ name: ['chia seeds'], amount: 30, unit: 'g', meal: ['', 'breakfast'] },
+			{ name: ['365 nonfat milk'], amount: 200, unit: 'g', meal: ['', 'breakfast'] },
+		],
+	},
+	{
+		id: 'brand-2',
+		use: 'search',
+		time: '11:00',
+		history: SCANNED,
+		text: '40 grams of oats and 200 grams of nonfat milk from 365',
+		items: [
+			{ name: ['oats'], amount: 40, unit: 'g', ref: [null, 'sb-oats'] },
+			{ name: ['365 nonfat milk'], amount: 200, unit: 'g', ref: [null, 'sb-milk'] },
+		],
+	},
+	{
+		id: 'brand-3',
+		use: 'search',
+		time: '11:00',
+		history: SCANNED,
+		text: '40 grams of oats, 30 grams of chia seeds and 200 grams of nonfat milk',
+		items: [
+			{ name: ['oats'], amount: 40, unit: 'g', ref: [null, 'sb-oats'] },
+			{ name: ['chia seeds'], amount: 30, unit: 'g', ref: [null, 'sb-chia', 'su-chia'] },
+			{ name: ['nonfat milk'], amount: 200, unit: 'g', ref: [null, 'sb-milk'] },
+		],
+	},
+	{
+		id: 'brand-4',
+		use: 'search',
+		time: '11:00',
+		history: SCANNED,
+		text: 'I had 200 grams of fairlife milk and 40 grams of steel cut oats',
+		items: [
+			{ name: ['fairlife milk'], amount: 200, unit: 'g' },
+			{ name: ['steel cut oats'], amount: 40, unit: 'g' },
 		],
 	},
 ];

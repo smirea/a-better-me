@@ -128,9 +128,9 @@ Corrections come first. When the speaker changes their mind, keep only the final
 
 Each item is one of two kinds.
 - "food": one food or drink.
-  - name: the food to search a food database for, in the speaker's words without the amount, the meal, or filler: "oats", "blueberries", "chia seeds", "kefir", "pepperoni pizza", "2% milk". Keep words that tell foods apart (brand, flavor, cut, cooked or raw). Fix obvious speech-to-text mishearings of food names.
+  - name: the food to search a food database for, in the speaker's words without the amount, the meal, or filler: "oats", "blueberries", "chia seeds", "kefir", "pepperoni pizza", "2% milk". Keep words that tell foods apart (brand, flavor, cut, cooked or raw). A brand goes first, however it was said ("milk from Fairlife" is "Fairlife milk", "yogurt by Chobani" is "Chobani yogurt"), with spoken numbers as digits ("nonfat milk from three six five" is "365 nonfat milk"). Fix obvious speech-to-text mishearings of food names, and write the word a food database uses ("no fat milk" is "nonfat milk").
   - amount and unit: the amount, after corrections. Fractions are decimals: "half a cup" is 0.5 cup, "a cup and a half" is 1.5 cup. unit is g, kg, oz, lb, ml, l, fl oz, cup, tbsp, or tsp when the speaker used one of those, written that way ("grams" is g, "tablespoons" is tbsp). For counted foods unit is the counted thing in the singular ("slice", "egg", "scoop", "bar", "piece", "bowl", "glass", "can"), or "" when the count is of the food itself ("2 bananas" is amount 2, unit ""). Leave the amount out when none was said; a bare "a" or "an" ("a banana", "a beer") is no amount, but "a cup of", "a slice of" is 1 cup, 1 slice.
-  - ref: the id of a logged entry when the speaker means a food they logged before: "my usual pancake", "the same coffee", "the oats from yesterday". Prefer a usual food (u…) for "my usual" or "my regular". Otherwise "". With a ref, name is still the food's name, and amount stays 0 unless they said a new amount.
+  - ref: the id of a logged entry when the speaker points back at a food they logged before: "my usual pancake", "the same coffee", "the oats from yesterday", "the pancakes from Sunday", or a food of a meal they copy ("but the steak should be 180 grams"). Prefer a usual food (u…) for "my usual" or "my regular". Naming a food is not pointing back: "40 grams of oats" has no ref even when they logged oats before, because the app matches a name to the speaker's own foods itself. With a ref, name is still the food's name, and amount stays 0 unless they said a new amount.
 - "copy": a whole logged meal again: "the same breakfast as yesterday", "yesterday's lunch", "the steak dinner from last night". copy is that meal's id (m…). Only when the speaker means the whole meal; one food from a meal ("the pancakes from Sunday") is a food item with that entry's ref. When they leave foods out, replace them, or change one's amount ("but with raspberries instead of blueberries", "without the syrup"), except lists the ids of those entries (e…), and each replacement is its own food item right after the copy. Otherwise copy and except are empty for a food item.
 
 For every item:
@@ -235,7 +235,7 @@ const nameWords = (name: string) =>
 	new Set(
 		name
 			.toLowerCase()
-			.split(/[^\p{L}]+/u)
+			.split(/[^\p{L}\p{N}]+/u)
 			.filter(word => word.length > 2)
 			.map(word => word.replace(/s$/, '')),
 	);
@@ -246,15 +246,20 @@ const NUMBERS =
 /** Options a model marks unasked open their lists over the transcript mid-ramble. */
 const ASKS_FOR_OPTIONS = /\b(options?|choices?|alternatives?|wrong|not right|show me|other ones?)\b/i;
 
-/** A ref names a food the speaker logged, so it shares a word with the item ("my usual pancake", "Protein pancake"). */
+/**
+ * A ref names a food the speaker logged, so the logged name holds every word of the item's ("pancake" in "Protein
+ * pancakes"). A word it lacks is a brand or kind the speaker asked for instead ("Fairlife milk" is not their "Organic
+ * Nonfat Milk By 365"), which the phone searches for.
+ */
 const sameFood = (name: string, logged: string) => {
-	const said = nameWords(name);
-	return [...nameWords(logged)].some(word => said.has(word));
+	const words = nameWords(logged);
+	const said = [...nameWords(name)];
+	return said.length > 0 && said.every(word => words.has(word));
 };
 
 /**
  * Maps aliases back to the phone's ids and drops what does not fit: a copy of no meal, an except outside its meal, a
- * ref to an entry that shares no word with the item's name, options the speaker never asked for. A
+ * ref to an entry whose name lacks a word of the item's, options the speaker never asked for. A
  * food the speaker gave no meal or time joins the item before it ("lunch at 12:15 was ramen and a coke"), which the
  * model often leaves out once it omits empty fields.
  */

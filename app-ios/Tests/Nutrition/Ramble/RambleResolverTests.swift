@@ -166,6 +166,45 @@ struct RambleResolverTests {
         #expect(describe(rows) == ["Oats: 0.75 cup", "Oats: 2 cup"])
     }
 
+    @Test func theOwnersLatestFoodHoldingEverySpokenWordBeatsGenericOnesUnlessABrandOrKindIsSaid() async throws {
+        let generic = try fixtureCatalog(rambleCatalog).foods([1, 7])
+        let grams = FoodNutrition(nutrients: [.energy: 375], baseGrams: 100, measures: [Measure(name: "serving", quantity: 1, servings: 0.4)])
+        let oats = Food(.openFoodFacts(barcode: "0099482434366"), name: "Organic Old-Fashioned Rolled Oats", brand: "365", nutrition: grams)
+        let byVolume = FoodNutrition(nutrients: [.energy: 33], baseMilliliters: 100, measures: [Measure(name: "serving", quantity: 1, servings: 2.4)])
+        let milk = Food(.openFoodFacts(barcode: "0099482400200"), name: "Organic Nonfat Milk", brand: "365", nutrition: byVolume)
+        store.log((1...5).flatMap { day in [generic[1]!, generic[7]!].map { (FoodPortion($0.snapshot), day: today.adding(days: -day), minute: 480) } })
+        try await store.write { _ in }.value
+        for food in [oats, milk] { store.saveFood(food) }
+        store.log([FoodPortion(oats.snapshot), FoodPortion(milk.snapshot)], on: today, minute: 484)
+        let resolver = try await resolver()
+        let rows = try resolver.rows([
+            RambleItem(name: "oats", amount: 40, unit: "g"),
+            RambleItem(name: "rolled oats", amount: 40, unit: "g"),
+            RambleItem(name: "nonfat milk", amount: 200, unit: "g"),
+            RambleItem(name: "365 nonfat milk", amount: 200, unit: "g"),
+            RambleItem(name: "steel cut oats", amount: 40, unit: "g"),
+            RambleItem(name: "Fairlife nonfat milk", amount: 200, unit: "g"),
+        ], previous: [], choices: [:])
+        #expect(describe(rows) == [
+            "Organic Old-Fashioned Rolled Oats: 40 g",
+            "Organic Old-Fashioned Rolled Oats: 40 g",
+            // Sold by volume, so water's density stands in for the spoken weight.
+            "Organic Nonfat Milk: 200 mL",
+            "Organic Nonfat Milk: 200 mL",
+            "unmatched steel cut oats",
+            "unmatched Fairlife nonfat milk",
+        ])
+        #expect(food(rows[0])?.options.map(\.portion.food.name) == ["Organic Old-Fashioned Rolled Oats", "Oats"])
+
+        let other = Food(.openFoodFacts(barcode: "0041383090738"), name: "Nonfat Milk", brand: "Glenview Farms", nutrition: grams)
+        let fairlife = Food(.openFoodFacts(barcode: "0811620021234"), name: "Ultra-Filtered Nonfat Milk", brand: "Fairlife", nutrition: grams)
+        let search = try FoodSearch(store: store, catalog: try fixtureCatalog(rambleCatalog), branded: StubBranded(hits: [other, fairlife]))
+        var online = resolver
+        online.online = ["fairlife nonfat milk": try await search.search("Fairlife nonfat milk")]
+        let found = try online.rows([RambleItem(name: "Fairlife nonfat milk", amount: 200, unit: "g")], previous: [], choices: [:])
+        #expect(describe(found) == ["Ultra-Filtered Nonfat Milk: 200 g"])
+    }
+
     @Test func aRefReusesTheLoggedEntryAndANewAmountRescalesIt() async throws {
         let pancake = FoodSnapshot(source: .custom, name: "Protein Pancake", nutrition: FoodNutrition(nutrients: [.energy: 120], baseGrams: 60, measures: [Measure(name: "pancake", quantity: 1, servings: 1)]))
         let entry = FoodEntry(FoodPortion(pancake, serving: Serving(measure: pancake.nutrition.measures[0], quantity: 3)), day: today.adding(days: -1), minute: 9 * 60)

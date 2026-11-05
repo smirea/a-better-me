@@ -219,7 +219,7 @@ struct RambleResolver: Sendable {
                 food.pick.portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, of: food.pick.portion.food.nutrition, history: food.pick.portion.serving)
                 return .food(food)
             }
-            let local = try index.local(item.name)
+            let local = try index.spoken(item.name)
             options = Array((local.isEmpty ? online[item.name.lowercased()] ?? [] : local).prefix(Self.optionLimit))
             spoken = nil
         }
@@ -229,9 +229,11 @@ struct RambleResolver: Sendable {
         let kept = earlier.flatMap { earlier in
             previous.map { Self.related($0.item.name, item.name) } == true ? options.first { $0.key == earlier.key } : nil
         }
-        // The search matches by prefix, so "peas" also finds "Pears, raw"; an option sharing a word with what was said
-        // comes first.
-        let best = options.first { Self.related(item.name, $0.portion.food.displayName) } ?? options.first
+        // The search matches by prefix, so "peas" also finds "Pears, raw"; an option holding every word said comes first
+        // (the online search for "365 nonfat milk" lists other brands' nonfat milk too), then one sharing a word.
+        let terms = FoodText.terms(item.name)
+        let best = options.first { FoodText($0.portion.food.name, brand: $0.portion.food.brand).holds(terms) }
+            ?? options.first { Self.related(item.name, $0.portion.food.displayName) } ?? options.first
         guard let result = chosen ?? spoken ?? kept ?? best else { return .unmatched }
         var portion = result.portion
         let history = result.group == .history ? result.portion.serving : nil
@@ -254,6 +256,7 @@ enum RambleServing {
     private static let grams: [String: (measure: String, factor: Double)] = [
         "g": ("g", 1), "gram": ("g", 1), "kg": ("g", 1000), "oz": ("oz", 1), "ounce": ("oz", 1), "lb": ("lb", 1), "pound": ("lb", 1),
     ]
+    private static let gramsPer: [String: Double] = ["g": 1, "oz": 28.349523125, "lb": 453.59237]
     /// Milliliters per unit, and the words a food's own measure may start with.
     private static let volumes: [String: (milliliters: Double, words: [String])] = [
         "ml": (1, ["ml", "milliliter"]),
@@ -280,8 +283,11 @@ enum RambleServing {
         let all = nutrition.allMeasures
         if unit.isEmpty { return defaultServing(nutrition, count: amount) }
         if let weight = grams[unit] {
-            guard let measure = all.first(where: { $0.name == weight.measure }) else { return fallback }
-            return Serving(measure: measure, quantity: amount * weight.factor)
+            if let measure = all.first(where: { $0.name == weight.measure }) { return Serving(measure: measure, quantity: amount * weight.factor) }
+            // Water's density stands in for a food measured only by volume (milk per 100 mL): 200 g is 200 mL, where the
+            // latest serving it fell back to was a whole carton.
+            guard let milliliter = all.first(where: { $0.name == "mL" }), let perUnit = gramsPer[weight.measure] else { return fallback }
+            return Serving(measure: milliliter, quantity: (amount * weight.factor * perUnit).rounded())
         }
         if let volume = volumes[unit] {
             // A serving's quantity counts the measure's own unit; the measure's quantity is only its reference size.
