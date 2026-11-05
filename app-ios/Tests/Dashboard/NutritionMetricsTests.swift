@@ -168,7 +168,7 @@ struct NutritionMetricsTests {
         profile.heightCm = 180
         profile.birthDate = CalendarDay("1990-06-01")
         let bmr = try #require(NutritionMetrics.expenditureSetup(intake: NutritionMetrics.intake(log, calendar: utc), weighIns: weighIns, trend: trend, settings: settings, profile: profile, calendar: utc))
-        #expect(bmr.start == start("2026-10-03"))
+        #expect(bmr.start == start("2026-10-05"))
         // MacroFactor BMR at 80 kg, 180 cm, 36 years: 129.6 × 80^0.55 + 0.011 × 180² − 1.96 × 36 = 1729.0, × 1.55.
         #expect(bmr.initialKcal == 2680)
         settings.activity = .mostlySedentary
@@ -185,6 +185,23 @@ struct NutritionMetricsTests {
         let fixed = NutritionMetrics.expenditure(intake: NutritionMetrics.intake(log, calendar: utc), weighIns: weighIns, trend: trend, settings: settings, profile: ProfileSettings(), plans: [], steps: [], now: day("2026-10-06"), calendar: utc)
         #expect(fixed.map(\.kcal) == [2300, 2300, 2300])
         #expect(NutritionMetrics.strategy(fixed, settings: settings) == .fixed)
+    }
+
+    /// The owner's Health holds weigh-ins from 2015 and the log starts in 2023: the estimate seeds at the first log, at
+    /// the age and trend weight of that day, and without a log at the last weigh-in.
+    @Test func expenditureStartsAtTheFirstLogNotTheFirstWeighIn() throws {
+        let weighIns = [DatedValue(date: day("2015-03-01"), value: 80), DatedValue(date: day("2023-07-15"), value: 80)]
+        let trend = NutritionEngine.TrendWeight.daily(weighIns: weighIns, through: day("2023-07-20"), calendar: utc)
+        var profile = ProfileSettings()
+        profile.heightCm = 180
+        profile.birthDate = CalendarDay("1990-06-01")
+        let intake = NutritionMetrics.intake([logDay("2023-07-18", kcal: [2000])], calendar: utc)
+        let logged = try #require(NutritionMetrics.expenditureSetup(intake: intake, weighIns: weighIns, trend: trend, settings: .init(), profile: profile, calendar: utc))
+        #expect(logged.start == start("2023-07-18"))
+        // (129.6 × 80^0.55 + 0.011 × 180² − 1.96 × 33) × 1.55; seeding in 2015, at 24, gave 2716.
+        #expect(logged.initialKcal == 2689)
+        let unlogged = try #require(NutritionMetrics.expenditureSetup(intake: [], weighIns: weighIns, trend: trend, settings: .init(), profile: profile, calendar: utc))
+        #expect(unlogged.start == start("2023-07-15"))
     }
 
     @Test func savedLayoutsAdoptTheNutritionCardsOnce() throws {

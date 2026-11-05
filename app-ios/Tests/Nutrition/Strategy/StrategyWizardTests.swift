@@ -41,8 +41,44 @@ struct StrategyWizardTests {
         #expect(plan.targets[5] == target(1678, 151, 60, 130))
         #expect(plan.targets[6] == target(1678, 151, 60, 130))
         #expect(plan.targets[7] == target(1525, 151, 52, 111))
-        #expect(model.designNotes.map(\.title) == ["Estimated Expenditure", "Average Target", "Calorie Shift", "Target Protein", "Diet Type"])
-        #expect(model.designNotes[1].value == "1569 kcal")
+        let notes = model.designNotes(unit: .lb)
+        #expect(notes.map(\.title) == ["Maintenance Calories", "Daily Deficit", "Average Target", "Calorie Shift", "Target Protein", "Diet Type"])
+        #expect(notes[0].value == "2,210 kcal")
+        #expect(notes[1].value == "−641 kcal")
+        #expect(notes[2].value == "1569 kcal")
+        #expect(plan.expenditureKcal == 2210)
+        #expect(plan.trendWeightKg == weightKg)
+    }
+
+    /// The owner's program of 2026-11-05: a 201.2 lb trend, losing 0.5% a week, coached, balanced, moderate protein.
+    /// 0.5% of 201.2 lb is 1.006 lb a week; at 3000 kcal/lb that is 1.006 × 3000 / 7 = 431 kcal a day under maintenance.
+    /// Protein is 0.77 g/lb × 201.2 = 154.9, truncated to 154 g (616 kcal); fat and carbs split what is left 50.5/48.3.
+    /// The phone planned from 2734 kcal, an estimate seeded from the owner's 2015 weigh-ins and never updated because the
+    /// phone held four logged days; three years of the log put maintenance at 2139 kcal.
+    @Test(arguments: [(2734.0, target(2303, 154, 95, 204), "−431 kcal"), (2139, target(1708, 154, 61, 132), "−431 kcal")])
+    func theOwnersProgramIsMaintenanceLessTheRatesDeficit(maintenance: Double, expected: DayTarget, deficit: String) {
+        let trend = 201.2 * Engine.kgPerLb
+        let goal = NutritionGoal(kind: .lose, targetWeightKg: 170 * Engine.kgPerLb, ratePercentPerWeek: -0.5, startedOn: today)
+        let current = NutritionPlan(from: today, kind: .setup, goal: goal, coaching: CoachingProgram(), targets: WeekTargets(every: expected))
+        let model = StrategyWizardModel(mode: .editProgram, current: current, today: today, weightKg: trend, expenditureKcal: maintenance, standardFloorKcal: 1200)
+        let plan = model.plan(isFirst: false)
+        #expect(plan.targets == WeekTargets(every: expected))
+        #expect(plan.expenditureKcal == maintenance)
+        let balance = StrategyRules.balanceText(maintenanceKcal: StrategyRules.maintenance(plan, expenditureKcal: 9999)!, averageKcal: StrategyRules.averageEnergy(plan.targets), unit: .lb)
+        #expect(balance.title == "Daily Deficit")
+        #expect(balance.value == deficit)
+        #expect(balance.text == "431 kcal a day under maintenance loses about 1.01 lb a week at 3,000 kcal per lb.")
+    }
+
+    @Test func aManualProgramMeasuresAgainstTodaysExpenditure() {
+        let goal = NutritionGoal(kind: .maintain, targetWeightKg: 80, ratePercentPerWeek: 0, startedOn: today)
+        var manual = NutritionPlan(from: today, kind: .setup, goal: goal, coaching: CoachingProgram(style: .manual), targets: WeekTargets(every: target(2000, 150, 70, 200)))
+        manual.expenditureKcal = 2500
+        #expect(StrategyRules.maintenance(manual, expenditureKcal: 2205) == 2205)
+        let surplus = StrategyRules.balanceText(maintenanceKcal: 1800, averageKcal: 2000, unit: .kg)
+        #expect(surplus.value == "+200 kcal")
+        #expect(surplus.text == "200 kcal a day over maintenance gains about 0.21 kg a week at 6,614 kcal per kg.")
+        #expect(StrategyRules.balanceText(maintenanceKcal: 2005, averageKcal: 2000, unit: .lb).title == "At Maintenance")
     }
 
     @Test func extraHighProteinSwitchesToKetoAndSaysSo() {
@@ -54,7 +90,7 @@ struct StrategyWizardTests {
         model.coaching.highDays = [5, 6]
         model.coaching.protein = .extraHigh
         #expect(model.plan(isFirst: true).targets[1] == target(1525, 212, 53, 49))
-        #expect(model.designNotes.last?.value == "Keto")
+        #expect(model.designNotes(unit: .lb).last?.value == "Keto")
     }
 
     @Test func goalTilesMatchTheWizard() {
@@ -97,7 +133,6 @@ struct StrategyWizardTests {
         model.goal.change(kind: kind, currentWeightKg: weightKg)
         model.goal.targetWeightKg = weightKg + (kind == .lose ? -5 : kind == .gain ? 5 : 0)
         model.choose(.collaborative)
-        model.leave(.style)
         #expect(model.steps.suffix(1) == [.collaborative])
         let even = StrategyRules.weekTargets(Engine.Targets.weekly(
             program: Engine.CoachedProgram(diet: .balanced, protein: .moderate, floor: .standard(kcal: 1361)),
@@ -124,7 +159,7 @@ struct StrategyWizardTests {
         model.goal.targetWeightKg = 85
         model.goal.ratePercent = 0.7594
         #expect(model.coaching.style == .collaborative)
-        model.leave(.style)
+        model.goalChanged()
         #expect(model.plan(isFirst: false).targets.days.map(\.energy) == Array(repeating: 1569, count: 7))
         #expect(model.plan(isFirst: false).targets[1].protein == 150)
     }

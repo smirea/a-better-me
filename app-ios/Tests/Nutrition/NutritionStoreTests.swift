@@ -197,6 +197,9 @@ struct NutritionStoreTests {
         checkIn.expenditureKcal = 2650
         checkIn.trendWeightKg = 81.2
         store.savePlan(setup)
+        var editedSetup = setup
+        editedSetup.kind = .edit
+        store.savePlan(editedSetup)
         store.savePlan(checkIn)
         var redo = checkIn
         redo.targets = WeekTargets(every: DayTarget(energy: 2050, protein: 160, fat: 65, carbs: 210))
@@ -208,6 +211,7 @@ struct NutritionStoreTests {
         #expect(plans[1].target(on: monday.adding(days: 9)).energy == 2050)
         #expect(plans[1].expenditureKcal == 2650)
         #expect(plans[1].kind == .checkIn)
+        #expect(plans[0].kind == .setup)
 
         store.deletePlan(startingOn: monday)
         try await settled()

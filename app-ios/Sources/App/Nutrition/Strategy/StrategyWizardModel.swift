@@ -1,7 +1,7 @@
 import Foundation
 
-/// The New Goal, Edit Goal, New Program, and Edit Program wizards as one value: the answers so far, the steps they
-/// lead through, and the plan they save. A new goal always continues into the program steps, as MacroFactor's does.
+/// The New Goal, Edit Goal, New Program, and Edit Program forms as one value: the answers so far, the sections they
+/// show, and the plan they save. A new goal always continues into the program sections, as MacroFactor's does.
 struct StrategyWizardModel {
     enum Mode: Hashable {
         case newGoal, editGoal, newProgram, editProgram
@@ -48,6 +48,7 @@ struct StrategyWizardModel {
         manual = targets
         manualSameAllWeek = Set(targets.days).count == 1
         collaborative = CollaborativeWeek(targets)
+        seedCollaborative()
     }
 
     var title: String {
@@ -81,22 +82,17 @@ struct StrategyWizardModel {
         return steps[index + 1]
     }
 
-    /// The progress bar's fill on `step`.
-    func progress(at step: Step) -> Double {
-        Double((steps.firstIndex(of: step) ?? 0) + 1) / Double(steps.count)
-    }
-
-    /// Which step-group header the progress bar shows: "1 Set new goal · 2 Set new program".
+    /// The group header over a section's group: "1 Set new goal · 2 Set new program".
     func phase(of step: Step) -> String {
         switch step {
         case .goalType, .goalWeightRate, .goalSummary: mode == .editGoal ? "Edit goal" : "1 Set new goal"
-        default: mode == .newGoal ? "2 Set new program" : "Set program preferences"
+        default: mode == .newGoal ? "2 Set new program" : "Program preferences"
         }
     }
 
     func canChoose(_ style: CoachingProgram.Style) -> Bool { style == .manual || basis != nil }
 
-    func canAdvance(from step: Step) -> Bool {
+    func isAnswered(_ step: Step) -> Bool {
         switch step {
         case .goalWeightRate: goal.problem(currentWeightKg: weightKg) == nil
         case .highDays: !coaching.highDays.isEmpty && coaching.highDays.count < 7
@@ -105,15 +101,24 @@ struct StrategyWizardModel {
         }
     }
 
+    var canSave: Bool { steps.allSatisfy(isAnswered) }
+
     mutating func choose(_ style: CoachingProgram.Style) {
         coaching.style = style
+        seedCollaborative()
     }
 
-    /// Leaving the style step seeds the collaborative editor for the goal being saved: an even coached week, as
-    /// MacroFactor's editor starts, or the current collaborative week moved to the new goal's budget. Editing the
-    /// current program never passes here, so its week stays as it was.
-    mutating func leave(_ step: Step) {
-        guard step == .style, coaching.style == .collaborative, let basis else { return }
+    /// The editor sits below the goal, so a goal change re-seeds the collaborative week at the new budget.
+    mutating func goalChanged() {
+        guard mode == .newGoal else { return }
+        seedCollaborative()
+    }
+
+    /// The collaborative editor of a new goal or program starts from an even coached week, as MacroFactor's editor does,
+    /// or from the current collaborative week moved to the new goal's budget. Edit Program never seeds, so its week
+    /// stays as it was.
+    private mutating func seedCollaborative() {
+        guard mode == .newGoal || mode == .newProgram, coaching.style == .collaborative, let basis else { return }
         var even = CoachingProgram()
         even.style = .collaborative
         let week = StrategyRules.coachedWeek(even, goal: savedGoal, basis: basis)
@@ -168,13 +173,13 @@ struct StrategyWizardModel {
         }
     }
 
-    /// What Done saves, from today.
+    /// What Save saves, from today.
     func plan(isFirst: Bool) -> NutritionPlan {
-        StrategyRules.savedPlan(on: today, isFirst: isFirst, goal: savedGoal, coaching: savedCoaching, targets: savedTargets)
+        StrategyRules.savedPlan(on: today, isFirst: isFirst, goal: savedGoal, coaching: savedCoaching, targets: savedTargets, basis: basis)
     }
 
     /// "How was your program designed?" on the coached result.
-    var designNotes: [DesignNote] {
+    func designNotes(unit: WeightUnit) -> [DesignNote] {
         guard let basis, let week = coachedWeek else { return [] }
         let saved = savedGoal
         let rate = abs(saved.ratePercentPerWeek).formatted(.number.precision(.fractionLength(0...2)))
@@ -184,12 +189,14 @@ struct StrategyWizardModel {
         case .maintain: "Your goal is to maintain your weight"
         case .gain: "Your goal is to gain weight at a rate of \(rate)% of body weight per week"
         }
+        let balance = StrategyRules.balanceText(maintenanceKcal: basis.expenditureKcal, averageKcal: week.averageKcal, unit: unit)
         var notes = [
             DesignNote(
-                title: "Estimated Expenditure", value: "\(Int(basis.expenditureKcal.rounded())) kcal",
-                text: "Your energy expenditure, from your logged intake and weight trend, or from your BMR and activity until there is enough data."
+                title: "Maintenance Calories", value: StrategyFormat.kcal(basis.expenditureKcal),
+                text: "Your estimated expenditure, from your logged intake and weight trend, or from your BMR and activity until there is enough data."
             ),
-            DesignNote(title: "Average Target", value: "\(average) kcal", text: "\(goalText), so your daily average Calorie goal should be around \(average) kcal."),
+            DesignNote(title: balance.title, value: balance.value, text: "\(goalText). \(balance.text)"),
+            DesignNote(title: "Average Target", value: "\(average) kcal", text: "So your daily average Calorie goal should be around \(average) kcal."),
         ]
         if !savedCoaching.highDays.isEmpty {
             notes.append(DesignNote(

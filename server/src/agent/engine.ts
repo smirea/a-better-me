@@ -241,8 +241,13 @@ export function expenditure(input: {
 	today: Day;
 }): Expenditure {
 	const { intake, weighIns, trend, settings, profile, today, plans = [], steps = [] } = input;
-	const firsts = [...intake.keys(), ...weighIns.map(w => w.day)].toSorted();
-	const start = settings.calculationStart ?? firsts[0];
+	const start =
+		settings.calculationStart ??
+		[...intake.keys()].toSorted()[0] ??
+		weighIns
+			.map(w => w.day)
+			.toSorted()
+			.at(-1);
 	if (!start) return { strategy: null, missing: 'No weigh-ins or logged days yet.', days: [] };
 	if (start > today) return { strategy: null, missing: `The calculation starts on ${start}.`, days: [] };
 	if (settings.staticKcal) {

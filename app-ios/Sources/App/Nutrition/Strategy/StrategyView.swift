@@ -207,14 +207,26 @@ private struct StrategyHome: View {
 
     private func programCard(_ plan: NutritionPlan) -> some View {
         let todayTarget = plan.target(on: data.today)
+        let average = StrategyRules.averageEnergy(plan.targets)
+        let maintenance = StrategyRules.maintenance(plan, expenditureKcal: data.inputs.expenditureKcal)
         return StrategyCard(
             title: "\(StrategyRules.styleName(plan.coaching.style)) Program",
             subtitle: StrategyFormat.range(StrategyRules.programStart(data.plans, current: plan), nil)
         ) {
+            if let maintenance {
+                let balance = StrategyRules.balanceText(maintenanceKcal: maintenance, averageKcal: average, unit: data.unit)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .top) {
+                        StrategyStat(value: StrategyFormat.kcal(maintenance), caption: "Maintenance")
+                        StrategyStat(value: balance.value, caption: balance.title)
+                    }
+                    Text(balance.text).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                }
+            }
             WeekTargetsChart(targets: plan.targets, today: data.today.weekday)
             HStack {
                 StrategyStat(value: StrategyFormat.kcal(todayTarget.energy), caption: "Today · \(NutritionFormat.macros(todayTarget.amounts))")
-                StrategyStat(value: StrategyFormat.kcal(StrategyRules.averageEnergy(plan.targets)), caption: "Daily average")
+                StrategyStat(value: StrategyFormat.kcal(average), caption: "Daily average")
             }
         } actions: {
             Button("New Program", systemImage: "arrow.clockwise") { open(.newProgram) }
