@@ -28,6 +28,9 @@ struct TransferCodecTests {
         let ambiguous = resolver.id(for: "GHD Hyperextension")
         #expect(ambiguous.hasPrefix("custom-"))
         #expect(resolver.created.map(\.name) == ["GHD Hyperextension"])
+        // MF's older name for Chest-Supported Dumbbell Row (Elbows-Out): the same words in another order.
+        #expect(resolver.id(for: "Chest-Supported Elbows-Out Dumbbell Row") == "2ab5c6f170d880839baed369debc0459")
+        #expect(resolver.created.map(\.name) == ["GHD Hyperextension"])
     }
 
     @Test func unmatchedNameCreatesOneFlaggedCustomThatTheNextImportReuses() throws {

@@ -256,6 +256,10 @@ const sessionFields = {
 };
 export const SessionCreate = z
 	.object({
+		id: z.guid().optional().meta({
+			description:
+				'Generated when omitted. An importer derives it from its source, so a rerun answers 409 instead of duplicating.',
+		}),
 		...sessionFields,
 		name: sessionFields.name.optional().meta({ description: "Defaults to the template's name." }),
 		templateId: sessionFields.templateId.default(null),

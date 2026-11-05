@@ -71,6 +71,7 @@ describe('handle', () => {
 
 		const pulled = await synced('b', 0, []);
 		expect(pulled).toEqual({
+			space: space.space(),
 			head: 1,
 			acked: 0,
 			rejected: [],

@@ -1,13 +1,16 @@
 import Foundation
 
 /// Turns the exercise names in a file into ids with the rules of `docs/research/mf-workouts/tools/programs-json.py`:
-/// a case-insensitive match on the name first, then on an alternative name when exactly one exercise carries it. A name
-/// that matches nothing becomes a new custom exercise flagged in its description, created once per distinct name.
+/// a case-insensitive match on the name first, then on an alternative name when exactly one exercise carries it, then on
+/// the same words in another order when exactly one exercise has them (MF's older "Chest-Supported Elbows-Out Dumbbell
+/// Row" is "Chest-Supported Dumbbell Row (Elbows-Out)" today). A name that matches nothing becomes a new custom exercise
+/// flagged in its description, created once per distinct name. `scripts/import-macrofactor-workouts.ts` uses the same rules.
 struct ExerciseResolver {
     /// The flagged exercises this import created, for the caller to insert and list.
     private(set) var created: [Exercise] = []
     private var byName: [String: ExerciseID] = [:]
     private var byAlternativeName: [String: Set<ExerciseID>] = [:]
+    private var byWords: [String: Set<ExerciseID>] = [:]
 
     /// `exercises` is the catalog with the owner's custom exercises, so a re-import reuses an earlier import's customs.
     init(exercises: [Exercise]) {
@@ -16,6 +19,7 @@ struct ExerciseResolver {
             let key = Self.key(exercise.name)
             if byName[key] == nil { byName[key] = exercise.id }
             for alternative in exercise.alternativeNames { byAlternativeName[Self.key(alternative), default: []].insert(exercise.id) }
+            for name in [exercise.name] + exercise.alternativeNames { byWords[Self.words(name), default: []].insert(exercise.id) }
         }
     }
 
@@ -23,6 +27,7 @@ struct ExerciseResolver {
         let key = Self.key(name)
         if let id = byName[key] { return id }
         if let ids = byAlternativeName[key], ids.count == 1, let id = ids.first { return id }
+        if let ids = byWords[Self.words(name)], ids.count == 1, let id = ids.first { return id }
         let exercise = Exercise(
             id: "custom-\(UUID().uuidString.lowercased())",
             name: name.trimmingCharacters(in: .whitespaces),
@@ -37,4 +42,8 @@ struct ExerciseResolver {
     }
 
     private static func key(_ name: String) -> String { name.trimmingCharacters(in: .whitespaces).lowercased() }
+
+    private static func words(_ name: String) -> String {
+        name.lowercased().replacing(/[()]/, with: " ").split(whereSeparator: \.isWhitespace).sorted().joined(separator: " ")
+    }
 }

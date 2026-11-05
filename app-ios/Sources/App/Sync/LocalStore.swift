@@ -26,11 +26,13 @@ final class LocalStore {
                 token: { AppEnvironment.ownerToken }
             )
             try LegacyImport.run(database.pool, tables: syncSchema.tables, migrate: client.migrate)
+            try SpaceResync.backUpIfNeeded(database.pool)
         } catch {
             fatalError("Could not open the local database at \(LocalDatabase.url.path): \(error)")
         }
         client.start()
         Telemetry.watch(client)
+        watchSyncSpace()
     }
 
     /// A store over a fresh file at `url` that migrates but never syncs, for tests.
@@ -38,6 +40,22 @@ final class LocalStore {
         database = try LocalDatabase(at: url)
         client = SyncClient(database: database.pool, schema: syncSchema, endpoint: URL(string: "http://localhost")!, token: { nil })
         try client.migrate()
+    }
+
+    /// The server space the cursor belongs to, re-read off the main thread after each sync, for the feedback capture.
+    @ObservationIgnored private var syncSpace = "none"
+
+    /// The pull cursor and the server space it belongs to, from memory, so a feedback capture never waits on the database.
+    var syncPosition: (cursor: Int, space: String) { (client.head, syncSpace) }
+
+    private func watchSyncSpace() {
+        let pool = database.pool
+        Task { [client] in
+            for await _ in Observations({ client.lastSyncAt }) {
+                let space = try? await pool.read { try String.fetchOne($0, sql: "SELECT value FROM _meta WHERE key = 'space'") }
+                syncSpace = (space ?? nil) ?? "none"
+            }
+        }
     }
 
     // MARK: Writes
