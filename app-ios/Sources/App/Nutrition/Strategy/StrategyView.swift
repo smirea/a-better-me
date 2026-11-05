@@ -186,13 +186,7 @@ private struct StrategyHome: View {
 
     private var checkInBanner: some View {
         StrategyCard(title: "Check-In Ready", subtitle: "Review your week and update your targets.") {
-            Button {
-                checkingIn = true
-            } label: {
-                Text("Start Check-In").font(AppFont.headline()).frame(maxWidth: .infinity)
-            }
-            .prominentButton(tint: Theme.goal)
-            .controlSize(.large)
+            Button("Start Check-In") { checkingIn = true }.primaryPill()
         }
     }
 
