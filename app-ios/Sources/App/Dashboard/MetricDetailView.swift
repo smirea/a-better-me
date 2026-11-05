@@ -49,7 +49,10 @@ struct MetricDetailView: View {
                         .padding(.horizontal, Theme.margin)
                 }
                 controls.padding(.horizontal, Theme.margin)
-                if case .steps = detail.footer {} else { legend(tab).padding(.horizontal, Theme.margin) }
+                // A single series needs no key: the title already names it.
+                if case .steps = detail.footer {} else if legendItems(tab).count > 1 {
+                    ChartLegend(items: legendItems(tab)).padding(.horizontal, Theme.margin)
+                }
                 footer(detail.footer, plot, tab: tab).padding(.horizontal, Theme.margin)
             }
             .padding(.bottom, 30)
@@ -258,7 +261,7 @@ struct MetricDetailView: View {
         }
     }
 
-    private func legend(_ tab: MetricTab) -> some View {
+    private func legendItems(_ tab: MetricTab) -> [ChartLegend.Item] {
         let line = "point.topleft.down.to.point.bottomright.curvepath"
         var items: [ChartLegend.Item] = []
         if let overlay = tab.overlay, !overlay.dashed {
@@ -274,7 +277,7 @@ struct MetricDetailView: View {
         if tab.goal != nil {
             items.append(ChartLegend.Item(title: "Goal", symbol: "line.horizontal.3", color: Theme.goal))
         }
-        return ChartLegend(items: items)
+        return items
     }
 
     @ViewBuilder
