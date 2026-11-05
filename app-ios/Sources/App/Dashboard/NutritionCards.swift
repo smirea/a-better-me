@@ -155,7 +155,7 @@ struct DailyNutritionCard: View {
         return VStack(spacing: 4) {
             Text(id.dashboardLabel).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             ProgressView(value: min(max(fill, 0), 1)).progressViewStyle(.bar(id.color))
-            Text("\(value?.wholeText ?? "--") / \(target.map { "\(Int($0.rounded()))g" } ?? "--")")
+            Text("\(value?.wholeText ?? "--") / \(target.map { "\($0.niceText)g" } ?? "--")")
                 .font(AppFont.headline(12))
         }
         .frame(maxWidth: .infinity)

@@ -152,11 +152,13 @@ struct LibraryFilterTests {
     }
 
     @Test func amountsAndServingsReadLikeMacroFactor() {
-        #expect(NutritionFormat.amount(15.64) == "15.6")
-        #expect(NutritionFormat.amount(120.4) == "120")
+        #expect([6.66, 9.96, 15.64, 120.4, 0, 0.04, -3.25, 1509.4].map(NutritionFormat.amount) == ["6.7", "10", "16", "120", "0", "<0.1", "-3.3", "1,509"])
         #expect(NutritionFormat.amount(2.26, .mg) == "2.3 mg")
+        #expect(NutritionFormat.amount(33.3, .kcal) == "33 kcal")
+        #expect(NutritionFormat.amount(33.3, of: .energy) == "33")
+        #expect(NutritionFormat.amount(6.66, of: .protein) == "6.7")
         #expect(NutritionFormat.calories([.energy: 1509.4, .protein: 0.4, .carbs: 15.6]) == "1,509")
-        #expect(NutritionFormat.macros([.energy: 60.4, .protein: 0.4, .carbs: 15.6]) == "0P 0F 16C")
+        #expect(NutritionFormat.macros([.energy: 60.4, .protein: 0.4, .carbs: 15.6]) == "0.4P 0F 16C")
         #expect(NutritionFormat.serving(Serving(measure: banana.nutrition.measures[0], quantity: 1), of: banana) == "1 large (150 g)")
         #expect(NutritionFormat.serving(Serving(measure: Measure(name: "g", quantity: 1, servings: 0.01), quantity: 30), of: banana) == "30 g")
     }

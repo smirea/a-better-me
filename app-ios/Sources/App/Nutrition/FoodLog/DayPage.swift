@@ -198,7 +198,7 @@ private struct HourTotals: View {
         HStack(spacing: 10) {
             ForEach(NutrientID.macros, id: \.self) { id in
                 HStack(spacing: 4) {
-                    Text("\(Int((amounts[id] ?? 0).rounded()))").font(AppFont.medium(12)).monospacedDigit()
+                    Text(NutritionFormat.amount(amounts[id] ?? 0, of: id)).font(AppFont.medium(12)).monospacedDigit()
                     Group {
                         if id == .energy { calorieGlyph } else { Text(id.rawValue.uppercased()) }
                     }

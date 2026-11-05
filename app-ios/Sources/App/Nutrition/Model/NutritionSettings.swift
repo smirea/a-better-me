@@ -38,7 +38,6 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     }
 
     struct Logger: Codable, Hashable, Sendable {
-        var bannerNutrients: [NutrientID] = [.energy, .protein]
         var nutritionDisplay = NutritionDisplay.remainingAfterPlate
         var timeSelection = TimeSelection.datePicker
         var optimization = Optimization.speed

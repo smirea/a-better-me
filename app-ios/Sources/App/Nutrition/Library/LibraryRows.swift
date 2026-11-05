@@ -83,7 +83,7 @@ struct FoodRow: View {
 extension Text {
     /// "105ઠ 1P 0F 27C": MacroFactor's compact nutrition, with the calorie glyph in place of "kcal".
     init(macroLine amounts: NutrientAmounts) {
-        let grams = { (id: NutrientID) in Int((amounts[id] ?? 0).rounded()) }
+        let grams = { (id: NutrientID) in NutritionFormat.amount(amounts[id] ?? 0) }
         self = Text("\(NutritionFormat.calories(amounts))\(calorieGlyph) \(NutritionFormat.macros(amounts))")
             .accessibilityLabel("\(NutritionFormat.calories(amounts)) kilocalories, \(grams(.protein)) grams protein, \(grams(.fat)) grams fat, \(grams(.carbs)) grams carbs")
     }

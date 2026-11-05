@@ -38,7 +38,7 @@ enum TileMetrics {
 
     /// Percent and Remaining fall back to Consumed for a nutrient without a target, as MacroFactor disables them there.
     static func tile(consumed: Double, range: NutrientRange, display: NutritionCard.Display, unit: NutrientUnit) -> Tile {
-        let format: (Double) -> String = { unit == .kcal ? $0.wholeText : nutrientText($0) }
+        let format: (Double) -> String = { unit == .kcal ? $0.wholeText : $0.niceText }
         switch (display, range.target) {
         case let (.percent, target?) where target > 0:
             return Tile(text: (consumed / target * 100).wholeText, unit: "%", consumed: consumed, range: range)
@@ -49,12 +49,6 @@ enum TileMetrics {
         }
     }
 
-    /// Enough digits that a nutrient with a small daily target (1.2 mg of vitamin B1) never reads as zero.
-    static func nutrientText(_ value: Double) -> String {
-        let digits = abs(value) >= 100 ? 0...0 : abs(value) >= 10 ? 0...1 : 0...2
-        return value.formatted(.number.precision(.fractionLength(digits)))
-    }
-
     /// Each macro's share of the calories its grams carry (protein and carbs 4 kcal/g, fat 9), nil when nothing is logged.
     struct MacroSplit: Equatable {
         var protein: Double
@@ -62,7 +56,7 @@ enum TileMetrics {
         var carbs: Double
 
         var text: String {
-            "\(Int((protein * 100).rounded()))% P • \(Int((fat * 100).rounded()))% F • \(Int((carbs * 100).rounded()))% C"
+            "\((protein * 100).wholeText)% P • \((fat * 100).wholeText)% F • \((carbs * 100).wholeText)% C"
         }
     }
 

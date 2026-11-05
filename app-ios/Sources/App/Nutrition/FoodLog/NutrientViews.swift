@@ -70,7 +70,7 @@ struct NutrientRow: View {
                     .font(AppFont.caption(14))
                     .monospacedDigit()
                 Spacer()
-                Text(range.target.map { "\(Int((value / max($0, 0.0001) * 100).rounded()))%" } ?? "No Target")
+                Text(range.target.map { "\((value / max($0, 0.0001) * 100).wholeText)%" } ?? "No Target")
                     .font(AppFont.caption(13))
                     .foregroundStyle(Theme.textSecondary)
                     .frame(width: 70, alignment: .trailing)
@@ -97,61 +97,106 @@ struct NutrientRow: View {
     }
 }
 
-/// Big calories, then protein, fat, and carbs, each with its share of the calories the three supply (`macroShare`).
+/// Calories, protein, fat, and carbs in four even columns, each macro labeled with its share of the calories the three
+/// supply (`macroShare`).
 struct MacroHeader: View {
     let amounts: NutrientAmounts
 
     var body: some View {
         let hasMacros = NutrientID.macros.dropFirst().contains { (amounts[$0] ?? 0) > 0 }
-        HStack(alignment: .bottom) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("\(Int((amounts[.energy] ?? 0).rounded()))").font(AppFont.number(32))
-                Text("Calories").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-            }
-            Spacer()
-            ForEach(NutrientID.macros.dropFirst(), id: \.self) { id in
-                VStack(spacing: 2) {
-                    Text(hasMacros ? "\(Int((amounts.macroShare(id) * 100).rounded()))%" : "–")
-                        .font(AppFont.badge)
-                        .foregroundStyle(Theme.textPrimary)
-                        .padding(.horizontal, 6)
-                        .background(id.color.mix(with: .black, by: 0.5), in: .capsule)
-                    Text(NutritionFormat.amount(amounts[id] ?? 0)).font(AppFont.number(18))
-                    Text(NutrientRegistry.nutrient(id)?.name ?? "").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            ForEach(NutrientID.macros, id: \.self) { id in
+                VStack(alignment: .leading, spacing: 2) {
+                    let unit = Text(id == .energy ? "" : " g").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
+                    Text("\(Text(NutritionFormat.amount(amounts[id] ?? 0, of: id)).font(AppFont.number(22)))\(unit)")
+                    HStack(spacing: 4) {
+                        Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? "").foregroundStyle(Theme.textSecondary)
+                        if id != .energy {
+                            Text(hasMacros ? "\((amounts.macroShare(id) * 100).wholeText)%" : "–").foregroundStyle(id.color)
+                        }
+                    }
+                    .font(AppFont.caption(12))
                 }
-                .frame(width: 64)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .monospacedDigit()
         .accessibilityElement(children: .combine)
         .feedback(self)
     }
 }
 
-/// Four rings: the share of the day's calorie and macro targets the amounts use, "–" where no plan sets one.
+/// "Impact on Targets": a ring per macro with the rest of the day dimmed and this food lit after it, and in the middle
+/// the share of the target the food takes. A day no plan covers has no target to fill, so the rings measure the day
+/// with the food instead and the section says what the food adds to it. `day` is the rest of the day the food lands
+/// on: its entries without the one being edited, plus `adding` (the logger's plate). It reads the day once, so a caller
+/// whose day can change gives it `.id(day)`.
 struct ImpactGauges: View {
     let amounts: NutrientAmounts
-    let target: DayTarget?
+    let day: CalendarDay
+    let adding: NutrientAmounts
+    let excluding: UUID?
+    @Observe(NutritionPlan.all) private var plans
+    @Observe<[FoodEntry]> private var entries: [FoodEntry]
+    @Observe<NutritionDay> private var row: NutritionDay
+
+    init(amounts: NutrientAmounts, day: CalendarDay, adding: NutrientAmounts = [:], excluding: UUID? = nil) {
+        self.amounts = amounts
+        self.day = day
+        self.adding = adding
+        self.excluding = excluding
+        _entries = Observe(FoodEntry.on(day))
+        _row = Observe(NutritionDay.one(day))
+    }
 
     var body: some View {
-        HStack {
-            ForEach(NutrientID.macros, id: \.self) { id in
-                let goal = target?.amount(id) ?? 0
-                let share = goal > 0 ? (amounts[id] ?? 0) / goal : 0
-                VStack(spacing: 6) {
-                    Gauge(value: min(1, share)) {
-                        EmptyView()
-                    } currentValueLabel: {
-                        Text(goal > 0 ? "\(Int((share * 100).rounded()))%" : "–").font(AppFont.rowDetail)
+        let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day)
+        let rest = row.totals(entries.filter { $0.id != excluding }) + adding
+        let lines = FoodLog.summary(rest, plate: amounts, target: target, showOverages: true)
+        ThemedSection(
+            target == nil ? "Share of the Day" : "Impact on Targets",
+            subtitle: target == nil ? "No targets for this day" : nil
+        ) {
+            HStack {
+                ForEach(lines) { line in
+                    VStack(spacing: 6) {
+                        ImpactRing(fill: line.fill(.eaten) ?? MacroLine.Fill(eaten: 0, plate: 0), color: line.nutrient.color) {
+                            Text(line.plateShare.map { "\(target == nil ? "" : "+")\(($0 * 100).wholeText)%" } ?? "–")
+                                .font(AppFont.caption(12))
+                                .monospacedDigit()
+                        }
+                        Text(line.nutrient == .energy ? "Calories" : NutrientRegistry.nutrient(line.nutrient)?.name ?? "")
+                            .font(AppFont.rowDetail)
+                            .foregroundStyle(Theme.textSecondary)
                     }
-                    .gaugeStyle(.accessoryCircularCapacity)
-                    .tint(id.color)
-                    Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? "").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(line.spoken)
                 }
-                .frame(maxWidth: .infinity)
             }
+            .padding(.vertical, 4)
+            .feedback(self)
         }
-        .padding(.vertical, 4)
-        .feedback(self)
+    }
+}
+
+private struct ImpactRing<Label: View>: View {
+    let fill: MacroLine.Fill
+    let color: Color
+    @ViewBuilder let label: Label
+
+    var body: some View {
+        ZStack {
+            Circle().stroke(Theme.surfaceRaised, lineWidth: 5)
+            Circle().trim(from: 0, to: fill.eaten).stroke(color.opacity(0.45), style: StrokeStyle(lineWidth: 5))
+            Circle().trim(from: fill.eaten, to: fill.eaten + fill.plate).stroke(color, style: StrokeStyle(lineWidth: 5))
+        }
+        .rotationEffect(.degrees(-90))
+        .overlay { label }
+        .frame(width: 52, height: 52)
+        .animation(.snappy, value: fill)
     }
 }
 

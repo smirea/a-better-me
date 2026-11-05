@@ -2,13 +2,19 @@ import Foundation
 
 /// Every number, serving, hour, and day nutrition prints, so a value reads the same on every screen.
 enum NutritionFormat {
-    /// A nutrient amount, as MacroFactor prints them: one decimal under 100, whole from there. "0.5", "15.6", "120".
+    /// A nutrient amount: one decimal under 10, whole from there (`niceText`). "0.5", "6.7", "16", "120".
     static func amount(_ value: Double) -> String {
-        value.formatted(.number.precision(.fractionLength(abs(value) < 100 ? 0...1 : 0...0)))
+        value.niceText
     }
 
+    /// Calories are always whole, "33 kcal"; every other unit reads like `amount`, "6.7 g".
     static func amount(_ value: Double, _ unit: NutrientUnit) -> String {
-        "\(amount(value)) \(unit.rawValue)"
+        "\(unit == .kcal ? value.wholeText : value.niceText) \(unit.rawValue)"
+    }
+
+    /// A nutrient's amount by its id: whole calories, `niceText` for the rest.
+    static func amount(_ value: Double, of id: NutrientID) -> String {
+        id == .energy ? value.wholeText : value.niceText
     }
 
     /// A quantity of a measure: up to two decimals, no grouping, and a point whatever the locale, since the keypad
@@ -17,14 +23,14 @@ enum NutritionFormat {
         value.formatted(.number.precision(.fractionLength(0...2)).grouping(.never).locale(Locale(identifier: "en_US_POSIX")))
     }
 
-    /// "12P 8F 20C": protein, fat, and carbs in whole grams.
+    /// "12P 8.4F 20C": protein, fat, and carbs in grams, as `amount` prints them.
     static func macros(_ amounts: NutrientAmounts) -> String {
-        NutrientID.macros.dropFirst().map { "\(Int((amounts[$0] ?? 0).rounded()))\($0.macroLetter)" }.joined(separator: " ")
+        NutrientID.macros.dropFirst().map { "\(amount(amounts[$0] ?? 0))\($0.macroLetter)" }.joined(separator: " ")
     }
 
     /// Whole kilocalories with grouping, "1,509"; rows follow it with `calorieGlyph` (`Text(macroLine:)`).
     static func calories(_ amounts: NutrientAmounts) -> String {
-        Int((amounts[.energy] ?? 0).rounded()).formatted()
+        (amounts[.energy] ?? 0).wholeText
     }
 
     /// "1.25 cup", "100 g", or with the food's weight when it knows its grams, "1 large (136 g)".

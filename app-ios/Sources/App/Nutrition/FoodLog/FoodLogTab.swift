@@ -137,11 +137,12 @@ private struct DaySummary: View {
             }
             Group {
                 if target == nil {
-                    MacroColumns(lines: lines, page: .consumed)
+                    MacroTotalsBars(lines: lines, page: .eaten)
                 } else {
+                    // The bottom padding leaves room for the page dots.
                     TabView {
-                        MacroColumns(lines: lines, page: .consumed)
-                        MacroColumns(lines: lines, page: .remaining)
+                        MacroTotalsBars(lines: lines, page: .eaten).padding(.bottom, 30)
+                        MacroTotalsBars(lines: lines, page: .remaining).padding(.bottom, 30)
                     }
                     .tabViewStyle(.page(indexDisplayMode: .always))
                     .frame(height: 64)
@@ -192,56 +193,6 @@ private struct DayStatusBadges: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(Theme.surfaceRaised, in: Capsule())
-    }
-}
-
-private struct MacroColumns: View {
-    enum Page { case consumed, remaining }
-
-    let lines: [MacroLine]
-    let page: Page
-
-    var body: some View {
-        HStack(spacing: 10) {
-            ForEach(lines) { line in
-                let color = line.nutrient.color
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("\(prefix(line.nutrient)) \(Text(text(line)).font(AppFont.rowDetail))")
-                        .font(AppFont.headline(12))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    if line.target != nil {
-                        ProgressView(value: fill(line))
-                            .progressViewStyle(.bar(color, height: 3))
-                            .scaleEffect(x: page == .remaining ? -1 : 1)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .feedback(line.nutrient.dashboardLabel, data: line)
-            }
-        }
-        .padding(.bottom, lines.first?.target == nil ? 0 : 30)
-        .contentShape(Rectangle())
-    }
-
-    private func prefix(_ id: NutrientID) -> Text {
-        id == .energy ? Text(calorieGlyph) : Text(id.rawValue.uppercased())
-    }
-
-    private func text(_ line: MacroLine) -> String {
-        let consumed = Int(line.consumed.rounded())
-        switch (page, line.target, line.remaining) {
-        case let (.remaining, _, remaining?): return "\(Int(remaining.rounded())) left"
-        case let (_, target?, _): return "\(consumed) / \(Int(target.rounded()))"
-        default: return "\(consumed)"
-        }
-    }
-
-    private func fill(_ line: MacroLine) -> Double {
-        switch page {
-        case .consumed: line.progress
-        case .remaining: 1 - line.progress
-        }
     }
 }
 

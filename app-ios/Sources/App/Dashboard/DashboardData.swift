@@ -55,7 +55,7 @@ enum MetricUnit: Equatable {
         switch self {
         case .whole: value.wholeText
         case .decimal: value.dashboardText
-        case .trace: TileMetrics.nutrientText(value)
+        case .trace: value.niceText
         case .ratio: value.formatted(.number.precision(.fractionLength(2)))
         }
     }
