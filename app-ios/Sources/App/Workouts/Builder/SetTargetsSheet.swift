@@ -100,7 +100,7 @@ struct SetTargetsSheet: View {
                     Button("Done") { focus = nil }.frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
-            .safeAreaInset(edge: .bottom) { bottomButtons }
+            .pinnedActions { bottomButtons }
             .onChange(of: restTimers) { _, on in
                 for index in draft.sets.indices {
                     draft.sets[index].restSeconds = on ? (draft.sets[index].restSeconds ?? defaultRest) : nil
@@ -137,7 +137,6 @@ struct SetTargetsSheet: View {
                 ForEach(actions.filter { $0.placement == .aboveSave }) { action in
                     Button(action.title) { perform(action) }
                         .secondaryPill()
-                        .padding(.horizontal, Theme.margin)
                 }
                 PinnedActionButton("Save") { save() }
                 ForEach(actions.filter { $0.placement == .belowSave }) { action in
@@ -444,7 +443,7 @@ private struct RestPicker: View {
                 }
             }
             .pickerStyle(.wheel)
-            .safeAreaInset(edge: .bottom) {
+            .pinnedActions {
                 PinnedActionButton("Save") {
                     onSave(minutes * 60 + seconds)
                     dismiss()

@@ -54,24 +54,14 @@ private struct CheckInPage: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                content
-            }
-            .padding(.horizontal, Theme.margin)
-            .padding(.vertical, 16)
-        }
-        .background(Theme.background)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            WizardProgress(value: progress)
-        }
-        .safeAreaInset(edge: .bottom) {
+        WizardPage(progress: progress) {
+            content
+        } actions: {
             PinnedActionButton(module == .update ? "Done" : "Next") {
                 if module == .update, let update { store.savePlan(update) }
                 next()
             }
             .disabled(module == .update && update == nil)
-            .padding(.top, 8)
         }
         .detailTitle("Check-In")
         .sheet(isPresented: $loggingWeight) { BodyWeightLogSheet() }

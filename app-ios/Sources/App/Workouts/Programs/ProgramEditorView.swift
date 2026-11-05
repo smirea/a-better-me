@@ -100,7 +100,7 @@ private struct ProgramEditorScreen: View {
         .toolbar {
             Button("Program Settings", systemImage: "slider.horizontal.3") { settingsShown = true }
         }
-        .safeAreaInset(edge: .bottom) { bottomButtons(program, template: template) }
+        .pinnedActions { bottomButtons(program, template: template) }
         .onChange(of: program.days.map(\.id)) { _, ids in
             if let pendingIndex, ids.indices.contains(pendingIndex) {
                 selection = ids[pendingIndex]
@@ -229,12 +229,8 @@ private struct ProgramEditorScreen: View {
     @ViewBuilder
     private func bottomButtons(_ program: Program, template: WorkoutTemplate?) -> some View {
         if let draft {
-            VStack(spacing: 8) {
-                Button("Save to Library") { draft.save() }
-                    .secondaryPill()
-                    .padding(.horizontal, Theme.margin)
-                PinnedActionButton("Activate Program") { draft.activate() }
-            }
+            Button("Save to Library") { draft.save() }.secondaryPill()
+            PinnedActionButton("Activate Program") { draft.activate() }
         } else if !program.isActive {
             PinnedActionButton("Activate Program") {
                 if program.isArchived { store.setProgramArchived(program.id, false) }

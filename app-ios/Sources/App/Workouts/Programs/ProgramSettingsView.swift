@@ -356,18 +356,16 @@ private struct ProgramSettingsDayOrder: View {
             .listStyle(.plain)
             .themedList()
             .environment(\.editMode, .constant(.active))
-            .detailTitle("Day Order")
-            .navigationSubtitle("\(order.count)-Day Cycle")
-            .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 4) {
-                    PinnedActionButton("Save") {
-                        onSave(order.map(\.id))
-                        dismiss()
-                    }
-                    Button("Cancel") { dismiss() }
-                        .font(AppFont.headline())
-                        .buttonStyle(.plain)
-                        .frame(minHeight: 44)
+            .detailTitle("Day Order", subtitle: "\(order.count)-Day Cycle")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(role: .close) { dismiss() }
+                }
+            }
+            .pinnedActions {
+                PinnedActionButton("Save") {
+                    onSave(order.map(\.id))
+                    dismiss()
                 }
             }
         }
@@ -458,7 +456,7 @@ private struct ProgramSettingsDuplicate: View {
                     Button(role: .close) { dismiss() }
                 }
             }
-            .safeAreaInset(edge: .bottom) {
+            .pinnedActions {
                 PinnedActionButton("Save & Go to Duplicate") {
                     let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !trimmed.isEmpty else { return }

@@ -36,13 +36,12 @@ struct StrategyWizardView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .background(Theme.background)
-            .safeAreaInset(edge: .bottom) {
+            .pinnedActions {
                 PinnedActionButton("Save") {
                     store.savePlan(model.plan(isFirst: isFirst))
                     dismiss()
                 }
                 .disabled(!model.canSave)
-                .padding(.top, 8)
             }
             .detailTitle(model.title)
             .toolbar {

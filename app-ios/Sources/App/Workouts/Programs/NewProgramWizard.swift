@@ -69,11 +69,9 @@ struct NewProgramWizard: View {
     }
 
     private func page(_ step: WizardStep) -> some View {
-        WizardPage(progress: progress(of: step), title: title(of: step), nextTitle: step == .generating ? nil : "Next", nextEnabled: canAdvance(step)) {
-            advance(from: step)
-        } content: {
+        WizardPage(progress: progress(of: step), question: title(of: step)) {
             content(of: step)
-        } footer: {
+        } actions: {
             if step == .muscleFocus {
                 HStack {
                     Text(NewProgramWizardRules.focusSummary(inputs.muscleFocus)).font(AppFont.medium(14))
@@ -83,9 +81,12 @@ struct NewProgramWizard: View {
                         .underline()
                         .disabled(inputs.muscleFocus.isEmpty)
                 }
-                .padding(.horizontal, Theme.margin)
+            }
+            if step != .generating {
+                PinnedActionButton("Next") { advance(from: step) }.disabled(!canAdvance(step))
             }
         }
+        .detailTitle("Create Program")
         .navigationBarBackButtonHidden(step == .generating)
     }
 
@@ -272,44 +273,6 @@ private enum WizardRoute: Hashable {
     case gyms
 }
 
-/// One wizard screen: the progress bar, the question, its options, and the pinned Next.
-private struct WizardPage<Content: View, Footer: View>: View {
-    let progress: Double
-    let title: String?
-    let nextTitle: String?
-    let nextEnabled: Bool
-    let onNext: () -> Void
-    @ViewBuilder let content: Content
-    @ViewBuilder let footer: Footer
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if let title {
-                    Text(title).font(AppFont.title(22)).padding(.bottom, 8)
-                }
-                content
-            }
-            .padding(.horizontal, Theme.margin)
-            .padding(.top, 16)
-            .padding(.bottom)
-        }
-        .background(Theme.background)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            ProgressView(value: progress).padding(.horizontal, Theme.margin)
-        }
-        .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 12) {
-                footer
-                if let nextTitle { PinnedActionButton(nextTitle, action: onNext).disabled(!nextEnabled) }
-            }
-            .padding(.top, 8)
-            .background(Theme.background)
-        }
-        .detailTitle("Create Program")
-        .feedback(self)
-    }
-}
 
 
 private struct DaysStepper: View {

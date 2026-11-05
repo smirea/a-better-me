@@ -87,10 +87,9 @@ private struct SwapSubstitutions: View {
                 Button(role: .close) { dismiss() }
             }
         }
-        .safeAreaInset(edge: .bottom) {
+        .pinnedActions {
             Button("Find Other Replacements", action: findOther)
                 .secondaryPill()
-                .padding(.horizontal, Theme.margin)
         }
         .sheet(item: $detail) { ref in
             let id = ref.id

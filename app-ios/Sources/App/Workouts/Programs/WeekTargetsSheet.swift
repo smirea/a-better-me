@@ -124,7 +124,7 @@ struct WeekTargetsSavingOptions: View {
                     Button(role: .close) { dismiss() }
                 }
             }
-            .safeAreaInset(edge: .bottom) {
+            .pinnedActions {
                 PinnedActionButton("Save") { onSave(scope) }
             }
         }

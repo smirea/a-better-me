@@ -148,41 +148,27 @@ struct CustomExerciseWizard: View {
     }
 
     private func step(_ step: Step) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                Text(title(step)).font(AppFont.title(24))
-                switch step {
-                case .build: BuildStep(draft: $draft)
-                case .muscles: MuscleStep(draft: $draft)
-                case .equipment: EquipmentStep(draft: $draft)
-                case .finalDetails: FinalDetailsStep(draft: $draft)
-                case .review: ReviewStep(draft: draft)
-                }
+        WizardPage(progress: Double(step.rawValue + 1) / Double(Step.allCases.count), question: title(step)) {
+            switch step {
+            case .build: BuildStep(draft: $draft)
+            case .muscles: MuscleStep(draft: $draft)
+            case .equipment: EquipmentStep(draft: $draft)
+            case .finalDetails: FinalDetailsStep(draft: $draft)
+            case .review: ReviewStep(draft: draft)
             }
-            .padding(Theme.margin)
+        } actions: {
+            if step == .review {
+                if let onCreateAndAdd {
+                    Button("Create & Add") { onCreateAndAdd(create()) }.secondaryPill()
+                }
+                Button("Create") { _ = create() }.primaryPill()
+            } else {
+                Button("Next") { path.append(Step(rawValue: step.rawValue + 1)!) }
+                    .primaryPill()
+                    .disabled(!canAdvance(step))
+            }
         }
-        .scrollDismissesKeyboard(.interactively)
-        .background(Theme.background)
         .detailTitle("Create Custom Exercise")
-        .safeAreaBar(edge: .top) {
-            ProgressView(value: Double(step.rawValue + 1), total: Double(Step.allCases.count))
-                .padding(.horizontal, Theme.margin)
-        }
-        .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 10) {
-                if step == .review {
-                    if let onCreateAndAdd {
-                        Button("Create & Add") { onCreateAndAdd(create()) }.secondaryPill()
-                    }
-                    Button("Create") { _ = create() }.primaryPill()
-                } else {
-                    Button("Next") { path.append(Step(rawValue: step.rawValue + 1)!) }
-                        .primaryPill()
-                        .disabled(!canAdvance(step))
-                }
-            }
-            .padding(.horizontal, Theme.margin)
-        }
     }
 
     private func title(_ step: Step) -> String {

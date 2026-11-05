@@ -33,7 +33,7 @@ extension View {
     }
 }
 
-/// The primary pill pinned to the bottom of a screen: Start Workout, Next, Save to Library, Save.
+/// The primary pill of a screen's `pinnedActions`: Start Workout, Next, Save to Library, Save.
 struct PinnedActionButton: View {
     let title: String
     let action: () -> Void
@@ -44,9 +44,17 @@ struct PinnedActionButton: View {
     }
 
     var body: some View {
-        Button(title, action: action)
-            .primaryPill()
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
+        Button(title, action: action).primaryPill()
+    }
+}
+
+extension View {
+    /// A screen's bottom actions, inset by the margins: secondary pills first, the primary pill last.
+    func pinnedActions<Actions: View>(@ViewBuilder _ actions: () -> Actions) -> some View {
+        safeAreaInset(edge: .bottom) {
+            VStack(spacing: 8) { actions() }
+                .padding(.horizontal, Theme.margin)
+                .padding(.vertical, 8)
+        }
     }
 }

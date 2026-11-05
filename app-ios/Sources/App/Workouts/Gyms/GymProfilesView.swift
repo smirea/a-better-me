@@ -46,11 +46,9 @@ struct GymProfilesView: View {
         .listStyle(.plain)
         .themedList()
         .detailTitle("Gym Profiles")
-        .safeAreaInset(edge: .bottom) {
+        .pinnedActions {
             Button("Add New Gym Profile") { adding = true }
                 .secondaryPill()
-                .padding(.horizontal, Theme.margin)
-                .padding(.bottom, 8)
         }
         .alert("Delete \(deleting?.name ?? "gym")?", isPresented: Binding { deleting != nil } set: { if !$0 { deleting = nil } }) {
             Button("Delete", role: .destructive) {
@@ -140,11 +138,9 @@ private struct NewGymSheet: View {
                     Button(role: .close) { dismiss() }
                 }
             }
-            .safeAreaInset(edge: .bottom) {
+            .pinnedActions {
                 Button("Create Gym Profile", action: create)
                     .primaryPill()
-                    .padding(.horizontal, Theme.margin)
-                    .padding(.bottom, 8)
             }
         }
         .feedback(self)

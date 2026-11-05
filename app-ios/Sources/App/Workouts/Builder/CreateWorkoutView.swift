@@ -105,16 +105,8 @@ struct CreateWorkoutView: View {
     }
 
     private func step(progress: Double, title: String, @ViewBuilder content: () -> some View, @ViewBuilder next: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 24) {
-            ProgressView(value: progress)
-            Text(title).font(AppFont.sectionTitle)
-            VStack(alignment: .leading, spacing: 12) { content() }
-            Spacer()
-        }
-        .padding(.horizontal, Theme.margin)
-        .background(Theme.background)
-        .safeAreaInset(edge: .bottom) { next() }
-        .detailTitle("Create Workout")
+        WizardPage(progress: progress, question: title, content: content, actions: next)
+            .detailTitle("Create Workout")
     }
 
     private func importWorkout(_ result: Result<URL, Error>) {
@@ -134,9 +126,9 @@ struct CreateWorkoutView: View {
     private var editor: some View {
         WorkoutEditor(blocks: $blocks)
             .safeAreaInset(edge: .top, spacing: 0) {
-                ProgressView(value: 1).padding(.horizontal, Theme.margin)
+                WizardProgress(value: 1)
             }
-            .safeAreaInset(edge: .bottom) {
+            .pinnedActions {
                 PinnedActionButton("Save to Library") {
                     var template = imported ?? WorkoutTemplate(name: trimmedName)
                     template.name = trimmedName

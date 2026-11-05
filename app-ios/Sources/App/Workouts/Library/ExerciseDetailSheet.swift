@@ -45,14 +45,13 @@ struct ExerciseDetailSheet: View {
                     Button(role: .close) { dismiss() }
                 }
             }
-            .safeAreaInset(edge: .bottom) {
+            .pinnedActions {
                 if let action {
                     Button(action.label) {
                         action.perform()
                         dismiss()
                     }
                     .primaryPill()
-                    .padding(.horizontal, Theme.margin)
                 }
             }
         }

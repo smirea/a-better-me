@@ -98,18 +98,6 @@ struct WeekTargetsChart: View {
     }
 }
 
-/// The check-in's header: its progress through the modules.
-struct WizardProgress: View {
-    let value: Double
-
-    var body: some View {
-        ProgressView(value: value)
-            .progressViewStyle(.bar(Theme.textPrimary))
-            .padding(.horizontal, Theme.margin)
-            .padding(.bottom, 8)
-    }
-}
-
 /// The overview's card: a title, an optional subtitle, the content, and a row of glass actions under a hairline.
 struct StrategyCard<Content: View, Actions: View>: View {
     let title: String

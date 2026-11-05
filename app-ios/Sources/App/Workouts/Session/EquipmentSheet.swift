@@ -45,7 +45,7 @@ struct EquipmentSheet<Settings: View>: View {
                 }
             }
             .navigationDestination(isPresented: $showingSettings) { settings() }
-            .safeAreaInset(edge: .bottom) {
+            .pinnedActions {
                 PinnedActionButton("Done") { dismiss() }
             }
         }
