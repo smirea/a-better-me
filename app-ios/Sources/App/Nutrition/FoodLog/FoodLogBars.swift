@@ -48,7 +48,7 @@ private struct NoticeBar: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(notice.message).font(AppFont.medium(14)).lineLimit(2)
+            Text(notice.message).font(AppFont.chip).lineLimit(2)
             Spacer(minLength: 0)
             if notice.undo != nil {
                 Button("Undo") { state.undo(in: store) }
@@ -175,7 +175,7 @@ private struct PasteBar: View {
             }
             if pending.inline {
                 Text("Tap an hour to paste")
-                    .font(AppFont.medium(14))
+                    .font(AppFont.chip)
                     .padding(.horizontal, 16)
                     .frame(height: 44)
                     .glassEffect(.regular, in: .capsule)
@@ -222,7 +222,7 @@ private struct BarTitle: View {
             HStack(spacing: 8) {
                 Image(systemName: systemImage)
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(Theme.onPrimary)
                     .frame(width: 26, height: 26)
                     .background(Theme.textPrimary, in: Circle())
                 VStack(alignment: .leading, spacing: 0) {

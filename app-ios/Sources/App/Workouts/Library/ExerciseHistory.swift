@@ -241,7 +241,7 @@ private struct HistoryRow: View {
             Button { withAnimation { isExpanded.toggle() } } label: {
                 HStack(spacing: 14) {
                     Image(systemName: "dumbbell.fill")
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.textPrimary)
                         .frame(width: 40, height: 40)
                         .background(Theme.accent, in: .rect(cornerRadius: Theme.smallCornerRadius))
                     VStack(alignment: .leading, spacing: 2) {
@@ -257,7 +257,7 @@ private struct HistoryRow: View {
                                         .labelStyle(.titleAndIcon)
                                 }
                             }
-                            .font(AppFont.caption(12))
+                            .font(AppFont.rowDetail)
                             .foregroundStyle(Theme.textPrimary)
                         }
                     }

@@ -77,7 +77,7 @@ struct SmartProgressionSheet: View {
                         HStack(spacing: 8) {
                             Text(row.label).font(AppFont.body(14))
                             Spacer()
-                            Text(valueText(row)).font(AppFont.medium(14))
+                            Text(valueText(row)).font(AppFont.chip)
                             if let rir = row.rir { RIRBadge(rir: rir) }
                         }
                     }

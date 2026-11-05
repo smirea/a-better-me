@@ -18,7 +18,7 @@ struct CollaborativeEditorView: View {
             WeekTargetsChart(targets: week.targets, selection: $weekday, locked: week.locked, height: 120)
             Divider().overlay(Theme.separator)
             HStack {
-                Text(StrategyFormat.weekdayNames[weekday - 1]).font(AppFont.title(20))
+                Text(StrategyFormat.weekdayNames[weekday - 1]).font(AppFont.sectionTitle)
                 Spacer()
                 Button("Reset All Days") { week.resetAll(like: weekday) }
                     .buttonStyle(.glass)
@@ -40,7 +40,7 @@ struct CollaborativeEditorView: View {
 
     private var calories: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Calorie targets: set between 0 and \(Double(maxKcal).wholeText) kcal").font(AppFont.medium(14))
+            Text("Calorie targets: set between 0 and \(Double(maxKcal).wholeText) kcal").font(AppFont.chip)
             HStack {
                 TextField("Calories", value: Binding(get: { Int(day.energy) }, set: { week.setCalories(min(maxKcal, max(0, $0)), on: weekday) }), format: .number)
                     .keyboardType(.numberPad)
@@ -61,9 +61,9 @@ struct CollaborativeEditorView: View {
         let perLb = day.protein / weightLb
         return VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Protein").font(AppFont.medium(14))
+                Text("Protein").font(AppFont.chip)
                 Spacer()
-                Text("\(day.protein.niceText) g · \(perLb.formatted(.number.precision(.fractionLength(2)))) g/lb").font(AppFont.medium(14)).monospacedDigit()
+                Text("\(day.protein.niceText) g · \(perLb.formatted(.number.precision(.fractionLength(2)))) g/lb").font(AppFont.chip).monospacedDigit()
             }
             Slider(
                 value: Binding(get: { min(perLb, CollaborativeWeek.maxProteinPerLb) }, set: { week.setProtein(Int(($0 * weightLb).rounded()), on: weekday) }),
@@ -78,9 +78,9 @@ struct CollaborativeEditorView: View {
         let target = day
         return VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Carb to Fat Ratio").font(AppFont.medium(14))
+                Text("Carb to Fat Ratio").font(AppFont.chip)
                 Spacer()
-                Text("\((week.carbShare(weekday) * 100).wholeText) %").font(AppFont.medium(14)).monospacedDigit()
+                Text("\((week.carbShare(weekday) * 100).wholeText) %").font(AppFont.chip).monospacedDigit()
             }
             Slider(value: Binding(get: { week.carbShare(weekday) }, set: { week.setCarbShare(($0 * 100).rounded() / 100, on: weekday) }), in: 0...1) { Text("Carb to Fat Ratio") }
                 .tint(Theme.carbs)

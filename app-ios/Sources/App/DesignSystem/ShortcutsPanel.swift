@@ -35,7 +35,7 @@ struct ShortcutsPanel<Item: ShortcutItem, Banner: View>: View {
                     }
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.bottom, 8)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
         }

@@ -31,7 +31,7 @@ struct NoteEditor: View {
                 Spacer()
                 DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
             }
-            .padding(20)
+            .padding(Theme.margin)
             .background(Theme.background)
             .detailTitle(isNew ? "New Note" : "Edit Note", subtitle: note.day.date.formatted(date: .numeric, time: .omitted))
             .toolbar {

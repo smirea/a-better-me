@@ -292,7 +292,7 @@ struct SessionEditor: View {
         let pinned = exerciseSettings.first { $0.id == item.exerciseID }?.pinnedNote ?? ""
         return VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(catalog.name(item.exerciseID)).font(AppFont.title())
+                Text(catalog.name(item.exerciseID)).font(AppFont.sectionTitle)
                 Text(SessionFlow.subtitle(for: (block, index), in: blocks))
                     .font(AppFont.caption(14))
                     .foregroundStyle(Theme.textSecondary)

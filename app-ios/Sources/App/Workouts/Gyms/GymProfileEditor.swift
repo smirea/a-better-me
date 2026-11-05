@@ -107,7 +107,7 @@ struct GymProfileEditor: View {
                         Button(anySelected ? "Deselect All" : "Select All") {
                             setSelected(section.items.map(\.id), !anySelected)
                         }
-                        .font(AppFont.medium(14))
+                        .font(AppFont.chip)
                         .underline()
                         .foregroundStyle(Theme.textPrimary)
                         .accessibilityLabel("\(anySelected ? "Deselect" : "Select") All \(section.category)")

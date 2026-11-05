@@ -154,8 +154,8 @@ struct ProgramSettingsView: View {
 
     private var colorIconTile: some View {
         Image(systemName: program.icon)
-            .font(AppFont.caption(12))
-            .foregroundStyle(.white)
+            .font(AppFont.rowDetail)
+            .foregroundStyle(Theme.textPrimary)
             .frame(width: 24, height: 24)
             .background(program.color.swatch, in: .rect(cornerRadius: Theme.tinyCornerRadius))
     }
@@ -267,7 +267,7 @@ struct ProgramIconGrid: View {
             ForEach(ProgramIcon.all, id: \.symbol) { icon in
                 Button { onPick(icon.symbol) } label: {
                     Image(systemName: icon.symbol)
-                        .font(AppFont.title(18))
+                        .font(AppFont.listTitle)
                         .foregroundStyle(icon.symbol == selection ? .white : Theme.textSecondary)
                         .frame(width: 48, height: 48)
                         .background(icon.symbol == selection ? color.swatch : Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))

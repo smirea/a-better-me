@@ -69,7 +69,7 @@ struct WeekStrip<Week: View>: View {
             LazyHStack(spacing: 0) {
                 ForEach(weeks, id: \.self) { offset in
                     HStack(spacing: 6) { week(origin.adding(days: offset * 7)) }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, Theme.margin)
                         .containerRelativeFrame(.horizontal)
                 }
             }

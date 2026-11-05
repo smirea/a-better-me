@@ -200,7 +200,7 @@ private struct DetailsTab: View {
                 SectionTitle("Details").padding(.bottom, 8)
                 ForEach(details, id: \.title) { item in
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(item.title).font(AppFont.medium(14))
+                        Text(item.title).font(AppFont.chip)
                         Text(item.value).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -236,7 +236,7 @@ private struct RatingRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(AppFont.medium(14))
+                Text(title).font(AppFont.chip)
                 Text("\(value)/5").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
@@ -268,7 +268,7 @@ struct EquipmentOptions: View {
                         HStack(spacing: 8) {
                             ForEach(ids[safe: index] ?? [], id: \.self) { EquipmentImage(equipmentID: $0).frame(width: 32, height: 32) }
                         }
-                        Text(optionName(index, fallback: name)).font(AppFont.medium(14))
+                        Text(optionName(index, fallback: name)).font(AppFont.chip)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)

@@ -55,7 +55,7 @@ struct PhotoTab: View {
         .scrollDismissesKeyboard(.interactively)
         .overlay {
             if session.isFindingFoods {
-                ProgressView("Finding foods").padding(20).glassEffect(in: .rect(cornerRadius: Theme.cornerRadius))
+                ProgressView("Finding foods").padding(Theme.margin).glassEffect(in: .rect(cornerRadius: Theme.cornerRadius))
             }
         }
         .pinnedActions {

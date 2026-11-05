@@ -115,7 +115,7 @@ struct MacroHeader: View {
                             Text(hasMacros ? "\((amounts.macroShare(id) * 100).wholeText)%" : "–").foregroundStyle(id.color)
                         }
                     }
-                    .font(AppFont.caption(12))
+                    .font(AppFont.rowDetail)
                 }
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -164,7 +164,7 @@ struct ImpactGauges: View {
                     VStack(spacing: 6) {
                         ImpactRing(fill: line.fill(.eaten) ?? MacroLine.Fill(eaten: 0, plate: 0), color: line.nutrient.color) {
                             Text(line.plateShare.map { "\(target == nil ? "" : "+")\(($0 * 100).wholeText)%" } ?? "–")
-                                .font(AppFont.caption(12))
+                                .font(AppFont.rowDetail)
                                 .monospacedDigit()
                         }
                         Text(line.nutrient == .energy ? "Calories" : NutrientRegistry.nutrient(line.nutrient)?.name ?? "")

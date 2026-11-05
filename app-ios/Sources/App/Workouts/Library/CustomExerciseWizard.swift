@@ -205,7 +205,7 @@ private struct FieldLabel: View {
 
     var body: some View {
         HStack {
-            Text(title).font(AppFont.medium(14))
+            Text(title).font(AppFont.chip)
             Spacer()
             if let trailing { Text(trailing).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary) }
         }
@@ -306,7 +306,7 @@ private struct MuscleStep: View {
                 Spacer()
                 Button("Reset") { draft.muscles = [:] }.underline().disabled(draft.muscles.isEmpty)
             }
-            .font(AppFont.medium(14))
+            .font(AppFont.chip)
             .foregroundStyle(Theme.textPrimary)
         }
         .feedback(self)
@@ -337,7 +337,7 @@ private struct MuscleStep: View {
                                             .offset(x: 4, y: 4)
                                     }
                                 }
-                            Text(muscle.displayName).font(AppFont.caption(12)).foregroundStyle(Theme.textPrimary)
+                            Text(muscle.displayName).font(AppFont.rowDetail).foregroundStyle(Theme.textPrimary)
                         }
                     }
                     .buttonStyle(.plain)
@@ -657,7 +657,7 @@ private struct ReviewStep: View {
     private func rating(_ title: String, _ value: Int?) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(AppFont.medium(14))
+                Text(title).font(AppFont.chip)
                 Text(value.map { "\($0)/5" } ?? "None").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
@@ -667,7 +667,7 @@ private struct ReviewStep: View {
 
     private func summary(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(AppFont.medium(14))
+            Text(title).font(AppFont.chip)
             Text(value)
                 .font(AppFont.body(15))
                 .lineLimit(6)

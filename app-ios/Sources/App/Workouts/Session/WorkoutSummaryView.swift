@@ -248,7 +248,7 @@ struct WorkoutSummaryView: View {
                 if !items.isEmpty {
                     if block.isSuperset {
                         Text(block.exercises.count > 2 ? "Circuit" : "Superset")
-                            .font(AppFont.medium(14))
+                            .font(AppFont.chip)
                             .foregroundStyle(Theme.textSecondary)
                             .padding(.horizontal, Theme.margin)
                             .padding(.top, 12)

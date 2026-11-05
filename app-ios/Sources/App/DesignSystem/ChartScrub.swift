@@ -107,12 +107,12 @@ private struct ChartCalloutView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(callout.title).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+            Text(callout.title).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             ForEach(Array(callout.lines.enumerated()), id: \.offset) { _, line in
                 HStack(spacing: 5) {
                     Circle().fill(line.color).frame(width: 7, height: 7)
                     if let label = line.label {
-                        Text(label).font(AppFont.caption(12)).foregroundStyle(Theme.textSecondary)
+                        Text(label).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                     }
                     Text(line.value).font(AppFont.headline(14)).monospacedDigit()
                 }

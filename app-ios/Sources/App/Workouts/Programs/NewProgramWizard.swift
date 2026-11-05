@@ -74,10 +74,10 @@ struct NewProgramWizard: View {
         } actions: {
             if step == .muscleFocus {
                 HStack {
-                    Text(NewProgramWizardRules.focusSummary(inputs.muscleFocus)).font(AppFont.medium(14))
+                    Text(NewProgramWizardRules.focusSummary(inputs.muscleFocus)).font(AppFont.chip)
                     Spacer()
                     Button("Reset") { inputs.muscleFocus = [:] }
-                        .font(AppFont.medium(14))
+                        .font(AppFont.chip)
                         .underline()
                         .disabled(inputs.muscleFocus.isEmpty)
                 }
@@ -145,7 +145,7 @@ struct NewProgramWizard: View {
                     .padding(.top, 80)
                     .accessibilityHidden(true)
                 Text("We will create a personalized training program tailored to your goals. Or, you can import or build your own.")
-                    .font(AppFont.title())
+                    .font(AppFont.sectionTitle)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
@@ -288,7 +288,7 @@ private struct DaysStepper: View {
                     .disabled(days >= NewProgramWizardRules.dayRange.upperBound)
             }
             .font(AppFont.headline(20))
-            Text("times per week").font(AppFont.medium(15))
+            Text("times per week").font(AppFont.rowTitle)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 180)

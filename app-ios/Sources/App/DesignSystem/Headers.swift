@@ -16,7 +16,7 @@ struct SectionHeader<Actions: View>: View {
             Text(title).font(AppFont.sectionTitle)
             Spacer()
             actions
-                .font(AppFont.medium(15))
+                .font(AppFont.rowTitle)
                 .underline()
                 .foregroundStyle(Theme.textPrimary)
         }

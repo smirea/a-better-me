@@ -276,7 +276,7 @@ struct QuantityKeypad: View {
                     confirmButton
                 }
             }
-            .font(AppFont.title(20))
+            .font(AppFont.sectionTitle)
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)

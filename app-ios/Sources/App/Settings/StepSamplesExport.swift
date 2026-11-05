@@ -124,7 +124,7 @@ struct StepSamplesExportSheet: View {
                     .secondaryPill()
             }
         }
-        .padding(20)
+        .padding(Theme.margin)
         .presentationDetents([.height(210)])
         .interactiveDismissDisabled(isRunning)
         .task {

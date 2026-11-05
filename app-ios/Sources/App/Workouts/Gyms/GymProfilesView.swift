@@ -28,7 +28,7 @@ struct GymProfilesView: View {
                         .swipeActions(edge: .trailing) {
                             if !isDefault {
                                 Button("Delete", systemImage: "trash") { deleting = gym }
-                                    .tint(.red)
+                                    .tint(Theme.destructive)
                             }
                             Button("Edit", systemImage: "pencil") { editing = gym.id }
                                 .tint(Theme.surfaceRaised)

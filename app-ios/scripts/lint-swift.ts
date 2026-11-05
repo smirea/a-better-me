@@ -29,6 +29,16 @@ const rules = [
 		allowedIn: ['App/DesignSystem/WizardOption.swift'],
 		fix: 'a choice row ends in SelectionMark(isOn:), one radio glyph and size everywhere',
 	},
+	{
+		pattern: /AppFont\.(medium\(1[45]\)|caption\(12\)|title\((18|20)?\))/,
+		allowedIn: [],
+		fix: 'that size is a type role: AppFont.chip, rowTitle, rowDetail, listTitle, or sectionTitle',
+	},
+	{
+		pattern: /\.(foregroundStyle|tint)\(\.(white|black|red|blue|green|gray)\)/,
+		allowedIn: ['App/Workouts/Session/PlateCalculatorView.swift'],
+		fix: 'use a Theme token: textPrimary, onPrimary, destructive, accent, or a named color',
+	},
 ];
 
 const problems: string[] = [];
