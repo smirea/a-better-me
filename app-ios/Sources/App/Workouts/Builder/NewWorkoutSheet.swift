@@ -96,7 +96,7 @@ private struct UpNextCard: View {
             if let template {
                 NavigationLink(value: ProgramRoute(programID: program.id, dayID: day.id)) {
                     HStack(spacing: 12) {
-                        TemplateSummary(template: template, title: "Up Next • \(template.name)")
+                        TemplateSummary(template: template, title: "Up Next • \(template.name)", day: (program, day.id))
                         Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
                     }
                     .contentShape(Rectangle())

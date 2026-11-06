@@ -12,7 +12,7 @@ struct MuscleTags: View {
         self.init(primary: exercise.primaryMuscles, secondary: exercise.secondaryMuscles, highlight: highlight)
     }
 
-    /// A workout's tags: every muscle its exercises train, as the Workout Library rows show them.
+    /// A workout's tags: every muscle its exercises train, as the history rows show them.
     init(primary: [Muscle], secondary: [Muscle], highlight: Muscle? = nil) {
         self.primary = primary
         self.secondary = secondary

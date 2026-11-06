@@ -243,3 +243,43 @@ struct WeekStripProgramTests {
         #expect(DayPillTarget.of(Self.date(27, hour: 0), session: nil, program: rolling, now: now, calendar: Self.calendar) == nil)
     }
 }
+
+struct WorkoutOverviewTests {
+    private static let bench = Exercise(id: "bench", name: "Bench Press", type: .compound, primaryMuscles: [.chest], secondaryMuscles: [.triceps], metrics: [.weight, .reps])
+    private static let plank = Exercise(id: "plank", name: "Plank", type: .isolation, primaryMuscles: [.abs], metrics: [.duration])
+
+    private static func catalog(_ id: ExerciseID) -> Exercise? { [bench, plank].first { $0.id == id } }
+
+    @Test func countsExercisesAndWorkingSetsAndWeighsSecondaryMusclesHalf() {
+        let sets = [WorkoutSet(type: .warmUp), WorkoutSet(), WorkoutSet(), WorkoutSet()]
+        let blocks = [
+            WorkoutBlock(exercises: [BlockExercise(exerciseID: "bench", sets: sets)]),
+            WorkoutBlock(exercises: [BlockExercise(exerciseID: "plank", sets: [WorkoutSet()])]),
+        ]
+        let overview = WorkoutOverview(blocks: blocks, catalog: Self.catalog)
+        #expect(overview.line == "2 exercises · 4 sets")
+        #expect(overview.muscleSets == [.chest: 3, .triceps: 1.5, .abs: 1])
+    }
+
+    @Test func singularAndEmptyLines() {
+        let one = WorkoutOverview(blocks: [WorkoutBlock(exercises: [BlockExercise(exerciseID: "plank", sets: [WorkoutSet()])])], catalog: Self.catalog)
+        #expect(one.line == "1 exercise · 1 set")
+        #expect(WorkoutOverview(blocks: [], catalog: Self.catalog).line == "No exercises")
+    }
+
+    @Test func completionsCountFinishedSessionsPerTemplateAndPerProgramDay() {
+        let push = UUID()
+        let pull = UUID()
+        let monday = UUID()
+        func session(_ template: UUID?, day: UUID? = nil, finished: Bool = true) -> WorkoutSession {
+            var session = WorkoutSession(name: "W", templateID: template)
+            session.program = day.map { ProgramPosition(programID: UUID(), dayID: $0, cycle: 1) }
+            if finished { session.endedAt = session.startedAt.addingTimeInterval(3600) }
+            return session
+        }
+        let counts = WorkoutOverview.completions(in: [
+            session(push), session(push, day: monday), session(pull), session(pull, finished: false), session(nil, day: monday), session(nil),
+        ])
+        #expect(counts == [push: 2, pull: 1, monday: 2])
+    }
+}
