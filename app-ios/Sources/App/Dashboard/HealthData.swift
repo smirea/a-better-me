@@ -65,7 +65,8 @@ final class HealthData {
             async let steps = readDailySums(Self.stepCount, unit: .count())
             async let flights = readDailySums(Self.flightsClimbed, unit: .count())
             async let distance = readDailySums(Self.distanceWalkingRunning, unit: .meter())
-            let read = try await steps
+            let today = Calendar.current.startOfDay(for: .now)
+            let read = PhonePedometer.merge(await PhonePedometer.steps(from: today, to: .now), into: try await steps, today: today)
             update(weights: try await weights, steps: read, flights: try await flights, distance: try await distance, logged: logged)
             WidgetPublisher.shared.update(healthSteps: read)
         } catch {
