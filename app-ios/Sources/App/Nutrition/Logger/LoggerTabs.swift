@@ -20,7 +20,7 @@ struct SearchTab: View {
                 }
                 ThemedSection("Latest") { rows(session.results, terms) }
             } else {
-                ForEach(groups, id: \.0) { group, results in
+                ForEach(session.results.grouped, id: \.0) { group, results in
                     ThemedSection(group.title) { rows(results, terms) }
                 }
                 if session.isSearchingBranded {
@@ -58,18 +58,6 @@ struct SearchTab: View {
         }
         .onChange(of: text) { session.setQuery(text, branded: settings.nutrition.searchBranded) }
         .feedback(self)
-    }
-
-    private var groups: [(FoodSearchGroup, [FoodSearchResult])] {
-        var groups: [(FoodSearchGroup, [FoodSearchResult])] = []
-        for result in session.results {
-            if groups.last?.0 == result.group {
-                groups[groups.count - 1].1.append(result)
-            } else {
-                groups.append((result.group, [result]))
-            }
-        }
-        return groups
     }
 
     /// Swiping a row right adds it to the plate, MacroFactor's Multi-Add. Swiping a Pick left takes it out of that
@@ -110,6 +98,21 @@ struct SearchTab: View {
                 }
             }
         }
+    }
+}
+
+extension [FoodSearchResult] {
+    /// Each run of one group, for a section per group.
+    var grouped: [(FoodSearchGroup, [FoodSearchResult])] {
+        var groups: [(FoodSearchGroup, [FoodSearchResult])] = []
+        for result in self {
+            if groups.last?.0 == result.group {
+                groups[groups.count - 1].1.append(result)
+            } else {
+                groups.append((result.group, [result]))
+            }
+        }
+        return groups
     }
 }
 

@@ -9,6 +9,8 @@ extension IngredientPicker {
     }
 }
 
+/// The logger's sections: Latest, the history at each food's last serving, while the field is empty, otherwise one
+/// per group, so the owner's own foods read apart from the database's.
 private struct IngredientSearch: View {
     let excluding: UUID?
     let add: @MainActor (FoodPortion) -> Void
@@ -23,25 +25,18 @@ private struct IngredientSearch: View {
         NavigationStack {
             List {
                 if let session {
-                    ThemedSection {
-                        ForEach(choices(session)) { result in
-                            HStack(spacing: 12) {
-                                Button {
-                                    pick(result)
-                                    dismiss()
-                                } label: {
-                                    FoodRow(food: result.portion.food, serving: result.portion.serving)
-                                }
-                                .buttonStyle(.plain)
-                                AddIngredientButton(name: result.portion.food.name) {
-                                    pick(result)
-                                    added += 1
-                                }
-                            }
+                    let terms = FoodText.terms(session.query)
+                    if session.query.isEmpty {
+                        ThemedSection("Latest") { rows(choices(session), terms) }
+                    } else {
+                        ForEach(choices(session).grouped, id: \.0) { group, results in
+                            ThemedSection(group.title) { rows(results, terms) }
                         }
                     }
                     if session.isSearchingBranded {
-                        ProgressView().frame(maxWidth: .infinity)
+                        ThemedSection(FoodSearchGroup.branded.title) {
+                            ProgressView().frame(maxWidth: .infinity)
+                        }
                     }
                 }
             }
@@ -65,6 +60,24 @@ private struct IngredientSearch: View {
             session = LoggerSession(store: store, search: search, start: LoggerStart())
         }
         .feedback(self)
+    }
+
+    private func rows(_ results: [FoodSearchResult], _ terms: [String]) -> some View {
+        ForEach(results) { result in
+            HStack(spacing: 12) {
+                Button {
+                    pick(result)
+                    dismiss()
+                } label: {
+                    FoodRow(food: result.portion.food, serving: result.portion.serving, matching: terms)
+                }
+                .buttonStyle(.plain)
+                AddIngredientButton(name: result.portion.food.name) {
+                    pick(result)
+                    added += 1
+                }
+            }
+        }
     }
 
     private func pick(_ result: FoodSearchResult) {
