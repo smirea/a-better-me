@@ -22,8 +22,9 @@ pre-commit:
             glob: '*.swift'
             run: bun app-ios/scripts/lint-swift.ts
 
+# Swift suites run at push, not commit: they build and boot a simulator, which costs a minute or more.
 pre-push:
   commands:
     test:
-      glob: '*.{js,mjs,mts,ts,tsx}'
+      glob: '*.{js,mjs,mts,ts,tsx,swift}'
       run: bun --no-env-file scripts/test-changed.ts {push_files}
