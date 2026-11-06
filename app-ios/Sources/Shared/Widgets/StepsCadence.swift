@@ -1,11 +1,11 @@
 import Foundation
 
-/// What one step widget refresh read, kept in the app group. A locked refresh can't read Health, so it reuses the
-/// last read that succeeded, and the next refresh compares its count with `today` to tell whether the owner is moving.
+/// What one step widget refresh showed, kept in the app group. A locked refresh can't read Health, so it starts from
+/// the last refresh's days, and the next refresh compares its count with `today` to tell whether the owner is moving.
 struct StepsReading: Codable, Equatable, Sendable {
     let date: Date
-    /// Health's daily counts from the last read that succeeded.
-    let health: [DatedValue]
+    /// Each day's largest count the widget has seen over the last month, from Health or the phone's pedometer.
+    let days: [DatedValue]
     /// Today's count as the widget showed it.
     let today: Double
 
@@ -13,7 +13,23 @@ struct StepsReading: Codable, Equatable, Sendable {
 
     static func load() -> StepsReading? {
         guard let url, let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(StepsReading.self, from: data)
+        return decode(data)
+    }
+
+    /// Builds before this type kept only Health's last read, as a bare list of days.
+    static func decode(_ data: Data) -> StepsReading? {
+        if let reading = try? JSONDecoder().decode(StepsReading.self, from: data) { return reading }
+        return (try? JSONDecoder().decode([DatedValue].self, from: data)).map { StepsReading(date: .distantPast, days: $0, today: 0) }
+    }
+
+    /// The last refresh's days raised by Health's fresh read and the phone's count for today, so a locked refresh never
+    /// shows less than the widget already showed, also for yesterday once midnight passes.
+    static func days(previous: [DatedValue], health: [DatedValue], phoneToday: Double?, today: Date, calendar: Calendar) -> [DatedValue] {
+        let start = calendar.date(byAdding: .day, value: -30, to: today)!
+        var largest: [Date: Double] = [:]
+        for point in previous + health where point.date >= start { largest[point.date] = max(largest[point.date] ?? 0, point.value) }
+        let days = largest.map { DatedValue(date: $0.key, value: $0.value) }.sorted { $0.date < $1.date }
+        return PhonePedometer.merge(phoneToday, into: days, today: today)
     }
 
     func save() throws {

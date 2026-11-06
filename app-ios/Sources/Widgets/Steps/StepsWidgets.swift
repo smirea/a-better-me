@@ -33,8 +33,8 @@ struct StepsEntry: TimelineEntry {
 }
 
 /// Health's own counts for the last month and the phone's pedometer for today, merged over the app's snapshot. Health
-/// stays readable only while the phone is unlocked, so a locked refresh reuses the last Health read and leans on the
-/// pedometer, which keeps counting. The next refresh comes sooner while the owner moves (`StepsCadence`).
+/// stays readable only while the phone is unlocked, so a locked refresh starts from the last refresh's days and leans
+/// on the pedometer, which keeps counting. The next refresh comes sooner while the owner moves (`StepsCadence`).
 struct StepsProvider: TimelineProvider {
     private static let store = HKHealthStore()
     private static let log = Logger(subsystem: "com.stefan.a-better-me", category: "widgets")
@@ -58,11 +58,10 @@ struct StepsProvider: TimelineProvider {
         async let fresh = health(now: now, calendar: calendar)
         async let phoneToday = PhonePedometer.steps(from: today, to: now)
         async let phoneRecent = PhonePedometer.steps(from: now.addingTimeInterval(-StepsCadence.recentWindow), to: now)
-        let health = await fresh ?? previous?.health ?? []
-        let live = PhonePedometer.merge(await phoneToday, into: health, today: today)
+        let live = StepsReading.days(previous: previous?.days ?? [], health: await fresh ?? [], phoneToday: await phoneToday, today: today, calendar: calendar)
         let midnight = calendar.date(byAdding: .day, value: 1, to: today)!
         let entries = [now, midnight].map { StepsEntry(date: $0, summary: snapshot.summary(live: live, now: $0, calendar: calendar)) }
-        let reading = StepsReading(date: now, health: health, today: entries[0].summary.today)
+        let reading = StepsReading(date: now, days: live, today: entries[0].summary.today)
         do {
             try reading.save()
         } catch {

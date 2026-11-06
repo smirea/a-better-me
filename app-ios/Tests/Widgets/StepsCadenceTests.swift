@@ -6,7 +6,7 @@ struct StepsCadenceTests {
     private let noon = day("2026-11-06", 12)
 
     private func reading(minutesAgo: Double = 0, today: Double) -> StepsReading {
-        StepsReading(date: noon.addingTimeInterval(-minutesAgo * 60), health: [], today: today)
+        StepsReading(date: noon.addingTimeInterval(-minutesAgo * 60), days: [], today: today)
     }
 
     @Test func aWalkThePedometerFeltRefreshesInFiveMinutes() {
@@ -46,5 +46,26 @@ struct StepsCadenceTests {
         #expect(PhonePedometer.merge(2500, into: health, today: today) == health)
         #expect(PhonePedometer.merge(nil, into: health, today: today) == health)
         #expect(PhonePedometer.merge(800, into: [yesterday], today: today) == [yesterday, DatedValue(date: today, value: 800)])
+    }
+
+    @Test func aLockedRefreshAfterMidnightKeepsYesterdaysPedometerCount() {
+        let yesterday = day("2026-11-05", 0)
+        let today = day("2026-11-06", 0)
+        let shown = [DatedValue(date: yesterday, value: 11000)]
+        let days = StepsReading.days(previous: shown, health: [], phoneToday: 120, today: today, calendar: utc)
+        #expect(days == [DatedValue(date: yesterday, value: 11000), DatedValue(date: today, value: 120)])
+    }
+
+    @Test func aFreshHealthReadRaisesDaysAndOldDaysFallOff() {
+        let today = day("2026-11-06", 0)
+        let previous = [DatedValue(date: day("2026-09-01", 0), value: 9000), DatedValue(date: day("2026-11-05", 0), value: 8000)]
+        let health = [DatedValue(date: day("2026-11-05", 0), value: 9500), DatedValue(date: today, value: 2000)]
+        let days = StepsReading.days(previous: previous, health: health, phoneToday: 1500, today: today, calendar: utc)
+        #expect(days == [DatedValue(date: day("2026-11-05", 0), value: 9500), DatedValue(date: today, value: 2000)])
+    }
+
+    @Test func theCacheFromBeforeThisBuildStillLoads() throws {
+        let legacy = try JSONEncoder().encode([DatedValue(date: day("2026-11-05", 0), value: 8000)])
+        #expect(StepsReading.decode(legacy) == StepsReading(date: .distantPast, days: [DatedValue(date: day("2026-11-05", 0), value: 8000)], today: 0))
     }
 }
