@@ -27,6 +27,9 @@ struct FoodLogTab: View {
                 }
                 .hidden(!showsToday)
                 ToolbarItem {
+                    Button("Strategy", systemImage: "chart.line.uptrend.xyaxis") { state.path.append(FoodLogRoute.strategy) }
+                }
+                ToolbarItem {
                     Button("Calendar", systemImage: "calendar") { showingCalendar = true }
                 }
                 ToolbarItem {
@@ -74,7 +77,9 @@ private struct FoodLogHeader: View {
             DaySummary(day: state.day, plans: plans).id(state.day)
         }
         .padding(.bottom, 6)
-        .background(Theme.header)
+        // The week strip is the scroll view nearest the bar, so its top edge effect greyed the bar behind the title,
+        // which the Workout tab's bar doesn't have. Nothing scrolls under the bar here.
+        .scrollEdgeEffectHidden(true, for: .top)
         .feedback(self)
     }
 }

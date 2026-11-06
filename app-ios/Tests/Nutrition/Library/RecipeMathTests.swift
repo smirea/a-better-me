@@ -158,7 +158,7 @@ struct LibraryFilterTests {
         #expect(NutritionFormat.amount(33.3, of: .energy) == "33")
         #expect(NutritionFormat.amount(6.66, of: .protein) == "6.7")
         #expect(NutritionFormat.calories([.energy: 1509.4, .protein: 0.4, .carbs: 15.6]) == "1,509")
-        #expect(NutritionFormat.macros([.energy: 60.4, .protein: 0.4, .carbs: 15.6]) == "0.4P 0F 16C")
+        #expect(NutritionFormat.macros([.energy: 60.4, .protein: 0.4, .carbs: 15.6]) == "0P 0F 16C")
         #expect(NutritionFormat.serving(Serving(measure: banana.nutrition.measures[0], quantity: 1), of: banana) == "1 large (150 g)")
         #expect(NutritionFormat.serving(Serving(measure: Measure(name: "g", quantity: 1, servings: 0.01), quantity: 30), of: banana) == "30 g")
     }

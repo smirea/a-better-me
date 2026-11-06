@@ -30,6 +30,8 @@ struct NutritionSnapshot: Codable, Equatable, Sendable {
     static let energy = "k"
     static let macros = ["p", "f", "c"]
 
+    static func isMacro(_ id: String) -> Bool { id == energy || macros.contains(id) }
+
     /// Every nutrient the owner hasn't hidden, in registry order.
     let nutrients: [Nutrient]
     /// The Dashboard's pinned nutrients, the default picks for a new widget.
@@ -106,20 +108,23 @@ struct NutrientProgress: Hashable, Sendable {
 
     var isOver: Bool { (remaining ?? 0) < 0 }
 
-    /// "1,240", "6.7": the size of the amount, since the labels say whether it is left or over.
-    static func number(_ value: Double) -> String { abs(value).niceText }
+    /// "1,240", "16", "6.7": the size of the amount, since the labels say whether it is left or over. Calories and
+    /// macros are whole, as on every condensed line; a vitamin or mineral keeps its decimal, since its amounts are small.
+    func number(_ value: Double) -> String {
+        NutritionSnapshot.isMacro(nutrient.id) ? abs(value).wholeText : abs(value).niceText
+    }
 
-    var consumedLabel: String { Self.number(consumed) }
+    var consumedLabel: String { number(consumed) }
 
     /// "1,240 kcal left", "120 kcal over", or the amount eaten when there is no goal.
     var remainingLabel: String {
         guard let remaining else { return "\(consumedLabel) \(nutrient.unit)" }
         if goalIsFloor, remaining == 0, consumed > 0, consumed <= range.ceiling ?? .infinity { return "Minimum met" }
-        return "\(Self.number(remaining)) \(nutrient.unit) \(remaining < 0 ? "over" : "left")"
+        return "\(number(remaining)) \(nutrient.unit) \(remaining < 0 ? "over" : "left")"
     }
 
     /// "1,860 / 2,400 kcal", or "1,860 kcal" with no goal.
     var totalLabel: String {
-        goal.map { "\(consumedLabel) / \(Self.number($0)) \(nutrient.unit)" } ?? "\(consumedLabel) \(nutrient.unit)"
+        goal.map { "\(consumedLabel) / \(number($0)) \(nutrient.unit)" } ?? "\(consumedLabel) \(nutrient.unit)"
     }
 }

@@ -125,8 +125,7 @@ struct PlateView: View {
         let goal = target?.amount(id)
         let unit = id == .energy ? "kcal" : "g"
         let amount = (withDay ? day[id] ?? 0 : 0) + (plate[id] ?? 0)
-        let number = { NutritionFormat.amount($0, of: id) }
-        let caption = withDay ? "\(number(amount))\(goal.map { " / \(number($0))" } ?? "") \(unit) with plate" : "\(number(amount)) \(unit) in plate"
+        let caption = withDay ? "\(amount.wholeText)\(goal.map { " / \($0.wholeText)" } ?? "") \(unit) with plate" : "\(amount.wholeText) \(unit) in plate"
         return VStack(alignment: .leading, spacing: 6) {
             Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.rowTitle)
             Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
