@@ -16,7 +16,6 @@ Repo config for the global `task-orchestrator` skill (`~/code/ai-files/skills/ta
 - iOS jobs run in parallel too: `app-ios/scripts/run` holds a headless boot while the Mac's total CPU is above 70%, telling the child it waits. Schema jobs don't wait on each other: the worker schema rule has the PR that merges second regenerate `SyncSchema.swift`.
 - Human-only tasks: testing on a physical iPhone or Apple Watch, topping up Gemini credits in AI Studio, or a camera, push, or Health check on a device.
 - A child may read the Gemini key for food-ramble or photo-logging evals, as the `# Worker` part describes.
-- Post-merge check: a merge that touched `app-ios/` also needs master's TestFlight run (`gh run list --workflow testflight.yml --branch master -L 1`) to succeed.
 - Known shared failures: a stuck `debugserver` that hangs every simulator launch (`app-ios/AGENTS.md` has the fix), depleted Gemini credits.
 
 # Worker
@@ -49,4 +48,5 @@ The Mac runs many jobs at once, and each booted simulator slows all of them. Cli
 
 ## After the merge
 
+- Post-merge run: a merge that touched `app-ios/` also waits on master's TestFlight run (`testflight.yml`) for your merge.
 - A Worker secret goes on the Worker with `bun scripts/secrets.ts push` after its `env-manager up`. If master's deploy already failed on `secrets verify`, `gh run rerun --failed <run>` then check `gh run view <run> --json status,conclusion` in foreground calls until `status` is `completed`. Report `merged` only once its `conclusion` is `success`; a failed deploy is `blocked` with the run link.
