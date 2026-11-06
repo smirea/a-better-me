@@ -32,10 +32,10 @@ struct StepsEntry: TimelineEntry {
     let summary: StepGoal.Summary
 }
 
-/// Health's own counts for the last month, merged over the app's snapshot. Health stays readable only while the
-/// phone is unlocked, so each read is kept in the app group and a locked refresh uses the last one instead.
+/// Health's own counts for the last month and the phone's pedometer for today, merged over the app's snapshot. Health
+/// stays readable only while the phone is unlocked, so a locked refresh starts from the last refresh's days and leans
+/// on the pedometer, which keeps counting. The next refresh comes sooner while the owner moves (`StepsCadence`).
 struct StepsProvider: TimelineProvider {
-    private static let refresh: TimeInterval = 15 * 60
     private static let store = HKHealthStore()
     private static let log = Logger(subsystem: "com.stefan.a-better-me", category: "widgets")
 
@@ -53,21 +53,28 @@ struct StepsProvider: TimelineProvider {
     /// Now, then midnight, which starts the new day at zero if the next refresh runs late.
     static func timeline(now: Date, calendar: Calendar = .current) async -> Timeline<StepsEntry> {
         let snapshot = StepsSnapshot.load() ?? StepsSnapshot(goal: StepGoal.defaultGoal, days: [:])
-        let live = await live(now: now, calendar: calendar) ?? lastRead()
-        let midnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))!
+        let previous = StepsReading.load()
+        let today = calendar.startOfDay(for: now)
+        async let fresh = health(now: now, calendar: calendar)
+        async let phoneToday = PhonePedometer.steps(from: today, to: now)
+        async let phoneRecent = PhonePedometer.steps(from: now.addingTimeInterval(-StepsCadence.recentWindow), to: now)
+        let live = StepsReading.days(previous: previous?.days ?? [], health: await fresh ?? [], phoneToday: await phoneToday, today: today, calendar: calendar)
+        let midnight = calendar.date(byAdding: .day, value: 1, to: today)!
         let entries = [now, midnight].map { StepsEntry(date: $0, summary: snapshot.summary(live: live, now: $0, calendar: calendar)) }
-        return Timeline(entries: entries, policy: .after(now.addingTimeInterval(refresh)))
-    }
-
-    private static var lastReadURL: URL? { AppGroup.url("Widgets/steps-live.json") }
-
-    private static func lastRead() -> [DatedValue] {
-        guard let url = lastReadURL, let data = try? Data(contentsOf: url) else { return [] }
-        return (try? JSONDecoder().decode([DatedValue].self, from: data)) ?? []
+        let reading = StepsReading(date: now, days: live, today: entries[0].summary.today)
+        do {
+            try reading.save()
+        } catch {
+            log.error("Saving the steps widget's read failed: \(String(describing: error))")
+        }
+        let recent = await phoneRecent
+        let interval = StepsCadence.interval(recentPhoneSteps: recent, previous: previous, current: reading)
+        log.info("Steps widget shows \(reading.today) steps, \(recent.map { "\($0)" } ?? "no pedometer") in the last 10 minutes, and refreshes in \(interval) s")
+        return Timeline(entries: entries, policy: .after(now.addingTimeInterval(interval)))
     }
 
     /// Nil when Health can't be read, as while the phone is locked.
-    private static func live(now: Date, calendar: Calendar) async -> [DatedValue]? {
+    private static func health(now: Date, calendar: Calendar) async -> [DatedValue]? {
         guard HKHealthStore.isHealthDataAvailable() else { return nil }
         let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))!
         let start = calendar.date(byAdding: .day, value: -30, to: end)!
@@ -82,10 +89,6 @@ struct StepsProvider: TimelineProvider {
             try await query.result(for: store).enumerateStatistics(from: start, to: end) { statistics, _ in
                 guard let sum = statistics.sumQuantity()?.doubleValue(for: .count()), sum > 0 else { return }
                 days.append(DatedValue(date: statistics.startDate, value: sum))
-            }
-            if let url = lastReadURL {
-                try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try? JSONEncoder().encode(days).write(to: url, options: .atomic)
             }
             return days
         } catch {

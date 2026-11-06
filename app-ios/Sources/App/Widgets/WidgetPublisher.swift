@@ -21,6 +21,7 @@ final class WidgetPublisher {
     private var healthSteps: [DatedValue]?
     private var publishedSteps: StepSources?
     private var writing: Task<Void, Never>?
+    private var workoutReloads: Task<Void, Never>?
 
     func start(store: LocalStore) {
         guard self.store == nil else { return }
@@ -29,6 +30,26 @@ final class WidgetPublisher {
         // The snapshot starts on the day it was read, and a new day changes no table, so each activation reads again.
         activation = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.observe() }
+        }
+        trackWorkout()
+    }
+
+    /// A live workout keeps the app running, so it reloads the step widgets on the moving cadence. On its own a widget
+    /// learns the owner is moving only from steps it already counted, and a gym session counts few.
+    private func trackWorkout() {
+        let live = withObservationTracking { LiveWorkoutController.shared.status != nil } onChange: { [weak self] in
+            Task { @MainActor in self?.trackWorkout() }
+        }
+        guard live else {
+            workoutReloads?.cancel()
+            workoutReloads = nil
+            return
+        }
+        guard workoutReloads == nil else { return }
+        workoutReloads = Task {
+            while (try? await Task.sleep(for: .seconds(StepsCadence.moving))) != nil {
+                for kind in WidgetKind.allSteps { WidgetCenter.shared.reloadTimelines(ofKind: kind) }
+            }
         }
     }
 

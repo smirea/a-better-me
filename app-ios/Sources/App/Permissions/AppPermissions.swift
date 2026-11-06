@@ -16,6 +16,7 @@ enum AppPermissions {
         _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
         _ = await AVCaptureDevice.requestAccess(for: .video)
         _ = await AVAudioApplication.requestRecordPermission()
+        await PhonePedometer.requestAccess()
         setSettled(true)
     }
 
