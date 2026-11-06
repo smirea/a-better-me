@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Screenshots every screen in `screen-tour.screens.ts` on a running simulator, one relaunch per screen so each starts
 // from the same seeded state. Run it before and after a UI change and pair the folders with --compare.
-import { mkdirSync, writeFileSync, existsSync, readdirSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync, readdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { spawnSync } from "node:child_process";
@@ -53,26 +53,33 @@ const selected = only ? screens.filter(screen => only.includes(screen.name)) : s
 const unknown = only?.filter(name => !screens.some(screen => screen.name === name)) ?? [];
 if (unknown.length) throw new Error(`Unknown screens: ${unknown.join(", ")}`);
 
+const scripts = join(out, ".scripts");
+mkdirSync(scripts, { recursive: true });
+const replay = (name: string, lines: string[]) => {
+    const script = join(scripts, `${name}.ad`);
+    writeFileSync(script, lines.join("\n") + "\n");
+    return spawnSync(agentDevice, ["replay", script, "--timeout", "60000"], { encoding: "utf8" });
+};
+
 const failures: string[] = [];
 for (const screen of selected) {
     // `shot <suffix>` is the tour's own step: a screenshot named after the screen, for screens taller than one viewport.
-    const lines = [
+    const result = replay(screen.name, [
         "open com.stefan.a-better-me --relaunch",
         `wait 'label="Dashboard"' 20000`,
         ...screen.steps.map(step => (step.startsWith("shot ") ? `screenshot ${join(out, `${screen.name}-${step.slice(5)}.png`)}` : step)),
         "wait 1200",
         `screenshot ${join(out, `${screen.name}.png`)}`,
-        ...(screen.after ?? []),
-    ];
-    const script = join(out, `.${screen.name}.ad`);
-    writeFileSync(script, lines.join("\n") + "\n");
-    const result = spawnSync(agentDevice, ["replay", script, "--timeout", "60000"], { encoding: "utf8" });
+    ]);
     if (result.status === 0) console.log(`ok   ${screen.name}`);
     else {
         failures.push(screen.name);
         console.log(`FAIL ${screen.name}\n${(result.stdout + result.stderr).trim().split("\n").slice(-8).join("\n")}`);
     }
+    // Its own replay, run even when the screen failed partway, so a started workout never leaks into the next screen.
+    if (screen.after) replay(`${screen.name}.after`, screen.after);
 }
+rmSync(scripts, { recursive: true, force: true });
 if (failures.length) {
     console.log(`\n${failures.length} of ${selected.length} failed: ${failures.join(",")}`);
     process.exit(1);

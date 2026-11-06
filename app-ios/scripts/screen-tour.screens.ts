@@ -1,4 +1,4 @@
-// Every screen `screen-tour.ts` captures, each a tap path from a fresh launch on the Dashboard. Steps are agent-device
+// Every screen `screen-tour` captures, each a tap path from a fresh launch on the Dashboard. Steps are agent-device
 // `.ad` lines; `shot <suffix>` saves an extra screenshot mid-path.
 // `after` runs once the screenshot is saved, to undo state the path left, such as a started workout.
 export type Screen = { name: string; steps: string[]; after?: string[] };
@@ -14,7 +14,7 @@ const more = (row: string) => [
 	...(bottomRows.has(row) ? ['scroll bottom', 'wait 500'] : []),
 	...tap(row),
 ];
-// The trailing toolbar menu of a tab root (Day Options on the Food Log, Workout Options on the Workout tab).
+// The trailing toolbar menu of a tab root (Day Options on the Food Log, Workout Tab Options on the Workout tab).
 const trailingToolbarButton = ['press 364 84', 'wait 800'];
 const bottomRows = new Set([
 	'Food Log',
@@ -25,7 +25,14 @@ const bottomRows = new Set([
 	'Data Visibility',
 	'API Tokens',
 ]);
-const discardWorkout = [...tapButton('Workout Options'), ...tap('Discard Workout'), ...tap('Discard'), 'wait 800'];
+// The live workout's menu reads as a button or a popup button from one launch to the next, so it is tapped by position.
+const discardWorkout = [
+	'wait \'label="Workout Options"\' 8000',
+	'press 36 88',
+	...tap('Discard Workout'),
+	...tap('Discard'),
+	'wait 800',
+];
 const scrolled = (count = 1) => Array.from({ length: count }, () => 'scroll down').concat('wait 600');
 
 export const screens: Screen[] = [
