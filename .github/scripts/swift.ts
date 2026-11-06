@@ -36,12 +36,10 @@ async function testSimulator() {
 const task = Bun.argv[2];
 if (task !== 'tests' && task !== 'build') throw new Error(`Unknown Swift task: ${task}`);
 
-// A fresh runner's first boot took 4.5 minutes, all of it after the build had finished. Booting before the package
-// fetch and the build overlaps the two. Bun.spawn starts at once, where a `$` command waits until it's awaited.
+// Booting the simulator alongside the build made the tests job slower (13 minutes before, 14.6 and 17.8 after): on
+// one runner the build started 9 minutes late, and on the other it took 8.8 minutes instead of 2.3. xcodebuild boots
+// it after the build.
 const simulator = task === 'tests' ? await testSimulator() : undefined;
-const boot = simulator
-	? Bun.spawn(['xcrun', 'simctl', 'bootstatus', simulator, '-b'], { stdout: 'ignore', stderr: 'inherit' })
-	: undefined;
 
 if (task === 'tests') await $`bun app-ios/scripts/lint-swift.ts`;
 await $`bun scripts/own-packages.ts .build/SourcePackages`.cwd(directory);
@@ -53,8 +51,5 @@ if (task === 'build') {
 } else if (!simulator) {
 	console.log('No Xcode tests configured.');
 } else {
-	const destination = `platform=iOS Simulator,id=${simulator}`;
-	await $`xcodebuild build-for-testing ${xcodeArgs} -destination ${destination}`.cwd(directory);
-	if (await boot!.exited) throw new Error(`Booting simulator ${simulator} failed`);
-	await $`xcodebuild test-without-building ${xcodeArgs} -destination ${destination}`.cwd(directory);
+	await $`xcodebuild test ${xcodeArgs} -destination ${`platform=iOS Simulator,id=${simulator}`}`.cwd(directory);
 }
