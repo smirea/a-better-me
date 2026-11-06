@@ -97,10 +97,19 @@ struct TemplateSummary: View {
     var day: (program: Program, id: ProgramDay.ID)?
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(SessionHistory.self) private var history
+    @State private var overviews = ViewMemo<OverviewKey, WorkoutOverview>()
+
+    private struct OverviewKey: Equatable {
+        let blocks: [WorkoutBlock]
+        let program: Program?
+        let catalogRevision: Int
+    }
 
     var body: some View {
-        let blocks = day.map { $0.program.blocks(of: template, cycle: $0.program.currentCycle) } ?? template.blocks
-        let overview = WorkoutOverview(blocks: blocks, catalog: catalog.exercise)
+        let overview = overviews(OverviewKey(blocks: template.blocks, program: day?.program, catalogRevision: catalog.revision)) {
+            let blocks = day.map { $0.program.blocks(of: template, cycle: $0.program.currentCycle) } ?? template.blocks
+            return WorkoutOverview(blocks: blocks, catalog: catalog.exercise)
+        }
         let completed = history.memo(TemplateCompletionsKey()) { WorkoutOverview.completions(in: $0) }[day?.id ?? template.id] ?? 0
         HStack(spacing: 12) {
             BodyThumbnail(muscleSets: overview.muscleSets)
