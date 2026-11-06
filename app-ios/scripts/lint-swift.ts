@@ -15,7 +15,7 @@ const rules = [
 		fix: 'use .prominentButton() (or .prominentButton(tint:)) or .primaryPill(); the native style draws white text on the white tint',
 	},
 	{
-		pattern: /Button\("(Close|Cancel|Done|Save)", systemImage: "(xmark|checkmark)"\)/,
+		pattern: /(?<![A-Za-z])Button\("(Close|Cancel|Done|Save)", systemImage: "(xmark|checkmark)"/,
 		allowedIn: [],
 		fix: 'a sheet closes with Button(role: .close) and confirms with Button("Save", role: .confirm), the native glyphs',
 	},

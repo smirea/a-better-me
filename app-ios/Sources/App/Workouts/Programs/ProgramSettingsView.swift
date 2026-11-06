@@ -268,7 +268,7 @@ struct ProgramIconGrid: View {
                 Button { onPick(icon.symbol) } label: {
                     Image(systemName: icon.symbol)
                         .font(AppFont.listTitle)
-                        .foregroundStyle(icon.symbol == selection ? .white : Theme.textSecondary)
+                        .foregroundStyle(icon.symbol == selection ? Theme.textPrimary : Theme.textSecondary)
                         .frame(width: 48, height: 48)
                         .background(icon.symbol == selection ? color.swatch : Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
                 }
