@@ -38,26 +38,77 @@ struct ProgramIconTile: View {
     }
 }
 
-/// A workout's name, its exercises on two lines, and its muscle tags: the body of library rows, program day rows, and
-/// the Up Next card.
+/// What a workout row says about its plan: how many exercises and working sets, and the sets each muscle gets for the
+/// body map (secondary muscles count half, as on Workout Complete).
+struct WorkoutOverview {
+    let exercises: Int
+    let sets: Int
+    let muscleSets: [Muscle: Double]
+
+    init(blocks: [WorkoutBlock], catalog: (ExerciseID) -> Exercise?) {
+        let items = blocks.flatMap(\.exercises)
+        exercises = items.count
+        sets = items.reduce(0) { total, item in total + item.sets.count { $0.type != .warmUp } }
+        muscleSets = WorkoutMetrics.muscleSets(in: blocks, catalog: catalog, loggedOnly: false)
+    }
+
+    /// "6 exercises · 18 sets".
+    var line: String {
+        guard exercises > 0 else { return "No exercises" }
+        return "\(exercises) \(exercises == 1 ? "exercise" : "exercises") · \(sets) \(sets == 1 ? "set" : "sets")"
+    }
+
+    /// Finished sessions, all time, keyed both by the template they started from and by the program day they filed
+    /// under. A program day row looks up its day id, because two days of one program can share a template; a library
+    /// row looks up its template id.
+    static func completions(in finished: [WorkoutSession]) -> [UUID: Int] {
+        var counts: [UUID: Int] = [:]
+        for session in finished where session.endedAt != nil {
+            if let templateID = session.templateID { counts[templateID, default: 0] += 1 }
+            if let dayID = session.program?.dayID { counts[dayID, default: 0] += 1 }
+        }
+        return counts
+    }
+}
+
+private struct TemplateCompletionsKey: Hashable {}
+
+/// The front and back figures at row size, each muscle tinted by its planned sets.
+struct BodyThumbnail: View {
+    let muscleSets: [Muscle: Double]
+
+    static let size = CGSize(width: 54, height: 56)
+
+    var body: some View {
+        HStack(spacing: 2) {
+            BodyMap(values: muscleSets, side: .front, fullAt: 4)
+            BodyMap(values: muscleSets, side: .back, fullAt: 4)
+        }
+        .frame(width: Self.size.width, height: Self.size.height)
+    }
+}
+
+/// A workout's body map, its name with a faint all-time "N completed", and "N exercises · M sets": the body of library
+/// rows, program day rows, and the Up Next card. A program day row passes `day`: it then shows the program's current
+/// cycle and counts that day's sessions instead of the template's.
 struct TemplateSummary: View {
     let template: WorkoutTemplate
     var title: String?
+    var day: (program: Program, id: ProgramDay.ID)?
     @Environment(ExerciseCatalog.self) private var catalog
+    @Environment(SessionHistory.self) private var history
 
     var body: some View {
-        let items = template.blocks.flatMap(\.exercises)
-        let exercises = items.compactMap { catalog.exercise($0.exerciseID) }
-        let primary = Set(exercises.flatMap(\.primaryMuscles))
-        let secondary = Set(exercises.flatMap(\.secondaryMuscles)).subtracting(primary)
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title ?? template.name).font(AppFont.headline())
-            if !items.isEmpty {
-                Text(items.map { catalog.name($0.exerciseID) }.joined(separator: ", "))
+        let blocks = day.map { $0.program.blocks(of: template, cycle: $0.program.currentCycle) } ?? template.blocks
+        let overview = WorkoutOverview(blocks: blocks, catalog: catalog.exercise)
+        let completed = history.memo(TemplateCompletionsKey()) { WorkoutOverview.completions(in: $0) }[day?.id ?? template.id] ?? 0
+        HStack(spacing: 12) {
+            BodyThumbnail(muscleSets: overview.muscleSets)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("\(Text(title ?? template.name).font(AppFont.headline()))  \(Text("\(completed) completed").font(AppFont.rowDetail).foregroundStyle(Theme.textTertiary))")
+                Text(overview.line)
                     .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(2)
-                MuscleTags(primary: primary.sorted { $0.displayName < $1.displayName }, secondary: secondary.sorted { $0.displayName < $1.displayName })
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -138,7 +189,7 @@ struct ProgramCard: View {
                 NavigationLink(value: ProgramRoute(programID: program.id, dayID: day.id)) {
                     HStack(spacing: 12) {
                         if let template = templates[templateID] {
-                            TemplateSummary(template: template)
+                            TemplateSummary(template: template, day: (program, day.id))
                         } else {
                             Text("Workout").font(AppFont.headline()).frame(maxWidth: .infinity, alignment: .leading)
                         }
@@ -149,6 +200,10 @@ struct ProgramCard: View {
                 .buttonStyle(.plain)
             } else {
                 HStack(spacing: 12) {
+                    Image(systemName: "bed.double")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Theme.textTertiary)
+                        .frame(width: BodyThumbnail.size.width)
                     Text("Rest Day").font(AppFont.headline()).frame(maxWidth: .infinity, alignment: .leading)
                     trailing(day, done: done)
                 }
