@@ -49,13 +49,39 @@ struct PinnedActionButton: View {
 }
 
 extension View {
-    /// A screen's bottom actions, inset by the margins: secondary pills first, the primary pill last.
+    /// A screen's bottom actions, inset by the margins: secondary pills first, the primary pill last. A bar rather than an
+    /// inset, so content scrolling under it gets the system's edge blur, as a wizard's summary line needs.
     func pinnedActions<Actions: View>(@ViewBuilder _ actions: () -> Actions) -> some View {
-        safeAreaInset(edge: .bottom) {
-            VStack(spacing: 8) { actions() }
-                .padding(.horizontal, Theme.margin)
-                .padding(.vertical, 8)
+        safeAreaBar(edge: .bottom) { PinnedStack { actions() } }
+    }
+}
+
+/// Stacks a screen's bottom actions inside the margins, and takes no room at all when a state shows none, such as an
+/// exercise's detail opened without an action or an active program's rest day.
+private struct PinnedStack: Layout {
+    private let spacing: CGFloat = 8
+    private let inset = EdgeInsets(top: 8, leading: Theme.margin, bottom: 8, trailing: Theme.margin)
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard !subviews.isEmpty else { return .zero }
+        let width = proposal.width ?? 0
+        let heights = heights(subviews, width: width)
+        let content = heights.reduce(0, +) + spacing * CGFloat(heights.count - 1)
+        return CGSize(width: width, height: content + inset.top + inset.bottom)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let width = bounds.width - inset.leading - inset.trailing
+        var y = bounds.minY + inset.top
+        for (subview, height) in zip(subviews, heights(subviews, width: bounds.width)) {
+            subview.place(at: CGPoint(x: bounds.minX + inset.leading, y: y), proposal: ProposedViewSize(width: width, height: height))
+            y += height + spacing
         }
+    }
+
+    private func heights(_ subviews: Subviews, width: CGFloat) -> [CGFloat] {
+        let inner = ProposedViewSize(width: max(0, width - inset.leading - inset.trailing), height: nil)
+        return subviews.map { $0.sizeThatFits(inner).height }
     }
 }
 

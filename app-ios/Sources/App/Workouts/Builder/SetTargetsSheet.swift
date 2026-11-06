@@ -131,7 +131,7 @@ struct SetTargetsSheet: View {
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
-                .padding()
+                .padding(.vertical)
         } else {
             VStack(spacing: 4) {
                 ForEach(actions.filter { $0.placement == .aboveSave }) { action in
@@ -341,6 +341,7 @@ private struct SetTypePicker: View {
                     }
                     .foregroundStyle(Theme.textPrimary)
                 }
+                .accessibilityAddTraits(type == selected ? .isSelected : [])
             }
             .listStyle(.plain)
             .detailTitle("Set Type")
