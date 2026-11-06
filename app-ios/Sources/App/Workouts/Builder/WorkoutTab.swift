@@ -13,6 +13,8 @@ struct WorkoutTab: View {
     @Environment(SessionHistory.self) private var history
     @Observe(AppSettings.current) private var settings
     @State private var showingCalendar = false
+    @State private var creatingWorkout = false
+    @State private var creatingProgram = false
     @State private var creatingSection = false
     @AppStorage("workouts.collapsed.library") private var libraryCollapsed = false
     @State private var summary: WorkoutSession?
@@ -55,6 +57,12 @@ struct WorkoutTab: View {
             }
         }
         .sheet(item: $summary) { WorkoutSummaryView(session: $0) }
+        .fullScreenCover(isPresented: $creatingWorkout) {
+            CreateWorkoutView { path.append($0.id) }
+        }
+        .fullScreenCover(isPresented: $creatingProgram) {
+            NewProgramWizard()
+        }
         .newSectionAlert(isPresented: $creatingSection)
         .feedback(self)
     }
@@ -86,7 +94,10 @@ struct WorkoutTab: View {
                 .toggleStyle(.button)
         }
         ToolbarItem {
-            Menu("Workout Options", systemImage: "ellipsis") {
+            Menu("Workout Tab Options", systemImage: "ellipsis") {
+                // The "+" sheet also creates these, but its shortcuts can be hidden, so the tab keeps a way in.
+                Button("New Workout", systemImage: "dumbbell") { creatingWorkout = true }
+                Button("New Program", systemImage: "point.topleft.down.to.point.bottomright.curvepath") { creatingProgram = true }
                 Button("New Section", systemImage: "rectangle.split.1x2") { creatingSection = true }
                 Button("Workout History", systemImage: "list.bullet.rectangle") { path.append(WorkoutTabRoute.history) }
                 Button("Customize Sections", systemImage: "rectangle.3.group") { path.append(WorkoutTabRoute.customizeSections) }
@@ -107,8 +118,11 @@ struct WorkoutTab: View {
             library(templates: byID)
         case .yourSections:
             // No sections yet draws nothing: Workout Options holds New Section, and Customize Sections explains them.
-            VStack(alignment: .leading, spacing: 28) {
-                ForEach(settings.workout.sections.custom) { CustomSectionView(section: $0, library: templates) }
+            let custom = settings.workout.sections.custom
+            if !custom.isEmpty {
+                VStack(alignment: .leading, spacing: 28) {
+                    ForEach(custom) { CustomSectionView(section: $0, library: templates) }
+                }
             }
         }
     }

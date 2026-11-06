@@ -1,7 +1,7 @@
 import Foundation
 
-/// The Workout tab's built-in sections. `yourSections` is the slot the custom sections draw in, or its empty state when
-/// there are none.
+/// The Workout tab's built-in sections. `yourSections` is the slot the custom sections draw in; it draws nothing when there
+/// are none.
 enum WorkoutSection: String, Codable, CaseIterable, Identifiable {
     case activeProgram, library, yourSections
 
