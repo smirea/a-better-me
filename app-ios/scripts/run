@@ -1,13 +1,16 @@
 #!/usr/bin/env bun
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { withBuildLock } from "./build-lock.ts";
 import { refreshOwnPackages } from "./own-packages.ts";
-import { agentCommand } from "../../scripts/lib.ts";
+import { agentCommand, parseDotenv, readOverride } from "../../scripts/lib.ts";
 
 const root = resolve(import.meta.dir, "..");
+const repo = resolve(root, "..");
+const serverPid = join(repo, ".data", "server.pid");
 const runCommand = "./scripts/run";
 const children = new Set<Bun.Subprocess>();
 const { values } = parseArgs({
@@ -19,6 +22,7 @@ const { values } = parseArgs({
         headless: { type: "boolean" },
         "pair-watch": { type: "boolean" },
         delete: { type: "boolean" },
+        stop: { type: "boolean" },
         "grant-permissions": { type: "boolean" },
         health: { type: "string" },
         "no-seed": { type: "boolean" },
@@ -253,6 +257,48 @@ async function pairWatch(target: Target) {
     console.log(`Paired ${model.name} (${runtime.name}) with ${target.name}.`);
 }
 
+async function listening(port: string) {
+    try {
+        await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(1000) });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/** Starts the worktree's server, detached so it outlives this run, unless something already answers on its port. A
+ * server an agent started with `&` in the same shell call as this script died with it (SIGTERM, exit 144). */
+async function ensureServer() {
+    const port = readOverride(repo)?.API_PORT ?? parseDotenv(readFileSync(join(repo, ".env"), "utf8")).API_PORT;
+    if (!port) throw new Error(`No API_PORT in ${repo}/.env.override or .env.`);
+    if (await listening(port)) return;
+    mkdirSync(dirname(serverPid), { recursive: true });
+    const log = join(repo, ".data", "server.log");
+    const out = openSync(log, "a");
+    const server = spawn("bun", ["run", "start:server"], { cwd: repo, detached: true, stdio: ["ignore", out, out] });
+    server.unref();
+    closeSync(out);
+    writeFileSync(serverPid, String(server.pid));
+    for (let i = 0; i < 60 && !(await listening(port)); i++) await Bun.sleep(500);
+    if (!(await listening(port))) throw new Error(`The server didn't answer on port ${port} within 30 seconds. See ${log}.`);
+    console.log(`Started the server on port ${port} (pid ${server.pid}, log ${log}). ${runCommand} --stop stops it.`);
+}
+
+/** Stops the server `ensureServer` started, by its process group, and shuts down this worktree's simulators. */
+async function stop() {
+    if (existsSync(serverPid)) {
+        const pid = Number(readFileSync(serverPid, "utf8"));
+        try {
+            process.kill(-pid, "SIGTERM");
+            console.log(`Stopped the server (pid ${pid}).`);
+        } catch (error: any) {
+            if (error.code !== "ESRCH") throw error;
+        }
+        unlinkSync(serverPid);
+    }
+    await command([agentCommand("agent-simulator"), "stop"]);
+}
+
 /** Shuts down and deletes the simulator and every watch paired with it, which `simctl delete` of the phone leaves
  * behind. */
 async function deleteSimulator(target: Target) {
@@ -309,7 +355,7 @@ async function launchWatchApp(watch: { udid: string; name: string; bundle: strin
 
 async function main() {
     if (values.help) {
-        console.log(`Usage: ${runCommand} [-t simulator|mac|<target-name-or-id>] [--targets] [--watch|-w] [--no-watch] [--headless] [--pair-watch] [--delete] [--grant-permissions] [--health on|off] [--no-seed] [--team TEAM_ID]
+        console.log(`Usage: ${runCommand} [-t simulator|mac|<target-name-or-id>] [--targets] [--watch|-w] [--no-watch] [--headless] [--pair-watch] [--delete] [--stop] [--grant-permissions] [--health on|off] [--no-seed] [--team TEAM_ID]
 
 Defaults to a connected iOS device, then a booted simulator, then an available simulator, then My Mac.
 SWIFT_RUN_DEFAULT_TARGET overrides this choice when -t/--target is omitted. --targets marks the effective default with *.
@@ -317,6 +363,8 @@ Watching is enabled by default. Saves rebuild and restart the app. Ctrl-C stops 
 --headless skips opening Simulator.app or Device Hub; the simulator still boots and runs the app.
 --pair-watch pairs a watch with the simulator first, reusing its pair if it has one, and runs the watch app on it.
 --delete shuts down and deletes the simulator and its paired watches instead of running.
+--headless also starts the worktree's server when nothing answers on its API_PORT, detached, logging to .data/server.log.
+--stop stops that server and shuts down this worktree's simulators, its paired watches included.
 --grant-permissions answers every permission prompt again; a run does it anyway when the last launch left one open.
 --health on turns Apple Health on in the simulator build, seeds 60 days of weights, steps, flights, and distance into an
 empty Health store, and answers its sheet; --health off turns it off. Debug
@@ -324,6 +372,7 @@ simulator builds start with it off, and the app keeps the last choice.
 --no-seed launches without the Debug seed, for a server restored from a backup (scripts/restore-backup.ts).`);
         return;
     }
+    if (values.stop) return stop();
     const all = await targets();
     const target = selectTarget(all);
     if (values.targets) {
@@ -341,6 +390,7 @@ simulator builds start with it off, and the app keeps the last choice.
             if (wait.exitCode) process.exit(wait.exitCode);
         }
     }
+    if (values.headless && target.kind === "simulator") await ensureServer();
     const projects = readdirSync(root).filter(file => file.endsWith(".xcodeproj"));
     if (projects.length !== 1) throw new Error("Expected one Xcode project in the repository root.");
     const project = projects[0];
