@@ -29,12 +29,16 @@ struct NutrientGoal: SyncedRecord {
         self.mode = mode
     }
 
+    /// The mode of the latest goal for `nutrient` on or before `day`; nil before its first goal.
+    static func mode(_ nutrient: NutrientID, on day: CalendarDay, goals: [NutrientGoal]) -> Mode? {
+        goals.filter { $0.nutrient == nutrient && $0.startsOn <= day }.max { $0.startsOn < $1.startsOn }?.mode
+    }
+
     /// The range for `nutrient` on `day`: the latest goal on or before it, or the registry's default.
     static func range(
         _ nutrient: NutrientID, on day: CalendarDay, goals: [NutrientGoal], sex: BodySex, weightKg: Double?
     ) -> NutrientRange {
-        let goal = goals.filter { $0.nutrient == nutrient && $0.startsOn <= day }.max { $0.startsOn < $1.startsOn }
-        switch goal?.mode {
+        switch mode(nutrient, on: day, goals: goals) {
         case let .custom(range): return range
         case .hidden: return NutrientRange()
         case .auto, nil: break

@@ -34,7 +34,7 @@ struct NutritionSnapshot: Codable, Equatable, Sendable {
 
     /// Every nutrient the owner hasn't hidden, in registry order.
     let nutrients: [Nutrient]
-    /// The Dashboard's pinned nutrients, the default picks for a new widget.
+    /// The Food Log summary's columns (`summaryNutrients`), the default picks for a new widget.
     let pinned: [String]
     let showOverages: Bool
     /// Today, then the days after it, so a widget rolls over at midnight without waking the app.

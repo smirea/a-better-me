@@ -117,7 +117,7 @@ private struct WeekPills: View {
     }
 }
 
-/// The day's four macro lines in two pages, swiped between as in MacroFactor: eaten against target, then what is left.
+/// The day's four summary columns in two pages, swiped between as in MacroFactor: eaten against target, then what is left.
 /// A day no plan covers has nothing to fill a bar against, so it shows what was eaten and a link to set targets.
 /// Tapping the lines opens the Nutrition Overview.
 private struct DaySummary: View {
@@ -126,6 +126,7 @@ private struct DaySummary: View {
 
     @Environment(FoodLogState.self) private var state
     @Observe(AppSettings.current) private var settings
+    @Observe(NutrientGoal.all) private var goals
     @Observe private var entries: [FoodEntry]
     @Observe private var row: NutritionDay
 
@@ -137,8 +138,9 @@ private struct DaySummary: View {
     }
 
     var body: some View {
-        let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day)
-        let lines = FoodLog.summary(row.totals(entries), target: target, showOverages: settings.nutrition.showOverages)
+        let targets = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile)
+        let target = targets.target
+        let lines = targets.summary(row.totals(entries), settings: settings)
         VStack(spacing: 4) {
             Group {
                 if target == nil {

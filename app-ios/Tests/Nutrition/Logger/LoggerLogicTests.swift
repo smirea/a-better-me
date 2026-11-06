@@ -146,7 +146,7 @@ struct PlateTests {
 
     @Test func bannerCountsThePlateOnTopOfTheDay() {
         let target = DayTarget(energy: 2000, protein: 150, fat: 70, carbs: 200)
-        let lines = FoodLog.summary([.energy: 1200, .protein: 100], plate: [.energy: 500, .protein: 6.66], target: target, showOverages: true)
+        let lines = FoodLog.summary([.energy: 1200, .protein: 100], plate: [.energy: 500, .protein: 6.66], targets: target.amounts, showOverages: true)
         let calories = lines[0]
         #expect(calories.text(.remaining) == "300 left")
         #expect(calories.text(.plate) == "+500")
@@ -159,24 +159,24 @@ struct PlateTests {
         #expect(NutritionSettings.Logger.NutritionDisplay.allCases.map(\.page) == [.plate, .eaten, .remaining])
 
         let small = DayTarget(energy: 1000, protein: 150, fat: 70, carbs: 200)
-        let over = FoodLog.summary([.energy: 750], plate: [.energy: 500], target: small, showOverages: true)[0]
+        let over = FoodLog.summary([.energy: 750], plate: [.energy: 500], targets: small.amounts, showOverages: true)[0]
         #expect(over.text(.remaining) == "-250 left")
         #expect(over.fill(.eaten) == MacroLine.Fill(eaten: 0.75, plate: 0.25))
         #expect(over.fill(.remaining) == MacroLine.Fill(eaten: 0, plate: 0.25))
-        #expect(FoodLog.summary([.energy: 750], plate: [.energy: 500], target: small, showOverages: false)[0].text(.remaining) == "0 left")
+        #expect(FoodLog.summary([.energy: 750], plate: [.energy: 500], targets: small.amounts, showOverages: false)[0].text(.remaining) == "0 left")
     }
 
     @Test func withoutATargetTheBarShowsThePlatesShareOfTheDay() {
-        let untargeted = FoodLog.summary([.energy: 100], plate: [.energy: 50], target: nil, showOverages: true)[0]
+        let untargeted = FoodLog.summary([.energy: 100], plate: [.energy: 50], targets: [:], showOverages: true)[0]
         #expect(untargeted.text(.remaining) == "150")
         #expect(untargeted.text(.eaten) == "150")
         #expect(untargeted.fill(.eaten) == MacroLine.Fill(eaten: 100.0 / 150, plate: 50.0 / 150))
         #expect(untargeted.plateShare == 50.0 / 150)
 
-        let empty = FoodLog.summary([:], plate: [:], target: nil, showOverages: true)[0]
+        let empty = FoodLog.summary([:], plate: [:], targets: [:], showOverages: true)[0]
         #expect(empty.fill(.eaten) == MacroLine.Fill(eaten: 0, plate: 0))
         #expect(empty.plateShare == nil)
-        #expect(FoodLog.summary([.energy: 100], target: nil, showOverages: true)[0].fill(.eaten) == nil)
+        #expect(FoodLog.summary([.energy: 100], targets: [:], showOverages: true)[0].fill(.eaten) == nil)
     }
 }
 

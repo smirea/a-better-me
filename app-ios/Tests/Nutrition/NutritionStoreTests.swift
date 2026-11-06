@@ -252,7 +252,7 @@ struct NutritionStoreTests {
 
         let settings = try #require(try store.read { try AppSettings.fetchOne($0, key: AppSettings.rowID) })
         #expect(settings.nutrition.energyUnit == .kj)
-        #expect(settings.nutrition.pinnedNutrients == [.energy, .protein, .fat, .carbs])
+        #expect(settings.nutrition.summaryNutrients == [.energy, .protein, .fat, .carbs])
         #expect(try outbox() == ["insert settings -", "update settings nutrition"])
     }
 }

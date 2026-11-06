@@ -302,6 +302,7 @@ private struct RambleSummary: View {
     @Environment(LocalStore.self) private var store
     @Observe(AppSettings.current) private var settings
     @Observe(NutritionPlan.all) private var plans
+    @Observe(NutrientGoal.all) private var goals
     @Observe<[FoodEntry]> private var entries: [FoodEntry]
     @Observe<NutritionDay> private var dayRow: NutritionDay
     @State private var pulse = 0.0
@@ -321,10 +322,8 @@ private struct RambleSummary: View {
         let plate = planned.filter { $0.day == day }.reduce(into: NutrientAmounts()) { $0 = $0 + $1.pick.portion.amounts }
         let kcal = Int(planned.reduce(0) { $0 + ($1.pick.portion.amounts[.energy] ?? 0) }.rounded())
         let display = settings.nutrition.logger.nutritionDisplay
-        let lines = FoodLog.summary(
-            dayRow.totals(entries), plate: plate,
-            target: NutritionPlan.effective(on: day, in: plans)?.target(on: day), showOverages: settings.nutrition.showOverages
-        )
+        let lines = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile)
+            .summary(dayRow.totals(entries), plate: plate, settings: settings)
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 RoundIconButton("Close", systemImage: "xmark", action: close)

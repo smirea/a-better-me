@@ -19,6 +19,18 @@ struct FoodLogSettingsView: View {
                     ]
                 )
             }
+            ThemedSection("Daily Summary", footer: "Shown over the timeline and in the logger's banner. Hold a column there to change it.") {
+                ForEach(Array(settings.nutrition.summaryNutrients.enumerated()), id: \.offset) { index, nutrient in
+                    Picker("Column \(index + 1)", selection: Binding(
+                        get: { nutrient },
+                        set: { picked in
+                            store.updateSettings { $0.nutrition.summaryNutrients = FoodLog.choosing(picked, at: index, in: $0.nutrition.summaryNutrients) }
+                        }
+                    )) {
+                        ForEach(NutrientID.summaryChoices, id: \.self) { Text($0.dashboardLabel).tag($0) }
+                    }
+                }
+            }
             ThemedSection("Timeline Options") {
                 NavigationLink { HourRangeView() } label: {
                     RowLabel(title: "Hour Range", detail: "\(SettingsRules.hour(timeline.firstHour)) – \(SettingsRules.hour(timeline.lastHour))", systemImage: "clock")

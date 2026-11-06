@@ -18,8 +18,8 @@ struct TimelineHour: Hashable, Identifiable {
     var totals: NutrientAmounts { FoodLog.totals(rows.map(\.entry)) }
 }
 
-/// One of the day's four macro lines: what was eaten, what the logger's plate adds on top (nil outside the logger),
-/// and the day's target when a plan sets one. `MacroTotalsBars` draws them on the Food Log and in the logger's banner.
+/// One of the day's four summary columns: what was eaten, what the logger's plate adds on top (nil outside the logger),
+/// and the day's target when there is one. `MacroTotalsBars` draws them on the Food Log and in the logger's banner.
 struct MacroLine: Hashable, Identifiable {
     /// Eaten against the target, what is left, or only what the plate adds.
     enum Page: Hashable { case eaten, remaining, plate }
@@ -136,17 +136,33 @@ enum FoodLog {
         showOverages ? target - consumed : max(0, target - consumed)
     }
 
-    /// The day's four macro lines. The logger passes its plate, which the lines count on top of the day.
-    static func summary(_ amounts: NutrientAmounts, plate: NutrientAmounts? = nil, target: DayTarget?, showOverages: Bool) -> [MacroLine] {
-        NutrientID.macros.map { id in
-            let consumed = amounts[id] ?? 0
-            let added = plate.map { $0[id] ?? 0 }
-            let target = target?.amount(id)
+    /// A line per nutrient, against `targets` (`NutrientTargets.goals`). The logger passes its plate, which the lines
+    /// count on top of the day.
+    static func summary(
+        _ amounts: NutrientAmounts, plate: NutrientAmounts? = nil, nutrients: [NutrientID] = NutrientID.macros,
+        targets: NutrientAmounts, showOverages: Bool
+    ) -> [MacroLine] {
+        nutrients.map { id in
+            let consumed = amounts.amount(of: id) ?? 0
+            let added = plate.map { $0.amount(of: id) ?? 0 }
+            let target = targets[id]
             return MacroLine(
                 nutrient: id, consumed: consumed, plate: added, target: target,
                 remaining: target.map { remaining(consumed: consumed + (added ?? 0), target: $0, showOverages: showOverages) }
             )
         }
+    }
+
+    /// Shows `nutrient` in column `index`. One already in another column trades places with the one it replaces, so
+    /// no nutrient shows twice.
+    static func choosing(_ nutrient: NutrientID, at index: Int, in columns: [NutrientID]) -> [NutrientID] {
+        var columns = columns
+        if let other = columns.firstIndex(of: nutrient) {
+            columns.swapAt(index, other)
+        } else {
+            columns[index] = nutrient
+        }
+        return columns
     }
 
     /// The day's calories as a fraction of its target, for the ring around a day pill. A day with food and no target

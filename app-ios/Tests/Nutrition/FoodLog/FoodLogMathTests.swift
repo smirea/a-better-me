@@ -47,7 +47,7 @@ struct FoodLogMathTests {
         #expect(totals.amount(of: .netCarbs) == 54)
 
         let target = DayTarget(energy: 2000, protein: 50, fat: 70, carbs: 200)
-        let shown = FoodLog.summary(totals, target: target, showOverages: true)
+        let shown = FoodLog.summary(totals, targets: target.amounts, showOverages: true)
         #expect(shown.map(\.nutrient) == [.energy, .protein, .fat, .carbs])
         #expect(shown.map(\.consumed) == [660, 55, 22, 66])
         #expect(shown.map(\.remaining) == [1340, -5, 48, 134])
@@ -58,7 +58,7 @@ struct FoodLogMathTests {
         #expect(shown.map { $0.text(.eaten) } == ["660 / 2,000", "55 / 50", "22 / 70", "66 / 200"])
         #expect(shown.map { $0.text(.remaining) } == ["1,340 left", "-5 left", "48 left", "134 left"])
 
-        let clamped = FoodLog.summary(totals, target: target, showOverages: false)
+        let clamped = FoodLog.summary(totals, targets: target.amounts, showOverages: false)
         #expect(clamped.map(\.remaining) == [1340, 0, 48, 134])
 
         var edited = NutritionDay(id: monday)
@@ -69,7 +69,7 @@ struct FoodLogMathTests {
         #expect(overridden[.fat] == 22)
         #expect(NutritionDay(id: monday).totals(entries) == totals)
 
-        let untargeted = FoodLog.summary(totals, target: nil, showOverages: true)
+        let untargeted = FoodLog.summary(totals, targets: [:], showOverages: true)
         #expect(untargeted.map(\.remaining) == [nil, nil, nil, nil])
         #expect(untargeted.map { $0.fill(.eaten) } == [nil, nil, nil, nil])
         #expect(untargeted.map { $0.text(.remaining) } == ["660", "55", "22", "66"])
@@ -78,10 +78,34 @@ struct FoodLogMathTests {
     @Test func spellsOutTheSummaryLinesForVoiceOver() {
         let totals = FoodLog.totals([entry(bowl, minute: 600), entry(yogurt, minute: 700, quantity: 2)])
         let target = DayTarget(energy: 2000, protein: 50, fat: 70, carbs: 200)
-        #expect(FoodLog.summary(totals, target: target, showOverages: true).map(\.spoken) == [
+        #expect(FoodLog.summary(totals, targets: target.amounts, showOverages: true).map(\.spoken) == [
             "Calories 660 of 2,000 calories", "Protein 55 of 50 grams", "Fat 22 of 70 grams", "Carbs 66 of 200 grams",
         ])
-        #expect(FoodLog.summary(totals, target: nil, showOverages: true).first?.spoken == "Calories 660 calories")
+        #expect(FoodLog.summary(totals, targets: [:], showOverages: true).first?.spoken == "Calories 660 calories")
+    }
+
+    @Test func summaryShowsTheChosenColumnsAgainstFiberAndNetCarbTargets() {
+        let totals = FoodLog.totals([entry(bowl, minute: 600), entry(yogurt, minute: 700, quantity: 2)])
+        let plan = DayTarget(energy: 2000, protein: 150, fat: 70, carbs: 115)
+        let columns: [NutrientID] = [.energy, .fiber, .fat, .netCarbs]
+        let targets = NutrientTargets(target: plan, goals: [], day: monday, sex: .male, weightKg: nil)
+        let lines = FoodLog.summary(totals, nutrients: columns, targets: targets.goals(columns), showOverages: true)
+        #expect(lines.map { $0.text(.eaten) } == ["660 / 2,000", "12 / 38", "22 / 70", "54 / 77"])
+        #expect(lines.map { $0.text(.remaining) } == ["1,340 left", "26 left", "48 left", "23 left"])
+        #expect(lines[3].spoken == "Net Carbs 54 of 77 grams")
+        #expect([NutrientID.protein, .fat, .carbs, .fiber, .netCarbs].map(\.columnLetters) == ["P", "Fa", "C", "Fb", "Nc"])
+
+        let keto = NutrientGoal(.netCarbs, from: monday, mode: .custom(NutrientRange(ceiling: 30)))
+        #expect(NutrientTargets(target: plan, goals: [keto], day: monday, sex: .male, weightKg: nil).goals([.netCarbs]) == [.netCarbs: 30])
+        let noFiber = NutrientGoal(.fiber, from: monday, mode: .hidden)
+        #expect(NutrientTargets(target: plan, goals: [noFiber], day: monday, sex: .male, weightKg: nil).goals([.fiber, .netCarbs]) == [.netCarbs: 115])
+        #expect(NutrientTargets(target: nil, goals: [], day: monday, sex: .female, weightKg: nil).goals(columns) == [.fiber: 25])
+    }
+
+    @Test func choosingAColumnTradesPlacesWithOneAlreadyShown() {
+        #expect(FoodLog.choosing(.fiber, at: 3, in: NutrientID.macros) == [.energy, .protein, .fat, .fiber])
+        #expect(FoodLog.choosing(.fat, at: 1, in: [.energy, .protein, .fat, .fiber]) == [.energy, .fat, .protein, .fiber])
+        #expect(FoodLog.choosing(.energy, at: 0, in: NutrientID.macros) == NutrientID.macros)
     }
 
     @Test func ringsFillWithCaloriesAgainstTheTarget() {
