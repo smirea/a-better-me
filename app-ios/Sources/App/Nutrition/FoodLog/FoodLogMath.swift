@@ -42,9 +42,8 @@ struct MacroLine: Hashable, Identifiable {
 
     var spoken: String {
         let unit = nutrient == .energy ? "calories" : "grams"
-        let amount = { NutritionFormat.amount($0, of: nutrient) }
-        let eaten = target.map { "\(amount(total)) of \(amount($0))" } ?? amount(total)
-        let plate = (plate ?? 0) > 0 ? ", \(amount(plate ?? 0)) on the plate" : ""
+        let eaten = target.map { "\(total.wholeText) of \($0.wholeText)" } ?? total.wholeText
+        let plate = (plate ?? 0) > 0 ? ", \((plate ?? 0).wholeText) on the plate" : ""
         return "\(nutrient.dashboardLabel) \(eaten) \(unit)\(plate)"
     }
 
@@ -56,12 +55,11 @@ struct MacroLine: Hashable, Identifiable {
     }
 
     func text(_ page: Page) -> String {
-        let amount = { NutritionFormat.amount($0, of: nutrient) }
         switch (page, target, remaining) {
-        case (.plate, _, _): return "+\(amount(plate ?? 0))"
-        case let (.remaining, _, remaining?): return "\(amount(remaining)) left"
-        case let (.eaten, target?, _): return "\(amount(total)) / \(amount(target))"
-        default: return amount(total)
+        case (.plate, _, _): return "+\((plate ?? 0).wholeText)"
+        case let (.remaining, _, remaining?): return "\(remaining.wholeText) left"
+        case let (.eaten, target?, _): return "\(total.wholeText) / \(target.wholeText)"
+        default: return total.wholeText
         }
     }
 

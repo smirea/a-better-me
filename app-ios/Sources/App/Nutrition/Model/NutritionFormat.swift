@@ -17,9 +17,9 @@ enum NutritionFormat {
         id == .energy ? value.wholeText : value.niceText
     }
 
-    /// "12P 8.4F 20C": protein, fat, and carbs in grams, as `amount` prints them.
+    /// "12P 8F 20C": protein, fat, and carbs in whole grams, as every condensed macro line reads.
     static func macros(_ amounts: NutrientAmounts) -> String {
-        NutrientID.macros.dropFirst().map { "\(amount(amounts[$0] ?? 0))\($0.macroLetter)" }.joined(separator: " ")
+        NutrientID.macros.dropFirst().map { "\((amounts[$0] ?? 0).wholeText)\($0.macroLetter)" }.joined(separator: " ")
     }
 
     /// Whole kilocalories with grouping, "1,509"; rows follow it with `calorieGlyph` (`Text(macroLine:)`).

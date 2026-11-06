@@ -52,7 +52,7 @@ private struct CurrentAndRemainingView: View {
                 Gauge(value: calories.fraction) {
                     Image(systemName: "flame.fill")
                 } currentValueLabel: {
-                    Text(NutrientProgress.number(calories.remaining ?? calories.consumed))
+                    Text(calories.number(calories.remaining ?? calories.consumed))
                 }
                 .gaugeStyle(.accessoryCircular)
             case .accessoryRectangular:
@@ -60,7 +60,7 @@ private struct CurrentAndRemainingView: View {
                     Text(calories.remainingLabel)
                         .font(AppFont.headline(15))
                         .widgetAccentable()
-                    Text(macros.map { "\($0.initial) \(NutrientProgress.number($0.remaining ?? $0.consumed))" }.joined(separator: " · "))
+                    Text(macros.map { "\($0.initial) \($0.number($0.remaining ?? $0.consumed))" }.joined(separator: " · "))
                         .font(AppFont.caption(13))
                     Text(calories.goal == nil ? "eaten today" : "left today")
                         .font(AppFont.caption(12))
@@ -85,7 +85,7 @@ private struct CurrentAndRemainingView: View {
                         ForEach(macros, id: \.nutrient.id) { macro in
                             VStack(spacing: 0) {
                                 Text(macro.initial).foregroundStyle(macro.nutrient.tint.color).widgetAccentable()
-                                Text(NutrientProgress.number(macro.remaining ?? macro.consumed)).monospacedDigit()
+                                Text(macro.number(macro.remaining ?? macro.consumed)).monospacedDigit()
                             }
                             .font(AppFont.medium(12))
                             .frame(maxWidth: .infinity)
@@ -107,7 +107,7 @@ private struct CaloriesRing: View {
     var body: some View {
         NutrientRing(progress: calories, lineWidth: 9) {
             VStack(spacing: 0) {
-                Text(NutrientProgress.number(calories.remaining ?? calories.consumed))
+                Text(calories.number(calories.remaining ?? calories.consumed))
                     .font(AppFont.number(size))
                     .foregroundStyle(calories.isOver ? Theme.destructive : Theme.textPrimary)
                     .minimumScaleFactor(0.5)
@@ -134,7 +134,7 @@ private struct NutrientFocusView: View {
                 Gauge(value: progress.fraction) {
                     Text(progress.initial)
                 } currentValueLabel: {
-                    Text(NutrientProgress.number(progress.consumed))
+                    Text(progress.number(progress.consumed))
                 }
                 .gaugeStyle(.accessoryCircularCapacity)
             case .accessoryRectangular:
@@ -152,7 +152,7 @@ private struct NutrientFocusView: View {
                         .widgetAccentable()
                     NutrientRing(progress: progress, lineWidth: 9) {
                         VStack(spacing: 0) {
-                            Text(NutrientProgress.number(progress.consumed))
+                            Text(progress.number(progress.consumed))
                                 .font(AppFont.number(20))
                                 .minimumScaleFactor(0.5)
                                 .lineLimit(1)
@@ -192,8 +192,8 @@ private struct NutrientCollectionView: View {
                             ForEach(all.dropFirst(row * 2).prefix(2), id: \.nutrient.id) { progress in
                                 VStack(alignment: .leading, spacing: 0) {
                                     Text(progress.nutrient.short).font(AppFont.caption(11)).foregroundStyle(.secondary)
-                                    Text(progress.goal == nil ? NutrientProgress.number(progress.consumed)
-                                        : "\(NutrientProgress.number(progress.remaining ?? 0)) \(progress.isOver ? "over" : "left")")
+                                    Text(progress.goal == nil ? progress.number(progress.consumed)
+                                        : "\(progress.number(progress.remaining ?? 0)) \(progress.isOver ? "over" : "left")")
                                         .font(AppFont.headline(14))
                                         .monospacedDigit()
                                         .widgetAccentable()
@@ -210,7 +210,7 @@ private struct NutrientCollectionView: View {
                     ForEach(all, id: \.nutrient.id) { progress in
                         VStack(spacing: 4) {
                             NutrientRing(progress: progress, lineWidth: 7) {
-                                Text(NutrientProgress.number(progress.consumed))
+                                Text(progress.number(progress.consumed))
                                     .font(AppFont.number(15))
                                     .minimumScaleFactor(0.5)
                                     .lineLimit(1)
@@ -232,7 +232,7 @@ private struct NutrientCollectionView: View {
                             ForEach(all.dropFirst(row * 2).prefix(2), id: \.nutrient.id) { progress in
                                 VStack(spacing: 2) {
                                     NutrientRing(progress: progress, lineWidth: 6) {
-                                        Text(NutrientProgress.number(progress.consumed))
+                                        Text(progress.number(progress.consumed))
                                             .font(AppFont.number(12))
                                             .minimumScaleFactor(0.5)
                                             .lineLimit(1)

@@ -155,7 +155,7 @@ struct PlateTests {
         #expect(calories.fill(.remaining) == MacroLine.Fill(eaten: 0.15, plate: 0.25))
         #expect(calories.plateShare == 0.25)
         #expect(calories.spoken == "Calories 1,700 of 2,000 calories, 500 on the plate")
-        #expect(lines[1].text(.plate) == "+6.7")
+        #expect(lines[1].text(.plate) == "+7")
         #expect(NutritionSettings.Logger.NutritionDisplay.allCases.map(\.page) == [.plate, .eaten, .remaining])
 
         let small = DayTarget(energy: 1000, protein: 150, fat: 70, carbs: 200)

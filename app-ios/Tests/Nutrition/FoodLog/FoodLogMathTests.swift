@@ -248,7 +248,7 @@ struct FoodLogMathTests {
         #expect(NutritionFormat.serving(Serving(measure: Measure(name: "cup", quantity: 1, servings: 2.4), quantity: 1.25)) == "1.25 cup")
         #expect(NutritionFormat.serving(Serving(measure: Measure(name: "g", quantity: 1, servings: 0.01), quantity: 150)) == "150 g")
         #expect(NumberText.plain(1.0 / 3) == "0.33")
-        #expect(NutritionFormat.macros([.energy: 199.6, .protein: 12, .fat: 8.4, .carbs: 19.5]) == "12P 8.4F 20C")
+        #expect(NutritionFormat.macros([.energy: 199.6, .protein: 12, .fat: 8.4, .carbs: 19.5]) == "12P 8F 20C")
         #expect(NutritionFormat.dayTitle(monday, today: monday) == "Today")
         #expect(NutritionFormat.dayTitle(monday, today: monday.adding(days: 1)) == "Yesterday")
         #expect(NutritionFormat.dayTitle(monday, today: monday.adding(days: -1)) == "Tomorrow")

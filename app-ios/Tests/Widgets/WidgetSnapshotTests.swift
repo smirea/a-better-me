@@ -65,4 +65,12 @@ struct NutrientProgressTests {
         #expect(progress(60, .init(floor: 25, ceiling: 50)).remainingLabel == "10 g over")
         #expect(progress(60, .init(floor: 25, ceiling: 50), overages: false).remainingLabel == "0 g left")
     }
+
+    @Test func macrosAreWholeWhileOtherNutrientsKeepADecimal() {
+        let protein = NutritionSnapshot.Nutrient(id: "p", name: "Protein", short: "prot", unit: "g", tint: .protein)
+        let eaten = NutrientProgress(nutrient: protein, consumed: 1.6, range: .init(target: 154), showOverages: true)
+        #expect(eaten.totalLabel == "2 / 154 g")
+        #expect(eaten.remainingLabel == "152 g left")
+        #expect(progress(1.6, .init(target: 25)).totalLabel == "1.6 / 25 g")
+    }
 }
