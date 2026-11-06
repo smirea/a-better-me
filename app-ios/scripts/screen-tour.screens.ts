@@ -154,7 +154,8 @@ export const screens: Screen[] = [
 	},
 	{
 		name: 'workout-summary',
-		steps: [...more('Workout History'), ...tap('Upper, Nov 3, 2026 at 10:36 AM'), 'wait 1200'],
+		// Rows name their session's date, which the seed derives from the launch time, so the first row is tapped by position.
+		steps: [...more('Workout History'), 'wait 1000', 'press 200 200', 'wait 1200'],
 	},
 	{ name: 'workout-create', steps: [...tapTab('Workout'), ...tapTab('New'), ...tap('New Workout')] },
 	{ name: 'workout-new-program', steps: [...tapTab('Workout'), ...tapTab('New'), ...tap('New Program')] },
@@ -164,7 +165,8 @@ export const screens: Screen[] = [
 		steps: [...tapTab('Workout'), ...tapTab('New'), ...tap('Empty Workout'), ...tapButton('Add Exercise'), 'wait 1000'],
 		after: [...tapButton('Close'), ...discardWorkout],
 	},
-	{ name: 'levels-muscle', steps: [...more('Levels'), ...tap('Lats, 12 sets')] },
+	// The first muscle row, whichever muscle the seed's sets put there.
+	{ name: 'levels-muscle', steps: [...more('Levels'), 'wait 1000', 'press 200 667'] },
 	{ name: 'gym-editor', steps: [...more('Gym Profiles'), ...tap('Your Gym')] },
 	{ name: 'gym-new', steps: [...more('Gym Profiles'), ...tap('Add New Gym Profile')] },
 	{ name: 'exercises-custom', steps: [...more('Exercises'), ...tap('Create Custom Exercise')] },
