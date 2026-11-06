@@ -102,7 +102,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        task: [checks, tests, build]
+        # Two tasks for the two macOS runners. The Swift lint runs inside `tests`, whose Debug build also covers what a
+        # separate `checks` build did; as a third job it held a runner and made `build` queue for three minutes.
+        task: [tests, build]
     env:
       SWIFT_DIRECTORY: app-ios
       CI: 'true'
