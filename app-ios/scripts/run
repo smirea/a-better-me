@@ -269,13 +269,18 @@ async function listening(port: string) {
 /** Starts the worktree's server, detached so it outlives this run, unless something already answers on its port. A
  * server an agent started with `&` in the same shell call as this script died with it (SIGTERM, exit 144). */
 async function ensureServer() {
-    const port = readOverride(repo)?.API_PORT ?? parseDotenv(readFileSync(join(repo, ".env"), "utf8")).API_PORT;
+    const override = readOverride(repo) ?? {};
+    const port = override.API_PORT ?? parseDotenv(readFileSync(join(repo, ".env"), "utf8")).API_PORT;
     if (!port) throw new Error(`No API_PORT in ${repo}/.env.override or .env.`);
     if (await listening(port)) return;
     mkdirSync(dirname(serverPid), { recursive: true });
     const log = join(repo, ".data", "server.log");
     const out = openSync(log, "a");
-    const server = spawn("bun", ["run", "start:server"], { cwd: repo, detached: true, stdio: ["ignore", out, out] });
+    // Bun gives variables it already has precedence over a folder's .env files, so a server started under the root's
+    // .env.local took the main checkout's API_PORT. The worktree's own ports go in explicitly.
+    const server = spawn("bun", ["run", "start"], {
+        cwd: join(repo, "server"), detached: true, stdio: ["ignore", out, out], env: { ...process.env, ...override },
+    });
     server.unref();
     closeSync(out);
     writeFileSync(serverPid, String(server.pid));
