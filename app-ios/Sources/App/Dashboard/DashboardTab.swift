@@ -56,7 +56,7 @@ private struct DashboardHome: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 30) {
                 if !layout.primaryFocus.isEmpty {
-                    primaryFocus
+                    FocusPager(cards: layout.primaryFocus)
                 }
                 ForEach(layout.sections, id: \.self) { section in
                     self.section(section)
@@ -77,26 +77,6 @@ private struct DashboardHome: View {
         .feedback(self)
     }
 
-    private var primaryFocus: some View {
-        TabView {
-            ForEach(layout.primaryFocus, id: \.self) { card in
-                Group {
-                    switch card {
-                    case .workouts: CycleFocus()
-                    case .recentRecords: RecordsFocus()
-                    case .weeklyNutrition: WeeklyNutritionFocus()
-                    case .energyBalance: EnergyBalanceFocusCard()
-                    case .dailyNutrition: DailyNutritionFocus()
-                    }
-                }
-                .padding(.horizontal, Theme.margin)
-                .frame(maxHeight: .infinity, alignment: .top)
-            }
-        }
-        .tabViewStyle(.page(indexDisplayMode: layout.primaryFocus.count > 1 ? .always : .never))
-        .frame(height: 320)
-    }
-
     @ViewBuilder
     private func section(_ section: DashboardSection) -> some View {
         if !isEmpty(section) {
@@ -108,7 +88,6 @@ private struct DashboardHome: View {
                 case .bodyMetrics: ForEach(layout.bodyMetrics, id: \.self) { BodyMetricCardView(card: $0) }
                 case .muscles: ForEach(layout.muscles, id: \.self) { MuscleCardView(card: $0) }
                 case .exercises: ForEach(layout.exercises, id: \.self) { ExerciseCardView(card: $0) }
-                case .general: StepsCardView()
                 }
             }
         }
@@ -122,7 +101,6 @@ private struct DashboardHome: View {
         case .bodyMetrics: layout.bodyMetrics.isEmpty
         case .muscles: layout.muscles.isEmpty
         case .exercises: layout.exercises.isEmpty
-        case .general: !layout.general.contains(.steps)
         }
     }
 }
@@ -134,7 +112,51 @@ private extension DashboardSection {
         case .bodyMetrics: .allBodyMetrics
         case .muscles: .allMuscles
         case .exercises: .allExercises
-        case .insights, .habits, .general: nil
+        case .insights, .habits: nil
+        }
+    }
+}
+
+/// A paging scroll view rather than a page-style `TabView`, which hosts each page in a recycled collection view cell:
+/// every swipe rebuilt the page coming in, Swift Charts and all, while the finger moved. The stack is eager so the
+/// handful of pages are built once and a swipe only moves them.
+private struct FocusPager: View {
+    let cards: [FocusCard]
+    @State private var shown: FocusCard?
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ScrollView(.horizontal) {
+                HStack(alignment: .top, spacing: 0) {
+                    ForEach(cards, id: \.self) { card in
+                        page(card)
+                            .padding(.horizontal, Theme.margin)
+                            .containerRelativeFrame(.horizontal)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $shown)
+            .scrollIndicators(.hidden)
+            if cards.count > 1 {
+                PageControl(count: cards.count, current: Binding(
+                    get: { shown.flatMap(cards.firstIndex(of:)) ?? 0 },
+                    set: { index in withAnimation { shown = cards[index] } }
+                ))
+            }
+        }
+        .feedback(self)
+    }
+
+    @ViewBuilder
+    private func page(_ card: FocusCard) -> some View {
+        switch card {
+        case .workouts: CycleFocus()
+        case .recentRecords: RecordsFocus()
+        case .weeklyNutrition: WeeklyNutritionFocus()
+        case .energyBalance: EnergyBalanceFocusCard()
+        case .dailyNutrition: DailyNutritionFocus()
         }
     }
 }
@@ -200,6 +222,16 @@ private struct InsightCardView: View {
                 EnergyBalanceInsightCard(balance: values.balance(.expenditure, days: 7))
             case .goalProgress:
                 GoalProgressInsightCard(progress: values.goalProgress(.scale))
+            case .steps:
+                let goal = values.stepGoal
+                NavigationLink(value: DashboardRoute.steps) {
+                    DashboardCard(
+                        title: "Steps", period: goal.streak > 0 ? "\(goal.streak)-day streak" : "Last 7 Days",
+                        value: goal.hasSteps ? goal.today.wholeText : nil, unit: "steps"
+                    ) {
+                        MiniBars(values: goal.week.map(\.steps), color: Theme.coral, colors: goal.week.map(\.tier.color), goal: Double(goal.goal))
+                    }
+                }
             }
         }
         .feedback(self)
@@ -236,23 +268,6 @@ private struct HabitCardView: View {
                         DotGrid(days: habit.days, color: Theme.calories)
                     }
                 }
-            }
-        }
-        .feedback(self)
-    }
-}
-
-private struct StepsCardView: View {
-    private var values = DashboardValues()
-
-    var body: some View {
-        let goal = values.stepGoal
-        NavigationLink(value: DashboardRoute.steps) {
-            DashboardCard(
-                title: "Steps", period: goal.streak > 0 ? "\(goal.streak)-day streak" : "Last 7 Days",
-                value: goal.hasSteps ? goal.today.wholeText : nil, unit: "steps"
-            ) {
-                MiniBars(values: goal.week.map(\.steps), color: Theme.coral, colors: goal.week.map(\.tier.color), goal: Double(goal.goal))
             }
         }
         .feedback(self)

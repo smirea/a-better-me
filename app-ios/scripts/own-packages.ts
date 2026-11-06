@@ -42,11 +42,20 @@ export async function refreshOwnPackages(sourcePackages: string) {
 			if (!pin.location.includes(ownRepositories) || !pin.state.branch) return undefined;
 			const remote = Bun.spawn(['git', 'ls-remote', pin.location, `refs/heads/${pin.state.branch}`], {
 				stdout: 'pipe',
-				stderr: 'ignore',
+				stderr: 'pipe',
 			});
 			const timeout = setTimeout(() => remote.kill(), 10_000);
-			const [code, output] = await Promise.all([remote.exited, new Response(remote.stdout).text()]);
+			const [code, output, error] = await Promise.all([
+				remote.exited,
+				new Response(remote.stdout).text(),
+				new Response(remote.stderr).text(),
+			]);
 			clearTimeout(timeout);
+			if (code !== 0) {
+				console.warn(
+					`Kept ${pin.identity} at ${pin.state.revision.slice(0, 7)}: git ls-remote exited ${code}. ${error.trim()}`,
+				);
+			}
 			const head = output.split('\t')[0];
 			return code === 0 && /^[0-9a-f]{40}$/.test(head) && head !== pin.state.revision ? head : undefined;
 		}),

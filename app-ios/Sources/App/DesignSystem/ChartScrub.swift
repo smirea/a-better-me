@@ -162,15 +162,17 @@ private struct ScrubRecognizer: UIGestureRecognizerRepresentable {
         func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
             guard let pan = recognizer as? UIPanGestureRecognizer else { return true }
             let velocity = pan.velocity(in: nil)
-            return abs(velocity.x) > abs(velocity.y) && !Self.scrollsHorizontally(around: pan.view)
+            return abs(velocity.x) > abs(velocity.y) && !Self.scrollsHorizontally(under: pan)
         }
 
         func gestureRecognizer(_ recognizer: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
             recognizer is UIPanGestureRecognizer && other.view is UIScrollView
         }
 
-        private static func scrollsHorizontally(around view: UIView?) -> Bool {
-            var ancestor = view?.superview
+        /// Walks up from the view under the touch: SwiftUI attaches the recognizer above a SwiftUI `ScrollView`, so the
+        /// pager is not among the recognizer view's own ancestors.
+        private static func scrollsHorizontally(under pan: UIPanGestureRecognizer) -> Bool {
+            var ancestor = pan.view.flatMap { $0.hitTest(pan.location(in: $0), with: nil) } ?? pan.view
             while let current = ancestor {
                 if let scroll = current as? UIScrollView, scroll.contentSize.width > scroll.bounds.width + 1 {
                     return true

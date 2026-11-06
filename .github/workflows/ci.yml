@@ -146,6 +146,9 @@ jobs:
           xcodebuild -version
           swift --version
           echo "key=$( { xcodebuild -version; swift --version; } | shasum -a 256 | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+      # Package.resolved is untracked, so nothing in the checkout names the packages' versions. A key per run saves
+      # each run's packages; a fixed key kept a months-old feedback-engine checkout, which a build used whenever
+      # own-packages.ts could not reach GitHub to move the pin.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: needs.changes.outputs.swift == 'true'
         with:
@@ -154,7 +157,7 @@ jobs:
             ${{ env.SWIFT_DIRECTORY }}/.build/checkouts
             ${{ env.SWIFT_DIRECTORY }}/.build/artifacts
             ${{ env.SWIFT_DIRECTORY }}/.build/SourcePackages
-          key: ${{ runner.os }}-${{ runner.arch }}-spm-${{ steps.toolchain.outputs.key }}-${{ hashFiles(format('{0}/Package.swift', env.SWIFT_DIRECTORY), format('{0}/**/Package.resolved', env.SWIFT_DIRECTORY)) }}
+          key: ${{ runner.os }}-${{ runner.arch }}-spm-${{ steps.toolchain.outputs.key }}-${{ github.run_id }}
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-spm-${{ steps.toolchain.outputs.key }}-
       - name: Run Swift task
