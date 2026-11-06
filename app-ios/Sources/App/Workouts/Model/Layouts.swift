@@ -4,17 +4,16 @@ import Foundation
 /// array is hidden, so there is no `hidden` flag that could disagree with the order.
 struct DashboardLayout: Codable, Hashable {
     /// Bumped when a release adds cards; see `init(from:)`.
-    static let revision = 2
+    static let revision = 3
 
     var primaryFocus: [FocusCard] = [.workouts, .recentRecords, .weeklyNutrition, .energyBalance, .dailyNutrition]
     var sections = DashboardSection.allCases
-    var insights: [InsightCard] = [.workouts, .weightTrend, .expenditure, .energyBalance, .goalProgress]
+    var insights: [InsightCard] = [.workouts, .weightTrend, .expenditure, .energyBalance, .goalProgress, .steps]
     var habits: [HabitCard] = [.weighIn, .foodLogging, .workouts]
     var nutrition: [NutritionCard] = NutritionCard.defaults
     var bodyMetrics: [BodyMetricCard] = [.scaleWeight, .visualBodyFat]
     var muscles: [MuscleCard] = []
     var exercises: [ExerciseCard] = []
-    var general: [GeneralCard] = [.steps]
     /// The last revision whose cards this layout adopted. It stays nil in the defaults, because the settings reader
     /// fills a key the stored text lacks from the defaults, and a filled-in revision would skip the adoption.
     var revision: Int?
@@ -36,14 +35,14 @@ extension DashboardLayout {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = DashboardLayout()
         primaryFocus = try container.decodeIfPresent([FocusCard].self, forKey: .primaryFocus) ?? defaults.primaryFocus
-        sections = try container.decodeIfPresent([DashboardSection].self, forKey: .sections) ?? defaults.sections
+        // Layouts saved before revision 3 list the General section, which Steps left for Insights.
+        sections = try container.decodeIfPresent([String].self, forKey: .sections)?.compactMap(DashboardSection.init(rawValue:)) ?? defaults.sections
         insights = try container.decodeIfPresent([InsightCard].self, forKey: .insights) ?? defaults.insights
         habits = try container.decodeIfPresent([HabitCard].self, forKey: .habits) ?? defaults.habits
         nutrition = try container.decodeIfPresent([NutritionCard].self, forKey: .nutrition) ?? defaults.nutrition
         bodyMetrics = try container.decodeIfPresent([BodyMetricCard].self, forKey: .bodyMetrics) ?? defaults.bodyMetrics
         muscles = try container.decodeIfPresent([MuscleCard].self, forKey: .muscles) ?? defaults.muscles
         exercises = try container.decodeIfPresent([ExerciseCard].self, forKey: .exercises) ?? defaults.exercises
-        general = try container.decodeIfPresent([GeneralCard].self, forKey: .general) ?? defaults.general
         let saved = try container.decodeIfPresent(Int.self, forKey: .revision) ?? 0
         if saved < 1 {
             primaryFocus.adopt([.weeklyNutrition, .energyBalance, .dailyNutrition], from: defaults.primaryFocus)
@@ -54,7 +53,17 @@ extension DashboardLayout {
             sections.adopt([.nutrition], from: defaults.sections)
             bodyMetrics.adopt([.visualBodyFat], from: defaults.bodyMetrics)
         }
+        if saved < 3 {
+            // Steps moved from General into Insights; a General list without it means the owner hid it. A layout
+            // with no General list never saved one, and the defaults showed Steps.
+            let general = try decoder.container(keyedBy: LegacyKeys.self).decodeIfPresent([String].self, forKey: .general)
+            if general?.contains("steps") ?? true { insights.adopt([.steps], from: defaults.insights) }
+        }
         revision = Self.revision
+    }
+
+    private enum LegacyKeys: String, CodingKey {
+        case general
     }
 }
 
@@ -73,11 +82,11 @@ enum FocusCard: String, Codable {
 }
 
 enum DashboardSection: String, Codable, CaseIterable {
-    case insights, habits, nutrition, bodyMetrics, muscles, exercises, general
+    case insights, habits, nutrition, bodyMetrics, muscles, exercises
 }
 
 enum InsightCard: String, Codable {
-    case workouts, weightTrend, expenditure, energyBalance, goalProgress
+    case workouts, weightTrend, expenditure, energyBalance, goalProgress, steps
 }
 
 enum HabitCard: String, Codable {
@@ -85,7 +94,7 @@ enum HabitCard: String, Codable {
 }
 
 /// A raw-value enum rather than a wrapper around `BodyMetricKind`, so layouts saved before the tape measurements existed
-/// still decode. Steps live in General, not here.
+/// still decode. Steps live in Insights, not here.
 enum BodyMetricCard: String, Codable, CaseIterable {
     case scaleWeight, visualBodyFat
     case neck, shoulders, bust, chest, waist, hips
@@ -107,10 +116,6 @@ struct NutritionCard: Codable, Hashable {
     static let macros = NutritionCard(nutrient: nil)
     /// MacroFactor's defaults, which the owner kept: Macros, then Calories, Protein, Fiber, Carbs, and Sugars Added.
     static let defaults: [NutritionCard] = [.macros] + ([.energy, .protein, .fiber, .carbs, "539"] as [NutrientID]).map { NutritionCard(nutrient: $0) }
-}
-
-enum GeneralCard: String, Codable {
-    case steps, period
 }
 
 struct MuscleCard: Codable, Hashable {

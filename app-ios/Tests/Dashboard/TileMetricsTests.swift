@@ -71,7 +71,7 @@ struct TileMetricsTests {
     @Test func layoutsSavedBeforeRevisionTwoAdoptNutritionAndVisualBodyFat() throws {
         let old = #"{"revision":1,"sections":["insights","habits","bodyMetrics","general"],"bodyMetrics":["scaleWeight"]}"#
         let adopted = try RowJSON.decoder.decode(DashboardLayout.self, from: Data(old.utf8))
-        #expect(adopted.sections == [.insights, .habits, .nutrition, .bodyMetrics, .general])
+        #expect(adopted.sections == [.insights, .habits, .nutrition, .bodyMetrics])
         #expect(adopted.bodyMetrics == [.scaleWeight, .visualBodyFat])
         #expect(adopted.nutrition == NutritionCard.defaults)
         #expect(NutritionCard.defaults.map(\.id) == ["macros", "k", "p", "291", "c", "539"])
@@ -80,5 +80,17 @@ struct TileMetricsTests {
         #expect(kept.sections == [.insights])
         #expect(kept.bodyMetrics == [.scaleWeight])
         #expect(kept.nutrition.isEmpty)
+    }
+
+    @Test func stepsMoveFromGeneralIntoInsightsOnce() throws {
+        func decode(_ json: String) throws -> DashboardLayout { try RowJSON.decoder.decode(DashboardLayout.self, from: Data(json.utf8)) }
+        let shown = try decode(#"{"revision":2,"sections":["general","insights"],"insights":["weightTrend","workouts"],"general":["steps"]}"#)
+        #expect(shown.sections == [.insights])
+        #expect(shown.insights == [.weightTrend, .steps, .workouts])
+        let hidden = try decode(#"{"revision":2,"insights":["workouts"],"general":[]}"#)
+        #expect(hidden.insights == [.workouts])
+        let removedSince = try decode(#"{"revision":3,"insights":["workouts"]}"#)
+        #expect(removedSince.insights == [.workouts])
+        #expect(try decode("{}").insights == [.workouts, .weightTrend, .expenditure, .energyBalance, .goalProgress, .steps])
     }
 }

@@ -118,9 +118,6 @@ struct CustomizeDashboardView: View {
                 }
             }
             .onMove { binding(\.exercises).wrappedValue.move(fromOffsets: $0, toOffset: $1) }
-        case .general:
-            ForEach(binding(\.general).wrappedValue, id: \.self) { _ in CardRow(title: "Steps", icon: .steps) }
-                .onMove { binding(\.general).wrappedValue.move(fromOffsets: $0, toOffset: $1) }
         }
     }
 
@@ -148,7 +145,6 @@ extension DashboardSection: Identifiable {
         case .bodyMetrics: "Body Metrics"
         case .muscles: "Muscle Groups"
         case .exercises: "Exercises"
-        case .general: "General"
         }
     }
 
@@ -160,13 +156,12 @@ extension DashboardSection: Identifiable {
         case .bodyMetrics: "Body Metrics"
         case .muscles: "Muscle Groups"
         case .exercises: "Exercises"
-        case .general: "General"
         }
     }
 }
 
 extension InsightCard: CaseIterable {
-    static let allCases: [InsightCard] = [.workouts, .weightTrend, .expenditure, .energyBalance, .goalProgress]
+    static let allCases: [InsightCard] = [.workouts, .weightTrend, .expenditure, .energyBalance, .goalProgress, .steps]
 
     var title: String {
         switch self {
@@ -175,6 +170,7 @@ extension InsightCard: CaseIterable {
         case .expenditure: "Expenditure"
         case .energyBalance: "Energy Balance"
         case .goalProgress: "Goal Progress"
+        case .steps: "Steps"
         }
     }
 
@@ -185,6 +181,7 @@ extension InsightCard: CaseIterable {
         case .expenditure: .expenditure
         case .energyBalance: .energyBalance
         case .goalProgress: .goalProgress
+        case .steps: .steps
         }
     }
 }
@@ -458,10 +455,6 @@ private struct AddRemoveSheet: View {
                         LabeledContent { Text("Turned Off").foregroundStyle(Theme.textSecondary) } label: { CardRow(title: card.title, icon: .scale) }
                     }
                 }
-            }
-        case .general:
-            ThemedSection {
-                toggle("Steps", .steps, \.general, .steps)
             }
         case .muscles:
             ThemedSection("Upper") { muscleToggles(Muscle.upperBody) }
