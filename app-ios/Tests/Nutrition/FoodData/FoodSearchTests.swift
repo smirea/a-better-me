@@ -122,6 +122,32 @@ struct FoodSearchTests {
         #expect(results[0].food == nil)
     }
 
+    @Test func historyRanksTheFoodsLoggedOnMoreRecentDaysFirstWithWholeWordsLeading() async throws {
+        let today = CalendarDay.today
+        let measures = [Measure(name: "g", quantity: 100, servings: 1)]
+        func food(_ name: String, brand: String? = nil) -> FoodSnapshot {
+            let food = Food(name: name, brand: brand, nutrition: FoodNutrition(nutrients: [.energy: 50], baseGrams: 100, measures: measures))
+            store.saveFood(food)
+            return food.snapshot
+        }
+        let generic = food("Milk, fluid, nonfat")
+        let brand = food("Organic Nonfat Milk", brand: "365 Whole Foods Market")
+        let chocolate = food("Milk, chocolate")
+        let eggs = try #require(try catalog.foods([171287])[171287]).snapshot
+        let eggplant = try #require(try catalog.foods([169228])[169228]).snapshot
+        for back in 1...3 {
+            store.log([FoodPortion(brand), FoodPortion(eggplant)], on: today.adding(days: -back), minute: 480)
+        }
+        for back in 100...104 {
+            store.log([FoodPortion(chocolate)], on: today.adding(days: -back), minute: 480)
+        }
+        store.log([FoodPortion(generic), FoodPortion(eggs)], on: today, minute: 480)
+        let search = try await search()
+
+        #expect(names(try search.local("milk")) == ["history Organic Nonfat Milk", "history Milk, fluid, nonfat", "history Milk, chocolate"])
+        #expect(names(try search.local("egg")) == ["history Egg, whole, raw, fresh", "history Eggplant, raw", "common Egg, white, raw, fresh"])
+    }
+
     @Test func latestListsFoodsByWhenTheyWereLoggedAtTheirLastServing() async throws {
         let banana = try #require(try catalog.foods([173944])[173944]).snapshot
         let cup = banana.nutrition.measures[1]
