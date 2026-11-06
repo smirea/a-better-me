@@ -6,7 +6,7 @@ import SwiftUI
 struct DataVisibilityView: View {
     var body: some View {
         Form {
-            ThemedSection("Visibility Settings", footer: "Hide the metrics you do not use to simplify the app. Hidden data is kept, and you can show it again at any time.") {
+            ThemedSection(footer: "Hide the metrics you do not use to simplify the app. Hidden data is kept, and you can show it again at any time.") {
                 NavigationLink { NutrientVisibilityView() } label: {
                     RowLabel(title: "Nutrient Visibility", systemImage: "leaf")
                 }

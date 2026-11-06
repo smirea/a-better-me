@@ -36,13 +36,12 @@ struct StrategyWizardView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .background(Theme.background)
-            .safeAreaInset(edge: .bottom) {
+            .pinnedActions {
                 PinnedActionButton("Save") {
                     store.savePlan(model.plan(isFirst: isFirst))
                     dismiss()
                 }
                 .disabled(!model.canSave)
-                .padding(.top, 8)
             }
             .detailTitle(model.title)
             .toolbar {
@@ -280,7 +279,7 @@ private struct GoalWeightRateStep: View {
                 tile(model.basis.map { "\(Double(model.goal.initialBudget($0)).wholeText) kcal" } ?? "—", "initial daily budget", highlighted: true)
                 tile(model.goal.projectedEnd(from: model.today, currentWeightKg: model.weightKg).map { StrategyFormat.day($0, year: true) } ?? "—", "projected end date", highlighted: false)
             }
-            Text("What is your target weight?").font(AppFont.title(20))
+            Text("What is your target weight?").font(AppFont.sectionTitle)
             HStack {
                 TextField("Target weight", value: targetBinding, format: .number.precision(.fractionLength(0...1)))
                     .keyboardType(.decimalPad)
@@ -307,7 +306,7 @@ private struct GoalWeightRateStep: View {
         let weekly = abs(model.goal.weeklyChangeKg(at: model.weightKg))
         let sign = model.goal.kind == .lose ? "−" : "+"
         return VStack(alignment: .leading, spacing: 14) {
-            Text("What is your target goal rate?").font(AppFont.title(20))
+            Text("What is your target goal rate?").font(AppFont.sectionTitle)
             Text(model.goal.band.label)
                 .font(AppFont.headline(13))
                 .padding(.horizontal, 10)

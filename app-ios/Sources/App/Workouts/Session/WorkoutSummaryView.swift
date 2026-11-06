@@ -66,7 +66,7 @@ struct WorkoutSummaryView: View {
             .detailTitle(isFinishing ? "Workout Complete" : session.startedAt.formatted(date: .abbreviated, time: .omitted))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { close() }
+                    Button(role: .close) { close() }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Menu("Workout Options", systemImage: "ellipsis") {
@@ -248,7 +248,7 @@ struct WorkoutSummaryView: View {
                 if !items.isEmpty {
                     if block.isSuperset {
                         Text(block.exercises.count > 2 ? "Circuit" : "Superset")
-                            .font(AppFont.medium(14))
+                            .font(AppFont.chip)
                             .foregroundStyle(Theme.textSecondary)
                             .padding(.horizontal, Theme.margin)
                             .padding(.top, 12)
@@ -368,9 +368,9 @@ private struct StartTimeSheet: View {
                 .labelsHidden()
                 .detailTitle("Start Time")
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                    ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") {
+                        Button("Save", role: .confirm) {
                             onSave(start)
                             dismiss()
                         }
@@ -404,9 +404,9 @@ private struct DurationSheet: View {
             .pickerStyle(.wheel)
             .detailTitle("Duration")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button("Save", role: .confirm) {
                         onSave(TimeInterval(hours * 3600 + minutes * 60))
                         dismiss()
                     }
@@ -459,7 +459,7 @@ private struct WorkoutChangesSheet: View {
             .detailTitle("Workout Changes")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }

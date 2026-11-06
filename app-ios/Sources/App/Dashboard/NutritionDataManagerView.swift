@@ -113,9 +113,7 @@ struct NutritionDayEntrySheet: View {
                 }
             }
             .themedList()
-            .navigationTitle("Nutrition")
-            .navigationSubtitle(date.formatted(.dateTime.weekday().month().day()))
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Nutrition", subtitle: date.formatted(.dateTime.weekday().month().day()))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .close) { dismiss() }

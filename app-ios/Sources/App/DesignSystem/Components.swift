@@ -7,9 +7,10 @@ extension View {
         navigationTitle(title).toolbarTitleDisplayMode(.inlineLarge)
     }
 
-    /// A pushed screen's or sheet's title, inline.
-    func detailTitle(_ title: String) -> some View {
-        navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+    /// A pushed screen's or sheet's title, inline, with an optional line under it. The subtitle is always applied, empty
+    /// when nil, so a screen whose subtitle comes and goes keeps its identity and scroll position.
+    func detailTitle(_ title: String, subtitle: String? = nil) -> some View {
+        navigationTitle(title).navigationSubtitle(subtitle ?? "").navigationBarTitleDisplayMode(.inline)
     }
 
     /// The app's card: content on the raised surface with the large radius.

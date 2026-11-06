@@ -10,7 +10,7 @@ struct FoodLogSettingsView: View {
     var body: some View {
         let timeline = settings.nutrition.timeline
         Form {
-            ThemedSection("Nutrient Reporting") {
+            ThemedSection {
                 SettingChoice(
                     title: "Nutrient Reporting", systemImage: "minus.forwardslash.plus", selection: store.binding(settings, \.nutrition.showOverages),
                     options: [
@@ -266,7 +266,7 @@ private struct BMREquationView: View {
 
     var body: some View {
         Form {
-            ThemedSection("BMR Equation") {
+            ThemedSection {
                 SettingChoice(
                     title: "Equation", systemImage: "function", selection: store.binding(settings, \.nutrition.expenditure.bmrEquation),
                     options: [

@@ -106,7 +106,7 @@ struct PeriodCaption: View {
             }
             .accessibilityLabel("Time Period, \(period.rawValue)")
         }
-        .font(AppFont.medium(14))
+        .font(AppFont.chip)
         .frame(maxWidth: .infinity)
     }
 }

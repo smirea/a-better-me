@@ -12,13 +12,12 @@ struct GymProfilesView: View {
 
     var body: some View {
         List {
-            ThemedSection(gyms.count == 1 ? "1 Gym" : "\(gyms.count) Gyms") {
+            ThemedSection {
                 ForEach(gyms) { gym in
                     let isDefault = gym.id == defaultGym?.id
                     Button { editing = gym.id } label: { GymRow(gym: gym, isDefault: isDefault) }
                         .buttonStyle(.plain)
                         .accessibilityHint("Opens the gym profile")
-                        .listRowBackground(Theme.background)
                         .swipeActions(edge: .leading) {
                             if !isDefault {
                                 Button("Set as Default", systemImage: "star") { store.setDefaultGym(gym.id) }
@@ -28,7 +27,7 @@ struct GymProfilesView: View {
                         .swipeActions(edge: .trailing) {
                             if !isDefault {
                                 Button("Delete", systemImage: "trash") { deleting = gym }
-                                    .tint(.red)
+                                    .tint(Theme.destructive)
                             }
                             Button("Edit", systemImage: "pencil") { editing = gym.id }
                                 .tint(Theme.surfaceRaised)
@@ -43,14 +42,10 @@ struct GymProfilesView: View {
                 }
             }
         }
-        .listStyle(.plain)
         .themedList()
         .detailTitle("Gym Profiles")
-        .safeAreaInset(edge: .bottom) {
-            Button("Add New Gym Profile") { adding = true }
-                .secondaryPill()
-                .padding(.horizontal, Theme.margin)
-                .padding(.bottom, 8)
+        .pinnedActions {
+            PinnedActionButton("Add New Gym Profile") { adding = true }
         }
         .alert("Delete \(deleting?.name ?? "gym")?", isPresented: Binding { deleting != nil } set: { if !$0 { deleting = nil } }) {
             Button("Delete", role: .destructive) {
@@ -73,25 +68,11 @@ private struct GymRow: View {
     let isDefault: Bool
 
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: gym.icon)
-                .font(.system(size: 18))
-                .foregroundStyle(Theme.textPrimary)
-                .frame(width: 28)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(gym.name).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
-                Text(gym.equipment.count == 1 ? "1 piece of equipment" : "\(gym.equipment.count) pieces of equipment")
-                    .font(AppFont.caption(13))
-                    .foregroundStyle(Theme.textSecondary)
-                if isDefault {
-                    Text("Default").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
-                }
-            }
-            Spacer()
-        }
-        .padding(.vertical, 6)
-        .contentShape(.rect)
-        .feedback(self)
+        let equipment = gym.equipment.count == 1 ? "1 piece of equipment" : "\(gym.equipment.count) pieces of equipment"
+        RowLabel(title: gym.name, detail: isDefault ? "Default · \(equipment)" : equipment, systemImage: gym.icon)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(.rect)
+            .feedback(self)
     }
 }
 
@@ -123,8 +104,7 @@ private struct NewGymSheet: View {
                                     Text(option.summary).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
                                 }
                                 Spacer()
-                                Image(systemName: template == option ? "largecircle.fill.circle" : "circle")
-                                    .foregroundStyle(template == option ? Theme.textPrimary : Theme.textTertiary)
+                                SelectionMark(isOn: template == option)
                             }
                             .foregroundStyle(Theme.textPrimary)
                             .contentShape(.rect)
@@ -138,14 +118,12 @@ private struct NewGymSheet: View {
             .detailTitle("New Gym Profile")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
-            .safeAreaInset(edge: .bottom) {
+            .pinnedActions {
                 Button("Create Gym Profile", action: create)
                     .primaryPill()
-                    .padding(.horizontal, Theme.margin)
-                    .padding(.bottom, 8)
             }
         }
         .feedback(self)

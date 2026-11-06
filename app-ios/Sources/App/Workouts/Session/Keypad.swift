@@ -55,15 +55,11 @@ enum SetField: Hashable {
     /// The keypad types "." and `apply` parses with `Double(_:)`, so field text never uses locale separators or grouping.
     func text(_ entry: SetEntry, unit: WeightUnit) -> String {
         switch self {
-        case .weight: entry.weightKg.map { Self.plain(unit.fromKg($0)) } ?? ""
+        case .weight: entry.weightKg.map { NumberText.plain(unit.fromKg($0)) } ?? ""
         case .reps: entry.reps.map(String.init) ?? ""
         case .duration: entry.durationSeconds.map(String.init) ?? ""
-        case let .distance(long): entry.distanceMeters.map { Self.plain(long ? $0 / 1000 : $0) } ?? ""
+        case let .distance(long): entry.distanceMeters.map { NumberText.plain(long ? $0 / 1000 : $0) } ?? ""
         }
-    }
-
-    static func plain(_ value: Double) -> String {
-        value.formatted(.number.precision(.fractionLength(0...2)).grouping(.never).locale(Locale(identifier: "en_US_POSIX")))
     }
 
     /// Writes typed `text` into `entry`. An empty field clears the value.
@@ -119,7 +115,7 @@ struct KeypadFocus: Equatable {
     }
 
     mutating func set(_ value: Double) {
-        text = SetField.plain(max(0, value))
+        text = NumberText.plain(max(0, value))
         replacesOnType = true
     }
 }

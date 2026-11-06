@@ -54,24 +54,14 @@ private struct CheckInPage: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                content
-            }
-            .padding(.horizontal, Theme.margin)
-            .padding(.vertical, 16)
-        }
-        .background(Theme.background)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            WizardProgress(value: progress)
-        }
-        .safeAreaInset(edge: .bottom) {
+        WizardPage(progress: progress) {
+            content
+        } actions: {
             PinnedActionButton(module == .update ? "Done" : "Next") {
                 if module == .update, let update { store.savePlan(update) }
                 next()
             }
             .disabled(module == .update && update == nil)
-            .padding(.top, 8)
         }
         .detailTitle("Check-In")
         .sheet(isPresented: $loggingWeight) { BodyWeightLogSheet() }
@@ -93,7 +83,7 @@ private struct CheckInPage: View {
             Button("Log Weight", systemImage: "scalemass") { loggingWeight = true }
                 .buttonStyle(.glass)
             StrategyCard(title: "Trend Weight") {
-                StrategyStat(value: StrategyFormat.weight(data.inputs.trendWeightKg, data.unit), caption: "Today")
+                StatView(value: StrategyFormat.weight(data.inputs.trendWeightKg, data.unit), caption: "Today")
             }
         case .review:
             Text("Review Your Week").font(AppFont.title(22))
@@ -114,13 +104,13 @@ private struct CheckInPage: View {
             Text("Program Update").font(AppFont.title(22))
             if let update, let current = data.current {
                 HStack {
-                    StrategyStat(value: StrategyFormat.kcal(StrategyRules.averageEnergy(current.targets)), caption: "Previous average")
-                    StrategyStat(value: StrategyFormat.kcal(StrategyRules.averageEnergy(update.targets)), caption: "New average")
+                    StatView(value: StrategyFormat.kcal(StrategyRules.averageEnergy(current.targets)), caption: "Previous average")
+                    StatView(value: StrategyFormat.kcal(StrategyRules.averageEnergy(update.targets)), caption: "New average")
                 }
                 WeekTargetsChart(targets: update.targets, today: data.today.weekday)
                 HStack {
-                    StrategyStat(value: StrategyFormat.kcal(update.expenditureKcal ?? 0), caption: "Expenditure")
-                    StrategyStat(value: StrategyFormat.weight(update.trendWeightKg, data.unit), caption: "Trend Weight")
+                    StatView(value: StrategyFormat.kcal(update.expenditureKcal ?? 0), caption: "Expenditure")
+                    StatView(value: StrategyFormat.weight(update.trendWeightKg, data.unit), caption: "Trend Weight")
                 }
                 Text("Your new targets start today and run until your next check-in.").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
             } else {

@@ -414,7 +414,7 @@ private struct FlightView: View {
             if flight.kind == .parse {
                 Text(flight.text)
                     .lineLimit(1)
-                    .font(AppFont.medium(14))
+                    .font(AppFont.chip)
                     .foregroundStyle(Theme.textPrimary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
@@ -774,7 +774,7 @@ private struct RambleLine: View {
         // The old amount fades out before the new one fades in, so they never overlap.
         let label = ZStack {
             Text(face.serving)
-                .font(AppFont.medium(14))
+                .font(AppFont.chip)
                 .monospacedDigit()
                 .lineLimit(1)
                 .id(face.serving)
@@ -854,7 +854,7 @@ private struct RambleLine: View {
 
     private static func spoken(_ item: RambleItem) -> String? {
         guard item.amount > 0 else { return nil }
-        let number = NutritionFormat.quantity(item.amount)
+        let number = NumberText.plain(item.amount)
         return item.unit.isEmpty ? "×\(number)" : "\(number) \(item.unit)"
     }
 

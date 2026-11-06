@@ -65,13 +65,12 @@ struct ProgramSettingsView: View {
                     .padding(.vertical, 10)
             }
             .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Theme.surface)
+            .themedList()
             .detailTitle("Program Settings")
             .navigationSubtitle(program.name)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
             .sheet(item: $page) { page in
@@ -155,8 +154,8 @@ struct ProgramSettingsView: View {
 
     private var colorIconTile: some View {
         Image(systemName: program.icon)
-            .font(AppFont.caption(12))
-            .foregroundStyle(.white)
+            .font(AppFont.rowDetail)
+            .foregroundStyle(Theme.textPrimary)
             .frame(width: 24, height: 24)
             .background(program.color.swatch, in: .rect(cornerRadius: Theme.tinyCornerRadius))
     }
@@ -268,8 +267,8 @@ struct ProgramIconGrid: View {
             ForEach(ProgramIcon.all, id: \.symbol) { icon in
                 Button { onPick(icon.symbol) } label: {
                     Image(systemName: icon.symbol)
-                        .font(AppFont.title(18))
-                        .foregroundStyle(icon.symbol == selection ? .white : Theme.textSecondary)
+                        .font(AppFont.listTitle)
+                        .foregroundStyle(icon.symbol == selection ? Theme.textPrimary : Theme.textSecondary)
                         .frame(width: 48, height: 48)
                         .background(icon.symbol == selection ? color.swatch : Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
                 }
@@ -318,7 +317,7 @@ private struct ProgramSettingsColorIcon: View {
             .navigationSubtitle("\(program.color.title), \(ProgramIcon.title(of: program.icon))")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done", role: .confirm) { dismiss() }
                 }
             }
         }
@@ -355,21 +354,18 @@ private struct ProgramSettingsDayOrder: View {
                 .onMove { order.move(fromOffsets: $0, toOffset: $1) }
             }
             .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Theme.surface)
+            .themedList()
             .environment(\.editMode, .constant(.active))
-            .detailTitle("Day Order")
-            .navigationSubtitle("\(order.count)-Day Cycle")
-            .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 4) {
-                    PinnedActionButton("Save") {
-                        onSave(order.map(\.id))
-                        dismiss()
-                    }
-                    Button("Cancel") { dismiss() }
-                        .font(AppFont.headline())
-                        .buttonStyle(.plain)
-                        .frame(minHeight: 44)
+            .detailTitle("Day Order", subtitle: "\(order.count)-Day Cycle")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(role: .close) { dismiss() }
+                }
+            }
+            .pinnedActions {
+                PinnedActionButton("Save") {
+                    onSave(order.map(\.id))
+                    dismiss()
                 }
             }
         }
@@ -412,7 +408,7 @@ private struct ProgramSettingsDeload: View {
                             Text(choice.summary).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                         }
                         Spacer()
-                        Image(systemName: choice == program.config.deload ? "largecircle.fill.circle" : "circle").font(AppFont.title())
+                        SelectionMark(isOn: choice == program.config.deload)
                     }
                     .foregroundStyle(Theme.textPrimary)
                     .contentShape(Rectangle())
@@ -421,12 +417,11 @@ private struct ProgramSettingsDeload: View {
                 .accessibilityAddTraits(choice == program.config.deload ? .isSelected : [])
             }
             .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Theme.surface)
+            .themedList()
             .detailTitle("Deload")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }
@@ -458,10 +453,10 @@ private struct ProgramSettingsDuplicate: View {
             .detailTitle("Program Name")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
-            .safeAreaInset(edge: .bottom) {
+            .pinnedActions {
                 PinnedActionButton("Save & Go to Duplicate") {
                     let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !trimmed.isEmpty else { return }

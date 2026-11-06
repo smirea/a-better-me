@@ -148,7 +148,7 @@ private struct AddSheetView: View {
                     choice("Workout", systemImage: "dumbbell") { sheet = .workout }
                 }
             }
-            .padding(20)
+            .padding(Theme.margin)
             .presentationDetents([.height(190)])
         }
     }

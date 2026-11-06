@@ -148,7 +148,7 @@ private struct QuantityChip: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Text(NutritionFormat.quantity(serving.quantity)).font(AppFont.headline(14)).monospacedDigit()
+            Text(NumberText.plain(serving.quantity)).font(AppFont.headline(14)).monospacedDigit()
             Text(serving.measure.name).font(AppFont.caption(11)).lineLimit(1)
         }
         .foregroundStyle(isActive ? Theme.onPrimary : Theme.textPrimary)

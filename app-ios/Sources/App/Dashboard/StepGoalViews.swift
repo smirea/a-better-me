@@ -189,11 +189,10 @@ struct StepGoalSheet: View {
             }
             .pickerStyle(.wheel)
             .padding(.horizontal, Theme.margin)
-            .navigationTitle("Daily Step Goal")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Daily Step Goal")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save", role: .confirm) {

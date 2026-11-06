@@ -98,18 +98,6 @@ struct WeekTargetsChart: View {
     }
 }
 
-/// The check-in's header: its progress through the modules.
-struct WizardProgress: View {
-    let value: Double
-
-    var body: some View {
-        ProgressView(value: value)
-            .progressViewStyle(.bar(Theme.textPrimary))
-            .padding(.horizontal, Theme.margin)
-            .padding(.bottom, 8)
-    }
-}
-
 /// The overview's card: a title, an optional subtitle, the content, and a row of glass actions under a hairline.
 struct StrategyCard<Content: View, Actions: View>: View {
     let title: String
@@ -148,17 +136,3 @@ extension StrategyCard where Actions == EmptyView {
     }
 }
 
-/// A big number over a caption, MacroFactor's stat style.
-struct StrategyStat: View {
-    let value: String
-    let caption: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value).font(AppFont.number(20)).lineLimit(1).minimumScaleFactor(0.7)
-            Text(caption).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-    }
-}

@@ -15,7 +15,7 @@ struct QuantityText: Hashable, Sendable {
     static let maxLength = 8
 
     init(_ value: Double) {
-        text = NutritionFormat.quantity(value)
+        text = NumberText.plain(value)
         untouched = value
     }
 

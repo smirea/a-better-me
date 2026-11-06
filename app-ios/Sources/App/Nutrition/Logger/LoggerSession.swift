@@ -15,6 +15,9 @@ enum LoggerTab: String, CaseIterable, Hashable, Sendable {
         }
     }
 
+    /// The segment's label: six full titles don't fit a phone's width, and "Quick Add" truncated to "Quick…".
+    var segment: String { self == .quickAdd ? "Quick" : title }
+
     var systemImage: String {
         switch self {
         case .scan: "barcode.viewfinder"

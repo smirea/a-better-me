@@ -35,7 +35,7 @@ struct SmartProgressionSheet: View {
             .navigationDestination(isPresented: $isShowingSettings) { WorkoutSettingsView() }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button("Workout Settings", systemImage: "slider.horizontal.3") { isShowingSettings = true }
@@ -58,9 +58,9 @@ struct SmartProgressionSheet: View {
             NavigationLink {
                 WorkoutTargetsView(exerciseName: exerciseName, sets: sets, suggestions: suggestions)
             } label: {
-                Text("Info").font(AppFont.headline(14))
+                Text("Info")
             }
-            .prominentButton(tint: Theme.muscle)
+            .chipButton()
             .accessibilityLabel("Adjusted targets info")
         }
         .padding(14)
@@ -77,7 +77,7 @@ struct SmartProgressionSheet: View {
                         HStack(spacing: 8) {
                             Text(row.label).font(AppFont.body(14))
                             Spacer()
-                            Text(valueText(row)).font(AppFont.medium(14))
+                            Text(valueText(row)).font(AppFont.chip)
                             if let rir = row.rir { RIRBadge(rir: rir) }
                         }
                     }
@@ -115,9 +115,7 @@ struct WorkoutTargetsView: View {
                 }
             }
         }
-        .navigationTitle("Workout Targets")
-        .navigationSubtitle(exerciseName)
-        .navigationBarTitleDisplayMode(.inline)
+        .detailTitle("Workout Targets", subtitle: exerciseName)
         .feedback(self)
     }
 

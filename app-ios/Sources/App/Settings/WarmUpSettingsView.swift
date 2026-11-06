@@ -120,19 +120,13 @@ private struct WarmUpSchemeEditor: View {
                 }
             }
             .themedList()
-            .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 8) {
+            .pinnedActions {
                     Button("Save To All Categories") { save(to: RestCategory.allCases) }
                         .secondaryPill()
                     Button("Save") { save(to: [category]) }
                         .primaryPill()
-                }
-                .padding(.horizontal, Theme.margin)
-                .padding(.bottom, 8)
             }
-            .navigationTitle("Default Scheme")
-            .navigationSubtitle(category.displayName)
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle("Default Scheme", subtitle: category.displayName)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .close) { dismiss() }

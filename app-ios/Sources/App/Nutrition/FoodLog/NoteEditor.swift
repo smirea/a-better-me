@@ -31,11 +31,9 @@ struct NoteEditor: View {
                 Spacer()
                 DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
             }
-            .padding(20)
+            .padding(Theme.margin)
             .background(Theme.background)
-            .navigationTitle(isNew ? "New Note" : "Edit Note")
-            .navigationSubtitle(note.day.date.formatted(date: .numeric, time: .omitted))
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(isNew ? "New Note" : "Edit Note", subtitle: note.day.date.formatted(date: .numeric, time: .omitted))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
                 ToolbarItem(placement: .topBarLeading) {

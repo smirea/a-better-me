@@ -163,7 +163,7 @@ private struct CustomizeShortcutsSheet: View {
             .detailTitle("Customize Shortcuts")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", systemImage: "checkmark") { dismiss() }
+                    Button("Done", role: .confirm) { dismiss() }
                 }
             }
         }

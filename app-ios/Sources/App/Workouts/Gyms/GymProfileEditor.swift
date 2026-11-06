@@ -38,18 +38,6 @@ struct GymProfileEditor: View {
         let isDefault = defaultGym?.id == gym.id
         return List {
             Section {
-                GymActions(
-                    icon: gym.icon,
-                    onIcon: { icon in edit { $0.icon = icon } },
-                    onRename: { renaming = true },
-                    onDuplicate: { duplicate(gym) },
-                    onDelete: isDefault ? nil : { confirmingRemove = true }
-                )
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
-            Section {
                 SettingToggle(
                     title: "Include Bumper Plates", detail: bumperDetail(gym), systemImage: "circle.circle",
                     isOn: calculatorBinding(gym, \.includeBumperPlates)
@@ -65,7 +53,7 @@ struct GymProfileEditor: View {
             } header: {
                 SectionTitle("Plate Calculator").textCase(nil)
             }
-            .listRowBackground(Theme.background)
+            .listRowBackground(Theme.surface)
             Section {
                 EmptyView()
             } header: {
@@ -99,7 +87,7 @@ struct GymProfileEditor: View {
                             onEditLoad: { editingLoad = item }
                         )
                     }
-                    .listRowBackground(Theme.background)
+                    .listRowBackground(Theme.surface)
                 } header: {
                     HStack {
                         Text(section.category).font(AppFont.headline(16)).foregroundStyle(Theme.textPrimary)
@@ -107,7 +95,7 @@ struct GymProfileEditor: View {
                         Button(anySelected ? "Deselect All" : "Select All") {
                             setSelected(section.items.map(\.id), !anySelected)
                         }
-                        .font(AppFont.medium(14))
+                        .font(AppFont.chip)
                         .underline()
                         .foregroundStyle(Theme.textPrimary)
                         .accessibilityLabel("\(anySelected ? "Deselect" : "Select") All \(section.category)")
@@ -116,7 +104,6 @@ struct GymProfileEditor: View {
                 }
             }
         }
-        .listStyle(.plain)
         .themedList()
         .scrollDismissesKeyboard(.immediately)
         .navigationTitle(gym.name)
@@ -125,6 +112,14 @@ struct GymProfileEditor: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("Gym Options", systemImage: "ellipsis") {
+                    Picker(selection: Binding(get: { gym.icon }, set: { icon in edit { $0.icon = icon } })) {
+                        ForEach(Self.icons, id: \.symbol) { Label($0.name, systemImage: $0.symbol).tag($0.symbol) }
+                    } label: {
+                        Label("Icon", systemImage: gym.icon)
+                    }
+                    .pickerStyle(.menu)
+                    Button("Rename", systemImage: "square.and.pencil") { renaming = true }
+                    Button("Duplicate", systemImage: "plus.square.on.square") { duplicate(gym) }
                     Button("Set as Default", systemImage: "star") { store.setDefaultGym(gym.id) }
                         .disabled(isDefault)
                     Button("Delete Gym", systemImage: "trash", role: .destructive) { confirmingRemove = true }
@@ -264,41 +259,11 @@ private struct EquipmentRow: View {
     }
 }
 
-private struct GymActions: View {
-    let icon: String
-    let onIcon: (String) -> Void
-    let onRename: () -> Void
-    let onDuplicate: () -> Void
-    /// Nil for the default gym. Another gym takes the default first, which also keeps the last gym, since removing it
-    /// would only bring the seeded gym back on the next launch.
-    let onDelete: (() -> Void)?
-
+extension GymProfileEditor {
     static let icons: [(symbol: String, name: String)] = [
         ("house.fill", "House"), ("building.2.fill", "Buildings"), ("building.columns.fill", "Columns"),
         ("dumbbell.fill", "Dumbbell"), ("figure.strengthtraining.traditional", "Lifter"), ("figure.run", "Runner"),
         ("tent.fill", "Tent"), ("sun.max.fill", "Sun"), ("briefcase.fill", "Briefcase"), ("airplane", "Airplane"),
         ("mountain.2.fill", "Mountains"), ("star.fill", "Star"),
     ]
-
-    var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 8) {
-                Menu {
-                    Picker("Icon", selection: Binding(get: { icon }, set: onIcon)) {
-                        ForEach(Self.icons, id: \.symbol) { Label($0.name, systemImage: $0.symbol).tag($0.symbol) }
-                    }
-                } label: {
-                    Chip(title: "Edit Icon", systemImage: icon)
-                }
-                Button(action: onRename) { Chip(title: "Rename Gym", systemImage: "square.and.pencil") }
-                Button(action: onDuplicate) { Chip(title: "Duplicate", systemImage: "plus.square.on.square") }
-                Button { onDelete?() } label: { Chip(title: "Delete", systemImage: "trash") }
-                    .disabled(onDelete == nil)
-            }
-            .padding(.horizontal, Theme.margin)
-            .padding(.vertical, 4)
-        }
-        .scrollIndicators(.hidden)
-        .buttonStyle(.plain)
-    }
 }

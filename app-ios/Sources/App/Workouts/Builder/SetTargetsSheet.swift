@@ -87,21 +87,20 @@ struct SetTargetsSheet: View {
             }
             .disabled(readOnlyNote != nil)
             .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Theme.surface)
+            .themedList()
             .scrollDismissesKeyboard(.interactively)
             .environment(\.defaultMinListRowHeight, 40)
             .detailTitle(subtitle == nil ? "Targets" : catalog.name(draft.exerciseID))
             .navigationSubtitle(subtitle ?? catalog.name(draft.exerciseID))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .keyboard) {
                     Button("Done") { focus = nil }.frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
-            .safeAreaInset(edge: .bottom) { bottomButtons }
+            .pinnedActions { bottomButtons }
             .onChange(of: restTimers) { _, on in
                 for index in draft.sets.indices {
                     draft.sets[index].restSeconds = on ? (draft.sets[index].restSeconds ?? defaultRest) : nil
@@ -132,13 +131,12 @@ struct SetTargetsSheet: View {
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
-                .padding()
+                .padding(.vertical)
         } else {
             VStack(spacing: 4) {
                 ForEach(actions.filter { $0.placement == .aboveSave }) { action in
                     Button(action.title) { perform(action) }
                         .secondaryPill()
-                        .padding(.horizontal, Theme.margin)
                 }
                 PinnedActionButton("Save") { save() }
                 ForEach(actions.filter { $0.placement == .belowSave }) { action in
@@ -339,17 +337,17 @@ private struct SetTypePicker: View {
                             Text(type.summary).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                         }
                         Spacer()
-                        Image(systemName: type == selected ? "largecircle.fill.circle" : "circle")
-                            .font(AppFont.title())
+                        SelectionMark(isOn: type == selected)
                     }
                     .foregroundStyle(Theme.textPrimary)
                 }
+                .accessibilityAddTraits(type == selected ? .isSelected : [])
             }
             .listStyle(.plain)
             .detailTitle("Set Type")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }
@@ -406,7 +404,7 @@ private struct RIRPicker: View {
             .detailTitle("RIR Targets")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button("Clear", systemImage: "trash") {
@@ -446,7 +444,7 @@ private struct RestPicker: View {
                 }
             }
             .pickerStyle(.wheel)
-            .safeAreaInset(edge: .bottom) {
+            .pinnedActions {
                 PinnedActionButton("Save") {
                     onSave(minutes * 60 + seconds)
                     dismiss()
@@ -455,7 +453,7 @@ private struct RestPicker: View {
             .detailTitle("Rest Timer")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }

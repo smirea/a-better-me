@@ -55,10 +55,10 @@ struct PhotoTab: View {
         .scrollDismissesKeyboard(.interactively)
         .overlay {
             if session.isFindingFoods {
-                ProgressView("Finding foods").padding(20).glassEffect(in: .rect(cornerRadius: Theme.cornerRadius))
+                ProgressView("Finding foods").padding(Theme.margin).glassEffect(in: .rect(cornerRadius: Theme.cornerRadius))
             }
         }
-        .safeAreaInset(edge: .bottom) {
+        .pinnedActions {
             HStack(spacing: 10) {
                 Button("Find Foods", action: findFoods)
                     .primaryPill()
@@ -67,8 +67,6 @@ struct PhotoTab: View {
                     .controlSize(.large)
                     .disabled(session.isFindingFoods)
             }
-            .padding(.horizontal, Theme.margin)
-            .padding(.bottom, 8)
         }
         .photosPicker(isPresented: $choosing, selection: $picked, matching: .images)
         .fullScreenCover(isPresented: $capturing) {

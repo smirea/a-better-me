@@ -170,7 +170,7 @@ struct PlatePlan: Equatable {
     /// "70 lb on both sides + 45 lb bar weight = 185 lb". A target the plates can't reach ends "- missing 5 lb"; one
     /// below the base ends "+ extra 45 lb", as MF showed for 0 lb.
     func sentence(unit: String) -> String {
-        func label(_ value: Double) -> String { "\(SetField.plain(value)) \(unit)" }
+        func label(_ value: Double) -> String { "\(NumberText.plain(value)) \(unit)" }
         let sides = loading.sides == 2 ? "on both sides" : "on one side"
         let base = loading.base == .bar ? "bar weight" : "base weight"
         let start = "\(label(perSide.reduce(0, +))) \(sides) + \(label(loading.baseWeight)) \(base) = \(label(target))"

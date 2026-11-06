@@ -39,10 +39,11 @@ struct CustomizeDashboardView: View {
         .detailTitle("Customize Dashboard")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save", role: .confirm) {
+                Button(role: .confirm) {
                     if let draft { store.updateSettings { $0.dashboard = draft.saved } }
                     dismiss()
                 }
+                .accessibilityLabel("Save")
             }
         }
         .sheet(item: $editing) { section in
@@ -403,9 +404,7 @@ private struct AddRemoveSheet: View {
                 content
             }
             .themedList()
-            .navigationTitle(section.title)
-            .navigationSubtitle("Add or remove tiles")
-            .navigationBarTitleDisplayMode(.inline)
+            .detailTitle(section.title, subtitle: "Add or remove tiles")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm) { dismiss() }

@@ -73,7 +73,7 @@ struct RestTimerSheet: View {
             .detailTitle("Rest Timer")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }
@@ -175,7 +175,7 @@ struct WarmUpSheet: View {
             .detailTitle("Warm Up")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }
@@ -233,7 +233,7 @@ struct NoteSheet: View {
             .detailTitle("Note")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }

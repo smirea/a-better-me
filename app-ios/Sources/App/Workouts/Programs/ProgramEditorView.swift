@@ -83,7 +83,6 @@ private struct ProgramEditorScreen: View {
                 }
             }
             if let day {
-                chips(program, day: day, template: template)
                 if let template {
                     ProgramDayEditor(program: program, template: template, templates: templates, span: $span, reordering: $reordering)
                         .id(template.id)
@@ -95,12 +94,17 @@ private struct ProgramEditorScreen: View {
             }
         }
         .background(Theme.background)
-        .detailTitle(draft == nil ? program.name : "Create Program")
+        .detailTitle(draft == nil ? program.name : "Create Program", subtitle: template.map { gymName($0) })
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
-            Button("Program Settings", systemImage: "slider.horizontal.3") { settingsShown = true }
+            if let day {
+                ToolbarItem { dayMenu(program, day: day, template: template) }
+            }
+            ToolbarItem {
+                Button("Program Settings", systemImage: "slider.horizontal.3") { settingsShown = true }
+            }
         }
-        .safeAreaInset(edge: .bottom) { bottomButtons(program, template: template) }
+        .pinnedActions { bottomButtons(program, template: template) }
         .onChange(of: program.days.map(\.id)) { _, ids in
             if let pendingIndex, ids.indices.contains(pendingIndex) {
                 selection = ids[pendingIndex]
@@ -160,40 +164,29 @@ private struct ProgramEditorScreen: View {
         return program.days.map { day in (day.id, day.templateID.flatMap { names[$0] } ?? "Rest") }
     }
 
-    private func chip(_ title: String, systemImage: String, trailingImage: String? = nil, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Chip(title: title, systemImage: systemImage, trailingImage: trailingImage) }
-            .buttonStyle(.plain)
+    private func gymName(_ template: WorkoutTemplate?) -> String {
+        template?.gymID.flatMap { id in gyms.first { $0.id == id }?.name } ?? "No Gym"
     }
 
-    private func chips(_ program: Program, day: ProgramDay, template: WorkoutTemplate?) -> some View {
+    /// The selected day's actions. They were a row of chips under the day tabs; the gym they led with is the title's
+    /// subtitle now.
+    private func dayMenu(_ program: Program, day: ProgramDay, template: WorkoutTemplate?) -> some View {
         let isRest = template == nil
-        let gymName = template?.gymID.flatMap { id in gyms.first { $0.id == id }?.name } ?? "No Gym"
-        let canRemove = program.days.count > 1
-        return ScrollView(.horizontal) {
-            HStack(spacing: 8) {
-                if isRest {
-                    chip("Remove", systemImage: "minus.circle.fill") { confirming = .remove }.disabled(!canRemove)
+        return Menu("Day Options", systemImage: "ellipsis") {
+            Group {
+                Button("Gym", systemImage: "house") { gymOptionsShown = true }
+                Button("Rename", systemImage: "square.and.pencil") { renaming = true }
+                Button("Re-order Exercises", systemImage: "arrow.up.arrow.down") { reordering = true }
+                Button("Duplicate Day", systemImage: "plus.square.on.square") {
+                    pendingIndex = program.days.count
+                    store.duplicateProgramDay(day.id, in: program.id)
                 }
-                Group {
-                    chip(gymName, systemImage: "house.fill", trailingImage: "chevron.down") { gymOptionsShown = true }
-                        .accessibilityLabel("Gym, \(gymName)")
-                    chip("Rename", systemImage: "square.and.pencil") { renaming = true }
-                    chip("Re-order", systemImage: "arrow.up.arrow.down") { reordering = true }
-                    chip("Duplicate", systemImage: "plus.square.on.square") {
-                        pendingIndex = program.days.count
-                        store.duplicateProgramDay(day.id, in: program.id)
-                    }
-                    chip("Change to Rest", systemImage: "arrow.triangle.swap") { confirming = .changeToRest }
-                }
-                .disabled(isRest)
-                if !isRest {
-                    chip("Remove", systemImage: "minus.circle.fill") { confirming = .remove }.disabled(!canRemove)
-                }
+                Button("Change to Rest Day", systemImage: "arrow.triangle.swap") { confirming = .changeToRest }
             }
-            .padding(.horizontal, Theme.margin)
-            .padding(.vertical, 8)
+            .disabled(isRest)
+            Button("Remove Day", systemImage: "minus.circle", role: .destructive) { confirming = .remove }
+                .disabled(program.days.count <= 1)
         }
-        .scrollIndicators(.hidden)
     }
 
     private var restDay: some View {
@@ -213,13 +206,8 @@ private struct ProgramEditorScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textTertiary) }
                 }
-                HStack {
-                    Text("0 Exercises").font(AppFont.sectionTitle)
-                    Spacer()
+                SectionHeader("0 Exercises") {
                     Button("Add Exercises") { addingToRestDay = true }
-                        .font(AppFont.headline(15))
-                        .underline()
-                        .buttonStyle(.plain)
                 }
             }
             .padding(Theme.margin)
@@ -229,12 +217,8 @@ private struct ProgramEditorScreen: View {
     @ViewBuilder
     private func bottomButtons(_ program: Program, template: WorkoutTemplate?) -> some View {
         if let draft {
-            VStack(spacing: 8) {
-                Button("Save to Library") { draft.save() }
-                    .secondaryPill()
-                    .padding(.horizontal, Theme.margin)
-                PinnedActionButton("Activate Program") { draft.activate() }
-            }
+            Button("Save to Library") { draft.save() }.secondaryPill()
+            PinnedActionButton("Activate Program") { draft.activate() }
         } else if !program.isActive {
             PinnedActionButton("Activate Program") {
                 if program.isArchived { store.setProgramArchived(program.id, false) }
@@ -278,7 +262,7 @@ private struct ProgramEditorGymOptions: View {
                                     .foregroundStyle(Theme.textSecondary)
                             }
                             Spacer()
-                            Image(systemName: gym.id == selected ? "largecircle.fill.circle" : "circle").font(AppFont.title())
+                            SelectionMark(isOn: gym.id == selected)
                         }
                         .foregroundStyle(Theme.textPrimary)
                         .contentShape(Rectangle())
@@ -310,13 +294,12 @@ private struct ProgramEditorGymOptions: View {
                 }
             }
             .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Theme.surface)
+            .themedList()
             .detailTitle("Gym Options")
             .navigationSubtitle("Impacts exercise selection")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }

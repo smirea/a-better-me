@@ -40,13 +40,13 @@ struct RecipeDetailView: View {
             ThemedSection {
                 HStack(spacing: 12) {
                     FoodIcon(food: recipe.snapshot, size: 44)
-                    Text(recipe.name).font(AppFont.title(20))
+                    Text(recipe.name).font(AppFont.sectionTitle)
                 }
                 MacroSummary(amounts: portion.amounts, caption: "Per \(NutritionFormat.serving(portion.serving, of: portion.food))")
                 actions(recipe, portion: portion)
             }
             ThemedSection("Details") {
-                LabeledContent("Makes", value: "\(NutritionFormat.quantity(recipe.servings)) \(recipe.servings == 1 ? "serving" : "servings")")
+                LabeledContent("Makes", value: "\(NumberText.plain(recipe.servings)) \(recipe.servings == 1 ? "serving" : "servings")")
                 if let cookedGrams = recipe.cookedGrams {
                     LabeledContent("Total Weight", value: "\(NutritionFormat.amount(cookedGrams)) g")
                 }
@@ -106,24 +106,6 @@ struct RecipeDetailView: View {
     }
 }
 
-/// An action as MacroFactor's detail pages lay them out: a glass circle over its title.
-struct ActionLabel: View {
-    let title: String
-    let systemImage: String
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Image(systemName: systemImage)
-                .font(.system(size: 16, weight: .semibold))
-                .frame(width: 40, height: 40)
-                .glassEffect(.regular.interactive(), in: .circle)
-            Text(title).font(AppFont.caption(11))
-        }
-        .foregroundStyle(Theme.textPrimary)
-        .frame(maxWidth: .infinity)
-    }
-}
-
 /// The numbered steps.
 private struct StepsSection: View {
     let steps: [String]
@@ -174,10 +156,10 @@ struct RecipePrepareView: View {
             }
             ThemedSection("Ingredients") {
                 Stepper(value: $servings, in: 0.5...100, step: 0.5) {
-                    Text("Instructions for \(NutritionFormat.quantity(servings)) \(servings == 1 ? "serving" : "servings")")
+                    Text("Instructions for \(NumberText.plain(servings)) \(servings == 1 ? "serving" : "servings")")
                         .font(AppFont.rowTitle)
                 }
-                .accessibilityValue("\(NutritionFormat.quantity(servings)) servings")
+                .accessibilityValue("\(NumberText.plain(servings)) servings")
                 ForEach(RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: servings)) { ingredient in
                     FoodRow(food: ingredient.food, serving: ingredient.serving)
                 }

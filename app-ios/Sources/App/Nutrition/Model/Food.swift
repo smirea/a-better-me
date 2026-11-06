@@ -22,7 +22,7 @@ struct Serving: Hashable, Codable, Sendable {
     var servings: Double { measure.servings * quantity / measure.quantity }
 
     /// The same amount in `measure`, at full precision, so switching units back and forth never changes what was
-    /// eaten. Screens round the quantity only when they print it (`NutritionFormat.quantity`).
+    /// eaten. Screens round the quantity only when they print it (`NumberText.plain`).
     func converted(to measure: Measure) -> Serving {
         Serving(measure: measure, quantity: servings * measure.quantity / measure.servings)
     }

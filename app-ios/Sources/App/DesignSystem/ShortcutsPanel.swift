@@ -34,13 +34,15 @@ struct ShortcutsPanel<Item: ShortcutItem, Banner: View>: View {
                         row(item)
                     }
                 }
+                .padding(.horizontal, 16)
+                .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.margin)
             .padding(.bottom, 8)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
         }
         .scrollBounceBehavior(.basedOnSize)
-        .background(Theme.surface)
+        .background(Theme.background)
         .detailTitle("Shortcuts")
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -59,7 +61,7 @@ struct ShortcutsPanel<Item: ShortcutItem, Banner: View>: View {
                 Image(systemName: item.systemImage)
                     .font(.system(size: 17, weight: .semibold))
                     .frame(width: 44, height: 44)
-                    .background(Theme.surfaceRaised, in: .circle)
+                    .background(Theme.surface, in: .circle)
                 Text(item.title).font(AppFont.medium(13))
             }
             .frame(maxWidth: .infinity)
@@ -76,7 +78,7 @@ struct ShortcutsPanel<Item: ShortcutItem, Banner: View>: View {
                 Spacer()
                 Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
             }
-            .padding(.vertical, 16)
+            .padding(.vertical, 14)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

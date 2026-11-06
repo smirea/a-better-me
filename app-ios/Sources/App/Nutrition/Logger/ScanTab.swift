@@ -33,7 +33,7 @@ struct ScanTab: View {
                 }
             }
             if looking {
-                ProgressView("Looking up barcode").padding(20).glassEffect(in: .rect(cornerRadius: Theme.cornerRadius))
+                ProgressView("Looking up barcode").padding(Theme.margin).glassEffect(in: .rect(cornerRadius: Theme.cornerRadius))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -38,14 +38,14 @@ struct EquipmentSheet<Settings: View>: View {
             .detailTitle("Equipment")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button("Equipment Settings", systemImage: "slider.horizontal.3") { showingSettings = true }
                 }
             }
             .navigationDestination(isPresented: $showingSettings) { settings() }
-            .safeAreaInset(edge: .bottom) {
+            .pinnedActions {
                 PinnedActionButton("Done") { dismiss() }
             }
         }
@@ -67,7 +67,7 @@ struct EquipmentSheet<Settings: View>: View {
                     }
                 }
                 Spacer()
-                Image(systemName: isSelected ? "largecircle.fill.circle" : "circle").font(.title3)
+                SelectionMark(isOn: isSelected)
             }
             .foregroundStyle(Theme.textPrimary)
             .padding(14)

@@ -37,7 +37,7 @@ struct NewProgramWizard: View {
             page(.splash)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Close", systemImage: "xmark") { dismiss() }
+                        Button(role: .close) { dismiss() }
                     }
                 }
                 .navigationDestination(for: WizardRoute.self) { route in
@@ -69,23 +69,24 @@ struct NewProgramWizard: View {
     }
 
     private func page(_ step: WizardStep) -> some View {
-        WizardPage(progress: progress(of: step), title: title(of: step), nextTitle: step == .generating ? nil : "Next", nextEnabled: canAdvance(step)) {
-            advance(from: step)
-        } content: {
+        WizardPage(progress: progress(of: step), question: title(of: step)) {
             content(of: step)
-        } footer: {
+        } actions: {
             if step == .muscleFocus {
                 HStack {
-                    Text(NewProgramWizardRules.focusSummary(inputs.muscleFocus)).font(AppFont.medium(14))
+                    Text(NewProgramWizardRules.focusSummary(inputs.muscleFocus)).font(AppFont.chip)
                     Spacer()
                     Button("Reset") { inputs.muscleFocus = [:] }
-                        .font(AppFont.medium(14))
+                        .font(AppFont.chip)
                         .underline()
                         .disabled(inputs.muscleFocus.isEmpty)
                 }
-                .padding(.horizontal, Theme.margin)
+            }
+            if step != .generating {
+                PinnedActionButton("Next") { advance(from: step) }.disabled(!canAdvance(step))
             }
         }
+        .detailTitle("Create Program")
         .navigationBarBackButtonHidden(step == .generating)
     }
 
@@ -144,7 +145,7 @@ struct NewProgramWizard: View {
                     .padding(.top, 80)
                     .accessibilityHidden(true)
                 Text("We will create a personalized training program tailored to your goals. Or, you can import or build your own.")
-                    .font(AppFont.title())
+                    .font(AppFont.sectionTitle)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
@@ -254,7 +255,7 @@ struct NewProgramWizard: View {
         .navigationBarBackButtonHidden()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Close", systemImage: "xmark") { confirmingExit = true }
+                Button(role: .close) { confirmingExit = true }
             }
         }
     }
@@ -272,44 +273,6 @@ private enum WizardRoute: Hashable {
     case gyms
 }
 
-/// One wizard screen: the progress bar, the question, its options, and the pinned Next.
-private struct WizardPage<Content: View, Footer: View>: View {
-    let progress: Double
-    let title: String?
-    let nextTitle: String?
-    let nextEnabled: Bool
-    let onNext: () -> Void
-    @ViewBuilder let content: Content
-    @ViewBuilder let footer: Footer
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if let title {
-                    Text(title).font(AppFont.title(22)).padding(.bottom, 8)
-                }
-                content
-            }
-            .padding(.horizontal, Theme.margin)
-            .padding(.top, 16)
-            .padding(.bottom)
-        }
-        .background(Theme.background)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            ProgressView(value: progress).padding(.horizontal, Theme.margin)
-        }
-        .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 12) {
-                footer
-                if let nextTitle { PinnedActionButton(nextTitle, action: onNext).disabled(!nextEnabled) }
-            }
-            .padding(.top, 8)
-            .background(Theme.background)
-        }
-        .detailTitle("Create Program")
-        .feedback(self)
-    }
-}
 
 
 private struct DaysStepper: View {
@@ -325,7 +288,7 @@ private struct DaysStepper: View {
                     .disabled(days >= NewProgramWizardRules.dayRange.upperBound)
             }
             .font(AppFont.headline(20))
-            Text("times per week").font(AppFont.medium(15))
+            Text("times per week").font(AppFont.rowTitle)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 180)
@@ -414,7 +377,7 @@ private struct KeepSelections: View {
                 ExerciseAssessmentView()
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
-                            Button("Done", systemImage: "checkmark") { assessing = false }
+                            Button("Done", role: .confirm) { assessing = false }
                         }
                     }
             }
@@ -496,9 +459,7 @@ private struct ExperienceSheet: View {
                                     Text(choice.summary).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                                 }
                                 Spacer()
-                                Image(systemName: choice == selected ? "record.circle.fill" : "circle")
-                                    .font(.system(size: 22))
-                                    .foregroundStyle(choice == selected ? Theme.textPrimary : Theme.textTertiary)
+                                SelectionMark(isOn: choice == selected)
                             }
                             .contentShape(Rectangle())
                         }
@@ -507,12 +468,11 @@ private struct ExperienceSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Theme.surface)
+            .themedList()
             .detailTitle("Lifting Experience")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
+                    Button(role: .close) { dismiss() }
                 }
             }
         }

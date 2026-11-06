@@ -30,6 +30,7 @@
 
 # Design
 
+- Follow the design language in `docs/decisions/design.md`. Before and after a UI change, run `./scripts/screen-tour --out <dir>` (pass the `agent-device` path `device_open` prints as `--agent-device` or `AGENT_DEVICE`) and pair the runs with `--compare`; add a new screen's tap path to `scripts/screen-tour.screens.ts`.
 - Design for the owner's real volume, not the first week. Lists that grow with use (weigh-ins, food entries, past workouts, measurements, notes) reach hundreds of rows within a year, so check every screen against the seeded data and look for places where the amount of data hurts: a section that pushes the rest of the screen out of reach, a chart or summary buried under a raw list, a picker or menu with dozens of options, a long horizontal strip, repeated rows that would read better aggregated.
 - A growing list inside a screen with other content is a `TruncatedList`: five and a half rows, the half row faded, and See All pushing a screen with every row. Never render an unbounded list inline. Prefer summarizing (averages, the latest value, a grouped count) over listing when the screen's job is an overview.
 

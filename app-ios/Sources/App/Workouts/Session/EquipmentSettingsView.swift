@@ -39,7 +39,7 @@ struct EquipmentSettingsView: View {
                         }
                     )) {
                         Text("Default (heaviest)").tag(Double?.none)
-                        ForEach(plates.baseWeights, id: \.self) { Text("\(SetField.plain($0)) \(unit.rawValue)").tag(Optional($0)) }
+                        ForEach(plates.baseWeights, id: \.self) { Text("\(NumberText.plain($0)) \(unit.rawValue)").tag(Optional($0)) }
                     }
                     .accessibilityLabel("Bar Weight")
                 }

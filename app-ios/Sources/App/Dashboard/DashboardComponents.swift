@@ -11,49 +11,6 @@ extension Theme {
     static let goalTowards = Color(hex: 0x1F5A3A)
 }
 
-/// A number with its title and unit. Regular stats lead a detail screen's chart; compact ones flank a focus card's
-/// ring or sum.
-struct StatView: View {
-    enum Size { case regular, compact }
-
-    let title: String
-    let value: String
-    var unit: String?
-    var size = Size.regular
-    /// A compact stat's series symbol, tying it to its chart.
-    var symbol: (name: String, color: Color)?
-
-    var body: some View {
-        Group {
-            switch size {
-            case .regular:
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(value).font(AppFont.number())
-                        if let unit { Text(unit).font(AppFont.caption()).foregroundStyle(Theme.textSecondary) }
-                    }
-                }
-            case .compact:
-                VStack(spacing: 2) {
-                    Text(value).font(AppFont.number(19))
-                    Group {
-                        if let symbol {
-                            Label { Text(title) } icon: { Image(systemName: symbol.name).foregroundStyle(symbol.color) }
-                        } else {
-                            Text(title)
-                        }
-                    }
-                    .font(AppFont.rowDetail)
-                    .foregroundStyle(Theme.textSecondary)
-                }
-                .frame(maxWidth: .infinity)
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
 struct ChartLegend: View {
     struct Item {
         var title: String

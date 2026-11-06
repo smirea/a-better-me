@@ -9,7 +9,18 @@ struct NutritionOverview: View {
 
         var id: Self { self }
 
+        /// Short, as the Dashboard's range picker writes them, so the five fit one segmented control.
         var title: String {
+            switch self {
+            case .today: "Day"
+            case .week: "1W"
+            case .month: "1M"
+            case .quarter: "3M"
+            case .year: "1Y"
+            }
+        }
+
+        var accessibilityTitle: String {
             switch self {
             case .today: "Today"
             case .week: "1 Week"
@@ -28,21 +39,23 @@ struct NutritionOverview: View {
     var body: some View {
         OverviewList(day: day, period: period, contributors: period == .today && contributors)
             .id(period)
-            .safeAreaInset(edge: .top) {
-                VStack(spacing: 10) {
-                    Picker("Period", selection: $period) {
-                        ForEach(Period.allCases) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    if period == .today {
-                        Toggle("Contributors", isOn: $contributors).tint(Theme.accent)
-                    }
+            .safeAreaBar(edge: .top) {
+                Picker("Period", selection: $period) {
+                    ForEach(Period.allCases) { Text($0.title).accessibilityLabel($0.accessibilityTitle).tag($0) }
                 }
+                .pickerStyle(.segmented)
                 .padding(.horizontal, Theme.margin)
                 .padding(.bottom, 8)
-                .background(Theme.background)
             }
             .detailTitle("Nutrition Overview")
+            .toolbar {
+                // Contributors are listed for a single day only.
+                ToolbarItem {
+                    Toggle("Contributors", systemImage: "list.bullet.indent", isOn: $contributors)
+                        .toggleStyle(.button)
+                        .disabled(period != .today)
+                }
+            }
         .feedback(self)
     }
 }

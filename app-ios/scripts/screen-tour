@@ -1,0 +1,87 @@
+#!/usr/bin/env bun
+// Screenshots every screen in `screen-tour.screens.ts` on a running simulator, one relaunch per screen so each starts
+// from the same seeded state. Run it before and after a UI change and pair the folders with --compare.
+import { mkdirSync, writeFileSync, existsSync, readdirSync, rmSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { parseArgs } from "node:util";
+import { spawnSync } from "node:child_process";
+import { screens } from "./screen-tour.screens.ts";
+
+const { values } = parseArgs({
+    options: {
+        out: { type: "string" },
+        only: { type: "string" },
+        "agent-device": { type: "string", default: process.env.AGENT_DEVICE },
+        compare: { type: "string", multiple: true },
+        help: { type: "boolean", short: "h" },
+    },
+});
+
+if (values.help) {
+    console.log(`Usage:
+  scripts/screen-tour --out <dir> [--only name,name] [--agent-device <path>]
+  scripts/screen-tour --compare <before-dir> --compare <after-dir> --out <dir>
+
+The first form drives the app with T3's agent-device command (device_open prints its path; AGENT_DEVICE works too)
+and writes <dir>/<screen>.png. The app must be installed and the dev server running, so the seed matches.
+The second writes <dir>/<screen>.png with the before and after shots side by side, for every screen in both.`);
+    process.exit(0);
+}
+
+if (!values.out) throw new Error("--out <dir> is required");
+const out = resolve(values.out);
+mkdirSync(out, { recursive: true });
+
+if (values.compare) {
+    const [before, after] = values.compare.map(dir => resolve(dir));
+    if (!before || !after) throw new Error("--compare takes a before and an after directory");
+    for (const file of readdirSync(after).filter(name => name.endsWith(".png"))) {
+        const left = join(before, file);
+        const sources = existsSync(left) ? [left, join(after, file)] : [join(after, file)];
+        const result = spawnSync("magick", [...sources, "-background", "black", "-gravity", "north", "+append", "-resize", "1000x", join(out, file)], { encoding: "utf8" });
+        if (result.status !== 0) throw new Error(`magick failed for ${file}: ${result.stderr}`);
+    }
+    console.log(`Wrote side-by-side shots to ${out}`);
+    process.exit(0);
+}
+
+const agentDevice = values["agent-device"];
+if (!agentDevice || !existsSync(agentDevice)) throw new Error("Pass --agent-device <path> (from T3's device_open) or set AGENT_DEVICE");
+
+const only = values.only?.split(",");
+const selected = only ? screens.filter(screen => only.includes(screen.name)) : screens;
+const unknown = only?.filter(name => !screens.some(screen => screen.name === name)) ?? [];
+if (unknown.length) throw new Error(`Unknown screens: ${unknown.join(", ")}`);
+
+const scripts = join(out, ".scripts");
+mkdirSync(scripts, { recursive: true });
+const replay = (name: string, lines: string[]) => {
+    const script = join(scripts, `${name}.ad`);
+    writeFileSync(script, lines.join("\n") + "\n");
+    return spawnSync(agentDevice, ["replay", script, "--timeout", "60000"], { encoding: "utf8" });
+};
+
+const failures: string[] = [];
+for (const screen of selected) {
+    // `shot <suffix>` is the tour's own step: a screenshot named after the screen, for screens taller than one viewport.
+    const result = replay(screen.name, [
+        "open com.stefan.a-better-me --relaunch",
+        `wait 'label="Dashboard"' 20000`,
+        ...screen.steps.map(step => (step.startsWith("shot ") ? `screenshot ${join(out, `${screen.name}-${step.slice(5)}.png`)}` : step)),
+        "wait 1200",
+        `screenshot ${join(out, `${screen.name}.png`)}`,
+    ]);
+    if (result.status === 0) console.log(`ok   ${screen.name}`);
+    else {
+        failures.push(screen.name);
+        console.log(`FAIL ${screen.name}\n${(result.stdout + result.stderr).trim().split("\n").slice(-8).join("\n")}`);
+    }
+    // Its own replay, run even when the screen failed partway, so a started workout never leaks into the next screen.
+    if (screen.after) replay(`${screen.name}.after`, screen.after);
+}
+rmSync(scripts, { recursive: true, force: true });
+if (failures.length) {
+    console.log(`\n${failures.length} of ${selected.length} failed: ${failures.join(",")}`);
+    process.exit(1);
+}
+console.log(`\n${selected.length} screens in ${out}`);

@@ -22,21 +22,10 @@ struct AddToPlateButton: View {
     @State private var showsCheck = false
 
     var body: some View {
-        Button {
+        RowActionButton(title: "Add \(food.name) to plate", systemImage: showsCheck ? "checkmark" : "plus", isOn: showsCheck) {
             added += 1
             add()
-        } label: {
-            Image(systemName: showsCheck ? "checkmark" : "plus")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(showsCheck ? Theme.onPrimary : Theme.textPrimary)
-                .contentTransition(.symbolEffect(.replace))
-                .frame(width: 26, height: 26)
-                .background(showsCheck ? Theme.textPrimary : Theme.surfaceRaised, in: .circle)
-                .frame(width: 44, height: 44)
-                .contentShape(.rect)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Add \(food.name) to plate")
         .accessibilityValue(showsCheck ? "Added" : "")
         .sensoryFeedback(.success, trigger: added)
         .task(id: added) {

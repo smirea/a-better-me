@@ -67,9 +67,9 @@ struct QuantityTextTests {
     }
 
     @Test func formatsWithAPointAndTwoDecimals() {
-        #expect(NutritionFormat.quantity(1) == "1")
-        #expect(NutritionFormat.quantity(1.5) == "1.5")
-        #expect(NutritionFormat.quantity(1234.567) == "1234.57")
+        #expect(NumberText.plain(1) == "1")
+        #expect(NumberText.plain(1.5) == "1.5")
+        #expect(NumberText.plain(1234.567) == "1234.57")
     }
 }
 

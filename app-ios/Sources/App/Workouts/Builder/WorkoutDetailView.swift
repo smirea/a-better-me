@@ -72,7 +72,7 @@ struct WorkoutDetailView: View {
                     Button("Delete Workout", systemImage: "trash", role: .destructive) { confirmingDelete = true }
                 }
             }
-            .safeAreaInset(edge: .bottom) {
+            .pinnedActions {
                 PinnedActionButton("Start Workout") {
                     presenter.startOrResume({ WorkoutSession(startingFrom: template) }, in: store)
                 }

@@ -11,8 +11,6 @@ struct WorkoutTab: View {
     @Observe(Program.archived) private var archivedPrograms
     @Observe(Program.active) private var activeProgram
     @Environment(SessionHistory.self) private var history
-    @Environment(LocalStore.self) private var store
-    @Environment(LiveWorkoutPresenter.self) private var presenter
     @Observe(AppSettings.current) private var settings
     @State private var showingCalendar = false
     @State private var creatingWorkout = false
@@ -95,20 +93,12 @@ struct WorkoutTab: View {
             Toggle("Calendar", systemImage: "calendar", isOn: $showingCalendar.animation())
                 .toggleStyle(.button)
         }
-        ToolbarSpacer(.fixed)
         ToolbarItem {
-            Menu("Create", systemImage: "plus") {
-                Button("New Section", systemImage: "rectangle.split.1x2") { creatingSection = true }
-                Button("New Program", systemImage: "point.topleft.down.to.point.bottomright.curvepath") { creatingProgram = true }
+            Menu("Workout Tab Options", systemImage: "ellipsis") {
+                // The "+" sheet also creates these, but its shortcuts can be hidden, so the tab keeps a way in.
                 Button("New Workout", systemImage: "dumbbell") { creatingWorkout = true }
-            }
-        }
-        ToolbarSpacer(.fixed)
-        ToolbarItem {
-            Menu("More", systemImage: "ellipsis") {
-                Button("Start Empty Workout", systemImage: "arrow.right.to.line") {
-                    presenter.startOrResume({ .empty }, in: store)
-                }
+                Button("New Program", systemImage: "point.topleft.down.to.point.bottomright.curvepath") { creatingProgram = true }
+                Button("New Section", systemImage: "rectangle.split.1x2") { creatingSection = true }
                 Button("Workout History", systemImage: "list.bullet.rectangle") { path.append(WorkoutTabRoute.history) }
                 Button("Customize Sections", systemImage: "rectangle.3.group") { path.append(WorkoutTabRoute.customizeSections) }
                 Button { path.append(WorkoutTabRoute.archive) } label: {
@@ -127,16 +117,9 @@ struct WorkoutTab: View {
         case .library:
             library(templates: byID)
         case .yourSections:
+            // No sections yet draws nothing: Workout Options holds New Section, and Customize Sections explains them.
             let custom = settings.workout.sections.custom
-            if custom.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    SectionHeader("Your Sections")
-                    NoSectionsLabel()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .card()
-                }
-                .feedback("Your Sections")
-            } else {
+            if !custom.isEmpty {
                 VStack(alignment: .leading, spacing: 28) {
                     ForEach(custom) { CustomSectionView(section: $0, library: templates) }
                 }

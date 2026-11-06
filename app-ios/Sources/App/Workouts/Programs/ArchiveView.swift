@@ -11,12 +11,6 @@ struct ArchiveView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Archive").font(AppFont.sectionTitle)
-                if programs.isEmpty, workouts.isEmpty {
-                    Text("Programs and workouts you archive appear here.")
-                        .font(AppFont.rowDetail)
-                        .foregroundStyle(Theme.textSecondary)
-                }
                 let byID = Dictionary(templates.map { ($0.id, $0) }) { first, _ in first }
                 ForEach(programs) { program in
                     ProgramCard(program: program, templates: byID, accessory: .chevron)
@@ -26,8 +20,14 @@ struct ArchiveView: View {
                         .buttonStyle(.plain)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Theme.margin)
             .padding(.bottom)
+        }
+        .overlay {
+            if programs.isEmpty, workouts.isEmpty {
+                ContentUnavailableView("Nothing Archived", systemImage: "archivebox", description: Text("Programs and workouts you archive appear here."))
+            }
         }
         .background(Theme.background)
         .detailTitle("Workout Archive")

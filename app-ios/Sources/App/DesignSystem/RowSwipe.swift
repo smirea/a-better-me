@@ -77,7 +77,7 @@ private struct RowSwipe: ViewModifier {
                 } label: {
                     Image(systemName: action.systemImage)
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(action.tint == Theme.surfaceRaised ? Theme.textPrimary : .white)
+                        .foregroundStyle(Theme.textPrimary)
                         .frame(width: 44, height: 44)
                         .background(action.tint, in: .circle)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)

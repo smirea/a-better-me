@@ -128,7 +128,7 @@ private struct SectionWorkoutsSheet: View {
                             HStack(spacing: 12) {
                                 Text(template.name).font(AppFont.rowTitle)
                                 Spacer()
-                                Image(systemName: isFiled ? "checkmark.square.fill" : "square").font(.system(size: 20))
+                                SelectionMark(isOn: isFiled, style: .check)
                             }
                             .foregroundStyle(Theme.textPrimary)
                             .contentShape(Rectangle())
@@ -138,12 +138,11 @@ private struct SectionWorkoutsSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Theme.surface)
+            .themedList()
             .detailTitle("Add Workout")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done", role: .confirm) { dismiss() }
                 }
             }
         }

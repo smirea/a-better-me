@@ -139,7 +139,7 @@ struct CustomExerciseWizard: View {
             step(.build)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Close", systemImage: "xmark") { dismiss() }
+                        Button(role: .close) { dismiss() }
                     }
                 }
                 .navigationDestination(for: Step.self) { step($0) }
@@ -148,41 +148,27 @@ struct CustomExerciseWizard: View {
     }
 
     private func step(_ step: Step) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                Text(title(step)).font(AppFont.title(24))
-                switch step {
-                case .build: BuildStep(draft: $draft)
-                case .muscles: MuscleStep(draft: $draft)
-                case .equipment: EquipmentStep(draft: $draft)
-                case .finalDetails: FinalDetailsStep(draft: $draft)
-                case .review: ReviewStep(draft: draft)
-                }
+        WizardPage(progress: Double(step.rawValue + 1) / Double(Step.allCases.count), question: title(step)) {
+            switch step {
+            case .build: BuildStep(draft: $draft)
+            case .muscles: MuscleStep(draft: $draft)
+            case .equipment: EquipmentStep(draft: $draft)
+            case .finalDetails: FinalDetailsStep(draft: $draft)
+            case .review: ReviewStep(draft: draft)
             }
-            .padding(Theme.margin)
+        } actions: {
+            if step == .review {
+                if let onCreateAndAdd {
+                    Button("Create & Add") { onCreateAndAdd(create()) }.secondaryPill()
+                }
+                Button("Create") { _ = create() }.primaryPill()
+            } else {
+                Button("Next") { path.append(Step(rawValue: step.rawValue + 1)!) }
+                    .primaryPill()
+                    .disabled(!canAdvance(step))
+            }
         }
-        .scrollDismissesKeyboard(.interactively)
-        .background(Theme.background)
         .detailTitle("Create Custom Exercise")
-        .safeAreaBar(edge: .top) {
-            ProgressView(value: Double(step.rawValue + 1), total: Double(Step.allCases.count))
-                .padding(.horizontal, Theme.margin)
-        }
-        .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 10) {
-                if step == .review {
-                    if let onCreateAndAdd {
-                        Button("Create & Add") { onCreateAndAdd(create()) }.secondaryPill()
-                    }
-                    Button("Create") { _ = create() }.primaryPill()
-                } else {
-                    Button("Next") { path.append(Step(rawValue: step.rawValue + 1)!) }
-                        .primaryPill()
-                        .disabled(!canAdvance(step))
-                }
-            }
-            .padding(.horizontal, Theme.margin)
-        }
     }
 
     private func title(_ step: Step) -> String {
@@ -219,7 +205,7 @@ private struct FieldLabel: View {
 
     var body: some View {
         HStack {
-            Text(title).font(AppFont.medium(14))
+            Text(title).font(AppFont.chip)
             Spacer()
             if let trailing { Text(trailing).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary) }
         }
@@ -320,7 +306,7 @@ private struct MuscleStep: View {
                 Spacer()
                 Button("Reset") { draft.muscles = [:] }.underline().disabled(draft.muscles.isEmpty)
             }
-            .font(AppFont.medium(14))
+            .font(AppFont.chip)
             .foregroundStyle(Theme.textPrimary)
         }
         .feedback(self)
@@ -351,7 +337,7 @@ private struct MuscleStep: View {
                                             .offset(x: 4, y: 4)
                                     }
                                 }
-                            Text(muscle.displayName).font(AppFont.caption(12)).foregroundStyle(Theme.textPrimary)
+                            Text(muscle.displayName).font(AppFont.rowDetail).foregroundStyle(Theme.textPrimary)
                         }
                     }
                     .buttonStyle(.plain)
@@ -583,7 +569,7 @@ private struct JointActionPicker: View {
             .detailTitle(title)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done", role: .confirm) { dismiss() }
                 }
             }
         }
@@ -609,7 +595,7 @@ private struct DescriptionEditor: View {
                 .detailTitle("Description")
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
+                        Button("Done", role: .confirm) { dismiss() }
                     }
                 }
         }
@@ -671,7 +657,7 @@ private struct ReviewStep: View {
     private func rating(_ title: String, _ value: Int?) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(AppFont.medium(14))
+                Text(title).font(AppFont.chip)
                 Text(value.map { "\($0)/5" } ?? "None").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
@@ -681,7 +667,7 @@ private struct ReviewStep: View {
 
     private func summary(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(AppFont.medium(14))
+            Text(title).font(AppFont.chip)
             Text(value)
                 .font(AppFont.body(15))
                 .lineLimit(6)
