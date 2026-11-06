@@ -19,6 +19,20 @@ struct NutrientID: RawRepresentable, Hashable, Codable, CodingKeyRepresentable, 
 
     /// Calories, then protein, fat, and carbs: the order every summary, header, and macro line uses.
     static let macros: [NutrientID] = [.energy, .protein, .fat, .carbs]
+    /// What a column of the Food Log's summary can show (`NutritionSettings.summaryNutrients`).
+    static let summaryChoices: [NutrientID] = [.energy, .protein, .fat, .carbs, .fiber, .netCarbs]
+
+    /// A summary column's letters. Fat is "Fa" so it never reads as fiber's "Fb"; calories draw the flame instead.
+    var columnLetters: String {
+        switch self {
+        case .protein: "P"
+        case .fat: "Fa"
+        case .carbs: "C"
+        case .fiber: "Fb"
+        case .netCarbs: "Nc"
+        default: NutrientRegistry.nutrient(self)?.short ?? rawValue
+        }
+    }
 }
 
 /// Sparse nutrient amounts in the registry's units (energy always kcal). A missing id means not reported, which a total
@@ -60,6 +74,9 @@ struct NutrientRange: Hashable, Codable, Sendable {
     var floor: Double?
     var target: Double?
     var ceiling: Double?
+
+    /// What a bar fills against: the target, else the floor, else the ceiling, as the widgets measure.
+    var goal: Double? { target ?? floor ?? ceiling }
 }
 
 /// One entry of the bundled registry, `Resources/Nutrition/nutrients.json`.

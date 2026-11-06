@@ -106,8 +106,9 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     var standardFloorKcal = 1200
     /// Remaining amounts go negative past a target instead of stopping at zero.
     var showOverages = true
-    /// Shown first, in this order, on the Dashboard and in food details.
-    var pinnedNutrients: [NutrientID] = [.energy, .protein, .fat, .carbs]
+    /// The Food Log summary's four columns in order, which the logger's banner and Ramble draw too and a new widget's
+    /// empty slots take. Each is one of `NutrientID.summaryChoices`.
+    var summaryNutrients = NutrientID.macros
     var hideAdditionalNutrients = false
     var searchBranded = true
     /// Measure names pinned to the front of the serving picker, at most two weights and two volumes.

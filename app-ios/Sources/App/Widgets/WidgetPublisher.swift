@@ -135,7 +135,7 @@ final class WidgetPublisher {
         }
         return NutritionSnapshot(
             nutrients: nutrients.map { NutritionSnapshot.Nutrient(id: $0.id.rawValue, name: $0.name, short: $0.short, unit: $0.unit.rawValue, tint: $0.tint) },
-            pinned: settings.nutrition.pinnedNutrients.filter { !hidden.contains($0) || NutrientID.macros.contains($0) }.map(\.rawValue),
+            pinned: settings.nutrition.summaryNutrients.filter { !hidden.contains($0) || NutrientID.macros.contains($0) }.map(\.rawValue),
             showOverages: settings.nutrition.showOverages,
             days: days
         )
