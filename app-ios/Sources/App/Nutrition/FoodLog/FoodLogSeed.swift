@@ -48,6 +48,10 @@ enum FoodLogSeed {
         var fasted = NutritionDay(id: today.adding(days: -3))
         fasted.status = .fasted
         try LocalStore.put(fasted, in: db)
+        var edited = NutritionDay(id: today.adding(days: -1))
+        edited.status = .partial
+        edited.override = [.energy: 2350, .protein: 160]
+        try LocalStore.put(edited, in: db)
         var note = FoodLogNote(day: today, minute: 9 * 60 + 10, title: "Felt hungry before lunch")
         note.id = DevSeed.id("note")
         note.body = "Try a bigger breakfast tomorrow."

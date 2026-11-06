@@ -140,9 +140,6 @@ private struct DaySummary: View {
         let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day)
         let lines = FoodLog.summary(row.totals(entries), target: target, showOverages: settings.nutrition.showOverages)
         VStack(spacing: 4) {
-            if row.status != .none || row.override != nil {
-                DayStatusBadges(row: row)
-            }
             Group {
                 if target == nil {
                     MacroTotalsBars(lines: lines, page: .eaten)
@@ -179,28 +176,10 @@ private struct DaySummary: View {
             }
         }
         .padding(.horizontal, Theme.margin)
+        // Day Options sets the status, not this line: the inline large title takes no title menu, and a tappable
+        // `.largeSubtitle` item gets no width to truncate in, so it ran under the toolbar on other days.
+        .navigationSubtitle([row.status == .none ? nil : row.status.title, row.override == nil ? nil : "Edited totals"].compactMap(\.self).joined(separator: " · "))
         .feedback(self)
-    }
-}
-
-private struct DayStatusBadges: View {
-    let row: NutritionDay
-
-    var body: some View {
-        HStack(spacing: 6) {
-            if row.status != .none { badge(row.status.title, systemImage: row.status.symbol) }
-            if row.override != nil { badge("Edited totals", systemImage: "pencil") }
-            Spacer()
-        }
-    }
-
-    private func badge(_ title: String, systemImage: String) -> some View {
-        Label(title, systemImage: systemImage)
-            .font(AppFont.rowDetail)
-            .foregroundStyle(Theme.textSecondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(Theme.surfaceRaised, in: Capsule())
     }
 }
 
