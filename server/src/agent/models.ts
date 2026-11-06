@@ -884,7 +884,14 @@ const NutritionSettingsPatch = z
 			.partial(),
 		standardFloorKcal: z.int().min(0).meta({ description: "The coached program's standard calorie floor." }),
 		showOverages: z.boolean(),
-		pinnedNutrients: z.array(nutrientID),
+		summaryNutrients: z
+			.array(z.enum(['k', 'p', 'f', 'c', '291', 'nc']))
+			.length(4)
+			.refine(ids => new Set(ids).size === ids.length, { message: 'Each column shows a different nutrient.' })
+			.meta({
+				description:
+					"The Food Log summary's four columns in order (`291` is fiber, `nc` net carbs). The logger's banner draws them too, and a new widget's empty slots take them.",
+			}),
 		hideAdditionalNutrients: z.boolean(),
 		searchBranded: z.boolean().meta({ description: 'Include Open Food Facts branded foods in search.' }),
 		favoriteMeasures: z.array(z.string()),

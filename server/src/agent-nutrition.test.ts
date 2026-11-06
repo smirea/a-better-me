@@ -279,6 +279,15 @@ describe('nutrition agent API', () => {
 		expect(settings.nutrition).toEqual({ checkInWeekday: 3, timeline: { firstHour: 6, lastHour: 22 } });
 		expect(settings.profile).toEqual({ heightCm: 180, birthDate: '1990-01-31' });
 		expect((await status('PATCH', '/settings', { nutrition: { checkInWeekday: 8 } })).status).toBe(400);
+		const columns = await ok('PATCH', '/settings', { nutrition: { summaryNutrients: ['k', 'nc', 'f', '291'] } });
+		expect(columns.nutrition.summaryNutrients).toEqual(['k', 'nc', 'f', '291']);
+		expect((await status('PATCH', '/settings', { nutrition: { summaryNutrients: ['k', 'p', 'p', 'c'] } })).status).toBe(
+			400,
+		);
+		expect(
+			(await status('PATCH', '/settings', { nutrition: { summaryNutrients: ['k', 'p', 'f', '301'] } })).status,
+		).toBe(400);
+		await ok('PATCH', '/settings', { nutrition: { summaryNutrients: ['k', 'p', 'f', 'c'] } });
 
 		await ok('PATCH', '/settings', { nutrition: { standardFloorKcal: 1300, logger: { timeSelection: 'timePad' } } });
 		const later = await ok('PATCH', '/settings', {
@@ -291,6 +300,7 @@ describe('nutrition agent API', () => {
 		expect(later.nutrition).toEqual({
 			checkInWeekday: 3,
 			timeline: { firstHour: 6, lastHour: 22 },
+			summaryNutrients: ['k', 'p', 'f', 'c'],
 			standardFloorKcal: 1300,
 			logger: { timeSelection: 'timePad', optimization: 'context' },
 			coachingModules: { fasting: true },
