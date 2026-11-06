@@ -2,6 +2,7 @@
 // Runs the AppTests Swift Testing suites on this worktree's simulator: waits for room on the Mac, boots it, builds,
 // and installs the test host itself before xcodebuild launches it (see the Live Activity note below).
 import { spawnSync } from "node:child_process";
+import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { withBuildLock } from "./build-lock.ts";
 import { refreshOwnPackages } from "./own-packages.ts";
@@ -12,18 +13,21 @@ const argv = Bun.argv.slice(2);
 const split = argv.includes("--") ? argv.indexOf("--") : argv.length;
 const passthrough = argv.slice(split + 1);
 let target: string | undefined;
+let keep = false;
 const suites: string[] = [];
 for (let i = 0; i < split; i++) {
     const arg = argv[i]!;
     if (arg === "-h" || arg === "--help") {
-        console.log(`Usage: scripts/test [-t <udid>] [Suite | Target/Suite/test ...] [-- xcodebuild arguments]
+        console.log(`Usage: scripts/test [-t <udid>] [--keep] [Suite | Target/Suite/test ...] [-- xcodebuild arguments]
 
 Runs AppTests on the worktree's simulator (\`agent-simulator udid\`), or -t's. A bare name is an AppTests suite, so
 \`scripts/test LoadingCacheTests\` runs -only-testing:AppTests/LoadingCacheTests; no names run every suite. Exits 3
-when the Mac stayed too busy to boot: rerun. Ends with the pass and fail counts and the result bundle's path.`);
+when the Mac stayed too busy to boot: rerun. Ends with the pass and fail counts and the result bundle's path. A
+simulator this booted shuts down when it ends; --keep leaves it running for \`scripts/run\` or the device tools.`);
         process.exit(0);
     }
     if (arg === "-t" || arg === "--target") target = argv[++i];
+    else if (arg === "--keep") keep = true;
     else if (arg.startsWith("-")) throw new Error(`Unknown option ${arg}. Pass xcodebuild arguments after --.`);
     else suites.push(arg);
 }
@@ -40,10 +44,27 @@ function appProcess(udid: string) {
     return jobs.split("\n").find(line => line.includes("UIKitApplication:com.stefan.a-better-me["))?.split("\t")[0];
 }
 
+// xcodebuild skips a name it doesn't know, so a mistyped suite beside real ones passed without running.
+const known = new Set(readdirSync(join(root, "Tests"), { recursive: true }).map(String).filter(file => file.endsWith(".swift"))
+    .flatMap(file => [...readFileSync(join(root, "Tests", file), "utf8").matchAll(/\b(?:struct|class|enum|actor) (\w+Tests)\b/g)].map(match => match[1]!)));
+for (const suite of suites) {
+    const [testTarget, name] = suite.includes("/") ? suite.split("/") : ["AppTests", suite];
+    if (testTarget !== "AppTests" || known.has(name!)) continue;
+    const prefix = (other: string) => { let n = 0; while (n < other.length && other[n] === name![n]) n++; return n; };
+    const near = [...known].sort((a, b) => prefix(b) - prefix(a)).slice(0, 5);
+    console.error(`No AppTests suite named ${name}. Closest: ${near.join(", ")}. Suites are the *Tests types under app-ios/Tests.`);
+    process.exit(2);
+}
+
 const simulator = agentCommand("agent-simulator");
 const udid = target ?? sh([simulator, "udid"], true);
 sh([simulator, "claim", udid]);
 sh([simulator, "wait", udid]);
+const devices = JSON.parse(sh(["xcrun", "simctl", "list", "devices", "--json"], true)).devices as Record<string, { udid: string; state: string }[]>;
+const wasBooted = Object.values(devices).flat().some(device => device.udid === udid && device.state === "Booted");
+// A simulator left booted after a test run stayed up for the rest of a job, about half an hour, while siblings waited
+// for room to boot their own.
+if (!wasBooted && !keep) process.on("exit", () => spawnSync("xcrun", ["simctl", "shutdown", udid], { stdio: "ignore" }));
 sh(["xcrun", "simctl", "bootstatus", udid, "-b"], true);
 
 const only = suites.map(suite => `-only-testing:${suite.includes("/") ? suite : `AppTests/${suite}`}`);
