@@ -3,14 +3,9 @@ import Foundation
 /// Recipe and measure arithmetic. `Recipe.nutrition` owns the per-serving amounts; these add the weights, per-gram
 /// amounts, and scaling the editor and Prepare show.
 enum RecipeMath {
-    /// What `serving` of `food` weighs, when the food's base serving has a weight.
-    static func grams(_ serving: Serving, of food: FoodSnapshot) -> Double? {
-        food.nutrition.baseGrams.map { serving.servings * $0 }
-    }
-
     /// MacroFactor's "Weight of ingredients": the sum over the ingredients whose weight is known.
     static func ingredientGrams(_ ingredients: [RecipeIngredient]) -> Double {
-        ingredients.reduce(0) { $0 + (grams($1.serving, of: $1.food) ?? 0) }
+        ingredients.reduce(0) { $0 + ($1.food.nutrition.grams($1.serving) ?? 0) }
     }
 
     /// Everything the recipe makes, before dividing into servings.

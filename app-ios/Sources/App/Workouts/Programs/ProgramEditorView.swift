@@ -82,7 +82,7 @@ private struct ProgramEditorScreen: View {
                     store.addRestDay(to: program.id)
                 }
             }
-            if let day {
+            if day != nil {
                 if let template {
                     ProgramDayEditor(program: program, template: template, templates: templates, span: $span, reordering: $reordering)
                         .id(template.id)

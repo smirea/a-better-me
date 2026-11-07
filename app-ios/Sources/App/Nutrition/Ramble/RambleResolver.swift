@@ -256,13 +256,12 @@ enum RambleServing {
     private static let grams: [String: (measure: String, factor: Double)] = [
         "g": ("g", 1), "gram": ("g", 1), "kg": ("g", 1000), "oz": ("oz", 1), "ounce": ("oz", 1), "lb": ("lb", 1), "pound": ("lb", 1),
     ]
-    private static let gramsPer: [String: Double] = ["g": 1, "oz": 28.349523125, "lb": 453.59237]
     /// Milliliters per unit, and the words a food's own measure may start with.
     private static let volumes: [String: (milliliters: Double, words: [String])] = [
         "ml": (1, ["ml", "milliliter"]),
         "l": (1000, ["l", "liter", "litre"]),
-        "fl oz": (29.5735295625, ["fl oz"]),
-        "cup": (236.5882365, ["cup"]),
+        "fl oz": (SizeUnit.flOz.size, ["fl oz"]),
+        "cup": (SizeUnit.cup.size, ["cup"]),
         "tbsp": (14.78676478125, ["tbsp", "tablespoon"]),
         "tsp": (4.92892159375, ["tsp", "teaspoon"]),
     ]
@@ -271,7 +270,7 @@ enum RambleServing {
     static func choices(_ current: Serving, of nutrition: FoodNutrition) -> [Serving] {
         var all = [0.5, 1, 1.5, 2].map { Serving(measure: current.measure, quantity: current.quantity * $0) }
         all += nutrition.measures.map { Serving(measure: $0, quantity: $0.quantity) }
-        if let gram = nutrition.allMeasures.first(where: { $0.name == "g" }) { all.append(Serving(measure: gram, quantity: 100)) }
+        if let gram = nutrition.allMeasures.first(where: { $0.name == SizeUnit.g.rawValue }) { all.append(Serving(measure: gram, quantity: 100)) }
         var seen = Set<String>()
         return all.filter { seen.insert(NutritionFormat.serving($0)).inserted }
     }
@@ -286,7 +285,7 @@ enum RambleServing {
             if let measure = all.first(where: { $0.name == weight.measure }) { return Serving(measure: measure, quantity: amount * weight.factor) }
             // Water's density stands in for a food measured only by volume (milk per 100 mL): 200 g is 200 mL, where the
             // latest serving it fell back to was a whole carton.
-            guard let milliliter = all.first(where: { $0.name == "mL" }), let perUnit = gramsPer[weight.measure] else { return fallback }
+            guard let milliliter = all.first(where: { $0.name == SizeUnit.mL.rawValue }), let perUnit = SizeUnit(rawValue: weight.measure)?.size else { return fallback }
             return Serving(measure: milliliter, quantity: (amount * weight.factor * perUnit).rounded())
         }
         if let volume = volumes[unit] {
@@ -301,7 +300,7 @@ enum RambleServing {
             }
             // Water's density stands in for a food that is only weighed (chia seeds per 100 g): 2 tbsp is 30 g, where
             // two of its 100 g servings would be 200 g.
-            if let gram = all.first(where: { $0.name == "g" }) { return Serving(measure: gram, quantity: milliliters.rounded()) }
+            if let gram = all.first(where: { $0.name == SizeUnit.g.rawValue }) { return Serving(measure: gram, quantity: milliliters.rounded()) }
             return defaultServing(nutrition, count: amount)
         }
         let word = unit.hasSuffix("s") && unit.count > 3 ? String(unit.dropLast()) : unit
@@ -313,7 +312,7 @@ enum RambleServing {
 
     /// A volume measure of the food and its milliliters per unit of its quantity.
     private static func volumeMeasure(_ measures: [Measure]) -> (Measure, Double)? {
-        if let measure = measures.first(where: { $0.name == "mL" }) { return (measure, 1) }
+        if let measure = measures.first(where: { $0.name == SizeUnit.mL.rawValue }) { return (measure, 1) }
         for volume in volumes.values.sorted(by: { $0.milliliters > $1.milliliters }) {
             if let measure = named(measures, volume.words) { return (measure, volume.milliliters) }
         }

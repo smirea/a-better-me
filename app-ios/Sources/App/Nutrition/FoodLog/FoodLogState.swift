@@ -6,13 +6,11 @@ import SwiftUI
 /// What the logger sheet opens with. Every add affordance on the Food Log (the search field, its barcode and Your
 /// Foods buttons, an hour's +) builds one, and `FoodLogTab` presents the logger for it.
 struct LogFoodRequest: Identifiable, Hashable {
-    enum Start: Hashable { case search, barcode, library }
-
     let id = UUID()
     var day: CalendarDay
     /// The hour's minute when an hour's + asked; nil logs at the current time.
     var minute: Int?
-    var start = Start.search
+    var start = LoggerTab.search
 }
 
 /// The Food Log's screen state, shared by the header, the day pages, and the bottom bars. Data stays in the store;
@@ -159,7 +157,7 @@ final class FoodLogState {
         pending = nil
     }
 
-    func requestLog(minute: Int? = nil, start: LogFoodRequest.Start = .search) {
+    func requestLog(minute: Int? = nil, start: LoggerTab = .search) {
         logRequest = LogFoodRequest(day: day, minute: minute, start: start)
     }
 }

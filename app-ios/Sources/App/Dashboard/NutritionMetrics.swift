@@ -115,9 +115,8 @@ enum NutritionMetrics {
 
         func target(_ id: NutrientID) -> Double? { target?.amount(id) }
 
-        /// Stops at zero past the target unless overages show.
         func remaining(_ id: NutrientID, overages: Bool) -> Double? {
-            target(id).map { overages ? $0 - consumed(id) : max($0 - consumed(id), 0) }
+            target(id).map { FoodLog.remaining(consumed: consumed(id), target: $0, showOverages: overages) }
         }
     }
 

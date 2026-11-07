@@ -24,6 +24,20 @@ enum WorkoutMetrics {
         for muscle in exercise.secondaryMuscles { add(muscle, count * 0.5) }
     }
 
+    /// How much of an exercise's work a muscle gets: all of it for a primary muscle, half for a secondary, as in MF and
+    /// as `forEachMuscleSet` counts sets.
+    static func share(of muscle: Muscle, in exercise: Exercise) -> Double {
+        exercise.primaryMuscles.contains(muscle) ? 1 : exercise.secondaryMuscles.contains(muscle) ? 0.5 : 0
+    }
+
+    /// The logged volume of `items`, warm-ups included, as the Workout Complete summary counts it.
+    static func volumeKg(of items: [BlockExercise], catalog: (ExerciseID) -> Exercise?) -> Double {
+        items.reduce(0) { total, item in
+            guard let exercise = catalog(item.exerciseID) else { return total }
+            return total + item.sets.filter(\.isCompleted).reduce(0) { $0 + volumeKg(of: $1, exercise: exercise) }
+        }
+    }
+
     /// Weight x reps over a set and its sub-rows, doubled for per-side metrics. Warm-ups count, as in MF's summary.
     /// Assistance weight is help, not load, so assisted exercises have no volume rather than one that grows as they get easier.
     static func volumeKg(of set: WorkoutSet, exercise: Exercise) -> Double {

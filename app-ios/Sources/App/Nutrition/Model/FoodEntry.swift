@@ -84,3 +84,8 @@ struct FoodFavorite: SyncedRecord {
         container["created_at"] = Instant.text(createdAt)
     }
 }
+
+extension [FoodEntry] {
+    /// The entries' sum, with net carbs as `NutrientAmounts +` carries them.
+    var totals: NutrientAmounts { reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts } }
+}

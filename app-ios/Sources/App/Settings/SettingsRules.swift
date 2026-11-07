@@ -28,8 +28,8 @@ enum SettingsRules {
         return "\(twelve) \(hour < 12 ? "AM" : "PM")"
     }
 
-    static let weightMeasures = ["g", "oz", "lb"]
-    static let volumeMeasures = ["mL", "cup", "tbsp", "tsp", "fl oz"]
+    static let weightMeasures = SizeUnit.allCases.filter { !$0.isVolume }.map(\.rawValue)
+    static let volumeMeasures = SizeUnit.allCases.filter(\.isVolume).map(\.rawValue)
     /// MacroFactor pins at most two weights and two volumes to the front of the serving picker.
     static let favoritesPerCategory = 2
 

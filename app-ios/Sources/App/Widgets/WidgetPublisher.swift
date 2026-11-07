@@ -4,7 +4,7 @@ import UIKit
 import WidgetKit
 
 /// Keeps the widgets' snapshots current. One observation over the log, the plans, the goals, and the settings rebuilds
-/// the nutrition snapshot off the main thread; the steps snapshot joins Health's days, which `HealthData` hands over,
+/// the nutrition snapshot off the main thread; the steps snapshot joins Health's days, read from `HealthData`,
 /// with the imported days and the goal. A changed snapshot is written to the app group and reloads its widgets.
 @MainActor
 final class WidgetPublisher {
@@ -23,10 +23,11 @@ final class WidgetPublisher {
     private var writing: Task<Void, Never>?
     private var workoutReloads: Task<Void, Never>?
 
-    func start(store: LocalStore) {
+    func start(store: LocalStore, health: HealthData) {
         guard self.store == nil else { return }
         self.store = store
         observe()
+        trackHealth(health)
         // The snapshot starts on the day it was read, and a new day changes no table, so each activation reads again.
         activation = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.observe() }
@@ -70,8 +71,10 @@ final class WidgetPublisher {
         )
     }
 
-    func update(healthSteps: [DatedValue]) {
-        self.healthSteps = healthSteps
+    private func trackHealth(_ health: HealthData) {
+        healthSteps = withObservationTracking { health.hasRead ? health.steps : nil } onChange: { [weak self] in
+            Task { @MainActor in self?.trackHealth(health) }
+        }
         publishSteps()
     }
 
@@ -109,7 +112,7 @@ final class WidgetPublisher {
         let settings = try AppSettings.current.fetch(db)
         let plans = try NutritionPlan.all.fetch(db)
         let goals = try NutrientGoal.all.fetch(db)
-        let weightKg = try BodyWeight.latest.fetch(db)?.weightKg ?? settings.profile.bodyWeightKg
+        let latestWeightKg = try BodyWeight.latest.fetch(db)?.weightKg
         let entries = Dictionary(grouping: try FoodEntry.between(today, last).fetch(db), by: \.day)
         let rows = Dictionary(uniqueKeysWithValues: try NutritionDay.between(today, last).fetch(db).map { ($0.id, $0) })
 
@@ -118,10 +121,7 @@ final class WidgetPublisher {
         let days = (0..<NutritionSnapshot.horizon).map { offset in
             let day = today.adding(days: offset)
             let totals = (rows[day] ?? NutritionDay(id: day)).totals(entries[day] ?? [])
-            let targets = NutrientTargets(
-                target: NutritionPlan.effective(on: day, in: plans)?.target(on: day), goals: goals, day: day,
-                sex: settings.profile.sex, weightKg: weightKg
-            )
+            let targets = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: latestWeightKg)
             var consumed: [String: Double] = [:]
             var ranges: [String: NutritionSnapshot.Range] = [:]
             for nutrient in nutrients {

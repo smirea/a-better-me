@@ -5,26 +5,14 @@ import Foundation
 enum TileMetrics {
     // MARK: Nutrients
 
-    /// Calories and the macros take their target from the plan; every other nutrient from its goals and the registry.
-    static func range(
-        _ id: NutrientID, on day: CalendarDay, plans: [NutritionPlan], goals: [NutrientGoal], sex: BodySex, weightKg: Double?
-    ) -> NutrientRange {
-        guard NutrientID.macros.contains(id) else {
-            return NutrientGoal.range(id, on: day, goals: goals, sex: sex, weightKg: weightKg)
-        }
-        let target = NutritionMetrics.DayNutrition(day: day, consumed: [:], target: NutritionPlan.effective(on: day, in: plans)?.target(on: day)).target(id)
-        return NutrientRange(target: target)
-    }
-
     /// A logged day's amount of `id`, and the target that applied that day, for every day with entries or an override.
     static func nutrientDays(
-        _ id: NutrientID, log: [NutritionLogDay], plans: [NutritionPlan], goals: [NutrientGoal], sex: BodySex, weightKg: Double?,
-        calendar: Calendar
+        _ id: NutrientID, log: [NutritionLogDay], targets: (CalendarDay) -> NutrientTargets, calendar: Calendar
     ) -> (consumed: [DatedValue], target: [DatedValue]) {
         let logged = log.filter(\.isLogged)
         let consumed = logged.map { DatedValue(date: $0.day.date(in: calendar), value: $0.consumed.amount(of: id) ?? 0) }
         let target = logged.compactMap { day in
-            range(id, on: day.day, plans: plans, goals: goals, sex: sex, weightKg: weightKg).target.map { DatedValue(date: day.day.date(in: calendar), value: $0) }
+            targets(day.day).range(id).target.map { DatedValue(date: day.day.date(in: calendar), value: $0) }
         }
         return (consumed, target)
     }

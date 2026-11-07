@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 import HealthKit
 import os
 
@@ -17,10 +18,26 @@ final class HealthData {
     @ObservationIgnored private var weights: [HealthWeight] = []
     @ObservationIgnored private var logged: [BodyWeight] = []
 
+    /// Whether Health answered once, available or not. The steps widget keeps its last file until then.
+    private(set) var hasRead = false
+
     /// Flips when HealthKit says it should ask, which makes `healthDataAccessRequest` present its sheet.
     private(set) var requestTrigger = false
 
     @ObservationIgnored let store = HealthStore.shared
+    @ObservationIgnored private var loggedObservation: AnyDatabaseCancellable?
+
+    /// The app's own weigh-ins merge into Health's, so it observes them itself.
+    init(store localStore: LocalStore) {
+        loggedObservation = ValueObservation.trackingConstantRegion { try BodyWeight.all.fetch($0) }
+            .removeDuplicates()
+            .start(
+                in: localStore.database.pool,
+                scheduling: .immediate,
+                onError: { LocalStore.log.error("Weigh-in observation failed: \(String(describing: $0))") },
+                onChange: { [weak self] in self?.update(logged: $0) }
+            )
+    }
     static let readTypes: Set<HKObjectType> = [bodyMass, stepCount, flightsClimbed, distanceWalkingRunning]
     #if DEBUG
     static let shareTypes: Set<HKSampleType> = HealthSeed.isRequested ? [bodyMass, stepCount, flightsClimbed, distanceWalkingRunning] : []
@@ -37,7 +54,7 @@ final class HealthData {
     @discardableResult
     func refresh() async -> Bool {
         guard HealthStore.isAvailable else {
-            WidgetPublisher.shared.update(healthSteps: [])
+            hasRead = true
             return false
         }
         do {
@@ -68,13 +85,13 @@ final class HealthData {
             let today = Calendar.current.startOfDay(for: .now)
             let read = PhonePedometer.merge(await PhonePedometer.steps(from: today, to: .now), into: try await steps, today: today)
             update(weights: try await weights, steps: read, flights: try await flights, distance: try await distance, logged: logged)
-            WidgetPublisher.shared.update(healthSteps: read)
+            hasRead = true
         } catch {
             Self.log.error("Reading HealthKit failed: \(String(describing: error))")
         }
     }
 
-    func update(logged: [BodyWeight]) {
+    private func update(logged: [BodyWeight]) {
         update(weights: weights, steps: steps, flights: flights, distance: distance, logged: logged)
     }
 

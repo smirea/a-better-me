@@ -37,20 +37,16 @@ struct FoodNutrition: Hashable, Codable, Sendable {
     var baseMilliliters: Double?
     var measures: [Measure]
 
-    private static let weights = [("g", 1.0), ("oz", 28.349523125), ("lb", 453.59237)]
-    private static let volumes = [("mL", 1.0), ("fl oz", 29.5735295625), ("cup", 236.5882365)]
+    /// What `serving` weighs, when the base serving has a weight.
+    func grams(_ serving: Serving) -> Double? { baseGrams.map { $0 * serving.servings } }
 
     /// `measures`, then the standard weights and volumes the base serving's size allows that it does not already name.
     var allMeasures: [Measure] {
         var all = measures
-        func add(_ units: [(String, Double)], base: Double?) {
-            guard let base else { return }
-            for (name, size) in units where !all.contains(where: { $0.name == name }) {
-                all.append(Measure(name: name, quantity: 1, servings: size / base))
-            }
+        for unit in SizeUnit.allCases where !all.contains(where: { $0.name == unit.rawValue }) {
+            guard let base = unit.isVolume ? baseMilliliters : baseGrams else { continue }
+            all.append(Measure(name: unit.rawValue, quantity: 1, servings: unit.size / base))
         }
-        add(Self.weights, base: baseGrams)
-        add(Self.volumes, base: baseMilliliters)
         return all
     }
 }
@@ -168,5 +164,26 @@ struct Food: Stamped {
         container["archived"] = isArchived ? 1 : 0
         container["created_at"] = Instant.text(createdAt)
         container["updated_at"] = Instant.text(updatedAt)
+    }
+}
+
+/// The standard weights and volumes: what a food's size is typed in, the measures its size unlocks, the favorites
+/// Settings offers, and the units Ramble hears. Weights set the food's grams, volumes its milliliters.
+enum SizeUnit: String, CaseIterable, Identifiable, Sendable {
+    case g, oz, lb, mL, flOz = "fl oz", cup
+
+    var id: Self { self }
+
+    var isVolume: Bool { self == .mL || self == .flOz || self == .cup }
+
+    /// Grams or milliliters in one of the unit.
+    var size: Double {
+        switch self {
+        case .g, .mL: 1
+        case .oz: 28.349523125
+        case .lb: 453.59237
+        case .flOz: 29.5735295625
+        case .cup: 236.5882365
+        }
     }
 }

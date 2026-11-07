@@ -116,7 +116,7 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     var timeline = Timeline()
     var logger = Logger()
     /// The Nutrition "+" sheet's shortcuts in order; the first four are its round buttons.
-    var shortcuts = NutritionShortcut.defaults
+    var shortcuts = NutritionShortcut.allCases
     var expenditure = Expenditure()
     /// Hidden from the Dashboard and summaries; totals still count them. Calories and the macros always show.
     var hiddenNutrients: Set<NutrientID> = []

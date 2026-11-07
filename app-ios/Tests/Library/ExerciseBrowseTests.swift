@@ -11,7 +11,7 @@ private func exercise(_ id: String, _ name: String, boost: Int = 0, category: Ex
 struct ExerciseCatalogOrderTests {
     @Test func catalogListsEveryExerciseInRankedOrder() {
         let catalog = ExerciseCatalog()
-        let ranked = ExerciseGroup.ranked(catalog.bundled)
+        let ranked = Exercise.ranked(catalog.bundled)
         #expect(catalog.all.count == ranked.count)
         #expect(catalog.all.map(\.id) == ranked.map(\.id))
     }
@@ -21,7 +21,7 @@ struct ExerciseCatalogOrderTests {
         let custom = [exercise("custom-b", "Zzz Last Lift"), exercise("custom-a", "Aaa First Lift", boost: 1000)]
         catalog.setCustom(custom)
         #expect(catalog.all.first?.id == "custom-a")
-        #expect(catalog.all.map(\.id) == ExerciseGroup.ranked(custom + catalog.bundled).map(\.id))
+        #expect(catalog.all.map(\.id) == Exercise.ranked(custom + catalog.bundled).map(\.id))
         #expect(catalog.revision == 1)
         catalog.setCustom(custom)
         #expect(catalog.revision == 1)
@@ -45,17 +45,17 @@ struct ExerciseRankingTests {
     let dip = exercise("dip", "Dip", boost: 10, muscle: .triceps)
 
     @Test func rankedPutsBoostFirstThenNamesIgnoringCase() {
-        #expect(ExerciseGroup.ranked([curl, apple, dip, bench]).map(\.id) == ["bench", "dip", "apple", "curl"])
+        #expect(Exercise.ranked([curl, apple, dip, bench]).map(\.id) == ["bench", "dip", "apple", "curl"])
     }
 
     @Test func rankingNameSortedListsMatchesAFullSort() {
         let nameSorted = [apple, bench, curl, dip]
-        #expect(ExerciseGroup.ranked(nameSorted: nameSorted).map(\.id) == ["bench", "dip", "apple", "curl"])
+        #expect(Exercise.ranked(nameSorted: nameSorted).map(\.id) == ["bench", "dip", "apple", "curl"])
     }
 
     @Test func mergeInterleavesTwoRankedLists() {
-        #expect(ExerciseGroup.merge([dip, curl], [bench, apple]).map(\.id) == ["bench", "dip", "apple", "curl"])
-        #expect(ExerciseGroup.merge([], [bench]).map(\.id) == ["bench"])
+        #expect(Exercise.mergeRanked([dip, curl], [bench, apple]).map(\.id) == ["bench", "dip", "apple", "curl"])
+        #expect(Exercise.mergeRanked([], [bench]).map(\.id) == ["bench"])
     }
 
     @Test func browseScopesFiltersSearchesAndGroupsInRankedOrder() {

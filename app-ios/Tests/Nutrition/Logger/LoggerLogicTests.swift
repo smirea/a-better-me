@@ -257,7 +257,7 @@ struct LoggerStartTests {
     private let now = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 26, hour: 14, minute: 37))!
 
     @Test func anHoursPlusLogsAtThatHour() {
-        let start = LoggerStart(LogFoodRequest(day: calendarDay("2026-10-24"), minute: 9 * 60, start: .barcode), now: now)
+        let start = LoggerStart(LogFoodRequest(day: calendarDay("2026-10-24"), minute: 9 * 60, start: .scan), now: now)
         #expect(start.tab == .scan)
         #expect(start.time == LogTime(day: calendarDay("2026-10-24"), hour: 9))
     }

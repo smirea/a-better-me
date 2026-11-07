@@ -41,7 +41,7 @@ struct FoodLogMathTests {
 
     @Test func totalsAndSummarizesAgainstTheDaysTarget() {
         let entries = [entry(bowl, minute: 600), entry(yogurt, minute: 700, quantity: 2)]
-        let totals = FoodLog.totals(entries)
+        let totals = entries.totals
         #expect(totals[.energy] == 660)
         #expect(totals[.protein] == 55)
         #expect(totals.amount(of: .netCarbs) == 54)
@@ -76,7 +76,7 @@ struct FoodLogMathTests {
     }
 
     @Test func spellsOutTheSummaryLinesForVoiceOver() {
-        let totals = FoodLog.totals([entry(bowl, minute: 600), entry(yogurt, minute: 700, quantity: 2)])
+        let totals = [entry(bowl, minute: 600), entry(yogurt, minute: 700, quantity: 2)].totals
         let target = DayTarget(energy: 2000, protein: 50, fat: 70, carbs: 200)
         #expect(FoodLog.summary(totals, targets: target.amounts, showOverages: true).map(\.spoken) == [
             "Calories 660 of 2,000 calories", "Protein 55 of 50 grams", "Fat 22 of 70 grams", "Carbs 66 of 200 grams",
@@ -85,7 +85,7 @@ struct FoodLogMathTests {
     }
 
     @Test func summaryShowsTheChosenColumnsAgainstFiberAndNetCarbTargets() {
-        let totals = FoodLog.totals([entry(bowl, minute: 600), entry(yogurt, minute: 700, quantity: 2)])
+        let totals = [entry(bowl, minute: 600), entry(yogurt, minute: 700, quantity: 2)].totals
         let plan = DayTarget(energy: 2000, protein: 150, fat: 70, carbs: 115)
         let columns: [NutrientID] = [.energy, .fiber, .fat, .netCarbs]
         let targets = NutrientTargets(target: plan, goals: [], day: monday, sex: .male, weightKg: nil)
@@ -216,7 +216,7 @@ struct FoodLogMathTests {
         #expect(half.map(\.food.name) == ["Chicken", "Pasta"])
         #expect(half.map(\.serving.quantity) == [90, 1.5])
         #expect(half.map(\.serving.measure.name) == ["g", "oz"])
-        #expect(FoodLog.totals(half.map { FoodEntry($0, day: monday, minute: 0) })[.energy]?.rounded() == 306)
+        #expect(half.map { FoodEntry($0, day: monday, minute: 0) }.totals[.energy]?.rounded() == 306)
     }
 
     @Test func draftsARecipeFromTheSelectionAtItsLoggedServings() {

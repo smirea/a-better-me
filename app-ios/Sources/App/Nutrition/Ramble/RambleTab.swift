@@ -291,7 +291,7 @@ struct RambleTab: View {
 }
 
 /// The top band: close and the other ways to log over the day's totals with the ramble's foods as the plate, drawn as
-/// the logger's banner draws them (`MacroTotalsBars`), pulsing as foods land.
+/// the logger's banner draws them (`PlateDayTotals`), pulsing as foods land.
 private struct RambleSummary: View {
     let day: CalendarDay
     let planned: [RamblePlanned]
@@ -299,31 +299,12 @@ private struct RambleSummary: View {
     let missing: Int
     let close: () -> Void
     let switchTo: (LoggerTab) -> Void
-    @Environment(LocalStore.self) private var store
-    @Observe(AppSettings.current) private var settings
-    @Observe(NutritionPlan.all) private var plans
-    @Observe(NutrientGoal.all) private var goals
-    @Observe<[FoodEntry]> private var entries: [FoodEntry]
-    @Observe<NutritionDay> private var dayRow: NutritionDay
     @State private var pulse = 0.0
-
-    init(day: CalendarDay, planned: [RamblePlanned], missing: Int, close: @escaping () -> Void, switchTo: @escaping (LoggerTab) -> Void) {
-        self.day = day
-        self.planned = planned
-        self.missing = missing
-        self.close = close
-        self.switchTo = switchTo
-        _entries = Observe(FoodEntry.on(day))
-        _dayRow = Observe(NutritionDay.one(day))
-    }
 
     var body: some View {
         // A row for another day ("yesterday I had…") logs there, so this day's totals leave it out.
         let plate = planned.filter { $0.day == day }.reduce(into: NutrientAmounts()) { $0 = $0 + $1.pick.portion.amounts }
         let kcal = Int(planned.reduce(0) { $0 + ($1.pick.portion.amounts[.energy] ?? 0) }.rounded())
-        let display = settings.nutrition.logger.nutritionDisplay
-        let lines = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile)
-            .summary(dayRow.totals(entries), plate: plate, settings: settings)
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 RoundIconButton("Close", systemImage: "xmark", action: close)
@@ -346,18 +327,8 @@ private struct RambleSummary: View {
                 .buttonBorderShape(.circle)
                 .accessibilityLabel("Other ways to log")
             }
-            MacroTotalsBars(lines: lines, page: display.page)
+            PlateDayTotals(day: day, plate: plate)
                 .scaleEffect(1 + 0.04 * pulse)
-                .gesture(DragGesture(minimumDistance: 20).onEnded { drag in
-                    guard abs(drag.translation.width) > 30, abs(drag.translation.width) > abs(drag.translation.height) else { return }
-                    store.updateSettings { $0.nutrition.logger.nutritionDisplay = display.cycled(by: drag.translation.width < 0 ? 1 : -1) }
-                })
-                .sensoryFeedback(.selection, trigger: display)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(lines.map(\.spoken).joined(separator: ", "))
-                .accessibilityAdjustableAction { direction in
-                    store.updateSettings { $0.nutrition.logger.nutritionDisplay = display.cycled(by: direction == .increment ? 1 : -1) }
-                }
         }
         .padding(.horizontal, Theme.margin)
         .padding(.top, 6)

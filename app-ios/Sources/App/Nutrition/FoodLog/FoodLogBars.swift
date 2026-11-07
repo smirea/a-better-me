@@ -80,7 +80,7 @@ private struct SearchBar: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                 }
-                Button("Scan a barcode", systemImage: "barcode.viewfinder") { state.requestLog(start: .barcode) }
+                Button("Scan a barcode", systemImage: "barcode.viewfinder") { state.requestLog(start: .scan) }
                     .labelStyle(.iconOnly)
             }
             .padding(.horizontal, 16)
