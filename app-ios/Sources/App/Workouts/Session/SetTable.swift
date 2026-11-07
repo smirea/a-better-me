@@ -261,19 +261,18 @@ extension SessionEditor {
             let previous = previousSets(for: path)
             drafts[id] = SetEntry(values, keeping: entry(path, previous: previous))
             toggle(path, previous: previous, at: date)
-        case .unlog(let id):
-            guard let path = blocks.path(of: id) else { return }
-            guard blocks.log(at: path) != nil else { return blocks.setSkipped(false, at: path) }
-            toggle(path, previous: previousSets(for: path))
-        case .skip(let id):
-            guard let path = blocks.path(of: id), blocks.log(at: path) == nil, !blocks.isSkipped(at: path) else { return }
-            blocks.setSkipped(true, at: path)
-            guard mode == .live, let next = SessionFlow.afterSkipping(path, in: blocks, settings: defaults.workout.flow), next != current else { return }
-            withAnimation { current = next }
+        case .unlog, .skip, .addSet:
+            switch blocks.apply(command, at: date) {
+            case .unlogged(let path, let log):
+                drafts[blocks.rowID(at: path)] = SetEntry(log)
+            case .skipped(let path):
+                guard mode == .live, let next = SessionFlow.afterSkipping(path, in: blocks, settings: defaults.workout.flow), next != current else { return }
+                withAnimation { current = next }
+            case .logged, .added, .none:
+                break
+            }
         case .select(let exerciseID):
             if blocks.locate(exerciseID) != nil { withAnimation { current = exerciseID } }
-        case .addSet(let exerciseID, let setID):
-            blocks.addSet(to: exerciseID, id: setID)
         case .adjustRest, .skipRest, .pause, .resume, .finish:
             return
         }

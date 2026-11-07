@@ -22,11 +22,40 @@ struct LiveWorkoutStatus: Codable, Hashable, Sendable {
     var endedAt: Date?
 }
 
+/// A rest between sets, and the rules the phone and the watch both run it by.
 struct LiveRest: Codable, Hashable, Sendable {
     var endsAt: Date
     var duration: TimeInterval
 
     var startedAt: Date { endsAt.addingTimeInterval(-duration) }
+
+    func remaining(at date: Date) -> TimeInterval { max(0, endsAt.timeIntervalSince(date)) }
+
+    /// A rest of `duration` from `start`, which a set logged on the watch a while ago puts in the past. Nil when it is
+    /// over by `now`.
+    static func starting(_ duration: TimeInterval, at start: Date, now: Date) -> LiveRest? {
+        let rest = LiveRest(endsAt: start.addingTimeInterval(duration), duration: duration)
+        return duration > 0 && rest.endsAt > now ? rest : nil
+    }
+
+    /// The Rest Timer's −15 and +15. Nil once it has run out by `now`.
+    func adjusted(by seconds: TimeInterval, now: Date) -> LiveRest? {
+        var rest = self
+        rest.endsAt.addTimeInterval(seconds)
+        rest.duration += seconds
+        return rest.endsAt > now ? rest : nil
+    }
+
+    /// What Pause freezes: the time left at `now`, nil when none is.
+    func frozen(at now: Date) -> TimeInterval? {
+        let left = remaining(at: now)
+        return left > 0 ? left : nil
+    }
+
+    /// The frozen rest picking up again at Resume.
+    static func resumed(_ frozen: TimeInterval?, at now: Date) -> LiveRest? {
+        frozen.flatMap { starting($0, at: now, now: now) }
+    }
 }
 
 /// One row of the set table: a set's main row or a drop or myo sub-row.

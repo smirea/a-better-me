@@ -110,66 +110,59 @@ extension WatchWorkout {
     /// Applies one event. A row that is gone, or already in the state the event asks for, is left alone.
     mutating func apply(_ event: WatchEvent) {
         let at = event.at
-        switch event.kind {
-        case .start, .discard:
-            return
-        case .log(let rowID, let values):
-            guard let path = blocks.path(of: rowID), blocks.log(at: path) == nil else { return }
-            blocks.setLog(SetLog(values, at: at), at: path)
-            prefill[rowID] = nil
-            let step = SessionFlow.afterCompleting(path, in: blocks, settings: rules) { [restSeconds] _, set in restSeconds[set.id] ?? 90 }
-            if let seconds = step.restSeconds, seconds > 0 {
-                rest = LiveRest(endsAt: at.addingTimeInterval(TimeInterval(seconds)), duration: TimeInterval(seconds))
+        guard let command = event.kind.command else { return }
+        switch command {
+        case .log, .unlog, .skip, .addSet:
+            if case .addSet(let exerciseID, let setID) = command { prepareSet(setID, addedTo: exerciseID) }
+            let change = blocks.apply(command, at: at)
+            switch change {
+            case .logged(let path):
+                prefill[blocks.rowID(at: path)] = nil
+                let step = SessionFlow.afterCompleting(path, in: blocks, settings: rules) { [restSeconds] _, set in restSeconds[set.id] ?? 90 }
+                if let seconds = step.restSeconds, let started = LiveRest.starting(TimeInterval(seconds), at: at, now: at) { rest = started }
+                if let next = step.next { current = next }
+                if current == nil { current = blocks[path.block].exercises[path.exercise].id }
+            case .unlogged(let path, let log):
+                prefill[blocks.rowID(at: path)] = LiveValues(log)
+            case .skipped(let path):
+                if let next = SessionFlow.afterSkipping(path, in: blocks, settings: rules) { current = next }
+            case .added, .none:
+                break
             }
-            if let next = step.next { current = next }
-            if current == nil { current = blocks[path.block].exercises[path.exercise].id }
-        case .unlog(let rowID):
-            guard let path = blocks.path(of: rowID) else { return }
-            if let log = blocks.log(at: path) {
-                prefill[rowID] = LiveValues(log)
-                blocks.setLog(nil, at: path)
-            } else {
-                blocks.setSkipped(false, at: path)
-            }
-        case .skip(let rowID):
-            guard let path = blocks.path(of: rowID), blocks.log(at: path) == nil, !blocks.isSkipped(at: path) else { return }
-            blocks.setSkipped(true, at: path)
-            if let next = SessionFlow.afterSkipping(path, in: blocks, settings: rules) { current = next }
-        case .addSet(let exerciseID, let setID):
-            guard let at = blocks.locate(exerciseID), blocks.path(of: setID) == nil else { return }
-            let item = blocks[at.block].exercises[at.item]
-            if let last = item.sets.last(where: { $0.type.isWorking }) {
-                restSeconds[setID] = restSeconds[last.id]
-                prefill[setID] = blocks.path(of: last.id).map { self.set(at: $0).values }
-            } else {
-                restSeconds[setID] = item.sets.last.flatMap { restSeconds[$0.id] }
-            }
-            blocks.addSet(to: exerciseID, id: setID)
         case .select(let exerciseID):
             if blocks.locate(exerciseID) != nil { current = exerciseID }
         case .adjustRest(let seconds):
-            guard var timer = rest else { return }
-            timer.endsAt.addTimeInterval(TimeInterval(seconds))
-            timer.duration += TimeInterval(seconds)
-            rest = timer.endsAt > at ? timer : nil
+            rest = rest?.adjusted(by: TimeInterval(seconds), now: at)
         case .skipRest:
             rest = nil
         case .pause:
             guard pausedAt == nil, !isFinished else { return }
             pausedAt = at
-            frozenRest = rest.map { $0.endsAt.timeIntervalSince(at) }.flatMap { $0 > 0 ? $0 : nil }
+            frozenRest = rest?.frozen(at: at)
             rest = nil
         case .resume:
             guard let pausedAt else { return }
             pausedSeconds += Int(at.timeIntervalSince(pausedAt))
             self.pausedAt = nil
-            if let frozenRest { rest = LiveRest(endsAt: at.addingTimeInterval(frozenRest), duration: frozenRest) }
+            if let resumed = LiveRest.resumed(frozenRest, at: at) { rest = resumed }
             frozenRest = nil
         case .finish:
             guard !isFinished else { return }
             if pausedAt != nil { apply(WatchEvent(sessionID: sessionID, at: at, kind: .resume)) }
             endedAt = at
             rest = nil
+        }
+    }
+
+    /// A set added here takes the rest and the prefill of the exercise's last working set, which the phone computed.
+    private mutating func prepareSet(_ setID: UUID, addedTo exerciseID: BlockExercise.ID) {
+        guard let at = blocks.locate(exerciseID), blocks.path(of: setID) == nil else { return }
+        let item = blocks[at.block].exercises[at.item]
+        if let last = item.sets.last(where: { $0.type.isWorking }) {
+            restSeconds[setID] = restSeconds[last.id]
+            prefill[setID] = blocks.path(of: last.id).map { self.set(at: $0).values }
+        } else {
+            restSeconds[setID] = item.sets.last.flatMap { restSeconds[$0.id] }
         }
     }
 

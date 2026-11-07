@@ -268,3 +268,70 @@ extension UUID {
         return UUID(uuid: bytes)
     }
 }
+
+/// What a row command changed, for each caller's own follow-up: rest and auto-next, drafts, the watch's prefill.
+enum RowChange: Equatable, Sendable {
+    case none
+    case logged(RowPath)
+    /// The row's log came off; it held `log`, which becomes the row's typed values again.
+    case unlogged(RowPath, SetLog)
+    case skipped(RowPath)
+    case added
+}
+
+extension [WorkoutBlock] {
+    /// The one meaning of the set table's row commands, for the phone's editor, its stored sessions, and the watch: a
+    /// log lands only on an open row, unlog clears the log or else the set's skip, a skip lands only on a row neither
+    /// logged nor skipped, and a set is added once. A row that is gone changes nothing. `log` turns a logged row's
+    /// values into its log.
+    mutating func apply(_ command: LiveWorkoutCommand, log: (RowPath, LiveValues) -> SetLog) -> RowChange {
+        switch command {
+        case .log(let rowID, let values):
+            guard let path = path(of: rowID), self.log(at: path) == nil else { return .none }
+            setLog(log(path, values), at: path)
+            return .logged(path)
+        case .unlog(let rowID):
+            guard let path = path(of: rowID) else { return .none }
+            guard let logged = self.log(at: path) else {
+                setSkipped(false, at: path)
+                return .none
+            }
+            setLog(nil, at: path)
+            return .unlogged(path, logged)
+        case .skip(let rowID):
+            guard let path = path(of: rowID), self.log(at: path) == nil, !isSkipped(at: path) else { return .none }
+            setSkipped(true, at: path)
+            return .skipped(path)
+        case .addSet(let exerciseID, let setID):
+            guard locate(exerciseID) != nil, path(of: setID) == nil else { return .none }
+            addSet(to: exerciseID, id: setID)
+            return .added
+        case .select, .adjustRest, .skipRest, .pause, .resume, .finish:
+            return .none
+        }
+    }
+
+    /// `apply` logging the values as given, done at `date`.
+    mutating func apply(_ command: LiveWorkoutCommand, at date: Date) -> RowChange {
+        apply(command) { _, values in SetLog(values, at: date) }
+    }
+}
+
+extension WatchEvent.Kind {
+    /// The command a watch event asks the phone for; nil for a start or a discard, which act on the session itself.
+    var command: LiveWorkoutCommand? {
+        switch self {
+        case .start, .discard: nil
+        case .log(let rowID, let values): .log(rowID: rowID, values: values)
+        case .unlog(let rowID): .unlog(rowID: rowID)
+        case .skip(let rowID): .skip(rowID: rowID)
+        case .addSet(let exerciseID, let setID): .addSet(exerciseID: exerciseID, setID: setID)
+        case .select(let exerciseID): .select(exerciseID: exerciseID)
+        case .adjustRest(let seconds): .adjustRest(seconds: seconds)
+        case .skipRest: .skipRest
+        case .pause: .pause
+        case .resume: .resume
+        case .finish: .finish
+        }
+    }
+}
