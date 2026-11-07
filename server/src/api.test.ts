@@ -1,26 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { bunSqlite } from 'sync-engine/bun-sqlite';
-import { createSpace, handleSync, type SyncResponse } from 'sync-engine/core';
-import { schema } from '../../shared/db/schema';
-import { handleAgent } from './agent';
+import type { SyncResponse } from 'sync-engine/core';
 import { handle, type App, type Report } from './api';
+import { testServer } from './testing';
 import { DEV_OWNER_TOKEN, parseConfig } from './config';
 
-const driver = bunSqlite(':memory:');
-const space = createSpace(driver, schema);
-space.migrate();
-const config = parseConfig({});
 let reports: unknown[][] = [];
 const report: Report = {
 	captureMessage: (...args) => reports.push(['message', ...args]),
 	captureException: (error, context) => reports.push(['exception', String(error), context]),
 };
-const app: App = {
-	config,
-	report,
-	engine: request => handleSync(space, request),
-	agent: request => handleAgent(request, { space, driver, ownerToken: config.ownerToken }),
-};
+const { space, config, app } = testServer({ report });
 
 const sync = (client: string, cursor: number, writes: unknown[], token: string | null = DEV_OWNER_TOKEN) =>
 	handle(

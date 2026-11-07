@@ -35,7 +35,7 @@ function weighIns(db: Db, timeZone: string) {
 	return db.all('body_weights').map(row => ({ day: dayIn(row.measuredAt, timeZone), value: row.weightKg }));
 }
 
-export function trendFor(db: Db, timeZone: string, now: string) {
+function trendFor(db: Db, timeZone: string, now: string) {
 	const today = dayIn(now, timeZone);
 	const points = weighIns(db, timeZone);
 	return { today, points, trend: weightTrend(points, today) };

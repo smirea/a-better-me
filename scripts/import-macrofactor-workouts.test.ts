@@ -2,14 +2,10 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { bunSqlite } from 'sync-engine/bun-sqlite';
-import { createSpace, handleSync } from 'sync-engine/core';
-import { handleAgent } from '../server/src/agent';
-import { handle, type App } from '../server/src/api';
-import { parseConfig } from '../server/src/config';
-import { schema } from '../shared/db/schema';
+import { handle } from '../server/src/api';
 import { stableId } from './import-macrofactor';
 import { exerciseResolver, importMacroFactorWorkouts, rebuildSets } from './import-macrofactor-workouts';
+import { testServer } from '../server/src/testing';
 import { writeXlsx, type Sheet } from './xlsx';
 
 const BENCH = '19f5c6f170d8808bb424e98de4472a7e';
@@ -66,16 +62,7 @@ const GRANULAR: Record<string, Sheet> = {
 	Workouts: [[null, 'Exercise', 'Notes', 'Set 1 Type', 'Set 1 RIR', 'Set 1 Rest']],
 };
 
-const driver = bunSqlite(':memory:');
-const space = createSpace(driver, schema);
-space.migrate();
-const config = parseConfig({});
-const app: App = {
-	config,
-	report: { captureMessage: () => undefined, captureException: () => undefined },
-	engine: request => handleSync(space, request),
-	agent: request => handleAgent(request, { space, driver, ownerToken: config.ownerToken }),
-};
+const { config, app } = testServer();
 const server = Bun.serve({ port: 0, fetch: request => handle(request, app) });
 afterAll(() => server.stop(true));
 

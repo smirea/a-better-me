@@ -11,7 +11,7 @@ type WorkoutSet = z.output<typeof M.WorkoutSet>;
 type Lookup = (id: string) => Exercise | undefined;
 
 /** Epley on reps to failure (reps + RIR), the app's stand-in for MacroFactor's unpublished estimate. */
-export const estimatedOneRepMaxKg = (weightKg: number, reps: number, rir: number | undefined) => {
+const estimatedOneRepMaxKg = (weightKg: number, reps: number, rir: number | undefined) => {
 	const toFailure = reps + (rir ?? 0);
 	return toFailure <= 1 ? weightKg : weightKg * (1 + toFailure / 30);
 };

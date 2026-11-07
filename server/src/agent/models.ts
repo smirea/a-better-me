@@ -32,6 +32,9 @@ import {
 export const newId = () => crypto.randomUUID();
 
 const id = z.guid().meta({ description: 'UUID. Generated when omitted.' });
+/** A row id or a reference to one: lowercase, like every row id the app writes, so ids compare with `===`. */
+export const ref = z.guid().overwrite(value => value.toLowerCase());
+const createdId = ref.meta({ description: 'UUID. Generated when omitted.' });
 export const instant = z.iso
 	.datetime({ offset: true })
 	.overwrite(text => new Date(text).toISOString())
@@ -39,7 +42,7 @@ export const instant = z.iso
 const count = z.int().min(0);
 const kg = z.number().min(0);
 
-export const SET_TYPES = ['standard', 'warmUp', 'drop', 'myo', 'failure'] as const;
+const SET_TYPES = ['standard', 'warmUp', 'drop', 'myo', 'failure'] as const;
 export const MUSCLES = [
 	'chest',
 	'front_delts',
@@ -65,7 +68,7 @@ export const MUSCLES = [
 	'calves',
 	'tibs',
 ] as const;
-export const METRICS = [
+const METRICS = [
 	'weight',
 	'assistanceWeight',
 	'weightPerSide',
@@ -80,12 +83,12 @@ export const METRICS = [
 ] as const;
 export const EXERCISE_TYPES = ['compound', 'isolation', 'core', 'other'] as const;
 export const EXERCISE_CATEGORIES = ['freeWeights', 'machines', 'bodyweight', 'cardio', 'other'] as const;
-export const REGIONS = ['upper', 'lower', 'core', 'fullBody'] as const;
-export const LATERALITIES = ['bilateral', 'unilateral', 'asymmetrical'] as const;
-export const PROGRAM_COLORS = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple'] as const;
-export const REST_CATEGORIES = ['compoundUpper', 'compoundLower', 'upperIsolation', 'lowerIsolation', 'core'] as const;
+const REGIONS = ['upper', 'lower', 'core', 'fullBody'] as const;
+const LATERALITIES = ['bilateral', 'unilateral', 'asymmetrical'] as const;
+const PROGRAM_COLORS = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple'] as const;
+const REST_CATEGORIES = ['compoundUpper', 'compoundLower', 'upperIsolation', 'lowerIsolation', 'core'] as const;
 
-export const SetTarget = z
+const SetTarget = z
 	.object({
 		repsMin: count.optional(),
 		repsMax: count.optional(),
@@ -133,7 +136,7 @@ const CycleTargets = z
 	.object({ sets: z.array(WorkoutSet), skip: z.boolean().default(false) })
 	.meta({ id: 'CycleTargets', description: 'The sets for one program cycle. `skip` drops the exercise that cycle.' });
 
-export const BlockExercise = z
+const BlockExercise = z
 	.object({
 		id: id.default(newId),
 		exerciseID: z.string().meta({ description: 'A catalog exercise id or a `custom-` id, from GET /exercises.' }),
@@ -176,7 +179,7 @@ const templateFields = {
 	name: z.string().trim().min(1),
 	notes: z.string(),
 	blocks: Blocks,
-	gymId: z.guid().nullable(),
+	gymId: ref.nullable(),
 	archived: z.boolean(),
 };
 export const TemplateCreate = z
@@ -190,8 +193,8 @@ export const TemplateCreate = z
 	.meta({ id: 'TemplateCreate' });
 export const TemplatePatch = z.object(templateFields).partial().meta({ id: 'TemplatePatch' });
 
-export const ProgramPosition = z
-	.object({ programId: z.guid(), dayId: z.guid(), cycle: z.int().min(1) })
+const ProgramPosition = z
+	.object({ programId: ref, dayId: ref, cycle: z.int().min(1) })
 	.meta({ id: 'ProgramPosition', description: 'The program day and cycle a session trains.' });
 
 const ExerciseStats = z
@@ -211,7 +214,7 @@ const ExerciseStats = z
 const MuscleSets = z
 	.record(z.string(), z.number())
 	.meta({ description: 'Working sets per muscle: 1 for a primary muscle, 0.5 for a secondary.' });
-export const SessionStats = z
+const SessionStats = z
 	.object({
 		durationSeconds: z.int().nullable().meta({ description: 'Ended minus started minus paused. Null in progress.' }),
 		workingSets: z.int(),
@@ -245,18 +248,18 @@ export const Session = z
 
 const sessionFields = {
 	name: z.string().trim().min(1),
-	templateId: z.guid().nullable(),
+	templateId: ref.nullable(),
 	startedAt: instant,
 	endedAt: instant.nullable(),
 	notes: z.string(),
 	blocks: Blocks,
 	program: ProgramPosition.nullable(),
-	gymId: z.guid().nullable(),
+	gymId: ref.nullable(),
 	pausedSeconds: count,
 };
 export const SessionCreate = z
 	.object({
-		id: z.guid().optional().meta({
+		id: ref.optional().meta({
 			description:
 				'Generated when omitted. An importer derives it from its source, so a rerun answers 409 instead of duplicating.',
 		}),
@@ -332,8 +335,8 @@ export const ProgramDetail = Program.extend({
 
 const DayInput = z
 	.object({
-		id: z.guid().optional().meta({ description: 'Keep an existing day by its id. Generated when omitted.' }),
-		templateId: z.guid().optional().meta({ description: 'An existing template to train that day.' }),
+		id: ref.optional().meta({ description: 'Keep an existing day by its id. Generated when omitted.' }),
+		templateId: ref.optional().meta({ description: 'An existing template to train that day.' }),
 		template: TemplateCreate.optional().meta({ description: "A new template, created as this program's day." }),
 	})
 	.refine(day => !(day.templateId && day.template), 'Give templateId or template, not both')
@@ -600,9 +603,13 @@ const foodFields = {
 };
 export const FoodCreate = z
 	.object({
-		id: z.string().optional().meta({
-			description: 'A custom food: a UUID, generated when omitted. A cached food: `usda-<fdcId>` or `off-<barcode>`.',
-		}),
+		id: z
+			.string()
+			.overwrite(value => value.toLowerCase())
+			.optional()
+			.meta({
+				description: 'A custom food: a UUID, generated when omitted. A cached food: `usda-<fdcId>` or `off-<barcode>`.',
+			}),
 		source: z.enum(FOOD_ROW_SOURCES).default('custom'),
 		...foodFields,
 		brand: foodFields.brand.default(null),
@@ -616,8 +623,7 @@ export const FoodPatch = z.object(foodFields).partial().meta({ id: 'FoodPatch' }
 const portionFields = {
 	food: FoodSnapshot.optional().meta({ description: 'The food as eaten. Or give `foodId` or `recipeId` instead.' }),
 	foodId: z.string().optional().meta({ description: 'Snapshot a stored food.' }),
-	recipeId: z
-		.guid()
+	recipeId: ref
 		.optional()
 		.meta({ description: 'Snapshot a stored recipe, one serving of its yield per base serving.' }),
 	serving: Serving.optional().meta({ description: "Defaults to the quantity of the food's first measure." }),
@@ -671,7 +677,7 @@ const recipeFields = {
 };
 export const RecipeCreate = z
 	.object({
-		id: id.optional(),
+		id: createdId.optional(),
 		...recipeFields,
 		icon: recipeFields.icon.default(null),
 		ingredients: recipeFields.ingredients.default([]),
@@ -703,7 +709,7 @@ export const FoodEntry = z
 	})
 	.meta({ id: 'FoodEntry', description: 'One logged food at a minute of a day. The log has no meals.' });
 export const FoodEntryCreate = z
-	.object({ id: id.optional(), day, minute: minute.default(720), ...portionFields })
+	.object({ id: createdId.optional(), day, minute: minute.default(720), ...portionFields })
 	.refine(...onePortion)
 	.meta({ id: 'FoodEntryCreate' });
 export const FoodEntryPatch = z
@@ -715,7 +721,7 @@ export const FoodFavorite = z
 	.object({ id: z.string(), food: FoodSnapshot, serving: Serving, createdAt: z.string() })
 	.meta({ id: 'FoodFavorite', description: 'A food saved at a chosen serving. Several may come from one food.' });
 export const FoodFavoriteCreate = z
-	.object({ id: id.optional(), ...portionFields })
+	.object({ id: createdId.optional(), ...portionFields })
 	.refine(...onePortion)
 	.meta({ id: 'FoodFavoriteCreate' });
 
@@ -732,7 +738,7 @@ export const FoodLogNote = z
 const noteFields = { day, minute, title: z.string().trim().min(1), body: z.string(), color: z.enum(NOTE_COLORS) };
 export const FoodLogNoteCreate = z
 	.object({
-		id: id.optional(),
+		id: createdId.optional(),
 		...noteFields,
 		minute: minute.default(720),
 		body: noteFields.body.default(''),
@@ -1033,7 +1039,7 @@ export const SettingsPatch = z
 				liftingExperience: z.enum(['beginner', 'intermediate', 'advanced']),
 				bodyWeightKg: z.number().positive(),
 				heightCm: z.number().positive().meta({ description: 'Read by the BMR and the nutrient defaults.' }),
-				birthDate: z.iso.date(),
+				birthDate: day,
 			})
 			.partial(),
 		nutrition: NutritionSettingsPatch,
@@ -1058,7 +1064,7 @@ const bodyWeightFields = {
 };
 export const BodyWeightCreate = z
 	.object({
-		id: id.optional(),
+		id: createdId.optional(),
 		...bodyWeightFields,
 		measuredAt: instant.default(() => new Date().toISOString()).meta({ description: 'Defaults to now.' }),
 		bodyFatPercent: bodyWeightFields.bodyFatPercent.default(null),

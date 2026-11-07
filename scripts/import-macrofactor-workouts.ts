@@ -34,9 +34,9 @@ const SHEETS: Record<string, Metric> = {
 };
 
 /** One exercise on one day, as the export's sheets total it. Weights in `unit`, volume per the app's per-side rule. */
-export type DayTotals = Partial<Record<Metric, number>> & { unit: Unit };
+type DayTotals = Partial<Record<Metric, number>> & { unit: Unit };
 /** One set as logged: weight in the export's unit. */
-export type RebuiltSet = { weight?: number; reps?: number; durationSeconds?: number };
+type RebuiltSet = { weight?: number; reps?: number; durationSeconds?: number };
 
 const splitUnit = (header: string) => {
 	const match = /^(.*?) \(([^()]*)\)$/.exec(header);
@@ -44,7 +44,7 @@ const splitUnit = (header: string) => {
 };
 
 /** `day -> exercise name -> totals`, merged over every file given. */
-export function parseWorkoutDays(workbooks: Map<string, Sheet>[]): Map<string, Map<string, DayTotals>> {
+function parseWorkoutDays(workbooks: Map<string, Sheet>[]): Map<string, Map<string, DayTotals>> {
 	const days = new Map<string, Map<string, DayTotals>>();
 	for (const book of workbooks) {
 		for (const [sheetName, metric] of Object.entries(SHEETS)) {

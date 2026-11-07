@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ApiError } from '../agent/db';
+import { ApiError } from '../http';
 import { limit, route, type Route } from '../agent/route';
 import { MealPhoto, MealPhotoRequest, recognizeMeal } from './mealPhoto';
 import { outlineRamble, RambleOutline, RambleRequest } from './ramble';
@@ -11,7 +11,7 @@ import { BrandedFood, lookupBarcode, searchProducts } from './openFoodFacts';
  * never leaves the server. Nothing is cached here: the phone caches what the owner
  * logs (`LocalStore.saveFood`), and a lookup is one request.
  */
-export const foodRoutes: Route[] = [
+export const foodRoutes = ({ geminiApiKey }: { geminiApiKey: string | null }): Route[] => [
 	route({
 		method: 'GET',
 		path: '/food-database/barcode/{barcode}',
@@ -47,7 +47,7 @@ export const foodRoutes: Route[] = [
 			'Gemini lists each food it sees with its edible weight in grams and a generic `search` name; it never estimates nutrition. Match `search` against a food database and scale its nutrients by `grams`. `note` corrects what the photo cannot show. 503 when the server has no Gemini key.',
 		body: MealPhotoRequest,
 		response: MealPhoto,
-		run({ body, geminiApiKey }) {
+		run({ body }) {
 			if (!geminiApiKey) throw new ApiError(503, 'Photo logging needs GEMINI_API_KEY on the server');
 			return recognizeMeal(body, geminiApiKey);
 		},
@@ -61,7 +61,7 @@ export const foodRoutes: Route[] = [
 			"Gemini reads the whole transcript so far and returns every item after the speaker's corrections, in spoken order: a `food` to search for by `name` (or reuse a logged entry by `ref`), or a `copy` of a logged meal minus `except`. The phone sends the recent meals and usual foods the speaker can point back at, and the options it shows per item. Send the full transcript each time; the answer replaces the last one. 503 when the server has no Gemini key.",
 		body: RambleRequest,
 		response: RambleOutline,
-		run({ body, geminiApiKey }) {
+		run({ body }) {
 			if (!geminiApiKey) throw new ApiError(503, 'Ramble logging needs GEMINI_API_KEY on the server');
 			return outlineRamble(body, geminiApiKey);
 		},

@@ -1,24 +1,12 @@
 import { afterEach, describe, expect, spyOn, test } from 'bun:test';
-import { bunSqlite } from 'sync-engine/bun-sqlite';
-import { createSpace, handleSync } from 'sync-engine/core';
-import { foodNutrition, schema } from '../../../shared/db/schema';
-import { handleAgent } from '../agent';
-import { handle, type App } from '../api';
-import { parseConfig } from '../config';
+import { foodNutrition } from '../../../shared/db/schema';
+import { handle } from '../api';
 import { GEMINI_MODEL } from './mealPhoto';
 import { RAMBLE_MODEL } from './ramble';
+import { testServer } from '../testing';
 import { USER_AGENT } from './openFoodFacts';
 
-const driver = bunSqlite(':memory:');
-const space = createSpace(driver, schema);
-space.migrate();
-const config = parseConfig({});
-const app: App = {
-	config,
-	report: { captureMessage: () => undefined, captureException: () => undefined },
-	engine: request => handleSync(space, request),
-	agent: request => handleAgent(request, { space, driver, ownerToken: config.ownerToken }),
-};
+const { config, app, agent } = testServer();
 
 const call = (path: string, token: string | null = config.ownerToken) =>
 	handle(
@@ -179,13 +167,12 @@ describe('food database', () => {
 });
 
 const photo = (geminiApiKey: string | null, body: unknown) =>
-	handleAgent(
+	agent(geminiApiKey)(
 		new Request('http://api.test/api/food-database/photo', {
 			method: 'POST',
 			headers: { authorization: `Bearer ${config.ownerToken}` },
 			body: JSON.stringify(body),
 		}),
-		{ space, driver, ownerToken: config.ownerToken, geminiApiKey },
 	);
 
 const geminiText = (text: string) => Response.json({ candidates: [{ content: { parts: [{ text }] } }] });
@@ -243,13 +230,12 @@ describe('meal photo', () => {
 });
 
 const ramble = (geminiApiKey: string | null, body: unknown) =>
-	handleAgent(
+	agent(geminiApiKey)(
 		new Request('http://api.test/api/food-database/ramble', {
 			method: 'POST',
 			headers: { authorization: `Bearer ${config.ownerToken}` },
 			body: JSON.stringify(body),
 		}),
-		{ space, driver, ownerToken: config.ownerToken, geminiApiKey },
 	);
 
 describe('ramble', () => {

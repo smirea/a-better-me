@@ -6,17 +6,17 @@
  */
 
 export type Day = string;
-export type DayValue = { day: Day; value: number };
+type DayValue = { day: Day; value: number };
 
 const DAY_MS = 86_400_000;
-export const KG_PER_LB = 0.45359237;
+const KG_PER_LB = 0.45359237;
 /** `NutritionEngine.kcalPerLb`: one energy density for the expenditure and the weight insights. */
 const KCAL_PER_LB = 3000;
 
 const epochDay = (day: Day) => Date.parse(`${day}T00:00:00Z`) / DAY_MS;
 export const addDays = (day: Day, count: number): Day =>
 	new Date((epochDay(day) + count) * DAY_MS).toISOString().slice(0, 10);
-export const daysBetween = (start: Day, end: Day) => epochDay(end) - epochDay(start);
+const daysBetween = (start: Day, end: Day) => epochDay(end) - epochDay(start);
 /** ISO weekday, Monday 1 through Sunday 7. */
 export const weekday = (day: Day) => ((new Date(epochDay(day) * DAY_MS).getUTCDay() + 6) % 7) + 1;
 
@@ -85,7 +85,7 @@ function seed(values: number[]) {
 	return meanY - (covariance / variance) * meanX;
 }
 
-export type TrendDay = { day: Day; scaleKg: number; trendKg: number; weighedIn: boolean };
+type TrendDay = { day: Day; scaleKg: number; trendKg: number; weighedIn: boolean };
 
 /** MacroFactor's Weight Trend V1, as `NutritionEngine.TrendWeight.daily`: an EMA with a 0.1 daily factor. */
 export function weightTrend(weighIns: DayValue[], through: Day): TrendDay[] {
@@ -113,15 +113,15 @@ export function weightInsights(trend: TrendDay[], today: Day) {
 	};
 }
 
-/** `DayIntake.energy`: an override counts, a partial day is skipped, and an empty day counts as 0 only when fasted. */
+/** `DayIntake.energy`: an override counts over the logged amounts, a partial day is skipped, and an empty day counts as 0 only when fasted. */
 export function countedKcal(entriesKcal: number | null, status: string, override: Record<string, number> | null) {
-	if (override) return override.k ?? 0;
+	if (override) return override.k ?? entriesKcal ?? 0;
 	if (status === 'partial') return null;
 	if (entriesKcal === null) return status === 'fasted' ? 0 : null;
 	return entriesKcal;
 }
 
-export type ExpenditureDay = { day: Day; kcal: number; holding: boolean };
+type ExpenditureDay = { day: Day; kcal: number; holding: boolean };
 
 const WINDOW = 28;
 const GATE = 7;
@@ -136,7 +136,7 @@ const GOAL_RATE_FACTOR = 0.04;
 const GOAL_RAMP_DAYS = 14;
 
 /** `Expenditure.Modifiers`: daily steps, and each plan's goal rate (percent per week, negative losing) from its day. */
-export type Modifiers = { steps: Map<Day, number>; goalRates: DayValue[] };
+type Modifiers = { steps: Map<Day, number>; goalRates: DayValue[] };
 
 /**
  * `NutritionEngine.Expenditure.daily` with the `v3` model: a day's estimate uses data through the day before, and

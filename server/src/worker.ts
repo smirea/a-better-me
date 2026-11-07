@@ -7,16 +7,16 @@ import type {
 } from '@cloudflare/workers-types';
 import * as Sentry from '@sentry/cloudflare';
 import { durableDriver, SpaceObject } from 'sync-engine/cloudflare';
-import { handleAgent } from './agent';
 import { schema } from '../../shared/db/schema';
+import { agentApi } from './agent';
 import { handle } from './api';
 import { BACKUP_CRON, backup } from './backup';
 import { parseConfig, type Config, type Settings } from './config';
-import { serveLiveRamble } from './food/ramble-live';
+import { liveRambleSetup, serveLiveRamble } from './food/ramble-live';
+import { errorResponse } from './http';
+import { SENTRY_DEFAULTS, withoutDedupe } from './sentry';
 
 declare const WebSocketPair: typeof import('@cloudflare/workers-types').WebSocketPair;
-
-/** The Cloudflare entry `wrangler.jsonc` names. The Bun server in `index.ts` serves the same `handle`. */
 
 type Env = Settings & { SPACE: DurableObjectNamespace; BACKUPS: R2Bucket };
 
@@ -25,11 +25,26 @@ type Env = Settings & { SPACE: DurableObjectNamespace; BACKUPS: R2Bucket };
  * agent API runs here, beside the rows and the bot tokens, on the request's original `/api` path.
  */
 class OwnerSpace extends SpaceObject<Env> {
-	private readonly driver;
+	private readonly agent;
 
 	constructor(ctx: DurableObjectState, env: Env) {
-		super(ctx, env, schema, configOf(env).space);
-		this.driver = durableDriver(ctx.storage);
+		const config = configOf(env);
+		super(ctx, env, schema, config.space);
+		this.agent = agentApi({
+			space: this.space,
+			driver: durableDriver(ctx.storage),
+			ownerToken: config.ownerToken,
+			geminiApiKey: config.geminiApiKey,
+			publish: head => {
+				for (const socket of this.ctx.getWebSockets()) {
+					try {
+						socket.send(JSON.stringify({ head }));
+					} catch {
+						// A socket mid-close throws on send, and it has no one left to nudge.
+					}
+				}
+			},
+		});
 	}
 
 	override async fetch(request: Request): Promise<Response> {
@@ -37,24 +52,7 @@ class OwnerSpace extends SpaceObject<Env> {
 		if (pathname === '/dump') return Response.json(this.space.dump());
 		if (pathname === '/ramble-live') return this.rambleLive();
 		if (pathname !== '/api' && !pathname.startsWith('/api/')) return super.fetch(request);
-		const before = this.space.head();
-		const response = await handleAgent(request, {
-			space: this.space,
-			driver: this.driver,
-			ownerToken: configOf(this.env).ownerToken,
-			geminiApiKey: configOf(this.env).geminiApiKey,
-		});
-		const head = this.space.head();
-		if (head > before) {
-			for (const socket of this.ctx.getWebSockets()) {
-				try {
-					socket.send(JSON.stringify({ head }));
-				} catch {
-					// A socket mid-close throws on send, and it has no one left to nudge.
-				}
-			}
-		}
-		return response;
+		return this.agent(request);
 	}
 
 	/**
@@ -63,11 +61,13 @@ class OwnerSpace extends SpaceObject<Env> {
 	 * `getWebSockets()`, which the sync nudge reads.
 	 */
 	private rambleLive(): Response {
+		const setup = liveRambleSetup(configOf(this.env));
+		if ('error' in setup) return errorResponse(503, setup.error);
 		const { 0: client, 1: server } = new WebSocketPair();
 		server.accept();
 		const ramble = serveLiveRamble(
 			{ send: text => server.send(text), close: (code, reason) => server.close(code, reason) },
-			{ gemini: configOf(this.env).geminiApiKey!, xai: configOf(this.env).xaiApiKey! },
+			setup,
 		);
 		// Binary frames arrive as Blobs here; reading one is async, so a chain keeps the frames and the stop in order.
 		let order = Promise.resolve();
@@ -105,11 +105,9 @@ function sentryOptions(env: Env): Sentry.CloudflareOptions {
 	if (!sentry) return { enabled: false };
 	return {
 		...sentry,
-		// A message without a stack trace keeps its own text as the issue title, not the calling function's name.
-		attachStacktrace: false,
+		...SENTRY_DEFAULTS,
 		integrations: defaults => [
-			// Dedupe drops an event equal to the one before it, which is every refusal after the first in a run.
-			...defaults.filter(integration => integration.name !== 'Dedupe'),
+			...withoutDedupe(defaults),
 			Sentry.cronTriggersIntegration({
 				// A local `wrangler dev` run would open a development monitor that then misses every day.
 				monitorSlug: cron =>

@@ -11,7 +11,7 @@ import { within, type Session, type Sink, type Trace } from './stt/common';
 type LabSttEngine = SttEngine;
 type LabSttRun = Omit<SttRun, 'engine'> & { engine: LabSttEngine };
 
-export function readWav(bytes: Buffer): Buffer {
+function readWav(bytes: Buffer): Buffer {
 	if (bytes.toString('ascii', 0, 4) !== 'RIFF' || bytes.toString('ascii', 8, 12) !== 'WAVE')
 		throw new Error('Expected a RIFF WAV');
 	let pcm: Buffer | undefined;

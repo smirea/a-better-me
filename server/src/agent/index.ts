@@ -1,29 +1,27 @@
 import { bearerToken, type Space, type SqlDriver } from 'sync-engine/core';
 import { z } from 'zod';
-import { isOwner } from '../api';
-import { ApiError, openDb, type Db } from './db';
+import { isOwner, sha256Hex } from '../auth';
+import { ApiError, errorResponse as error } from '../http';
+import { openDb, type Db } from './db';
 import * as M from './models';
 import { openApi } from './openapi';
-import type { Method } from './route';
-import { routes, snapshot } from './routes';
+import type { Method, Route } from './route';
+import { agentRoutes, snapshot } from './routes';
 
-/** What runs the agent API: the space's own host, since bot tokens and every row live in it. */
-export type AgentHost = {
+/**
+ * What runs the agent API: the space's own host, since bot tokens and every row live in it. `publish` tells every
+ * device to pull after a request that advanced the space's head.
+ */
+type AgentHost = {
 	space: Space;
 	driver: SqlDriver;
 	ownerToken: string;
-	geminiApiKey?: string | null;
+	geminiApiKey: string | null;
+	publish(head: number): void;
 };
 
-export const TOKEN_PREFIX = 'abm_';
-
-const error = (status: number, message: string, issues?: unknown) =>
-	Response.json({ ok: false, error: message, ...(issues !== undefined && { issues }) }, { status });
-
-export async function sha256Hex(text: string): Promise<string> {
-	const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-	return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
-}
+const TOKEN_PREFIX = 'abm_';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Actor = { kind: 'owner' } | { kind: 'bot'; id: string; name: string };
 
@@ -55,7 +53,7 @@ The owner's workout and nutrition data, as the iOS app holds it. Every write her
 - **Programs** are a cycle of days repeated \`cycles\` times. A day is a template (\`templateID\`) or a rest day. Program templates have \`programId\` set and may carry \`cycleTargets\`, the sets of each cycle. At most one program is active; \`GET /programs/{id}\` says which day is up next.
 - **Gyms** are places to train and the equipment each has, keyed by ids from \`GET /equipment\`. \`GET /exercises?gymId=\` lists what a gym can do.
 - **Settings** hold the display weight unit, the default rest per exercise category, the profile, and the Nutrition settings.
-- **Food log**: each logged food is an entry at a \`day\` and \`minute\`, holding a snapshot of the food and a \`serving\`; there are no meals. \`GET /food-log/{day}\` is one day with its totals and target, \`GET /food-log?from=&to=\` a range of them. A day row (\`PUT /nutrition-days/{day}\`) marks it \`fasted\` or \`partial\`, or sets an \`override\` that replaces its totals.
+- **Food log**: each logged food is an entry at a \`day\` and \`minute\`, holding a snapshot of the food and a \`serving\`; there are no meals. \`GET /food-log/{day}\` is one day with its totals and target, \`GET /food-log?from=&to=\` a range of them. A day row (\`PUT /nutrition-days/{day}\`) marks it \`fasted\` or \`partial\`, or sets an \`override\` whose amounts replace the logged ones.
 - **Foods and recipes** are what the owner logs from: custom foods, cached USDA and Open Food Facts foods, and recipes, whose nutrition derives from their ingredients. Log one with \`POST /food-entries\` and \`foodId\` or \`recipeId\`.
 - **Strategy**: a nutrition plan sets the goal, coaching program, and seven daily targets (Monday first) from its day until the next plan's. Per-nutrient goals set micronutrient bounds from a day on.
 - **Body metrics** are visual body fat, tape measurements, and steps, one value per day and kind, beside the weigh-ins.
@@ -82,7 +80,7 @@ The owner's workout and nutrition data, as the iOS app holds it. Every write her
 
 Base URL: ${base}. The OpenAPI 3.1 document below lists every operation and schema.`;
 
-function match(method: string, path: string) {
+function match(routes: Route[], method: string, path: string) {
 	for (const route of routes) {
 		if (route.method !== (method as Method)) continue;
 		const names: string[] = [];
@@ -93,7 +91,12 @@ function match(method: string, path: string) {
 		if (found)
 			return {
 				route,
-				params: Object.fromEntries(names.map((name, index) => [name, decodeURIComponent(found[index + 1]!)])),
+				params: Object.fromEntries(
+					names.map((name, index) => {
+						const value = decodeURIComponent(found[index + 1]!);
+						return [name, UUID.test(value) ? value.toLowerCase() : value];
+					}),
+				),
 			};
 	}
 	return undefined;
@@ -104,7 +107,18 @@ function match(method: string, path: string) {
  * with a token it returns the guide, a snapshot of the owner's state, and the OpenAPI document. Every other route,
  * `/openapi.json` included, answers a bare 401 without a token.
  */
-export async function handleAgent(request: Request, host: AgentHost): Promise<Response> {
+export function agentApi(host: AgentHost): (request: Request) => Promise<Response> {
+	const routes = agentRoutes({ geminiApiKey: host.geminiApiKey });
+	return async request => {
+		const before = host.space.head();
+		const response = await answer(request, host, routes);
+		const head = host.space.head();
+		if (head > before) host.publish(head);
+		return response;
+	};
+}
+
+async function answer(request: Request, host: AgentHost, routes: Route[]): Promise<Response> {
 	const url = new URL(request.url);
 	const base = `${url.origin}/api`;
 	const path = url.pathname.replace(/^\/api/, '').replace(/\/+$/, '');
@@ -134,7 +148,7 @@ export async function handleAgent(request: Request, host: AgentHost): Promise<Re
 			openapi: openApi(routes, base, guide(base)),
 		});
 	}
-	const found = match(request.method, path);
+	const found = match(routes, request.method, path);
 	if (!found) return error(404, `No route ${request.method} /api${path}. GET ${base} lists every route.`);
 	const { route, params } = found;
 	try {
@@ -153,7 +167,6 @@ export async function handleAgent(request: Request, host: AgentHost): Promise<Re
 			query: (route.query ?? z.object({})).parse(Object.fromEntries(url.searchParams)),
 			body: route.body?.parse(raw),
 			now: new Date().toISOString(),
-			geminiApiKey: host.geminiApiKey ?? null,
 		});
 		return Response.json(result);
 	} catch (caught) {

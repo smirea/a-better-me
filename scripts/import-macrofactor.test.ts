@@ -2,14 +2,10 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { bunSqlite } from 'sync-engine/bun-sqlite';
-import { createSpace, handleSync } from 'sync-engine/core';
 import registry from '../app-ios/Sources/App/Resources/Nutrition/nutrients.json';
-import { handleAgent } from '../server/src/agent';
-import { handle, type App } from '../server/src/api';
-import { parseConfig } from '../server/src/config';
-import { schema } from '../shared/db/schema';
+import { handle } from '../server/src/api';
 import { importMacroFactor, NUTRIENT_COLUMNS, parseCsv, stableId } from './import-macrofactor';
+import { testServer } from '../server/src/testing';
 import { writeXlsx, type Sheet } from './xlsx';
 
 /** A made-up account: three days in January 2026 (Excel serials 46030 to 46032), none of it the owner's. */
@@ -152,16 +148,7 @@ const LOG: Sheet = [
 	['2026-01-09', '06:00 PM', 'Test Bowl', 'serving', 1, 200, 350, 10, 50, 10],
 ];
 
-const driver = bunSqlite(':memory:');
-const space = createSpace(driver, schema);
-space.migrate();
-const config = parseConfig({});
-const app: App = {
-	config,
-	report: { captureMessage: () => undefined, captureException: () => undefined },
-	engine: request => handleSync(space, request),
-	agent: request => handleAgent(request, { space, driver, ownerToken: config.ownerToken }),
-};
+const { config, app } = testServer();
 const server = Bun.serve({ port: 0, fetch: request => handle(request, app) });
 afterAll(() => server.stop(true));
 

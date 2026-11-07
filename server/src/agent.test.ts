@@ -1,21 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { bunSqlite } from 'sync-engine/bun-sqlite';
-import { createSpace, handleSync, type SyncResponse } from 'sync-engine/core';
-import { schema } from '../../shared/db/schema';
-import { handleAgent, sha256Hex } from './agent';
-import { handle, type App } from './api';
-import { parseConfig } from './config';
+import type { SyncResponse } from 'sync-engine/core';
+import { sha256Hex } from './auth';
+import { testServer } from './testing';
+import { handle } from './api';
 
-const driver = bunSqlite(':memory:');
-const space = createSpace(driver, schema);
-space.migrate();
-const config = parseConfig({});
-const app: App = {
-	config,
-	report: { captureMessage: () => undefined, captureException: () => undefined },
-	engine: request => handleSync(space, request),
-	agent: request => handleAgent(request, { space, driver, ownerToken: config.ownerToken }),
-};
+const { space, config, app } = testServer();
 
 const BOT = 'abm_test-token-for-the-coach';
 const BENCH = '19f5c6f170d8808bb424e98de4472a7e';
@@ -279,6 +268,15 @@ describe('agent API', () => {
 			(await call('POST', '/programs', { name: 'P', cycles: 1, days: [{ template: { name: 'X', blocks: logged } }] }))
 				.status,
 		).toBe(400);
+	});
+
+	test('an id works in either case on every route', async () => {
+		const id = 'A1B2C3D4-0000-4000-8000-00000000000A';
+		const created = await ok('POST', '/body-weights', { id, measuredAt: '2026-01-02T08:00:00.000Z', weightKg: 80 });
+		expect(created.id).toBe(id.toLowerCase());
+		expect((await ok('GET', `/body-weights/${id}`)).weightKg).toBe(80);
+		expect((await ok('PATCH', `/body-weights/${id}`, { weightKg: 81 })).weightKg).toBe(81);
+		expect((await ok('DELETE', `/body-weights/${id}`)).deleted).toBe(id.toLowerCase());
 	});
 
 	test('settings patch the synced row the app reads', async () => {

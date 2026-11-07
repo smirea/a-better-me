@@ -1,22 +1,14 @@
 import { getTableColumns } from 'drizzle-orm';
 import type { Space, SqlDriver, SqlValue, Values, Write } from 'sync-engine/core';
 import { SYNCED_TABLES, type SyncedTable } from '../../../shared/db/schema';
+import { ApiError } from '../http';
 
 export type RowOf<T extends SyncedTable> = (typeof SYNCED_TABLES)[T]['$inferSelect'];
 
 type Change = { table: SyncedTable; id: string } & ({ op: 'put' | 'patch'; values: Values } | { op: 'delete' });
 
-export class ApiError extends Error {
-	constructor(
-		readonly status: number,
-		message: string,
-	) {
-		super(message);
-	}
-}
-
 /** Sorted keys, the encoding iOS writes (`RowJSON`), so a value an agent writes reads back byte for byte the same. */
-export function stableJson(value: unknown): string {
+function stableJson(value: unknown): string {
 	return JSON.stringify(value, (_key, inner) =>
 		inner && typeof inner === 'object' && !Array.isArray(inner)
 			? Object.fromEntries(

@@ -1,5 +1,8 @@
 import { withBearer, type SyncResponse } from 'sync-engine/core';
+import { isOwner } from './auth';
 import type { Config } from './config';
+import { LIVE_RAMBLE_ROUTE, liveRambleSetup, type LiveRambleSetup } from './food/ramble-live';
+import { errorResponse as error } from './http';
 
 /**
  * The two calls `handle` makes on a Sentry SDK. `index.ts` passes `@sentry/bun`, `worker.ts` `@sentry/cloudflare`,
@@ -24,25 +27,17 @@ export type App<Upgraded = never> = {
 	report: Report;
 	engine(request: Request): Promise<Response | Upgraded>;
 	agent(request: Request): Promise<Response>;
-	/** `GET /api/food-database/ramble/live`, the live Ramble socket (`food/ramble-live.ts`), after the owner check. */
-	ramble?(request: Request): Promise<Response | Upgraded>;
+	/** The live Ramble socket (`food/ramble-live.ts`), after the owner check and with the setup the settings allow. */
+	ramble(request: Request, setup: LiveRambleSetup): Promise<Response | Upgraded>;
 };
 
-export const RAMBLE_LIVE_ROUTE = 'GET /api/food-database/ramble/live';
-
-const error = (status: number, message: string) => Response.json({ ok: false, error: message }, { status });
-
-/** Compares SHA-256 digests byte by byte without stopping early, so the time taken says nothing about the token. */
-export async function isOwner(request: Request, token: string): Promise<boolean> {
-	const given = /^Bearer (.+)$/i.exec(request.headers.get('authorization') ?? '')?.[1];
-	if (!given) return false;
-	const encoder = new TextEncoder();
-	const [a, b] = await Promise.all(
-		[given, token].map(async value => new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value)))),
-	);
-	let difference = 0;
-	for (let index = 0; index < a!.length; index++) difference |= a![index]! ^ b![index]!;
-	return difference === 0;
+/**
+ * Bun 1.4 resets the connection when a response leaves before the request body was read, so the client would see
+ * ECONNRESET, which reads as offline, instead of the 401 that stops it.
+ */
+async function unauthorized(request: Request): Promise<Response> {
+	if (request.body) await request.arrayBuffer();
+	return error(401, 'Missing or wrong owner token');
 }
 
 /**
@@ -55,19 +50,19 @@ export async function isOwner(request: Request, token: string): Promise<boolean>
 export async function handle<Upgraded = never>(request: Request, app: App<Upgraded>): Promise<Response | Upgraded> {
 	const url = new URL(request.url);
 	const route = `${request.method} ${url.pathname}`;
-	if (route === RAMBLE_LIVE_ROUTE) {
-		if (!(await isOwner(request, app.config.ownerToken))) return error(401, 'Missing or wrong owner token');
-		if (!app.config.geminiApiKey || !(app.config.xaiApiKey || app.config.rambleScript))
-			return error(503, 'Live Ramble needs GEMINI_API_KEY and XAI_API_KEY (or RAMBLE_SCRIPT) on the server');
+	if (route === LIVE_RAMBLE_ROUTE) {
+		if (!(await isOwner(request, app.config.ownerToken))) return unauthorized(request);
+		const setup = liveRambleSetup(app.config);
+		if ('error' in setup) return error(503, setup.error);
 		if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket')
 			return error(426, 'Expected a WebSocket upgrade');
-		return app.ramble ? app.ramble(request) : error(501, 'This host has no live ramble');
+		return app.ramble(request, setup);
 	}
 	if (route !== 'POST /api/sync' && route !== 'GET /api/live') {
 		if (url.pathname !== '/api' && !url.pathname.startsWith('/api/')) return error(404, 'Not found');
 		return reportFailure(route, await app.agent(request), app.report);
 	}
-	if (!(await isOwner(withBearer(request), app.config.ownerToken))) return error(401, 'Missing or wrong owner token');
+	if (!(await isOwner(withBearer(request), app.config.ownerToken))) return unauthorized(request);
 	const response = await app.engine(request);
 	if (!(response instanceof Response)) return response;
 	if (route === 'POST /api/sync' && response.status === 200) return reportRejected(response, app.report);
