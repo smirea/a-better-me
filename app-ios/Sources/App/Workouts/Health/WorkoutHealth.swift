@@ -192,9 +192,8 @@ final class WorkoutHealth {
         do {
             session = try await store.read { try WorkoutSession.fetchOne($0, key: WorkoutSession.key(id)) }
         } catch {
-            // Only a row that is gone means discarded; a failed read keeps the recording rather than throw it away.
-            WorkoutRecording.log.error("Reading the ended session failed, so its recording is kept: \(String(describing: error))")
-            return
+            WorkoutRecording.log.error("Reading the ended session failed, so its recording is discarded: \(String(describing: error))")
+            session = nil
         }
         guard let session, let endedAt = session.endedAt else {
             stats = nil

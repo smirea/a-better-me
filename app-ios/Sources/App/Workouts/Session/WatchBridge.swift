@@ -116,8 +116,8 @@ final class WatchBridge: NSObject {
         } else if let current = workout, !current.isFinished {
             // The workout left the in-progress query. A finished one stays the watch's copy, with `endedAt`, so a
             // watch that hears this before the earlier copies still sees the end, saves its recording, and shows the
-            // summary. A discarded one is gone, and `WorkoutHealth` tells the watch.
-            workout = nil
+            // summary. A discarded one is gone, and `WorkoutHealth` tells the watch. Until the read answers, the watch
+            // keeps the copy it has: a nil sent meanwhile would make it drop the finished copy that follows.
             Task { await sendFinishedCopy(of: current.sessionID) }
             return
         }
@@ -126,18 +126,17 @@ final class WatchBridge: NSObject {
     }
 
     private func sendFinishedCopy(of id: UUID) async {
-        guard let store else { return }
+        let session: WorkoutSession?
         do {
-            let session = try await store.read { try WorkoutSession.fetchOne($0, key: WorkoutSession.key(id)) }
-            // A workout started during the read is newer than this copy.
-            guard workout == nil else { return }
-            if let session, session.endedAt != nil {
-                workout = LiveWorkoutController.shared.watchWorkout(for: session, history: [], gym: nil, isLive: false)
-                if let workout { deliver(.workout(workout, acknowledged: acknowledged)) }
-            }
+            session = try await store?.read { try WorkoutSession.fetchOne($0, key: WorkoutSession.key(id)) }
         } catch {
             LocalStore.log.error("Reading the ended session for the watch failed: \(String(describing: error))")
+            session = nil
         }
+        // A newer workout, or an earlier read of this one, already replaced the copy.
+        guard let current = workout, current.sessionID == id, !current.isFinished else { return }
+        workout = session.flatMap { $0.endedAt == nil ? nil : LiveWorkoutController.shared.watchWorkout(for: $0, history: [], gym: nil, isLive: false) }
+        if let workout { deliver(.workout(workout, acknowledged: acknowledged)) }
         send(.workout(workout, acknowledged: acknowledged))
         updateContext()
     }
