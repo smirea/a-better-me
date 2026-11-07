@@ -96,3 +96,7 @@ enum BodySex: String, Codable {
 enum LiftingExperience: String, Codable, CaseIterable {
     case beginner, intermediate, advanced
 }
+
+extension AppSettings {
+    static let current = DatabaseQuery(AppSettings()) { try AppSettings.fetchOne($0, key: rowID) ?? AppSettings() }
+}

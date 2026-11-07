@@ -20,7 +20,7 @@ extension LocalStore {
             template.blocks = ProgramEditorRules.settingWeeks(count, from: program.cycles, in: template.blocks)
         } program: { program in
             program.cycles = count
-            program.currentCycle = min(program.currentCycle, program.totalCycles)
+            program.clampCycle()
         }
     }
 
@@ -40,14 +40,13 @@ extension LocalStore {
                 guard let existing = try WorkoutTemplate.fetchOne(db, key: WorkoutTemplate.key(id)) else { continue }
                 var template = existing
                 template.gymID = gymID
-                template.updatedAt = .now
-                try template.updateChanges(db, from: existing)
+                try template.update(db, from: existing)
             }
         }
     }
 
     func reorderProgramDays(_ order: [ProgramDay.ID], in programID: UUID) {
-        editProgram(programID) { $0.days = ProgramEditorRules.reordering($0.days, by: order) }
+        edit(Program.self, id: programID) { $0.days = ProgramEditorRules.reordering($0.days, by: order) }
     }
 
     /// Appends exercises to a day. A rest day becomes a workout day named `name` first.
@@ -65,28 +64,8 @@ extension LocalStore {
             var source = existing
             let item = source.blocks[at.block].exercises[at.item]
             source.blocks.remove(id)
-            source.updatedAt = .now
-            try source.updateChanges(db, from: existing)
+            try source.update(db, from: existing)
             try Self.append([WorkoutBlock(exercises: [item])], toDay: dayID, in: programID, name: name, gymID: existing.gymID, db)
-        }
-    }
-
-    /// "Save & Go to Duplicate": `duplicateProgram` with the name the owner typed. Resolves with the copy's id.
-    func duplicateProgram(_ program: Program, templates: [WorkoutTemplate], named name: String) -> Task<UUID, any Error> {
-        var copy = Program(name: name, color: program.color, icon: program.icon, cycles: program.cycles, config: program.config)
-        var copies: [WorkoutTemplate] = []
-        copy.days = program.days.map { day in
-            guard let source = templates.first(where: { $0.id == day.templateID }) else { return ProgramDay() }
-            var template = WorkoutTemplate(name: source.name, notes: source.notes, blocks: source.blocks.copyingCycleTargets())
-            template.programID = copy.id
-            template.gymID = source.gymID
-            copies.append(template)
-            return ProgramDay(templateID: template.id)
-        }
-        return write { [copy, copies] db in
-            try copy.insert(db)
-            for template in copies { try template.insert(db) }
-            return copy.id
         }
     }
 
@@ -102,14 +81,12 @@ extension LocalStore {
                 var template = original
                 change(existing, &template)
                 guard template.blocks != original.blocks else { continue }
-                template.updatedAt = .now
-                try template.updateChanges(db, from: original)
+                try template.update(db, from: original)
             }
             guard let changeProgram else { return }
             var program = existing
             changeProgram(&program)
-            program.updatedAt = .now
-            try program.updateChanges(db, from: existing)
+            try program.update(db, from: existing)
         }
     }
 
@@ -120,17 +97,13 @@ extension LocalStore {
            let original = try WorkoutTemplate.fetchOne(db, key: WorkoutTemplate.key(templateID)) {
             var template = original
             template.blocks += blocks
-            template.updatedAt = .now
-            try template.updateChanges(db, from: original)
+            try template.update(db, from: original)
             return
         }
-        var template = WorkoutTemplate(name: name, blocks: blocks)
-        template.programID = programID
-        template.gymID = gymID
+        let template = WorkoutTemplate(programID: programID, name: name, blocks: blocks, gymID: gymID)
         try template.insert(db)
         var program = existing
         program.days[index].templateID = template.id
-        program.updatedAt = .now
-        try program.updateChanges(db, from: existing)
+        try program.update(db, from: existing)
     }
 }

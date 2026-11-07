@@ -96,7 +96,7 @@ struct FoodPortion: Hashable, Sendable {
 }
 
 /// A row of the synced `foods` table: a food the owner made, or a USDA or Open Food Facts food cached on first use.
-struct Food: SyncedRecord {
+struct Food: Stamped {
     static let table = "foods"
 
     enum Remote: Sendable {

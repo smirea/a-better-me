@@ -40,10 +40,10 @@ enum DevSeed {
     /// Fills each empty area, so running it again changes nothing.
     static func seed(in db: Database) throws {
         if try WorkoutTemplate.fetchCount(db) == 0 { try SampleData.insert(in: db) }
-        if try Program.fetchCount(db) == 0 { try DashboardSeed.insertProgram(in: db) }
+        if try Program.fetchCount(db) == 0 { try ProgramSeed.insertProgram(in: db) }
         if try Recipe.fetchCount(db) == 0, try FoodFavorite.fetchCount(db) == 0 { try LibrarySeed.insert(in: db) }
         if try FoodEntry.fetchCount(db) == 0, try BodyWeight.fetchCount(db) == 0 {
-            try DashboardSeed.insertNutrition(in: db)
+            try FoodLogSeed.insertHistory(in: db)
             try FoodLogSeed.insert(in: db)
         }
     }

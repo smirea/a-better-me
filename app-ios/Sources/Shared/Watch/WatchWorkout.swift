@@ -138,7 +138,7 @@ extension WatchWorkout {
         case .addSet(let exerciseID, let setID):
             guard let at = blocks.locate(exerciseID), blocks.path(of: setID) == nil else { return }
             let item = blocks[at.block].exercises[at.item]
-            if let last = item.sets.last(where: { $0.type != .warmUp }) {
+            if let last = item.sets.last(where: { $0.type.isWorking }) {
                 restSeconds[setID] = restSeconds[last.id]
                 prefill[setID] = blocks.path(of: last.id).map { self.set(at: $0).values }
             } else {
@@ -201,7 +201,7 @@ extension LiveValues {
         let weight = weightKg.map { "\(unit.fromKg($0).formatted(.number.precision(.fractionLength(0...1)))) \(unit.rawValue)" }
         let amount = reps.map(String.init) ?? durationSeconds.map { $0.minuteSecond }
         let main = [weight, amount].compactMap { $0 }.joined(separator: " · ")
-        return rir.map { "\(main) @ \($0 >= 6 ? "6+" : "\($0)") RIR" } ?? main
+        return rir.map { "\(main) @ \(RIR.text($0)) RIR" } ?? main
     }
 }
 

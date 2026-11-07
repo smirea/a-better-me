@@ -3,7 +3,7 @@ import GRDB
 
 /// A row of the synced `food_entries` table: one logged food at a time of a day. MacroFactor has no meals; its
 /// timeline groups entries by hour.
-struct FoodEntry: SyncedRecord {
+struct FoodEntry: Stamped {
     static let table = "food_entries"
 
     var id: UUID

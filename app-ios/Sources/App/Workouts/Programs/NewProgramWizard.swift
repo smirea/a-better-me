@@ -239,7 +239,7 @@ struct NewProgramWizard: View {
     }
 
     private func open(_ generated: GeneratedProgram) {
-        store.insertProgram(generated, activate: false)
+        store.insertProgram(generated)
         draftID = generated.program.id
         path.append(.editor(generated.program.id))
     }

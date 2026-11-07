@@ -9,7 +9,7 @@ struct ExerciseHistoryEntry: Identifiable {
     let sets: [WorkoutSet]
     var records: [HistoryMetric: Double] = [:]
 
-    var workingSets: [WorkoutSet] { sets.filter { $0.type != .warmUp } }
+    var workingSets: [WorkoutSet] { sets.filter { $0.type.isWorking } }
 }
 
 /// The "Exercise Display" dropdown.

@@ -44,7 +44,6 @@ struct BetterMeApp: App {
         #if DEBUG
         DevSeed.run(store)
         SampleData.seedIfRequested(store)
-        store.seedGeneratedProgramIfRequested(catalog: catalog)
         SampleWorkout.startIfRequested(store)
         #endif
     }

@@ -38,11 +38,7 @@ enum MFTransfer {
         Dictionary(exercises.map { ($0.id, $0.name) }) { first, _ in first }
     }
 
-    /// The template's gym, else the default gym the way `GymProfile.defaultGym` picks it, else none.
-    private static func gymName(_ id: UUID?, gyms: [GymProfile]) -> String? {
-        if let id, let gym = gyms.first(where: { $0.id == id }) { return gym.name }
-        return (gyms.filter(\.isDefault).max { $0.updatedAt < $1.updatedAt } ?? gyms.min { $0.createdAt < $1.createdAt })?.name
-    }
+    private static func gymName(_ id: UUID?, gyms: [GymProfile]) -> String? { GymProfile.resolve(id, in: gyms)?.name }
 
     private static func gymID(_ name: String, gyms: [GymProfile]) -> UUID? {
         gyms.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }?.id

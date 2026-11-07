@@ -4,9 +4,9 @@ import Testing
 
 struct SettingsRulesTests {
     @Test func energyIsStoredInKcalAndShownInTheEnergyUnit() {
-        #expect(SettingsRules.displayEnergy(2000, in: .kcal) == 2000)
-        #expect(SettingsRules.displayEnergy(2000, in: .kj) == 8368)
-        #expect(SettingsRules.storedEnergy(8368, in: .kj) == 2000)
+        #expect(NutritionSettings.EnergyUnit.kcal.fromKcal(2000) == 2000)
+        #expect(NutritionSettings.EnergyUnit.kj.fromKcal(2000) == 8368)
+        #expect(NutritionSettings.EnergyUnit.kj.toKcal(8368) == 2000)
     }
 
     @Test func heightsReadInFeetAndInchesOrCentimeters() {

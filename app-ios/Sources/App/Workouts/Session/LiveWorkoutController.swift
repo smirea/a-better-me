@@ -63,7 +63,7 @@ final class LiveWorkoutController {
                 session: session,
                 settings: AppSettings.current.fetch(db),
                 exerciseSettings: ExerciseSettings.all.fetch(db),
-                gym: gyms.first { $0.id == session?.gymID } ?? GymProfile.defaultGym.fetch(db)
+                gym: GymProfile.resolve(session?.gymID, in: gyms)
             )
         }
         .removeDuplicates()

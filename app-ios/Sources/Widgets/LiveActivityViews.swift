@@ -247,7 +247,7 @@ struct RIRBadge: View {
     let rir: Int
 
     var body: some View {
-        Text(rir >= 6 ? "6+" : "\(rir)")
+        Text(RIR.text(rir))
             .font(AppFont.title(11))
             .foregroundStyle(Theme.background)
             .frame(minWidth: 18, minHeight: 18)

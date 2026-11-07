@@ -28,7 +28,7 @@ struct StrategyDataReader<Content: View>: View {
 
     private struct Sources: Equatable {
         var weighIns: [WeighIn]
-        var log: IntakeLog
+        var log: [NutritionLogDay]
         var settings: NutritionSettings
         var profile: ProfileSettings
         var plans: [NutritionPlan]
@@ -45,7 +45,7 @@ struct StrategyDataReader<Content: View>: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(HealthData.self) private var health
     @Observe(NutritionPlan.all) private var plans
-    @Observe(IntakeLog.all) private var log
+    @Observe(NutritionLogDay.all) private var log
     @Observe(AppSettings.current) private var settings
     @Observe(BodyMetric.series(.steps)) private var importedSteps
     @State private var inputs: StrategyInputs?
@@ -55,7 +55,7 @@ struct StrategyDataReader<Content: View>: View {
         let _ = scenePhase
         let sources = Sources(
             weighIns: health.weighIns, log: log, settings: settings.nutrition, profile: settings.profile, plans: plans,
-            steps: NutritionMetrics.steps(health: health.steps, imported: importedSteps, calendar: .current), today: .today
+            steps: NutritionExpenditure.steps(health: health.steps, imported: importedSteps, calendar: .current), today: .today
         )
         // The first frame derives synchronously rather than drawing blank; later changes go through `onChange`.
         content(StrategyData(plans: plans, settings: settings, inputs: inputs ?? sources.inputs()))

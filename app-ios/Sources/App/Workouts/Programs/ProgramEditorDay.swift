@@ -46,7 +46,7 @@ struct ProgramDayEditor: View {
         WorkoutEditor(blocks: shown, program: context)
             .onChange(of: blocks) { _, blocks in
                 guard let blocks, blocks != template.blocks else { return }
-                store.editTemplate(template.id) { $0.blocks = blocks }
+                store.edit(WorkoutTemplate.self, id: template.id) { $0.blocks = blocks }
             }
             .onChange(of: template.blocks) { _, remote in
                 if store.pendingWrites == 0, remote != blocks { blocks = nil }

@@ -131,7 +131,7 @@ struct StrategyCheckInTests {
         settings.expenditure.initialKcal = 2000
         let logged = try store.read(BodyWeight.all.fetch)
         let inputs = StrategyInputs.make(
-            weighIns: WeighIns.merge(logged: logged, health: []), log: try store.read(IntakeLog.all.fetch),
+            weighIns: WeighIns.merge(logged: logged, health: []), log: try store.read(NutritionLogDay.all.fetch),
             settings: settings, profile: ProfileSettings(), today: today, calendar: utc
         )
         #expect(inputs.trendWeightKg == 80)
@@ -164,7 +164,7 @@ struct StrategyInputsTests {
         settings.expenditure.initialKcal = 2000
         settings.expenditure.calculationStart = calendarDay("2026-10-24")
         let weighIn = WeighIn(date: calendarDay("2026-10-01").date(in: utc), kg: 80, source: .health)
-        let inputs = StrategyInputs.make(weighIns: [weighIn], log: IntakeLog(), settings: settings, profile: profile, today: calendarDay("2026-10-26"), calendar: utc)
+        let inputs = StrategyInputs.make(weighIns: [weighIn], log: [], settings: settings, profile: profile, today: calendarDay("2026-10-26"), calendar: utc)
         #expect(inputs.expenditure.keys.sorted() == [calendarDay("2026-10-24"), calendarDay("2026-10-25"), calendarDay("2026-10-26")])
     }
 
@@ -172,7 +172,7 @@ struct StrategyInputsTests {
         var settings = NutritionSettings()
         settings.expenditure.staticKcal = 2400
         let weighIn = WeighIn(date: calendarDay("2026-10-20").date(in: utc), kg: 80, source: .health)
-        let inputs = StrategyInputs.make(weighIns: [weighIn], log: IntakeLog(), settings: settings, profile: ProfileSettings(), today: calendarDay("2026-10-26"), calendar: utc)
+        let inputs = StrategyInputs.make(weighIns: [weighIn], log: [], settings: settings, profile: ProfileSettings(), today: calendarDay("2026-10-26"), calendar: utc)
         #expect(inputs.expenditureKcal == 2400)
         #expect(inputs.isStaticExpenditure)
         #expect(inputs.trendWeightKg == 80)
@@ -180,7 +180,7 @@ struct StrategyInputsTests {
 
         settings.expenditure.initialKcal = 2000
         settings.expenditure.calculationStart = calendarDay("2026-10-27")
-        let notStarted = StrategyInputs.make(weighIns: [weighIn], log: IntakeLog(), settings: settings, profile: ProfileSettings(), today: calendarDay("2026-10-26"), calendar: utc)
+        let notStarted = StrategyInputs.make(weighIns: [weighIn], log: [], settings: settings, profile: ProfileSettings(), today: calendarDay("2026-10-26"), calendar: utc)
         #expect(notStarted.expenditure.isEmpty)
         #expect(notStarted.expenditureKcal == 2400)
     }

@@ -185,3 +185,17 @@ enum RowJSON {
         String(decoding: try encoder.encode(value), as: UTF8.self)
     }
 }
+
+/// A record whose `updatedAt` moves with every edit. Newest-wins reads (`Program.active`, `GymProfile.defaultGym`)
+/// break ties on it, so an edit that skipped the stamp could change which row wins.
+protocol Stamped: SyncedRecord {
+    var updatedAt: Date { get set }
+}
+
+extension Stamped {
+    /// Writes the columns that differ from `existing`, `updatedAt` stamped.
+    mutating func update(_ db: Database, from existing: Self) throws {
+        updatedAt = .now
+        try updateChanges(db, from: existing)
+    }
+}

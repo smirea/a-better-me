@@ -160,9 +160,7 @@ extension DashboardSection: Identifiable {
     }
 }
 
-extension InsightCard: CaseIterable {
-    static let allCases: [InsightCard] = [.workouts, .weightTrend, .expenditure, .energyBalance, .goalProgress, .steps]
-
+extension InsightCard {
     var title: String {
         switch self {
         case .workouts: "Workouts"
@@ -186,9 +184,7 @@ extension InsightCard: CaseIterable {
     }
 }
 
-extension HabitCard: CaseIterable {
-    static let allCases: [HabitCard] = [.weighIn, .foodLogging, .workouts]
-
+extension HabitCard {
     var title: String {
         switch self {
         case .weighIn: "Weigh-In"
@@ -206,9 +202,7 @@ extension HabitCard: CaseIterable {
     }
 }
 
-extension FocusCard: CaseIterable {
-    static let allCases: [FocusCard] = [.workouts, .recentRecords, .weeklyNutrition, .energyBalance, .dailyNutrition]
-
+extension FocusCard {
     var title: String {
         switch self {
         case .workouts: "Weekly Workouts"

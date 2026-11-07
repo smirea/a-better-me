@@ -77,7 +77,7 @@ private extension Array where Element: Equatable {
     }
 }
 
-enum FocusCard: String, Codable {
+enum FocusCard: String, Codable, CaseIterable {
     case workouts, recentRecords, weeklyNutrition, energyBalance, dailyNutrition
 }
 
@@ -85,12 +85,12 @@ enum DashboardSection: String, Codable, CaseIterable {
     case insights, habits, nutrition, bodyMetrics, muscles, exercises
 }
 
-enum InsightCard: String, Codable {
+enum InsightCard: String, Codable, CaseIterable {
     case workouts, weightTrend, expenditure, energyBalance, goalProgress, steps
 }
 
-enum HabitCard: String, Codable {
-    case weighIn, workouts, foodLogging
+enum HabitCard: String, Codable, CaseIterable {
+    case weighIn, foodLogging, workouts
 }
 
 /// A raw-value enum rather than a wrapper around `BodyMetricKind`, so layouts saved before the tape measurements existed
@@ -134,15 +134,4 @@ struct ExerciseCard: Codable, Hashable {
 
 enum ExerciseChartMetric: String, Codable, CaseIterable {
     case oneRM, threeRM, tenRM, heaviestWeight, totalVolume, bestSetVolume, totalReps, bestSetReps, totalSets
-}
-
-/// The "+" sheet's Shortcuts, encoded whole into `settings.shortcuts`.
-struct ShortcutsLayout: Codable, Hashable {
-    var upNextBanner = true
-    var top = Shortcut.history
-    var items: [Shortcut] = [.weight, .emptyWorkout, .newProgram, .newWorkout]
-}
-
-enum Shortcut: String, Codable {
-    case weight, history, emptyWorkout, newWorkout, newProgram
 }

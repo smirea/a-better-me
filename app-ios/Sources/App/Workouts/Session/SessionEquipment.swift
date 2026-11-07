@@ -5,8 +5,7 @@ import SwiftUI
 extension SessionEditor {
     /// The gym the session started at, or the default gym for a session without one or whose gym was removed.
     var sessionGym: GymProfile? {
-        let id = session.gymID
-        return gyms.first { $0.id == id } ?? defaultGym
+        GymProfile.resolve(session.gymID, in: gyms)
     }
 
     var availability: GymAvailability? {

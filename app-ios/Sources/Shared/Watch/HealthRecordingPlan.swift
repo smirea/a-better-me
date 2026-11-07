@@ -30,7 +30,7 @@ enum HealthRecordingPlan {
     /// Apple's 1-10 workout effort from the working sets' average RIR: 0 RIR is all out (10), and each rep in reserve
     /// takes a point off. Warm-ups don't count, and with no logged RIR there is no score.
     static func effort(in blocks: [WorkoutBlock]) -> Double? {
-        let rirs = blocks.flatMap(\.exercises).flatMap(\.sets).filter { $0.type != .warmUp }
+        let rirs = blocks.flatMap(\.exercises).flatMap(\.sets).filter { $0.type.isWorking }
             .flatMap { [$0.log] + $0.subSets.map(\.log) }
             .compactMap { $0?.rir }
         guard !rirs.isEmpty else { return nil }

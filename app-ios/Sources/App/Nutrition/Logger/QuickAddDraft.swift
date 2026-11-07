@@ -15,12 +15,11 @@ struct QuickAddDraft: Hashable, Sendable {
     }
 
     static let focusOrder = FocusOrder(Field.allCases)
-    static let kilojoulesPerKcal = 4.184
 
     /// "Macro sum is 250 kcal": 4 kcal per gram of protein and carbs, 9 of fat, 7 of alcohol, in the chosen unit.
     var macroSum: Double {
         let kcal = 4 * Self.grams(protein) + 9 * Self.grams(fat) + 4 * Self.grams(carbs) + 7 * Self.grams(alcohol)
-        return unit == .kj ? kcal * Self.kilojoulesPerKcal : kcal
+        return unit.fromKcal(kcal)
     }
 
     /// The entry's amounts, energy in kcal. Without a typed energy the macro sum is the energy. Nil when nothing is
@@ -31,7 +30,7 @@ struct QuickAddDraft: Hashable, Sendable {
         var amounts: NutrientAmounts = [:]
         let typed = Self.grams(energy)
         let energyInUnit = typed > 0 ? typed : macroSum
-        amounts[.energy] = unit == .kj ? energyInUnit / Self.kilojoulesPerKcal : energyInUnit
+        amounts[.energy] = unit.toKcal(energyInUnit)
         for (id, text) in [(NutrientID.protein, protein), (.fat, fat), (.carbs, carbs), (.alcohol, alcohol)] where !text.isEmpty {
             amounts[id] = Self.grams(text)
         }

@@ -79,7 +79,7 @@ private struct ProgramEditorScreen: View {
             UnderlineTabs(items: dayTabs(program, templates: templates), selection: Binding { day?.id } set: { selection = $0 }) {
                 Button("Add Day") {
                     pendingIndex = program.days.count
-                    store.addProgramDay(to: program.id, rest: true, name: "", gymID: nil)
+                    store.addRestDay(to: program.id)
                 }
             }
             if let day {
@@ -130,13 +130,13 @@ private struct ProgramEditorScreen: View {
             }
         }
         .nameAlert("Rename Day", isPresented: $renaming, initial: template?.name ?? "") { name in
-            if let template { store.editTemplate(template.id) { $0.name = name } }
+            if let template { store.edit(WorkoutTemplate.self, id: template.id) { $0.name = name } }
         }
         .alert(confirmationTitle, isPresented: .isPresent($confirming), presenting: confirming) { confirmation in
             switch confirmation {
             case .changeToRest:
                 Button("Change to Rest", role: .destructive) {
-                    if let day { store.toggleRestDay(day.id, in: program.id, name: "", gymID: nil) }
+                    if let day { store.toggleRestDay(day.id, in: program.id) }
                 }
             case .remove:
                 Button("OK", role: .destructive) {
@@ -221,7 +221,6 @@ private struct ProgramEditorScreen: View {
             PinnedActionButton("Activate Program") { draft.activate() }
         } else if !program.isActive {
             PinnedActionButton("Activate Program") {
-                if program.isArchived { store.setProgramArchived(program.id, false) }
                 store.activate(program.id)
             }
         } else if let template {

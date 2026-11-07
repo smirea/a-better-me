@@ -121,3 +121,42 @@ enum NutrientRegistry {
 
     static func nutrient(_ id: NutrientID) -> Nutrient? { byID[id] }
 }
+
+extension NutrientID {
+    /// The name every screen gives the nutrient: the macros by their short names, the rest by the registry's.
+    var title: String {
+        switch self {
+        case .energy: "Calories"
+        case .protein: "Protein"
+        case .fat: "Fat"
+        case .carbs: "Carbs"
+        default: NutrientRegistry.nutrient(self)?.name ?? rawValue
+        }
+    }
+}
+
+extension NutrientID {
+    /// The banner's and the plate's short names.
+    var macroLetter: String {
+        switch self {
+        case .energy: "kcal"
+        case .protein: "P"
+        case .fat: "F"
+        case .carbs: "C"
+        default: NutrientRegistry.nutrient(self)?.short ?? rawValue
+        }
+    }
+}
+
+extension NutrientGroup {
+    var title: String {
+        switch self {
+        case .general: "General"
+        case .protein: "Protein Breakdown"
+        case .carbohydrates: "Carb Breakdown"
+        case .fats: "Fat Breakdown"
+        case .vitamins: "Vitamins"
+        case .minerals: "Minerals"
+        }
+    }
+}

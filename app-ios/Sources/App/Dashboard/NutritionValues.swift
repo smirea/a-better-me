@@ -3,7 +3,7 @@ import SwiftUI
 struct ExpenditureSummary {
     var changes: [NutritionMetrics.Change]
     var currentKcal: Double?
-    var strategy: NutritionMetrics.ExpenditureStrategy?
+    var strategy: NutritionExpenditure.ExpenditureStrategy?
 }
 
 struct WeightTrendSummary {
@@ -38,7 +38,7 @@ struct FoodLoggingValues {
 extension DashboardData {
     var today: CalendarDay { CalendarDay(now, in: calendar) }
 
-    var intake: [DatedValue] { NutritionMetrics.intake(log, calendar: calendar) }
+    var intake: [DatedValue] { NutritionExpenditure.intake(log, calendar: calendar) }
 
     var expenditurePoints: [DatedValue] { expenditure.map { DatedValue(date: $0.date, value: $0.kcal) } }
 
@@ -47,8 +47,8 @@ extension DashboardData {
     var goalPlan: NutritionPlan? { NutritionPlan.effective(on: today, in: plans) }
 
     func computedExpenditure(profile: ProfileSettings) -> [NutritionEngine.ExpenditureDay] {
-        NutritionMetrics.expenditure(
-            intake: NutritionMetrics.intake(log, calendar: calendar), weighIns: weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, trend: trend,
+        NutritionExpenditure.expenditure(
+            intake: NutritionExpenditure.intake(log, calendar: calendar), weighIns: weighIns.points, trend: trend,
             settings: expenditureSettings, profile: profile, plans: plans, steps: steps, now: now, calendar: calendar
         )
     }

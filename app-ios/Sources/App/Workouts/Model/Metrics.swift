@@ -18,7 +18,7 @@ enum WorkoutMetrics {
     /// `muscleSets` for one exercise, handing each muscle and its count to `add` instead of building a dictionary.
     static func forEachMuscleSet(of item: BlockExercise, catalog: (ExerciseID) -> Exercise?, loggedOnly: Bool, _ add: (Muscle, Double) -> Void) {
         guard let exercise = catalog(item.exerciseID) else { return }
-        let count = Double(item.sets.count { $0.type != .warmUp && (!loggedOnly || $0.isCompleted) })
+        let count = Double(item.sets.count { $0.type.isWorking && (!loggedOnly || $0.isCompleted) })
         guard count > 0 else { return }
         for muscle in exercise.primaryMuscles { add(muscle, count) }
         for muscle in exercise.secondaryMuscles { add(muscle, count * 0.5) }

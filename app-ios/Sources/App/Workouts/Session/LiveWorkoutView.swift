@@ -32,7 +32,6 @@ struct SessionEditor: View {
     @Observe(AppSettings.current) var defaults
     @Observe(BodyWeight.latest) private var latestBodyWeight
     @Observe(GymProfile.all) var gyms
-    @Observe(GymProfile.defaultGym) var defaultGym
     /// The session's row as it changes under the editor, which `session` cannot show once the cover is up.
     @Observe private var live: WorkoutSession?
 

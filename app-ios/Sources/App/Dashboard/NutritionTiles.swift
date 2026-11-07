@@ -251,9 +251,9 @@ struct AllBodyMetricsView: View {
         let groups = Dictionary(grouping: cards, by: \.group)
         ScrollView {
             VStack(alignment: .leading, spacing: 30) {
-                ForEach(["Weight & Body Fat", "Upper Body", "Arms", "Legs", "Ratios"], id: \.self) { title in
-                    if let cards = groups[title] {
-                        DashboardSectionView(title: title) {
+                ForEach(BodyMetricGroup.allCases, id: \.self) { group in
+                    if let cards = groups[group] {
+                        DashboardSectionView(title: group.rawValue) {
                             ForEach(cards, id: \.self) { BodyMetricCardView(card: $0) }
                         }
                     }

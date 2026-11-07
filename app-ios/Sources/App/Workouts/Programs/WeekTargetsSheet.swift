@@ -78,7 +78,7 @@ struct WeekTargetsSheet: View {
     }
 
     private var deloadNote: String {
-        let neighbor = program.config.deload == .firstCycle ? 1 : program.cycles
+        let neighbor = program.deloadNeighborWeek
         return "The deload follows \(program.cycleNoun) \(neighbor) by the deload rule. Edit \(program.cycleNoun) \(neighbor) to change it."
     }
 

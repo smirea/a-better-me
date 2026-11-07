@@ -48,7 +48,7 @@ struct WorkoutOverview {
     init(blocks: [WorkoutBlock], catalog: (ExerciseID) -> Exercise?) {
         let items = blocks.flatMap(\.exercises)
         exercises = items.count
-        sets = items.reduce(0) { total, item in total + item.sets.count { $0.type != .warmUp } }
+        sets = items.reduce(0) { total, item in total + item.sets.count { $0.type.isWorking } }
         muscleSets = WorkoutMetrics.muscleSets(in: blocks, catalog: catalog, loggedOnly: false)
     }
 

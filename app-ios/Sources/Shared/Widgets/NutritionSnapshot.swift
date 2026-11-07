@@ -65,11 +65,6 @@ struct NutritionSnapshot: Codable, Equatable, Sendable {
         }
     }
 
-    /// The `YYYY-MM-DD` key of the day `date` falls on in the device's calendar, as the app's `CalendarDay` writes it.
-    static func dayKey(_ date: Date, calendar: Calendar = .current) -> String {
-        let parts = calendar.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!)
-    }
 }
 
 /// MacroFactor's nutrient colors: calories and the macros, then the vitamin and mineral groups.

@@ -2,8 +2,8 @@ import Foundation
 import GRDB
 
 /// A row of the synced `programs` table: a cycle of days, each a template or a rest day. At most one program is meant to
-/// be active; `LocalStore.activateProgram` keeps it so and `Program.active` resolves a double state.
-struct Program: SyncedRecord {
+/// be active; `LocalStore.activate` keeps it so and `Program.active` resolves a double state.
+struct Program: Stamped {
     static let table = "programs"
 
     var id: UUID
@@ -41,7 +41,7 @@ struct Program: SyncedRecord {
         config = row.json("config", over: ProgramConfig())
         // Two devices patch `cycles` and `current_cycle` independently, so the reader clamps instead of a server check.
         // A deload adds one cycle on top of `cycles`.
-        currentCycle = min(max(row["current_cycle"] ?? 1, 1), cycles + (config.deload == .none ? 0 : 1))
+        currentCycle = min(max(row["current_cycle"] ?? 1, 1), Self.totalCycles(cycles, deload: config.deload))
         isActive = row.flag("active")
         isArchived = row.flag("archived")
         days = row.json("days", over: [ProgramDay]())
@@ -62,19 +62,6 @@ struct Program: SyncedRecord {
         container["days"] = try RowJSON.text(days)
         container["created_at"] = Instant.text(createdAt)
         container["updated_at"] = Instant.text(updatedAt)
-    }
-
-    /// The next day to train: the workout day after the newest finished session of this program's current cycle,
-    /// skipping rest days, or the first workout day. `nil` when every day is a rest day.
-    func upNext(after history: [WorkoutSession]) -> ProgramPosition? {
-        let workoutDays = days.indices.filter { days[$0].templateID != nil }
-        guard let first = workoutDays.first else { return nil }
-        let latest = history
-            .filter { $0.endedAt != nil && $0.program?.programID == id && $0.program?.cycle == currentCycle }
-            .max { $0.startedAt < $1.startedAt }
-        let lastIndex = latest.flatMap { session in days.firstIndex { $0.id == session.program?.dayID } }
-        let next = lastIndex.flatMap { last in workoutDays.first { $0 > last } } ?? first
-        return ProgramPosition(programID: id, dayID: days[next].id, cycle: currentCycle)
     }
 }
 

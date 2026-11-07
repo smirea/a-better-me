@@ -52,7 +52,6 @@ struct ProgramSettingsView: View {
                     actionRow("Deactivate Program", systemImage: "flag.fill") { confirming = .deactivate }
                 } else {
                     actionRow("Activate Program", systemImage: "flag.fill") {
-                        if program.isArchived { store.setProgramArchived(program.id, false) }
                         store.activate(program.id)
                     }
                 }
@@ -90,7 +89,7 @@ struct ProgramSettingsView: View {
                 }
             }
             .nameAlert("Name", isPresented: $renaming, initial: program.name) { name in
-                store.editProgram(program.id) { $0.name = name }
+                store.edit(Program.self, id: program.id) { $0.name = name }
             }
             .alert(confirmationTitle, isPresented: .isPresent($confirming), presenting: confirming) { confirmation in
                 switch confirmation {
@@ -293,7 +292,7 @@ private struct ProgramSettingsColorIcon: View {
                     SectionTitle("Color")
                     HStack {
                         ForEach(ProgramColor.allCases, id: \.self) { color in
-                            Button { store.editProgram(program.id) { $0.color = color } } label: {
+                            Button { store.edit(Program.self, id: program.id) { $0.color = color } } label: {
                                 Circle()
                                     .fill(color.swatch)
                                     .frame(width: 36, height: 36)
@@ -307,7 +306,7 @@ private struct ProgramSettingsColorIcon: View {
                     }
                     SectionTitle("Icon")
                     ProgramIconGrid(selection: program.icon, color: program.color) { symbol in
-                        store.editProgram(program.id) { $0.icon = symbol }
+                        store.edit(Program.self, id: program.id) { $0.icon = symbol }
                     }
                 }
                 .padding(Theme.margin)
@@ -396,9 +395,9 @@ private struct ProgramSettingsDeload: View {
         NavigationStack {
             List(Deload.choices, id: \.self) { choice in
                 Button {
-                    store.editProgram(program.id) { program in
+                    store.edit(Program.self, id: program.id) { program in
                         program.config.deload = choice
-                        program.currentCycle = min(program.currentCycle, program.totalCycles)
+                        program.clampCycle()
                     }
                     dismiss()
                 } label: {

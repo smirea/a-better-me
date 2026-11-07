@@ -50,3 +50,11 @@ func currentBodyWeightKg(logged: [BodyWeight], health: (kg: Double, at: Date)?, 
     case (nil, nil): return manual
     }
 }
+
+extension BodyWeight {
+    static let all = DatabaseQuery([BodyWeight]()) { db in
+        try BodyWeight.fetchAll(db).sorted { $0.measuredAt > $1.measuredAt }
+    }
+
+    static let latest = DatabaseQuery(BodyWeight?.none) { db in try all.fetch(db).first }
+}

@@ -54,12 +54,10 @@ enum ProgramGenerator {
         var workoutDays = days.makeIterator()
         program.days = SplitPlan.weekPattern(daysPerWeek: inputs.daysPerWeek).map { isWorkout in
             guard isWorkout, let day = workoutDays.next() else { return ProgramDay() }
-            var template = WorkoutTemplate(name: day.skeleton.name, blocks: day.slots.map { slot in
+            let template = WorkoutTemplate(programID: program.id, name: day.skeleton.name, blocks: day.slots.map { slot in
                 let targets = RepScheme.cycleTargets(count: slot.sets, goal: inputs.goal, role: slot.role, progression: inputs.repProgression)
                 return WorkoutBlock(exercises: [BlockExercise(exerciseID: slot.exerciseID, sets: targets[0].sets, cycleTargets: targets)])
-            })
-            template.programID = program.id
-            template.gymID = gym?.id
+            }, gymID: gym?.id)
             templates.append(template)
             return ProgramDay(templateID: template.id)
         }

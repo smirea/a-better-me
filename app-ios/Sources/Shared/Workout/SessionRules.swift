@@ -177,7 +177,7 @@ extension [WorkoutBlock] {
     /// the watch and the phone, replaying the same event, name the same rows.
     mutating func addSet(to exerciseID: BlockExercise.ID, id: UUID) {
         guard let at = locate(exerciseID), path(of: id) == nil else { return }
-        let last = self[at.block].exercises[at.item].sets.last { $0.type != .warmUp }
+        let last = self[at.block].exercises[at.item].sets.last { $0.type.isWorking }
         var set = last?.planned ?? WorkoutSet()
         set.id = id
         set.subSets = set.subSets.enumerated().map { SubSet(id: id.derived($0.offset), target: $0.element.target) }
@@ -249,7 +249,7 @@ extension SetTarget {
             weightKg.map { "\(unit.label(kg: $0))" },
             reps,
             durationSeconds.map { $0.minuteSecond },
-            rir.map { "\($0 >= 6 ? "6+" : "\($0)") RIR" },
+            rir.map { "\(RIR.text($0)) RIR" },
         ].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }

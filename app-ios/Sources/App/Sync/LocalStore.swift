@@ -118,39 +118,11 @@ final class LocalStore {
         try changed.updateChanges(db, from: existing)
     }
 
-    func editTemplate(_ id: UUID, _ change: @escaping @Sendable (inout WorkoutTemplate) -> Void) {
-        modify(WorkoutTemplate.self, id: id) {
+    /// `modify` for a stamped row: `updatedAt` moves with the edit.
+    func edit<R: Stamped>(_: R.Type, id: R.ID, _ change: @escaping @Sendable (inout R) -> Void) {
+        modify(R.self, id: id) {
             change(&$0)
             $0.updatedAt = .now
-        }
-    }
-
-    func editProgram(_ id: UUID, _ change: @escaping @Sendable (inout Program) -> Void) {
-        modify(Program.self, id: id) {
-            change(&$0)
-            $0.updatedAt = .now
-        }
-    }
-
-    func activateProgram(_ id: UUID) {
-        write { db in
-            for program in try Program.fetchAll(db) where program.isActive != (program.id == id) {
-                var changed = program
-                changed.isActive = program.id == id
-                changed.updatedAt = .now
-                try changed.updateChanges(db, from: program)
-            }
-        }
-    }
-
-    func setDefaultGym(_ id: UUID) {
-        write { db in
-            for gym in try GymProfile.fetchAll(db) where gym.isDefault != (gym.id == id) {
-                var changed = gym
-                changed.isDefault = gym.id == id
-                changed.updatedAt = .now
-                try changed.updateChanges(db, from: gym)
-            }
         }
     }
 

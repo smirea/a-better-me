@@ -14,7 +14,7 @@ enum BodyMetricKind: String, Codable, CaseIterable, Sendable {
 
 /// A row of the synced `body_metrics` table: one manual value per kind and day, keyed `<day>/<kind>`, so setting it again
 /// replaces it. Visual body fat is a percent, steps a count, and every tape measurement centimeters.
-struct BodyMetric: SyncedRecord {
+struct BodyMetric: Stamped {
     static let table = "body_metrics"
 
     var day: CalendarDay
@@ -50,4 +50,30 @@ struct BodyMetric: SyncedRecord {
         container["value"] = value
         container["updated_at"] = Instant.text(updatedAt)
     }
+}
+
+extension BodyMetricKind {
+    /// "Left Bicep" from `leftBicep`.
+    var title: String {
+        String(describing: self).replacing(/([a-z])([A-Z])/) { "\($0.1) \($0.2)" }.capitalized
+    }
+
+    var isLength: Bool { self != .visualBodyFat && self != .steps }
+
+    /// The sections Data Visibility and All Body Metrics list the kinds under; steps live in Insights instead.
+    var group: BodyMetricGroup? {
+        switch self {
+        case .visualBodyFat: .weightAndBodyFat
+        case .steps: nil
+        case .neck, .shoulders, .bust, .chest, .waist, .hips: .upperBody
+        case .leftBicep, .rightBicep, .leftForearm, .rightForearm, .leftWrist, .rightWrist: .arms
+        case .leftThigh, .rightThigh, .leftCalf, .rightCalf, .leftAnkle, .rightAnkle: .legs
+        }
+    }
+}
+
+enum BodyMetricGroup: String, CaseIterable {
+    case weightAndBodyFat = "Weight & Body Fat", upperBody = "Upper Body", arms = "Arms", legs = "Legs", ratios = "Ratios"
+
+    var kinds: [BodyMetricKind] { BodyMetricKind.allCases.filter { $0.group == self } }
 }

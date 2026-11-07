@@ -68,7 +68,6 @@ struct FoodDraft: Equatable, Sendable {
     var energyUnit = NutritionSettings.EnergyUnit.kcal
     var nutrients: [NutrientID: String] = [:]
 
-    static let kilojoulesPerKilocalorie = 4.184
 
     init() {}
 
@@ -193,7 +192,7 @@ struct FoodDraft: Equatable, Sendable {
                 issues[.nutrient(id)] = "Enter a number of 0 or more"
                 continue
             }
-            amounts[id] = id == .energy && energyUnit == .kj ? value / Self.kilojoulesPerKilocalorie : value
+            amounts[id] = id == .energy ? energyUnit.toKcal(value) : value
         }
 
         guard issues.isEmpty else { return (nil, issues) }

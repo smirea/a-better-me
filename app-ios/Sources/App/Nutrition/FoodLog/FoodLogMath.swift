@@ -44,7 +44,7 @@ struct MacroLine: Hashable, Identifiable {
         let unit = nutrient == .energy ? "calories" : "grams"
         let eaten = target.map { "\(total.wholeText) of \($0.wholeText)" } ?? total.wholeText
         let plate = (plate ?? 0) > 0 ? ", \((plate ?? 0).wholeText) on the plate" : ""
-        return "\(nutrient.dashboardLabel) \(eaten) \(unit)\(plate)"
+        return "\(nutrient.title) \(eaten) \(unit)\(plate)"
     }
 
     /// What the plate adds as a share of the target, or without one as a share of the day with the plate.

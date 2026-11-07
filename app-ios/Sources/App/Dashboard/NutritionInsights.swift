@@ -32,7 +32,7 @@ struct ExpenditureInsights: View {
     static let missing = "Log your weight and nutrition, and add your height and birth date in Settings, to start the estimate."
 }
 
-extension NutritionMetrics.ExpenditureStrategy {
+extension NutritionExpenditure.ExpenditureStrategy {
     var title: String {
         switch self {
         case .updating: "Updating"

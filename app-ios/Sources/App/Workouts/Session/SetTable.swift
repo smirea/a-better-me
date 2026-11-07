@@ -134,7 +134,7 @@ extension SessionEditor {
         return VStack(spacing: 0) {
             if let main = lines.main {
                 Text(main)
-                if let rir = lines.rir { Text("\(rir >= 6 ? "6+" : "\(rir)") RIR").foregroundStyle(Theme.textSecondary) }
+                if let rir = lines.rir { Text("\(RIR.text(rir)) RIR").foregroundStyle(Theme.textSecondary) }
             } else {
                 Text(lines.empty).foregroundStyle(Theme.textTertiary)
             }
@@ -347,7 +347,7 @@ extension SessionEditor {
     /// Warm-ups go after any existing ones, before the first working set.
     func addWarmUps(_ warmUps: [(weightKg: Double?, reps: Int?)], block: Int, exercise index: Int) {
         var sets = blocks[block].exercises[index].sets
-        let insertAt = sets.firstIndex { $0.type != .warmUp } ?? sets.count
+        let insertAt = sets.firstIndex { $0.type.isWorking } ?? sets.count
         let new = warmUps.map { WorkoutSet(type: .warmUp, target: SetTarget(repsMin: $0.reps, repsMax: $0.reps, weightKg: $0.weightKg)) }
         sets.insert(contentsOf: new, at: insertAt)
         blocks[block].exercises[index].sets = sets
@@ -365,7 +365,7 @@ extension SessionEditor {
             automation: overrides?.warmUpAutomation ?? settings.automation,
             simplifyPlates: settings.simplifyPlates
         )
-        if let set = item.sets.firstIndex(where: { $0.type != .warmUp }) {
+        if let set = item.sets.firstIndex(where: { $0.type.isWorking }) {
             let value = entry(RowPath(block: block, exercise: index, set: set), previous: previousSets[item.exerciseID] ?? [])
             context.workingWeightKg = value.weightKg
             context.reps = value.reps ?? item.sets[set].target?.repsMax
@@ -374,7 +374,7 @@ extension SessionEditor {
         let muscles = Set(exercise?.primaryMuscles ?? [])
         let earlier = blocks.flatMap(\.exercises).prefix { $0.id != item.id }
         context.isFresh = !earlier.contains { other in
-            other.sets.contains { $0.type != .warmUp && $0.isCompleted }
+            other.sets.contains { $0.type.isWorking && $0.isCompleted }
                 && !muscles.isDisjoint(with: catalog.exercise(other.exerciseID)?.primaryMuscles ?? [])
         }
         return context

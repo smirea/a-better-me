@@ -2,27 +2,13 @@ import Foundation
 
 /// The settings screens' arithmetic and labels, apart from the views.
 enum SettingsRules {
-    static let kilojoulesPerKcal = 4.184
-    static let centimetersPerInch = 2.54
-
-    /// Stored energy is kcal; the energy unit only changes what a field shows.
-    static func displayEnergy(_ kcal: Double, in unit: NutritionSettings.EnergyUnit) -> Double {
-        unit == .kj ? kcal * kilojoulesPerKcal : kcal
-    }
-
-    static func storedEnergy(_ value: Double, in unit: NutritionSettings.EnergyUnit) -> Double {
-        unit == .kj ? value / kilojoulesPerKcal : value
-    }
-
-    static func energyLabel(_ unit: NutritionSettings.EnergyUnit) -> String { unit == .kj ? "kJ" : "kcal" }
-
     /// `5' 11"` or `180 cm`, to the nearest whole inch or centimeter.
     static func height(_ centimeters: Double, in unit: NutritionSettings.HeightUnit) -> String {
         switch unit {
         case .centimeters:
             return "\(Int(centimeters.rounded())) cm"
         case .feetAndInches:
-            let inches = Int((centimeters / centimetersPerInch).rounded())
+            let inches = Int((centimeters / NutritionSettings.HeightUnit.centimetersPerInch).rounded())
             return "\(inches / 12)' \(inches % 12)\""
         }
     }
@@ -32,7 +18,7 @@ enum SettingsRules {
     static func heightChoices(in unit: NutritionSettings.HeightUnit) -> [Double] {
         switch unit {
         case .centimeters: (120...230).map(Double.init)
-        case .feetAndInches: (48...90).map { Double($0) * centimetersPerInch }
+        case .feetAndInches: (48...90).map { Double($0) * NutritionSettings.HeightUnit.centimetersPerInch }
         }
     }
 

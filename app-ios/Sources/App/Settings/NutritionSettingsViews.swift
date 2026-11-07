@@ -27,7 +27,7 @@ struct FoodLogSettingsView: View {
                             store.updateSettings { $0.nutrition.summaryNutrients = FoodLog.choosing(picked, at: index, in: $0.nutrition.summaryNutrients) }
                         }
                     )) {
-                        ForEach(NutrientID.summaryChoices, id: \.self) { Text($0.dashboardLabel).tag($0) }
+                        ForEach(NutrientID.summaryChoices, id: \.self) { Text($0.title).tag($0) }
                     }
                 }
             }
@@ -385,13 +385,13 @@ private struct EnergyField: View {
         LabeledContent(title) {
             HStack(spacing: 4) {
                 TextField(title, value: Binding(
-                    get: { kcal.map { SettingsRules.displayEnergy($0, in: unit).rounded() } },
-                    set: { value in if let value { kcal = SettingsRules.storedEnergy(value, in: unit) } }
+                    get: { kcal.map { unit.fromKcal($0).rounded() } },
+                    set: { value in if let value { kcal = unit.toKcal(value) } }
                 ), format: .number.precision(.fractionLength(0)))
                 .keyboardType(.numberPad)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: 100)
-                Text(SettingsRules.energyLabel(unit)).foregroundStyle(Theme.textSecondary)
+                Text(unit.label).foregroundStyle(Theme.textSecondary)
             }
         }
     }

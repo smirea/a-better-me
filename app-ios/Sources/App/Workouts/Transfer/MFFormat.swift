@@ -155,9 +155,7 @@ enum ProgramSheet {
                 outline.append(day)
                 if let day {
                     let (name, gym) = Rows.splitDay(day.day)
-                    var template = WorkoutTemplate(name: name)
-                    template.programID = program.id
-                    template.gymID = gym.flatMap(gymID)
+                    let template = WorkoutTemplate(programID: program.id, name: name, gymID: gym.flatMap(gymID))
                     templates.append(template)
                     program.days.append(ProgramDay(templateID: template.id))
                 } else {

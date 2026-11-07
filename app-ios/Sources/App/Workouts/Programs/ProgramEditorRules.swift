@@ -105,7 +105,7 @@ enum ProgramEditorRules {
         let deloadCycle = (1...program.totalCycles).first(where: program.isDeloadCycle)
         let deload = deloadCycle.map { WeekCard(cycle: $0, title: "Deload", isDeload: true) }
         guard program.config.periodization else {
-            let firstWeek = program.config.deload == .firstCycle ? 2 : 1
+            let firstWeek = program.firstTrainingCycle
             let noun = program.cycles == 1 ? program.cycleNoun : "\(program.cycleNoun)s"
             let single = WeekCard(cycle: firstWeek, title: "\(program.cycles) \(noun)", isDeload: false)
             return program.config.deload == .firstCycle ? [deload, single].compactMap { $0 } : [single, deload].compactMap { $0 }

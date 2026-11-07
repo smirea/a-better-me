@@ -178,9 +178,7 @@ private struct CustomizeShortcutsSheet: View {
     }
 }
 
-extension Shortcut: CaseIterable, ShortcutItem {
-    static let allCases: [Shortcut] = [.weight, .history, .emptyWorkout, .newProgram, .newWorkout]
-
+extension Shortcut: ShortcutItem {
     var title: String {
         switch self {
         case .weight: "Weight"
@@ -229,4 +227,15 @@ extension ShortcutsLayout {
 extension WorkoutSession {
     /// "Empty" is the reference's name for a workout started without a template.
     static var empty: WorkoutSession { WorkoutSession(name: "Empty") }
+}
+
+/// The "+" sheet's Shortcuts, encoded whole into `settings.shortcuts`.
+struct ShortcutsLayout: Codable, Hashable {
+    var upNextBanner = true
+    var top = Shortcut.history
+    var items: [Shortcut] = [.weight, .emptyWorkout, .newProgram, .newWorkout]
+}
+
+enum Shortcut: String, Codable, CaseIterable {
+    case weight, history, emptyWorkout, newProgram, newWorkout
 }

@@ -31,7 +31,7 @@ enum NutritionTimeline {
         guard let snapshot else { return Timeline(entries: [NutritionEntry(date: now, state: .empty, picks: picks)], policy: .never) }
         var entries: [NutritionEntry] = []
         var start = calendar.startOfDay(for: now)
-        while let day = snapshot.day(NutritionSnapshot.dayKey(start, calendar: calendar)) {
+        while let day = snapshot.day(CalendarDay(start, in: calendar).description) {
             entries.append(NutritionEntry(date: max(now, start), state: .ready(snapshot, day), picks: picks))
             start = calendar.date(byAdding: .day, value: 1, to: start)!
         }
@@ -116,7 +116,7 @@ extension NutritionSnapshot {
             Nutrient(id: "291", name: "Fiber", short: "fiber", unit: "g", tint: .carbs),
         ]
         let day = Day(
-            day: dayKey(.now),
+            day: CalendarDay(.now).description,
             consumed: ["k": 1460, "p": 118, "f": 46, "c": 142, "291": 21],
             ranges: [
                 "k": Range(target: 2400), "p": Range(target: 180), "f": Range(target: 70), "c": Range(target: 250),

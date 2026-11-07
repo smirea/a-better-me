@@ -63,7 +63,7 @@ extension DashboardData {
     }
 
     var macrosDetail: MetricDetail {
-        let logged = log.filter { $0.entryCount > 0 || $0.hasOverride }
+        let logged = log.filter(\.isLogged)
         let tabs = [(NutrientID.protein, "Protein"), (.fat, "Fat"), (.carbs, "Carbs")].map { id, title in
             MetricTab(
                 title: title, points: logged.map { DatedValue(date: $0.day.date(in: calendar), value: $0.consumed.amount(of: id) ?? 0) },

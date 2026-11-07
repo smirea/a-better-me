@@ -21,7 +21,7 @@ enum TileMetrics {
         _ id: NutrientID, log: [NutritionLogDay], plans: [NutritionPlan], goals: [NutrientGoal], sex: BodySex, weightKg: Double?,
         calendar: Calendar
     ) -> (consumed: [DatedValue], target: [DatedValue]) {
-        let logged = log.filter { $0.entryCount > 0 || $0.hasOverride }
+        let logged = log.filter(\.isLogged)
         let consumed = logged.map { DatedValue(date: $0.day.date(in: calendar), value: $0.consumed.amount(of: id) ?? 0) }
         let target = logged.compactMap { day in
             range(id, on: day.day, plans: plans, goals: goals, sex: sex, weightKg: weightKg).target.map { DatedValue(date: day.day.date(in: calendar), value: $0) }
@@ -157,24 +157,11 @@ extension BodyMetricCard {
         }
     }
 
-    var group: String {
+    var group: BodyMetricGroup {
         switch self {
-        case .scaleWeight, .visualBodyFat: "Weight & Body Fat"
-        case .neck, .shoulders, .bust, .chest, .waist, .hips: "Upper Body"
-        case .leftBicep, .rightBicep, .leftForearm, .rightForearm, .leftWrist, .rightWrist: "Arms"
-        case .leftThigh, .rightThigh, .leftCalf, .rightCalf, .leftAnkle, .rightAnkle: "Legs"
-        case .waistToHeight, .waistToHip: "Ratios"
+        case .scaleWeight: .weightAndBodyFat
+        case .waistToHeight, .waistToHip: .ratios
+        default: kind!.group!
         }
     }
-}
-
-extension BodyMetricKind {
-    var isLength: Bool { self != .visualBodyFat && self != .steps }
-}
-
-extension NutritionSettings.HeightUnit {
-    var lengthLabel: String { self == .centimeters ? "cm" : "in" }
-
-    func fromCm(_ cm: Double) -> Double { self == .centimeters ? cm : cm / 2.54 }
-    func toCm(_ value: Double) -> Double { self == .centimeters ? value : value * 2.54 }
 }

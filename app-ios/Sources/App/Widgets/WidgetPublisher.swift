@@ -159,7 +159,7 @@ private struct StepSources: Equatable, Sendable {
 
     func snapshot() -> StepsSnapshot {
         let calendar = Calendar.current
-        let steps = NutritionMetrics.steps(health: health, imported: inputs.imported, calendar: calendar)
+        let steps = NutritionExpenditure.steps(health: health, imported: inputs.imported, calendar: calendar)
         return StepsSnapshot(goal: inputs.goal, steps: steps, calendar: calendar)
     }
 }

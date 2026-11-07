@@ -2,7 +2,7 @@ import Foundation
 
 enum DashboardMetrics {
     static func workingSets(_ items: [BlockExercise]) -> [WorkoutSet] {
-        items.flatMap(\.sets).filter { $0.isCompleted && $0.type != .warmUp }
+        items.flatMap(\.sets).filter { $0.isCompleted && $0.type.isWorking }
     }
 
     /// Includes warm-ups, unlike working sets, to match the Workout Complete summary.
@@ -141,12 +141,13 @@ enum DashboardMetrics {
     }
 
     static func plan(_ program: Program, templates: [WorkoutTemplate], catalog: (ExerciseID) -> Exercise?) -> Counts {
-        let blocks = program.days.compactMap { day in templates.first { $0.id == day.templateID } }
-            .flatMap { $0.blocks.targets(forCycle: program.currentCycle) }
+        let byID = Dictionary(templates.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let blocks = program.days.compactMap { $0.templateID.flatMap { byID[$0] } }
+            .flatMap { program.blocks(of: $0, cycle: program.currentCycle) }
         let items = blocks.flatMap(\.exercises)
         return Counts(
             muscles: WorkoutMetrics.muscleSets(in: blocks, catalog: catalog, loggedOnly: false).count,
-            sets: items.flatMap(\.sets).count { $0.type != .warmUp },
+            sets: items.flatMap(\.sets).count { $0.type.isWorking },
             exercises: items.count
         )
     }

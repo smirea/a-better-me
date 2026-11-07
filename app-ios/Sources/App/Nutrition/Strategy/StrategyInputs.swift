@@ -1,22 +1,4 @@
 import Foundation
-import GRDB
-
-/// The log as the expenditure algorithm reads it, one value per day that has entries or a day row.
-struct IntakeLog: Equatable, Sendable {
-    var days: [CalendarDay: DayIntake] = [:]
-    var status: [CalendarDay: NutritionDay.Status] = [:]
-
-    static let all = DatabaseQuery(IntakeLog()) { db in
-        let entries = Dictionary(grouping: try FoodEntry.fetchAll(db), by: \.day)
-        let rows = Dictionary(uniqueKeysWithValues: try NutritionDay.fetchAll(db).map { ($0.id, $0) })
-        var log = IntakeLog()
-        for day in Set(entries.keys).union(rows.keys) {
-            log.days[day] = DayIntake(entries: entries[day] ?? [], day: rows[day])
-            log.status[day] = rows[day]?.status ?? NutritionDay.Status.none
-        }
-        return log
-    }
-}
 
 /// The trend weight and expenditure Strategy plans from, computed by the engine from the weigh-ins (merged as the
 /// Dashboard merges them) and the log. Nothing here is stored; a check-in freezes what it used in its plan row.
@@ -35,19 +17,19 @@ struct StrategyInputs {
 
 
     static func make(
-        weighIns: [WeighIn], log: IntakeLog, settings: NutritionSettings, profile: ProfileSettings, plans: [NutritionPlan] = [],
+        weighIns: [WeighIn], log: [NutritionLogDay], settings: NutritionSettings, profile: ProfileSettings, plans: [NutritionPlan] = [],
         steps: [DatedValue] = [], today: CalendarDay, calendar: Calendar
     ) -> StrategyInputs {
         let end = today.date(in: calendar)
-        let weights = weighIns.map { DatedValue(date: $0.date, value: $0.kg) }
+        let weights = weighIns.points
         let trendSeries = NutritionEngine.TrendWeight.daily(weighIns: weights, through: end, calendar: calendar)
-        let counted = log.days.compactMapValues(\.energy).filter { $0.key <= today }
+        let counted = Dictionary(uniqueKeysWithValues: log.filter { $0.day <= today }.compactMap { day in day.intake.energy.map { (day.day, $0) } })
         let intake = counted.keys.sorted().map { DatedValue(date: $0.date(in: calendar), value: counted[$0]!) }
-        let series = NutritionMetrics.expenditure(
+        let series = NutritionExpenditure.expenditure(
             intake: intake, weighIns: weights, trend: trendSeries, settings: settings.expenditure, profile: profile, plans: plans, steps: steps,
             now: end, calendar: calendar
         )
-        let initial = NutritionMetrics.expenditureSetup(
+        let initial = NutritionExpenditure.expenditureSetup(
             intake: intake, weighIns: weights, trend: trendSeries, settings: settings.expenditure, profile: profile, calendar: calendar
         )?.initialKcal
         return StrategyInputs(
@@ -55,7 +37,7 @@ struct StrategyInputs {
             trend: Dictionary(trendSeries.map { (CalendarDay($0.date, in: calendar), $0.value) }, uniquingKeysWith: { $1 }),
             expenditure: Dictionary(series.map { (CalendarDay($0.date, in: calendar), $0) }, uniquingKeysWith: { $1 }),
             intake: counted,
-            statuses: log.status,
+            statuses: Dictionary(uniqueKeysWithValues: log.map { ($0.day, $0.status) }),
             weighInDays: Set(weighIns.map { CalendarDay($0.date, in: calendar) }),
             trendWeightKg: trendSeries.last?.value,
             expenditureKcal: settings.expenditure.staticKcal ?? series.last?.kcal ?? initial,

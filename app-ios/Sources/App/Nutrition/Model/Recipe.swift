@@ -14,7 +14,7 @@ struct RecipeIngredient: Hashable, Codable, Identifiable, Sendable {
 
 /// A row of the synced `recipes` table. Ingredients are snapshots, so a recipe survives its foods being edited or
 /// deleted. Its nutrition is derived from them, never stored.
-struct Recipe: SyncedRecord {
+struct Recipe: Stamped {
     static let table = "recipes"
 
     var id: UUID

@@ -47,7 +47,7 @@ final class WatchBridge: NSObject {
         homeObservation = ValueObservation.trackingConstantRegion { db in
             try HomeInputs(
                 templates: WorkoutTemplate.all.fetch(db), program: Program.active.fetch(db),
-                gyms: GymProfile.all.fetch(db), defaultGym: GymProfile.defaultGym.fetch(db)
+                gyms: GymProfile.all.fetch(db)
             )
         }
         .removeDuplicates()
@@ -67,7 +67,6 @@ final class WatchBridge: NSObject {
         var templates: [WorkoutTemplate]
         var program: Program?
         var gyms: [GymProfile]
-        var defaultGym: GymProfile?
     }
 
     /// Runs again whenever the inputs or the history change.
@@ -84,19 +83,19 @@ final class WatchBridge: NSObject {
         let blocks = finished.map(\.blocks)
         func option(_ template: WorkoutTemplate, program: String?, session: WorkoutSession) -> WatchWorkoutOption {
             var session = session
-            session.gymID = session.gymID ?? inputs.defaultGym?.id
-            let gym = inputs.gyms.first { $0.id == session.gymID }
+            let gym = GymProfile.resolve(session.gymID, in: inputs.gyms)
+            session.gymID = session.gymID ?? gym?.id
             let exercises = session.blocks.flatMap(\.exercises)
             return WatchWorkoutOption(
                 id: template.id, name: template.name, program: program,
-                exercises: exercises.map { catalog.name($0.exerciseID) }, totalSets: exercises.flatMap(\.sets).count,
+                exercises: exercises.map { catalog.name($0.exerciseID) }, totalSets: exercises.flatMap(\.sets).count(where: \.type.isWorking),
                 plan: LiveWorkoutController.shared.watchWorkout(for: session, history: blocks, gym: gym, isLive: false)
             )
         }
         var workouts: [WatchWorkoutOption] = []
-        if let program = inputs.program, let next = program.upNext(after: finished),
-           let templateID = program.days.first(where: { $0.id == next.dayID })?.templateID, let template = byID[templateID] {
-            let session = program.session(startingFrom: template, dayID: next.dayID, gymID: template.gymID)
+        if let program = inputs.program, let next = program.nextWorkoutDay(finished: finished),
+           let templateID = next.templateID, let template = byID[templateID] {
+            let session = program.session(startingFrom: template, dayID: next.id, gymID: template.gymID)
             workouts.append(option(template, program: program.name, session: session))
         }
         workouts += inputs.templates.filter { $0.programID == nil && !$0.isArchived }.map {
