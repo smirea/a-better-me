@@ -25,7 +25,6 @@ enum DashboardRoute: Hashable {
     }
 }
 
-/// A metric's unit label and how its values read.
 enum MetricUnit: Equatable {
     /// Whole numbers, as kcal and steps.
     case whole(String)

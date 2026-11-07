@@ -295,7 +295,6 @@ private struct LogTimePicker: View {
         .feedback(self)
     }
 
-    /// A month back through a week ahead, plus the chosen day when it lies outside them.
     private var days: [CalendarDay] {
         var days = (-30...7).map { today.adding(days: $0) }
         if !days.contains(session.time.day) { days.append(session.time.day) }

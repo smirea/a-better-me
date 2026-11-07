@@ -29,7 +29,6 @@ struct NutrientGoal: SyncedRecord {
         self.mode = mode
     }
 
-    /// The mode of the latest goal for `nutrient` on or before `day`; nil before its first goal.
     static func mode(_ nutrient: NutrientID, on day: CalendarDay, goals: [NutrientGoal]) -> Mode? {
         goals.filter { $0.nutrient == nutrient && $0.startsOn <= day }.max { $0.startsOn < $1.startsOn }?.mode
     }

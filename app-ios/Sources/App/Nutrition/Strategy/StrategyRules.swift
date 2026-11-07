@@ -14,8 +14,6 @@ struct StrategyBasis: Hashable {
 enum StrategyRules {
     typealias Engine = NutritionEngine
 
-    // MARK: Records to engine
-
     /// The engine's rate is always positive; the record's is negative while losing.
     static func engineGoal(_ goal: NutritionGoal) -> Engine.Goal {
         let kind: Engine.GoalKind = switch goal.kind {
@@ -59,8 +57,6 @@ enum StrategyRules {
     static func averageEnergy(_ targets: WeekTargets) -> Double {
         targets.days.map(\.energy).reduce(0, +) / 7
     }
-
-    // MARK: Plans
 
     static func coachedWeek(_ coaching: CoachingProgram, goal: NutritionGoal, basis: StrategyBasis) -> Engine.WeeklyPlan {
         Engine.Targets.weekly(

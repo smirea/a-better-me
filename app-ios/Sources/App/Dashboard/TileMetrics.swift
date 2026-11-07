@@ -3,7 +3,6 @@ import Foundation
 /// The numbers behind the Dashboard's Nutrition and Body Metrics sections, as pure functions so tests pin each to
 /// literal values. See docs/decisions/nutrition.md "Dashboard".
 enum TileMetrics {
-    // MARK: Nutrients
 
     /// A logged day's amount of `id`, and the target that applied that day, for every day with entries or an override.
     static func nutrientDays(
@@ -56,8 +55,6 @@ enum TileMetrics {
         guard total > 0 else { return nil }
         return MacroSplit(protein: protein / total, fat: fat / total, carbs: carbs / total)
     }
-
-    // MARK: Body metrics
 
     /// A card's daily values: visual body fat in percent, tape measurements in centimeters, and the ratios as
     /// fractions. Waist to height needs the profile's height; waist to hip needs both on the same day.

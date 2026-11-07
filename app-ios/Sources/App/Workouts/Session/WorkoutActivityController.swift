@@ -143,8 +143,6 @@ final class WorkoutActivityController {
         await queue?.value
     }
 
-    // MARK: Thumbnails
-
     private func writeThumbnails(for status: LiveWorkoutStatus) {
         for catalogID in Set([status.current?.catalogID, status.upNext?.catalogID].compactMap(\.self)) {
             writeThumbnail(catalogID)

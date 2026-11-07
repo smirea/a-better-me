@@ -289,7 +289,6 @@ async function ensureServer() {
     console.log(`Started the server on port ${port} (pid ${server.pid}, log ${log}). ${runCommand} --stop stops it.`);
 }
 
-/** Stops the server `ensureServer` started, by its process group, and shuts down this worktree's simulators. */
 async function stop() {
     if (existsSync(serverPid)) {
         const pid = Number(readFileSync(serverPid, "utf8"));

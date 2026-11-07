@@ -4,7 +4,6 @@ import GRDB
 /// Nutrition's writes. Each runs as one `write`, in call order. None reaches from one table into another: entries,
 /// favorites, and recipes hold snapshots, so deleting a food or recipe leaves them as they are.
 extension LocalStore {
-    // MARK: Log
 
     /// Logs every portion at `minute` of `day`, as one transaction: a plate, a recipe, or a single food.
     func log(_ portions: [FoodPortion], on day: CalendarDay, minute: Int) {
@@ -39,9 +38,6 @@ extension LocalStore {
         }
     }
 
-    // MARK: Days
-
-    /// Changes the day's row, creating it on first use.
     func updateDay(_ day: CalendarDay, _ change: @escaping @Sendable (inout NutritionDay) -> Void) {
         modify(NutritionDay.self, id: day, orInsert: { NutritionDay(id: day) }, change)
     }
@@ -57,8 +53,6 @@ extension LocalStore {
     func deleteNote(_ id: UUID) {
         delete(FoodLogNote.self, id: id)
     }
-
-    // MARK: Foods and recipes
 
     /// Creates a food, or refreshes a cached one in place, keeping when it was first saved.
     func saveFood(_ food: Food) {
@@ -97,8 +91,6 @@ extension LocalStore {
         delete(Recipe.self, id: id)
     }
 
-    // MARK: Favorites
-
     /// Saves a favorite. At the limit it replaces the oldest, as MacroFactor replaces one when full.
     func addFavorite(_ portion: FoodPortion) {
         let favorite = FoodFavorite(portion)
@@ -115,15 +107,11 @@ extension LocalStore {
         delete(FoodFavorite.self, id: id)
     }
 
-    // MARK: Body metrics
-
     /// Sets the day's value of `kind`, replacing any earlier one; nil clears it.
     func setBodyMetric(_ kind: BodyMetricKind, on day: CalendarDay, value: Double?) {
         guard let value else { return delete(BodyMetric.self, id: BodyMetric.id(kind, on: day)) }
         put(BodyMetric(kind, on: day, value: value))
     }
-
-    // MARK: Strategy
 
     /// Saves the plan from its day on, replacing a plan that starts the same day.
     /// One plan per day, so a goal or program edited on a setup's or check-in's day replaces that row. It keeps its

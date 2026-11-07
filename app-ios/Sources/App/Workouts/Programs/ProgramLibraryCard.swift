@@ -24,7 +24,6 @@ extension ProgramColor {
     var title: String { rawValue.capitalized }
 }
 
-/// The rounded icon tile in the program color.
 struct ProgramIconTile: View {
     let program: Program
     var size: CGFloat = 44

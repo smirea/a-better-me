@@ -36,10 +36,8 @@ const discardWorkout = [
 const scrolled = (count = 1) => Array.from({ length: count }, () => 'scroll down').concat('wait 600');
 
 export const screens: Screen[] = [
-	// Root
 	{ name: 'add-choose', steps: tapTab('New') },
 
-	// Dashboard
 	{ name: 'dashboard', steps: ['shot top', ...scrolled(1), 'shot mid', ...scrolled(2)] },
 	{ name: 'dashboard-customize', steps: [...tap('Customize Dashboard')] },
 	{ name: 'dashboard-workouts-detail', steps: [...scrollTo('Workouts'), ...tap('Workouts'), 'wait 1000'] },
@@ -55,7 +53,6 @@ export const screens: Screen[] = [
 	},
 	{ name: 'dashboard-see-all-body-metrics', steps: ['scroll bottom', 'wait 600', 'press 358 331'] },
 
-	// Nutrition
 	{ name: 'foodlog', steps: tapTab('Nutrition') },
 	// Swipes the timeline back to yesterday, which the seed marks incomplete with edited totals: the title's subtitle.
 	{ name: 'foodlog-marked-day', steps: [...tapTab('Nutrition'), 'swipe 60 500 340 500', 'wait 800'] },
@@ -75,7 +72,6 @@ export const screens: Screen[] = [
 		steps: [...tapTab('Nutrition'), ...tap('Search for a food'), `press 'role="button" label="Scan"'`, 'wait 800'],
 	},
 
-	// Workouts
 	{ name: 'workout', steps: [...tapTab('Workout'), 'shot top', ...scrolled(1)] },
 	{ name: 'workout-calendar', steps: [...tapTab('Workout'), ...tap('Calendar')] },
 	{ name: 'workout-shortcuts', steps: [...tapTab('Workout'), ...tapTab('New')] },
@@ -91,7 +87,6 @@ export const screens: Screen[] = [
 		after: discardWorkout,
 	},
 
-	// More and settings
 	{ name: 'more', steps: [...tapTab('More'), 'shot top', ...scrolled(2)] },
 	{ name: 'levels', steps: more('Levels') },
 	{ name: 'strategy', steps: [...more('Strategy'), 'shot top', ...scrolled(1)] },
@@ -107,7 +102,6 @@ export const screens: Screen[] = [
 	{ name: 'settings-health', steps: more('Apple Health') },
 	{ name: 'settings-data-visibility', steps: more('Data Visibility') },
 	{ name: 'settings-api-tokens', steps: more('API Tokens') },
-	// Second level
 	{ name: 'dashboard-food-logging', steps: [...scrollTo('Food Logging'), ...tap('Food Logging'), 'wait 1000'] },
 	{ name: 'dashboard-scale-weight', steps: ['scroll bottom', 'wait 500', ...tap('Scale Weight'), 'wait 1000'] },
 	{ name: 'dashboard-steps', steps: ['scroll bottom', 'wait 600', 'press 56 617', 'wait 1000'] },

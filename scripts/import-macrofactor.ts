@@ -192,7 +192,6 @@ function nutrients(record: Record<string, Cell>): Amounts {
 	return amounts;
 }
 
-/** The value of the column named `name`, converted from the unit its header names. */
 function measured<Units extends Record<string, number>>(record: Record<string, Cell>, name: string, units: Units) {
 	for (const [header, cell] of Object.entries(record)) {
 		const { name: column, unit } = splitUnit(header);
@@ -479,7 +478,6 @@ function recipeRow(id: string, name: string, record: Record<string, Cell>, known
 	};
 }
 
-/** Base servings in one `unit` of a food: one of its own measures, or grams and ounces from its base weight. */
 function unitServings(nutrition: Nutrition, unit: string): number | undefined {
 	const own = nutrition.measures.find(measure => measure.name.toLowerCase() === unit.toLowerCase());
 	if (own) return own.servings / own.quantity;

@@ -123,19 +123,6 @@ final class HealthData {
     /// for longer.
     private func readDailySums(_ type: HKQuantityType, unit: HKUnit) async throws -> [DatedValue] {
         let calendar = Calendar.current
-        let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: .now))!
-        let start = calendar.date(byAdding: .year, value: -2, to: end)!
-        let query = HKStatisticsCollectionQueryDescriptor(
-            predicate: .quantitySample(type: type, predicate: HKQuery.predicateForSamples(withStart: start, end: end)),
-            options: .cumulativeSum,
-            anchorDate: start,
-            intervalComponents: DateComponents(day: 1)
-        )
-        var days: [DatedValue] = []
-        try await query.result(for: store).enumerateStatistics(from: start, to: end) { statistics, _ in
-            guard let sum = statistics.sumQuantity()?.doubleValue(for: unit), sum > 0 else { return }
-            days.append(DatedValue(date: statistics.startDate, value: sum))
-        }
-        return days
+        return try await store.dailySums(of: type, unit: unit, from: calendar.date(byAdding: .day, value: 1, to: calendar.date(byAdding: .year, value: -2, to: .now)!)!, through: .now, calendar: calendar)
     }
 }

@@ -125,8 +125,6 @@ final class LiveWorkoutController {
         }
     }
 
-    // MARK: Watch
-
     /// `session` as the watch runs it: the in-progress one with what the phone typed and suggested, or a workout on
     /// the watch's home list as it would start, prefilled from `history`.
     func watchWorkout(for session: WorkoutSession, history: [[WorkoutBlock]], gym: GymProfile?, isLive: Bool) -> WatchWorkout {
@@ -289,8 +287,6 @@ final class LiveWorkoutController {
         for event in ready { apply(event) }
     }
 
-    // MARK: Status
-
     private func build() -> LiveWorkoutStatus? {
         guard let session = inputs.session, let catalog else { return nil }
         let blocks = session.blocks
@@ -355,8 +351,6 @@ final class LiveWorkoutController {
             suggestions: live.suggestions, appliedRows: live.appliedRows, settings: inputs.settings
         )
     }
-
-    // MARK: Commands
 
     /// `at` is when the owner acted, which is a while ago for a command the watch queued while the phone was away.
     func perform(_ command: LiveWorkoutCommand, at date: Date = .now) {

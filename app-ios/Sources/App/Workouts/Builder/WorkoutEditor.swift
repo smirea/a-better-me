@@ -291,7 +291,6 @@ private struct ExerciseRow: View {
     }
 }
 
-/// "② 8-12 reps" with the RIR badge at the trailing edge.
 struct TargetLine: View {
     let set: WorkoutSet
     let number: Int

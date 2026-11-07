@@ -199,17 +199,14 @@ extension Shortcut: ShortcutItem {
         }
     }
 
-    /// Weight and History are round buttons by nature; the rest are rows unless pinned to the top row.
     var isRound: Bool { self == .weight || self == .history }
 }
 
 extension ShortcutsLayout {
-    /// The round buttons: every visible round shortcut in `items` order, then `top` when `items` does not hold it.
     var topRow: [Shortcut] {
         items.filter { $0.isRound || $0 == top } + (items.contains(top) ? [] : [top])
     }
 
-    /// The rows under Up Next: every visible shortcut that is not a round button, in `items` order.
     var rows: [Shortcut] {
         items.filter { !$0.isRound && $0 != top }
     }

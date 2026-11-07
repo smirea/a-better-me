@@ -49,7 +49,6 @@ extension [WorkoutBlock] {
         }
     }
 
-    /// Only a standalone exercise next to another block can join it.
     func canSuperset(_ id: BlockExercise.ID, with neighbor: Neighbor) -> Bool {
         guard let at = locate(id), !self[at.block].isSuperset else { return false }
         return indices.contains(neighbor == .previous ? at.block - 1 : at.block + 1)
@@ -65,7 +64,6 @@ extension [WorkoutBlock] {
         remove(at: at.block)
     }
 
-    /// Takes one exercise out of its superset and places it on its own right after the group.
     mutating func detach(_ id: BlockExercise.ID) {
         guard let at = locate(id), self[at.block].isSuperset else { return }
         let item = self[at.block].exercises.remove(at: at.item)
@@ -100,7 +98,6 @@ extension BlockExercise {
 }
 
 extension WorkoutSet {
-    /// What the Targets sheet's "+" adds: the same type, targets, and rest, without anything logged.
     func copyingTargets() -> WorkoutSet {
         WorkoutSet(type: type, target: target, restSeconds: restSeconds, subSets: subSets.map { SubSet(target: $0.target) })
     }

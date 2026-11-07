@@ -53,7 +53,6 @@ extension DashboardData {
         )
     }
 
-    /// The `days` days ending today.
     func window(days: Int) -> DateInterval {
         let today = calendar.startOfDay(for: now)
         return DateInterval(
@@ -101,7 +100,6 @@ extension DashboardData {
         )
     }
 
-    /// Intake bars against a dashed reference, with the range's mean difference as the one stat.
     func balanceTab(_ reference: BalanceReference, title: String, points: [DatedValue], color: Color) -> MetricTab {
         let intake = intake
         let differences = NutritionMetrics.differences(intake: intake, reference: points, calendar: calendar)

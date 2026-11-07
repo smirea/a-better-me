@@ -26,7 +26,6 @@ function walk(dir: string): string[] {
 	});
 }
 
-/** The files back to back, and where each one sits. */
 export function concatenate(files: { path: string; bytes: Uint8Array }[]): {
 	bytes: Uint8Array<ArrayBuffer>;
 	files: PackEntry[];

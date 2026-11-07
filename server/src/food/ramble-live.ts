@@ -365,7 +365,6 @@ type LiveRamble = {
 
 type ReadOptions = { model?: RambleModel; timing?: ReadTiming };
 
-/** What serving live Ramble needs: Gemini to read and a transcriber to hear. */
 export type LiveRambleSetup = { gemini: string; transcribe: Transcribe };
 
 /**
@@ -451,6 +450,8 @@ async function openLiveRamble(
 	};
 }
 
+type LiveSocket = { send(text: string): void; close(code?: number, reason?: string): void };
+
 /**
  * The phone's side of `GET /api/food-database/ramble/live`, the same on Bun and in the Worker's Durable Object. The
  * phone sends the ramble's context as its first text message, then 16 kHz PCM as binary frames, `{"type":"shown"}`
@@ -458,8 +459,6 @@ async function openLiveRamble(
  * listens, `heard` with the transcript and `outline` as they change, and `done` with both after the stop; an `error`
  * closes the socket. Audio sent before `ready` is held, so the first words are not lost.
  */
-type LiveSocket = { send(text: string): void; close(code?: number, reason?: string): void };
-
 export function serveLiveRamble(socket: LiveSocket, setup: LiveRambleSetup, options: ReadOptions = {}) {
 	let session: LiveRamble | undefined;
 	let opening = false;

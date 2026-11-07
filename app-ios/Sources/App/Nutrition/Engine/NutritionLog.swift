@@ -1,7 +1,6 @@
 import Foundation
 import GRDB
 
-/// One day of the food log: what was eaten and what the owner said about the day.
 struct NutritionLogDay: Equatable, Sendable {
     var day: CalendarDay
     var consumed: NutrientAmounts
@@ -47,7 +46,6 @@ enum NutritionExpenditure {
         case updating, holding, fixed
     }
 
-    /// The days the expenditure runs over and the estimate it starts from.
     struct ExpenditureSetup: Equatable {
         var start: Date
         var initialKcal: Double
@@ -118,7 +116,6 @@ enum NutritionExpenditure {
         )
     }
 
-    /// The modifiers the Expenditure settings turn on: the merged daily steps, and each plan's goal rate from its day.
     static func modifiers(settings: NutritionSettings.Expenditure, plans: [NutritionPlan], steps: [DatedValue], calendar: Calendar) -> NutritionEngine.Expenditure.Modifiers {
         NutritionEngine.Expenditure.Modifiers(
             steps: settings.stepInformedUpdates ? steps : [],

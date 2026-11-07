@@ -1,7 +1,6 @@
 import Feedback
 import SwiftUI
 
-/// The set table, its keypad, and the edits they make to `blocks`.
 extension SessionEditor {
     private static let checkboxWidth: CGFloat = 32
 
@@ -201,9 +200,6 @@ extension SessionEditor {
         blocks.rows(block: block, exercise: index).count(where: isHidden)
     }
 
-    // MARK: Values
-
-    /// What a row shows and logs: its log once checked, else what was typed, else the prefill.
     func entry(_ path: RowPath, previous: [WorkoutSet]) -> SetEntry {
         SessionFlow.entry(
             for: path, in: blocks, drafts: drafts, previous: previous,
@@ -226,8 +222,6 @@ extension SessionEditor {
             drafts[blocks.rowID(at: path)] = value
         }
     }
-
-    // MARK: Checking sets
 
     /// `date` is when the set was done: now for a tap, earlier for a set the watch logged while the phone was away.
     private func toggle(_ path: RowPath, previous: [WorkoutSet], at date: Date = .now) {
@@ -312,8 +306,6 @@ extension SessionEditor {
         }
         if let next { withAnimation { current = next } }
     }
-
-    // MARK: Structure
 
     private func setTypeBinding(_ path: RowPath) -> Binding<SetType> {
         Binding {
@@ -415,8 +407,6 @@ extension SessionEditor {
         blocks.add(pick)
         current = blocks.flatMap(\.exercises).first { !existing.contains($0.id) }?.id ?? current
     }
-
-    // MARK: Keypad
 
     func keypad(for focus: KeypadFocus) -> some View {
         let rir = blocks.contains(focus.row) ? entry(focus.row, previous: previousSets(for: focus.row)).rir : nil

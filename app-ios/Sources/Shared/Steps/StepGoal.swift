@@ -28,7 +28,6 @@ enum StepGoal {
         var date: Date
         var steps: Double
         var tier: Tier
-        /// Part of the current streak.
         var inStreak: Bool
 
         var id: Date { date }

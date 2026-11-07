@@ -58,8 +58,6 @@ final class LocalStore {
         }
     }
 
-    // MARK: Writes
-
     /// Runs `body` in one write transaction after every write called before it. The task resolves with its result.
     @discardableResult
     func write<T: Sendable>(_ body: @escaping @Sendable (Database) throws -> T) -> Task<T, any Error> {
@@ -142,8 +140,6 @@ final class LocalStore {
     func read<T>(_ body: (Database) throws -> T) throws -> T {
         try database.pool.read(body)
     }
-
-    // MARK: Sync
 
     var lastSyncedAt: Date? { client.lastSyncAt }
     var snapshotRows: Int? { client.snapshotRows }

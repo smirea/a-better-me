@@ -4,7 +4,6 @@ import Foundation
 /// The deload is never stored: it is derived from the week next to it, so toggling Deload in Program Settings or
 /// building a program from scratch needs no rewrite.
 extension Program {
-    /// The training weeks plus the deload cycle when there is one.
     var totalCycles: Int { Self.totalCycles(cycles, deload: config.deload) }
 
     static func totalCycles(_ cycles: Int, deload: Deload) -> Int { cycles + (deload == .none ? 0 : 1) }
@@ -15,7 +14,6 @@ extension Program {
     /// The training week the deload derives its sets from: the first week for a first-cycle deload, else the last.
     var deloadNeighborWeek: Int { config.deload == .firstCycle ? 1 : cycles }
 
-    /// The first cycle that trains week 1.
     var firstTrainingCycle: Int { config.deload == .firstCycle ? 2 : 1 }
 
     /// A fresh run from cycle 1: sessions before it count for nothing, and no rest day is ticked.
@@ -144,7 +142,6 @@ extension Program {
         }
     }
 
-    /// Starts `template` as day `dayID` of this program's current cycle.
     func session(startingFrom template: WorkoutTemplate, dayID: ProgramDay.ID, gymID: UUID?) -> WorkoutSession {
         var resolved = template
         resolved.blocks = blocks(of: template, cycle: currentCycle)

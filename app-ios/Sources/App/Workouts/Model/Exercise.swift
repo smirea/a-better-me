@@ -1,7 +1,5 @@
 import Foundation
 
-/// MF Workouts' exercise ID for catalog exercises, `custom-<uuid>` for the owner's own.
-
 /// Field names and values mirror `scripts/catalog.ts`, which generates them from the reference app's own export.
 struct Exercise: Codable, Hashable, Identifiable {
     let id: ExerciseID
@@ -82,7 +80,6 @@ struct RecommendationLevels: Codable, Hashable {
     var secondaryCompound: Double?
     var accessory: Double?
 }
-
 
 enum ExerciseType: String, Codable, CaseIterable {
     case compound, isolation, core, other

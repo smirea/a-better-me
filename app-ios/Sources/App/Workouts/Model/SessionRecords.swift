@@ -74,7 +74,6 @@ enum SessionRecords {
         }
     }
 
-    /// Each exercise's best value of each kind over `earlier` sessions' blocks.
     static func bests(in earlier: [[WorkoutBlock]], catalog: (ExerciseID) -> Exercise?) -> [ExerciseID: [ExerciseRecord.Kind: Double]] {
         var bests: [ExerciseID: [ExerciseRecord.Kind: Double]] = [:]
         for blocks in earlier {

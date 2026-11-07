@@ -1,9 +1,6 @@
 import SwiftUI
 
-/// The session's gym and what each exercise's chosen equipment loads in it, for the Equipment chip, the plate
-/// calculator, and the weight stepper.
 extension SessionEditor {
-    /// The gym the session started at, or the default gym for a session without one or whose gym was removed.
     var sessionGym: GymProfile? {
         GymProfile.resolve(session.gymID, in: gyms)
     }
@@ -12,7 +9,6 @@ extension SessionEditor {
         sessionGym.map { GymAvailability(gym: $0, equipment: catalog.equipment) }
     }
 
-    /// The session gym's calculator switches; every switch is off without a gym.
     var calculatorOptions: PlateCalculatorOptions {
         sessionGym.map { defaults.workout.plateCalculator(for: $0.id) } ?? PlateCalculatorOptions()
     }
@@ -33,7 +29,6 @@ extension SessionEditor {
         loading(for: blocks[path.block].exercises[path.exercise])
     }
 
-    /// The exercise's offset, only where the gym's Offset Weight is on.
     func plateOffset(of exerciseID: ExerciseID) -> PlateOffset? {
         guard calculatorOptions.offsetWeight else { return nil }
         return ExerciseSettings.of(exerciseID, in: exerciseSettings)?.overrides.plateOffset

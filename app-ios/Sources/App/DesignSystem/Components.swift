@@ -2,7 +2,6 @@ import SwiftUI
 import UIKit
 
 extension View {
-    /// A tab root's title, large and leading on the same row as its toolbar buttons.
     func screenTitle(_ title: String) -> some View {
         navigationTitle(title).toolbarTitleDisplayMode(.inlineLarge)
     }
@@ -13,7 +12,6 @@ extension View {
         navigationTitle(title).navigationSubtitle(subtitle ?? "").navigationBarTitleDisplayMode(.inline)
     }
 
-    /// The app's card: content on the raised surface with the large radius.
     func card() -> some View {
         padding(14).background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
     }

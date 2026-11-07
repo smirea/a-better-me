@@ -48,7 +48,6 @@ struct FoodDraft: Equatable, Sendable {
     var energyUnit = NutritionSettings.EnergyUnit.kcal
     var nutrients: [NutrientID: String] = [:]
 
-
     init() {}
 
     /// Reads a saved food back into its fields. A base serving of exactly 100 g or 100 mL named for its unit is the
@@ -94,7 +93,6 @@ struct FoodDraft: Equatable, Sendable {
         return copy
     }
 
-    /// The base serving's grams and milliliters as the fields stand.
     var baseSize: (grams: Double?, milliliters: Double?) {
         switch basis {
         case .hundredGrams: return (100, nil)

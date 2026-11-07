@@ -168,8 +168,6 @@ private struct ProgramEditorScreen: View {
         template?.gymID.flatMap { id in gyms.first { $0.id == id }?.name } ?? "No Gym"
     }
 
-    /// The selected day's actions. They were a row of chips under the day tabs; the gym they led with is the title's
-    /// subtitle now.
     private func dayMenu(_ program: Program, day: ProgramDay, template: WorkoutTemplate?) -> some View {
         let isRest = template == nil
         return Menu("Day Options", systemImage: "ellipsis") {
@@ -229,7 +227,6 @@ private struct ProgramEditorScreen: View {
     }
 }
 
-/// The scrolling day tabs: one per day, underlined when selected, then Add Day.
 /// "Gym Options · Impacts exercise selection": the day's gym, or every day's with Apply to All Days.
 private struct ProgramEditorGymOptions: View {
     let gyms: [GymProfile]

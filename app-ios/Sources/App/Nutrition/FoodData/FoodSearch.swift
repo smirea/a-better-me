@@ -131,7 +131,6 @@ final class FoodSearch {
         library = try await store.database.pool.read { try FoodLibrary.read($0, today: today) }
     }
 
-    /// The foods usually logged within `hour` (`HourPicks`), at their last serving there.
     func picks(hour: Int) -> [FoodSearchResult] {
         library.picks[hour] ?? []
     }

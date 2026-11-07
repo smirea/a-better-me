@@ -87,7 +87,6 @@ private struct ChartScrubOverlay<X: Plottable & Equatable>: View {
         .allowsHitTesting(false)
     }
 
-    /// Binary search: `xs` are in plotted order, so their positions grow.
     private func nearest(_ x: CGFloat) -> Int? {
         guard !xs.isEmpty else { return nil }
         func position(_ index: Int) -> CGFloat { proxy.position(forX: xs[index]) ?? 0 }

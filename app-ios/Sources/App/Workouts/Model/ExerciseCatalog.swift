@@ -46,7 +46,6 @@ final class ExerciseCatalog {
 
     @ObservationIgnored private var customObservation: AnyDatabaseCancellable?
 
-    /// Keeps the custom exercises current with the store.
     func observeCustom(in store: LocalStore) {
         customObservation = ValueObservation.trackingConstantRegion { try CustomExercise.all.fetch($0).map(\.exercise) }
             .removeDuplicates()

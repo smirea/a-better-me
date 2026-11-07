@@ -113,7 +113,6 @@ final class LiveSessionStore {
         didAutomateWarmUps = []
     }
 
-    /// A nil rest stops the timer.
     private func setRest(_ timer: LiveRest?) {
         guard let timer else { return stopRest() }
         rest = timer

@@ -159,8 +159,6 @@ struct WorkoutSummaryView: View {
         if isFinishing { LiveSessionStore.shared.reset() }
     }
 
-    // MARK: Sections
-
     private func recordCards(_ records: [ExerciseRecord]) -> some View {
         ScrollView(.horizontal) {
             HStack(spacing: 10) {

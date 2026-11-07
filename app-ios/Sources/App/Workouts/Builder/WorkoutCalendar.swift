@@ -20,7 +20,6 @@ struct LoggedDays {
     }
 }
 
-/// What tapping a day pill opens.
 enum DayPillTarget: Hashable {
     case summary(WorkoutSession)
     case programDay(ProgramRoute)

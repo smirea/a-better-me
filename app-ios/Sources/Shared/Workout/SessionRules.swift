@@ -9,7 +9,6 @@ struct FlowRules: Codable, Hashable, Sendable {
 }
 
 extension WorkoutSet {
-    /// The main row and every drop or myo sub-row are logged, or the set was skipped.
     var isDone: Bool { skipped == true || isCompleted && subSets.allSatisfy { $0.log != nil } }
 
     /// The set as a plan: targets and structure without anything lifted.

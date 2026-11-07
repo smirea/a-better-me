@@ -3,7 +3,6 @@ import Foundation
 /// The nutrition numbers on the Dashboard, as pure functions over the log, the plans, and the engine's series, so tests
 /// pin each to literal values. See docs/decisions/nutrition.md "Dashboard".
 enum NutritionMetrics {
-    // MARK: Changes over the last days
 
     struct Change: Equatable {
         var days: Int
@@ -36,8 +35,6 @@ enum NutritionMetrics {
         return delta > 0 ? .increase : .decrease
     }
 
-    // MARK: Weight Trend insights
-
     struct WeightInsights: Equatable {
         var currentKg: Double
         /// Per week, over the last three weeks of trend.
@@ -64,15 +61,11 @@ enum NutritionMetrics {
         )
     }
 
-    // MARK: Energy balance
-
-    /// Intake minus the reference on each day that has both.
     static func differences(intake: [DatedValue], reference: [DatedValue], calendar: Calendar) -> [DatedValue] {
         let byDay = Dictionary(reference.map { (calendar.startOfDay(for: $0.date), $0.value) }, uniquingKeysWith: { $1 })
         return intake.compactMap { day in byDay[calendar.startOfDay(for: day.date)].map { DatedValue(date: day.date, value: day.value - $0) } }
     }
 
-    /// The mean of the points on the `days` days ending today; nil without any.
     static func trailingMean(_ points: [DatedValue], days: Int, now: Date, calendar: Calendar) -> Double? {
         let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))!
         let start = calendar.date(byAdding: .day, value: -days, to: end)!
@@ -91,7 +84,6 @@ enum NutritionMetrics {
         return difference > 0 ? .above : .below
     }
 
-    /// Each day's calorie target from the plan in force, from the first plan's day through `end`.
     static func energyTargets(_ plans: [NutritionPlan], through end: CalendarDay, calendar: Calendar) -> [DatedValue] {
         guard var day = plans.map(\.id).min() else { return [] }
         var result: [DatedValue] = []
@@ -103,8 +95,6 @@ enum NutritionMetrics {
         }
         return result
     }
-
-    // MARK: Daily and weekly nutrition
 
     struct DayNutrition: Equatable {
         var day: CalendarDay
@@ -133,15 +123,12 @@ enum NutritionMetrics {
         return today.week.map { day($0, log: log, plans: plans) }
     }
 
-    // MARK: Goal progress
-
     /// Percent of the way from the start weight to the target, 0 when the weight moved away and 100 once there.
     static func goalPercent(startKg: Double, currentKg: Double, targetKg: Double) -> Double {
         guard startKg != targetKg else { return 100 }
         return min(max((startKg - currentKg) / (startKg - targetKg) * 100, 0), 100)
     }
 
-    /// The last value on or before `date`, else the first value after it.
     static func value(_ points: [DatedValue], on date: Date) -> Double? {
         (points.last { $0.date <= date } ?? points.first)?.value
     }
@@ -183,8 +170,6 @@ enum NutritionMetrics {
         return bars
     }
 
-    // MARK: Food Logging habit
-
     enum LogState: Equatable {
         case tracked, fasting, untracked
     }
@@ -197,7 +182,6 @@ enum NutritionMetrics {
         return day.status == .fasted ? .fasting : .untracked
     }
 
-    /// The days the habit counts: tracked and fasting days.
     static func loggedDates(_ log: [NutritionLogDay], calendar: Calendar) -> [Date] {
         log.filter { logState($0) != .untracked }.map { $0.day.date(in: calendar) }
     }

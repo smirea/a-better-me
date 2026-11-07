@@ -70,7 +70,6 @@ function parseWorkoutDays(workbooks: Map<string, Sheet>[]): Map<string, Map<stri
 	return days;
 }
 
-/** Splits `total` into `count` whole parts as evenly as possible, larger parts first. */
 function spread(total: number, count: number): number[] {
 	const base = Math.floor(total / count);
 	return Array.from({ length: count }, (_, index) => base + (index < total - base * count ? 1 : 0));

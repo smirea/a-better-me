@@ -37,7 +37,6 @@ final class WatchModel: NSObject {
     /// Sessions the phone told this watch not to record: discarded, or recorded on the phone by an older build.
     @ObservationIgnored private var standDown: Set<UUID> = []
 
-
     func activate() {
         restore()
         recordIfNeeded()
@@ -67,8 +66,6 @@ final class WatchModel: NSObject {
         for task in connectivityTasks { task.setTaskCompletedWithSnapshot(false) }
         connectivityTasks = []
     }
-
-    // MARK: Workout
 
     /// Starts a home-list workout here, with or without the phone. The phone inserts the same session when the start
     /// event reaches it.
@@ -151,8 +148,6 @@ final class WatchModel: NSObject {
         persist()
         recordIfNeeded()
     }
-
-    // MARK: Recording
 
     /// The phone started a workout and launched this app to record it.
     func startRecording() {
@@ -290,8 +285,6 @@ final class WatchModel: NSObject {
         maxHeartRate = Double(220 - age)
     }
 
-    // MARK: Phone
-
     /// In a mirrored workout the data channel is fastest; WatchConnectivity covers everything else.
     private func send(_ message: WatchMessage) {
         guard let recording, recording.isRunning, isMirrorConfirmed else { return sendOverConnectivity(message, queued: false) }
@@ -340,8 +333,6 @@ final class WatchModel: NSObject {
         if let data = context[WatchMessage.workoutKey] as? Data, let message = try? WatchMessage(data) { receive(message) }
         completeConnectivityTasks()
     }
-
-    // MARK: Disk
 
     private struct Saved: Codable {
         var home: WatchHome?

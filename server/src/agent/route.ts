@@ -84,7 +84,6 @@ export function pagedList<T extends SyncedTable, Item = RowOf<T>>(
 	return { total: db.count(table, sql, params), items: rows.map(map) };
 }
 
-/** The id a create writes: the given one unless a row has it already, or a new one. */
 export function fresh(db: Db, table: SyncedTable, id: string | undefined): string {
 	if (!id) return newId();
 	if (db.get(table, id)) throw new ApiError(409, `${table} ${id} already exists. PATCH it instead.`);

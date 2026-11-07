@@ -12,7 +12,6 @@ enum NutritionFormat {
         "\(unit == .kcal ? value.wholeText : value.niceText) \(unit.rawValue)"
     }
 
-    /// A nutrient's amount by its id: whole calories, `niceText` for the rest.
     static func amount(_ value: Double, of id: NutrientID) -> String {
         id == .energy ? value.wholeText : value.niceText
     }

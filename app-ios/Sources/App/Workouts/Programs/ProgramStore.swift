@@ -73,7 +73,6 @@ extension LocalStore {
         edit(Program.self, id: programID) { $0.currentCycle = min(max(cycle, 1), $0.totalCycles) }
     }
 
-    /// Adds a rest day at the end of the cycle.
     func addRestDay(to programID: UUID) {
         edit(Program.self, id: programID) { $0.days.append(ProgramDay()) }
     }

@@ -9,7 +9,6 @@ struct TimelineRow: Hashable, Identifiable {
     var id: UUID { entry.id }
 }
 
-/// One hour pill of the timeline and the entries under it.
 struct TimelineHour: Hashable, Identifiable {
     let hour: Int
     let rows: [TimelineRow]
@@ -128,7 +127,6 @@ enum FoodLog {
         }
     }
 
-    /// Stops at zero past the target unless overages show.
     static func remaining(consumed: Double, target: Double, showOverages: Bool) -> Double {
         showOverages ? target - consumed : max(0, target - consumed)
     }
@@ -244,7 +242,6 @@ enum FoodLog {
         return "\(verb) \(foods) to \(place)"
     }
 
-    /// The selection after tapping an hour's pill: the hour's entries join it, or leave it when all are already in.
     static func toggling(_ hour: [UUID], in selection: Set<UUID>) -> Set<UUID> {
         selection.isSuperset(of: hour) ? selection.subtracting(hour) : selection.union(hour)
     }

@@ -37,7 +37,6 @@ struct FoodNutrition: Hashable, Codable, Sendable {
     var baseMilliliters: Double?
     var measures: [Measure]
 
-    /// What `serving` weighs, when the base serving has a weight.
     func grams(_ serving: Serving) -> Double? { baseGrams.map { $0 * serving.servings } }
 
     /// `measures`, then the standard weights and volumes the base serving's size allows that it does not already name.

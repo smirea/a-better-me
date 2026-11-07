@@ -1,7 +1,6 @@
 import Feedback
 import SwiftUI
 
-/// The catch-all tab: Levels, Strategy, the workout history, and the one settings tree for both halves.
 struct MoreTab: View {
     @Environment(LocalStore.self) private var store
 
@@ -87,7 +86,6 @@ private enum MoreRoute: Hashable {
     }
 }
 
-/// Shows a progress bar only while downloading, so a finished download leaves just its size.
 private struct AssetsRow: View {
     var body: some View {
         let store = AssetStore.shared

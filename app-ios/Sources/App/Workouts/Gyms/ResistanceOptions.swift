@@ -43,7 +43,6 @@ extension Exercise {
         EquipmentChoiceOption.chosen(choice, among: supportOptions(in: availability))
     }
 
-    /// Whether the Equipment chip has anything to pick: more than one resistance or support option.
     var hasEquipmentChoice: Bool { resistanceEquipmentIDs.count > 1 || supportEquipmentIDs.count > 1 }
 }
 

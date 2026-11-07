@@ -88,8 +88,6 @@ struct ExerciseBrowser<Trailing: View>: View {
     }
 }
 
-
-/// Reset, Gym, Type, Laterality, Resistance, Support, and Range of Motion.
 struct ExerciseFilterBar: View {
     @Binding var filter: ExerciseFilter
     let exercises: [Exercise]

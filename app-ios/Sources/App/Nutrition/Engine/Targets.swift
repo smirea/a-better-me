@@ -113,7 +113,6 @@ extension NutritionEngine {
             return Int((log(ratio) / log(weeklyFactor) * 7).rounded(.up))
         }
 
-        /// A coached week: calories from the goal, shifted onto high days, then macros per day.
         static func weekly(program: CoachedProgram, goal: Goal, expenditure: Double, weightKg: Double) -> WeeklyPlan {
             let floor = Double(program.floor.kcal)
             let average = max(dailyBudget(expenditure: expenditure, goal: goal, weightKg: weightKg), floor)

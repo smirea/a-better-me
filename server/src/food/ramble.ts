@@ -304,7 +304,6 @@ function resolveAliases(
 	}
 }
 
-/** The outline of the whole transcript so far. */
 export async function outlineRamble(
 	request: RambleRequest,
 	apiKey: string,

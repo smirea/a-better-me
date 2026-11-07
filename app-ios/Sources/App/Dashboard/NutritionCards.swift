@@ -180,7 +180,6 @@ struct EnergyBalanceFocusCard: View {
     }
 }
 
-/// Daily intake bars with a dashed reference line, the Energy Balance chart.
 struct BalanceChart: View {
     let bars: [DatedValue]
     let line: [DatedValue]
@@ -267,7 +266,6 @@ struct GoalProgressInsightCard: View {
     }
 }
 
-/// The current goal measured on scale or trend weight.
 struct GoalProgressValues {
     enum Source: String, CaseIterable {
         case scale = "Scale Weight", trend = "Trend Weight"

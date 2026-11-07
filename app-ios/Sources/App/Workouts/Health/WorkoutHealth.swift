@@ -80,8 +80,6 @@ final class WorkoutHealth {
         }
     }
 
-    // MARK: Starting
-
     /// A workout started on the watch is recorded there; the phone only follows it, even when it hears of the
     /// workout before the watch's word that it records.
     func expectWatchRecording(_ id: UUID) {
@@ -179,8 +177,6 @@ final class WorkoutHealth {
     private func receive(_ stats: WorkoutRecording.Stats) {
         self.stats = stats
     }
-
-    // MARK: Ending
 
     /// The session left the in-progress query: Done ended it, or it was discarded and its row is gone.
     private func end(_ id: UUID) {

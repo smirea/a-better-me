@@ -304,7 +304,6 @@ private struct RestCell: View {
     }
 }
 
-/// The RIR badge, or an empty gray dot when the set has no RIR target.
 private struct RIRCell: View {
     let rir: Int?
 
@@ -380,7 +379,6 @@ private extension SetType {
     }
 }
 
-/// "RIR Targets": 0 through 6+, or "?" to clear.
 private struct RIRPicker: View {
     let onSelect: (Int?) -> Void
 
@@ -419,7 +417,6 @@ private struct RIRPicker: View {
     }
 }
 
-/// "Rest Timer": a minutes and seconds wheel.
 private struct RestPicker: View {
     let onSave: (Int) -> Void
 

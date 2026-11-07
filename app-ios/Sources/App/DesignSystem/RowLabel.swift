@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The app's list row label: an icon, a title, and an optional detail line.
 struct RowLabel: View {
     let title: Text
     var detail: Text?

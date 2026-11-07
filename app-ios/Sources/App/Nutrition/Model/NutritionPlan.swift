@@ -110,7 +110,6 @@ struct NutritionPlan: SyncedRecord {
 
     func target(on day: CalendarDay) -> DayTarget { targets[day.weekday] }
 
-    /// The plan in force on `day`: the latest that starts on or before it.
     static func effective(on day: CalendarDay, in plans: [NutritionPlan]) -> NutritionPlan? {
         plans.filter { $0.id <= day }.max { $0.id < $1.id }
     }

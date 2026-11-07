@@ -214,7 +214,6 @@ describe('xaiTranscriber', () => {
 	});
 });
 
-/** A transcriber the test speaks through. */
 function fakeStt() {
 	let events: TranscriberEvents | undefined;
 	const audio: number[] = [];

@@ -34,8 +34,6 @@ enum WeighIns {
     }
 }
 
-
 extension [WeighIn] {
-    /// The weigh-ins as the engine's series read them.
     var points: [DatedValue] { map { DatedValue(date: $0.date, value: $0.kg) } }
 }

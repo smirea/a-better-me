@@ -156,7 +156,6 @@ private struct MealPhoto: Sendable {
     }
 }
 
-/// The system camera, handing back the photo as taken.
 private struct CameraCapture: UIViewControllerRepresentable {
     let captured: (UIImage) -> Void
     @Environment(\.dismiss) private var dismiss

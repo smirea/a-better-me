@@ -20,7 +20,6 @@ extension WorkoutTemplate {
 }
 
 extension WorkoutSession {
-    /// Finished sessions, newest first.
     static let finished = DatabaseQuery([WorkoutSession]()) { db in
         try WorkoutSession.filter(Column("ended_at") != nil).fetchAll(db).sorted { $0.startedAt > $1.startedAt }
     }
@@ -52,7 +51,6 @@ extension ExerciseSettings {
         DatabaseQuery(nil) { try ExerciseSettings.fetchOne($0, key: id) }
     }
 }
-
 
 extension Program {
     static let all = DatabaseQuery([Program]()) { db in

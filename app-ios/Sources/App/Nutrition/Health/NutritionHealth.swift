@@ -52,7 +52,6 @@ final class NutritionHealth {
         )
     }
 
-    /// Writes today and the days of the recent window.
     func syncRecent() {
         let today = CalendarDay(.now, in: calendar)
         enqueue((0..<DietaryHealth.recentDays).map { today.adding(days: -$0) })

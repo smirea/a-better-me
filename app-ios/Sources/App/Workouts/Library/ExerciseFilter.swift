@@ -81,7 +81,6 @@ struct ExerciseGroup: Identifiable {
 }
 
 extension ExerciseGroup {
-    /// The browser's list: `ranked` exercises narrowed to `scope`, the filters, the gym, and the search, by category.
     static func browse(
         _ ranked: [Exercise], scope: BrowseScope, filter: ExerciseFilter, search: ExerciseSearch, availability: GymAvailability?
     ) -> (scoped: [Exercise], groups: [ExerciseGroup]) {

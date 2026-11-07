@@ -207,7 +207,6 @@ struct Volume {
         }
     }
 
-    /// The compound sets one day aims for.
     private var compoundBudget: Int {
         switch band {
         case .upTo20: 3

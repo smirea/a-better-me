@@ -191,8 +191,6 @@ struct SessionEditor: View {
         return (at.block, at.item)
     }
 
-    // MARK: Header
-
     private var header: some View {
         HStack(spacing: 16) {
             switch mode {
@@ -244,8 +242,6 @@ struct SessionEditor: View {
         .feedback("Top Bar", data: mode)
     }
 
-    // MARK: Exercise strip
-
     private var exerciseStrip: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 4) {
@@ -282,8 +278,6 @@ struct SessionEditor: View {
                 .frame(height: 3)
         }
     }
-
-    // MARK: Current exercise
 
     private func exerciseContent(block: Int, exercise index: Int) -> some View {
         let item = blocks[block].exercises[index]
@@ -391,8 +385,6 @@ struct SessionEditor: View {
             }
     }
 
-    // MARK: Sheets
-
     @ViewBuilder
     private func sheetContent(_ sheet: Sheet) -> some View {
         switch sheet {
@@ -455,8 +447,6 @@ struct SessionEditor: View {
         }
     }
 
-    // MARK: Finishing
-
     private func requestFinish() {
         let allDone = blocks.flatMap(\.exercises).allSatisfy { $0.sets.allSatisfy(\.isDone) }
         if allDone { finish(logAll: false) } else { confirmingFinish = true }
@@ -484,8 +474,6 @@ struct SessionEditor: View {
         let paused = store.resume()
         localStore.modify(WorkoutSession.self, id: session.id) { $0.pausedSeconds += paused }
     }
-
-    // MARK: Smart Progression
 
     func progressionSettings(for exerciseID: ExerciseID) -> ProgressionSettings {
         var settings = defaults.workout.progression

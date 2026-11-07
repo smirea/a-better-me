@@ -68,7 +68,6 @@ extension DashboardLayout {
 }
 
 private extension Array where Element: Equatable {
-    /// Inserts each missing card of `added` after the nearest card before it in `defaults` that the array holds.
     mutating func adopt(_ added: [Element], from defaults: [Element]) {
         for card in added where !contains(card) {
             let anchor = defaults.prefix { $0 != card }.last { contains($0) }
@@ -103,7 +102,6 @@ enum BodyMetricCard: String, Codable, CaseIterable {
     case waistToHeight, waistToHip
 }
 
-/// The Macros tile or one nutrient's tile, with how the tile states its value.
 struct NutritionCard: Codable, Hashable {
     enum Display: String, Codable, CaseIterable {
         case percent, consumed, remaining

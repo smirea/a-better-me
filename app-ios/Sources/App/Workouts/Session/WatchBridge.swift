@@ -136,8 +136,6 @@ final class WatchBridge: NSObject {
         LiveWorkoutController.shared.acknowledgedWatchEvents.filter(heard.contains)
     }
 
-    // MARK: Sending
-
     /// The current home list and workout, right away: a watch app just opened, or a mirrored session just connected.
     func sendState() {
         send(.home(home))
@@ -184,8 +182,6 @@ final class WatchBridge: NSObject {
             LocalStore.log.error("Updating the watch's context failed: \(String(describing: error))")
         }
     }
-
-    // MARK: Receiving
 
     func receive(_ message: WatchMessage) {
         switch message {

@@ -32,7 +32,6 @@ struct NutrientTargets {
         }
     }
 
-    /// What each of `ids` fills its bar against, leaving out those with no bounds.
     func goals(_ ids: [NutrientID]) -> NutrientAmounts {
         Dictionary(uniqueKeysWithValues: ids.compactMap { id in range(id).goal.map { (id, $0) } })
     }

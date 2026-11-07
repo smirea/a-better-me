@@ -176,13 +176,11 @@ enum FoodLogRoute: Hashable {
     case strategy
 }
 
-/// Where an entry sits on the log.
 struct EntryTime: Hashable {
     let day: CalendarDay
     let minute: Int
 }
 
-/// An entry a move took from one time to another.
 struct MovedEntry: Hashable {
     let id: UUID
     let from: EntryTime

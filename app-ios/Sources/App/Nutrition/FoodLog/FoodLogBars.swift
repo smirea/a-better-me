@@ -311,7 +311,6 @@ private struct DatesPrompt: View {
     }
 }
 
-/// The ⋮ menu: Nutrition Overview, Copy Day, Select All, Clear Day, the day's status, and the tile and hour toggles.
 struct DayMenu: View {
     let day: CalendarDay
 
