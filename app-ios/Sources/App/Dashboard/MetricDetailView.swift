@@ -487,7 +487,7 @@ private struct TopExerciseRow: View {
             if let exercise {
                 ExerciseTile(exercise: exercise, size: .small)
             }
-            Text(exercise?.name ?? "Unknown exercise").font(AppFont.headline(15)).lineLimit(2)
+            Text(exercise?.name ?? Exercise.unknownName).font(AppFont.headline(15)).lineLimit(2)
             Spacer()
             Text("\(sets) \(sets == 1 ? "set" : "sets")").font(AppFont.body(15))
             Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(Theme.textTertiary)

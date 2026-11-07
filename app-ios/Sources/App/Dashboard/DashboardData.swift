@@ -266,7 +266,7 @@ struct DashboardData {
             case .volume, .oneRepMax: "\(unit.fromKg(record.value).dashboardText) \(unit.rawValue)"
             }
             return RecordRow(
-                exerciseID: record.exerciseID, name: catalog(record.exerciseID)?.name ?? "Unknown exercise",
+                exerciseID: record.exerciseID, name: catalog(record.exerciseID)?.name ?? Exercise.unknownName,
                 label: label, fraction: record.value / top
             )
         }
@@ -338,7 +338,7 @@ struct DashboardData {
             }, footer: .months)
         case let .exercise(id, _):
             let series = DashboardMetrics.exercise(id, sessions: sessions, catalog: catalog)
-            return MetricDetail(title: catalog(id)?.name ?? "Unknown exercise", tabs: ExerciseChartMetric.allCases.map { metric in
+            return MetricDetail(title: catalog(id)?.name ?? Exercise.unknownName, tabs: ExerciseChartMetric.allCases.map { metric in
                 MetricTab(
                     title: metric.title, points: metric.dailyCombine.combine(convert(series[metric] ?? [], metric), calendar: calendar),
                     unit: .decimal(metric.unit(unit)), averageTitle: "Avg \(metric.title)",

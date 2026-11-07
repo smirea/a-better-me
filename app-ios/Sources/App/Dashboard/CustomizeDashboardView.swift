@@ -123,7 +123,7 @@ struct CustomizeDashboardView: View {
 
     @Environment(ExerciseCatalog.self) private var catalog
 
-    private func catalogName(_ id: ExerciseID) -> String { catalog.exercise(id)?.name ?? "Unknown exercise" }
+    private func catalogName(_ id: ExerciseID) -> String { catalog.exercise(id)?.name ?? Exercise.unknownName }
 }
 
 extension MuscleCard: Identifiable {
@@ -458,7 +458,7 @@ private struct AddRemoveSheet: View {
             ThemedSection {
                 ForEach(trained.firstOccurrences(), id: \.self) { id in
                     toggle(
-                        catalog.exercise(id)?.name ?? "Unknown exercise", .exercise, \.exercises, ExerciseCard(exerciseID: id),
+                        catalog.exercise(id)?.name ?? Exercise.unknownName, .exercise, \.exercises, ExerciseCard(exerciseID: id),
                         matching: { $0.exerciseID == id }
                     )
                 }

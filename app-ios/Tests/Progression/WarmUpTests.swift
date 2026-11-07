@@ -4,7 +4,7 @@ import Testing
 struct SmartWarmUpTests {
     @Test func curlAt40x8GetsTwoStepsBelowTheWorkingWeight() {
         let steps = SmartWarmUp.steps(workingWeight: 40, reps: 8, rir: 0, loadable: LoadableWeights(loading: nil, unit: .lb), isFresh: true)
-        #expect(steps == [SmartWarmUp.Step(percent: 40, weight: 20, reps: 8), SmartWarmUp.Step(percent: 63, weight: 30, reps: 5)])
+        #expect(steps == [WarmUpSet(percent: 40, reps: 8, weight: 20), WarmUpSet(percent: 63, reps: 5, weight: 30)])
     }
 
     @Test func simplifiedPlatesLandOnTheSameCurlWeights() {
@@ -36,10 +36,5 @@ struct WarmUpSchemeTests {
     @Test func standardSchemeRoundsToTheIncrement() {
         let steps = WarmUpScheme.sets(workingWeight: 102.5, loadable: LoadableWeights(loading: nil, unit: .kg), steps: WarmUpStep.standard)
         #expect(steps.map(\.weight) == [40, 62.5, 82.5])
-    }
-
-    @Test func incrementPerUnit() {
-        #expect(WarmUpScheme.increment(for: .kg) == 2.5)
-        #expect(WarmUpScheme.increment(for: .lb) == 5)
     }
 }

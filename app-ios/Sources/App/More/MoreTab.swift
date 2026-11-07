@@ -13,35 +13,35 @@ struct MoreTab: View {
                     }
                 }
                 ThemedSection("Progress") {
-                    row(.levels, "Levels", "trophy")
-                    row(.strategy, "Strategy", "chart.line.uptrend.xyaxis")
-                    row(.workoutHistory, "Workout History", "list.bullet.rectangle")
+                    row(.levels)
+                    row(.strategy)
+                    row(.workoutHistory)
                 }
                 ThemedSection("General") {
-                    row(.units, "Units", "ruler")
-                    row(.profile, "Profile", "person.crop.circle")
-                    row(.dashboard, "Dashboard", "square.grid.2x2")
+                    row(.units)
+                    row(.profile)
+                    row(.dashboard)
                 }
                 ThemedSection("Workouts") {
-                    row(.workout, "Workout", "dumbbell")
-                    row(.exercises, "Exercises", "figure.strengthtraining.traditional")
-                    row(.gymProfiles, "Gym Profiles", "building.2")
+                    row(.workout)
+                    row(.exercises)
+                    row(.gymProfiles)
                 }
                 ThemedSection("Nutrition") {
-                    row(.foodLog, "Food Log", "fork.knife")
-                    row(.expenditure, "Expenditure", "bolt.fill")
-                    row(.strategySettings, "Strategy Settings", "circle.hexagongrid")
-                    row(.foodsRecipes, "Foods & Recipes", "carrot")
+                    row(.foodLog)
+                    row(.expenditure)
+                    row(.strategySettings)
+                    row(.foodsRecipes)
                 }
                 ThemedSection("Integrations") {
-                    row(.appleHealth, "Apple Health", "heart.fill")
+                    row(.appleHealth)
                 }
                 ThemedSection("Data") {
-                    row(.dataVisibility, "Data Visibility", "eye")
+                    row(.dataVisibility)
                     AssetsRow()
                 }
                 ThemedSection("Automation") {
-                    row(.apiTokens, "API Tokens", "key")
+                    row(.apiTokens)
                 }
             }
             .themedList()
@@ -53,8 +53,8 @@ struct MoreTab: View {
         .feedback(self)
     }
 
-    private func row(_ route: MoreRoute, _ title: String, _ systemImage: String) -> some View {
-        NavigationLink(value: route) { RowLabel(title: title, systemImage: systemImage) }
+    private func row(_ route: MoreRoute) -> some View {
+        NavigationLink(value: route) { RowLabel(title: route.title, systemImage: route.systemImage) }
     }
 }
 
@@ -62,6 +62,48 @@ struct MoreTab: View {
 /// value link inside a screen pushed with a view destination never fired, so nothing here pushes by view.
 private enum MoreRoute: Hashable {
     case levels, strategy, workoutHistory, units, profile, dashboard, workout, exercises, gymProfiles, foodLog, expenditure, strategySettings, foodsRecipes, appleHealth, dataVisibility, apiTokens
+
+    var title: String {
+        switch self {
+        case .levels: "Levels"
+        case .strategy: "Strategy"
+        case .workoutHistory: "Workout History"
+        case .units: "Units"
+        case .profile: "Profile"
+        case .dashboard: "Dashboard"
+        case .workout: "Workout"
+        case .exercises: "Exercises"
+        case .gymProfiles: "Gym Profiles"
+        case .foodLog: "Food Log"
+        case .expenditure: "Expenditure"
+        case .strategySettings: "Strategy Settings"
+        case .foodsRecipes: "Foods & Recipes"
+        case .appleHealth: "Apple Health"
+        case .dataVisibility: "Data Visibility"
+        case .apiTokens: "API Tokens"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .levels: "trophy"
+        case .strategy: "chart.line.uptrend.xyaxis"
+        case .workoutHistory: "list.bullet.rectangle"
+        case .units: "ruler"
+        case .profile: "person.crop.circle"
+        case .dashboard: "square.grid.2x2"
+        case .workout: "dumbbell"
+        case .exercises: "figure.strengthtraining.traditional"
+        case .gymProfiles: "building.2"
+        case .foodLog: "fork.knife"
+        case .expenditure: "bolt.fill"
+        case .strategySettings: "circle.hexagongrid"
+        case .foodsRecipes: "carrot"
+        case .appleHealth: "heart.fill"
+        case .dataVisibility: "eye"
+        case .apiTokens: "key"
+        }
+    }
 
     @ViewBuilder
     var destination: some View {

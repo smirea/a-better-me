@@ -56,6 +56,9 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     }
 
     struct Expenditure: Codable, Hashable, Sendable {
+        /// Where a typed initial or static expenditure starts when the owner switches one on.
+        static let typedKcalStart = 2000.0
+
         /// A fixed daily expenditure in kcal instead of the computed one.
         var staticKcal: Double?
         /// The owner's own starting estimate in place of the BMR one.

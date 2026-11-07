@@ -352,7 +352,7 @@ extension SessionEditor {
         let settings = defaults.workout.warmUp
         var context = WarmUpContext(
             loadable: loadable(for: item),
-            scheme: overrides?.warmUpScheme ?? settings.schemes[exercise?.restCategory ?? .upperIsolation] ?? WarmUpStep.standard,
+            scheme: overrides?.warmUpScheme ?? settings.scheme(for: exercise?.restCategory ?? .upperIsolation),
             automation: overrides?.warmUpAutomation ?? settings.automation,
             simplifyPlates: settings.simplifyPlates
         )
@@ -429,7 +429,7 @@ extension SessionEditor {
                 guard let next = loading.step(from: Double(state.text) ?? 0, up: key.isIncrement) else { return }
                 state.set(next)
             } else {
-                let increment = WarmUpScheme.increment(for: unit)
+                let increment = unit.plateIncrement
                 state.set((Double(state.text) ?? 0) + (key.isIncrement ? increment : -increment))
             }
         case .plates:

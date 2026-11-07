@@ -112,7 +112,7 @@ enum SessionFlow {
             return item.sets.isEmpty ? "No sets" : "Set \(position) of \(item.sets.count)"
         }
         let rounds = block.exercises.map(\.sets.count).max() ?? 0
-        let kind = block.exercises.count > 2 ? "Circuit" : "Superset"
+        let kind = block.groupName
         return "\(kind) \(path.exercise + 1) of \(block.exercises.count) • Round \(max(1, position)) of \(rounds)"
     }
 }

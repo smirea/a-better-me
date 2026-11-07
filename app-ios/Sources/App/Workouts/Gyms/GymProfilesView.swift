@@ -84,7 +84,7 @@ private struct NewGymSheet: View {
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(\.dismiss) private var dismiss
     @Observe(AppSettings.current) private var settings
-    @State private var name = "Your Gym"
+    @State private var name = GymProfile.defaultName
     @State private var template = GymTemplate.commercial
 
     var body: some View {
@@ -131,7 +131,7 @@ private struct NewGymSheet: View {
 
     private func create() {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        var gym = GymProfile(name: trimmed.isEmpty ? "Your Gym" : trimmed, icon: template.icon, equipment: template.equipment(from: catalog.equipment))
+        var gym = GymProfile(name: trimmed.isEmpty ? GymProfile.defaultName : trimmed, icon: template.icon, equipment: template.equipment(from: catalog.equipment))
         gym.isDefault = makesDefault
         store.insert(gym)
         dismiss()

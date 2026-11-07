@@ -245,7 +245,7 @@ struct WorkoutSummaryView: View {
                 let items = block.exercises.filter(\.hasLoggedSets)
                 if !items.isEmpty {
                     if block.isSuperset {
-                        Text(block.exercises.count > 2 ? "Circuit" : "Superset")
+                        Text(block.groupName)
                             .font(AppFont.chip)
                             .foregroundStyle(Theme.textSecondary)
                             .padding(.horizontal, Theme.margin)

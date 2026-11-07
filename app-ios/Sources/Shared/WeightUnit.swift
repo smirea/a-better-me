@@ -24,6 +24,10 @@ enum WeightUnit: String, CaseIterable, Identifiable, Codable {
         fromKg(kg).formatted(.number.precision(.fractionLength(0...2)))
     }
 
+    /// The step a weight moves by when no loading says which weights exist: the smallest common plate pair. The watch's
+    /// crown steps by half of it, since a crown has no keypad to type a weight in between.
+    var plateIncrement: Double { self == .kg ? 2.5 : 5 }
+
     /// "102.5 lb", kept on one line.
     func label(kg: Double) -> String { "\(format(kg: kg))\u{00A0}\(rawValue)" }
 }

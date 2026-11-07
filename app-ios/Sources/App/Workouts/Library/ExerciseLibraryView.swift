@@ -257,7 +257,7 @@ struct ExerciseSettingsView: View {
                 WarmUpSchemeEditor(
                     exerciseID: exerciseID,
                     scheme: current?.overrides.warmUpScheme,
-                    defaultScheme: workout.warmUp.schemes[category] ?? WarmUpStep.standard
+                    defaultScheme: workout.warmUp.scheme(for: category)
                 )
             } label: {
                 SettingsRow(title: row.title, subtitle: summary, systemImage: row.systemImage) { EmptyView() }

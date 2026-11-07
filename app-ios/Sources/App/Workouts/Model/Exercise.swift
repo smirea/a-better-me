@@ -2,6 +2,9 @@ import Foundation
 
 /// Field names and values mirror `scripts/catalog.ts`, which generates them from the reference app's own export.
 struct Exercise: Codable, Hashable, Identifiable {
+    /// What every screen calls an exercise whose id no longer resolves, so history never shows a blank row.
+    static let unknownName = "Unknown exercise"
+
     let id: ExerciseID
     var name: String
     var alternativeNames: [String] = []

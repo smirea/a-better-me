@@ -69,7 +69,7 @@ final class ExerciseCatalog {
     func exercise(_ id: ExerciseID) -> Exercise? { byID[id] }
 
     /// Name for display even when an ID no longer resolves, so history never shows a blank row.
-    func name(_ id: ExerciseID) -> String { byID[id]?.name ?? "Unknown exercise" }
+    func name(_ id: ExerciseID) -> String { byID[id]?.name ?? Exercise.unknownName }
 }
 
 /// The order every exercise list shows: search boost first, then name.

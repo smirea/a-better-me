@@ -57,6 +57,9 @@ struct WarmUpSettings: Codable, Hashable {
     var schemes = Dictionary(uniqueKeysWithValues: RestCategory.allCases.map { ($0, WarmUpStep.standard) })
     var hideCompletedSets = true
     var simplifyPlates = true
+
+    /// A category's ramp, the standard one where none was stored.
+    func scheme(for category: RestCategory) -> [WarmUpStep] { schemes[category] ?? WarmUpStep.standard }
 }
 
 enum WarmUpAutomation: String, Codable {

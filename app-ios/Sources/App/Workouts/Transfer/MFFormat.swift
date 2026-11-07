@@ -296,7 +296,7 @@ private enum Rows {
         return blocks.flatMap { block in
             if block.isSuperset { group += 1 }
             let suffix = block.isSuperset ? " ∈ SS\(group)" : ""
-            return block.exercises.map { ($0, (names[$0.exerciseID] ?? "Unknown exercise") + suffix) }
+            return block.exercises.map { ($0, (names[$0.exerciseID] ?? Exercise.unknownName) + suffix) }
         }
     }
 

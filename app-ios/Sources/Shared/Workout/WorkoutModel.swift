@@ -90,3 +90,8 @@ struct ProgramPosition: Codable, Hashable, Sendable {
     var dayID: UUID
     var cycle: Int
 }
+
+extension WorkoutBlock {
+    /// What a group of exercises is called: two make a superset, more a circuit.
+    var groupName: String { exercises.count > 2 ? "Circuit" : "Superset" }
+}
