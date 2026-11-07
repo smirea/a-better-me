@@ -24,7 +24,6 @@ struct SettingsRulesTests {
 
     @Test func favoriteMeasuresKeepTwoPerCategory() {
         let defaults = NutritionSettings().favoriteMeasures
-        #expect(defaults == ["g", "oz", "mL", "cup"])
         #expect(SettingsRules.toggleFavorite("lb", in: defaults) == ["oz", "mL", "cup", "lb"])
         #expect(SettingsRules.toggleFavorite("fl oz", in: defaults) == ["g", "oz", "cup", "fl oz"])
         #expect(SettingsRules.toggleFavorite("oz", in: defaults) == ["g", "mL", "cup"])

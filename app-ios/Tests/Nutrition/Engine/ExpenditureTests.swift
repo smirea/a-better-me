@@ -2,8 +2,6 @@ import Foundation
 import Testing
 @testable import App
 
-typealias Engine = NutritionEngine
-
 private func dates(_ from: String, count: Int) -> [Date] {
     (0..<count).map { utc.date(byAdding: .day, value: $0, to: day(from))! }
 }

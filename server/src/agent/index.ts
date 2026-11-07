@@ -18,6 +18,8 @@ type AgentHost = {
 	ownerToken: string;
 	geminiApiKey: string | null;
 	publish(head: number): void;
+	/** What the routes read as now; tests pass a clock they control. */
+	clock?: () => Date;
 };
 
 const TOKEN_PREFIX = 'abm_';
@@ -144,7 +146,7 @@ async function answer(request: Request, host: AgentHost, routes: Route[]): Promi
 			actor,
 			baseUrl: base,
 			guide: guide(base),
-			state: snapshot(db, tz.data, new Date().toISOString()),
+			state: snapshot(db, tz.data, (host.clock?.() ?? new Date()).toISOString()),
 			openapi: openApi(routes, base, guide(base)),
 		});
 	}
@@ -166,7 +168,7 @@ async function answer(request: Request, host: AgentHost, routes: Route[]): Promi
 			params,
 			query: (route.query ?? z.object({})).parse(Object.fromEntries(url.searchParams)),
 			body: route.body?.parse(raw),
-			now: new Date().toISOString(),
+			now: (host.clock?.() ?? new Date()).toISOString(),
 		});
 		return Response.json(result);
 	} catch (caught) {

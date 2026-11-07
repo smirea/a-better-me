@@ -3,7 +3,9 @@ import type { SyncResponse } from 'sync-engine/core';
 import { testServer } from './testing';
 import { handle } from './api';
 
-const { config, app } = testServer();
+let tick = Date.parse('2026-10-22T12:00:00.000Z');
+// Each request a millisecond later, so rows ordered by when they were written keep the order they were sent in.
+const { config, app } = testServer({ clock: () => new Date(tick++) });
 
 const call = (method: string, path: string, body?: unknown) =>
 	handle(
@@ -183,8 +185,6 @@ describe('nutrition agent API', () => {
 		const ids: string[] = [];
 		for (let index = 0; index < 51; index++) {
 			ids.push((await ok('POST', '/food-favorites', { foodId: food.id })).id);
-			// Eviction goes by `createdAt`, which has millisecond resolution.
-			await Bun.sleep(2);
 		}
 		const kept = (await ok('GET', '/food-favorites')).map((favorite: any) => favorite.id);
 		expect(kept.length).toBe(50);

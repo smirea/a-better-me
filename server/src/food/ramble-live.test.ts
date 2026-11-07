@@ -94,7 +94,9 @@ describe('Reader', () => {
 		await tick(20);
 		calls[0]!.answer();
 		await tick();
+		const started = Date.now();
 		expect((await reader.settle('Two eggs.')).items.map(item => item.name)).toEqual(['two eggs']);
+		expect(Date.now() - started).toBeLessThan(timing.settleCapMs);
 		expect(calls).toHaveLength(1);
 	});
 

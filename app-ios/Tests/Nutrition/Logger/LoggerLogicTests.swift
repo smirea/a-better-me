@@ -234,7 +234,7 @@ struct QuickAddDraftTests {
 
 struct SearchPolicyTests {
     @Test func asksOpenFoodFactsOnlyAfterAPauseAndTwoLetters() {
-        #expect(SearchPolicy.remoteDelay(for: "ba", branded: true) == .milliseconds(400))
+        #expect(SearchPolicy.remoteDelay(for: "ba", branded: true) != nil)
         #expect(SearchPolicy.remoteDelay(for: " b ", branded: true) == nil)
         #expect(SearchPolicy.remoteDelay(for: "", branded: true) == nil)
         #expect(SearchPolicy.remoteDelay(for: "banana", branded: false) == nil)

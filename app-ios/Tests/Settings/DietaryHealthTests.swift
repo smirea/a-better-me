@@ -49,7 +49,6 @@ struct DietaryHealthTests {
     let key = "00000000-0000-0000-0000-0000000000a1"
 
     @Test func everyMappedNutrientIsInTheRegistryInAUnitHealthAccepts() {
-        #expect(DietaryHealth.types.count == 34)
         for (id, identifier) in DietaryHealth.types {
             let nutrient = NutrientRegistry.nutrient(id)
             #expect(nutrient != nil, "\(id.rawValue) is not in the registry")

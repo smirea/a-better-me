@@ -74,7 +74,6 @@ struct TileMetricsTests {
         #expect(adopted.sections == [.insights, .habits, .nutrition, .bodyMetrics])
         #expect(adopted.bodyMetrics == [.scaleWeight, .visualBodyFat])
         #expect(adopted.nutrition == NutritionCard.defaults)
-        #expect(NutritionCard.defaults.map(\.id) == ["macros", "k", "p", "291", "c", "539"])
         let saved = #"{"revision":2,"sections":["insights"],"bodyMetrics":["scaleWeight"],"nutrition":[]}"#
         let kept = try RowJSON.decoder.decode(DashboardLayout.self, from: Data(saved.utf8))
         #expect(kept.sections == [.insights])

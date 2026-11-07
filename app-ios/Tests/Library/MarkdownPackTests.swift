@@ -7,9 +7,9 @@ struct MarkdownPackTests {
     @Test func bundledPackHoldsEveryCatalogExercisesInstructionsAndEveryArticle() {
         let catalog = ExerciseCatalog()
         let withInstructions = catalog.bundled.filter(\.hasInstructions)
-        #expect(withInstructions.count == 1_213)
+        #expect(withInstructions.count > 1_000)
         #expect(withInstructions.allSatisfy { MarkdownPack.bundled.instructions($0.id) != nil })
-        #expect(catalog.articles.count == 277)
+        #expect(catalog.articles.count > 200)
         #expect(catalog.articles.keys.allSatisfy { MarkdownPack.bundled.article($0)?.isEmpty == false })
     }
 

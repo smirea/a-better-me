@@ -130,7 +130,8 @@ struct RambleResolverTests {
             "Blueberries: 1 cup",
             "Oats: 2 tbsp",
         ])
-        if case let .food(oats) = rows[11].content { #expect(abs(oats.pick.portion.serving.servings - 0.81 * 2 / 16) < 0.0001) }
+        guard case let .food(oats) = rows[11].content else { Issue.record("Oats is not a food row"); return }
+        #expect(abs(oats.pick.portion.serving.servings - 0.10125) < 0.0001)
         #expect(rows.map(\.id) == Array(0..<12))
         #expect(rows.allSatisfy { $0.day == today && $0.minute == 14 * 60 })
     }

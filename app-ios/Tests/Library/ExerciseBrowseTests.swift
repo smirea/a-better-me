@@ -29,13 +29,6 @@ struct ExerciseCatalogOrderTests {
         #expect(catalog.all.count == catalog.bundled.count)
         #expect(catalog.revision == 2)
     }
-
-    /// Run with `-only-testing:AppTests/ExerciseCatalogOrderTests` to read the launch cost in the log.
-    @Test func catalogLoadTime() {
-        let start = ContinuousClock.now
-        _ = ExerciseCatalog()
-        print("ExerciseCatalog.init took \(ContinuousClock.now - start)")
-    }
 }
 
 struct ExerciseRankingTests {

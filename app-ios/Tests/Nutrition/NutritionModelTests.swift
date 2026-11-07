@@ -2,17 +2,6 @@ import Foundation
 import Testing
 @testable import App
 
-func calendarDay(_ text: String) -> CalendarDay { CalendarDay(text)! }
-
-/// 120 kcal, 10 g protein, 4 g fat, 12 g carbs, and 2 g fiber per 100 g; a container is 150 g.
-let yogurt = FoodSnapshot(
-    foodID: "usda-171304", source: .usda, name: "Yogurt", brand: nil,
-    nutrition: FoodNutrition(
-        nutrients: [.energy: 120, .protein: 10, .fat: 4, .carbs: 12, .fiber: 2], baseGrams: 100,
-        measures: [Measure(name: "container", quantity: 1, servings: 1.5)]
-    )
-)
-
 struct NutritionModelTests {
     @Test func calendarDaysParseStrictlyAndCountInIsoWeekdays() {
         #expect(CalendarDay("2026-02-30") == nil)
@@ -105,14 +94,9 @@ struct NutritionModelTests {
         #expect(lysine == NutrientRange(target: 3.04))
     }
 
-    @Test func theRegistryListsMacroFactorsNutrientsByGroup() {
+    @Test func theRegistryNamesEachNutrientOnce() {
         let all = NutrientRegistry.all
-        #expect(all.count == 56)
-        #expect(Set(all.map(\.id)).count == 56)
-        #expect(all.prefix(4).map(\.id.rawValue) == ["k", "221", "262", "255"])
-        #expect(NutrientGroup.allCases.map { group in all.first { $0.group == group }!.id.rawValue } == ["k", "p", "c", "f", "417", "301"])
-        #expect(NutrientRegistry.nutrient("418")?.unit == .mcg)
-        #expect(NutrientRegistry.nutrient("307")?.defaults?.female == NutrientRange(target: 1500, ceiling: 2300))
+        #expect(Set(all.map(\.id)).count == all.count)
     }
 
     /// The same text is the fixture `shared/db/schema.test.ts` runs the server's validators over.

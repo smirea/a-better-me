@@ -3,7 +3,7 @@ import type { SyncResponse } from 'sync-engine/core';
 import { testServer } from './testing';
 import { handle } from './api';
 
-const { config, app } = testServer();
+const { config, app } = testServer({ clock: () => new Date('2026-10-22T12:00:00.000Z') });
 
 const BENCH = '19f5c6f170d8808bb424e98de4472a7e';
 const REAR_DELT_FLY = '2a15c6f170d88066b38fd65f8757716f';

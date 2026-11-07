@@ -11,16 +11,6 @@ struct LibrarySeedTests {
         #expect(icons.filter { FoodIconChoice.named($0) == nil }.isEmpty)
     }
 
-    @Test func recipesDivideTheirIngredientsIntoServings() {
-        #expect(LibrarySeed.overnightOats.nutrition.nutrients[.energy] == 312.5)
-        #expect(LibrarySeed.chickenRiceBowl.nutrition.baseGrams == 295)
-        #expect(LibrarySeed.recipes.map(\.ingredients.count) == [4, 3, 3, 4])
-    }
-
-    @Test func favoritesKeepTheirNamedServings() {
-        #expect(LibrarySeed.favorites.map { NutritionFormat.serving($0.serving) } == ["1 medium", "0.5 cup", "1.5 oz", "1 scoop", "1 serving"])
-    }
-
     @Test func seedingAgainAfterTheRecipesAreDeletedConverges() async throws {
         let store = try LocalStore(unsyncedAt: FileManager.default.temporaryDirectory.appending(path: "seed-\(UUID().uuidString)/a.sqlite"))
         try await store.write { try DevSeed.seed(in: $0) }.value

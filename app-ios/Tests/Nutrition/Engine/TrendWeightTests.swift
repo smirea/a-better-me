@@ -61,4 +61,36 @@ struct EngineTrendWeightTests {
         #expect(trend.map { la.component(.day, from: $0.date) } == [7, 8, 9, 10])
         #expect(trend.map { ($0.value * 1000).rounded() / 1000 } == [100, 99.9, 99.71, 99.439])
     }
+
+    @Test func ignoresLaterWeighInsSoThePastNeverChanges() {
+        let early = (1...8).map { DatedValue(date: day("2026-10-0\($0)"), value: $0 % 2 == 1 ? 90 : 92) }
+        let later = early + [DatedValue(date: day("2026-10-09"), value: 70)]
+        let before = NutritionEngine.TrendWeight.daily(weighIns: early, through: day("2026-10-08"), calendar: utc)
+        let after = NutritionEngine.TrendWeight.daily(weighIns: later, through: day("2026-10-09"), calendar: utc)
+        #expect(Array(after.prefix(8)) == before)
+        #expect(((after[8].value) * 100).rounded() / 100 == 88.87)
+    }
+
+
+    @Test func aWeighInAfterAGapLeavesTheDaysBeforeTheGapAlone() {
+        let early = (1...8).map { DatedValue(date: day("2026-10-0\($0)"), value: $0 % 2 == 1 ? 90 : 92) }
+        let later = early + [DatedValue(date: day("2026-10-11"), value: 86)]
+        let before = NutritionEngine.TrendWeight.daily(weighIns: early, through: day("2026-10-11"), calendar: utc)
+        let after = NutritionEngine.TrendWeight.daily(weighIns: later, through: day("2026-10-11"), calendar: utc)
+        #expect(Array(after.prefix(8)) == Array(before.prefix(8)))
+        #expect(after.suffix(3).map { ($0.value * 100).rounded() / 100 } == [90.87, 90.58, 90.13])
+    }
+
+
+    @Test func keepsTakingWeighInsAfterAMidnightDaylightSavingChange() {
+        var cairo = Calendar(identifier: .gregorian)
+        cairo.timeZone = TimeZone(identifier: "Africa/Cairo")!
+        let weighIns = (20...26).map { date in
+            DatedValue(date: cairo.date(from: DateComponents(year: 2026, month: 4, day: date, hour: 8))!, value: Double(100 - (date - 20) * 10))
+        }
+        let end = cairo.date(from: DateComponents(year: 2026, month: 4, day: 26, hour: 12))!
+        let trend = NutritionEngine.TrendWeight.daily(weighIns: weighIns, through: end, calendar: cairo)
+        #expect(trend.count == 7)
+        #expect(trend.map { ($0.value * 100).rounded() / 100 } == [100, 99, 97.1, 94.39, 90.95, 86.86, 82.17])
+    }
 }

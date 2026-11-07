@@ -3,18 +3,6 @@ import GRDB
 import Testing
 @testable import App
 
-/// A catalog in the generator's shape over a few rows, with the priors the generator gives them.
-func fixtureCatalog(_ rows: [(id: Int, name: String, prior: Double, nutrition: String)]) throws -> USDACatalog {
-    let database = try DatabaseQueue()
-    try database.write { db in
-        try db.execute(sql: "CREATE TABLE foods (fdc_id INTEGER PRIMARY KEY, name TEXT NOT NULL, prior REAL NOT NULL, nutrition TEXT NOT NULL)")
-        for row in rows {
-            try db.execute(sql: "INSERT INTO foods VALUES (?, ?, ?, ?)", arguments: [row.id, row.name, row.prior, row.nutrition])
-        }
-    }
-    return try USDACatalog(database)
-}
-
 private let per100g = #"{"nutrients":{"k":100},"baseGrams":100,"measures":[{"name":"g","quantity":100,"servings":1}]}"#
 private let bananaNutrition = #"{"nutrients":{"k":89,"p":1.09,"f":0.33,"c":22.84,"291":2.6},"baseGrams":100,"measures":[{"name":"medium (7\" to 7-7/8\" long)","quantity":1,"servings":1.18},{"name":"cup, sliced","quantity":1,"servings":1.5}]}"#
 
@@ -40,23 +28,6 @@ private let chobani = Food(
         measures: [Measure(name: "serving", quantity: 1, servings: 1.7), Measure(name: "g", quantity: 100, servings: 1)]
     )
 )
-
-/// Answers from fixed foods, or fails like a phone without a network.
-struct StubBranded: BrandedFoodSource {
-    var products: [String: Food] = [:]
-    var hits: [Food] = []
-    var offline = false
-
-    func food(barcode: String) async throws -> Food? {
-        if offline { throw URLError(.notConnectedToInternet) }
-        return products[barcode]
-    }
-
-    func search(_ query: String, limit: Int) async throws -> [Food] {
-        if offline { throw URLError(.notConnectedToInternet) }
-        return hits
-    }
-}
 
 @MainActor
 struct FoodSearchTests {
