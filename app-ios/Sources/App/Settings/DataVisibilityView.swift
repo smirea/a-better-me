@@ -61,20 +61,14 @@ private struct BodyMetricsVisibilityView: View {
     @Environment(LocalStore.self) private var store
     @Observe(AppSettings.current) private var settings
 
-    private static let groups: [(title: String, kinds: [BodyMetricKind])] = [
-        ("Upper Body", [.neck, .shoulders, .bust, .chest, .waist, .hips]),
-        ("Arms", [.leftBicep, .rightBicep, .leftForearm, .rightForearm, .leftWrist, .rightWrist]),
-        ("Legs", [.leftThigh, .rightThigh, .leftCalf, .rightCalf, .leftAnkle, .rightAnkle]),
-    ]
-
     var body: some View {
         Form {
             ThemedSection("Weight & Body Fat") {
                 LabeledContent("Scale Weight", value: "Default")
                 LabeledContent("Visual Body Fat", value: "Default")
             }
-            ForEach(Self.groups, id: \.title) { group in
-                ThemedSection(group.title) {
+            ForEach([BodyMetricGroup.upperBody, .arms, .legs], id: \.self) { group in
+                ThemedSection(group.rawValue) {
                     ForEach(group.kinds, id: \.self) { kind in
                         Toggle(kind.title, isOn: Binding(
                             get: { settings.nutrition.visibleBodyMetrics.contains(kind) },
@@ -93,22 +87,3 @@ private struct BodyMetricsVisibilityView: View {
     }
 }
 
-extension NutrientGroup {
-    var title: String {
-        switch self {
-        case .general: "General"
-        case .protein: "Protein Breakdown"
-        case .carbohydrates: "Carb Breakdown"
-        case .fats: "Fat Breakdown"
-        case .vitamins: "Vitamins"
-        case .minerals: "Minerals"
-        }
-    }
-}
-
-extension BodyMetricKind {
-    /// "Left Bicep" from `leftBicep`.
-    var title: String {
-        String(describing: self).replacing(/([a-z])([A-Z])/) { "\($0.1) \($0.2)" }.capitalized
-    }
-}

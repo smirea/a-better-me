@@ -58,8 +58,6 @@ final class LocalStore {
         }
     }
 
-    // MARK: Writes
-
     /// Runs `body` in one write transaction after every write called before it. The task resolves with its result.
     @discardableResult
     func write<T: Sendable>(_ body: @escaping @Sendable (Database) throws -> T) -> Task<T, any Error> {
@@ -118,39 +116,11 @@ final class LocalStore {
         try changed.updateChanges(db, from: existing)
     }
 
-    func editTemplate(_ id: UUID, _ change: @escaping @Sendable (inout WorkoutTemplate) -> Void) {
-        modify(WorkoutTemplate.self, id: id) {
+    /// `modify` for a stamped row: `updatedAt` moves with the edit.
+    func edit<R: Stamped>(_: R.Type, id: R.ID, _ change: @escaping @Sendable (inout R) -> Void) {
+        modify(R.self, id: id) {
             change(&$0)
             $0.updatedAt = .now
-        }
-    }
-
-    func editProgram(_ id: UUID, _ change: @escaping @Sendable (inout Program) -> Void) {
-        modify(Program.self, id: id) {
-            change(&$0)
-            $0.updatedAt = .now
-        }
-    }
-
-    func activateProgram(_ id: UUID) {
-        write { db in
-            for program in try Program.fetchAll(db) where program.isActive != (program.id == id) {
-                var changed = program
-                changed.isActive = program.id == id
-                changed.updatedAt = .now
-                try changed.updateChanges(db, from: program)
-            }
-        }
-    }
-
-    func setDefaultGym(_ id: UUID) {
-        write { db in
-            for gym in try GymProfile.fetchAll(db) where gym.isDefault != (gym.id == id) {
-                var changed = gym
-                changed.isDefault = gym.id == id
-                changed.updatedAt = .now
-                try changed.updateChanges(db, from: gym)
-            }
         }
     }
 
@@ -166,12 +136,15 @@ final class LocalStore {
         )
     }
 
-    /// Reads outside an observation.
-    func read<T>(_ body: (Database) throws -> T) throws -> T {
-        try database.pool.read(body)
+    /// Reads outside an observation, off the main thread.
+    func read<T: Sendable>(_ body: @escaping @Sendable (Database) throws -> T) async throws -> T {
+        try await database.pool.read(body)
     }
 
-    // MARK: Sync
+    /// The same read, blocking the caller: for tests, never for the main thread.
+    func readBlocking<T>(_ body: (Database) throws -> T) throws -> T {
+        try database.pool.read(body)
+    }
 
     var lastSyncedAt: Date? { client.lastSyncAt }
     var snapshotRows: Int? { client.snapshotRows }

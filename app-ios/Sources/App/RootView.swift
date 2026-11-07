@@ -35,10 +35,8 @@ struct RootView: View {
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(LiveWorkoutPresenter.self) private var presenter
     @Environment(LocalStore.self) private var store
-    @Observe(CustomExercise.all) private var customExercises
     @Observe(WorkoutSession.inProgressID) private var activeSessionID
-    @Observe(BodyWeight.all) private var loggedWeights
-    @State private var health = HealthData()
+    @Environment(HealthData.self) private var health
     @State private var tab = AppTab.dashboard
     @State private var dashboardPath: [DashboardRoute] = []
     @State private var sheet: RootSheet?
@@ -73,10 +71,6 @@ struct RootView: View {
         .fullScreenCover(isPresented: Binding(get: { presenter.isExpanded && activeSessionID != nil }, set: { presenter.isExpanded = $0 })) {
             LiveWorkoutView()
         }
-        .onChange(of: customExercises.map(\.exercise), initial: true) { _, exercises in
-            catalog.setCustom(exercises)
-        }
-        .onChange(of: loggedWeights, initial: true) { health.update(logged: loggedWeights) }
         .healthDataAccessRequest(store: health.store, shareTypes: AppPermissions.healthShare, readTypes: AppPermissions.healthRead, trigger: health.requestTrigger) { _ in
             Task {
                 await health.load()
@@ -100,7 +94,6 @@ struct RootView: View {
             inbox.pending = nil
             Task { await open(action) }
         }
-        .environment(health)
     }
 
     private func open(_ action: QuickAction) async {

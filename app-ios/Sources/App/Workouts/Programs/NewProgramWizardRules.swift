@@ -88,11 +88,6 @@ enum NewProgramWizardRules {
         return "\(more) prioritized · \(focus.count - more) deprioritized"
     }
 
-    /// The gym the program is generated for: the remembered one while it still exists, else the default gym.
-    static func gym(_ id: UUID?, among gyms: [GymProfile]) -> GymProfile? {
-        gyms.first { $0.id == id } ?? gyms.first(where: \.isDefault) ?? gyms.first
-    }
-
     /// The name step's prefill: the split the generator will build, so No preference names the resolved split.
     static func defaultName(for inputs: GeneratorInputs) -> String {
         SplitPlan.resolve(inputs.split, daysPerWeek: inputs.daysPerWeek).title
@@ -101,8 +96,7 @@ enum NewProgramWizardRules {
     /// Build From Scratch: one empty workout day named "Day 1" in a ten-cycle program.
     static func scratchProgram(name: String, color: ProgramColor, icon: String) -> GeneratedProgram {
         var program = Program(name: name, color: color, icon: icon, cycles: 10)
-        var template = WorkoutTemplate(name: "Day 1")
-        template.programID = program.id
+        let template = WorkoutTemplate(programID: program.id, name: "Day 1", gymID: nil)
         program.days = [ProgramDay(templateID: template.id)]
         return GeneratedProgram(program: program, templates: [template])
     }

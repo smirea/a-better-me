@@ -35,9 +35,6 @@ struct ActiveSessionBar: View {
             }
             .foregroundStyle(Theme.textPrimary)
             .accessibilityLabel("Resume \(session.name)")
-            #if DEBUG
-            .task { SampleWorkout.expandIfRequested(presenter) }
-            #endif
             .feedback(self)
         }
     }

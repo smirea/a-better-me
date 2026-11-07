@@ -18,36 +18,6 @@ enum SampleData {
         ("1a25c6f170d88079a926dde776766181", 160, 10), // 45° leg press
     ]
 
-    /// `-seedGroundworkRows` inserts one program and one gym and patches a workout setting, so a second simulator on
-    /// the same server can prove the milestone 2 tables sync. `-dumpSyncedRows` writes what the store reads for them
-    /// to `dump.json` next to the database, after every earlier write, so a script can compare the two devices.
-    static let groundworkArgument = "-seedGroundworkRows"
-    static let dumpArgument = "-dumpSyncedRows"
-    static let dumpURL = LocalDatabase.directory.appending(path: "dump.json")
-
-    @MainActor
-    static func seedIfRequested(_ store: LocalStore) {
-        let arguments = ProcessInfo.processInfo.arguments
-        if arguments.contains(groundworkArgument) {
-            store.insert(Program(name: "Groundwork PPL", color: .teal, cycles: 6, days: [ProgramDay(), ProgramDay(templateID: nil)]))
-            store.insert(GymProfile(name: "Garage", icon: "house", equipment: ["19e5c6f170d8801cac93cf6853bd86b8": GymEquipment(load: .weights(options: [WeightOption(kg: 20)]))]))
-            store.updateSettings { $0.workout.rest.enabled = false }
-            store.updateSettings { $0.workout.rest.scaling.afterLastWarmUp = 60 }
-        }
-        if arguments.contains(dumpArgument) {
-            store.write { db in
-                let dump = try [
-                    "programs": RowJSON.text(Program.library.fetch(db).map(\.name)),
-                    "programDays": RowJSON.text(Program.all.fetch(db).map(\.days.count)),
-                    "gyms": RowJSON.text(GymProfile.all.fetch(db).map(\.name)),
-                    "gymBarbellKg": RowJSON.text(GymProfile.all.fetch(db).map { $0.equipment["19e5c6f170d8801cac93cf6853bd86b8"]?.load }),
-                    "workout": RowJSON.text(AppSettings.current.fetch(db).workout),
-                ]
-                try RowJSON.text(dump).write(to: dumpURL, atomically: true, encoding: .utf8)
-            }
-        }
-    }
-
     static func insert(in db: Database) throws {
         for record in records() { try record.insert(db) }
     }

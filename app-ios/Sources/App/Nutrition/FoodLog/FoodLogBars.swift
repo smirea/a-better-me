@@ -80,7 +80,7 @@ private struct SearchBar: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                 }
-                Button("Scan a barcode", systemImage: "barcode.viewfinder") { state.requestLog(start: .barcode) }
+                Button("Scan a barcode", systemImage: "barcode.viewfinder") { state.requestLog(start: .scan) }
                     .labelStyle(.iconOnly)
             }
             .padding(.horizontal, 16)
@@ -311,7 +311,6 @@ private struct DatesPrompt: View {
     }
 }
 
-/// The ⋮ menu: Nutrition Overview, Copy Day, Select All, Clear Day, the day's status, and the tile and hour toggles.
 struct DayMenu: View {
     let day: CalendarDay
 

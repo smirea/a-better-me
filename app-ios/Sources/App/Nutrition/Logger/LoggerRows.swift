@@ -1,18 +1,5 @@
 import SwiftUI
 
-extension NutrientID {
-    /// The banner's and the plate's short names.
-    var macroLetter: String {
-        switch self {
-        case .energy: "kcal"
-        case .protein: "P"
-        case .fat: "F"
-        case .carbs: "C"
-        default: NutrientRegistry.nutrient(self)?.short ?? rawValue
-        }
-    }
-}
-
 /// The round + that puts a food on the plate without leaving the list, MacroFactor's Multi-Add: a 26 pt circle in a
 /// 44 pt target that turns into a check for a moment after each add.
 struct AddToPlateButton: View {

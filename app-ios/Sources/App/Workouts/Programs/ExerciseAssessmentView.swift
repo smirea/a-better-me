@@ -2,8 +2,7 @@ import Feedback
 import SwiftUI
 
 /// The Exercise Assessment questionnaire: seven yes-or-no questions saved into `ProfileSettings.assessment` as they are
-/// answered. `assessmentCompletedAt` is stamped once every question has an answer. The caller supplies the navigation
-/// stack.
+/// answered. The caller supplies the navigation stack.
 struct ExerciseAssessmentView: View {
     @Environment(LocalStore.self) private var store
     @Observe(AppSettings.current) private var settings
@@ -36,9 +35,6 @@ struct ExerciseAssessmentView: View {
             set: { value in
                 store.updateSettings { settings in
                     settings.profile.assessment[question.id] = value
-                    if AssessmentQuestion.all.allSatisfy({ settings.profile.assessment[$0.id] != nil }) {
-                        settings.profile.assessmentCompletedAt = .now
-                    }
                 }
             }
         )

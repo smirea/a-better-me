@@ -41,12 +41,10 @@ enum BodyWeightSource: String {
     case manual, healthKit = "healthkit"
 }
 
-func currentBodyWeightKg(logged: [BodyWeight], health: (kg: Double, at: Date)?, manual: Double?) -> Double? {
-    let newest = logged.max { $0.measuredAt < $1.measuredAt }
-    switch (newest, health) {
-    case let (weight?, sample?): return weight.measuredAt >= sample.at ? weight.weightKg : sample.kg
-    case let (weight?, nil): return weight.weightKg
-    case let (nil, sample?): return sample.kg
-    case (nil, nil): return manual
+extension BodyWeight {
+    static let all = DatabaseQuery([BodyWeight]()) { db in
+        try BodyWeight.fetchAll(db).sorted { $0.measuredAt > $1.measuredAt }
     }
+
+    static let latest = DatabaseQuery(BodyWeight?.none) { db in try all.fetch(db).first }
 }

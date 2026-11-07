@@ -58,7 +58,6 @@ private struct LevelsSection: View {
     }
 }
 
-/// The mini figure, name, sets, and a bar scaled to the most-trained muscle.
 struct MuscleLevelRow: View {
     let muscle: Muscle
     let sets: Double

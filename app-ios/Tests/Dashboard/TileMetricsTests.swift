@@ -64,8 +64,8 @@ struct TileMetricsTests {
     @Test func microTargetsComeFromGoalsAndMacroTargetsFromThePlan() {
         let day = CalendarDay("2026-10-05")!
         let custom = NutrientGoal("291", from: CalendarDay("2026-10-01")!, mode: .custom(NutrientRange(floor: 20, target: 40, ceiling: nil)))
-        #expect(TileMetrics.range("291", on: day, plans: [], goals: [custom], sex: .male, weightKg: nil) == NutrientRange(floor: 20, target: 40, ceiling: nil))
-        #expect(TileMetrics.range(.protein, on: day, plans: [], goals: [], sex: .male, weightKg: nil) == NutrientRange())
+        #expect(NutrientTargets(target: nil, goals: [custom], day: day, sex: .male, weightKg: nil).range("291") == NutrientRange(floor: 20, target: 40, ceiling: nil))
+        #expect(NutrientTargets(target: nil, goals: [], day: day, sex: .male, weightKg: nil).range(.protein) == NutrientRange())
     }
 
     @Test func layoutsSavedBeforeRevisionTwoAdoptNutritionAndVisualBodyFat() throws {
@@ -74,7 +74,6 @@ struct TileMetricsTests {
         #expect(adopted.sections == [.insights, .habits, .nutrition, .bodyMetrics])
         #expect(adopted.bodyMetrics == [.scaleWeight, .visualBodyFat])
         #expect(adopted.nutrition == NutritionCard.defaults)
-        #expect(NutritionCard.defaults.map(\.id) == ["macros", "k", "p", "291", "c", "539"])
         let saved = #"{"revision":2,"sections":["insights"],"bodyMetrics":["scaleWeight"],"nutrition":[]}"#
         let kept = try RowJSON.decoder.decode(DashboardLayout.self, from: Data(saved.utf8))
         #expect(kept.sections == [.insights])

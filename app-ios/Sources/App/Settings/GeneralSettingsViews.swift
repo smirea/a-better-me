@@ -74,7 +74,7 @@ struct ProfileSettingsView: View {
         if let day = settings.profile.birthDate {
             DatePicker(
                 selection: Binding(
-                    get: { Calendar.current.date(from: DateComponents(year: day.year, month: day.month, day: day.day)) ?? .now },
+                    get: { day.date(in: .current) },
                     set: { date in store.updateSettings { $0.profile.birthDate = CalendarDay(date) } }
                 ),
                 in: ...Date.now, displayedComponents: .date

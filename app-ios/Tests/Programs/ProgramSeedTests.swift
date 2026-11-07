@@ -8,7 +8,7 @@ struct ProgramSeedTests {
     @Test func seededProgramDaysOpenTheProgramsOwnTemplates() async throws {
         let store = try LocalStore(unsyncedAt: FileManager.default.temporaryDirectory.appending(path: "seed-\(UUID().uuidString)/a.sqlite"))
         try await store.write { try DevSeed.seed(in: $0) }.value
-        let (program, templates, library) = try store.read { db in
+        let (program, templates, library) = try store.readBlocking { db in
             try (Program.all.fetch(db).first { $0.isActive }, WorkoutTemplate.all.fetch(db), WorkoutTemplate.library.fetch(db))
         }
         let active = try #require(program)
@@ -20,7 +20,7 @@ struct ProgramSeedTests {
     @Test func seedsAnInactiveProgramForTheWorkoutLibrary() async throws {
         let store = try LocalStore(unsyncedAt: FileManager.default.temporaryDirectory.appending(path: "seed-\(UUID().uuidString)/a.sqlite"))
         try await store.write { try DevSeed.seed(in: $0) }.value
-        let (programs, templates) = try store.read { db in try (Program.all.fetch(db), WorkoutTemplate.all.fetch(db)) }
+        let (programs, templates) = try store.readBlocking { db in try (Program.all.fetch(db), WorkoutTemplate.all.fetch(db)) }
         let inactive = try #require(programs.first { !$0.isActive })
         let owned = Dictionary(uniqueKeysWithValues: templates.filter { $0.programID == inactive.id }.map { ($0.id, $0.name) })
         #expect(programs.filter(\.isActive).count == 1)

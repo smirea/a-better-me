@@ -18,10 +18,24 @@ enum WorkoutMetrics {
     /// `muscleSets` for one exercise, handing each muscle and its count to `add` instead of building a dictionary.
     static func forEachMuscleSet(of item: BlockExercise, catalog: (ExerciseID) -> Exercise?, loggedOnly: Bool, _ add: (Muscle, Double) -> Void) {
         guard let exercise = catalog(item.exerciseID) else { return }
-        let count = Double(item.sets.count { $0.type != .warmUp && (!loggedOnly || $0.isCompleted) })
+        let count = Double(item.sets.count { $0.type.isWorking && (!loggedOnly || $0.isCompleted) })
         guard count > 0 else { return }
         for muscle in exercise.primaryMuscles { add(muscle, count) }
         for muscle in exercise.secondaryMuscles { add(muscle, count * 0.5) }
+    }
+
+    /// How much of an exercise's work a muscle gets: all of it for a primary muscle, half for a secondary, as in MF and
+    /// as `forEachMuscleSet` counts sets.
+    static func share(of muscle: Muscle, in exercise: Exercise) -> Double {
+        exercise.primaryMuscles.contains(muscle) ? 1 : exercise.secondaryMuscles.contains(muscle) ? 0.5 : 0
+    }
+
+    /// The logged volume of `items`, warm-ups included, as the Workout Complete summary counts it.
+    static func volumeKg(of items: [BlockExercise], catalog: (ExerciseID) -> Exercise?) -> Double {
+        items.reduce(0) { total, item in
+            guard let exercise = catalog(item.exerciseID) else { return total }
+            return total + item.sets.filter(\.isCompleted).reduce(0) { $0 + volumeKg(of: $1, exercise: exercise) }
+        }
     }
 
     /// Weight x reps over a set and its sub-rows, doubled for per-side metrics. Warm-ups count, as in MF's summary.

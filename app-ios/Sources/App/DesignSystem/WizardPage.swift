@@ -28,7 +28,6 @@ struct WizardPage<Content: View, Actions: View>: View {
     }
 }
 
-/// A wizard's progress through its steps, under the navigation bar.
 struct WizardProgress: View {
     let value: Double
 

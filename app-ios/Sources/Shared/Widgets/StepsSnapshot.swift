@@ -25,24 +25,18 @@ struct StepsSnapshot: Codable, Equatable, Sendable {
     func summary(live: [DatedValue], now: Date, calendar: Calendar = .current) -> StepGoal.Summary {
         var merged = days
         for point in live {
-            let key = NutritionSnapshot.dayKey(point.date, calendar: calendar)
+            let key = CalendarDay(point.date, in: calendar).description
             merged[key] = max(merged[key] ?? 0, point.value)
         }
-        let steps = merged.compactMap { key, value in Self.date(key, calendar: calendar).map { DatedValue(date: $0, value: value) } }
+        let steps = merged.compactMap { key, value in CalendarDay(key).map { DatedValue(date: $0.date(in: calendar), value: value) } }
         return StepGoal.summary(steps, goal: goal, today: now, calendar: calendar)
-    }
-
-    private static func date(_ key: String, calendar: Calendar) -> Date? {
-        let parts = key.split(separator: "-").compactMap { Int($0) }
-        guard parts.count == 3 else { return nil }
-        return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
     }
 }
 
 extension StepsSnapshot {
     init(goal: Int, steps: [DatedValue], calendar: Calendar = .current) {
         var days: [String: Double] = [:]
-        for point in steps { days[NutritionSnapshot.dayKey(point.date, calendar: calendar), default: 0] += point.value }
+        for point in steps { days[CalendarDay(point.date, in: calendar).description, default: 0] += point.value }
         self.init(goal: goal, days: days)
     }
 }

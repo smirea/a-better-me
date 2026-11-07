@@ -304,7 +304,6 @@ private struct RestCell: View {
     }
 }
 
-/// The RIR badge, or an empty gray dot when the set has no RIR target.
 private struct RIRCell: View {
     let rir: Int?
 
@@ -357,16 +356,6 @@ private struct SetTypePicker: View {
 }
 
 private extension SetType {
-    var title: String {
-        switch self {
-        case .standard: "Standard Set"
-        case .warmUp: "Warm-Up Set"
-        case .drop: "Drop Set"
-        case .myo: "Myo Set"
-        case .failure: "Failure Set"
-        }
-    }
-
     var summary: String {
         switch self {
         case .standard: "A normal set of a fixed weight and target repetitions"
@@ -380,7 +369,6 @@ private extension SetType {
     }
 }
 
-/// "RIR Targets": 0 through 6+, or "?" to clear.
 private struct RIRPicker: View {
     let onSelect: (Int?) -> Void
 
@@ -419,7 +407,6 @@ private struct RIRPicker: View {
     }
 }
 
-/// "Rest Timer": a minutes and seconds wheel.
 private struct RestPicker: View {
     let onSave: (Int) -> Void
 

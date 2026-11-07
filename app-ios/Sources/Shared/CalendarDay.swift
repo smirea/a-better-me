@@ -1,5 +1,4 @@
 import Foundation
-import GRDB
 
 /// A date on the owner's calendar, the nutrition log's unit: stored as `YYYY-MM-DD` text, which sorts as text and never
 /// moves through a time zone, so dinner logged while traveling stays on the day it was eaten.
@@ -63,18 +62,6 @@ struct CalendarDay: Hashable, Comparable, Codable, Sendable, CustomStringConvert
     func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(description)
-    }
-}
-
-extension SyncedRecord where ID == CalendarDay {
-    static func key(_ id: CalendarDay) -> String { id.description }
-}
-
-extension Row {
-    func day(_ column: String) throws -> CalendarDay {
-        let text: String = self[column]
-        guard let day = CalendarDay(text) else { throw RowDecodingError(description: "\(column) is not a day: \(text)") }
-        return day
     }
 }
 

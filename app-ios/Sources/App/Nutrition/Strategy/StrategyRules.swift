@@ -14,18 +14,6 @@ struct StrategyBasis: Hashable {
 enum StrategyRules {
     typealias Engine = NutritionEngine
 
-    // MARK: Records to engine
-
-    /// The engine's rate is always positive; the record's is negative while losing.
-    static func engineGoal(_ goal: NutritionGoal) -> Engine.Goal {
-        let kind: Engine.GoalKind = switch goal.kind {
-        case .lose: .lose
-        case .maintain: .maintain
-        case .gain: .gain
-        }
-        return Engine.Goal(kind: kind, ratePercentPerWeek: abs(goal.ratePercentPerWeek), targetWeightKg: goal.targetWeightKg)
-    }
-
     static func engineProgram(_ coaching: CoachingProgram, standardFloorKcal: Int) -> Engine.CoachedProgram {
         let diet: Engine.DietStyle = switch coaching.diet {
         case .balanced: .balanced
@@ -60,11 +48,9 @@ enum StrategyRules {
         targets.days.map(\.energy).reduce(0, +) / 7
     }
 
-    // MARK: Plans
-
     static func coachedWeek(_ coaching: CoachingProgram, goal: NutritionGoal, basis: StrategyBasis) -> Engine.WeeklyPlan {
         Engine.Targets.weekly(
-            program: engineProgram(coaching, standardFloorKcal: basis.standardFloorKcal), goal: engineGoal(goal),
+            program: engineProgram(coaching, standardFloorKcal: basis.standardFloorKcal), goal: goal.engine,
             expenditure: basis.expenditureKcal, weightKg: basis.weightKg
         )
     }
@@ -163,5 +149,17 @@ enum StrategyRules {
         case .maintain: "Maintenance"
         case .gain: "Weight Gain"
         }
+    }
+}
+
+extension NutritionGoal {
+    /// The engine's rate is always positive; the record's is negative while losing.
+    var engine: NutritionEngine.Goal {
+        let kind: NutritionEngine.GoalKind = switch self.kind {
+        case .lose: .lose
+        case .maintain: .maintain
+        case .gain: .gain
+        }
+        return NutritionEngine.Goal(kind: kind, ratePercentPerWeek: abs(ratePercentPerWeek), targetWeightKg: targetWeightKg)
     }
 }

@@ -60,14 +60,12 @@ struct WorkoutSectionsLayout: Codable, Hashable {
         custom = try container.decode([CustomWorkoutSection].self, forKey: .custom)
     }
 
-    /// Unknown or repeated sections are dropped and missing ones appended in their default order.
     static func normalized(_ stored: [String]) -> [WorkoutSection] {
         var seen = Set<WorkoutSection>()
         let known = stored.compactMap(WorkoutSection.init(rawValue:)).filter { seen.insert($0).inserted }
         return known + WorkoutSection.allCases.filter { !seen.contains($0) }
     }
 
-    /// The sections the tab draws, in order.
     var visible: [WorkoutSection] {
         order.filter { $0 != .activeProgram || showsActiveProgram }
     }

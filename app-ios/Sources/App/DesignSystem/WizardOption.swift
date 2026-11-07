@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A radio row: an optional icon, the title, a one-line description, an optional tag, and the radio on the right.
 struct WizardOption: View {
     var icon: String?
     let title: String

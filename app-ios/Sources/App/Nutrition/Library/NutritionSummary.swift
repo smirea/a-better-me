@@ -1,7 +1,6 @@
 import Feedback
 import SwiftUI
 
-/// Calories, Protein, Fat, and Carbs side by side.
 struct MacroSummary: View {
     let amounts: NutrientAmounts
     var caption: String?

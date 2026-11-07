@@ -215,7 +215,7 @@ struct RecipeEditor: View {
         showErrors = true
         guard let valid = draft.valid else { return }
         if let recipeID {
-            store.editRecipe(recipeID) { valid.write(into: &$0) }
+            store.edit(Recipe.self, id: recipeID) { valid.write(into: &$0) }
         } else {
             let recipe = valid.newRecipe()
             store.saveRecipe(recipe)

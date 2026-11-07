@@ -27,7 +27,6 @@ enum GeneratedRole: Hashable, CaseIterable {
     case primary, secondary, pullPrimary, pullSecondary, accessory
 
     var isAccessory: Bool { self == .accessory }
-    var isPull: Bool { self == .pullPrimary || self == .pullSecondary }
     var isPrimary: Bool { self == .primary || self == .pullPrimary }
 
     init(pattern: MovementPattern, slot: SlotRole) {

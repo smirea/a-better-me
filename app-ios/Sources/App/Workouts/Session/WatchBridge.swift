@@ -47,7 +47,7 @@ final class WatchBridge: NSObject {
         homeObservation = ValueObservation.trackingConstantRegion { db in
             try HomeInputs(
                 templates: WorkoutTemplate.all.fetch(db), program: Program.active.fetch(db),
-                gyms: GymProfile.all.fetch(db), defaultGym: GymProfile.defaultGym.fetch(db)
+                gyms: GymProfile.all.fetch(db)
             )
         }
         .removeDuplicates()
@@ -67,7 +67,6 @@ final class WatchBridge: NSObject {
         var templates: [WorkoutTemplate]
         var program: Program?
         var gyms: [GymProfile]
-        var defaultGym: GymProfile?
     }
 
     /// Runs again whenever the inputs or the history change.
@@ -84,19 +83,19 @@ final class WatchBridge: NSObject {
         let blocks = finished.map(\.blocks)
         func option(_ template: WorkoutTemplate, program: String?, session: WorkoutSession) -> WatchWorkoutOption {
             var session = session
-            session.gymID = session.gymID ?? inputs.defaultGym?.id
-            let gym = inputs.gyms.first { $0.id == session.gymID }
+            let gym = GymProfile.resolve(session.gymID, in: inputs.gyms)
+            session.gymID = session.gymID ?? gym?.id
             let exercises = session.blocks.flatMap(\.exercises)
             return WatchWorkoutOption(
                 id: template.id, name: template.name, program: program,
-                exercises: exercises.map { catalog.name($0.exerciseID) }, totalSets: exercises.flatMap(\.sets).count,
+                exercises: exercises.map { catalog.name($0.exerciseID) }, totalSets: exercises.flatMap(\.sets).count(where: \.type.isWorking),
                 plan: LiveWorkoutController.shared.watchWorkout(for: session, history: blocks, gym: gym, isLive: false)
             )
         }
         var workouts: [WatchWorkoutOption] = []
-        if let program = inputs.program, let next = program.upNext(after: finished),
-           let templateID = program.days.first(where: { $0.id == next.dayID })?.templateID, let template = byID[templateID] {
-            let session = program.session(startingFrom: template, dayID: next.dayID, gymID: template.gymID)
+        if let program = inputs.program, let next = program.nextWorkoutDay(finished: finished),
+           let templateID = next.templateID, let template = byID[templateID] {
+            let session = program.session(startingFrom: template, dayID: next.id, gymID: template.gymID)
             workouts.append(option(template, program: program.name, session: session))
         }
         workouts += inputs.templates.filter { $0.programID == nil && !$0.isArchived }.map {
@@ -117,18 +116,29 @@ final class WatchBridge: NSObject {
         } else if let current = workout, !current.isFinished {
             // The workout left the in-progress query. A finished one stays the watch's copy, with `endedAt`, so a
             // watch that hears this before the earlier copies still sees the end, saves its recording, and shows the
-            // summary. A discarded one is gone, and `WorkoutHealth` tells the watch.
-            workout = finishedCopy(of: current.sessionID)
-            if let workout { deliver(.workout(workout, acknowledged: acknowledged)) }
+            // summary. A discarded one is gone, and `WorkoutHealth` tells the watch. Until the read answers, the watch
+            // keeps the copy it has: a nil sent meanwhile would make it drop the finished copy that follows.
+            Task { await sendFinishedCopy(of: current.sessionID) }
+            return
         }
         send(.workout(workout, acknowledged: acknowledged))
         updateContext()
     }
 
-    private func finishedCopy(of id: UUID) -> WatchWorkout? {
-        guard let store, let session = try? store.read({ try WorkoutSession.fetchOne($0, key: WorkoutSession.key(id)) }),
-              session.endedAt != nil else { return nil }
-        return LiveWorkoutController.shared.watchWorkout(for: session, history: [], gym: nil, isLive: false)
+    private func sendFinishedCopy(of id: UUID) async {
+        let session: WorkoutSession?
+        do {
+            session = try await store?.read { try WorkoutSession.fetchOne($0, key: WorkoutSession.key(id)) }
+        } catch {
+            LocalStore.log.error("Reading the ended session for the watch failed: \(String(describing: error))")
+            session = nil
+        }
+        // A newer workout, or an earlier read of this one, already replaced the copy.
+        guard let current = workout, current.sessionID == id, !current.isFinished else { return }
+        workout = session.flatMap { $0.endedAt == nil ? nil : LiveWorkoutController.shared.watchWorkout(for: $0, history: [], gym: nil, isLive: false) }
+        if let workout { deliver(.workout(workout, acknowledged: acknowledged)) }
+        send(.workout(workout, acknowledged: acknowledged))
+        updateContext()
     }
 
     /// The acknowledged events the watch may still hold: the ones it sent lately. The phone's list of applied events is
@@ -136,8 +146,6 @@ final class WatchBridge: NSObject {
     private var acknowledged: [UUID] {
         LiveWorkoutController.shared.acknowledgedWatchEvents.filter(heard.contains)
     }
-
-    // MARK: Sending
 
     /// The current home list and workout, right away: a watch app just opened, or a mirrored session just connected.
     func sendState() {
@@ -185,8 +193,6 @@ final class WatchBridge: NSObject {
             LocalStore.log.error("Updating the watch's context failed: \(String(describing: error))")
         }
     }
-
-    // MARK: Receiving
 
     func receive(_ message: WatchMessage) {
         switch message {

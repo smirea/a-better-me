@@ -17,8 +17,6 @@ struct StepGoalTests {
         let summary = StepGoal.summary(week, goal: 10_000, today: day("2026-10-28"), calendar: utc)
         #expect(summary.today == 10208)
         #expect(summary.streak == 2)
-        #expect(summary.best == 2)
-        #expect(summary.metLast30 == 2)
         #expect(summary.week.map(\.tier) == [.near, .near, .near, .far, .near, .met, .met])
         #expect(summary.week.map(\.inStreak) == [false, false, false, false, false, true, true])
     }
@@ -35,7 +33,6 @@ struct StepGoalTests {
         ])
         let summary = StepGoal.summary(history, goal: 10_000, today: day("2026-10-07"), calendar: utc)
         #expect(summary.streak == 0)
-        #expect(summary.best == 3)
         #expect(summary.week.map(\.inStreak) == Array(repeating: false, count: 7))
     }
 

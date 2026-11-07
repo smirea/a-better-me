@@ -17,10 +17,8 @@ struct NutrientSummary: Equatable {
 }
 
 extension DashboardData {
-    private var latestWeightKg: Double? { trend.last?.value }
-
-    private func nutrientRange(_ id: NutrientID, on day: CalendarDay) -> NutrientRange {
-        TileMetrics.range(id, on: day, plans: plans, goals: goals, sex: profile.sex, weightKg: latestWeightKg)
+    private func targets(on day: CalendarDay) -> NutrientTargets {
+        NutrientTargets.of(day, plans: plans, goals: goals, profile: profile, latestWeightKg: weighIns.last?.kg)
     }
 
     func nutrientTile(_ card: NutritionCard) -> TileMetrics.Tile {
@@ -28,13 +26,13 @@ extension DashboardData {
             return TileMetrics.Tile(text: nil, unit: "", consumed: 0, range: NutrientRange())
         }
         let consumed = log.first { $0.day == today }?.consumed.amount(of: id) ?? 0
-        return TileMetrics.tile(consumed: consumed, range: nutrientRange(id, on: today), display: card.display, unit: nutrient.unit)
+        return TileMetrics.tile(consumed: consumed, range: targets(on: today).range(id), display: card.display, unit: nutrient.unit)
     }
 
     var macrosCard: MacrosCardValues {
         let days = (0..<7).reversed().map { today.adding(days: -$0) }
         let consumed = days.map { day in log.first { $0.day == day }?.consumed ?? [:] }
-        let bars = consumed.map { [($0[.protein] ?? 0) * 4, ($0[.fat] ?? 0) * 9, ($0[.carbs] ?? 0) * 4] }
+        let bars = consumed.map { amounts in [NutrientID.protein, .fat, .carbs].map(amounts.kcal(from:)) }
         let logged = consumed.compactMap { $0[.energy] }.filter { $0 > 0 }
         let average = logged.isEmpty ? nil : logged.reduce(0, +) / Double(logged.count)
         return MacrosCardValues(days: bars, text: average?.wholeText)
@@ -50,7 +48,7 @@ extension DashboardData {
         let nutrient = NutrientRegistry.nutrient(id)
         let unit = nutrient?.unit.rawValue ?? ""
         let metricUnit = nutrient.map { MetricUnit($0.unit) } ?? .decimal("")
-        let days = TileMetrics.nutrientDays(id, log: log, plans: plans, goals: goals, sex: profile.sex, weightKg: latestWeightKg, calendar: calendar)
+        let days = TileMetrics.nutrientDays(id, log: log, targets: targets(on:), calendar: calendar)
         let color = id.color
         return MetricDetail(title: nutrient?.name ?? id.rawValue, tabs: [MetricTab(
             title: nutrient?.name ?? id.rawValue, points: days.consumed, unit: metricUnit, averageTitle: "Average",
@@ -58,12 +56,12 @@ extension DashboardData {
             overlay: days.target.isEmpty ? nil : MetricTab.Overlay(title: "Target", points: days.target, color: Theme.textPrimary, dashed: true)
         )], footer: .nutrient(NutrientSummary(
             nutrient: id, name: nutrient?.name ?? id.rawValue, unit: unit, today: today,
-            consumedToday: log.first { $0.day == today }?.consumed.amount(of: id) ?? 0, range: nutrientRange(id, on: today)
+            consumedToday: log.first { $0.day == today }?.consumed.amount(of: id) ?? 0, range: targets(on: today).range(id)
         )))
     }
 
     var macrosDetail: MetricDetail {
-        let logged = log.filter { $0.entryCount > 0 || $0.hasOverride }
+        let logged = log.filter(\.isLogged)
         let tabs = [(NutrientID.protein, "Protein"), (.fat, "Fat"), (.carbs, "Carbs")].map { id, title in
             MetricTab(
                 title: title, points: logged.map { DatedValue(date: $0.day.date(in: calendar), value: $0.consumed.amount(of: id) ?? 0) },

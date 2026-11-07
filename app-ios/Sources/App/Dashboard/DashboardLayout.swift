@@ -68,7 +68,6 @@ extension DashboardLayout {
 }
 
 private extension Array where Element: Equatable {
-    /// Inserts each missing card of `added` after the nearest card before it in `defaults` that the array holds.
     mutating func adopt(_ added: [Element], from defaults: [Element]) {
         for card in added where !contains(card) {
             let anchor = defaults.prefix { $0 != card }.last { contains($0) }
@@ -77,7 +76,7 @@ private extension Array where Element: Equatable {
     }
 }
 
-enum FocusCard: String, Codable {
+enum FocusCard: String, Codable, CaseIterable {
     case workouts, recentRecords, weeklyNutrition, energyBalance, dailyNutrition
 }
 
@@ -85,12 +84,12 @@ enum DashboardSection: String, Codable, CaseIterable {
     case insights, habits, nutrition, bodyMetrics, muscles, exercises
 }
 
-enum InsightCard: String, Codable {
+enum InsightCard: String, Codable, CaseIterable {
     case workouts, weightTrend, expenditure, energyBalance, goalProgress, steps
 }
 
-enum HabitCard: String, Codable {
-    case weighIn, workouts, foodLogging
+enum HabitCard: String, Codable, CaseIterable {
+    case weighIn, foodLogging, workouts
 }
 
 /// A raw-value enum rather than a wrapper around `BodyMetricKind`, so layouts saved before the tape measurements existed
@@ -103,7 +102,6 @@ enum BodyMetricCard: String, Codable, CaseIterable {
     case waistToHeight, waistToHip
 }
 
-/// The Macros tile or one nutrient's tile, with how the tile states its value.
 struct NutritionCard: Codable, Hashable {
     enum Display: String, Codable, CaseIterable {
         case percent, consumed, remaining
@@ -134,15 +132,4 @@ struct ExerciseCard: Codable, Hashable {
 
 enum ExerciseChartMetric: String, Codable, CaseIterable {
     case oneRM, threeRM, tenRM, heaviestWeight, totalVolume, bestSetVolume, totalReps, bestSetReps, totalSets
-}
-
-/// The "+" sheet's Shortcuts, encoded whole into `settings.shortcuts`.
-struct ShortcutsLayout: Codable, Hashable {
-    var upNextBanner = true
-    var top = Shortcut.history
-    var items: [Shortcut] = [.weight, .emptyWorkout, .newProgram, .newWorkout]
-}
-
-enum Shortcut: String, Codable {
-    case weight, history, emptyWorkout, newWorkout, newProgram
 }

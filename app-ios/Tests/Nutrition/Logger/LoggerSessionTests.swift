@@ -48,7 +48,7 @@ struct LoggerSessionTests {
 
     func entries() async throws -> [FoodEntry] {
         try await store.write { _ in }.value
-        return try store.read(FoodEntry.on(monday).fetch)
+        return try store.readBlocking(FoodEntry.on(monday).fetch)
     }
 
     @Test func anHoursPicksShowAboveLatestOnlyForThatHourAndAnEmptyQuery() async throws {
@@ -89,7 +89,7 @@ struct LoggerSessionTests {
         #expect(logged.map(\.minute) == [14 * 60 + 41, 14 * 60 + 41])
         #expect(logged.map { NutritionFormat.serving($0.serving) } == ["1 medium", "1 serving"])
         #expect(logger.plate.isEmpty)
-        #expect(try store.read { try Food.fetchOne($0, key: "usda-173944") }?.name == "Bananas, raw")
+        #expect(try store.readBlocking { try Food.fetchOne($0, key: "usda-173944") }?.name == "Bananas, raw")
 
         await logger.reloadSearch()
         logger.setQuery("", branded: false)
@@ -128,7 +128,7 @@ struct LoggerSessionTests {
         let logger = try await session(StubBranded(products: ["0894700010137": greekYogurt]))
         #expect(found(await logger.lookup(barcode: "0 894700 010137")) == "off-0894700010137")
         try await store.write { _ in }.value
-        #expect(try store.read { try Food.fetchOne($0, key: "off-0894700010137") }?.brand == "Chobani")
+        #expect(try store.readBlocking { try Food.fetchOne($0, key: "off-0894700010137") }?.brand == "Chobani")
         #expect(await logger.lookup(barcode: "12345678") == .notFound("12345678"))
         #expect(await logger.lookup(barcode: "12 34") == .invalid)
     }

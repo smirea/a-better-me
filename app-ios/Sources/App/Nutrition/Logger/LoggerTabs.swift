@@ -102,7 +102,6 @@ struct SearchTab: View {
 }
 
 extension [FoodSearchResult] {
-    /// Each run of one group, for a section per group.
     var grouped: [(FoodSearchGroup, [FoodSearchResult])] {
         var groups: [(FoodSearchGroup, [FoodSearchResult])] = []
         for result in self {

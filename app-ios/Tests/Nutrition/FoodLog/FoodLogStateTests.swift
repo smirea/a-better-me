@@ -18,7 +18,7 @@ struct FoodLogStateTests {
 
     func entries(on day: CalendarDay) async throws -> [FoodEntry] {
         try await store.write { _ in }.value
-        return try store.read(FoodEntry.on(day).fetch)
+        return try store.readBlocking(FoodEntry.on(day).fetch)
     }
 
     func log(_ entries: [FoodEntry]) async throws {
@@ -88,7 +88,7 @@ struct FoodLogStateTests {
         let state = FoodLogState()
 
         state.relocate(breakfast, .move, to: .hour(monday, hour: 12), in: store)
-        store.moveEntries([breakfast[1].id], to: monday, minute: 780)
+        _ = store.relocate([breakfast[1]], .move, to: .dateTime(monday, minute: 780))
         state.undo(in: store)
         #expect(try await entries(on: monday).map(\.minute) == [482, 780])
     }
@@ -96,7 +96,7 @@ struct FoodLogStateTests {
     @Test func undoingAMoveRestoresTheTimeTheMoveReplacedNotTheSelectedOne() async throws {
         let snack = entry(minute: 600)
         try await log([snack])
-        store.moveEntries([snack.id], to: monday, minute: 630)
+        _ = store.relocate([snack], .move, to: .dateTime(monday, minute: 630))
         let state = FoodLogState()
 
         state.relocate([snack], .move, to: .hour(monday, hour: 15), in: store)

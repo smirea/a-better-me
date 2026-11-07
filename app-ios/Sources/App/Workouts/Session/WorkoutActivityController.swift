@@ -92,11 +92,20 @@ final class WorkoutActivityController {
         lastSentStatus = nil
         guard let ending = activity else { return }
         activity = nil
-        let session = try? store?.read { try WorkoutSession.fetchOne($0, key: WorkoutSession.key(last.sessionID)) }
+        Task { await end(ending, after: last) }
+    }
+
+    private func end(_ ending: Activity<WorkoutActivityAttributes>, after last: LiveWorkoutStatus) async {
         var final = last
         final.rest = nil
         final.pausedAt = nil
-        final.endedAt = session?.endedAt
+        do {
+            final.endedAt = try await store?.read { try WorkoutSession.fetchOne($0, key: WorkoutSession.key(last.sessionID))?.endedAt }
+        } catch {
+            // A failed read shows the finished banner rather than dismissing a workout that may have ended.
+            Self.log.error("Reading the ended session failed: \(String(describing: error))")
+            final.endedAt = .now
+        }
         let policy: ActivityUIDismissalPolicy = final.endedAt == nil ? .immediate : .after(.now + Self.finishedLinger)
         let content = ActivityContent(state: final, staleDate: nil)
         enqueue(ending) { await $0.end(content, dismissalPolicy: policy) }
@@ -142,8 +151,6 @@ final class WorkoutActivityController {
         }
         await queue?.value
     }
-
-    // MARK: Thumbnails
 
     private func writeThumbnails(for status: LiveWorkoutStatus) {
         for catalogID in Set([status.current?.catalogID, status.upNext?.catalogID].compactMap(\.self)) {

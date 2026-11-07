@@ -94,7 +94,9 @@ describe('Reader', () => {
 		await tick(20);
 		calls[0]!.answer();
 		await tick();
+		const started = Date.now();
 		expect((await reader.settle('Two eggs.')).items.map(item => item.name)).toEqual(['two eggs']);
+		expect(Date.now() - started).toBeLessThan(timing.settleCapMs);
 		expect(calls).toHaveLength(1);
 	});
 
@@ -214,7 +216,6 @@ describe('xaiTranscriber', () => {
 	});
 });
 
-/** A transcriber the test speaks through. */
 function fakeStt() {
 	let events: TranscriberEvents | undefined;
 	const audio: number[] = [];
@@ -253,8 +254,8 @@ describe('serveLiveRamble', () => {
 		const closes: number[] = [];
 		const live = serveLiveRamble(
 			{ send: text => messages.push(JSON.parse(text)), close: code => closes.push(code ?? 0) },
-			{ gemini: 'gemini-key', xai: 'xai-key' },
-			{ transcribe: stt.transcribe, timing: { debounceMs: 1, inflight: 2, settleCapMs: 500 } },
+			{ gemini: 'gemini-key', transcribe: stt.transcribe },
+			{ timing: { debounceMs: 1, inflight: 2, settleCapMs: 500 } },
 		);
 		live.message(JSON.stringify({ ...context, transcript: 'oats' }));
 		live.message(new Uint8Array(3200));
@@ -283,8 +284,7 @@ describe('serveLiveRamble', () => {
 		const closes: number[] = [];
 		const live = serveLiveRamble(
 			{ send: text => messages.push(JSON.parse(text)), close: code => closes.push(code ?? 0) },
-			{ gemini: 'gemini-key', xai: 'xai-key' },
-			{ transcribe: fakeStt().transcribe },
+			{ gemini: 'gemini-key', transcribe: fakeStt().transcribe },
 		);
 		live.message(JSON.stringify({ today: 'soon' }));
 		expect(messages[0]!.type).toBe('error');

@@ -106,7 +106,6 @@ struct RecipeDetailView: View {
     }
 }
 
-/// The numbered steps.
 private struct StepsSection: View {
     let steps: [String]
 

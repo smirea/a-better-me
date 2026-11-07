@@ -4,8 +4,47 @@ import Foundation
 /// The deload is never stored: it is derived from the week next to it, so toggling Deload in Program Settings or
 /// building a program from scratch needs no rewrite.
 extension Program {
-    /// The training weeks plus the deload cycle when there is one.
-    var totalCycles: Int { cycles + (config.deload == .none ? 0 : 1) }
+    var totalCycles: Int { Self.totalCycles(cycles, deload: config.deload) }
+
+    static func totalCycles(_ cycles: Int, deload: Deload) -> Int { cycles + (deload == .none ? 0 : 1) }
+
+    /// Keeps the current cycle inside the program after its weeks or its deload changed.
+    mutating func clampCycle() { currentCycle = min(currentCycle, totalCycles) }
+
+    /// The training week the deload derives its sets from: the first week for a first-cycle deload, else the last.
+    var deloadNeighborWeek: Int { config.deload == .firstCycle ? 1 : cycles }
+
+    var firstTrainingCycle: Int { config.deload == .firstCycle ? 2 : 1 }
+
+    /// A fresh run from cycle 1: sessions before it count for nothing, and no rest day is ticked.
+    mutating func startRun(at date: Date = .now) {
+        resetProgress()
+        config.runStartedAt = date
+    }
+
+    /// A copy named `name` with fresh ids throughout, inactive and in the library, its days opening copies of
+    /// `templates` with their cycle targets.
+    func duplicated(named name: String, templates: [WorkoutTemplate]) -> GeneratedProgram {
+        let byID = Dictionary(templates.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var copy = Program(name: name, color: color, icon: icon, cycles: cycles, config: config)
+        copy.config.runStartedAt = nil
+        var copies: [WorkoutTemplate] = []
+        copy.days = days.map { day in
+            guard let source = day.templateID.flatMap({ byID[$0] }) else { return ProgramDay() }
+            let template = WorkoutTemplate(
+                programID: copy.id, name: source.name, notes: source.notes, blocks: source.blocks.copyingCycleTargets(), gymID: source.gymID
+            )
+            copies.append(template)
+            return ProgramDay(templateID: template.id)
+        }
+        return GeneratedProgram(program: copy, templates: copies)
+    }
+
+    /// Back to cycle 1 with no rest day ticked, as deactivating does.
+    mutating func resetProgress() {
+        currentCycle = 1
+        for index in days.indices { days[index].restDoneInCycle = nil }
+    }
 
     func isDeloadCycle(_ cycle: Int) -> Bool {
         switch config.deload {
@@ -55,11 +94,7 @@ extension Program {
     }
 
     /// A workout day is done once a session of it in the current cycle has finished; a rest day once it was ticked
-    /// this cycle. `finished` is the finished-session history.
-    func isDone(_ day: ProgramDay, finished: [WorkoutSession]) -> Bool {
-        isDone(day, finishedDays: finishedDayIDs(finished))
-    }
-
+    /// this cycle.
     func isDone(_ day: ProgramDay, finishedDays: Set<ProgramDay.ID>) -> Bool {
         guard day.templateID != nil else { return day.restDoneInCycle == currentCycle }
         return finishedDays.contains(day.id)
@@ -71,11 +106,16 @@ extension Program {
         return days.first { !isDone($0, finishedDays: finishedDays) }
     }
 
+    /// Up Next for a surface that can only start a workout, the watch's: the first workout day not done.
+    func nextWorkoutDay(finished: [WorkoutSession]) -> ProgramDay? {
+        let finishedDays = finishedDayIDs(finished)
+        return workoutDays.first { !isDone($0, finishedDays: finishedDays) }
+    }
+
     /// The sets `item` trains in `cycle`, or `nil` when the exercise is skipped that cycle.
     func sets(of item: BlockExercise, cycle: Int) -> [WorkoutSet]? {
         guard let week = week(ofCycle: cycle) else {
-            let neighbor = config.deload == .firstCycle ? 1 : cycles
-            return weekSets(of: item, week: neighbor).map(DeloadRule.apply)
+            return weekSets(of: item, week: deloadNeighborWeek).map(DeloadRule.apply)
         }
         return weekSets(of: item, week: week)
     }
@@ -102,7 +142,6 @@ extension Program {
         }
     }
 
-    /// Starts `template` as day `dayID` of this program's current cycle.
     func session(startingFrom template: WorkoutTemplate, dayID: ProgramDay.ID, gymID: UUID?) -> WorkoutSession {
         var resolved = template
         resolved.blocks = blocks(of: template, cycle: currentCycle)
@@ -165,11 +204,6 @@ enum ProgramAdvance {
 /// session dropped is skipped that week, and an exercise it added joins the template for every week. Other weeks
 /// stay as they were. A deload session changes nothing, because the deload derives from its neighbor week.
 enum ProgramPlanUpdate {
-    static func blocks(of template: WorkoutTemplate, updatedBy session: WorkoutSession, program: Program) -> [WorkoutBlock] {
-        guard let position = session.program else { return template.blocks }
-        return blocks(of: template, plan: SessionFlow.plan(from: session.blocks), position: position, program: program)
-    }
-
     /// `plan` is the session's blocks already reduced to a plan (logs stripped, undone changes reverted).
     static func blocks(of template: WorkoutTemplate, plan: [WorkoutBlock], position: ProgramPosition, program: Program) -> [WorkoutBlock] {
         guard let week = program.week(ofCycle: position.cycle) else { return template.blocks }

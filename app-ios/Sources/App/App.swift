@@ -7,6 +7,7 @@ struct BetterMeApp: App {
     @State private var presenter: LiveWorkoutPresenter
     @State private var store: LocalStore
     @State private var history: SessionHistory
+    @State private var health: HealthData
 
     init() {
         Telemetry.start()
@@ -22,12 +23,15 @@ struct BetterMeApp: App {
         _store = State(initialValue: store)
         let history = SessionHistory(store: store)
         _history = State(initialValue: history)
+        let health = HealthData(store: store)
+        _health = State(initialValue: health)
+        catalog.observeCustom(in: store)
         LiveWorkoutController.shared.start(store: store, history: history, catalog: catalog)
         WorkoutActivityController.shared.start(store: store, catalog: catalog)
         WatchBridge.shared.start(store: store, history: history, catalog: catalog)
         WorkoutHealth.shared.start(store: store, catalog: catalog)
         NutritionHealth.shared.start(store: store)
-        WidgetPublisher.shared.start(store: store)
+        WidgetPublisher.shared.start(store: store, health: health)
         QuickActionInbox.shared.install()
         Feedback.enable()
         Feedback.context("Sync") {
@@ -43,9 +47,6 @@ struct BetterMeApp: App {
         Feedback.context("Assets") { AssetStore.shared.statusLine }
         #if DEBUG
         DevSeed.run(store)
-        SampleData.seedIfRequested(store)
-        store.seedGeneratedProgramIfRequested(catalog: catalog)
-        SampleWorkout.startIfRequested(store)
         #endif
     }
 
@@ -56,6 +57,7 @@ struct BetterMeApp: App {
                 .environment(presenter)
                 .environment(store)
                 .environment(history)
+                .environment(health)
                 .font(AppFont.body())
                 .preferredColorScheme(.dark)
                 .tint(Theme.textPrimary)

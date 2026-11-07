@@ -161,35 +161,14 @@ private struct LoggerContent: View {
     }
 }
 
-/// The logger's top band: exit, the time chip, and the plate over the day's calories and macros with the plate counted
-/// in, drawn as the Food Log's summary is. Swiping the totals steps through Nutrition Display, as swiping
-/// MacroFactor's banner does.
+/// The logger's top band: exit, the time chip, and the plate over the day's totals with the plate counted in.
 private struct LoggerBanner: View {
     let session: LoggerSession
     let exit: () -> Void
     let chooseTime: () -> Void
     let openPlate: () -> Void
-    @Environment(LocalStore.self) private var store
-    @Observe(AppSettings.current) private var settings
-    @Observe(NutritionPlan.all) private var plans
-    @Observe(NutrientGoal.all) private var goals
-    @Observe<[FoodEntry]> private var entries: [FoodEntry]
-    @Observe<NutritionDay> private var dayRow: NutritionDay
-
-    init(session: LoggerSession, exit: @escaping () -> Void, chooseTime: @escaping () -> Void, openPlate: @escaping () -> Void) {
-        self.session = session
-        self.exit = exit
-        self.chooseTime = chooseTime
-        self.openPlate = openPlate
-        _entries = Observe(FoodEntry.on(session.time.day))
-        _dayRow = Observe(NutritionDay.one(session.time.day))
-    }
 
     var body: some View {
-        let display = settings.nutrition.logger.nutritionDisplay
-        let day = session.time.day
-        let lines = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile)
-            .summary(dayRow.totals(entries), plate: session.plateWithPending, settings: settings)
         VStack(spacing: 10) {
             GlassEffectContainer {
                 HStack(spacing: 10) {
@@ -203,17 +182,7 @@ private struct LoggerBanner: View {
                     plateButton
                 }
             }
-            MacroTotalsBars(lines: lines, page: display.page)
-                .gesture(DragGesture(minimumDistance: 20).onEnded { drag in
-                    guard abs(drag.translation.width) > 30, abs(drag.translation.width) > abs(drag.translation.height) else { return }
-                    store.updateSettings { $0.nutrition.logger.nutritionDisplay = display.cycled(by: drag.translation.width < 0 ? 1 : -1) }
-                })
-                .sensoryFeedback(.selection, trigger: display)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(lines.map(\.spoken).joined(separator: ", "))
-                .accessibilityAdjustableAction { direction in
-                    store.updateSettings { $0.nutrition.logger.nutritionDisplay = display.cycled(by: direction == .increment ? 1 : -1) }
-                }
+            PlateDayTotals(day: session.time.day, plate: session.plateWithPending)
         }
         .padding(.horizontal, Theme.margin)
         .padding(.top, 14)
@@ -326,7 +295,6 @@ private struct LogTimePicker: View {
         .feedback(self)
     }
 
-    /// A month back through a week ahead, plus the chosen day when it lies outside them.
     private var days: [CalendarDay] {
         var days = (-30...7).map { today.adding(days: $0) }
         if !days.contains(session.time.day) { days.append(session.time.day) }

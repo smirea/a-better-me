@@ -24,8 +24,6 @@ final class WorkoutRecording: NSObject {
         var maxHeartRate: Double?
         var activeEnergyKcal: Double?
         var basalEnergyKcal: Double?
-
-        var live: LiveHealthMetrics { LiveHealthMetrics(heartRate: heartRate, activeEnergyKcal: activeEnergyKcal) }
     }
 
     nonisolated static let log = Logger(subsystem: "com.stefan.a-better-me", category: "workout-recording")

@@ -78,9 +78,7 @@ struct ProfileSettings: Codable, Hashable {
     var liftingExperience = LiftingExperience.intermediate
     /// Exercise Assessment answers by question id. The question and answer ids come from the research thread.
     var assessment: [String: String] = [:]
-    var assessmentCompletedAt: Date?
-    /// The manual fallback the live workout's Bodyweight Contribution uses when no `BodyWeight` row and no HealthKit
-    /// sample exist. `currentBodyWeightKg` ranks it last.
+    /// The weight per-kilogram amounts use when no `BodyWeight` row exists.
     var bodyWeightKg: Double?
     /// The BMR and nutrient-default inputs Nutrition reads.
     var heightCm: Double?
@@ -95,4 +93,8 @@ enum BodySex: String, Codable {
 
 enum LiftingExperience: String, Codable, CaseIterable {
     case beginner, intermediate, advanced
+}
+
+extension AppSettings {
+    static let current = DatabaseQuery(AppSettings()) { try AppSettings.fetchOne($0, key: rowID) ?? AppSettings() }
 }

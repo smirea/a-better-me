@@ -9,13 +9,12 @@ struct TimelineRow: Hashable, Identifiable {
     var id: UUID { entry.id }
 }
 
-/// One hour pill of the timeline and the entries under it.
 struct TimelineHour: Hashable, Identifiable {
     let hour: Int
     let rows: [TimelineRow]
 
     var id: Int { hour }
-    var totals: NutrientAmounts { FoodLog.totals(rows.map(\.entry)) }
+    var totals: NutrientAmounts { rows.map(\.entry).totals }
 }
 
 /// One of the day's four summary columns: what was eaten, what the logger's plate adds on top (nil outside the logger),
@@ -44,7 +43,7 @@ struct MacroLine: Hashable, Identifiable {
         let unit = nutrient == .energy ? "calories" : "grams"
         let eaten = target.map { "\(total.wholeText) of \($0.wholeText)" } ?? total.wholeText
         let plate = (plate ?? 0) > 0 ? ", \((plate ?? 0).wholeText) on the plate" : ""
-        return "\(nutrient.dashboardLabel) \(eaten) \(unit)\(plate)"
+        return "\(nutrient.title) \(eaten) \(unit)\(plate)"
     }
 
     /// What the plate adds as a share of the target, or without one as a share of the day with the plate.
@@ -94,7 +93,7 @@ enum PasteTarget: Hashable {
     case hour(CalendarDay, hour: Int)
 }
 
-/// One `LocalStore.copyEntries` or `moveEntries` call: entries that land at the same day and minute.
+/// Entries a copy or move lands at the same day and minute.
 struct Relocation: Hashable {
     let ids: [UUID]
     let day: CalendarDay
@@ -112,10 +111,6 @@ struct Contributor: Hashable, Identifiable {
 
 /// The Food Log's arithmetic, kept out of the views so the suites can pin them.
 enum FoodLog {
-    static func totals(_ entries: [FoodEntry]) -> NutrientAmounts {
-        entries.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts }
-    }
-
     /// The day's hours: the configured range, unless empty hours hide, plus every hour that has an entry.
     static func hours(_ entries: [FoodEntry], timeline: NutritionSettings.Timeline) -> [TimelineHour] {
         let byHour = Dictionary(grouping: entries, by: \.hour)
@@ -247,7 +242,6 @@ enum FoodLog {
         return "\(verb) \(foods) to \(place)"
     }
 
-    /// The selection after tapping an hour's pill: the hour's entries join it, or leave it when all are already in.
     static func toggling(_ hour: [UUID], in selection: Set<UUID>) -> Set<UUID> {
         selection.isSuperset(of: hour) ? selection.subtracting(hour) : selection.union(hour)
     }
@@ -286,5 +280,13 @@ enum FoodLog {
     static func barMaximum(value: Double, range: NutrientRange) -> Double? {
         guard let reference = range.target ?? range.ceiling ?? range.floor, reference > 0 else { return nil }
         return max(reference / 0.6, value)
+    }
+}
+
+extension NutrientTargets {
+    /// The summary's lines for the day: `settings` picks the columns and whether remaining goes negative.
+    func summary(_ amounts: NutrientAmounts, plate: NutrientAmounts? = nil, settings: AppSettings) -> [MacroLine] {
+        let columns = settings.nutrition.summaryNutrients
+        return FoodLog.summary(amounts, plate: plate, nutrients: columns, targets: goals(columns), showOverages: settings.nutrition.showOverages)
     }
 }

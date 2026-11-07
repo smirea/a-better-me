@@ -127,6 +127,7 @@ private struct DaySummary: View {
     @Environment(FoodLogState.self) private var state
     @Observe(AppSettings.current) private var settings
     @Observe(NutrientGoal.all) private var goals
+    @Observe(BodyWeight.latest) private var latestWeight
     @Observe private var entries: [FoodEntry]
     @Observe private var row: NutritionDay
 
@@ -138,7 +139,7 @@ private struct DaySummary: View {
     }
 
     var body: some View {
-        let targets = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile)
+        let targets = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: latestWeight?.weightKg)
         let target = targets.target
         let lines = targets.summary(row.totals(entries), settings: settings)
         VStack(spacing: 4) {

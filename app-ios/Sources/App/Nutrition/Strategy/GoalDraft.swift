@@ -93,14 +93,14 @@ struct GoalDraft: Hashable {
     /// The wizard's "initial daily budget" tile.
     func initialBudget(_ basis: StrategyBasis) -> Int {
         NutritionEngine.Targets.initialDailyBudget(
-            expenditure: basis.expenditureKcal, goal: StrategyRules.engineGoal(goal(startingOn: CalendarDay.today)), weightKg: basis.weightKg
+            expenditure: basis.expenditureKcal, goal: goal(startingOn: CalendarDay.today).engine, weightKg: basis.weightKg
         )
     }
 
     /// The wizard's "projected end date": the day the trend reaches the target at this rate, nil while maintaining.
     func projectedEnd(from today: CalendarDay, currentWeightKg: Double) -> CalendarDay? {
         guard problem(currentWeightKg: currentWeightKg) == nil else { return nil }
-        return NutritionEngine.Targets.estimatedDays(goal: StrategyRules.engineGoal(goal(startingOn: today)), weightKg: currentWeightKg)
+        return NutritionEngine.Targets.estimatedDays(goal: goal(startingOn: today).engine, weightKg: currentWeightKg)
             .map { today.adding(days: $0) }
     }
 }

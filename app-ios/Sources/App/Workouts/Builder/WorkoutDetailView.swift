@@ -65,9 +65,9 @@ struct WorkoutDetailView: View {
                         Label("Export Workout", systemImage: "square.and.arrow.up")
                     }
                     if template.isArchived {
-                        Button("Unarchive Workout", systemImage: "arrow.up.bin") { store.editTemplate(templateID) { $0.isArchived = false } }
+                        Button("Unarchive Workout", systemImage: "arrow.up.bin") { store.edit(WorkoutTemplate.self, id: templateID) { $0.isArchived = false } }
                     } else {
-                        Button("Archive Workout", systemImage: "archivebox") { store.editTemplate(templateID) { $0.isArchived = true } }
+                        Button("Archive Workout", systemImage: "archivebox") { store.edit(WorkoutTemplate.self, id: templateID) { $0.isArchived = true } }
                     }
                     Button("Delete Workout", systemImage: "trash", role: .destructive) { confirmingDelete = true }
                 }
@@ -79,13 +79,13 @@ struct WorkoutDetailView: View {
             }
             .onChange(of: blocks) { _, blocks in
                 guard let blocks, blocks != template.blocks else { return }
-                store.editTemplate(templateID) { $0.blocks = blocks }
+                store.edit(WorkoutTemplate.self, id: templateID) { $0.blocks = blocks }
             }
             .onChange(of: template.blocks) { _, remote in
                 if store.pendingWrites == 0, remote != blocks { blocks = nil }
             }
             .nameAlert("Name", isPresented: $renaming, initial: template.name) { name in
-                store.editTemplate(templateID) { $0.name = name }
+                store.edit(WorkoutTemplate.self, id: templateID) { $0.name = name }
             }
             .alert("Reset \(template.name)?", isPresented: $confirmingReset) {
                 Button("Reset Workout", role: .destructive) {

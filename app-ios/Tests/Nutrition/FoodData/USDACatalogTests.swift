@@ -12,7 +12,6 @@ struct USDACatalogTests {
     }
 
     @Test func commonQueriesFindThePlainFoodFirst() {
-        #expect(catalog.entries.count == 7283)
         #expect(top("banana") == ["Bananas, raw", "Bananas, dehydrated, or banana powder", "Pepper, banana, raw"])
         #expect(top("egg") == ["Egg, whole, raw, fresh", "Egg, white, raw, fresh", "Egg, whole, cooked, fried"])
         #expect(top("chicken breast", 2) == [

@@ -34,25 +34,10 @@ struct CycleTargets: Codable, Hashable {
     var skip = false
 }
 
-extension [WorkoutBlock] {
-    func targets(forCycle cycle: Int) -> [WorkoutBlock] {
-        compactMap { block in
-            var block = block
-            block.exercises = block.exercises.compactMap { exercise in
-                guard let targets = exercise.cycleTargets, targets.indices.contains(cycle - 1) else { return exercise }
-                if targets[cycle - 1].skip { return nil }
-                var exercise = exercise
-                exercise.sets = targets[cycle - 1].sets
-                return exercise
-            }
-            return block.exercises.isEmpty ? nil : block
-        }
-    }
-}
 
 extension [WorkoutSet] {
     /// The number in a set's circle. Warm-ups show "W", so working sets count from 1 after them: W, 1, 2, D.
-    func number(at index: Int) -> Int { prefix(index + 1).count { $0.type != .warmUp } }
+    func number(at index: Int) -> Int { prefix(index + 1).count { $0.type.isWorking } }
 }
 
 struct WorkoutSet: Codable, Hashable, Identifiable {
@@ -104,4 +89,9 @@ struct ProgramPosition: Codable, Hashable, Sendable {
     var programID: UUID
     var dayID: UUID
     var cycle: Int
+}
+
+extension WorkoutBlock {
+    /// What a group of exercises is called: two make a superset, more a circuit.
+    var groupName: String { exercises.count > 2 ? "Circuit" : "Superset" }
 }

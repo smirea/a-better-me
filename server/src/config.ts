@@ -17,7 +17,7 @@ const SPACE_SETTINGS = {
 	SYNC_COMPACT_EVERY_MS: 'compactEvery',
 } as const satisfies Record<string, keyof SpaceOptions>;
 
-export type Environment = 'development' | 'production';
+type Environment = 'development' | 'production';
 
 type SpaceSetting = keyof typeof SPACE_SETTINGS;
 type TextSetting = 'APP_ENV' | 'RAMBLE_SCRIPT' | (typeof REQUIRED_IN_PRODUCTION)[number];
@@ -26,7 +26,7 @@ type TextSetting = 'APP_ENV' | 'RAMBLE_SCRIPT' | (typeof REQUIRED_IN_PRODUCTION)
 export type Settings = Partial<Record<TextSetting, string> & Record<SpaceSetting, string | number>>;
 
 /** Sentry project `a-better-me-worker`, reported under the server's own environment. Null turns reporting off. */
-export type SentryTarget = { dsn: string; environment: Environment };
+type SentryTarget = { dsn: string; environment: Environment };
 
 export type Config = {
 	environment: Environment;

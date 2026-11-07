@@ -10,13 +10,6 @@ final class LiveWorkoutPresenter {
     /// or discard it and start this one.
     var pendingStart: WorkoutSession?
 
-    /// Starts `session` and shows it. At most one session is in progress, so callers resolve an existing one first
-    /// (the live session thread owns that prompt).
-    func start(_ session: WorkoutSession, in store: LocalStore) {
-        store.insert(session)
-        isExpanded = true
-    }
-
     /// "Discard and Start New": every unfinished session goes, in the same transaction as the insert, since two devices
     /// that started workouts offline can both have one.
     func replaceInProgress(with session: WorkoutSession, in store: LocalStore) {

@@ -109,11 +109,6 @@ final class FoodSearch {
     private let branded: any BrandedFoodSource
     private(set) var library: FoodLibrary
 
-    convenience init(store: LocalStore, catalog: USDACatalog = .bundled, branded: any BrandedFoodSource = FoodDatabaseClient.live) throws {
-        let today = CalendarDay.today
-        self.init(store: store, catalog: catalog, branded: branded, library: try store.read { try FoodLibrary.read($0, today: today) })
-    }
-
     private init(store: LocalStore, catalog: USDACatalog, branded: any BrandedFoodSource, library: FoodLibrary) {
         self.store = store
         self.catalog = catalog
@@ -131,18 +126,11 @@ final class FoodSearch {
     }
 
     /// Rereads the owner's side, after logging or editing foods.
-    func reload() throws {
-        let today = CalendarDay.today
-        library = try store.read { try FoodLibrary.read($0, today: today) }
-    }
-
-    /// `reload`, read off the main actor.
     func refresh() async throws {
         let today = CalendarDay.today
         library = try await store.database.pool.read { try FoodLibrary.read($0, today: today) }
     }
 
-    /// The foods usually logged within `hour` (`HourPicks`), at their last serving there.
     func picks(hour: Int) -> [FoodSearchResult] {
         library.picks[hour] ?? []
     }
@@ -181,7 +169,7 @@ final class FoodSearch {
     /// Facts, whose answer is cached under `off-<barcode>`. Nil when neither knows it; throws when the server is
     /// unreachable.
     func lookup(barcode: String) async throws -> Food? {
-        let known = try store.read { db in
+        let known = try await store.read { db in
             try Food.filter(Column("barcode") == barcode && Column("archived") == false).fetchAll(db)
                 .min { ($0.source == .custom ? 0 : 1, $0.createdAt) < ($1.source == .custom ? 0 : 1, $1.createdAt) }
         }

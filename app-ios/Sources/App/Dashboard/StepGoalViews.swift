@@ -174,7 +174,6 @@ private struct BracketArm: Shape {
     }
 }
 
-/// Opened from the Steps screen's toolbar.
 struct StepGoalSheet: View {
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss

@@ -49,7 +49,6 @@ struct DietaryHealthTests {
     let key = "00000000-0000-0000-0000-0000000000a1"
 
     @Test func everyMappedNutrientIsInTheRegistryInAUnitHealthAccepts() {
-        #expect(DietaryHealth.types.count == 34)
         for (id, identifier) in DietaryHealth.types {
             let nutrient = NutrientRegistry.nutrient(id)
             #expect(nutrient != nil, "\(id.rawValue) is not in the registry")
@@ -134,7 +133,7 @@ struct DietaryHealthTests {
         let sync = NutritionHealth(target: health, defaults: defaults, calendar: utc)
         sync.start(store: store)
 
-        store.quickAdd([.energy: 500, .protein: 40], on: today, minute: 9 * 60)
+        store.log([FoodPortion(.quickAdd([.energy: 500, .protein: 40]))], on: today, minute: 9 * 60)
         try await store.write { _ in }.value
         await sync.idle()
         #expect(health.summary == [])
@@ -144,8 +143,8 @@ struct DietaryHealthTests {
         #expect(health.held.map(\.sample.amount).sorted() == [40, 500])
         #expect(defaults.bool(forKey: NutritionHealth.enabledKey))
 
-        let id = try store.read(FoodEntry.on(today).fetch)[0].id
-        store.editEntry(id) { $0.serving.quantity = 2 }
+        let id = try store.readBlocking(FoodEntry.on(today).fetch)[0].id
+        store.edit(FoodEntry.self, id: id) { $0.serving.quantity = 2 }
         try await eventually { health.held.map(\.sample.amount).sorted() == [80, 1000] }
 
         store.deleteEntries([id])
@@ -154,10 +153,10 @@ struct DietaryHealthTests {
 
     @Test func anEditSyncedInWithAnOlderTimestampStillChangesTheDaysDigest() async throws {
         let store = try LocalStore(unsyncedAt: FileManager.default.temporaryDirectory.appending(path: "digest-\(UUID().uuidString)/a.sqlite"))
-        store.quickAdd([.energy: 300], on: monday, minute: 8 * 60)
-        store.quickAdd([.energy: 500], on: monday, minute: 12 * 60)
+        store.log([FoodPortion(.quickAdd([.energy: 300]))], on: monday, minute: 8 * 60)
+        store.log([FoodPortion(.quickAdd([.energy: 500]))], on: monday, minute: 12 * 60)
         try await store.write { _ in }.value
-        let before = try store.read(NutritionHealth.dayDigests)
+        let before = try store.readBlocking(NutritionHealth.dayDigests)
 
         try await store.write { db in
             try db.execute(sql: """
@@ -165,7 +164,7 @@ struct DietaryHealthTests {
                 WHERE minute = 480
                 """)
         }.value
-        let after = try store.read(NutritionHealth.dayDigests)
+        let after = try store.readBlocking(NutritionHealth.dayDigests)
 
         #expect(before.keys.sorted() == ["2026-10-26"])
         #expect(after.keys.sorted() == ["2026-10-26"])

@@ -76,21 +76,9 @@ struct StepsProvider: TimelineProvider {
     /// Nil when Health can't be read, as while the phone is locked.
     private static func health(now: Date, calendar: Calendar) async -> [DatedValue]? {
         guard HKHealthStore.isHealthDataAvailable() else { return nil }
-        let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))!
-        let start = calendar.date(byAdding: .day, value: -30, to: end)!
-        let query = HKStatisticsCollectionQueryDescriptor(
-            predicate: .quantitySample(type: HKQuantityType(.stepCount), predicate: HKQuery.predicateForSamples(withStart: start, end: end)),
-            options: .cumulativeSum,
-            anchorDate: start,
-            intervalComponents: DateComponents(day: 1)
-        )
         do {
-            var days: [DatedValue] = []
-            try await query.result(for: store).enumerateStatistics(from: start, to: end) { statistics, _ in
-                guard let sum = statistics.sumQuantity()?.doubleValue(for: .count()), sum > 0 else { return }
-                days.append(DatedValue(date: statistics.startDate, value: sum))
-            }
-            return days
+            let start = calendar.date(byAdding: .day, value: -29, to: now)!
+            return try await store.dailySums(of: HKQuantityType(.stepCount), unit: .count(), from: start, through: now, calendar: calendar)
         } catch {
             log.info("Steps widget read no Health data: \(String(describing: error))")
             return nil

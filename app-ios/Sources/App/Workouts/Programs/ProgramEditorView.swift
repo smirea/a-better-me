@@ -79,10 +79,10 @@ private struct ProgramEditorScreen: View {
             UnderlineTabs(items: dayTabs(program, templates: templates), selection: Binding { day?.id } set: { selection = $0 }) {
                 Button("Add Day") {
                     pendingIndex = program.days.count
-                    store.addProgramDay(to: program.id, rest: true, name: "", gymID: nil)
+                    store.addRestDay(to: program.id)
                 }
             }
-            if let day {
+            if day != nil {
                 if let template {
                     ProgramDayEditor(program: program, template: template, templates: templates, span: $span, reordering: $reordering)
                         .id(template.id)
@@ -130,13 +130,13 @@ private struct ProgramEditorScreen: View {
             }
         }
         .nameAlert("Rename Day", isPresented: $renaming, initial: template?.name ?? "") { name in
-            if let template { store.editTemplate(template.id) { $0.name = name } }
+            if let template { store.edit(WorkoutTemplate.self, id: template.id) { $0.name = name } }
         }
         .alert(confirmationTitle, isPresented: .isPresent($confirming), presenting: confirming) { confirmation in
             switch confirmation {
             case .changeToRest:
                 Button("Change to Rest", role: .destructive) {
-                    if let day { store.toggleRestDay(day.id, in: program.id, name: "", gymID: nil) }
+                    if let day { store.toggleRestDay(day.id, in: program.id) }
                 }
             case .remove:
                 Button("OK", role: .destructive) {
@@ -168,8 +168,6 @@ private struct ProgramEditorScreen: View {
         template?.gymID.flatMap { id in gyms.first { $0.id == id }?.name } ?? "No Gym"
     }
 
-    /// The selected day's actions. They were a row of chips under the day tabs; the gym they led with is the title's
-    /// subtitle now.
     private func dayMenu(_ program: Program, day: ProgramDay, template: WorkoutTemplate?) -> some View {
         let isRest = template == nil
         return Menu("Day Options", systemImage: "ellipsis") {
@@ -221,7 +219,6 @@ private struct ProgramEditorScreen: View {
             PinnedActionButton("Activate Program") { draft.activate() }
         } else if !program.isActive {
             PinnedActionButton("Activate Program") {
-                if program.isArchived { store.setProgramArchived(program.id, false) }
                 store.activate(program.id)
             }
         } else if let template {
@@ -230,7 +227,6 @@ private struct ProgramEditorScreen: View {
     }
 }
 
-/// The scrolling day tabs: one per day, underlined when selected, then Add Day.
 /// "Gym Options · Impacts exercise selection": the day's gym, or every day's with Apply to All Days.
 private struct ProgramEditorGymOptions: View {
     let gyms: [GymProfile]
@@ -257,7 +253,7 @@ private struct ProgramEditorGymOptions: View {
                             Image(systemName: gym.icon).frame(width: 24)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(gym.name).font(AppFont.rowTitle)
-                                Text("\(gym.equipment.count) pieces of equipment")
+                                Text(gym.equipmentSummary)
                                     .font(AppFont.rowDetail)
                                     .foregroundStyle(Theme.textSecondary)
                             }

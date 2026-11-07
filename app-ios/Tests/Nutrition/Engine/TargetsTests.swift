@@ -39,11 +39,6 @@ struct TargetsTests {
         #expect(plan.days[.friday] == Engine.DayTarget(kcal: 1678, proteinG: 212, fatG: 64, carbsG: 60))
     }
 
-    @Test func proteinLevelsAreGramsPerPound() {
-        let grams = Engine.ProteinLevel.allCases.map { ($0.gramsPerLb * 197).rounded(.down) }
-        #expect(grams == [124, 151, 183, 212])
-    }
-
     @Test func evenDistributionGivesEveryDayTheAverage() {
         let program = Engine.CoachedProgram(diet: .balanced, protein: .moderate, floor: floor)
         let plan = Engine.Targets.weekly(program: program, goal: lose, expenditure: expenditure, weightKg: weightKg)

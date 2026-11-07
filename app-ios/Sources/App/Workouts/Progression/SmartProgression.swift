@@ -91,7 +91,7 @@ enum SmartProgression {
     /// set. Warm-ups keep their fill, since a working set says nothing about how to warm up. Returns only the rows
     /// whose suggestion differs from `current`, so the caller can merge them and log the change.
     static func applyInSession(sets: [WorkoutSet], current: [UUID: SetSuggestion], settings: ProgressionSettings, loadable: LoadableWeights, rirTracking: Bool, unit: WeightUnit) -> [UUID: SetSuggestion] {
-        let working = sets.filter { $0.type != .warmUp }
+        let working = sets.filter { $0.type.isWorking }
         guard let latest = working.compactMap(\.log).max(by: { $0.completedAt < $1.completedAt }) else { return [:] }
         let fresh = compute(sets: sets, settings: settings, loadable: loadable, rirTracking: rirTracking, unit: unit) { _ in latest }
         let openRows = Set(working.filter { !$0.isCompleted }.flatMap { [$0.id] + $0.subSets.filter { $0.log == nil }.map(\.id) })
@@ -102,7 +102,7 @@ enum SmartProgression {
     static func event(at date: Date, sets: [WorkoutSet], suggestions: [UUID: SetSuggestion]) -> ProgressionEvent {
         let rows = sets.indices.compactMap { index -> ProgressionEvent.Row? in
             let set = sets[index]
-            guard set.type != .warmUp, let suggestion = suggestions[set.id], !suggestion.isEmpty else { return nil }
+            guard set.type.isWorking, let suggestion = suggestions[set.id], !suggestion.isEmpty else { return nil }
             let number = sets.number(at: index)
             return ProgressionEvent.Row(
                 label: "\(set.type.badge ?? String(number)) Set \(number)",

@@ -103,16 +103,15 @@ struct MacroHeader: View {
     let amounts: NutrientAmounts
 
     var body: some View {
-        let hasMacros = NutrientID.macros.dropFirst().contains { (amounts[$0] ?? 0) > 0 }
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             ForEach(NutrientID.macros, id: \.self) { id in
                 VStack(alignment: .leading, spacing: 2) {
                     let unit = Text(id == .energy ? "" : " g").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
                     Text("\(Text(NutritionFormat.amount(amounts[id] ?? 0, of: id)).font(AppFont.number(22)))\(unit)")
                     HStack(spacing: 4) {
-                        Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? "").foregroundStyle(Theme.textSecondary)
+                        Text(id.title).foregroundStyle(Theme.textSecondary)
                         if id != .energy {
-                            Text(hasMacros ? "\((amounts.macroShare(id) * 100).wholeText)%" : "–").foregroundStyle(id.color)
+                            Text(amounts.macroShare(id).map { "\(($0 * 100).wholeText)%" } ?? "–").foregroundStyle(id.color)
                         }
                     }
                     .font(AppFont.rowDetail)
@@ -167,7 +166,7 @@ struct ImpactGauges: View {
                                 .font(AppFont.rowDetail)
                                 .monospacedDigit()
                         }
-                        Text(line.nutrient == .energy ? "Calories" : NutrientRegistry.nutrient(line.nutrient)?.name ?? "")
+                        Text(line.nutrient.title)
                             .font(AppFont.rowDetail)
                             .foregroundStyle(Theme.textSecondary)
                     }
@@ -227,45 +226,4 @@ enum NutrientSection: String, CaseIterable, Identifiable {
         guard let group else { return (section, NutrientID.macros.compactMap(NutrientRegistry.nutrient)) }
         return (section, NutrientRegistry.all.filter { $0.group == group && !NutrientID.macros.contains($0.id) })
     })
-}
-
-/// The ranges a day's rows draw: calories and macros from the plan, every other nutrient from its goal. Net carbs
-/// without a goal of their own get the carbs target less fiber's, the net carbs left once fiber is eaten.
-struct NutrientTargets {
-    let target: DayTarget?
-    let goals: [NutrientGoal]
-    let day: CalendarDay
-    let sex: BodySex
-    let weightKg: Double?
-
-    /// The profile's weight stands in for the latest weigh-in, which only the per-kilogram amino acids read.
-    static func of(_ day: CalendarDay, plans: [NutritionPlan], goals: [NutrientGoal], profile: ProfileSettings) -> NutrientTargets {
-        NutrientTargets(
-            target: NutritionPlan.effective(on: day, in: plans)?.target(on: day), goals: goals, day: day,
-            sex: profile.sex, weightKg: profile.bodyWeightKg
-        )
-    }
-
-    func range(_ id: NutrientID) -> NutrientRange {
-        switch id {
-        case .energy: NutrientRange(target: target?.energy)
-        case .protein: NutrientRange(target: target?.protein)
-        case .fat: NutrientRange(target: target?.fat)
-        case .carbs: NutrientRange(target: target?.carbs)
-        case .netCarbs where NutrientGoal.mode(id, on: day, goals: goals) ?? .auto == .auto:
-            NutrientRange(target: target.map { max(0, $0.carbs - (range(.fiber).goal ?? 0)) })
-        default: NutrientGoal.range(id, on: day, goals: goals, sex: sex, weightKg: weightKg)
-        }
-    }
-
-    /// The summary's lines for the day: `settings` picks the columns and whether remaining goes negative.
-    func summary(_ amounts: NutrientAmounts, plate: NutrientAmounts? = nil, settings: AppSettings) -> [MacroLine] {
-        let columns = settings.nutrition.summaryNutrients
-        return FoodLog.summary(amounts, plate: plate, nutrients: columns, targets: goals(columns), showOverages: settings.nutrition.showOverages)
-    }
-
-    /// What each of `ids` fills its bar against, leaving out those with no bounds.
-    func goals(_ ids: [NutrientID]) -> NutrientAmounts {
-        Dictionary(uniqueKeysWithValues: ids.compactMap { id in range(id).goal.map { (id, $0) } })
-    }
 }

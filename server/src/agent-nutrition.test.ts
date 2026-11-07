@@ -1,21 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { bunSqlite } from 'sync-engine/bun-sqlite';
-import { createSpace, handleSync, type SyncResponse } from 'sync-engine/core';
-import { schema } from '../../shared/db/schema';
-import { handleAgent } from './agent';
-import { handle, type App } from './api';
-import { parseConfig } from './config';
+import type { SyncResponse } from 'sync-engine/core';
+import { testServer } from './testing';
+import { handle } from './api';
 
-const driver = bunSqlite(':memory:');
-const space = createSpace(driver, schema);
-space.migrate();
-const config = parseConfig({});
-const app: App = {
-	config,
-	report: { captureMessage: () => undefined, captureException: () => undefined },
-	engine: request => handleSync(space, request),
-	agent: request => handleAgent(request, { space, driver, ownerToken: config.ownerToken }),
-};
+let tick = Date.parse('2026-10-22T12:00:00.000Z');
+// Each request a millisecond later, so rows ordered by when they were written keep the order they were sent in.
+const { config, app } = testServer({ clock: () => new Date(tick++) });
 
 const call = (method: string, path: string, body?: unknown) =>
 	handle(
@@ -195,8 +185,6 @@ describe('nutrition agent API', () => {
 		const ids: string[] = [];
 		for (let index = 0; index < 51; index++) {
 			ids.push((await ok('POST', '/food-favorites', { foodId: food.id })).id);
-			// Eviction goes by `createdAt`, which has millisecond resolution.
-			await Bun.sleep(2);
 		}
 		const kept = (await ok('GET', '/food-favorites')).map((favorite: any) => favorite.id);
 		expect(kept.length).toBe(50);

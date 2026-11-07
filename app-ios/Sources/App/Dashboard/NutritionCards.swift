@@ -6,18 +6,6 @@ enum NutritionShown: String, CaseIterable {
     case consumed = "Consumed", remaining = "Remaining"
 }
 
-extension NutrientID {
-    var dashboardLabel: String {
-        switch self {
-        case .energy: "Calories"
-        case .protein: "Protein"
-        case .fat: "Fat"
-        case .carbs: "Carbs"
-        default: NutrientRegistry.nutrient(self)?.name ?? rawValue
-        }
-    }
-}
-
 struct WeeklyNutritionFocus: View {
     private var values = DashboardValues()
 
@@ -76,7 +64,7 @@ struct WeeklyNutritionCard: View {
         if id == .energy {
             Image(systemName: "flame.fill").font(.caption).foregroundStyle(Theme.calories).accessibilityLabel("Calories")
         } else {
-            Text(id.rawValue.uppercased()).font(AppFont.headline(12)).accessibilityLabel(id.dashboardLabel)
+            Text(id.rawValue.uppercased()).font(AppFont.headline(12)).accessibilityLabel(id.title)
         }
     }
 
@@ -100,7 +88,7 @@ struct WeeklyNutritionCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(id.dashboardLabel) \(day.day.date(in: calendar).formatted(.dateTime.weekday(.wide)))")
+        .accessibilityLabel("\(id.title) \(day.day.date(in: calendar).formatted(.dateTime.weekday(.wide)))")
         .accessibilityValue("\(value?.wholeText ?? "none") \(shown.rawValue.lowercased()) of \(target?.wholeText ?? "no target")")
     }
 }
@@ -153,7 +141,7 @@ struct DailyNutritionCard: View {
         let value = shown == .consumed ? day.consumed(id) : day.remaining(id, overages: overages)
         let fill = target.map { $0 > 0 ? (value ?? 0) / $0 : 0 } ?? 0
         return VStack(spacing: 4) {
-            Text(id.dashboardLabel).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+            Text(id.title).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             ProgressView(value: min(max(fill, 0), 1)).progressViewStyle(.bar(id.color))
             Text("\(value?.wholeText ?? "--") / \(target.map { "\($0.niceText)g" } ?? "--")")
                 .font(AppFont.headline(12))
@@ -192,7 +180,6 @@ struct EnergyBalanceFocusCard: View {
     }
 }
 
-/// Daily intake bars with a dashed reference line, the Energy Balance chart.
 struct BalanceChart: View {
     let bars: [DatedValue]
     let line: [DatedValue]
@@ -279,7 +266,6 @@ struct GoalProgressInsightCard: View {
     }
 }
 
-/// The current goal measured on scale or trend weight.
 struct GoalProgressValues {
     enum Source: String, CaseIterable {
         case scale = "Scale Weight", trend = "Trend Weight"
@@ -301,7 +287,7 @@ struct GoalProgressValues {
         guard let plan = data.goalPlan else { return nil }
         goal = plan.goal
         points = switch source {
-        case .scale: DailyCombine.mean.combine(data.weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, calendar: data.calendar)
+        case .scale: DailyCombine.mean.combine(data.weighIns.points, calendar: data.calendar)
         case .trend: data.trend
         }
         let start = goal.startedOn.date(in: data.calendar)

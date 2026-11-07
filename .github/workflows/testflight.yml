@@ -114,10 +114,13 @@ jobs:
           sudo xcode-select -s "$xcode"
           xcodebuild -version
 
+      # Package.resolved is untracked, so a key per run saves each run's packages, as ci.yml does.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: app-ios/.build/SourcePackages
-          key: testflight-source-packages-${{ hashFiles('app-ios/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: testflight-source-packages-${{ github.run_id }}
+          restore-keys: |
+            testflight-source-packages-
 
       # Lives outside the repository, as the archive script requires, and is deleted when the job ends.
       - name: App Store Connect API key

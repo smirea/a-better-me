@@ -1,9 +1,22 @@
 import { z } from 'zod';
-import { BODY_METRIC_KINDS, nutrientID, type SyncedTable } from '../../../shared/db/schema';
-import { ApiError, type Db, type RowOf } from './db';
+import { nutrientID } from '../../../shared/db/schema';
+import { ApiError } from '../http';
+import type { Db, RowOf } from './db';
 import * as M from './models';
 import { countedKcal, planOn } from './engine';
-import { limit, offset, paged, route, where, type Route } from './route';
+import {
+	dayRange,
+	days,
+	fresh,
+	list,
+	page,
+	paged,
+	pagedList,
+	route,
+	dayParam,
+	type Condition,
+	type Route,
+} from './route';
 
 type Amounts = Record<string, number>;
 type Snapshot = z.output<typeof M.FoodSnapshot>;
@@ -64,19 +77,11 @@ function portion(db: Db, input: Portion) {
 		food = snapshot(row.id, row.source, row.name, row.nutrition as Nutrition, { brand: row.brand, icon: row.icon });
 	}
 	if (input.recipeId) {
-		const row = db.find('recipes', input.recipeId.toLowerCase(), 'recipe');
+		const row = db.find('recipes', input.recipeId, 'recipe');
 		food = snapshot(row.id, 'recipe', row.name, recipeNutrition(row), { icon: row.icon });
 	}
 	const [first] = food!.nutrition.measures;
 	return { food: food!, serving: input.serving ?? { measure: first!, quantity: first!.quantity } };
-}
-
-/** The id a create writes: the given one, lowercased, unless a row has it already, or a new one. */
-export function fresh(db: Db, table: SyncedTable, id: string | undefined): string {
-	if (!id) return M.newId();
-	const key = id.toLowerCase();
-	if (db.get(table, key)) throw new ApiError(409, `${table} ${key} already exists. PATCH it instead.`);
-	return key;
 }
 
 const FOOD_IDS: Record<RowOf<'foods'>['source'], [RegExp, string]> = {
@@ -84,55 +89,6 @@ const FOOD_IDS: Record<RowOf<'foods'>['source'], [RegExp, string]> = {
 	usda: [/^usda-\d+$/, '`usda-<fdcId>`'],
 	open_food_facts: [/^off-\S+$/, '`off-<barcode>`'],
 };
-
-const NESTED = ['coachingModules', 'timeline', 'logger', 'expenditure'] as const;
-
-/** `profile`-style merge, one level deeper for the nested groups. */
-export function mergeNutrition(
-	current: Record<string, unknown>,
-	patch: z.output<typeof M.SettingsPatch>['nutrition'],
-): Record<string, unknown> {
-	if (!patch) return current;
-	const merged: Record<string, unknown> = { ...current, ...patch };
-	for (const key of NESTED) {
-		if (patch[key]) merged[key] = { ...(current[key] as object | undefined), ...patch[key] };
-	}
-	return merged;
-}
-
-const days = z.object({
-	from: M.day.optional().meta({ description: 'The first day, inclusive.' }),
-	to: M.day.optional().meta({ description: 'The last day, inclusive.' }),
-});
-function dayRange(column: string, query: { from?: string; to?: string }) {
-	const conditions: [string, ...(string | number)[]][] = [];
-	if (query.from) conditions.push([`${column} >= ?`, query.from]);
-	if (query.to) conditions.push([`${column} <= ?`, query.to]);
-	return conditions;
-}
-const page = { limit: limit(500, 5000), offset };
-
-function list<T extends SyncedTable>(db: Db, table: T, conditions: [string, ...(string | number)[]][], order: string) {
-	const [sql, params] = where(conditions);
-	return db.all(table, `${sql ?? '1'} ORDER BY ${order}`, params);
-}
-
-export function pagedList<T extends SyncedTable, Item = RowOf<T>>(
-	db: Db,
-	table: T,
-	conditions: [string, ...(string | number)[]][],
-	order: string,
-	query: { limit: number; offset: number },
-	map: (row: RowOf<T>) => Item = row => row as Item,
-) {
-	const [sql, params] = where(conditions);
-	const rows = db.all(table, `${sql ?? '1'} ORDER BY ${order} LIMIT ? OFFSET ?`, [
-		...params,
-		query.limit,
-		query.offset,
-	]);
-	return { total: db.count(table, sql, params), items: rows.map(map) };
-}
 
 type Plans = RowOf<'nutrition_plans'>[];
 
@@ -153,7 +109,7 @@ function logSummary(
 		override,
 		entryCount: entries.length,
 		totals,
-		consumed: override ?? totals,
+		consumed: override ? { ...totals, ...override } : totals,
 		countedKcal: countedKcal(entries.length ? (totals.k ?? 0) : null, status, override),
 		planId: placed?.plan.id ?? null,
 		target: placed?.target ?? null,
@@ -170,7 +126,6 @@ export function logDays(db: Db, range: { from?: string; to?: string }) {
 		.map(day => logSummary(day, entries.get(day) ?? [], rows.get(day), plans));
 }
 
-const dayParam = (params: Record<string, string>) => M.day.parse(params.day);
 const assertNoteRoom = (db: Db, day: string, except = '') => {
 	if (db.all('food_log_notes', 'day = ? AND id != ?', [day, except]).length >= NOTES_PER_DAY)
 		throw new ApiError(409, `${day} already has ${NOTES_PER_DAY} notes, the most a day takes`);
@@ -190,7 +145,7 @@ export const nutritionRoutes: Route[] = [
 		}),
 		response: paged(M.Food),
 		run({ db, query }) {
-			const conditions: [string, ...(string | number)[]][] = [];
+			const conditions: Condition[] = [];
 			if (query.q)
 				conditions.push([
 					'(instr(lower(name), ?) > 0 OR instr(lower(brand), ?) > 0)',
@@ -219,8 +174,7 @@ export const nutritionRoutes: Route[] = [
 		response: M.Food,
 		run({ db, body, now }) {
 			const [pattern, shape] = FOOD_IDS[body.source];
-			if (body.id && !pattern.test(body.id.toLowerCase()))
-				throw new ApiError(400, `A ${body.source} food's id is ${shape}`);
+			if (body.id && !pattern.test(body.id)) throw new ApiError(400, `A ${body.source} food's id is ${shape}`);
 			if (!body.id && body.source !== 'custom') throw new ApiError(400, `A ${body.source} food's id is ${shape}`);
 			const row: RowOf<'foods'> = { ...body, id: fresh(db, 'foods', body.id), createdAt: now, updatedAt: now };
 			db.commit(db.put('foods', row));
@@ -263,7 +217,7 @@ export const nutritionRoutes: Route[] = [
 		query: z.object({ q: z.string().optional(), archived: z.stringbool().optional(), ...page }),
 		response: paged(M.Recipe),
 		run({ db, query }) {
-			const conditions: [string, ...(string | number)[]][] = [];
+			const conditions: Condition[] = [];
 			if (query.q) conditions.push(['instr(lower(name), ?) > 0', query.q.toLowerCase()]);
 			if (query.archived !== undefined) conditions.push(['archived = ?', query.archived ? 1 : 0]);
 			return pagedList(db, 'recipes', conditions, 'name, id', query, recipe);
@@ -275,7 +229,7 @@ export const nutritionRoutes: Route[] = [
 		tag: 'Recipes',
 		summary: 'Get a recipe',
 		response: M.Recipe,
-		run: ({ db, params }) => recipe(db.find('recipes', params.id!.toLowerCase(), 'recipe')),
+		run: ({ db, params }) => recipe(db.find('recipes', params.id!, 'recipe')),
 	}),
 	route({
 		method: 'POST',
@@ -306,7 +260,7 @@ export const nutritionRoutes: Route[] = [
 		body: M.RecipePatch,
 		response: M.Recipe,
 		run({ db, params, body, now }) {
-			const id = db.find('recipes', params.id!.toLowerCase(), 'recipe').id;
+			const id = db.find('recipes', params.id!, 'recipe').id;
 			const ingredients = body.ingredients?.map(({ id: key, ...input }) => ({ id: key, ...portion(db, input) }));
 			db.commit(db.patch('recipes', id, { ...body, ...(ingredients && { ingredients }), updatedAt: now }));
 			return recipe(db.find('recipes', id, 'recipe'));
@@ -319,7 +273,7 @@ export const nutritionRoutes: Route[] = [
 		summary: 'Delete a recipe',
 		response: M.Deleted,
 		run({ db, params }) {
-			const id = db.find('recipes', params.id!.toLowerCase(), 'recipe').id;
+			const id = db.find('recipes', params.id!, 'recipe').id;
 			db.commit(db.delete('recipes', id));
 			return { deleted: id };
 		},
@@ -360,13 +314,13 @@ export const nutritionRoutes: Route[] = [
 		tag: 'Food log',
 		summary: 'List logged foods, oldest first',
 		query: days.extend({
-			foodId: z.string().optional().meta({ description: 'Only entries of this food or recipe.' }),
+			foodId: M.foodRef.optional().meta({ description: 'Only entries of this food or recipe.' }),
 			...page,
 		}),
 		response: paged(M.FoodEntry),
 		run({ db, query }) {
 			const conditions = dayRange('day', query);
-			if (query.foodId) conditions.push(["lower(json_extract(food, '$.foodID')) = ?", query.foodId.toLowerCase()]);
+			if (query.foodId) conditions.push(["lower(json_extract(food, '$.foodID')) = ?", query.foodId]);
 			return pagedList(db, 'food_entries', conditions, 'day, minute, created_at, id', query, entry);
 		},
 	}),
@@ -376,7 +330,7 @@ export const nutritionRoutes: Route[] = [
 		tag: 'Food log',
 		summary: 'Get a logged food',
 		response: M.FoodEntry,
-		run: ({ db, params }) => entry(db.find('food_entries', params.id!.toLowerCase(), 'food entry')),
+		run: ({ db, params }) => entry(db.find('food_entries', params.id!, 'food entry')),
 	}),
 	route({
 		method: 'POST',
@@ -409,7 +363,7 @@ export const nutritionRoutes: Route[] = [
 		body: M.FoodEntryPatch,
 		response: M.FoodEntry,
 		run({ db, params, body, now }) {
-			const id = db.find('food_entries', params.id!.toLowerCase(), 'food entry').id;
+			const id = db.find('food_entries', params.id!, 'food entry').id;
 			db.commit(db.patch('food_entries', id, { ...body, updatedAt: now }));
 			return entry(db.find('food_entries', id, 'food entry'));
 		},
@@ -421,7 +375,7 @@ export const nutritionRoutes: Route[] = [
 		summary: 'Delete a logged food',
 		response: M.Deleted,
 		run({ db, params }) {
-			const id = db.find('food_entries', params.id!.toLowerCase(), 'food entry').id;
+			const id = db.find('food_entries', params.id!, 'food entry').id;
 			db.commit(db.delete('food_entries', id));
 			return { deleted: id };
 		},
@@ -479,7 +433,7 @@ export const nutritionRoutes: Route[] = [
 		tag: 'Food log',
 		summary: 'Get a food log note',
 		response: M.FoodLogNote,
-		run: ({ db, params }) => db.find('food_log_notes', params.id!.toLowerCase(), 'note'),
+		run: ({ db, params }) => db.find('food_log_notes', params.id!, 'note'),
 	}),
 	route({
 		method: 'POST',
@@ -504,7 +458,7 @@ export const nutritionRoutes: Route[] = [
 		body: M.FoodLogNotePatch,
 		response: M.FoodLogNote,
 		run({ db, params, body }) {
-			const existing = db.find('food_log_notes', params.id!.toLowerCase(), 'note');
+			const existing = db.find('food_log_notes', params.id!, 'note');
 			if (body.day && body.day !== existing.day) assertNoteRoom(db, body.day, existing.id);
 			db.commit(db.patch('food_log_notes', existing.id, body));
 			return db.find('food_log_notes', existing.id, 'note');
@@ -517,7 +471,7 @@ export const nutritionRoutes: Route[] = [
 		summary: 'Delete a food log note',
 		response: M.Deleted,
 		run({ db, params }) {
-			const id = db.find('food_log_notes', params.id!.toLowerCase(), 'note').id;
+			const id = db.find('food_log_notes', params.id!, 'note').id;
 			db.commit(db.delete('food_log_notes', id));
 			return { deleted: id };
 		},
@@ -537,7 +491,7 @@ export const nutritionRoutes: Route[] = [
 		tag: 'Foods',
 		summary: 'Get a favorite',
 		response: M.FoodFavorite,
-		run: ({ db, params }) => db.find('food_favorites', params.id!.toLowerCase(), 'favorite'),
+		run: ({ db, params }) => db.find('food_favorites', params.id!, 'favorite'),
 	}),
 	route({
 		method: 'POST',
@@ -567,50 +521,8 @@ export const nutritionRoutes: Route[] = [
 		summary: 'Delete a favorite',
 		response: M.Deleted,
 		run({ db, params }) {
-			const id = db.find('food_favorites', params.id!.toLowerCase(), 'favorite').id;
+			const id = db.find('food_favorites', params.id!, 'favorite').id;
 			db.commit(db.delete('food_favorites', id));
-			return { deleted: id };
-		},
-	}),
-
-	route({
-		method: 'GET',
-		path: '/body-metrics',
-		tag: 'Body weight',
-		summary: 'List visual body fat, tape measurements, and step counts, oldest first',
-		query: days.extend({ kind: z.enum(BODY_METRIC_KINDS).optional(), ...page }),
-		response: paged(M.BodyMetric),
-		run({ db, query }) {
-			const conditions = dayRange('day', query);
-			if (query.kind) conditions.push(['kind = ?', query.kind]);
-			return pagedList(db, 'body_metrics', conditions, 'day, kind', query);
-		},
-	}),
-	route({
-		method: 'PUT',
-		path: '/body-metrics/{day}/{kind}',
-		tag: 'Body weight',
-		summary: "Set a day's value of a body metric",
-		description: 'Centimeters for tape measurements, a percent for `visual_body_fat`, a count for `steps`.',
-		body: M.BodyMetricPut,
-		response: M.BodyMetric,
-		run({ db, params, body, now }) {
-			const day = dayParam(params);
-			const kind = z.enum(BODY_METRIC_KINDS).parse(params.kind);
-			const row: RowOf<'body_metrics'> = { id: `${day}/${kind}`, day, kind, value: body.value, updatedAt: now };
-			db.commit(db.put('body_metrics', row));
-			return row;
-		},
-	}),
-	route({
-		method: 'DELETE',
-		path: '/body-metrics/{day}/{kind}',
-		tag: 'Body weight',
-		summary: "Clear a day's value of a body metric",
-		response: M.Deleted,
-		run({ db, params }) {
-			const id = db.find('body_metrics', `${dayParam(params)}/${params.kind}`, 'body metric').id;
-			db.commit(db.delete('body_metrics', id));
 			return { deleted: id };
 		},
 	}),

@@ -81,7 +81,11 @@ struct WorkoutSummaryView: View {
         }
         .task {
             if let templateID = session.templateID {
-                template = try? store.read { try WorkoutTemplate.fetchOne($0, key: WorkoutTemplate.key(templateID)) }
+                do {
+                    template = try await store.read { try WorkoutTemplate.fetchOne($0, key: WorkoutTemplate.key(templateID)) }
+                } catch {
+                    LocalStore.log.error("Reading the session's template failed: \(String(describing: error))")
+                }
             }
         }
         // Ending or deleting the session while the screen is still up would empty it mid-dismissal, so it waits until gone.
@@ -158,8 +162,6 @@ struct WorkoutSummaryView: View {
         }
         if isFinishing { LiveSessionStore.shared.reset() }
     }
-
-    // MARK: Sections
 
     private func recordCards(_ records: [ExerciseRecord]) -> some View {
         ScrollView(.horizontal) {
@@ -247,7 +249,7 @@ struct WorkoutSummaryView: View {
                 let items = block.exercises.filter(\.hasLoggedSets)
                 if !items.isEmpty {
                     if block.isSuperset {
-                        Text(block.exercises.count > 2 ? "Circuit" : "Superset")
+                        Text(block.groupName)
                             .font(AppFont.chip)
                             .foregroundStyle(Theme.textSecondary)
                             .padding(.horizontal, Theme.margin)

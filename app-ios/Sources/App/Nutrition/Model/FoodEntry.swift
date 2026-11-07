@@ -3,7 +3,7 @@ import GRDB
 
 /// A row of the synced `food_entries` table: one logged food at a time of a day. MacroFactor has no meals; its
 /// timeline groups entries by hour.
-struct FoodEntry: SyncedRecord {
+struct FoodEntry: Stamped {
     static let table = "food_entries"
 
     var id: UUID
@@ -83,4 +83,9 @@ struct FoodFavorite: SyncedRecord {
         container["serving"] = try RowJSON.text(serving)
         container["created_at"] = Instant.text(createdAt)
     }
+}
+
+extension [FoodEntry] {
+    /// The entries' sum, with net carbs as `NutrientAmounts +` carries them.
+    var totals: NutrientAmounts { reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts } }
 }

@@ -3,13 +3,12 @@ import SwiftUI
 
 /// The filterable, category-grouped exercise list shared by the picker and Settings > Exercises. The owner of the
 /// navigation stack attaches `.searchable` and passes its text in as `query`.
-struct ExerciseBrowser<Header: View, Trailing: View>: View {
+struct ExerciseBrowser<Trailing: View>: View {
     let scope: BrowseScope
     @Binding var filter: ExerciseFilter
     let query: String
     var subtitle: (Exercise) -> String? = { _ in nil }
     let onSelect: (Exercise) -> Void
-    @ViewBuilder var header: Header
     @ViewBuilder var trailing: (Exercise) -> Trailing
 
     @Environment(ExerciseCatalog.self) private var catalog
@@ -80,7 +79,6 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
         .scrollDismissesKeyboard(.immediately)
         .safeAreaBar(edge: .top) {
             VStack(alignment: .leading, spacing: 10) {
-                header
                 ExerciseFilterBar(filter: $filter, exercises: scoped, gyms: gyms, availability: availability)
                 MuscleFilterRow(selection: $filter.muscle)
             }
@@ -90,23 +88,6 @@ struct ExerciseBrowser<Header: View, Trailing: View>: View {
     }
 }
 
-extension ExerciseBrowser where Header == EmptyView {
-    init(
-        scope: BrowseScope,
-        filter: Binding<ExerciseFilter>,
-        query: String,
-        subtitle: @escaping (Exercise) -> String? = { _ in nil },
-        onSelect: @escaping (Exercise) -> Void,
-        @ViewBuilder trailing: @escaping (Exercise) -> Trailing
-    ) {
-        self.init(
-            scope: scope, filter: filter, query: query, subtitle: subtitle, onSelect: onSelect,
-            header: { EmptyView() }, trailing: trailing
-        )
-    }
-}
-
-/// Reset, Gym, Type, Laterality, Resistance, Support, and Range of Motion.
 struct ExerciseFilterBar: View {
     @Binding var filter: ExerciseFilter
     let exercises: [Exercise]
@@ -243,6 +224,12 @@ enum EquipmentRole: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String { rawValue.capitalized }
     var systemImage: String { self == .resistance ? "scalemass" : "chair.lounge" }
+    var summary: String {
+        switch self {
+        case .resistance: "Equipment that adds load to the exercise"
+        case .support: "Equipment that assists, stabilizes, or makes the movement possible, without adding resistance"
+        }
+    }
 
     var filterKey: WritableKeyPath<ExerciseFilter, EquipmentChoice?> {
         self == .resistance ? \.resistance : \.support

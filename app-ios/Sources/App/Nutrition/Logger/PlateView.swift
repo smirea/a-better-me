@@ -127,7 +127,7 @@ struct PlateView: View {
         let amount = (withDay ? day[id] ?? 0 : 0) + (plate[id] ?? 0)
         let caption = withDay ? "\(amount.wholeText)\(goal.map { " / \($0.wholeText)" } ?? "") \(unit) with plate" : "\(amount.wholeText) \(unit) in plate"
         return VStack(alignment: .leading, spacing: 6) {
-            Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? id.rawValue).font(AppFont.rowTitle)
+            Text(id.title).font(AppFont.rowTitle)
             Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
             ProgressView(value: goal.map { min(1, amount / max($0, 1)) } ?? 0)
                 .progressViewStyle(.bar(id.color))

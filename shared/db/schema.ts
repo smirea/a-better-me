@@ -17,7 +17,7 @@ export const SETTINGS_ID = 'settings';
 export const WEIGHT_UNITS = ['kg', 'lb'] as const;
 export const BODY_WEIGHT_SOURCES = ['manual', 'healthkit'] as const;
 /** Where a food snapshot came from. Only the first three are rows of `foods`; recipes and quick adds are snapshots. */
-export const FOOD_SOURCES = ['custom', 'usda', 'open_food_facts', 'recipe', 'quick_add'] as const;
+const FOOD_SOURCES = ['custom', 'usda', 'open_food_facts', 'recipe', 'quick_add'] as const;
 export const FOOD_ROW_SOURCES = ['custom', 'usda', 'open_food_facts'] as const;
 export const DAY_STATUSES = ['none', 'partial', 'fasted'] as const;
 export const NOTE_COLORS = ['red', 'blue', 'green', 'yellow', 'purple'] as const;
@@ -52,7 +52,7 @@ export const PROTEIN_LEVELS = ['low', 'moderate', 'high', 'extra_high'] as const
 export const CALORIE_FLOORS = ['standard', 'low', 'ignored'] as const;
 export const NUTRIENT_GOAL_MODES = ['auto', 'custom', 'none'] as const;
 
-export const workoutTemplates = sqliteTable('workout_templates', {
+const workoutTemplates = sqliteTable('workout_templates', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
 	notes: text('notes').notNull().default(''),
@@ -66,7 +66,7 @@ export const workoutTemplates = sqliteTable('workout_templates', {
 	archived: bool('archived').notNull().default(false),
 });
 
-export const workoutSessions = sqliteTable('workout_sessions', {
+const workoutSessions = sqliteTable('workout_sessions', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
 	/** The template it started from. Not a foreign key: deleting a template keeps its history. */
@@ -128,7 +128,7 @@ export const programs = sqliteTable('programs', {
 	icon: text('icon').notNull(),
 	cycles: integer('cycles').notNull(),
 	currentCycle: integer('current_cycle').notNull().default(1),
-	/** At most one program is meant to be active. The app keeps it so (`LocalStore.activateProgram`); no index enforces it. */
+	/** At most one program is meant to be active. The app keeps it so (`LocalStore.activate`); no index enforces it. */
 	active: bool('active').notNull().default(false),
 	archived: bool('archived').notNull().default(false),
 	config: json('config').notNull().default({}),
@@ -138,7 +138,7 @@ export const programs = sqliteTable('programs', {
 	updatedAt: text('updated_at').notNull(),
 });
 
-export const gymProfiles = sqliteTable('gym_profiles', {
+const gymProfiles = sqliteTable('gym_profiles', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
 	icon: text('icon').notNull(),
@@ -162,7 +162,7 @@ export const bodyWeights = sqliteTable('body_weights', {
  * A bot token for the agent API (`/api`), made and revoked on a device. Only the SHA-256 of the token syncs, so the
  * server and the backups never hold a usable token. Revoking deletes the row.
  */
-export const apiTokens = sqliteTable('api_tokens', {
+const apiTokens = sqliteTable('api_tokens', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
 	/** Lowercase hex SHA-256 of the whole token, `abm_` prefix included. */
@@ -234,7 +234,7 @@ export const foodEntries = sqliteTable('food_entries', {
 });
 
 /** A saved snapshot of a food at a chosen serving. Several may come from one food. */
-export const foodFavorites = sqliteTable('food_favorites', {
+const foodFavorites = sqliteTable('food_favorites', {
 	id: text('id').primaryKey(),
 	food: json('food').notNull().default({}),
 	serving: json('serving').notNull().default({}),
@@ -242,7 +242,7 @@ export const foodFavorites = sqliteTable('food_favorites', {
 });
 
 /** What the owner said about a day. The id is the day; a day without a row is a plain logged day. */
-export const nutritionDays = sqliteTable('nutrition_days', {
+const nutritionDays = sqliteTable('nutrition_days', {
 	id: text('id').primaryKey(),
 	status: text('status', { enum: DAY_STATUSES }).notNull().default('none'),
 	/** Sparse nutrients that replace the log's totals for this day, or null to use the log. */
@@ -250,7 +250,7 @@ export const nutritionDays = sqliteTable('nutrition_days', {
 });
 
 /** A titled note on a day of the food log, at a time; MacroFactor allows five a day. */
-export const foodLogNotes = sqliteTable('food_log_notes', {
+const foodLogNotes = sqliteTable('food_log_notes', {
 	id: text('id').primaryKey(),
 	day: text('day').notNull(),
 	minute: integer('minute').notNull().default(720),
@@ -260,7 +260,7 @@ export const foodLogNotes = sqliteTable('food_log_notes', {
 });
 
 /** A manual visual body fat, tape measurement, or step count for a day. The id is `<day>/<kind>`, so one value per day. */
-export const bodyMetrics = sqliteTable('body_metrics', {
+const bodyMetrics = sqliteTable('body_metrics', {
 	id: text('id').primaryKey(),
 	day: text('day').notNull(),
 	kind: text('kind', { enum: BODY_METRIC_KINDS }).notNull(),
@@ -293,7 +293,7 @@ export const nutritionPlans = sqliteTable('nutrition_plans', {
  * registry's defaults and ignores the three bounds, `none` shows no bounds, and a null bound under `custom` hides that
  * bound.
  */
-export const nutrientGoals = sqliteTable('nutrient_goals', {
+const nutrientGoals = sqliteTable('nutrient_goals', {
 	id: text('id').primaryKey(),
 	nutrient: text('nutrient').notNull(),
 	startsOn: text('starts_on').notNull(),
@@ -381,8 +381,7 @@ const coachingProgram = z.object({
 });
 
 /**
- * What the Postgres check constraints refused, now run by the engine per column before a write lands. A check that
- * related two columns (a session's program with its day and cycle) is gone: two devices can patch them separately, so
+ * Per-column checks the engine runs before a write lands. A check that related two columns (a session's program with its day and cycle) is gone: two devices can patch them separately, so
  * the reader tolerates a half-set trio, as it already does for `cycles` and `current_cycle`.
  */
 export const schema = defineSchema({

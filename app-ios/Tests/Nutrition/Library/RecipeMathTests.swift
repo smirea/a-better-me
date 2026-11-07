@@ -35,7 +35,7 @@ struct RecipeMathTests {
         #expect(Serving(measure: cup, quantity: 1).converted(to: tablespoon).quantity == 16)
         #expect(Serving(measure: tablespoon, quantity: 8).converted(to: cup).quantity == 0.5)
         #expect(Serving(measure: banana.nutrition.measures[0], quantity: 2).converted(to: grams).quantity == 300)
-        #expect(RecipeMath.grams(Serving(measure: banana.nutrition.measures[0], quantity: 2), of: banana) == 300)
+        #expect(banana.nutrition.grams(Serving(measure: banana.nutrition.measures[0], quantity: 2)) == 300)
     }
 
     @Test func prepareScalesIngredientsToTheServingsCooked() {
@@ -106,7 +106,7 @@ struct RecipeMathTests {
         ingredient.switchMeasure(to: pound)
         #expect(ingredient.quantity == "0.331")
         #expect(ingredient.value.serving.quantity == 1.5 / 4.5359237)
-        #expect(RecipeMath.grams(ingredient.value.serving, of: banana) == 150)
+        #expect(banana.nutrition.grams(ingredient.value.serving) == 150)
 
         ingredient.switchMeasure(to: banana.nutrition.measures[0])
         #expect(ingredient.value.serving.quantity == 1)

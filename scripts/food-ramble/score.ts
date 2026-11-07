@@ -1,8 +1,6 @@
 import type { RambleItem, RambleOutline } from '../../server/src/food/ramble';
 import type { Case, Expected } from './cases';
 
-/** The labelled-ramble scorer of the ramble lab (`scripts/ramble-lab/`). */
-
 const UNITS: Record<string, string> = {
 	gram: 'g',
 	grams: 'g',
@@ -68,7 +66,6 @@ function anyOf<T>(want: T | T[], got: T, same: (a: T, b: T) => boolean = (a, b) 
 	return (Array.isArray(want) ? want : [want]).some(w => same(w, got));
 }
 
-/** The fields of `actual` that differ from `expected`, empty when it matches. */
 export function diff(expected: Expected, actual: RambleItem, text: string): string[] {
 	const misses: string[] = [];
 	const kind = expected.kind ?? 'food';

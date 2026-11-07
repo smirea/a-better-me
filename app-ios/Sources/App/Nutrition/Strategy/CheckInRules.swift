@@ -72,7 +72,7 @@ enum CheckInRules {
         guard current.coaching.style != .manual else { return nil }
         let week = NutritionEngine.CheckIn.plan(
             program: StrategyRules.engineProgram(current.coaching, standardFloorKcal: basis.standardFloorKcal),
-            goal: StrategyRules.engineGoal(current.goal), expenditure: basis.expenditureKcal, trendWeightKg: basis.weightKg,
+            goal: current.goal.engine, expenditure: basis.expenditureKcal, trendWeightKg: basis.weightKg,
             previousAverageKcal: StrategyRules.averageEnergy(current.targets)
         )
         let targets: WeekTargets

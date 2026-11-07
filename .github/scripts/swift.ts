@@ -17,11 +17,6 @@ const xcodeArgs = [
 ];
 
 async function testSimulator() {
-	const testables =
-		await $`xmllint --xpath ${'boolean(//TestableReference | //TestPlanReference)'} App.xcodeproj/xcshareddata/xcschemes/App.xcscheme`
-			.cwd(directory)
-			.text();
-	if (testables.trim() !== 'true') return undefined;
 	const simulators: { devices: Record<string, { udid: string; name: string }[]> } =
 		await $`xcrun simctl list devices available --json`.cwd(directory).json();
 	const simulator = Object.entries(simulators.devices)
@@ -48,8 +43,6 @@ if (task === 'build') {
 	await $`xcodebuild build ${xcodeArgs} -configuration Release -destination ${'generic/platform=iOS Simulator'}`.cwd(
 		directory,
 	);
-} else if (!simulator) {
-	console.log('No Xcode tests configured.');
 } else {
 	await $`xcodebuild test ${xcodeArgs} -destination ${`platform=iOS Simulator,id=${simulator}`}`.cwd(directory);
 }

@@ -5,7 +5,7 @@ const offsetMs = (value: unknown) => {
 	return undefined;
 };
 
-export type TranscribeOptions = { silenceMs?: number; mode?: 'VERBATIM' | 'SMART'; hybrid?: boolean };
+type TranscribeOptions = { silenceMs?: number; mode?: 'VERBATIM' | 'SMART'; hybrid?: boolean };
 
 export async function geminiTranscribe(
 	key: string,

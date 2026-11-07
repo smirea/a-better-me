@@ -9,7 +9,6 @@ extension View {
             .foregroundStyle(tint == Theme.textPrimary ? Theme.onPrimary : Theme.textPrimary)
     }
 
-    /// The app's primary action: a full-width white glass pill.
     func primaryPill() -> some View {
         prominentButton()
             .buttonSizing(.flexible)

@@ -17,7 +17,6 @@ type RunOptions = {
 	cwd?: string;
 };
 
-/** Runs a command to completion and answers its trimmed stdout. A failure names the command and shows its output. */
 export function run(cmd: string[], { allowFail = false, stdio = 'pipe', env, cwd }: RunOptions = {}): string {
 	const result = spawnSync(cmd[0]!, cmd.slice(1), {
 		encoding: 'utf8',

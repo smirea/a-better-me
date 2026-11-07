@@ -199,7 +199,7 @@ struct Keypad: View {
                 .overlay { if value == rir { Circle().strokeBorder(Theme.textPrimary, lineWidth: 2) } }
         }
         .frame(maxWidth: .infinity)
-        .accessibilityLabel(value.map { "RIR \($0 >= 6 ? "6+" : "\($0)")" } ?? "RIR unknown")
+        .accessibilityLabel(value.map { "RIR \(RIR.text($0))" } ?? "RIR unknown")
     }
 
     private var partialToggle: some View {

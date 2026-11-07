@@ -4,7 +4,10 @@ import GRDB
 
 /// A row of the synced `gym_profiles` table: a place to train and the equipment it has. At most one profile is meant to
 /// be the default; `LocalStore.setDefaultGym` keeps it so and `GymProfile.defaultGym` resolves a double state.
-struct GymProfile: SyncedRecord {
+struct GymProfile: Stamped {
+    /// The first gym's name, and the name of one saved without one, as MF names its first gym.
+    static let defaultName = "Your Gym"
+
     static let table = "gym_profiles"
 
     var id: UUID

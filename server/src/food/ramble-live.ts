@@ -1,8 +1,6 @@
 import { z } from 'zod';
+import type { Config } from '../config';
 import { outlineRamble, RambleRequest, type RambleModel, type RambleOutline } from './ramble';
-
-/** Live Ramble hears with xAI and reads with Gemini. */
-export type RambleKeys = { gemini: string; xai: string };
 
 /**
  * Live Ramble: the phone's audio streams to xAI's speech-to-text, and the text model reads the whole transcript again
@@ -11,14 +9,15 @@ export type RambleKeys = { gemini: string; xai: string };
  * logging). Both were picked on the labelled rambles of `scripts/ramble-lab/`.
  */
 
-export const LIVE_SAMPLE_RATE = 16_000;
-export const STT_MODEL = 'grok-voice-transcribe-2.0';
+export const LIVE_RAMBLE_ROUTE = 'GET /api/food-database/ramble/live';
+const LIVE_SAMPLE_RATE = 16_000;
+const STT_MODEL = 'grok-voice-transcribe-2.0';
 const STT_URL = 'wss://api.x.ai/v1/stt';
 const STT_READY_TIMEOUT_MS = 8_000;
 /** The speaker paused this long: the transcript's last words are final enough to read. */
 const ENDPOINTING_MS = 400;
 
-export type ReadTiming = {
+type ReadTiming = {
 	/** A read starts this long after the words last changed, so a burst of partials costs one read. */
 	debounceMs: number;
 	/** Reads in flight at once; the answer for the newest words wins and older answers landing after it are dropped. */
@@ -29,16 +28,14 @@ export type ReadTiming = {
 const DANGLING =
 	/(?:\d[\d.,]*|\b(?:a|an|of|and|some|the|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|hundred|half|couple|few))[\s,.-]*$/i;
 
-export const READ_TIMING: ReadTiming = { debounceMs: 250, inflight: 2, settleCapMs: 6_000 };
+const READ_TIMING: ReadTiming = { debounceMs: 250, inflight: 2, settleCapMs: 6_000 };
 
-export const LiveRambleRequest = RambleRequest;
-export type LiveRambleRequest = z.input<typeof LiveRambleRequest>;
 const Shown = RambleRequest.shape.shown;
 
 /** What the speaker has said so far: `committed` will not change; `partial` is the words still being heard. */
 export type Heard = { committed: string; partial: string };
 const joined = (...parts: string[]) => parts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
-export const heardText = (heard: Heard) => joined(heard.committed, heard.partial);
+const heardText = (heard: Heard) => joined(heard.committed, heard.partial);
 /** Two transcripts that differ only in case or punctuation ("two eggs" and "Two eggs.") read the same. */
 const sameWords = (a: string, b: string) => {
 	const key = (text: string) =>
@@ -59,7 +56,7 @@ export type SttSocket = {
 	addEventListener(type: 'message', listener: (event: { data: unknown }) => void): void;
 	addEventListener(type: 'close', listener: (event: { code: number; reason: string }) => void): void;
 };
-export type Dial = (url: URL, headers: Record<string, string>) => Promise<SttSocket>;
+type Dial = (url: URL, headers: Record<string, string>) => Promise<SttSocket>;
 
 /** Bun takes handshake headers in the WebSocket constructor; a Worker can only send them with a fetch upgrade. */
 const dial: Dial = async (url, headers) => {
@@ -83,7 +80,7 @@ type SttMessage = {
 	error?: string;
 };
 
-export type Transcriber = {
+type Transcriber = {
 	/** 16 kHz mono 16-bit little-endian PCM. */
 	audio(pcm: Uint8Array): void;
 	/** Ends the audio; `done` follows once the last words are committed. */
@@ -350,14 +347,14 @@ export class Reader {
 	}
 }
 
-export type LiveEvents = {
+type LiveEvents = {
 	heard(heard: Heard): void;
 	outline(outline: RambleOutline): void;
 	/** The ramble failed before `finish` resolved. */
 	error(error: Error): void;
 };
-export type LiveResult = { transcript: string; outline: RambleOutline };
-export type LiveRamble = {
+type LiveResult = { transcript: string; outline: RambleOutline };
+type LiveRamble = {
 	audio(pcm: Uint8Array): void;
 	/** The options the phone shows now, for picks spoken from here on ("the second one"). */
 	shown(shown: z.input<typeof Shown>): void;
@@ -366,19 +363,36 @@ export type LiveRamble = {
 	close(): void;
 };
 
-export type LiveOptions = { transcribe: Transcribe; model?: RambleModel; timing?: ReadTiming };
+type ReadOptions = { model?: RambleModel; timing?: ReadTiming };
+
+export type LiveRambleSetup = { gemini: string; transcribe: Transcribe };
+
+/**
+ * The setup a server's settings allow, or why live Ramble can't run there. A development server with `RAMBLE_SCRIPT`
+ * hears the script instead of the microphone, so it needs no xAI key.
+ */
+export function liveRambleSetup(
+	config: Pick<Config, 'geminiApiKey' | 'xaiApiKey' | 'rambleScript'>,
+): LiveRambleSetup | { error: string } {
+	const transcribe = config.rambleScript
+		? scriptedTranscriber(config.rambleScript)
+		: config.xaiApiKey && xaiTranscriber(config.xaiApiKey);
+	if (!config.geminiApiKey || !transcribe)
+		return { error: 'Live Ramble needs GEMINI_API_KEY and XAI_API_KEY (or RAMBLE_SCRIPT) on the server' };
+	return { gemini: config.geminiApiKey, transcribe };
+}
 
 /**
  * One listen. The request's `transcript` is what earlier listens of the same ramble heard, so every read covers the
  * whole ramble and a correction may reach back past a stop.
  */
-export async function openLiveRamble(
-	request: LiveRambleRequest,
-	keys: RambleKeys,
+async function openLiveRamble(
+	request: z.input<typeof RambleRequest>,
+	{ gemini, transcribe }: LiveRambleSetup,
 	events: LiveEvents,
-	{ transcribe, model, timing }: LiveOptions,
+	{ model, timing }: ReadOptions = {},
 ): Promise<LiveRamble> {
-	const context = LiveRambleRequest.parse(request);
+	const context = RambleRequest.parse(request);
 	const base = context.transcript;
 	let heard: Heard = { committed: base, partial: '' };
 	let stt: Transcriber | undefined;
@@ -393,7 +407,7 @@ export async function openLiveRamble(
 		events.error(error);
 	};
 	const reader = new Reader(
-		text => outlineRamble({ ...context, transcript: text }, keys.gemini, { model }),
+		text => outlineRamble({ ...context, transcript: text }, gemini, { model }),
 		{ outline: events.outline, error: fail },
 		timing,
 	);
@@ -436,6 +450,8 @@ export async function openLiveRamble(
 	};
 }
 
+type LiveSocket = { send(text: string): void; close(code?: number, reason?: string): void };
+
 /**
  * The phone's side of `GET /api/food-database/ramble/live`, the same on Bun and in the Worker's Durable Object. The
  * phone sends the ramble's context as its first text message, then 16 kHz PCM as binary frames, `{"type":"shown"}`
@@ -443,9 +459,7 @@ export async function openLiveRamble(
  * listens, `heard` with the transcript and `outline` as they change, and `done` with both after the stop; an `error`
  * closes the socket. Audio sent before `ready` is held, so the first words are not lost.
  */
-export type LiveSocket = { send(text: string): void; close(code?: number, reason?: string): void };
-
-export function serveLiveRamble(socket: LiveSocket, keys: RambleKeys, options?: Partial<LiveOptions>) {
+export function serveLiveRamble(socket: LiveSocket, setup: LiveRambleSetup, options: ReadOptions = {}) {
 	let session: LiveRamble | undefined;
 	let opening = false;
 	let held: Uint8Array[] = [];
@@ -503,21 +517,17 @@ export function serveLiveRamble(socket: LiveSocket, keys: RambleKeys, options?: 
 			} catch {
 				return fail(new Error('The first message is the ramble context as JSON'));
 			}
-			const parsed = LiveRambleRequest.safeParse(context);
+			const parsed = RambleRequest.safeParse(context);
 			if (!parsed.success) return fail(new Error(`Bad ramble context: ${parsed.error.message}`));
 			openLiveRamble(
 				parsed.data,
-				keys,
+				setup,
 				{
 					heard: heard => send({ type: 'heard', ...heard }),
 					outline: outline => send({ type: 'outline', outline }),
 					error: fail,
 				},
-				{
-					transcribe: options?.transcribe ?? xaiTranscriber(keys.xai),
-					model: options?.model,
-					timing: options?.timing,
-				},
+				options,
 			).then(live => {
 				if (closed) return live.close();
 				session = live;

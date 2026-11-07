@@ -7,12 +7,11 @@ struct SwapGymMenu: View {
     let gymID: UUID?
     @Environment(LocalStore.self) private var store
     @Observe(GymProfile.all) private var gyms
-    @Observe(GymProfile.defaultGym) private var defaultGym
 
     var body: some View {
-        let current = gyms.first { $0.id == gymID } ?? defaultGym
+        let current = GymProfile.resolve(gymID, in: gyms)
         Menu {
-            Picker("Gym", selection: Binding { current?.id } set: { id in store.editTemplate(templateID) { $0.gymID = id } }) {
+            Picker("Gym", selection: Binding { current?.id } set: { id in store.edit(WorkoutTemplate.self, id: templateID) { $0.gymID = id } }) {
                 ForEach(gyms) { gym in
                     Label(gym.name, systemImage: gym.icon).tag(Optional(gym.id))
                 }

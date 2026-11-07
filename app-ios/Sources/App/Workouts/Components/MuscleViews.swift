@@ -90,7 +90,7 @@ struct RIRBadge: View {
     let rir: Int?
 
     var body: some View {
-        Text(rir.map { $0 >= 6 ? "6+" : "\($0)" } ?? "?")
+        Text(rir.map(RIR.text) ?? "?")
             .font(AppFont.badge)
             .foregroundStyle(Theme.textPrimary)
             .frame(minWidth: 18, minHeight: 18)

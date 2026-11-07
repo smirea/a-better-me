@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ApiError } from '../agent/db';
+import { generateJson } from './gemini';
 
 export type RambleModel = { model: string; thinking?: 'minimal' | 'low' | 'medium' | 'high' };
 
@@ -8,13 +8,12 @@ export type RambleModel = { model: string; thinking?: 'minimal' | 'low' | 'mediu
  * the labelled rambles near 100% when read live, with no final read.
  */
 export const RAMBLE_MODEL: RambleModel = { model: 'gemini-3.5-flash', thinking: 'minimal' };
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const TIMEOUT_MS = 15_000;
 
 export const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 const day = z.iso.date();
 
-export const RambleLogged = z
+const RambleLogged = z
 	.object({
 		id: z.string().min(1).max(80),
 		name: z.string().trim().min(1).max(200),
@@ -22,7 +21,7 @@ export const RambleLogged = z
 	})
 	.meta({ id: 'RambleLogged' });
 
-export const RambleMeal = z
+const RambleMeal = z
 	.object({
 		id: z.string().min(1).max(80),
 		day,
@@ -89,7 +88,7 @@ const dayLabel = (iso: string, today: string) => {
  * The model sees short aliases (`m1`, `e1`, `u1`) instead of the phone's UUIDs: it copies them more reliably, and the
  * schema limits every reference to the aliases that exist, so it cannot invent one.
  */
-export type Aliases = { meals: Map<string, string>; entries: Map<string, string> };
+type Aliases = { meals: Map<string, string>; entries: Map<string, string> };
 
 export function aliases(input: z.output<typeof RambleRequest>): Aliases {
 	const meals = new Map<string, string>();
@@ -109,7 +108,7 @@ const TRANSCRIPT = `The transcript is live speech-to-text: it has filler, false 
 const OMIT_EMPTY = `Leave out every field that is empty, 0, or false, except day 0 for a said "today": a food item with only a name is { "kind": "food", "name": "pizza" }. Leaving them out keeps the answer short, and the list updates live while the speaker talks.`;
 const SAID = `Each item also has "said": the words of the transcript it came from, copied exactly as written there (same spelling, digits, and punctuation), shortest span that holds its food and amount, e.g. "2 tablespoons of chia seeds". For an item changed by a correction, quote the correcting words ("actually make that 250"). The app highlights these words, so never paraphrase.`;
 
-export function rambleInstructions(input: z.output<typeof RambleRequest>): string {
+function rambleInstructions(input: z.output<typeof RambleRequest>): string {
 	let e = 0;
 	const meals = input.meals.map((meal, i) => {
 		const entries = meal.entries.map(entry => `e${++e} ${logged(entry)}`).join('; ');
@@ -198,7 +197,7 @@ function responseSchema(names: Aliases) {
 	};
 }
 
-export const ModelItem = z.object({
+const ModelItem = z.object({
 	kind: z.enum(['food', 'copy']),
 	name: z.string().default(''),
 	amount: z.number().min(0).default(0),
@@ -212,19 +211,8 @@ export const ModelItem = z.object({
 	options: z.boolean().default(false),
 	said: z.string().default(''),
 });
-export const ModelOutline = z.object({ items: z.array(ModelItem) });
+const ModelOutline = z.object({ items: z.array(ModelItem) });
 
-const GeminiAnswer = z.object({
-	candidates: z
-		.array(
-			z.object({
-				content: z
-					.object({ parts: z.array(z.object({ text: z.string().optional(), thought: z.boolean().optional() })) })
-					.optional(),
-			}),
-		)
-		.optional(),
-});
 const clock = (time: string) => {
 	const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
 	if (!match || Number(match[1]) > 23 || Number(match[2]) > 59) return '';
@@ -263,7 +251,7 @@ const sameFood = (name: string, logged: string) => {
  * food the speaker gave no meal or time joins the item before it ("lunch at 12:15 was ramen and a coke"), which the
  * model often leaves out once it omits empty fields.
  */
-export function resolveAliases(
+function resolveAliases(
 	outline: z.output<typeof ModelOutline>,
 	input: z.output<typeof RambleRequest>,
 	names: Aliases,
@@ -316,7 +304,6 @@ export function resolveAliases(
 	}
 }
 
-/** The outline of the whole transcript so far. */
 export async function outlineRamble(
 	request: RambleRequest,
 	apiKey: string,
@@ -326,40 +313,20 @@ export async function outlineRamble(
 	if (!input.transcript.trim()) return { items: [] };
 	const names = aliases(input);
 	const timeout = AbortSignal.timeout(TIMEOUT_MS);
-	let response: Response;
-	try {
-		response = await fetch(`${GEMINI_URL}/${model.model}:generateContent`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
-			signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-			body: JSON.stringify({
-				systemInstruction: { parts: [{ text: rambleInstructions(input) }] },
-				contents: [{ role: 'user', parts: [{ text: `Ramble: ${input.transcript}` }] }],
-				generationConfig: {
-					temperature: 0,
-					responseMimeType: 'application/json',
-					responseJsonSchema: responseSchema(names),
-					...(model.thinking ? { thinkingConfig: { thinkingLevel: model.thinking } } : {}),
-				},
-			}),
-		});
-	} catch (error) {
-		throw new ApiError(502, `Gemini is unreachable: ${String(error)}`);
-	}
-	if (!response.ok) throw new ApiError(502, `Gemini answered ${response.status}: ${await response.text()}`);
-	const answer = GeminiAnswer.safeParse(await response.json().catch(() => null));
-	const text = answer.data?.candidates?.[0]?.content?.parts
-		.filter(part => !part.thought)
-		.map(part => part.text ?? '')
-		.join('');
-	if (!text) throw new ApiError(502, 'Gemini returned no answer');
-	let json: unknown;
-	try {
-		json = JSON.parse(text);
-	} catch {
-		throw new ApiError(502, `Gemini's answer is not JSON: ${text.slice(0, 200)}`);
-	}
-	const parsed = ModelOutline.safeParse(json);
-	if (!parsed.success) throw new ApiError(502, `Gemini's answer does not fit the schema: ${parsed.error.message}`);
-	return resolveAliases(parsed.data, input, names);
+	const outline = await generateJson(
+		model.model,
+		{
+			systemInstruction: { parts: [{ text: rambleInstructions(input) }] },
+			contents: [{ role: 'user', parts: [{ text: `Ramble: ${input.transcript}` }] }],
+			generationConfig: {
+				temperature: 0,
+				responseMimeType: 'application/json',
+				responseJsonSchema: responseSchema(names),
+				...(model.thinking ? { thinkingConfig: { thinkingLevel: model.thinking } } : {}),
+			},
+		},
+		ModelOutline,
+		{ apiKey, signal: signal ? AbortSignal.any([signal, timeout]) : timeout },
+	);
+	return resolveAliases(outline, input, names);
 }

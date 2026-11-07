@@ -74,7 +74,7 @@ private struct WarmUpSchemeView: View {
     }
 
     private func steps(_ category: RestCategory) -> [WarmUpStep] {
-        settings.workout.warmUp.schemes[category] ?? WarmUpStep.standard
+        settings.workout.warmUp.scheme(for: category)
     }
 
     private func summary(_ steps: [WarmUpStep]) -> String {

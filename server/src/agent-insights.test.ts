@@ -1,21 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { bunSqlite } from 'sync-engine/bun-sqlite';
-import { createSpace, handleSync, type SyncResponse } from 'sync-engine/core';
-import { schema } from '../../shared/db/schema';
-import { handleAgent } from './agent';
-import { handle, type App } from './api';
-import { parseConfig } from './config';
+import type { SyncResponse } from 'sync-engine/core';
+import { testServer } from './testing';
+import { handle } from './api';
 
-const driver = bunSqlite(':memory:');
-const space = createSpace(driver, schema);
-space.migrate();
-const config = parseConfig({});
-const app: App = {
-	config,
-	report: { captureMessage: () => undefined, captureException: () => undefined },
-	engine: request => handleSync(space, request),
-	agent: request => handleAgent(request, { space, driver, ownerToken: config.ownerToken }),
-};
+const { config, app } = testServer({ clock: () => new Date('2026-10-22T12:00:00.000Z') });
 
 const BENCH = '19f5c6f170d8808bb424e98de4472a7e';
 const REAR_DELT_FLY = '2a15c6f170d88066b38fd65f8757716f';

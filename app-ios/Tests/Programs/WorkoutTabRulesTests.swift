@@ -110,9 +110,9 @@ struct NewProgramWizardRulesTests {
         var club = GymProfile(name: "Club")
         club.isDefault = true
         home.isDefault = false
-        #expect(NewProgramWizardRules.gym(home.id, among: [home, club])?.name == "Home")
-        #expect(NewProgramWizardRules.gym(UUID(), among: [home, club])?.name == "Club")
-        #expect(NewProgramWizardRules.gym(nil, among: []) == nil)
+        #expect(GymProfile.resolve(home.id, in: [home, club])?.name == "Home")
+        #expect(GymProfile.resolve(UUID(), in: [home, club])?.name == "Club")
+        #expect(GymProfile.resolve(nil, in: []) == nil)
     }
 
     @Test func noneIsStoredAsBeginnerAndShownBackAsNone() {

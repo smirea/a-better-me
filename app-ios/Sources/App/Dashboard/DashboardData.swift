@@ -25,7 +25,6 @@ enum DashboardRoute: Hashable {
     }
 }
 
-/// A metric's unit label and how its values read.
 enum MetricUnit: Equatable {
     /// Whole numbers, as kcal and steps.
     case whole(String)
@@ -175,7 +174,7 @@ struct DashboardData {
     var meters: [DatedValue] = []
 
     var trend: [DatedValue] {
-        WeightTrend.daily(weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, through: now, calendar: calendar)
+        NutritionEngine.TrendWeight.daily(weighIns: weighIns.points, through: now, calendar: calendar)
     }
 
     func weight(_ points: [DatedValue]) -> [DatedValue] {
@@ -267,7 +266,7 @@ struct DashboardData {
             case .volume, .oneRepMax: "\(unit.fromKg(record.value).dashboardText) \(unit.rawValue)"
             }
             return RecordRow(
-                exerciseID: record.exerciseID, name: catalog(record.exerciseID)?.name ?? "Unknown exercise",
+                exerciseID: record.exerciseID, name: catalog(record.exerciseID)?.name ?? Exercise.unknownName,
                 label: label, fraction: record.value / top
             )
         }
@@ -293,7 +292,7 @@ struct DashboardData {
             }, footer: .topExercises(DashboardMetrics.topExercises(sessions, since: since)))
         case .weightTrend:
             let trend = trend
-            let scale = DailyCombine.mean.combine(weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, calendar: calendar)
+            let scale = DailyCombine.mean.combine(weighIns.points, calendar: calendar)
             return MetricDetail(title: "Weight Trend", tabs: [MetricTab(
                 title: "Trend Weight", points: weight(trend), unit: .decimal(unit.rawValue), averageTitle: "Average",
                 summary: .change, style: .line, color: Theme.weightTrend,
@@ -310,7 +309,7 @@ struct DashboardData {
             )], footer: .expenditure(ExpenditureSummary(
                 changes: NutritionMetrics.changes(expenditurePoints, now: now, calendar: calendar),
                 currentKcal: expenditure.last?.kcal,
-                strategy: NutritionMetrics.strategy(expenditure, settings: expenditureSettings)
+                strategy: NutritionExpenditure.strategy(expenditure, settings: expenditureSettings)
             )))
         case .energyBalance:
             return MetricDetail(title: "Energy Balance", tabs: [
@@ -318,7 +317,7 @@ struct DashboardData {
                 balanceTab(.targets, title: "Calorie Targets", points: energyTargets, color: Theme.fat),
             ], footer: .energyBalance)
         case .scaleWeight:
-            let points = DailyCombine.mean.combine(weighIns.map { DatedValue(date: $0.date, value: $0.kg) }, calendar: calendar)
+            let points = DailyCombine.mean.combine(weighIns.points, calendar: calendar)
             return MetricDetail(title: "Scale Weight", tabs: [MetricTab(
                 title: "Scale Weight", points: weight(points), unit: .decimal(unit.rawValue), averageTitle: "Average",
                 summary: .change, style: .line, color: Theme.green
@@ -339,7 +338,7 @@ struct DashboardData {
             }, footer: .months)
         case let .exercise(id, _):
             let series = DashboardMetrics.exercise(id, sessions: sessions, catalog: catalog)
-            return MetricDetail(title: catalog(id)?.name ?? "Unknown exercise", tabs: ExerciseChartMetric.allCases.map { metric in
+            return MetricDetail(title: catalog(id)?.name ?? Exercise.unknownName, tabs: ExerciseChartMetric.allCases.map { metric in
                 MetricTab(
                     title: metric.title, points: metric.dailyCombine.combine(convert(series[metric] ?? [], metric), calendar: calendar),
                     unit: .decimal(metric.unit(unit)), averageTitle: "Avg \(metric.title)",
@@ -409,7 +408,7 @@ struct DashboardValues: DynamicProperty {
                 data.meters = health.distance
             }
             if usesNutrition {
-                data.steps = NutritionMetrics.steps(health: health.steps, imported: nutrition.importedSteps, calendar: context.calendar)
+                data.steps = NutritionExpenditure.steps(health: health.steps, imported: nutrition.importedSteps, calendar: context.calendar)
                 data.log = nutrition.log
                 data.plans = nutrition.plans
                 data.expenditureSettings = nutrition.inputs.expenditure

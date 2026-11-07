@@ -54,7 +54,7 @@ enum SessionRecords {
         for set in items.flatMap(\.sets) where set.isCompleted {
             stats.volumeKg += WorkoutMetrics.volumeKg(of: set, exercise: exercise)
             stats.loggedSets += 1
-            guard set.type != .warmUp, let log = set.log, let reps = log.reps else { continue }
+            guard set.type.isWorking, let log = set.log, let reps = log.reps else { continue }
             stats.bestReps = max(stats.bestReps ?? 0, reps)
             if let weight = log.weightKg, weight > 0 {
                 let estimate = WorkoutMetrics.estimatedOneRepMaxKg(weightKg: weight, reps: reps, rir: log.rir)
@@ -74,7 +74,6 @@ enum SessionRecords {
         }
     }
 
-    /// Each exercise's best value of each kind over `earlier` sessions' blocks.
     static func bests(in earlier: [[WorkoutBlock]], catalog: (ExerciseID) -> Exercise?) -> [ExerciseID: [ExerciseRecord.Kind: Double]] {
         var bests: [ExerciseID: [ExerciseRecord.Kind: Double]] = [:]
         for blocks in earlier {

@@ -56,6 +56,9 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     }
 
     struct Expenditure: Codable, Hashable, Sendable {
+        /// Where a typed initial or static expenditure starts when the owner switches one on.
+        static let typedKcalStart = 2000.0
+
         /// A fixed daily expenditure in kcal instead of the computed one.
         var staticKcal: Double?
         /// The owner's own starting estimate in place of the BMR one.
@@ -116,7 +119,7 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     var timeline = Timeline()
     var logger = Logger()
     /// The Nutrition "+" sheet's shortcuts in order; the first four are its round buttons.
-    var shortcuts = NutritionShortcut.defaults
+    var shortcuts = NutritionShortcut.allCases
     var expenditure = Expenditure()
     /// Hidden from the Dashboard and summaries; totals still count them. Calories and the macros always show.
     var hiddenNutrients: Set<NutrientID> = []
@@ -127,4 +130,28 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     /// Foods swiped out of the logger's history (Latest and From History), by `FoodSearchResult.key`, with when. Logging
     /// one again after that brings it back, as in MacroFactor.
     var hiddenHistory: [String: Date] = [:]
+}
+
+extension NutritionSettings.EnergyUnit {
+    static let kilojoulesPerKcal = 4.184
+
+    var label: String { self == .kj ? "kJ" : "kcal" }
+
+    /// Stored energy is kcal; the unit only changes what a field shows.
+    func fromKcal(_ kcal: Double) -> Double { self == .kj ? kcal * Self.kilojoulesPerKcal : kcal }
+    func toKcal(_ value: Double) -> Double { self == .kj ? value / Self.kilojoulesPerKcal : value }
+}
+
+extension NutritionSettings.HeightUnit {
+    static let centimetersPerInch = 2.54
+
+    /// A tape measurement's unit: inches for the imperial setting.
+    var lengthLabel: String { self == .centimeters ? "cm" : "in" }
+
+    func fromCm(_ cm: Double) -> Double { self == .centimeters ? cm : cm / Self.centimetersPerInch }
+    func toCm(_ value: Double) -> Double { self == .centimeters ? value : value * Self.centimetersPerInch }
+}
+
+extension NutritionSettings {
+    func shows(_ nutrient: NutrientID) -> Bool { NutrientID.macros.contains(nutrient) || !hiddenNutrients.contains(nutrient) }
 }

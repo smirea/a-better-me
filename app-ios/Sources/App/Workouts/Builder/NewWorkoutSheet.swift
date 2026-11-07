@@ -178,9 +178,7 @@ private struct CustomizeShortcutsSheet: View {
     }
 }
 
-extension Shortcut: CaseIterable, ShortcutItem {
-    static let allCases: [Shortcut] = [.weight, .history, .emptyWorkout, .newProgram, .newWorkout]
-
+extension Shortcut: ShortcutItem {
     var title: String {
         switch self {
         case .weight: "Weight"
@@ -201,17 +199,14 @@ extension Shortcut: CaseIterable, ShortcutItem {
         }
     }
 
-    /// Weight and History are round buttons by nature; the rest are rows unless pinned to the top row.
     var isRound: Bool { self == .weight || self == .history }
 }
 
 extension ShortcutsLayout {
-    /// The round buttons: every visible round shortcut in `items` order, then `top` when `items` does not hold it.
     var topRow: [Shortcut] {
         items.filter { $0.isRound || $0 == top } + (items.contains(top) ? [] : [top])
     }
 
-    /// The rows under Up Next: every visible shortcut that is not a round button, in `items` order.
     var rows: [Shortcut] {
         items.filter { !$0.isRound && $0 != top }
     }
@@ -229,4 +224,15 @@ extension ShortcutsLayout {
 extension WorkoutSession {
     /// "Empty" is the reference's name for a workout started without a template.
     static var empty: WorkoutSession { WorkoutSession(name: "Empty") }
+}
+
+/// The "+" sheet's Shortcuts, encoded whole into `settings.shortcuts`.
+struct ShortcutsLayout: Codable, Hashable {
+    var upNextBanner = true
+    var top = Shortcut.history
+    var items: [Shortcut] = [.weight, .emptyWorkout, .newProgram, .newWorkout]
+}
+
+enum Shortcut: String, Codable, CaseIterable {
+    case weight, history, emptyWorkout, newProgram, newWorkout
 }

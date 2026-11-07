@@ -27,7 +27,7 @@ struct MacroTotalsBars: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(.contextMenuPreview, .rect(cornerRadius: 8))
                 .contextMenu { columnPicker(index, showing: line.nutrient) }
-                .feedback(line.nutrient.dashboardLabel, data: line)
+                .feedback(line.nutrient.title, data: line)
             }
         }
         .animation(.snappy, value: lines)
@@ -46,7 +46,7 @@ struct MacroTotalsBars: View {
             }
         )
         return Picker("Show in This Column", selection: choice) {
-            ForEach(NutrientID.summaryChoices, id: \.self) { Text($0.dashboardLabel).tag($0) }
+            ForEach(NutrientID.summaryChoices, id: \.self) { Text($0.title).tag($0) }
         }
         .pickerStyle(.inline)
     }

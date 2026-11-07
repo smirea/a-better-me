@@ -12,7 +12,6 @@ enum NutritionFormat {
         "\(unit == .kcal ? value.wholeText : value.niceText) \(unit.rawValue)"
     }
 
-    /// A nutrient's amount by its id: whole calories, `niceText` for the rest.
     static func amount(_ value: Double, of id: NutrientID) -> String {
         id == .energy ? value.wholeText : value.niceText
     }
@@ -31,7 +30,7 @@ enum NutritionFormat {
     static func serving(_ serving: Serving, of food: FoodSnapshot? = nil) -> String {
         let text = "\(NumberText.plain(serving.quantity)) \(serving.measure.name)"
         guard let food, !SizeUnit.allCases.contains(where: { $0.rawValue == serving.measure.name }),
-              let grams = RecipeMath.grams(serving, of: food) else { return text }
+              let grams = food.nutrition.grams(serving) else { return text }
         return "\(text) (\(amount(grams)) g)"
     }
 

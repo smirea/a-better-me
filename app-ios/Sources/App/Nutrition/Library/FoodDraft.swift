@@ -1,25 +1,5 @@
 import Foundation
 
-/// A unit the serving weight or a measure's size is typed in. Weights set the food's grams, volumes its milliliters.
-enum SizeUnit: String, CaseIterable, Identifiable, Sendable {
-    case g, oz, lb, mL, flOz = "fl oz", cup
-
-    var id: Self { self }
-
-    var isVolume: Bool { self == .mL || self == .flOz || self == .cup }
-
-    /// Grams or milliliters in one of the unit.
-    var size: Double {
-        switch self {
-        case .g, .mL: 1
-        case .oz: 28.349523125
-        case .lb: 453.59237
-        case .flOz: 29.5735295625
-        case .cup: 236.5882365
-        }
-    }
-}
-
 /// What the food's nutrition is entered for, MacroFactor's Serving | 100 g | 100 ml. All three become a base serving
 /// with its size, so the log scales them the same way.
 enum NutritionBasis: String, CaseIterable, Identifiable, Sendable {
@@ -68,8 +48,6 @@ struct FoodDraft: Equatable, Sendable {
     var energyUnit = NutritionSettings.EnergyUnit.kcal
     var nutrients: [NutrientID: String] = [:]
 
-    static let kilojoulesPerKilocalorie = 4.184
-
     init() {}
 
     /// Reads a saved food back into its fields. A base serving of exactly 100 g or 100 mL named for its unit is the
@@ -83,9 +61,9 @@ struct FoodDraft: Equatable, Sendable {
         let nutrition = food.nutrition
         let base = nutrition.measures.first ?? Measure(name: "serving", quantity: 1, servings: 1)
         var factor = 1.0
-        if base.name == "g", base.quantity == 100, base.servings == 1, nutrition.baseGrams == 100 {
+        if base.name == SizeUnit.g.rawValue, base.quantity == 100, base.servings == 1, nutrition.baseGrams == 100 {
             basis = .hundredGrams
-        } else if base.name == "mL", base.quantity == 100, base.servings == 1, nutrition.baseMilliliters == 100 {
+        } else if base.name == SizeUnit.mL.rawValue, base.quantity == 100, base.servings == 1, nutrition.baseMilliliters == 100 {
             basis = .hundredMilliliters
         } else {
             basis = .serving
@@ -115,7 +93,6 @@ struct FoodDraft: Equatable, Sendable {
         return copy
     }
 
-    /// The base serving's grams and milliliters as the fields stand.
     var baseSize: (grams: Double?, milliliters: Double?) {
         switch basis {
         case .hundredGrams: return (100, nil)
@@ -193,7 +170,7 @@ struct FoodDraft: Equatable, Sendable {
                 issues[.nutrient(id)] = "Enter a number of 0 or more"
                 continue
             }
-            amounts[id] = id == .energy && energyUnit == .kj ? value / Self.kilojoulesPerKilocalorie : value
+            amounts[id] = id == .energy ? energyUnit.toKcal(value) : value
         }
 
         guard issues.isEmpty else { return (nil, issues) }

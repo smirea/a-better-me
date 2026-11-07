@@ -39,6 +39,11 @@ const rules = [
 		allowedIn: ['App/Workouts/Session/PlateCalculatorView.swift'],
 		fix: 'use a Theme token: textPrimary, onPrimary, destructive, accent, or a named color',
 	},
+	{
+		pattern: /\.confirmationDialog\(/,
+		allowedIn: [],
+		fix: 'on iOS 26 and later a confirmationDialog shows as a popover, which drops its cancel button; use .alert with a Button(role: .cancel)',
+	},
 ];
 
 const problems: string[] = [];

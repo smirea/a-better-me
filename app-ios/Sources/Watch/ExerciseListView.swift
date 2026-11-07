@@ -21,7 +21,7 @@ struct ExerciseListView: View {
                     }
                 } header: {
                     if block.isSuperset {
-                        Label(block.exercises.count > 2 ? "Circuit" : "Superset", systemImage: "repeat")
+                        Label(block.groupName, systemImage: "repeat")
                             .font(AppFont.headline(11))
                             .foregroundStyle(Theme.lavender)
                     }

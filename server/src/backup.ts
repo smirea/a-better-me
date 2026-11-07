@@ -1,11 +1,11 @@
 import type { R2Bucket } from '@cloudflare/workers-types';
 
 export const BACKUP_CRON = '0 9 * * *';
-export const BACKUP_PREFIX = 'sqlite/';
-export const BACKUPS_KEPT = 30;
+const BACKUP_PREFIX = 'sqlite/';
+const BACKUPS_KEPT = 30;
 
 /** `sqlite/2026-10-23.json`, so a lexicographic listing is oldest first and a rerun the same day overwrites. */
-export const backupKey = (at: Date) => `${BACKUP_PREFIX}${at.toISOString().slice(0, 10)}.json`;
+const backupKey = (at: Date) => `${BACKUP_PREFIX}${at.toISOString().slice(0, 10)}.json`;
 
 /**
  * Writes the space's tables as one JSON document, then deletes all but the newest `BACKUPS_KEPT`. Pruning by count

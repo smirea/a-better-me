@@ -37,7 +37,7 @@ struct NutritionDataManagerView: View {
     }
 
     private func row(_ day: NutritionLogDay, calendar: Calendar) -> some View {
-        let title = day.entryCount > 0 || day.hasOverride ? "\((day.consumed[.energy] ?? 0).wholeText) kcal" : "No intake"
+        let title = day.isLogged ? "\((day.consumed[.energy] ?? 0).wholeText) kcal" : "No intake"
         return Button { editing = EditedLogDay(day: day.day) } label: {
             HStack {
                 RowLabel(
@@ -98,11 +98,11 @@ struct NutritionDayEntrySheet: View {
                 ThemedSection("Nutrition") {
                     ForEach(NutrientID.macros, id: \.self) { id in
                         HStack {
-                            Text(id == .energy ? "Energy" : id.dashboardLabel)
+                            Text(id == .energy ? "Energy" : id.title)
                             TextField(placeholder(id), value: Binding(get: { fields[id] }, set: { fields[id] = $0 }), format: .number.precision(.fractionLength(0...1)).grouping(.never))
                                 .keyboardType(.decimalPad)
                                 .multilineTextAlignment(.trailing)
-                                .accessibilityLabel("\(id == .energy ? "Energy" : id.dashboardLabel) in \(id == .energy ? "kcal" : "grams")")
+                                .accessibilityLabel("\(id == .energy ? "Energy" : id.title) in \(id == .energy ? "kcal" : "grams")")
                             Text(id == .energy ? "kcal" : "g").foregroundStyle(Theme.textSecondary)
                         }
                     }

@@ -22,6 +22,16 @@ struct NutrientID: RawRepresentable, Hashable, Codable, CodingKeyRepresentable, 
     /// What a column of the Food Log's summary can show (`NutritionSettings.summaryNutrients`).
     static let summaryChoices: [NutrientID] = [.energy, .protein, .fat, .carbs, .fiber, .netCarbs]
 
+    /// Calories per gram, by Atwater's general factors; nil for a nutrient that supplies none.
+    var kcalPerGram: Double? {
+        switch self {
+        case .protein, .carbs: 4
+        case .fat: 9
+        case .alcohol: 7
+        default: nil
+        }
+    }
+
     /// A summary column's letters. Fat is "Fa" so it never reads as fiber's "Fb"; calories draw the flame instead.
     var columnLetters: String {
         switch self {
@@ -41,6 +51,15 @@ typealias NutrientAmounts = [NutrientID: Double]
 
 extension Dictionary where Key == NutrientID, Value == Double {
     func scaled(by factor: Double) -> NutrientAmounts { mapValues { $0 * factor } }
+
+    func kcal(from id: NutrientID) -> Double { (self[id] ?? 0) * (id.kcalPerGram ?? 0) }
+
+    /// A macro's share of the calories protein, fat, and carbs supply, so the shares sum to 100% as MacroFactor's chips
+    /// do, even when a label's energy disagrees with its macros. Nil when none of the three is reported.
+    func macroShare(_ id: NutrientID) -> Double? {
+        let total = [NutrientID.protein, .fat, .carbs].map(kcal(from:)).reduce(0, +)
+        return total > 0 ? kcal(from: id) / total : nil
+    }
 
     /// Once either side reports net carbs, the sum carries them explicitly, so the side that does not report them
     /// still adds its derived amount.
@@ -120,4 +139,34 @@ enum NutrientRegistry {
     private static let byID = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
 
     static func nutrient(_ id: NutrientID) -> Nutrient? { byID[id] }
+}
+
+extension NutrientID {
+    var title: String { NutrientRegistry.nutrient(self)?.name ?? rawValue }
+}
+
+extension NutrientID {
+    /// The banner's and the plate's short names.
+    var macroLetter: String {
+        switch self {
+        case .energy: "kcal"
+        case .protein: "P"
+        case .fat: "F"
+        case .carbs: "C"
+        default: NutrientRegistry.nutrient(self)?.short ?? rawValue
+        }
+    }
+}
+
+extension NutrientGroup {
+    var title: String {
+        switch self {
+        case .general: "General"
+        case .protein: "Protein Breakdown"
+        case .carbohydrates: "Carb Breakdown"
+        case .fats: "Fat Breakdown"
+        case .vitamins: "Vitamins"
+        case .minerals: "Minerals"
+        }
+    }
 }

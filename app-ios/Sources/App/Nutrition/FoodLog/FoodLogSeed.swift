@@ -4,7 +4,7 @@ import GRDB
 
 /// The dev seed's (`DevSeed`) real foods: today and the five days before it with entries across the hours, among them
 /// `LibrarySeed`'s recipes and custom foods at full and partial servings, a note today, and a fasted day three days ago.
-/// Earlier days get quick adds from `DashboardSeed`.
+/// Earlier days get quick adds from `insertHistory`.
 enum FoodLogSeed {
     private static func food(_ name: String, _ icon: String, brand: String? = nil, _ nutrients: NutrientAmounts, grams: Double?, measure: Measure) -> FoodSnapshot {
         FoodSnapshot(source: .usda, name: name, brand: brand, icon: icon, nutrition: FoodNutrition(nutrients: nutrients, baseGrams: grams, measures: [measure]))
@@ -57,6 +57,64 @@ enum FoodLogSeed {
         note.body = "Try a bigger breakfast tomorrow."
         note.color = .green
         try note.insert(db)
+    }
+}
+
+extension FoodLogSeed {
+    /// 45 days of weigh-ins, quick adds before the Food Log's own six days, a losing plan, imported steps, and one
+    /// fasted, one incomplete, and one entered day, so the nutrition cards and details have data.
+    static func insertHistory(in db: Database) throws {
+        let today = CalendarDay.today
+        let calendar = Calendar.current
+        for offset in 0..<45 {
+            let day = today.adding(days: -offset)
+            let date = day.date(in: calendar)
+            if offset % 5 != 2 {
+                let kg = 84 - Double(45 - offset) * 0.045 + sin(Double(offset) * 1.3) * 0.5
+                var weighIn = BodyWeight(weightKg: (kg * 10).rounded() / 10, measuredAt: min(date.addingTimeInterval(7.5 * 3600), .now.addingTimeInterval(-60)))
+                weighIn.id = DevSeed.id("weigh-in/\(offset)")
+                try weighIn.insert(db)
+            }
+            if offset >= 20 {
+                try BodyMetric(.steps, on: day, value: Double(6000 + (offset * 1931) % 7000)).insert(db)
+            }
+            guard offset >= FoodLogSeed.days.count else { continue }
+            switch offset {
+            case 12:
+                var row = NutritionDay(id: day)
+                row.status = .fasted
+                try row.insert(db)
+                continue
+            case 18:
+                var row = NutritionDay(id: day)
+                row.override = [.energy: 2350, .protein: 150, .fat: 80, .carbs: 240]
+                try row.insert(db)
+                continue
+            case 7:
+                var row = NutritionDay(id: day)
+                row.status = .partial
+                try row.insert(db)
+            default:
+                if offset % 9 == 4 { continue }
+            }
+            let kcal = 2050 + Double((offset * 137) % 400) - 200
+            for (meal, (minute, share)) in [(480, 0.25), (780, 0.35), (1140, 0.4)].enumerated() {
+                let amounts: NutrientAmounts = [.energy: kcal * share, .protein: kcal * share * 0.3 / 4, .fat: kcal * share * 0.3 / 9, .carbs: kcal * share * 0.4 / 4]
+                var entry = FoodEntry(FoodPortion(.quickAdd(amounts)), day: day, minute: minute)
+                entry.id = DevSeed.id("quick-add/\(offset)/\(meal)")
+                try entry.insert(db)
+            }
+        }
+        let start = today.adding(days: -40)
+        try NutritionPlan(
+            from: start, kind: .setup,
+            goal: NutritionGoal(kind: .lose, targetWeightKg: 78, ratePercentPerWeek: -0.5, startedOn: start),
+            coaching: CoachingProgram(), targets: WeekTargets(every: DayTarget(energy: 2100, protein: 160, fat: 65, carbs: 210))
+        ).insert(db)
+        var settings = try AppSettings.current.fetch(db)
+        if settings.profile.heightCm == nil { settings.profile.heightCm = 180 }
+        if settings.profile.birthDate == nil { settings.profile.birthDate = CalendarDay("1990-06-01") }
+        try LocalStore.put(settings, in: db)
     }
 }
 #endif

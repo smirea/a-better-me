@@ -1,12 +1,12 @@
 import { z } from 'zod';
 import { foodNutrition } from '../../../shared/db/schema';
-import { ApiError } from '../agent/db';
+import { ApiError } from '../http';
 
 /** Open Food Facts asks every client to name itself, and blocks anonymous scrapers. */
 export const USER_AGENT = 'ABetterMe/1.0 (+https://github.com/smirea/a-better-me)';
-export const PRODUCT_URL = 'https://world.openfoodfacts.org/api/v2/product';
+const PRODUCT_URL = 'https://world.openfoodfacts.org/api/v2/product';
 /** Search-a-licious: the product API's own search has no full-text query, and the legacy `cgi/search.pl` is retired. */
-export const SEARCH_URL = 'https://search.openfoodfacts.org/search';
+const SEARCH_URL = 'https://search.openfoodfacts.org/search';
 const FIELDS = [
 	'code',
 	'product_name',

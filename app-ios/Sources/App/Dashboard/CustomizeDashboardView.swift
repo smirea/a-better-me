@@ -123,7 +123,7 @@ struct CustomizeDashboardView: View {
 
     @Environment(ExerciseCatalog.self) private var catalog
 
-    private func catalogName(_ id: ExerciseID) -> String { catalog.exercise(id)?.name ?? "Unknown exercise" }
+    private func catalogName(_ id: ExerciseID) -> String { catalog.exercise(id)?.name ?? Exercise.unknownName }
 }
 
 extension MuscleCard: Identifiable {
@@ -160,9 +160,7 @@ extension DashboardSection: Identifiable {
     }
 }
 
-extension InsightCard: CaseIterable {
-    static let allCases: [InsightCard] = [.workouts, .weightTrend, .expenditure, .energyBalance, .goalProgress, .steps]
-
+extension InsightCard {
     var title: String {
         switch self {
         case .workouts: "Workouts"
@@ -186,9 +184,7 @@ extension InsightCard: CaseIterable {
     }
 }
 
-extension HabitCard: CaseIterable {
-    static let allCases: [HabitCard] = [.weighIn, .foodLogging, .workouts]
-
+extension HabitCard {
     var title: String {
         switch self {
         case .weighIn: "Weigh-In"
@@ -206,9 +202,7 @@ extension HabitCard: CaseIterable {
     }
 }
 
-extension FocusCard: CaseIterable {
-    static let allCases: [FocusCard] = [.workouts, .recentRecords, .weeklyNutrition, .energyBalance, .dailyNutrition]
-
+extension FocusCard {
     var title: String {
         switch self {
         case .workouts: "Weekly Workouts"
@@ -464,7 +458,7 @@ private struct AddRemoveSheet: View {
             ThemedSection {
                 ForEach(trained.firstOccurrences(), id: \.self) { id in
                     toggle(
-                        catalog.exercise(id)?.name ?? "Unknown exercise", .exercise, \.exercises, ExerciseCard(exerciseID: id),
+                        catalog.exercise(id)?.name ?? Exercise.unknownName, .exercise, \.exercises, ExerciseCard(exerciseID: id),
                         matching: { $0.exerciseID == id }
                     )
                 }

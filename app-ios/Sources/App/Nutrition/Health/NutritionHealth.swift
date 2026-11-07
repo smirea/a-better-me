@@ -52,7 +52,6 @@ final class NutritionHealth {
         )
     }
 
-    /// Writes today and the days of the recent window.
     func syncRecent() {
         let today = CalendarDay(.now, in: calendar)
         enqueue((0..<DietaryHealth.recentDays).map { today.adding(days: -$0) })
@@ -120,7 +119,7 @@ final class NutritionHealth {
     private func write(_ day: CalendarDay) async {
         guard isEnabled, let store else { return }
         do {
-            let (entries, override) = try store.read { db in
+            let (entries, override) = try await store.read { db in
                 (try FoodEntry.on(day).fetch(db), try NutritionDay.fetchOne(db, key: NutritionDay.key(day))?.override)
             }
             try await DietaryHealth.sync(day, entries: entries, override: override, today: CalendarDay(.now, in: calendar), calendar: calendar, in: target)

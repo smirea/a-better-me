@@ -27,7 +27,7 @@ struct FoodLogSettingsView: View {
                             store.updateSettings { $0.nutrition.summaryNutrients = FoodLog.choosing(picked, at: index, in: $0.nutrition.summaryNutrients) }
                         }
                     )) {
-                        ForEach(NutrientID.summaryChoices, id: \.self) { Text($0.dashboardLabel).tag($0) }
+                        ForEach(NutrientID.summaryChoices, id: \.self) { Text($0.title).tag($0) }
                     }
                 }
             }
@@ -191,7 +191,7 @@ struct ExpenditureSettingsView: View {
                     title: "Estimation Method", systemImage: "function",
                     selection: Binding(
                         get: { expenditure.initialKcal != nil },
-                        set: { manual in store.updateSettings { $0.nutrition.expenditure.initialKcal = manual ? expenditure.initialKcal ?? 2000 : nil } }
+                        set: { manual in store.updateSettings { $0.nutrition.expenditure.initialKcal = manual ? expenditure.initialKcal ?? NutritionSettings.Expenditure.typedKcalStart : nil } }
                     ),
                     options: [
                         SettingOption(value: false, title: "Default", detail: "A BMR equation and estimated activity factor estimate your initial expenditure"),
@@ -211,7 +211,7 @@ struct ExpenditureSettingsView: View {
                     title: "Calculation Mode", systemImage: "waveform.path.ecg",
                     selection: Binding(
                         get: { expenditure.staticKcal != nil },
-                        set: { fixed in store.updateSettings { $0.nutrition.expenditure.staticKcal = fixed ? expenditure.staticKcal ?? 2000 : nil } }
+                        set: { fixed in store.updateSettings { $0.nutrition.expenditure.staticKcal = fixed ? expenditure.staticKcal ?? NutritionSettings.Expenditure.typedKcalStart : nil } }
                     ),
                     options: [
                         SettingOption(value: false, title: "Dynamic (Recommended)", detail: "Expenditure updates from your intake and weight trend"),
@@ -252,7 +252,7 @@ struct ExpenditureSettingsView: View {
         if let start {
             DatePicker(
                 selection: Binding(
-                    get: { Calendar.current.date(from: DateComponents(year: start.year, month: start.month, day: start.day)) ?? .now },
+                    get: { start.date(in: .current) },
                     set: { date in store.updateSettings { $0.nutrition.expenditure.calculationStart = CalendarDay(date) } }
                 ),
                 displayedComponents: .date
@@ -385,13 +385,13 @@ private struct EnergyField: View {
         LabeledContent(title) {
             HStack(spacing: 4) {
                 TextField(title, value: Binding(
-                    get: { kcal.map { SettingsRules.displayEnergy($0, in: unit).rounded() } },
-                    set: { value in if let value { kcal = SettingsRules.storedEnergy(value, in: unit) } }
+                    get: { kcal.map { unit.fromKcal($0).rounded() } },
+                    set: { value in if let value { kcal = unit.toKcal(value) } }
                 ), format: .number.precision(.fractionLength(0)))
                 .keyboardType(.numberPad)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: 100)
-                Text(SettingsRules.energyLabel(unit)).foregroundStyle(Theme.textSecondary)
+                Text(unit.label).foregroundStyle(Theme.textSecondary)
             }
         }
     }

@@ -2,8 +2,6 @@ import Foundation
 import Testing
 @testable import App
 
-typealias Engine = NutritionEngine
-
 private func dates(_ from: String, count: Int) -> [Date] {
     (0..<count).map { utc.date(byAdding: .day, value: $0, to: day(from))! }
 }
@@ -100,14 +98,6 @@ struct BMRTests {
         #expect((Engine.BMR.macroFactor(weightKg: 100, heightCm: 180, ageYears: 30, sex: .male) * 10).rounded() / 10 == 1929.2)
         #expect((Engine.BMR.macroFactor(weightKg: 100, heightCm: 180, ageYears: 30, sex: .female) * 10).rounded() / 10 == 1715.4)
         #expect((Engine.BMR.macroFactor(weightKg: 100, heightCm: 180, ageYears: 65, sex: .male) * 10).rounded() / 10 == 1669.5)
-    }
-
-    @Test func macroFactorEquationByBodyComposition() {
-        #expect((Engine.BMR.macroFactor(fatFreeMassKg: 60, fatMassKg: 20, ageYears: 30) * 10).rounded() / 10 == 1715.9)
-    }
-
-    @Test func cunningham() {
-        #expect(Engine.BMR.cunningham(fatFreeMassKg: 60) == 1666)
     }
 
     @Test func initialExpenditureIsBMRTimesTheActivityFactor() {

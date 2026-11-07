@@ -13,7 +13,7 @@ struct WidgetSnapshotTests {
 
     func snapshot() async throws -> NutritionSnapshot {
         try await store.write { _ in }.value
-        return try store.read { try WidgetPublisher.snapshot($0, today: monday) }
+        return try store.readBlocking { try WidgetPublisher.snapshot($0, today: monday) }
     }
 
     @Test func coversAWeekWithTheLogAndThePlanTargets() async throws {

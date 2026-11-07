@@ -43,11 +43,7 @@ extension LoggerStart {
     /// The Food Log's request: its tab, and the hour whose + asked. A request for today without an hour follows the
     /// clock; another day logs at the current hour of that day.
     init(_ request: LogFoodRequest, now: Date = .now, calendar: Calendar = .current) {
-        tab = switch request.start {
-        case .search: .search
-        case .barcode: .scan
-        case .library: .library
-        }
+        tab = request.start
         if let minute = request.minute {
             time = LogTime(day: request.day, hour: minute / 60)
         } else if request.day != CalendarDay(now, in: calendar) {
@@ -255,7 +251,7 @@ final class LoggerSession {
                 continue
             }
             var pick = LoggerPick(result)
-            if let grams = pick.portion.food.nutrition.allMeasures.first(where: { $0.name == "g" }) {
+            if let grams = pick.portion.food.nutrition.allMeasures.first(where: { $0.name == SizeUnit.g.rawValue }) {
                 pick.portion.serving = Serving(measure: grams, quantity: food.grams)
             }
             plate.add(pick)

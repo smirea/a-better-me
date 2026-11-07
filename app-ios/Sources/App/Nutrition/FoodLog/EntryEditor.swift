@@ -37,10 +37,7 @@ struct EntryEditor: View {
 
     private var targets: NutrientTargets {
         let day = CalendarDay(time)
-        return NutrientTargets(
-            target: NutritionPlan.effective(on: day, in: plans)?.target(on: day), goals: goals, day: day,
-            sex: settings.profile.sex, weightKg: weight?.weightKg ?? settings.profile.bodyWeightKg
-        )
+        return NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: weight?.weightKg)
     }
 
     var body: some View {
@@ -140,7 +137,7 @@ struct EntryEditor: View {
         let serving = serving
         let day = CalendarDay(time)
         let minute = minute
-        store.editEntry(entry.id) {
+        store.edit(FoodEntry.self, id: entry.id) {
             $0.serving = serving
             $0.day = day
             $0.minute = minute

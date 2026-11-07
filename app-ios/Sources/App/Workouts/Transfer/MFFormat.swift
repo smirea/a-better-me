@@ -155,9 +155,7 @@ enum ProgramSheet {
                 outline.append(day)
                 if let day {
                     let (name, gym) = Rows.splitDay(day.day)
-                    var template = WorkoutTemplate(name: name)
-                    template.programID = program.id
-                    template.gymID = gym.flatMap(gymID)
+                    let template = WorkoutTemplate(programID: program.id, name: name, gymID: gym.flatMap(gymID))
                     templates.append(template)
                     program.days.append(ProgramDay(templateID: template.id))
                 } else {
@@ -298,7 +296,7 @@ private enum Rows {
         return blocks.flatMap { block in
             if block.isSuperset { group += 1 }
             let suffix = block.isSuperset ? " ∈ SS\(group)" : ""
-            return block.exercises.map { ($0, (names[$0.exerciseID] ?? "Unknown exercise") + suffix) }
+            return block.exercises.map { ($0, (names[$0.exerciseID] ?? Exercise.unknownName) + suffix) }
         }
     }
 

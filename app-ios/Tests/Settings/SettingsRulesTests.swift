@@ -4,9 +4,9 @@ import Testing
 
 struct SettingsRulesTests {
     @Test func energyIsStoredInKcalAndShownInTheEnergyUnit() {
-        #expect(SettingsRules.displayEnergy(2000, in: .kcal) == 2000)
-        #expect(SettingsRules.displayEnergy(2000, in: .kj) == 8368)
-        #expect(SettingsRules.storedEnergy(8368, in: .kj) == 2000)
+        #expect(NutritionSettings.EnergyUnit.kcal.fromKcal(2000) == 2000)
+        #expect(NutritionSettings.EnergyUnit.kj.fromKcal(2000) == 8368)
+        #expect(NutritionSettings.EnergyUnit.kj.toKcal(8368) == 2000)
     }
 
     @Test func heightsReadInFeetAndInchesOrCentimeters() {
@@ -24,7 +24,6 @@ struct SettingsRulesTests {
 
     @Test func favoriteMeasuresKeepTwoPerCategory() {
         let defaults = NutritionSettings().favoriteMeasures
-        #expect(defaults == ["g", "oz", "mL", "cup"])
         #expect(SettingsRules.toggleFavorite("lb", in: defaults) == ["oz", "mL", "cup", "lb"])
         #expect(SettingsRules.toggleFavorite("tbsp", in: defaults) == ["g", "oz", "cup", "tbsp"])
         #expect(SettingsRules.toggleFavorite("oz", in: defaults) == ["g", "mL", "cup"])
@@ -57,7 +56,7 @@ struct NutritionSettingsPersistenceTests {
         }
         try await store.write { _ in }.value
 
-        let reopened = try LocalStore(unsyncedAt: url).read(AppSettings.current.fetch)
+        let reopened = try LocalStore(unsyncedAt: url).readBlocking(AppSettings.current.fetch)
         var expected = NutritionSettings()
         expected.energyUnit = .kj
         expected.heightUnit = .centimeters

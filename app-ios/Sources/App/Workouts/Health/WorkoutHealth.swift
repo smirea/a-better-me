@@ -80,8 +80,6 @@ final class WorkoutHealth {
         }
     }
 
-    // MARK: Starting
-
     /// A workout started on the watch is recorded there; the phone only follows it, even when it hears of the
     /// workout before the watch's word that it records.
     func expectWatchRecording(_ id: UUID) {
@@ -178,24 +176,30 @@ final class WorkoutHealth {
 
     private func receive(_ stats: WorkoutRecording.Stats) {
         self.stats = stats
-        LiveWorkoutController.shared.metrics = stats.live
     }
-
-    // MARK: Ending
 
     /// The session left the in-progress query: Done ended it, or it was discarded and its row is gone.
     private func end(_ id: UUID) {
         let recorder = recorder
         sessionID = nil
         self.recorder = nil
-        LiveWorkoutController.shared.metrics = nil
         guard let recorder, let store, let catalog else { return }
-        let session = try? store.read { try WorkoutSession.fetchOne($0, key: WorkoutSession.key(id)) }
+        Task { await end(id, recorder: recorder, store: store, catalog: catalog) }
+    }
+
+    private func end(_ id: UUID, recorder: Recorder, store: LocalStore, catalog: ExerciseCatalog) async {
+        let session: WorkoutSession?
+        do {
+            session = try await store.read { try WorkoutSession.fetchOne($0, key: WorkoutSession.key(id)) }
+        } catch {
+            WorkoutRecording.log.error("Reading the ended session failed, so its recording is discarded: \(String(describing: error))")
+            session = nil
+        }
         guard let session, let endedAt = session.endedAt else {
             stats = nil
             switch recorder {
             case .phone(let recording): recording.discard()
-            case .mirror(let recording): Task { try? await recording.send(.discardRecording(sessionID: id)) }
+            case .mirror(let recording): try? await recording.send(.discardRecording(sessionID: id))
             case .watch: WatchBridge.shared.deliver(.discardRecording(sessionID: id))
             }
             return
@@ -203,12 +207,10 @@ final class WorkoutHealth {
         // The watch saves its own recording from the finished workout `WatchBridge` sends, and answers with `.recorded`.
         guard case .phone(let recording) = recorder else { return }
         let plan = HealthRecordingPlan.plan(sessionID: session.id, name: session.name, startedAt: session.startedAt, endedAt: endedAt, blocks: session.blocks, exerciseName: catalog.name)
-        Task {
-            do {
-                save(try await recording.finish(plan, source: .phone), for: id)
-            } catch {
-                WorkoutRecording.log.error("Saving the workout to Health failed: \(String(describing: error))")
-            }
+        do {
+            save(try await recording.finish(plan, source: .phone), for: id)
+        } catch {
+            WorkoutRecording.log.error("Saving the workout to Health failed: \(String(describing: error))")
         }
     }
 

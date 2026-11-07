@@ -22,7 +22,6 @@ const UPLOAD_CONCURRENCY = 16;
 const sha256 = (data: string | Uint8Array) => createHash('sha256').update(data).digest('hex');
 const megabytes = (bytes: number) => `${(bytes / 1e6).toFixed(1)} MB`;
 
-/** The version the app bundles, from the tracked `Assets.xcconfig`, or null when it has none. */
 export function trackedVersion(): string | null {
 	return /^ASSETS_VERSION\s*=\s*([0-9a-f]+)\s*$/m.exec(readFileSync(XCCONFIG_PATH, 'utf8'))?.[1] ?? null;
 }

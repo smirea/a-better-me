@@ -363,7 +363,7 @@ private struct EquipmentStep: View {
         .sheet(item: $picking) { role in
             EquipmentPickerSheet(
                 title: role.title,
-                equipmentIDs: Set(catalog.bundled.flatMap { (role == .resistance ? $0.resistanceEquipmentIDs : $0.supportEquipmentIDs).joined() }),
+                equipmentIDs: Set(catalog.bundled.flatMap { $0[keyPath: role.optionsKey].joined() }),
                 selection: Binding {
                     let options = role == .resistance ? draft.resistance : draft.support
                     guard options.count == 1, let id = options[0].ids.first, options[0].ids.count == 1 else { return nil }
@@ -400,24 +400,11 @@ private struct EquipmentStep: View {
             EquipmentOptions(title: "", names: options.map(\.name), ids: options.map(\.ids))
         }
     }
-
-    enum EquipmentRole: Identifiable {
-        case resistance, support
-
-        var id: Self { self }
-        var title: String { self == .resistance ? "Resistance" : "Support" }
-        var summary: String {
-            switch self {
-            case .resistance: "Equipment that adds load to the exercise"
-            case .support: "Equipment that assists, stabilizes, or makes the movement possible, without adding resistance"
-            }
-        }
-    }
 }
 
 private struct FinalDetailsStep: View {
     @Binding var draft: CustomExerciseDraft
-    @Observe(BodyWeight.all) private var weighIns
+    @Observe(BodyWeight.latest) private var latestWeight
     @Observe(AppSettings.current) private var settings
     @State private var percentText: String
     @State private var choosing: JointActionRole?
@@ -518,7 +505,7 @@ private struct FinalDetailsStep: View {
         guard let percent = draft.bodyWeightPercent else { return "Enter the share of body weight the exercise moves" }
         guard (0...100).contains(percent) else { return "Enter a percentage from 0 to 100" }
         let unit = settings.weightUnit
-        guard let bodyKg = currentBodyWeightKg(logged: weighIns, health: nil, manual: settings.profile.bodyWeightKg) else {
+        guard let bodyKg = latestWeight?.weightKg ?? settings.profile.bodyWeightKg else {
             return "Log your body weight to see the load this adds"
         }
         return "\(unit.label(kg: bodyKg * percent / 100)) at your current weight"

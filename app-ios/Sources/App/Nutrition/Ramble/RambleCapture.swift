@@ -61,8 +61,6 @@ final class RambleCapture {
     private(set) var notice: String?
     let meter = LevelMeter()
 
-    var transcript: String { heard.text }
-
     @ObservationIgnored private let store: LocalStore
     @ObservationIgnored private let index: @MainActor () -> FoodIndex
     /// The server transcribes the audio and keeps the outline current.
@@ -125,8 +123,10 @@ final class RambleCapture {
         rows.count { $0.content == .unmatched && !parsing.contains($0.key) && !searchingOnline.contains($0.item.name.lowercased()) }
     }
 
-    /// The words land 0.55 s after the row appears, and what was said shows for a second after that.
-    static let parsedFor = Duration.milliseconds(1550)
+    /// How long a said word takes to fly into its row, which shows its content once it lands.
+    nonisolated static let landing = Duration.milliseconds(550)
+    /// What was said shows for a second after it lands.
+    static let parsedFor = landing + .seconds(1)
     var isEmpty: Bool { rows.isEmpty }
 
     func start() async {

@@ -37,7 +37,7 @@ struct RambleResolverTests {
 
     func resolver(context: RambleContext = RambleContext()) async throws -> RambleResolver {
         try await store.write { _ in }.value
-        let search = try FoodSearch(store: store, catalog: try fixtureCatalog(rambleCatalog), branded: StubBranded())
+        let search = try await FoodSearch.load(store: store, catalog: try fixtureCatalog(rambleCatalog), branded: StubBranded())
         return RambleResolver(index: search.index, context: context, today: today, fallback: (today, 14 * 60))
     }
 
@@ -130,7 +130,8 @@ struct RambleResolverTests {
             "Blueberries: 1 cup",
             "Oats: 2 tbsp",
         ])
-        if case let .food(oats) = rows[11].content { #expect(abs(oats.pick.portion.serving.servings - 0.81 * 2 / 16) < 0.0001) }
+        guard case let .food(oats) = rows[11].content else { Issue.record("Oats is not a food row"); return }
+        #expect(abs(oats.pick.portion.serving.servings - 0.10125) < 0.0001)
         #expect(rows.map(\.id) == Array(0..<12))
         #expect(rows.allSatisfy { $0.day == today && $0.minute == 14 * 60 })
     }
@@ -198,7 +199,7 @@ struct RambleResolverTests {
 
         let other = Food(.openFoodFacts(barcode: "0041383090738"), name: "Nonfat Milk", brand: "Glenview Farms", nutrition: grams)
         let fairlife = Food(.openFoodFacts(barcode: "0811620021234"), name: "Ultra-Filtered Nonfat Milk", brand: "Fairlife", nutrition: grams)
-        let search = try FoodSearch(store: store, catalog: try fixtureCatalog(rambleCatalog), branded: StubBranded(hits: [other, fairlife]))
+        let search = try await FoodSearch.load(store: store, catalog: try fixtureCatalog(rambleCatalog), branded: StubBranded(hits: [other, fairlife]))
         var online = resolver
         online.online = ["fairlife nonfat milk": try await search.search("Fairlife nonfat milk")]
         let found = try online.rows([RambleItem(name: "Fairlife nonfat milk", amount: 200, unit: "g")], previous: [], choices: [:])
@@ -348,7 +349,7 @@ struct RambleLoggingTests {
         let kefir = FoodPortion(.quickAdd([.energy: 100], name: "Kefir"))
         store.log([(oats, day: today, minute: 480), (kefir, day: today.adding(days: -1), minute: 1140)])
         try await store.write { _ in }.value
-        let logged = try store.read(FoodEntry.between(today.adding(days: -1), today).fetch)
+        let logged = try store.readBlocking(FoodEntry.between(today.adding(days: -1), today).fetch)
         #expect(logged.map { "\($0.food.name) \($0.day) \($0.minute)" } == ["Kefir 2026-10-27 1140", "Oats 2026-10-28 480"])
     }
 }

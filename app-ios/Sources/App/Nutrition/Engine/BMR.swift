@@ -13,17 +13,6 @@ extension NutritionEngine {
             return 129.6 * pow(weightKg, 0.55) + 0.011 * heightCm * heightCm - ageFactor * Double(ageYears) - (sex == .female ? 213.8 : 0)
         }
 
-        /// The MacroFactor Equation, body-composition form.
-        static func macroFactor(fatFreeMassKg: Double, fatMassKg: Double, ageYears: Int) -> Double {
-            let ageFactor = ageYears > 60 ? 2.75 : 1.1
-            let lean = pow(fatFreeMassKg, 0.7)
-            return 50.2 * lean + 40.5 * lean * pow(fatMassKg, 0.066) - ageFactor * Double(ageYears)
-        }
-
-        /// Cunningham (1991): MacroFactor's other selectable equation.
-        static func cunningham(fatFreeMassKg: Double) -> Double {
-            21.6 * fatFreeMassKg + 370
-        }
     }
 
     enum ActivityLevel {

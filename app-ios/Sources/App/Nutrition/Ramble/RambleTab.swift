@@ -291,7 +291,7 @@ struct RambleTab: View {
 }
 
 /// The top band: close and the other ways to log over the day's totals with the ramble's foods as the plate, drawn as
-/// the logger's banner draws them (`MacroTotalsBars`), pulsing as foods land.
+/// the logger's banner draws them (`PlateDayTotals`), pulsing as foods land.
 private struct RambleSummary: View {
     let day: CalendarDay
     let planned: [RamblePlanned]
@@ -299,31 +299,12 @@ private struct RambleSummary: View {
     let missing: Int
     let close: () -> Void
     let switchTo: (LoggerTab) -> Void
-    @Environment(LocalStore.self) private var store
-    @Observe(AppSettings.current) private var settings
-    @Observe(NutritionPlan.all) private var plans
-    @Observe(NutrientGoal.all) private var goals
-    @Observe<[FoodEntry]> private var entries: [FoodEntry]
-    @Observe<NutritionDay> private var dayRow: NutritionDay
     @State private var pulse = 0.0
-
-    init(day: CalendarDay, planned: [RamblePlanned], missing: Int, close: @escaping () -> Void, switchTo: @escaping (LoggerTab) -> Void) {
-        self.day = day
-        self.planned = planned
-        self.missing = missing
-        self.close = close
-        self.switchTo = switchTo
-        _entries = Observe(FoodEntry.on(day))
-        _dayRow = Observe(NutritionDay.one(day))
-    }
 
     var body: some View {
         // A row for another day ("yesterday I had…") logs there, so this day's totals leave it out.
         let plate = planned.filter { $0.day == day }.reduce(into: NutrientAmounts()) { $0 = $0 + $1.pick.portion.amounts }
         let kcal = Int(planned.reduce(0) { $0 + ($1.pick.portion.amounts[.energy] ?? 0) }.rounded())
-        let display = settings.nutrition.logger.nutritionDisplay
-        let lines = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile)
-            .summary(dayRow.totals(entries), plate: plate, settings: settings)
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 RoundIconButton("Close", systemImage: "xmark", action: close)
@@ -346,18 +327,8 @@ private struct RambleSummary: View {
                 .buttonBorderShape(.circle)
                 .accessibilityLabel("Other ways to log")
             }
-            MacroTotalsBars(lines: lines, page: display.page)
+            PlateDayTotals(day: day, plate: plate)
                 .scaleEffect(1 + 0.04 * pulse)
-                .gesture(DragGesture(minimumDistance: 20).onEnded { drag in
-                    guard abs(drag.translation.width) > 30, abs(drag.translation.width) > abs(drag.translation.height) else { return }
-                    store.updateSettings { $0.nutrition.logger.nutritionDisplay = display.cycled(by: drag.translation.width < 0 ? 1 : -1) }
-                })
-                .sensoryFeedback(.selection, trigger: display)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(lines.map(\.spoken).joined(separator: ", "))
-                .accessibilityAdjustableAction { direction in
-                    store.updateSettings { $0.nutrition.logger.nutritionDisplay = display.cycled(by: direction == .increment ? 1 : -1) }
-                }
         }
         .padding(.horizontal, Theme.margin)
         .padding(.top, 6)
@@ -390,7 +361,7 @@ struct RambleAnchors: PreferenceKey {
 private struct Flight: Identifiable, Equatable {
     enum Kind { case parse, correction }
 
-    static let duration = Duration.milliseconds(550)
+    static let duration = RambleCapture.landing
 
     let id = UUID()
     /// The row's `RambleRow.key`.
@@ -563,9 +534,6 @@ private struct RambleLine: View {
     @State private var born = ContinuousClock.now
     @State private var allOptions = false
 
-    /// The flight's words land, and the row's content shows, this long after the row appears.
-    static let landing = Duration.milliseconds(550)
-
     /// No local match, and the online search is still looking.
     private var onlineSearch: Bool { row.content == .unmatched && capture.searchingOnline.contains(row.item.name.lowercased()) }
 
@@ -627,7 +595,7 @@ private struct RambleLine: View {
             } else if !landed {
                 withAnimation(.easeOut(duration: 0.2).delay(0.35)) { landed = true }
                 Task {
-                    try? await Task.sleep(for: Self.landing)
+                    try? await Task.sleep(for: RambleCapture.landing)
                     light()
                 }
             } else if capture.phase == .listening || capture.phase == .finishing {

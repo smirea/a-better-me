@@ -1,7 +1,6 @@
 import Foundation
 
 struct HealthWeight: Hashable {
-    var id: UUID
     var date: Date
     var kg: Double
 }
@@ -35,9 +34,6 @@ enum WeighIns {
     }
 }
 
-/// The Dashboard's trend is the Nutrition engine's, so the app has one trend algorithm; see docs/decisions/nutrition.md.
-enum WeightTrend {
-    static func daily(_ weighIns: [DatedValue], through end: Date, calendar: Calendar) -> [DatedValue] {
-        NutritionEngine.TrendWeight.daily(weighIns: weighIns, through: end, calendar: calendar)
-    }
+extension [WeighIn] {
+    var points: [DatedValue] { map { DatedValue(date: $0.date, value: $0.kg) } }
 }

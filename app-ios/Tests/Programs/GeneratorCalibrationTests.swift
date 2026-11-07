@@ -86,7 +86,7 @@ struct GeneratorCalibrationTests {
         let (_, generated, _) = Calibration.measure(Self.program("P2"), catalog: Self.catalog, gym: Self.gym)
         for id in generated.templates.flatMap(\.blocks).flatMap(\.exercises).map(\.exerciseID) {
             let exercise = Self.catalog.exercise(id)!
-            #expect(GymAvailability.isAvailable(exercise, in: Self.gym, equipment: Self.catalog.equipment), "\(exercise.name) needs equipment the gym lacks")
+            #expect(GymAvailability(gym: Self.gym, equipment: Self.catalog.equipment).isAvailable(exercise), "\(exercise.name) needs equipment the gym lacks")
             #expect(ExerciseAssessment.allows(exercise, profile: Calibration.profile), "\(exercise.name) fails the assessment")
             #expect(exercise.selection?.preconditions.contains { $0.contains("vertical pull") || $0.contains("dip") } != true)
         }

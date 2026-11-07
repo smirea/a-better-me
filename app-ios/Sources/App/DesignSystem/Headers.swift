@@ -29,7 +29,6 @@ extension SectionHeader where Actions == EmptyView {
     }
 }
 
-/// The header's "See All", pushing `value` on the enclosing stack.
 struct SeeAllLink<Value: Hashable>: View {
     let section: String
     let value: Value

@@ -13,3 +13,23 @@ enum SetType: String, Codable, CaseIterable {
         }
     }
 }
+
+extension SetType {
+    var title: String {
+        switch self {
+        case .standard: "Standard Set"
+        case .warmUp: "Warm-Up Set"
+        case .drop: "Drop Set"
+        case .myo: "Myo Set"
+        case .failure: "Failure Set"
+        }
+    }
+
+    /// What counts toward sets, volume, and progression: everything but warm-ups.
+    var isWorking: Bool { self != .warmUp }
+}
+
+/// Reps in reserve as every surface writes them: six or more reads "6+".
+enum RIR {
+    static func text(_ rir: Int) -> String { rir >= 6 ? "6+" : "\(rir)" }
+}

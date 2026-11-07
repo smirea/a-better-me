@@ -3,15 +3,6 @@ import os
 import UIKit
 import UserNotifications
 
-struct RestTimer: Equatable {
-    var startedAt: Date
-    var duration: TimeInterval
-
-    var endsAt: Date { startedAt.addingTimeInterval(duration) }
-
-    func remaining(at date: Date) -> TimeInterval { max(0, endsAt.timeIntervalSince(date)) }
-}
-
 /// What an exercise's suggestions were computed over: its planned sets and the weights its equipment can load. A
 /// Targets edit, an added set, an Equipment or gym change, or a new bar choice changes it and refills.
 struct SuggestionBasis: Equatable {
@@ -52,8 +43,8 @@ final class LiveSessionStore {
     var didAutomateWarmUps: Set<WorkoutSession.ID> = []
     /// Set while Pause workout holds both clocks. Resume folds it into `WorkoutSession.pausedSeconds`.
     private(set) var pausedAt: Date?
-    private var frozenRestRemaining: TimeInterval?
-    private(set) var rest: RestTimer?
+    private var frozenRest: TimeInterval?
+    private(set) var rest: LiveRest?
     /// What the restart pill "↺" goes back to: the rest the last checked set resolved to. It outlives Stop.
     private(set) var setRestSeconds: Int?
     private var restEndTask: Task<Void, Never>?
@@ -62,26 +53,19 @@ final class LiveSessionStore {
 
     private static let notificationID = "rest-timer"
 
-    /// A rest that started at `start`, which a set logged on the watch a while ago puts in the past; one already over
-    /// doesn't start.
     func startRest(seconds: Int, alerts: RestSettings, from start: Date = .now) {
         self.alerts = alerts
         setRestSeconds = seconds
-        guard seconds > 0, start.addingTimeInterval(TimeInterval(seconds)) > .now else { return stopRest() }
-        setRest(RestTimer(startedAt: start, duration: TimeInterval(seconds)))
+        setRest(.starting(TimeInterval(seconds), at: start, now: .now))
     }
 
     func restartRest(seconds: Int) {
-        guard seconds > 0 else { return stopRest() }
-        setRest(RestTimer(startedAt: .now, duration: TimeInterval(seconds)))
+        setRest(.starting(TimeInterval(seconds), at: .now, now: .now))
     }
 
-    /// The Rest Timer sheet's −15 and +15. Running out stops the timer.
     func adjustRest(by seconds: TimeInterval) {
-        guard var timer = rest else { return }
-        timer.duration += seconds
-        if timer.remaining(at: .now) <= 0 { return stopRest() }
-        setRest(timer)
+        guard let rest else { return }
+        setRest(rest.adjusted(by: seconds, now: .now))
     }
 
     func stopRest() {
@@ -93,7 +77,7 @@ final class LiveSessionStore {
     func pause(at now: Date = .now) {
         guard pausedAt == nil else { return }
         pausedAt = now
-        frozenRestRemaining = rest?.remaining(at: now)
+        frozenRest = rest?.frozen(at: now)
         stopRest()
     }
 
@@ -101,8 +85,8 @@ final class LiveSessionStore {
     func resume(at now: Date = .now) -> Int {
         guard let pausedAt else { return 0 }
         self.pausedAt = nil
-        if let remaining = frozenRestRemaining, remaining > 0 { setRest(RestTimer(startedAt: now, duration: remaining)) }
-        frozenRestRemaining = nil
+        if let resumed = LiveRest.resumed(frozenRest, at: now) { setRest(resumed) }
+        frozenRest = nil
         return Int(now.timeIntervalSince(pausedAt))
     }
 
@@ -117,7 +101,7 @@ final class LiveSessionStore {
     func reset() {
         stopRest()
         pausedAt = nil
-        frozenRestRemaining = nil
+        frozenRest = nil
         setRestSeconds = nil
         drafts = [:]
         currentExercise = nil
@@ -129,7 +113,8 @@ final class LiveSessionStore {
         didAutomateWarmUps = []
     }
 
-    private func setRest(_ timer: RestTimer) {
+    private func setRest(_ timer: LiveRest?) {
+        guard let timer else { return stopRest() }
         rest = timer
         restEndTask?.cancel()
         restEndTask = Task { [weak self] in

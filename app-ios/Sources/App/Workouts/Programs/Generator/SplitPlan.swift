@@ -107,7 +107,7 @@ enum SplitPlan {
                 DaySkeleton("Full", .full, primaries: [], secondaries: [[hpl, hh]]),
             ]
         case .pushPullLegs:
-            return pushPullLegs(suffix: "")
+            return pushPullLegs()
         case .upperLowerUpperLower:
             return [
                 DaySkeleton("Upper A", .upper, primaries: [hp, hpl], secondaries: [[vp, vpl], [vp, vpl]]),
@@ -118,7 +118,7 @@ enum SplitPlan {
         case .pushPullHingeSquat:
             return pushPullHingeSquat
         case .pushPullLegsAccessories:
-            return pushPullLegs(suffix: "") + [DaySkeleton("Accessories", .accessories, primaries: [])]
+            return pushPullLegs() + [DaySkeleton("Accessories", .accessories, primaries: [])]
         case .upperLowerUpperLowerUpper:
             return [
                 DaySkeleton("Upper A", .upper, primaries: [hp, hpl], secondaries: [[vp, vpl]]),
@@ -167,11 +167,11 @@ enum SplitPlan {
         ]
     }
 
-    private static func pushPullLegs(suffix: String) -> [DaySkeleton] {
+    private static func pushPullLegs() -> [DaySkeleton] {
         [
-            DaySkeleton("Push\(suffix)", .push, primaries: [.horizontalPush, .verticalPush], secondaries: [[.horizontalPush, .verticalPush], [.horizontalPush, .verticalPush]]),
-            DaySkeleton("Pull\(suffix)", .pull, primaries: [.horizontalPull, .verticalPull], secondaries: [[.horizontalPull, .verticalPull], [.horizontalPull, .verticalPull]]),
-            DaySkeleton("Legs\(suffix)", .lower, primaries: [.squat, .hipHinge], secondaries: [[.squat, .hipHinge], [.squat, .hipHinge]]),
+            DaySkeleton("Push", .push, primaries: [.horizontalPush, .verticalPush], secondaries: [[.horizontalPush, .verticalPush], [.horizontalPush, .verticalPush]]),
+            DaySkeleton("Pull", .pull, primaries: [.horizontalPull, .verticalPull], secondaries: [[.horizontalPull, .verticalPull], [.horizontalPull, .verticalPull]]),
+            DaySkeleton("Legs", .lower, primaries: [.squat, .hipHinge], secondaries: [[.squat, .hipHinge], [.squat, .hipHinge]]),
         ]
     }
 

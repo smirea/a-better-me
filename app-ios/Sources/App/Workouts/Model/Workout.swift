@@ -9,12 +9,12 @@ extension BlockExercise {
 
     /// What a set rests when it has no rest of its own: the value "Set Rest Timers" starts from.
     func defaultRestSeconds(exercise: Exercise?, settings: ExerciseSettings?, defaults: AppSettings) -> Int {
-        restSeconds ?? settings?.restSeconds ?? defaults.restSeconds(exercise?.restCategory ?? .upperIsolation)
+        restSeconds ?? settings?.restSeconds ?? defaults.restSeconds(Exercise.restCategory(of: exercise))
     }
 }
 
 /// A row of the synced `workout_templates` table (docs/decisions/sync.md). Edits go through `LocalStore`.
-struct WorkoutTemplate: SyncedRecord {
+struct WorkoutTemplate: Stamped {
     static let table = "workout_templates"
 
     var id: UUID
@@ -34,6 +34,13 @@ struct WorkoutTemplate: SyncedRecord {
         createdAt = .now
         updatedAt = .now
         self.blocks = blocks
+    }
+
+    /// A program day's template, owned by the program and deleted with it.
+    init(programID: UUID, name: String, notes: String = "", blocks: [WorkoutBlock] = [], gymID: UUID?) {
+        self.init(name: name, notes: notes, blocks: blocks)
+        self.programID = programID
+        self.gymID = gymID
     }
 
     init(row: Row) throws {
@@ -92,7 +99,7 @@ struct WorkoutSession: SyncedRecord {
     }
 
     init(startingFrom template: WorkoutTemplate, at position: ProgramPosition, gymID: UUID?) {
-        self.init(name: template.name, templateID: template.id, blocks: template.blocks.targets(forCycle: position.cycle))
+        self.init(name: template.name, templateID: template.id, blocks: template.blocks)
         program = position
         self.gymID = gymID
     }

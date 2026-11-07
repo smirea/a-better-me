@@ -55,7 +55,7 @@ struct NutritionDay: SyncedRecord {
     /// The day's totals everywhere they show: the entries' sum with the override's amounts in place of the logged
     /// ones. A nutrient the override leaves out keeps its logged amount, so a calorie-only edit never zeroes protein.
     func totals(_ entries: [FoodEntry]) -> NutrientAmounts {
-        FoodLog.totals(entries).merging(override ?? [:]) { $1 }
+        entries.totals.merging(override ?? [:]) { $1 }
     }
 }
 
@@ -75,7 +75,7 @@ enum DayIntake: Equatable, Sendable {
         } else if entries.isEmpty {
             self = day?.status == .fasted ? .fasted : .skipped
         } else {
-            self = .logged(FoodLog.totals(entries))
+            self = .logged(entries.totals)
         }
     }
 

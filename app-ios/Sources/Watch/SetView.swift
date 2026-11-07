@@ -194,7 +194,7 @@ enum MetricScale {
         switch field {
         case .weight:
             if let loadableKg, !loadableKg.isEmpty { return [0] + loadableKg }
-            let step = unit == .kg ? 1.25 : 2.5
+            let step = unit.plateIncrement / 2
             return (0...400).map { unit.toKg(Double($0) * step) }
         case .reps: return (0...100).map(Double.init)
         case .rir: return (0...6).map(Double.init)
@@ -228,7 +228,7 @@ enum MetricScale {
         switch field {
         case .weight: (values.weightKg.map { unit.fromKg($0).formatted(.number.precision(.fractionLength(0...1))) } ?? "–", unit.rawValue.uppercased())
         case .reps: (values.reps.map(String.init) ?? "–", "REPS")
-        case .rir: (values.rir.map { $0 >= 6 ? "6+" : "\($0)" } ?? "–", "RIR")
+        case .rir: (values.rir.map(RIR.text) ?? "–", "RIR")
         case .duration: (values.durationSeconds.map { $0.minuteSecond } ?? "–", "TIME")
         case .distance: (values.distanceMeters.map { $0.formatted(.number.precision(.fractionLength(0))) } ?? "–", "M")
         }

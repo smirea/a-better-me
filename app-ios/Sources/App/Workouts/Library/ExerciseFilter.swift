@@ -81,39 +81,6 @@ struct ExerciseGroup: Identifiable {
 }
 
 extension ExerciseGroup {
-    static func ranksBefore(_ a: Exercise, _ b: Exercise) -> Bool {
-        a.searchBoost != b.searchBoost
-            ? a.searchBoost > b.searchBoost
-            : a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
-    }
-
-    static func ranked(_ exercises: [Exercise]) -> [Exercise] {
-        exercises.sorted(by: ranksBefore)
-    }
-
-    /// `ranked` for exercises already sorted by name, without comparing names again.
-    static func ranked(nameSorted exercises: [Exercise]) -> [Exercise] {
-        Dictionary(grouping: exercises, by: \.searchBoost).sorted { $0.key > $1.key }.flatMap(\.value)
-    }
-
-    /// Merges two lists that are each in `ranked` order.
-    static func merge(_ a: [Exercise], _ b: [Exercise]) -> [Exercise] {
-        var merged: [Exercise] = []
-        merged.reserveCapacity(a.count + b.count)
-        var i = a.startIndex, j = b.startIndex
-        while i < a.endIndex, j < b.endIndex {
-            if ranksBefore(b[j], a[i]) {
-                merged.append(b[j])
-                j += 1
-            } else {
-                merged.append(a[i])
-                i += 1
-            }
-        }
-        return merged + a[i...] + b[j...]
-    }
-
-    /// The browser's list: `ranked` exercises narrowed to `scope`, the filters, the gym, and the search, by category.
     static func browse(
         _ ranked: [Exercise], scope: BrowseScope, filter: ExerciseFilter, search: ExerciseSearch, availability: GymAvailability?
     ) -> (scoped: [Exercise], groups: [ExerciseGroup]) {

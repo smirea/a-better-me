@@ -4,7 +4,6 @@
 	"type": "module",
 	"scripts": {
 		"build": "bun --env-file=.env.local --bun run vite build",
-		"start": "bun --env-file=.env.local --bun run vite",
-		"dev": "bun run start"
+		"start": "bun --env-file=.env.local --bun run vite"
 	}
 }

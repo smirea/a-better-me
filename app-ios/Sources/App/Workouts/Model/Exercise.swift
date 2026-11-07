@@ -1,9 +1,13 @@
 import Foundation
 
-/// MF Workouts' exercise ID for catalog exercises, `custom-<uuid>` for the owner's own.
-
 /// Field names and values mirror `scripts/catalog.ts`, which generates them from the reference app's own export.
 struct Exercise: Codable, Hashable, Identifiable {
+    /// What every screen calls an exercise whose id no longer resolves, so history never shows a blank row.
+    static let unknownName = "Unknown exercise"
+
+    /// The rest category of an exercise that may no longer resolve: an unknown one rests like an upper isolation.
+    static func restCategory(of exercise: Exercise?) -> RestCategory { exercise?.restCategory ?? .upperIsolation }
+
     let id: ExerciseID
     var name: String
     var alternativeNames: [String] = []
@@ -72,25 +76,15 @@ struct Exercise: Codable, Hashable, Identifiable {
 struct ExerciseSelection: Codable, Hashable {
     var hypertrophy: RecommendationLevels
     var strength: RecommendationLevels
-    var hypertrophyClassification: [ExerciseClassification]
-    var strengthClassification: [ExerciseClassification]
-    var exerciseGroups: [String]
     var exclusionGroupings: [String]
     var preconditions: [String]
-    /// Anatomical names, the same vocabulary as `Exercise.primaryMuscleDetails`.
-    var stretchedMuscles: [String]
     var emphasizedAgonists: [Muscle]
-    var deemphasizedAgonists: [Muscle]
 }
 
 struct RecommendationLevels: Codable, Hashable {
     var primaryCompound: Double?
     var secondaryCompound: Double?
     var accessory: Double?
-}
-
-enum ExerciseClassification: String, Codable {
-    case primaryCompound, secondaryCompound, accessory, core
 }
 
 enum ExerciseType: String, Codable, CaseIterable {

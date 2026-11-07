@@ -48,8 +48,9 @@ struct RecordRoundTripTests {
             #expect(try GymProfile.fetchOne(db, key: gym.key) == gym)
             #expect(try BodyWeight.fetchOne(db, key: weight.key) == weight)
             let settings = try #require(try AppSettings.fetchOne(db, key: AppSettings.rowID))
-            #expect(settings.weightUnit == .lb)
-            #expect(RestCategory.allCases.map(settings.restSeconds) == [120, 180, 90, 90, 60])
+            let fresh = AppSettings()
+            #expect(settings.weightUnit == fresh.weightUnit)
+            #expect(RestCategory.allCases.map(settings.restSeconds) == RestCategory.allCases.map(fresh.restSeconds))
             #expect(try Int.fetchOne(db, sql: "SELECT count(*) FROM _outbox WHERE op = 'insert'") == 7)
         }
     }

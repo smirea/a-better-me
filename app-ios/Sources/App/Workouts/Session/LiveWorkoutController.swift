@@ -27,7 +27,6 @@ final class LiveWorkoutController {
     /// Applied events waiting for `watchWorkout` to show them. Acknowledging one before its write lands would let the
     /// watch drop it while the copy it receives still predates it.
     @ObservationIgnored private var unreflectedWatchEvents: [(event: WatchEvent, appliedAt: Date)] = []
-    var metrics: LiveHealthMetrics?
     @ObservationIgnored var editor: ((LiveWorkoutCommand, Date) -> Void)?
 
     private var inputs = Inputs()
@@ -63,7 +62,7 @@ final class LiveWorkoutController {
                 session: session,
                 settings: AppSettings.current.fetch(db),
                 exerciseSettings: ExerciseSettings.all.fetch(db),
-                gym: gyms.first { $0.id == session?.gymID } ?? GymProfile.defaultGym.fetch(db)
+                gym: GymProfile.resolve(session?.gymID, in: gyms)
             )
         }
         .removeDuplicates()
@@ -126,8 +125,6 @@ final class LiveWorkoutController {
         }
     }
 
-    // MARK: Watch
-
     /// `session` as the watch runs it: the in-progress one with what the phone typed and suggested, or a workout on
     /// the watch's home list as it would start, prefilled from `history`.
     func watchWorkout(for session: WorkoutSession, history: [[WorkoutBlock]], gym: GymProfile?, isLive: Bool) -> WatchWorkout {
@@ -170,7 +167,7 @@ final class LiveWorkoutController {
             sessionID: session.id, templateID: session.templateID, name: session.name, program: session.program, gymID: session.gymID,
             startedAt: session.startedAt, pausedSeconds: session.pausedSeconds, pausedAt: isLive ? live.pausedAt : nil, endedAt: session.endedAt,
             blocks: blocks, current: isLive ? live.currentExercise : nil,
-            rest: isLive ? live.rest.map { LiveRest(endsAt: $0.endsAt, duration: $0.duration) } : nil,
+            rest: isLive ? live.rest : nil,
             rules: settings.workout.flow, unit: unit, exercises: exercises, restSeconds: rest, prefill: prefill, previous: previous
         )
     }
@@ -183,22 +180,13 @@ final class LiveWorkoutController {
               !unreflectedWatchEvents.contains(where: { $0.event.id == event.id }) else { return }
         if case .start(let plan) = event.kind { return startFromWatch(plan, event: event, in: store) }
         guard let session = inputs.session, session.id == event.sessionID else { return applyToStored(event, in: store) }
-        switch event.kind {
-        case .start: break
-        case .log(let rowID, let values): perform(.log(rowID: rowID, values: values), at: event.at)
-        case .unlog(let rowID):
-            // The draft goes in before the write, so the copy that shows the row open already shows the undone values.
-            if let path = session.blocks.path(of: rowID), let log = session.blocks.log(at: path) { live.drafts[rowID] = SetEntry(log) }
-            perform(.unlog(rowID: rowID), at: event.at)
-        case .skip(let rowID): perform(.skip(rowID: rowID), at: event.at)
-        case .addSet(let exerciseID, let setID): perform(.addSet(exerciseID: exerciseID, setID: setID), at: event.at)
-        case .select(let exerciseID): perform(.select(exerciseID: exerciseID), at: event.at)
-        case .adjustRest(let seconds): perform(.adjustRest(seconds: seconds), at: event.at)
-        case .skipRest: perform(.skipRest, at: event.at)
-        case .pause: perform(.pause, at: event.at)
-        case .resume: perform(.resume, at: event.at)
-        case .finish: perform(.finish, at: event.at)
-        case .discard:
+        if let command = event.kind.command {
+            // The draft goes in before the write, so the copy that shows an unlogged row open already shows its values.
+            if case .unlog(let rowID) = command, let path = session.blocks.path(of: rowID), let log = session.blocks.log(at: path) {
+                live.drafts[rowID] = SetEntry(log)
+            }
+            perform(command, at: event.at)
+        } else if case .discard = event.kind {
             live.reset()
             store.delete(WorkoutSession.self, id: session.id)
         }
@@ -216,19 +204,8 @@ final class LiveWorkoutController {
             let existing = session
             var outcome = StoredOutcome.applied
             switch event.kind {
-            case .log(let rowID, let values):
-                if let path = session.blocks.path(of: rowID), session.blocks.log(at: path) == nil {
-                    session.blocks.setLog(SetLog(values, at: event.at), at: path)
-                }
-            case .unlog(let rowID):
-                if let path = session.blocks.path(of: rowID) {
-                    session.blocks.setLog(nil, at: path)
-                    session.blocks.setSkipped(false, at: path)
-                }
-            case .skip(let rowID):
-                if let path = session.blocks.path(of: rowID), session.blocks.log(at: path) == nil { session.blocks.setSkipped(true, at: path) }
-            case .addSet(let exerciseID, let setID):
-                session.blocks.addSet(to: exerciseID, id: setID)
+            case .log, .unlog, .skip, .addSet:
+                if let command = event.kind.command { _ = session.blocks.apply(command, at: event.at) }
             case .pause:
                 pauses.started.withLock { $0[session.id] = event.at }
             case .resume:
@@ -310,8 +287,6 @@ final class LiveWorkoutController {
         for event in ready { apply(event) }
     }
 
-    // MARK: Status
-
     private func build() -> LiveWorkoutStatus? {
         guard let session = inputs.session, let catalog else { return nil }
         let blocks = session.blocks
@@ -324,13 +299,12 @@ final class LiveWorkoutController {
             name: session.name,
             pauseAdjustedStart: session.startedAt.addingTimeInterval(TimeInterval(session.pausedSeconds)),
             pausedAt: pausedAt,
-            rest: live.rest.map { LiveRest(endsAt: $0.endsAt, duration: $0.duration) },
+            rest: live.rest,
             current: current.map { liveSet($0, in: blocks, catalog: catalog, unit: unit) },
             upNext: current.flatMap { SessionFlow.upNext(after: $0, in: blocks, rules: inputs.settings.workout.flow) }.map { liveSet($0, in: blocks, catalog: catalog, unit: unit) },
             completedSets: rows.count { blocks.log(at: $0) != nil },
             totalSets: rows.count,
-            unit: unit,
-            metrics: metrics
+            unit: unit
         )
         return status
     }
@@ -359,7 +333,6 @@ final class LiveWorkoutController {
         let previous = previousSets[item.exerciseID] ?? []
         return LiveSet(
             id: blocks.rowID(at: path),
-            blockExerciseID: item.id,
             catalogID: item.exerciseID,
             exerciseName: exercise?.name ?? "Exercise",
             position: SessionFlow.subtitle(for: (path.block, path.exercise), set: path.set, in: blocks),
@@ -378,8 +351,6 @@ final class LiveWorkoutController {
             suggestions: live.suggestions, appliedRows: live.appliedRows, settings: inputs.settings
         )
     }
-
-    // MARK: Commands
 
     /// `at` is when the owner acted, which is a while ago for a command the watch queued while the phone was away.
     func perform(_ command: LiveWorkoutCommand, at date: Date = .now) {
@@ -469,28 +440,15 @@ private struct Fill: Sendable {
     var at: Date
 
     func apply(_ command: LiveWorkoutCommand, to blocks: inout [WorkoutBlock]) -> Outcome {
-        switch command {
-        case .log(let rowID, let values):
-            guard let path = blocks.path(of: rowID), blocks.log(at: path) == nil else { return .none }
-            blocks.setLog(SetEntry(values, keeping: entry(path, in: blocks)).log(at: at), at: path)
-            return .logged(rowID: rowID, path: path, blocks: blocks)
-        case .unlog(let rowID):
-            guard let path = blocks.path(of: rowID) else { return .none }
-            guard let log = blocks.log(at: path) else {
-                blocks.setSkipped(false, at: path)
-                return .none
-            }
-            blocks.setLog(nil, at: path)
-            return .draft(rowID: rowID, SetEntry(log))
-        case .skip(let rowID):
-            guard let path = blocks.path(of: rowID), blocks.log(at: path) == nil, !blocks.isSkipped(at: path) else { return .none }
-            blocks.setSkipped(true, at: path)
-            return .skipped(path: path, blocks: blocks)
-        case .addSet(let exerciseID, let setID):
-            blocks.addSet(to: exerciseID, id: setID)
-            return .none
-        case .select, .adjustRest, .skipRest, .pause, .resume, .finish:
-            return .none
+        let before = blocks
+        let change = blocks.apply(command) { path, values in
+            SetEntry(values, keeping: entry(path, in: before)).log(at: at)
+        }
+        switch change {
+        case .logged(let path): return .logged(rowID: blocks.rowID(at: path), path: path, blocks: blocks)
+        case .unlogged(let path, let log): return .draft(rowID: blocks.rowID(at: path), SetEntry(log))
+        case .skipped(let path): return .skipped(path: path, blocks: blocks)
+        case .added, .none: return .none
         }
     }
 
@@ -533,13 +491,13 @@ extension WatchEvent {
             if case .start = kind { return false }
             return true
         }
-        let blocks = workout.blocks
         switch kind {
         case .start: return true
-        case .log(let rowID, _): return blocks.path(of: rowID).map { blocks.log(at: $0) != nil } ?? true
-        case .unlog(let rowID): return blocks.path(of: rowID).map { blocks.log(at: $0) == nil && !blocks.isSkipped(at: $0) } ?? true
-        case .skip(let rowID): return blocks.path(of: rowID).map { blocks.log(at: $0) != nil || blocks.isSkipped(at: $0) } ?? true
-        case .addSet(_, let setID): return blocks.path(of: setID) != nil
+        case .log, .unlog, .skip, .addSet:
+            // Reflected once applying it again would change nothing.
+            var blocks = workout.blocks
+            if let command = kind.command { _ = blocks.apply(command, at: at) }
+            return blocks == workout.blocks
         case .select(let exerciseID): return workout.current == exerciseID
         case .pause: return workout.pausedAt != nil
         case .resume: return workout.pausedAt == nil

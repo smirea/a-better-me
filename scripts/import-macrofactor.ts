@@ -174,7 +174,7 @@ export function toDay(cell: Cell | undefined): string {
 }
 
 /** `02:48 PM`, `14:48`, or an Excel time fraction, as minutes since midnight. */
-export function toMinute(cell: Cell | undefined): number {
+function toMinute(cell: Cell | undefined): number {
 	if (typeof cell === 'number') return Math.round((cell % 1) * 1440) % 1440;
 	const match = /^(\d{1,2}):(\d{2})(?::\d{2})?\s*([AP]M)?$/i.exec(text(cell) ?? '');
 	if (!match) throw new Error(`Not a time: ${JSON.stringify(cell)}`);
@@ -192,7 +192,6 @@ function nutrients(record: Record<string, Cell>): Amounts {
 	return amounts;
 }
 
-/** The value of the column named `name`, converted from the unit its header names. */
 function measured<Units extends Record<string, number>>(record: Record<string, Cell>, name: string, units: Units) {
 	for (const [header, cell] of Object.entries(record)) {
 		const { name: column, unit } = splitUnit(header);
@@ -479,7 +478,6 @@ function recipeRow(id: string, name: string, record: Record<string, Cell>, known
 	};
 }
 
-/** Base servings in one `unit` of a food: one of its own measures, or grams and ounces from its base weight. */
 function unitServings(nutrition: Nutrition, unit: string): number | undefined {
 	const own = nutrition.measures.find(measure => measure.name.toLowerCase() === unit.toLowerCase());
 	if (own) return own.servings / own.quantity;
@@ -581,7 +579,7 @@ const same = (existing: Row, desired: Row) =>
 
 export type Counts = Record<string, { created: number; updated: number; unchanged: number; skipped: number }>;
 
-export type Client = (method: string, path: string, body?: unknown) => Promise<any>;
+type Client = (method: string, path: string, body?: unknown) => Promise<any>;
 
 export function client(server: string, token: string): Client {
 	const base = `${server.replace(/\/+$/, '').replace(/\/api$/, '')}/api`;

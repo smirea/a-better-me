@@ -11,8 +11,8 @@ export const ASSETS_DIR = join(import.meta.dir, '../../app-ios/Assets');
  */
 const PACK_BYTES = 1_000_000;
 
-export type PackEntry = { path: string; offset: number; size: number };
-export type Pack = { sha256: string; size: number; files: PackEntry[] };
+type PackEntry = { path: string; offset: number; size: number };
+type Pack = { sha256: string; size: number; files: PackEntry[] };
 export type Manifest = { version: string; packs: Pack[] };
 export type Assets = { manifest: Manifest; blobs: Map<string, Uint8Array<ArrayBuffer>> };
 
@@ -26,7 +26,6 @@ function walk(dir: string): string[] {
 	});
 }
 
-/** The files back to back, and where each one sits. */
 export function concatenate(files: { path: string; bytes: Uint8Array }[]): {
 	bytes: Uint8Array<ArrayBuffer>;
 	files: PackEntry[];

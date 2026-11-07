@@ -170,10 +170,7 @@ struct GymProfileEditor: View {
     }
 
     private func edit(_ change: @escaping @Sendable (inout GymProfile) -> Void) {
-        store.modify(GymProfile.self, id: gymID) {
-            change(&$0)
-            $0.updatedAt = .now
-        }
+        store.edit(GymProfile.self, id: gymID, change)
     }
 
     /// Selecting keeps an item's custom load; deselecting drops it with the key.

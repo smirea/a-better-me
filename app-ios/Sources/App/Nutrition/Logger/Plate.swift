@@ -70,14 +70,3 @@ struct LogTime: Hashable, Sendable {
         return "\(hourText) · \(NutritionFormat.shortDay(day))"
     }
 }
-
-extension Dictionary where Key == NutrientID, Value == Double {
-    /// A macro's share of the calories the three macros supply (4, 9, and 4 kcal per gram), so the shares sum to 100%
-    /// as MacroFactor's chips do, even when a label's energy disagrees with its macros.
-    func macroShare(_ id: NutrientID) -> Double {
-        let perGram: [NutrientID: Double] = [.protein: 4, .fat: 9, .carbs: 4]
-        let kcal = perGram.reduce(into: NutrientAmounts()) { $0[$1.key] = (self[$1.key] ?? 0) * $1.value }
-        let total = kcal.values.reduce(0, +)
-        return total > 0 ? (kcal[id] ?? 0) / total : 0
-    }
-}

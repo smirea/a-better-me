@@ -32,7 +32,6 @@ struct SessionEditor: View {
     @Observe(AppSettings.current) var defaults
     @Observe(BodyWeight.latest) private var latestBodyWeight
     @Observe(GymProfile.all) var gyms
-    @Observe(GymProfile.defaultGym) var defaultGym
     /// The session's row as it changes under the editor, which `session` cannot show once the cover is up.
     @Observe private var live: WorkoutSession?
 
@@ -192,8 +191,6 @@ struct SessionEditor: View {
         return (at.block, at.item)
     }
 
-    // MARK: Header
-
     private var header: some View {
         HStack(spacing: 16) {
             switch mode {
@@ -245,8 +242,6 @@ struct SessionEditor: View {
         .feedback("Top Bar", data: mode)
     }
 
-    // MARK: Exercise strip
-
     private var exerciseStrip: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 4) {
@@ -284,8 +279,6 @@ struct SessionEditor: View {
         }
     }
 
-    // MARK: Current exercise
-
     private func exerciseContent(block: Int, exercise index: Int) -> some View {
         let item = blocks[block].exercises[index]
         let exercise = catalog.exercise(item.exerciseID)
@@ -314,7 +307,7 @@ struct SessionEditor: View {
     /// Bodyweight Contribution: "Body weight 80 kg · 65% counted (52 kg)", for exercises that lift part of the body.
     private func bodyweightCaption(_ exercise: Exercise?) -> String? {
         guard mode == .live, defaults.workout.display.bodyweightContribution, let fraction = exercise?.bodyweightFraction, fraction > 0,
-              let kg = currentBodyWeightKg(logged: latestBodyWeight.map { [$0] } ?? [], health: nil, manual: defaults.profile.bodyWeightKg) else { return nil }
+              let kg = latestBodyWeight?.weightKg ?? defaults.profile.bodyWeightKg else { return nil }
         let percent = (fraction * 100).formatted(.number.precision(.fractionLength(0)))
         return "Body weight \(unit.label(kg: kg)) · \(percent)% counted (\(unit.label(kg: kg * fraction)))"
     }
@@ -392,8 +385,6 @@ struct SessionEditor: View {
             }
     }
 
-    // MARK: Sheets
-
     @ViewBuilder
     private func sheetContent(_ sheet: Sheet) -> some View {
         switch sheet {
@@ -456,8 +447,6 @@ struct SessionEditor: View {
         }
     }
 
-    // MARK: Finishing
-
     private func requestFinish() {
         let allDone = blocks.flatMap(\.exercises).allSatisfy { $0.sets.allSatisfy(\.isDone) }
         if allDone { finish(logAll: false) } else { confirmingFinish = true }
@@ -485,8 +474,6 @@ struct SessionEditor: View {
         let paused = store.resume()
         localStore.modify(WorkoutSession.self, id: session.id) { $0.pausedSeconds += paused }
     }
-
-    // MARK: Smart Progression
 
     func progressionSettings(for exerciseID: ExerciseID) -> ProgressionSettings {
         var settings = defaults.workout.progression

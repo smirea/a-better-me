@@ -28,7 +28,6 @@ enum StepGoal {
         var date: Date
         var steps: Double
         var tier: Tier
-        /// Part of the current streak.
         var inStreak: Bool
 
         var id: Date { date }
@@ -40,8 +39,6 @@ enum StepGoal {
         /// The last seven days, oldest first, today last.
         var week: [Day]
         var streak: Int
-        var best: Int
-        var metLast30: Int
         var hasSteps: Bool
     }
 
@@ -65,23 +62,11 @@ enum StepGoal {
         }
         let streakDays = streak > 0 ? day(cursor + 1)...day(cursor + streak) : nil
 
-        var best = 0
-        var run = 0
-        var previous: Date?
-        for date in byDay.keys.sorted() where met(date) {
-            run = previous.map { calendar.date(byAdding: .day, value: 1, to: $0) == date } == true ? run + 1 : 1
-            best = max(best, run)
-            previous = date
-        }
-
         let week = (-6...0).map { offset in
             let date = day(offset)
             let value = byDay[date] ?? 0
             return Day(date: date, steps: value, tier: tier(value, goal: goal), inStreak: streakDays?.contains(date) == true)
         }
-        return Summary(
-            goal: goal, today: byDay[start] ?? 0, week: week, streak: streak, best: best,
-            metLast30: (-29...0).count { met(day($0)) }, hasSteps: !byDay.isEmpty
-        )
+        return Summary(goal: goal, today: byDay[start] ?? 0, week: week, streak: streak, hasSteps: !byDay.isEmpty)
     }
 }

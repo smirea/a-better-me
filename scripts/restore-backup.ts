@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
-import { basename, join } from 'node:path';
 import { bunSqlite } from 'sync-engine/bun-sqlite';
 import { createSpace, type Values } from 'sync-engine/core';
 import { schema } from '../shared/db/schema';
+import { DATA_FILE as file } from '../server/src/data-file';
 
 /**
  * Loads a daily backup (`server/src/backup.ts`, `{ at, tables }`) into this checkout's local database, the file
@@ -18,8 +18,6 @@ import { schema } from '../shared/db/schema';
 
 const [path] = process.argv.slice(2);
 if (!path) throw new Error('Usage: bun scripts/restore-backup.ts <backup.json>');
-const root = join(import.meta.dir, '..');
-const file = join(root, '.data', `${basename(root)}.sqlite`);
 if (existsSync(file)) throw new Error(`${file} exists; stop the server and trash it first`);
 
 const backup = (await Bun.file(path).json()) as { at: string; tables: Record<string, ({ id: string } & Values)[]> };

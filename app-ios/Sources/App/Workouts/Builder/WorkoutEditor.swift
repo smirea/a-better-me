@@ -160,7 +160,7 @@ private struct BlockView: View {
         let rounds = block.exercises.map(\.sets.count).max() ?? 0
         return HStack {
             VStack(alignment: .leading, spacing: 0) {
-                Text(block.exercises.count > 2 ? "Circuit" : "Superset").font(AppFont.rowTitle)
+                Text(block.groupName).font(AppFont.rowTitle)
                 Text(rounds == 1 ? "1 round" : "\(rounds) rounds")
                     .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
@@ -291,7 +291,6 @@ private struct ExerciseRow: View {
     }
 }
 
-/// "② 8-12 reps" with the RIR badge at the trailing edge.
 struct TargetLine: View {
     let set: WorkoutSet
     let number: Int

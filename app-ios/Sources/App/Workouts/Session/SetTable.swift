@@ -1,7 +1,6 @@
 import Feedback
 import SwiftUI
 
-/// The set table, its keypad, and the edits they make to `blocks`.
 extension SessionEditor {
     private static let checkboxWidth: CGFloat = 32
 
@@ -77,11 +76,7 @@ extension SessionEditor {
         } else {
             Menu {
                 Picker("Set Type", selection: setTypeBinding(path)) {
-                    Text("Standard Set").tag(SetType.standard)
-                    Text("Warm-Up Set").tag(SetType.warmUp)
-                    Text("Drop Set").tag(SetType.drop)
-                    Text("Myo Set").tag(SetType.myo)
-                    Text("Failure Set").tag(SetType.failure)
+                    ForEach(SetType.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 if set.type.hasSubSets {
                     Button(set.type == .drop ? "Add Drop" : "Add Myo Rep Set", systemImage: "plus") { addSubSet(path) }
@@ -134,7 +129,7 @@ extension SessionEditor {
         return VStack(spacing: 0) {
             if let main = lines.main {
                 Text(main)
-                if let rir = lines.rir { Text("\(rir >= 6 ? "6+" : "\(rir)") RIR").foregroundStyle(Theme.textSecondary) }
+                if let rir = lines.rir { Text("\(RIR.text(rir)) RIR").foregroundStyle(Theme.textSecondary) }
             } else {
                 Text(lines.empty).foregroundStyle(Theme.textTertiary)
             }
@@ -201,9 +196,6 @@ extension SessionEditor {
         blocks.rows(block: block, exercise: index).count(where: isHidden)
     }
 
-    // MARK: Values
-
-    /// What a row shows and logs: its log once checked, else what was typed, else the prefill.
     func entry(_ path: RowPath, previous: [WorkoutSet]) -> SetEntry {
         SessionFlow.entry(
             for: path, in: blocks, drafts: drafts, previous: previous,
@@ -226,8 +218,6 @@ extension SessionEditor {
             drafts[blocks.rowID(at: path)] = value
         }
     }
-
-    // MARK: Checking sets
 
     /// `date` is when the set was done: now for a tap, earlier for a set the watch logged while the phone was away.
     private func toggle(_ path: RowPath, previous: [WorkoutSet], at date: Date = .now) {
@@ -261,19 +251,18 @@ extension SessionEditor {
             let previous = previousSets(for: path)
             drafts[id] = SetEntry(values, keeping: entry(path, previous: previous))
             toggle(path, previous: previous, at: date)
-        case .unlog(let id):
-            guard let path = blocks.path(of: id) else { return }
-            guard blocks.log(at: path) != nil else { return blocks.setSkipped(false, at: path) }
-            toggle(path, previous: previousSets(for: path))
-        case .skip(let id):
-            guard let path = blocks.path(of: id), blocks.log(at: path) == nil, !blocks.isSkipped(at: path) else { return }
-            blocks.setSkipped(true, at: path)
-            guard mode == .live, let next = SessionFlow.afterSkipping(path, in: blocks, settings: defaults.workout.flow), next != current else { return }
-            withAnimation { current = next }
+        case .unlog, .skip, .addSet:
+            switch blocks.apply(command, at: date) {
+            case .unlogged(let path, let log):
+                drafts[blocks.rowID(at: path)] = SetEntry(log)
+            case .skipped(let path):
+                guard mode == .live, let next = SessionFlow.afterSkipping(path, in: blocks, settings: defaults.workout.flow), next != current else { return }
+                withAnimation { current = next }
+            case .logged, .added, .none:
+                break
+            }
         case .select(let exerciseID):
             if blocks.locate(exerciseID) != nil { withAnimation { current = exerciseID } }
-        case .addSet(let exerciseID, let setID):
-            blocks.addSet(to: exerciseID, id: setID)
         case .adjustRest, .skipRest, .pause, .resume, .finish:
             return
         }
@@ -314,8 +303,6 @@ extension SessionEditor {
         if let next { withAnimation { current = next } }
     }
 
-    // MARK: Structure
-
     private func setTypeBinding(_ path: RowPath) -> Binding<SetType> {
         Binding {
             blocks[path.block].exercises[path.exercise].sets[path.set].type
@@ -347,7 +334,7 @@ extension SessionEditor {
     /// Warm-ups go after any existing ones, before the first working set.
     func addWarmUps(_ warmUps: [(weightKg: Double?, reps: Int?)], block: Int, exercise index: Int) {
         var sets = blocks[block].exercises[index].sets
-        let insertAt = sets.firstIndex { $0.type != .warmUp } ?? sets.count
+        let insertAt = sets.firstIndex { $0.type.isWorking } ?? sets.count
         let new = warmUps.map { WorkoutSet(type: .warmUp, target: SetTarget(repsMin: $0.reps, repsMax: $0.reps, weightKg: $0.weightKg)) }
         sets.insert(contentsOf: new, at: insertAt)
         blocks[block].exercises[index].sets = sets
@@ -361,11 +348,11 @@ extension SessionEditor {
         let settings = defaults.workout.warmUp
         var context = WarmUpContext(
             loadable: loadable(for: item),
-            scheme: overrides?.warmUpScheme ?? settings.schemes[exercise?.restCategory ?? .upperIsolation] ?? WarmUpStep.standard,
+            scheme: overrides?.warmUpScheme ?? settings.scheme(for: Exercise.restCategory(of: exercise)),
             automation: overrides?.warmUpAutomation ?? settings.automation,
             simplifyPlates: settings.simplifyPlates
         )
-        if let set = item.sets.firstIndex(where: { $0.type != .warmUp }) {
+        if let set = item.sets.firstIndex(where: { $0.type.isWorking }) {
             let value = entry(RowPath(block: block, exercise: index, set: set), previous: previousSets[item.exerciseID] ?? [])
             context.workingWeightKg = value.weightKg
             context.reps = value.reps ?? item.sets[set].target?.repsMax
@@ -374,7 +361,7 @@ extension SessionEditor {
         let muscles = Set(exercise?.primaryMuscles ?? [])
         let earlier = blocks.flatMap(\.exercises).prefix { $0.id != item.id }
         context.isFresh = !earlier.contains { other in
-            other.sets.contains { $0.type != .warmUp && $0.isCompleted }
+            other.sets.contains { $0.type.isWorking && $0.isCompleted }
                 && !muscles.isDisjoint(with: catalog.exercise(other.exerciseID)?.primaryMuscles ?? [])
         }
         return context
@@ -417,8 +404,6 @@ extension SessionEditor {
         current = blocks.flatMap(\.exercises).first { !existing.contains($0.id) }?.id ?? current
     }
 
-    // MARK: Keypad
-
     func keypad(for focus: KeypadFocus) -> some View {
         let rir = blocks.contains(focus.row) ? entry(focus.row, previous: previousSets(for: focus.row)).rir : nil
         let hasPlates = focus.field.isWeight && blocks.contains(focus.row) && loading(at: focus.row)?.plates != nil
@@ -440,7 +425,7 @@ extension SessionEditor {
                 guard let next = loading.step(from: Double(state.text) ?? 0, up: key.isIncrement) else { return }
                 state.set(next)
             } else {
-                let increment = WarmUpScheme.increment(for: unit)
+                let increment = unit.plateIncrement
                 state.set((Double(state.text) ?? 0) + (key.isIncrement ? increment : -increment))
             }
         case .plates:

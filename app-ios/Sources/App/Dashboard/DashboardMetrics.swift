@@ -2,15 +2,7 @@ import Foundation
 
 enum DashboardMetrics {
     static func workingSets(_ items: [BlockExercise]) -> [WorkoutSet] {
-        items.flatMap(\.sets).filter { $0.isCompleted && $0.type != .warmUp }
-    }
-
-    /// Includes warm-ups, unlike working sets, to match the Workout Complete summary.
-    static func volumeKg(_ items: [BlockExercise], catalog: (ExerciseID) -> Exercise?) -> Double {
-        items.reduce(0) { total, item in
-            guard let exercise = catalog(item.exerciseID) else { return total }
-            return total + item.sets.filter(\.isCompleted).reduce(0) { $0 + WorkoutMetrics.volumeKg(of: $1, exercise: exercise) }
-        }
+        items.flatMap(\.sets).filter { $0.isCompleted && $0.type.isWorking }
     }
 
 
@@ -23,7 +15,7 @@ enum DashboardMetrics {
             let items = session.blocks.flatMap(\.exercises)
             let value = switch metric {
             case .sets: Double(workingSets(items).count)
-            case .volume: volumeKg(items, catalog: catalog)
+            case .volume: WorkoutMetrics.volumeKg(of: items, catalog: catalog)
             }
             return DatedValue(date: session.startedAt, value: value)
         }
@@ -52,8 +44,7 @@ enum DashboardMetrics {
             case .sets: WorkoutMetrics.muscleSets(in: session.blocks, catalog: catalog, loggedOnly: true)[muscle] ?? 0
             case .volume: session.blocks.flatMap(\.exercises).reduce(0) { total, item in
                 guard let exercise = catalog(item.exerciseID) else { return total }
-                let share = exercise.primaryMuscles.contains(muscle) ? 1 : exercise.secondaryMuscles.contains(muscle) ? 0.5 : 0
-                return total + share * volumeKg([item], catalog: catalog)
+                return total + WorkoutMetrics.share(of: muscle, in: exercise) * WorkoutMetrics.volumeKg(of: [item], catalog: catalog)
             }
             }
             return value > 0 ? DatedValue(date: session.startedAt, value: value) : nil
@@ -83,8 +74,8 @@ enum DashboardMetrics {
         let logs = working.flatMap { [$0.log] + $0.subSets.map(\.log) }.compactMap { $0 }
         let values: [ExerciseChartMetric: Double?] = [
             .oneRM: stats.bestOneRepMaxKg,
-            .threeRM: stats.bestOneRepMaxKg.map { repMaxKg(oneRepMaxKg: $0, reps: 3) },
-            .tenRM: stats.bestOneRepMaxKg.map { repMaxKg(oneRepMaxKg: $0, reps: 10) },
+            .threeRM: stats.bestOneRepMaxKg.map { WorkoutMetrics.estimatedRepMaxKg(oneRepMaxKg: $0, reps: 3) },
+            .tenRM: stats.bestOneRepMaxKg.map { WorkoutMetrics.estimatedRepMaxKg(oneRepMaxKg: $0, reps: 10) },
             .heaviestWeight: logs.compactMap(\.weightKg).max(),
             .totalVolume: stats.volumeKg > 0 ? stats.volumeKg : nil,
             .bestSetVolume: working.map { WorkoutMetrics.volumeKg(of: $0, exercise: exercise) }.max().flatMap { $0 > 0 ? $0 : nil },
@@ -93,10 +84,6 @@ enum DashboardMetrics {
             .totalSets: Double(working.count),
         ]
         return values.compactMapValues { $0 }
-    }
-
-    static func repMaxKg(oneRepMaxKg: Double, reps: Int) -> Double {
-        oneRepMaxKg / (WorkoutMetrics.estimatedOneRepMaxKg(weightKg: 1, reps: reps, rir: nil))
     }
 
 
@@ -141,12 +128,13 @@ enum DashboardMetrics {
     }
 
     static func plan(_ program: Program, templates: [WorkoutTemplate], catalog: (ExerciseID) -> Exercise?) -> Counts {
-        let blocks = program.days.compactMap { day in templates.first { $0.id == day.templateID } }
-            .flatMap { $0.blocks.targets(forCycle: program.currentCycle) }
+        let byID = Dictionary(templates.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let blocks = program.days.compactMap { $0.templateID.flatMap { byID[$0] } }
+            .flatMap { program.blocks(of: $0, cycle: program.currentCycle) }
         let items = blocks.flatMap(\.exercises)
         return Counts(
             muscles: WorkoutMetrics.muscleSets(in: blocks, catalog: catalog, loggedOnly: false).count,
-            sets: items.flatMap(\.sets).count { $0.type != .warmUp },
+            sets: items.flatMap(\.sets).count { $0.type.isWorking },
             exercises: items.count
         )
     }

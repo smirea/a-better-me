@@ -84,10 +84,7 @@ private struct OverviewList: View {
     var body: some View {
         let days = (0..<period.rawValue).map { day.adding(days: -$0) }
         let amounts = period == .today ? (rows.first { $0.id == day } ?? NutritionDay(id: day)).totals(entries) : FoodLog.dailyAverage(entries, rows: rows, days: days)
-        let targets = NutrientTargets(
-            target: NutritionPlan.effective(on: day, in: plans)?.target(on: day), goals: goals, day: day,
-            sex: settings.profile.sex, weightKg: weight?.weightKg ?? settings.profile.bodyWeightKg
-        )
+        let targets = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: weight?.weightKg)
         List {
             ForEach(settings.nutrition.hideAdditionalNutrients ? [.macros] : NutrientSection.allCases) { section in
                 ThemedSection(section.rawValue) {

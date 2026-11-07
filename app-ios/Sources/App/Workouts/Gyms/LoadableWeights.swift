@@ -16,7 +16,7 @@ struct LoadableWeights: Equatable {
         self.loading = loading?.step(from: 0, up: true) == nil ? nil : loading
     }
 
-    var increment: Double { WarmUpScheme.increment(for: unit) }
+    var increment: Double { unit.plateIncrement }
 
     var lightest: Double { loading?.step(from: 0, up: true) ?? increment }
 
