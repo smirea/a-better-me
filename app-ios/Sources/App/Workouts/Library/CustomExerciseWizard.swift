@@ -363,7 +363,7 @@ private struct EquipmentStep: View {
         .sheet(item: $picking) { role in
             EquipmentPickerSheet(
                 title: role.title,
-                equipmentIDs: Set(catalog.bundled.flatMap { (role == .resistance ? $0.resistanceEquipmentIDs : $0.supportEquipmentIDs).joined() }),
+                equipmentIDs: Set(catalog.bundled.flatMap { $0[keyPath: role.optionsKey].joined() }),
                 selection: Binding {
                     let options = role == .resistance ? draft.resistance : draft.support
                     guard options.count == 1, let id = options[0].ids.first, options[0].ids.count == 1 else { return nil }
@@ -398,19 +398,6 @@ private struct EquipmentStep: View {
                     .accessibilityLabel(options.isEmpty ? "Add \(role.title)" : "Change \(role.title)")
             }
             EquipmentOptions(title: "", names: options.map(\.name), ids: options.map(\.ids))
-        }
-    }
-
-    enum EquipmentRole: Identifiable {
-        case resistance, support
-
-        var id: Self { self }
-        var title: String { self == .resistance ? "Resistance" : "Support" }
-        var summary: String {
-            switch self {
-            case .resistance: "Equipment that adds load to the exercise"
-            case .support: "Equipment that assists, stabilizes, or makes the movement possible, without adding resistance"
-            }
         }
     }
 }

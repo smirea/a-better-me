@@ -72,15 +72,9 @@ struct Exercise: Codable, Hashable, Identifiable {
 struct ExerciseSelection: Codable, Hashable {
     var hypertrophy: RecommendationLevels
     var strength: RecommendationLevels
-    var hypertrophyClassification: [ExerciseClassification]
-    var strengthClassification: [ExerciseClassification]
-    var exerciseGroups: [String]
     var exclusionGroupings: [String]
     var preconditions: [String]
-    /// Anatomical names, the same vocabulary as `Exercise.primaryMuscleDetails`.
-    var stretchedMuscles: [String]
     var emphasizedAgonists: [Muscle]
-    var deemphasizedAgonists: [Muscle]
 }
 
 struct RecommendationLevels: Codable, Hashable {
@@ -89,9 +83,6 @@ struct RecommendationLevels: Codable, Hashable {
     var accessory: Double?
 }
 
-enum ExerciseClassification: String, Codable {
-    case primaryCompound, secondaryCompound, accessory, core
-}
 
 enum ExerciseType: String, Codable, CaseIterable {
     case compound, isolation, core, other

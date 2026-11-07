@@ -31,7 +31,7 @@ struct NutritionMigrationTests {
         #expect(settings.nutrition == NutritionSettings())
         #expect(try store.read { try WorkoutTemplate.fetchAll($0) }.map(\.name) == ["Upper"])
 
-        store.quickAdd([.energy: 300], on: calendarDay("2026-10-26"), minute: 9 * 60)
+        store.log([FoodPortion(.quickAdd([.energy: 300]))], on: calendarDay("2026-10-26"), minute: 9 * 60)
         try await store.write { _ in }.value
         #expect(try store.read(FoodEntry.on(calendarDay("2026-10-26")).fetch).count == 1)
     }

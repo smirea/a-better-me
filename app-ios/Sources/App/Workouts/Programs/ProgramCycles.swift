@@ -96,11 +96,7 @@ extension Program {
     }
 
     /// A workout day is done once a session of it in the current cycle has finished; a rest day once it was ticked
-    /// this cycle. `finished` is the finished-session history.
-    func isDone(_ day: ProgramDay, finished: [WorkoutSession]) -> Bool {
-        isDone(day, finishedDays: finishedDayIDs(finished))
-    }
-
+    /// this cycle.
     func isDone(_ day: ProgramDay, finishedDays: Set<ProgramDay.ID>) -> Bool {
         guard day.templateID != nil else { return day.restDoneInCycle == currentCycle }
         return finishedDays.contains(day.id)
@@ -211,11 +207,6 @@ enum ProgramAdvance {
 /// session dropped is skipped that week, and an exercise it added joins the template for every week. Other weeks
 /// stay as they were. A deload session changes nothing, because the deload derives from its neighbor week.
 enum ProgramPlanUpdate {
-    static func blocks(of template: WorkoutTemplate, updatedBy session: WorkoutSession, program: Program) -> [WorkoutBlock] {
-        guard let position = session.program else { return template.blocks }
-        return blocks(of: template, plan: SessionFlow.plan(from: session.blocks), position: position, program: program)
-    }
-
     /// `plan` is the session's blocks already reduced to a plan (logs stripped, undone changes reverted).
     static func blocks(of template: WorkoutTemplate, plan: [WorkoutBlock], position: ProgramPosition, program: Program) -> [WorkoutBlock] {
         guard let week = program.week(ofCycle: position.cycle) else { return template.blocks }

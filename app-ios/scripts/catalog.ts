@@ -78,18 +78,6 @@ const region = (id: unknown) => {
 };
 const level = (id: unknown, type: string) => (id ? Number(ref(id as string, type).name) : null);
 
-const classifications: Record<string, string> = {
-	'Primary Compound': 'primaryCompound',
-	'Secondary Compound': 'secondaryCompound',
-	'Isolation/Accessory': 'accessory',
-	Core: 'core',
-};
-const classification = (ids: unknown) =>
-	names(ids, 'exerciseDescriptor').map(name => {
-		const value = classifications[name];
-		if (!value) throw new Error(`Unknown exercise classification ${name}`);
-		return value;
-	});
 const recommendation = (value: unknown) => {
 	if (value !== null && typeof value !== 'number') throw new Error(`Recommendation level ${value} is not a number`);
 	return value;
@@ -102,14 +90,9 @@ const recommendationLevels = (e: Record<string, unknown>, goal: 'strength' | 'hy
 const selection = (e: Record<string, unknown>) => ({
 	hypertrophy: recommendationLevels(e, 'hypertrophy'),
 	strength: recommendationLevels(e, 'strength'),
-	hypertrophyClassification: classification(e.exerciseClassificationHypertrophy),
-	strengthClassification: classification(e.exerciseClassificationStrength),
-	exerciseGroups: names(e.exerciseGroup, 'exerciseGroup'),
 	exclusionGroupings: names(e.exclusionGroupings, 'exclusionGroupings'),
 	preconditions: names(e.preconditions, 'preconditions'),
-	stretchedMuscles: names(e.stretchedMuscle, 'muscle'),
 	emphasizedAgonists: names(e.emphasizedAgonist, 'featureMuscleGroup').map(snake),
-	deemphasizedAgonists: names(e.deemphasizedAgonist, 'featureMuscleGroup').map(snake),
 });
 
 const plateLaterality: Record<string, string> = { 'Per side': 'perSide', 'Single side': 'singleSide' };

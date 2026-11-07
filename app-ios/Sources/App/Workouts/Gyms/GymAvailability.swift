@@ -26,10 +26,6 @@ struct GymAvailability {
         }
         return satisfied(exercise.resistanceEquipmentIDs) && satisfied(exercise.supportEquipmentIDs)
     }
-
-    static func isAvailable(_ exercise: Exercise, in gym: GymProfile, equipment: [EquipmentID: Equipment]) -> Bool {
-        GymAvailability(gym: gym, equipment: equipment).isAvailable(exercise)
-    }
 }
 
 /// The items a gym profile lists: every catalog item except the singulars that have a plural and the always-available

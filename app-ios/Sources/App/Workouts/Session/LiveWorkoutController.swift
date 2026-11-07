@@ -27,7 +27,6 @@ final class LiveWorkoutController {
     /// Applied events waiting for `watchWorkout` to show them. Acknowledging one before its write lands would let the
     /// watch drop it while the copy it receives still predates it.
     @ObservationIgnored private var unreflectedWatchEvents: [(event: WatchEvent, appliedAt: Date)] = []
-    var metrics: LiveHealthMetrics?
     @ObservationIgnored var editor: ((LiveWorkoutCommand, Date) -> Void)?
 
     private var inputs = Inputs()
@@ -309,8 +308,7 @@ final class LiveWorkoutController {
             upNext: current.flatMap { SessionFlow.upNext(after: $0, in: blocks, rules: inputs.settings.workout.flow) }.map { liveSet($0, in: blocks, catalog: catalog, unit: unit) },
             completedSets: rows.count { blocks.log(at: $0) != nil },
             totalSets: rows.count,
-            unit: unit,
-            metrics: metrics
+            unit: unit
         )
         return status
     }
@@ -339,7 +337,6 @@ final class LiveWorkoutController {
         let previous = previousSets[item.exerciseID] ?? []
         return LiveSet(
             id: blocks.rowID(at: path),
-            blockExerciseID: item.id,
             catalogID: item.exerciseID,
             exerciseName: exercise?.name ?? "Exercise",
             position: SessionFlow.subtitle(for: (path.block, path.exercise), set: path.set, in: blocks),

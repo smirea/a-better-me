@@ -94,7 +94,7 @@ enum PasteTarget: Hashable {
     case hour(CalendarDay, hour: Int)
 }
 
-/// One `LocalStore.copyEntries` or `moveEntries` call: entries that land at the same day and minute.
+/// Entries a copy or move lands at the same day and minute.
 struct Relocation: Hashable {
     let ids: [UUID]
     let day: CalendarDay

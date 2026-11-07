@@ -176,8 +176,8 @@ struct ProgramAdvanceTests {
         old.startedAt = Date(timeIntervalSince1970: 500)
         var fresh = finished(program, day: 2, cycle: 1)
         fresh.startedAt = Date(timeIntervalSince1970: 2_000)
-        #expect(!program.isDone(program.days[0], finished: [old]))
-        #expect(program.isDone(program.days[2], finished: [fresh]))
+        #expect(!program.isDone(program.days[0], finishedDays: program.finishedDayIDs([old])))
+        #expect(program.isDone(program.days[2], finishedDays: program.finishedDayIDs([fresh])))
         #expect(ProgramAdvance.cycle(after: fresh, program: program, finished: [old]) == nil)
         var redone = old
         redone.startedAt = Date(timeIntervalSince1970: 1_500)
@@ -196,9 +196,7 @@ struct ExerciseAssessmentTests {
     private func exercise(_ precondition: String?) -> Exercise {
         var exercise = Exercise(id: "e", name: "E", type: .compound, primaryMuscles: [.chest], metrics: [.weight, .reps])
         exercise.selection = ExerciseSelection(
-            hypertrophy: RecommendationLevels(), strength: RecommendationLevels(), hypertrophyClassification: [], strengthClassification: [],
-            exerciseGroups: [], exclusionGroupings: [], preconditions: precondition.map { [$0] } ?? [], stretchedMuscles: [],
-            emphasizedAgonists: [], deemphasizedAgonists: []
+            hypertrophy: RecommendationLevels(), strength: RecommendationLevels(), exclusionGroupings: [], preconditions: precondition.map { [$0] } ?? [], emphasizedAgonists: []
         )
         return exercise
     }
@@ -291,7 +289,7 @@ struct ProgramPlanUpdateTests {
         session.blocks[0].exercises[0].sets = [set(8), set(8)]
         session.blocks.remove(at: 1)
         session.blocks.append(WorkoutBlock(exercises: [BlockExercise(exerciseID: "curl", sets: [set(15)])]))
-        let blocks = ProgramPlanUpdate.blocks(of: template, updatedBy: session, program: program)
+        let blocks = ProgramPlanUpdate.blocks(of: template, plan: SessionFlow.plan(from: session.blocks), position: session.program!, program: program)
         let bench = blocks[0].exercises[0]
         #expect(bench.cycleTargets?.map { $0.sets.map { $0.target?.repsMin } } == [[11], [8, 8], [7]])
         #expect(bench.sets.map { $0.target?.repsMin } == [11])
@@ -307,14 +305,14 @@ struct ProgramPlanUpdateTests {
         program.currentCycle = 4
         var session = program.session(startingFrom: template, dayID: program.days[0].id, gymID: nil)
         session.blocks[0].exercises[0].sets = [set(3)]
-        #expect(ProgramPlanUpdate.blocks(of: template, updatedBy: session, program: program) == template.blocks)
+        #expect(ProgramPlanUpdate.blocks(of: template, plan: SessionFlow.plan(from: session.blocks), position: session.program!, program: program) == template.blocks)
 
         program.config.periodization = false
         program.currentCycle = 1
         template.blocks[0].exercises[0].cycleTargets = nil
         var plain = program.session(startingFrom: template, dayID: program.days[0].id, gymID: nil)
         plain.blocks[0].exercises[0].sets = [set(6), set(6)]
-        let blocks = ProgramPlanUpdate.blocks(of: template, updatedBy: plain, program: program)
+        let blocks = ProgramPlanUpdate.blocks(of: template, plan: SessionFlow.plan(from: plain.blocks), position: plain.program!, program: program)
         #expect(blocks[0].exercises[0].sets.map { $0.target?.repsMin } == [6, 6])
         #expect(blocks[0].exercises[0].cycleTargets == nil)
     }

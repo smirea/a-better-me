@@ -134,7 +134,7 @@ struct DietaryHealthTests {
         let sync = NutritionHealth(target: health, defaults: defaults, calendar: utc)
         sync.start(store: store)
 
-        store.quickAdd([.energy: 500, .protein: 40], on: today, minute: 9 * 60)
+        store.log([FoodPortion(.quickAdd([.energy: 500, .protein: 40]))], on: today, minute: 9 * 60)
         try await store.write { _ in }.value
         await sync.idle()
         #expect(health.summary == [])
@@ -154,8 +154,8 @@ struct DietaryHealthTests {
 
     @Test func anEditSyncedInWithAnOlderTimestampStillChangesTheDaysDigest() async throws {
         let store = try LocalStore(unsyncedAt: FileManager.default.temporaryDirectory.appending(path: "digest-\(UUID().uuidString)/a.sqlite"))
-        store.quickAdd([.energy: 300], on: monday, minute: 8 * 60)
-        store.quickAdd([.energy: 500], on: monday, minute: 12 * 60)
+        store.log([FoodPortion(.quickAdd([.energy: 300]))], on: monday, minute: 8 * 60)
+        store.log([FoodPortion(.quickAdd([.energy: 500]))], on: monday, minute: 12 * 60)
         try await store.write { _ in }.value
         let before = try store.read(NutritionHealth.dayDigests)
 

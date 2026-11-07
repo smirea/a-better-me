@@ -37,7 +37,7 @@ struct RambleResolverTests {
 
     func resolver(context: RambleContext = RambleContext()) async throws -> RambleResolver {
         try await store.write { _ in }.value
-        let search = try FoodSearch(store: store, catalog: try fixtureCatalog(rambleCatalog), branded: StubBranded())
+        let search = try await FoodSearch.load(store: store, catalog: try fixtureCatalog(rambleCatalog), branded: StubBranded())
         return RambleResolver(index: search.index, context: context, today: today, fallback: (today, 14 * 60))
     }
 
@@ -198,7 +198,7 @@ struct RambleResolverTests {
 
         let other = Food(.openFoodFacts(barcode: "0041383090738"), name: "Nonfat Milk", brand: "Glenview Farms", nutrition: grams)
         let fairlife = Food(.openFoodFacts(barcode: "0811620021234"), name: "Ultra-Filtered Nonfat Milk", brand: "Fairlife", nutrition: grams)
-        let search = try FoodSearch(store: store, catalog: try fixtureCatalog(rambleCatalog), branded: StubBranded(hits: [other, fairlife]))
+        let search = try await FoodSearch.load(store: store, catalog: try fixtureCatalog(rambleCatalog), branded: StubBranded(hits: [other, fairlife]))
         var online = resolver
         online.online = ["fairlife nonfat milk": try await search.search("Fairlife nonfat milk")]
         let found = try online.rows([RambleItem(name: "Fairlife nonfat milk", amount: 200, unit: "g")], previous: [], choices: [:])

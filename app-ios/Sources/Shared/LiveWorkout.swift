@@ -17,7 +17,6 @@ struct LiveWorkoutStatus: Codable, Hashable, Sendable {
     var completedSets: Int
     var totalSets: Int
     var unit: WeightUnit
-    var metrics: LiveHealthMetrics?
     /// Set only on the Live Activity's final content, after the session was finished.
     var endedAt: Date?
 }
@@ -61,7 +60,6 @@ struct LiveRest: Codable, Hashable, Sendable {
 /// One row of the set table: a set's main row or a drop or myo sub-row.
 struct LiveSet: Codable, Hashable, Sendable, Identifiable {
     var id: UUID
-    var blockExerciseID: UUID
     /// The catalog or custom exercise ID.
     var catalogID: String
     var exerciseName: String
@@ -90,11 +88,6 @@ enum LiveField: String, Codable, Hashable, Sendable {
     case weight, reps, rir, duration, distance
 }
 
-/// Heart rate and energy from the workout's HealthKit session, on the watch or the phone.
-struct LiveHealthMetrics: Codable, Hashable, Sendable {
-    var heartRate: Double?
-    var activeEnergyKcal: Double?
-}
 
 /// What the Live Activity's buttons, and the watch's events, ask the phone to do. Each names the row it was shown, so a command
 /// that crosses a change on the phone acts on the row the owner saw, or does nothing once that row is gone.

@@ -26,38 +26,10 @@ extension LocalStore {
         }
     }
 
-    func quickAdd(_ amounts: NutrientAmounts, name: String? = nil, on day: CalendarDay, minute: Int) {
-        log([FoodPortion(.quickAdd(amounts, name: name))], on: day, minute: minute)
-    }
-
     func editEntry(_ id: UUID, _ change: @escaping @Sendable (inout FoodEntry) -> Void) {
         modify(FoodEntry.self, id: id) {
             change(&$0)
             $0.updatedAt = .now
-        }
-    }
-
-    /// Patches only `day` and `minute`, so a move on one device and a serving edit on another both land.
-    func moveEntries(_ ids: [UUID], to day: CalendarDay, minute: Int) {
-        write { db in
-            for id in ids {
-                guard let entry = try FoodEntry.fetchOne(db, key: FoodEntry.key(id)) else { continue }
-                var moved = entry
-                moved.day = day
-                moved.minute = minute
-                moved.updatedAt = .now
-                try moved.updateChanges(db, from: entry)
-            }
-        }
-    }
-
-    /// Copies keep the snapshot and serving under new ids, so pasting twice logs twice.
-    func copyEntries(_ ids: [UUID], to day: CalendarDay, minute: Int) {
-        write { db in
-            for id in ids {
-                guard let entry = try FoodEntry.fetchOne(db, key: FoodEntry.key(id)) else { continue }
-                try FoodEntry(entry.portion, day: day, minute: minute).insert(db)
-            }
         }
     }
 
@@ -166,10 +138,6 @@ extension LocalStore {
             }
             try Self.put(plan, in: db)
         }
-    }
-
-    func deletePlan(startingOn day: CalendarDay) {
-        delete(NutritionPlan.self, id: day)
     }
 
     /// Sets a nutrient's goal from `day` on, replacing one set the same day.

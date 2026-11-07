@@ -47,8 +47,6 @@ struct BetterMeApp: App {
         Feedback.context("Assets") { AssetStore.shared.statusLine }
         #if DEBUG
         DevSeed.run(store)
-        SampleData.seedIfRequested(store)
-        SampleWorkout.startIfRequested(store)
         #endif
     }
 

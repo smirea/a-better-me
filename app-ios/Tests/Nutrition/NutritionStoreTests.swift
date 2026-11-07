@@ -33,7 +33,7 @@ struct NutritionStoreTests {
 
     @Test func logsQuickAddsMovesCopiesAndDeletesEntries() async throws {
         store.log([FoodPortion(yogurt), FoodPortion(yogurt, serving: Serving(measure: yogurt.nutrition.measures[0], quantity: 2))], on: monday, minute: 8 * 60 + 15)
-        store.quickAdd([.energy: 420, .protein: 30], name: "Lunch out", on: monday, minute: 13 * 60)
+        store.log([FoodPortion(.quickAdd([.energy: 420, .protein: 30], name: "Lunch out"))], on: monday, minute: 13 * 60)
         try await settled()
 
         let logged = try read(FoodEntry.on(monday))
@@ -43,8 +43,8 @@ struct NutritionStoreTests {
         #expect(logged[2].food.source == .quickAdd)
 
         store.editEntry(logged[1].id) { $0.serving.quantity = 0.5 }
-        store.moveEntries([logged[0].id], to: tuesday, minute: 7 * 60)
-        store.copyEntries([logged[2].id], to: tuesday, minute: 12 * 60 + 30)
+        _ = store.relocate([logged[0]], .move, to: .dateTime(tuesday, minute: 7 * 60))
+        _ = store.relocate([logged[2]], .copy, to: .dateTime(tuesday, minute: 12 * 60 + 30))
         try await settled()
 
         #expect(try read(FoodEntry.on(monday)).map { $0.amounts[.energy] } == [90, 420])
@@ -213,7 +213,7 @@ struct NutritionStoreTests {
         #expect(plans[1].kind == .checkIn)
         #expect(plans[0].kind == .setup)
 
-        store.deletePlan(startingOn: monday)
+        store.delete(NutritionPlan.self, id: monday)
         try await settled()
         #expect(try read(NutritionPlan.all).map(\.kind) == [.checkIn])
 

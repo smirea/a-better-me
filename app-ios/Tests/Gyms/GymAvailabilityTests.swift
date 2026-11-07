@@ -48,20 +48,20 @@ struct GymAvailabilityTests {
 
     @Test func missingBarbellMakesABarbellExerciseUnavailable() {
         let benchPress = exercise(resistance: [["barbell", "plate"]], support: [["flat-bench", "power-rack"]])
-        #expect(GymAvailability.isAvailable(benchPress, in: gym("barbell", "plates", "flat-bench", "power-rack"), equipment: catalog))
-        #expect(!GymAvailability.isAvailable(benchPress, in: gym("plates", "flat-bench", "power-rack"), equipment: catalog))
-        #expect(!GymAvailability.isAvailable(benchPress, in: gym("barbell", "flat-bench", "power-rack"), equipment: catalog))
+        #expect(GymAvailability(gym: gym("barbell", "plates", "flat-bench", "power-rack"), equipment: catalog).isAvailable(benchPress))
+        #expect(!GymAvailability(gym: gym("plates", "flat-bench", "power-rack"), equipment: catalog).isAvailable(benchPress))
+        #expect(!GymAvailability(gym: gym("barbell", "flat-bench", "power-rack"), equipment: catalog).isAvailable(benchPress))
     }
 
     @Test func anyFullyProvidedOptionSatisfiesItsKind() {
         let press = exercise(resistance: [["barbell", "plate"], ["dumbbell"]], support: [["flat-bench", "power-rack"], ["flat-bench"]])
-        #expect(GymAvailability.isAvailable(press, in: gym("dumbbells", "flat-bench"), equipment: catalog))
-        #expect(!GymAvailability.isAvailable(press, in: gym("dumbbells", "power-rack"), equipment: catalog))
+        #expect(GymAvailability(gym: gym("dumbbells", "flat-bench"), equipment: catalog).isAvailable(press))
+        #expect(!GymAvailability(gym: gym("dumbbells", "power-rack"), equipment: catalog).isAvailable(press))
     }
 
     @Test func emptySupportOptionsNeedNothing() {
         let curl = exercise(resistance: [["dumbbell"]], support: [])
-        #expect(GymAvailability.isAvailable(curl, in: gym("dumbbells"), equipment: catalog))
+        #expect(GymAvailability(gym: gym("dumbbells"), equipment: catalog).isAvailable(curl))
     }
 
     @Test func templatesSelectTheListedPluralOfAFlaggedSingular() {

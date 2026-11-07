@@ -78,7 +78,6 @@ extension WatchWorkout {
 
     var currentRow: RowPath? { SessionFlow.currentRow(in: blocks, current: current) }
 
-    var upNextRow: RowPath? { currentRow.flatMap { SessionFlow.upNext(after: $0, in: blocks, rules: rules) } }
 
     var completedSets: Int { blocks.allRows.count { blocks.log(at: $0) != nil } }
 
@@ -100,7 +99,7 @@ extension WatchWorkout {
         let info = exercise(item.exerciseID)
         let values = blocks.log(at: path).map(LiveValues.init) ?? prefill[rowID] ?? LiveValues()
         return LiveSet(
-            id: rowID, blockExerciseID: item.id, catalogID: item.exerciseID, exerciseName: info.name,
+            id: rowID, catalogID: item.exerciseID, exerciseName: info.name,
             position: SessionFlow.subtitle(for: (path.block, path.exercise), set: path.set, in: blocks),
             setType: set.type, isSubRow: path.sub != nil, fields: info.fields, values: values,
             target: blocks.target(at: path).flatMap { $0.summary(unit: unit) }, previous: previous[rowID].map { $0.summary(unit: unit) }

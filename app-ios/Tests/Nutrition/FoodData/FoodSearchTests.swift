@@ -71,7 +71,7 @@ struct FoodSearchTests {
 
     func search(_ branded: StubBranded = StubBranded()) async throws -> FoodSearch {
         try await store.write { _ in }.value
-        return try FoodSearch(store: store, catalog: catalog, branded: branded)
+        return try await FoodSearch.load(store: store, catalog: catalog, branded: branded)
     }
 
     func names(_ results: [FoodSearchResult]) -> [String] {
@@ -107,7 +107,7 @@ struct FoodSearchTests {
         let cup = banana.nutrition.measures[1]
         store.log([FoodPortion(banana.snapshot)], on: calendarDay("2026-10-20"), minute: 480)
         store.log([FoodPortion(banana.snapshot, serving: Serving(measure: cup, quantity: 2))], on: monday, minute: 480)
-        store.quickAdd([.energy: 300], name: "Banana split", on: monday, minute: 900)
+        store.log([FoodPortion(.quickAdd([.energy: 300], name: "Banana split"))], on: monday, minute: 900)
         let bread = Food(name: "Banana bread", nutrition: FoodNutrition(nutrients: [.energy: 300], measures: [Measure(name: "slice", quantity: 1, servings: 1)]))
         store.saveFood(bread)
         store.log([FoodPortion(yogurt)], on: monday, minute: 420)
@@ -234,7 +234,7 @@ struct FoodSearchTests {
         search.cache(banana)
         store.log([banana.portion], on: monday, minute: 600)
         try await store.write { _ in }.value
-        try search.reload()
+        try await search.refresh()
         #expect(try store.read { try Food.fetchOne($0, key: "usda-173944") }?.name == "Bananas, raw")
         #expect(names(try search.local("banana")).first == "history Bananas, raw")
     }

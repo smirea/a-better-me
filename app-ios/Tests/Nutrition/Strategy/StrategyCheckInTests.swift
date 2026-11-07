@@ -122,7 +122,7 @@ struct StrategyCheckInTests {
         for offset in 1...70 {
             let day = today.adding(days: -offset)
             store.insert(BodyWeight(weightKg: 80, measuredAt: day.date(in: utc).addingTimeInterval(12 * 3600)))
-            store.quickAdd([.energy: 2000, .protein: 135, .fat: 60, .carbs: 180], on: day, minute: 720)
+            store.log([FoodPortion(.quickAdd([.energy: 2000, .protein: 135, .fat: 60, .carbs: 180]))], on: day, minute: 720)
         }
         store.savePlan(plan("2026-10-06"))
         try await store.write { _ in }.value

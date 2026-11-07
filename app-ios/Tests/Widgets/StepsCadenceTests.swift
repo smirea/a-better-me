@@ -63,9 +63,4 @@ struct StepsCadenceTests {
         let days = StepsReading.days(previous: previous, health: health, phoneToday: 1500, today: today, calendar: utc)
         #expect(days == [DatedValue(date: day("2026-11-05", 0), value: 9500), DatedValue(date: today, value: 2000)])
     }
-
-    @Test func theCacheFromBeforeThisBuildStillLoads() throws {
-        let legacy = try JSONEncoder().encode([DatedValue(date: day("2026-11-05", 0), value: 8000)])
-        #expect(StepsReading.decode(legacy) == StepsReading(date: .distantPast, days: [DatedValue(date: day("2026-11-05", 0), value: 8000)], today: 0))
-    }
 }

@@ -61,8 +61,6 @@ final class RambleCapture {
     private(set) var notice: String?
     let meter = LevelMeter()
 
-    var transcript: String { heard.text }
-
     @ObservationIgnored private let store: LocalStore
     @ObservationIgnored private let index: @MainActor () -> FoodIndex
     /// The server transcribes the audio and keeps the outline current.

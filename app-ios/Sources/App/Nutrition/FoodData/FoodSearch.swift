@@ -109,11 +109,6 @@ final class FoodSearch {
     private let branded: any BrandedFoodSource
     private(set) var library: FoodLibrary
 
-    convenience init(store: LocalStore, catalog: USDACatalog = .bundled, branded: any BrandedFoodSource = FoodDatabaseClient.live) throws {
-        let today = CalendarDay.today
-        self.init(store: store, catalog: catalog, branded: branded, library: try store.read { try FoodLibrary.read($0, today: today) })
-    }
-
     private init(store: LocalStore, catalog: USDACatalog, branded: any BrandedFoodSource, library: FoodLibrary) {
         self.store = store
         self.catalog = catalog
@@ -131,12 +126,6 @@ final class FoodSearch {
     }
 
     /// Rereads the owner's side, after logging or editing foods.
-    func reload() throws {
-        let today = CalendarDay.today
-        library = try store.read { try FoodLibrary.read($0, today: today) }
-    }
-
-    /// `reload`, read off the main actor.
     func refresh() async throws {
         let today = CalendarDay.today
         library = try await store.database.pool.read { try FoodLibrary.read($0, today: today) }

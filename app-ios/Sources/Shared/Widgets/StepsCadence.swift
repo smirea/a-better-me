@@ -13,13 +13,7 @@ struct StepsReading: Codable, Equatable, Sendable {
 
     static func load() -> StepsReading? {
         guard let url, let data = try? Data(contentsOf: url) else { return nil }
-        return decode(data)
-    }
-
-    /// Builds before this type kept only Health's last read, as a bare list of days.
-    static func decode(_ data: Data) -> StepsReading? {
-        if let reading = try? JSONDecoder().decode(StepsReading.self, from: data) { return reading }
-        return (try? JSONDecoder().decode([DatedValue].self, from: data)).map { StepsReading(date: .distantPast, days: $0, today: 0) }
+        return try? JSONDecoder().decode(StepsReading.self, from: data)
     }
 
     /// The last refresh's days raised by Health's fresh read and the phone's count for today, so a locked refresh never

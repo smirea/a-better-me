@@ -112,20 +112,18 @@ struct RoundIconButton: View {
     let title: String
     let systemImage: String
     var size = Size.regular
-    var role: ButtonRole?
     let action: () -> Void
 
-    init(_ title: String, systemImage: String, size: Size = .regular, role: ButtonRole? = nil, action: @escaping () -> Void) {
+    init(_ title: String, systemImage: String, size: Size = .regular, action: @escaping () -> Void) {
         self.title = title
         self.systemImage = systemImage
         self.size = size
-        self.role = role
         self.action = action
     }
 
     var body: some View {
         // A fixed glyph frame keeps every circle the same size, whatever the symbol's own width.
-        Button(role: role, action: action) {
+        Button(action: action) {
             Image(systemName: systemImage).frame(width: glyph, height: glyph)
         }
         .accessibilityLabel(title)

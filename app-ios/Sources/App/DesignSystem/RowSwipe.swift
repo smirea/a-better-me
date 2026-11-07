@@ -11,8 +11,8 @@ struct SwipeAction: Identifiable {
 
     var id: String { title }
 
-    static func destructive(_ title: String, systemImage: String = "trash", action: @escaping () -> Void) -> SwipeAction {
-        SwipeAction(title: title, systemImage: systemImage, tint: Theme.destructive, action: action)
+    static func destructive(_ title: String, action: @escaping () -> Void) -> SwipeAction {
+        SwipeAction(title: title, systemImage: "trash", tint: Theme.destructive, action: action)
     }
 }
 

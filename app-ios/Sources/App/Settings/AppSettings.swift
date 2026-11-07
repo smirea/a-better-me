@@ -78,7 +78,6 @@ struct ProfileSettings: Codable, Hashable {
     var liftingExperience = LiftingExperience.intermediate
     /// Exercise Assessment answers by question id. The question and answer ids come from the research thread.
     var assessment: [String: String] = [:]
-    var assessmentCompletedAt: Date?
     /// The manual fallback the live workout's Bodyweight Contribution uses when no `BodyWeight` row and no HealthKit
     /// sample exist. `currentBodyWeightKg` ranks it last.
     var bodyWeightKg: Double?

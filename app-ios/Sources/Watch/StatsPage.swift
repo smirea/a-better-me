@@ -6,7 +6,7 @@ struct StatsPage: View {
     private var model: WatchModel { .shared }
 
     var body: some View {
-        let metrics = model.metrics
+        let metrics = model.stats
         let zone = metrics?.heartRate.map { HeartRateZone(heartRate: $0, max: model.maxHeartRate) }
         NavigationStack {
             VStack(alignment: .leading, spacing: 4) {

@@ -20,7 +20,6 @@ final class WatchModel: NSObject {
     private(set) var stats: WorkoutRecording.Stats?
     /// 220 minus the owner's age from Health, else a 30-year-old's.
     private(set) var maxHeartRate = 190.0
-    private(set) var isPhoneReachable = false
     /// Rows logged or skipped on this watch in the current workout, newest last, so Undo reverses a skip as well.
     private(set) var actedRows: [UUID] = []
 
@@ -38,7 +37,6 @@ final class WatchModel: NSObject {
     /// Sessions the phone told this watch not to record: discarded, or recorded on the phone by an older build.
     @ObservationIgnored private var standDown: Set<UUID> = []
 
-    var metrics: LiveHealthMetrics? { stats?.live }
 
     func activate() {
         restore()
@@ -383,10 +381,8 @@ extension WatchModel: WCSessionDelegate {
     nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: (any Error)?) {
         let context = session.receivedApplicationContext
         let data = context.compactMapValues { $0 as? Data }
-        let reachable = session.isReachable
         Task { @MainActor in
             receive(context: data)
-            isPhoneReachable = reachable
             requestState()
         }
     }
@@ -394,7 +390,6 @@ extension WatchModel: WCSessionDelegate {
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         let reachable = session.isReachable
         Task { @MainActor in
-            isPhoneReachable = reachable
             if reachable { requestState() }
         }
     }

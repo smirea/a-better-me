@@ -178,7 +178,6 @@ final class WorkoutHealth {
 
     private func receive(_ stats: WorkoutRecording.Stats) {
         self.stats = stats
-        LiveWorkoutController.shared.metrics = stats.live
     }
 
     // MARK: Ending
@@ -188,7 +187,6 @@ final class WorkoutHealth {
         let recorder = recorder
         sessionID = nil
         self.recorder = nil
-        LiveWorkoutController.shared.metrics = nil
         guard let recorder, let store, let catalog else { return }
         let session = try? store.read { try WorkoutSession.fetchOne($0, key: WorkoutSession.key(id)) }
         guard let session, let endedAt = session.endedAt else {
