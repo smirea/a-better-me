@@ -277,6 +277,12 @@ describe('agent API', () => {
 		expect((await ok('GET', `/body-weights/${id}`)).weightKg).toBe(80);
 		expect((await ok('PATCH', `/body-weights/${id}`, { weightKg: 81 })).weightKg).toBe(81);
 		expect((await ok('DELETE', `/body-weights/${id}`)).deleted).toBe(id.toLowerCase());
+
+		const foodId = 'B1B2C3D4-0000-4000-8000-00000000000B';
+		const nutrition = { nutrients: { k: 100 }, measures: [{ name: 'serving', quantity: 1, servings: 1 }] };
+		await ok('POST', '/foods', { id: foodId, name: 'Upper', nutrition });
+		await ok('POST', '/food-entries', { foodId, day: '2026-01-02', minute: 480 });
+		expect((await ok('GET', `/food-entries?foodId=${foodId}`)).items).toHaveLength(1);
 	});
 
 	test('settings patch the synced row the app reads', async () => {

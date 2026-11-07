@@ -184,12 +184,23 @@ final class WorkoutHealth {
         sessionID = nil
         self.recorder = nil
         guard let recorder, let store, let catalog else { return }
-        let session = try? store.read { try WorkoutSession.fetchOne($0, key: WorkoutSession.key(id)) }
+        Task { await end(id, recorder: recorder, store: store, catalog: catalog) }
+    }
+
+    private func end(_ id: UUID, recorder: Recorder, store: LocalStore, catalog: ExerciseCatalog) async {
+        let session: WorkoutSession?
+        do {
+            session = try await store.read { try WorkoutSession.fetchOne($0, key: WorkoutSession.key(id)) }
+        } catch {
+            // Only a row that is gone means discarded; a failed read keeps the recording rather than throw it away.
+            WorkoutRecording.log.error("Reading the ended session failed, so its recording is kept: \(String(describing: error))")
+            return
+        }
         guard let session, let endedAt = session.endedAt else {
             stats = nil
             switch recorder {
             case .phone(let recording): recording.discard()
-            case .mirror(let recording): Task { try? await recording.send(.discardRecording(sessionID: id)) }
+            case .mirror(let recording): try? await recording.send(.discardRecording(sessionID: id))
             case .watch: WatchBridge.shared.deliver(.discardRecording(sessionID: id))
             }
             return
@@ -197,12 +208,10 @@ final class WorkoutHealth {
         // The watch saves its own recording from the finished workout `WatchBridge` sends, and answers with `.recorded`.
         guard case .phone(let recording) = recorder else { return }
         let plan = HealthRecordingPlan.plan(sessionID: session.id, name: session.name, startedAt: session.startedAt, endedAt: endedAt, blocks: session.blocks, exerciseName: catalog.name)
-        Task {
-            do {
-                save(try await recording.finish(plan, source: .phone), for: id)
-            } catch {
-                WorkoutRecording.log.error("Saving the workout to Health failed: \(String(describing: error))")
-            }
+        do {
+            save(try await recording.finish(plan, source: .phone), for: id)
+        } catch {
+            WorkoutRecording.log.error("Saving the workout to Health failed: \(String(describing: error))")
         }
     }
 

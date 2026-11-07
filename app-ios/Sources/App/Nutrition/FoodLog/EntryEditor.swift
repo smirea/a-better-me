@@ -137,7 +137,7 @@ struct EntryEditor: View {
         let serving = serving
         let day = CalendarDay(time)
         let minute = minute
-        store.editEntry(entry.id) {
+        store.edit(FoodEntry.self, id: entry.id) {
             $0.serving = serving
             $0.day = day
             $0.minute = minute

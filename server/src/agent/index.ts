@@ -1,7 +1,7 @@
 import { bearerToken, type Space, type SqlDriver } from 'sync-engine/core';
 import { z } from 'zod';
 import { isOwner, sha256Hex } from '../auth';
-import { ApiError, errorResponse as error } from '../http';
+import { ApiError, drain, errorResponse as error } from '../http';
 import { openDb, type Db } from './db';
 import * as M from './models';
 import { openApi } from './openapi';
@@ -131,6 +131,7 @@ async function answer(request: Request, host: AgentHost, routes: Route[]): Promi
 		return Response.json({ name: 'A Better Me', authenticated: false, instructions: howToAuthenticate(base) });
 	}
 	if (!actor) {
+		await drain(request);
 		return Response.json(
 			{ ok: false, error: 'Missing, wrong, or revoked token' },
 			{ status: 401, headers: { 'WWW-Authenticate': 'Bearer' } },
@@ -151,7 +152,10 @@ async function answer(request: Request, host: AgentHost, routes: Route[]): Promi
 		});
 	}
 	const found = match(routes, request.method, path);
-	if (!found) return error(404, `No route ${request.method} /api${path}. GET ${base} lists every route.`);
+	if (!found) {
+		await drain(request);
+		return error(404, `No route ${request.method} /api${path}. GET ${base} lists every route.`);
+	}
 	const { route, params } = found;
 	try {
 		let raw: unknown;

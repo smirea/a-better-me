@@ -81,7 +81,11 @@ struct WorkoutSummaryView: View {
         }
         .task {
             if let templateID = session.templateID {
-                template = try? store.read { try WorkoutTemplate.fetchOne($0, key: WorkoutTemplate.key(templateID)) }
+                do {
+                    template = try await store.read { try WorkoutTemplate.fetchOne($0, key: WorkoutTemplate.key(templateID)) }
+                } catch {
+                    LocalStore.log.error("Reading the session's template failed: \(String(describing: error))")
+                }
             }
         }
         // Ending or deleting the session while the screen is still up would empty it mid-dismissal, so it waits until gone.

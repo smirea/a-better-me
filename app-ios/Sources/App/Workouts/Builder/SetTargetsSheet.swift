@@ -356,16 +356,6 @@ private struct SetTypePicker: View {
 }
 
 private extension SetType {
-    var title: String {
-        switch self {
-        case .standard: "Standard Set"
-        case .warmUp: "Warm-Up Set"
-        case .drop: "Drop Set"
-        case .myo: "Myo Set"
-        case .failure: "Failure Set"
-        }
-    }
-
     var summary: String {
         switch self {
         case .standard: "A normal set of a fixed weight and target repetitions"

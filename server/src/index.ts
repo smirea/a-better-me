@@ -10,6 +10,7 @@ import { ASSETS_DIR, assetRoutes } from './assets';
 import { parseConfig } from './config';
 import { DATA_FILE } from './data-file';
 import { serveLiveRamble, type LiveRambleSetup } from './food/ramble-live';
+import { errorResponse } from './http';
 import { SENTRY_DEFAULTS, withoutDedupe } from './sentry';
 import env from './env';
 
@@ -19,7 +20,7 @@ if (config.sentry) Sentry.init({ ...config.sentry, ...SENTRY_DEFAULTS, integrati
 
 mkdirSync(dirname(DATA_FILE), { recursive: true });
 const driver = bunSqlite(DATA_FILE);
-const space = createSpace(driver, schema);
+const space = createSpace(driver, schema, config.space);
 space.migrate();
 
 const publish = (head: number) => server.publish('live', JSON.stringify({ head }));
@@ -42,7 +43,7 @@ const server = Bun.serve<Socket>({
 			report: Sentry,
 			async ramble(request, setup) {
 				if (server.upgrade(request, { data: { setup } })) return undefined;
-				return Response.json({ ok: false, error: 'Expected a WebSocket upgrade' }, { status: 400 });
+				return errorResponse(400, 'Expected a WebSocket upgrade');
 			},
 			async engine(request) {
 				if (request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
@@ -53,7 +54,7 @@ const server = Bun.serve<Socket>({
 						.some(p => p.trim() === LIVE_PROTOCOL);
 					const headers = offered ? { 'Sec-WebSocket-Protocol': LIVE_PROTOCOL } : undefined;
 					if (server.upgrade(request, { headers, data: undefined })) return undefined;
-					return Response.json({ ok: false, error: 'Expected a WebSocket upgrade' }, { status: 400 });
+					return errorResponse(400, 'Expected a WebSocket upgrade');
 				}
 				const before = space.head();
 				const response = await handleSync(space, request);
@@ -78,7 +79,7 @@ const server = Bun.serve<Socket>({
 	},
 	error: error => {
 		console.error(error);
-		return Response.json({ ok: false, error: 'Internal error' }, { status: 500 });
+		return errorResponse(500, 'Internal error');
 	},
 });
 

@@ -40,8 +40,7 @@ extension [WorkoutBlock] {
     mutating func duplicate(_ id: BlockExercise.ID) {
         guard let at = locate(id) else { return }
         let original = self[at.block].exercises[at.item]
-        var copy = original.copy()
-        copy.cycleTargets = original.cycleTargets?.map { CycleTargets(sets: $0.sets.map { $0.copyingTargets() }, skip: $0.skip) }
+        let copy = original.copyingCycleTargets()
         if self[at.block].isSuperset {
             self[at.block].exercises.insert(copy, at: at.item + 1)
         } else {

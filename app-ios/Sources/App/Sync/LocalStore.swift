@@ -136,8 +136,13 @@ final class LocalStore {
         )
     }
 
-    /// Reads outside an observation.
-    func read<T>(_ body: (Database) throws -> T) throws -> T {
+    /// Reads outside an observation, off the main thread.
+    func read<T: Sendable>(_ body: @escaping @Sendable (Database) throws -> T) async throws -> T {
+        try await database.pool.read(body)
+    }
+
+    /// The same read, blocking the caller: for tests, never for the main thread.
+    func readBlocking<T>(_ body: (Database) throws -> T) throws -> T {
         try database.pool.read(body)
     }
 

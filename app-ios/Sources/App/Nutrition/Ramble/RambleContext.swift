@@ -5,7 +5,7 @@ import Foundation
 /// resolver turns a `ref` or a `copy` back into snapshots and servings.
 struct RambleContext: Sendable {
     static let mealDays = 7
-    static let usualDays = 60
+    static let usualDays = FoodLibrary.usualDays
     static let usualLimit = 15
     /// The server's cap per meal.
     static let entriesPerMeal = 30

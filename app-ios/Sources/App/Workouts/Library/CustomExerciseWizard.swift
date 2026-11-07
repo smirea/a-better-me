@@ -404,7 +404,7 @@ private struct EquipmentStep: View {
 
 private struct FinalDetailsStep: View {
     @Binding var draft: CustomExerciseDraft
-    @Observe(BodyWeight.all) private var weighIns
+    @Observe(BodyWeight.latest) private var latestWeight
     @Observe(AppSettings.current) private var settings
     @State private var percentText: String
     @State private var choosing: JointActionRole?
@@ -505,7 +505,7 @@ private struct FinalDetailsStep: View {
         guard let percent = draft.bodyWeightPercent else { return "Enter the share of body weight the exercise moves" }
         guard (0...100).contains(percent) else { return "Enter a percentage from 0 to 100" }
         let unit = settings.weightUnit
-        guard let bodyKg = currentBodyWeightKg(logged: weighIns, health: nil, manual: settings.profile.bodyWeightKg) else {
+        guard let bodyKg = latestWeight?.weightKg ?? settings.profile.bodyWeightKg else {
             return "Log your body weight to see the load this adds"
         }
         return "\(unit.label(kg: bodyKg * percent / 100)) at your current weight"

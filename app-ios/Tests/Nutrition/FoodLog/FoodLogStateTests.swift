@@ -18,7 +18,7 @@ struct FoodLogStateTests {
 
     func entries(on day: CalendarDay) async throws -> [FoodEntry] {
         try await store.write { _ in }.value
-        return try store.read(FoodEntry.on(day).fetch)
+        return try store.readBlocking(FoodEntry.on(day).fetch)
     }
 
     func log(_ entries: [FoodEntry]) async throws {

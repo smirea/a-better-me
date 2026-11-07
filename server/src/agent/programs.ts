@@ -5,7 +5,7 @@ import { assertExercises } from './exercises';
 import { assertGym } from './gyms';
 import * as M from './models';
 import { flag, route, where, type Condition, type Route } from './route';
-import { assertNoLogs } from './workouts';
+import { assertNoLogs } from './blocks';
 
 type TemplateRow = RowOf<'workout_templates'>;
 type SessionRow = RowOf<'workout_sessions'>;
@@ -128,7 +128,7 @@ function resolveDays(db: Db, inputs: DayInput[], programId: string, previous: Pr
 	return { days, changes };
 }
 
-/** `LocalStore.activate` and `activateProgram`: a fresh run from cycle 1, and every other program inactive. */
+/** `LocalStore.activate`: a fresh run from cycle 1, out of the archive, and every other program inactive. */
 function activation(db: Db, row: ProgramRow, now: string) {
 	const others = db.all('programs', 'active = 1 AND id != ?', [row.id]);
 	return [

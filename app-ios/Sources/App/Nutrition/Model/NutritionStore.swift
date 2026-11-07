@@ -7,12 +7,7 @@ extension LocalStore {
 
     /// Logs every portion at `minute` of `day`, as one transaction: a plate, a recipe, or a single food.
     func log(_ portions: [FoodPortion], on day: CalendarDay, minute: Int) {
-        let entries = portions.map { FoodEntry($0, day: day, minute: minute) }
-        write { db in
-            for entry in entries {
-                try entry.insert(db)
-            }
-        }
+        log(portions.map { ($0, day: day, minute: minute) })
     }
 
     /// Logs each portion at its own day and minute, as one transaction: a ramble's rows.
@@ -22,13 +17,6 @@ extension LocalStore {
             for entry in entries {
                 try entry.insert(db)
             }
-        }
-    }
-
-    func editEntry(_ id: UUID, _ change: @escaping @Sendable (inout FoodEntry) -> Void) {
-        modify(FoodEntry.self, id: id) {
-            change(&$0)
-            $0.updatedAt = .now
         }
     }
 
@@ -60,15 +48,7 @@ extension LocalStore {
             var saved = food
             guard let existing = try Food.fetchOne(db, key: food.id) else { return try saved.insert(db) }
             saved.createdAt = existing.createdAt
-            saved.updatedAt = .now
-            try saved.updateChanges(db, from: existing)
-        }
-    }
-
-    func editFood(_ id: String, _ change: @escaping @Sendable (inout Food) -> Void) {
-        modify(Food.self, id: id) {
-            change(&$0)
-            $0.updatedAt = .now
+            try saved.update(db, from: existing)
         }
     }
 
@@ -78,13 +58,6 @@ extension LocalStore {
 
     func saveRecipe(_ recipe: Recipe) {
         insert(recipe)
-    }
-
-    func editRecipe(_ id: UUID, _ change: @escaping @Sendable (inout Recipe) -> Void) {
-        modify(Recipe.self, id: id) {
-            change(&$0)
-            $0.updatedAt = .now
-        }
     }
 
     func deleteRecipe(_ id: UUID) {

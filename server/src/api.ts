@@ -2,7 +2,7 @@ import { withBearer, type SyncResponse } from 'sync-engine/core';
 import { isOwner } from './auth';
 import type { Config } from './config';
 import { LIVE_RAMBLE_ROUTE, liveRambleSetup, type LiveRambleSetup } from './food/ramble-live';
-import { errorResponse as error } from './http';
+import { drain, errorResponse as error } from './http';
 
 /**
  * The two calls `handle` makes on a Sentry SDK. `index.ts` passes `@sentry/bun`, `worker.ts` `@sentry/cloudflare`,
@@ -31,12 +31,8 @@ export type App<Upgraded = never> = {
 	ramble(request: Request, setup: LiveRambleSetup): Promise<Response | Upgraded>;
 };
 
-/**
- * Bun 1.4 resets the connection when a response leaves before the request body was read, so the client would see
- * ECONNRESET, which reads as offline, instead of the 401 that stops it.
- */
 async function unauthorized(request: Request): Promise<Response> {
-	if (request.body) await request.arrayBuffer();
+	await drain(request);
 	return error(401, 'Missing or wrong owner token');
 }
 

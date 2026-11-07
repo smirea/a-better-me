@@ -93,11 +93,11 @@ struct MetricDetailView: View {
         .feedback(self)
     }
 
-    private func history(_ plot: MetricPlot, tab: MetricTab, title: String = "History") -> some View {
-        TruncatedList(title, items: plot.months.flatMap(\.rows)) { row in
+    private func history(_ plot: MetricPlot, tab: MetricTab, title: String? = nil) -> some View {
+        TruncatedList(title ?? "History", items: plot.months.flatMap(\.rows)) { row in
             MonthRowView(row: row)
         } destination: {
-            MetricHistoryView(route: route, tab: tab.id, range: range, averaging: averaging, title: title == "History" ? "\(tab.title) History" : title)
+            MetricHistoryView(route: route, tab: tab.id, range: range, averaging: averaging, title: title ?? "\(tab.title) History")
         }
     }
 

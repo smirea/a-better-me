@@ -135,7 +135,7 @@ struct FoodSearchTests {
         #expect(names(latest) == ["history Bananas, raw", "history Yogurt"])
         #expect(latest.map { NutritionFormat.serving($0.portion.serving) } == ["1 medium (7\" to 7-7/8\" long)", "2 container"])
 
-        store.editEntry(copied.id) { $0.serving = Serving(measure: container, quantity: 3) }
+        store.edit(FoodEntry.self, id: copied.id) { $0.serving = Serving(measure: container, quantity: 3) }
         let edited = try await search().local("")
         #expect(names(edited) == ["history Yogurt", "history Bananas, raw"])
         #expect(edited[0].portion.serving.quantity == 3)
@@ -192,7 +192,7 @@ struct FoodSearchTests {
         let found = try #require(try await online.lookup(barcode: chobani.barcode!))
         #expect(found.id == "off-0894700010137")
         try await store.write { _ in }.value
-        #expect(try store.read { try Food.fetchOne($0, key: "off-0894700010137") }?.nutrition == chobani.nutrition)
+        #expect(try store.readBlocking { try Food.fetchOne($0, key: "off-0894700010137") }?.nutrition == chobani.nutrition)
 
         let offline = try await search(StubBranded(offline: true))
         #expect(try await offline.lookup(barcode: chobani.barcode!)?.name == "Nonfat Greek Yogurt")
@@ -206,7 +206,7 @@ struct FoodSearchTests {
         store.log([banana.portion], on: monday, minute: 600)
         try await store.write { _ in }.value
         try await search.refresh()
-        #expect(try store.read { try Food.fetchOne($0, key: "usda-173944") }?.name == "Bananas, raw")
+        #expect(try store.readBlocking { try Food.fetchOne($0, key: "usda-173944") }?.name == "Bananas, raw")
         #expect(names(try search.local("banana")).first == "history Bananas, raw")
     }
 

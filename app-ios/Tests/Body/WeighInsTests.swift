@@ -32,6 +32,3 @@ struct WeighInsTests {
         #expect(merged.map(\.kg) == [82, 82.1, 81, 80.6, 80])
     }
 }
-
-struct WeightTrendDaylightSavingTests {
-}

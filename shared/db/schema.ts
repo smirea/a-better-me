@@ -128,7 +128,7 @@ export const programs = sqliteTable('programs', {
 	icon: text('icon').notNull(),
 	cycles: integer('cycles').notNull(),
 	currentCycle: integer('current_cycle').notNull().default(1),
-	/** At most one program is meant to be active. The app keeps it so (`LocalStore.activateProgram`); no index enforces it. */
+	/** At most one program is meant to be active. The app keeps it so (`LocalStore.activate`); no index enforces it. */
 	active: bool('active').notNull().default(false),
 	archived: bool('archived').notNull().default(false),
 	config: json('config').notNull().default({}),

@@ -143,8 +143,8 @@ struct DietaryHealthTests {
         #expect(health.held.map(\.sample.amount).sorted() == [40, 500])
         #expect(defaults.bool(forKey: NutritionHealth.enabledKey))
 
-        let id = try store.read(FoodEntry.on(today).fetch)[0].id
-        store.editEntry(id) { $0.serving.quantity = 2 }
+        let id = try store.readBlocking(FoodEntry.on(today).fetch)[0].id
+        store.edit(FoodEntry.self, id: id) { $0.serving.quantity = 2 }
         try await eventually { health.held.map(\.sample.amount).sorted() == [80, 1000] }
 
         store.deleteEntries([id])
@@ -156,7 +156,7 @@ struct DietaryHealthTests {
         store.log([FoodPortion(.quickAdd([.energy: 300]))], on: monday, minute: 8 * 60)
         store.log([FoodPortion(.quickAdd([.energy: 500]))], on: monday, minute: 12 * 60)
         try await store.write { _ in }.value
-        let before = try store.read(NutritionHealth.dayDigests)
+        let before = try store.readBlocking(NutritionHealth.dayDigests)
 
         try await store.write { db in
             try db.execute(sql: """
@@ -164,7 +164,7 @@ struct DietaryHealthTests {
                 WHERE minute = 480
                 """)
         }.value
-        let after = try store.read(NutritionHealth.dayDigests)
+        let after = try store.readBlocking(NutritionHealth.dayDigests)
 
         #expect(before.keys.sorted() == ["2026-10-26"])
         #expect(after.keys.sorted() == ["2026-10-26"])

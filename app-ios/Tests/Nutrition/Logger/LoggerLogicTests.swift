@@ -131,7 +131,7 @@ struct PlateTests {
         #expect(label.macroShare(.protein) == 0.1)
         #expect(label.macroShare(.fat) == 0.1125)
         #expect(label.macroShare(.carbs) == 0.7875)
-        #expect(NutrientAmounts().macroShare(.protein) == 0)
+        #expect(NutrientAmounts().macroShare(.protein) == nil)
     }
 
     @Test func aDaysOverrideReplacesOnlyTheNutrientsItSets() {

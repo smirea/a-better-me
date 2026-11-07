@@ -76,11 +76,7 @@ extension SessionEditor {
         } else {
             Menu {
                 Picker("Set Type", selection: setTypeBinding(path)) {
-                    Text("Standard Set").tag(SetType.standard)
-                    Text("Warm-Up Set").tag(SetType.warmUp)
-                    Text("Drop Set").tag(SetType.drop)
-                    Text("Myo Set").tag(SetType.myo)
-                    Text("Failure Set").tag(SetType.failure)
+                    ForEach(SetType.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 if set.type.hasSubSets {
                     Button(set.type == .drop ? "Add Drop" : "Add Myo Rep Set", systemImage: "plus") { addSubSet(path) }
@@ -352,7 +348,7 @@ extension SessionEditor {
         let settings = defaults.workout.warmUp
         var context = WarmUpContext(
             loadable: loadable(for: item),
-            scheme: overrides?.warmUpScheme ?? settings.scheme(for: exercise?.restCategory ?? .upperIsolation),
+            scheme: overrides?.warmUpScheme ?? settings.scheme(for: Exercise.restCategory(of: exercise)),
             automation: overrides?.warmUpAutomation ?? settings.automation,
             simplifyPlates: settings.simplifyPlates
         )

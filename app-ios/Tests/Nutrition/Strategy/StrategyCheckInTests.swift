@@ -129,15 +129,15 @@ struct StrategyCheckInTests {
 
         var settings = NutritionSettings()
         settings.expenditure.initialKcal = 2000
-        let logged = try store.read(BodyWeight.all.fetch)
+        let logged = try store.readBlocking(BodyWeight.all.fetch)
         let inputs = StrategyInputs.make(
-            weighIns: WeighIns.merge(logged: logged, health: []), log: try store.read(NutritionLogDay.all.fetch),
+            weighIns: WeighIns.merge(logged: logged, health: []), log: try store.readBlocking(NutritionLogDay.all.fetch),
             settings: settings, profile: ProfileSettings(), today: today, calendar: utc
         )
         #expect(inputs.trendWeightKg == 80)
         #expect(inputs.expenditureKcal == 2000)
         #expect(CheckInRules.summary(inputs).loggedDays == 7)
-        let plans = try store.read(NutritionPlan.all.fetch)
+        let plans = try store.readBlocking(NutritionPlan.all.fetch)
         let current = try #require(NutritionPlan.effective(on: today, in: plans))
         #expect(CheckInRules.isDue(current, today: today, weekday: settings.checkInWeekday))
 
@@ -146,7 +146,7 @@ struct StrategyCheckInTests {
         store.savePlan(update)
         try await store.write { _ in }.value
 
-        let saved = try store.read(NutritionPlan.all.fetch)
+        let saved = try store.readBlocking(NutritionPlan.all.fetch)
         #expect(saved.map(\.kind) == [.setup, .checkIn])
         #expect(saved.last?.targets[1] == target(1661, 135, 63, 135))
         #expect(saved.last?.expenditureKcal == 2000)
@@ -236,7 +236,7 @@ struct NutrientGoalDraftTests {
         draft.range = NutrientRange(floor: 25, target: 38, ceiling: nil)
         store.setNutrientGoal(.fiber, from: draft.startsOn, draft.mode)
         try await store.write { _ in }.value
-        let goals = try store.read(NutrientGoal.all.fetch)
+        let goals = try store.readBlocking(NutrientGoal.all.fetch)
         #expect(NutrientGoal.range(.fiber, on: calendarDay("2026-10-27"), goals: goals, sex: .male, weightKg: nil) == NutrientRange(floor: 25, target: 38, ceiling: nil))
         #expect(NutrientGoalDraft(goals[0]) == draft)
     }

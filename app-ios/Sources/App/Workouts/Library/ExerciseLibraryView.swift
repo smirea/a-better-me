@@ -99,7 +99,7 @@ struct ExerciseSettingsView: View {
 
     var body: some View {
         let exercise = catalog.exercise(exerciseID)
-        let category = exercise?.restCategory ?? .upperIsolation
+        let category = Exercise.restCategory(of: exercise)
         Form {
             ThemedSection("General") {
                 Button { showingInfo = true } label: {

@@ -225,7 +225,7 @@ struct AllNutritionView: View {
                 }
                 ForEach(NutrientGroup.allCases, id: \.self) { group in
                     let nutrients = NutrientRegistry.all.filter {
-                        $0.group == group && !NutrientID.macros.contains($0.id) && !settings.nutrition.hiddenNutrients.contains($0.id)
+                        $0.group == group && !NutrientID.macros.contains($0.id) && settings.nutrition.shows($0.id)
                     }
                     if !nutrients.isEmpty {
                         DashboardSectionView(title: group.title) {

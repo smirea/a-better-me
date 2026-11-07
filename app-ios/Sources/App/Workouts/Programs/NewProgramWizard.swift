@@ -176,9 +176,9 @@ struct NewProgramWizard: View {
         case .muscleFocus:
             MuscleFocusList(focus: $inputs.muscleFocus)
         case .gym:
-            let chosen = NewProgramWizardRules.gym(inputs.gymID, among: gyms)
+            let chosen = GymProfile.resolve(inputs.gymID, in: gyms)
             ForEach(gyms) { gym in
-                WizardOption(icon: gym.icon, title: gym.name, subtitle: gym.equipment.count == 1 ? "1 piece of equipment" : "\(gym.equipment.count) pieces of equipment", tag: gym.isDefault ? "Default" : nil, selected: gym.id == chosen?.id) {
+                WizardOption(icon: gym.icon, title: gym.name, subtitle: gym.equipmentSummary, tag: gym.id == GymProfile.preferred(in: gyms)?.id ? "Default" : nil, selected: gym.id == chosen?.id) {
                     inputs.gymID = gym.id
                 }
             }
@@ -216,7 +216,7 @@ struct NewProgramWizard: View {
     private func generate() async -> GeneratedProgram {
         var answers = inputs
         answers.experience = settings.profile.liftingExperience
-        let gym = NewProgramWizardRules.gym(answers.gymID, among: gyms)
+        let gym = GymProfile.resolve(answers.gymID, in: gyms)
         answers.gymID = gym?.id
         lastInputs = NewProgramWizardRules.storage(of: answers)
         let (profile, exercises, equipment, name, color, icon) = (settings.profile, catalog.bundled, catalog.equipment, programName, color, icon)

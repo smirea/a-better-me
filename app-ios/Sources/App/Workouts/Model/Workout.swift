@@ -9,7 +9,7 @@ extension BlockExercise {
 
     /// What a set rests when it has no rest of its own: the value "Set Rest Timers" starts from.
     func defaultRestSeconds(exercise: Exercise?, settings: ExerciseSettings?, defaults: AppSettings) -> Int {
-        restSeconds ?? settings?.restSeconds ?? defaults.restSeconds(exercise?.restCategory ?? .upperIsolation)
+        restSeconds ?? settings?.restSeconds ?? defaults.restSeconds(Exercise.restCategory(of: exercise))
     }
 }
 

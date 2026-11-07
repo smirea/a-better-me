@@ -19,11 +19,11 @@ struct LibrarySeedTests {
             _ = try FoodFavorite.deleteAll(db)
             try DevSeed.seed(in: db)
         }.value
-        let counts = try store.read { db in
+        let counts = try store.readBlocking { db in
             try [Recipe.fetchCount(db), Food.filter(Column("source") == "custom").fetchCount(db), FoodFavorite.fetchCount(db)]
         }
         #expect(counts == [4, 4, 5])
-        let recipeEntries = try store.read { db in
+        let recipeEntries = try store.readBlocking { db in
             try FoodEntry.fetchAll(db).filter { $0.food.source == .recipe && $0.day != .today }.map(\.serving.quantity).sorted()
         }
         #expect(recipeEntries == [0.5, 0.5, 0.75, 1, 1.5])

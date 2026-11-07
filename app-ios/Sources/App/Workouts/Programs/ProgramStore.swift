@@ -170,12 +170,17 @@ extension [WorkoutBlock] {
     /// `copy()` with each exercise's cycle targets kept, for duplicating program days.
     func copyingCycleTargets() -> [WorkoutBlock] {
         map { block in
-            WorkoutBlock(exercises: block.exercises.map { item in
-                var copy = item.copy()
-                copy.cycleTargets = item.cycleTargets?.map { CycleTargets(sets: $0.sets.map { $0.copyingTargets() }, skip: $0.skip) }
-                return copy
-            })
+            WorkoutBlock(exercises: block.exercises.map { $0.copyingCycleTargets() })
         }
+    }
+}
+
+extension BlockExercise {
+    /// `copy()` with the cycle targets kept, for duplicating a program day or an exercise in one.
+    func copyingCycleTargets() -> BlockExercise {
+        var copy = copy()
+        copy.cycleTargets = cycleTargets?.map { CycleTargets(sets: $0.sets.map { $0.copyingTargets() }, skip: $0.skip) }
+        return copy
     }
 }
 

@@ -349,7 +349,7 @@ struct RambleLoggingTests {
         let kefir = FoodPortion(.quickAdd([.energy: 100], name: "Kefir"))
         store.log([(oats, day: today, minute: 480), (kefir, day: today.adding(days: -1), minute: 1140)])
         try await store.write { _ in }.value
-        let logged = try store.read(FoodEntry.between(today.adding(days: -1), today).fetch)
+        let logged = try store.readBlocking(FoodEntry.between(today.adding(days: -1), today).fetch)
         #expect(logged.map { "\($0.food.name) \($0.day) \($0.minute)" } == ["Kefir 2026-10-27 1140", "Oats 2026-10-28 480"])
     }
 }

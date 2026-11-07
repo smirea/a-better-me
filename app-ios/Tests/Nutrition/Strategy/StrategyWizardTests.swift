@@ -136,7 +136,7 @@ struct StrategyWizardTests {
         #expect(model.steps.suffix(1) == [.collaborative])
         let even = StrategyRules.weekTargets(Engine.Targets.weekly(
             program: Engine.CoachedProgram(diet: .balanced, protein: .moderate, floor: .standard(kcal: 1361)),
-            goal: StrategyRules.engineGoal(model.savedGoal), expenditure: 2210, weightKg: weightKg
+            goal: model.savedGoal.engine, expenditure: 2210, weightKg: weightKg
         ))
         #expect(model.collaborative.targets == even)
         model.collaborative.locked = [1]

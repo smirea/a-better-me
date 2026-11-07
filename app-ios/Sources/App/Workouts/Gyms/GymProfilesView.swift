@@ -68,7 +68,7 @@ private struct GymRow: View {
     let isDefault: Bool
 
     var body: some View {
-        let equipment = gym.equipment.count == 1 ? "1 piece of equipment" : "\(gym.equipment.count) pieces of equipment"
+        let equipment = gym.equipmentSummary
         RowLabel(title: gym.name, detail: isDefault ? "Default · \(equipment)" : equipment, systemImage: gym.icon)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(.rect)

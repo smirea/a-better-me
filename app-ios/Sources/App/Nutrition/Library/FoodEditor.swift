@@ -200,7 +200,7 @@ struct FoodEditor: View {
         showErrors = true
         guard let valid = draft.valid else { return }
         if let foodID {
-            store.editFood(foodID) { valid.write(into: &$0) }
+            store.edit(Food.self, id: foodID) { valid.write(into: &$0) }
         } else {
             let food = valid.newFood()
             store.saveFood(food)

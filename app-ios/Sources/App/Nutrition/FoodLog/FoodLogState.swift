@@ -229,8 +229,7 @@ extension LocalStore {
                         var changed = entry
                         changed.day = to.day
                         changed.minute = to.minute
-                        changed.updatedAt = .now
-                        try changed.updateChanges(db, from: entry)
+                        try changed.update(db, from: entry)
                         moved.append(MovedEntry(id: id, from: EntryTime(day: entry.day, minute: entry.minute), to: to))
                     }
                 }
@@ -253,8 +252,7 @@ extension LocalStore {
                     var restored = current
                     restored.day = move.from.day
                     restored.minute = move.from.minute
-                    restored.updatedAt = .now
-                    try restored.updateChanges(db, from: current)
+                    try restored.update(db, from: current)
                 }
             }
         }

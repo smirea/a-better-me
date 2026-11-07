@@ -20,11 +20,11 @@ struct NutritionStoreTests {
     }
 
     func read<T>(_ query: DatabaseQuery<T>) throws -> T {
-        try store.read(query.fetch)
+        try store.readBlocking(query.fetch)
     }
 
     func outbox() throws -> [String] {
-        try store.read { db in
+        try store.readBlocking { db in
             try Row.fetchAll(db, sql: #"SELECT op, "table" AS tbl, col FROM _outbox ORDER BY seq"#).map {
                 "\($0["op"] as String) \($0["tbl"] as String) \($0["col"] as String? ?? "-")"
             }
@@ -42,7 +42,7 @@ struct NutritionStoreTests {
         #expect(logged[2].food.name == "Lunch out")
         #expect(logged[2].food.source == .quickAdd)
 
-        store.editEntry(logged[1].id) { $0.serving.quantity = 0.5 }
+        store.edit(FoodEntry.self, id: logged[1].id) { $0.serving.quantity = 0.5 }
         _ = store.relocate([logged[0]], .move, to: .dateTime(tuesday, minute: 7 * 60))
         _ = store.relocate([logged[2]], .copy, to: .dateTime(tuesday, minute: 12 * 60 + 30))
         try await settled()
@@ -103,8 +103,8 @@ struct NutritionStoreTests {
 
         let custom = Food(name: "Oats", nutrition: FoodNutrition(nutrients: [.energy: 380], baseGrams: 100, measures: [Measure(name: "g", quantity: 100, servings: 1)]))
         store.saveFood(custom)
-        store.editFood(custom.id) { $0.name = "Rolled oats" }
-        store.editFood(cached.id) { $0.nutrition.nutrients[.energy] = 0 }
+        store.edit(Food.self, id: custom.id) { $0.name = "Rolled oats" }
+        store.edit(Food.self, id: cached.id) { $0.nutrition.nutrients[.energy] = 0 }
         store.deleteFood(cached.id)
         try await settled()
 
@@ -120,7 +120,7 @@ struct NutritionStoreTests {
         recipe.ingredients = [RecipeIngredient(FoodPortion(yogurt))]
         recipe.steps = ["Mix", "Chill"]
         store.saveRecipe(recipe)
-        store.editRecipe(recipe.id) {
+        store.edit(Recipe.self, id: recipe.id) {
             $0.servings = 3
             $0.prepMinutes = 5
         }
@@ -250,7 +250,7 @@ struct NutritionStoreTests {
         store.updateSettings { $0.nutrition.energyUnit = .kj }
         try await settled()
 
-        let settings = try #require(try store.read { try AppSettings.fetchOne($0, key: AppSettings.rowID) })
+        let settings = try #require(try store.readBlocking { try AppSettings.fetchOne($0, key: AppSettings.rowID) })
         #expect(settings.nutrition.energyUnit == .kj)
         #expect(settings.nutrition.summaryNutrients == [.energy, .protein, .fat, .carbs])
         #expect(try outbox() == ["insert settings -", "update settings nutrition"])

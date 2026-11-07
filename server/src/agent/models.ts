@@ -35,6 +35,8 @@ const id = z.guid().meta({ description: 'UUID. Generated when omitted.' });
 /** A row id or a reference to one: lowercase, like every row id the app writes, so ids compare with `===`. */
 export const ref = z.guid().overwrite(value => value.toLowerCase());
 const createdId = ref.meta({ description: 'UUID. Generated when omitted.' });
+/** A food id (a UUID, `usda-<fdcId>`, or `off-<barcode>`), lowercase like `ref`. */
+export const foodRef = z.string().overwrite(value => value.toLowerCase());
 export const instant = z.iso
 	.datetime({ offset: true })
 	.overwrite(text => new Date(text).toISOString())
@@ -603,13 +605,9 @@ const foodFields = {
 };
 export const FoodCreate = z
 	.object({
-		id: z
-			.string()
-			.overwrite(value => value.toLowerCase())
-			.optional()
-			.meta({
-				description: 'A custom food: a UUID, generated when omitted. A cached food: `usda-<fdcId>` or `off-<barcode>`.',
-			}),
+		id: foodRef.optional().meta({
+			description: 'A custom food: a UUID, generated when omitted. A cached food: `usda-<fdcId>` or `off-<barcode>`.',
+		}),
 		source: z.enum(FOOD_ROW_SOURCES).default('custom'),
 		...foodFields,
 		brand: foodFields.brand.default(null),
@@ -622,7 +620,7 @@ export const FoodPatch = z.object(foodFields).partial().meta({ id: 'FoodPatch' }
 
 const portionFields = {
 	food: FoodSnapshot.optional().meta({ description: 'The food as eaten. Or give `foodId` or `recipeId` instead.' }),
-	foodId: z.string().optional().meta({ description: 'Snapshot a stored food.' }),
+	foodId: foodRef.optional().meta({ description: 'Snapshot a stored food.' }),
 	recipeId: ref
 		.optional()
 		.meta({ description: 'Snapshot a stored recipe, one serving of its yield per base serving.' }),

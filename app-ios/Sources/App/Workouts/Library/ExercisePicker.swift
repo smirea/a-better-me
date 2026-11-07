@@ -21,7 +21,6 @@ struct ExercisePicker: View {
     var gymID: UUID? = nil
     let onPick: (ExercisePick) -> Void
     @Observe(GymProfile.all) private var gyms
-    @Observe(GymProfile.defaultGym) private var defaultGym
     @State private var showingAllReplacements = false
     @State private var filter = ExerciseFilter()
     @State private var choseGym = false
@@ -43,7 +42,7 @@ struct ExercisePicker: View {
         .onAppear {
             guard !choseGym else { return }
             choseGym = true
-            filter.gymID = gyms.first { $0.id == gymID }?.id ?? defaultGym?.id
+            filter.gymID = GymProfile.resolve(gymID, in: gyms)?.id
         }
         .feedback(self)
     }

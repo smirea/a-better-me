@@ -314,13 +314,13 @@ export const nutritionRoutes: Route[] = [
 		tag: 'Food log',
 		summary: 'List logged foods, oldest first',
 		query: days.extend({
-			foodId: z.string().optional().meta({ description: 'Only entries of this food or recipe.' }),
+			foodId: M.foodRef.optional().meta({ description: 'Only entries of this food or recipe.' }),
 			...page,
 		}),
 		response: paged(M.FoodEntry),
 		run({ db, query }) {
 			const conditions = dayRange('day', query);
-			if (query.foodId) conditions.push(["lower(json_extract(food, '$.foodID')) = ?", query.foodId.toLowerCase()]);
+			if (query.foodId) conditions.push(["lower(json_extract(food, '$.foodID')) = ?", query.foodId]);
 			return pagedList(db, 'food_entries', conditions, 'day, minute, created_at, id', query, entry);
 		},
 	}),

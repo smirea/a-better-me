@@ -253,7 +253,7 @@ private struct ProgramEditorGymOptions: View {
                             Image(systemName: gym.icon).frame(width: 24)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(gym.name).font(AppFont.rowTitle)
-                                Text("\(gym.equipment.count) pieces of equipment")
+                                Text(gym.equipmentSummary)
                                     .font(AppFont.rowDetail)
                                     .foregroundStyle(Theme.textSecondary)
                             }

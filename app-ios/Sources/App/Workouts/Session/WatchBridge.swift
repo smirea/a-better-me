@@ -117,17 +117,29 @@ final class WatchBridge: NSObject {
             // The workout left the in-progress query. A finished one stays the watch's copy, with `endedAt`, so a
             // watch that hears this before the earlier copies still sees the end, saves its recording, and shows the
             // summary. A discarded one is gone, and `WorkoutHealth` tells the watch.
-            workout = finishedCopy(of: current.sessionID)
-            if let workout { deliver(.workout(workout, acknowledged: acknowledged)) }
+            workout = nil
+            Task { await sendFinishedCopy(of: current.sessionID) }
+            return
         }
         send(.workout(workout, acknowledged: acknowledged))
         updateContext()
     }
 
-    private func finishedCopy(of id: UUID) -> WatchWorkout? {
-        guard let store, let session = try? store.read({ try WorkoutSession.fetchOne($0, key: WorkoutSession.key(id)) }),
-              session.endedAt != nil else { return nil }
-        return LiveWorkoutController.shared.watchWorkout(for: session, history: [], gym: nil, isLive: false)
+    private func sendFinishedCopy(of id: UUID) async {
+        guard let store else { return }
+        do {
+            let session = try await store.read { try WorkoutSession.fetchOne($0, key: WorkoutSession.key(id)) }
+            // A workout started during the read is newer than this copy.
+            guard workout == nil else { return }
+            if let session, session.endedAt != nil {
+                workout = LiveWorkoutController.shared.watchWorkout(for: session, history: [], gym: nil, isLive: false)
+                if let workout { deliver(.workout(workout, acknowledged: acknowledged)) }
+            }
+        } catch {
+            LocalStore.log.error("Reading the ended session for the watch failed: \(String(describing: error))")
+        }
+        send(.workout(workout, acknowledged: acknowledged))
+        updateContext()
     }
 
     /// The acknowledged events the watch may still hold: the ones it sent lately. The phone's list of applied events is

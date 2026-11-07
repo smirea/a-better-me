@@ -103,16 +103,15 @@ struct MacroHeader: View {
     let amounts: NutrientAmounts
 
     var body: some View {
-        let hasMacros = NutrientID.macros.dropFirst().contains { (amounts[$0] ?? 0) > 0 }
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             ForEach(NutrientID.macros, id: \.self) { id in
                 VStack(alignment: .leading, spacing: 2) {
                     let unit = Text(id == .energy ? "" : " g").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
                     Text("\(Text(NutritionFormat.amount(amounts[id] ?? 0, of: id)).font(AppFont.number(22)))\(unit)")
                     HStack(spacing: 4) {
-                        Text(id == .energy ? "Calories" : NutrientRegistry.nutrient(id)?.name ?? "").foregroundStyle(Theme.textSecondary)
+                        Text(id.title).foregroundStyle(Theme.textSecondary)
                         if id != .energy {
-                            Text(hasMacros ? "\((amounts.macroShare(id) * 100).wholeText)%" : "–").foregroundStyle(id.color)
+                            Text(amounts.macroShare(id).map { "\(($0 * 100).wholeText)%" } ?? "–").foregroundStyle(id.color)
                         }
                     }
                     .font(AppFont.rowDetail)
@@ -167,7 +166,7 @@ struct ImpactGauges: View {
                                 .font(AppFont.rowDetail)
                                 .monospacedDigit()
                         }
-                        Text(line.nutrient == .energy ? "Calories" : NutrientRegistry.nutrient(line.nutrient)?.name ?? "")
+                        Text(line.nutrient.title)
                             .font(AppFont.rowDetail)
                             .foregroundStyle(Theme.textSecondary)
                     }

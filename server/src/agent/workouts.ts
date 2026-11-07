@@ -6,39 +6,13 @@ import { assertExercises } from './exercises';
 import { assertGym } from './gyms';
 import { sessionStats } from './metrics';
 import * as M from './models';
+import { assertNoLogs, stampLogs } from './blocks';
 import { blocksForCycle, program } from './programs';
 import { flag, fresh, limit, offset, paged, pagedList, route, where, type Condition, type Route } from './route';
 
 type TemplateRow = RowOf<'workout_templates'>;
 type SessionRow = RowOf<'workout_sessions'>;
 
-function forEachSet(blocks: M.Blocks, visit: (set: { log?: z.output<typeof M.SetLog> }) => void) {
-	for (const block of blocks) {
-		for (const exercise of block.exercises) {
-			for (const set of [...exercise.sets, ...(exercise.cycleTargets ?? []).flatMap(cycle => cycle.sets)]) {
-				visit(set);
-				set.subSets.forEach(visit);
-			}
-		}
-	}
-}
-
-/** Swift's `SetLog.completedAt` is required, so a log without one gets the moment the workout ended. */
-function stampLogs(blocks: M.Blocks, at: string): M.Blocks {
-	forEachSet(blocks, set => {
-		if (set.log && !set.log.completedAt) set.log.completedAt = at;
-	});
-	return blocks;
-}
-
-/** Templates hold plans. The app decodes `SetLog.completedAt` strictly, so a log there would hide the template. */
-export function assertNoLogs(blocks: M.Blocks | undefined) {
-	let logged = false;
-	forEachSet(blocks ?? [], set => {
-		logged ||= !!set.log;
-	});
-	if (logged) throw new ApiError(400, 'Template sets take `target`, not `log`. Log done sets on a session.');
-}
 const withStats = (db: Db) => {
 	const lookup = exerciseLookup(db);
 	return (row: SessionRow) => ({ ...row, stats: sessionStats(row, lookup) });

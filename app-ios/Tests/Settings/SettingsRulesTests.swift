@@ -56,7 +56,7 @@ struct NutritionSettingsPersistenceTests {
         }
         try await store.write { _ in }.value
 
-        let reopened = try LocalStore(unsyncedAt: url).read(AppSettings.current.fetch)
+        let reopened = try LocalStore(unsyncedAt: url).readBlocking(AppSettings.current.fetch)
         var expected = NutritionSettings()
         expected.energyUnit = .kj
         expected.heightUnit = .centimeters

@@ -5,6 +5,9 @@ struct Exercise: Codable, Hashable, Identifiable {
     /// What every screen calls an exercise whose id no longer resolves, so history never shows a blank row.
     static let unknownName = "Unknown exercise"
 
+    /// The rest category of an exercise that may no longer resolve: an unknown one rests like an upper isolation.
+    static func restCategory(of exercise: Exercise?) -> RestCategory { exercise?.restCategory ?? .upperIsolation }
+
     let id: ExerciseID
     var name: String
     var alternativeNames: [String] = []

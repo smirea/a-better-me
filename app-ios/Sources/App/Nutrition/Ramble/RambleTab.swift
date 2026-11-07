@@ -361,7 +361,7 @@ struct RambleAnchors: PreferenceKey {
 private struct Flight: Identifiable, Equatable {
     enum Kind { case parse, correction }
 
-    static let duration = Duration.milliseconds(550)
+    static let duration = RambleCapture.landing
 
     let id = UUID()
     /// The row's `RambleRow.key`.
@@ -534,9 +534,6 @@ private struct RambleLine: View {
     @State private var born = ContinuousClock.now
     @State private var allOptions = false
 
-    /// The flight's words land, and the row's content shows, this long after the row appears.
-    static let landing = Duration.milliseconds(550)
-
     /// No local match, and the online search is still looking.
     private var onlineSearch: Bool { row.content == .unmatched && capture.searchingOnline.contains(row.item.name.lowercased()) }
 
@@ -598,7 +595,7 @@ private struct RambleLine: View {
             } else if !landed {
                 withAnimation(.easeOut(duration: 0.2).delay(0.35)) { landed = true }
                 Task {
-                    try? await Task.sleep(for: Self.landing)
+                    try? await Task.sleep(for: RambleCapture.landing)
                     light()
                 }
             } else if capture.phase == .listening || capture.phase == .finishing {

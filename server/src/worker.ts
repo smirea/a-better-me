@@ -143,7 +143,7 @@ async function fetch(request: Request, env: Env): Promise<Response> {
 	} catch (error) {
 		console.error(error);
 		Sentry.captureException(error);
-		return Response.json({ ok: false, error: 'Internal error' }, { status: 500 });
+		return errorResponse(500, 'Internal error');
 	}
 }
 

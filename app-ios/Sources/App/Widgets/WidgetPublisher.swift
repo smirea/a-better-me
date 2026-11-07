@@ -116,8 +116,7 @@ final class WidgetPublisher {
         let entries = Dictionary(grouping: try FoodEntry.between(today, last).fetch(db), by: \.day)
         let rows = Dictionary(uniqueKeysWithValues: try NutritionDay.between(today, last).fetch(db).map { ($0.id, $0) })
 
-        let hidden = settings.nutrition.hiddenNutrients
-        let nutrients = NutrientRegistry.all.filter { NutrientID.macros.contains($0.id) || !hidden.contains($0.id) }
+        let nutrients = NutrientRegistry.all.filter { settings.nutrition.shows($0.id) }
         let days = (0..<NutritionSnapshot.horizon).map { offset in
             let day = today.adding(days: offset)
             let totals = (rows[day] ?? NutritionDay(id: day)).totals(entries[day] ?? [])
@@ -135,7 +134,7 @@ final class WidgetPublisher {
         }
         return NutritionSnapshot(
             nutrients: nutrients.map { NutritionSnapshot.Nutrient(id: $0.id.rawValue, name: $0.name, short: $0.short, unit: $0.unit.rawValue, tint: $0.tint) },
-            pinned: settings.nutrition.summaryNutrients.filter { !hidden.contains($0) || NutrientID.macros.contains($0) }.map(\.rawValue),
+            pinned: settings.nutrition.summaryNutrients.filter(settings.nutrition.shows).map(\.rawValue),
             showOverages: settings.nutrition.showOverages,
             days: days
         )

@@ -97,7 +97,7 @@ struct CreateWorkoutView: View {
         let chosen = gymID ?? defaultGym?.id
         return step(progress: 3.0 / 4, title: "Where will you work out?") {
             ForEach(gyms) { gym in
-                WizardOption(icon: gym.icon, title: gym.name, subtitle: "\(gym.equipment.count) pieces of equipment", selected: gym.id == chosen) { gymID = gym.id }
+                WizardOption(icon: gym.icon, title: gym.name, subtitle: gym.equipmentSummary, selected: gym.id == chosen) { gymID = gym.id }
             }
         } next: {
             PinnedActionButton("Next") { path.append(.editor) }

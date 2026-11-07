@@ -92,6 +92,10 @@ extension GymProfile {
     static func resolve(_ id: UUID?, in gyms: [GymProfile]) -> GymProfile? {
         gyms.first { $0.id == id } ?? preferred(in: gyms)
     }
+}
+
+extension GymProfile {
+    var equipmentSummary: String { equipment.count == 1 ? "1 piece of equipment" : "\(equipment.count) pieces of equipment" }
 
     static func one(_ id: UUID) -> DatabaseQuery<GymProfile?> {
         DatabaseQuery(nil) { try GymProfile.fetchOne($0, key: key(id)) }

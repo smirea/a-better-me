@@ -1,6 +1,6 @@
 /**
- * The numbers the phone derives instead of storing, ported from `app-ios/Sources/App/Nutrition/Engine/` and
- * `Dashboard/NutritionMetrics.swift` so an agent reads the same trend, expenditure, and targets the app shows. Days are
+ * The numbers the phone derives instead of storing, ported from `app-ios/Sources/App/Nutrition/Engine/`
+ * (`NutritionLog.swift` among them) and `Dashboard/NutritionMetrics.swift` so an agent reads the same trend, expenditure, and targets the app shows. Days are
  * `YYYY-MM-DD`; a weigh-in's day is its instant read in the owner's time zone, which the phone knows and the server is
  * told per request. See docs/decisions/agent-api.md.
  */
@@ -209,7 +209,7 @@ function fullYears(birth: Day, on: Day) {
 }
 
 /**
- * `NutritionMetrics.initialEstimate`: the MacroFactor Equation times the inferred activity factor. An unanswered
+ * `NutritionExpenditure.initialEstimate`: the MacroFactor Equation times the inferred activity factor. An unanswered
  * question reads as moderately active with four to six sessions, the one cell the factors are anchored on.
  */
 export function initialEstimate(profile: Profile, settings: ExpenditureSettings, weightKg: number, on: Day) {
@@ -229,7 +229,7 @@ export type Expenditure =
 	| { strategy: 'fixed' | 'updating' | 'holding'; start: Day; initialKcal: number | null; days: ExpenditureDay[] }
 	| { strategy: null; missing: string; days: [] };
 
-/** `NutritionMetrics.expenditure`, the one function the Dashboard and a check-in read. */
+/** `NutritionExpenditure.expenditure`, the one function the Dashboard and a check-in read. */
 export function expenditure(input: {
 	intake: Map<Day, number>;
 	weighIns: DayValue[];

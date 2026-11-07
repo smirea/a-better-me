@@ -169,7 +169,7 @@ final class FoodSearch {
     /// Facts, whose answer is cached under `off-<barcode>`. Nil when neither knows it; throws when the server is
     /// unreachable.
     func lookup(barcode: String) async throws -> Food? {
-        let known = try store.read { db in
+        let known = try await store.read { db in
             try Food.filter(Column("barcode") == barcode && Column("archived") == false).fetchAll(db)
                 .min { ($0.source == .custom ? 0 : 1, $0.createdAt) < ($1.source == .custom ? 0 : 1, $1.createdAt) }
         }

@@ -151,3 +151,7 @@ extension NutritionSettings.HeightUnit {
     func fromCm(_ cm: Double) -> Double { self == .centimeters ? cm : cm / Self.centimetersPerInch }
     func toCm(_ value: Double) -> Double { self == .centimeters ? value : value * Self.centimetersPerInch }
 }
+
+extension NutritionSettings {
+    func shows(_ nutrient: NutrientID) -> Bool { NutrientID.macros.contains(nutrient) || !hiddenNutrients.contains(nutrient) }
+}

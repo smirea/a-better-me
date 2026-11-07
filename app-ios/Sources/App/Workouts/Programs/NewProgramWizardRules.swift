@@ -88,11 +88,6 @@ enum NewProgramWizardRules {
         return "\(more) prioritized · \(focus.count - more) deprioritized"
     }
 
-    /// The gym the program is generated for: the remembered one while it still exists, else the default gym.
-    static func gym(_ id: UUID?, among gyms: [GymProfile]) -> GymProfile? {
-        gyms.first { $0.id == id } ?? gyms.first(where: \.isDefault) ?? gyms.first
-    }
-
     /// The name step's prefill: the split the generator will build, so No preference names the resolved split.
     static func defaultName(for inputs: GeneratorInputs) -> String {
         SplitPlan.resolve(inputs.split, daysPerWeek: inputs.daysPerWeek).title

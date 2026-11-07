@@ -307,7 +307,7 @@ struct SessionEditor: View {
     /// Bodyweight Contribution: "Body weight 80 kg · 65% counted (52 kg)", for exercises that lift part of the body.
     private func bodyweightCaption(_ exercise: Exercise?) -> String? {
         guard mode == .live, defaults.workout.display.bodyweightContribution, let fraction = exercise?.bodyweightFraction, fraction > 0,
-              let kg = currentBodyWeightKg(logged: latestBodyWeight.map { [$0] } ?? [], health: nil, manual: defaults.profile.bodyWeightKg) else { return nil }
+              let kg = latestBodyWeight?.weightKg ?? defaults.profile.bodyWeightKg else { return nil }
         let percent = (fraction * 100).formatted(.number.precision(.fractionLength(0)))
         return "Body weight \(unit.label(kg: kg)) · \(percent)% counted (\(unit.label(kg: kg * fraction)))"
     }

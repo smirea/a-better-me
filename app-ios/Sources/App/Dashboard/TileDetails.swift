@@ -32,7 +32,7 @@ extension DashboardData {
     var macrosCard: MacrosCardValues {
         let days = (0..<7).reversed().map { today.adding(days: -$0) }
         let consumed = days.map { day in log.first { $0.day == day }?.consumed ?? [:] }
-        let bars = consumed.map { [($0[.protein] ?? 0) * 4, ($0[.fat] ?? 0) * 9, ($0[.carbs] ?? 0) * 4] }
+        let bars = consumed.map { amounts in [NutrientID.protein, .fat, .carbs].map(amounts.kcal(from:)) }
         let logged = consumed.compactMap { $0[.energy] }.filter { $0 > 0 }
         let average = logged.isEmpty ? nil : logged.reduce(0, +) / Double(logged.count)
         return MacrosCardValues(days: bars, text: average?.wholeText)

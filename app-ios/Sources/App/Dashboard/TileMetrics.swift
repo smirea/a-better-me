@@ -48,12 +48,8 @@ enum TileMetrics {
     }
 
     static func split(_ amounts: NutrientAmounts) -> MacroSplit? {
-        let protein = (amounts[.protein] ?? 0) * 4
-        let fat = (amounts[.fat] ?? 0) * 9
-        let carbs = (amounts[.carbs] ?? 0) * 4
-        let total = protein + fat + carbs
-        guard total > 0 else { return nil }
-        return MacroSplit(protein: protein / total, fat: fat / total, carbs: carbs / total)
+        guard let protein = amounts.macroShare(.protein), let fat = amounts.macroShare(.fat), let carbs = amounts.macroShare(.carbs) else { return nil }
+        return MacroSplit(protein: protein, fat: fat, carbs: carbs)
     }
 
     /// A card's daily values: visual body fat in percent, tape measurements in centimeters, and the ratios as
