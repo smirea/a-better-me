@@ -36,7 +36,7 @@ struct ThemedSection<Content: View>: View {
 }
 
 /// A capsule chip for filters, choices, and quick values. Active chips fill white. Small chips are the Food Log's hour
-/// pills.
+/// pills, which share one `width` so their column lines up.
 struct Chip: View {
     enum Size { case small, regular }
 
@@ -45,6 +45,7 @@ struct Chip: View {
     var trailingImage: String?
     var isActive = false
     var size = Size.regular
+    var width: CGFloat?
 
     var body: some View {
         HStack(spacing: size == .small ? 3 : 6) {
@@ -54,8 +55,8 @@ struct Chip: View {
         }
         .font(size == .small ? AppFont.badge : AppFont.chip)
         .foregroundStyle(isActive ? Theme.onPrimary : Theme.textPrimary)
-        .padding(.horizontal, size == .small ? 8 : 12)
-        .frame(height: size == .small ? 22 : 32)
+        .padding(.horizontal, width != nil ? 4 : size == .small ? 8 : 12)
+        .frame(width: width, height: size == .small ? 22 : 32)
         .background(isActive ? Theme.textPrimary : Theme.surfaceRaised, in: .capsule)
     }
 }

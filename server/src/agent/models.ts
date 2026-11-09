@@ -8,7 +8,6 @@ import {
 	DIET_STYLES,
 	FOOD_ROW_SOURCES,
 	GOAL_KINDS,
-	NOTE_COLORS,
 	NUTRIENT_GOAL_MODES,
 	PLAN_KINDS,
 	PROGRAM_STYLES,
@@ -723,28 +722,6 @@ export const FoodFavoriteCreate = z
 	.refine(...onePortion)
 	.meta({ id: 'FoodFavoriteCreate' });
 
-export const FoodLogNote = z
-	.object({
-		id: z.string(),
-		day,
-		minute,
-		title: z.string(),
-		body: z.string(),
-		color: z.enum(NOTE_COLORS),
-	})
-	.meta({ id: 'FoodLogNote', description: 'A titled note on a day of the food log. At most five a day.' });
-const noteFields = { day, minute, title: z.string().trim().min(1), body: z.string(), color: z.enum(NOTE_COLORS) };
-export const FoodLogNoteCreate = z
-	.object({
-		id: createdId.optional(),
-		...noteFields,
-		minute: minute.default(720),
-		body: noteFields.body.default(''),
-		color: noteFields.color.default('blue'),
-	})
-	.meta({ id: 'FoodLogNoteCreate' });
-export const FoodLogNotePatch = z.object(noteFields).partial().meta({ id: 'FoodLogNotePatch' });
-
 export const NutritionDay = z
 	.object({
 		id: day,
@@ -778,7 +755,6 @@ export const FoodLogDay = z
 		totals: NutrientAmounts.meta({ description: "The entries' amounts summed. `override` replaces them when set." }),
 		...daySummary,
 		entries: z.array(FoodEntry),
-		notes: z.array(FoodLogNote),
 	})
 	.meta({ id: 'FoodLogDay' });
 export const FoodLogSummary = z

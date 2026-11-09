@@ -249,7 +249,7 @@ const nutritionDays = sqliteTable('nutrition_days', {
 	override: json('override'),
 });
 
-/** A titled note on a day of the food log, at a time; MacroFactor allows five a day. */
+/** Retired: the app and the agent API dropped food log notes. Kept because the schema is additive; nothing reads it. */
 const foodLogNotes = sqliteTable('food_log_notes', {
 	id: text('id').primaryKey(),
 	day: text('day').notNull(),

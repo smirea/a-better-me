@@ -201,7 +201,7 @@ describe('import-macrofactor', () => {
 			nutrition_plans: row(1),
 			settings: row(0, 1),
 		});
-		expect(first.warnings).toEqual(['Food Log Notes: 1 rows not imported (the importer does not read this sheet yet)']);
+		expect(first.warnings).toEqual(['Food Log Notes: 1 rows not imported (the app has no food log notes)']);
 
 		const second = await run([granular, quick]);
 		expect(second.counts).toEqual({

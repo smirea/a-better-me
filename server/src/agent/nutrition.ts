@@ -24,8 +24,7 @@ type Serving = z.output<typeof M.Serving>;
 type Nutrition = z.output<typeof M.FoodNutrition>;
 type Portion = { food?: Snapshot; foodId?: string; recipeId?: string; serving?: Serving };
 
-/** The app's caps, `FoodLogNote.limitPerDay` and `FoodFavorite.limit`. */
-const NOTES_PER_DAY = 5;
+/** The app's cap, `FoodFavorite.limit`. */
 const FAVORITES = 50;
 
 /** `Serving.servings`: the base servings eaten, the one factor every amount scales by. */
@@ -125,11 +124,6 @@ export function logDays(db: Db, range: { from?: string; to?: string }) {
 		.toSorted()
 		.map(day => logSummary(day, entries.get(day) ?? [], rows.get(day), plans));
 }
-
-const assertNoteRoom = (db: Db, day: string, except = '') => {
-	if (db.all('food_log_notes', 'day = ? AND id != ?', [day, except]).length >= NOTES_PER_DAY)
-		throw new ApiError(409, `${day} already has ${NOTES_PER_DAY} notes, the most a day takes`);
-};
 
 export const nutritionRoutes: Route[] = [
 	route({
@@ -283,7 +277,7 @@ export const nutritionRoutes: Route[] = [
 		method: 'GET',
 		path: '/food-log/{day}',
 		tag: 'Food log',
-		summary: 'A day of the food log: its entries, notes, totals, and what the owner said about it',
+		summary: 'A day of the food log: its entries, totals, and what the owner said about it',
 		response: M.FoodLogDay,
 		run({ db, params }) {
 			const day = dayParam(params);
@@ -294,7 +288,7 @@ export const nutritionRoutes: Route[] = [
 				db.get('nutrition_days', day),
 				db.all('nutrition_plans'),
 			);
-			return { ...summary, entries, notes: db.all('food_log_notes', 'day = ? ORDER BY minute, id', [day]) };
+			return { ...summary, entries };
 		},
 	}),
 	route({
@@ -414,65 +408,6 @@ export const nutritionRoutes: Route[] = [
 		run({ db, params }) {
 			const id = db.find('nutrition_days', dayParam(params), 'nutrition day').id;
 			db.commit(db.delete('nutrition_days', id));
-			return { deleted: id };
-		},
-	}),
-
-	route({
-		method: 'GET',
-		path: '/food-log-notes',
-		tag: 'Food log',
-		summary: 'List food log notes, oldest first',
-		query: days,
-		response: z.array(M.FoodLogNote),
-		run: ({ db, query }) => list(db, 'food_log_notes', dayRange('day', query), 'day, minute, id'),
-	}),
-	route({
-		method: 'GET',
-		path: '/food-log-notes/{id}',
-		tag: 'Food log',
-		summary: 'Get a food log note',
-		response: M.FoodLogNote,
-		run: ({ db, params }) => db.find('food_log_notes', params.id!, 'note'),
-	}),
-	route({
-		method: 'POST',
-		path: '/food-log-notes',
-		tag: 'Food log',
-		summary: 'Add a note to a day of the food log',
-		description: 'A day takes five notes; a sixth is refused with 409.',
-		body: M.FoodLogNoteCreate,
-		response: M.FoodLogNote,
-		run({ db, body }) {
-			assertNoteRoom(db, body.day);
-			const row: RowOf<'food_log_notes'> = { ...body, id: fresh(db, 'food_log_notes', body.id) };
-			db.commit(db.put('food_log_notes', row));
-			return row;
-		},
-	}),
-	route({
-		method: 'PATCH',
-		path: '/food-log-notes/{id}',
-		tag: 'Food log',
-		summary: 'Edit or move a food log note',
-		body: M.FoodLogNotePatch,
-		response: M.FoodLogNote,
-		run({ db, params, body }) {
-			const existing = db.find('food_log_notes', params.id!, 'note');
-			if (body.day && body.day !== existing.day) assertNoteRoom(db, body.day, existing.id);
-			db.commit(db.patch('food_log_notes', existing.id, body));
-			return db.find('food_log_notes', existing.id, 'note');
-		},
-	}),
-	route({
-		method: 'DELETE',
-		path: '/food-log-notes/{id}',
-		tag: 'Food log',
-		summary: 'Delete a food log note',
-		response: M.Deleted,
-		run({ db, params }) {
-			const id = db.find('food_log_notes', params.id!, 'note').id;
-			db.commit(db.delete('food_log_notes', id));
 			return { deleted: id };
 		},
 	}),
