@@ -184,8 +184,8 @@ extension NutritionEngine {
             let date = { (day: Int) in calendar.date(byAdding: .day, value: day - end - 1, to: todayDate)! }
 
             var periods: [Period] = []
-            if var first = (Array(counted.keys) + Array(weights.keys)).min() {
-                if let calculationStart { first = max(first, ordinal(calculationStart)) }
+            let earliest = (Array(counted.keys) + Array(weights.keys)).min()
+            if let earliest, case let first = max(earliest, calculationStart.map(ordinal) ?? earliest), first <= end {
                 let now = activity(over: end - model.activityDays + 1...end, steps: stepsByDay, sessions: sessions, firstWorkout: firstWorkout, model: model)
                 periods = measuredRuns(first...end, counted: counted, weights: weights, model: model).compactMap { run in
                     guard let measured = measure(run, counted: counted, weights: weights, model: model) else { return nil }
