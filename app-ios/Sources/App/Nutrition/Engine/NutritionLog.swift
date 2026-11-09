@@ -57,7 +57,7 @@ enum NutritionExpenditure {
             day.intake.energy.map { kcal in
                 NutritionEngine.CountedDay(
                     date: day.day.date(in: calendar), kcal: kcal, proteinG: day.consumed[.protein] ?? 0, entries: day.entryCount,
-                    isMarked: day.hasOverride || day.status == .fasted
+                    isMarked: day.hasOverride || day.status == .fasted || day.status == .complete
                 )
             }
         }

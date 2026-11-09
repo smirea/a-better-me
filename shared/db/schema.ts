@@ -19,7 +19,7 @@ export const BODY_WEIGHT_SOURCES = ['manual', 'healthkit'] as const;
 /** Where a food snapshot came from. Only the first three are rows of `foods`; recipes and quick adds are snapshots. */
 const FOOD_SOURCES = ['custom', 'usda', 'open_food_facts', 'recipe', 'quick_add'] as const;
 export const FOOD_ROW_SOURCES = ['custom', 'usda', 'open_food_facts'] as const;
-export const DAY_STATUSES = ['none', 'partial', 'fasted'] as const;
+export const DAY_STATUSES = ['none', 'complete', 'partial', 'fasted'] as const;
 export const NOTE_COLORS = ['red', 'blue', 'green', 'yellow', 'purple'] as const;
 export const BODY_METRIC_KINDS = [
 	'visual_body_fat',

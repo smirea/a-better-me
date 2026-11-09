@@ -160,7 +160,7 @@ struct MaintenanceBreakdownView: View {
                     ThemedSection(
                         "Left out as incomplete",
                         subtitle: "\(excluded.count) day\(excluded.count == 1 ? "" : "s")",
-                        footer: "A day far below your typical intake (under 60% of the median of the days around it), or a light day with few entries or little protein, counts as if you had marked it incomplete. Enter its totals in the Nutrition Data Manager to count it."
+                        footer: "A day far below your typical intake (under 60% of the median of the days around it), or a light day with few entries or little protein, counts as if you had marked it incomplete. Mark the day Complete in the Food Log to count it."
                     ) {
                         ForEach(Array(excluded.prefix(showsAllExcluded ? excluded.count : 8)), id: \.date) { day in
                             LabeledContent {

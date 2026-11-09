@@ -142,7 +142,7 @@ private struct DayReviewRow: View {
     private var choices: [NutritionDay.Status] {
         NutritionDay.Status.allCases.filter { choice in
             switch choice {
-            case .none: true
+            case .none, .complete: true
             case .partial: modules.partialLogging || status == .partial
             case .fasted: modules.fasting || status == .fasted
             }
@@ -154,7 +154,7 @@ private struct DayReviewRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 RowLabel(title: day.date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()), detail: kcal.map(StrategyFormat.kcal) ?? "Not counted")
                 if let incomplete {
-                    Text("Looks incomplete: \(MaintenanceFormat.share(incomplete)) of your typical \(StrategyFormat.kcal(incomplete.typicalKcal)), so it's left out.")
+                    Text("Looks incomplete: \(MaintenanceFormat.share(incomplete)) of your typical \(StrategyFormat.kcal(incomplete.typicalKcal)), so it's left out. Mark it Complete to count it.")
                         .font(AppFont.caption())
                         .foregroundStyle(Theme.amber)
                 }
