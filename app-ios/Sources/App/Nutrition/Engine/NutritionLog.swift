@@ -51,9 +51,37 @@ enum NutritionExpenditure {
         var initialKcal: Double
     }
 
-    /// The days that count toward expenditure: logged days at their kcal, fasted days at zero.
+    /// The days `DayIntake` counts, with what the incomplete-day screen compares.
+    static func countedDays(_ log: [NutritionLogDay], calendar: Calendar) -> [NutritionEngine.CountedDay] {
+        log.compactMap { day in
+            day.intake.energy.map { kcal in
+                NutritionEngine.CountedDay(
+                    date: day.day.date(in: calendar), kcal: kcal, proteinG: day.consumed[.protein] ?? 0, entries: day.entryCount,
+                    isMarked: day.hasOverride || day.status == .fasted
+                )
+            }
+        }
+    }
+
+    /// The days that count toward expenditure: logged days at their kcal, fasted days at zero, less the days the screen
+    /// finds almost certainly incomplete.
     static func intake(_ log: [NutritionLogDay], calendar: Calendar) -> [DatedValue] {
-        log.compactMap { day in day.intake.energy.map { DatedValue(date: day.day.date(in: calendar), value: $0) } }
+        NutritionEngine.Maintenance.screen(countedDays(log, calendar: calendar), calendar: calendar).counted
+    }
+
+    /// The maintenance Strategy plans from. Its prior is the owner's initial estimate, else the BMR one at today's
+    /// weight, which needs the profile's height and birth date.
+    static func maintenance(
+        log: [NutritionLogDay], weighIns: [DatedValue], weightKg: Double, settings: NutritionSettings.Expenditure, profile: ProfileSettings,
+        steps: [DatedValue], workouts: [DatedValue], now: Date, calendar: Calendar
+    ) -> NutritionEngine.Maintenance.Estimate? {
+        let prior = settings.initialKcal.map { NutritionEngine.Maintenance.Prior(kcal: $0, source: .initial) }
+            ?? initialEstimate(profile: profile, settings: settings, weightKg: weightKg, on: now, calendar: calendar)
+            .map { NutritionEngine.Maintenance.Prior(kcal: $0, source: .bmr) }
+        return NutritionEngine.Maintenance.estimate(
+            days: countedDays(log, calendar: calendar), weighIns: weighIns, weightKg: weightKg, steps: steps, workouts: workouts, prior: prior,
+            from: settings.calculationStart?.date(in: calendar), today: now, calendar: calendar
+        )
     }
 
     /// The start is the setting's, else the first counted day, else the last weigh-in. The initial estimate is the owner's,

@@ -43,7 +43,7 @@ enum CheckInRules {
 
     static func summary(_ inputs: StrategyInputs) -> WeekSummary {
         let days = (1...7).map { inputs.today.adding(days: -$0) }
-        let intake = days.compactMap { inputs.intake[$0] }
+        let intake = days.compactMap { inputs.incomplete[$0] == nil ? inputs.intake[$0] : nil }
         let last = days[0], first = days[6], before = first.adding(days: -1)
         return WeekSummary(
             first: first, last: last,
@@ -53,17 +53,6 @@ enum CheckInRules {
             trendChangeKg: inputs.trend[last].flatMap { end in inputs.trend[before].map { end - $0 } },
             expenditureChangeKcal: inputs.expenditure[inputs.today].flatMap { now in inputs.expenditure[first].map { now.kcal - $0.kcal } }
         )
-    }
-
-    /// The week's counted days under half the mean of its other counted days, MacroFactor's partial-logging flag
-    /// (macrofactor.com/algorithm-accuracy), which it names the largest source of expenditure error. Fasted days (0 kcal)
-    /// are never flagged, and a day needs two others to compare with.
-    static func likelyIncomplete(intake: [CalendarDay: Double], today: CalendarDay) -> Set<CalendarDay> {
-        let eaten = (1...7).map { today.adding(days: -$0) }.compactMap { day in intake[day].flatMap { $0 > 0 ? (day, $0) : nil } }
-        return Set(eaten.filter { day, kcal in
-            let others = eaten.filter { $0.0 != day }.map(\.1)
-            return others.count >= 2 && kcal < 0.5 * others.reduce(0, +) / Double(others.count)
-        }.map(\.0))
     }
 
     /// The new week from today, or nil for a manual program. A coached week is rebuilt by the engine; a collaborative

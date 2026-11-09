@@ -1098,6 +1098,61 @@ export const ExpenditureSeries = z
 			'Daily energy expenditure (TDEE) as the Dashboard and the check-in compute it. A holding day kept the estimate because the week before had too little data.',
 	});
 
+export const MaintenanceEstimate = z
+	.object({
+		today: day,
+		estimate: z
+			.object({
+				kcal: z.number().meta({ description: "Today's maintenance at the trend weight." }),
+				sdKcal: z.number().meta({ description: 'One standard deviation of the pooled estimate.' }),
+				weightKg: z.number(),
+				periods: z.array(
+					z.object({
+						start: day,
+						end: day,
+						days: z.int(),
+						loggedDays: z.int(),
+						weighIns: z.int().meta({ description: 'Weigh-in days the weight line was fitted to, outliers left out.' }),
+						intakeKcal: z.number(),
+						weightChangeKg: z.number(),
+						meanWeightKg: z.number(),
+						measuredKcal: z.number().meta({ description: 'Average intake less the energy of the weight change.' }),
+						adjustments: z.array(
+							z.object({
+								kind: z.enum(['weight', 'steps', 'workouts']),
+								before: z
+									.number()
+									.meta({ description: 'Kilograms, steps a day, or workout minutes a week in the period.' }),
+								now: z.number().meta({ description: 'The same over the last four weeks, or the trend weight today.' }),
+								kcal: z.number(),
+							}),
+						),
+						kcal: z.number().meta({ description: 'The measured maintenance moved to today.' }),
+						sdKcal: z.number(),
+						share: z.number().meta({ description: 'Its weight in the pooled estimate, 0 to 1.' }),
+					}),
+				),
+				prior: z
+					.object({ kcal: z.number(), source: z.enum(['initial', 'bmr']), share: z.number() })
+					.nullable()
+					.meta({ description: 'The initial expenditure setting, else BMR times activity. Null without either.' }),
+				incomplete: z.array(
+					z.object({
+						day,
+						kcal: z.number(),
+						typicalKcal: z.number(),
+						reason: z.enum(['farBelowTypical', 'fewEntries', 'lowProtein']),
+					}),
+				),
+			})
+			.nullable()
+			.meta({ description: 'Null without a measurable period and without a prior, or without a weigh-in.' }),
+	})
+	.meta({
+		id: 'MaintenanceEstimate',
+		description: 'The maintenance Strategy plans from, and each input that shaped it.',
+	});
+
 export const TrainingSummary = z
 	.object({
 		sessions: z.int(),

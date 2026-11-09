@@ -8,6 +8,7 @@ struct StrategyWizardModel {
     }
 
     enum Step: Hashable {
+        case maintenance
         case goalType, goalWeightRate, goalSummary
         case style, diet, floor, training, distribution, highDays, protein, coachedResult
         case collaborative
@@ -24,8 +25,12 @@ struct StrategyWizardModel {
     let current: NutritionPlan?
     let today: CalendarDay
     let weightKg: Double
-    /// Nil without an expenditure estimate, which leaves only the manual program.
-    private(set) var basis: StrategyBasis?
+    /// The estimate the maintenance section explains; nil with a static expenditure or without data and a profile.
+    let maintenance: NutritionEngine.Maintenance.Estimate?
+    let estimatedKcal: Double?
+    /// The owner's maintenance in place of the estimate; the targets derive from it.
+    private(set) var maintenanceOverride: Double?
+    private var standardFloorKcal: Int
 
     var goal: GoalDraft
     var coaching: CoachingProgram
@@ -34,15 +39,20 @@ struct StrategyWizardModel {
     var manual: WeekTargets
     var collaborative: CollaborativeWeek
 
-    init(mode: Mode, current: NutritionPlan?, today: CalendarDay, weightKg: Double, expenditureKcal: Double?, standardFloorKcal: Int) {
+    init(
+        mode: Mode, current: NutritionPlan?, today: CalendarDay, weightKg: Double, expenditureKcal: Double?, standardFloorKcal: Int,
+        maintenance: NutritionEngine.Maintenance.Estimate? = nil
+    ) {
         self.mode = current == nil ? .newGoal : mode
         self.current = current
         self.today = today
         self.weightKg = weightKg
-        basis = expenditureKcal.map { StrategyBasis(weightKg: weightKg, expenditureKcal: $0, standardFloorKcal: standardFloorKcal) }
+        self.maintenance = maintenance
+        estimatedKcal = expenditureKcal
+        self.standardFloorKcal = standardFloorKcal
         goal = current.map { GoalDraft($0.goal, currentWeightKg: weightKg) } ?? GoalDraft(kind: .lose, currentWeightKg: weightKg)
         coaching = current?.coaching ?? CoachingProgram()
-        if basis == nil, current == nil { coaching.style = .manual }
+        if expenditureKcal == nil, current == nil { coaching.style = .manual }
         shiftCalories = !(current?.coaching.highDays.isEmpty ?? true)
         let targets = current?.targets ?? WeekTargets(every: DayTarget(energy: 2000, protein: 150, fat: 65, carbs: 210))
         manual = targets
@@ -60,12 +70,17 @@ struct StrategyWizardModel {
         }
     }
 
+    /// Nil without a maintenance estimate or override, which leaves only the manual program.
+    var basis: StrategyBasis? {
+        (maintenanceOverride ?? estimatedKcal).map { StrategyBasis(weightKg: weightKg, expenditureKcal: $0, standardFloorKcal: standardFloorKcal) }
+    }
+
     var steps: [Step] {
         switch mode {
-        case .newGoal: [.goalType, .goalWeightRate, .goalSummary, .style] + styleSteps
-        case .editGoal: [.goalWeightRate, .goalSummary]
-        case .newProgram: [.style] + styleSteps
-        case .editProgram: styleSteps
+        case .newGoal: [.goalType, .maintenance, .goalWeightRate, .goalSummary, .style] + styleSteps
+        case .editGoal: [.maintenance, .goalWeightRate, .goalSummary]
+        case .newProgram: [.maintenance, .style] + styleSteps
+        case .editProgram: (coaching.style == .manual ? [] : [.maintenance]) + styleSteps
         }
     }
 
@@ -86,6 +101,7 @@ struct StrategyWizardModel {
     func phase(of step: Step) -> String {
         switch step {
         case .goalType, .goalWeightRate, .goalSummary: mode == .editGoal ? "Edit goal" : "1 Set new goal"
+        case .maintenance where mode == .newGoal || mode == .editGoal: mode == .editGoal ? "Edit goal" : "1 Set new goal"
         default: mode == .newGoal ? "2 Set new program" : "Program preferences"
         }
     }
@@ -132,7 +148,23 @@ struct StrategyWizardModel {
 
     /// The floor step edits the Standard Floor in place; the view saves it to the settings too.
     mutating func setStandardFloor(_ kcal: Int) {
-        basis?.standardFloorKcal = kcal
+        standardFloorKcal = kcal
+    }
+
+    /// A collaborative week follows the maintenance it is computed from: a new one is seeded at the budget, and an edited
+    /// one keeps its split and moves to the budget at the override, or back to the week it opened with without one.
+    mutating func setMaintenanceOverride(_ kcal: Double?) {
+        maintenanceOverride = kcal
+        guard mode == .editProgram, coaching.style == .collaborative, let current else { return seedCollaborative() }
+        collaborative = CollaborativeWeek(current.targets)
+        if kcal != nil, let budget = collaborativeBudget { collaborative.rescale(toAverage: budget) }
+    }
+
+    /// The average of an even coached week at the goal and the maintenance, the budget a collaborative week moves to.
+    private var collaborativeBudget: Double? {
+        var even = CoachingProgram()
+        even.style = .collaborative
+        return basis.map { StrategyRules.coachedWeek(even, goal: savedGoal, basis: $0).averageKcal }
     }
 
     mutating func toggleHighDay(_ weekday: Int) {

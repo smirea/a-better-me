@@ -47,9 +47,15 @@ private struct CheckInPage: View {
 
     @Environment(LocalStore.self) private var store
     @State private var loggingWeight = false
+    @State private var maintenanceOverride: Double?
+
+    private var basis: StrategyBasis? {
+        guard let maintenanceOverride, let weight = data.inputs.trendWeightKg else { return data.basis }
+        return StrategyBasis(weightKg: weight, expenditureKcal: maintenanceOverride, standardFloorKcal: data.settings.nutrition.standardFloorKcal)
+    }
 
     private var update: NutritionPlan? {
-        guard let current = data.current, let basis = data.basis else { return nil }
+        guard let current = data.current, let basis else { return nil }
         return CheckInRules.checkedIn(current, basis: basis, today: data.today)
     }
 
@@ -93,11 +99,10 @@ private struct CheckInPage: View {
                 : modules.partialLogging ? "Mark days you logged incompletely so they are left out." : "Mark days you fasted so they count as zero.")
                 .font(AppFont.body(15))
                 .foregroundStyle(Theme.textSecondary)
-            let flagged = modules.partialLogging ? CheckInRules.likelyIncomplete(intake: data.inputs.intake, today: data.today) : []
             ForEach((1...7).map { data.today.adding(days: -$0) }.reversed(), id: \.self) { day in
                 DayReviewRow(
                     day: day, kcal: data.inputs.intake[day], status: data.inputs.statuses[day] ?? .none, modules: modules,
-                    looksIncomplete: flagged.contains(day)
+                    incomplete: data.inputs.incomplete[day]
                 )
             }
         case .update:
@@ -108,11 +113,14 @@ private struct CheckInPage: View {
                     StatView(value: StrategyFormat.kcal(StrategyRules.averageEnergy(update.targets)), caption: "New average")
                 }
                 WeekTargetsChart(targets: update.targets, today: data.today.weekday)
-                HStack {
-                    StatView(value: StrategyFormat.kcal(update.expenditureKcal ?? 0), caption: "Expenditure")
-                    StatView(value: StrategyFormat.weight(update.trendWeightKg, data.unit), caption: "Trend Weight")
-                }
+                StatView(value: StrategyFormat.weight(update.trendWeightKg, data.unit), caption: "Trend Weight")
                 Text("Your new targets start today and run until your next check-in.").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+            }
+            if data.current.map({ $0.coaching.style != .manual }) == true {
+                MaintenanceSection(
+                    estimate: data.inputs.isStaticExpenditure ? nil : data.inputs.maintenance, isStatic: data.inputs.isStaticExpenditure,
+                    estimatedKcal: data.inputs.expenditureKcal, overrideKcal: $maintenanceOverride, unit: data.unit
+                )
             } else {
                 Text("Your program keeps its targets. Manual programs are opted out of automatic weekly plan updates.")
                     .font(AppFont.body())
@@ -127,7 +135,7 @@ private struct DayReviewRow: View {
     let kcal: Double?
     let status: NutritionDay.Status
     let modules: NutritionSettings.CoachingModules
-    let looksIncomplete: Bool
+    let incomplete: NutritionEngine.Maintenance.IncompleteDay?
 
     @Environment(LocalStore.self) private var store
 
@@ -145,8 +153,10 @@ private struct DayReviewRow: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 RowLabel(title: day.date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()), detail: kcal.map(StrategyFormat.kcal) ?? "Not counted")
-                if looksIncomplete {
-                    Text("Under half your other days. Incomplete?").font(AppFont.caption()).foregroundStyle(Theme.amber)
+                if let incomplete {
+                    Text("Looks incomplete: \(MaintenanceFormat.share(incomplete)) of your typical \(StrategyFormat.kcal(incomplete.typicalKcal)), so it's left out.")
+                        .font(AppFont.caption())
+                        .foregroundStyle(Theme.amber)
                 }
             }
             Spacer()

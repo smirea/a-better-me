@@ -78,16 +78,6 @@ struct StrategyCheckInTests {
         #expect(CheckInRules.nextCheckInDay(today: calendarDay("2026-10-22"), weekday: 1) == calendarDay("2026-10-26"))
     }
 
-    @Test func flagsADayUnderHalfTheWeeksOtherDaysButNeverAFast() {
-        let today = calendarDay("2026-03-09")
-        let intake: [CalendarDay: Double] = [
-            today.adding(days: -1): 2000, today.adding(days: -2): 2200, today.adding(days: -3): 900,
-            today.adding(days: -4): 0, today.adding(days: -5): 1800, today.adding(days: -8): 100,
-        ]
-        #expect(CheckInRules.likelyIncomplete(intake: intake, today: today) == [today.adding(days: -3)])
-        #expect(CheckInRules.likelyIncomplete(intake: [today.adding(days: -1): 2000, today.adding(days: -2): 500], today: today).isEmpty)
-    }
-
     @Test func theSettingsChooseTheModules() {
         var settings = NutritionSettings()
         #expect(CheckInRules.modules(settings) == [.review, .update])
@@ -199,7 +189,8 @@ struct GoalHistoryTests {
         let inputs = StrategyInputs(
             today: calendarDay("2026-10-26"),
             trend: [first: 85, calendarDay("2026-10-01"): 79, calendarDay("2026-10-26"): 78.5],
-            expenditure: [:], intake: [:], statuses: [:], weighInDays: [], trendWeightKg: 78.5, expenditureKcal: nil, isStaticExpenditure: false
+            expenditure: [:], intake: [:], incomplete: [:], statuses: [:], weighInDays: [], trendWeightKg: 78.5, expenditureKcal: nil,
+            isStaticExpenditure: false
         )
         let history = GoalPeriod.history(plans, inputs: inputs)
         #expect(history == [

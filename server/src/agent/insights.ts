@@ -5,12 +5,14 @@ import type { Db } from './db';
 import {
 	dayIn,
 	expenditure,
+	initialEstimate,
 	weightInsights,
 	weightTrend,
 	type Day,
 	type ExpenditureSettings,
 	type Profile,
 } from './engine';
+import { maintenance, screenIntake, type CountedDay } from './maintenance';
 import { sessionStats } from './metrics';
 import * as M from './models';
 import { logDays } from './nutrition';
@@ -41,21 +43,69 @@ function trendFor(db: Db, timeZone: string, now: string) {
 	return { today, points, trend: weightTrend(points, today) };
 }
 
-export function expenditureFor(db: Db, timeZone: string, now: string) {
-	const { today, points, trend } = trendFor(db, timeZone, now);
-	const intake = new Map(
-		logDays(db, {}).flatMap(day => (day.countedKcal === null ? [] : [[day.day, day.countedKcal] as const])),
+/** `NutritionExpenditure.countedDays`: the days `DayIntake` counts, with what the incomplete-day screen compares. */
+function countedDays(db: Db): CountedDay[] {
+	return logDays(db, {}).flatMap(day =>
+		day.countedKcal === null
+			? []
+			: [
+					{
+						day: day.day,
+						kcal: day.countedKcal,
+						proteinG: day.consumed.p ?? 0,
+						entries: day.entryCount,
+						marked: day.override !== null || day.status === 'fasted',
+					},
+				],
 	);
-	const plans = db.all('nutrition_plans');
-	const steps = db
+}
+
+function stepsOf(db: Db) {
+	return db
 		.all('body_metrics')
 		.filter(row => row.kind === 'steps')
 		.map(row => ({ day: row.day, value: row.value }));
+}
+
+export function expenditureFor(db: Db, timeZone: string, now: string) {
+	const { today, points, trend } = trendFor(db, timeZone, now);
+	const { counted: intake } = screenIntake(countedDays(db).filter(day => day.day <= today));
+	const plans = db.all('nutrition_plans');
 	return {
 		today,
 		trend,
-		result: expenditure({ intake, weighIns: points, trend, today, plans, steps, ...nutritionInputs(db) }),
+		result: expenditure({ intake, weighIns: points, trend, today, plans, steps: stepsOf(db), ...nutritionInputs(db) }),
 	};
+}
+
+/** `NutritionExpenditure.maintenance`: the estimate Strategy plans from, with the owner's initial estimate or the BMR one as its prior. */
+export function maintenanceFor(db: Db, timeZone: string, now: string) {
+	const { today, points, trend } = trendFor(db, timeZone, now);
+	const weightKg = trend.at(-1)?.trendKg;
+	if (weightKg === undefined) return { today, result: null };
+	const { settings, profile } = nutritionInputs(db);
+	const bmr = initialEstimate(profile, settings, weightKg, today);
+	const prior = settings.initialKcal
+		? { kcal: settings.initialKcal, source: 'initial' as const }
+		: bmr === null
+			? null
+			: { kcal: bmr, source: 'bmr' as const };
+	const workouts = db.all('workout_sessions', 'ended_at IS NOT NULL').map(session => ({
+		day: dayIn(session.startedAt, timeZone),
+		minutes:
+			Math.max(0, Date.parse(session.endedAt!) - Date.parse(session.startedAt) - session.pausedSeconds * 1000) / 60_000,
+	}));
+	const result = maintenance({
+		days: countedDays(db),
+		weighIns: points,
+		weightKg,
+		steps: stepsOf(db),
+		workouts,
+		prior,
+		from: settings.calculationStart,
+		today,
+	});
+	return { today, result };
 }
 
 const best = (a: number | null, b: number | null) => (a === null ? b : b === null ? a : Math.max(a, b));
@@ -110,6 +160,20 @@ export const insightRoutes: Route[] = [
 				currentKcal: result.days.at(-1)?.kcal ?? null,
 				days: result.days.filter(day => within(day.day, query)),
 			};
+		},
+	}),
+	route({
+		method: 'GET',
+		path: '/maintenance',
+		tag: 'Insights',
+		summary: 'The maintenance estimate Strategy sets targets from, with how it was reached',
+		description:
+			"The stretches of the log dense enough to measure (60% of days logged and six weigh-ins in any three weeks, less each stretch's first two weeks), each moved to today's trend weight, steps, and workouts, and pooled with the BMR or initial-estimate prior by inverse variance. `incomplete` lists the counted days left out as almost certainly incomplete, which `GET /expenditure` skips too. Like the other insights it reads the app's weigh-ins and imported steps, not Apple Health, so it can differ from the phone's. A static expenditure in the settings replaces it in the app.",
+		query: z.object({ tz: M.timeZone }),
+		response: M.MaintenanceEstimate,
+		run({ db, query, now }) {
+			const { today, result } = maintenanceFor(db, query.tz, now);
+			return { today, estimate: result };
 		},
 	}),
 	route({

@@ -30,7 +30,7 @@ struct StrategyWizardTests {
         model.toggleHighDay(6)
         model.coaching.protein = .moderate
 
-        #expect(model.steps == [.goalType, .goalWeightRate, .goalSummary, .style, .diet, .floor, .training, .distribution, .highDays, .protein, .coachedResult])
+        #expect(model.steps == [.goalType, .maintenance, .goalWeightRate, .goalSummary, .style, .diet, .floor, .training, .distribution, .highDays, .protein, .coachedResult])
         let plan = model.plan(isFirst: true)
         #expect(plan.id == today)
         #expect(plan.kind == .setup)
@@ -196,6 +196,21 @@ struct StrategyWizardTests {
         #expect(model.canChoose(.manual))
     }
 
+    @Test func aMaintenanceSetByHandReplacesTheEstimateTheTargetsComeFrom() {
+        var model = StrategyWizardModel(mode: .newGoal, current: nil, today: today, weightKg: weightKg, expenditureKcal: nil, standardFloorKcal: 1200)
+        model.setMaintenanceOverride(2400)
+        #expect(model.canChoose(.coached))
+        model.choose(.coached)
+        model.goal.change(kind: .maintain, currentWeightKg: weightKg)
+        #expect(model.plan(isFirst: true).expenditureKcal == 2400)
+        #expect(model.coachedWeek?.averageKcal == 2400)
+
+        var estimated = wizard()
+        estimated.setMaintenanceOverride(2600)
+        estimated.setMaintenanceOverride(nil)
+        #expect(estimated.basis?.expenditureKcal == 2210)
+    }
+
     @Test func editGoalKeepsTheGoalsStartAndRetargetsACoachedProgram() {
         var sample = wizard()
         sample.goal.targetWeightKg = 85
@@ -207,7 +222,7 @@ struct StrategyWizardTests {
         current = NutritionPlan(from: calendarDay("2026-10-01"), kind: .setup, goal: NutritionGoal(kind: .lose, targetWeightKg: 85, ratePercentPerWeek: -0.7594, startedOn: calendarDay("2026-10-01")), coaching: current.coaching, targets: current.targets)
 
         var edit = wizard(.editGoal, current: current)
-        #expect(edit.steps == [.goalWeightRate, .goalSummary])
+        #expect(edit.steps == [.maintenance, .goalWeightRate, .goalSummary])
         edit.goal.ratePercent = 0.5
         let plan = edit.plan(isFirst: false)
         #expect(plan.goal.startedOn == calendarDay("2026-10-01"))
@@ -228,8 +243,12 @@ struct StrategyWizardTests {
             goal: NutritionGoal(kind: .maintain, targetWeightKg: 89, ratePercentPerWeek: 0, startedOn: calendarDay("2026-10-01")),
             coaching: CoachingProgram(style: .collaborative), targets: WeekTargets(every: target(2000, 150, 70, 200))
         )
-        let model = wizard(.editProgram, current: current)
-        #expect(model.steps == [.collaborative])
+        var model = wizard(.editProgram, current: current)
+        #expect(model.steps == [.maintenance, .collaborative])
+        #expect(model.collaborative.targets == current.targets)
+        model.setMaintenanceOverride(2500)
+        #expect(StrategyRules.averageEnergy(model.plan(isFirst: false).targets) == 2500)
+        model.setMaintenanceOverride(nil)
         #expect(model.collaborative.targets == current.targets)
         #expect(model.plan(isFirst: false).goal == current.goal)
         #expect(wizard(.newProgram, current: nil).mode == .newGoal)
