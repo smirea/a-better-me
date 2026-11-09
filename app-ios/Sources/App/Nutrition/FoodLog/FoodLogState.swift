@@ -8,8 +8,11 @@ import SwiftUI
 struct LogFoodRequest: Identifiable, Hashable {
     let id = UUID()
     var day: CalendarDay
-    /// The hour's minute when an hour's + asked; nil logs at the current time.
+    /// The hour's minute when an hour's + asked, or the section's (`[MealSection].logMinute`); nil logs at the current
+    /// time.
     var minute: Int?
+    /// The section whose + asked, which the plate logs into whatever its minute.
+    var section: MealSection?
     var start = LoggerTab.search
 }
 
@@ -156,8 +159,8 @@ final class FoodLogState {
         pending = nil
     }
 
-    func requestLog(minute: Int? = nil, start: LoggerTab = .search) {
-        logRequest = LogFoodRequest(day: day, minute: minute, start: start)
+    func requestLog(minute: Int? = nil, section: MealSection? = nil, start: LoggerTab = .search) {
+        logRequest = LogFoodRequest(day: day, minute: minute, section: section, start: start)
     }
 }
 
@@ -167,9 +170,15 @@ enum FoodLogRoute: Hashable {
     case strategy
 }
 
+/// Where an entry sits: its day, minute, and meal section.
 struct EntryTime: Hashable {
     let day: CalendarDay
     let minute: Int
+    let section: String?
+}
+
+extension FoodEntry {
+    var time: EntryTime { EntryTime(day: day, minute: minute, section: section) }
 }
 
 struct MovedEntry: Hashable {
@@ -198,12 +207,13 @@ extension LocalStore {
         switch action {
         case .copy:
             let copies = relocations.flatMap { relocation in
-                relocation.ids.map { (source: $0, id: UUID(), at: EntryTime(day: relocation.day, minute: relocation.minute)) }
+                relocation.ids.map { (source: $0, id: UUID(), to: relocation) }
             }
             write { db in
+                let sections = try MealSection.current(db)
                 for copy in copies {
                     guard let source = try FoodEntry.fetchOne(db, key: FoodEntry.key(copy.source)) else { continue }
-                    var entry = FoodEntry(source.portion, day: copy.at.day, minute: copy.at.minute)
+                    var entry = FoodEntry(source.portion, day: copy.to.day, minute: copy.to.minute, section: copy.to.section(for: source, in: sections))
                     entry.id = copy.id
                     try entry.insert(db)
                 }
@@ -212,16 +222,17 @@ extension LocalStore {
         case .move:
             let record = MoveRecord()
             write { db in
+                let sections = try MealSection.current(db)
                 var moved: [MovedEntry] = []
                 for relocation in relocations {
-                    let to = EntryTime(day: relocation.day, minute: relocation.minute)
                     for id in relocation.ids {
                         guard let entry = try FoodEntry.fetchOne(db, key: FoodEntry.key(id)) else { continue }
                         var changed = entry
-                        changed.day = to.day
-                        changed.minute = to.minute
+                        changed.day = relocation.day
+                        changed.minute = relocation.minute
+                        changed.section = relocation.section(for: entry, in: sections)
                         try changed.update(db, from: entry)
-                        moved.append(MovedEntry(id: id, from: EntryTime(day: entry.day, minute: entry.minute), to: to))
+                        moved.append(MovedEntry(id: id, from: entry.time, to: changed.time))
                     }
                 }
                 record.moves.withLock { $0 = moved }
@@ -238,11 +249,12 @@ extension LocalStore {
             write { db in
                 for move in record.moves.withLock({ $0 }) {
                     guard let current = try FoodEntry.fetchOne(db, key: FoodEntry.key(move.id)),
-                          EntryTime(day: current.day, minute: current.minute) == move.to
+                          current.time == move.to
                     else { continue }
                     var restored = current
                     restored.day = move.from.day
                     restored.minute = move.from.minute
+                    restored.section = move.from.section
                     try restored.update(db, from: current)
                 }
             }
@@ -259,7 +271,7 @@ extension LocalStore {
             else { return false }
             try entry.delete(db)
             for portion in FoodLog.exploded(entry.serving, of: recipe) {
-                try FoodEntry(portion, day: entry.day, minute: entry.minute).insert(db)
+                try FoodEntry(portion, day: entry.day, minute: entry.minute, section: entry.section).insert(db)
             }
             return true
         }

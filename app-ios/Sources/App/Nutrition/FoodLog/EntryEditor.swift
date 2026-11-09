@@ -2,8 +2,8 @@ import Feedback
 import SwiftUI
 
 /// The pencil's sheet over the timeline: the entry's calories and macros, Remove, Favorite, Duplicate, and for a
-/// recipe Explode, its amount, day, and time, the share of the day's targets it uses, and its nutrients. Done saves the
-/// amount, day, and time.
+/// recipe Explode, its amount, day, time, and in the Sections display its section, the share of the day's targets it
+/// uses, and its nutrients. Done saves the amount, day, time, and section.
 struct EntryEditor: View {
     let entry: FoodEntry
 
@@ -17,6 +17,8 @@ struct EntryEditor: View {
     @State private var serving: Serving
     @State private var quantity: String
     @State private var time: Date
+    /// The section it is in; changing the time moves it to the section the new minute falls in.
+    @State private var section: String?
     @State private var favorited = false
 
     init(entry: FoodEntry) {
@@ -24,6 +26,7 @@ struct EntryEditor: View {
         _serving = State(initialValue: entry.serving)
         _quantity = State(initialValue: NumberText.plain(entry.serving.quantity))
         _time = State(initialValue: entry.day.date(atMinute: entry.minute))
+        _section = State(initialValue: entry.section)
     }
 
     private var amounts: NutrientAmounts { entry.food.amounts(serving) }
@@ -68,6 +71,12 @@ struct EntryEditor: View {
                         in: CalendarDay.today.adding(days: -FoodLogState.daysBack).date...CalendarDay.today.adding(days: FoodLogState.daysAhead).date(atMinute: 24 * 60 - 1),
                         displayedComponents: [.date, .hourAndMinute]
                     )
+                    .onChange(of: minute) { _, minute in section = sections.section(at: minute).id }
+                    if settings.nutrition.timeline.display == .sections {
+                        Picker("Section", selection: Binding(get: { sections.section(of: section, minute: minute).id }, set: { section = $0 })) {
+                            ForEach(sections) { Text($0.name).tag($0.id) }
+                        }
+                    }
                 }
                 ImpactGauges(amounts: amounts, day: CalendarDay(time), excluding: entry.id).id(CalendarDay(time))
                 ForEach(NutrientSection.allCases) { section in
@@ -111,7 +120,7 @@ struct EntryEditor: View {
             .disabled(favorited)
             action("Duplicate", systemImage: "plus.square.on.square") {
                 state.expectAdditions()
-                store.log([FoodPortion(entry.food, serving: serving)], on: CalendarDay(time), minute: minute)
+                store.log([FoodPortion(entry.food, serving: serving)], on: CalendarDay(time), minute: minute, section: section)
                 dismiss()
             }
             if entry.food.source == .recipe {
@@ -130,6 +139,7 @@ struct EntryEditor: View {
     }
 
     private var minute: Int { time.minuteOfDay() }
+    private var sections: [MealSection] { settings.nutrition.mealSections }
 
     private var isValid: Bool { (Double(quantity.replacingOccurrences(of: ",", with: ".")) ?? 0) > 0 }
 
@@ -137,10 +147,12 @@ struct EntryEditor: View {
         let serving = serving
         let day = CalendarDay(time)
         let minute = minute
+        let section = section
         store.edit(FoodEntry.self, id: entry.id) {
             $0.serving = serving
             $0.day = day
             $0.minute = minute
+            $0.section = section
         }
     }
 }

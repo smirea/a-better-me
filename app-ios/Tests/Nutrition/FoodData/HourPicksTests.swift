@@ -33,7 +33,7 @@ struct HourPicksTests {
             entry("Eggs", daysAgo: -1, 7, 15),
             entry("Eggs", daysAgo: -2, 7, 15),
             entry("Salmon", daysAgo: 1, 19, 30),
-        ], today: today)
+        ], today: today, by: { $0.minute / 60 })
 
         #expect(picks[7]?.map(\.food.name) == ["Oats", "Banana", "Yogurt"])
         #expect(picks[7]?.first?.serving.quantity == 1.5)
@@ -43,7 +43,7 @@ struct HourPicksTests {
     }
 
     @Test func aMonthBackCountsAndTheDayBeforeDoesNot() {
-        let picks = HourPicks.picks([entry("Coffee", daysAgo: 29, 6, 0), entry("Tea", daysAgo: 30, 6, 0)], today: today)
+        let picks = HourPicks.picks([entry("Coffee", daysAgo: 29, 6, 0), entry("Tea", daysAgo: 30, 6, 0)], today: today, by: { $0.minute / 60 })
         #expect(picks[6]?.map(\.food.name) == ["Coffee"])
     }
 
@@ -54,15 +54,26 @@ struct HourPicksTests {
             entry("Toast", daysAgo: 1, 7, 10), entry("Yogurt", daysAgo: 2, 7, 15),
             entry("Oats", daysAgo: 1, 19, 0),
         ]
-        let picks = HourPicks.picks(entries, today: today, hidden: [7: ["custom-Oats"]])
+        let picks = HourPicks.picks(entries, today: today, by: { $0.minute / 60 }, hidden: [7: ["custom-Oats"]])
         #expect(picks[7]?.map(\.food.name) == ["Banana", "Toast", "Yogurt"])
         #expect(picks[19]?.map(\.food.name) == ["Oats"])
+    }
+
+    @Test func aSectionsPicksCountTheSectionEachFoodWasLoggedInto() {
+        var early = entry("Oats", daysAgo: 1, 11, 50)
+        early.section = "lunch"
+        let entries = [early, entry("Oats", daysAgo: 2, 12, 30), entry("Toast", daysAgo: 1, 8, 0), entry("Nuts", daysAgo: 1, 11, 0)]
+        let sections = MealSection.defaults
+        let picks = HourPicks.picks(entries, today: today, by: { sections.section(of: $0.section, minute: $0.minute).id }, hidden: ["breakfast": ["custom-Toast"]])
+        #expect(picks["lunch"]?.map(\.food.name) == ["Oats"])
+        #expect(picks["am-snack"]?.map(\.food.name) == ["Nuts"])
+        #expect(picks["breakfast"] == nil)
     }
 
     @Test func theLaterWriteWinsWithinOneMinuteWhateverTheOrder() {
         let first = entry("Oats", daysAgo: 0, 8, 0, quantity: 1, written: "2026-10-27T08:00:01.000Z")
         let second = entry("Oats", daysAgo: 0, 8, 0, quantity: 2, written: "2026-10-27T08:00:02.000Z")
-        #expect(HourPicks.picks([first, second], today: today)[8]?.first?.serving.quantity == 2)
-        #expect(HourPicks.picks([second, first], today: today)[8]?.first?.serving.quantity == 2)
+        #expect(HourPicks.picks([first, second], today: today, by: { $0.minute / 60 })[8]?.first?.serving.quantity == 2)
+        #expect(HourPicks.picks([second, first], today: today, by: { $0.minute / 60 })[8]?.first?.serving.quantity == 2)
     }
 }

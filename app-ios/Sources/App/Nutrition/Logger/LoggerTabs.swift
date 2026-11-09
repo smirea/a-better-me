@@ -15,8 +15,8 @@ struct SearchTab: View {
         let picks = session.picks
         List {
             if session.query.isEmpty {
-                if let hour = session.picksHour, !picks.isEmpty {
-                    ThemedSection("\(NutritionFormat.hour(hour)) Picks") { rows(picks, terms) }
+                if !picks.isEmpty {
+                    ThemedSection("\(session.picksSlot.label) Picks") { rows(picks, terms) }
                 }
                 ThemedSection("Latest") { rows(session.results, terms) }
             } else {
@@ -82,12 +82,11 @@ struct SearchTab: View {
             .swipeActions(edge: .trailing) {
                 switch result.group {
                 case .picks:
-                    if let hour = session.picksHour {
-                        Button("Remove from Picks", systemImage: "trash", role: .destructive) {
-                            Task { await session.hidePick(result.portion.food, hour: hour) }
-                        }
-                        .tint(Theme.destructive)
+                    let slot = session.picksSlot
+                    Button("Remove from Picks", systemImage: "trash", role: .destructive) {
+                        Task { await session.hidePick(result.portion.food, from: slot) }
                     }
+                    .tint(Theme.destructive)
                 case .history:
                     Button("Remove from History", systemImage: "trash", role: .destructive) {
                         Task { await session.hideFromHistory(result.portion.food) }

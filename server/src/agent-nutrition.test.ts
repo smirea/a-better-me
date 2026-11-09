@@ -293,6 +293,49 @@ describe('nutrition agent API', () => {
 		expect(stripped.nutrition).not.toHaveProperty('searchOpenFoodFacts');
 	});
 
+	test('entries keep the meal section they were logged into when the sections change', async () => {
+		const food = await ok('POST', '/foods', { ...oats, name: 'Section Oats' });
+		const log = (body: object) => ok('POST', '/food-entries', { day: '2026-10-23', foodId: food.id, ...body });
+		expect((await log({ minute: 9 * 60 + 30 })).section).toBe('breakfast');
+		expect((await log({ minute: 9 * 60 + 30, section: 'lunch' })).section).toBe('lunch');
+		expect(
+			(await status('POST', '/food-entries', { day: '2026-10-23', foodId: food.id, section: 'brunch' })).status,
+		).toBe(422);
+
+		const sections = [
+			{ id: 'breakfast', name: 'Breakfast', start: 0 },
+			{ id: 'brunch', name: 'Brunch', start: 9 * 60 },
+			{ id: 'dinner', name: 'Dinner', start: 17 * 60 },
+		];
+		const moved = await log({ minute: 8 * 60 });
+		await ok('PATCH', '/settings', { nutrition: { mealSections: sections, timeline: { display: 'sections' } } });
+		expect((await ok('GET', `/food-entries/${moved.id}`)).section).toBe('breakfast');
+		const brunch = await log({ minute: 9 * 60 + 30 });
+		expect(brunch.section).toBe('brunch');
+		expect((await ok('PATCH', `/food-entries/${moved.id}`, { minute: 18 * 60 })).section).toBe('dinner');
+		expect((await ok('PATCH', `/food-entries/${moved.id}`, { quantity: 2, day: '2026-10-24' })).section).toBe('dinner');
+		expect((await ok('GET', '/settings')).nutrition).toMatchObject({
+			mealSections: sections,
+			timeline: { display: 'sections' },
+		});
+
+		for (const bad of [
+			[],
+			[{ id: 'a', name: 'A', start: 60 }],
+			[sections[0], { ...sections[1], start: 0 }],
+			[sections[0], sections[0]],
+		]) {
+			expect((await status('PATCH', '/settings', { nutrition: { mealSections: bad } })).status).toBe(400);
+		}
+		const [breakfast, , dinner] = sections;
+		await ok('PATCH', '/settings', { nutrition: { mealSections: [breakfast, dinner] } });
+		expect((await ok('GET', `/food-entries/${brunch.id}`)).section).toBe('brunch');
+		await ok('PATCH', '/settings', { nutrition: { mealSections: [breakfast, { ...dinner!, start: 600 }] } });
+		const rows = await phone('food_entries');
+		expect(rows.find(entry => entry.id === brunch.id)!.section).toBe('breakfast');
+		expect(rows.find(entry => entry.id === moved.id)!.section).toBe('dinner');
+	});
+
 	test('the OpenAPI document lists the nutrition operations', async () => {
 		const { paths } = await ok('GET', '/openapi.json');
 		expect(Object.keys(paths['/nutrition-plans/{day}'])).toEqual(['get', 'put', 'delete']);

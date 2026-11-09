@@ -693,6 +693,10 @@ export const RecipePatch = z
 	.partial()
 	.meta({ id: 'RecipePatch', description: '`ingredients` and `steps` replace the whole list.' });
 
+const entrySection = z.string().min(1).optional().meta({
+	description:
+		'A meal section id from `settings.nutrition.mealSections`. Omitted, the section `minute` falls in, as the app logs.',
+});
 export const FoodEntry = z
 	.object({
 		id: z.string(),
@@ -700,19 +704,26 @@ export const FoodEntry = z
 		minute,
 		food: FoodSnapshot,
 		serving: Serving,
+		section: z.string().nullable().meta({
+			description:
+				'The id of the meal section (`settings.nutrition.mealSections`) it was logged into, kept when the sections change. Null for entries logged before sections existed, which the app places by `minute`.',
+		}),
 		amounts: NutrientAmounts.meta({ description: "What was eaten: the snapshot's nutrients scaled by the serving." }),
 		createdAt: z.string(),
 		updatedAt: z.string(),
 	})
-	.meta({ id: 'FoodEntry', description: 'One logged food at a minute of a day. The log has no meals.' });
+	.meta({ id: 'FoodEntry', description: 'One logged food at a minute of a day, in a meal section.' });
 export const FoodEntryCreate = z
-	.object({ id: createdId.optional(), day, minute: minute.default(720), ...portionFields })
+	.object({ id: createdId.optional(), day, minute: minute.default(720), section: entrySection, ...portionFields })
 	.refine(...onePortion)
 	.meta({ id: 'FoodEntryCreate' });
 export const FoodEntryPatch = z
-	.object({ day, minute, food: FoodSnapshot, serving: Serving })
+	.object({ day, minute, food: FoodSnapshot, serving: Serving, section: entrySection })
 	.partial()
-	.meta({ id: 'FoodEntryPatch' });
+	.meta({
+		id: 'FoodEntryPatch',
+		description: 'A new `minute` without a `section` moves the entry to the section that minute falls in.',
+	});
 
 export const FoodFavorite = z
 	.object({ id: z.string(), food: FoodSnapshot, serving: Serving, createdAt: z.string() })
@@ -851,6 +862,28 @@ export const NutrientGoalPut = z
 	.meta({ id: 'NutrientGoalPut', description: 'The bounds apply only under `custom`.' });
 
 const hour = z.int().min(0).max(23);
+/** Mirrors `MealSection.defaults`. */
+export const DEFAULT_MEAL_SECTIONS = [
+	{ id: 'breakfast', name: 'Breakfast', start: 0 },
+	{ id: 'am-snack', name: 'AM Snack', start: 600 },
+	{ id: 'lunch', name: 'Lunch', start: 720 },
+	{ id: 'pm-snack', name: 'PM Snack', start: 900 },
+	{ id: 'dinner', name: 'Dinner', start: 1020 },
+];
+export const MealSections = z
+	.array(z.object({ id: z.string().min(1), name: z.string().min(1), start: minute }))
+	.min(1)
+	.refine(sections => sections[0]?.start === 0, { message: 'The first section starts at midnight (0).' })
+	.refine(sections => sections.every((section, index) => index === 0 || section.start > sections[index - 1]!.start), {
+		message: 'Each section starts after the one before.',
+	})
+	.refine(sections => new Set(sections.map(section => section.id)).size === sections.length, {
+		message: 'Section ids are unique.',
+	})
+	.meta({
+		description:
+			"The meal sections in time order, each from its `start` (minutes since midnight) to the next one's; the first starts at 0. Ids stay when a section is renamed, since entries store them.",
+	});
 /** Mirrors `NutritionSettings` in the iOS app; a key the app does not know is ignored there. */
 const NutritionSettingsPatch = z
 	.object({
@@ -878,6 +911,9 @@ const NutritionSettingsPatch = z
 		favoriteMeasures: z.array(z.string()),
 		timeline: z
 			.object({
+				display: z
+					.enum(['time', 'sections'])
+					.meta({ description: 'The Food Log groups foods by hour, or by `mealSections`.' }),
 				firstHour: hour,
 				lastHour: hour,
 				hideEmptyHours: z.boolean(),
@@ -915,6 +951,7 @@ const NutritionSettingsPatch = z
 				predictiveGoalAdjustment: z.boolean(),
 			})
 			.partial(),
+		mealSections: MealSections,
 		hiddenNutrients: z.array(nutrientID),
 		visibleBodyMetrics: z.array(z.enum(BODY_METRIC_KINDS)),
 	})

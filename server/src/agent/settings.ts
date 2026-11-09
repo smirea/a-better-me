@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { SETTINGS_ID } from '../../../shared/db/schema';
 import type { Db } from './db';
 import * as M from './models';
+import { stampSections } from './nutrition';
 import { route, type Route } from './route';
 
 /** Objects merge key by key and everything else replaces, as the app reads a settings tree over its defaults. */
@@ -78,8 +79,10 @@ export const settingsRoutes: Route[] = [
 				nutrition: deepMerge(current.nutrition, body.nutrition ?? {}),
 				workout: workoutPatch(current.workout, body.workout),
 			};
+			const stamps = body.nutrition?.mealSections ? stampSections(db, body.nutrition.mealSections) : [];
 			const exists = db.get('settings', SETTINGS_ID);
 			db.commit(
+				...stamps,
 				exists
 					? db.patch('settings', SETTINGS_ID, values)
 					: db.put('settings', { ...current, ...values, id: SETTINGS_ID }),

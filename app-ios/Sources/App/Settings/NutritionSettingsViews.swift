@@ -19,6 +19,18 @@ struct FoodLogSettingsView: View {
                     ]
                 )
             }
+            ThemedSection("Food Log Display") {
+                SettingChoice(
+                    title: "Display", systemImage: "list.bullet.indent", selection: store.binding(settings, \.nutrition.timeline.display),
+                    options: [
+                        SettingOption(value: .time, title: "Time", detail: "Foods are grouped by the hour they were logged"),
+                        SettingOption(value: .sections, title: "Sections", detail: "Foods are grouped into meal sections, such as Breakfast and Lunch"),
+                    ]
+                )
+            }
+            if timeline.display == .sections {
+                MealSectionsEditor(sections: settings.nutrition.mealSections)
+            }
             ThemedSection("Daily Summary", footer: "Shown over the timeline and in the logger's banner. Hold a column there to change it.") {
                 ForEach(Array(settings.nutrition.summaryNutrients.enumerated()), id: \.offset) { index, nutrient in
                     Picker("Column \(index + 1)", selection: Binding(
@@ -394,5 +406,98 @@ private struct EnergyField: View {
                 Text(unit.label).foregroundStyle(Theme.textSecondary)
             }
         }
+    }
+}
+
+/// Settings > Food Log > Sections, shown with the Sections display: each section's name, and between two sections the
+/// time one ends and the next begins. Foods keep the section they were logged into, so editing these never moves them.
+private struct MealSectionsEditor: View {
+    let sections: [MealSection]
+
+    @Environment(LocalStore.self) private var store
+
+    var body: some View {
+        ThemedSection("Sections", footer: "The time between two sections is when one ends and the next begins. Foods keep the section they were logged into when these change.") {
+            ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                if index > 0 { boundary(index) }
+                SectionNameField(name: section.name) { name in edit { MealSectionsEditing.renaming(index, to: name, in: $0) } }
+                    .swipeActions(edge: .leading) { moves(index) }
+                    .swipeActions(edge: .trailing) { remove(index) }
+                    .contextMenu {
+                        moves(index)
+                        remove(index)
+                    }
+            }
+            Button("Add Section", systemImage: "plus") {
+                edit { MealSectionsEditing.adding(MealSectionsEditing.newName(in: $0), to: $0) ?? $0 }
+            }
+            .disabled(MealSectionsEditing.adding("", to: sections) == nil)
+        }
+    }
+
+    private func boundary(_ index: Int) -> some View {
+        let bounds = MealSectionsEditing.startBounds(of: index, in: sections)
+        let day = CalendarDay.today
+        return DatePicker(
+            selection: Binding(
+                get: { day.date(atMinute: sections[index].start) },
+                set: { date in edit { MealSectionsEditing.settingStart(date.minuteOfDay(), of: index, in: $0) } }
+            ),
+            in: day.date(atMinute: bounds.lowerBound)...day.date(atMinute: bounds.upperBound),
+            displayedComponents: .hourAndMinute
+        ) {
+            Label("\(sections[index].name) starts", systemImage: "clock").foregroundStyle(Theme.textSecondary)
+        }
+    }
+
+    @ViewBuilder
+    private func moves(_ index: Int) -> some View {
+        if index > 0 {
+            Button("Move Up", systemImage: "arrow.up") { edit { MealSectionsEditing.moving(index, by: -1, in: $0) } }
+        }
+        if index < sections.count - 1 {
+            Button("Move Down", systemImage: "arrow.down") { edit { MealSectionsEditing.moving(index, by: 1, in: $0) } }
+        }
+    }
+
+    @ViewBuilder
+    private func remove(_ index: Int) -> some View {
+        if sections.count > 1 {
+            Button("Delete", systemImage: "trash", role: .destructive) { edit { MealSectionsEditing.removing(index, from: $0) } }
+        }
+    }
+
+    private func edit(_ change: @escaping @Sendable ([MealSection]) -> [MealSection]) {
+        store.updateMealSections(change)
+    }
+}
+
+/// A section's name, saved when editing ends rather than on every keystroke. An empty name keeps the old one.
+private struct SectionNameField: View {
+    let name: String
+    let commit: (String) -> Void
+
+    @State private var text: String
+    @FocusState private var focused: Bool
+
+    init(name: String, commit: @escaping (String) -> Void) {
+        self.name = name
+        self.commit = commit
+        _text = State(initialValue: name)
+    }
+
+    var body: some View {
+        TextField("Section name", text: $text)
+            .focused($focused)
+            .submitLabel(.done)
+            .onSubmit(save)
+            .onChange(of: focused) { _, focused in if !focused { save() } }
+            .onChange(of: name) { _, name in if !focused { text = name } }
+            .accessibilityLabel("\(name) section name")
+    }
+
+    private func save() {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty || trimmed == name { text = name } else { commit(trimmed) }
     }
 }

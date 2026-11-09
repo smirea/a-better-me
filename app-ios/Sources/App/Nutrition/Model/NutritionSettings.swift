@@ -18,6 +18,8 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     }
 
     struct Timeline: Codable, Hashable, Sendable {
+        /// The timeline groups foods by hour, or by the owner's meal sections (`NutritionSettings.mealSections`).
+        var display = Display.time
         /// The hours always shown, inclusive; hours with entries outside them still show.
         var firstHour = 8
         var lastHour = 21
@@ -35,6 +37,11 @@ struct NutritionSettings: Codable, Hashable, Sendable {
         enum AddFoodsToHour: String, Codable, Sendable { case plusIcon, longPress }
         /// The week strip folds away while the timeline is scrolled down, stays, or is never shown.
         enum CalendarWeekBanner: String, Codable, Sendable { case show, showAndPin, hide }
+        enum Display: String, Codable, CaseIterable, Sendable {
+            case time, sections
+
+            var title: String { self == .time ? "Time" : "Sections" }
+        }
     }
 
     struct Logger: Codable, Hashable, Sendable {
@@ -117,6 +124,9 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     /// Measure names pinned to the front of the serving picker, at most two weights and two volumes.
     var favoriteMeasures = ["g", "oz", "mL", "cup"]
     var timeline = Timeline()
+    /// The meal sections in time order. The Sections display groups the timeline by them, and every entry stores the one it
+    /// was logged into; the logger's Picks and search ranking read them in either display.
+    var mealSections = MealSection.defaults
     var logger = Logger()
     /// The Nutrition "+" sheet's shortcuts in order; the first four are its round buttons.
     var shortcuts = NutritionShortcut.allCases
@@ -127,6 +137,8 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     var visibleBodyMetrics: Set<BodyMetricKind> = []
     /// Foods swiped out of an hour's Picks (`HourPicks`), by `FoodSearchResult.key`.
     var hiddenPicks: [Int: Set<String>] = [:]
+    /// Foods swiped out of a section's Picks, by section id.
+    var hiddenSectionPicks: [String: Set<String>] = [:]
     /// Foods swiped out of the logger's history (Latest and From History), by `FoodSearchResult.key`, with when. Logging
     /// one again after that brings it back, as in MacroFactor.
     var hiddenHistory: [String: Date] = [:]

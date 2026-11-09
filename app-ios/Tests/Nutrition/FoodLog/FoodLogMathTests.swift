@@ -27,7 +27,8 @@ struct FoodLogMathTests {
         let timeline = NutritionSettings.Timeline(firstHour: 12, lastHour: 15)
 
         let hours = FoodLog.hours([third, second, early, first], timeline: timeline)
-        #expect(hours.map(\.hour) == [6, 12, 13, 14, 15])
+        #expect(hours.map(\.slot) == [.hour(6), .hour(12), .hour(13), .hour(14), .hour(15)])
+        #expect(hours[3].minutes == 840..<900)
         #expect(hours[3].rows.map(\.entry.id) == [first.id, second.id, third.id])
         #expect(hours[3].rows.map(\.showsTime) == [true, false, true])
         #expect(hours[3].totals[.energy] == 960)
@@ -36,7 +37,7 @@ struct FoodLogMathTests {
 
         var hidden = timeline
         hidden.hideEmptyHours = true
-        #expect(FoodLog.hours([third, early], timeline: hidden).map(\.hour) == [6, 14])
+        #expect(FoodLog.hours([third, early], timeline: hidden).map(\.slot) == [.hour(6), .hour(14)])
     }
 
     @Test func totalsAndSummarizesAgainstTheDaysTarget() {
@@ -156,12 +157,12 @@ struct FoodLogMathTests {
             Relocation(ids: [lunch.id, breakfast.id, coffee.id], day: monday, minute: 1085),
         ])
         #expect(FoodLog.relocations(entries, to: .tomorrow, now: now, calendar: calendar) == [
-            Relocation(ids: [breakfast.id, coffee.id], day: calendarDay("2026-10-27"), minute: 480),
-            Relocation(ids: [lunch.id], day: calendarDay("2026-10-27"), minute: 750),
+            Relocation(ids: [breakfast.id, coffee.id], day: calendarDay("2026-10-27"), minute: 480, section: .keep),
+            Relocation(ids: [lunch.id], day: calendarDay("2026-10-27"), minute: 750, section: .keep),
         ])
         #expect(FoodLog.relocations([lunch], to: .days([calendarDay("2026-11-02"), calendarDay("2026-10-30")]), now: now, calendar: calendar) == [
-            Relocation(ids: [lunch.id], day: calendarDay("2026-10-30"), minute: 750),
-            Relocation(ids: [lunch.id], day: calendarDay("2026-11-02"), minute: 750),
+            Relocation(ids: [lunch.id], day: calendarDay("2026-10-30"), minute: 750, section: .keep),
+            Relocation(ids: [lunch.id], day: calendarDay("2026-11-02"), minute: 750, section: .keep),
         ])
         #expect(FoodLog.relocations([lunch], to: .hour(monday, hour: 15), now: now, calendar: calendar) == [
             Relocation(ids: [lunch.id], day: monday, minute: 900),

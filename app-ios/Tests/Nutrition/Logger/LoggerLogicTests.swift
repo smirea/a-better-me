@@ -199,6 +199,14 @@ struct LogTimeTests {
         #expect(LogTime(day: today, hour: 14).label(today: today) == "2 PM")
         #expect(LogTime(day: today, hour: 0).label(today: today) == "12 AM")
         #expect(LogTime(day: calendarDay("2026-07-31"), hour: 12).label(today: today) == "12 PM · Jul 31")
+        let sections = MealSection.defaults
+        let at = calendar.date(from: DateComponents(year: 2026, month: 10, day: 26, hour: 9, minute: 40))!
+        #expect(LogTime(day: today, hour: 11).label(today: today, sections: sections, now: at) == "AM Snack")
+        #expect(LogTime(day: calendarDay("2026-07-31"), hour: 13).label(today: today, sections: sections, now: at) == "Lunch · Jul 31")
+        #expect(LogTime(day: today, hour: 11, section: sections[2]).label(today: today, now: at) == "Lunch")
+        var picked = LogTime(day: today, hour: 11, section: sections[2])
+        picked.hour = 12
+        #expect(picked.section == nil)
         #expect(NutritionFormat.dayTitle(today.adding(days: -1), today: today) == "Yesterday")
         #expect(NutritionFormat.dayTitle(calendarDay("2026-10-24"), today: today) == "Sat, Oct 24")
     }
@@ -260,6 +268,12 @@ struct LoggerStartTests {
         let start = LoggerStart(LogFoodRequest(day: calendarDay("2026-10-24"), minute: 9 * 60, start: .scan), now: now)
         #expect(start.tab == .scan)
         #expect(start.time == LogTime(day: calendarDay("2026-10-24"), hour: 9))
+    }
+
+    @Test func aSectionsPlusLogsIntoThatSection() {
+        let lunch = MealSection.defaults[2]
+        let start = LoggerStart(LogFoodRequest(day: calendarDay("2026-10-24"), minute: 13 * 60 + 30, section: lunch), now: now)
+        #expect(start.time == LogTime(day: calendarDay("2026-10-24"), hour: 13, section: lunch))
     }
 
     @Test func todayFollowsTheClockAndAnotherDayTakesTheCurrentHour() {

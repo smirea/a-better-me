@@ -229,6 +229,8 @@ export const foodEntries = sqliteTable('food_entries', {
 	food: json('food').notNull().default({}),
 	/** `Serving`: `{ measure, quantity }`. */
 	serving: json('serving').notNull().default({}),
+	/** The `MealSection` id the entry was logged into, kept when the sections change. Null before sections existed. */
+	section: text('section'),
 	createdAt: text('created_at').notNull(),
 	updatedAt: text('updated_at').notNull(),
 });
@@ -423,7 +425,7 @@ export const schema = defineSchema({
 			prepMinutes: count,
 			cookMinutes: count,
 		},
-		food_entries: { day, minute, food: foodSnapshot, serving },
+		food_entries: { day, minute, food: foodSnapshot, serving, section: z.string().min(1) },
 		food_favorites: { food: foodSnapshot, serving },
 		nutrition_days: { status: z.enum(DAY_STATUSES), override: nutrientAmounts },
 		food_log_notes: { day, minute, title: z.string().min(1), color: z.enum(NOTE_COLORS) },

@@ -1,8 +1,8 @@
 import Foundation
 import GRDB
 
-/// A row of the synced `food_entries` table: one logged food at a time of a day. MacroFactor has no meals; its
-/// timeline groups entries by hour.
+/// A row of the synced `food_entries` table: one logged food at a time of a day, and the meal section it was logged
+/// into. The Time display groups entries by hour, the Sections display by section.
 struct FoodEntry: Stamped {
     static let table = "food_entries"
 
@@ -12,13 +12,17 @@ struct FoodEntry: Stamped {
     var minute: Int
     var food: FoodSnapshot
     var serving: Serving
+    /// The `MealSection` id it was logged into, kept when the sections or their times change later. Nil for entries
+    /// logged before sections existed, which show in the section their minute falls in.
+    var section: String?
     var createdAt: Date
     var updatedAt: Date
 
-    init(_ portion: FoodPortion, day: CalendarDay, minute: Int, at date: Date = .now) {
+    init(_ portion: FoodPortion, day: CalendarDay, minute: Int, section: String? = nil, at date: Date = .now) {
         id = UUID()
         self.day = day
         self.minute = minute
+        self.section = section
         food = portion.food
         serving = portion.serving
         createdAt = date
@@ -35,6 +39,7 @@ struct FoodEntry: Stamped {
         minute = row["minute"] ?? 720
         food = try row.json("food")
         serving = try row.json("serving")
+        section = row["section"]
         createdAt = try row.instant("created_at")
         updatedAt = try row.instant("updated_at")
     }
@@ -45,6 +50,7 @@ struct FoodEntry: Stamped {
         container["minute"] = minute
         container["food"] = try RowJSON.text(food)
         container["serving"] = try RowJSON.text(serving)
+        container["section"] = section
         container["created_at"] = Instant.text(createdAt)
         container["updated_at"] = Instant.text(updatedAt)
     }

@@ -6,15 +6,19 @@ import GRDB
 extension LocalStore {
 
     /// Logs every portion at `minute` of `day`, as one transaction: a plate, a recipe, or a single food.
-    func log(_ portions: [FoodPortion], on day: CalendarDay, minute: Int) {
-        log(portions.map { ($0, day: day, minute: minute) })
+    func log(_ portions: [FoodPortion], on day: CalendarDay, minute: Int, section: String? = nil) {
+        log(portions.map { ($0, day: day, minute: minute) }, section: section)
     }
 
-    /// Logs each portion at its own day and minute, as one transaction: a ramble's rows.
-    func log(_ portions: [(FoodPortion, day: CalendarDay, minute: Int)]) {
-        let entries = portions.map { FoodEntry($0.0, day: $0.day, minute: $0.minute) }
+    /// Logs each portion at its own day and minute, as one transaction: a ramble's rows. Each entry keeps the meal
+    /// section it lands in: `section` when the owner picked one, else the one its minute falls in as the sections stand
+    /// now, so moving a boundary later never moves it.
+    func log(_ portions: [(FoodPortion, day: CalendarDay, minute: Int)], section: String? = nil) {
+        let entries = portions.map { FoodEntry($0.0, day: $0.day, minute: $0.minute, section: section) }
         write { db in
-            for entry in entries {
+            let sections = try MealSection.current(db)
+            for var entry in entries {
+                entry.section = entry.section ?? sections.section(at: entry.minute).id
                 try entry.insert(db)
             }
         }
@@ -96,5 +100,45 @@ extension LocalStore {
 
     func deleteNutrientGoal(_ nutrient: NutrientID, from day: CalendarDay) {
         delete(NutrientGoal.self, id: NutrientGoal.id(nutrient, from: day))
+    }
+}
+
+extension LocalStore {
+    /// Changes the meal sections. When a change moves time between sections (a boundary, a removal, a reorder), every
+    /// entry without a section of its own (logged before sections existed, or into a section since removed) first gets
+    /// the one its minute falls in as the sections stand, in the same transaction, so the change moves no entry already
+    /// logged. A rename moves nothing, so it stamps nothing. The stamp keeps `updated_at`, which orders Latest.
+    func updateMealSections(_ change: @escaping @Sendable ([MealSection]) -> [MealSection]) {
+        write { db in
+            let current = try AppSettings.fetchOne(db, key: AppSettings.key(AppSettings.rowID))
+            let sections = current?.nutrition.mealSections ?? MealSection.defaults
+            let changed = change(sections)
+            guard changed != sections else { return }
+            if changed.map(\.id) != sections.map(\.id) || changed.map(\.start) != sections.map(\.start) {
+                try Self.stampSections(sections, in: db)
+            }
+            guard let current else {
+                var fresh = AppSettings()
+                fresh.nutrition.mealSections = changed
+                return try fresh.insert(db)
+            }
+            var updated = current
+            updated.nutrition.mealSections = changed
+            try updated.updateChanges(db, from: current)
+        }
+    }
+
+    nonisolated static func stampSections(_ sections: [MealSection], in db: Database) throws {
+        let ids = sections.map(\.id)
+        let cases = sections.reversed().map { _ in "WHEN minute >= ? THEN ?" }.joined(separator: " ")
+        var arguments: [any DatabaseValueConvertible] = sections.reversed().flatMap { [$0.start, $0.id] as [any DatabaseValueConvertible] }
+        arguments += ids
+        try db.execute(
+            sql: """
+                UPDATE food_entries SET section = CASE \(cases) END
+                WHERE section IS NULL OR section NOT IN (\(databaseQuestionMarks(count: ids.count)))
+                """,
+            arguments: StatementArguments(arguments)
+        )
     }
 }
