@@ -63,12 +63,15 @@ export function mealSections(db: Db) {
 	return parsed.success ? parsed.data : M.DEFAULT_MEAL_SECTIONS;
 }
 
+/** Where each section starts, which is all that decides the section a minute falls in. */
+const timing = (sections: { id: string; start: number }[]) =>
+	sections.map(section => `${section.id}@${section.start}`).join();
+
 /** Before the sections change, gives every entry without a section of its own the one its minute falls in now, so the
  * change moves no entry already logged; `LocalStore.updateMealSections` does the same. A rename moves nothing. */
 export function stampSections(db: Db, next: { id: string; start: number }[]) {
 	const sections = mealSections(db);
-	const shape = (list: { id: string; start: number }[]) => list.map(section => `${section.id}@${section.start}`).join();
-	if (shape(sections) === shape(next)) return [];
+	if (timing(sections) === timing(next)) return [];
 	const ids = sections.map(section => section.id);
 	return db
 		.all('food_entries', `section IS NULL OR section NOT IN (${ids.map(() => '?').join(', ')})`, ids)
