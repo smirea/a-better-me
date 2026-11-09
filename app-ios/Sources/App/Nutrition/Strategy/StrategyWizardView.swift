@@ -76,6 +76,7 @@ struct StrategyWizardView: View {
 
     private func title(_ step: StrategyWizardModel.Step) -> String? {
         switch step {
+        case .maintenance: "What is your maintenance?"
         case .goalType: "What is your goal?"
         case .goalWeightRate: nil
         case .goalSummary: "Goal summary"
@@ -96,6 +97,11 @@ struct StrategyWizardView: View {
     @ViewBuilder
     private func content(_ step: StrategyWizardModel.Step) -> some View {
         switch step {
+        case .maintenance:
+            MaintenanceSection(
+                estimate: model.maintenance, isStatic: model.maintenance == nil && model.estimatedKcal != nil, estimatedKcal: model.estimatedKcal,
+                overrideKcal: Binding(get: { model.maintenanceOverride }, set: { model.setMaintenanceOverride($0) }), unit: unit
+            )
         case .goalType:
             ForEach([NutritionGoal.Kind.lose, .maintain, .gain], id: \.self) { kind in
                 WizardOption(title: goalKindName(kind), subtitle: nil, selected: model.goal.kind == kind) {
@@ -111,7 +117,7 @@ struct StrategyWizardView: View {
             styleOption(step, .collaborative, "Collaborative", "Set your own macro targets and we'll adjust your Calorie budget based on your goal and progress.")
             styleOption(step, .manual, "Manual", "Set your own macro and Calorie targets using manual entry.")
             if model.basis == nil {
-                Text("Coached and collaborative programs need an expenditure estimate: add your height and birth date to your profile, or set an initial expenditure in Settings.")
+                Text("Coached and collaborative programs need a maintenance estimate: add your height and birth date to your profile, or set your maintenance by hand above.")
                     .font(AppFont.caption())
                     .foregroundStyle(Theme.textSecondary)
             }

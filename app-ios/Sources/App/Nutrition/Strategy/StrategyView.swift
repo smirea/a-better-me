@@ -18,7 +18,8 @@ struct StrategyData {
         guard let weight = inputs.trendWeightKg ?? settings.profile.bodyWeightKg else { return nil }
         return StrategyWizardModel(
             mode: mode, current: current, today: today, weightKg: weight,
-            expenditureKcal: inputs.expenditureKcal, standardFloorKcal: settings.nutrition.standardFloorKcal
+            expenditureKcal: inputs.expenditureKcal, standardFloorKcal: settings.nutrition.standardFloorKcal,
+            maintenance: inputs.isStaticExpenditure ? nil : inputs.maintenance
         )
     }
 }
@@ -33,11 +34,12 @@ struct StrategyDataReader<Content: View>: View {
         var profile: ProfileSettings
         var plans: [NutritionPlan]
         var steps: [DatedValue]
+        var workouts: [DatedValue]
         var today: CalendarDay
 
         func inputs() -> StrategyInputs {
             StrategyInputs.make(
-                weighIns: weighIns, log: log, settings: settings, profile: profile, plans: plans, steps: steps, today: today, calendar: .current
+                weighIns: weighIns, log: log, settings: settings, profile: profile, plans: plans, steps: steps, workouts: workouts, today: today, calendar: .current
             )
         }
     }
@@ -48,6 +50,7 @@ struct StrategyDataReader<Content: View>: View {
     @Observe(NutritionLogDay.all) private var log
     @Observe(AppSettings.current) private var settings
     @Observe(BodyMetric.series(.steps)) private var importedSteps
+    @Observe(WorkoutSession.activeMinutes) private var workouts
     @State private var inputs: StrategyInputs?
 
     var body: some View {
@@ -55,7 +58,8 @@ struct StrategyDataReader<Content: View>: View {
         let _ = scenePhase
         let sources = Sources(
             weighIns: health.weighIns, log: log, settings: settings.nutrition, profile: settings.profile, plans: plans,
-            steps: NutritionExpenditure.steps(health: health.steps, imported: importedSteps, calendar: .current), today: .today
+            steps: NutritionExpenditure.steps(health: health.steps, imported: importedSteps, calendar: .current), workouts: workouts,
+            today: .today
         )
         // The first frame derives synchronously rather than drawing blank; later changes go through `onChange`.
         content(StrategyData(plans: plans, settings: settings, inputs: inputs ?? sources.inputs()))

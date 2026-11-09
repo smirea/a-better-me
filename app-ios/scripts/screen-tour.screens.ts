@@ -123,6 +123,18 @@ export const screens: Screen[] = [
 		steps: [...more('Strategy'), 'press 362 84', 'wait 800', ...tap('Edit Goal'), 'wait 1000'],
 	},
 	{
+		name: 'strategy-maintenance-breakdown',
+		steps: [
+			...more('Strategy'),
+			'press 362 84',
+			'wait 800',
+			...tap('Edit Goal'),
+			'wait 1000',
+			...tap('See the calculation'),
+			'wait 1000',
+		],
+	},
+	{
 		name: 'foodlog-nutrient-goals',
 		steps: [...more('Strategy'), 'press 362 84', 'wait 800', ...tap('Nutrient Goals')],
 	},

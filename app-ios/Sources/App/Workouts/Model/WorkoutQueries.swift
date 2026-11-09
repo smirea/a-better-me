@@ -28,6 +28,17 @@ extension WorkoutSession {
         try WorkoutSession.filter(Column("ended_at") == nil).fetchAll(db).min { $0.startedAt < $1.startedAt }
     }
 
+    /// Each finished session at its start with its active minutes, read without decoding its blocks, so the maintenance
+    /// estimate can watch the table cheaply.
+    static let activeMinutes = DatabaseQuery([DatedValue]()) { db in
+        try Row.fetchAll(db, sql: "SELECT started_at, ended_at, paused_seconds FROM workout_sessions WHERE ended_at IS NOT NULL").map { row in
+            let start = try row.instant("started_at")
+            let end = try row.instant("ended_at")
+            let paused: Int = row["paused_seconds"] ?? 0
+            return DatedValue(date: start, value: max(0, end.timeIntervalSince(start) - Double(paused)) / 60)
+        }
+    }
+
     /// For views that only show whether a session is in progress, so logging a set doesn't re-render them.
     static let inProgressID = DatabaseQuery(UUID?.none) { try inProgress.fetch($0)?.id }
 
