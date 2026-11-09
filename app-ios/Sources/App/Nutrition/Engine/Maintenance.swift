@@ -1,8 +1,8 @@
 import Foundation
 
 extension NutritionEngine {
-    /// A day `DayIntake` counts, with what the incomplete-day screen compares. A marked day (fasted, or totals entered
-    /// by hand) is one the owner vouched for, so it is never screened out.
+    /// A day `DayIntake` counts, with what the incomplete-day screen compares. A marked day (complete, fasted, or totals
+    /// entered by hand) is one the owner vouched for, so it is never screened out.
     struct CountedDay: Hashable {
         var date: Date
         var kcal: Double

@@ -58,6 +58,14 @@ struct NutritionMetricsTests {
         #expect(log.map(NutritionMetrics.logState) == [.tracked, .tracked, .tracked, .fasting, .untracked])
     }
 
+    @Test func aLightDayIsScreenedOutUnlessMarkedComplete() {
+        let typical = (1...14).map { logDay(String(format: "2026-10-%02d", $0), kcal: [2000]) }
+        let unmarked = typical + [logDay("2026-10-15", kcal: [600])]
+        let complete = typical + [logDay("2026-10-15", kcal: [600], row: row("2026-10-15", .complete))]
+        #expect(NutritionExpenditure.intake(unmarked, calendar: utc).last == DatedValue(date: start("2026-10-14"), value: 2000))
+        #expect(NutritionExpenditure.intake(complete, calendar: utc).last == DatedValue(date: start("2026-10-15"), value: 600))
+    }
+
     @Test func foodLoggingHabitCountsTrackedAndFastingDaysAndTheStreak() {
         let log = [
             logDay("2026-10-20", kcal: [500]),

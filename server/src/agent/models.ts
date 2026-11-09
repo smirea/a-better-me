@@ -726,7 +726,8 @@ export const NutritionDay = z
 	.object({
 		id: day,
 		status: z.enum(DAY_STATUSES).meta({
-			description: '`partial`: incomplete, skipped by the expenditure algorithm. `fasted`: counts as zero when empty.',
+			description:
+				'`none`: unmarked, skipped when the incomplete-day screen finds it almost certainly partial. `complete`: always counted. `partial`: incomplete, skipped by the expenditure algorithm. `fasted`: counts as zero when empty.',
 		}),
 		override: NutrientAmounts.nullable().meta({ description: "Replaces the log's totals for the day." }),
 	})

@@ -54,7 +54,7 @@ function countedDays(db: Db): CountedDay[] {
 						kcal: day.countedKcal,
 						proteinG: day.consumed.p ?? 0,
 						entries: day.entryCount,
-						marked: day.override !== null || day.status === 'fasted',
+						marked: day.override !== null || day.status === 'fasted' || day.status === 'complete',
 					},
 				],
 	);

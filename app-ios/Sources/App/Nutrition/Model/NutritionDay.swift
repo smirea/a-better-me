@@ -7,8 +7,10 @@ struct NutritionDay: SyncedRecord {
     static let table = "nutrition_days"
 
     enum Status: String, CaseIterable, Codable, Sendable {
-        /// Logged as usual: the entries are the intake.
+        /// Unmarked: the entries are the intake, unless the incomplete-day screen finds the day almost certainly partial.
         case none
+        /// Marked complete: the entries are the intake, and the incomplete-day screen keeps a light day.
+        case complete
         /// Marked incomplete; the algorithms skip it.
         case partial
         /// Marked fasted; with no entries it counts as zero calories.
@@ -16,7 +18,8 @@ struct NutritionDay: SyncedRecord {
 
         var title: String {
             switch self {
-            case .none: "Complete"
+            case .none: "Unmarked"
+            case .complete: "Complete"
             case .partial: "Incomplete"
             case .fasted: "Fasted"
             }
@@ -24,7 +27,8 @@ struct NutritionDay: SyncedRecord {
 
         var symbol: String {
             switch self {
-            case .none: "checkmark.circle"
+            case .none: "circle.dashed"
+            case .complete: "checkmark.circle"
             case .partial: "circle.lefthalf.filled"
             case .fasted: "moon.zzz.fill"
             }

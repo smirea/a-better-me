@@ -152,7 +152,7 @@ struct NutritionDayEntrySheet: View {
         let filled = amounts
         let logged = existing.map { $0.hasOverride ? [:] : $0.consumed } ?? [:]
         let amounts = filled.isEmpty ? filled : logged.merging(filled) { $1 }
-        let status: NutritionDay.Status = fasting ? .fasted : incomplete ? .partial : .none
+        let status: NutritionDay.Status = fasting ? .fasted : incomplete ? .partial : existing?.status == .complete ? .complete : .none
         store.updateDay(day) { row in
             row.override = amounts.isEmpty ? nil : amounts
             row.status = status

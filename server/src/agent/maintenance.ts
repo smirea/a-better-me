@@ -19,7 +19,7 @@ const median = (values: number[]) => {
 	return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
 };
 
-/** A day `DayIntake` counts. `marked` is a fasted day or entered totals, which the owner vouched for. */
+/** A day `DayIntake` counts. `marked` is a day marked complete or fasted, or entered totals, which the owner vouched for. */
 export type CountedDay = { day: Day; kcal: number; proteinG: number; entries: number; marked: boolean };
 export type IncompleteReason = 'farBelowTypical' | 'fewEntries' | 'lowProtein';
 export type IncompleteDay = { day: Day; kcal: number; typicalKcal: number; reason: IncompleteReason };
