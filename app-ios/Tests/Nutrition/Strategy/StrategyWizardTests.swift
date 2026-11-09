@@ -243,8 +243,12 @@ struct StrategyWizardTests {
             goal: NutritionGoal(kind: .maintain, targetWeightKg: 89, ratePercentPerWeek: 0, startedOn: calendarDay("2026-10-01")),
             coaching: CoachingProgram(style: .collaborative), targets: WeekTargets(every: target(2000, 150, 70, 200))
         )
-        let model = wizard(.editProgram, current: current)
+        var model = wizard(.editProgram, current: current)
         #expect(model.steps == [.maintenance, .collaborative])
+        #expect(model.collaborative.targets == current.targets)
+        model.setMaintenanceOverride(2500)
+        #expect(StrategyRules.averageEnergy(model.plan(isFirst: false).targets) == 2500)
+        model.setMaintenanceOverride(nil)
         #expect(model.collaborative.targets == current.targets)
         #expect(model.plan(isFirst: false).goal == current.goal)
         #expect(wizard(.newProgram, current: nil).mode == .newGoal)

@@ -151,10 +151,20 @@ struct StrategyWizardModel {
         standardFloorKcal = kcal
     }
 
-    /// A collaborative week is seeded at the budget, so it follows the maintenance it is computed from.
+    /// A collaborative week follows the maintenance it is computed from: a new one is seeded at the budget, and an edited
+    /// one keeps its split and moves to the budget at the override, or back to the week it opened with without one.
     mutating func setMaintenanceOverride(_ kcal: Double?) {
         maintenanceOverride = kcal
-        seedCollaborative()
+        guard mode == .editProgram, coaching.style == .collaborative, let current else { return seedCollaborative() }
+        collaborative = CollaborativeWeek(current.targets)
+        if kcal != nil, let budget = collaborativeBudget { collaborative.rescale(toAverage: budget) }
+    }
+
+    /// The average of an even coached week at the goal and the maintenance, the budget a collaborative week moves to.
+    private var collaborativeBudget: Double? {
+        var even = CoachingProgram()
+        even.style = .collaborative
+        return basis.map { StrategyRules.coachedWeek(even, goal: savedGoal, basis: $0).averageKcal }
     }
 
     mutating func toggleHighDay(_ weekday: Int) {

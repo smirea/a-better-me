@@ -56,7 +56,7 @@ struct MaintenanceTests {
         ))
         let period = try #require(estimate.periods.first)
         #expect(period.adjustments.map(\.kind) == [.weight, .steps, .workouts])
-        #expect(period.adjustments.map { [round($0.before), round($0.now), round($0.kcal)] } == [[98.2, 96, -48.4], [5000, 9000, 160], [3.6, 0, -122.7]])
+        #expect(period.adjustments.map { [round($0.before), round($0.now), round($0.kcal)] } == [[98.2, 96, -48.4], [5000, 9000, 160], [214.7, 0, -122.7]])
         #expect([round(period.kcal), round(period.sdKcal), round(period.share)] == [2319.6, 123.7, 0.9])
         #expect([round(estimate.kcal), round(estimate.prior?.share ?? 0)] == [2344.1, 0.1])
     }

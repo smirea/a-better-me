@@ -77,7 +77,7 @@ extension NutritionEngine {
             }
 
             var kind: Kind
-            /// Kilograms, steps a day, or sessions a week, in the period and over the last four weeks.
+            /// Kilograms, steps a day, or workout minutes a week, in the period and over the last four weeks.
             var before: Double
             var now: Double
             var kcal: Double
@@ -314,8 +314,7 @@ extension NutritionEngine {
 
         private struct Activity {
             var steps: Double?
-            var workoutsPerDay: Double?
-            var minutesPerWorkout: Double?
+            var workoutMinutesPerDay: Double?
         }
 
         /// Mean steps over the days with steps once half the days have them; workouts only once the history holds any.
@@ -326,8 +325,7 @@ extension NutritionEngine {
             let done = sessions.filter { days.contains($0.day) }
             return Activity(
                 steps: Double(counts.count) >= model.stepShare * Double(days.count) ? counts.reduce(0, +) / Double(counts.count) : nil,
-                workoutsPerDay: firstWorkout.map { days.lowerBound >= $0 } == true ? Double(done.count) / Double(days.count) : nil,
-                minutesPerWorkout: done.isEmpty ? nil : done.map(\.minutes).reduce(0, +) / Double(done.count)
+                workoutMinutesPerDay: firstWorkout.map { days.lowerBound >= $0 } == true ? done.map(\.minutes).reduce(0, +) / Double(days.count) : nil
             )
         }
 
@@ -338,9 +336,8 @@ extension NutritionEngine {
             if let before = past.steps, let after = now.steps, abs(after - before) >= model.minStepChange {
                 adjustments.append(Adjustment(kind: .steps, before: before, now: after, kcal: model.kcalPerStep * (after - before)))
             }
-            if let before = past.workoutsPerDay, let after = now.workoutsPerDay {
-                let minutes = now.minutesPerWorkout ?? past.minutesPerWorkout ?? 0
-                let kcal = (after - before) * minutes / 60 * model.netWorkoutMets * weightKg
+            if let before = past.workoutMinutesPerDay, let after = now.workoutMinutesPerDay {
+                let kcal = (after - before) / 60 * model.netWorkoutMets * weightKg
                 if abs(kcal) >= model.minWorkoutChange {
                     adjustments.append(Adjustment(kind: .workouts, before: before * 7, now: after * 7, kcal: kcal))
                 }

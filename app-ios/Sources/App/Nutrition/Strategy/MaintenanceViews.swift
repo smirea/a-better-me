@@ -209,7 +209,7 @@ struct MaintenanceBreakdownView: View {
         case .steps:
             "\(adjustment.before.wholeText) a day then, \(adjustment.now.wholeText) over the last 4 weeks"
         case .workouts:
-            "\(adjustment.before.formatted(.number.precision(.fractionLength(1)))) a week then, \(adjustment.now.formatted(.number.precision(.fractionLength(1)))) over the last 4 weeks"
+            "\(adjustment.before.wholeText) min a week then, \(adjustment.now.wholeText) over the last 4 weeks"
         }
     }
 }

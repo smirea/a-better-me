@@ -83,7 +83,7 @@ describe('maintenance', () => {
 		expect(period!.adjustments.map(a => [a.kind, round(a.before), round(a.now), round(a.kcal)])).toEqual([
 			['weight', 98.2, 96, -48.4],
 			['steps', 5000, 9000, 160],
-			['workouts', 3.6, 0, -122.7],
+			['workouts', 214.7, 0, -122.7],
 		]);
 		expect([round(period!.kcal), round(period!.sdKcal), round(period!.share)]).toEqual([2319.6, 123.7, 0.9]);
 		expect([round(estimate.kcal), round(estimate.prior!.share)]).toEqual([2344.1, 0.1]);

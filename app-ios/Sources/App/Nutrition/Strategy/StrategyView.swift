@@ -61,11 +61,20 @@ struct StrategyDataReader<Content: View>: View {
             steps: NutritionExpenditure.steps(health: health.steps, imported: importedSteps, calendar: .current), workouts: workouts,
             today: .today
         )
-        // The first frame derives synchronously rather than drawing blank; later changes go through `onChange`.
-        content(StrategyData(plans: plans, settings: settings, inputs: inputs ?? sources.inputs()))
-            .onChange(of: sources, initial: true) { _, sources in
-                inputs = sources.inputs()
+        // The maintenance estimate screens and fits the whole history, so it is computed off the main thread; until the
+        // first result lands the page shows a spinner, and later changes keep the previous result on screen.
+        Group {
+            if let inputs {
+                content(StrategyData(plans: plans, settings: settings, inputs: inputs))
+            } else {
+                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity).background(Theme.background)
             }
+        }
+        .task(id: sources) {
+            let computed = await Task.detached(priority: .userInitiated) { sources.inputs() }.value
+            guard !Task.isCancelled else { return }
+            inputs = computed
+        }
     }
 }
 

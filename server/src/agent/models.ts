@@ -1120,7 +1120,9 @@ export const MaintenanceEstimate = z
 						adjustments: z.array(
 							z.object({
 								kind: z.enum(['weight', 'steps', 'workouts']),
-								before: z.number().meta({ description: 'Kilograms, steps a day, or workouts a week in the period.' }),
+								before: z
+									.number()
+									.meta({ description: 'Kilograms, steps a day, or workout minutes a week in the period.' }),
 								now: z.number().meta({ description: 'The same over the last four weeks, or the trend weight today.' }),
 								kcal: z.number(),
 							}),

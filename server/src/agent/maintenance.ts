@@ -266,7 +266,7 @@ function line(points: { x: number; y: number }[]) {
 	return { slope, intercept, at, slopeSe: residualSd / Math.sqrt(sxx), used: points.length };
 }
 
-type Activity = { steps: number | null; workoutsPerDay: number | null; minutesPerWorkout: number | null };
+type Activity = { steps: number | null; workoutMinutesPerDay: number | null };
 
 function activityNow(steps: { day: Day; value: number }[], workouts: Workout[], end: Day): Activity {
 	return activityOver(
@@ -290,8 +290,7 @@ function activityOver(
 	const known = firstWorkout !== undefined && days[0]! >= firstWorkout;
 	return {
 		steps: counts.length >= MODEL.stepShare * days.length ? mean(counts) : null,
-		workoutsPerDay: known ? done.length / days.length : null,
-		minutesPerWorkout: done.length ? mean(done.map(w => w.minutes)) : null,
+		workoutMinutesPerDay: known ? sum(done.map(w => w.minutes)) / days.length : null,
 	};
 }
 
@@ -324,11 +323,15 @@ function adjust(
 			kcal: MODEL.kcalPerStep * (now.steps - past.steps),
 		});
 	}
-	if (past.workoutsPerDay !== null && now.workoutsPerDay !== null) {
-		const minutes = now.minutesPerWorkout ?? past.minutesPerWorkout ?? 0;
-		const kcal = (now.workoutsPerDay - past.workoutsPerDay) * ((minutes / 60) * MODEL.netWorkoutMets * weightKg);
+	if (past.workoutMinutesPerDay !== null && now.workoutMinutesPerDay !== null) {
+		const kcal = ((now.workoutMinutesPerDay - past.workoutMinutesPerDay) / 60) * MODEL.netWorkoutMets * weightKg;
 		if (Math.abs(kcal) >= MODEL.minWorkoutChange) {
-			adjustments.push({ kind: 'workouts', before: past.workoutsPerDay * 7, now: now.workoutsPerDay * 7, kcal });
+			adjustments.push({
+				kind: 'workouts',
+				before: past.workoutMinutesPerDay * 7,
+				now: now.workoutMinutesPerDay * 7,
+				kcal,
+			});
 		}
 	}
 	const { baseSd, ...measured } = period;
