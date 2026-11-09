@@ -279,7 +279,7 @@ struct FoodLogMathTests {
         #expect(NutritionFormat.dayTitle(monday, today: monday.adding(days: 5)) == "Mon, Oct 26")
         #expect(NutritionFormat.shortDay(monday) == "Oct 26")
         #expect(monday.date(atMinute: 888, in: utc).minuteOfDay(in: utc) == 888)
-        #expect(NutritionDay.Status.allCases.map(\.title) == ["Complete", "Incomplete", "Fasted"])
+        #expect(NutritionDay.Status.allCases.map(\.title) == ["Unmarked", "Complete", "Incomplete", "Fasted"])
         #expect(calendarDay("2026-10-29").week.map(\.description) == [
             "2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01",
         ])
