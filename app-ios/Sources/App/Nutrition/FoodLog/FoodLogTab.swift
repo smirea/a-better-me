@@ -52,7 +52,6 @@ struct FoodLogTab: View {
         .sheet(item: $state.logRequest) { LoggerSheet(start: LoggerStart($0)) }
         .sheet(item: $state.editing) { EntryEditor(entry: $0).environment(state) }
         .sheet(item: $state.recipeRequest) { RecipeEditor(draft: $0.draft) }
-        .sheet(item: $state.note) { NoteEditor(draft: $0) }
         .sheet(isPresented: $showingCalendar) { CalendarSheet().environment(state) }
         .feedback(self)
     }
@@ -76,7 +75,6 @@ private struct FoodLogHeader: View {
             }
             DaySummary(day: state.day, plans: plans).id(state.day)
         }
-        .padding(.bottom, 6)
         // The week strip is the scroll view nearest the bar, so its top edge effect greyed the bar behind the title,
         // which the Workout tab's bar doesn't have. Nothing scrolls under the bar here.
         .scrollEdgeEffectHidden(true, for: .top)
@@ -154,6 +152,9 @@ private struct DaySummary: View {
                     }
                     .tabViewStyle(.page(indexDisplayMode: .always))
                     .frame(height: 64)
+                    // The page dots sit at a fixed height inside the TabView and leave an empty band under them, which a
+                    // shorter frame doesn't remove (it moves the dots onto the bars). The timeline overlaps the band instead.
+                    .padding(.bottom, -14)
                 }
             }
             .contentShape(Rectangle())

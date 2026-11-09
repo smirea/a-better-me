@@ -3,7 +3,7 @@ import Foundation
 import GRDB
 
 /// The dev seed's (`DevSeed`) real foods: today and the five days before it with entries across the hours, among them
-/// `LibrarySeed`'s recipes and custom foods at full and partial servings, a note today, and a fasted day three days ago.
+/// `LibrarySeed`'s recipes and custom foods at full and partial servings, and a fasted day three days ago.
 /// Earlier days get quick adds from `insertHistory`.
 enum FoodLogSeed {
     private static func food(_ name: String, _ icon: String, brand: String? = nil, _ nutrients: NutrientAmounts, grams: Double?, measure: Measure) -> FoodSnapshot {
@@ -52,11 +52,6 @@ enum FoodLogSeed {
         edited.status = .partial
         edited.override = [.energy: 2350, .protein: 160]
         try LocalStore.put(edited, in: db)
-        var note = FoodLogNote(day: today, minute: 9 * 60 + 10, title: "Felt hungry before lunch")
-        note.id = DevSeed.id("note")
-        note.body = "Try a bigger breakfast tomorrow."
-        note.color = .green
-        try note.insert(db)
     }
 }
 

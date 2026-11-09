@@ -30,18 +30,6 @@ extension LocalStore {
         modify(NutritionDay.self, id: day, orInsert: { NutritionDay(id: day) }, change)
     }
 
-    func saveNote(_ note: FoodLogNote) {
-        insert(note)
-    }
-
-    func editNote(_ id: UUID, _ change: @escaping @Sendable (inout FoodLogNote) -> Void) {
-        modify(FoodLogNote.self, id: id, change)
-    }
-
-    func deleteNote(_ id: UUID) {
-        delete(FoodLogNote.self, id: id)
-    }
-
     /// Creates a food, or refreshes a cached one in place, keeping when it was first saved.
     func saveFood(_ food: Food) {
         write { db in

@@ -264,8 +264,6 @@ describe('agent API insights', () => {
 	test('single rows read by id, and the export holds every table but the tokens', async () => {
 		const weight = (await ok('GET', '/body-weights')).items[0];
 		expect(await ok('GET', `/body-weights/${weight.id}`)).toEqual(weight);
-		const note = await ok('POST', '/food-log-notes', { day: '2026-10-19', title: 'Travel' });
-		expect(await ok('GET', `/food-log-notes/${note.id}`)).toEqual(note);
 		const favorite = await ok('POST', '/food-favorites', { foodId: (await ok('GET', '/foods')).items[0].id });
 		expect(await ok('GET', `/food-favorites/${favorite.id}`)).toEqual(favorite);
 

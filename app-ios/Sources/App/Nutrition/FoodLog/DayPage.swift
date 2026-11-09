@@ -1,19 +1,19 @@
 import Feedback
 import SwiftUI
 
-/// One day's timeline: an hour pill per hour with its + and totals, the entries under their hour, then the notes.
+/// One day's timeline: an hour pill per hour with its + and totals, and the entries under their hour.
 struct DayPage: View {
     let day: CalendarDay
 
     @Environment(FoodLogState.self) private var state
     @Observe(AppSettings.current) private var settings
     @Observe private var entries: [FoodEntry]
-    @Observe private var notes: [FoodLogNote]
+    /// One width for every hour pill, so "8 AM" and the current "12 PM" with its dot line up; it scales with the text.
+    @ScaledMetric private var pillWidth: CGFloat = 60
 
     init(day: CalendarDay) {
         self.day = day
         _entries = Observe(FoodEntry.on(day))
-        _notes = Observe(FoodLogNote.on(day))
     }
 
     private var timeline: NutritionSettings.Timeline { settings.nutrition.timeline }
@@ -22,26 +22,22 @@ struct DayPage: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(FoodLog.hours(entries, timeline: timeline)) { hour in
-                            HourRow(
-                                day: day, hour: hour, showsTotals: timeline.hourlyTotals,
-                                addsOnLongPress: timeline.addFoodsToHour == .longPress, premove: timeline.premove
-                            )
-                            ForEach(hour.rows) { row in
-                                EntryRow(row: row, showsTime: timeline.foodTimestamps, hidesDetails: timeline.hideFoodDetails)
-                                    .id(row.id)
-                            }
+                    ForEach(FoodLog.hours(entries, timeline: timeline)) { hour in
+                        HourRow(
+                            day: day, hour: hour, pillWidth: pillWidth, showsTotals: timeline.hourlyTotals,
+                            addsOnLongPress: timeline.addFoodsToHour == .longPress, premove: timeline.premove
+                        )
+                        ForEach(hour.rows) { row in
+                            EntryRow(row: row, pillWidth: pillWidth, showsTime: timeline.foodTimestamps, hidesDetails: timeline.hideFoodDetails)
+                                .id(row.id)
                         }
                     }
-                    .background(alignment: .leading) {
-                        Rectangle().fill(Theme.separator).frame(width: 1).padding(.leading, HourRow.gutter / 2)
-                    }
-                    NotesSection(day: day, notes: notes)
-                        .padding(.top, 28)
+                }
+                .background(alignment: .leading) {
+                    Rectangle().fill(Theme.separator).frame(width: 1).padding(.leading, pillWidth / 2)
                 }
                 .padding(.horizontal, Theme.margin)
-                .padding(.vertical, 8)
+                .padding(.bottom, 8)
             }
             .scrollIndicators(.hidden)
             .onChange(of: entries) { old, new in
@@ -82,10 +78,11 @@ struct ShownDayEntries: View {
 /// The hour pill, its + (a paste button while pasting inline, a move button under Premove), and the hour's macro
 /// totals. Tapping the pill selects the hour's entries; under the long-press setting, holding it adds food there.
 private struct HourRow: View {
-    static let gutter: CGFloat = 64
+    static let spacing: CGFloat = 6
 
     let day: CalendarDay
     let hour: TimelineHour
+    let pillWidth: CGFloat
     let showsTotals: Bool
     let addsOnLongPress: Bool
     let premove: Bool
@@ -111,8 +108,8 @@ private struct HourRow: View {
     }
 
     private func row(pill: some View, control: some View) -> some View {
-        HStack(spacing: 6) {
-            pill.frame(width: Self.gutter)
+        HStack(spacing: Self.spacing) {
+            pill
             control
             Spacer(minLength: 8)
             if showsTotals, !hour.rows.isEmpty {
@@ -124,8 +121,7 @@ private struct HourRow: View {
 
     private func pill(_ label: String, isActive: Bool) -> some View {
         let isCurrent = day == .today && Calendar.current.component(.hour, from: .now) == hour.hour
-        return Chip(title: label, trailingImage: isCurrent ? "circlebadge.fill" : nil, isActive: isActive, size: .small)
-            .fixedSize()
+        return Chip(title: label, trailingImage: isCurrent ? "circlebadge.fill" : nil, isActive: isActive, size: .small, width: pillWidth)
     }
 
     private func interactivePill(_ label: String) -> some View {
@@ -133,7 +129,7 @@ private struct HourRow: View {
         let isSelected = state.selecting && !ids.isEmpty && ids.allSatisfy(state.selection.contains)
         let addsHere = addsOnLongPress && !state.selecting
         return pill(label, isActive: isSelected)
-            .frame(width: Self.gutter, height: 40)
+            .frame(height: 40)
             .contentShape(.rect)
             .onTapGesture { state.selectHour(ids) }
             .gesture(LongPressGesture(minimumDuration: 0.35).onEnded { _ in state.requestLog(minute: hour.hour * 60) }, isEnabled: addsHere)
@@ -220,6 +216,7 @@ private struct HourTotals: View {
 /// the blank space was meant to page.
 private struct EntryRow: View {
     let row: TimelineRow
+    let pillWidth: CGFloat
     let showsTime: Bool
     let hidesDetails: Bool
 
@@ -230,7 +227,7 @@ private struct EntryRow: View {
         let entry = row.entry
         let isSelected = state.selection.contains(entry.id)
         let showsCircle = state.selecting && state.pending?.inline != true
-        HStack(spacing: 0) {
+        HStack(spacing: HourRow.spacing) {
             ZStack {
                 Color.clear
                 if showsCircle {
@@ -241,7 +238,7 @@ private struct EntryRow: View {
                     Text(NutritionFormat.time(entry.minute)).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
                 }
             }
-            .frame(width: HourRow.gutter)
+            .frame(width: pillWidth)
             HStack(spacing: 12) {
                 FoodRow(food: entry.food, serving: entry.serving, showsDetail: !hidesDetails)
                 RoundIconButton("Edit \(entry.food.name)", systemImage: "pencil", size: .small) { state.editing = entry }
@@ -268,83 +265,4 @@ private struct EntryRow: View {
         .padding(.bottom, 6)
         .feedback(self)
     }
-}
-
-/// The day's notes, "n / 5", and the + that is off at the limit.
-private struct NotesSection: View {
-    let day: CalendarDay
-    let notes: [FoodLogNote]
-
-    @Environment(FoodLogState.self) private var state
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Notes").font(AppFont.listTitle)
-                Spacer()
-                if !notes.isEmpty {
-                    Text("\(notes.count) / \(FoodLogNote.limitPerDay)").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
-                }
-                Button("Add Note", systemImage: "plus") {
-                    state.note = NoteDraft(note: FoodLogNote(day: day, minute: Date.now.minuteOfDay(), title: ""), isNew: true)
-                }
-                .labelStyle(.iconOnly)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(Theme.onPrimary)
-                .frame(width: 28, height: 28)
-                .background(Theme.textPrimary, in: Circle())
-                .disabled(notes.count >= FoodLogNote.limitPerDay || state.selecting)
-                .opacity(notes.count >= FoodLogNote.limitPerDay ? 0.4 : 1)
-            }
-            if notes.isEmpty {
-                Text("No notes to display")
-                    .font(AppFont.caption())
-                    .foregroundStyle(Theme.textTertiary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .card()
-            }
-            ForEach(notes) { note in
-                Button { state.note = NoteDraft(note: note, isNew: false) } label: { NoteCard(note: note) }
-                    .buttonStyle(.plain)
-                    .disabled(state.selecting)
-            }
-        }
-        .feedback(self)
-    }
-}
-
-private struct NoteCard: View {
-    let note: FoodLogNote
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(note.title).font(AppFont.rowTitle)
-            if !note.body.isEmpty {
-                Text(note.body).font(AppFont.caption(14)).foregroundStyle(Theme.textSecondary).lineLimit(4)
-            }
-            HStack(spacing: 6) {
-                Spacer()
-                Text(NutritionFormat.clock(note.minute)).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
-                Circle().fill(note.color.tint).frame(width: 6, height: 6)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .card()
-        .contentShape(Rectangle())
-        .feedback(self)
-    }
-}
-
-extension FoodLogNote.Color {
-    var tint: Color {
-        switch self {
-        case .red: Theme.destructive
-        case .blue: Theme.calories
-        case .green: Theme.carbs
-        case .yellow: Theme.fat
-        case .purple: Theme.vitamins
-        }
-    }
-
-    var title: String { rawValue.capitalized }
 }

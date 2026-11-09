@@ -139,24 +139,6 @@ struct NutritionStoreTests {
         #expect(try read(FoodEntry.on(monday)).map { $0.amounts[.energy] } == [60])
     }
 
-    @Test func addsEditsAndDeletesDayNotes() async throws {
-        var note = FoodLogNote(day: monday, minute: 20 * 60, title: "Dinner out")
-        note.color = .purple
-        store.saveNote(note)
-        store.saveNote(FoodLogNote(day: monday, minute: 9 * 60, title: "Slept badly"))
-        store.editNote(note.id) { $0.body = "Pizza, two slices" }
-        try await settled()
-
-        let notes = try read(FoodLogNote.on(monday))
-        #expect(notes.map(\.title) == ["Slept badly", "Dinner out"])
-        #expect(notes[1].body == "Pizza, two slices")
-        #expect(notes[1].color == .purple)
-
-        store.deleteNote(notes[0].id)
-        try await settled()
-        #expect(try read(FoodLogNote.on(monday)).map(\.title) == ["Dinner out"])
-    }
-
     @Test func aFullFavoritesListReplacesItsOldest() async throws {
         let start = Date(timeIntervalSince1970: 1_761_321_600)
         for index in 0..<FoodFavorite.limit {

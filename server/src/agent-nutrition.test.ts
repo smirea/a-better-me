@@ -159,7 +159,7 @@ describe('nutrition agent API', () => {
 		expect(row!.serving).toBe('{"measure":{"name":"cup","quantity":1,"servings":0.8},"quantity":0.5}');
 	});
 
-	test('a day is marked or overridden with PUT, and notes stop at five a day', async () => {
+	test('a day is marked or overridden with PUT, and the log takes no notes', async () => {
 		expect(await ok('PUT', '/nutrition-days/2026-10-22', { override: { k: 2000, p: 150 } })).toEqual({
 			id: '2026-10-22',
 			status: 'none',
@@ -171,13 +171,8 @@ describe('nutrition agent API', () => {
 		await ok('DELETE', '/nutrition-days/2026-10-23');
 		expect((await ok('GET', '/food-log/2026-10-23')).status).toBe('none');
 
-		for (const title of ['1', '2', '3', '4', '5']) await ok('POST', '/food-log-notes', { day: '2026-10-22', title });
-		expect(await status('POST', '/food-log-notes', { day: '2026-10-22', title: '6' })).toEqual({
-			status: 409,
-			error: '2026-10-22 already has 5 notes, the most a day takes',
-		});
-		const notes = await ok('GET', '/food-log-notes?from=2026-10-22&to=2026-10-22');
-		expect(notes.find((note: any) => note.title === '1')).toMatchObject({ minute: 720, body: '', color: 'blue' });
+		expect(await ok('GET', '/food-log/2026-10-22')).not.toHaveProperty('notes');
+		expect((await status('POST', '/food-log-notes', { day: '2026-10-22', title: '1' })).status).toBe(404);
 	});
 
 	test('favorites keep the newest fifty', async () => {

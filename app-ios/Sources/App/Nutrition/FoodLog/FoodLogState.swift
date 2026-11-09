@@ -63,7 +63,6 @@ final class FoodLogState {
         }
     }
     var editing: FoodEntry?
-    var note: NoteDraft?
     /// Untyped, so screens pushed here push their own routes too: Strategy, from a day without a plan, pushes `StrategyRoute`.
     var path = NavigationPath()
     var notice: Notice?
@@ -160,14 +159,6 @@ final class FoodLogState {
     func requestLog(minute: Int? = nil, start: LoggerTab = .search) {
         logRequest = LogFoodRequest(day: day, minute: minute, start: start)
     }
-}
-
-/// A note open in the editor: an existing one, or a new one on a day.
-struct NoteDraft: Identifiable, Hashable {
-    var note: FoodLogNote
-    var isNew: Bool
-
-    var id: UUID { note.id }
 }
 
 enum FoodLogRoute: Hashable {

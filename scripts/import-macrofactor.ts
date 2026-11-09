@@ -81,8 +81,12 @@ export const NUTRIENT_COLUMNS: Record<string, string> = {
 const KG_PER = { lb: 0.45359237, kg: 1 } as const;
 const CM_PER = { in: 2.54, cm: 1 } as const;
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-/** Sheets the owner's export had empty, so their vocabulary is unknown. A filled one is reported, not guessed at. */
-const UNSUPPORTED = ['Favorites', 'Food Log Notes', 'Micronutrient Goals'];
+/** Sheets not imported, and why. A filled one is reported, not guessed at. */
+const UNSUPPORTED: Record<string, string> = {
+	Favorites: 'the importer does not read this sheet yet',
+	'Micronutrient Goals': 'the importer does not read this sheet yet',
+	'Food Log Notes': 'the app has no food log notes',
+};
 /** WeighIns.sameMomentTolerance: another weigh-in this close is the same one. */
 const SAME_MOMENT_MS = 60_000;
 /** The export has no time of day, so a weigh-in already stored that day at this weight is the same reading. */
@@ -393,10 +397,9 @@ export function parseExports(workbooks: Map<string, Sheet>[]): Parsed {
 		const [profile] = records(sheets.get('User Profile'));
 		if (profile) parsed.profile = profileOf(profile);
 
-		for (const sheet of UNSUPPORTED) {
+		for (const [sheet, reason] of Object.entries(UNSUPPORTED)) {
 			const count = records(sheets.get(sheet)).length;
-			if (count)
-				parsed.warnings.push(`${sheet}: ${count} rows not imported (the importer does not read this sheet yet)`);
+			if (count) parsed.warnings.push(`${sheet}: ${count} rows not imported (${reason})`);
 		}
 	}
 	for (const [day, amounts] of parsed.totals)
