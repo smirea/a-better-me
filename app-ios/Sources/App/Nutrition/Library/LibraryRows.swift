@@ -56,7 +56,7 @@ struct FoodRow: View {
             FoodIcon(food: food)
             RowLabel(
                 title: title,
-                detail: showsDetail ? Text("\(Text(macroLine: food.amounts(serving))) · \(NutritionFormat.serving(serving))") : nil
+                detail: showsDetail ? Text("\(Text(macroLine: food.amounts(serving))) · \(NutritionFormat.listed(serving, of: food))") : nil
             )
             .lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)

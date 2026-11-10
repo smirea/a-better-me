@@ -34,6 +34,12 @@ enum NutritionFormat {
         return "\(text) (\(amount(grams)) g)"
     }
 
+    /// A listed row's serving. A recipe adds its weight, "1 serving (365 g)", since its serving is whatever share of
+    /// the pot its yield makes, and one that makes a single serving is the whole pot.
+    static func listed(_ serving: Serving, of food: FoodSnapshot) -> String {
+        self.serving(serving, of: food.source == .recipe ? food : nil)
+    }
+
     static func hour(_ hour: Int) -> String {
         "\(hour % 12 == 0 ? 12 : hour % 12) \(hour < 12 ? "AM" : "PM")"
     }
