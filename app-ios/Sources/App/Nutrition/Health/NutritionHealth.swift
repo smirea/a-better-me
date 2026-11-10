@@ -78,7 +78,8 @@ final class NutritionHealth {
 
     /// One text per day that changes whenever an entry of the day is added, edited, moved, or deleted, or its override
     /// changes, so a change re-writes only its days. Every entry is in it, so an edit that syncs in with an older
-    /// timestamp than another entry's still shows. The snapshot is left out: it never changes without `updated_at`.
+    /// timestamp than another entry's still shows. The snapshot is left out: it never changes without `updated_at`,
+    /// except for an inferred icon, which Health never sees.
     static let dayDigests: @Sendable (Database) throws -> [String: String] = { db in
         var digests: [String: String] = [:]
         let entries = """
