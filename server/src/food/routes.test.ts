@@ -239,6 +239,81 @@ describe('meal photo', () => {
 	});
 });
 
+const label = (geminiApiKey: string | null, body: unknown) =>
+	agent(geminiApiKey)(
+		new Request('http://api.test/api/food-database/label', {
+			method: 'POST',
+			headers: { authorization: `Bearer ${config.ownerToken}` },
+			body: JSON.stringify(body),
+		}),
+	);
+
+describe('food label', () => {
+	const front = { image: btoa('front'), mediaType: 'image/jpeg' };
+	const panel = { image: btoa('panel'), mediaType: 'image/jpeg' };
+
+	test('every photo goes to Gemini in one call, and the panel becomes nutrition per printed serving', async () => {
+		stub(() =>
+			geminiText(
+				JSON.stringify({
+					name: ' Chicken Tikka Bowl ',
+					brand: 'Whole Foods Market',
+					store: 'Whole Foods Market',
+					serving: { quantity: 1, unit: 'ea', grams: 312, milliliters: null },
+					servingsPerContainer: 2,
+					nutrients: {
+						calories_kcal: 600,
+						protein_g: 33,
+						total_fat_g: 26,
+						sodium_mg: 1000,
+						vitamin_d_mcg: 0,
+						iron_mg: null,
+					},
+				}),
+			),
+		);
+		const response = await label('gemini-key', { images: [front, panel] });
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body).toEqual({
+			name: 'Chicken Tikka Bowl',
+			brand: 'Whole Foods Market',
+			store: 'Whole Foods Market',
+			nutrition: {
+				nutrients: { k: 600, p: 33, f: 26, '307': 1000, '328': 0 },
+				baseGrams: 312,
+				measures: [
+					{ name: 'ea', quantity: 1, servings: 1 },
+					{ name: 'container', quantity: 1, servings: 2 },
+				],
+			},
+		});
+		expect(foodNutrition.safeParse(body.nutrition).success).toBe(true);
+		expect(requests).toHaveLength(1);
+		const sent = await requests[0]!.json();
+		expect(sent.contents[0].parts.slice(0, 2)).toEqual([
+			{ inline_data: { mime_type: 'image/jpeg', data: front.image } },
+			{ inline_data: { mime_type: 'image/jpeg', data: panel.image } },
+		]);
+	});
+
+	test('photos without a panel answer what they show and no nutrition', async () => {
+		stub(() =>
+			geminiText(JSON.stringify({ name: 'Oat Milk', brand: 'Oatly', store: null, serving: null, nutrients: null })),
+		);
+		const response = await label('gemini-key', { images: [front] });
+		expect(await response.json()).toEqual({ name: 'Oat Milk', brand: 'Oatly' });
+	});
+
+	test('no key is a 503, and no photos or more than eight are refused', async () => {
+		stub(() => geminiText('{}'));
+		expect((await label(null, { images: [front] })).status).toBe(503);
+		expect((await label('gemini-key', { images: [] })).status).toBe(400);
+		expect((await label('gemini-key', { images: Array(9).fill(front) })).status).toBe(400);
+		expect(requests).toEqual([]);
+	});
+});
+
 const ramble = (geminiApiKey: string | null, body: unknown) =>
 	agent(geminiApiKey)(
 		new Request('http://api.test/api/food-database/ramble', {

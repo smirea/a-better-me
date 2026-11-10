@@ -190,6 +190,8 @@ export const foods = sqliteTable('foods', {
 	archived: bool('archived').notNull().default(false),
 	createdAt: text('created_at').notNull(),
 	updatedAt: text('updated_at').notNull(),
+	/** The store a store-packed food was bought at; its barcode is the store's item code, which another store may reuse. */
+	store: text('store'),
 });
 
 export const recipes = sqliteTable('recipes', {

@@ -20,7 +20,7 @@ struct FoodDraft: Equatable, Sendable {
     }
 
     enum Field: Hashable, Sendable {
-        case name, brand, barcode, servingWeight, servingQuantity, servingName
+        case name, brand, store, barcode, servingWeight, servingQuantity, servingName
         case measureQuantity(UUID), measureName(UUID), measureSize(UUID)
         case nutrient(NutrientID)
     }
@@ -30,6 +30,7 @@ struct FoodDraft: Equatable, Sendable {
         var name: String
         var brand: String?
         var barcode: String?
+        var store: String?
         var icon: String?
         var nutrition: FoodNutrition
     }
@@ -38,6 +39,7 @@ struct FoodDraft: Equatable, Sendable {
     var name = ""
     var brand = ""
     var barcode = ""
+    var store = ""
     var basis = NutritionBasis.serving
     var servingWeight = ""
     var servingWeightUnit = SizeUnit.g
@@ -58,6 +60,7 @@ struct FoodDraft: Equatable, Sendable {
         name = food.name
         brand = food.brand ?? ""
         barcode = food.barcode ?? ""
+        store = food.store ?? ""
         let nutrition = food.nutrition
         let base = nutrition.measures.first ?? Measure(name: "serving", quantity: 1, servings: 1)
         var factor = 1.0
@@ -175,7 +178,7 @@ struct FoodDraft: Equatable, Sendable {
 
         guard issues.isEmpty else { return (nil, issues) }
         let nutrition = FoodNutrition(nutrients: amounts, baseGrams: size.grams, baseMilliliters: size.milliliters, measures: all)
-        return (Valid(name: name, brand: Self.optional(brand), barcode: Self.optional(barcode), icon: icon, nutrition: nutrition), [:])
+        return (Valid(name: name, brand: Self.optional(brand), barcode: Self.optional(barcode).map { ScannedBarcode($0)?.code ?? $0 }, store: Self.optional(store), icon: icon, nutrition: nutrition), [:])
     }
 
     private static func optional(_ text: String) -> String? {
@@ -189,6 +192,7 @@ extension FoodDraft.Valid {
         food.name = name
         food.brand = brand
         food.barcode = barcode
+        food.store = store
         food.icon = icon
         food.nutrition = nutrition
     }

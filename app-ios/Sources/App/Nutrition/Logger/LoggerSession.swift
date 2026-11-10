@@ -55,9 +55,12 @@ extension LoggerStart {
 
 /// What a barcode lookup found. The scanner and the manual entry both end here.
 enum BarcodeOutcome: Hashable, Sendable {
-    case found(Food)
-    case notFound(String)
-    /// Not 8 to 14 digits once spaces and dashes are gone.
+    /// The food, at the package's weight when the barcode carries one.
+    case found(FoodPortion)
+    /// A store item code that the owner's foods from several stores share, newest first.
+    case stores([Food], ScannedBarcode)
+    case notFound(ScannedBarcode)
+    /// Neither 8 to 14 digits once spaces and dashes are gone nor a GS1 element string with a GTIN.
     case invalid
     case unreachable
 }
@@ -297,22 +300,21 @@ final class LoggerSession {
         }
     }
 
-    /// A typed or scanned barcode: a custom or cached food first, then Open Food Facts.
+    /// A typed or scanned barcode: a custom or cached food first, then Open Food Facts. A store item is only ever the
+    /// owner's own food.
     func lookup(barcode text: String) async -> BarcodeOutcome {
-        guard let barcode = Self.barcode(text) else { return .invalid }
+        guard let barcode = ScannedBarcode(text) else { return .invalid }
         do {
-            guard let food = try await search.lookup(barcode: barcode) else { return .notFound(barcode) }
-            return .found(food)
+            if barcode.isStoreItem {
+                let foods = try await search.foods(storeItem: barcode.code)
+                if foods.count > 1 { return .stores(foods, barcode) }
+                return foods.first.map { .found(barcode.portion(of: $0)) } ?? .notFound(barcode)
+            }
+            guard let food = try await search.lookup(barcode: barcode.code) else { return .notFound(barcode) }
+            return .found(barcode.portion(of: food))
         } catch {
             FoodSearch.log.info("Barcode lookup failed: \(String(describing: error))")
             return .unreachable
         }
-    }
-
-    /// The digits of an EAN-8, UPC-A, EAN-13, or GTIN-14, as a scanner or a person types them.
-    nonisolated static func barcode(_ text: String) -> String? {
-        let digits = text.filter { !$0.isWhitespace && $0 != "-" }
-        guard (8...14).contains(digits.count), digits.allSatisfy(\.isASCII), digits.allSatisfy(\.isNumber) else { return nil }
-        return digits
     }
 }

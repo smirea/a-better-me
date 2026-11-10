@@ -11,19 +11,27 @@ struct FoodEditor: View {
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var draft: FoodDraft
+    /// The draft as the editor opened or the last photo read left it, so a new read skips the fields changed since.
+    @State private var baseline: FoodDraft
+    private let opened: FoodDraft
+    @State private var photos: FoodPhotoReader
     @State private var showErrors = false
     @State private var choosingIcon = false
     @State private var confirmingDelete = false
     @State private var expanded: Set<NutrientSection>
     @FocusState private var focus: FoodDraft.Field?
 
-    /// Edits `food`, or creates a food from `draft` (blank, or a duplicate's copy).
-    init(food: Food? = nil, draft: FoodDraft? = nil, onCreate: ((Food) -> Void)? = nil, onCreateAndAdd: ((Food) -> Void)? = nil) {
+    /// Edits `food`, or creates a food from `draft` (blank, a duplicate's copy, or a scanned barcode's). `photos` arrives
+    /// already reading when a scan photographed the package.
+    init(food: Food? = nil, draft: FoodDraft? = nil, photos: FoodPhotoReader? = nil, onCreate: ((Food) -> Void)? = nil, onCreateAndAdd: ((Food) -> Void)? = nil) {
         foodID = food?.id
         self.onCreate = onCreate
         self.onCreateAndAdd = onCreateAndAdd
         let initial = draft ?? food.map(FoodDraft.init) ?? FoodDraft()
         _draft = State(initialValue: initial)
+        _baseline = State(initialValue: initial)
+        opened = initial
+        _photos = State(initialValue: photos ?? FoodPhotoReader())
         _expanded = State(initialValue: Set(NutrientSection.allCases.filter { section in
             section.nutrients.contains { !(initial.nutrients[$0.id] ?? "").isEmpty }
         }))
@@ -33,6 +41,7 @@ struct FoodEditor: View {
         let issues = showErrors ? draft.issues : [:]
         NavigationStack {
             Form {
+                FoodPhotosSection(reader: photos)
                 identity(issues)
                 serving(issues)
                 otherServings(issues)
@@ -61,6 +70,16 @@ struct FoodEditor: View {
                     }
                 }
             }
+            .onChange(of: photos.state, initial: true) {
+                guard case let .read(label) = photos.state else { return }
+                let read = baseline.reading(label)
+                draft.merge(read, over: baseline)
+                baseline = read
+                expanded.formUnion(NutrientSection.allCases.filter { section in
+                    section.nutrients.contains { !(draft.nutrients[$0.id] ?? "").isEmpty }
+                })
+            }
+            .onDisappear { photos.cancel() }
             .sheet(isPresented: $choosingIcon) { FoodIconPicker(selection: $draft.icon) }
             .alert("Delete Custom Food", isPresented: $confirmingDelete) {
                 Button("Delete", role: .destructive) {
@@ -72,6 +91,8 @@ struct FoodEditor: View {
                 Text("Are you sure you want to delete \(draft.name)? Logged entries keep their copy. This action cannot be undone.")
             }
         }
+        // A read takes seconds and fills dozens of fields; a stray swipe should not throw that away. Close still does.
+        .interactiveDismissDisabled(draft != opened || !photos.photos.isEmpty)
         .feedback(self)
     }
 
@@ -92,6 +113,9 @@ struct FoodEditor: View {
             TextField("Brand Name", text: $draft.brand)
                 .focused($focus, equals: .brand)
                 .accessibilityLabel("Brand Name")
+            TextField("Store", text: $draft.store)
+                .focused($focus, equals: .store)
+                .accessibilityLabel("Store")
             TextField("Barcode", text: $draft.barcode)
                 .keyboardType(.numberPad)
                 .focused($focus, equals: .barcode)
@@ -249,7 +273,7 @@ extension FoodDraft {
         let serving: [Field] = basis == .serving ? [.servingWeight, .servingQuantity, .servingName] : []
         let measures = measures.flatMap { [Field.measureQuantity($0.id), .measureName($0.id), .measureSize($0.id)] }
         let nutrients = NutrientSection.allCases.filter { $0 == .macros || expanded.contains($0) }.flatMap { $0.nutrients.map { Field.nutrient($0.id) } }
-        return FocusOrder([.name, .brand, .barcode] + serving + measures + nutrients)
+        return FocusOrder([.name, .brand, .store, .barcode] + serving + measures + nutrients)
     }
 }
 

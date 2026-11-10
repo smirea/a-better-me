@@ -19,14 +19,14 @@ struct FocusOrderTests {
         draft.measures = [measure]
         let macros: [FoodDraft.Field] = [.nutrient(.energy), .nutrient(.protein), .nutrient(.fat), .nutrient(.carbs), .nutrient(.fiber), .nutrient(.netCarbs)]
         #expect(draft.focusOrder(expanded: []).fields == [
-            .name, .brand, .barcode, .servingWeight, .servingQuantity, .servingName,
+            .name, .brand, .store, .barcode, .servingWeight, .servingQuantity, .servingName,
             .measureQuantity(measure.id), .measureName(measure.id), .measureSize(measure.id),
         ] + macros)
 
         draft.basis = .hundredGrams
         draft.measures = []
         let starch = FoodDraft.Field.nutrient("209")
-        #expect(draft.focusOrder(expanded: []).fields == [.name, .brand, .barcode] + macros)
+        #expect(draft.focusOrder(expanded: []).fields == [.name, .brand, .store, .barcode] + macros)
         #expect(!draft.focusOrder(expanded: []).fields.contains(starch))
         #expect(draft.focusOrder(expanded: [.carbs]).field(after: .nutrient(.netCarbs)) == starch)
     }
