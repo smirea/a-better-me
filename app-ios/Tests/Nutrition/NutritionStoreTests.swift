@@ -31,6 +31,23 @@ struct NutritionStoreTests {
         }
     }
 
+    @Test func aLogStoresTheSectionItLandsInAndKeepsItWhenTheSectionsChange() async throws {
+        let legacy = FoodEntry(FoodPortion(yogurt), day: monday, minute: 9 * 60 + 45)
+        store.write { try legacy.insert($0) }
+        store.log([FoodPortion(yogurt)], on: monday, minute: 9 * 60 + 30)
+        store.log([FoodPortion(yogurt)], on: monday, minute: 9 * 60 + 30, section: "lunch")
+        store.updateMealSections { MealSectionsEditing.renaming(0, to: "Morning", in: $0) }
+        try await settled()
+        #expect(try read(FoodEntry.on(monday)).map(\.section) == ["breakfast", "lunch", nil])
+
+        store.updateMealSections { MealSectionsEditing.settingStart(9 * 60, of: 1, in: $0) }
+        store.log([FoodPortion(yogurt)], on: monday, minute: 9 * 60 + 30)
+        try await settled()
+        #expect(try read(FoodEntry.on(monday)).map(\.section) == ["breakfast", "lunch", "am-snack", "breakfast"])
+        #expect(try read(FoodEntry.on(monday)).last.map { Instant.text($0.updatedAt) } == Instant.text(legacy.updatedAt))
+        #expect(try read(AppSettings.current).nutrition.mealSections.map(\.name).first == "Morning")
+    }
+
     @Test func logsQuickAddsMovesCopiesAndDeletesEntries() async throws {
         store.log([FoodPortion(yogurt), FoodPortion(yogurt, serving: Serving(measure: yogurt.nutrition.measures[0], quantity: 2))], on: monday, minute: 8 * 60 + 15)
         store.log([FoodPortion(.quickAdd([.energy: 420, .protein: 30], name: "Lunch out"))], on: monday, minute: 13 * 60)

@@ -50,10 +50,20 @@ struct Plate: Hashable, Sendable {
 }
 
 /// When the plate is logged: a calendar day and an hour, MacroFactor's hour-granular time chip. The minute comes from
-/// the clock when logging, so foods logged one after another keep their order.
+/// the clock when logging, so foods logged one after another keep their order. A section's + or the section picker also
+/// names the meal section, which the plate logs into whatever the minute.
 struct LogTime: Hashable, Sendable {
     var day: CalendarDay
-    var hour: Int
+    var hour: Int {
+        didSet { section = nil }
+    }
+    var section: MealSection?
+
+    init(day: CalendarDay, hour: Int, section: MealSection? = nil) {
+        self.day = day
+        self.hour = hour
+        self.section = section
+    }
 
     static func now(_ date: Date = .now, calendar: Calendar = .current) -> LogTime {
         LogTime(day: CalendarDay(date, in: calendar), hour: calendar.component(.hour, from: date))
@@ -63,10 +73,11 @@ struct LogTime: Hashable, Sendable {
         hour * 60 + calendar.component(.minute, from: date)
     }
 
-    /// "2 PM" today, "2 PM · Jul 31" on any other day.
-    func label(today: CalendarDay = .today) -> String {
-        let hourText = NutritionFormat.hour(hour)
-        guard day != today else { return hourText }
-        return "\(hourText) · \(NutritionFormat.shortDay(day))"
+    /// "2 PM" today, "2 PM · Jul 31" on any other day. With `sections` (the Sections display), the section instead:
+    /// "Lunch", "Lunch · Jul 31".
+    func label(today: CalendarDay = .today, sections: [MealSection]? = nil, now: Date = .now) -> String {
+        let slot = section?.name ?? sections.map { $0.section(at: minute(at: now)).name } ?? NutritionFormat.hour(hour)
+        guard day != today else { return slot }
+        return "\(slot) · \(NutritionFormat.shortDay(day))"
     }
 }

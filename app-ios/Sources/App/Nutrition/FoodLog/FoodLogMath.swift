@@ -1,7 +1,7 @@
 import Foundation
 
 /// An entry on the timeline, and whether the gutter shows its time: only when it differs from the entry above it in
-/// the same hour, as MacroFactor writes "2:48" once over three foods logged together.
+/// the same group, as MacroFactor writes "2:48" once over three foods logged together.
 struct TimelineRow: Hashable, Identifiable {
     let entry: FoodEntry
     let showsTime: Bool
@@ -9,11 +9,27 @@ struct TimelineRow: Hashable, Identifiable {
     var id: UUID { entry.id }
 }
 
-struct TimelineHour: Hashable, Identifiable {
-    let hour: Int
-    let rows: [TimelineRow]
+/// What a timeline group stands for: an hour of the Time display, or a meal section of the Sections display.
+enum TimelineSlot: Hashable {
+    case hour(Int)
+    case section(MealSection)
 
-    var id: Int { hour }
+    var label: String {
+        switch self {
+        case let .hour(hour): NutritionFormat.hour(hour)
+        case let .section(section): section.name
+        }
+    }
+}
+
+/// A pill and the entries under it.
+struct TimelineGroup: Hashable, Identifiable {
+    let slot: TimelineSlot
+    let rows: [TimelineRow]
+    /// The minutes of the day it covers, which mark the current one with a dot.
+    let minutes: Range<Int>
+
+    var id: TimelineSlot { slot }
     var totals: NutrientAmounts { rows.map(\.entry).totals }
 }
 
@@ -83,7 +99,8 @@ struct MacroLine: Hashable, Identifiable {
     }
 }
 
-/// Where a copy or move lands. `today` and `tomorrow` keep each entry's own time; the rest set one time for all.
+/// Where a copy or move lands. `today` and `tomorrow` keep each entry's own time and section; the rest set one time
+/// for all, and a section's paste puts them all in it.
 enum PasteTarget: Hashable {
     case now
     case today
@@ -91,13 +108,31 @@ enum PasteTarget: Hashable {
     case days([CalendarDay])
     case dateTime(CalendarDay, minute: Int)
     case hour(CalendarDay, hour: Int)
+    case section(CalendarDay, MealSection, minute: Int)
 }
 
-/// Entries a copy or move lands at the same day and minute.
+/// Entries a copy or move lands at the same day and minute, and the meal section each ends up in.
 struct Relocation: Hashable {
+    enum Section: Hashable {
+        /// Each entry keeps the section it has.
+        case keep
+        /// The section the new minute falls in.
+        case fromMinute
+        case chosen(String)
+    }
+
     let ids: [UUID]
     let day: CalendarDay
     let minute: Int
+    var section = Section.fromMinute
+
+    func section(for entry: FoodEntry, in sections: [MealSection]) -> String {
+        switch section {
+        case .keep: entry.section ?? sections.section(at: entry.minute).id
+        case .fromMinute: sections.section(at: minute).id
+        case let .chosen(id): id
+        }
+    }
 }
 
 /// A food's share of a nutrient on the day.
@@ -111,19 +146,38 @@ struct Contributor: Hashable, Identifiable {
 
 /// The Food Log's arithmetic, kept out of the views so the suites can pin them.
 enum FoodLog {
+    /// The day's timeline in the owner's display: hours or meal sections.
+    static func groups(_ entries: [FoodEntry], settings: NutritionSettings) -> [TimelineGroup] {
+        switch settings.timeline.display {
+        case .time: hours(entries, timeline: settings.timeline)
+        case .sections: sections(entries, sections: settings.mealSections, hideEmpty: settings.timeline.hideEmptyHours)
+        }
+    }
+
     /// The day's hours: the configured range, unless empty hours hide, plus every hour that has an entry.
-    static func hours(_ entries: [FoodEntry], timeline: NutritionSettings.Timeline) -> [TimelineHour] {
+    static func hours(_ entries: [FoodEntry], timeline: NutritionSettings.Timeline) -> [TimelineGroup] {
         let byHour = Dictionary(grouping: entries, by: \.hour)
         var hours = Set(byHour.keys)
         if !timeline.hideEmptyHours, timeline.firstHour <= timeline.lastHour {
             hours.formUnion(timeline.firstHour...timeline.lastHour)
         }
-        return hours.sorted().map { hour in
-            let entries = (byHour[hour] ?? []).sorted { ($0.minute, $0.createdAt) < ($1.minute, $1.createdAt) }
-            let rows = entries.enumerated().map { index, entry in
-                TimelineRow(entry: entry, showsTime: index == 0 || entries[index - 1].minute != entry.minute)
-            }
-            return TimelineHour(hour: hour, rows: rows)
+        return hours.sorted().map { TimelineGroup(slot: .hour($0), rows: rows(byHour[$0] ?? []), minutes: $0 * 60..<($0 + 1) * 60) }
+    }
+
+    /// The day's meal sections in order, each with the entries logged into it, or for an entry without one (or whose
+    /// section was removed), the section its minute falls in. Empty sections hide with Hide Empty Hours.
+    static func sections(_ entries: [FoodEntry], sections: [MealSection], hideEmpty: Bool) -> [TimelineGroup] {
+        let bySection = Dictionary(grouping: entries) { sections.section(of: $0).id }
+        return sections.compactMap { section in
+            let entries = bySection[section.id] ?? []
+            return hideEmpty && entries.isEmpty ? nil : TimelineGroup(slot: .section(section), rows: rows(entries), minutes: sections.range(of: section))
+        }
+    }
+
+    private static func rows(_ entries: [FoodEntry]) -> [TimelineRow] {
+        let entries = entries.sorted { ($0.minute, $0.createdAt) < ($1.minute, $1.createdAt) }
+        return entries.enumerated().map { index, entry in
+            TimelineRow(entry: entry, showsTime: index == 0 || entries[index - 1].minute != entry.minute)
         }
     }
 
@@ -217,12 +271,14 @@ enum FoodLog {
             return [Relocation(ids: ids, day: day, minute: minute)]
         case let .hour(day, hour):
             return [Relocation(ids: ids, day: day, minute: hour * 60)]
+        case let .section(day, section, minute):
+            return [Relocation(ids: ids, day: day, minute: minute, section: .chosen(section.id))]
         }
     }
 
     private static func keepingTimes(_ entries: [FoodEntry], on day: CalendarDay) -> [Relocation] {
         Dictionary(grouping: entries, by: \.minute).keys.sorted().map { minute in
-            Relocation(ids: entries.filter { $0.minute == minute }.map(\.id), day: day, minute: minute)
+            Relocation(ids: entries.filter { $0.minute == minute }.map(\.id), day: day, minute: minute, section: .keep)
         }
     }
 
@@ -238,6 +294,7 @@ enum FoodLog {
         case let .days(days): "\(days.count) days"
         case let .dateTime(day, minute): "\(NutritionFormat.dayTitle(day, today: today)) at \(NutritionFormat.moment(minute))"
         case let .hour(day, hour): "\(NutritionFormat.dayTitle(day, today: today)) at \(NutritionFormat.moment(hour * 60))"
+        case let .section(day, section, _): "\(section.name), \(NutritionFormat.dayTitle(day, today: today))"
         }
         return "\(verb) \(foods) to \(place)"
     }

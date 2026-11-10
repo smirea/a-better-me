@@ -30,7 +30,8 @@ enum LoggerTab: String, CaseIterable, Hashable, Sendable {
     }
 }
 
-/// How the logger opens: the tab its shortcut names and, from an hour's + in the Food Log, that day and hour.
+/// How the logger opens: the tab its shortcut names and, from an hour's or a section's + in the Food Log, that day and
+/// time.
 struct LoggerStart: Hashable, Identifiable, Sendable {
     var tab = LoggerTab.search
     var library = FoodLibraryView.Tab.foods
@@ -40,12 +41,12 @@ struct LoggerStart: Hashable, Identifiable, Sendable {
 }
 
 extension LoggerStart {
-    /// The Food Log's request: its tab, and the hour whose + asked. A request for today without an hour follows the
-    /// clock; another day logs at the current hour of that day.
+    /// The Food Log's request: its tab, and the hour or section whose + asked. A request for today without either follows
+    /// the clock; another day logs at the current hour of that day.
     init(_ request: LogFoodRequest, now: Date = .now, calendar: Calendar = .current) {
         tab = request.start
         if let minute = request.minute {
-            time = LogTime(day: request.day, hour: minute / 60)
+            time = LogTime(day: request.day, hour: minute / 60, section: request.section)
         } else if request.day != CalendarDay(now, in: calendar) {
             time = LogTime(day: request.day, hour: calendar.component(.hour, from: now))
         }
@@ -93,8 +94,10 @@ final class LoggerSession {
     var time: LogTime {
         get { chosenTime ?? .now() }
         set {
+            let section = self.section
             chosenTime = newValue
             ramble.replace()
+            if self.section != section, !query.isEmpty { setQuery(query, branded: branded) }
         }
     }
     var plate = Plate()
@@ -102,6 +105,8 @@ final class LoggerSession {
     /// would leave.
     var pending: FoodPortion?
     private(set) var query = ""
+    /// Whether the last query asked Open Food Facts, so re-ranking for a new section asks the same.
+    @ObservationIgnored private var branded = false
     private(set) var results: [FoodSearchResult] = []
     private(set) var isSearchingBranded = false
     private(set) var isFindingFoods = false
@@ -113,15 +118,25 @@ final class LoggerSession {
     /// it was, such as hiding a Pick.
     private var searchReloads = 0
 
-    /// The hour the logger was opened for or the time chip picked, whose Picks show above Latest. Nil while the time
-    /// follows the clock.
-    var picksHour: Int? { chosenTime?.hour }
+    var sections: [MealSection] { search.library.sections }
+    var showsSections: Bool { search.library.display == .sections }
 
-    /// "8 AM Picks" (`HourPicks`) while the query is empty.
+    /// The time the section picker sets: now when today's clock is in the section, else its typical minute.
+    func time(of section: MealSection, on day: CalendarDay, now: Date = .now) -> LogTime {
+        LogTime(day: day, hour: sections.logMinute(for: section, on: day, now: now) / 60, section: section)
+    }
+
+    /// The meal section a log lands in: the one picked, else the one the time falls in. Search ranks its usual foods first.
+    var section: MealSection { time.section ?? sections.section(at: time.minute()) }
+
+    /// The hour, or in the Sections display the section, whose Picks show above Latest.
+    var picksSlot: TimelineSlot { showsSections ? .section(section) : .hour(time.hour) }
+
+    /// "8 AM Picks" or "Breakfast Picks" (`HourPicks`) while the query is empty.
     var picks: [FoodSearchResult] {
         _ = searchReloads
-        guard query.isEmpty, let picksHour else { return [] }
-        return search.picks(hour: picksHour)
+        guard query.isEmpty else { return [] }
+        return search.picks(picksSlot)
     }
 
     init(
@@ -144,10 +159,11 @@ final class LoggerSession {
     /// search keeps the local results without an error (`FoodSearch.search`).
     func setQuery(_ text: String, branded: Bool) {
         query = text
+        self.branded = branded
         remote?.cancel()
         isSearchingBranded = false
         do {
-            results = try search.local(text)
+            results = try search.local(text, section: section.id)
         } catch {
             FoodSearch.log.error("Local search failed: \(String(describing: error))")
         }
@@ -156,7 +172,7 @@ final class LoggerSession {
         remote = Task { [weak self] in
             try? await Task.sleep(for: delay)
             guard !Task.isCancelled, let self else { return }
-            let found = try? await search.search(text, branded: true)
+            let found = try? await search.search(text, branded: true, section: section.id)
             guard !Task.isCancelled, query == text else { return }
             if let found { results = found }
             isSearchingBranded = false
@@ -181,7 +197,7 @@ final class LoggerSession {
             if let food = item.pick.uncached { store.saveFood(food) }
         }
         let time = chosenTime ?? .now(date)
-        store.log(plate.portions, on: time.day, minute: time.minute(at: date))
+        store.log(plate.portions, on: time.day, minute: time.minute(at: date), section: time.section?.id)
         plate = Plate()
         pending = nil
         logged += 1
@@ -214,14 +230,18 @@ final class LoggerSession {
         do {
             try await search.refresh()
             searchReloads += 1
-            results = try search.local(query)
+            results = try search.local(query, section: section.id)
         } catch {
             FoodSearch.log.error("Reloading search failed: \(String(describing: error))")
         }
     }
 
-    func hidePick(_ food: FoodSnapshot, hour: Int) async {
-        store.updateSettings { $0.nutrition.hiddenPicks[hour, default: []].insert(FoodSearchResult.key(food)) }
+    func hidePick(_ food: FoodSnapshot, from slot: TimelineSlot) async {
+        let key = FoodSearchResult.key(food)
+        switch slot {
+        case let .hour(hour): store.updateSettings { $0.nutrition.hiddenPicks[hour, default: []].insert(key) }
+        case let .section(section): store.updateSettings { $0.nutrition.hiddenSectionPicks[section.id, default: []].insert(key) }
+        }
         await reloadSearch()
     }
 

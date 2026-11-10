@@ -1,7 +1,8 @@
 import Feedback
 import SwiftUI
 
-/// One day's timeline: an hour pill per hour with its + and totals, and the entries under their hour.
+/// One day's timeline: a pill per hour, or per meal section in the Sections display, with its + and totals, and the
+/// entries under it.
 struct DayPage: View {
     let day: CalendarDay
 
@@ -9,7 +10,10 @@ struct DayPage: View {
     @Observe(AppSettings.current) private var settings
     @Observe private var entries: [FoodEntry]
     /// One width for every hour pill, so "8 AM" and the current "12 PM" with its dot line up; it scales with the text.
-    @ScaledMetric private var pillWidth: CGFloat = 60
+    @ScaledMetric private var hourPillWidth: CGFloat = 60
+    /// Section pills share one wider width, which fits "Breakfast" with the current section's dot.
+    @ScaledMetric private var sectionPillWidth: CGFloat = 92
+    @State private var groups = ViewMemo<GroupsKey, [TimelineGroup]>()
 
     init(day: CalendarDay) {
         self.day = day
@@ -17,17 +21,26 @@ struct DayPage: View {
     }
 
     private var timeline: NutritionSettings.Timeline { settings.nutrition.timeline }
+    private var pillWidth: CGFloat { timeline.display == .sections ? sectionPillWidth : hourPillWidth }
+
+    private struct GroupsKey: Equatable {
+        let entries: [FoodEntry]
+        let timeline: NutritionSettings.Timeline
+        let sections: [MealSection]
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(FoodLog.hours(entries, timeline: timeline)) { hour in
-                        HourRow(
-                            day: day, hour: hour, pillWidth: pillWidth, showsTotals: timeline.hourlyTotals,
-                            addsOnLongPress: timeline.addFoodsToHour == .longPress, premove: timeline.premove
+                    ForEach(groups(GroupsKey(entries: entries, timeline: timeline, sections: settings.nutrition.mealSections)) {
+                        FoodLog.groups(entries, settings: settings.nutrition)
+                    }) { group in
+                        SlotRow(
+                            day: day, group: group, sections: settings.nutrition.mealSections, pillWidth: pillWidth,
+                            showsTotals: timeline.hourlyTotals, addsOnLongPress: timeline.addFoodsToHour == .longPress, premove: timeline.premove
                         )
-                        ForEach(hour.rows) { row in
+                        ForEach(group.rows) { row in
                             EntryRow(row: row, pillWidth: pillWidth, showsTime: timeline.foodTimestamps, hidesDetails: timeline.hideFoodDetails)
                                 .id(row.id)
                         }
@@ -75,13 +88,14 @@ struct ShownDayEntries: View {
     }
 }
 
-/// The hour pill, its + (a paste button while pasting inline, a move button under Premove), and the hour's macro
-/// totals. Tapping the pill selects the hour's entries; under the long-press setting, holding it adds food there.
-private struct HourRow: View {
+/// The hour's or section's pill, its + (a paste button while pasting inline, a move button under Premove), and its
+/// macro totals. Tapping the pill selects its entries; under the long-press setting, holding it adds food there.
+private struct SlotRow: View {
     static let spacing: CGFloat = 6
 
     let day: CalendarDay
-    let hour: TimelineHour
+    let group: TimelineGroup
+    let sections: [MealSection]
     let pillWidth: CGFloat
     let showsTotals: Bool
     let addsOnLongPress: Bool
@@ -92,9 +106,9 @@ private struct HourRow: View {
 
     var body: some View {
         Group {
-            let label = NutritionFormat.hour(hour.hour)
+            let label = group.slot.label
             if state.pending?.inline == true {
-                Button { state.paste(to: .hour(day, hour: hour.hour), in: store) } label: {
+                Button { state.paste(to: target, in: store) } label: {
                     let paste = Image(systemName: "doc.on.clipboard.fill").hourIcon(isPrimary: true).frame(width: 32, height: 40)
                     row(pill: pill(label, isActive: false), control: paste).contentShape(.rect)
                 }
@@ -107,41 +121,65 @@ private struct HourRow: View {
         .feedback(self)
     }
 
+    /// The minute food added here lands at: the hour's start, or for a section now when today's clock is inside it,
+    /// else its typical minute.
+    private var minute: Int {
+        switch group.slot {
+        case let .hour(hour): hour * 60
+        case let .section(section): sections.logMinute(for: section, on: day, now: .now)
+        }
+    }
+
+    private var target: PasteTarget {
+        switch group.slot {
+        case let .hour(hour): .hour(day, hour: hour)
+        case let .section(section): .section(day, section, minute: minute)
+        }
+    }
+
+    private func requestLog() {
+        if case let .section(section) = group.slot {
+            state.requestLog(minute: minute, section: section)
+        } else {
+            state.requestLog(minute: minute)
+        }
+    }
+
     private func row(pill: some View, control: some View) -> some View {
         HStack(spacing: Self.spacing) {
             pill
             control
             Spacer(minLength: 8)
-            if showsTotals, !hour.rows.isEmpty {
-                HourTotals(amounts: hour.totals)
+            if showsTotals, !group.rows.isEmpty {
+                HourTotals(amounts: group.totals)
             }
         }
         .frame(height: 40)
     }
 
     private func pill(_ label: String, isActive: Bool) -> some View {
-        let isCurrent = day == .today && Calendar.current.component(.hour, from: .now) == hour.hour
+        let isCurrent = day == .today && group.minutes.contains(Date.now.minuteOfDay())
         return Chip(title: label, trailingImage: isCurrent ? "circlebadge.fill" : nil, isActive: isActive, size: .small, width: pillWidth)
     }
 
     private func interactivePill(_ label: String) -> some View {
-        let ids = hour.rows.map(\.entry.id)
+        let ids = group.rows.map(\.entry.id)
         let isSelected = state.selecting && !ids.isEmpty && ids.allSatisfy(state.selection.contains)
         let addsHere = addsOnLongPress && !state.selecting
         return pill(label, isActive: isSelected)
             .frame(height: 40)
             .contentShape(.rect)
             .onTapGesture { state.selectHour(ids) }
-            .gesture(LongPressGesture(minimumDuration: 0.35).onEnded { _ in state.requestLog(minute: hour.hour * 60) }, isEnabled: addsHere)
+            .gesture(LongPressGesture(minimumDuration: 0.35).onEnded { _ in requestLog() }, isEnabled: addsHere)
             .accessibilityElement()
             .accessibilityLabel(label)
             .accessibilityValue(ids.isEmpty ? "No foods" : "\(ids.count) \(ids.count == 1 ? "food" : "foods")")
             .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-            .accessibilityHint(ids.isEmpty ? "" : "Selects this hour's foods")
+            .accessibilityHint(ids.isEmpty ? "" : "Selects these foods")
             .accessibilityAction { state.selectHour(ids) }
             .accessibilityActions {
                 if addsHere {
-                    Button("Add food at \(label)") { state.requestLog(minute: hour.hour * 60) }
+                    Button("Add food at \(label)") { requestLog() }
                 }
             }
     }
@@ -150,12 +188,12 @@ private struct HourRow: View {
     private func control(_ label: String) -> some View {
         if premove, state.selecting, state.pending == nil {
             Button("Move to \(label)", systemImage: "arrow.left") {
-                state.relocate(state.selectedEntries, .move, to: .hour(day, hour: hour.hour), in: store)
+                state.relocate(state.selectedEntries, .move, to: target, in: store)
             }
             .buttonStyle(HourIconStyle(isPrimary: true))
             .disabled(state.selection.isEmpty)
         } else if !addsOnLongPress {
-            Button("Add food at \(label)", systemImage: "plus") { state.requestLog(minute: hour.hour * 60) }
+            Button("Add food at \(label)", systemImage: "plus") { requestLog() }
                 .buttonStyle(HourIconStyle(isPrimary: false))
                 .disabled(state.selecting)
         }
@@ -227,7 +265,7 @@ private struct EntryRow: View {
         let entry = row.entry
         let isSelected = state.selection.contains(entry.id)
         let showsCircle = state.selecting && state.pending?.inline != true
-        HStack(spacing: HourRow.spacing) {
+        HStack(spacing: SlotRow.spacing) {
             ZStack {
                 Color.clear
                 if showsCircle {

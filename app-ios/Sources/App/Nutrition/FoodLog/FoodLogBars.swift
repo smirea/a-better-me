@@ -153,7 +153,7 @@ private struct SelectionBar: View {
     }
 }
 
-/// Copy or Move's targets. Paste Inline turns every hour's + into a paste button, on any day the owner swipes to.
+/// Copy or Move's targets. Paste Inline turns every hour's or section's + into a paste button, on any day the owner swipes to.
 private struct PasteBar: View {
     private enum Prompt: Identifiable {
         case dateTime, dates
@@ -165,6 +165,7 @@ private struct PasteBar: View {
 
     @Environment(FoodLogState.self) private var state
     @Environment(LocalStore.self) private var store
+    @Observe(AppSettings.current) private var settings
     @State private var prompt: Prompt?
 
     var body: some View {
@@ -174,7 +175,7 @@ private struct PasteBar: View {
                 if pending.inline { state.pending?.inline = false } else { state.pending = nil }
             }
             if pending.inline {
-                Text("Tap an hour to paste")
+                Text(settings.nutrition.timeline.display == .sections ? "Tap a section to paste" : "Tap an hour to paste")
                     .font(AppFont.chip)
                     .padding(.horizontal, 16)
                     .frame(height: 44)
@@ -351,7 +352,11 @@ struct DayMenu: View {
             .pickerStyle(.menu)
             Section {
                 Toggle("Hide Food Details", systemImage: "chevron.up.circle", isOn: store.binding(settings, \.nutrition.timeline.hideFoodDetails))
-                Toggle("Hide Empty Hours", systemImage: "hourglass", isOn: store.binding(settings, \.nutrition.timeline.hideEmptyHours))
+                Toggle(settings.nutrition.timeline.display == .sections ? "Hide Empty Sections" : "Hide Empty Hours", systemImage: "hourglass", isOn: store.binding(settings, \.nutrition.timeline.hideEmptyHours))
+                Picker("Display", systemImage: "list.bullet.indent", selection: store.binding(settings, \.nutrition.timeline.display)) {
+                    ForEach(NutritionSettings.Timeline.Display.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.menu)
             }
         }
         .alert("Clear Day", isPresented: $confirmingClear) {

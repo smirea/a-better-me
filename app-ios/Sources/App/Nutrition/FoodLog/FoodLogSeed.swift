@@ -42,6 +42,9 @@ enum FoodLogSeed {
             for (index, (minute, food, quantity)) in meals.enumerated() where offset > 0 || minute <= nowMinute {
                 var entry = FoodEntry(FoodPortion(food, serving: Serving(measure: food.nutrition.measures[0], quantity: quantity)), day: day, minute: minute, at: Calendar.current.date(bySettingHour: minute / 60, minute: minute % 60, second: 0, of: day.date)!)
                 entry.id = DevSeed.id("food/\(offset)/\(index)")
+                // Logged as they would be: into the section the minute falls in, except the early lunch at 11:50, which
+                // the owner put in Lunch, so a stored section over its AM Snack minute shows in the seed.
+                entry.section = minute == 11 * 60 + 50 ? "lunch" : MealSection.defaults.section(at: minute).id
                 try entry.insert(db)
             }
         }

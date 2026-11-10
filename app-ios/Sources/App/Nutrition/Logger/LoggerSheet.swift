@@ -174,10 +174,10 @@ private struct LoggerBanner: View {
                 HStack(spacing: 10) {
                     RoundIconButton("Close", systemImage: "xmark", action: exit)
                     Button(action: chooseTime) {
-                        Text(session.time.label()).font(AppFont.headline(14))
+                        Text(timeLabel).font(AppFont.headline(14))
                     }
                     .chipButton()
-                    .accessibilityLabel("Log time, \(session.time.label())")
+                    .accessibilityLabel("Log time, \(timeLabel)")
                     Spacer(minLength: 0)
                     plateButton
                 }
@@ -190,6 +190,8 @@ private struct LoggerBanner: View {
         .animation(.snappy, value: session.plate.items.count)
         .feedback(self)
     }
+
+    private var timeLabel: String { session.time.label(sections: session.showsSections ? session.sections : nil) }
 
     /// White once the plate holds a food, so the way to review and log it stands out.
     @ViewBuilder private var plateButton: some View {
@@ -238,18 +240,26 @@ extension FoodLibraryView.Item {
     }
 }
 
-/// "Select Date and Time": a wheel of days and an hour. The minute comes from the clock when the plate is logged.
+/// "Select Date and Time": a wheel of days and an hour, or a meal section in the Sections display. The minute comes from
+/// the clock when the plate is logged.
 private struct LogTimePicker: View {
     let session: LoggerSession
     @Environment(\.dismiss) private var dismiss
     @State private var day: CalendarDay
     @State private var hour: Int
+    @State private var section: MealSection
     private let today = CalendarDay.today
 
     init(session: LoggerSession) {
         self.session = session
         _day = State(initialValue: session.time.day)
         _hour = State(initialValue: session.time.hour)
+        _section = State(initialValue: session.section)
+    }
+
+    /// The day and the hour, or in the Sections display the section.
+    private var chosen: LogTime {
+        session.showsSections ? session.time(of: section, on: day) : LogTime(day: day, hour: hour)
     }
 
     var body: some View {
@@ -259,22 +269,29 @@ private struct LogTimePicker: View {
                     Picker("Day", selection: $day) {
                         ForEach(days, id: \.self) { Text(NutritionFormat.dayTitle($0, today: today)).tag($0) }
                     }
-                    Picker("Hour", selection: $hour) {
-                        ForEach(0..<24, id: \.self) { Text(NutritionFormat.hour($0)).tag($0) }
+                    if session.showsSections {
+                        Picker("Section", selection: $section) {
+                            ForEach(session.sections) { Text($0.name).tag($0) }
+                        }
+                        .frame(width: 150)
+                    } else {
+                        Picker("Hour", selection: $hour) {
+                            ForEach(0..<24, id: \.self) { Text(NutritionFormat.hour($0)).tag($0) }
+                        }
+                        .frame(width: 120)
                     }
-                    .frame(width: 120)
                 }
                 .pickerStyle(.wheel)
                 .frame(height: 170)
                 Button {
-                    session.time = LogTime(day: day, hour: hour)
+                    session.time = chosen
                     dismiss()
                 } label: {
                     Text("Select Date and Time")
                 }
                 .secondaryPill()
                 Button {
-                    session.time = LogTime(day: day, hour: hour)
+                    session.time = chosen
                     session.logPlate()
                 } label: {
                     Text("Log to Date and Time")
@@ -302,24 +319,28 @@ private struct LogTimePicker: View {
     }
 }
 
-/// Time Pad: the 24 hours of the chosen day as buttons, without a date.
+/// Time Pad: the 24 hours of the chosen day as buttons, without a date, or in the Sections display its sections.
 private struct LogHourPad: View {
     let session: LoggerSession
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
-                ForEach(0..<24, id: \.self) { hour in
-                    let selected = hour == session.time.hour
-                    Button {
-                        session.time.hour = hour
-                        dismiss()
-                    } label: {
-                        Chip(title: NutritionFormat.hour(hour), isActive: selected)
+            Group {
+                if session.showsSections {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
+                        ForEach(session.sections) { section in
+                            pad(section.name, selected: section.id == session.section.id) {
+                                session.time = session.time(of: section, on: session.time.day)
+                            }
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(selected ? .isSelected : [])
+                } else {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                        ForEach(0..<24, id: \.self) { hour in
+                            pad(NutritionFormat.hour(hour), selected: hour == session.time.hour) { session.time.hour = hour }
+                        }
+                    }
                 }
             }
             .padding(.horizontal, Theme.margin)
@@ -333,5 +354,16 @@ private struct LogHourPad: View {
         .presentationDetents([.height(400)])
         .presentationBackground(Theme.surface)
         .feedback(self)
+    }
+
+    private func pad(_ title: String, selected: Bool, choose: @escaping () -> Void) -> some View {
+        Button {
+            choose()
+            dismiss()
+        } label: {
+            Chip(title: title, isActive: selected)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

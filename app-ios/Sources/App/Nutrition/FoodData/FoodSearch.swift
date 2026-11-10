@@ -34,8 +34,9 @@ struct FoodSearchResult: Identifiable, Hashable, Sendable {
 }
 
 /// The owner's side of a search, read once when the logger opens: one history row per food (its latest serving, most
-/// recently logged first, and the days it was logged lately), each hour's Picks, favorites, custom foods, recipes, and
-/// the Open Food Facts foods already cached, which keep branded results working offline.
+/// recently logged first, and the days it was logged lately, in all and per meal section), each hour's and section's
+/// Picks, favorites, custom foods, recipes, and the Open Food Facts foods already cached, which keep branded results
+/// working offline. It also keeps the owner's meal sections and display, which the logger reads with it.
 struct FoodLibrary: Sendable {
     /// How far back a history food's logged days count toward its search rank, the same window as Ramble's usual foods.
     static let usualDays = 60
@@ -45,46 +46,70 @@ struct FoodLibrary: Sendable {
         let text: FoodText
         /// The days in the last `usualDays` this food was logged on; zero outside the history.
         let days: Int
+        /// The same days per meal section id, so a search at breakfast ranks the breakfast foods first.
+        let sectionDays: [String: Int]
 
-        init(_ result: FoodSearchResult, days: Int = 0) {
+        init(_ result: FoodSearchResult, days: Int = 0, sectionDays: [String: Int] = [:]) {
             self.result = result
             text = FoodText(result.portion.food.name, brand: result.portion.food.brand)
             self.days = days
+            self.sectionDays = sectionDays
         }
     }
 
     fileprivate var items: [FoodSearchGroup: [Item]] = [:]
     fileprivate var picks: [Int: [FoodSearchResult]] = [:]
+    fileprivate var sectionPicks: [String: [FoodSearchResult]] = [:]
+    private(set) var sections = MealSection.defaults
+    private(set) var display = NutritionSettings.Timeline.Display.time
 
     static func read(_ db: Database, today: CalendarDay) throws -> FoodLibrary {
+        let settings = try AppSettings.fetchOne(db, key: AppSettings.key(AppSettings.rowID))?.nutrition ?? NutritionSettings()
+        let sections = settings.mealSections
+        let usualStart = today.adding(days: -(usualDays - 1))
+        var sectionDays: [String: [String: Set<CalendarDay>]] = [:]
+        for row in try Row.fetchAll(db, sql: """
+            SELECT \(foodKey) AS key, day, minute, section FROM food_entries
+            WHERE day BETWEEN ? AND ? AND json_extract(food, '$.source') <> 'quick_add'
+            """, arguments: [usualStart.description, today.description]) {
+            let section = sections.section(of: row["section"] as String?, minute: row["minute"]).id
+            sectionDays[row["key"], default: [:]][section, default: []].insert(try row.day("day"))
+        }
         // Bare columns beside MAX() come from the row holding the max, so each food brings its latest serving. Logging
         // or editing an entry sets updated_at, so a copy onto a future day ranks by when it was copied, not by its day.
-        let settings = try AppSettings.fetchOne(db, key: AppSettings.key(AppSettings.rowID))?.nutrition ?? NutritionSettings()
         let history = try Row.fetchAll(db, sql: """
             SELECT food, serving, MAX(updated_at || day || printf('%04d', minute) || created_at || id) AS latest,
                 COUNT(DISTINCT CASE WHEN day BETWEEN ? AND ? THEN day END) AS days
             FROM food_entries
             WHERE json_extract(food, '$.source') <> 'quick_add'
-            GROUP BY COALESCE(json_extract(food, '$.foodID'), json_extract(food, '$.name') || '|' || COALESCE(json_extract(food, '$.brand'), ''))
+            GROUP BY \(foodKey)
             ORDER BY latest DESC
-            """, arguments: [today.adding(days: -(usualDays - 1)).description, today.description]).compactMap { row -> Item? in
+            """, arguments: [usualStart.description, today.description]).compactMap { row -> Item? in
             let result = FoodSearchResult(.history, FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving))
             // `latest` leads with the entry's updated_at, a fixed-width instant; a second MAX() would break the bare columns.
             let latest: String = row["latest"]
             if let hidden = settings.hiddenHistory[result.key], let logged = Instant.parse(String(latest.prefix(24))), logged <= hidden {
                 return nil
             }
-            return Item(result, days: row["days"])
+            return Item(result, days: row["days"], sectionDays: sectionDays[result.key]?.mapValues(\.count) ?? [:])
         }
         let foods = try Food.filter(Column("archived") == false).fetchAll(db)
         let recent = try Row.fetchAll(db, sql: """
-            SELECT food, serving, day, minute, updated_at || created_at || id AS written FROM food_entries
+            SELECT food, serving, day, minute, section, updated_at || created_at || id AS written FROM food_entries
             WHERE day BETWEEN ? AND ? AND json_extract(food, '$.source') <> 'quick_add'
             """, arguments: [today.adding(days: -(HourPicks.days - 1)).description, today.description]).map { row in
-            HourPicks.Entry(portion: FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving), day: try row.day("day"), minute: row["minute"], written: row["written"])
+            HourPicks.Entry(
+                portion: FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving), day: try row.day("day"),
+                minute: row["minute"], section: row["section"], written: row["written"]
+            )
         }
         var library = FoodLibrary()
-        library.picks = HourPicks.picks(recent, today: today, hidden: settings.hiddenPicks).mapValues { $0.map { FoodSearchResult(.picks, $0) } }
+        library.sections = sections
+        library.display = settings.timeline.display
+        library.picks = HourPicks.picks(recent, today: today, by: { $0.minute / 60 }, hidden: settings.hiddenPicks)
+            .mapValues { $0.map { FoodSearchResult(.picks, $0) } }
+        library.sectionPicks = HourPicks.picks(recent, today: today, by: { sections.section(of: $0.section, minute: $0.minute).id }, hidden: settings.hiddenSectionPicks)
+            .mapValues { $0.map { FoodSearchResult(.picks, $0) } }
         library.items[.history] = history
         library.items[.favorites] = try FoodFavorite.fetchAll(db).sorted { $0.createdAt < $1.createdAt }
             .map { Item(FoodSearchResult(.favorites, $0.portion)) }
@@ -94,6 +119,9 @@ struct FoodLibrary: Sendable {
         library.items[.branded] = foods.filter { $0.source == .openFoodFacts }.map { Item(FoodSearchResult(.branded, FoodPortion($0.snapshot))) }
         return library
     }
+
+    /// `FoodSearchResult.key` in SQL.
+    private static let foodKey = "COALESCE(json_extract(food, '$.foodID'), json_extract(food, '$.name') || '|' || COALESCE(json_extract(food, '$.brand'), ''))"
 }
 
 /// The logger's search: the owner's history, favorites, foods, and recipes, the bundled USDA foods, and, online,
@@ -131,14 +159,18 @@ final class FoodSearch {
         library = try await store.database.pool.read { try FoodLibrary.read($0, today: today) }
     }
 
-    func picks(hour: Int) -> [FoodSearchResult] {
-        library.picks[hour] ?? []
+    /// The usual foods of an hour or a meal section (`HourPicks`).
+    func picks(_ slot: TimelineSlot) -> [FoodSearchResult] {
+        switch slot {
+        case let .hour(hour): library.picks[hour] ?? []
+        case let .section(section): library.sectionPicks[section.id] ?? []
+        }
     }
 
     /// Everything that needs no network. An empty query lists the history, most recently logged first (MacroFactor's
-    /// Latest).
-    func local(_ query: String) throws -> [FoodSearchResult] {
-        try index.local(query)
+    /// Latest). `section` is the meal section the logger logs into, whose usual foods rank first in the history.
+    func local(_ query: String, section: String? = nil) throws -> [FoodSearchResult] {
+        try index.local(query, section: section)
     }
 
     /// What `local` reads, as a value a background task can search without the main actor.
@@ -146,8 +178,8 @@ final class FoodSearch {
 
     /// `local`, then Open Food Facts' branded foods when `branded` is on and the server answers. Offline, or when the
     /// server fails, it is `local` alone, without an error: the logger keeps working.
-    func search(_ query: String, branded includeBranded: Bool = true) async throws -> [FoodSearchResult] {
-        var results = try local(query)
+    func search(_ query: String, branded includeBranded: Bool = true, section: String? = nil) async throws -> [FoodSearchResult] {
+        var results = try local(query, section: section)
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard includeBranded, trimmed.count >= 2 else { return results }
         let remote: [Food]
@@ -195,7 +227,7 @@ struct FoodIndex: Sendable {
     let catalog: USDACatalog
 
     /// Everything that needs no network. An empty query lists the history, newest first (MacroFactor's Latest).
-    func local(_ query: String) throws -> [FoodSearchResult] {
+    func local(_ query: String, section: String? = nil) throws -> [FoodSearchResult] {
         let terms = FoodText.terms(query)
         guard !terms.isEmpty else { return (library.items[.history] ?? []).prefix(Self.limit).map(\.result) }
         var shown = Set<String>()
@@ -205,7 +237,7 @@ struct FoodIndex: Sendable {
                 results.append(result)
             }
         }
-        add(Self.rankByUse(library.items[.history] ?? [], terms))
+        add(Self.rankByUse(library.items[.history] ?? [], terms, section: section))
         for group in [FoodSearchGroup.favorites, .custom, .recipes] {
             add(Self.rank(library.items[group] ?? [], terms))
         }
@@ -278,13 +310,17 @@ struct FoodIndex: Sendable {
     }
 
     /// The history's matches, the foods the owner logs most first: names that hold every term as a whole word, then by
-    /// the days logged in the last `FoodLibrary.usualDays`, then the name's score, then the newest. The name score alone
+    /// the days logged in `section` (the meal being logged) in the last `FoodLibrary.usualDays`, then the days logged in
+    /// all, then the name's score, then the newest. At breakfast the milk logged every morning beats the milk logged at
+    /// dinner more often. The name score alone
     /// put USDA's "Milk, fluid, nonfat" logged once above the store-brand milk logged every morning, because the brand's
     /// name buries "milk" in its first part. Whole words still lead, so "egg" finds eggs before an eggplant logged daily.
-    private static func rankByUse(_ items: [FoodLibrary.Item], _ terms: [String]) -> [FoodSearchResult] {
+    private static func rankByUse(_ items: [FoodLibrary.Item], _ terms: [String], section: String?) -> [FoodSearchResult] {
         items.enumerated()
-            .compactMap { index, item in item.text.score(terms).map { (item.result, item.text.holds(terms) ? 1 : 0, item.days, $0, -index) } }
-            .sorted { ($0.1, $0.2, $0.3, $0.4) > ($1.1, $1.2, $1.3, $1.4) }
+            .compactMap { index, item in
+                item.text.score(terms).map { (item.result, item.text.holds(terms) ? 1 : 0, section.flatMap { item.sectionDays[$0] } ?? 0, item.days, $0, -index) }
+            }
+            .sorted { ($0.1, $0.2, $0.3, $0.4, $0.5) > ($1.1, $1.2, $1.3, $1.4, $1.5) }
             .prefix(limit)
             .map(\.0)
     }

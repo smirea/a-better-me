@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { nutrientID } from '../../../shared/db/schema';
+import { nutrientID, SETTINGS_ID } from '../../../shared/db/schema';
 import { ApiError } from '../http';
 import type { Db, RowOf } from './db';
 import * as M from './models';
@@ -54,6 +54,42 @@ function recipeNutrition(row: RowOf<'recipes'>): Nutrition {
 		...(row.cookedGrams && { baseGrams: row.cookedGrams / row.servings }),
 		measures: [{ name: 'serving', quantity: 1, servings: 1 }],
 	};
+}
+
+/** The owner's meal sections, as the app reads them: the stored list, else the defaults. */
+export function mealSections(db: Db) {
+	const nutrition = db.get('settings', SETTINGS_ID)?.nutrition as { mealSections?: unknown } | undefined;
+	const parsed = M.MealSections.safeParse(nutrition?.mealSections);
+	return parsed.success ? parsed.data : M.DEFAULT_MEAL_SECTIONS;
+}
+
+/** Where each section starts, which is all that decides the section a minute falls in. */
+const timing = (sections: { id: string; start: number }[]) =>
+	sections.map(section => `${section.id}@${section.start}`).join();
+
+/** Before the sections change, gives every entry without a section of its own the one its minute falls in now, so the
+ * change moves no entry already logged; `LocalStore.updateMealSections` does the same. A rename moves nothing. */
+export function stampSections(db: Db, next: { id: string; start: number }[]) {
+	const sections = mealSections(db);
+	if (timing(sections) === timing(next)) return [];
+	const ids = sections.map(section => section.id);
+	return db
+		.all('food_entries', `section IS NULL OR section NOT IN (${ids.map(() => '?').join(', ')})`, ids)
+		.map(row =>
+			db.patch('food_entries', row.id, { section: sections.findLast(section => section.start <= row.minute)!.id }),
+		);
+}
+
+/** The section an entry lands in: the one asked for, which must be one of the owner's, else the one `minute` falls in,
+ * as `LocalStore.log` assigns it. */
+function entrySection(db: Db, minute: number, asked: string | undefined) {
+	const sections = mealSections(db);
+	if (asked === undefined) return sections.findLast(section => section.start <= minute)!.id;
+	if (!sections.some(section => section.id === asked)) {
+		const ids = sections.map(section => section.id).join(', ');
+		throw new ApiError(422, `No meal section ${asked}; settings.nutrition.mealSections has ${ids}`);
+	}
+	return asked;
 }
 
 const recipe = (row: RowOf<'recipes'>) => ({ ...row, nutrition: recipeNutrition(row) });
@@ -336,11 +372,12 @@ export const nutritionRoutes: Route[] = [
 		body: M.FoodEntryCreate,
 		response: M.FoodEntry,
 		run({ db, body, now }) {
-			const { id, day, minute, ...input } = body;
+			const { id, day, minute, section, ...input } = body;
 			const row: RowOf<'food_entries'> = {
 				id: fresh(db, 'food_entries', id),
 				day,
 				minute,
+				section: entrySection(db, minute, section),
 				...portion(db, input),
 				createdAt: now,
 				updatedAt: now,
@@ -357,9 +394,11 @@ export const nutritionRoutes: Route[] = [
 		body: M.FoodEntryPatch,
 		response: M.FoodEntry,
 		run({ db, params, body, now }) {
-			const id = db.find('food_entries', params.id!, 'food entry').id;
-			db.commit(db.patch('food_entries', id, { ...body, updatedAt: now }));
-			return entry(db.find('food_entries', id, 'food entry'));
+			const current = db.find('food_entries', params.id!, 'food entry');
+			const moved = body.section !== undefined || (body.minute !== undefined && body.minute !== current.minute);
+			const section = moved ? { section: entrySection(db, body.minute ?? current.minute, body.section) } : {};
+			db.commit(db.patch('food_entries', current.id, { ...body, ...section, updatedAt: now }));
+			return entry(db.find('food_entries', current.id, 'food entry'));
 		},
 	}),
 	route({

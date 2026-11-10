@@ -51,7 +51,7 @@ struct LoggerSessionTests {
         return try store.readBlocking(FoodEntry.on(monday).fetch)
     }
 
-    @Test func anHoursPicksShowAboveLatestOnlyForThatHourAndAnEmptyQuery() async throws {
+    @Test func anHoursPicksShowAboveLatestForThatHourAndAnEmptyQuery() async throws {
         let catalog = try fixtureCatalog([(173944, "Bananas, raw", 8, bananaNutrition)])
         store.log([FoodPortion(yogurt)], on: .today, minute: 8 * 60 + 5)
         store.log([FoodPortion(yogurt)], on: CalendarDay.today.adding(days: -1), minute: 8 * 60 + 40)
@@ -60,7 +60,7 @@ struct LoggerSessionTests {
         let search = try await FoodSearch.load(store: store, catalog: catalog, branded: StubBranded())
 
         let eight = LoggerSession(store: store, search: search, start: LoggerStart(time: LogTime(day: .today, hour: 8)))
-        #expect(eight.picksHour == 8)
+        #expect(eight.picksSlot == .hour(8))
         #expect(eight.picks.map(\.portion.food.name) == ["Yogurt"])
         #expect(eight.picks.first?.group == .picks)
         eight.setQuery("yog", branded: false)
@@ -70,8 +70,35 @@ struct LoggerSessionTests {
         #expect(eight.picks.map(\.portion.food.name) == ["Nonfat Greek Yogurt"])
 
         let clock = LoggerSession(store: store, search: search, start: LoggerStart())
-        #expect(clock.picksHour == nil)
-        #expect(clock.picks.isEmpty)
+        #expect(clock.picksSlot == .hour(Calendar.current.component(.hour, from: .now)))
+    }
+
+    @Test func theSectionsDisplayPicksAndRanksBySectionAndLogsIntoTheChosenOne() async throws {
+        let catalog = try fixtureCatalog([(173944, "Bananas, raw", 8, bananaNutrition)])
+        let milk = FoodSnapshot(foodID: "custom-milk", source: .custom, name: "Oat Milk", nutrition: yogurt.nutrition)
+        let chocolate = FoodSnapshot(foodID: "custom-chocolate", source: .custom, name: "Chocolate Milk", nutrition: yogurt.nutrition)
+        for day in 1...3 { store.log([FoodPortion(milk)], on: CalendarDay.today.adding(days: -day), minute: 8 * 60) }
+        for day in 1...5 { store.log([FoodPortion(chocolate)], on: CalendarDay.today.adding(days: -day), minute: 19 * 60) }
+        store.updateSettings { $0.nutrition.timeline.display = .sections }
+        try await store.write { _ in }.value
+        let search = try await FoodSearch.load(store: store, catalog: catalog, branded: StubBranded())
+        let sections = MealSection.defaults
+
+        let breakfast = LoggerSession(store: store, search: search, start: LoggerStart(time: LogTime(day: monday, hour: 8, section: sections[0])))
+        #expect(breakfast.picksSlot == .section(sections[0]))
+        #expect(breakfast.picks.map(\.portion.food.name) == ["Oat Milk"])
+        breakfast.setQuery("milk", branded: false)
+        #expect(breakfast.results.prefix(2).map(\.portion.food.name) == ["Oat Milk", "Chocolate Milk"])
+        breakfast.time = breakfast.time(of: sections[4], on: monday)
+        #expect(breakfast.time.hour == 19)
+        #expect(breakfast.results.prefix(2).map(\.portion.food.name) == ["Chocolate Milk", "Oat Milk"])
+
+        breakfast.time = LogTime(day: monday, hour: 8, section: sections[2])
+        breakfast.add(LoggerPick(FoodPortion(milk)))
+        breakfast.logPlate()
+        let logged = try await entries()
+        #expect(logged.map(\.section) == ["lunch"])
+        #expect(logged.map(\.hour) == [8])
     }
 
     @Test func logsThePlateInOneGoAndCachesDatabaseFoods() async throws {
