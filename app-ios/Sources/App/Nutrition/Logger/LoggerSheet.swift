@@ -23,7 +23,6 @@ struct LoggerSheet: View {
         Group {
             if let session {
                 LoggerContent(session: session, close: { dismiss() })
-                    .environment(\.ingredientPicker, .search)
             } else if let failure {
                 ContentUnavailableView("Food search is unavailable", systemImage: "exclamationmark.triangle", description: Text(failure))
             } else {
