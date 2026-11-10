@@ -34,13 +34,50 @@ extension LocalStore {
         modify(NutritionDay.self, id: day, orInsert: { NutritionDay(id: day) }, change)
     }
 
-    /// Creates a food, or refreshes a cached one in place, keeping when it was first saved.
+    /// Creates a food, or refreshes a cached one in place, keeping when it was first saved and the icon inferred for it,
+    /// since the database it came from has none.
     func saveFood(_ food: Food) {
         write { db in
             var saved = food
             guard let existing = try Food.fetchOne(db, key: food.id) else { return try saved.insert(db) }
             saved.createdAt = existing.createdAt
+            if saved.source != .custom { saved.icon = saved.icon ?? existing.icon }
             try saved.update(db, from: existing)
+        }
+    }
+
+    /// Gives a food without an icon the one `FoodIconInference` picked, and every snapshot of it without one too: the
+    /// log's entries, favorites, and recipe ingredients. Only the icon changes and `updated_at` stays, so Latest keeps its
+    /// order. A food that got an icon meanwhile keeps it.
+    func setInferredIcon(_ icon: String, forFood id: String) {
+        write { db in
+            guard let food = try Food.fetchOne(db, key: id), food.icon == nil else { return }
+            var named = food
+            named.icon = icon
+            try named.updateChanges(db, from: food)
+
+            let missing = "json_extract(food, '$.foodID') = ? AND json_extract(food, '$.icon') IS NULL"
+            for entry in try FoodEntry.fetchAll(db, sql: "SELECT * FROM food_entries WHERE \(missing)", arguments: [id]) {
+                var changed = entry
+                changed.food.icon = icon
+                try changed.updateChanges(db, from: entry)
+            }
+            for favorite in try FoodFavorite.fetchAll(db, sql: "SELECT * FROM food_favorites WHERE \(missing)", arguments: [id]) {
+                var changed = favorite
+                changed.food.icon = icon
+                try changed.updateChanges(db, from: favorite)
+            }
+            let ingredients = """
+                SELECT * FROM recipes WHERE EXISTS (SELECT 1 FROM json_each(recipes.ingredients)
+                WHERE json_extract(value, '$.food.foodID') = ? AND json_extract(value, '$.food.icon') IS NULL)
+                """
+            for recipe in try Recipe.fetchAll(db, sql: ingredients, arguments: [id]) {
+                var changed = recipe
+                for index in changed.ingredients.indices where changed.ingredients[index].food.foodID == id {
+                    changed.ingredients[index].food.icon = changed.ingredients[index].food.icon ?? icon
+                }
+                try changed.updateChanges(db, from: recipe)
+            }
         }
     }
 
