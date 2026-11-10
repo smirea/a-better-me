@@ -79,6 +79,15 @@ struct RambleResolverTests {
         #expect(describe(again) == ["unmatched bok choy"])
     }
 
+    @Test func aNameThatGrowsMidSentenceIsSearchedAgainAfterTheRowHeldItsOldMatch() async throws {
+        let resolver = try await resolver()
+        let partial = try resolver.rows([RambleItem(name: "pizza", amount: 1, unit: "slice")], previous: [], choices: [:])
+        let held = try resolver.rows([RambleItem(name: "pizza pepperoni", amount: 1, unit: "slice")], previous: partial, choices: [:], search: false)
+        #expect(describe(held) == ["Pizza, cheese: 1 slice"])
+        let searched = try resolver.rows([RambleItem(name: "pizza pepperoni", amount: 1, unit: "slice")], previous: held, choices: [:])
+        #expect(describe(searched) == ["Pizza, pepperoni: 1 slice"])
+    }
+
     @Test func aServingMenuOffersHalfToDoubleTheFoodsServingsAnd100Grams() async throws {
         let resolver = try await resolver()
         let rows = try resolver.rows([RambleItem(name: "oats", amount: 0.5, unit: "cup")], previous: [], choices: [:])
@@ -140,12 +149,83 @@ struct RambleResolverTests {
         let drink = FoodNutrition(nutrients: [.energy: 40], measures: [Measure(name: "mL", quantity: 100, servings: 1)])
         let cereal = FoodNutrition(nutrients: [.energy: 110], measures: [Measure(name: "cup", quantity: 0.5, servings: 1)])
         let bread = FoodNutrition(nutrients: [.energy: 160], measures: [Measure(name: "slices", quantity: 2, servings: 1)])
-        let mL = RambleServing.serving(amount: 250, unit: "ml", of: drink, history: nil)
-        let cup = RambleServing.serving(amount: 1, unit: "cup", of: cereal, history: nil)
-        let slices = RambleServing.serving(amount: 3, unit: "slice", of: bread, history: nil)
+        let mL = RambleServing.serving(amount: 250, unit: "ml", food: "drink", of: drink, history: nil)
+        let cup = RambleServing.serving(amount: 1, unit: "cup", food: "cereal", of: cereal, history: nil)
+        let slices = RambleServing.serving(amount: 3, unit: "slice", food: "bread", of: bread, history: nil)
         #expect([mL.quantity, mL.servings] == [250, 2.5])
         #expect([cup.quantity, cup.servings] == [1, 2])
         #expect([slices.quantity, slices.servings] == [3, 1.5])
+    }
+
+    @Test func aCountOfTheFoodItselfTakesAMeasureNamedForItElseAWholeSize() {
+        let apricots = FoodNutrition(nutrients: [.energy: 48], baseGrams: 100, measures: [
+            Measure(name: "cup, halves", quantity: 1, servings: 1.55), Measure(name: "apricot", quantity: 1, servings: 0.35),
+        ])
+        let shallots = FoodNutrition(nutrients: [.energy: 72], baseGrams: 100, measures: [
+            Measure(name: "tbsp chopped", quantity: 1, servings: 0.1), Measure(name: "medium", quantity: 1, servings: 0.28),
+        ])
+        let rice = FoodNutrition(nutrients: [.energy: 130], baseGrams: 100, measures: [Measure(name: "cup", quantity: 1, servings: 1.58)])
+        let raspberries = FoodNutrition(nutrients: [.energy: 52], baseGrams: 100, measures: [
+            Measure(name: "cup", quantity: 1, servings: 1.23), Measure(name: "raspberries", quantity: 10, servings: 0.19),
+        ])
+        let ten = RambleServing.serving(amount: 10, unit: "", food: "raspberries", of: raspberries, history: nil)
+        #expect(NutritionFormat.serving(ten) == "10 raspberries")
+        #expect(abs(ten.servings - 0.19) < 0.0001)
+        let serving = { (food: String, nutrition: FoodNutrition) in
+            NutritionFormat.serving(RambleServing.serving(amount: 2, unit: "", food: food, of: nutrition, history: nil))
+        }
+        #expect([serving("apricots", apricots), serving("shallots", shallots), serving("rice", rice)] == ["2 apricot", "2 medium", "2 cup"])
+    }
+
+    @Test func aCountedContainerIsThePackageInTheSpeakersWord() {
+        let tomatoes = FoodNutrition(nutrients: [.energy: 22], baseGrams: 100, measures: [
+            Measure(name: "g", quantity: 100, servings: 1), Measure(name: "package", quantity: 1, servings: 7.94),
+        ])
+        let can = RambleServing.serving(amount: 1, unit: "can", food: "San Marzano tomatoes", of: tomatoes, history: nil)
+        #expect(NutritionFormat.serving(can) == "1 can")
+        #expect(abs(can.servings - 7.94) < 0.0001)
+        let unsized = FoodNutrition(nutrients: [.energy: 22], baseGrams: 100, measures: [Measure(name: "g", quantity: 100, servings: 1)])
+        #expect(NutritionFormat.serving(RambleServing.serving(amount: 1, unit: "can", food: "tomatoes", of: unsized, history: nil)) == "100 g")
+        #expect(RambleServing.sizes("cans", of: tomatoes) && !RambleServing.sizes("can", of: unsized) && !RambleServing.sizes("g", of: tomatoes))
+    }
+
+    @Test func aSpokenSpoonTakesTheFoodsOtherSpoonWithItsQualifier() {
+        let oregano = FoodNutrition(nutrients: [.energy: 265], baseGrams: 100, measures: [
+            Measure(name: "tsp, leaves", quantity: 1, servings: 0.01), Measure(name: "tsp, ground", quantity: 1, servings: 0.018),
+        ])
+        let tbsp = RambleServing.serving(amount: 2, unit: "tbsp", food: "oregano", of: oregano, history: nil)
+        #expect(NutritionFormat.serving(tbsp) == "2 tbsp, leaves")
+        #expect(abs(tbsp.servings - 0.06) < 0.0001)
+    }
+
+    @Test func aCanOfABrandedFoodPrefersAProductThatKnowsItsCan() async throws {
+        let product = { (barcode: String, brand: String, measures: [Measure]) in
+            Food(.openFoodFacts(barcode: barcode), name: "San marzano tomatoes", brand: brand,
+                 nutrition: FoodNutrition(nutrients: [.energy: 22], baseGrams: 100, measures: measures))
+        }
+        let gram = Measure(name: "g", quantity: 100, servings: 1)
+        let branded = StubBranded(hits: [
+            product("0072368425184", "DeLallo", [gram]),
+            product("0070796400179", "Cento", [gram, Measure(name: "package", quantity: 1, servings: 7.94)]),
+            product("0800091000848", "", [gram]),
+        ])
+        try await store.write { _ in }.value
+        let search = try await FoodSearch.load(store: store, catalog: try fixtureCatalog(rambleCatalog), branded: branded)
+        var resolver = RambleResolver(index: search.index, context: RambleContext(), today: today, fallback: (today, 14 * 60))
+        resolver.online = ["san marzano tomatoes": try await search.search("San Marzano tomatoes", branded: true).filter { $0.group == .branded }]
+        let rows = try resolver.rows([
+            RambleItem(name: "San Marzano tomatoes", amount: 1, unit: "can"),
+            RambleItem(name: "San Marzano tomatoes", amount: 200, unit: "g", day: -1),
+        ], previous: [], choices: [:])
+        #expect(rows.compactMap { food($0) }.map { "\($0.pick.portion.food.brand ?? ""): \(NutritionFormat.serving($0.pick.portion.serving))" } == [
+            "Cento: 1 can", "DeLallo: 200 g",
+        ])
+        // Heard mid-sentence as "San Marzano", the name grows into the unbranded product's own name; that is no pick.
+        var partial = resolver
+        partial.online = ["san marzano": resolver.online["san marzano tomatoes"]!]
+        let first = try partial.rows([RambleItem(name: "San Marzano", amount: 1, unit: "can")], previous: [], choices: [:])
+        let grown = try partial.rows([RambleItem(name: "San Marzano tomatoes", amount: 1, unit: "can")], previous: first, choices: [:])
+        #expect(grown.compactMap { food($0) }.map { "\($0.pick.portion.food.brand ?? ""): \(NutritionFormat.serving($0.pick.portion.serving))" } == ["Cento: 1 can"])
     }
 
     @Test func theOwnersPickHoldsWhenALaterReadAddsARefToAnotherFood() async throws {

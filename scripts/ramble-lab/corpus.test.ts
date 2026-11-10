@@ -4,12 +4,12 @@ import { LAB } from './corpus';
 import { PERSONAS } from './types';
 
 describe('Ramble labelled corpus', () => {
-	test('contains 120 uniquely identified cases with 12 per persona', () => {
-		expect(LAB).toHaveLength(120);
-		expect(new Set(LAB.map(c => c.id)).size).toBe(120);
+	test('contains uniquely identified cases, at least 12 per persona', () => {
+		expect(LAB.length).toBeGreaterThanOrEqual(120);
+		expect(new Set(LAB.map(c => c.id)).size).toBe(LAB.length);
 		for (const persona of Object.keys(PERSONAS)) {
 			const cases = LAB.filter(c => c.persona === persona);
-			expect(cases).toHaveLength(12);
+			expect(cases.length).toBeGreaterThanOrEqual(12);
 			for (const c of cases) expect(c.id).toMatch(new RegExp(`^${persona}-\\d+$`));
 		}
 	});

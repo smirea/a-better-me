@@ -84,3 +84,16 @@ struct RambleHeldTests {
         #expect(names(["salad", "diet coke"], showing: ["salad", "coke"], last: ["salad", "coke"]) == ["salad", "diet coke"])
     }
 }
+
+struct RambleUnsaidTests {
+    @Test func aRemovalLiftsOnlyWhenTheFoodIsSaidAgainAfterItsWords() {
+        let words = RambleWords(RambleHeard(committed: "Two tablespoons of salt. One tablespoon of pepper. One tablespoon of salt."))
+        let removed = [0: RambleChoice(name: "table salt", removed: true, through: 4)]
+        let before = [RambleItem(name: "table salt", amount: 2, unit: "tbsp", said: "Two tablespoons of salt")]
+        let again = [RambleItem(name: "table salt", amount: 1, unit: "tbsp", said: "One tablespoon of salt")]
+        #expect(RambleCapture.unsaid(removed, items: before, words: words) == removed)
+        #expect(RambleCapture.unsaid(removed, items: again, words: words).isEmpty)
+        let picked = [0: RambleChoice(name: "table salt", option: "usda-173468")]
+        #expect(RambleCapture.unsaid(picked, items: again, words: words) == picked)
+    }
+}

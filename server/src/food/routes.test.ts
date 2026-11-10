@@ -24,6 +24,7 @@ const NUTELLA = {
 		brands: 'Ferrero, Nutella',
 		serving_quantity: '15',
 		product_quantity_unit: 'g',
+		quantity: '400 g',
 		nutriments: {
 			'energy-kcal_100g': 539,
 			'energy-kj_100g': 2228,
@@ -55,7 +56,7 @@ afterEach(() => {
 });
 
 describe('food database', () => {
-	test('a barcode answers the product as the app caches it, per 100 g with the label serving first', async () => {
+	test('a barcode answers the product as the app caches it, per 100 g with the label serving first and the package last', async () => {
 		stub(() => Response.json(NUTELLA));
 		const response = await call('/food-database/barcode/3017624010701');
 		const food = await response.json();
@@ -72,17 +73,18 @@ describe('food database', () => {
 				measures: [
 					{ name: 'serving', quantity: 1, servings: 0.15 },
 					{ name: 'g', quantity: 100, servings: 1 },
+					{ name: 'package', quantity: 1, servings: 4 },
 				],
 			},
 		});
 		expect(foodNutrition.safeParse(food.nutrition).success).toBe(true);
 		expect(requests.map(request => request.url)).toEqual([
-			'https://world.openfoodfacts.org/api/v2/product/3017624010701?fields=code%2Cproduct_name%2Cbrands%2Cnutriments%2Cserving_quantity%2Cserving_quantity_unit%2Cproduct_quantity_unit',
+			'https://world.openfoodfacts.org/api/v2/product/3017624010701?fields=code%2Cproduct_name%2Cbrands%2Cnutriments%2Cserving_quantity%2Cserving_quantity_unit%2Cproduct_quantity_unit%2Cquantity',
 		]);
 		expect(requests[0]!.headers.get('user-agent')).toBe(USER_AGENT);
 	});
 
-	test('a drink is per 100 mL, energy falls back to kJ, sodium to salt, and alcohol turns into grams', async () => {
+	test('a drink is per 100 mL, energy falls back to kJ, sodium to salt, alcohol turns into grams, and its oz are fluid', async () => {
 		stub(() =>
 			Response.json({
 				status: 1,
@@ -90,6 +92,7 @@ describe('food database', () => {
 					product_name: 'Pale Ale',
 					brands: 'Brewery',
 					product_quantity_unit: 'ml',
+					quantity: '12 oz',
 					nutriments: { 'energy-kj_100g': 167.36, carbohydrates_100g: 3, salt_100g: 0.01, alcohol_100g: 5 },
 				},
 			}),
@@ -98,7 +101,10 @@ describe('food database', () => {
 		expect(food.nutrition).toEqual({
 			nutrients: { k: 40, c: 3, '307': 4, '221': 3.945 },
 			baseMilliliters: 100,
-			measures: [{ name: 'mL', quantity: 100, servings: 1 }],
+			measures: [
+				{ name: 'mL', quantity: 100, servings: 1 },
+				{ name: 'package', quantity: 1, servings: 3.54882 },
+			],
 		});
 	});
 
@@ -122,6 +128,7 @@ describe('food database', () => {
 						code: '0894700010137',
 						product_name: 'Nonfat Greek Yogurt',
 						brands: ['Chobani'],
+						quantity: '4 x 5.3 oz',
 						nutriments: { 'energy-kcal_100g': 52.9, proteins_100g: 9.41 },
 					},
 					{ code: '0000000000001', product_name: 'No energy', nutriments: { proteins_100g: 3 } },
@@ -141,7 +148,10 @@ describe('food database', () => {
 				nutrition: {
 					nutrients: { k: 52.9, p: 9.41 },
 					baseGrams: 100,
-					measures: [{ name: 'g', quantity: 100, servings: 1 }],
+					measures: [
+						{ name: 'g', quantity: 100, servings: 1 },
+						{ name: 'package', quantity: 1, servings: 1.50252 },
+					],
 				},
 			},
 		]);

@@ -87,6 +87,7 @@ const STAPLES = [
 	'Tomatoes, red, ripe, raw, year round average',
 	'Onions, raw',
 	'Cucumber, with peel, raw',
+	'Squash, summer, zucchini, includes skin, raw',
 	'Lettuce, cos or romaine, raw',
 	'Peppers, sweet, red, raw',
 	'Mushrooms, white, raw',
@@ -126,6 +127,17 @@ const ALTERNATES = [
 	'Bread, white, commercially prepared (includes soft bread crumbs)',
 	'Potatoes, flesh and skin, raw',
 ];
+/**
+ * Whole-item weights SR Legacy lacks, so "2 shallots" counts shallots, not its only measure, 2 tbsp chopped. Shallots
+ * are America's Test Kitchen's sizes (small 14 g, medium 28 g, large 42 g); FNDDS and Foundation Foods list none.
+ */
+const ADDED_PORTIONS: Record<string, Measure[]> = {
+	'Shallots, raw': [
+		{ name: 'medium', quantity: 1, servings: 0.28 },
+		{ name: 'small', quantity: 1, servings: 0.14 },
+		{ name: 'large', quantity: 1, servings: 0.42 },
+	],
+};
 const STAPLE_PRIOR = 8;
 const ALTERNATE_PRIOR = 5;
 /** A note on 57 SR Legacy names that says nothing about the food. */
@@ -214,9 +226,9 @@ async function download(): Promise<string> {
 
 const round = (value: number) => Math.round(value * 1000) / 1000;
 
-function measures(portions: Row[]): Measure[] {
-	const seen = new Set<string>();
-	const all: Measure[] = [];
+function measures(portions: Row[], added: Measure[] = []): Measure[] {
+	const seen = new Set(added.map(measure => measure.name));
+	const all: Measure[] = [...added];
 	for (const portion of portions.toSorted((a, b) => Number(a.seq_num) - Number(b.seq_num))) {
 		const name = (portion.modifier || portion.portion_description || '').trim();
 		const grams = Number(portion.gram_weight);
@@ -264,7 +276,7 @@ async function generate() {
 		}
 	}
 
-	const missing = new Set([...STAPLES, ...ALTERNATES]);
+	const missing = new Set([...STAPLES, ...ALTERNATES, ...Object.keys(ADDED_PORTIONS)]);
 	const rows = foods!
 		.filter(food => !DROPPED_CATEGORIES.has(categoryName.get(food.food_category_id!) ?? ''))
 		.toSorted((a, b) => Number(a.fdc_id) - Number(b.fdc_id))
@@ -295,11 +307,11 @@ async function generate() {
 			const json = JSON.stringify({
 				nutrients: nutrition,
 				baseGrams: 100,
-				measures: measures(portionsByFood.get(food.fdc_id!) ?? []),
+				measures: measures(portionsByFood.get(food.fdc_id!) ?? [], ADDED_PORTIONS[name]),
 			});
 			return [Number(food.fdc_id), name, prior, json] as const;
 		});
-	if (missing.size) throw new Error(`Staples missing from ${DATASET.name}: ${[...missing].join('; ')}`);
+	if (missing.size) throw new Error(`Hand-picked foods missing from ${DATASET.name}: ${[...missing].join('; ')}`);
 
 	const temporary = `${OUT}.tmp`;
 	rmSync(temporary, { force: true });

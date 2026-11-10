@@ -90,6 +90,7 @@ final class RambleCapture {
             let aligned = RambleAlignment.align(oldValue.map(\.identity), items.map(\.identity)).filter(\.value.same)
             let moved = Dictionary(uniqueKeysWithValues: aligned.map { ($0.value.old, $0.key) })
             choices = Dictionary(uniqueKeysWithValues: choices.compactMap { old, choice in moved[old].map { ($0, choice) } })
+            choices = Self.unsaid(choices, items: items, words: words)
         }
     }
     @ObservationIgnored private var choices: [Int: RambleChoice] = [:]
@@ -306,10 +307,12 @@ final class RambleCapture {
     }
 
     func remove(_ row: RambleRow) {
-        choices[row.id] = RambleChoice(name: row.item.identity, removed: true)
+        choices[row.id] = RambleChoice(name: row.item.identity, removed: true, through: spans[row.key]?.upperBound)
         // The owner took the whole row back: every word of it, corrections included, is struck.
         if let span = spans[row.key] { struck.formUnion(span) }
         rows.removeAll { $0.id == row.id }
+        // Said again, the food comes back on its new words; the removed ones stay struck.
+        gone[row.item.identity] = nil
         // A resolution already running read the choices before this one; resolving again drops its answer.
         resolve()
     }
@@ -452,6 +455,17 @@ final class RambleCapture {
             inserted += 1
         }
         return result
+    }
+
+    /// The choices without the removals the speaker took back by saying the food again: the model updates a food said
+    /// again in place ("2 tablespoons of salt … 1 tablespoon of salt"), so the removed item keeps its name, and only its
+    /// quote, now past the removed words, tells.
+    nonisolated static func unsaid(_ choices: [Int: RambleChoice], items: [RambleItem], words: RambleWords) -> [Int: RambleChoice] {
+        choices.filter { position, choice in
+            guard let through = choice.through, items.indices.contains(position), let span = words.span(of: items[position].said)
+            else { return true }
+            return span.upperBound <= through
+        }
     }
 
     /// Searches online for each unmatched name not asked yet, and resolves again when one finds something.

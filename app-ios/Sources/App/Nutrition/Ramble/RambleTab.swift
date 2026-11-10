@@ -787,7 +787,7 @@ private struct RambleLine: View {
                     HStack(spacing: 10) {
                         Image(systemName: "arrow.left.arrow.right.circle")
                             .foregroundStyle(Theme.textTertiary)
-                        FoodRow(food: option.portion.food, serving: RambleServing.serving(amount: row.item.amount, unit: row.item.unit, of: option.portion.food.nutrition, history: option.portion.serving))
+                        FoodRow(food: option.portion.food, serving: RambleServing.serving(amount: row.item.amount, unit: row.item.unit, food: row.item.name, of: option.portion.food.nutrition, history: option.portion.serving))
                     }
                     .frame(minHeight: 44)
                     .contentShape(.rect)
