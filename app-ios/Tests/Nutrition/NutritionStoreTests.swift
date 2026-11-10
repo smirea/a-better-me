@@ -80,6 +80,35 @@ struct NutritionStoreTests {
         #expect(try read(FoodEntry.between(monday, tuesday)).map { $0.amounts[.energy] } == [90, 180])
     }
 
+    @Test func aRecipeReplacesItsSelectionUnlessTheSelectionChanged() async throws {
+        store.log([FoodPortion(yogurt)], on: monday, minute: 8 * 60)
+        store.log([FoodPortion(yogurt)], on: monday, minute: 8 * 60 + 30, section: "breakfast")
+        try await settled()
+        let selection = try read(FoodEntry.on(monday))
+        var recipe = Recipe(name: "Yogurt Bowl", servings: 1)
+        recipe.ingredients = selection.map { RecipeIngredient($0.portion) }
+        let replacement = try #require(FoodLog.replacement(for: selection, with: recipe))
+
+        #expect(try await store.replace(selection, with: replacement).value)
+        let replaced = try read(FoodEntry.on(monday))
+        #expect(replaced.map(\.food.name) == ["Yogurt Bowl"])
+        #expect(replaced.map(\.minute) == [8 * 60])
+        #expect(replaced.map(\.section) == ["breakfast"])
+        #expect(replaced.map { $0.amounts[.energy] } == [360])
+
+        store.undo(.unreplace(added: replacement.id, removed: selection))
+        try await settled()
+        let restored = try read(FoodEntry.on(monday))
+        #expect(restored.map(\.food.name) == [yogurt.name, yogurt.name])
+        #expect(restored.map(\.minute) == [8 * 60, 8 * 60 + 30])
+
+        store.edit(FoodEntry.self, id: restored[1].id) { $0.serving.quantity = 2 }
+        try await settled()
+        let stale = try #require(FoodLog.replacement(for: restored, with: recipe))
+        #expect(try await store.replace(restored, with: stale).value == false)
+        #expect(try read(FoodEntry.on(monday)).map { $0.amounts[.energy] } == [180, 360])
+    }
+
     @Test func marksADayAndClearsItsOverride() async throws {
         #expect(try read(NutritionDay.one(monday)) == NutritionDay(id: monday))
         store.updateDay(monday) { $0.status = .fasted }

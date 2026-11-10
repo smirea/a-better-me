@@ -316,6 +316,16 @@ enum FoodLog {
         return draft
     }
 
+    /// What saving Create Recipe logs in place of the selection: the whole batch, at the earliest selected entry's
+    /// day, minute, and section. The selection was the whole recipe, so a recipe made to serve 4 logs 4 servings and
+    /// the day's totals stay put; at the draft's default of 1 serving it is the owner's "1 serving of the recipe".
+    static func replacement(for entries: [FoodEntry], with recipe: Recipe) -> FoodEntry? {
+        guard let first = entries.min(by: { ($0.day, $0.minute) < ($1.day, $1.minute) }) else { return nil }
+        let measure = recipe.nutrition.measures[0]
+        let batch = Serving(measure: measure, quantity: recipe.servings * measure.quantity / measure.servings)
+        return FoodEntry(FoodPortion(recipe.snapshot, serving: batch), day: first.day, minute: first.minute, section: first.section)
+    }
+
     /// The entry to bring into view after the day's entries changed: the last one in the timeline that was not there
     /// before. Nil when nothing was added.
     static func added(from old: [FoodEntry], to new: [FoodEntry]) -> UUID? {
