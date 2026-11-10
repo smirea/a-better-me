@@ -12,40 +12,35 @@ struct MoreTab: View {
                         RowLabel(title: "Downloading… \(rows) rows", systemImage: "arrow.down.circle")
                     }
                 }
-                ThemedSection("Progress") {
-                    row(.levels)
-                    row(.strategy)
-                    row(.workoutHistory)
-                }
                 ThemedSection("General") {
                     row(.units)
                     row(.profile)
                     row(.dashboard)
+                    row(.appleHealth)
+                }
+                ThemedSection("Nutrition") {
+                    row(.strategy)
+                    row(.foodLog)
+                    row(.expenditure)
+                    row(.foodsRecipes)
                 }
                 ThemedSection("Workouts") {
+                    row(.levels)
+                    row(.workoutHistory)
                     row(.workout)
                     row(.exercises)
                     row(.gymProfiles)
                 }
-                ThemedSection("Nutrition") {
-                    row(.foodLog)
-                    row(.expenditure)
-                    row(.strategySettings)
-                    row(.foodsRecipes)
-                }
-                ThemedSection("Integrations") {
-                    row(.appleHealth)
-                }
-                ThemedSection("Data") {
+                ThemedSection("Development") {
                     row(.dataVisibility)
                     AssetsRow()
-                }
-                ThemedSection("Automation") {
                     row(.apiTokens)
                 }
             }
             .themedList()
-            .screenTitle("More")
+            .navigationTitle("More")
+            .toolbarVisibility(.hidden, for: .navigationBar)
+            .safeAreaBar(edge: .top, spacing: 0) { Color.clear.frame(height: 0) }
             .navigationDestination(for: MoreRoute.self) { $0.destination }
             .navigationDestination(for: Muscle.self) { MuscleLevelsView(muscle: $0) }
             .navigationDestination(for: StrategyRoute.self) { $0.destination }
@@ -61,7 +56,7 @@ struct MoreTab: View {
 /// More's screens are path values registered at its root, with the destinations Levels and Strategy push. A
 /// value link inside a screen pushed with a view destination never fired, so nothing here pushes by view.
 private enum MoreRoute: Hashable {
-    case levels, strategy, workoutHistory, units, profile, dashboard, workout, exercises, gymProfiles, foodLog, expenditure, strategySettings, foodsRecipes, appleHealth, dataVisibility, apiTokens
+    case levels, strategy, workoutHistory, units, profile, dashboard, workout, exercises, gymProfiles, foodLog, expenditure, foodsRecipes, appleHealth, dataVisibility, apiTokens
 
     var title: String {
         switch self {
@@ -76,7 +71,6 @@ private enum MoreRoute: Hashable {
         case .gymProfiles: "Gym Profiles"
         case .foodLog: "Food Log"
         case .expenditure: "Expenditure"
-        case .strategySettings: "Strategy Settings"
         case .foodsRecipes: "Foods & Recipes"
         case .appleHealth: "Apple Health"
         case .dataVisibility: "Data Visibility"
@@ -97,7 +91,6 @@ private enum MoreRoute: Hashable {
         case .gymProfiles: "building.2"
         case .foodLog: "fork.knife"
         case .expenditure: "bolt.fill"
-        case .strategySettings: "circle.hexagongrid"
         case .foodsRecipes: "carrot"
         case .appleHealth: "heart.fill"
         case .dataVisibility: "eye"
@@ -119,7 +112,6 @@ private enum MoreRoute: Hashable {
         case .gymProfiles: GymProfilesView()
         case .foodLog: FoodLogSettingsView()
         case .expenditure: ExpenditureSettingsView()
-        case .strategySettings: StrategySettingsView()
         case .foodsRecipes: FoodLibraryView()
         case .appleHealth: HealthSettingsView()
         case .dataVisibility: DataVisibilityView()
