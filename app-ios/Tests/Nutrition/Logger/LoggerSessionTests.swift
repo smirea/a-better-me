@@ -176,6 +176,15 @@ struct LoggerSessionTests {
         #expect(portion.serving.quantity == 430)
         #expect(portion.amounts[.energy] == 860)
 
+        var legacy = Food(name: "Old Deli Salad", barcode: "210843007991", nutrition: tikka.nutrition)
+        legacy.store = "Central Market"
+        store.saveFood(legacy)
+        try await store.write { _ in }.value
+        guard case let .stores(both, _) = await logger.lookup(barcode: label) else { Issue.record("legacy not matched"); return }
+        #expect(Set(both.map(\.id)) == [tikka.id, legacy.id])
+        store.deleteFood(legacy.id)
+        try await store.write { _ in }.value
+
         var salad = Food(name: "Kale Salad", barcode: "210843", nutrition: tikka.nutrition)
         salad.store = "H-E-B"
         store.saveFood(salad)

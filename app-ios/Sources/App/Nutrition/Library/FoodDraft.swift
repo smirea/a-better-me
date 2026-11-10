@@ -178,7 +178,7 @@ struct FoodDraft: Equatable, Sendable {
 
         guard issues.isEmpty else { return (nil, issues) }
         let nutrition = FoodNutrition(nutrients: amounts, baseGrams: size.grams, baseMilliliters: size.milliliters, measures: all)
-        return (Valid(name: name, brand: Self.optional(brand), barcode: Self.optional(barcode), store: Self.optional(store), icon: icon, nutrition: nutrition), [:])
+        return (Valid(name: name, brand: Self.optional(brand), barcode: Self.optional(barcode).map { ScannedBarcode($0)?.code ?? $0 }, store: Self.optional(store), icon: icon, nutrition: nutrition), [:])
     }
 
     private static func optional(_ text: String) -> String? {

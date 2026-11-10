@@ -73,7 +73,8 @@ extension FoodDraft {
 
     /// Takes a new read of the photos, except where the owner changed a field since `baseline`, the draft as the last
     /// read (or the editor's opening) left it. The serving moves as one, since its fields only mean something together;
-    /// each nutrient moves alone, so fixing calories by hand keeps that fix through a read of one more photo.
+    /// each nutrient moves alone, so fixing calories by hand keeps that fix through a read of one more photo, and energy
+    /// moves with its unit, so a kcal read never lands in a field switched to kJ.
     mutating func merge(_ read: FoodDraft, over baseline: FoodDraft) {
         if name == baseline.name { name = read.name }
         if brand == baseline.brand { brand = read.brand }
@@ -86,8 +87,11 @@ extension FoodDraft {
             servingName = read.servingName
             measures = read.measures
         }
-        if nutrients[.energy] == baseline.nutrients[.energy], energyUnit == baseline.energyUnit { energyUnit = read.energyUnit }
-        for id in Set(read.nutrients.keys).union(baseline.nutrients.keys) where nutrients[id] == baseline.nutrients[id] {
+        if nutrients[.energy] == baseline.nutrients[.energy], energyUnit == baseline.energyUnit {
+            nutrients[.energy] = read.nutrients[.energy]
+            energyUnit = read.energyUnit
+        }
+        for id in Set(read.nutrients.keys).union(baseline.nutrients.keys) where id != .energy && nutrients[id] == baseline.nutrients[id] {
             nutrients[id] = read.nutrients[id]
         }
     }

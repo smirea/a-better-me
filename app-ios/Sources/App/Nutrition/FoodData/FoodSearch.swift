@@ -212,10 +212,12 @@ final class FoodSearch {
     }
 
     /// The owner's foods with this store item code, newest first: one per store that reuses the code. Never online,
-    /// since Open Food Facts knows no store's own codes.
+    /// since Open Food Facts knows no store's own codes. A food saved before codes were shortened holds the whole
+    /// label (`210843007991`), so any barcode containing the code is read the way a scan is.
     func foods(storeItem code: String) async throws -> [Food] {
         try await store.read { db in
-            try Food.filter(Column("barcode") == code && Column("archived") == false).order(Column("updated_at").desc).fetchAll(db)
+            try Food.filter(Column("barcode").like("%\(code)%") && Column("archived") == false).order(Column("updated_at").desc).fetchAll(db)
+                .filter { $0.barcode == code || $0.barcode.flatMap(ScannedBarcode.init)?.code == code }
         }
     }
 

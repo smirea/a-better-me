@@ -166,3 +166,24 @@ struct FoodDraftReadingTests {
         #expect(draft.basis == .serving)
     }
 }
+
+struct FoodDraftEnergyAndBarcodeTests {
+    @Test func energySwitchedToKilojoulesDuringAReadKeepsItsUnitAndAmount() {
+        let opened = FoodDraft()
+        var draft = opened
+        draft.energyUnit = .kj
+        draft.merge(opened.reading(FoodLabel(nutrition: FoodNutrition(nutrients: [.energy: 600, .protein: 33], measures: [Measure(name: "ea", quantity: 1, servings: 1)]))), over: opened)
+        #expect(draft.energyUnit == .kj)
+        #expect(draft.nutrients[.energy] == nil)
+        #expect(draft.nutrients[.protein] == "33")
+    }
+
+    @Test func aStoreLabelTypedInFullSavesItsItemCode() {
+        var draft = FoodDraft()
+        draft.name = "Tikka"
+        draft.barcode = "210843007991"
+        #expect(draft.valid?.barcode == "210843")
+        draft.barcode = "0894700010137"
+        #expect(draft.valid?.barcode == "0894700010137")
+    }
+}
