@@ -194,4 +194,19 @@ struct LibraryFilterTests {
         #expect(NutritionFormat.serving(Serving(measure: banana.nutrition.measures[0], quantity: 1), of: banana) == "1 large (150 g)")
         #expect(NutritionFormat.serving(Serving(measure: Measure(name: "g", quantity: 1, servings: 0.01), quantity: 30), of: banana) == "30 g")
     }
+
+    @Test func oneServingOfARecipeIsItsTotalOverItsYield() {
+        var sauce = Recipe(name: "Pasta sauce", servings: 4)
+        sauce.ingredients = [large(8)]
+        sauce.cookedGrams = 1460
+        let portion = FoodPortion(sauce.snapshot)
+
+        #expect(portion.amounts == [.energy: 300, .protein: 6, .carbs: 60])
+        #expect(NutritionFormat.listed(portion.serving, of: sauce.snapshot) == "1 serving (365 g)")
+        #expect(NutritionFormat.listed(Serving(measure: banana.nutrition.measures[0], quantity: 1), of: banana) == "1 large")
+
+        sauce.servings = 1
+        #expect(FoodPortion(sauce.snapshot).amounts == [.energy: 1200, .protein: 24, .carbs: 240])
+        #expect(NutritionFormat.listed(FoodPortion(sauce.snapshot).serving, of: sauce.snapshot) == "1 serving (1,460 g)")
+    }
 }
