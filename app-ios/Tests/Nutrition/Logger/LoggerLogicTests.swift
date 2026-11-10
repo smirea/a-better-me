@@ -247,17 +247,36 @@ struct SearchPolicyTests {
         #expect(SearchPolicy.remoteDelay(for: "", branded: true) == nil)
         #expect(SearchPolicy.remoteDelay(for: "banana", branded: false) == nil)
     }
+}
 
+struct ScannedBarcodeTests {
     @Test(arguments: [
         ("0894700010137", "0894700010137"), ("0 89470 00101 3", "089470001013"), ("9638-5074", "96385074"),
+        ("(01)00894700010137", "0894700010137"),
     ])
-    func readsBarcodes(_ text: String, _ barcode: String) {
-        #expect(LoggerSession.barcode(text) == barcode)
+    func readsProductBarcodes(_ text: String, _ code: String) {
+        #expect(ScannedBarcode(text) == ScannedBarcode(code: code, isStoreItem: false, grams: nil))
     }
 
-    @Test(arguments: ["1234567", "123456789012345", "12345abc", "", "١٢٣٤٥٦٧٨"])
+    /// The Whole Foods deli label: a GS1-128 of the variable-measure GTIN and the price, read by a scanner (with or
+    /// without the symbology prefix and separators), typed from the print, or as the same item's UPC-A price label.
+    @Test(arguments: [
+        "010021084300000039040079900", "]C1010021084300000039040079900", "0100210843000000\u{1D}39040079900",
+        "(01)00210843000000(3904)0079900", "210843007991", "0210843007991",
+    ])
+    func readsAStoreItemWithoutItsPrice(_ text: String) {
+        #expect(ScannedBarcode(text) == ScannedBarcode(code: "210843", isStoreItem: true, grams: nil))
+    }
+
+    @Test func readsAStoreItemsWeight() {
+        #expect(ScannedBarcode("0100210843000000\u{1D}3103000430\u{1D}39220799")?.grams == 430)
+        #expect(ScannedBarcode("(01)00210843000000(3202)000150")?.grams.map { ($0 * 10).rounded() / 10 } == 680.4)
+        #expect(ScannedBarcode("2012345012342") == ScannedBarcode(code: "2012345", isStoreItem: true, grams: nil))
+    }
+
+    @Test(arguments: ["1234567", "123456789012345", "12345abc", "", "١٢٣٤٥٦٧٨", "(3904)0079900", "(01)123"])
     func rejectsBarcodes(_ text: String) {
-        #expect(LoggerSession.barcode(text) == nil)
+        #expect(ScannedBarcode(text) == nil)
     }
 }
 

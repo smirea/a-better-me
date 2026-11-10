@@ -104,6 +104,8 @@ struct Food: Stamped {
     var name: String
     var brand: String?
     var barcode: String?
+    /// The store a store-packed food is from; its barcode is that store's item code (`ScannedBarcode`).
+    var store: String?
     var icon: String?
     var nutrition: FoodNutrition
     var isArchived = false
@@ -145,6 +147,7 @@ struct Food: Stamped {
         name = row["name"]
         brand = row["brand"]
         barcode = row["barcode"]
+        store = row["store"]
         icon = row["icon"]
         nutrition = try row.json("nutrition")
         isArchived = row.flag("archived")
@@ -158,6 +161,7 @@ struct Food: Stamped {
         container["name"] = name
         container["brand"] = brand
         container["barcode"] = barcode
+        container["store"] = store
         container["icon"] = icon
         container["nutrition"] = try RowJSON.text(nutrition)
         container["archived"] = isArchived ? 1 : 0

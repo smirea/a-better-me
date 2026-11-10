@@ -43,7 +43,7 @@ struct LoggerSessionTests {
 
     /// The found food's id: a food read back from the database differs from the stub's in its timestamps.
     func found(_ outcome: BarcodeOutcome) -> String? {
-        if case let .found(food) = outcome { food.id } else { nil }
+        if case let .found(portion) = outcome { portion.food.foodID } else { nil }
     }
 
     func entries() async throws -> [FoodEntry] {
@@ -156,8 +156,32 @@ struct LoggerSessionTests {
         #expect(found(await logger.lookup(barcode: "0 894700 010137")) == "off-0894700010137")
         try await store.write { _ in }.value
         #expect(try store.readBlocking { try Food.fetchOne($0, key: "off-0894700010137") }?.brand == "Chobani")
-        #expect(await logger.lookup(barcode: "12345678") == .notFound("12345678"))
+        #expect(await logger.lookup(barcode: "12345678") == .notFound(ScannedBarcode(code: "12345678", isStoreItem: false, grams: nil)))
         #expect(await logger.lookup(barcode: "12 34") == .invalid)
+    }
+
+    @Test func aStoreItemFindsTheOwnersFoodByItsCodeAtTheLabelsWeight() async throws {
+        let logger = try await session(StubBranded(offline: true))
+        let label = "0100210843000000\u{1D}3103000430\u{1D}39220799"
+        let unknown = await logger.lookup(barcode: label)
+        #expect(unknown == .notFound(ScannedBarcode(code: "210843", isStoreItem: true, grams: 430)))
+
+        var tikka = Food(name: "Chicken Tikka", barcode: "210843", nutrition: FoodNutrition(nutrients: [.energy: 2], baseGrams: 1, measures: [Measure(name: "ea", quantity: 1, servings: 312)]))
+        tikka.store = "Whole Foods Market"
+        store.saveFood(tikka)
+        try await store.write { _ in }.value
+        guard case let .found(portion) = await logger.lookup(barcode: label) else { Issue.record("not found"); return }
+        #expect(portion.food.foodID == tikka.id)
+        #expect(portion.serving.measure.name == "g")
+        #expect(portion.serving.quantity == 430)
+        #expect(portion.amounts[.energy] == 860)
+
+        var salad = Food(name: "Kale Salad", barcode: "210843", nutrition: tikka.nutrition)
+        salad.store = "H-E-B"
+        store.saveFood(salad)
+        try await store.write { _ in }.value
+        guard case let .stores(foods, _) = await logger.lookup(barcode: "(01)00210843000000(3904)0079900") else { Issue.record("no choice"); return }
+        #expect(Set(foods.map(\.store)) == ["Whole Foods Market", "H-E-B"])
     }
 
     @Test func aKnownBarcodeNeedsNoNetwork() async throws {

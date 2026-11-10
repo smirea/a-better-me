@@ -124,3 +124,45 @@ struct FoodDraftTests {
         #expect(draft.duplicate().name == "Yogurt (Copy)")
     }
 }
+
+struct FoodDraftReadingTests {
+    let panel = FoodLabel(
+        name: "Chicken Tikka", brand: "Whole Foods Market", store: "Whole Foods Market",
+        nutrition: FoodNutrition(nutrients: [.energy: 600, .protein: 33, .fat: 26], baseGrams: 312, measures: [Measure(name: "ea", quantity: 1, servings: 1)])
+    )
+
+    @Test func aReadFillsTheServingAndNutrientsAndKeepsTheBarcode() {
+        var opened = FoodDraft()
+        opened.barcode = "210843"
+        let read = opened.reading(panel)
+        var draft = opened
+        draft.merge(read, over: opened)
+        #expect(draft.barcode == "210843")
+        #expect(draft.store == "Whole Foods Market")
+        #expect(draft.basisLabel == "1 ea (312 g)")
+        #expect(draft.nutrients == [.energy: "600", .protein: "33", .fat: "26"])
+        #expect(draft.valid?.nutrition.baseGrams == 312)
+    }
+
+    @Test func aLaterReadKeepsWhatTheOwnerChangedSinceTheLastOne() {
+        let opened = FoodDraft()
+        let first = opened.reading(FoodLabel(name: "Tikka", nutrition: panel.nutrition))
+        var draft = opened
+        draft.merge(first, over: opened)
+        draft.name = "Tikka Bowl"
+        draft.nutrients[.energy] = "610"
+
+        var more = panel
+        more.nutrition?.nutrients[.fiber] = 2
+        let second = first.reading(more)
+        draft.merge(second, over: first)
+        #expect(draft.name == "Tikka Bowl")
+        #expect(draft.brand == "Whole Foods Market")
+        #expect(draft.nutrients == [.energy: "610", .protein: "33", .fat: "26", .fiber: "2"])
+
+        draft.servingName = "bowl"
+        draft.merge(second.reading(FoodLabel(nutrition: FoodNutrition(nutrients: [.energy: 1], measures: [Measure(name: "g", quantity: 100, servings: 1)]))), over: second)
+        #expect(draft.servingName == "bowl")
+        #expect(draft.basis == .serving)
+    }
+}

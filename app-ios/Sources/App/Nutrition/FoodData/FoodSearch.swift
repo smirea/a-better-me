@@ -211,6 +211,14 @@ final class FoodSearch {
         return food
     }
 
+    /// The owner's foods with this store item code, newest first: one per store that reuses the code. Never online,
+    /// since Open Food Facts knows no store's own codes.
+    func foods(storeItem code: String) async throws -> [Food] {
+        try await store.read { db in
+            try Food.filter(Column("barcode") == code && Column("archived") == false).order(Column("updated_at").desc).fetchAll(db)
+        }
+    }
+
     /// Caches a USDA or Open Food Facts result before it is logged; a no-op for the owner's own foods.
     func cache(_ result: FoodSearchResult) {
         if let food = result.food { store.saveFood(food) }

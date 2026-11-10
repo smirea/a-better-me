@@ -9,7 +9,7 @@ import UIKit
 struct PhotoTab: View {
     let session: LoggerSession
     let showPlate: () -> Void
-    @State private var photo: MealPhoto?
+    @State private var photo: PhotoUpload?
     @State private var note = ""
     @State private var choosing = false
     @State private var picked: PhotosPickerItem?
@@ -70,14 +70,14 @@ struct PhotoTab: View {
         }
         .photosPicker(isPresented: $choosing, selection: $picked, matching: .images)
         .fullScreenCover(isPresented: $capturing) {
-            CameraCapture { image in load { MealPhoto(image) } }.ignoresSafeArea()
+            CameraCapture { image in load { PhotoUpload(image) } }.ignoresSafeArea()
         }
         .onChange(of: picked) {
             guard let picked else { return }
             Task {
                 let data = try? await picked.loadTransferable(type: Data.self)
                 self.picked = nil
-                if let data { load { MealPhoto(data) } } else { unreadable = true }
+                if let data { load { PhotoUpload(data) } } else { unreadable = true }
             }
         }
         .onAppear(perform: showAddedFoods)
@@ -119,7 +119,7 @@ struct PhotoTab: View {
     }
 
     /// Shrinks the photo off the main actor; the full-size original never stays in memory.
-    private func load(_ prepare: @escaping @Sendable () -> MealPhoto?) {
+    private func load(_ prepare: @escaping @Sendable () -> PhotoUpload?) {
         Task {
             let prepared = await Task.detached(operation: prepare).value
             if let prepared { photo = prepared } else { unreadable = true }
@@ -131,60 +131,5 @@ struct PhotoTab: View {
         noteFocused = false
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
         Task { await session.findFoods(jpeg: photo.jpeg, note: trimmed.isEmpty ? nil : trimmed) }
-    }
-}
-
-/// The photo as it is sent, and the same pixels to show.
-private struct MealPhoto: Sendable {
-    let jpeg: Data
-    let preview: UIImage
-
-    init?(_ data: Data) {
-        guard let jpeg = MealPhotoImage.jpeg(from: data), let preview = UIImage(data: jpeg) else { return nil }
-        self.jpeg = jpeg
-        self.preview = preview
-    }
-
-    /// A camera photo, shrunk before it is encoded so the full-size frame is never compressed.
-    init?(_ image: UIImage) {
-        let pixels = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
-        let scale = min(1, Double(MealPhotoImage.maxPixels) / max(pixels.width, pixels.height))
-        guard let small = image.preparingThumbnail(of: CGSize(width: pixels.width * scale, height: pixels.height * scale)),
-              let jpeg = small.jpegData(compressionQuality: 0.7) else { return nil }
-        self.jpeg = jpeg
-        preview = small
-    }
-}
-
-private struct CameraCapture: UIViewControllerRepresentable {
-    let captured: (UIImage) -> Void
-    @Environment(\.dismiss) private var dismiss
-
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_: UIImagePickerController, context _: Context) {}
-
-    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
-
-    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: CameraCapture
-
-        init(parent: CameraCapture) {
-            self.parent = parent
-        }
-
-        func imagePickerController(_: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            if let image = info[.originalImage] as? UIImage { parent.captured(image) }
-            parent.dismiss()
-        }
-
-        func imagePickerControllerDidCancel(_: UIImagePickerController) {
-            parent.dismiss()
-        }
     }
 }

@@ -583,6 +583,7 @@ export const Food = z
 		name: z.string(),
 		brand: z.string().nullable(),
 		barcode: z.string().nullable(),
+		store: z.string().nullable(),
 		icon: z.string().nullable(),
 		nutrition: FoodNutrition,
 		archived: z.boolean(),
@@ -598,6 +599,10 @@ const foodFields = {
 	name: z.string().trim().min(1),
 	brand: z.string().nullable(),
 	barcode: z.string().nullable(),
+	store: z
+		.string()
+		.nullable()
+		.meta({ description: "The store a store-packed food is from; its barcode is that store's item code." }),
 	icon: z.string().nullable().meta({ description: 'A food icon name; null for the default.' }),
 	nutrition: FoodNutrition,
 	archived: z.boolean(),
@@ -611,6 +616,7 @@ export const FoodCreate = z
 		...foodFields,
 		brand: foodFields.brand.default(null),
 		barcode: foodFields.barcode.default(null),
+		store: foodFields.store.default(null),
 		icon: foodFields.icon.default(null),
 		archived: foodFields.archived.default(false),
 	})
