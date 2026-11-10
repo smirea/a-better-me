@@ -106,6 +106,7 @@ private struct SelectionBar: View {
 
     @Environment(FoodLogState.self) private var state
     @Environment(LocalStore.self) private var store
+    @Observe(AppSettings.current) private var settings
     @State private var confirmingRemove = false
     @State private var prompt: Prompt?
 
@@ -126,7 +127,9 @@ private struct SelectionBar: View {
                 Button("Copy") { state.pending = .init(action: .copy, entries: state.selectedEntries) }
                 Button("Move") { state.pending = .init(action: .move, entries: state.selectedEntries) }
                 Button("Remove") { confirmingRemove = true }
-                Button("Modify Timestamp") { prompt = .timestamp }
+                if settings.nutrition.timeline.display == .time {
+                    Button("Modify Timestamp") { prompt = .timestamp }
+                }
                 if count > 1 {
                     Button("Create Recipe") { state.createRecipe() }
                 }

@@ -27,8 +27,8 @@ struct DayPage: View {
     private var isSections: Bool { timeline.display == .sections }
     private var column: TimelineColumn {
         isSections
-            ? TimelineColumn(pillWidth: sectionPillWidth, lineX: sectionPillWidth / 4, tileInset: sectionPillWidth / 4 + 14)
-            : TimelineColumn(pillWidth: hourPillWidth, lineX: hourPillWidth / 2, tileInset: hourPillWidth + SlotRow.spacing)
+            ? TimelineColumn(pillWidth: sectionPillWidth, tileInset: EntryRow.circleSize / 2, hasLine: false)
+            : TimelineColumn(pillWidth: hourPillWidth, tileInset: hourPillWidth + SlotRow.spacing, hasLine: true)
     }
 
     private struct GroupsKey: Equatable {
@@ -66,7 +66,9 @@ struct DayPage: View {
                     }
                 }
                 .background(alignment: .leading) {
-                    Rectangle().fill(Theme.separator).frame(width: 1).padding(.leading, column.lineX)
+                    if column.hasLine {
+                        Rectangle().fill(Theme.separator).frame(width: 1).padding(.leading, column.pillWidth / 2)
+                    }
                 }
                 .padding(.horizontal, Theme.margin)
                 .padding(.bottom, Self.bottomPadding)
@@ -128,13 +130,13 @@ private struct FillHeight: Layout {
     }
 }
 
-/// Where the timeline's line runs and where its tiles start. Time centers the line on the hour pills, with each tile's
-/// time or check circle on it in the gutter. Sections moves the line to a quarter of the pill and nests the tiles under
-/// the pill just past it, which leaves room for the check circle on the line but not for a time.
+/// Where the tiles start, and whether a line runs down the pills. Time centers the line on the hour pills, with each
+/// tile's time on it in the gutter. Sections has no line and nests the tiles under the pill, indented by half a check
+/// circle, so select mode's circles, centered on the tiles' left edges, line up with the pills' left edges.
 private struct TimelineColumn {
     let pillWidth: CGFloat
-    let lineX: CGFloat
     let tileInset: CGFloat
+    let hasLine: Bool
 }
 
 /// The hour's or section's pill, its + (a paste button while pasting inline, a move button under Premove), and its
@@ -296,9 +298,10 @@ private struct HourTotals: View {
     }
 }
 
-/// A food tile with its time, or its check circle in select mode, on the timeline's line. Pasting inline hides the
-/// circles, so the destination day's foods don't read as a new selection. Tapping the tile or its circle toggles it, and a
-/// long press starts select mode on it: the selection's bar holds its actions, so there is no context menu. Swiping
+/// A food tile with its time on the timeline's line, and in select mode a check circle floating half over its left
+/// edge. Pasting inline hides the circles, so the destination day's foods don't read as a new selection. Tapping the
+/// tile enters select mode on it, or toggles it there, and the selection's bar opens the editor, so the tile has no
+/// edit button. A long press starts select mode on it too: the bar holds its actions, so there is no context menu. Swiping
 /// a tile left reveals Remove and Copy, as MacroFactor's does; it has no full swipe, because a left swipe that misses
 /// the blank space was meant to page.
 private struct EntryRow: View {
@@ -306,6 +309,8 @@ private struct EntryRow: View {
     let column: TimelineColumn
     let showsTime: Bool
     let hidesDetails: Bool
+
+    static let circleSize: CGFloat = 20
 
     @Environment(FoodLogState.self) private var state
     @Environment(LocalStore.self) private var store
@@ -316,41 +321,44 @@ private struct EntryRow: View {
         let showsCircle = state.selecting && state.pending?.inline != true
         HStack(spacing: 0) {
             Color.clear.frame(width: column.tileInset).overlay(alignment: .leading) {
-                ZStack {
-                    if showsCircle {
-                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 20))
-                            .foregroundStyle(Theme.textPrimary)
-                            .background(Theme.background, in: .circle)
-                    } else if showsTime, row.showsTime {
-                        Text(NutritionFormat.time(entry.minute)).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
+                if showsTime, row.showsTime {
+                    Text(NutritionFormat.time(entry.minute)).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
+                        .frame(width: column.pillWidth)
+                }
+            }
+            FoodRow(food: entry.food, serving: entry.serving, showsDetail: !hidesDetails)
+                // The circle covers the tile's first half circle, so the icon steps right to clear it.
+                .padding(.leading, showsCircle ? 12 + Self.circleSize / 2 : 12)
+                .padding(.trailing, 12)
+                .padding(.vertical, 8)
+                .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
+                .overlay {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textSecondary, lineWidth: 1)
                     }
                 }
-                .frame(width: column.lineX * 2)
+                .rowSwipeActions(trailing: state.selecting ? [] : [
+                    .destructive("Remove") { store.deleteEntries([entry.id]) },
+                    SwipeAction(title: "Copy", systemImage: "doc.on.doc") { state.copy(entry) },
+                ])
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+                .accessibilityAction(named: isSelected ? "Deselect" : "Select") { state.select(entry.id) }
+                .accessibilityAction(named: "Edit") { state.editing = entry }
+        }
+        // On the row rather than the tile, whose swipe clips it.
+        .overlay(alignment: .leading) {
+            if showsCircle {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: Self.circleSize))
+                    .foregroundStyle(Theme.textPrimary)
+                    .background(Theme.background, in: .circle)
+                    .padding(.leading, column.tileInset - Self.circleSize / 2)
             }
-            HStack(spacing: 12) {
-                FoodRow(food: entry.food, serving: entry.serving, showsDetail: !hidesDetails)
-                RoundIconButton("Edit \(entry.food.name)", systemImage: "pencil", size: .small) { state.editing = entry }
-                    .disabled(state.selecting)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
-            .overlay {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textSecondary, lineWidth: 1)
-                }
-            }
-            .rowSwipeActions(trailing: state.selecting ? [] : [
-                .destructive("Remove") { store.deleteEntries([entry.id]) },
-                SwipeAction(title: "Copy", systemImage: "doc.on.doc") { state.copy(entry) },
-            ])
-            .accessibilityAddTraits(isSelected ? .isSelected : [])
-            .accessibilityAction(named: isSelected ? "Deselect" : "Select") { state.select(entry.id) }
         }
         // The gutter's clear color would otherwise take a share of the height a short day of Sections spreads.
         .fixedSize(horizontal: false, vertical: true)
         .contentShape(.rect)
+        .animation(.snappy, value: showsCircle)
         .onTapGesture { state.select(entry.id) }
         .onLongPressGesture(minimumDuration: 0.35) { state.startSelection(at: entry.id) }
         .padding(.bottom, 6)
