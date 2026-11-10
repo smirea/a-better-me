@@ -85,6 +85,24 @@ struct ServingChoicesTests {
         #expect(choices.units.map(\.name) == ["g", "oz", "mL", "cup"])
     }
 
+    @Test func eachSpoonServingBringsItsOtherSpoonWithTheSameQualifier() {
+        let oregano = FoodNutrition(nutrients: [.energy: 265], baseGrams: 100, measures: [
+            Measure(name: "tsp, leaves", quantity: 1, servings: 0.01),
+            Measure(name: "tsp, ground", quantity: 1, servings: 0.018),
+            Measure(name: "cup (8 fl oz)", quantity: 1, servings: 2.4),
+            Measure(name: "cups, chopped", quantity: 0.5, servings: 0.6),
+            Measure(name: "tbsp, chopped", quantity: 1, servings: 0.08),
+        ])
+        let choices = ServingChoices(oregano, favorites: ["g", "oz", "mL", "cup"])
+        #expect(choices.units.map(\.name) == ["g", "oz"])
+        #expect(choices.servings.map(\.name) == [
+            "tsp, leaves", "tbsp, leaves", "tsp, ground", "tbsp, ground", "cup (8 fl oz)", "cups, chopped", "tbsp, chopped", "tsp, chopped",
+        ])
+        let tbsp = choices.servings[3], tsp = choices.servings[2]
+        #expect(abs(Serving(measure: tbsp, quantity: 1).servings - 3 * Serving(measure: tsp, quantity: 1).servings) < 1e-9)
+        #expect(oregano.allMeasures.map(\.name).suffix(3) == ["g", "oz", "lb"])
+    }
+
     @Test func keepsTheCurrentMeasureWhenItIsNotAFavorite() {
         let pound = banana.nutrition.allMeasures.first { $0.name == "lb" }!
         let choices = ServingChoices(banana.nutrition, favorites: ["g"], current: pound)

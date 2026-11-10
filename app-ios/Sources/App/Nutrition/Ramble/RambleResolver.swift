@@ -1,7 +1,8 @@
 import Foundation
 
 /// What the owner changed on a row: an option they picked, a serving they typed, or the row removed. It holds while
-/// the model keeps the row's name, so a re-read of the ramble never undoes a tap.
+/// the model keeps the row's name, so a re-read of the ramble never undoes a tap. A removal also ends when the speaker
+/// says the food again (`RambleCapture`).
 struct RambleChoice: Hashable, Sendable {
     /// The item's `identity` when the choice was made; a different item at the row's position drops it.
     var name: String
@@ -9,6 +10,8 @@ struct RambleChoice: Hashable, Sendable {
     var option: String?
     var serving: Serving?
     var removed = false
+    /// For a removal, the transcript word after the removed row's words.
+    var through: Int?
 }
 
 /// One food a row will log, at its own day and minute.
@@ -27,6 +30,10 @@ struct RambleRow: Identifiable, Hashable, Sendable {
         var key: String
         /// The search's top candidates for the spoken name, best first, at most `RambleResolver.optionLimit`.
         var options: [FoodSearchResult]
+        /// The name `options` were searched for. A row renamed before its search lands holds its old options under the
+        /// new name, and searching only when the row's name changed had kept "San" (sandwich spreads) for "San Marzano
+        /// tomatoes".
+        var searched = ""
         /// The model was asked to show them ("that pizza is not right").
         var showsOptions: Bool
     }
@@ -190,13 +197,13 @@ struct RambleResolver: Sendable {
         if let refEntry, let option = choice?.option, option != FoodSearchResult.key(refEntry.food), let earlier, earlier.key == option {
             var pick = earlier.pick
             pick.portion.serving = choice?.serving
-                ?? RambleServing.serving(amount: item.amount, unit: item.unit, of: pick.portion.food.nutrition, history: pick.portion.serving)
-            return .food(.init(pick: pick, key: earlier.key, options: earlier.options, showsOptions: item.options))
+                ?? RambleServing.serving(amount: item.amount, unit: item.unit, food: item.name, of: pick.portion.food.nutrition, history: pick.portion.serving)
+            return .food(.init(pick: pick, key: earlier.key, options: earlier.options, searched: earlier.searched, showsOptions: item.options))
         }
         if let entry = refEntry, choice?.option.map({ $0 == FoodSearchResult.key(entry.food) }) ?? true {
             var portion = entry.portion
             if item.amount > 0 {
-                portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, of: entry.food.nutrition, history: entry.serving)
+                portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, food: item.name, of: entry.food.nutrition, history: entry.serving)
             }
             if let serving = choice?.serving { portion.serving = serving }
             let pick = LoggerPick(portion)
@@ -204,19 +211,20 @@ struct RambleResolver: Sendable {
         }
         let options: [FoodSearchResult]
         let spoken: FoodSearchResult?
-        if let earlier, previous?.item.name == item.name, !earlier.options.isEmpty {
+        if let earlier, earlier.searched == item.name, !earlier.options.isEmpty {
             options = earlier.options
             spoken = nil
         } else if let earlier, let shown = earlier.options.first(where: { $0.portion.food.displayName.caseInsensitiveCompare(item.name) == .orderedSame }) {
-            // The speaker picked one of the options on screen ("let's go with the pepperoni"); the list stays put.
+            // The speaker picked one of the options on screen ("let's go with the pepperoni"); the list stays put. A counted
+            // can the named product cannot size is no pick: "San Marzano" grew into an unbranded product's own name.
             options = earlier.options
-            spoken = shown
+            spoken = RambleServing.counts(item.unit) && !RambleServing.sizes(item.unit, of: shown.portion.food.nutrition) ? nil : shown
         } else {
             // A row renamed by a correction ("coke" to "diet coke") keeps its food, at the new amount, until the search for
             // its new name lands. Rows are positions, so after a removal another food sits here; it shares no word.
             guard search else {
                 guard var food = earlier, let before = previous?.item.name, Self.related(before, item.name) else { return .searching }
-                food.pick.portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, of: food.pick.portion.food.nutrition, history: food.pick.portion.serving)
+                food.pick.portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, food: item.name, of: food.pick.portion.food.nutrition, history: food.pick.portion.serving)
                 return .food(food)
             }
             let local = try index.spoken(item.name)
@@ -232,15 +240,18 @@ struct RambleResolver: Sendable {
         // The search matches by prefix, so "peas" also finds "Pears, raw"; an option holding every word said comes first
         // (the online search for "365 nonfat milk" lists other brands' nonfat milk too), then one sharing a word.
         let terms = FoodText.terms(item.name)
-        let best = options.first { FoodText($0.portion.food.name, brand: $0.portion.food.brand).holds(terms) }
-            ?? options.first { Self.related(item.name, $0.portion.food.displayName) } ?? options.first
+        let holding = options.filter { FoodText($0.portion.food.name, brand: $0.portion.food.brand).holds(terms) }
+        // "1 can of San Marzano tomatoes" takes a product that knows its can over one that would log 100 g, unless the
+        // owner logged one of them.
+        let sized = holding.contains { $0.group == .history } ? nil : holding.first { RambleServing.sizes(item.unit, of: $0.portion.food.nutrition) }
+        let best = sized ?? holding.first ?? options.first { Self.related(item.name, $0.portion.food.displayName) } ?? options.first
         guard let result = chosen ?? spoken ?? kept ?? best else { return .unmatched }
         var portion = result.portion
         let history = result.group == .history ? result.portion.serving : nil
-        portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, of: result.portion.food.nutrition, history: history)
+        portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, food: item.name, of: result.portion.food.nutrition, history: history)
         // A measure belongs to the food it was set on; another food in the row's place keeps its own serving.
         if let serving = choice?.serving, choice?.option == result.key { portion.serving = serving }
-        return .food(.init(pick: LoggerPick(portion, uncached: result.food), key: result.key, options: options, showsOptions: item.options))
+        return .food(.init(pick: LoggerPick(portion, uncached: result.food), key: result.key, options: options, searched: item.name, showsOptions: item.options))
     }
 }
 
@@ -262,8 +273,8 @@ enum RambleServing {
         "l": (1000, ["l", "liter", "litre"]),
         "fl oz": (SizeUnit.flOz.size, ["fl oz"]),
         "cup": (SizeUnit.cup.size, ["cup"]),
-        "tbsp": (14.78676478125, ["tbsp", "tablespoon"]),
-        "tsp": (4.92892159375, ["tsp", "teaspoon"]),
+        "tbsp": (Spoon.Unit.tbsp.milliliters, ["tbsp", "tablespoon"]),
+        "tsp": (Spoon.Unit.tsp.milliliters, ["tsp", "teaspoon"]),
     ]
 
     /// What a row's serving menu offers: half, one and a half, or twice the serving, the food's own servings, and 100 g.
@@ -275,12 +286,16 @@ enum RambleServing {
         return all.filter { seen.insert(NutritionFormat.serving($0)).inserted }
     }
 
-    static func serving(amount: Double, unit: String, of nutrition: FoodNutrition, history: Serving?) -> Serving {
+    /// Words for a container, which a product's "package" measure (its label's net quantity) sizes.
+    private static let containers: Set<String> = ["can", "jar", "bottle", "package", "pack", "box", "bag", "carton", "tub", "container", "pouch", "packet"]
+
+    /// `amount` of `unit` of the food the speaker called `food`.
+    static func serving(amount: Double, unit: String, food: String, of nutrition: FoodNutrition, history: Serving?) -> Serving {
         let fallback = history ?? defaultServing(nutrition, count: 1)
         guard amount > 0 else { return fallback }
         let unit = unit.trimmingCharacters(in: .whitespaces).lowercased()
         let all = nutrition.allMeasures
-        if unit.isEmpty { return defaultServing(nutrition, count: amount) }
+        if unit.isEmpty { return counted(nutrition, food: food, count: amount) }
         if let weight = grams[unit] {
             if let measure = all.first(where: { $0.name == weight.measure }) { return Serving(measure: measure, quantity: amount * weight.factor) }
             // Water's density stands in for a food measured only by volume (milk per 100 mL): 200 g is 200 mL, where the
@@ -303,11 +318,42 @@ enum RambleServing {
             if let gram = all.first(where: { $0.name == SizeUnit.g.rawValue }) { return Serving(measure: gram, quantity: milliliters.rounded()) }
             return defaultServing(nutrition, count: amount)
         }
-        let word = unit.hasSuffix("s") && unit.count > 3 ? String(unit.dropLast()) : unit
+        let word = singular(unit)
         if let measure = all.first(where: { $0.name.lowercased().hasPrefix(word) }) ?? all.first(where: { $0.name.lowercased().contains(word) }) {
             return Serving(measure: measure, quantity: amount)
         }
+        // "1 can" of a product that lists no can: its package, shown in the speaker's word.
+        if let package = self.package(word, of: nutrition) { return Serving(measure: package, quantity: amount) }
         return defaultServing(nutrition, count: amount)
+    }
+
+    /// Whether `unit` counts containers ("can", "jars").
+    static func counts(_ unit: String) -> Bool { containers.contains(singular(unit.trimmingCharacters(in: .whitespaces).lowercased())) }
+
+    /// Whether `unit` is a container the food knows the size of, so a spoken "1 can" can be logged as one.
+    static func sizes(_ unit: String, of nutrition: FoodNutrition) -> Bool {
+        let word = singular(unit.trimmingCharacters(in: .whitespaces).lowercased())
+        return counts(word) && (nutrition.allMeasures.contains { $0.name.lowercased().hasPrefix(word) } || package(word, of: nutrition) != nil)
+    }
+
+    private static func package(_ word: String, of nutrition: FoodNutrition) -> Measure? {
+        guard containers.contains(word), let package = nutrition.measures.first(where: { $0.name == "package" }) else { return nil }
+        return Measure(name: word, quantity: 1, servings: package.servings / package.quantity)
+    }
+
+    private static func singular(_ unit: String) -> String {
+        unit.hasSuffix("s") && unit.count > 3 ? String(unit.dropLast()) : unit
+    }
+
+    /// A count of the food itself ("2 shallots", "2 apricots"): a measure named for it, else a whole one of a size, else
+    /// the default. The default alone made "2 apricots" 2 "cup, halves".
+    private static func counted(_ nutrition: FoodNutrition, food: String, count: Double) -> Serving {
+        let said = Set(FoodText.terms(food))
+        let first = { (measure: Measure) in FoodText.terms(measure.name).first ?? "" }
+        let measure = nutrition.measures.first { said.contains(first($0)) }
+            ?? nutrition.measures.first { ["medium", "large", "small", "whole"].contains(first($0)) }
+        guard let measure else { return defaultServing(nutrition, count: count) }
+        return Serving(measure: measure, quantity: measure.quantity * count)
     }
 
     /// A volume measure of the food and its milliliters per unit of its quantity.

@@ -15,6 +15,7 @@ const FIELDS = [
 	'serving_quantity',
 	'serving_quantity_unit',
 	'product_quantity_unit',
+	'quantity',
 ].join(',');
 const TIMEOUT_MS = 8000;
 
@@ -92,6 +93,8 @@ type Product = {
 	serving_quantity?: number | string;
 	serving_quantity_unit?: string;
 	product_quantity_unit?: string;
+	/** The label's net quantity as printed: "28 oz", "3 x 28 oz", "500 ml". The search index has no parsed field. */
+	quantity?: string;
 };
 
 /** Six significant digits are more than any label has, and they hide float noise from the unit conversions. */
@@ -118,10 +121,37 @@ function nutrients(nutriments: Record<string, unknown>): Record<string, number> 
 	return amounts;
 }
 
+const PACKAGE_UNITS: Record<string, [kind: 'g' | 'mL', size: number]> = {
+	g: ['g', 1],
+	kg: ['g', 1000],
+	oz: ['g', 28.349523125],
+	lb: ['g', 453.59237],
+	lbs: ['g', 453.59237],
+	ml: ['mL', 1],
+	cl: ['mL', 10],
+	dl: ['mL', 100],
+	l: ['mL', 1000],
+	'fl oz': ['mL', 29.5735295625],
+};
+
+/**
+ * One package's grams or milliliters from the label's quantity, in the food's base unit, or undefined: "3 x 28 oz" is
+ * one 28 oz can, which is what "a can" means. A drink's bare "oz" is US labels' fluid ounce ("12 oz" of beer).
+ */
+function packageSize(quantity: string | undefined, kind: 'g' | 'mL'): number | undefined {
+	const match = quantity?.match(/(\d+(?:[.,]\d+)?)\s*(fl\.?\s*oz|kg|g|lbs?|oz|ml|cl|dl|l)\b/i);
+	if (!match) return undefined;
+	const said = match[2]!.toLowerCase().replace(/^fl\.?\s*oz$/, 'fl oz');
+	const unit = said === 'oz' && kind === 'mL' ? 'fl oz' : said;
+	const [unitKind, size] = PACKAGE_UNITS[unit]!;
+	const amount = Number(match[1]!.replace(',', '.')) * size;
+	return unitKind === kind && amount > 0 ? amount : undefined;
+}
+
 /**
  * A product as the app's food: nutrients per 100 g, or per 100 mL for a product sold by volume, and the label's
- * serving first when it has one, so a new entry defaults to one serving as MacroFactor's does. Null when the product
- * has no name or no energy, which the app could not log.
+ * serving first when it has one, so a new entry defaults to one serving as MacroFactor's does, and the package last,
+ * for a spoken "1 can". Null when the product has no name or no energy, which the app could not log.
  */
 export function normalize(product: Product): BrandedFood | null {
 	const name = product.product_name?.trim();
@@ -132,6 +162,7 @@ export function normalize(product: Product): BrandedFood | null {
 		unit => unit?.toLowerCase() === 'ml',
 	);
 	const serving = Number(product.serving_quantity);
+	const pack = packageSize(product.quantity, byVolume ? 'mL' : 'g');
 	const brand = (Array.isArray(product.brands) ? product.brands : (product.brands?.split(',') ?? []))
 		.map(text => text.trim())
 		.find(Boolean);
@@ -147,6 +178,7 @@ export function normalize(product: Product): BrandedFood | null {
 			measures: [
 				...(serving > 0 ? [{ name: 'serving', quantity: 1, servings: tidy(serving / 100) }] : []),
 				{ name: byVolume ? 'mL' : 'g', quantity: 100, servings: 1 },
+				...(pack ? [{ name: 'package', quantity: 1, servings: tidy(pack / 100) }] : []),
 			],
 		},
 	};

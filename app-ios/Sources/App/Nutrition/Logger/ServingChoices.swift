@@ -6,11 +6,10 @@ struct ServingChoices: Hashable, Sendable {
     let units: [Measure]
     let servings: [Measure]
 
-
     init(_ nutrition: FoodNutrition, favorites: [String], current: Measure? = nil) {
         let all = nutrition.allMeasures
         var units = favorites.compactMap { name in all.first { $0.name == name } }
-        let servings = nutrition.measures.filter { measure in !units.contains { $0.name == measure.name } }
+        let servings = nutrition.servingMeasures.filter { measure in !units.contains { $0.name == measure.name } }
         if let current, !units.contains(current), !servings.contains(current) {
             units.append(current)
         }

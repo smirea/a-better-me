@@ -39,14 +39,77 @@ struct FoodNutrition: Hashable, Codable, Sendable {
 
     func grams(_ serving: Serving) -> Double? { baseGrams.map { $0 * serving.servings } }
 
-    /// `measures`, then the standard weights and volumes the base serving's size allows that it does not already name.
+    /// `servingMeasures`, then the standard weights and volumes the base serving's size allows that it does not already name.
     var allMeasures: [Measure] {
-        var all = measures
+        var all = servingMeasures
         for unit in SizeUnit.allCases where !all.contains(where: { $0.name == unit.rawValue }) {
             guard let base = unit.isVolume ? baseMilliliters : baseGrams else { continue }
             all.append(Measure(name: unit.rawValue, quantity: 1, servings: unit.size / base))
         }
         return all
+    }
+
+    /// `measures`, each spoon or cup measure followed by its neighbour the food lacks, with the same qualifier: a
+    /// teaspoon's tablespoon, a tablespoon's teaspoon, and a cup's tablespoon ("tsp, ground" brings "tbsp, ground").
+    var servingMeasures: [Measure] {
+        let own = Set(measures.compactMap { Spoon($0.name).map { "\($0.unit) \($0.qualifier)" } })
+        var all: [Measure] = []
+        for measure in measures {
+            all.append(measure)
+            guard let spoon = Spoon(measure.name) else { continue }
+            for unit in spoon.unit.neighbours where !own.contains("\(unit) \(spoon.qualifier)") {
+                let servings = measure.servings / measure.quantity * unit.milliliters / spoon.unit.milliliters
+                all.append(Measure(name: unit.rawValue + spoon.qualifier, quantity: 1, servings: servings))
+            }
+        }
+        return all
+    }
+}
+
+/// A measure named for a spoon or a cup, and the rest of its name. A measure whose rest gives a size ("cup (8 fl oz)",
+/// "tbsp (1/8 cup)") is not one: the size belongs to that unit alone.
+struct Spoon {
+    enum Unit: String {
+        case tsp, tbsp, cup
+
+        var milliliters: Double {
+            switch self {
+            case .tsp: 4.92892159375
+            case .tbsp: 14.78676478125
+            case .cup: SizeUnit.cup.size
+            }
+        }
+
+        /// A cup gains no teaspoon, and a spoon no cup: those amounts are far from how the food is measured.
+        var neighbours: [Unit] {
+            switch self {
+            case .tsp: [.tbsp]
+            case .tbsp: [.tsp]
+            case .cup: [.tbsp]
+            }
+        }
+    }
+
+    let unit: Unit
+    /// What follows the unit, its separator included: ", ground" or " chopped", or empty.
+    let qualifier: String
+
+    init?(_ name: String) {
+        let lower = name.lowercased()
+        let spellings: [(String, Unit)] = [
+            ("tsp", .tsp), ("teaspoon", .tsp), ("tbsp", .tbsp), ("tablespoon", .tbsp), ("cup", .cup),
+        ]
+        for (word, unit) in spellings {
+            for spelled in [word + "s", word] where lower.hasPrefix(spelled) {
+                let rest = name.dropFirst(spelled.count)
+                guard rest.isEmpty || rest.first == "," || rest.first == " " else { continue }
+                guard !rest.contains(where: { $0.isNumber || $0 == "(" }) else { return nil }
+                self.unit = unit
+                qualifier = String(rest)
+                return
+            }
+        }
+        return nil
     }
 }
 

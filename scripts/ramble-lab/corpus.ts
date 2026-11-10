@@ -435,6 +435,12 @@ export const LAB: LabCase[] = [
 				f('mashed potatoes', 0.5, 'cup', 'dinner'),
 			],
 		},
+		{
+			use: 'correct',
+			scenario: 'Seasonings said again with new amounts update them, as after the owner removed their rows',
+			text: 'Two tablespoons of salt. One tablespoon of, uh, pepper. One tablespoon of salt. Two tablespoons of pepper.',
+			items: [f('table salt', 1, 'tbsp'), f('black pepper', 2, 'tbsp')],
+		},
 	]),
 	...group('storyteller', [
 		{
@@ -699,6 +705,20 @@ export const LAB: LabCase[] = [
 				f('tomato juice', 8, 'fl oz', 'snack'),
 				f('water', 0.5, 'l', 'snack'),
 				f('pretzels', 15, 'g', 'snack'),
+			],
+		},
+		{
+			use: 'meal',
+			scenario: 'Cooking ingredients: whole counts, a can, and seasonings named as a database does',
+			text: 'One pound of ninety percent lean ground beef, one pound of elk, ninety three percent? Two zucchinis. One can of Santo Marzano tomatoes. The tomatoes are very cancerous. Two shallots. Two tablespoons of salt. One tablespoon of, uh, pepper.',
+			items: [
+				f(['90% lean ground beef', 'ground beef 90% lean', 'lean ground beef'], 1, 'lb'),
+				f(['elk', '93% elk', 'ground elk', '93% lean ground elk'], 1, 'lb'),
+				f(['zucchini', 'zucchinis'], 2, ['', 'zucchini']),
+				f('San Marzano tomatoes', 1, 'can'),
+				f(['shallots', 'shallot'], 2, ['', 'shallot']),
+				f('table salt', 2, 'tbsp'),
+				f('black pepper', 1, 'tbsp'),
 			],
 		},
 	]),
