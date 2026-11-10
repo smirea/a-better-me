@@ -26,5 +26,8 @@ pre-commit:
 pre-push:
   commands:
     test:
+      # Not {push_files}: on a branch with no upstream it diffs against origin/master's tip, so once master moved, a
+      # docs-only push ran the Swift suites of master's own merges.
+      files: git diff --name-only "$(git merge-base HEAD '@{push}' 2>/dev/null || git merge-base HEAD origin/master)" HEAD
       glob: '*.{js,mjs,mts,ts,tsx,swift}'
-      run: bun --no-env-file scripts/test-changed.ts {push_files}
+      run: bun --no-env-file scripts/test-changed.ts {files}
