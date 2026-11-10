@@ -353,7 +353,7 @@ enum RambleServing {
         let measure = nutrition.measures.first { said.contains(first($0)) }
             ?? nutrition.measures.first { ["medium", "large", "small", "whole"].contains(first($0)) }
         guard let measure else { return defaultServing(nutrition, count: count) }
-        return Serving(measure: measure, quantity: measure.quantity * count)
+        return Serving(measure: measure, quantity: count)
     }
 
     /// A volume measure of the food and its milliliters per unit of its quantity.

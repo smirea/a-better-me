@@ -165,6 +165,12 @@ struct RambleResolverTests {
             Measure(name: "tbsp chopped", quantity: 1, servings: 0.1), Measure(name: "medium", quantity: 1, servings: 0.28),
         ])
         let rice = FoodNutrition(nutrients: [.energy: 130], baseGrams: 100, measures: [Measure(name: "cup", quantity: 1, servings: 1.58)])
+        let raspberries = FoodNutrition(nutrients: [.energy: 52], baseGrams: 100, measures: [
+            Measure(name: "cup", quantity: 1, servings: 1.23), Measure(name: "raspberries", quantity: 10, servings: 0.19),
+        ])
+        let ten = RambleServing.serving(amount: 10, unit: "", food: "raspberries", of: raspberries, history: nil)
+        #expect(NutritionFormat.serving(ten) == "10 raspberries")
+        #expect(abs(ten.servings - 0.19) < 0.0001)
         let serving = { (food: String, nutrition: FoodNutrition) in
             NutritionFormat.serving(RambleServing.serving(amount: 2, unit: "", food: food, of: nutrition, history: nil))
         }
