@@ -58,10 +58,12 @@ struct FoodLogSettingsView: View {
                         SettingOption(value: .longPress, title: "Long-press hour shortcut"),
                     ]
                 )
-                SettingToggle(
-                    title: "Food Timestamps", detail: "Show each food's time in the timeline",
-                    systemImage: "clock.badge", isOn: store.binding(settings, \.nutrition.timeline.foodTimestamps)
-                )
+                if timeline.display == .time {
+                    SettingToggle(
+                        title: "Food Timestamps", detail: "Show each food's time in the timeline",
+                        systemImage: "clock.badge", isOn: store.binding(settings, \.nutrition.timeline.foodTimestamps)
+                    )
+                }
                 SettingToggle(
                     title: "Hourly Macro Totals", detail: "Show each hour's calories and macros",
                     systemImage: "sum", isOn: store.binding(settings, \.nutrition.timeline.hourlyTotals)
