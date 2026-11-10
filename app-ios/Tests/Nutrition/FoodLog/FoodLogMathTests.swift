@@ -229,6 +229,31 @@ struct FoodLogMathTests {
         #expect(draft.preview.nutrition.nutrients[.energy] == 690)
     }
 
+    @Test func replacesTheSelectionWithTheWholeRecipeAtItsEarliestEntry() throws {
+        var first = entry(yogurt, minute: 600, quantity: 0.5)
+        first.section = "breakfast"
+        let selection = [entry(bowl, minute: 610, quantity: 2), first, entry(bowl, minute: 620)]
+        var draft = FoodLog.recipeDraft(selection)
+        draft.name = "Breakfast Bowl"
+
+        let recipe = try #require(draft.valid).newRecipe()
+        let single = try #require(FoodLog.replacement(for: selection, with: recipe))
+        #expect(single.food.name == "Breakfast Bowl")
+        #expect(single.food.source == .recipe)
+        #expect(single.serving.quantity == 1)
+        #expect(single.serving.measure.name == "serving")
+        #expect(single.day == monday)
+        #expect(single.minute == 600)
+        #expect(single.section == "breakfast")
+        #expect([single].totals[.energy] == selection.totals[.energy])
+
+        draft.servings = "4"
+        let batchRecipe = try #require(draft.valid).newRecipe()
+        let batch = try #require(FoodLog.replacement(for: selection, with: batchRecipe))
+        #expect(batch.serving.quantity == 4)
+        #expect([batch].totals[.energy] == selection.totals[.energy])
+    }
+
     @Test func findsTheLastEntryAddedToTheDay() {
         let breakfast = entry(bowl, minute: 480)
         let lunch = entry(bowl, minute: 750)

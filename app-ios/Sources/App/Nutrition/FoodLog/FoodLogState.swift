@@ -41,6 +41,8 @@ final class FoodLogState {
     struct RecipeRequest: Identifiable {
         let id = UUID()
         let draft: RecipeDraft
+        /// The selection it was made from, which saving the recipe replaces.
+        let entries: [FoodEntry]
     }
 
     /// How far the pager, the week strip, and the calendar reach from today, in days.
@@ -111,8 +113,16 @@ final class FoodLogState {
     }
 
     func createRecipe() {
-        recipeRequest = RecipeRequest(draft: FoodLog.recipeDraft(selectedEntries))
+        let entries = selectedEntries
+        recipeRequest = RecipeRequest(draft: FoodLog.recipeDraft(entries), entries: entries)
         endSelection()
+    }
+
+    func replace(_ entries: [FoodEntry], with recipe: Recipe, in store: LocalStore) {
+        guard let replacement = FoodLog.replacement(for: entries, with: recipe) else { return }
+        expectAdditions()
+        let undo = store.replace(entries, with: replacement)
+        notice = Notice(message: "Replaced \(entries.count) foods with \(recipe.name)", undo: undo)
     }
 
     func relocate(_ entries: [FoodEntry], _ action: Action, to target: PasteTarget, in store: LocalStore) {
@@ -197,6 +207,8 @@ final class MoveRecord: Sendable {
 enum LogUndo {
     case remove([UUID])
     case restore(MoveRecord)
+    /// Removes the recipe that replaced a selection and logs the selection back, under new ids.
+    case unreplace(added: UUID, removed: [FoodEntry])
 }
 
 extension LocalStore {
@@ -241,8 +253,27 @@ extension LocalStore {
         }
     }
 
+    /// Swaps `entries` for `replacement` in one transaction. A section-less replacement takes the one its minute falls
+    /// in, as `log` does.
+    func replace(_ entries: [FoodEntry], with replacement: FoodEntry) -> LogUndo {
+        write { db in
+            _ = try FoodEntry.deleteAll(db, keys: entries.map { FoodEntry.key($0.id) })
+            var entry = replacement
+            if entry.section == nil { entry.section = try MealSection.current(db).section(at: entry.minute).id }
+            try entry.insert(db)
+        }
+        return .unreplace(added: replacement.id, removed: entries)
+    }
+
     func undo(_ undo: LogUndo) {
         switch undo {
+        case let .unreplace(added, removed):
+            write { db in
+                _ = try FoodEntry.deleteOne(db, key: FoodEntry.key(added))
+                for entry in removed {
+                    try FoodEntry(entry.portion, day: entry.day, minute: entry.minute, section: entry.section).insert(db)
+                }
+            }
         case let .remove(ids):
             deleteEntries(ids)
         case let .restore(record):

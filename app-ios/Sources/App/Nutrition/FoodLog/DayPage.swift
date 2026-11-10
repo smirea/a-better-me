@@ -9,9 +9,9 @@ struct DayPage: View {
     @Environment(FoodLogState.self) private var state
     @Observe(AppSettings.current) private var settings
     @Observe private var entries: [FoodEntry]
-    /// One width for every hour pill, so "8 AM" and the current "12 PM" with its dot line up; it scales with the text.
+    /// One width for every hour pill, so "8 AM" and "12 PM" line up; it scales with the text.
     @ScaledMetric private var hourPillWidth: CGFloat = 60
-    /// Section pills share one width, which fits "Breakfast" with the current section's dot and little padding.
+    /// Section pills share one width, which fits "Breakfast" with little padding.
     @ScaledMetric private var sectionPillWidth: CGFloat = 72
     @State private var groups = ViewMemo<GroupsKey, [TimelineGroup]>()
     /// The page's height above the bottom bars, which a day of Sections too short to scroll fills. The bars' inset is
@@ -210,7 +210,11 @@ private struct SlotRow: View {
 
     private func pill(_ label: String, isActive: Bool) -> some View {
         let isCurrent = day == .today && group.minutes.contains(Date.now.minuteOfDay())
-        return Chip(title: label, trailingImage: isCurrent ? "circlebadge.fill" : nil, isActive: isActive, size: .small, width: pillWidth)
+        return Chip(title: label, isActive: isActive, size: .small, width: pillWidth)
+            // A ring standing off the pill, drawn behind it so the pills keep one width; selection fills the pill instead.
+            .background {
+                if isCurrent { Capsule().strokeBorder(Theme.textPrimary, lineWidth: 1.5).padding(-3) }
+            }
     }
 
     private func interactivePill(_ label: String) -> some View {

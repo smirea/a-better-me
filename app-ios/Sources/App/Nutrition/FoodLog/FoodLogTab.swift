@@ -3,6 +3,7 @@ import SwiftUI
 
 /// MacroFactor's Food Log: a week strip, the day's macro summary, and a timeline of hours that pages between days.
 struct FoodLogTab: View {
+    @Environment(LocalStore.self) private var store
     @State private var state = FoodLogState()
     @State private var showingCalendar = false
     /// Its own animated state, so the Today button morphs into the toolbar's glass when a swipe pages the day.
@@ -51,7 +52,9 @@ struct FoodLogTab: View {
         .environment(state)
         .sheet(item: $state.logRequest) { LoggerSheet(start: LoggerStart($0)) }
         .sheet(item: $state.editing) { EntryEditor(entry: $0).environment(state) }
-        .sheet(item: $state.recipeRequest) { RecipeEditor(draft: $0.draft) }
+        .sheet(item: $state.recipeRequest) { request in
+            RecipeEditor(draft: request.draft, onCreate: { state.replace(request.entries, with: $0, in: store) })
+        }
         .sheet(isPresented: $showingCalendar) { CalendarSheet().environment(state) }
         .feedback(self)
     }
