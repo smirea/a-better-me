@@ -91,7 +91,6 @@ struct LoggerSessionTests {
         #expect(breakfast.results.prefix(2).map(\.portion.food.name) == ["Oat Milk", "Chocolate Milk"])
         breakfast.time = breakfast.time(of: sections[4], on: monday)
         #expect(breakfast.time.hour == 19)
-        breakfast.setQuery("milk", branded: false)
         #expect(breakfast.results.prefix(2).map(\.portion.food.name) == ["Chocolate Milk", "Oat Milk"])
 
         breakfast.time = LogTime(day: monday, hour: 8, section: sections[2])

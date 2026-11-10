@@ -13,6 +13,7 @@ struct DayPage: View {
     @ScaledMetric private var hourPillWidth: CGFloat = 60
     /// Section pills share one wider width, which fits "Breakfast" with the current section's dot.
     @ScaledMetric private var sectionPillWidth: CGFloat = 92
+    @State private var groups = ViewMemo<GroupsKey, [TimelineGroup]>()
 
     init(day: CalendarDay) {
         self.day = day
@@ -22,11 +23,19 @@ struct DayPage: View {
     private var timeline: NutritionSettings.Timeline { settings.nutrition.timeline }
     private var pillWidth: CGFloat { timeline.display == .sections ? sectionPillWidth : hourPillWidth }
 
+    private struct GroupsKey: Equatable {
+        let entries: [FoodEntry]
+        let timeline: NutritionSettings.Timeline
+        let sections: [MealSection]
+    }
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(FoodLog.groups(entries, settings: settings.nutrition)) { group in
+                    ForEach(groups(GroupsKey(entries: entries, timeline: timeline, sections: settings.nutrition.mealSections)) {
+                        FoodLog.groups(entries, settings: settings.nutrition)
+                    }) { group in
                         SlotRow(
                             day: day, group: group, sections: settings.nutrition.mealSections, pillWidth: pillWidth,
                             showsTotals: timeline.hourlyTotals, addsOnLongPress: timeline.addFoodsToHour == .longPress, premove: timeline.premove

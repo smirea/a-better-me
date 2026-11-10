@@ -94,8 +94,10 @@ final class LoggerSession {
     var time: LogTime {
         get { chosenTime ?? .now() }
         set {
+            let section = self.section
             chosenTime = newValue
             ramble.replace()
+            if self.section != section, !query.isEmpty { setQuery(query, branded: branded) }
         }
     }
     var plate = Plate()
@@ -103,6 +105,8 @@ final class LoggerSession {
     /// would leave.
     var pending: FoodPortion?
     private(set) var query = ""
+    /// Whether the last query asked Open Food Facts, so re-ranking for a new section asks the same.
+    @ObservationIgnored private var branded = false
     private(set) var results: [FoodSearchResult] = []
     private(set) var isSearchingBranded = false
     private(set) var isFindingFoods = false
@@ -155,6 +159,7 @@ final class LoggerSession {
     /// search keeps the local results without an error (`FoodSearch.search`).
     func setQuery(_ text: String, branded: Bool) {
         query = text
+        self.branded = branded
         remote?.cancel()
         isSearchingBranded = false
         do {
