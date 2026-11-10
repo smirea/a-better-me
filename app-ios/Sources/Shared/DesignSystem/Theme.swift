@@ -31,6 +31,10 @@ enum Theme {
     static let protein = Color(hex: 0xFF8660)
     static let fat = Color(hex: 0xFFD05E)
     static let carbs = Color(hex: 0x5EB987)
+    /// Fiber and net carbs are carbs too, so they are shades of its green: fiber, the part that is not counted, darker;
+    /// net carbs, the part left, lighter.
+    static let fiber = Color(hex: 0x2F8556)
+    static let netCarbs = Color(hex: 0xA3DDB9)
     static let vitamins = Color(hex: 0xB28DF7)
     static let minerals = Color(hex: 0xFF7EA2)
     /// Goals and their progress on Strategy and the Dashboard.

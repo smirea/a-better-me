@@ -113,7 +113,7 @@ extension NutritionSnapshot {
             Nutrient(id: "p", name: "Protein", short: "prot", unit: "g", tint: .protein),
             Nutrient(id: "f", name: "Fat", short: "fat", unit: "g", tint: .fat),
             Nutrient(id: "c", name: "Carbs", short: "carbs", unit: "g", tint: .carbs),
-            Nutrient(id: "291", name: "Fiber", short: "fiber", unit: "g", tint: .carbs),
+            Nutrient(id: "291", name: "Fiber", short: "fiber", unit: "g", tint: .fiber),
         ]
         let day = Day(
             day: CalendarDay(.now).description,

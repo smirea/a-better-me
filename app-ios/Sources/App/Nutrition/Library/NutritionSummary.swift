@@ -32,19 +32,20 @@ struct MacroSummary: View {
     }
 }
 
-/// Every nutrient section below the macros, as Form sections. Without `showAll` only reported nutrients show.
+/// Every nutrient `MacroSummary` leaves out, as Form sections: fiber and net carbs untitled, then the breakdowns.
+/// Without `showAll` only reported nutrients show.
 struct NutrientBreakdown: View {
     let amounts: NutrientAmounts
     var showAll = false
 
     var body: some View {
-        ForEach(NutrientSection.allCases.filter { $0 != .macros }) { section in
-            let rows = section.nutrients.compactMap { nutrient -> (Nutrient, Double?)? in
+        ForEach(NutrientSection.allCases) { section in
+            let rows = section.nutrients.filter { !NutrientID.macros.contains($0.id) }.compactMap { nutrient -> (Nutrient, Double?)? in
                 let amount = amounts.amount(of: nutrient.id)
                 return showAll || amount != nil ? (nutrient, amount) : nil
             }
             if !rows.isEmpty {
-                ThemedSection(section.rawValue) {
+                ThemedSection(section == .macros ? nil : section.rawValue) {
                     ForEach(rows, id: \.0.id) { nutrient, amount in
                         LabeledContent(nutrient.name) {
                             Text(amount.map { NutritionFormat.amount($0, nutrient.unit) } ?? "–")

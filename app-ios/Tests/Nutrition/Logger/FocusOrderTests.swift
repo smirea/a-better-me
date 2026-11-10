@@ -17,7 +17,7 @@ struct FocusOrderTests {
         var draft = FoodDraft()
         let measure = FoodDraft.MeasureDraft()
         draft.measures = [measure]
-        let macros: [FoodDraft.Field] = [.nutrient(.energy), .nutrient(.protein), .nutrient(.fat), .nutrient(.carbs)]
+        let macros: [FoodDraft.Field] = [.nutrient(.energy), .nutrient(.protein), .nutrient(.fat), .nutrient(.carbs), .nutrient(.fiber), .nutrient(.netCarbs)]
         #expect(draft.focusOrder(expanded: []).fields == [
             .name, .brand, .barcode, .servingWeight, .servingQuantity, .servingName,
             .measureQuantity(measure.id), .measureName(measure.id), .measureSize(measure.id),
@@ -25,10 +25,10 @@ struct FocusOrderTests {
 
         draft.basis = .hundredGrams
         draft.measures = []
-        let fiber = FoodDraft.Field.nutrient(.fiber)
+        let starch = FoodDraft.Field.nutrient("209")
         #expect(draft.focusOrder(expanded: []).fields == [.name, .brand, .barcode] + macros)
-        #expect(draft.focusOrder(expanded: [.carbs]).fields.contains(fiber))
-        #expect(draft.focusOrder(expanded: [.carbs]).field(after: .nutrient(.carbs)) == fiber)
+        #expect(!draft.focusOrder(expanded: []).fields.contains(starch))
+        #expect(draft.focusOrder(expanded: [.carbs]).field(after: .nutrient(.netCarbs)) == starch)
     }
 
     @Test func aRecipeWalksThroughEachIngredientsQuantity() {

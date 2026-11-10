@@ -7,6 +7,8 @@ extension NutrientTint {
         case .protein: Theme.protein
         case .fat: Theme.fat
         case .carbs: Theme.carbs
+        case .fiber: Theme.fiber
+        case .netCarbs: Theme.netCarbs
         case .vitamins: Theme.vitamins
         case .minerals: Theme.minerals
         }

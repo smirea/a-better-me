@@ -170,7 +170,7 @@ struct FoodEditor: View {
     @ViewBuilder
     private func nutrients(_ section: NutrientSection, issues: [FoodDraft.Field: String]) -> some View {
         let rows = ForEach(section.nutrients) { nutrient in
-            NutrientInputRow(nutrient: nutrient, text: nutrientText(nutrient.id), energyUnit: $draft.energyUnit, isMacro: section == .macros, focus: $focus)
+            NutrientInputRow(nutrient: nutrient, text: nutrientText(nutrient.id), energyUnit: $draft.energyUnit, isMacro: NutrientID.macros.contains(nutrient.id), focus: $focus)
             FieldIssue(issues[.nutrient(nutrient.id)])
         }
         if section == .macros {
