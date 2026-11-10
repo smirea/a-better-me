@@ -46,7 +46,7 @@ struct WidgetSnapshotTests {
 }
 
 struct NutrientProgressTests {
-    private let fiber = NutritionSnapshot.Nutrient(id: "291", name: "Fiber", short: "fiber", unit: "g", tint: .carbs)
+    private let fiber = NutritionSnapshot.Nutrient(id: "291", name: "Fiber", short: "fiber", unit: "g", tint: .fiber)
 
     private func progress(_ consumed: Double, _ range: NutritionSnapshot.Range, overages: Bool = true) -> NutrientProgress {
         NutrientProgress(nutrient: fiber, consumed: consumed, range: range, showOverages: overages)

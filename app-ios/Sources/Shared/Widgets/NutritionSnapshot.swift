@@ -69,7 +69,7 @@ struct NutritionSnapshot: Codable, Equatable, Sendable {
 
 /// MacroFactor's nutrient colors: calories and the macros, then the vitamin and mineral groups.
 enum NutrientTint: String, Codable, Sendable {
-    case calories, protein, fat, carbs, vitamins, minerals
+    case calories, protein, fat, carbs, fiber, netCarbs, vitamins, minerals
 }
 
 /// One nutrient's day against its goal, as MacroFactor's widgets word it: the target, else the floor, else the

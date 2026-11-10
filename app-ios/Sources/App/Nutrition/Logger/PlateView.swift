@@ -66,7 +66,7 @@ struct PlateView: View {
                 Toggle("Show all nutrients", isOn: $allNutrients).tint(Theme.accent)
                 if allNutrients {
                     let total = withDay ? day + plate : plate
-                    ForEach(NutrientSection.allCases.dropFirst().flatMap(\.nutrients).filter { total.amount(of: $0.id) != nil }) { nutrient in
+                    ForEach(NutrientSection.allCases.flatMap(\.nutrients).filter { !NutrientID.macros.contains($0.id) && total.amount(of: $0.id) != nil }) { nutrient in
                         LabeledContent(nutrient.name, value: NutritionFormat.amount(total.amount(of: nutrient.id) ?? 0, nutrient.unit))
                     }
                 }

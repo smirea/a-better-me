@@ -5,6 +5,8 @@ extension Nutrient {
     var tint: NutrientTint {
         switch (id, group) {
         case (.energy, _): .calories
+        case (.fiber, _): .fiber
+        case (.netCarbs, _): .netCarbs
         case (_, .protein): .protein
         case (_, .fats): .fat
         case (_, .carbohydrates): .carbs
@@ -199,7 +201,8 @@ private struct ImpactRing<Label: View>: View {
     }
 }
 
-/// The nutrient sections every nutrient list shows, in MacroFactor's Food Detail order.
+/// The nutrient sections every nutrient list shows, in MacroFactor's Food Detail order except that fiber and net carbs
+/// follow carbs in the macros.
 enum NutrientSection: String, CaseIterable, Identifiable {
     case macros = "Calories & Macros"
     case carbs = "Carb Breakdown"
@@ -213,6 +216,8 @@ enum NutrientSection: String, CaseIterable, Identifiable {
 
     var nutrients: [Nutrient] { Self.table[self] ?? [] }
 
+    private static let macroSection: [NutrientID] = NutrientID.macros + [.fiber, .netCarbs]
+
     private static let table: [NutrientSection: [Nutrient]] = Dictionary(uniqueKeysWithValues: allCases.map { section in
         let group: NutrientGroup? = switch section {
         case .macros: nil
@@ -223,7 +228,7 @@ enum NutrientSection: String, CaseIterable, Identifiable {
         case .minerals: .minerals
         case .other: .general
         }
-        guard let group else { return (section, NutrientID.macros.compactMap(NutrientRegistry.nutrient)) }
-        return (section, NutrientRegistry.all.filter { $0.group == group && !NutrientID.macros.contains($0.id) })
+        guard let group else { return (section, macroSection.compactMap(NutrientRegistry.nutrient)) }
+        return (section, NutrientRegistry.all.filter { $0.group == group && !macroSection.contains($0.id) })
     })
 }
