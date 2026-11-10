@@ -121,8 +121,14 @@ final class FoodLogState {
     func replace(_ entries: [FoodEntry], with recipe: Recipe, in store: LocalStore) {
         guard let replacement = FoodLog.replacement(for: entries, with: recipe) else { return }
         expectAdditions()
-        let undo = store.replace(entries, with: replacement)
-        notice = Notice(message: "Replaced \(entries.count) foods with \(recipe.name)", undo: undo)
+        let replacing = store.replace(entries, with: replacement)
+        Task {
+            notice = if (try? await replacing.value) == true {
+                Notice(message: "Replaced \(entries.count) foods with \(recipe.name)", undo: .unreplace(added: replacement.id, removed: entries))
+            } else {
+                Notice(message: "Saved \(recipe.name). The foods changed meanwhile, so they stayed")
+            }
+        }
     }
 
     func relocate(_ entries: [FoodEntry], _ action: Action, to target: PasteTarget, in store: LocalStore) {
@@ -253,16 +259,20 @@ extension LocalStore {
         }
     }
 
-    /// Swaps `entries` for `replacement` in one transaction. A section-less replacement takes the one its minute falls
-    /// in, as `log` does.
-    func replace(_ entries: [FoodEntry], with replacement: FoodEntry) -> LogUndo {
+    /// Swaps `entries` for `replacement` in one transaction, unless one of them changed or went since it was selected
+    /// (another device, the agent API), so a stale selection never comes back inside the recipe or through Undo.
+    /// Resolves whether it swapped. A section-less replacement takes the section its minute falls in, as `log` does.
+    func replace(_ entries: [FoodEntry], with replacement: FoodEntry) -> Task<Bool, any Error> {
         write { db in
+            for entry in entries {
+                guard try FoodEntry.fetchOne(db, key: FoodEntry.key(entry.id))?.updatedAt == entry.updatedAt else { return false }
+            }
             _ = try FoodEntry.deleteAll(db, keys: entries.map { FoodEntry.key($0.id) })
             var entry = replacement
             if entry.section == nil { entry.section = try MealSection.current(db).section(at: entry.minute).id }
             try entry.insert(db)
+            return true
         }
-        return .unreplace(added: replacement.id, removed: entries)
     }
 
     func undo(_ undo: LogUndo) {
