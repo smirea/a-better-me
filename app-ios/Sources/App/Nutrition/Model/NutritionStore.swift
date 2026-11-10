@@ -1,8 +1,8 @@
 import Foundation
 import GRDB
 
-/// Nutrition's writes. Each runs as one `write`, in call order. None reaches from one table into another: entries,
-/// favorites, and recipes hold snapshots, so deleting a food or recipe leaves them as they are.
+/// Nutrition's writes. Each runs as one `write`, in call order. Entries, favorites, and recipes hold snapshots, so
+/// deleting or editing a food or recipe leaves them as they are; only a food's inferred icon reaches them.
 extension LocalStore {
 
     /// Logs every portion at `minute` of `day`, as one transaction: a plate, a recipe, or a single food.
@@ -19,6 +19,7 @@ extension LocalStore {
             let sections = try MealSection.current(db)
             for var entry in entries {
                 entry.section = entry.section ?? sections.section(at: entry.minute).id
+                entry.food = try Self.withInferredIcon(entry.food, in: db)
                 try entry.insert(db)
             }
         }
@@ -44,6 +45,15 @@ extension LocalStore {
             if saved.source != .custom { saved.icon = saved.icon ?? existing.icon }
             try saved.update(db, from: existing)
         }
+    }
+
+    /// A snapshot taken before its food's icon was inferred (a plate item, a recipe draft) takes the icon as it is saved,
+    /// since `setInferredIcon` reaches only the snapshots stored by then.
+    nonisolated static func withInferredIcon(_ food: FoodSnapshot, in db: Database) throws -> FoodSnapshot {
+        guard food.icon == nil, let id = food.foodID, [.custom, .usda, .openFoodFacts].contains(food.source) else { return food }
+        var filled = food
+        filled.icon = try String.fetchOne(db, sql: "SELECT icon FROM foods WHERE id = ?", arguments: [id])
+        return filled
     }
 
     /// Gives a food without an icon the one `FoodIconInference` picked, and every snapshot of it without one too: the
@@ -86,7 +96,13 @@ extension LocalStore {
     }
 
     func saveRecipe(_ recipe: Recipe) {
-        insert(recipe)
+        write { db in
+            var saved = recipe
+            for index in saved.ingredients.indices {
+                saved.ingredients[index].food = try Self.withInferredIcon(saved.ingredients[index].food, in: db)
+            }
+            try saved.insert(db)
+        }
     }
 
     func deleteRecipe(_ id: UUID) {
@@ -95,8 +111,10 @@ extension LocalStore {
 
     /// Saves a favorite. At the limit it replaces the oldest, as MacroFactor replaces one when full.
     func addFavorite(_ portion: FoodPortion) {
-        let favorite = FoodFavorite(portion)
+        let made = FoodFavorite(portion)
         write { db in
+            var favorite = made
+            favorite.food = try Self.withInferredIcon(favorite.food, in: db)
             let existing = try FoodFavorite.fetchAll(db).sorted { $0.createdAt < $1.createdAt }
             for old in existing.prefix(max(0, existing.count - FoodFavorite.limit + 1)) {
                 try old.delete(db)

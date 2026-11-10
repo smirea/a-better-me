@@ -102,6 +102,22 @@ struct FoodIconInferenceTests {
         #expect(try icons() == ["off-1": "pasta"])
     }
 
+    @Test func aSnapshotTakenBeforeTheIconTakesItWhenSaved() async throws {
+        let fusilli = food("Protein Boost Fusilli no. 34", brand: "De Cecco", barcode: "1")
+        store.saveFood(fusilli)
+        store.setInferredIcon("pasta", forFood: fusilli.id)
+        store.log([FoodPortion(fusilli.snapshot), FoodPortion(yogurt)], on: monday, minute: 12 * 60)
+        store.addFavorite(FoodPortion(fusilli.snapshot))
+        var recipe = Recipe(name: "Pasta salad")
+        recipe.ingredients = [RecipeIngredient(FoodPortion(fusilli.snapshot))]
+        store.saveRecipe(recipe)
+        try await store.write { _ in }.value
+
+        #expect(try store.readBlocking(FoodEntry.on(monday).fetch).map { $0.food.icon ?? "none" }.sorted() == ["none", "pasta"])
+        #expect(try store.readBlocking { try FoodFavorite.fetchAll($0) }.map(\.food.icon) == ["pasta"])
+        #expect(try store.readBlocking { try Recipe.fetchOne($0, key: recipe.key) }?.ingredients.map(\.food.icon) == ["pasta"])
+    }
+
     /// The real model on names the keywords miss, when this simulator or device can run it (CI's simulators can't).
     /// The first 23 names shaped the instructions; the last 10 were held out.
     @Test(.enabled(if: SystemLanguageModel.default.isAvailable))
