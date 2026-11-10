@@ -141,6 +141,9 @@ struct FoodIconInferenceTests {
             ("Bresaola", ["beef", "meat"]),
             ("Seitan", ["meat", "beans"]),
             ("Dal makhani", ["beans", "curry", "stew"]),
+            ("Pâte lentille corail By Fusilli", ["pasta", "beans"]),
+            ("Joghurt Natur By Weihenstephan", ["milk"]),
+            ("Pane integrale", ["bread"]),
         ]
         var answers: [String] = []
         var misses: [String] = []
@@ -150,8 +153,9 @@ struct FoodIconInferenceTests {
             answers.append("\(name): \(icon)")
             if !icons.contains(icon) { misses.append(name) }
         }
-        // Greedy sampling makes this repeatable. 29 of 33 fit on iOS 27.0 (2026-11-10); the misses were tzatziki as
-        // smoothie, tempeh as cereal, pho as meat, and chorizo as beef.
+        // Greedy sampling makes this repeatable. On iOS 27.0 (2026-11-10) 29 of the first 33 fit; the misses were
+        // tzatziki as smoothie, tempeh as cereal, pho as meat, and chorizo as beef. Of the foreign names, the lentil pasta
+        // drew leafy-greens, and telling the model names come in any language made it worse (7 misses).
         #expect(misses.count <= 5, "\(misses.count) misses of \(fitting.count): \(answers.joined(separator: "; "))")
     }
 }

@@ -26,9 +26,9 @@ struct OnDeviceFoodIconModel: FoodIconModel {
     }
 
     private static let instructions = """
-        You choose the icon a food shows in a nutrition log. Pick the icon that best shows what the food mostly is; a \
-        brand follows "By". Pasta shapes are pasta; grains such as quinoa are rice; protein and granola bars are cereal; \
-        sodas, energy and sports drinks are smoothie; pork and cured meats are meat.
+        You choose the icon a food shows in a nutrition log. Pick the icon that best shows what the food mostly \
+        is; a brand follows "By". Pasta shapes are pasta; grains such as quinoa are rice; protein and granola bars \
+        are cereal; sodas, energy and sports drinks are smoothie; pork and cured meats are meat.
         """
 }
 
@@ -39,9 +39,9 @@ private struct FoodIconPick {
 }
 
 /// Gives every food that would draw its source's symbol (no icon stored, none its name mentions) an icon the on-device
-/// model picks, stored on the food and its snapshots (`LocalStore.setInferredIcon`). It watches the foods table, so a
-/// food cached, created, or synced in from another device is covered the moment it lands, and the first launch backfills
-/// every older one. Without the model nothing happens and the source's symbol stays.
+/// model picks, stored on the food and its snapshots (`LocalStore.setInferredIcon`). It watches the foods table, so
+/// a food cached, created, or synced in from another device is covered the moment it lands, and the first launch
+/// backfills every older one. Without the model nothing happens and the source's symbol stays.
 @MainActor
 final class FoodIconInference {
     static let shared = FoodIconInference(model: OnDeviceFoodIconModel())
