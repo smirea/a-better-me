@@ -16,15 +16,7 @@ const more = (row: string) => [
 ];
 // The trailing toolbar menu of a tab root (Day Options on the Food Log, Workout Tab Options on the Workout tab).
 const trailingToolbarButton = ['press 364 84', 'wait 800'];
-const bottomRows = new Set([
-	'Food Log',
-	'Expenditure',
-	'Strategy Settings',
-	'Foods & Recipes',
-	'Apple Health',
-	'Data Visibility',
-	'API Tokens',
-]);
+const bottomRows = new Set(['Exercises', 'Gym Profiles', 'Data Visibility', 'API Tokens']);
 // The live workout's menu reads as a button or a popup button from one launch to the next, so it is tapped by position.
 const discardWorkout = [
 	'wait \'label="Workout Options"\' 8000',
@@ -97,7 +89,7 @@ export const screens: Screen[] = [
 	{ name: 'gym-profiles', steps: more('Gym Profiles') },
 	{ name: 'settings-food-log', steps: more('Food Log') },
 	{ name: 'settings-expenditure', steps: more('Expenditure') },
-	{ name: 'settings-strategy', steps: more('Strategy Settings') },
+	{ name: 'settings-strategy', steps: [...more('Strategy'), 'press 362 84', 'wait 800', ...tap('Strategy Settings')] },
 	{ name: 'foods-recipes', steps: more('Foods & Recipes') },
 	{ name: 'settings-health', steps: more('Apple Health') },
 	{ name: 'settings-data-visibility', steps: more('Data Visibility') },
