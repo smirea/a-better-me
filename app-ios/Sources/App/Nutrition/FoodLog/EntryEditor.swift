@@ -1,9 +1,9 @@
 import Feedback
 import SwiftUI
 
-/// The pencil's sheet over the timeline: the entry's calories and macros, Remove, Favorite, Duplicate, and for a
-/// recipe Explode, its amount, day, time, and in the Sections display its section, the share of the day's targets it
-/// uses, and its nutrients. Done saves the amount, day, time, and section.
+/// The sheet over the timeline: the entry's full name, calories and macros, and amount in one card, then Remove,
+/// Favorite, Duplicate, and for a recipe Explode, its day, time, and in the Sections display its section, the share of
+/// the day's targets it uses, and its nutrients. Done saves the amount, day, time, and section.
 struct EntryEditor: View {
     let entry: FoodEntry
 
@@ -46,9 +46,12 @@ struct EntryEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                ThemedSection { MacroHeader(amounts: amounts) }
-                ThemedSection { actions }
-                ThemedSection("Amount") {
+                ThemedSection {
+                    VStack(alignment: .leading, spacing: 14) {
+                        name
+                        MacroHeader(amounts: amounts)
+                    }
+                    .padding(.vertical, 4)
                     HStack {
                         TextField("Quantity", text: $quantity)
                             .keyboardType(.decimalPad)
@@ -66,6 +69,9 @@ struct EntryEditor: View {
                         }
                         .labelsHidden()
                     }
+                }
+                ThemedSection { actions }
+                ThemedSection {
                     DatePicker(
                         "Date & Time", selection: $time,
                         in: CalendarDay.today.adding(days: -FoodLogState.daysBack).date...CalendarDay.today.adding(days: FoodLogState.daysAhead).date(atMinute: 24 * 60 - 1),
@@ -91,7 +97,7 @@ struct EntryEditor: View {
                 }
             }
             .themedList()
-            .detailTitle(entry.food.displayName)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -105,6 +111,19 @@ struct EntryEditor: View {
         }
         .presentationDetents([.large])
         .feedback(self)
+    }
+
+    /// The whole name, wrapped: the bar's inline title truncated long food names to one line.
+    private var name: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(entry.food.name).font(AppFont.headline(18))
+            if let brand = entry.food.brand, !brand.isEmpty {
+                Text(brand).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 
     private var actions: some View {

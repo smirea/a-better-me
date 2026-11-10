@@ -89,7 +89,7 @@ struct FoodDetailView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(food.name).font(AppFont.headline(18)).lineLimit(2)
+                    Text(food.name).font(AppFont.headline(18)).fixedSize(horizontal: false, vertical: true)
                     if let brand = food.brand, !brand.isEmpty {
                         Text(brand).font(AppFont.caption()).foregroundStyle(Theme.textSecondary).lineLimit(1)
                     }
