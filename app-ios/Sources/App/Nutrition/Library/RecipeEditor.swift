@@ -10,11 +10,12 @@ struct RecipeEditor: View {
     private let onCreateAndAdd: ((Recipe) -> Void)?
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.ingredientPicker) private var ingredientPicker
+    /// The draft as the editor opened, so a swipe down cannot drop unsaved changes.
+    @State private var opened: RecipeDraft
     @State private var draft: RecipeDraft
     @State private var showErrors = false
     @State private var choosingIcon = false
-    @State private var addingIngredient = false
+    @State private var search: IngredientSearchRequest?
     @State private var confirmingDelete = false
     @State private var perServing = true
     @State private var showAllNutrients = false
@@ -24,7 +25,9 @@ struct RecipeEditor: View {
         recipeID = recipe?.id
         self.onCreate = onCreate
         self.onCreateAndAdd = onCreateAndAdd
-        _draft = State(initialValue: draft ?? recipe.map(RecipeDraft.init) ?? RecipeDraft())
+        let opened = draft ?? recipe.map(RecipeDraft.init) ?? RecipeDraft()
+        _opened = State(initialValue: opened)
+        _draft = State(initialValue: opened)
     }
 
     var body: some View {
@@ -65,8 +68,16 @@ struct RecipeEditor: View {
                 }
             }
             .sheet(isPresented: $choosingIcon) { FoodIconPicker(selection: $draft.icon) }
-            .sheet(isPresented: $addingIngredient) {
-                ingredientPicker.content(recipeID) { draft.ingredients.append(RecipeDraft.Ingredient(RecipeIngredient($0))) }
+            .sheet(item: $search) { request in
+                switch request {
+                case .add:
+                    IngredientSearch(recipeID: recipeID) { draft.ingredients.append(RecipeDraft.Ingredient(RecipeIngredient($0))) }
+                case let .swap(id, food):
+                    IngredientSearch(recipeID: recipeID, swapping: food) { portion in
+                        guard let index = draft.ingredients.firstIndex(where: { $0.id == id }) else { return }
+                        draft.ingredients[index].replace(with: portion)
+                    }
+                }
             }
             .alert("Delete Recipe", isPresented: $confirmingDelete) {
                 Button("Delete", role: .destructive) {
@@ -78,15 +89,12 @@ struct RecipeEditor: View {
                 Text("Are you sure you want to delete \(draft.name)? Logged entries keep their copy. This action cannot be undone.")
             }
         }
+        .interactiveDismissDisabled(draft != opened)
         .feedback(self)
     }
 
     private func build(_ issues: [RecipeDraft.Field: String], preview: Recipe) -> some View {
-        ThemedSection(
-            "Recipe",
-            footer: preview.cookedGrams.map { "Per serving weight will be \(NutritionFormat.amount($0 / preview.servings)) g. Total Weight is the weight of all servings combined, after cooking; blank uses the ingredients' weight." }
-                ?? "Weight for all servings this recipe makes combined."
-        ) {
+        ThemedSection("Recipe", footer: preview.servings == 1 ? nil : preview.cookedGrams.map { "\(NutritionFormat.amount($0 / preview.servings)) g per serving" }) {
             HStack(spacing: 12) {
                 FoodIcon(icon: draft.icon, source: .recipe, size: 36)
                 RowLabel(
@@ -126,13 +134,21 @@ struct RecipeEditor: View {
 
     private func ingredients(_ issues: [RecipeDraft.Field: String]) -> some View {
         ThemedSection("Ingredients", subtitle: "Weight of ingredients is \(NutritionFormat.amount(draft.ingredientGrams)) g") {
+            // One row per ingredient, its issue inside it, so List's move offsets are ingredient indexes.
             ForEach($draft.ingredients) { $ingredient in
-                IngredientRow(ingredient: $ingredient, focus: $focus)
-                FieldIssue(issues[.ingredientQuantity(ingredient.id)])
+                VStack(alignment: .leading, spacing: 4) {
+                    IngredientRow(ingredient: $ingredient, focus: $focus)
+                    FieldIssue(issues[.ingredientQuantity(ingredient.id)])
+                }
+                .swipeActions {
+                    Button("Delete", systemImage: "trash") { draft.ingredients.removeAll { $0.id == ingredient.id } }
+                        .tint(Theme.destructive)
+                    Button("Swap", systemImage: "arrow.left.arrow.right") { search = .swap(ingredient.id, ingredient.value.food) }
+                        .tint(Theme.surfaceRaised)
+                }
             }
-            .onDelete { draft.ingredients.remove(atOffsets: $0) }
             .onMove { draft.ingredients.move(fromOffsets: $0, toOffset: $1) }
-            Button("Add Ingredient", systemImage: "plus") { addingIngredient = true }
+            Button("Add Ingredient", systemImage: "plus") { search = .add }
             FieldIssue(issues[.ingredients])
         }
     }
@@ -234,19 +250,59 @@ extension RecipeDraft {
     }
 }
 
+/// Which search the recipe editor's sheet shows: Add Ingredient, or Swap for the ingredient with this id.
+private enum IngredientSearchRequest: Identifiable {
+    case add
+    case swap(UUID, FoodSnapshot)
+
+    var id: String {
+        switch self {
+        case .add: "add"
+        case let .swap(id, _): id.uuidString
+        }
+    }
+}
+
 /// An ingredient with its quantity typed in place and its measure picked from the food's measures. Switching the
-/// measure converts the quantity, so the amount stays the same.
+/// measure converts the quantity, so the amount stays the same. The amount sits beside the name while the whole name
+/// fits on one line beside it, and under the name otherwise, so a long measure ("5 tbsp chopped") never squeezes it.
 private struct IngredientRow: View {
     @Binding var ingredient: RecipeDraft.Ingredient
     let focus: FocusState<RecipeDraft.Field?>.Binding
 
     var body: some View {
         let food = ingredient.value.food
+        let macros = Text(macroLine: food.amounts(ingredient.value.serving))
         HStack(spacing: 10) {
             FoodIcon(food: food)
-            RowLabel(title: food.displayName, detail: Text(macroLine: food.amounts(ingredient.value.serving)))
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    RowLabel(title: food.displayName, detail: macros)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    amount(food)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(food.displayName)
+                        .font(AppFont.rowTitle)
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(2)
+                    HStack(spacing: 10) {
+                        macros
+                            .font(AppFont.rowDetail)
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        amount(food)
+                    }
+                }
+            }
+        }
+        .feedback(self)
+    }
+
+    private func amount(_ food: FoodSnapshot) -> some View {
+        HStack(spacing: 10) {
             TextField("1", text: Binding { ingredient.quantity } set: { ingredient.type($0) })
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
@@ -259,7 +315,6 @@ private struct IngredientRow: View {
             .labelsHidden()
             .fixedSize()
         }
-        .feedback(self)
     }
 
     private var measure: Binding<String> {

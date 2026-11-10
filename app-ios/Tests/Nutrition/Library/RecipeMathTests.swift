@@ -113,6 +113,38 @@ struct RecipeMathTests {
         #expect(ingredient.quantity == "1")
     }
 
+    @Test func swappingAnIngredientKeepsItsPlaceAndAmount() {
+        let tablespoon = { (servings: Double) in Measure(name: "tbsp", quantity: 1, servings: servings) }
+        let food = { (name: String, baseGrams: Double?, measures: [Measure]) in
+            FoodSnapshot(foodID: name, source: .usda, name: name, brand: nil, nutrition: FoodNutrition(nutrients: [.energy: 100], baseGrams: baseGrams, measures: measures))
+        }
+        let shallot = food("Shallots, raw", 100, [tablespoon(0.1)])
+        var ingredient = RecipeDraft.Ingredient(RecipeIngredient(FoodPortion(shallot, serving: Serving(measure: tablespoon(0.1), quantity: 5))))
+        let id = ingredient.id
+
+        ingredient.replace(with: FoodPortion(food("Onions, raw", 100, [Measure(name: "medium", quantity: 1, servings: 1.1), tablespoon(0.12)])))
+        #expect(ingredient.id == id)
+        #expect(ingredient.value.food.name == "Onions, raw")
+        #expect(ingredient.value.serving == Serving(measure: tablespoon(0.12), quantity: 5))
+        #expect(ingredient.quantity == "5")
+
+        ingredient.replace(with: FoodPortion(food("Leeks, raw", 50, [Measure(name: "leek", quantity: 1, servings: 1.8)])))
+        #expect(ingredient.value.serving.measure.name == "g")
+        #expect(ingredient.quantity == "60")
+
+        ingredient.replace(with: FoodPortion(food("Chives", nil, [Measure(name: "bunch", quantity: 1, servings: 1)])))
+        #expect(ingredient.value.serving == Serving(measure: Measure(name: "bunch", quantity: 1, servings: 1), quantity: 1))
+    }
+
+    @Test func swapSearchesForTheFoodsKind() {
+        let named = { (name: String) in RecipeDraft.Ingredient.swapQuery(FoodSnapshot(source: .usda, name: name, nutrition: FoodNutrition(nutrients: [:], measures: []))) }
+        #expect(named("Shallots, raw") == "Shallots")
+        #expect(named("Beef, ground, 90% lean meat / 10% fat, raw") == "Beef")
+        #expect(named("Greek Yogurt") == "Greek Yogurt")
+        #expect(named("San Marzano Tomatoes") == "Tomatoes")
+        #expect(named("Grass-Fed Ground Venison") == "Venison")
+    }
+
     @Test func invalidRecipeFieldsReportMacroFactorsMessages() {
         var draft = RecipeDraft()
         draft.servings = "0"

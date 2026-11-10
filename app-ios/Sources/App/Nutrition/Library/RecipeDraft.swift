@@ -59,6 +59,31 @@ struct RecipeDraft: Equatable, Sendable {
             value.serving = value.serving.converted(to: measure)
             quantity = NumberText.text(value.serving.quantity)
         }
+
+        /// Swaps in another food at the same place, keeping the amount: the same quantity when the new food has a
+        /// measure of the same name ("5 tbsp" stays 5 tbsp), else the same weight in grams, else the picked serving.
+        mutating func replace(with portion: FoodPortion) {
+            let old = value.serving
+            let measures = portion.food.nutrition.allMeasures
+            if let same = measures.first(where: { $0.name == old.measure.name }) {
+                value.serving = Serving(measure: same, quantity: old.quantity)
+            } else if let grams = value.food.nutrition.grams(old), let gram = measures.first(where: { $0.name == SizeUnit.g.rawValue }) {
+                value.serving = Serving(measure: gram, quantity: grams)
+            } else {
+                value.serving = portion.serving
+            }
+            value.food = portion.food
+            quantity = NumberText.text(value.serving.quantity)
+        }
+
+        /// What Swap searches for: the food's kind, so the results are alternatives to it. A name's first comma part
+        /// names the kind ("Shallots, raw"); a longer one ends in it ("San Marzano Tomatoes", "Grass-Fed Ground
+        /// Venison"), so it keeps only its last word.
+        static func swapQuery(_ food: FoodSnapshot) -> String {
+            let head = food.name.split(separator: ",").first.map(String.init) ?? food.name
+            let words = head.split(whereSeparator: \.isWhitespace)
+            return words.count > 2 ? String(words[words.count - 1]) : words.joined(separator: " ")
+        }
     }
 
     enum Field: Hashable, Sendable {
