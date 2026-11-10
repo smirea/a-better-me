@@ -11,9 +11,12 @@ struct DayPage: View {
     @Observe private var entries: [FoodEntry]
     /// One width for every hour pill, so "8 AM" and the current "12 PM" with its dot line up; it scales with the text.
     @ScaledMetric private var hourPillWidth: CGFloat = 60
-    /// Section pills share one wider width, which fits "Breakfast" with the current section's dot.
-    @ScaledMetric private var sectionPillWidth: CGFloat = 92
+    /// Section pills share one width, which fits "Breakfast" with the current section's dot and little padding.
+    @ScaledMetric private var sectionPillWidth: CGFloat = 72
     @State private var groups = ViewMemo<GroupsKey, [TimelineGroup]>()
+    /// The page's height above the bottom bars, which a day of Sections too short to scroll fills. The bars' inset is
+    /// already out of the container's size.
+    @State private var visibleHeight: CGFloat = 0
 
     init(day: CalendarDay) {
         self.day = day
@@ -21,7 +24,12 @@ struct DayPage: View {
     }
 
     private var timeline: NutritionSettings.Timeline { settings.nutrition.timeline }
-    private var pillWidth: CGFloat { timeline.display == .sections ? sectionPillWidth : hourPillWidth }
+    private var isSections: Bool { timeline.display == .sections }
+    private var column: TimelineColumn {
+        isSections
+            ? TimelineColumn(pillWidth: sectionPillWidth, lineX: sectionPillWidth / 4, tileInset: sectionPillWidth / 4 + 14)
+            : TimelineColumn(pillWidth: hourPillWidth, lineX: hourPillWidth / 2, tileInset: hourPillWidth + SlotRow.spacing)
+    }
 
     private struct GroupsKey: Equatable {
         let entries: [FoodEntry]
@@ -29,28 +37,39 @@ struct DayPage: View {
         let sections: [MealSection]
     }
 
+    private static let bottomPadding: CGFloat = 8
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(groups(GroupsKey(entries: entries, timeline: timeline, sections: settings.nutrition.mealSections)) {
-                        FoodLog.groups(entries, settings: settings.nutrition)
-                    }) { group in
-                        SlotRow(
-                            day: day, group: group, sections: settings.nutrition.mealSections, pillWidth: pillWidth,
-                            showsTotals: timeline.hourlyTotals, addsOnLongPress: timeline.addFoodsToHour == .longPress, premove: timeline.premove
-                        )
-                        ForEach(group.rows) { row in
-                            EntryRow(row: row, pillWidth: pillWidth, showsTime: timeline.foodTimestamps, hidesDetails: timeline.hideFoodDetails)
+                let groups = self.groups(GroupsKey(entries: entries, timeline: timeline, sections: settings.nutrition.mealSections)) {
+                    FoodLog.groups(entries, settings: settings.nutrition)
+                }
+                let column = self.column
+                FillHeight(minHeight: isSections ? visibleHeight - Self.bottomPadding : 0) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
+                            if isSections, index > 0, group.rows.isEmpty || groups[index - 1].rows.isEmpty {
+                                Spacer(minLength: 0)
+                            }
+                            SlotRow(
+                                day: day, group: group, sections: settings.nutrition.mealSections, pillWidth: column.pillWidth,
+                                showsTotals: timeline.hourlyTotals, addsOnLongPress: timeline.addFoodsToHour == .longPress, premove: timeline.premove
+                            )
+                            ForEach(group.rows) { row in
+                                EntryRow(
+                                    row: row, column: column, showsTime: timeline.foodTimestamps && !isSections, hidesDetails: timeline.hideFoodDetails
+                                )
                                 .id(row.id)
+                            }
                         }
                     }
                 }
                 .background(alignment: .leading) {
-                    Rectangle().fill(Theme.separator).frame(width: 1).padding(.leading, pillWidth / 2)
+                    Rectangle().fill(Theme.separator).frame(width: 1).padding(.leading, column.lineX)
                 }
                 .padding(.horizontal, Theme.margin)
-                .padding(.bottom, 8)
+                .padding(.bottom, Self.bottomPadding)
             }
             .scrollIndicators(.hidden)
             .onChange(of: entries) { old, new in
@@ -66,6 +85,9 @@ struct DayPage: View {
         } action: { _, scrolled in
             guard let scrolled else { return }
             withAnimation(.snappy) { state.setScrolled(scrolled, on: day) }
+        }
+        .onScrollGeometryChange(for: CGFloat.self) { $0.containerSize.height } action: { _, height in
+            visibleHeight = height
         }
         .feedback(self)
     }
@@ -86,6 +108,33 @@ struct ShownDayEntries: View {
             if state.entries != entries { state.entries = entries }
         }
     }
+}
+
+/// Offers its content at least `minHeight`, so the spacers around a short day's empty sections share what the page
+/// leaves; a day that scrolls is taller, so its spacers get nothing. `.frame(minHeight:)` sized itself to the height but
+/// still laid the stack out at its ideal height, leaving the sections bunched at the top.
+private struct FillHeight: Layout {
+    let minHeight: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let content = subviews.first else { return .zero }
+        let ideal = content.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil))
+        guard ideal.height < minHeight else { return ideal }
+        return content.sizeThatFits(ProposedViewSize(width: proposal.width, height: minHeight))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
+    }
+}
+
+/// Where the timeline's line runs and where its tiles start. Time centers the line on the hour pills, with each tile's
+/// time or check circle on it in the gutter. Sections moves the line to a quarter of the pill and nests the tiles under
+/// the pill just past it, which leaves room for the check circle on the line but not for a time.
+private struct TimelineColumn {
+    let pillWidth: CGFloat
+    let lineX: CGFloat
+    let tileInset: CGFloat
 }
 
 /// The hour's or section's pill, its + (a paste button while pasting inline, a move button under Premove), and its
@@ -247,14 +296,14 @@ private struct HourTotals: View {
     }
 }
 
-/// A food tile with its time, or its check circle in select mode, in the gutter. Pasting inline hides the circles,
-/// so the destination day's foods don't read as a new selection. Tapping the tile or its circle toggles it, and a
+/// A food tile with its time, or its check circle in select mode, on the timeline's line. Pasting inline hides the
+/// circles, so the destination day's foods don't read as a new selection. Tapping the tile or its circle toggles it, and a
 /// long press starts select mode on it: the selection's bar holds its actions, so there is no context menu. Swiping
 /// a tile left reveals Remove and Copy, as MacroFactor's does; it has no full swipe, because a left swipe that misses
 /// the blank space was meant to page.
 private struct EntryRow: View {
     let row: TimelineRow
-    let pillWidth: CGFloat
+    let column: TimelineColumn
     let showsTime: Bool
     let hidesDetails: Bool
 
@@ -265,18 +314,20 @@ private struct EntryRow: View {
         let entry = row.entry
         let isSelected = state.selection.contains(entry.id)
         let showsCircle = state.selecting && state.pending?.inline != true
-        HStack(spacing: SlotRow.spacing) {
-            ZStack {
-                Color.clear
-                if showsCircle {
-                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 20))
-                        .foregroundStyle(Theme.textPrimary)
-                } else if showsTime, row.showsTime {
-                    Text(NutritionFormat.time(entry.minute)).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
+        HStack(spacing: 0) {
+            Color.clear.frame(width: column.tileInset).overlay(alignment: .leading) {
+                ZStack {
+                    if showsCircle {
+                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Theme.textPrimary)
+                            .background(Theme.background, in: .circle)
+                    } else if showsTime, row.showsTime {
+                        Text(NutritionFormat.time(entry.minute)).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
+                    }
                 }
+                .frame(width: column.lineX * 2)
             }
-            .frame(width: pillWidth)
             HStack(spacing: 12) {
                 FoodRow(food: entry.food, serving: entry.serving, showsDetail: !hidesDetails)
                 RoundIconButton("Edit \(entry.food.name)", systemImage: "pencil", size: .small) { state.editing = entry }
@@ -297,6 +348,8 @@ private struct EntryRow: View {
             .accessibilityAddTraits(isSelected ? .isSelected : [])
             .accessibilityAction(named: isSelected ? "Deselect" : "Select") { state.select(entry.id) }
         }
+        // The gutter's clear color would otherwise take a share of the height a short day of Sections spreads.
+        .fixedSize(horizontal: false, vertical: true)
         .contentShape(.rect)
         .onTapGesture { state.select(entry.id) }
         .onLongPressGesture(minimumDuration: 0.35) { state.startSelection(at: entry.id) }
