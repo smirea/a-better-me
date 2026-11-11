@@ -46,7 +46,7 @@ export const screens: Screen[] = [
 	{ name: 'dashboard-see-all-body-metrics', steps: ['scroll bottom', 'wait 600', 'press 358 331'] },
 
 	{ name: 'foodlog', steps: tapTab('Nutrition') },
-	// Swipes the timeline back to yesterday, which the seed marks incomplete with edited totals: the title's subtitle.
+	// Swipes the timeline back to yesterday, which the seed marks incomplete with edited totals, beside the page dots.
 	{ name: 'foodlog-marked-day', steps: [...tapTab('Nutrition'), 'swipe 60 500 340 500', 'wait 800'] },
 	{ name: 'foodlog-menu', steps: [...tapTab('Nutrition'), ...trailingToolbarButton] },
 	{ name: 'foodlog-calendar', steps: [...tapTab('Nutrition'), ...tap('Calendar')] },
