@@ -29,6 +29,29 @@ struct FoodLogStateTests {
         }.value
     }
 
+    @Test func tappingATileEditsItUntilALongPressStartsSelecting() {
+        let state = FoodLogState()
+        let oats = entry(minute: 482)
+        let coffee = entry(minute: 485)
+
+        state.tap(oats)
+        #expect(!state.selecting)
+        #expect(state.editing?.id == oats.id)
+
+        state.editing = nil
+        state.startSelection(at: oats.id)
+        state.tap(coffee)
+        #expect(state.selection == [oats.id, coffee.id])
+        state.tap(oats)
+        #expect(state.selection == [coffee.id])
+        #expect(state.editing == nil)
+
+        state.endSelection()
+        state.tap(coffee)
+        #expect(!state.selecting)
+        #expect(state.editing?.id == coffee.id)
+    }
+
     @Test func tappingAnHourPillSelectsTheHourThenTogglesIt() {
         let state = FoodLogState()
         let breakfast = [UUID(), UUID()]
