@@ -60,8 +60,8 @@ struct FoodLogTab: View {
     }
 }
 
-/// The week strip and the day's macro summary over the timeline. The summary stays; the strip follows Calendar Week
-/// Banner, folding away while the timeline is scrolled down unless it is pinned.
+/// The week strip and the day's macro summary over the timeline. The summary stays; the title row and the strip fold
+/// away together while the timeline is scrolled down, unless Calendar Week Banner pins the strip.
 private struct FoodLogHeader: View {
     @Environment(FoodLogState.self) private var state
     @Observe(NutritionPlan.all) private var plans
@@ -69,8 +69,9 @@ private struct FoodLogHeader: View {
 
     var body: some View {
         let banner = settings.nutrition.timeline.calendarWeekBanner
+        let folded = banner != .showAndPin && state.scrolledDays.contains(state.day)
         VStack(spacing: 6) {
-            if banner == .showAndPin || banner == .show && !state.scrolledDays.contains(state.day) {
+            if banner == .showAndPin || banner == .show && !folded {
                 WeekStrip(anchor: state.day, weeks: -(FoodLogState.daysBack / 7 + 1)...(FoodLogState.daysAhead / 7 + 1)) {
                     WeekPills(monday: $0, plans: plans)
                 }
@@ -81,6 +82,9 @@ private struct FoodLogHeader: View {
         // The week strip is the scroll view nearest the bar, so its top edge effect greyed the bar behind the title,
         // which the Workout tab's bar doesn't have. Nothing scrolls under the bar here.
         .scrollEdgeEffectHidden(true, for: .top)
+        // The whole bar hides rather than collapsing to an inline title: the timeline scrolls inside
+        // the pager, out of the bar's reach, so the system's large-title collapse never tracks it.
+        .toolbarVisibility(folded ? .hidden : .automatic, for: .navigationBar)
         .feedback(self)
     }
 }

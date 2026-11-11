@@ -267,7 +267,7 @@ struct FoodLogMathTests {
     @Test func foldsTheWeekStripOnlyWhenScrolledThroughALongDay() {
         #expect(FoodLog.collapsesStrip(offset: 0, slack: 600) == false)
         #expect(FoodLog.collapsesStrip(offset: 60, slack: 600) == true)
-        #expect(FoodLog.collapsesStrip(offset: 60, slack: 80) == nil)
+        #expect(FoodLog.collapsesStrip(offset: 60, slack: 150) == nil)
         #expect(FoodLog.collapsesStrip(offset: 25, slack: 600) == nil)
     }
 

@@ -335,10 +335,10 @@ enum FoodLog {
 
     /// Whether the week strip collapses for a timeline scrolled `offset` points down, with `slack` points of content
     /// beyond the screen. Nil keeps the strip as it is, so collapsing, which lengthens the timeline's view, never
-    /// expands it again on the next frame.
+    /// expands it again on the next frame. The slack covers the strip and the title row, which fold together.
     static func collapsesStrip(offset: Double, slack: Double) -> Bool? {
         if offset < 12 { return false }
-        if offset > 40, slack > 100 { return true }
+        if offset > 40, slack > 200 { return true }
         return nil
     }
 
