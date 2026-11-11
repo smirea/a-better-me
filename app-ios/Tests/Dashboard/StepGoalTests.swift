@@ -63,9 +63,11 @@ struct StepsPlotTests {
     }
 
     @Test func dailyBarsCarryTheirFlightsAndDistanceAndTheWeeksShareOfTheGoal() throws {
-        let week = try #require(plot(range: .oneWeek, averaging: .daily).steps)
-        #expect(week.flights == [day("2026-10-23", 0): 3, day("2026-10-27", 0): 12, day("2026-10-28", 0): 5])
-        #expect(week.meters == [day("2026-10-23", 0): 7200, day("2026-10-27", 0): 11500, day("2026-10-28", 0): 7700])
+        let plot = plot(range: .oneWeek, averaging: .daily)
+        let bars = try #require(plot.steps)
+        #expect(bars.flights == [day("2026-10-23", 0): 3, day("2026-10-27", 0): 12, day("2026-10-28", 0): 5])
+        #expect(bars.meters == [day("2026-10-23", 0): 7200, day("2026-10-27", 0): 11500, day("2026-10-28", 0): 7700])
+        let week = try #require(plot.window(at: plot.initialStart).steps)
         #expect(week.total == 59950)
         #expect(week.distance == 26400)
         // 59,950 of 7 × 10,000, so the bracket reads 86% of Goal in the near tier, as Pedometer++'s 83% week does.
@@ -77,17 +79,40 @@ struct StepsPlotTests {
 
     @Test func weeklyBarsAverageFlightsAndDistanceAndTheGoalCountsFromTheFirstRecordedDay() throws {
         let plot = plot(range: .oneMonth, averaging: .weekly)
-        let month = try #require(plot.steps)
-        #expect(month.flights == [day("2026-09-29", 0): 40, day("2026-10-19", 0): 3, day("2026-10-26", 0): 8.5])
-        #expect(month.meters == [day("2026-09-29", 0): 9000, day("2026-10-19", 0): 7200, day("2026-10-26", 0): 9600])
+        #expect(!plot.scrolls)
+        let bars = try #require(plot.steps)
+        let month = try #require(plot.window(at: plot.initialStart).steps)
+        #expect(bars.flights == [day("2026-09-28", 0): 40, day("2026-10-19", 0): 3, day("2026-10-26", 0): 8.5])
+        #expect(bars.meters == [day("2026-09-28", 0): 9000, day("2026-10-19", 0): 7200, day("2026-10-26", 0): 9600])
         #expect(month.distance == 35400)
         // Steps start Oct 22, so the month's goal covers those 7 days, not the 30 since Sep 29.
         #expect(month.goalShare == 59950.0 / 70_000)
         #expect(month.tier == .near)
         #expect(plot.scrubDates == [day("2026-10-22", 12), day("2026-10-29", 12)])
-        // The range ends Oct 28, inside the last week, so the domain runs to that week's end.
-        #expect(plot.xDomain == day("2026-09-29", 0)...day("2026-11-02", 0))
+        // The domain runs over whole weeks, from the one holding the range's start to the one holding today.
+        #expect(plot.xDomain == day("2026-09-28", 0)...day("2026-11-02", 0))
         #expect(plot.months.isEmpty)
+    }
+
+    @Test func aWeekScrollsBackThroughEveryRecordedDayAndSummarizesTheShownWeek() throws {
+        let points = (0..<14).map { DatedValue(date: utc.date(byAdding: .day, value: $0, to: day("2026-10-15", 0))!, value: Double(1000 * ($0 + 1))) }
+        let tab = MetricTab(title: "Steps", points: points, unit: .whole("steps"), averageTitle: "Average Steps", summary: .total, style: .bar, color: Theme.coral, goal: 10_000)
+        let summary = StepGoal.summary(points, goal: 10_000, today: day("2026-10-28"), calendar: utc)
+        let plot = MetricPlot(tab: tab, footer: .steps(summary, flights: [], meters: []), range: .oneWeek, averaging: .daily, now: day("2026-10-28"), calendar: utc, unit: .kg)
+        #expect(plot.scrolls)
+        #expect(plot.drawn.count == 14)
+        #expect(plot.xDomain == day("2026-10-15", 0)...day("2026-10-29", 0))
+        #expect(plot.initialStart == day("2026-10-22", 0))
+        #expect(try #require(plot.window(at: plot.initialStart).steps).total == 77_000)
+        let earlier = plot.window(at: day("2026-10-15", 0))
+        #expect(earlier.interval == DateInterval(start: day("2026-10-15", 0), end: day("2026-10-22", 0)))
+        #expect(earlier.points.map(\.value) == [1000, 2000, 3000, 4000, 5000, 6000, 7000])
+        #expect(earlier.high == 10_000)
+        let week = try #require(earlier.steps)
+        #expect(week.total == 28_000)
+        #expect(week.goalShare == 0.4)
+        // A scroll never shows days before the first recorded one.
+        #expect(plot.window(at: day("2026-10-01", 0)).interval == earlier.interval)
     }
 
     @Test func detailsDropFirstThenCountsShortenThenHide() {

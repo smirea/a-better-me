@@ -97,16 +97,19 @@ struct DashboardMetricsTests {
             unit: .decimal("sets"), averageTitle: "Average Sets", summary: .total, style: .bar, color: Theme.muscle
         )
         let plot = MetricPlot(tab: tab, footer: .months, range: .oneMonth, averaging: .weekly, now: day("2026-10-07"), calendar: utc, unit: .kg)
-        #expect(plot.interval == DateInterval(start: day("2026-09-08", 0), end: day("2026-10-08", 0)))
+        #expect(plot.latest == DateInterval(start: day("2026-09-08", 0), end: day("2026-10-08", 0)))
+        // Weekly bars open on whole weeks, through the end of the current one.
+        let window = plot.window(at: plot.initialStart)
+        #expect(window.interval == DateInterval(start: day("2026-09-07", 0), end: day("2026-10-12", 0)))
         #expect(plot.months.map(\.id) == [day("2026-10-01", 0), day("2026-09-01", 0), day("2026-08-01", 0)])
         #expect(plot.months.map { $0.rows.map(\.text) } == [["4 sets"], ["3 sets", "2 sets"], ["1 sets"]])
         #expect(plot.drawn == [
-            DatedValue(date: day("2026-09-08", 0), value: 2),
+            DatedValue(date: day("2026-08-17", 0), value: 1),
+            DatedValue(date: day("2026-09-07", 0), value: 2),
             DatedValue(date: day("2026-09-28", 0), value: 3.5),
         ])
         #expect(plot.drawnUnit == .weekOfYear)
-        #expect(plot.average == 2.75)
-        #expect(plot.second == 9)
+        #expect(window.stats.map(\.value) == [2.75, 9])
     }
 
     @Test func plotWeighInRowsDeleteOnlyAppEntries() {
