@@ -78,7 +78,11 @@ struct FoodIconInferenceTests {
         let fusilli = food("Protein Boost Fusilli no. 34", brand: "De Cecco", barcode: "1")
         let chosen = FoodSnapshot(foodID: fusilli.id, source: .openFoodFacts, name: fusilli.name, icon: "noodles", nutrition: fusilli.nutrition)
         store.saveFood(fusilli)
-        store.log([FoodPortion(fusilli.snapshot), FoodPortion(chosen), FoodPortion(yogurt)], on: monday, minute: 12 * 60)
+        store.log([FoodPortion(fusilli.snapshot), FoodPortion(yogurt)], on: monday, minute: 12 * 60)
+        try await store.write { db in
+            var entry = FoodEntry(FoodPortion(chosen), day: monday, minute: 12 * 60)
+            try entry.insert(db)
+        }.value
         store.addFavorite(FoodPortion(fusilli.snapshot))
         var recipe = Recipe(name: "Pasta salad")
         recipe.ingredients = [RecipeIngredient(FoodPortion(fusilli.snapshot)), RecipeIngredient(FoodPortion(yogurt))]
@@ -170,12 +174,18 @@ struct FoodIconInferenceTests {
         #expect(try icons() == ["off-1": nil])
         #expect(try entryIcons() == ["none"])
 
+        var stale = lentils.snapshot
+        stale.icon = "pasta"
+        store.log([FoodPortion(stale)], on: monday, minute: 13 * 60)
+        try await store.write { _ in }.value
+        #expect(try entryIcons() == ["none", "none"])
+
         let model = StubIconModel(answers: ["Pâte lentille corail": "noodles"])
         let inference = FoodIconInference(model: model)
         inference.start(store: store)
         await inference.idle()
         #expect(try icons() == ["off-1": "noodles"])
-        #expect(try entryIcons() == ["noodles"])
+        #expect(try entryIcons() == ["noodles", "noodles"])
     }
 
     @Test func aSnapshotWithoutAFoodIDStandsForEveryOneWithItsNameAndBrand() async throws {

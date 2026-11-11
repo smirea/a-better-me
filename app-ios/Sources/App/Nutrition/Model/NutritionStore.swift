@@ -47,13 +47,14 @@ extension LocalStore {
         }
     }
 
-    /// A snapshot taken before its food's icon was inferred or picked (a plate item, a recipe draft, a Ramble row) takes
-    /// the food's icon as it is saved, since `setInferredIcon` and `setIcon` reach only the snapshots stored by then.
+    /// A snapshot taken before its food's icon was inferred, picked, or cleared (a plate item, a recipe draft, a Ramble
+    /// row) takes the food's icon as it is saved, since `setInferredIcon` and `setIcon` reach only the snapshots stored
+    /// by then. A cached food's icon is the snapshot's, even none after Default; a food no longer stored leaves it as is.
     nonisolated static func withFoodIcon(_ food: FoodSnapshot, in db: Database) throws -> FoodSnapshot {
         guard let id = food.foodID, [.custom, .usda, .openFoodFacts].contains(food.source),
-              let icon = try String.fetchOne(db, sql: "SELECT icon FROM foods WHERE id = ?", arguments: [id]) else { return food }
+              let row = try Row.fetchOne(db, sql: "SELECT icon FROM foods WHERE id = ?", arguments: [id]) else { return food }
         var filled = food
-        filled.icon = icon
+        filled.icon = row["icon"]
         return filled
     }
 
