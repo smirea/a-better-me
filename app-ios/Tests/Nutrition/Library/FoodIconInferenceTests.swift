@@ -78,7 +78,11 @@ struct FoodIconInferenceTests {
         let fusilli = food("Protein Boost Fusilli no. 34", brand: "De Cecco", barcode: "1")
         let chosen = FoodSnapshot(foodID: fusilli.id, source: .openFoodFacts, name: fusilli.name, icon: "noodles", nutrition: fusilli.nutrition)
         store.saveFood(fusilli)
-        store.log([FoodPortion(fusilli.snapshot), FoodPortion(chosen), FoodPortion(yogurt)], on: monday, minute: 12 * 60)
+        store.log([FoodPortion(fusilli.snapshot), FoodPortion(yogurt)], on: monday, minute: 12 * 60)
+        try await store.write { db in
+            var entry = FoodEntry(FoodPortion(chosen), day: monday, minute: 12 * 60)
+            try entry.insert(db)
+        }.value
         store.addFavorite(FoodPortion(fusilli.snapshot))
         var recipe = Recipe(name: "Pasta salad")
         recipe.ingredients = [RecipeIngredient(FoodPortion(fusilli.snapshot)), RecipeIngredient(FoodPortion(yogurt))]
@@ -116,6 +120,92 @@ struct FoodIconInferenceTests {
         #expect(try store.readBlocking(FoodEntry.on(monday).fetch).map { $0.food.icon ?? "none" }.sorted() == ["none", "pasta"])
         #expect(try store.readBlocking { try FoodFavorite.fetchAll($0) }.map(\.food.icon) == ["pasta"])
         #expect(try store.readBlocking { try Recipe.fetchOne($0, key: recipe.key) }?.ingredients.map(\.food.icon) == ["pasta"])
+    }
+
+    func entryIcons() throws -> [String] {
+        try store.readBlocking(FoodEntry.on(monday).fetch).map { $0.food.icon ?? "none" }.sorted()
+    }
+
+    @Test func theOwnersIconReplacesEverySnapshotAndOutlastsTheModelAndARefresh() async throws {
+        let lentils = food("Pâte lentille corail", brand: "Carrefour", barcode: "1")
+        store.saveFood(lentils)
+        store.setInferredIcon("leafy-greens", forFood: lentils.id)
+        store.log([FoodPortion(lentils.snapshot), FoodPortion(yogurt)], on: monday, minute: 12 * 60)
+        store.addFavorite(FoodPortion(lentils.snapshot))
+        var recipe = Recipe(name: "Lentil bowl")
+        recipe.ingredients = [RecipeIngredient(FoodPortion(lentils.snapshot))]
+        store.saveRecipe(recipe)
+        try await store.write { _ in }.value
+        let before = try store.readBlocking(FoodEntry.on(monday).fetch)
+        #expect(try entryIcons() == ["leafy-greens", "none"])
+
+        var shown = lentils.snapshot
+        shown.icon = "leafy-greens"
+        store.setIcon("pasta", of: shown)
+        store.setInferredIcon("cereal", forFood: lentils.id)
+        store.saveFood(food("Pâte lentille corail", brand: "Carrefour", barcode: "1"))
+        try await store.write { _ in }.value
+
+        #expect(try icons() == ["off-1": "pasta"])
+        #expect(try entryIcons() == ["none", "pasta"])
+        #expect(Set(try store.readBlocking(FoodEntry.on(monday).fetch).map { "\($0.id) \(Instant.text($0.updatedAt))" }) == Set(before.map { "\($0.id) \(Instant.text($0.updatedAt))" }))
+        #expect(try store.readBlocking { try FoodFavorite.fetchAll($0) }.map(\.food.icon) == ["pasta"])
+        #expect(try store.readBlocking { try Recipe.fetchOne($0, key: recipe.key) }?.ingredients.map(\.food.icon) == ["pasta"])
+
+        store.log([FoodPortion(shown)], on: monday, minute: 13 * 60)
+        let model = StubIconModel(answers: ["Pâte lentille corail By Carrefour": "salad"])
+        let inference = FoodIconInference(model: model)
+        inference.start(store: store)
+        await inference.idle()
+        #expect(model.asked.isEmpty)
+        #expect(try entryIcons() == ["none", "pasta", "pasta"])
+    }
+
+    @Test func defaultClearsTheIconEverywhereSoTheModelPicksAgain() async throws {
+        let lentils = food("Pâte lentille corail", barcode: "1")
+        store.saveFood(lentils)
+        store.setIcon("pasta", of: lentils.snapshot)
+        store.log([FoodPortion(lentils.snapshot)], on: monday, minute: 12 * 60)
+        try await store.write { _ in }.value
+        #expect(try entryIcons() == ["pasta"])
+
+        store.setIcon(nil, of: lentils.snapshot)
+        try await store.write { _ in }.value
+        #expect(try icons() == ["off-1": nil])
+        #expect(try entryIcons() == ["none"])
+
+        var stale = lentils.snapshot
+        stale.icon = "pasta"
+        store.log([FoodPortion(stale)], on: monday, minute: 13 * 60)
+        try await store.write { _ in }.value
+        #expect(try entryIcons() == ["none", "none"])
+
+        let model = StubIconModel(answers: ["Pâte lentille corail": "noodles"])
+        let inference = FoodIconInference(model: model)
+        inference.start(store: store)
+        await inference.idle()
+        #expect(try icons() == ["off-1": "noodles"])
+        #expect(try entryIcons() == ["noodles", "noodles"])
+    }
+
+    @Test func aSnapshotWithoutAFoodIDStandsForEveryOneWithItsNameAndBrand() async throws {
+        let seeded = FoodSnapshot(source: .usda, name: "Oatmeal", icon: "🥣", nutrition: yogurt.nutrition)
+        let branded = FoodSnapshot(source: .usda, name: "Oatmeal", brand: "Quaker", nutrition: yogurt.nutrition)
+        store.log([FoodPortion(seeded), FoodPortion(seeded), FoodPortion(branded), FoodPortion(.quickAdd([.energy: 100]))], on: monday, minute: 8 * 60)
+        store.setIcon("cereal", of: seeded)
+        store.setIcon("cereal", of: .quickAdd([.energy: 100]))
+        try await store.write { _ in }.value
+        #expect(try entryIcons() == ["cereal", "cereal", "none", "none"])
+    }
+
+    @Test func aRecipesIconReachesItsRowAndItsEntries() async throws {
+        let recipe = Recipe(name: "Lentil bowl")
+        store.saveRecipe(recipe)
+        store.log([FoodPortion(recipe.snapshot)], on: monday, minute: 12 * 60)
+        store.setIcon("salad", of: recipe.snapshot)
+        try await store.write { _ in }.value
+        #expect(try store.readBlocking { try Recipe.fetchOne($0, key: recipe.key) }?.icon == "salad")
+        #expect(try entryIcons() == ["salad"])
     }
 
     /// The real model on names the keywords miss, when this simulator or device can run it (CI's simulators can't).

@@ -253,6 +253,15 @@ final class LoggerSession {
         await reloadSearch()
     }
 
+    /// The owner's icon for a food (`LocalStore.setIcon`). A search result is cached first, so the icon has a food to live
+    /// on, and the plate's portions of the food take it too.
+    func setIcon(_ icon: String?, of food: FoodSnapshot, uncached: Food?) async {
+        if let uncached { store.saveFood(uncached) }
+        store.setIcon(icon, of: food)
+        plate.setIcon(icon, of: food)
+        await reloadSearch()
+    }
+
     func favorite(_ portion: FoodPortion, uncached: Food?) async {
         if let uncached { store.saveFood(uncached) }
         store.addFavorite(portion)

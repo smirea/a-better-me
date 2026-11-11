@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 /// Nutrition's writes. Each runs as one `write`, in call order. Entries, favorites, and recipes hold snapshots, so
-/// deleting or editing a food or recipe leaves them as they are; only a food's inferred icon reaches them.
+/// deleting or editing a food or recipe leaves them as they are; only a food's icon reaches them.
 extension LocalStore {
 
     /// Logs every portion at `minute` of `day`, as one transaction: a plate, a recipe, or a single food.
@@ -19,7 +19,7 @@ extension LocalStore {
             let sections = try MealSection.current(db)
             for var entry in entries {
                 entry.section = entry.section ?? sections.section(at: entry.minute).id
-                entry.food = try Self.withInferredIcon(entry.food, in: db)
+                entry.food = try Self.withFoodIcon(entry.food, in: db)
                 try entry.insert(db)
             }
         }
@@ -47,47 +47,81 @@ extension LocalStore {
         }
     }
 
-    /// A snapshot taken before its food's icon was inferred (a plate item, a recipe draft) takes the icon as it is saved,
-    /// since `setInferredIcon` reaches only the snapshots stored by then.
-    nonisolated static func withInferredIcon(_ food: FoodSnapshot, in db: Database) throws -> FoodSnapshot {
-        guard food.icon == nil, let id = food.foodID, [.custom, .usda, .openFoodFacts].contains(food.source) else { return food }
+    /// A snapshot taken before its food's icon was inferred, picked, or cleared (a plate item, a recipe draft, a Ramble
+    /// row) takes the food's icon as it is saved, since `setInferredIcon` and `setIcon` reach only the snapshots stored
+    /// by then. A cached food's icon is the snapshot's, even none after Default; a food no longer stored leaves it as is.
+    nonisolated static func withFoodIcon(_ food: FoodSnapshot, in db: Database) throws -> FoodSnapshot {
+        guard let id = food.foodID, [.custom, .usda, .openFoodFacts].contains(food.source),
+              let row = try Row.fetchOne(db, sql: "SELECT icon FROM foods WHERE id = ?", arguments: [id]) else { return food }
         var filled = food
-        filled.icon = try String.fetchOne(db, sql: "SELECT icon FROM foods WHERE id = ?", arguments: [id])
+        filled.icon = row["icon"]
         return filled
     }
 
     /// Gives a food without an icon the one `FoodIconInference` picked, and every snapshot of it without one too: the
     /// log's entries, favorites, and recipe ingredients. Only the icon changes and `updated_at` stays, so Latest keeps its
-    /// order. A food that got an icon meanwhile keeps it.
+    /// order. A food that got an icon meanwhile, the model's or the owner's, keeps it.
     func setInferredIcon(_ icon: String, forFood id: String) {
         write { db in
             guard let food = try Food.fetchOne(db, key: id), food.icon == nil else { return }
             var named = food
             named.icon = icon
             try named.updateChanges(db, from: food)
+            try Self.setSnapshotIcons(icon, of: named.snapshot, replacing: false, in: db)
+        }
+    }
 
-            let missing = "json_extract(food, '$.foodID') = ? AND json_extract(food, '$.icon') IS NULL"
-            for entry in try FoodEntry.fetchAll(db, sql: "SELECT * FROM food_entries WHERE \(missing)", arguments: [id]) {
-                var changed = entry
-                changed.food.icon = icon
-                try changed.updateChanges(db, from: entry)
-            }
-            for favorite in try FoodFavorite.fetchAll(db, sql: "SELECT * FROM food_favorites WHERE \(missing)", arguments: [id]) {
-                var changed = favorite
-                changed.food.icon = icon
-                try changed.updateChanges(db, from: favorite)
-            }
-            let ingredients = """
-                SELECT * FROM recipes WHERE EXISTS (SELECT 1 FROM json_each(recipes.ingredients)
-                WHERE json_extract(value, '$.food.foodID') = ? AND json_extract(value, '$.food.icon') IS NULL)
-                """
-            for recipe in try Recipe.fetchAll(db, sql: ingredients, arguments: [id]) {
-                var changed = recipe
-                for index in changed.ingredients.indices where changed.ingredients[index].food.foodID == id {
-                    changed.ingredients[index].food.icon = changed.ingredients[index].food.icon ?? icon
+    /// The owner's icon for a food or recipe, nil for Default (the app's choice, which lets the model pick again). It is a
+    /// correction, so it replaces the icon on the food and on every snapshot of it, whatever they held. A snapshot
+    /// without a food id (the dev seed's log) stands for every snapshot with its name and brand, as search groups them.
+    func setIcon(_ icon: String?, of food: FoodSnapshot) {
+        guard food.source != .quickAdd else { return }
+        write { db in
+            switch food.source {
+            case .custom, .usda, .openFoodFacts:
+                if let id = food.foodID, let row = try Food.fetchOne(db, key: id) {
+                    var changed = row
+                    changed.icon = icon
+                    try changed.updateChanges(db, from: row)
                 }
-                try changed.updateChanges(db, from: recipe)
+            case .recipe:
+                if let id = food.foodID.flatMap(UUID.init(uuidString:)), let row = try Recipe.fetchOne(db, key: Recipe.key(id)) {
+                    var changed = row
+                    changed.icon = icon
+                    try changed.updateChanges(db, from: row)
+                }
+            case .quickAdd:
+                break
             }
+            try Self.setSnapshotIcons(icon, of: food, replacing: true, in: db)
+        }
+    }
+
+    /// Sets the icon on the log's entries, the favorites, and the recipe ingredients that are snapshots of `food`
+    /// (`FoodSearchResult.key`): only those without one unless `replacing`. `updated_at` stays, so Latest keeps its order.
+    nonisolated private static func setSnapshotIcons(_ icon: String?, of food: FoodSnapshot, replacing: Bool, in db: Database) throws {
+        let key = FoodSearchResult.key(food)
+        func matching(_ path: String) -> String {
+            "\(FoodSearchResult.keySQL(path)) = ?" + (replacing ? " AND json_extract(\(path), '$.icon') IS NOT ?" : " AND json_extract(\(path), '$.icon') IS NULL")
+        }
+        let arguments: StatementArguments = replacing ? [key, icon] : [key]
+        for entry in try FoodEntry.fetchAll(db, sql: "SELECT * FROM food_entries WHERE \(matching("food"))", arguments: arguments) {
+            var changed = entry
+            changed.food.icon = icon
+            try changed.updateChanges(db, from: entry)
+        }
+        for favorite in try FoodFavorite.fetchAll(db, sql: "SELECT * FROM food_favorites WHERE \(matching("food"))", arguments: arguments) {
+            var changed = favorite
+            changed.food.icon = icon
+            try changed.updateChanges(db, from: favorite)
+        }
+        let ingredients = "SELECT * FROM recipes WHERE EXISTS (SELECT 1 FROM json_each(recipes.ingredients) WHERE \(matching("json_extract(value, '$.food')")))"
+        for recipe in try Recipe.fetchAll(db, sql: ingredients, arguments: arguments) {
+            var changed = recipe
+            for index in changed.ingredients.indices where FoodSearchResult.key(changed.ingredients[index].food) == key {
+                if replacing || changed.ingredients[index].food.icon == nil { changed.ingredients[index].food.icon = icon }
+            }
+            try changed.updateChanges(db, from: recipe)
         }
     }
 
@@ -99,7 +133,7 @@ extension LocalStore {
         write { db in
             var saved = recipe
             for index in saved.ingredients.indices {
-                saved.ingredients[index].food = try Self.withInferredIcon(saved.ingredients[index].food, in: db)
+                saved.ingredients[index].food = try Self.withFoodIcon(saved.ingredients[index].food, in: db)
             }
             try saved.insert(db)
         }
@@ -114,7 +148,7 @@ extension LocalStore {
         let made = FoodFavorite(portion)
         write { db in
             var favorite = made
-            favorite.food = try Self.withInferredIcon(favorite.food, in: db)
+            favorite.food = try Self.withFoodIcon(favorite.food, in: db)
             let existing = try FoodFavorite.fetchAll(db).sorted { $0.createdAt < $1.createdAt }
             for old in existing.prefix(max(0, existing.count - FoodFavorite.limit + 1)) {
                 try old.delete(db)

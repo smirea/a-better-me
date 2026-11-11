@@ -31,6 +31,11 @@ struct FoodSearchResult: Identifiable, Hashable, Sendable {
     }
 
     static func key(_ food: FoodSnapshot) -> String { food.foodID ?? "\(food.name)|\(food.brand ?? "")" }
+
+    /// `key` in SQL, for the snapshot JSON at `snapshot`.
+    static func keySQL(_ snapshot: String) -> String {
+        "COALESCE(json_extract(\(snapshot), '$.foodID'), json_extract(\(snapshot), '$.name') || '|' || COALESCE(json_extract(\(snapshot), '$.brand'), ''))"
+    }
 }
 
 /// The owner's side of a search, read once when the logger opens: one history row per food (its latest serving, most
@@ -60,6 +65,8 @@ struct FoodLibrary: Sendable {
     fileprivate var items: [FoodSearchGroup: [Item]] = [:]
     fileprivate var picks: [Int: [FoodSearchResult]] = [:]
     fileprivate var sectionPicks: [String: [FoodSearchResult]] = [:]
+    /// The icons of cached USDA foods, by id, which the bundled catalog's copies lack.
+    fileprivate var usdaIcons: [String: String] = [:]
     private(set) var sections = MealSection.defaults
     private(set) var display = NutritionSettings.Timeline.Display.time
 
@@ -116,12 +123,12 @@ struct FoodLibrary: Sendable {
         library.items[.custom] = foods.filter { $0.source == .custom }.map { Item(FoodSearchResult(.custom, FoodPortion($0.snapshot))) }
         library.items[.recipes] = try Recipe.filter(Column("archived") == false).fetchAll(db)
             .map { Item(FoodSearchResult(.recipes, FoodPortion($0.snapshot))) }
+        library.usdaIcons = Dictionary(uniqueKeysWithValues: foods.compactMap { food in food.source == .usda ? food.icon.map { (food.id, $0) } : nil })
         library.items[.branded] = foods.filter { $0.source == .openFoodFacts }.map { Item(FoodSearchResult(.branded, FoodPortion($0.snapshot))) }
         return library
     }
 
-    /// `FoodSearchResult.key` in SQL.
-    private static let foodKey = "COALESCE(json_extract(food, '$.foodID'), json_extract(food, '$.name') || '|' || COALESCE(json_extract(food, '$.brand'), ''))"
+    private static let foodKey = FoodSearchResult.keySQL("food")
 }
 
 /// The logger's search: the owner's history, favorites, foods, and recipes, the bundled USDA foods, and, online,
@@ -254,7 +261,11 @@ struct FoodIndex: Sendable {
         let matches = catalog.search(terms, limit: Self.limit + shown.count)
         let foods = try catalog.foods(matches.map(\.entry.fdcID))
         add(Array(matches.compactMap { match in
-            foods[match.entry.fdcID].map { FoodSearchResult(.common, FoodPortion($0.snapshot), food: $0) }
+            foods[match.entry.fdcID].map { food in
+                var snapshot = food.snapshot
+                snapshot.icon = library.usdaIcons[food.id] ?? snapshot.icon
+                return FoodSearchResult(.common, FoodPortion(snapshot), food: food)
+            }
         }.filter { !shown.contains($0.key) }.prefix(Self.limit)))
         add(Self.rank(library.items[.branded] ?? [], terms))
         return results
