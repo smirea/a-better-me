@@ -135,6 +135,8 @@ private struct DaySummary: View {
     @Observe(BodyWeight.latest) private var latestWeight
     @Observe private var entries: [FoodEntry]
     @Observe private var row: NutritionDay
+    /// Per-device view state, as the Workout tab's collapsed cards are, so the page survives a relaunch and a day change.
+    @AppStorage("nutrition.foodLog.summaryPage") private var page = MacroLine.Page.eaten
 
     init(day: CalendarDay, plans: [NutritionPlan]) {
         self.day = day
@@ -153,9 +155,9 @@ private struct DaySummary: View {
                     MacroTotalsBars(lines: lines, page: .eaten)
                 } else {
                     // The bottom padding leaves room for the page dots.
-                    TabView {
-                        MacroTotalsBars(lines: lines, page: .eaten).padding(.bottom, 30)
-                        MacroTotalsBars(lines: lines, page: .remaining).padding(.bottom, 30)
+                    TabView(selection: $page) {
+                        MacroTotalsBars(lines: lines, page: .eaten).padding(.bottom, 30).tag(MacroLine.Page.eaten)
+                        MacroTotalsBars(lines: lines, page: .remaining).padding(.bottom, 30).tag(MacroLine.Page.remaining)
                     }
                     .tabViewStyle(.page(indexDisplayMode: .always))
                     .frame(height: 64)

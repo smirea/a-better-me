@@ -37,7 +37,7 @@ struct TimelineGroup: Hashable, Identifiable {
 /// and the day's target when there is one. `MacroTotalsBars` draws them on the Food Log and in the logger's banner.
 struct MacroLine: Hashable, Identifiable {
     /// Eaten against the target, what is left, or only what the plate adds.
-    enum Page: Hashable { case eaten, remaining, plate }
+    enum Page: String { case eaten, remaining, plate }
 
     /// A bar's two segments as fractions of its track, eaten first and the plate after it.
     struct Fill: Hashable {
