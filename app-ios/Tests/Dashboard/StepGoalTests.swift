@@ -94,6 +94,26 @@ struct StepsPlotTests {
         #expect(plot.months.isEmpty)
     }
 
+    @Test func coarseBarsOpenOnWholeCalendarBins() throws {
+        // A week averaged by month opens on its month's bar instead of a window past today.
+        let monthly = plot(range: .oneWeek, averaging: .monthly)
+        let month = monthly.window(at: monthly.initialStart)
+        #expect(month.interval == DateInterval(start: day("2026-10-01", 0), end: day("2026-11-01", 0)))
+        #expect(try #require(month.steps).total == 59950)
+
+        // A week across the fall-back change lasts 169 hours and still shows one weekly bar.
+        var pacific = Calendar(identifier: .gregorian)
+        pacific.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        let start = pacific.date(from: DateComponents(year: 2026, month: 10, day: 20))!
+        let points = (0..<16).map { DatedValue(date: pacific.date(byAdding: .day, value: $0, to: start)!, value: 1000) }
+        let tab = MetricTab(title: "Steps", points: points, unit: .whole("steps"), averageTitle: "Average Steps", summary: .total, style: .bar, color: Theme.coral, goal: 10_000)
+        let now = pacific.date(from: DateComponents(year: 2026, month: 11, day: 4, hour: 12))!
+        let weekly = MetricPlot(tab: tab, footer: .months, range: .oneWeek, averaging: .weekly, now: now, calendar: pacific, unit: .kg)
+        let week = weekly.window(at: weekly.initialStart).interval
+        #expect(week.start == pacific.date(from: DateComponents(year: 2026, month: 11, day: 1)))
+        #expect(week.end == pacific.date(from: DateComponents(year: 2026, month: 11, day: 8)))
+    }
+
     @Test func aWeekScrollsBackThroughEveryRecordedDayAndSummarizesTheShownWeek() throws {
         let points = (0..<14).map { DatedValue(date: utc.date(byAdding: .day, value: $0, to: day("2026-10-15", 0))!, value: Double(1000 * ($0 + 1))) }
         let tab = MetricTab(title: "Steps", points: points, unit: .whole("steps"), averageTitle: "Average Steps", summary: .total, style: .bar, color: Theme.coral, goal: 10_000)

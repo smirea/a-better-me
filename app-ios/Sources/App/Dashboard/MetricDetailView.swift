@@ -301,7 +301,6 @@ private struct MetricChart: View, @MainActor Equatable {
 
     var body: some View {
         let points = plot.drawn
-        let long = plot.visibleLength > 400 * 86_400
         Chart {
             if let line = tab.overlay {
                 ForEach(plot.overlay, id: \.date) { point in
@@ -347,8 +346,8 @@ private struct MetricChart: View, @MainActor Equatable {
         .chartYAxis(stepGoal == nil ? .automatic : .hidden)
         .chartXAxis {
             AxisMarks(values: axisValues) { _ in
-                AxisValueLabel(format: axisFormat(long: long))
-                    .font(stepGoal == nil ? nil : AppFont.medium(range == .oneWeek ? 16 : 13))
+                AxisValueLabel(format: axisFormat)
+                    .font(stepGoal == nil ? nil : AppFont.medium(span == .week ? 16 : 13))
                     .foregroundStyle(stepGoal == nil ? Theme.textSecondary : Theme.textPrimary)
             }
         }
@@ -367,26 +366,35 @@ private struct MetricChart: View, @MainActor Equatable {
         .chartScrubbing(plot.scrubDates, placement: stepGoal == nil ? .above : .beside) { index in callout(index) }
     }
 
+    /// The labels the shown window's length fits, whatever range and averaging made it: 1W averaged by month shows a
+    /// month.
+    private enum AxisSpan: Equatable { case week, month, months, year, all(long: Bool) }
+
+    private var span: AxisSpan {
+        let days = plot.visibleLength / 86_400
+        if range == .all { return .all(long: days > 400) }
+        return days <= 10 ? .week : days <= 45 ? .month : days <= 200 ? .months : .year
+    }
+
     /// Calendar-aligned marks, so the labels stay on the same days while the chart scrolls.
     private var axisValues: AxisMarkValues {
-        switch range {
-        case .oneWeek: .stride(by: .day)
-        case .oneMonth: .stride(by: .weekOfYear)
-        case .threeMonths, .sixMonths, .oneYear: .stride(by: .month)
+        switch span {
+        case .week: .stride(by: .day)
+        case .month: .stride(by: .weekOfYear)
+        case .months, .year: .stride(by: .month)
         case .all: .automatic(desiredCount: 5)
         }
     }
 
-    private func axisFormat(long: Bool) -> Date.FormatStyle {
-        switch range {
-        case .oneWeek: .dateTime.weekday(.abbreviated)
-        case .oneMonth: .dateTime.month(.abbreviated).day()
-        case .threeMonths, .sixMonths: .dateTime.month(.abbreviated)
-        case .oneYear: .dateTime.month(.narrow)
-        case .all: long ? .dateTime.month(.abbreviated).year(.twoDigits) : .dateTime.month(.abbreviated).day()
+    private var axisFormat: Date.FormatStyle {
+        switch span {
+        case .week: .dateTime.weekday(.abbreviated)
+        case .month: .dateTime.month(.abbreviated).day()
+        case .months: .dateTime.month(.abbreviated)
+        case .year: .dateTime.month(.narrow)
+        case let .all(long): long ? .dateTime.month(.abbreviated).year(.twoDigits) : .dateTime.month(.abbreviated).day()
         }
     }
-
     private func callout(_ index: Int) -> ChartCallout {
         let point = plot.drawn[index]
         let title = switch plot.drawnUnit {
@@ -471,9 +479,12 @@ struct MetricPlot {
             : history.start...history.end
         xDomain = domain
         let domainLength = domain.upperBound.timeIntervalSince(domain.lowerBound)
-        // Weekly bars show whole weeks, so a window that opens on the current week starts on a week too.
-        let week: TimeInterval = 7 * 86_400
-        let length = drawing == .weekly ? (latest.duration / week).rounded(.up) * week : latest.duration
+        // Weekly and monthly bars show whole calendar bins, at least one, so the window opens on a bin's start; the
+        // slack keeps a week that gains an hour at a daylight saving change from counting as two.
+        let typical: TimeInterval = drawing == .monthly ? 30.44 * 86_400 : 7 * 86_400
+        let count = max(Int((latest.duration / typical - 0.05).rounded(.up)), 1)
+        let opening = drawing == .daily ? latest.start : calendar.date(byAdding: drawing.component, value: -count, to: domain.upperBound)!
+        let length = domain.upperBound.timeIntervalSince(opening)
         visibleLength = range == .all ? domainLength : min(length, domainLength)
         marksPoints = drawn.inside(latest).count < 15
         holding = drawing == .daily ? tab.holding : []
@@ -536,6 +547,7 @@ struct MetricPlot {
         let values = (points + overlay.inside(interval)).map(\.value) + (tab.goal.map { [$0] } ?? [])
         // A window runs past today when bars widen the domain to a whole week or month.
         let end = min(interval.end, latest.end)
+        let labelStart = max(interval.start, historyStart)
         var steps: StepsSummary?
         if let summaryInputs = summary.steps {
             let total = days.map(\.value).reduce(0, +)
@@ -548,7 +560,7 @@ struct MetricPlot {
             )
         }
         return MetricWindow(
-            interval: interval, label: Self.rangeLabel(DateInterval(start: max(interval.start, historyStart), end: max(end, historyStart)), calendar: calendar),
+            interval: interval, label: Self.rangeLabel(DateInterval(start: labelStart, end: max(end, labelStart)), calendar: calendar),
             points: points, stats: stats, low: values.min() ?? 0, high: max(values.max() ?? 0, 1), steps: steps
         )
     }
