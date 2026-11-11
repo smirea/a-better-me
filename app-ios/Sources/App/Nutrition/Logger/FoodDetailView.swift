@@ -1,10 +1,10 @@
 import Feedback
 import SwiftUI
 
-/// The food detail (`log-03-food-detail.jpg`): a card with the name, Favorite, and the serving's calories and macros
-/// with each macro's share of calories, the impact on the day's targets, every nutrient the food reports, and the
-/// quantity keypad pinned under them. A recipe adds Prepare, Edit, and Duplicate, as the library's recipe page does. A
-/// plate item opens here too, with Update and Remove. The logger's banner stays above it with its close button, so the
+/// The food detail (`log-03-food-detail.jpg`): a card with the icon, the name, Favorite, the serving's calories and
+/// macros with each macro's share of calories, and Edit Icon, then the impact on the day's targets, every nutrient the
+/// food reports, and the quantity keypad pinned under them. A recipe adds Prepare, Edit, and Duplicate, as the
+/// library's recipe page does. A plate item opens here too, with Update and Remove. The logger's banner stays above it with its close button, so the
 /// detail has no navigation bar of its own; a Ramble row's detail, which has no banner, keeps the back button.
 struct FoodDetailView: View {
     let session: LoggerSession
@@ -22,6 +22,7 @@ struct FoodDetailView: View {
     @State private var food: FoodSnapshot
     @State private var recipeSheet: LibraryEditorSheet?
     @State private var preparing: Recipe?
+    @State private var choosingIcon = false
 
     init(session: LoggerSession, editing: UUID?, pick: LoggerPick, ramble: RambleEdit? = nil) {
         self.session = session
@@ -72,6 +73,9 @@ struct FoodDetailView: View {
         .onChange(of: portion, preview)
         .onDisappear { session.pending = nil }
         .sheet(item: $recipeSheet) { $0.editor }
+        .sheet(isPresented: $choosingIcon) {
+            FoodIconPicker(selection: Binding(get: { food.icon }, set: setIcon))
+        }
         .navigationDestination(isPresented: .isPresent($preparing)) {
             if let preparing { RecipePrepareView(recipe: preparing) }
         }
@@ -88,6 +92,8 @@ struct FoodDetailView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
+                FoodIcon(food: food, size: 36)
+                    .onTapGesture { if food.source != .quickAdd { choosingIcon = true } }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(food.name).font(AppFont.headline(18)).fixedSize(horizontal: false, vertical: true)
                     if let brand = food.brand, !brand.isEmpty {
@@ -105,8 +111,11 @@ struct FoodDetailView: View {
             }
             MacroHeader(amounts: amounts)
             let recipeID = pick.portion.food.source == .recipe ? pick.portion.food.foodID.flatMap(UUID.init(uuidString:)) : nil
-            if recipeID != nil || editing != nil {
+            if food.source != .quickAdd || editing != nil {
                 FlowLayout {
+                    if food.source != .quickAdd {
+                        Button("Edit Icon", systemImage: "face.smiling") { choosingIcon = true }
+                    }
                     if let recipeID {
                         RecipeActions(recipeID: recipeID, session: session, prepare: { preparing = $0 }, present: { recipeSheet = $0 }, edited: recipeEdited)
                     }
@@ -123,6 +132,11 @@ struct FoodDetailView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private func setIcon(_ icon: String?) {
+        food.icon = icon
+        Task { await session.setIcon(icon, of: food, uncached: pick.uncached) }
     }
 
     /// The plate without the item being edited, which the gauges count as the food itself.

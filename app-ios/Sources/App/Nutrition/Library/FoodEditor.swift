@@ -225,6 +225,9 @@ struct FoodEditor: View {
         guard let valid = draft.valid else { return }
         if let foodID {
             store.edit(Food.self, id: foodID) { valid.write(into: &$0) }
+            if valid.icon != opened.icon {
+                store.setIcon(valid.icon, of: FoodSnapshot(foodID: foodID, source: .custom, name: valid.name, brand: valid.brand, nutrition: valid.nutrition))
+            }
         } else {
             let food = valid.newFood()
             store.saveFood(food)

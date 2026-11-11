@@ -49,6 +49,15 @@ struct FoodSearchTests {
         results.map { "\($0.group) \($0.portion.food.name)" }
     }
 
+    @Test func aCommonResultDrawsTheIconOfItsCachedFood() async throws {
+        let first = try await search()
+        let bananas = try #require(first.local("bananas raw").first?.food)
+        store.saveFood(bananas)
+        store.setIcon("bread", of: bananas.snapshot)
+        let results = try await search().local("bananas raw")
+        #expect(results.map { "\($0.portion.food.name) \($0.portion.food.icon ?? "none")" } == ["Bananas, raw bread", "Pepper, banana, raw none"])
+    }
+
     @Test func plainFoodsRankFirst() async throws {
         let search = try await search()
         #expect(names(try search.local("banana")) == [

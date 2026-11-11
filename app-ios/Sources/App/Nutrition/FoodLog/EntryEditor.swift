@@ -1,7 +1,7 @@
 import Feedback
 import SwiftUI
 
-/// The sheet over the timeline: the entry's full name, calories and macros, and amount in one card, then Remove,
+/// The sheet over the timeline: the entry's icon and full name, calories and macros, and amount in one card, then Remove,
 /// Favorite, Duplicate, and for a recipe Explode, its day, time, and in the Sections display its section, the share of
 /// the day's targets it uses, and its nutrients. Done saves the amount, day, time, and section.
 struct EntryEditor: View {
@@ -20,6 +20,9 @@ struct EntryEditor: View {
     /// The section it is in; changing the time moves it to the section the new minute falls in.
     @State private var section: String?
     @State private var favorited = false
+    /// The food's icon, which Edit Icon changes on the food and everything logged of it at once (`LocalStore.setIcon`).
+    @State private var icon: String?
+    @State private var choosingIcon = false
 
     init(entry: FoodEntry) {
         self.entry = entry
@@ -27,6 +30,13 @@ struct EntryEditor: View {
         _quantity = State(initialValue: NumberText.plain(entry.serving.quantity))
         _time = State(initialValue: entry.day.date(atMinute: entry.minute))
         _section = State(initialValue: entry.section)
+        _icon = State(initialValue: entry.food.icon)
+    }
+
+    private var food: FoodSnapshot {
+        var food = entry.food
+        food.icon = icon
+        return food
     }
 
     private var amounts: NutrientAmounts { entry.food.amounts(serving) }
@@ -48,7 +58,7 @@ struct EntryEditor: View {
             Form {
                 ThemedSection {
                     VStack(alignment: .leading, spacing: 14) {
-                        name
+                        identity
                         MacroHeader(amounts: amounts)
                     }
                     .padding(.vertical, 4)
@@ -110,20 +120,38 @@ struct EntryEditor: View {
             }
         }
         .presentationDetents([.large])
+        .sheet(isPresented: $choosingIcon) {
+            FoodIconPicker(selection: Binding(get: { icon }, set: { picked in
+                icon = picked
+                store.setIcon(picked, of: food)
+            }))
+        }
         .feedback(self)
     }
 
-    /// The whole name, wrapped: the bar's inline title truncated long food names to one line.
-    private var name: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(entry.food.name).font(AppFont.headline(18))
-            if let brand = entry.food.brand, !brand.isEmpty {
-                Text(brand).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+    /// The icon and the whole name, wrapped: the bar's inline title truncated long food names to one line. A quick add
+    /// is no food, so it has no icon to edit.
+    private var identity: some View {
+        HStack(spacing: 12) {
+            let editable = entry.food.source != .quickAdd
+            FoodIcon(food: food, size: 36)
+                .onTapGesture { if editable { choosingIcon = true } }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.food.name).font(AppFont.headline(18))
+                if let brand = entry.food.brand, !brand.isEmpty {
+                    Text(brand).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+            if editable {
+                Button("Edit Icon") { choosingIcon = true }
+                    .chipButton()
+                    .controlSize(.small)
             }
         }
-        .fixedSize(horizontal: false, vertical: true)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
     }
 
     private var actions: some View {
@@ -133,13 +161,13 @@ struct EntryEditor: View {
                 dismiss()
             }
             action(favorited ? "Favorited" : "Favorite", systemImage: favorited ? "heart.fill" : "heart") {
-                store.addFavorite(FoodPortion(entry.food, serving: serving))
+                store.addFavorite(FoodPortion(food, serving: serving))
                 favorited = true
             }
             .disabled(favorited)
             action("Duplicate", systemImage: "plus.square.on.square") {
                 state.expectAdditions()
-                store.log([FoodPortion(entry.food, serving: serving)], on: CalendarDay(time), minute: minute, section: section)
+                store.log([FoodPortion(food, serving: serving)], on: CalendarDay(time), minute: minute, section: section)
                 dismiss()
             }
             if entry.food.source == .recipe {

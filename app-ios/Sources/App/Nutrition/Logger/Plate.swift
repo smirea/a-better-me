@@ -42,6 +42,13 @@ struct Plate: Hashable, Sendable {
         items[index].pick.portion.serving = serving
     }
 
+    mutating func setIcon(_ icon: String?, of food: FoodSnapshot) {
+        let key = FoodSearchResult.key(food)
+        for index in items.indices where FoodSearchResult.key(items[index].pick.portion.food) == key {
+            items[index].pick.portion.food.icon = icon
+        }
+    }
+
     mutating func remove(_ id: UUID) {
         items.removeAll { $0.id == id }
     }
