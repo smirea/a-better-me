@@ -216,7 +216,7 @@ private struct SlotRow: View {
     }
 
     private func row(pill: some View, control: some View) -> some View {
-        let totals = group.rows.isEmpty ? NutrientAmounts() : group.totals
+        let totals = group.totals
         let score = rating.enabled ? rating.formula.score(totals) : nil
         return HStack(spacing: Self.spacing) {
             pill
