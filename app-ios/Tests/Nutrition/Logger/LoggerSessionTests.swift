@@ -201,14 +201,18 @@ struct LoggerSessionTests {
         #expect(await logger.lookup(barcode: "12345678") == .unreachable)
     }
 
-    @Test func favoritesAPortionAndFindsItAgain() async throws {
+    @Test func favoritesAPortionFindsItAgainAndTakesItBack() async throws {
         let logger = try await session()
         logger.setQuery("banana", branded: false)
         let banana = try #require(logger.results.first)
         let two = Serving(measure: banana.portion.serving.measure, quantity: 2)
-        await logger.favorite(FoodPortion(banana.portion.food, serving: two), uncached: banana.food)
+        let id = UUID()
+        await logger.favorite(FoodPortion(banana.portion.food, serving: two), id: id, uncached: banana.food)
         #expect(logger.results.map(\.group) == [.favorites])
         #expect(logger.results.first.map { NutritionFormat.serving($0.portion.serving) } == "2 medium")
+
+        await logger.unfavorite(id)
+        #expect(logger.results.map(\.group) == [.common])
     }
 
     @Test func aPhotoPutsEachMatchedFoodOnThePlateAtItsGrams() async throws {

@@ -183,10 +183,7 @@ private struct PlateServingEditor: View {
             detail: ServingChoices.detail(serving, nutrition),
             choices: ServingChoices(nutrition, favorites: settings.nutrition.favoriteMeasures, current: measure),
             confirmTitle: "Update",
-            choose: { next in
-                quantity = QuantityText(serving.converted(to: next).quantity)
-                measure = next
-            },
+            choose: { measure = $0 },
             confirm: {
                 session.plate.setServing(serving, of: item.id)
                 done()

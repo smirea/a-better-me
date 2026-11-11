@@ -28,13 +28,11 @@ struct RecipeMathTests {
         #expect(RecipeMath.perGram(recipe) == nil)
     }
 
-    @Test func convertingAMeasureKeepsTheAmount() {
+    @Test func measuresScaleByTheirServings() {
         let cup = Measure(name: "cup", quantity: 1, servings: 2.5)
         let tablespoon = Measure(name: "tbsp", quantity: 1, servings: 0.15625)
-        let grams = Measure(name: "g", quantity: 1, servings: 0.01)
-        #expect(Serving(measure: cup, quantity: 1).converted(to: tablespoon).quantity == 16)
-        #expect(Serving(measure: tablespoon, quantity: 8).converted(to: cup).quantity == 0.5)
-        #expect(Serving(measure: banana.nutrition.measures[0], quantity: 2).converted(to: grams).quantity == 300)
+        #expect(Serving(measure: cup, quantity: 2).servings == 5)
+        #expect(Serving(measure: tablespoon, quantity: 8).servings == 1.25)
         #expect(banana.nutrition.grams(Serving(measure: banana.nutrition.measures[0], quantity: 2)) == 300)
     }
 
@@ -124,17 +122,13 @@ struct RecipeMathTests {
         #expect(draft.valid?.ingredients.map(\.serving.quantity) == [2.5])
     }
 
-    @Test func switchingAnIngredientsMeasureKeepsItsAmountAtFullPrecision() {
-        var ingredient = RecipeDraft.Ingredient(large(1))
-        let pound = Measure(name: "lb", quantity: 1, servings: 4.5359237)
-        ingredient.switchMeasure(to: pound)
-        #expect(ingredient.quantity == "0.331")
-        #expect(ingredient.value.serving.quantity == 1.5 / 4.5359237)
-        #expect(banana.nutrition.grams(ingredient.value.serving) == 150)
-
-        ingredient.switchMeasure(to: banana.nutrition.measures[0])
-        #expect(ingredient.value.serving.quantity == 1)
-        #expect(ingredient.quantity == "1")
+    @Test func switchingAnIngredientsMeasureKeepsItsNumber() {
+        var ingredient = RecipeDraft.Ingredient(large(2))
+        let grams = banana.nutrition.allMeasures.first { $0.name == "g" }!
+        ingredient.switchMeasure(to: grams)
+        #expect(ingredient.quantity == "2")
+        #expect(ingredient.value.serving == Serving(measure: grams, quantity: 2))
+        #expect(banana.nutrition.grams(ingredient.value.serving) == 2)
     }
 
     @Test func swappingAnIngredientKeepsItsPlaceAndAmount() {

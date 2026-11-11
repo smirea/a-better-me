@@ -17,7 +17,8 @@ struct FoodDetailView: View {
     @Observe(AppSettings.current) private var settings
     @State private var measure: Measure
     @State private var quantity: QuantityText
-    @State private var favorited = 0
+    /// The favorite this sheet saved, which a second tap on the heart removes.
+    @State private var favorite: UUID?
     /// The pick's food, until the owner edits the recipe it is from here.
     @State private var food: FoodSnapshot
     @State private var recipeSheet: LibraryEditorSheet?
@@ -66,7 +67,7 @@ struct FoodDetailView: View {
                 detail: ServingChoices.detail(serving, food.nutrition),
                 choices: ServingChoices(food.nutrition, favorites: settings.nutrition.favoriteMeasures, current: measure),
                 confirmTitle: editing == nil && ramble == nil ? "Add" : "Update",
-                choose: choose, confirm: confirm
+                choose: { measure = $0 }, confirm: confirm
             )
         }
         .onAppear(perform: preview)
@@ -102,12 +103,21 @@ struct FoodDetailView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
-                RoundIconButton(favorited > 0 ? "Saved" : "Favorite", systemImage: favorited > 0 ? "heart.fill" : "heart", size: .small) {
-                    favorited += 1
-                    Task { await session.favorite(portion, uncached: pick.uncached) }
+                RoundIconButton(
+                    favorite != nil ? "Saved" : "Favorite", systemImage: favorite != nil ? "heart.fill" : "heart",
+                    size: .small, tint: favorite != nil ? Theme.favorite : nil
+                ) {
+                    if let favorite {
+                        self.favorite = nil
+                        Task { await session.unfavorite(favorite) }
+                    } else {
+                        let id = UUID()
+                        favorite = id
+                        Task { await session.favorite(portion, id: id, uncached: pick.uncached) }
+                    }
                 }
-                .disabled(serving.quantity <= 0 || favorited > 0)
-                .sensoryFeedback(.success, trigger: favorited)
+                .disabled(serving.quantity <= 0 && favorite == nil)
+                .sensoryFeedback(.success, trigger: favorite) { _, new in new != nil }
             }
             MacroHeader(amounts: amounts)
             let recipeID = pick.portion.food.source == .recipe ? pick.portion.food.foodID.flatMap(UUID.init(uuidString:)) : nil
@@ -144,12 +154,6 @@ struct FoodDetailView: View {
         var plate = session.plate
         if let editing { plate.remove(editing) }
         return plate.totals
-    }
-
-    private func choose(_ next: Measure) {
-        let converted = serving.converted(to: next)
-        measure = next
-        quantity = QuantityText(converted.quantity)
     }
 
     private func confirm() {

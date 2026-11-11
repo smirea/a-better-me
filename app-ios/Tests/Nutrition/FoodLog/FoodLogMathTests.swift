@@ -280,15 +280,7 @@ struct FoodLogMathTests {
         #expect(FoodLog.barMaximum(value: 10, range: NutrientRange()) == nil)
     }
 
-    @Test func convertsServingsKeepingTheAmountEaten() {
-        let container = Serving(measure: yogurt.nutrition.measures[0], quantity: 2)
-        let grams = yogurt.nutrition.allMeasures.first { $0.name == "g" }!
-        let ounces = yogurt.nutrition.allMeasures.first { $0.name == "oz" }!
-        #expect(NumberText.plain(container.converted(to: grams).quantity) == "300")
-        #expect(NumberText.plain(container.converted(to: ounces).quantity) == "10.58")
-        let pounds = yogurt.nutrition.allMeasures.first { $0.name == "lb" }!
-        let back = container.converted(to: pounds).converted(to: yogurt.nutrition.measures[0])
-        #expect(abs(back.quantity - 2) < 1e-9)
+    @Test func countsDaysBetweenCalendarDays() {
         #expect(calendarDay("2026-10-26").days(to: calendarDay("2027-01-01")) == 67)
         #expect(calendarDay("2026-10-26").days(to: calendarDay("2026-10-20")) == -6)
     }

@@ -56,8 +56,7 @@ struct RecipeDraft: Equatable, Sendable {
         }
 
         mutating func switchMeasure(to measure: Measure) {
-            value.serving = value.serving.converted(to: measure)
-            quantity = NumberText.text(value.serving.quantity)
+            value.serving.measure = measure
         }
 
         /// Swaps in another food at the same place, keeping the amount: the same quantity when the new food has a
