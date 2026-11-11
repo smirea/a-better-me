@@ -86,19 +86,15 @@ private struct OverviewList: View {
         let amounts = period == .today ? (rows.first { $0.id == day } ?? NutritionDay(id: day)).totals(entries) : FoodLog.dailyAverage(entries, rows: rows, days: days)
         let targets = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: weight?.weightKg)
         List {
-            ForEach(settings.nutrition.hideAdditionalNutrients ? [.macros] : NutrientSection.allCases) { section in
-                ThemedSection(section.rawValue) {
-                    ForEach(section.nutrients) { nutrient in
-                        let row = NutrientRow(
-                            nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id),
-                            contributors: contributors ? FoodLog.contributors(entries, of: nutrient.id, limit: 3) : nil
-                        )
-                        if contributors {
-                            NavigationLink(value: FoodLogRoute.contributors(day, nutrient.id)) { row }
-                        } else {
-                            row
-                        }
-                    }
+            NutrientList(rows: settings.nutrition.hideAdditionalNutrients ? NutrientListRow.macros : NutrientListRow.all) { nutrient in
+                let row = NutrientRow(
+                    nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id),
+                    contributors: contributors ? FoodLog.contributors(entries, of: nutrient.id, limit: 3) : nil
+                )
+                if contributors {
+                    NavigationLink(value: FoodLogRoute.contributors(day, nutrient.id)) { row }
+                } else {
+                    row
                 }
             }
         }

@@ -32,29 +32,28 @@ struct MacroSummary: View {
     }
 }
 
-/// Every nutrient `MacroSummary` leaves out, as Form sections: fiber and net carbs untitled, then the breakdowns.
+/// Every nutrient `MacroSummary` leaves out, in one `NutrientList`: fiber and net carbs unlabeled, then the breakdowns.
 /// Without `showAll` only reported nutrients show.
 struct NutrientBreakdown: View {
     let amounts: NutrientAmounts
     var showAll = false
+    @State private var rows = ViewMemo<Key, [NutrientListRow]>()
+
+    private struct Key: Equatable {
+        let amounts: NutrientAmounts
+        let showAll: Bool
+    }
 
     var body: some View {
-        ForEach(NutrientSection.allCases) { section in
-            let rows = section.nutrients.filter { !NutrientID.macros.contains($0.id) }.compactMap { nutrient -> (Nutrient, Double?)? in
-                let amount = amounts.amount(of: nutrient.id)
-                return showAll || amount != nil ? (nutrient, amount) : nil
+        let rows = rows(Key(amounts: amounts, showAll: showAll)) {
+            NutrientListRow.rows(labelsMacros: false) { !NutrientID.macros.contains($0.id) && (showAll || amounts.amount(of: $0.id) != nil) }
+        }
+        NutrientList(rows: rows) { nutrient in
+            LabeledContent(nutrient.name) {
+                Text(amounts.amount(of: nutrient.id).map { NutritionFormat.amount($0, nutrient.unit) } ?? "–")
+                    .monospacedDigit()
             }
-            if !rows.isEmpty {
-                ThemedSection(section == .macros ? nil : section.rawValue) {
-                    ForEach(rows, id: \.0.id) { nutrient, amount in
-                        LabeledContent(nutrient.name) {
-                            Text(amount.map { NutritionFormat.amount($0, nutrient.unit) } ?? "–")
-                                .monospacedDigit()
-                        }
-                        .font(AppFont.body(15))
-                    }
-                }
-            }
+            .font(AppFont.body(15))
         }
     }
 }

@@ -22,7 +22,21 @@ struct NutritionModelTests {
         let grams = yogurt.nutrition.allMeasures.first { $0.name == "g" }!
         let half = FoodPortion(yogurt, serving: Serving(measure: grams, quantity: 50))
         #expect(half.amounts[.energy] == 60)
-        #expect(yogurt.nutrition.allMeasures.map(\.name) == ["container", "g", "oz", "lb"])
+        #expect(yogurt.nutrition.allMeasures.map(\.name) == ["container", "g", "kg", "oz", "lb"])
+    }
+
+    @Test func aNutrientListLabelsOnlyTheSectionsItShows() {
+        let names = { (rows: [NutrientListRow]) in
+            rows.map { row in
+                switch row {
+                case .label(let section): "# \(section.rawValue)"
+                case .nutrient(let nutrient): nutrient.name
+                }
+            }
+        }
+        let reported: NutrientAmounts = [.energy: 127, .fiber: 0, "601": 59]
+        #expect(names(NutrientListRow.rows { reported[$0.id] != nil }) == ["# Calories & Macros", "Calories", "Fiber", "# Fat Breakdown", "Cholesterol"])
+        #expect(names(NutrientListRow.rows(labelsMacros: false) { $0.id == .fiber || $0.id == "601" }) == ["Fiber", "# Fat Breakdown", "Cholesterol"])
     }
 
     @Test func netCarbsAreDerivedUnlessReported() {

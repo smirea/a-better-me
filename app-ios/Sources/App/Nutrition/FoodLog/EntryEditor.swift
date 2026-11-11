@@ -24,6 +24,7 @@ struct EntryEditor: View {
     /// The food's icon, which Edit Icon changes on the food and everything logged of it at once (`LocalStore.setIcon`).
     @State private var icon: String?
     @State private var choosingIcon = false
+    @State private var nutrientRows = ViewMemo<NutrientAmounts, [NutrientListRow]>()
 
     init(entry: FoodEntry) {
         self.entry = entry
@@ -55,6 +56,9 @@ struct EntryEditor: View {
     }
 
     var body: some View {
+        let amounts = self.amounts
+        let targets = self.targets
+        let reported = entry.food.nutrition.nutrients
         NavigationStack {
             Form {
                 ThemedSection {
@@ -91,15 +95,8 @@ struct EntryEditor: View {
                     }
                 }
                 ImpactGauges(amounts: amounts, day: CalendarDay(time), excluding: entry.id).id(CalendarDay(time))
-                ForEach(NutrientSection.allCases) { section in
-                    let shown = section.nutrients.filter { amounts.amount(of: $0.id) != nil }
-                    if !shown.isEmpty {
-                        ThemedSection(section.rawValue) {
-                            ForEach(shown) { nutrient in
-                                NutrientRow(nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id))
-                            }
-                        }
-                    }
+                NutrientList(title: "Nutrients", rows: nutrientRows(reported) { NutrientListRow.rows { reported.amount(of: $0.id) != nil } }) { nutrient in
+                    NutrientRow(nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id))
                 }
             }
             .themedList()

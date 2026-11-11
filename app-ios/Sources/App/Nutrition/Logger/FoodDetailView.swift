@@ -24,6 +24,7 @@ struct FoodDetailView: View {
     @State private var recipeSheet: LibraryEditorSheet?
     @State private var preparing: Recipe?
     @State private var choosingIcon = false
+    @State private var nutrientRows = ViewMemo<NutrientAmounts, [NutrientListRow]>()
 
     init(session: LoggerSession, editing: UUID?, pick: LoggerPick, ramble: RambleEdit? = nil) {
         self.session = session
@@ -40,21 +41,16 @@ struct FoodDetailView: View {
     private var amounts: NutrientAmounts { portion.amounts }
 
     var body: some View {
+        let amounts = self.amounts
+        let reported = food.nutrition.nutrients
         List {
             ThemedSection {
                 header
             }
             let day = ramble?.day ?? session.time.day
             ImpactGauges(amounts: amounts, day: day, adding: ramble?.others ?? restOfPlate).id(day)
-            ForEach(NutrientSection.allCases) { section in
-                let rows = section.nutrients.filter { food.nutrition.nutrients.amount(of: $0.id) != nil }
-                if !rows.isEmpty {
-                    ThemedSection(section.rawValue) {
-                        ForEach(rows) { nutrient in
-                            LabeledContent(nutrient.name, value: NutritionFormat.amount(amounts.amount(of: nutrient.id) ?? 0, nutrient.unit))
-                        }
-                    }
-                }
+            NutrientList(title: "Nutrients", rows: nutrientRows(reported) { NutrientListRow.rows { reported.amount(of: $0.id) != nil } }) { nutrient in
+                LabeledContent(nutrient.name, value: NutritionFormat.amount(amounts.amount(of: nutrient.id) ?? 0, nutrient.unit))
             }
         }
         .themedList()
