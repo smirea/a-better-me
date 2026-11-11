@@ -243,6 +243,12 @@ struct RecipeEditor: View {
         guard let valid = draft.valid else { return }
         if let recipeID {
             store.edit(Recipe.self, id: recipeID) { valid.write(into: &$0) }
+            if valid.icon != opened.icon {
+                var edited = Recipe(name: valid.name)
+                edited.id = recipeID
+                valid.write(into: &edited)
+                store.setIcon(valid.icon, of: edited.snapshot)
+            }
         } else {
             let recipe = valid.newRecipe()
             store.saveRecipe(recipe)
