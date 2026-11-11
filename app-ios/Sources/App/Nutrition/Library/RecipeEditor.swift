@@ -60,10 +60,12 @@ struct RecipeEditor: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm) { save(adding: false) }
+                        .disabled(draft.servingCount == nil)
                 }
                 if onCreateAndAdd != nil {
                     ToolbarItem(placement: .bottomBar) {
                         Button("Create & Add") { save(adding: true) }
+                            .disabled(draft.servingCount == nil)
                     }
                 }
             }
@@ -113,13 +115,20 @@ struct RecipeEditor: View {
                 .accessibilityLabel("Recipe Name")
             FieldIssue(issues[.name])
             LabeledContent("Serving Quantity") {
-                TextField("1", text: $draft.servings)
+                TextField("Required", text: $draft.servings)
                     .keyboardType(.decimalPad)
                     .focused($focus, equals: .servings)
                     .multilineTextAlignment(.trailing)
                     .accessibilityLabel("Serving Quantity")
             }
-            FieldIssue(issues[.servings])
+            // Save stays disabled without a serving count, so its message shows as it is typed rather than after Save.
+            if draft.servings.trimmingCharacters(in: .whitespaces).isEmpty {
+                Text("Enter how many servings the recipe makes to save it")
+                    .font(AppFont.rowDetail)
+                    .foregroundStyle(Theme.textSecondary)
+            } else {
+                FieldIssue(draft.servingsIssue)
+            }
             LabeledContent("Total Weight") {
                 HStack(spacing: 4) {
                     TextField(draft.ingredientGrams > 0 ? NutritionFormat.amount(draft.ingredientGrams) : "Weight after cooking", text: $draft.totalWeight)

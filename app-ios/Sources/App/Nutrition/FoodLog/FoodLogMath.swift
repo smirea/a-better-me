@@ -309,7 +309,8 @@ enum FoodLog {
         RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: serving.servings).map { FoodPortion($0.food, serving: $0.serving) }
     }
 
-    /// Create Recipe's starting draft: the selected entries as ingredients at their logged servings, one serving.
+    /// Create Recipe's starting draft: the selected entries as ingredients at their logged servings, with the number
+    /// of servings left for the owner to type.
     static func recipeDraft(_ entries: [FoodEntry]) -> RecipeDraft {
         var draft = RecipeDraft()
         draft.ingredients = entries.map { .init(RecipeIngredient($0.portion)) }
@@ -318,7 +319,7 @@ enum FoodLog {
 
     /// What saving Create Recipe logs in place of the selection: the whole batch, at the earliest selected entry's
     /// day, minute, and section. The selection was the whole recipe, so a recipe made to serve 4 logs 4 servings and
-    /// the day's totals stay put; at the draft's default of 1 serving it is the owner's "1 serving of the recipe".
+    /// the day's totals stay put; a recipe of 1 serving is the owner's "1 serving of the recipe".
     static func replacement(for entries: [FoodEntry], with recipe: Recipe) -> FoodEntry? {
         guard let first = entries.min(by: { ($0.day, $0.minute) < ($1.day, $1.minute) }) else { return nil }
         let measure = recipe.nutrition.measures[0]

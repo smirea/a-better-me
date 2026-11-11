@@ -83,9 +83,33 @@ struct RecipeMathTests {
         #expect(valid?.steps == ["Chop", "Simmer"])
     }
 
+    @Test func aNewRecipeWaitsForItsServingCount() {
+        var draft = RecipeDraft()
+        draft.name = "Pasta sauce"
+        draft.ingredients = [.init(large(2))]
+        #expect(draft.servings == "")
+        #expect(draft.servingCount == nil)
+        #expect(draft.issues == [.servings: "Serving quantity is required"])
+        #expect(draft.preview.servings == 1)
+
+        draft.servings = "0"
+        #expect(draft.valid == nil)
+        #expect(draft.servingsIssue == "Serving quantity cannot be zero")
+
+        draft.servings = "2,5"
+        #expect(draft.servingCount == 2.5)
+        #expect(draft.valid?.servings == 2.5)
+
+        var recipe = Recipe(name: "Soup", servings: 6)
+        recipe.ingredients = [large(1)]
+        #expect(RecipeDraft(recipe).servings == "6")
+        #expect(RecipeDraft(recipe).duplicate().servings == "6")
+    }
+
     @Test func aTypedIngredientQuantityMustBePositiveToSave() {
         var draft = RecipeDraft()
         draft.name = "Bread"
+        draft.servings = "1"
         draft.ingredients = [.init(large(1))]
         let id = draft.ingredients[0].id
 
