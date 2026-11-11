@@ -99,9 +99,11 @@ struct RecipeEditor: View {
                 FoodIcon(icon: draft.icon, source: .recipe, size: 36)
                 RowLabel(
                     title: draft.name.isEmpty ? "Your New Recipe" : draft.name,
-                    detail: Text("\(Text(macroLine: preview.nutrition.nutrients)) · \(servingLabel(preview))")
+                    detail: Text(macroLine: preview.nutrition.nutrients),
+                    trailingDetail: Text(servingLabel(preview))
                 )
-                Spacer()
+                .lineLimit(1)
+                Spacer(minLength: 0)
                 Button("Edit Icon") { choosingIcon = true }
                     .chipButton()
                     .controlSize(.small)
