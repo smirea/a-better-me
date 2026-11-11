@@ -43,6 +43,7 @@ struct FoodLogSettingsView: View {
                     }
                 }
             }
+            MealRatingSettings()
             ThemedSection("Timeline Options") {
                 NavigationLink { HourRangeView() } label: {
                     RowLabel(title: "Hour Range", detail: "\(SettingsRules.hour(timeline.firstHour)) – \(SettingsRules.hour(timeline.lastHour))", systemImage: "clock")

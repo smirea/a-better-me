@@ -958,6 +958,15 @@ const NutritionSettingsPatch = z
 			})
 			.partial(),
 		mealSections: MealSections,
+		mealRating: z
+			.object({
+				enabled: z.boolean(),
+				formula: z.enum(['caloriesPerProtein']).meta({ description: 'Calories divided by grams of protein.' }),
+			})
+			.partial()
+			.meta({
+				description: "The Food Log's tag beside each meal's +, grading its foods by `formula`. Off by default.",
+			}),
 		hiddenNutrients: z.array(nutrientID),
 		visibleBodyMetrics: z.array(z.enum(BODY_METRIC_KINDS)),
 	})
@@ -965,7 +974,7 @@ const NutritionSettingsPatch = z
 	.meta({
 		id: 'NutritionSettingsPatch',
 		description:
-			'Merges into the stored Nutrition settings, and `coachingModules`, `timeline`, `logger`, and `expenditure` key by key.',
+			'Merges into the stored Nutrition settings, and `coachingModules`, `timeline`, `logger`, `expenditure`, and `mealRating` key by key.',
 	});
 
 const percent = z.int().min(0).max(1000);

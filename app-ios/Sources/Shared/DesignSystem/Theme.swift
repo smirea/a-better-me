@@ -41,6 +41,11 @@ enum Theme {
     static let minerals = Color(hex: 0xFF7EA2)
     /// Goals and their progress on Strategy and the Dashboard.
     static let goal = Color(hex: 0x5EBB89)
+    /// Meal Rating tiers: blue for excellent, green for great and good, yellow for fair, red for poor.
+    static let ratingBlue = Color(hex: 0x4F9DFF)
+    static let ratingGreen = Color(hex: 0x5EBB89)
+    static let ratingYellow = Color(hex: 0xF5C84C)
+    static let ratingRed = Color(hex: 0xF0524A)
 
     /// MF's RIR badge colors: 0-1 red, 2-3 amber, 4-5 green, 6+ blue, unknown gray.
     static func rir(_ rir: Int?) -> Color {
