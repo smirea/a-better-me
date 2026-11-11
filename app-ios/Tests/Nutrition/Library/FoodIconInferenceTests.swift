@@ -165,7 +165,14 @@ struct FoodIconInferenceTests {
         var misses: [String] = []
         for (name, icons) in fitting {
             #expect(FoodIconChoice.mentioned(in: name) == nil, "\(name) has a keyword icon, so it is never asked")
-            let icon = try await model.icon(for: name)
+            let icon: String
+            do {
+                icon = try await model.icon(for: name)
+            } catch let error as NSError where answers.isEmpty && Self.modelManagerCannotServe(error) {
+                // A GitHub runner's iOS 27.2 simulator reports the model available, then every request fails in the
+                // model manager (error 1026), so the gate above cannot tell that it can't run.
+                try Test.cancel("The on-device model is listed but cannot run here: \(error)")
+            }
             answers.append("\(name): \(icon)")
             if !icons.contains(icon) { misses.append(name) }
         }
@@ -173,5 +180,9 @@ struct FoodIconInferenceTests {
         // tzatziki as smoothie, tempeh as cereal, pho as meat, and chorizo as beef. Of the foreign names, the lentil pasta
         // drew leafy-greens, and telling the model names come in any language made it worse (7 misses).
         #expect(misses.count <= 5, "\(misses.count) misses of \(fitting.count): \(answers.joined(separator: "; "))")
+    }
+
+    private static func modelManagerCannotServe(_ error: NSError) -> Bool {
+        ([error] + error.underlyingErrors).contains { ($0 as NSError).domain == "ModelManagerServices.ModelManagerError" }
     }
 }

@@ -223,7 +223,8 @@ struct FoodLogMathTests {
     @Test func draftsARecipeFromTheSelectionAtItsLoggedServings() {
         let draft = FoodLog.recipeDraft([entry(bowl, minute: 600, quantity: 2), entry(yogurt, minute: 610, quantity: 0.5)])
         #expect(draft.name == "")
-        #expect(draft.servings == "1")
+        #expect(draft.servings == "")
+        #expect(draft.valid == nil)
         #expect(draft.ingredients.map(\.value.food.name) == ["Bowl", "Yogurt"])
         #expect(draft.ingredients.map(\.quantity) == ["2", "0.5"])
         #expect(draft.preview.nutrition.nutrients[.energy] == 690)
@@ -235,6 +236,7 @@ struct FoodLogMathTests {
         let selection = [entry(bowl, minute: 610, quantity: 2), first, entry(bowl, minute: 620)]
         var draft = FoodLog.recipeDraft(selection)
         draft.name = "Breakfast Bowl"
+        draft.servings = "1"
 
         let recipe = try #require(draft.valid).newRecipe()
         let single = try #require(FoodLog.replacement(for: selection, with: recipe))

@@ -109,7 +109,9 @@ struct RecipeDraft: Equatable, Sendable {
 
     var icon: String?
     var name = ""
-    var servings = "1"
+    /// Blank in a new recipe: the owner types how many servings it makes before Save, since a default of 1 made the
+    /// whole pot one serving.
+    var servings = ""
     /// The cooked weight of the whole recipe in grams; blank falls back to the ingredients' weight.
     var totalWeight = ""
     var ingredients: [Ingredient] = []
@@ -147,6 +149,14 @@ struct RecipeDraft: Equatable, Sendable {
 
     var ingredientGrams: Double { RecipeMath.ingredientGrams(ingredients.map(\.value)) }
 
+    /// The typed number of servings when it is a positive number, which Save waits for.
+    var servingCount: Double? { NumberText.parse(servings).flatMap { $0 > 0 ? $0 : nil } }
+
+    var servingsIssue: String? {
+        if servings.trimmingCharacters(in: .whitespaces).isEmpty { return "Serving quantity is required" }
+        return servingCount == nil ? "Serving quantity cannot be zero" : nil
+    }
+
     /// The cooked weight the recipe saves with: the typed total, else the ingredients' weight when any is known.
     var cookedGrams: Double? {
         if let typed = NumberText.parse(totalWeight), typed > 0 { return typed }
@@ -156,7 +166,7 @@ struct RecipeDraft: Equatable, Sendable {
 
     /// The draft as a recipe for the live nutrition preview, read leniently while fields are mid-edit.
     var preview: Recipe {
-        var recipe = Recipe(name: name, servings: NumberText.parse(servings).flatMap { $0 > 0 ? $0 : nil } ?? 1)
+        var recipe = Recipe(name: name, servings: servingCount ?? 1)
         recipe.icon = icon
         recipe.ingredients = ingredients.map(\.value)
         recipe.cookedGrams = cookedGrams
@@ -170,12 +180,8 @@ struct RecipeDraft: Equatable, Sendable {
         var issues: [Field: String] = [:]
         let name = self.name.trimmingCharacters(in: .whitespaces)
         if name.isEmpty { issues[.name] = "Recipe name is required" }
-        let servings = NumberText.parse(self.servings)
-        if self.servings.trimmingCharacters(in: .whitespaces).isEmpty {
-            issues[.servings] = "Serving quantity is required"
-        } else if (servings ?? 0) <= 0 {
-            issues[.servings] = "Serving quantity cannot be zero"
-        }
+        let servings = servingCount
+        if let servingsIssue { issues[.servings] = servingsIssue }
         if !totalWeight.trimmingCharacters(in: .whitespaces).isEmpty, (NumberText.parse(totalWeight) ?? 0) <= 0 {
             issues[.totalWeight] = "Must be greater than 0"
         }
