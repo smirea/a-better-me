@@ -42,8 +42,8 @@ enum LibraryFilter {
 }
 
 /// A food everywhere one is listed (the timeline, search, the library, the plate, a recipe), one line each like
-/// MacroFactor's 47 pt rows: its icon, "Name By Brand" with the words a search matched in bold, and "120ઠ 1P 0F 31C · 1
-/// large" at `serving`.
+/// MacroFactor's 47 pt rows: its icon, "Name By Brand" with the words a search matched in bold, and "120ઠ 1P 0F 31C" at
+/// `serving` with "1 large" at the trailing edge, which truncates before the macros do.
 struct FoodRow: View {
     let food: FoodSnapshot
     let serving: Serving
@@ -56,7 +56,8 @@ struct FoodRow: View {
             FoodIcon(food: food)
             RowLabel(
                 title: title,
-                detail: showsDetail ? Text("\(Text(macroLine: food.amounts(serving))) · \(NutritionFormat.listed(serving, of: food))") : nil
+                detail: showsDetail ? Text(macroLine: food.amounts(serving)) : nil,
+                trailingDetail: showsDetail ? Text(NutritionFormat.listed(serving, of: food)) : nil
             )
             .lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)
