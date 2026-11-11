@@ -127,6 +127,8 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     /// The meal sections in time order. The Sections display groups the timeline by them, and every entry stores the one it
     /// was logged into; the logger's Picks and search ranking read them in either display.
     var mealSections = MealSection.defaults
+    /// The tag right of each meal's + grading its totals, off until the owner turns it on.
+    var mealRating = MealRating()
     var logger = Logger()
     /// The Nutrition "+" sheet's shortcuts in order; the first four are its round buttons.
     var shortcuts = NutritionShortcut.allCases

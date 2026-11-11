@@ -29,8 +29,17 @@ struct TimelineGroup: Hashable, Identifiable {
     /// The minutes of the day it covers, which mark the current one with a dot.
     let minutes: Range<Int>
 
+    /// Summed once here, since `DayPage` memoizes the groups and every render of the row reads them.
+    let totals: NutrientAmounts
+
+    init(slot: TimelineSlot, rows: [TimelineRow], minutes: Range<Int>) {
+        self.slot = slot
+        self.rows = rows
+        self.minutes = minutes
+        totals = rows.map(\.entry).totals
+    }
+
     var id: TimelineSlot { slot }
-    var totals: NutrientAmounts { rows.map(\.entry).totals }
 }
 
 /// One of the day's four summary columns: what was eaten, what the logger's plate adds on top (nil outside the logger),

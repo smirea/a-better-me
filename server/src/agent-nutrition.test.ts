@@ -272,6 +272,13 @@ describe('nutrition agent API', () => {
 		).toBe(400);
 		await ok('PATCH', '/settings', { nutrition: { summaryNutrients: ['k', 'p', 'f', 'c'] } });
 
+		await ok('PATCH', '/settings', { nutrition: { mealRating: { enabled: true } } });
+		const rated = await ok('PATCH', '/settings', { nutrition: { mealRating: { formula: 'caloriesPerProtein' } } });
+		expect(rated.nutrition.mealRating).toEqual({ enabled: true, formula: 'caloriesPerProtein' });
+		expect((await status('PATCH', '/settings', { nutrition: { mealRating: { formula: 'fatPerCarb' } } })).status).toBe(
+			400,
+		);
+
 		await ok('PATCH', '/settings', { nutrition: { standardFloorKcal: 1300, logger: { timeSelection: 'timePad' } } });
 		const later = await ok('PATCH', '/settings', {
 			nutrition: {
@@ -288,6 +295,7 @@ describe('nutrition agent API', () => {
 			logger: { timeSelection: 'timePad', optimization: 'context' },
 			coachingModules: { fasting: true },
 			visibleBodyMetrics: ['waist'],
+			mealRating: { enabled: true, formula: 'caloriesPerProtein' },
 		});
 		const stripped = await ok('PATCH', '/settings', { nutrition: { searchOpenFoodFacts: true } });
 		expect(stripped.nutrition).not.toHaveProperty('searchOpenFoodFacts');

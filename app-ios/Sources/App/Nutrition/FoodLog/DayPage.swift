@@ -54,7 +54,8 @@ struct DayPage: View {
                             }
                             SlotRow(
                                 day: day, group: group, sections: settings.nutrition.mealSections, pillWidth: column.pillWidth,
-                                showsTotals: timeline.hourlyTotals, addsOnLongPress: timeline.addFoodsToHour == .longPress, premove: timeline.premove
+                                showsTotals: timeline.hourlyTotals, rating: settings.nutrition.mealRating,
+                                addsOnLongPress: timeline.addFoodsToHour == .longPress, premove: timeline.premove
                             )
                             ForEach(group.rows) { row in
                                 EntryRow(
@@ -155,7 +156,8 @@ private struct TimelineColumn {
 }
 
 /// The hour's or section's pill, its + (a paste button while pasting inline, a move button under Premove), and its
-/// macro totals. Tapping the pill selects its entries; under the long-press setting, holding it adds food there.
+/// Meal Rating tag, and its macro totals. Tapping the pill selects its entries; under the long-press setting, holding it
+/// adds food there.
 private struct SlotRow: View {
     static let spacing: CGFloat = 6
 
@@ -164,11 +166,13 @@ private struct SlotRow: View {
     let sections: [MealSection]
     let pillWidth: CGFloat
     let showsTotals: Bool
+    let rating: MealRating
     let addsOnLongPress: Bool
     let premove: Bool
 
     @Environment(FoodLogState.self) private var state
     @Environment(LocalStore.self) private var store
+    @State private var explainsRating = false
 
     var body: some View {
         Group {
@@ -212,15 +216,52 @@ private struct SlotRow: View {
     }
 
     private func row(pill: some View, control: some View) -> some View {
-        HStack(spacing: Self.spacing) {
+        let totals = group.totals
+        let score = rating.enabled ? rating.formula.score(totals) : nil
+        return HStack(spacing: Self.spacing) {
             pill
             control
-            Spacer(minLength: 8)
-            if showsTotals, !group.rows.isEmpty {
-                HourTotals(amounts: group.totals)
+            if let score {
+                // Where the row runs out of width (larger text, a wide section pill) the tag drops its "C:P", then
+                // shrinks to a dot of its color, so the totals never truncate.
+                ViewThatFits(in: .horizontal) {
+                    trailing(totals, tag: ratingTag(score, text: "\(rating.formula.abbreviation) \(score.ratioText)"))
+                    trailing(totals, tag: ratingTag(score, text: score.ratioText))
+                    trailing(totals, tag: ratingTag(score, text: nil))
+                }
+            } else {
+                trailing(totals, tag: EmptyView())
             }
         }
         .frame(height: 40)
+        .sheet(isPresented: $explainsRating) {
+            MealRatingSheet(meal: group.slot.label, amounts: totals)
+        }
+    }
+
+    private func trailing(_ totals: NutrientAmounts, tag: some View) -> some View {
+        HStack(spacing: 0) {
+            tag
+            Spacer(minLength: 8)
+            if showsTotals, !group.rows.isEmpty {
+                HourTotals(amounts: totals)
+            }
+        }
+    }
+
+    /// Pasting inline turns the whole row into the paste button, so there the tag is not a button of its own.
+    @ViewBuilder
+    private func ratingTag(_ score: MealRating.Score, text: String?) -> some View {
+        let tag = MealRatingTag(text: text, tier: score.tier, isDire: score.isDire)
+        if state.pending?.inline == true {
+            tag
+        } else {
+            Button { explainsRating = true } label: { tag.frame(height: 40).contentShape(.rect) }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(group.slot.label) \(rating.formula.title)")
+                .accessibilityValue("\(score.ratio.map { "\($0) to 1" } ?? "No protein"), \(score.tier.title)")
+                .accessibilityHint("Explains the meal rating")
+        }
     }
 
     private func pill(_ label: String, isActive: Bool) -> some View {
