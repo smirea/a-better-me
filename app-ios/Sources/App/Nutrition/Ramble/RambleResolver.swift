@@ -265,7 +265,7 @@ extension RambleResolver {
 /// The serving a spoken amount and unit mean for a food (docs/decisions/nutrition.md, Ramble logging).
 enum RambleServing {
     private static let grams: [String: (measure: String, factor: Double)] = [
-        "g": ("g", 1), "gram": ("g", 1), "kg": ("g", 1000), "oz": ("oz", 1), "ounce": ("oz", 1), "lb": ("lb", 1), "pound": ("lb", 1),
+        "g": ("g", 1), "gram": ("g", 1), "kg": ("kg", 1), "kilogram": ("kg", 1), "kilo": ("kg", 1), "oz": ("oz", 1), "ounce": ("oz", 1), "lb": ("lb", 1), "pound": ("lb", 1),
     ]
     /// Milliliters per unit, and the words a food's own measure may start with.
     private static let volumes: [String: (milliliters: Double, words: [String])] = [
@@ -273,8 +273,8 @@ enum RambleServing {
         "l": (1000, ["l", "liter", "litre"]),
         "fl oz": (SizeUnit.flOz.size, ["fl oz"]),
         "cup": (SizeUnit.cup.size, ["cup"]),
-        "tbsp": (Spoon.Unit.tbsp.milliliters, ["tbsp", "tablespoon"]),
-        "tsp": (Spoon.Unit.tsp.milliliters, ["tsp", "teaspoon"]),
+        "tbsp": (NamedUnit.Unit.tbsp.size, ["tbsp", "tablespoon"]),
+        "tsp": (NamedUnit.Unit.tsp.size, ["tsp", "teaspoon"]),
     ]
 
     /// What a row's serving menu offers: half, one and a half, or twice the serving, the food's own servings, and 100 g.

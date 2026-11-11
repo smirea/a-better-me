@@ -74,15 +74,15 @@ struct QuantityTextTests {
 }
 
 struct ServingChoicesTests {
-    @Test func favoriteUnitsTheFoodAllowsThenItsServings() {
+    @Test func favoriteUnitsTheFoodAllowsEachWithItsLargerUnitThenItsServings() {
         let choices = ServingChoices(banana.nutrition, favorites: ["g", "oz", "mL", "cup"])
-        #expect(choices.units.map(\.name) == ["g", "oz"])
+        #expect(choices.units.map(\.name) == ["g", "kg", "oz", "lb"])
         #expect(choices.servings.map(\.name) == ["medium", "large"])
     }
 
     @Test func volumeUnitsNeedTheFoodsMilliliters() {
         let choices = ServingChoices(milk.nutrition, favorites: ["g", "oz", "mL", "cup"])
-        #expect(choices.units.map(\.name) == ["g", "oz", "mL", "cup"])
+        #expect(choices.units.map(\.name) == ["g", "kg", "oz", "lb", "mL", "cup"])
     }
 
     @Test func eachSpoonServingBringsItsOtherSpoonWithTheSameQualifier() {
@@ -94,19 +94,40 @@ struct ServingChoicesTests {
             Measure(name: "tbsp, chopped", quantity: 1, servings: 0.08),
         ])
         let choices = ServingChoices(oregano, favorites: ["g", "oz", "mL", "cup"])
-        #expect(choices.units.map(\.name) == ["g", "oz"])
+        #expect(choices.units.map(\.name) == ["g", "kg", "oz", "lb"])
         #expect(choices.servings.map(\.name) == [
             "tsp, leaves", "tbsp, leaves", "tsp, ground", "tbsp, ground", "cup (8 fl oz)", "cups, chopped", "tbsp, chopped", "tsp, chopped",
         ])
         let tbsp = choices.servings[3], tsp = choices.servings[2]
         #expect(abs(Serving(measure: tbsp, quantity: 1).servings - 3 * Serving(measure: tsp, quantity: 1).servings) < 1e-9)
-        #expect(oregano.allMeasures.map(\.name).suffix(3) == ["g", "oz", "lb"])
+        #expect(oregano.allMeasures.map(\.name).suffix(4) == ["g", "kg", "oz", "lb"])
+    }
+
+    @Test func eachWeightServingBringsItsOtherUnitWithTheSameQualifier() {
+        let steak = FoodNutrition(nutrients: [.energy: 127], measures: [
+            Measure(name: "g", quantity: 100, servings: 1),
+            Measure(name: "oz, boneless", quantity: 3, servings: 0.85),
+            Measure(name: "lb (454 g)", quantity: 1, servings: 4.54),
+        ])
+        #expect(steak.servingMeasures.map(\.name) == ["g", "kg", "oz, boneless", "lb, boneless", "lb (454 g)"])
+        #expect(NamedUnit("lbs")?.neighbours.map(\.name) == ["oz"])
+        #expect(NamedUnit("grams")?.neighbours.map(\.name) == ["kg"])
+        #expect(NamedUnit("glass") == nil)
+        let kilogram = steak.servingMeasures[1], pound = steak.servingMeasures[3]
+        #expect(Serving(measure: kilogram, quantity: 1).servings == 10)
+        #expect(abs(Serving(measure: pound, quantity: 1).servings - 0.85 / 3 * 16) < 1e-9)
+    }
+
+    @Test func aPoundTypedAsOneIsAPoundOfTheFood() {
+        let pound = ServingChoices(banana.nutrition, favorites: ["oz"]).units.first { $0.name == "lb" }!
+        let portion = FoodPortion(banana, serving: Serving(measure: pound, quantity: 1))
+        #expect(abs(portion.amounts[.energy]! - 89 * 4.5359237) < 1e-9)
     }
 
     @Test func keepsTheCurrentMeasureWhenItIsNotAFavorite() {
         let pound = banana.nutrition.allMeasures.first { $0.name == "lb" }!
         let choices = ServingChoices(banana.nutrition, favorites: ["g"], current: pound)
-        #expect(choices.units.map(\.name) == ["g", "lb"])
+        #expect(choices.units.map(\.name) == ["g", "kg", "lb"])
     }
 
     @Test func scalesNutritionByTheServing() {

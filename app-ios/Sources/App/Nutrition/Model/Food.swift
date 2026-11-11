@@ -43,45 +43,61 @@ struct FoodNutrition: Hashable, Codable, Sendable {
         return all
     }
 
-    /// `measures`, each spoon or cup measure followed by its neighbour the food lacks, with the same qualifier: a
-    /// teaspoon's tablespoon, a tablespoon's teaspoon, and a cup's tablespoon ("tsp, ground" brings "tbsp, ground").
+    /// `measures`, each spoon, cup, or weight measure followed by its neighbours the food lacks, with the same qualifier:
+    /// a teaspoon's tablespoon, a tablespoon's teaspoon, a cup's tablespoon, a gram's kilogram, and an ounce's pound
+    /// ("tsp, ground" brings "tbsp, ground", "oz, boneless" brings "lb, boneless").
     var servingMeasures: [Measure] {
-        let own = Set(measures.compactMap { Spoon($0.name).map { "\($0.unit) \($0.qualifier)" } })
+        let own = Set(measures.compactMap { NamedUnit($0.name)?.key })
         var all: [Measure] = []
         for measure in measures {
             all.append(measure)
-            guard let spoon = Spoon(measure.name) else { continue }
-            for unit in spoon.unit.neighbours where !own.contains("\(unit) \(spoon.qualifier)") {
-                let servings = measure.servings / measure.quantity * unit.milliliters / spoon.unit.milliliters
-                all.append(Measure(name: unit.rawValue + spoon.qualifier, quantity: 1, servings: servings))
+            guard let named = NamedUnit(measure.name) else { continue }
+            for neighbour in named.neighbours where !own.contains(neighbour.key) {
+                let servings = measure.servings / measure.quantity * neighbour.unit.size / named.unit.size
+                all.append(Measure(name: neighbour.name, quantity: 1, servings: servings))
             }
         }
         return all
     }
 }
 
-/// A measure named for a spoon or a cup, and the rest of its name. A measure whose rest gives a size ("cup (8 fl oz)",
-/// "tbsp (1/8 cup)") is not one: the size belongs to that unit alone.
-struct Spoon {
+/// A measure named for a spoon, a cup, or a weight, and the rest of its name. A measure whose rest gives a size
+/// ("cup (8 fl oz)", "tbsp (1/8 cup)", "oz (28 g)") is not one: the size belongs to that unit alone.
+struct NamedUnit {
     enum Unit: String {
-        case tsp, tbsp, cup
+        case tsp, tbsp, cup, g, kg, oz, lb
 
-        var milliliters: Double {
+        /// Milliliters for a spoon or cup, grams for a weight.
+        var size: Double {
             switch self {
             case .tsp: 4.92892159375
             case .tbsp: 14.78676478125
             case .cup: SizeUnit.cup.size
+            case .g: SizeUnit.g.size
+            case .kg: SizeUnit.kg.size
+            case .oz: SizeUnit.oz.size
+            case .lb: SizeUnit.lb.size
             }
         }
 
-        /// A cup gains no teaspoon, and a spoon no cup: those amounts are far from how the food is measured.
+        /// A cup gains no teaspoon, and a spoon no cup: those amounts are far from how the food is measured. A weight
+        /// gains the other unit of its system, so a steak weighed in grams or ounces can be logged by the kilogram or pound.
         var neighbours: [Unit] {
             switch self {
             case .tsp: [.tbsp]
             case .tbsp: [.tsp]
             case .cup: [.tbsp]
+            case .g: [.kg]
+            case .kg: [.g]
+            case .oz: [.lb]
+            case .lb: [.oz]
             }
         }
+
+        fileprivate static let spellings: [(String, Unit)] = [
+            ("tsp", .tsp), ("teaspoon", .tsp), ("tbsp", .tbsp), ("tablespoon", .tbsp), ("cup", .cup),
+            ("kg", .kg), ("kilogram", .kg), ("gram", .g), ("g", .g), ("oz", .oz), ("ounce", .oz), ("lb", .lb), ("pound", .lb),
+        ]
     }
 
     let unit: Unit
@@ -90,10 +106,7 @@ struct Spoon {
 
     init?(_ name: String) {
         let lower = name.lowercased()
-        let spellings: [(String, Unit)] = [
-            ("tsp", .tsp), ("teaspoon", .tsp), ("tbsp", .tbsp), ("tablespoon", .tbsp), ("cup", .cup),
-        ]
-        for (word, unit) in spellings {
+        for (word, unit) in Unit.spellings {
             for spelled in [word + "s", word] where lower.hasPrefix(spelled) {
                 let rest = name.dropFirst(spelled.count)
                 guard rest.isEmpty || rest.first == "," || rest.first == " " else { continue }
@@ -105,6 +118,15 @@ struct Spoon {
         }
         return nil
     }
+
+    private init(_ unit: Unit, qualifier: String) {
+        self.unit = unit
+        self.qualifier = qualifier
+    }
+
+    var name: String { unit.rawValue + qualifier }
+    var neighbours: [NamedUnit] { unit.neighbours.map { NamedUnit($0, qualifier: qualifier) } }
+    fileprivate var key: String { "\(unit) \(qualifier)" }
 }
 
 /// Everything a log entry, favorite, or recipe ingredient keeps of a food, so editing or deleting the food, or a
@@ -230,7 +252,7 @@ struct Food: Stamped {
 /// The standard weights and volumes: what a food's size is typed in, the measures its size unlocks, the favorites
 /// Settings offers, and the units Ramble hears. Weights set the food's grams, volumes its milliliters.
 enum SizeUnit: String, CaseIterable, Identifiable, Sendable {
-    case g, oz, lb, mL, flOz = "fl oz", cup
+    case g, kg, oz, lb, mL, flOz = "fl oz", cup
 
     var id: Self { self }
 
@@ -240,6 +262,7 @@ enum SizeUnit: String, CaseIterable, Identifiable, Sendable {
     var size: Double {
         switch self {
         case .g, .mL: 1
+        case .kg: 1000
         case .oz: 28.349523125
         case .lb: 453.59237
         case .flOz: 29.5735295625

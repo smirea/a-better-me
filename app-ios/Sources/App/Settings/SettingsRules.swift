@@ -30,7 +30,7 @@ enum SettingsRules {
 
     /// Matched by name against a food's own measures too, so volumes include the tbsp and tsp USDA servings that
     /// `SizeUnit` cannot convert.
-    static let weightMeasures = ["g", "oz", "lb"]
+    static let weightMeasures = ["g", "kg", "oz", "lb"]
     static let volumeMeasures = ["mL", "cup", "tbsp", "tsp", "fl oz"]
     /// MacroFactor pins at most two weights and two volumes to the front of the serving picker.
     static let favoritesPerCategory = 2

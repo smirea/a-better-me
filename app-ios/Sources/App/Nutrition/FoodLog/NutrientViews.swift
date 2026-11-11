@@ -232,3 +232,63 @@ enum NutrientSection: String, CaseIterable, Identifiable {
         return (section, NutrientRegistry.all.filter { $0.group == group && !macroSection.contains($0.id) })
     })
 }
+
+/// One row of a nutrient list: a section's label or one of its nutrients.
+enum NutrientListRow: Hashable, Identifiable {
+    case label(NutrientSection)
+    case nutrient(Nutrient)
+
+    var id: Self { self }
+
+    /// Each section's label, then its nutrients that `shows` keeps. A section that keeps none has no label, and
+    /// `labelsMacros: false` leaves the first section's label out where the macros are shown above the list.
+    static func rows(_ sections: [NutrientSection] = NutrientSection.allCases, labelsMacros: Bool = true, shows: (Nutrient) -> Bool) -> [NutrientListRow] {
+        sections.flatMap { section -> [NutrientListRow] in
+            let nutrients = section.nutrients.filter(shows)
+            guard !nutrients.isEmpty else { return [] }
+            return (section == .macros && !labelsMacros ? [] : [.label(section)]) + nutrients.map(NutrientListRow.nutrient)
+        }
+    }
+
+    /// Every nutrient, for a list that shows each whether or not it was reported.
+    static let all = rows { _ in true }
+    static let macros = rows([.macros]) { _ in true }
+}
+
+/// Every nutrient section in one card, the sections' names as label rows between their nutrients. `rows` comes from
+/// `NutrientListRow.rows`, derived once per input, never per render.
+struct NutrientList<Row: View>: View {
+    var title: String?
+    let rows: [NutrientListRow]
+    @ViewBuilder let row: (Nutrient) -> Row
+
+    var body: some View {
+        ThemedSection(title) {
+            ForEach(rows) { item in
+                NutrientListItem(item: item, row: row)
+            }
+        }
+    }
+}
+
+/// One `VStack` per element, so the `List` counts one row each without building them and lays out only those on
+/// screen. A bare `switch` between a label and a row made it build every row on open and on each keypress.
+private struct NutrientListItem<Row: View>: View {
+    let item: NutrientListRow
+    let row: (Nutrient) -> Row
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            switch item {
+            case .label(let section):
+                Text(section.rawValue)
+                    .font(AppFont.headline(14))
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(.top, 6)
+                    .accessibilityAddTraits(.isHeader)
+            case .nutrient(let nutrient):
+                row(nutrient)
+            }
+        }
+    }
+}

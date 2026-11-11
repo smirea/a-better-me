@@ -134,7 +134,7 @@ struct RambleResolverTests {
             "Egg: 2 medium",
             "Milk: 250 mL",
             "Peanut butter: 1 tbsp",
-            "Oats: 200 g",
+            "Oats: 0.2 kg",
             "Egg: 1 medium",
             "Blueberries: 1 cup",
             "Oats: 2 tbsp",
