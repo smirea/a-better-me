@@ -334,13 +334,25 @@ enum FoodLog {
         return new.last { !before.contains($0.id) }?.id
     }
 
-    /// Whether the week strip collapses for a timeline scrolled `offset` points down, with `slack` points of content
-    /// beyond the screen. Nil keeps the strip as it is, so collapsing, which lengthens the timeline's view, never
-    /// expands it again on the next frame. The slack covers the strip and the title row, which fold together.
-    static func collapsesStrip(offset: Double, slack: Double) -> Bool? {
-        if offset < 12 { return false }
-        if offset > 40, slack > 200 { return true }
-        return nil
+    /// How many day pills the header row shows in `width`: as many as fit at `minPill` or wider, an odd count so the
+    /// selected day has as many days on each side, and at least three.
+    static func stripCount(width: Double, minPill: Double, spacing: Double) -> Int {
+        let fit = Int((width + spacing) / (minPill + spacing))
+        return max(3, fit.isMultiple(of: 2) ? fit - 1 : fit)
+    }
+
+    /// How far the header row has slid away on a page scrolled `offset` down, for a row `row` tall and `maxOffset` of
+    /// scrolling. The row tracks the content 1:1, so it scrolls away as if it were the timeline's first row; the page
+    /// keeps its top margin either way, so sliding never resizes anything mid-drag. A day too short to scroll the row
+    /// all the way out keeps it, so the row never rests half hidden.
+    static func headerSlide(offset: Double, row: Double, maxOffset: Double) -> Double {
+        maxOffset < row ? 0 : min(max(offset, 0), row)
+    }
+
+    /// Where a scroll that would come to rest at `target` stops instead: never with the header row half slid away.
+    static func headerSnap(target: Double, row: Double, maxOffset: Double) -> Double {
+        guard maxOffset >= row, target > 0, target < row else { return target }
+        return target < row / 2 ? 0 : row
     }
 
     /// The bar's full length for `value` against `range`: the reference bound sits at 60% of the track, as

@@ -266,11 +266,26 @@ struct FoodLogMathTests {
         #expect(FoodLog.added(from: [], to: []) == nil)
     }
 
-    @Test func foldsTheWeekStripOnlyWhenScrolledThroughALongDay() {
-        #expect(FoodLog.collapsesStrip(offset: 0, slack: 600) == false)
-        #expect(FoodLog.collapsesStrip(offset: 60, slack: 600) == true)
-        #expect(FoodLog.collapsesStrip(offset: 60, slack: 150) == nil)
-        #expect(FoodLog.collapsesStrip(offset: 25, slack: 600) == nil)
+    @Test func slidesTheHeaderRowWithTheTimelineOnlyOnADayLongEnoughToHideIt() {
+        #expect(FoodLog.headerSlide(offset: -30, row: 64, maxOffset: 600) == 0)
+        #expect(FoodLog.headerSlide(offset: 20, row: 64, maxOffset: 600) == 20)
+        #expect(FoodLog.headerSlide(offset: 400, row: 64, maxOffset: 600) == 64)
+        #expect(FoodLog.headerSlide(offset: 40, row: 64, maxOffset: 50) == 0)
+    }
+
+    @Test func showsAnOddCountOfDayPillsThatFitComfortably() {
+        #expect(FoodLog.stripCount(width: 254, minPill: 46, spacing: 6) == 5)
+        #expect(FoodLog.stripCount(width: 300, minPill: 46, spacing: 6) == 5)
+        #expect(FoodLog.stripCount(width: 358, minPill: 46, spacing: 6) == 7)
+        #expect(FoodLog.stripCount(width: 100, minPill: 46, spacing: 6) == 3)
+    }
+
+    @Test func neverRestsWithTheHeaderRowHalfHidden() {
+        #expect(FoodLog.headerSnap(target: 20, row: 64, maxOffset: 600) == 0)
+        #expect(FoodLog.headerSnap(target: 40, row: 64, maxOffset: 600) == 64)
+        #expect(FoodLog.headerSnap(target: 0, row: 64, maxOffset: 600) == 0)
+        #expect(FoodLog.headerSnap(target: 300, row: 64, maxOffset: 600) == 300)
+        #expect(FoodLog.headerSnap(target: 40, row: 64, maxOffset: 50) == 40)
     }
 
     @Test func scalesBarsSoTheTargetSitsAtSixtyPercent() {

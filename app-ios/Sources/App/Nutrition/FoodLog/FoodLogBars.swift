@@ -332,8 +332,9 @@ struct DayMenu: View {
     }
 
     var body: some View {
-        Menu("Day Options", systemImage: "ellipsis") {
+        Menu {
             Button("Nutrition Overview", systemImage: "list.bullet.rectangle") { state.path.append(FoodLogRoute.overview(day)) }
+            Button("Strategy", systemImage: "chart.line.uptrend.xyaxis") { state.path.append(FoodLogRoute.strategy) }
             Button("Copy Day", systemImage: "doc.on.doc") {
                 state.selecting = true
                 state.selection = Set(entries.map(\.id))
@@ -361,6 +362,9 @@ struct DayMenu: View {
                 }
                 .pickerStyle(.menu)
             }
+        } label: {
+            // Inside the label, so the whole circle opens the menu, not just the glyph.
+            Label("Day Options", systemImage: "ellipsis").labelStyle(.iconOnly).frame(width: 48, height: 48).contentShape(.circle)
         }
         .alert("Clear Day", isPresented: $confirmingClear) {
             Button("Clear", role: .destructive) { store.deleteEntries(entries.map(\.id)) }

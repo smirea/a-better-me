@@ -14,9 +14,9 @@ struct DayPage: View {
     /// Section pills share one width, which fits "Breakfast" with little padding.
     @ScaledMetric private var sectionPillWidth: CGFloat = 72
     @State private var groups = ViewMemo<GroupsKey, [TimelineGroup]>()
-    /// The page's height above the bottom bars, which a day of Sections too short to scroll fills. The bars' inset is
-    /// already out of the container's size.
-    @State private var visibleHeight: CGFloat = 0
+    /// The page's height above the bottom bars. Less the header, it is what a day of Sections too short to scroll
+    /// fills. Read from the page's frame, since a scroll geometry change never reports the first height.
+    @State private var pageHeight: CGFloat = 0
 
     init(day: CalendarDay) {
         self.day = day
@@ -46,7 +46,7 @@ struct DayPage: View {
                     FoodLog.groups(entries, settings: settings.nutrition)
                 }
                 let column = self.column
-                FillHeight(minHeight: isSections ? visibleHeight - Self.bottomPadding : 0) {
+                FillHeight(minHeight: isSections ? pageHeight - state.header.height - Self.bottomPadding : 0) {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
                             if isSections, index > 0, group.rows.isEmpty || groups[index - 1].rows.isEmpty {
@@ -74,24 +74,39 @@ struct DayPage: View {
                 .padding(.bottom, Self.bottomPadding)
             }
             .scrollIndicators(.hidden)
+            .contentMargins(.top, state.header.height, for: .scrollContent)
+            .scrollTargetBehavior(HeaderSnap(row: state.header.row))
             .onChange(of: entries) { old, new in
                 guard Date.now < state.revealsAdditionsUntil, let added = FoodLog.added(from: old, to: new) else { return }
                 withAnimation { proxy.scrollTo(added, anchor: .center) }
             }
         }
-        .onScrollGeometryChange(for: Bool?.self) { geometry in
-            FoodLog.collapsesStrip(
-                offset: geometry.contentOffset.y + geometry.contentInsets.top,
-                slack: geometry.contentSize.height + geometry.contentInsets.top + geometry.contentInsets.bottom - geometry.containerSize.height
-            )
-        } action: { _, scrolled in
-            guard let scrolled else { return }
-            withAnimation(.snappy) { state.setScrolled(scrolled, on: day) }
+        .onScrollGeometryChange(for: PageScroll.self) { PageScroll($0) } action: { _, scroll in
+            state.setScrolled(FoodLog.headerSlide(offset: scroll.offset, row: state.header.row, maxOffset: scroll.maxOffset), on: day)
         }
-        .onScrollGeometryChange(for: CGFloat.self) { $0.containerSize.height } action: { _, height in
-            visibleHeight = height
-        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pageHeight = $0 }
         .feedback(self)
+    }
+}
+
+private struct PageScroll: Equatable {
+    let offset: Double
+    let maxOffset: Double
+
+    init(_ geometry: ScrollGeometry) {
+        offset = geometry.contentOffset.y + geometry.contentInsets.top
+        maxOffset = geometry.contentSize.height - geometry.containerSize.height
+    }
+}
+
+/// Lets a page come to rest only with the header row fully shown or fully slid away.
+private struct HeaderSnap: ScrollTargetBehavior {
+    let row: Double
+
+    /// The target counts from the content's top, and the container's size already leaves out the insets.
+    func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
+        let maxOffset = context.contentSize.height - context.containerSize.height
+        target.rect.origin.y = FoodLog.headerSnap(target: target.rect.origin.y, row: row, maxOffset: maxOffset)
     }
 }
 

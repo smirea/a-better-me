@@ -42,7 +42,7 @@ struct DayPill: View {
     }
 }
 
-/// Seven day pills a week per page, Monday first, used by the Food Log and the Workout tab. Swiping shows other weeks;
+/// Seven day pills a week per page, Monday first, used by the Workout tab. Swiping shows other weeks;
 /// away from `anchor`'s week a round chevron returns to it, and a new `anchor` scrolls its week in.
 struct WeekStrip<Week: View>: View {
     let anchor: CalendarDay

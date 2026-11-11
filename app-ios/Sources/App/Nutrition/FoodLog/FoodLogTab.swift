@@ -1,53 +1,37 @@
 import Feedback
 import SwiftUI
 
-/// MacroFactor's Food Log: a week strip, the day's macro summary, and a timeline of hours that pages between days.
+/// MacroFactor's Food Log: one header row (Calendar, the day strip, Day Options), the day's macro summary, and a
+/// timeline of hours that pages between days.
 struct FoodLogTab: View {
     @Environment(LocalStore.self) private var store
     @State private var state = FoodLogState()
     @State private var showingCalendar = false
-    /// Its own animated state, so the Today button morphs into the toolbar's glass when a swipe pages the day.
-    @State private var showsToday = false
 
     var body: some View {
         NavigationStack(path: $state.path) {
-            VStack(spacing: 0) {
-                FoodLogHeader()
-                DayPager()
-            }
-            .background(Theme.background)
-            .background { ShownDayEntries(day: state.day).id(state.day) }
-            .safeAreaInset(edge: .bottom) { FoodLogBottomBar() }
-            // Selecting or pasting puts its own bar of actions at the bottom, so the tab bar steps aside for it.
-            .toolbarVisibility(state.selecting || state.pending != nil ? .hidden : .automatic, for: .tabBar)
-            .animation(.snappy, value: state.selecting || state.pending != nil)
-            .screenTitle(NutritionFormat.dayTitle(state.day))
-            .toolbar {
-                ToolbarItem {
-                    Button("Today", systemImage: "arrow.uturn.backward") { state.day = .today }
+            DayPager()
+                // The pages still scroll under the bottom bars, but not under the status bar once the header row has
+                // slid away.
+                .mask { Rectangle().ignoresSafeArea(edges: .bottom) }
+                .overlay(alignment: .top) { FoodLogHeader(showingCalendar: $showingCalendar) }
+                .background(Theme.background)
+                .background { ShownDayEntries(day: state.day).id(state.day) }
+                .safeAreaInset(edge: .bottom) { FoodLogBottomBar() }
+                // Selecting or pasting puts its own bar of actions at the bottom, so the tab bar steps aside for it.
+                .toolbarVisibility(state.selecting || state.pending != nil ? .hidden : .automatic, for: .tabBar)
+                .animation(.snappy, value: state.selecting || state.pending != nil)
+                // The header row replaces the bar; the title still names the day for VoiceOver and pushed screens' back button.
+                .navigationTitle(NutritionFormat.dayTitle(state.day))
+                .toolbarVisibility(.hidden, for: .navigationBar)
+                .navigationDestination(for: FoodLogRoute.self) { route in
+                    switch route {
+                    case let .overview(day): NutritionOverview(day: day)
+                    case let .contributors(day, nutrient): ContributorsView(day: day, nutrient: nutrient)
+                    case .strategy: StrategyView()
+                    }
                 }
-                .hidden(!showsToday)
-                ToolbarItem {
-                    Button("Strategy", systemImage: "chart.line.uptrend.xyaxis") { state.path.append(FoodLogRoute.strategy) }
-                }
-                ToolbarItem {
-                    Button("Calendar", systemImage: "calendar") { showingCalendar = true }
-                }
-                ToolbarItem {
-                    DayMenu(day: state.day).id(state.day)
-                }
-            }
-            .onChange(of: state.day != .today, initial: true) { _, away in
-                withAnimation { showsToday = away }
-            }
-            .navigationDestination(for: FoodLogRoute.self) { route in
-                switch route {
-                case let .overview(day): NutritionOverview(day: day)
-                case let .contributors(day, nutrient): ContributorsView(day: day, nutrient: nutrient)
-                case .strategy: StrategyView()
-                }
-            }
-            .navigationDestination(for: StrategyRoute.self) { $0.destination }
+                .navigationDestination(for: StrategyRoute.self) { $0.destination }
         }
         .environment(state)
         .sheet(item: $state.logRequest) { LoggerSheet(start: LoggerStart($0)) }
@@ -60,71 +44,75 @@ struct FoodLogTab: View {
     }
 }
 
-/// The week strip and the day's macro summary over the timeline. The summary stays; the title row and the strip fold
-/// away together while the timeline is scrolled down, unless Calendar Week Banner pins the strip.
+/// The header row and the day's summary over the timeline. The pages keep the header's height clear above their first
+/// row, and the row slides away 1:1 as the shown day scrolls down, as if it were the timeline's own first row, unless
+/// Calendar Week Banner pins it. Sliding moves only this overlay, so nothing under the finger is laid out again.
 private struct FoodLogHeader: View {
+    @Binding var showingCalendar: Bool
+
     @Environment(FoodLogState.self) private var state
     @Observe(NutritionPlan.all) private var plans
     @Observe(AppSettings.current) private var settings
 
     var body: some View {
         let banner = settings.nutrition.timeline.calendarWeekBanner
-        let folded = banner != .showAndPin && state.scrolledDays.contains(state.day)
         VStack(spacing: 6) {
-            if banner == .showAndPin || banner == .show && !folded {
-                WeekStrip(anchor: state.day, weeks: -(FoodLogState.daysBack / 7 + 1)...(FoodLogState.daysAhead / 7 + 1)) {
-                    WeekPills(monday: $0, plans: plans)
+            HStack(spacing: 8) {
+                Button("Calendar", systemImage: "calendar") {
+                    if state.day == .today { showingCalendar = true } else { state.day = .today }
                 }
-                .transition(.move(edge: .top).combined(with: .opacity))
+                .accessibilityHint(state.day == .today ? "Opens the calendar" : "Goes to today")
+                .headerButton()
+                if banner == .hide {
+                    Spacer(minLength: 0)
+                } else {
+                    DayStrip(selected: state.day, plans: plans)
+                }
+                DayMenu(day: state.day).id(state.day).headerButton()
             }
+            .padding(.horizontal, Theme.margin)
+            .onGeometryChange(for: Double.self) { $0.size.height } action: { state.header.row = $0 + 6 }
             DaySummary(day: state.day, plans: plans).id(state.day)
         }
-        // The week strip is the scroll view nearest the bar, so its top edge effect greyed the bar behind the title,
-        // which the Workout tab's bar doesn't have. Nothing scrolls under the bar here.
-        .scrollEdgeEffectHidden(true, for: .top)
-        // The whole bar hides rather than collapsing to an inline title: the timeline scrolls inside
-        // the pager, out of the bar's reach, so the system's large-title collapse never tracks it.
-        .toolbarVisibility(folded ? .hidden : .automatic, for: .navigationBar)
+        .background(Theme.background)
+        .onGeometryChange(for: Double.self) { $0.size.height } action: { state.header.height = $0 }
+        .modifier(HeaderSlide(pinned: banner == .showAndPin))
+        // An overlay sorts after the pager, so VoiceOver would read the whole timeline before the header.
+        .accessibilitySortPriority(1)
+        // Clipping to the header's own frame keeps the sliding row from drawing over the status bar.
+        .clipped()
         .feedback(self)
     }
 }
 
-/// The week strip's pills, each outline filling with the day's calories against its target. One week per view, so a
-/// page observes only its own entries.
-private struct WeekPills: View {
-    let monday: CalendarDay
-    let plans: [NutritionPlan]
+/// Reads the shown day's scroll in its own view, so only the offset re-renders while the row slides.
+private struct HeaderSlide: ViewModifier {
+    let pinned: Bool
 
     @Environment(FoodLogState.self) private var state
-    @Observe private var entries: [FoodEntry]
-    @Observe private var rows: [NutritionDay]
 
-    init(monday: CalendarDay, plans: [NutritionPlan]) {
-        self.monday = monday
-        self.plans = plans
-        _entries = Observe(FoodEntry.between(monday, monday.adding(days: 6)))
-        _rows = Observe(NutritionDay.between(monday, monday.adding(days: 6)))
+    func body(content: Content) -> some View {
+        content
+            .offset(y: pinned ? 0 : -state.scrolled[state.day, default: 0])
+            .animation(.snappy, value: state.day)
     }
+}
 
-    var body: some View {
-        let byDay = Dictionary(grouping: entries, by: \.day)
-        let rowByDay = Dictionary(rows.map { ($0.id, $0) }) { first, _ in first }
-        let kcal = Dictionary(uniqueKeysWithValues: monday.week.map { day in
-            (day, (rowByDay[day] ?? NutritionDay(id: day)).totals(byDay[day] ?? [])[.energy] ?? 0)
-        })
-        ForEach(monday.week, id: \.self) { day in
-            let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day).energy
-            DayPill(
-                day: day, isSelected: day == state.day,
-                ring: DayRing(fraction: FoodLog.ringProgress(kcal: kcal[day] ?? 0, target: target), color: Theme.calories)
-            ) { state.day = day }
-        }
+private extension View {
+    /// The bottom bar's Your Foods circle: a fixed frame, so the Calendar button and the ⋯ menu match.
+    func headerButton() -> some View {
+        labelStyle(.iconOnly)
+            .foregroundStyle(Theme.textPrimary)
+            .frame(width: 48, height: 48)
+            .contentShape(.circle)
+            .glassEffect(.regular.interactive(), in: .circle)
+            .buttonStyle(.plain)
     }
 }
 
 /// The day's four summary columns in two pages, swiped between as in MacroFactor: eaten against target, then what is left.
 /// A day no plan covers has nothing to fill a bar against, so it shows what was eaten and a link to set targets.
-/// Tapping the lines opens the Nutrition Overview.
+/// Tapping the lines opens the Nutrition Overview. The day's status and edited totals sit beside the page dots.
 private struct DaySummary: View {
     let day: CalendarDay
     let plans: [NutritionPlan]
@@ -149,6 +137,8 @@ private struct DaySummary: View {
         let targets = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: latestWeight?.weightKg)
         let target = targets.target
         let lines = targets.summary(row.totals(entries), settings: settings)
+        let status = row.status == .none ? nil : row.status.title
+        let edited = row.override == nil ? nil : "Edited totals"
         VStack(spacing: 4) {
             Group {
                 if target == nil {
@@ -161,6 +151,16 @@ private struct DaySummary: View {
                     }
                     .tabViewStyle(.page(indexDisplayMode: .always))
                     .frame(height: 64)
+                    .overlay(alignment: .bottom) {
+                        HStack {
+                            if let status { Text(status) }
+                            Spacer()
+                            if let edited { Text(edited) }
+                        }
+                        .font(AppFont.caption(11))
+                        .foregroundStyle(Theme.textSecondary)
+                        .padding(.bottom, 12)
+                    }
                     // The page dots sit at a fixed height inside the TabView and leave an empty band under them, which a
                     // shorter frame doesn't remove (it moves the dots onto the bars). The timeline overlaps the band instead.
                     .padding(.bottom, -14)
@@ -170,28 +170,29 @@ private struct DaySummary: View {
             .onTapGesture { state.path.append(FoodLogRoute.overview(day)) }
             // Combining the paged TabView reads only its page indicator, so the label spells the lines out.
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(lines.map(\.spoken).joined(separator: ", "))
+            .accessibilityLabel((lines.map(\.spoken) + [status, edited].compactMap(\.self)).joined(separator: ", "))
             .accessibilityAddTraits(.isButton)
             .accessibilityHint("Opens the Nutrition Overview")
             if target == nil {
-                Button { state.path.append(FoodLogRoute.strategy) } label: {
-                    HStack(spacing: 4) {
-                        Text("No targets for this day")
-                            .foregroundStyle(Theme.textSecondary)
-                        Text("Set Targets")
-                        Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold))
+                HStack(spacing: 4) {
+                    Button { state.path.append(FoodLogRoute.strategy) } label: {
+                        HStack(spacing: 4) {
+                            Text("No targets for this day")
+                                .foregroundStyle(Theme.textSecondary)
+                            Text("Set Targets")
+                            Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold))
+                        }
+                        .contentShape(.rect)
                     }
-                    .font(AppFont.rowDetail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(.rect)
+                    .buttonStyle(.plain)
+                    Spacer(minLength: 0)
+                    Text([status, edited].compactMap(\.self).joined(separator: " · "))
+                        .foregroundStyle(Theme.textSecondary)
                 }
-                .buttonStyle(.plain)
+                .font(AppFont.rowDetail)
             }
         }
         .padding(.horizontal, Theme.margin)
-        // Day Options sets the status, not this line: the inline large title takes no title menu, and a tappable
-        // `.largeSubtitle` item gets no width to truncate in, so it ran under the toolbar on other days.
-        .navigationSubtitle([row.status == .none ? nil : row.status.title, row.override == nil ? nil : "Edited totals"].compactMap(\.self).joined(separator: " · "))
         .feedback(self)
     }
 }

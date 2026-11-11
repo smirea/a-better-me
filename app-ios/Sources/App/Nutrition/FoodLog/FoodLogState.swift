@@ -16,6 +16,11 @@ struct LogFoodRequest: Identifiable, Hashable {
     var start = LoggerTab.search
 }
 
+struct FoodLogHeaderSize: Equatable {
+    var height: Double = 0
+    var row: Double = 0
+}
+
 /// The Food Log's screen state, shared by the header, the day pages, and the bottom bars. Data stays in the store;
 /// this holds only what the owner is doing.
 @MainActor @Observable
@@ -45,7 +50,7 @@ final class FoodLogState {
         let entries: [FoodEntry]
     }
 
-    /// How far the pager, the week strip, and the calendar reach from today, in days.
+    /// How far the pager, the day strip, and the calendar reach from today, in days.
     static let daysBack = 730
     static let daysAhead = 365
 
@@ -72,8 +77,11 @@ final class FoodLogState {
     var path = NavigationPath()
     var notice: Notice?
     var recipeRequest: RecipeRequest?
-    /// The days whose page is scrolled down, so a week strip set to Show folds away on them.
-    var scrolledDays: Set<CalendarDay> = []
+    /// How far the header row has slid away on each day's page (`FoodLog.headerSlide`). It stops changing once the row
+    /// is gone, so scrolling the rest of a long day re-renders nothing.
+    private(set) var scrolled: [CalendarDay: Double] = [:]
+    /// The header's height, which each page keeps clear above its first row, and the row's, which slides away.
+    var header = FoodLogHeaderSize()
     /// Until when entries arriving on a page come from the owner (a log, a paste, an Explode) and scroll into view.
     /// Entries a sync brings leave the page where it is.
     @ObservationIgnored private(set) var revealsAdditionsUntil = Date.distantPast
@@ -170,8 +178,8 @@ final class FoodLogState {
         revealsAdditionsUntil = .now.addingTimeInterval(3)
     }
 
-    func setScrolled(_ scrolled: Bool, on day: CalendarDay) {
-        if scrolled { scrolledDays.insert(day) } else if scrolledDays.contains(day) { scrolledDays.remove(day) }
+    func setScrolled(_ offset: Double, on day: CalendarDay) {
+        if scrolled[day, default: 0] != offset { scrolled[day] = offset }
     }
 
     func endSelection() {
