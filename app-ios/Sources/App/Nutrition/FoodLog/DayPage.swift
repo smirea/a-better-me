@@ -224,8 +224,9 @@ private struct SlotRow: View {
         return pill(label, isActive: isSelected)
             .frame(height: 40)
             .contentShape(.rect)
-            .onTapGesture { state.selectHour(ids) }
-            .gesture(LongPressGesture(minimumDuration: 0.35).onEnded { _ in requestLog() }, isEnabled: addsHere)
+            .gesture(LongPressGesture(minimumDuration: 0.35).exclusively(before: TapGesture()).onEnded { gesture in
+                if case .first = gesture, addsHere { requestLog() } else { state.selectHour(ids) }
+            })
             .accessibilityElement()
             .accessibilityLabel(label)
             .accessibilityValue(ids.isEmpty ? "No foods" : "\(ids.count) \(ids.count == 1 ? "food" : "foods")")
@@ -304,8 +305,8 @@ private struct HourTotals: View {
 
 /// A food tile with its time on the timeline's line, and in select mode a check circle floating half over its left
 /// edge. Pasting inline hides the circles, so the destination day's foods don't read as a new selection. Tapping the
-/// tile enters select mode on it, or toggles it there, and the selection's bar opens the editor, so the tile has no
-/// edit button. A long press starts select mode on it too: the bar holds its actions, so there is no context menu. Swiping
+/// tile opens its editor, or toggles it in select mode. A long press starts select mode on it: the bar holds the
+/// selection's actions, so there is no context menu. Swiping
 /// a tile left reveals Remove and Copy, as MacroFactor's does; it has no full swipe, because a left swipe that misses
 /// the blank space was meant to page.
 private struct EntryRow: View {
@@ -346,6 +347,7 @@ private struct EntryRow: View {
                     SwipeAction(title: "Copy", systemImage: "doc.on.doc") { state.copy(entry) },
                 ])
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
+                .accessibilityAction { state.tap(entry) }
                 .accessibilityAction(named: isSelected ? "Deselect" : "Select") { state.select(entry.id) }
                 .accessibilityAction(named: "Edit") { state.editing = entry }
         }
@@ -363,8 +365,13 @@ private struct EntryRow: View {
         .fixedSize(horizontal: false, vertical: true)
         .contentShape(.rect)
         .animation(.snappy, value: showsCircle)
-        .onTapGesture { state.select(entry.id) }
-        .onLongPressGesture(minimumDuration: 0.35) { state.startSelection(at: entry.id) }
+        // A tap gesture recognizes on release however long the hold, so separate tap and long-press gestures both fired.
+        .gesture(LongPressGesture(minimumDuration: 0.35).exclusively(before: TapGesture()).onEnded { gesture in
+            switch gesture {
+            case .first: state.startSelection(at: entry.id)
+            case .second: state.tap(entry)
+            }
+        })
         .padding(.bottom, 6)
         .feedback(self)
     }

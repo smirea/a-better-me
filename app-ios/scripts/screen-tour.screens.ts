@@ -101,7 +101,7 @@ export const screens: Screen[] = [
 		name: 'dashboard-add-remove',
 		steps: [...tap('Customize Dashboard'), ...scrollTo('Add or Remove Nutrition'), ...tap('Add or Remove Nutrition')],
 	},
-	{ name: 'foodlog-entry-editor', steps: [...tapTab('Nutrition'), ...tap('Overnight Oats'), ...tapButton('Edit')] },
+	{ name: 'foodlog-entry-editor', steps: [...tapTab('Nutrition'), ...tap('Overnight Oats')] },
 	{
 		name: 'foodlog-select-copy',
 		steps: [...tapTab('Nutrition'), ...trailingToolbarButton, ...tap('Select All'), ...tap('Copy')],

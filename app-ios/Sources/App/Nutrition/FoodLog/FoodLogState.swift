@@ -89,6 +89,11 @@ final class FoodLogState {
         }
     }
 
+    /// A tile's tap: outside select mode it opens the entry editor, inside it toggles the entry.
+    func tap(_ entry: FoodEntry) {
+        if selecting { select(entry.id) } else { editing = entry }
+    }
+
     /// A long press: select mode with the entry selected, never toggling it off.
     func startSelection(at id: UUID) {
         selecting = true
