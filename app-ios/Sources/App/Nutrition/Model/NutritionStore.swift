@@ -143,11 +143,13 @@ extension LocalStore {
         delete(Recipe.self, id: id)
     }
 
-    /// Saves a favorite. At the limit it replaces the oldest, as MacroFactor replaces one when full.
-    func addFavorite(_ portion: FoodPortion) {
+    /// Saves a favorite. At the limit it replaces the oldest, as MacroFactor replaces one when full. A screen that can
+    /// take the favorite back passes its `id`.
+    func addFavorite(_ portion: FoodPortion, id: UUID = UUID()) {
         let made = FoodFavorite(portion)
         write { db in
             var favorite = made
+            favorite.id = id
             favorite.food = try Self.withFoodIcon(favorite.food, in: db)
             let existing = try FoodFavorite.fetchAll(db).sorted { $0.createdAt < $1.createdAt }
             for old in existing.prefix(max(0, existing.count - FoodFavorite.limit + 1)) {

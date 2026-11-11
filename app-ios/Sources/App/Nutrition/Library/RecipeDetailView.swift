@@ -17,7 +17,8 @@ struct RecipeDetailView: View {
     @State private var sheet: LibraryEditorSheet?
     @State private var confirmingDelete = false
     @State private var showAllNutrients = false
-    @State private var favorited = false
+    /// The favorite this page saved, which a second tap removes.
+    @State private var favorite: UUID?
     @State private var preparing = false
 
     init(recipeID: UUID) {
@@ -77,7 +78,7 @@ struct RecipeDetailView: View {
         .detailTitle(recipe.name)
         .sheet(item: $sheet) { $0.editor }
         .navigationDestination(isPresented: $preparing) { RecipePrepareView(recipe: recipe) }
-        .sensoryFeedback(.success, trigger: favorited)
+        .sensoryFeedback(.success, trigger: favorite) { _, new in new != nil }
         .alert("Delete Recipe", isPresented: $confirmingDelete) {
             Button("Delete", role: .destructive) {
                 store.deleteRecipe(recipe.id)
@@ -94,10 +95,19 @@ struct RecipeDetailView: View {
             Button { preparing = true } label: { ActionLabel(title: "Prepare", systemImage: "frying.pan") }
             Button { sheet = LibraryEditorSheet(.editRecipe(recipe)) } label: { ActionLabel(title: "Edit", systemImage: "pencil") }
             Button {
-                store.addFavorite(portion)
-                favorited.toggle()
+                if let favorite {
+                    store.deleteFavorite(favorite)
+                    self.favorite = nil
+                } else {
+                    let id = UUID()
+                    store.addFavorite(portion, id: id)
+                    favorite = id
+                }
             } label: {
-                ActionLabel(title: "Favorite", systemImage: "heart")
+                ActionLabel(
+                    title: favorite != nil ? "Favorited" : "Favorite", systemImage: favorite != nil ? "heart.fill" : "heart",
+                    tint: favorite != nil ? Theme.favorite : nil
+                )
             }
             Button { sheet = LibraryEditorSheet(.newRecipe(RecipeDraft(recipe).duplicate())) } label: { ActionLabel(title: "Duplicate", systemImage: "plus.square.on.square") }
             Button { confirmingDelete = true } label: { ActionLabel(title: "Delete", systemImage: "trash") }

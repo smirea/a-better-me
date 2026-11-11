@@ -89,11 +89,14 @@ private struct PinnedStack: Layout {
 struct ActionLabel: View {
     let title: String
     let systemImage: String
+    /// The glyph's color when it marks a state, such as a saved favorite's heart; the title stays white.
+    var tint: Color?
 
     var body: some View {
         VStack(spacing: 6) {
             Image(systemName: systemImage)
                 .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(tint ?? Theme.textPrimary)
                 .frame(width: 40, height: 40)
                 .background(Theme.surfaceRaised, in: .circle)
             Text(title).font(AppFont.rowDetail)

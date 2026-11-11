@@ -262,9 +262,14 @@ final class LoggerSession {
         await reloadSearch()
     }
 
-    func favorite(_ portion: FoodPortion, uncached: Food?) async {
+    func favorite(_ portion: FoodPortion, id: UUID = UUID(), uncached: Food?) async {
         if let uncached { store.saveFood(uncached) }
-        store.addFavorite(portion)
+        store.addFavorite(portion, id: id)
+        await reloadSearch()
+    }
+
+    func unfavorite(_ id: UUID) async {
+        store.deleteFavorite(id)
         await reloadSearch()
     }
 

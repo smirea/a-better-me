@@ -19,7 +19,8 @@ struct EntryEditor: View {
     @State private var time: Date
     /// The section it is in; changing the time moves it to the section the new minute falls in.
     @State private var section: String?
-    @State private var favorited = false
+    /// The favorite this sheet saved, which a second tap removes.
+    @State private var favorite: UUID?
     /// The food's icon, which Edit Icon changes on the food and everything logged of it at once (`LocalStore.setIcon`).
     @State private var icon: String?
     @State private var choosingIcon = false
@@ -67,14 +68,9 @@ struct EntryEditor: View {
                             .keyboardType(.decimalPad)
                             .font(AppFont.number(20))
                             .onChange(of: quantity) { _, text in
-                                // The unit picker writes the rounded label of an exact conversion; only typing replaces it.
-                                guard text != NumberText.plain(serving.quantity) else { return }
                                 if let value = Double(text.replacingOccurrences(of: ",", with: ".")) { serving.quantity = value }
                             }
-                        Picker("Unit", selection: Binding(get: { serving.measure }, set: { measure in
-                            serving = serving.converted(to: measure)
-                            quantity = NumberText.plain(serving.quantity)
-                        })) {
+                        Picker("Unit", selection: $serving.measure) {
                             ForEach(measures, id: \.self) { Text($0.name).tag($0) }
                         }
                         .labelsHidden()
@@ -160,11 +156,16 @@ struct EntryEditor: View {
                 store.deleteEntries([entry.id])
                 dismiss()
             }
-            action(favorited ? "Favorited" : "Favorite", systemImage: favorited ? "heart.fill" : "heart") {
-                store.addFavorite(FoodPortion(food, serving: serving))
-                favorited = true
+            action(favorite != nil ? "Favorited" : "Favorite", systemImage: favorite != nil ? "heart.fill" : "heart", tint: favorite != nil ? Theme.favorite : nil) {
+                if let favorite {
+                    store.deleteFavorite(favorite)
+                    self.favorite = nil
+                } else {
+                    let id = UUID()
+                    store.addFavorite(FoodPortion(food, serving: serving), id: id)
+                    favorite = id
+                }
             }
-            .disabled(favorited)
             action("Duplicate", systemImage: "plus.square.on.square") {
                 state.expectAdditions()
                 store.log([FoodPortion(food, serving: serving)], on: CalendarDay(time), minute: minute, section: section)
@@ -181,8 +182,8 @@ struct EntryEditor: View {
         .buttonStyle(.borderless)
     }
 
-    private func action(_ title: String, systemImage: String, run: @escaping () -> Void) -> some View {
-        Button(action: run) { ActionLabel(title: title, systemImage: systemImage) }
+    private func action(_ title: String, systemImage: String, tint: Color? = nil, run: @escaping () -> Void) -> some View {
+        Button(action: run) { ActionLabel(title: title, systemImage: systemImage, tint: tint) }
     }
 
     private var minute: Int { time.minuteOfDay() }

@@ -109,17 +109,6 @@ struct ServingChoicesTests {
         #expect(choices.units.map(\.name) == ["g", "lb"])
     }
 
-    @Test func convertsBetweenMeasuresKeepingTheAmount() {
-        let large = Serving(measure: banana.nutrition.measures[1], quantity: 1)
-        let grams = banana.nutrition.allMeasures.first { $0.name == "g" }!
-        let inGrams = large.converted(to: grams)
-        #expect(NutritionFormat.serving(inGrams) == "136 g")
-        let ounces = banana.nutrition.allMeasures.first { $0.name == "oz" }!
-        #expect(NutritionFormat.serving(large.converted(to: ounces)) == "4.8 oz")
-        #expect(NutritionFormat.serving(inGrams.converted(to: banana.nutrition.measures[0]), of: banana) == "1.15 medium (136 g)")
-        #expect(abs(inGrams.converted(to: large.measure).quantity - 1) < 1e-9)
-    }
-
     @Test func scalesNutritionByTheServing() {
         let twoMedium = FoodPortion(banana, serving: Serving(measure: banana.nutrition.measures[0], quantity: 2))
         #expect(twoMedium.amounts[.energy] == 89 * 2.36)

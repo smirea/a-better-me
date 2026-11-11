@@ -23,6 +23,8 @@ enum Theme {
     /// Logged days in the workout calendar, and the 2-3 RIR badge.
     static let amber = Color(hex: 0xF0A830)
     static let destructive = Color(hex: 0xE5534B)
+    /// A saved favorite's filled heart. Brighter than `destructive` so it reads on glass and on cards.
+    static let favorite = Color(hex: 0xFF453A)
     /// Trained muscles on body maps and progress bars.
     static let muscle = Color(hex: 0x276EF1)
 
