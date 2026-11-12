@@ -59,10 +59,13 @@ private struct FoodLogHeader: View {
         let banner = settings.nutrition.timeline.calendarWeekBanner
         VStack(spacing: 6) {
             HStack(spacing: 8) {
-                Button("Calendar", systemImage: "calendar") {
-                    if state.day == .today { showingCalendar = true } else { state.day = .today }
+                let onToday = state.day == .today
+                Button(onToday ? "Calendar" : "Go to Today", systemImage: onToday ? "calendar" : "arrow.uturn.backward") {
+                    if onToday { showingCalendar = true } else { state.day = .today }
                 }
-                .accessibilityHint(state.day == .today ? "Opens the calendar" : "Goes to today")
+                .contentTransition(.symbolEffect(.replace))
+                .animation(.snappy, value: onToday)
+                .accessibilityHint(onToday ? "Opens the calendar" : "")
                 .headerButton()
                 if banner == .hide {
                     Spacer(minLength: 0)
@@ -139,7 +142,6 @@ private struct DaySummary: View {
         let target = targets.target
         let totals = row.totals(entries)
         let lines = targets.summary(totals, settings: settings)
-        let rating = MealRatingBadge(title: NutritionFormat.dayTitle(day), amounts: totals)
         let status = row.status == .none ? nil : row.status.title
         let edited = row.override == nil ? nil : "Edited totals"
         VStack(spacing: 4) {
@@ -166,18 +168,14 @@ private struct DaySummary: View {
             .accessibilityLabel((lines.map(\.spoken) + [status, edited].compactMap(\.self)).joined(separator: ", "))
             .accessibilityAddTraits(.isButton)
             .accessibilityHint("Opens the Nutrition Overview")
-            // Over the summary rather than inside it, which reads as one VoiceOver element, so the rating stays a button.
             .overlay(alignment: .bottom) {
                 if target != nil {
                     HStack(spacing: 6) {
-                        rating
-                        Group {
-                            if let status { Text(status) }
-                            Spacer()
-                            if let edited { Text(edited) }
-                        }
-                        .allowsHitTesting(false)
+                        if let status { Text(status) }
+                        Spacer()
+                        if let edited { Text(edited) }
                     }
+                    .allowsHitTesting(false)
                     .font(AppFont.caption(11))
                     .foregroundStyle(Theme.textSecondary)
                     .frame(height: 20)
@@ -198,7 +196,6 @@ private struct DaySummary: View {
                     Spacer(minLength: 0)
                     Text([status, edited].compactMap(\.self).joined(separator: " · "))
                         .foregroundStyle(Theme.textSecondary)
-                    rating
                 }
                 .font(AppFont.rowDetail)
             }

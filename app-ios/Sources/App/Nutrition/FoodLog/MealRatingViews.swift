@@ -83,7 +83,7 @@ struct MealRatingButton: View {
     }
 }
 
-/// The rating of a group of foods outside the Food Log's rows (a recipe, the plate, the day), with its drawer. It draws
+/// The rating of a group of foods outside the Food Log's rows (a recipe, the plate), with its drawer. It draws
 /// nothing while Meal Rating is off or the foods have no calories. The drawer hangs on a stack that stays when the tag
 /// goes, so turning the rating off inside the drawer keeps it open, as the rows' does.
 struct MealRatingBadge: View {
@@ -237,7 +237,7 @@ struct MealRatingSheet: View {
 
 /// Meal Rating's rows, in Settings > Food Log and under a tag's explanation.
 struct MealRatingSettings: View {
-    var footer: String? = "Grades each meal, the day, recipes, and your plate with a tag. Tap a tag to see what it means."
+    var footer: String? = "Grades each meal, recipes, and your plate with a tag. Tap a tag to see what it means."
 
     @Environment(LocalStore.self) private var store
     @Observe(AppSettings.current) private var settings
