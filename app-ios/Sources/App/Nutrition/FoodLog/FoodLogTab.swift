@@ -136,7 +136,9 @@ private struct DaySummary: View {
     var body: some View {
         let targets = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: latestWeight?.weightKg)
         let target = targets.target
-        let lines = targets.summary(row.totals(entries), settings: settings)
+        let totals = row.totals(entries)
+        let lines = targets.summary(totals, settings: settings)
+        let rating = MealRatingBadge(title: NutritionFormat.dayTitle(day), amounts: totals)
         let status = row.status == .none ? nil : row.status.title
         let edited = row.override == nil ? nil : "Edited totals"
         VStack(spacing: 4) {
@@ -151,16 +153,6 @@ private struct DaySummary: View {
                     }
                     .tabViewStyle(.page(indexDisplayMode: .always))
                     .frame(height: 64)
-                    .overlay(alignment: .bottom) {
-                        HStack {
-                            if let status { Text(status) }
-                            Spacer()
-                            if let edited { Text(edited) }
-                        }
-                        .font(AppFont.caption(11))
-                        .foregroundStyle(Theme.textSecondary)
-                        .padding(.bottom, 12)
-                    }
                     // The page dots sit at a fixed height inside the TabView and leave an empty band under them, which a
                     // shorter frame doesn't remove (it moves the dots onto the bars). The timeline overlaps the band instead.
                     .padding(.bottom, -14)
@@ -173,6 +165,23 @@ private struct DaySummary: View {
             .accessibilityLabel((lines.map(\.spoken) + [status, edited].compactMap(\.self)).joined(separator: ", "))
             .accessibilityAddTraits(.isButton)
             .accessibilityHint("Opens the Nutrition Overview")
+            // Over the summary rather than inside it, which reads as one VoiceOver element, so the rating stays a button.
+            .overlay(alignment: .bottom) {
+                if target != nil {
+                    HStack(spacing: 6) {
+                        rating
+                        Group {
+                            if let status { Text(status) }
+                            Spacer()
+                            if let edited { Text(edited) }
+                        }
+                        .allowsHitTesting(false)
+                    }
+                    .font(AppFont.caption(11))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(height: 20)
+                }
+            }
             if target == nil {
                 HStack(spacing: 4) {
                     Button { state.path.append(FoodLogRoute.strategy) } label: {
@@ -188,6 +197,7 @@ private struct DaySummary: View {
                     Spacer(minLength: 0)
                     Text([status, edited].compactMap(\.self).joined(separator: " · "))
                         .foregroundStyle(Theme.textSecondary)
+                    rating
                 }
                 .font(AppFont.rowDetail)
             }

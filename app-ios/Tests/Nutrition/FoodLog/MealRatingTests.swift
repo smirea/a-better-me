@@ -28,6 +28,13 @@ struct MealRatingTests {
         #expect(score(420, 20)?.tier == .poor)
     }
 
+    @Test func runsTheBorderOnTheTwoBestTiersAndTheSkull() {
+        let animated = [(120, 20), (160, 20), (200, 20), (260, 20), (400, 20), (420, 20), (250, 0)].map { calories, protein in
+            score(Double(calories), Double(protein)).map { $0.tier.isAnimated(dire: $0.isDire) }
+        }
+        #expect(animated == [true, true, false, false, false, true, true])
+    }
+
     @Test func aMealWithoutProteinIsTheWorst() {
         #expect(score(250, 0) == MealRating.Score(ratio: nil, tier: .poor, isDire: true))
         #expect(score(250, 0)?.ratioText == "∞")

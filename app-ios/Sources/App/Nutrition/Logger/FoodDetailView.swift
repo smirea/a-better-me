@@ -99,6 +99,9 @@ struct FoodDetailView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
+                if food.source == .recipe {
+                    MealRatingBadge(title: food.name, amounts: amounts)
+                }
                 RoundIconButton(
                     favorite != nil ? "Saved" : "Favorite", systemImage: favorite != nil ? "heart.fill" : "heart",
                     size: .small, tint: favorite != nil ? Theme.favorite : nil

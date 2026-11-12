@@ -165,14 +165,20 @@ struct RecipeEditor: View {
     }
 
     private func nutrition(_ preview: Recipe) -> some View {
-        ThemedSection("Nutrition") {
-            Picker("Nutrition Per", selection: $perServing) {
-                Text("Serving").tag(true)
-                Text("Recipe").tag(false)
+        let amounts = perServing ? preview.nutrition.nutrients : RecipeMath.total(preview.ingredients)
+        return ThemedSection("Nutrition") {
+            HStack {
+                Picker("Nutrition Per", selection: $perServing) {
+                    Text("Serving").tag(true)
+                    Text("Recipe").tag(false)
+                }
+                .pickerStyle(.segmented)
+                MealRatingBadge(title: draft.name.isEmpty ? "Your New Recipe" : draft.name, amounts: amounts)
             }
-            .pickerStyle(.segmented)
+            // The row's separator otherwise starts at the tag, its first text.
+            .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
             MacroSummary(
-                amounts: perServing ? preview.nutrition.nutrients : RecipeMath.total(preview.ingredients),
+                amounts: amounts,
                 caption: perServing ? "Per \(servingLabel(preview))" : "For \(NumberText.plain(preview.servings)) servings"
             )
             Toggle("Show all nutrients", isOn: $showAllNutrients).tint(Theme.accent)
