@@ -9,14 +9,10 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { assertNotBare } from './check-not-bare';
+import { dropGitEnv } from './git-env';
 
-// Git hooks export GIT_DIR (and GIT_INDEX_FILE at commit), which in a linked worktree points into the main checkout's
-// `.git`, so any git call a test makes, `git init` in a scratch directory included, acts on the real repository. A
-// test once committed its fixtures onto the branch and set core.bare = true in the shared config; xcodebuild's package
-// checkouts failed with "Couldn't check out revision". Dropping them here is the one place that works: Bun.spawn
-// ignores every later change to process.env, so a runner can't clean its own environment, but these node:child_process
-// spawns hand their children the cleaned one.
-for (const key of Object.keys(process.env)) if (key.startsWith('GIT_')) delete process.env[key];
+// The hooks run every test through here, so this is where their GIT_* stops (see git-env.ts).
+dropGitEnv();
 
 const root = realpathSync(join(import.meta.dir, '..'));
 const SOURCE = /\.(ts|tsx|mts)$/;
