@@ -91,15 +91,19 @@ struct ChangelogView: View {
 
 private struct ChangelogRow: View {
     let entry: Changelog.Entry
+    @ScaledMetric(relativeTo: .caption2) private var buildWidth: CGFloat = 52
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
-            // The widest build number sizes the column, so every title starts at one edge at any text size.
-            Text("0000.0000.000000")
-                .hidden()
-                .overlay(alignment: .leading) { Text(entry.build).foregroundStyle(Theme.textTertiary) }
-                .font(AppFont.caption(11).monospacedDigit())
-                .accessibilityRepresentation { Text("Build \(entry.build)") }
+            // A build number wraps after its day, year.MMdd over HHmmss, so the column stays narrow and every title
+            // starts at one edge.
+            Text(entry.build.replacing(/\.(?=\d+$)/, with: "\n"))
+                .font(AppFont.caption(11))
+                .foregroundStyle(Theme.textTertiary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .frame(width: buildWidth, alignment: .leading)
+                .accessibilityLabel("Build \(entry.build)")
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.title).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
                 if let description = entry.description {

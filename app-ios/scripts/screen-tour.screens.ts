@@ -84,6 +84,7 @@ export const screens: Screen[] = [
 	{ name: 'strategy', steps: [...more('Strategy'), 'shot top', ...scrolled(1)] },
 	{ name: 'settings-units', steps: more('Units') },
 	{ name: 'settings-profile', steps: more('Profile') },
+	{ name: 'changelog', steps: [...more('Changelog'), 'shot top', ...scrolled(2)] },
 	{ name: 'settings-workout', steps: [...tapTab('More'), `press 'role="cell" label="Workout"'`] },
 	{ name: 'exercises', steps: more('Exercises') },
 	{ name: 'gym-profiles', steps: more('Gym Profiles') },
