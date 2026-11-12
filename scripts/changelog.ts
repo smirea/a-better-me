@@ -137,7 +137,16 @@ export function bundle(root: string, currentBuild: string): Bundle {
 		if (line.startsWith('\0')) commit = position.get(line.slice(1)) ?? -1;
 		else if (line && commit >= 0) added.set(basename(line, '.json'), commit);
 	}
-	// Oldest first, so the first tag at or after a commit is the earliest build holding it.
+	// Build numbers drop leading zeros (2026.1112.1442 is 00:14:42), so they compare numerically. The build being made
+	// is the newest.
+	const buildOrder = (build: string) => (build === currentBuild ? [Infinity] : build.split('.').map(Number));
+	const olderFirst = (a: string, b: string) => {
+		const [x, y] = [buildOrder(a), buildOrder(b)];
+		const i = x.findIndex((part, n) => part !== y[n]);
+		return i < 0 ? 0 : x[i]! - y[i]!;
+	};
+	// Oldest first, so the first tag at or after a commit is the earliest build holding it, even when a rerun archived
+	// the same commit twice.
 	const tags = git(root, [
 		'for-each-ref',
 		'--format=%(refname:lstrip=2)%09%(objectname)%09%(*objectname)',
@@ -150,17 +159,10 @@ export function bundle(root: string, currentBuild: string): Bundle {
 			const index = position.get(peeled || object!);
 			return index === undefined ? [] : [{ build: name!.slice(tagPrefix.length), index }];
 		})
-		.sort((a, b) => b.index - a.index);
+		.sort((a, b) => b.index - a.index || olderFirst(a.build, b.build));
 	const shippedIn = (index: number | undefined) =>
 		index === undefined ? undefined : tags.find(tag => tag.index <= index)?.build;
 
-	// Entries added by one commit, such as a backfill, fall back to their builds' order; the build being made is newest.
-	const buildOrder = (build: string) => (build === currentBuild ? [Infinity] : build.split('.').map(Number));
-	const newerBuild = (a: string, b: string) => {
-		const [x, y] = [buildOrder(a), buildOrder(b)];
-		const i = x.findIndex((part, n) => part !== y[n]);
-		return i < 0 ? 0 : y[i]! - x[i]!;
-	};
 	return {
 		build: currentBuild,
 		entries: entries
@@ -172,7 +174,8 @@ export function bundle(root: string, currentBuild: string): Bundle {
 				(a, b) =>
 					b.entry.date.localeCompare(a.entry.date) ||
 					(a.index ?? -1) - (b.index ?? -1) ||
-					newerBuild(a.entry.build, b.entry.build) ||
+					// Entries one commit added, such as a backfill, fall back to their builds' order.
+					olderFirst(b.entry.build, a.entry.build) ||
 					b.entry.id.localeCompare(a.entry.id),
 			)
 			.map(({ entry }) => entry),

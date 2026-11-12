@@ -129,3 +129,11 @@ test('an entry with a multi-line title or a bad task id is rejected', () => {
 	expect(() => parseEntry('2026-11-12-x.json', '{"title":"One","tasks":["123"]}')).toThrow('tasks must be');
 	expect(() => parseEntry('notes.json', '{"title":"One"}')).toThrow('name it <YYYY-MM-DD>');
 });
+
+test('a commit archived twice keeps the first build that held it', () => {
+	write('changelog/2026-11-12-a.json', '{"title":"A"}\n');
+	const sha = commit('a');
+	git('tag', 'testflight/2026.1112.100000', sha);
+	git('tag', 'testflight/2026.1112.90000', sha);
+	expect(bundle(root, 'dev').entries.map(entry => entry.build)).toEqual(['2026.1112.90000']);
+});
