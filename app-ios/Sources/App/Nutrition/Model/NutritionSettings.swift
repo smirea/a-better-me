@@ -130,8 +130,6 @@ struct NutritionSettings: Codable, Hashable, Sendable {
     /// The tag right of each meal's + grading its totals, off until the owner turns it on.
     var mealRating = MealRating()
     var logger = Logger()
-    /// The Nutrition "+" sheet's shortcuts in order; the first four are its round buttons.
-    var shortcuts = NutritionShortcut.allCases
     var expenditure = Expenditure()
     /// Hidden from the Dashboard and summaries; totals still count them. Calories and the macros always show.
     var hiddenNutrients: Set<NutrientID> = []

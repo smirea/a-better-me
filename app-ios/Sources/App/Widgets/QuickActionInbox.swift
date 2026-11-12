@@ -14,16 +14,16 @@ final class QuickActionInbox {
 }
 
 extension QuickAction {
-    /// Where a logging action opens the logger, as the Nutrition "+" shortcut of the same name does.
+    /// Where a logging action opens the logger.
     var logger: LoggerStart? {
         switch self {
-        case .search: NutritionShortcut.search.logger
-        case .barcode: NutritionShortcut.barcode.logger
-        case .quickAdd: NutritionShortcut.quickAdd.logger
-        case .ramble: NutritionShortcut.ramble.logger
-        case .foods: NutritionShortcut.yourFoods.logger
-        case .recipes: NutritionShortcut.recipes.logger
-        case .favorites: NutritionShortcut.favorites.logger
+        case .search: LoggerStart(tab: .search)
+        case .barcode: LoggerStart(tab: .scan)
+        case .quickAdd: LoggerStart(tab: .quickAdd)
+        case .ramble: LoggerStart(tab: .ramble)
+        case .foods: LoggerStart(tab: .library, library: .foods)
+        case .recipes: LoggerStart(tab: .library, library: .recipes)
+        case .favorites: LoggerStart(tab: .library, library: .favorites)
         case .weight, .foodLog, .dashboard, .steps, .newWorkout, .emptyWorkout: nil
         }
     }
