@@ -8,10 +8,6 @@ import { withBuildLock } from "./build-lock.ts";
 import { refreshOwnPackages } from "./own-packages.ts";
 import { agentCommand } from "../../scripts/lib.ts";
 
-// Run from a git hook, git's GIT_DIR reaches xcodebuild, whose checkout of a moved package pin then fails with
-// "Couldn't check out revision" (refreshOwnPackages moves own pins to their branch head).
-for (const key of Object.keys(process.env)) if (key.startsWith("GIT_")) delete process.env[key];
-
 const root = resolve(import.meta.dir, "..");
 const argv = Bun.argv.slice(2);
 const split = argv.includes("--") ? argv.indexOf("--") : argv.length;
