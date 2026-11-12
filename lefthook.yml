@@ -25,6 +25,9 @@ pre-commit:
 # Swift suites run at push, not commit: they build and boot a simulator, which costs a minute or more.
 pre-push:
   commands:
+    # The same check as CI's "Changelog entry" job, so a missing entry fails before the PR opens.
+    changelog:
+      run: bun --no-env-file scripts/changelog.ts check --base "$(git merge-base HEAD origin/master)"
     test:
       # Not {push_files}: on a branch with no upstream it diffs against origin/master's tip, so once master moved, a
       # docs-only push ran the Swift suites of master's own merges.

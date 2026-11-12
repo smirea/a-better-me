@@ -186,6 +186,7 @@
 				A00000000000000000000007 /* Sources */,
 				A00000000000000000000008 /* Frameworks */,
 				A00000000000000000000009 /* Resources */,
+				E00000000000000000000011 /* Bundle Changelog */,
 				B0000000000000000000000D /* Embed Watch Content */,
 				C0000000000000000000000D /* Embed Foundation Extensions */,
 				E00000000000000000000010 /* Upload dSYMs to Sentry */,
@@ -376,6 +377,23 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		E00000000000000000000011 /* Bundle Changelog */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle Changelog";
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Changelog.json",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/scripts/bundle-changelog\"\n";
+			showEnvVarsInLog = 0;
+		};
 		E00000000000000000000010 /* Upload dSYMs to Sentry */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;

@@ -1,0 +1,4 @@
+{
+	"title": "Faster agent loop: CI overlaps the simulator boot, Swift suites run at push",
+	"build": "2026.1106.44807"
+}

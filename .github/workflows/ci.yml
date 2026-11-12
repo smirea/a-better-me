@@ -41,6 +41,25 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
         run: bun .github/scripts/changes.ts
 
+  # Every PR that changes shipped code adds a changelog/ entry, which the iPhone app lists in More > Changelog.
+  changelog:
+    name: Changelog entry
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Check for a new entry
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: bun scripts/changelog.ts check --base "$BASE_SHA"
+
   bun:
     name: ${{ matrix.task }} (Bun)
     needs: changes

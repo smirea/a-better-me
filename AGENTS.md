@@ -9,6 +9,7 @@ Full rules in [`docs/decisions/workflow.md`](docs/decisions/workflow.md).
 
 - One PR per thread, never stacked. Rebase only when GitHub reports a real conflict.
 - Worktree setup is automatic: T3 Code runs `agent-t3-worktree setup` when it creates a worktree, and the session-start and pre-commit checks rerun it when something is missing. Never run it by hand, and never rename a T3 worktree's branch. A merged worktree is removed when its thread settles or by `agent-t3-worktree gc --repo .`; `agent-t3-worktree teardown <worktree | branch>` removes one right away.
+- A PR that changes shipped code (`app-ios/Sources`, `app-ios/Config`, `app-ios/Assets`, `server/src`, `app-web/src`, `shared/`) adds a changelog entry, which the app lists in More > Changelog: `bun scripts/changelog.ts add "<one-line title of what changed for the owner>" --task <task id or link from your brief> [--desc "<one short sentence>"]`, then commit the file it writes under `changelog/`. Pre-push and CI's Changelog entry check fail without one. See [`docs/decisions/changelog.md`](docs/decisions/changelog.md).
 - After opening a PR, run `pr-ship [--merge]` (shared, from `~/code/scripts`) in the foreground until it exits 0. Its exit code names the next step.
 - Never skip git hooks. Fix the failure instead.
 - Run only the relevant tests locally; CI runs the full suite.

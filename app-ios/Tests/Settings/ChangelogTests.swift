@@ -1,0 +1,30 @@
+import Foundation
+import Testing
+@testable import App
+
+struct ChangelogTests {
+    /// The shape `scripts/changelog.ts bundle` writes, newest first.
+    private let json = #"""
+    {"build":"2026.1112.183941","entries":[
+      {"id":"2026-11-12-b","date":"2026-11-12","title":"B","tasks":["2ca9f3dd-67c0-4ffc-8670-266407c5df7b"],"build":"2026.1112.183941"},
+      {"id":"2026-11-12-a","date":"2026-11-12","title":"A","description":"Detail.","tasks":[],"build":"2026.1112.170758"},
+      {"id":"2026-11-11-c","date":"2026-11-11","title":"C","tasks":[],"build":"2026.1111.184217"},
+      {"id":"2026-10-30-d","date":"2026-10-30","title":"D","tasks":[],"build":"2026.1030.90000"}
+    ]}
+    """#
+
+    @Test func groupsEntriesByDayInBundleOrder() throws {
+        let changelog = try JSONDecoder().decode(Changelog.self, from: Data(json.utf8))
+        let days = changelog.days(today: CalendarDay("2026-11-12")!)
+        #expect(days.map(\.day.description) == ["2026-11-12", "2026-11-11", "2026-10-30"])
+        #expect(days.map { $0.entries.map(\.id) } == [["2026-11-12-b", "2026-11-12-a"], ["2026-11-11-c"], ["2026-10-30-d"]])
+        #expect(days[0].title == "Today")
+        #expect(days[1].title == "Yesterday")
+        #expect(days[0].entries[1].description == "Detail.")
+    }
+
+    @Test func taskLinksOpenProcrastiMate() {
+        #expect(Changelog.taskURL("2ca9f3dd-67c0-4ffc-8670-266407c5df7b").absoluteString
+            == "https://procrastimate.stf.lol/inbox?task=2ca9f3dd-67c0-4ffc-8670-266407c5df7b")
+    }
+}

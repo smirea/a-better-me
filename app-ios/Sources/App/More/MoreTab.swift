@@ -17,6 +17,7 @@ struct MoreTab: View {
                     row(.profile)
                     row(.dashboard)
                     row(.appleHealth)
+                    row(.changelog)
                 }
                 ThemedSection("Nutrition") {
                     row(.strategy)
@@ -56,7 +57,7 @@ struct MoreTab: View {
 /// More's screens are path values registered at its root, with the destinations Levels and Strategy push. A
 /// value link inside a screen pushed with a view destination never fired, so nothing here pushes by view.
 private enum MoreRoute: Hashable {
-    case levels, strategy, workoutHistory, units, profile, dashboard, workout, exercises, gymProfiles, foodLog, expenditure, foodsRecipes, appleHealth, dataVisibility, apiTokens
+    case levels, strategy, workoutHistory, units, profile, dashboard, workout, exercises, gymProfiles, foodLog, expenditure, foodsRecipes, appleHealth, changelog, dataVisibility, apiTokens
 
     var title: String {
         switch self {
@@ -73,6 +74,7 @@ private enum MoreRoute: Hashable {
         case .expenditure: "Expenditure"
         case .foodsRecipes: "Foods & Recipes"
         case .appleHealth: "Apple Health"
+        case .changelog: "Changelog"
         case .dataVisibility: "Data Visibility"
         case .apiTokens: "API Tokens"
         }
@@ -93,6 +95,7 @@ private enum MoreRoute: Hashable {
         case .expenditure: "bolt.fill"
         case .foodsRecipes: "carrot"
         case .appleHealth: "heart.fill"
+        case .changelog: "clock.arrow.circlepath"
         case .dataVisibility: "eye"
         case .apiTokens: "key"
         }
@@ -114,6 +117,7 @@ private enum MoreRoute: Hashable {
         case .expenditure: ExpenditureSettingsView()
         case .foodsRecipes: FoodLibraryView()
         case .appleHealth: HealthSettingsView()
+        case .changelog: ChangelogView()
         case .dataVisibility: DataVisibilityView()
         case .apiTokens: ApiTokensView()
         }
