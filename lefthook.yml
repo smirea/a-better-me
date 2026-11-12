@@ -1,5 +1,9 @@
 pre-commit:
   jobs:
+    # A linked worktree keeps working when the shared config says core.bare = true, so only the main checkout and T3
+    # break, far from the cause. Failing here points at it the next time any worktree commits or pushes.
+    - name: not-bare
+      run: bun --no-env-file scripts/check-not-bare.ts
     # Heals a worktree whose setup is missing or stale. CI and cloud agents don't have the command.
     - name: worktree-check
       run: '[ ! -x "$HOME/bin/agent-t3-worktree" ] || "$HOME/bin/agent-t3-worktree" check --heal'
@@ -25,6 +29,8 @@ pre-commit:
 # Swift suites run at push, not commit: they build and boot a simulator, which costs a minute or more.
 pre-push:
   commands:
+    not-bare:
+      run: bun --no-env-file scripts/check-not-bare.ts
     # The same check as CI's "Changelog entry" job, so a missing entry fails before the PR opens.
     changelog:
       run: bun --no-env-file scripts/changelog.ts check --base "$(git merge-base HEAD origin/master)"
