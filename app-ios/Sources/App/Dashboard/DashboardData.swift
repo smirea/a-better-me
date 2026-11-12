@@ -71,7 +71,7 @@ struct MetricTab: Identifiable {
         var dashed = false
     }
 
-    struct Stat {
+    struct Stat: Equatable {
         var title: String
         var value: Double?
     }
