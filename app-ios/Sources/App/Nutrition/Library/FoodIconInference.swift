@@ -21,7 +21,7 @@ struct OnDeviceFoodIconModel: FoodIconModel {
 
     func icon(for food: String) async throws -> String {
         let session = LanguageModelSession(model: model, instructions: Self.instructions)
-        let pick = try await session.respond(to: "Food: \(food)", generating: FoodIconPick.self, options: GenerationOptions(sampling: .greedy))
+        let pick = try await session.respond(to: "Food: \(food)", generating: FoodIconPick.self, options: GenerationOptions(samplingMode: .greedy))
         return pick.content.icon
     }
 
@@ -71,7 +71,7 @@ final class FoodIconInference {
             in: store.database.pool,
             scheduling: .async(onQueue: .main),
             onError: { Self.log.error("Observing foods without icons failed: \(String(describing: $0))") },
-            onChange: { [weak self] in self?.receive($0) }
+            onChange: { candidates in MainActor.assumeIsolated { [weak self] in self?.receive(candidates) } }
         )
     }
 

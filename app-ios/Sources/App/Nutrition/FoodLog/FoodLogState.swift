@@ -144,6 +144,13 @@ final class FoodLogState {
         }
     }
 
+    /// Saves a meal line's suggestion as a recipe. The entries stay logged, so the meal keeps counting.
+    func createMeal(_ name: String, from entries: [FoodEntry], in store: LocalStore) {
+        let recipe = FoodLog.mealRecipe(name, from: entries)
+        store.saveRecipe(recipe)
+        notice = Notice(message: "Saved \(name) to Recipes", undo: .deleteRecipe(recipe.id))
+    }
+
     func relocate(_ entries: [FoodEntry], _ action: Action, to target: PasteTarget, in store: LocalStore) {
         expectAdditions()
         let undo = store.relocate(entries, action, to: target)
@@ -197,6 +204,7 @@ enum FoodLogRoute: Hashable {
     case overview(CalendarDay)
     case contributors(CalendarDay, NutrientID)
     case strategy
+    case recipe(UUID)
 }
 
 /// Where an entry sits: its day, minute, and meal section.
@@ -228,6 +236,8 @@ enum LogUndo {
     case restore(MoveRecord)
     /// Removes the recipe that replaced a selection and logs the selection back, under new ids.
     case unreplace(added: UUID, removed: [FoodEntry])
+    /// Takes back a meal line's Create.
+    case deleteRecipe(UUID)
 }
 
 extension LocalStore {
@@ -299,6 +309,8 @@ extension LocalStore {
             }
         case let .remove(ids):
             deleteEntries(ids)
+        case let .deleteRecipe(id):
+            deleteRecipe(id)
         case let .restore(record):
             write { db in
                 for move in record.moves.withLock({ $0 }) {

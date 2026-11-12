@@ -8,6 +8,7 @@ struct BetterMeApp: App {
     @State private var store: LocalStore
     @State private var history: SessionHistory
     @State private var health: HealthData
+    @State private var meals: MealCatalog
 
     init() {
         Telemetry.start()
@@ -25,6 +26,9 @@ struct BetterMeApp: App {
         _history = State(initialValue: history)
         let health = HealthData(store: store)
         _health = State(initialValue: health)
+        let meals = MealCatalog()
+        meals.start(store: store)
+        _meals = State(initialValue: meals)
         catalog.observeCustom(in: store)
         LiveWorkoutController.shared.start(store: store, history: history, catalog: catalog)
         WorkoutActivityController.shared.start(store: store, catalog: catalog)
@@ -59,6 +63,7 @@ struct BetterMeApp: App {
                 .environment(store)
                 .environment(history)
                 .environment(health)
+                .environment(meals)
                 .font(AppFont.body())
                 .preferredColorScheme(.dark)
                 .tint(Theme.textPrimary)

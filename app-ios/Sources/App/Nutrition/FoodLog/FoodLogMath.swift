@@ -31,12 +31,15 @@ struct TimelineGroup: Hashable, Identifiable {
 
     /// Summed once here, since `DayPage` memoizes the groups and every render of the row reads them.
     let totals: NutrientAmounts
+    /// A section's foods as a meal, hashed once here for the same reason. An hour is no meal, so it has none.
+    let meal: MealComponents?
 
     init(slot: TimelineSlot, rows: [TimelineRow], minutes: Range<Int>) {
         self.slot = slot
         self.rows = rows
         self.minutes = minutes
         totals = rows.map(\.entry).totals
+        meal = if case .section = slot { MealComponents(rows.map(\.entry.food)) } else { nil }
     }
 
     var id: TimelineSlot { slot }
@@ -324,6 +327,16 @@ enum FoodLog {
         var draft = RecipeDraft()
         draft.ingredients = entries.map { .init(RecipeIngredient($0.portion)) }
         return draft
+    }
+
+    /// A meal line's Create: the section's foods as a recipe of one serving at the amounts logged, weighed as the
+    /// recipe editor weighs a blank Total Weight. Quick adds stay out, as they stay out of the meal.
+    static func mealRecipe(_ name: String, from entries: [FoodEntry]) -> Recipe {
+        var recipe = Recipe(name: name)
+        recipe.ingredients = entries.filter { $0.food.source != .quickAdd }.map { RecipeIngredient($0.portion) }
+        let grams = RecipeMath.ingredientGrams(recipe.ingredients)
+        recipe.cookedGrams = grams > 0 ? grams : nil
+        return recipe
     }
 
     /// What saving Create Recipe logs in place of the selection: the whole batch, at the earliest selected entry's

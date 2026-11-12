@@ -7,6 +7,7 @@ struct DayPage: View {
     let day: CalendarDay
 
     @Environment(FoodLogState.self) private var state
+    @Environment(MealCatalog.self) private var meals
     @Observe(AppSettings.current) private var settings
     @Observe private var entries: [FoodEntry]
     /// One width for every hour pill, so "8 AM" and "12 PM" line up; it scales with the text.
@@ -40,11 +41,11 @@ struct DayPage: View {
     private static let bottomPadding: CGFloat = 8
 
     var body: some View {
+        let groups = self.groups(GroupsKey(entries: entries, timeline: timeline, sections: settings.nutrition.mealSections)) {
+            FoodLog.groups(entries, settings: settings.nutrition)
+        }
         ScrollViewReader { proxy in
             ScrollView {
-                let groups = self.groups(GroupsKey(entries: entries, timeline: timeline, sections: settings.nutrition.mealSections)) {
-                    FoodLog.groups(entries, settings: settings.nutrition)
-                }
                 let column = self.column
                 FillHeight(minHeight: isSections ? pageHeight - state.header.height - Self.bottomPadding : 0) {
                     VStack(alignment: .leading, spacing: 0) {
@@ -62,6 +63,10 @@ struct DayPage: View {
                                     row: row, column: column, showsTime: timeline.foodTimestamps && !isSections, hidesDetails: timeline.hideFoodDetails
                                 )
                                 .id(row.id)
+                            }
+                            if let meal = group.meal {
+                                MealLineRow(meal: meal, entries: group.rows.map(\.entry))
+                                    .padding(.leading, column.tileInset)
                             }
                         }
                     }
@@ -86,6 +91,67 @@ struct DayPage: View {
             state.setScrolled(FoodLog.headerSlide(offset: scroll.offset, row: state.header.row, maxOffset: scroll.maxOffset), on: day)
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pageHeight = $0 }
+        .task(id: groups.compactMap(\.meal)) {
+            for group in groups {
+                if let meal = group.meal { meals.suggest(meal, from: group.rows.map(\.entry)) }
+            }
+        }
+        .feedback(self)
+    }
+}
+
+/// The line under a section's foods once they make a meal: the recipe it was saved as and how many times it was
+/// logged, which opens the recipe, or the name the model suggested and Create, which saves it as one.
+/// It reads the index itself, so a change to it re-renders only the meal lines.
+private struct MealLineRow: View {
+    let meal: MealComponents
+    let entries: [FoodEntry]
+
+    @Environment(MealCatalog.self) private var meals
+    @Environment(FoodLogState.self) private var state
+    @Environment(LocalStore.self) private var store
+
+    var body: some View {
+        if let line = meals.index.line(for: meal) { row(line) }
+    }
+
+    private func row(_ line: MealIndex.Line) -> some View {
+        Group {
+            switch line {
+            case let .saved(recipe, count):
+                Button { state.path.append(FoodLogRoute.recipe(recipe.id)) } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "frying.pan").foregroundStyle(Theme.textSecondary)
+                        Text(recipe.name).lineLimit(1)
+                        Spacer(minLength: 8)
+                        Text("Logged \(count)×").foregroundStyle(Theme.textSecondary).monospacedDigit()
+                        Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.textSecondary)
+                    }
+                    .frame(minHeight: 36)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .disabled(state.selecting)
+                .accessibilityLabel("\(recipe.name), logged \(count) \(count == 1 ? "time" : "times")")
+                .accessibilityHint("Opens the recipe")
+            case let .suggested(name):
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles").foregroundStyle(Theme.textSecondary)
+                    Text(name).lineLimit(1).foregroundStyle(Theme.textSecondary)
+                        .accessibilityLabel("Suggested meal name, \(name)")
+                    Spacer(minLength: 8)
+                    Button("Create") { state.createMeal(name, from: entries, in: store) }
+                        .chipButton()
+                        .disabled(state.selecting)
+                        .accessibilityLabel("Create \(name)")
+                }
+                .frame(minHeight: 36)
+            }
+        }
+        .font(AppFont.chip)
+        .foregroundStyle(Theme.textPrimary)
+        .padding(.leading, 12)
+        .padding(.bottom, 6)
         .feedback(self)
     }
 }
