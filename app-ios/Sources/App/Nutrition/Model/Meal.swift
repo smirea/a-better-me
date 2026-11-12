@@ -4,9 +4,10 @@ import GRDB
 
 /// What makes two meals the same meal: the distinct foods in it (`FoodSearchResult.key`), in any order and at any
 /// servings. Quick adds are left out, since every one shares the name "Quick Add" and none is a food the owner could
-/// eat again. Fewer than `minimumFoods` foods are no meal.
+/// eat again. Fewer than `minimumFoods` foods are no meal: the owner read "more than two things" as two being enough
+/// once two foods logged into Dinner showed no line.
 struct MealComponents: Hashable, Sendable {
-    static let minimumFoods = 3
+    static let minimumFoods = 2
 
     let keys: [String]
     /// A digest of the sorted keys, the same on every device and launch, which the `meal_names` rows are keyed by.
@@ -21,6 +22,19 @@ struct MealComponents: Hashable, Sendable {
 
     init?(_ foods: some Sequence<FoodSnapshot>) {
         self.init(keys: foods.filter { $0.source != .quickAdd }.map(FoodSearchResult.key))
+    }
+
+    /// The meal line's name until the model's lands, and for good where the model can't run: the two foods with the
+    /// most calories, each up to its first comma, so USDA's "Beef, top sirloin, steak" reads "Beef and Potatoes".
+    static func fallbackName(_ portions: [FoodPortion]) -> String {
+        var calories: [String: (name: String, energy: Double)] = [:]
+        for portion in portions where portion.food.source != .quickAdd {
+            let name = (portion.food.name.split(separator: ",", maxSplits: 1).first.map(String.init) ?? portion.food.name)
+                .trimmingCharacters(in: .whitespaces)
+            calories[name.lowercased(), default: (name, 0)].energy += portion.amounts[.energy] ?? 0
+        }
+        let top = calories.values.sorted { ($0.energy, $1.name) > ($1.energy, $0.name) }.prefix(2).map(\.name)
+        return top.joined(separator: " and ")
     }
 }
 

@@ -23,9 +23,11 @@ struct MealIndex: Equatable, Sendable {
     /// The meal sections holding exactly the meal's foods, on any day, plus the entries of the recipe it was saved as.
     var counts: [String: Int] = [:]
 
-    func line(for meal: MealComponents) -> Line? {
+    /// A meal with neither a recipe nor a stored name shows `fallback`: the model's answer is on its way, or the
+    /// device can't run the model.
+    func line(for meal: MealComponents, fallback: String) -> Line {
         if let recipe = recipes[meal.hash] { return .saved(recipe, count: counts[meal.hash, default: 0]) }
-        return names[meal.hash].map(Line.suggested)
+        return .suggested(names[meal.hash] ?? fallback)
     }
 
     nonisolated static let read: @Sendable (Database) throws -> MealIndex = { db in
@@ -112,7 +114,7 @@ private struct MealTitle {
 /// The app's one `MealIndex`, observed from the database, and the namer behind the suggestions. A meal line asks for
 /// a name with `suggest`; once the index has loaded, a meal with neither a recipe nor a stored name goes to the model,
 /// one at a time, and its answer is stored in `meal_names`, which the index then reads back. Without the model nothing
-/// is asked, so an unmatched meal shows no line.
+/// is asked, and the line keeps the name `MealComponents.fallbackName` built.
 @MainActor @Observable
 final class MealCatalog {
     nonisolated static let log = Logger(subsystem: "com.stefan.a-better-me", category: "meals")

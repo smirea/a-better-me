@@ -144,11 +144,22 @@ final class FoodLogState {
         }
     }
 
-    /// Saves a meal line's suggestion as a recipe. The entries stay logged, so the meal keeps counting.
-    func createMeal(_ name: String, from entries: [FoodEntry], in store: LocalStore) {
-        let recipe = FoodLog.mealRecipe(name, from: entries)
-        store.saveRecipe(recipe)
-        notice = Notice(message: "Saved \(name) to Recipes", undo: .deleteRecipe(recipe.id))
+    /// Saves a meal line's suggestion as a one-serving recipe and logs one serving of it in place of the section's
+    /// foods, in the write that saves it. Quick adds stay, as they stay out of the recipe. Undo takes both back.
+    @discardableResult
+    func createMeal(_ name: String, from entries: [FoodEntry], in store: LocalStore) -> Task<Void, Never> {
+        let foods = entries.filter { $0.food.source != .quickAdd }
+        let recipe = FoodLog.mealRecipe(name, from: foods)
+        guard let replacement = FoodLog.replacement(for: foods, with: recipe) else { return Task {} }
+        expectAdditions()
+        let replacing = store.replace(foods, with: replacement, saving: recipe)
+        return Task {
+            notice = if (try? await replacing.value) == true {
+                Notice(message: "Replaced \(foods.count) foods with \(name)", undo: .unreplace(added: replacement.id, removed: foods, recipe: recipe.id))
+            } else {
+                Notice(message: "Saved \(name). The foods changed meanwhile, so they stayed", undo: .deleteRecipe(recipe.id))
+            }
+        }
     }
 
     func relocate(_ entries: [FoodEntry], _ action: Action, to target: PasteTarget, in store: LocalStore) {
@@ -234,9 +245,10 @@ final class MoveRecord: Sendable {
 enum LogUndo {
     case remove([UUID])
     case restore(MoveRecord)
-    /// Removes the recipe that replaced a selection and logs the selection back, under new ids.
-    case unreplace(added: UUID, removed: [FoodEntry])
-    /// Takes back a meal line's Create.
+    /// Removes the recipe entry that replaced a selection and logs the selection back, under new ids. A meal line's
+    /// Create also deletes the recipe it saved, since the owner made it in one tap.
+    case unreplace(added: UUID, removed: [FoodEntry], recipe: UUID? = nil)
+    /// Takes back a meal line's Create whose foods changed before they could be replaced.
     case deleteRecipe(UUID)
 }
 
@@ -285,8 +297,10 @@ extension LocalStore {
     /// Swaps `entries` for `replacement` in one transaction, unless one of them changed or went since it was selected
     /// (another device, the agent API), so a stale selection never comes back inside the recipe or through Undo.
     /// Resolves whether it swapped. A section-less replacement takes the section its minute falls in, as `log` does.
-    func replace(_ entries: [FoodEntry], with replacement: FoodEntry) -> Task<Bool, any Error> {
+    /// `recipe` is saved in the same write either way, so the meal index never sees the foods and their recipe apart.
+    func replace(_ entries: [FoodEntry], with replacement: FoodEntry, saving recipe: Recipe? = nil) -> Task<Bool, any Error> {
         write { db in
+            if let recipe { try Self.insert(recipe, in: db) }
             for entry in entries {
                 guard try FoodEntry.fetchOne(db, key: FoodEntry.key(entry.id))?.updatedAt == entry.updatedAt else { return false }
             }
@@ -300,9 +314,10 @@ extension LocalStore {
 
     func undo(_ undo: LogUndo) {
         switch undo {
-        case let .unreplace(added, removed):
+        case let .unreplace(added, removed, recipe):
             write { db in
                 _ = try FoodEntry.deleteOne(db, key: FoodEntry.key(added))
+                if let recipe { _ = try Recipe.deleteOne(db, key: Recipe.key(recipe)) }
                 for entry in removed {
                     try FoodEntry(entry.portion, day: entry.day, minute: entry.minute, section: entry.section).insert(db)
                 }

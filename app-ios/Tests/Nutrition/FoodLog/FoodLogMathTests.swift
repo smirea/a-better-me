@@ -220,6 +220,23 @@ struct FoodLogMathTests {
         #expect(half.map { FoodEntry($0, day: monday, minute: 0) }.totals[.energy]?.rounded() == 306)
     }
 
+    @Test func aLoggedRecipesTileListsFiveIngredientsByCaloriesAtTheAmountEaten() {
+        func food(_ name: String, _ energy: Double) -> FoodSnapshot {
+            FoodSnapshot(source: .custom, name: name, nutrition: FoodNutrition(nutrients: [.energy: energy], measures: [Measure(name: "g", quantity: 100, servings: 1)]))
+        }
+        var recipe = Recipe(name: "Matcha Granola Bowl", servings: 2)
+        recipe.ingredients = [("Milk", 40.0, 200.0), ("Granola", 450, 80), ("Chia", 490, 20), ("Blueberries", 57, 100), ("Matcha", 300, 4), ("Honey", 300, 20)]
+            .map { name, energy, grams in RecipeIngredient(FoodPortion(food(name, energy), serving: Serving(measure: Measure(name: "g", quantity: 100, servings: 1), quantity: grams))) }
+
+        let tile = FoodLog.tileIngredients(Serving(measure: Measure(name: "serving", quantity: 1, servings: 1), quantity: 1), of: recipe)
+        #expect(tile.lines == [
+            .init(name: "Granola", amount: "40 g"), .init(name: "Chia", amount: "10 g"), .init(name: "Milk", amount: "100 g"),
+            .init(name: "Honey", amount: "10 g"), .init(name: "Blueberries", amount: "50 g"),
+        ])
+        #expect(tile.more == 1)
+        #expect(FoodLog.tileIngredients(Serving(measure: Measure(name: "serving", quantity: 1, servings: 1), quantity: 1), of: recipe, limit: 6).more == 0)
+    }
+
     @Test func draftsARecipeFromTheSelectionAtItsLoggedServings() {
         let draft = FoodLog.recipeDraft([entry(bowl, minute: 600, quantity: 2), entry(yogurt, minute: 610, quantity: 0.5)])
         #expect(draft.name == "")
