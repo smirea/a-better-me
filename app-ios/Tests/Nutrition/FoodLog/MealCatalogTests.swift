@@ -108,6 +108,27 @@ struct MealCatalogTests {
         #expect(catalog.index.line(for: meal) == .saved(.init(id: recipe.id, name: "Yogurt Granola Bowl"), count: 3))
     }
 
+    @Test func aMealShownWhileItsRecipeIsDeletedIsNamedThen() async throws {
+        let model = StubMealNameModel(answer: "Yogurt Granola Bowl")
+        let catalog = MealCatalog(model: model)
+        catalog.start(store: store)
+        store.log([portion(granola, 1), portion(yogurt, 1), portion(milk, 1)], on: monday, minute: 8 * 60)
+        let (meal, entries) = try await breakfast(on: monday)
+        let recipe = FoodLog.mealRecipe("Breakfast Bowl", from: entries)
+        store.saveRecipe(recipe)
+        await catalog.idle()
+
+        catalog.suggest(meal, from: entries)
+        await catalog.idle()
+        #expect(model.asked.isEmpty)
+        #expect(catalog.index.line(for: meal) == .saved(.init(id: recipe.id, name: "Breakfast Bowl"), count: 1))
+
+        store.deleteRecipe(recipe.id)
+        await catalog.idle()
+        #expect(model.asked.count == 1)
+        #expect(catalog.index.line(for: meal) == .suggested("Yogurt Granola Bowl"))
+    }
+
     @Test func withoutTheModelAnUnnamedMealHasNoLine() async throws {
         store.log([portion(granola, 1), portion(yogurt, 1), portion(milk, 1)], on: monday, minute: 8 * 60)
         let model = StubMealNameModel(isAvailable: false, answer: "Yogurt Granola Bowl")

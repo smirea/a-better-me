@@ -93,7 +93,7 @@ struct OnDeviceMealNameModel: MealNameModel {
     func name(for foods: [String]) async throws -> String {
         let session = LanguageModelSession(model: model, instructions: Self.instructions)
         let prompt = "Foods:\n" + foods.map { "- \($0)" }.joined(separator: "\n")
-        return try await session.respond(to: prompt, generating: MealTitle.self, options: GenerationOptions(sampling: .greedy)).content.name
+        return try await session.respond(to: prompt, generating: MealTitle.self, options: GenerationOptions(samplingMode: .greedy)).content.name
     }
 
     private static let instructions = """
@@ -123,7 +123,8 @@ final class MealCatalog {
     @ObservationIgnored private var store: LocalStore?
     @ObservationIgnored private var observation: AnyDatabaseCancellable?
     @ObservationIgnored private var loaded = false
-    /// Meals shown without a name, with the lines the model reads, until the index has loaded to tell which need one.
+    /// Meals shown without a name, with the lines the model reads. One a recipe holds stays here, so that if the
+    /// recipe is deleted or its foods change (another device, Undo) the meal is named without the page reopening.
     @ObservationIgnored private var wanted: [String: [String]] = [:]
     @ObservationIgnored private var queue: [(hash: String, foods: [String])] = []
     /// Meals asked about this launch, so one the model fails on is not asked again until the next.
@@ -141,13 +142,13 @@ final class MealCatalog {
             in: store.database.pool,
             scheduling: .async(onQueue: .main),
             onError: { Self.log.error("Observing meals failed: \(String(describing: $0))") },
-            onChange: { [weak self] in self?.receive($0) }
+            onChange: { index in MainActor.assumeIsolated { [weak self] in self?.receive(index) } }
         )
     }
 
     /// Asks for a name for a meal shown without one: `entries` are its foods as logged, whose servings the model reads.
     func suggest(_ meal: MealComponents, from entries: [FoodEntry]) {
-        guard model.isAvailable, !asked.contains(meal.hash), !loaded || index.line(for: meal) == nil else { return }
+        guard model.isAvailable, !asked.contains(meal.hash), index.names[meal.hash] == nil else { return }
         wanted[meal.hash] = entries.filter { $0.food.source != .quickAdd }.map {
             "\($0.food.displayName), \(NutritionFormat.serving($0.serving, of: $0.food))"
         }
@@ -170,11 +171,12 @@ final class MealCatalog {
     }
 
     private func askWanted() {
-        for (hash, foods) in wanted where index.recipes[hash] == nil && index.names[hash] == nil && !asked.contains(hash) {
+        for (hash, foods) in wanted where index.recipes[hash] == nil {
+            wanted[hash] = nil
+            guard index.names[hash] == nil, !asked.contains(hash) else { continue }
             asked.insert(hash)
             queue.append((hash, foods))
         }
-        wanted = [:]
         guard worker == nil, !queue.isEmpty else { return }
         worker = Task {
             while !queue.isEmpty {
