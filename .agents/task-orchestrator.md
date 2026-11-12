@@ -44,6 +44,7 @@ The Mac runs many jobs at once, and each booted simulator slows all of them. Cli
 
 ## PR
 
+- Add the changelog entry before you push, with every task id from your brief's `# Tasks being addressed`: `bun scripts/changelog.ts add "<what changed, in the owner's words, one line>" --task <id> [--task <id>] [--desc "<one short sentence, only when the title needs it>"]`. Pre-push and CI fail a PR that changes shipped code without one.
 - Schema changes are additive (`docs/decisions/sync.md`): add tables and columns, each with a default or nullable, and never drop or retype one; a column whose type must change gets a new name. After changing `shared/db/schema.ts`, run `bun run generate` and commit `SyncSchema.swift`. Two schema PRs conflict in that file: the one that merges second takes master's copy, rebases, and reruns `bun run generate`. Never hand-merge it.
 
 ## After the merge

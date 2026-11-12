@@ -86,6 +86,7 @@ xcodebuild -exportArchive -archivePath "$archive" -exportOptionsPlist "$options"
     -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 
 if [ "$destination" = upload ]; then
+    [ -z "${GITHUB_OUTPUT:-}" ] || echo "build-number=$build_number" >> "$GITHUB_OUTPUT"
     echo "Uploaded build $build_number. It shows in TestFlight once App Store Connect finishes processing."
 else
     echo "Exported $out/export/App.ipa (build $build_number)"

@@ -1,0 +1,27 @@
+#!/bin/bash
+# The App target's build phase: writes Changelog.json, the More > Changelog list, into the app from the repository's
+# changelog/ entries and its testflight/<build> tags. A TestFlight archive (Release for a device) stamps the entries no
+# earlier build holds with its own build number, so it needs the full history and tags; every other build says "dev".
+set -euo pipefail
+
+build=dev
+if [ "$CONFIGURATION" = Release ] && [ "$PLATFORM_NAME" = iphoneos ]; then
+    build=$CURRENT_PROJECT_VERSION
+    if [ "$(git -C "$SRCROOT" rev-parse --is-shallow-repository)" = true ]; then
+        echo "error: the changelog needs the full git history and tags to name each entry's build. Fetch with fetch-depth: 0."
+        exit 1
+    fi
+fi
+
+# Xcode's script environment drops the shell's PATH, so look where Bun installs too.
+bun=$(command -v bun || true)
+for candidate in "$HOME/.bun/bin/bun" /opt/homebrew/bin/bun /usr/local/bin/bun; do
+    [ -n "$bun" ] || { [ -x "$candidate" ] && bun=$candidate; }
+done
+if [ -z "$bun" ]; then
+    echo "error: Bun is missing, so the changelog could not be bundled. Install it from https://bun.sh."
+    exit 1
+fi
+
+"$bun" "$SRCROOT/../scripts/changelog.ts" bundle --build "$build" \
+    --out "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Changelog.json"
