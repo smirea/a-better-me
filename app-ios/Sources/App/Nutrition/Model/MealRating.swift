@@ -1,6 +1,7 @@
 import Foundation
 
-/// Settings > Food Log > Meal Rating: a tag right of each meal's + that grades the meal's totals by one formula.
+/// Settings > Food Log > Meal Rating: a tag that grades a group of foods (a meal, the day, a recipe, the plate) by one
+/// formula.
 struct MealRating: Codable, Hashable, Sendable {
     var enabled = false
     var formula = Formula.caloriesPerProtein
@@ -44,7 +45,7 @@ struct MealRating: Codable, Hashable, Sendable {
         }
     }
 
-    /// Best first. The two best tiers draw a moving border.
+    /// Best first. The two best tiers draw a moving border, as does a dire score.
     enum Tier: Int, CaseIterable, Sendable {
         case excellent, great, good, fair, poor
 
@@ -58,7 +59,7 @@ struct MealRating: Codable, Hashable, Sendable {
             }
         }
 
-        var isAnimated: Bool { self == .excellent || self == .great }
+        func isAnimated(dire: Bool) -> Bool { dire || self == .excellent || self == .great }
     }
 
     struct Score: Hashable, Sendable {

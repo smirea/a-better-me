@@ -12,12 +12,24 @@ extension MealRating.Tier {
     }
 }
 
-/// "C:P 13:1" in its tier's color, with a skull past the formula's dire line. Without text it is a dot in the same
-/// colors, for a row with no width to spare.
+/// "13:1" in its tier's color, with a skull past the formula's dire line. Without text it is a dot in the same colors,
+/// for a row with no width to spare.
 struct MealRatingTag: View {
     let text: String?
     let tier: MealRating.Tier
     var isDire = false
+
+    init(text: String?, tier: MealRating.Tier, isDire: Bool = false) {
+        self.text = text
+        self.tier = tier
+        self.isDire = isDire
+    }
+
+    init(_ score: MealRating.Score, showsText: Bool = true) {
+        self.init(text: showsText ? score.ratioText : nil, tier: score.tier, isDire: score.isDire)
+    }
+
+    private var isAnimated: Bool { tier.isAnimated(dire: isDire) }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -40,16 +52,56 @@ struct MealRatingTag: View {
             }
             .background(color.opacity(text == nil ? 0.5 : 0.16), in: .capsule)
                 .overlay {
-                    if tier.isAnimated, !reduceMotion {
+                    if isAnimated, !reduceMotion {
                         RunningBorder(color: color)
                     } else {
-                        Capsule().strokeBorder(color.opacity(tier.isAnimated ? 1 : 0.5), lineWidth: tier.isAnimated ? 1.5 : 1)
+                        Capsule().strokeBorder(color.opacity(isAnimated ? 1 : 0.5), lineWidth: isAnimated ? 1.5 : 1)
                     }
                 }
             if isDire {
                 // No SF Symbol draws a skull; multiplying the emoji's white by red keeps its dark eyes.
                 Text(verbatim: "💀").font(.system(size: 13)).colorMultiply(Theme.ratingRed)
             }
+        }
+    }
+}
+
+/// A tag that opens the rating's drawer, read as "<title> Calories per Protein, 13 to 1, Fair".
+struct MealRatingButton: View {
+    let title: String
+    let score: MealRating.Score
+    let formula: MealRating.Formula
+    var showsText = true
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) { MealRatingTag(score, showsText: showsText).frame(minHeight: 40).contentShape(.rect) }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(title) \(formula.title)")
+            .accessibilityValue("\(score.ratio.map { "\($0) to 1" } ?? "No protein"), \(score.tier.title)")
+            .accessibilityHint("Explains the meal rating")
+    }
+}
+
+/// The rating of a group of foods outside the Food Log's rows (a recipe, the plate, the day), with its drawer. It draws
+/// nothing while Meal Rating is off or the foods have no calories. The drawer hangs on a stack that stays when the tag
+/// goes, so turning the rating off inside the drawer keeps it open, as the rows' does.
+struct MealRatingBadge: View {
+    let title: String
+    let amounts: NutrientAmounts
+
+    @Observe(AppSettings.current) private var settings
+    @State private var explains = false
+
+    var body: some View {
+        let rating = settings.nutrition.mealRating
+        HStack(spacing: 0) {
+            if rating.enabled, let score = rating.formula.score(amounts) {
+                MealRatingButton(title: title, score: score, formula: rating.formula) { explains = true }
+            }
+        }
+        .sheet(isPresented: $explains) {
+            MealRatingSheet(meal: title, amounts: amounts)
         }
     }
 }
@@ -145,7 +197,7 @@ struct MealRatingSheet: View {
                             Text(meal).font(AppFont.rowTitle)
                             Spacer()
                             if let score {
-                                MealRatingTag(text: "\(formula.abbreviation) \(score.ratioText)", tier: score.tier, isDire: score.isDire)
+                                MealRatingTag(score)
                             }
                         }
                         Text("\((amounts[.energy] ?? 0).wholeText) kcal ÷ \((amounts[.protein] ?? 0).wholeText) g protein")
@@ -154,7 +206,7 @@ struct MealRatingSheet: View {
                     }
                     .padding(.vertical, 4)
                 }
-                ThemedSection(formula.title, footer: "Over \(formula.direAbove):1 the tag also gets a skull.") {
+                ThemedSection(formula.title, footer: "Over \(formula.direAbove):1 the tag also gets a skull and a running border.") {
                     ForEach(MealRating.Tier.allCases, id: \.self) { tier in
                         HStack(spacing: 12) {
                             MealRatingTag(text: formula.range(of: tier), tier: tier)
@@ -185,7 +237,7 @@ struct MealRatingSheet: View {
 
 /// Meal Rating's rows, in Settings > Food Log and under a tag's explanation.
 struct MealRatingSettings: View {
-    var footer: String? = "Grades each meal's foods with a tag right of its +. Tap a tag to see what it means."
+    var footer: String? = "Grades each meal, the day, recipes, and your plate with a tag. Tap a tag to see what it means."
 
     @Environment(LocalStore.self) private var store
     @Observe(AppSettings.current) private var settings
@@ -193,7 +245,7 @@ struct MealRatingSettings: View {
     var body: some View {
         ThemedSection("Meal Rating", footer: footer) {
             SettingToggle(
-                title: "Meal Rating", detail: "Show a rating beside each meal",
+                title: "Meal Rating", detail: "Show a rating beside meals and recipes",
                 systemImage: "gauge.with.needle", isOn: store.binding(settings, \.nutrition.mealRating.enabled)
             )
             if settings.nutrition.mealRating.enabled {

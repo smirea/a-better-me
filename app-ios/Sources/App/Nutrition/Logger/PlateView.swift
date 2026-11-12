@@ -26,7 +26,7 @@ struct PlateView: View {
         let day = dayRow.totals(entries)
         let target = NutritionPlan.effective(on: session.time.day, in: plans)?.target(on: session.time.day)
         List {
-            ThemedSection("Your Plate") {
+            Section {
                 ForEach(session.plate.items) { item in
                     row(item)
                 }
@@ -36,7 +36,14 @@ struct PlateView: View {
                         if editing == id { editing = nil }
                     }
                 }
+            } header: {
+                HStack {
+                    SectionTitle("Your Plate")
+                    Spacer()
+                    MealRatingBadge(title: "Your Plate", amounts: plate)
+                }
             }
+            .listRowBackground(Theme.surface.feedback("Your Plate Row"))
             Section {
                 Grid(horizontalSpacing: 8, verticalSpacing: 8) {
                     GridRow {

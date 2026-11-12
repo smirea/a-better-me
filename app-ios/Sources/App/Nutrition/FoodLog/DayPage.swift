@@ -222,12 +222,11 @@ private struct SlotRow: View {
             pill
             control
             if let score {
-                // Where the row runs out of width (larger text, a wide section pill) the tag drops its "C:P", then
-                // shrinks to a dot of its color, so the totals never truncate.
+                // Where the row runs out of width (larger text, a wide section pill) the tag shrinks to a dot of its
+                // color, so the totals never truncate.
                 ViewThatFits(in: .horizontal) {
-                    trailing(totals, tag: ratingTag(score, text: "\(rating.formula.abbreviation) \(score.ratioText)"))
-                    trailing(totals, tag: ratingTag(score, text: score.ratioText))
-                    trailing(totals, tag: ratingTag(score, text: nil))
+                    trailing(totals, tag: ratingTag(score, showsText: true))
+                    trailing(totals, tag: ratingTag(score, showsText: false))
                 }
             } else {
                 trailing(totals, tag: EmptyView())
@@ -251,16 +250,11 @@ private struct SlotRow: View {
 
     /// Pasting inline turns the whole row into the paste button, so there the tag is not a button of its own.
     @ViewBuilder
-    private func ratingTag(_ score: MealRating.Score, text: String?) -> some View {
-        let tag = MealRatingTag(text: text, tier: score.tier, isDire: score.isDire)
+    private func ratingTag(_ score: MealRating.Score, showsText: Bool) -> some View {
         if state.pending?.inline == true {
-            tag
+            MealRatingTag(score, showsText: showsText)
         } else {
-            Button { explainsRating = true } label: { tag.frame(height: 40).contentShape(.rect) }
-                .buttonStyle(.plain)
-                .accessibilityLabel("\(group.slot.label) \(rating.formula.title)")
-                .accessibilityValue("\(score.ratio.map { "\($0) to 1" } ?? "No protein"), \(score.tier.title)")
-                .accessibilityHint("Explains the meal rating")
+            MealRatingButton(title: group.slot.label, score: score, formula: rating.formula, showsText: showsText) { explainsRating = true }
         }
     }
 

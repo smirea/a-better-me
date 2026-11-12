@@ -41,7 +41,8 @@ struct RecipeDetailView: View {
             ThemedSection {
                 HStack(spacing: 12) {
                     FoodIcon(food: recipe.snapshot, size: 44)
-                    Text(recipe.name).font(AppFont.sectionTitle)
+                    Text(recipe.name).font(AppFont.sectionTitle).frame(maxWidth: .infinity, alignment: .leading)
+                    MealRatingBadge(title: recipe.name, amounts: portion.amounts)
                 }
                 MacroSummary(amounts: portion.amounts, caption: "Per \(NutritionFormat.serving(portion.serving, of: portion.food))")
                 actions(recipe, portion: portion)
