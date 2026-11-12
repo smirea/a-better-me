@@ -6,19 +6,12 @@ enum AppTab: Hashable {
     case dashboard, nutrition, workout, more, add
 }
 
-/// What "+" opens: the selected tab's sheet, or a choice between them on Dashboard. On More the button goes back instead.
+/// What "+" opens from the root: the New Workout sheet, or on Dashboard a choice between the halves. On Nutrition "+"
+/// opens the Food Log's scanner instead, and on More it goes back.
 enum AddSheet: Identifiable {
     case food, workout, choose
 
     var id: Self { self }
-
-    init(for tab: AppTab) {
-        self = switch tab {
-        case .nutrition: .food
-        case .workout: .workout
-        case .dashboard, .more, .add: .choose
-        }
-    }
 }
 
 /// The sheets the root presents: "+", and the screens a quick action opens.
@@ -42,13 +35,15 @@ struct RootView: View {
     @State private var beforeMore = AppTab.dashboard
     @State private var dashboardPath: [DashboardRoute] = []
     @State private var sheet: RootSheet?
+    /// Here rather than in the tab, so "+" can open the scanner on the day the Food Log shows.
+    @State private var foodLog = FoodLogState()
     @State private var inbox = QuickActionInbox.shared
 
     var body: some View {
         TabView(selection: $tab) {
             // The tab bar's selection keeps the accent, so each tab's content restores the app's white tint.
             Tab("Dashboard", systemImage: "square.grid.2x2", value: .dashboard) { DashboardTab(path: $dashboardPath).tint(Theme.textPrimary) }
-            Tab("Nutrition", systemImage: "fork.knife", value: .nutrition) { FoodLogTab().tint(Theme.textPrimary) }
+            Tab("Nutrition", systemImage: "fork.knife", value: .nutrition) { FoodLogTab(state: foodLog).tint(Theme.textPrimary) }
             Tab("Workout", systemImage: "dumbbell", value: .workout) { WorkoutTab().tint(Theme.textPrimary) }
             Tab("More", systemImage: "ellipsis", value: .more) { MoreTab().tint(Theme.textPrimary) }
             Tab(tab == .more ? "Back" : "New", systemImage: tab == .more ? "chevron.backward" : "plus", value: .add, role: .prominent) { Color.clear }
@@ -58,14 +53,15 @@ struct RootView: View {
         .resolvingWorkoutStart()
         .onChange(of: tab) { previous, current in
             if current == .more { beforeMore = previous }
-            // "+" acts like a button: it opens the previous tab's sheet and keeps that tab selected, or on More returns
-            // to the tab More was opened from.
+            // "+" acts like a button: it acts for the previous tab and keeps that tab selected, or on More returns to the
+            // tab More was opened from.
             guard current == .add else { return }
-            if previous == .more {
-                tab = beforeMore
-            } else {
-                sheet = .add(AddSheet(for: previous))
-                tab = previous
+            tab = previous == .more ? beforeMore : previous
+            switch previous {
+            case .nutrition: foodLog.requestLog(start: .scan)
+            case .workout: sheet = .add(.workout)
+            case .dashboard, .add: sheet = .add(.choose)
+            case .more: break
             }
         }
         .sheet(item: $sheet) { sheet in
@@ -133,13 +129,14 @@ struct RootView: View {
     }
 }
 
-/// "+" from Dashboard asks which half to add to, then becomes that half's sheet in place.
+/// "+" from Dashboard asks which half to add to, then becomes that half's sheet in place: Log Food opens the scanner, as
+/// "+" does on Nutrition.
 private struct AddSheetView: View {
     @State var sheet: AddSheet
 
     var body: some View {
         switch sheet {
-        case .food: NutritionAddSheet()
+        case .food: LoggerSheet(start: LoggerStart(tab: .scan))
         case .workout: NewWorkoutSheet()
         case .choose:
             VStack(spacing: 12) {

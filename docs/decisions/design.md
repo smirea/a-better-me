@@ -11,6 +11,6 @@ The app merged two reference apps and grew a Dashboard, so screens drifted into 
 - **Selection.** Choice rows end in `SelectionMark`, one radio glyph; multi-select rows in its checkbox. Settings choices trail their row as a menu with the current value and an up-down chevron (`SettingChoice`).
 - **Stats.** A number reads over its caption (`StatView`), on the Dashboard, Strategy, and the food editors alike.
 - **Charts.** A chart shows a value only when it is tapped, and a drag always moves something: the chart through time on a metric detail screen, the screen, or a pager. See [iOS](ios.md), Charts are interactive.
-- **Bottom bars.** One bar at a time. A mode that brings its own action bar (the Food Log's select and paste) hides the tab bar while it lasts.
+- **Bottom bars.** One bar at a time. A mode that brings its own action bar (the Food Log's select and paste) hides the tab bar while it lasts. A lone floating button over a list (the Food Log's Your Foods) gets no band or fade behind it: the content runs under it, and the list's bottom inset is only the button's height, so the last row scrolls clear.
 - **Empty states.** `ContentUnavailableView`: icon, title, one line. A section with nothing in it and a way to add elsewhere is hidden rather than drawn empty.
 - **Proof.** `app-ios/scripts/screen-tour` screenshots every screen in `screen-tour.screens.ts` from a fresh launch on the seeded data, and `--compare` pairs two runs side by side. A UI change runs it before and after and adds any new screen to the list.

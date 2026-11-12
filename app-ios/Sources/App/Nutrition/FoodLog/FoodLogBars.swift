@@ -1,12 +1,14 @@
 import Feedback
 import SwiftUI
 
-/// The bar under the timeline: the search field, or in select mode the selection's actions, or a copy or move's
-/// targets. A notice of what was just copied or moved sits over it.
+/// The bar under the timeline: the round Your Foods button, or in select mode the selection's actions, or a copy or
+/// move's targets. A notice of what was just copied or moved sits over it. Its height is the timeline's bottom inset,
+/// so the last row scrolls clear of the button; until then the foods show beside and under it.
 struct FoodLogBottomBar: View {
     @Environment(FoodLogState.self) private var state
 
     var body: some View {
+        let acting = state.selecting || state.pending != nil
         GlassEffectContainer {
             VStack(alignment: .leading, spacing: 8) {
                 if let notice = state.notice {
@@ -18,7 +20,7 @@ struct FoodLogBottomBar: View {
                 } else if state.selecting {
                     SelectionBar()
                 } else {
-                    SearchBar()
+                    LibraryButton().frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
         }
@@ -27,11 +29,14 @@ struct FoodLogBottomBar: View {
         .padding(.bottom, 8)
         // The day pages scroll inside the pager, out of reach of a bar's scroll edge effect, so the timeline fades
         // out here instead; hour pills showing through the glass buttons made the selection's actions hard to read.
+        // The lone Your Foods circle needs no fade, so the foods run to the tab bar.
         .background {
-            LinearGradient(colors: [Theme.background.opacity(0), Theme.background], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.2))
-                .padding(.top, -24)
-                .ignoresSafeArea(edges: .bottom)
-                .allowsHitTesting(false)
+            if acting {
+                LinearGradient(colors: [Theme.background.opacity(0), Theme.background], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.2))
+                    .padding(.top, -24)
+                    .ignoresSafeArea(edges: .bottom)
+                    .allowsHitTesting(false)
+            }
         }
         .sensoryFeedback(.selection, trigger: state.selection)
         .animation(.snappy, value: state.notice)
@@ -67,32 +72,18 @@ private struct NoticeBar: View {
     }
 }
 
-/// "Search for a food" with a barcode button, and the round Your Foods button: each opens the logger.
-private struct SearchBar: View {
+/// Opens the logger on its Library tab; its Search tab is one segment away.
+private struct LibraryButton: View {
     @Environment(FoodLogState.self) private var state
 
     var body: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 10) {
-                Button { state.requestLog() } label: {
-                    Label("Search for a food", systemImage: "magnifyingglass")
-                        .foregroundStyle(Theme.textSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                }
-                Button("Scan a barcode", systemImage: "barcode.viewfinder") { state.requestLog(start: .scan) }
-                    .labelStyle(.iconOnly)
-            }
-            .padding(.horizontal, 16)
-            .frame(height: 48)
-            .glassEffect(.regular.interactive(), in: .capsule)
-            Button("Your Foods", systemImage: "books.vertical.fill") { state.requestLog(start: .library) }
-                .labelStyle(.iconOnly)
-                .frame(width: 48, height: 48)
-                .glassEffect(.regular.interactive(), in: .circle)
-        }
-        .buttonStyle(.plain)
-        .feedback(self)
+        Button("Your Foods", systemImage: "books.vertical.fill") { state.requestLog(start: .library) }
+            .labelStyle(.iconOnly)
+            .frame(width: 48, height: 48)
+            .contentShape(.circle)
+            .glassEffect(.regular.interactive(), in: .circle)
+            .buttonStyle(.plain)
+            .feedback(self)
     }
 }
 

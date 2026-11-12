@@ -25,6 +25,7 @@ const discardWorkout = [
 	...tap('Discard'),
 	'wait 800',
 ];
+const loggerTab = (tab: string) => [...tapTab('Nutrition'), ...tap('Your Foods'), ...tapButton(tab)];
 const scrolled = (count = 1) => Array.from({ length: count }, () => 'scroll down').concat('wait 600');
 
 export const screens: Screen[] = [
@@ -53,16 +54,12 @@ export const screens: Screen[] = [
 	{ name: 'foodlog-overview', steps: [...tapTab('Nutrition'), ...trailingToolbarButton, 'press 260 93'] },
 	{ name: 'foodlog-select', steps: [...tapTab('Nutrition'), ...trailingToolbarButton, ...tap('Select All')] },
 	{ name: 'foodlog-copy', steps: [...tapTab('Nutrition'), ...trailingToolbarButton, ...tap('Copy Day')] },
-	{ name: 'nutrition-shortcuts', steps: [...tapTab('Nutrition'), ...tapTab('New')] },
-	{ name: 'logger-search', steps: [...tapTab('Nutrition'), ...tap('Search for a food'), 'wait 800'] },
-	{ name: 'logger-quick-add', steps: [...tapTab('Nutrition'), ...tap('Search for a food'), ...tap('Quick Add')] },
+	{ name: 'logger-scan', steps: [...tapTab('Nutrition'), ...tapTab('New'), 'wait 800'] },
 	{ name: 'logger-library', steps: [...tapTab('Nutrition'), ...tap('Your Foods')] },
-	{ name: 'logger-photo', steps: [...tapTab('Nutrition'), ...tap('Search for a food'), ...tap('Photo')] },
-	{ name: 'logger-ramble', steps: [...tapTab('Nutrition'), ...tap('Search for a food'), ...tap('Ramble')] },
-	{
-		name: 'logger-scan',
-		steps: [...tapTab('Nutrition'), ...tap('Search for a food'), `press 'role="button" label="Scan"'`, 'wait 800'],
-	},
+	{ name: 'logger-search', steps: [...loggerTab('Search'), 'wait 800'] },
+	{ name: 'logger-quick-add', steps: loggerTab('Quick Add') },
+	{ name: 'logger-photo', steps: loggerTab('Photo') },
+	{ name: 'logger-ramble', steps: loggerTab('Ramble') },
 
 	{ name: 'workout', steps: [...tapTab('Workout'), 'shot top', ...scrolled(1)] },
 	{ name: 'workout-calendar', steps: [...tapTab('Workout'), ...tap('Calendar')] },

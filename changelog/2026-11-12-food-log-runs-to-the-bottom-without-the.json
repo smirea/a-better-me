@@ -1,0 +1,5 @@
+{
+	"title": "Food Log runs to the bottom without the search bar; + opens the barcode scanner",
+	"description": "The quick-add menu is gone; Your Foods and the logger's tabs cover search, Quick Add, and the rest.",
+	"tasks": ["e9dbe795-e92b-4508-b8ea-62c0fdc6ef70"]
+}

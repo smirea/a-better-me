@@ -5,7 +5,7 @@ import SwiftUI
 /// timeline of hours that pages between days.
 struct FoodLogTab: View {
     @Environment(LocalStore.self) private var store
-    @State private var state = FoodLogState()
+    @Bindable var state: FoodLogState
     @State private var showingCalendar = false
 
     var body: some View {
@@ -17,7 +17,7 @@ struct FoodLogTab: View {
                 .overlay(alignment: .top) { FoodLogHeader(showingCalendar: $showingCalendar) }
                 .background(Theme.background)
                 .background { ShownDayEntries(day: state.day).id(state.day) }
-                .safeAreaInset(edge: .bottom) { FoodLogBottomBar() }
+                .safeAreaInset(edge: .bottom, spacing: 0) { FoodLogBottomBar() }
                 // Selecting or pasting puts its own bar of actions at the bottom, so the tab bar steps aside for it.
                 .toolbarVisibility(state.selecting || state.pending != nil ? .hidden : .automatic, for: .tabBar)
                 .animation(.snappy, value: state.selecting || state.pending != nil)

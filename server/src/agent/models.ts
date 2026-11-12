@@ -938,9 +938,6 @@ const NutritionSettingsPatch = z
 				optimization: z.enum(['speed', 'context']),
 			})
 			.partial(),
-		shortcuts: z.array(
-			z.enum(['yourFoods', 'search', 'barcode', 'quickAdd', 'recipes', 'favorites', 'editDay', 'weight']),
-		),
 		expenditure: z
 			.object({
 				staticKcal: z.number().positive().nullable(),
