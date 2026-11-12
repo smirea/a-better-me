@@ -8,6 +8,11 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { assertNotBare } from './check-not-bare';
+import { dropGitEnv } from './git-env';
+
+// The hooks run every test through here, so this is where their GIT_* stops (see git-env.ts).
+dropGitEnv();
 
 const root = realpathSync(join(import.meta.dir, '..'));
 const SOURCE = /\.(ts|tsx|mts)$/;
@@ -108,5 +113,6 @@ for (const [command, cwd] of runs) {
 	}
 	const result = spawnSync(command[0]!, command.slice(1), { cwd, stdio: 'inherit' });
 	if (result.status === 3) console.error('The Mac was too busy to boot a simulator for the Swift suites: rerun.');
+	assertNotBare(command.join(' '));
 	if (result.status !== 0) process.exit(result.status ?? 1);
 }

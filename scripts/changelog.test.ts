@@ -5,11 +5,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { add, bundle, check, parseEntry } from './changelog';
 
-// Git hooks export GIT_DIR and GIT_INDEX_FILE, which would point every git call here, and the script's own, at the
-// repository being committed instead of the scratch one: a pre-commit run once committed these fixtures onto the branch
-// and wrote their user into the shared config.
-for (const key of Object.keys(process.env)) if (key.startsWith('GIT_')) delete process.env[key];
-
 let root: string;
 
 function git(...args: string[]) {
