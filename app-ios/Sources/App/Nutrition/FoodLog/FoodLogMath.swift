@@ -9,6 +9,17 @@ struct TimelineRow: Hashable, Identifiable {
     var id: UUID { entry.id }
 }
 
+/// What a logged recipe's tile lists under its totals: names and amounts only, since the tile's totals are the point.
+struct RecipeTileIngredients: Hashable, Sendable {
+    struct Line: Hashable, Sendable {
+        let name: String
+        let amount: String
+    }
+
+    let lines: [Line]
+    let more: Int
+}
+
 /// What a timeline group stands for: an hour of the Time display, or a meal section of the Sections display.
 enum TimelineSlot: Hashable {
     case hour(Int)
@@ -33,6 +44,8 @@ struct TimelineGroup: Hashable, Identifiable {
     let totals: NutrientAmounts
     /// A section's foods as a meal, hashed once here for the same reason. An hour is no meal, so it has none.
     let meal: MealComponents?
+    /// What the meal line shows while the meal has neither a recipe nor a stored name.
+    let mealFallbackName: String?
 
     init(slot: TimelineSlot, rows: [TimelineRow], minutes: Range<Int>) {
         self.slot = slot
@@ -40,6 +53,7 @@ struct TimelineGroup: Hashable, Identifiable {
         self.minutes = minutes
         totals = rows.map(\.entry).totals
         meal = if case .section = slot { MealComponents(rows.map(\.entry.food)) } else { nil }
+        mealFallbackName = meal == nil ? nil : MealComponents.fallbackName(rows.map(\.entry.portion))
     }
 
     var id: TimelineSlot { slot }
@@ -319,6 +333,18 @@ enum FoodLog {
     /// halves every ingredient.
     static func exploded(_ serving: Serving, of recipe: Recipe) -> [FoodPortion] {
         RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: serving.servings).map { FoodPortion($0.food, serving: $0.serving) }
+    }
+
+    /// A logged recipe's tile lines: its ingredients at the amounts eaten, most calories first, the first `limit` of
+    /// them, and how many more there are.
+    static func tileIngredients(_ serving: Serving, of recipe: Recipe, limit: Int = 5) -> RecipeTileIngredients {
+        let portions = exploded(serving, of: recipe).enumerated()
+            .sorted { ($1.element.amounts[.energy] ?? 0, $0.offset) < ($0.element.amounts[.energy] ?? 0, $1.offset) }
+            .map(\.element)
+        return RecipeTileIngredients(
+            lines: portions.prefix(limit).map { .init(name: $0.food.displayName, amount: NutritionFormat.serving($0.serving)) },
+            more: max(portions.count - limit, 0)
+        )
     }
 
     /// Create Recipe's starting draft: the selected entries as ingredients at their logged servings, with the number

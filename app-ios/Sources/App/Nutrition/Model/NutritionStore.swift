@@ -130,13 +130,15 @@ extension LocalStore {
     }
 
     func saveRecipe(_ recipe: Recipe) {
-        write { db in
-            var saved = recipe
-            for index in saved.ingredients.indices {
-                saved.ingredients[index].food = try Self.withFoodIcon(saved.ingredients[index].food, in: db)
-            }
-            try saved.insert(db)
+        write { try Self.insert(recipe, in: $0) }
+    }
+
+    nonisolated static func insert(_ recipe: Recipe, in db: Database) throws {
+        var saved = recipe
+        for index in saved.ingredients.indices {
+            saved.ingredients[index].food = try withFoodIcon(saved.ingredients[index].food, in: db)
         }
+        try saved.insert(db)
     }
 
     func deleteRecipe(_ id: UUID) {

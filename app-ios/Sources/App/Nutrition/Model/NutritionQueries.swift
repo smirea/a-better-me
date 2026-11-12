@@ -9,6 +9,23 @@ extension FoodEntry {
         }
     }
 
+    /// The tile lines of the day's logged recipes, by entry id. An entry holds a snapshot of its recipe's nutrition,
+    /// not its ingredients, so they come from the recipe as it is now, as Explode reads them; a deleted one lists none.
+    static func recipeIngredients(on day: CalendarDay) -> DatabaseQuery<[UUID: RecipeTileIngredients]> {
+        DatabaseQuery([:]) { db in
+            let entries = try FoodEntry.filter(Column("day") == day.description)
+                .filter(sql: "json_extract(food, '$.source') = ?", arguments: [FoodSource.recipe.rawValue]).fetchAll(db)
+            var recipes: [String: Recipe] = [:]
+            var ingredients: [UUID: RecipeTileIngredients] = [:]
+            for entry in entries {
+                guard let id = entry.food.foodID else { continue }
+                if recipes[id] == nil { recipes[id] = try Recipe.fetchOne(db, key: id) }
+                if let recipe = recipes[id] { ingredients[entry.id] = FoodLog.tileIngredients(entry.serving, of: recipe) }
+            }
+            return ingredients
+        }
+    }
+
     /// Entries from `start` through `end`, oldest day first.
     static func between(_ start: CalendarDay, _ end: CalendarDay) -> DatabaseQuery<[FoodEntry]> {
         DatabaseQuery([]) { db in

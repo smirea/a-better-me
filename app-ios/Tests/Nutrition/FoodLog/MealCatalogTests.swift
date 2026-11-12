@@ -43,10 +43,20 @@ struct MealComponentsTests {
         #expect(MealComponents([milk, yogurt, granola]) == meal)
     }
 
-    @Test func fewerThanThreeFoodsIsNoMealAndQuickAddsDoNotCount() {
-        #expect(MealComponents([granola, yogurt, yogurt]) == nil)
-        #expect(MealComponents([granola, yogurt, .quickAdd([.energy: 300])]) == nil)
+    @Test func twoFoodsMakeAMealAndQuickAddsDoNotCount() {
+        #expect(MealComponents([granola, granola]) == nil)
+        #expect(MealComponents([granola, .quickAdd([.energy: 300])]) == nil)
+        #expect(MealComponents([granola, yogurt, yogurt])?.keys == ["granola", "usda-171304"])
         #expect(MealComponents([granola, yogurt, milk, .quickAdd([.energy: 300])])?.keys == ["granola", "milk", "usda-171304"])
+    }
+
+    @Test func theFallbackNameIsTheTwoFoodsWithTheMostCaloriesUpToTheirFirstComma() {
+        var beef = food("beef", "Beef, top sirloin, steak, separable lean only")
+        beef.nutrition.nutrients[.energy] = 400
+        var potatoes = food("potatoes", "Potatoes, baked, flesh and skin")
+        potatoes.nutrition.nutrients[.energy] = 93
+        #expect(MealComponents.fallbackName([portion(potatoes, 3), portion(beef, 1), FoodPortion(.quickAdd([.energy: 900]))]) == "Beef and Potatoes")
+        #expect(MealComponents.fallbackName([portion(potatoes, 5), portion(beef, 1), portion(granola, 0.5)]) == "Potatoes and Beef")
     }
 
     @Test func theModelsAnswerLosesQuotesAndAClosingPeriod() {
@@ -80,7 +90,7 @@ struct MealCatalogTests {
         catalog.suggest(meal, from: entries)
         await catalog.idle()
         #expect(model.asked.map { $0.sorted() } == [["Granola, 1 container (150 g)", "Oat milk, 1 container (150 g)", "Yogurt, 1 container (150 g)"]])
-        #expect(catalog.index.line(for: meal) == .suggested("Yogurt Granola Bowl"))
+        #expect(catalog.index.line(for: meal, fallback: "") == .suggested("Yogurt Granola Bowl"))
         let search = try await FoodSearch.load(store: store, catalog: try fixtureCatalog([]), branded: StubBranded())
         #expect(try search.local("Yogurt Granola Bowl").isEmpty)
 
@@ -89,23 +99,53 @@ struct MealCatalogTests {
         relaunched.suggest(meal, from: entries)
         await relaunched.idle()
         #expect(model.asked.count == 1)
-        #expect(relaunched.index.line(for: meal) == .suggested("Yogurt Granola Bowl"))
+        #expect(relaunched.index.line(for: meal, fallback: "") == .suggested("Yogurt Granola Bowl"))
 
         let recipe = FoodLog.mealRecipe("Yogurt Granola Bowl", from: entries)
         store.saveRecipe(recipe)
         await catalog.idle()
-        #expect(catalog.index.line(for: meal) == .saved(.init(id: recipe.id, name: "Yogurt Granola Bowl"), count: 1))
+        #expect(catalog.index.line(for: meal, fallback: "") == .saved(.init(id: recipe.id, name: "Yogurt Granola Bowl"), count: 1))
         #expect(recipe.servings == 1)
         #expect(recipe.cookedGrams == 450)
 
         store.log([portion(milk, 2), portion(granola, 0.5), portion(yogurt, 1)], on: tuesday, minute: 9 * 60)
         await catalog.idle()
         #expect(try await breakfast(on: tuesday).0 == meal)
-        #expect(catalog.index.line(for: meal) == .saved(.init(id: recipe.id, name: "Yogurt Granola Bowl"), count: 2))
+        #expect(catalog.index.line(for: meal, fallback: "") == .saved(.init(id: recipe.id, name: "Yogurt Granola Bowl"), count: 2))
 
         store.log([FoodPortion(recipe.snapshot)], on: tuesday, minute: 19 * 60)
         await catalog.idle()
-        #expect(catalog.index.line(for: meal) == .saved(.init(id: recipe.id, name: "Yogurt Granola Bowl"), count: 3))
+        #expect(catalog.index.line(for: meal, fallback: "") == .saved(.init(id: recipe.id, name: "Yogurt Granola Bowl"), count: 3))
+    }
+
+    @Test func createReplacesTheFoodsWithOneServingOfTheMealAndUndoTakesItAllBack() async throws {
+        store.log([portion(granola, 1), portion(yogurt, 2), portion(milk, 1)], on: monday, minute: 8 * 60)
+        store.log([FoodPortion(.quickAdd([.energy: 50]))], on: monday, minute: 8 * 60 + 5)
+        let catalog = MealCatalog(model: StubMealNameModel(answer: "Yogurt Granola Bowl"))
+        catalog.start(store: store)
+        let (meal, entries) = try await breakfast(on: monday)
+        let state = FoodLogState()
+
+        await state.createMeal("Yogurt Granola Bowl", from: entries, in: store).value
+        await catalog.idle()
+        let replaced = try store.readBlocking(FoodEntry.on(monday).fetch)
+        #expect(replaced.map(\.food.name) == ["Yogurt Granola Bowl", "Quick Add"])
+        #expect(replaced.map(\.minute) == [8 * 60, 8 * 60 + 5])
+        #expect(replaced.totals[.energy] == entries.totals[.energy])
+        #expect(replaced[0].serving.servings == 1)
+        let recipe = try #require(try store.readBlocking { try Recipe.fetchAll($0) }.first)
+        #expect(catalog.index.line(for: meal, fallback: "") == .saved(.init(id: recipe.id, name: "Yogurt Granola Bowl"), count: 1))
+        #expect(state.notice?.message == "Replaced 3 foods with Yogurt Granola Bowl")
+        let lines = try #require(try store.readBlocking(FoodEntry.recipeIngredients(on: monday).fetch)[replaced[0].id]).lines
+        #expect(lines.first == .init(name: "Yogurt", amount: "2 container"))
+        #expect(Set(lines.dropFirst().map(\.name)) == ["Granola", "Oat milk"])
+
+        state.undo(in: store)
+        try await store.write { _ in }.value
+        let restored = try store.readBlocking(FoodEntry.on(monday).fetch)
+        #expect(restored.map(\.food.name).sorted() == ["Granola", "Oat milk", "Quick Add", "Yogurt"])
+        #expect(restored.totals[.energy] == entries.totals[.energy])
+        #expect(try store.readBlocking { try Recipe.fetchCount($0) } == 0)
     }
 
     @Test func aMealShownWhileItsRecipeIsDeletedIsNamedThen() async throws {
@@ -121,15 +161,15 @@ struct MealCatalogTests {
         catalog.suggest(meal, from: entries)
         await catalog.idle()
         #expect(model.asked.isEmpty)
-        #expect(catalog.index.line(for: meal) == .saved(.init(id: recipe.id, name: "Breakfast Bowl"), count: 1))
+        #expect(catalog.index.line(for: meal, fallback: "") == .saved(.init(id: recipe.id, name: "Breakfast Bowl"), count: 1))
 
         store.deleteRecipe(recipe.id)
         await catalog.idle()
         #expect(model.asked.count == 1)
-        #expect(catalog.index.line(for: meal) == .suggested("Yogurt Granola Bowl"))
+        #expect(catalog.index.line(for: meal, fallback: "") == .suggested("Yogurt Granola Bowl"))
     }
 
-    @Test func withoutTheModelAnUnnamedMealHasNoLine() async throws {
+    @Test func withoutTheModelAnUnnamedMealShowsItsFallbackName() async throws {
         store.log([portion(granola, 1), portion(yogurt, 1), portion(milk, 1)], on: monday, minute: 8 * 60)
         let model = StubMealNameModel(isAvailable: false, answer: "Yogurt Granola Bowl")
         let catalog = MealCatalog(model: model)
@@ -139,7 +179,7 @@ struct MealCatalogTests {
         catalog.suggest(meal, from: entries)
         await catalog.idle()
         #expect(model.asked.isEmpty)
-        #expect(catalog.index.line(for: meal) == nil)
+        #expect(catalog.index.line(for: meal, fallback: "Granola and Yogurt") == .suggested("Granola and Yogurt"))
     }
 
     /// The real model on the owner's breakfast, when this simulator or device can run it (CI's simulators can't).

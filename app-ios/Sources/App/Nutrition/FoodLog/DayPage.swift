@@ -10,6 +10,7 @@ struct DayPage: View {
     @Environment(MealCatalog.self) private var meals
     @Observe(AppSettings.current) private var settings
     @Observe private var entries: [FoodEntry]
+    @Observe private var recipeIngredients: [UUID: RecipeTileIngredients]
     /// One width for every hour pill, so "8 AM" and "12 PM" line up; it scales with the text.
     @ScaledMetric private var hourPillWidth: CGFloat = 60
     /// Section pills share one width, which fits "Breakfast" with little padding.
@@ -22,6 +23,7 @@ struct DayPage: View {
     init(day: CalendarDay) {
         self.day = day
         _entries = Observe(FoodEntry.on(day))
+        _recipeIngredients = Observe(FoodEntry.recipeIngredients(on: day))
     }
 
     private var timeline: NutritionSettings.Timeline { settings.nutrition.timeline }
@@ -60,12 +62,13 @@ struct DayPage: View {
                             )
                             ForEach(group.rows) { row in
                                 EntryRow(
-                                    row: row, column: column, showsTime: timeline.foodTimestamps && !isSections, hidesDetails: timeline.hideFoodDetails
+                                    row: row, ingredients: recipeIngredients[row.id], column: column,
+                                    showsTime: timeline.foodTimestamps && !isSections, hidesDetails: timeline.hideFoodDetails
                                 )
                                 .id(row.id)
                             }
-                            if let meal = group.meal {
-                                MealLineRow(meal: meal, entries: group.rows.map(\.entry))
+                            if let meal = group.meal, let fallback = group.mealFallbackName {
+                                MealLineRow(meal: meal, fallback: fallback, entries: group.rows.map(\.entry))
                                     .padding(.leading, column.tileInset)
                             }
                         }
@@ -101,10 +104,12 @@ struct DayPage: View {
 }
 
 /// The line under a section's foods once they make a meal: the recipe it was saved as and how many times it was
-/// logged, which opens the recipe, or the name the model suggested and Create, which saves it as one.
+/// logged, which opens the recipe, or the name the model suggested (`MealComponents.fallbackName` until it does, or
+/// where it can't) and Create, which saves it as one and logs it in place of the foods.
 /// It reads the index itself, so a change to it re-renders only the meal lines.
 private struct MealLineRow: View {
     let meal: MealComponents
+    let fallback: String
     let entries: [FoodEntry]
 
     @Environment(MealCatalog.self) private var meals
@@ -112,7 +117,7 @@ private struct MealLineRow: View {
     @Environment(LocalStore.self) private var store
 
     var body: some View {
-        if let line = meals.index.line(for: meal) { row(line) }
+        row(meals.index.line(for: meal, fallback: fallback))
     }
 
     private func row(_ line: MealIndex.Line) -> some View {
@@ -427,6 +432,8 @@ private struct HourTotals: View {
 /// the blank space was meant to page.
 private struct EntryRow: View {
     let row: TimelineRow
+    /// A logged recipe's ingredients, which its tile lists under its totals.
+    let ingredients: RecipeTileIngredients?
     let column: TimelineColumn
     let showsTime: Bool
     let hidesDetails: Bool
@@ -447,25 +454,34 @@ private struct EntryRow: View {
                         .frame(width: column.pillWidth)
                 }
             }
-            FoodRow(food: entry.food, serving: entry.serving, showsDetail: !hidesDetails)
-                // The circle covers the tile's first half circle, so the icon steps right to clear it.
-                .padding(.leading, showsCircle ? 12 + Self.circleSize / 2 : 12)
-                .padding(.trailing, 12)
-                .padding(.vertical, 8)
-                .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
-                .overlay {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textSecondary, lineWidth: 1)
-                    }
+            VStack(alignment: .leading, spacing: 6) {
+                FoodRow(food: entry.food, serving: entry.serving, showsDetail: !hidesDetails)
+                if let ingredients {
+                    IngredientLines(ingredients: ingredients, showsAmounts: !hidesDetails)
+                        // Under the name, past the 28 pt icon and the row's 12 pt spacing.
+                        .padding(.leading, 40)
                 }
-                .rowSwipeActions(trailing: state.selecting ? [] : [
-                    .destructive("Remove") { store.deleteEntries([entry.id]) },
-                    SwipeAction(title: "Copy", systemImage: "doc.on.doc") { state.copy(entry) },
-                ])
-                .accessibilityAddTraits(isSelected ? .isSelected : [])
-                .accessibilityAction { state.tap(entry) }
-                .accessibilityAction(named: isSelected ? "Deselect" : "Select") { state.select(entry.id) }
-                .accessibilityAction(named: "Edit") { state.editing = entry }
+            }
+            // One element, so VoiceOver reads the ingredients with the food and the actions below land on the tile.
+            .accessibilityElement(children: .combine)
+            // The circle covers the tile's first half circle, so the icon steps right to clear it.
+            .padding(.leading, showsCircle ? 12 + Self.circleSize / 2 : 12)
+            .padding(.trailing, 12)
+            .padding(.vertical, 8)
+            .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
+            .overlay {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textSecondary, lineWidth: 1)
+                }
+            }
+            .rowSwipeActions(trailing: state.selecting ? [] : [
+                .destructive("Remove") { store.deleteEntries([entry.id]) },
+                SwipeAction(title: "Copy", systemImage: "doc.on.doc") { state.copy(entry) },
+            ])
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
+            .accessibilityAction { state.tap(entry) }
+            .accessibilityAction(named: isSelected ? "Deselect" : "Select") { state.select(entry.id) }
+            .accessibilityAction(named: "Edit") { state.editing = entry }
         }
         // On the row rather than the tile, whose swipe clips it.
         .overlay(alignment: .leading) {
@@ -490,5 +506,37 @@ private struct EntryRow: View {
         })
         .padding(.bottom, 6)
         .feedback(self)
+    }
+}
+
+/// A logged recipe's ingredients under its tile's name, one line each with its amount when the width allows, and no
+/// nutrition, since the tile's totals above are what counts.
+private struct IngredientLines: View {
+    let ingredients: RecipeTileIngredients
+    let showsAmounts: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(Array(ingredients.lines.enumerated()), id: \.offset) { _, line in
+                ViewThatFits(in: .horizontal) {
+                    if showsAmounts {
+                        HStack(spacing: 8) {
+                            Text(line.name).fixedSize()
+                            Spacer(minLength: 0)
+                            Text(line.amount).fixedSize().monospacedDigit()
+                        }
+                    }
+                    Text(line.name).lineLimit(1)
+                }
+            }
+            if ingredients.more > 0 {
+                Text("+\(ingredients.more) more")
+            }
+        }
+        .font(AppFont.rowDetail)
+        .foregroundStyle(Theme.textSecondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Ingredients: " + (ingredients.lines.map(\.name) + (ingredients.more > 0 ? ["\(ingredients.more) more"] : [])).joined(separator: ", "))
     }
 }

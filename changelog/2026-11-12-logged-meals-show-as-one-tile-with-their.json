@@ -1,0 +1,5 @@
+{
+	"title": "Logged meals show as one tile with their ingredients; two foods make a meal",
+	"description": "Create on a meal line swaps the foods for the new meal, and the line shows a name at once.",
+	"tasks": ["7ab99156-61bd-4e4a-aafe-c681081f0ae2", "d454ff34-285a-4031-8b45-14d61cd00645"]
+}
