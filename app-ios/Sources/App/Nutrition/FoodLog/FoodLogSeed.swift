@@ -3,7 +3,9 @@ import Foundation
 import GRDB
 
 /// The dev seed's (`DevSeed`) real foods: today and the five days before it with entries across the hours, among them
-/// `LibrarySeed`'s recipes and custom foods at full and partial servings, and a fasted day three days ago.
+/// `LibrarySeed`'s recipes and custom foods at full and partial servings, and a fasted day three days ago. Yesterday's
+/// breakfast is a meal of three foods no recipe holds, which the meal line names, and its lunch and the one the day
+/// before are the Chicken Rice Bowl's foods, logged loose.
 /// Earlier days get quick adds from `insertHistory`.
 enum FoodLogSeed {
     private static func food(_ name: String, _ icon: String, brand: String? = nil, _ nutrients: NutrientAmounts, grams: Double?, measure: Measure) -> FoodSnapshot {
@@ -27,8 +29,8 @@ enum FoodLogSeed {
     /// A day of meals: (minute, food, quantity of its measure).
     static let days: [[(Int, FoodSnapshot, Double)]] = [
         [(7 * 60 + 40, overnightOats, 1), (7 * 60 + 40, LibrarySeed.coldBrew.snapshot, 1), (12 * 60 + 15, chickenRiceBowl, 1), (15 * 60 + 30, yogurt, 1), (15 * 60 + 30, LibrarySeed.granola.snapshot, 0.5)],
-        [(8 * 60 + 5, yogurt, 1), (8 * 60 + 5, banana, 1), (13 * 60, salad, 1), (13 * 60, chicken, 1), (16 * 60 + 10, almonds, 1.5), (16 * 60 + 10, LibrarySeed.whey.snapshot, 1), (19 * 60 + 47, salmonSalad, 1), (19 * 60 + 48, rice, 1)],
-        [(9 * 60, proteinPancakes, 0.5), (9 * 60, LibrarySeed.coldBrew.snapshot, 1), (12 * 60 + 30, chicken, 1.5), (12 * 60 + 30, rice, 1), (18 * 60 + 45, salmon, 1), (18 * 60 + 45, salad, 2)],
+        [(8 * 60 + 5, yogurt, 1), (8 * 60 + 5, banana, 1), (8 * 60 + 5, LibrarySeed.granola.snapshot, 0.5), (13 * 60, salad, 1), (13 * 60, chicken, 1), (13 * 60, rice, 1), (16 * 60 + 10, almonds, 1.5), (16 * 60 + 10, LibrarySeed.whey.snapshot, 1), (19 * 60 + 47, salmonSalad, 1), (19 * 60 + 48, rice, 1)],
+        [(9 * 60, proteinPancakes, 0.5), (9 * 60, LibrarySeed.coldBrew.snapshot, 1), (12 * 60 + 30, chicken, 1.5), (12 * 60 + 30, rice, 1), (12 * 60 + 30, salad, 1), (18 * 60 + 45, salmon, 1), (18 * 60 + 45, salad, 2)],
         [],
         [(7 * 60 + 30, overnightOats, 0.5), (7 * 60 + 30, LibrarySeed.sourdough.snapshot, 2), (11 * 60 + 50, chicken, 1), (11 * 60 + 50, salad, 1), (20 * 60 + 15, almonds, 1)],
         [(8 * 60 + 20, oats, 1), (13 * 60 + 5, chickenRiceBowl, 1.5), (17 * 60, banana, 2), (19 * 60 + 30, salmonSalad, 0.75)],

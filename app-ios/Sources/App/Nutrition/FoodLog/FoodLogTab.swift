@@ -29,6 +29,7 @@ struct FoodLogTab: View {
                     case let .overview(day): NutritionOverview(day: day)
                     case let .contributors(day, nutrient): ContributorsView(day: day, nutrient: nutrient)
                     case .strategy: StrategyView()
+                    case let .recipe(id): RecipeDetailView(recipeID: id)
                     }
                 }
                 .navigationDestination(for: StrategyRoute.self) { $0.destination }

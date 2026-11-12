@@ -307,6 +307,16 @@ const nutrientGoals = sqliteTable('nutrient_goals', {
 	ceiling: real('ceiling'),
 });
 
+/**
+ * The name the on-device model suggested for a meal, keyed by the meal's hash (`MealComponents`: its distinct foods,
+ * not their servings), stored when first suggested so the meal keeps that name on every device, created or not.
+ */
+const mealNames = sqliteTable('meal_names', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	createdAt: text('created_at').notNull(),
+});
+
 /** The order here is the order of the generated Swift schema and of a snapshot pull. */
 export const SYNCED_TABLES = {
 	workout_templates: workoutTemplates,
@@ -327,6 +337,7 @@ export const SYNCED_TABLES = {
 	body_metrics: bodyMetrics,
 	nutrition_plans: nutritionPlans,
 	nutrient_goals: nutrientGoals,
+	meal_names: mealNames,
 } as const;
 
 export type SyncedTable = keyof typeof SYNCED_TABLES;
@@ -448,5 +459,6 @@ export const schema = defineSchema({
 			target: amount,
 			ceiling: amount,
 		},
+		meal_names: { name: z.string().min(1) },
 	},
 });

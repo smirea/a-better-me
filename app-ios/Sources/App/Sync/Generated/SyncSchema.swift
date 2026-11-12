@@ -21,6 +21,7 @@ let syncSchema = SyncSchema(
         SyncTable(name: "body_metrics", columns: ["day", "kind", "value", "updated_at"]),
         SyncTable(name: "nutrition_plans", columns: ["kind", "goal", "coaching", "targets", "expenditure_kcal", "trend_weight_kg", "created_at"]),
         SyncTable(name: "nutrient_goals", columns: ["nutrient", "starts_on", "mode", "floor", "target", "ceiling"]),
+        SyncTable(name: "meal_names", columns: ["name", "created_at"]),
     ],
     statements: [
         "CREATE TABLE IF NOT EXISTS workout_templates (id TEXT PRIMARY KEY, name TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '', blocks TEXT NOT NULL DEFAULT '[]', created_at TEXT NOT NULL, updated_at TEXT NOT NULL, program_id TEXT, gym_id TEXT, archived INTEGER NOT NULL DEFAULT 0)",
@@ -160,6 +161,9 @@ let syncSchema = SyncSchema(
         "ALTER TABLE nutrient_goals ADD COLUMN floor REAL",
         "ALTER TABLE nutrient_goals ADD COLUMN target REAL",
         "ALTER TABLE nutrient_goals ADD COLUMN ceiling REAL",
+        "CREATE TABLE IF NOT EXISTS meal_names (id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL)",
+        "ALTER TABLE meal_names ADD COLUMN name TEXT NOT NULL",
+        "ALTER TABLE meal_names ADD COLUMN created_at TEXT NOT NULL",
         "CREATE TABLE IF NOT EXISTS _outbox (seq INTEGER PRIMARY KEY AUTOINCREMENT, \"table\" TEXT NOT NULL, id TEXT NOT NULL, op TEXT NOT NULL, col TEXT)",
         "CREATE TABLE IF NOT EXISTS _meta (key TEXT PRIMARY KEY, value)",
         "CREATE TRIGGER IF NOT EXISTS _ob_i_workout_templates AFTER INSERT ON workout_templates\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('workout_templates', NEW.id, 'insert', NULL); END",
@@ -317,5 +321,9 @@ let syncSchema = SyncSchema(
         "CREATE TRIGGER IF NOT EXISTS _ob_u_nutrient_goals_floor AFTER UPDATE OF floor ON nutrient_goals\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.floor IS NOT NEW.floor\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('nutrient_goals', NEW.id, 'update', 'floor'); END",
         "CREATE TRIGGER IF NOT EXISTS _ob_u_nutrient_goals_target AFTER UPDATE OF target ON nutrient_goals\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.target IS NOT NEW.target\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('nutrient_goals', NEW.id, 'update', 'target'); END",
         "CREATE TRIGGER IF NOT EXISTS _ob_u_nutrient_goals_ceiling AFTER UPDATE OF ceiling ON nutrient_goals\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.ceiling IS NOT NEW.ceiling\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('nutrient_goals', NEW.id, 'update', 'ceiling'); END",
+        "CREATE TRIGGER IF NOT EXISTS _ob_i_meal_names AFTER INSERT ON meal_names\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('meal_names', NEW.id, 'insert', NULL); END",
+        "CREATE TRIGGER IF NOT EXISTS _ob_d_meal_names AFTER DELETE ON meal_names\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('meal_names', OLD.id, 'delete', NULL); END",
+        "CREATE TRIGGER IF NOT EXISTS _ob_u_meal_names_name AFTER UPDATE OF name ON meal_names\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.name IS NOT NEW.name\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('meal_names', NEW.id, 'update', 'name'); END",
+        "CREATE TRIGGER IF NOT EXISTS _ob_u_meal_names_created_at AFTER UPDATE OF created_at ON meal_names\n  WHEN coalesce((SELECT value FROM _meta WHERE key = 'applying'), 0) = 0 AND OLD.created_at IS NOT NEW.created_at\n  BEGIN INSERT INTO _outbox (\"table\", id, op, col) VALUES ('meal_names', NEW.id, 'update', 'created_at'); END",
     ]
 )
