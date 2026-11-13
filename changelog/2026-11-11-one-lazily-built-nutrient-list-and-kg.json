@@ -1,5 +1,10 @@
 {
 	"title": "One lazily built nutrient list, and kg and lb beside g and oz",
-	"tasks": ["a64f6b4f-e3c2-4b2f-ad40-f92fd7def97d"],
+	"tasks": [
+		{
+			"id": "a64f6b4f-e3c2-4b2f-ad40-f92fd7def97d",
+			"title": "Nutrition Feedback: 2 changes"
+		}
+	],
 	"build": "2026.1111.184217"
 }

@@ -1,5 +1,14 @@
 {
 	"title": "Seasonings, cans, whole counts, and re-said removals; spoons gain their neighbour",
-	"tasks": ["d993724d-419c-4d26-8e24-2bbf31273102", "8d162458-a4ad-4bba-b7bc-fcfc7277df69"],
+	"tasks": [
+		{
+			"id": "d993724d-419c-4d26-8e24-2bbf31273102",
+			"title": "Today Feedback"
+		},
+		{
+			"id": "8d162458-a4ad-4bba-b7bc-fcfc7277df69",
+			"title": "Today Feedback"
+		}
+	],
 	"build": "2026.1110.221630"
 }

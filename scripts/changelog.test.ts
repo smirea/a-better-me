@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { add, bundle, check, parseEntry } from './changelog';
+import { add, bundle, check, parseEntry, parseTaskArgument } from './changelog';
 
 let root: string;
 
@@ -66,7 +66,7 @@ test('each entry ships in the first tagged build holding it; untagged ones ship 
 				id: '2026-11-11-first',
 				date: '2026-11-11',
 				title: 'First',
-				tasks: ['2ca9f3dd-67c0-4ffc-8670-266407c5df7b'],
+				tasks: [{ id: '2ca9f3dd-67c0-4ffc-8670-266407c5df7b' }],
 				build: '2026.1111.120000',
 			},
 			{ id: '2026-11-10-old', date: '2026-11-10', title: 'Old', tasks: [], build: '2026.1101.100000' },
@@ -121,7 +121,13 @@ test('tests, docs, and tooling need no entry', () => {
 
 test('an entry with a multi-line title or a bad task id is rejected', () => {
 	expect(() => parseEntry('2026-11-12-x.json', '{"title":"One\\nTwo"}')).toThrow('title must be one line');
-	expect(() => parseEntry('2026-11-12-x.json', '{"title":"One","tasks":["123"]}')).toThrow('tasks must be');
+	expect(() => parseEntry('2026-11-12-x.json', '{"title":"One","tasks":["123"]}')).toThrow('each task must be');
+	expect(() =>
+		parseEntry(
+			'2026-11-12-x.json',
+			'{"title":"One","tasks":[{"id":"2ca9f3dd-67c0-4ffc-8670-266407c5df7b","title":""}]}',
+		),
+	).toThrow('title must be a non-empty string');
 	expect(() => parseEntry('notes.json', '{"title":"One"}')).toThrow('name it <YYYY-MM-DD>');
 });
 
@@ -131,4 +137,34 @@ test('a commit archived twice keeps the first build that held it', () => {
 	git('tag', 'testflight/2026.1112.100000', sha);
 	git('tag', 'testflight/2026.1112.90000', sha);
 	expect(bundle(root, 'dev').entries.map(entry => entry.build)).toEqual(['2026.1112.90000']);
+});
+
+test("a task keeps the title from the brief's markdown line; a bare id or link has none", () => {
+	const id = 'd6c161bd-1f76-4dfb-aee8-8ec0e3a5bc85';
+	expect(
+		parseTaskArgument(
+			`- [1 Changelog Feedback: Add text per task line](https://procrastimate.stf.lol/inbox?task=${id})`,
+		),
+	).toEqual({ id, title: '1 Changelog Feedback: Add text per task line' });
+	expect(parseTaskArgument(`[Brackets [x] (and parens)](https://procrastimate.stf.lol/inbox?task=${id})`)).toEqual({
+		id,
+		title: 'Brackets [x] (and parens)',
+	});
+	expect(parseTaskArgument(id.toUpperCase())).toBe(id);
+	expect(() => parseTaskArgument('[No id](https://example.com)')).toThrow('holds no ProcrastiMate task id');
+
+	const path = add(root, {
+		title: 'Titles',
+		tasks: [`[Today Feedback](https://procrastimate.stf.lol/inbox?task=${id})`, '2ca9f3dd-67c0-4ffc-8670-266407c5df7b'],
+		date: '2026-11-13',
+	});
+	expect(JSON.parse(readFileSync(join(root, path), 'utf8')).tasks).toEqual([
+		{ id, title: 'Today Feedback' },
+		'2ca9f3dd-67c0-4ffc-8670-266407c5df7b',
+	]);
+	commit('titles');
+	expect(bundle(root, 'dev').entries[0]!.tasks).toEqual([
+		{ id, title: 'Today Feedback' },
+		{ id: '2ca9f3dd-67c0-4ffc-8670-266407c5df7b' },
+	]);
 });

@@ -1,5 +1,14 @@
 {
 	"title": "Create Recipe replaces the selection; the current pill gets a ring",
-	"tasks": ["94039ff2-02cd-45c8-84d9-e1b788d90d63", "6682e28c-d752-4b68-98c6-2e30d435c1e4"],
+	"tasks": [
+		{
+			"id": "94039ff2-02cd-45c8-84d9-e1b788d90d63",
+			"title": "Today Feedback"
+		},
+		{
+			"id": "6682e28c-d752-4b68-98c6-2e30d435c1e4",
+			"title": "Today Feedback"
+		}
+	],
 	"build": "2026.1110.232632"
 }

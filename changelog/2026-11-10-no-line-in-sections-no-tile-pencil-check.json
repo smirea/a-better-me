@@ -1,5 +1,14 @@
 {
 	"title": "No line in Sections, no tile pencil, check circles on the tile edge",
-	"tasks": ["7a1bb90a-9796-4e2a-825d-71c5f6b3236b", "2a241231-49ca-40d3-8026-b0c2da98edd5"],
+	"tasks": [
+		{
+			"id": "7a1bb90a-9796-4e2a-825d-71c5f6b3236b",
+			"title": "Today Feedback"
+		},
+		{
+			"id": "2a241231-49ca-40d3-8026-b0c2da98edd5",
+			"title": "Today Feedback"
+		}
+	],
 	"build": "2026.1110.221630"
 }

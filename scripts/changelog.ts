@@ -3,7 +3,7 @@
  * The in-app changelog: one JSON file per entry under `changelog/`, named `<YYYY-MM-DD>-<slug>.json` after the day it
  * merged, so parallel PRs never edit the same file.
  *
- *   bun scripts/changelog.ts add "<one-line title>" --task <id or link> [--task …] [--desc "<one short sentence>"]
+ *   bun scripts/changelog.ts add "<one-line title>" --task "<[title](link) from the brief, or an id>" [--task …] [--desc "…"]
  *   bun scripts/changelog.ts check [--base <ref>]        fails when shipped code changed without a new entry
  *   bun scripts/changelog.ts bundle --build <n> --out <file>   the JSON the iPhone app bundles
  *
@@ -18,12 +18,15 @@ import { basename, dirname, join } from 'node:path';
 export const changelogDir = 'changelog';
 export const tagPrefix = 'testflight/';
 
+/** A task's title is captured when the entry is written: the app can't reach ProcrastiMate to look it up. */
+export type Task = { id: string; title?: string };
+
 export type Entry = {
 	id: string;
 	date: string;
 	title: string;
 	description?: string;
-	tasks: string[];
+	tasks: Task[];
 	/** Set only on entries backfilled from before builds were tagged. */
 	build?: string;
 };
@@ -36,6 +39,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const buildNumber = /^\d{4}\.\d{1,4}\.\d{1,6}$/;
 export const titleLimit = 90;
 export const descriptionLimit = 240;
+export const taskTitleLimit = 500;
 
 /** Shipped code: a change here reaches the owner, so its PR needs an entry. Tests, docs, and tooling don't. */
 const shippedPrefixes = [
@@ -73,8 +77,15 @@ export function parseEntry(name: string, text: string): Entry {
 		if (value.length > limit) fail(`${key} is ${value.length} characters; keep it to ${limit}`);
 		return value.trim();
 	};
-	if (!Array.isArray(tasks) || tasks.some(task => typeof task !== 'string' || !uuid.test(task)))
-		fail('tasks must be a list of ProcrastiMate task ids (lowercase UUIDs)');
+	// A bare id stays valid: entries written before titles were stored, and PRs still writing that way, must pass.
+	const taskList = (Array.isArray(tasks) ? tasks : fail('tasks must be a list')).map((task: unknown): Task => {
+		const bad = () => fail('each task must be a ProcrastiMate task id (lowercase UUID) or {"id", "title"}');
+		if (typeof task === 'string') return uuid.test(task) ? { id: task } : bad();
+		if (typeof task !== 'object' || task === null || Array.isArray(task)) return bad();
+		const { id, title: taskTitle, ...extra } = task as Record<string, unknown>;
+		if (typeof id !== 'string' || !uuid.test(id) || Object.keys(extra).length) return bad();
+		return taskTitle === undefined ? { id } : { id, title: line(taskTitle, `task ${id} title`, taskTitleLimit) };
+	});
 	if (build !== undefined && (typeof build !== 'string' || !buildNumber.test(build)))
 		fail('build must be a TestFlight build number such as 2026.1112.183941');
 	return {
@@ -82,7 +93,7 @@ export function parseEntry(name: string, text: string): Entry {
 		date,
 		title: line(title, 'title', titleLimit),
 		...(description === undefined ? {} : { description: line(description, 'description', descriptionLimit) }),
-		tasks: tasks as string[],
+		tasks: taskList,
 		...(build === undefined ? {} : { build: build as string }),
 	};
 }
@@ -204,7 +215,7 @@ export function missingEntryMessage(shipped: string[]): string {
 		`This change ships code (${listed}) but adds no changelog entry.`,
 		'Add one, with the ProcrastiMate task from your brief, and commit the file it prints:',
 		'',
-		'  bun scripts/changelog.ts add "<one-line title of what changed for the user>" --task <task id or link> [--desc "<one short sentence>"]',
+		'  bun scripts/changelog.ts add "<one-line title of what changed for the user>" --task "<[task title](task link) line from your brief>" [--desc "<one short sentence>"]',
 		'',
 		`Leave out --task only when no task exists. Changes outside ${shippedPrefixes.join(', ')} (tests, docs, tooling) need none.`,
 	].join('\n');
@@ -228,6 +239,20 @@ export function localDate(date = new Date()): string {
 	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/**
+ * `--task` takes a brief's `- [<title>](<link>)` line, which keeps the title, or a bare id or link, which shows as a
+ * generic label in the app.
+ */
+export function parseTaskArgument(argument: string): string | Task {
+	const markdown = /^\s*(?:[-*]\s+)?\[(.+)\]\((\S+)\)\s*$/s.exec(argument);
+	const id = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+		.exec(markdown?.[2] ?? argument)?.[0]
+		?.toLowerCase();
+	if (!id) throw new Error(`--task ${argument} holds no ProcrastiMate task id`);
+	const title = markdown?.[1]?.replace(/\s+/g, ' ').trim();
+	return title ? { id, title } : id;
+}
+
 export function add(
 	root: string,
 	{
@@ -237,12 +262,11 @@ export function add(
 		date = localDate(),
 	}: { title: string; tasks: string[]; description?: string; date?: string },
 ): string {
-	const ids = tasks.map(task => {
-		const id = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.exec(task)?.[0]?.toLowerCase();
-		if (!id) throw new Error(`--task ${task} holds no ProcrastiMate task id`);
-		return id;
-	});
-	const body = { title, ...(description ? { description } : {}), ...(ids.length ? { tasks: ids } : {}) };
+	const body = {
+		title,
+		...(description ? { description } : {}),
+		...(tasks.length ? { tasks: tasks.map(parseTaskArgument) } : {}),
+	};
 	let name = `${date}-${slugify(title)}.json`;
 	for (let n = 2; existsSync(join(root, changelogDir, name)); n++) name = `${date}-${slugify(title)}-${n}.json`;
 	const text = `${JSON.stringify(body, null, '\t')}\n`;
@@ -272,7 +296,10 @@ function main(argv: string[]): number {
 	switch (command) {
 		case 'add': {
 			const title = positional.join(' ').trim();
-			if (!title) throw new Error('usage: bun scripts/changelog.ts add "<title>" [--task <id>] [--desc "<text>"]');
+			if (!title)
+				throw new Error(
+					'usage: bun scripts/changelog.ts add "<title>" [--task "[<task title>](<link>)"] [--desc "<text>"]',
+				);
 			console.log(add(root, { title, tasks: flags.get('task') ?? [], description: flag('desc') }));
 			return 0;
 		}

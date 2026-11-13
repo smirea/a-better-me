@@ -1,5 +1,10 @@
 {
 	"title": "Recipe rows show a serving's weight",
-	"tasks": ["5aa3b065-f8cb-4791-ad1e-3b35b9983001"],
+	"tasks": [
+		{
+			"id": "5aa3b065-f8cb-4791-ad1e-3b35b9983001",
+			"title": "Foods & Recipes Feedback"
+		}
+	],
 	"build": "2026.1110.232632"
 }

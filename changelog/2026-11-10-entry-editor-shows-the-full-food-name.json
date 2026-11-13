@@ -1,5 +1,10 @@
 {
 	"title": "Entry editor shows the full food name, amount under the macros",
-	"tasks": ["62270a39-3cfe-499c-8d42-8ca58c45dc5d"],
+	"tasks": [
+		{
+			"id": "62270a39-3cfe-499c-8d42-8ca58c45dc5d",
+			"title": "Hamburger or Ground Beef, 93% Lean Feedback"
+		}
+	],
 	"build": "2026.1110.232632"
 }

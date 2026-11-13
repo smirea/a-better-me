@@ -1,4 +1,9 @@
 {
 	"title": "Changelog in More: what each update changed, by day, with its build and task",
-	"tasks": ["2ca9f3dd-67c0-4ffc-8670-266407c5df7b"]
+	"tasks": [
+		{
+			"id": "2ca9f3dd-67c0-4ffc-8670-266407c5df7b",
+			"title": "Add a changelog in settings general section. Changelog entry must be automatically added by every PR that links the local procratimate task (if available) and has a one line title of it and extra description if needed also succinctly. In app it renders as a list grouped by date, button for procrastimate task in the top right and version to the left"
+		}
+	]
 }
