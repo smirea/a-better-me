@@ -14,7 +14,12 @@ extension LocalStore {
     /// section it lands in: `section` when the owner picked one, else the one its minute falls in as the sections stand
     /// now, so moving a boundary later never moves it.
     func log(_ portions: [(FoodPortion, day: CalendarDay, minute: Int)], section: String? = nil) {
-        let entries = portions.map { FoodEntry($0.0, day: $0.day, minute: $0.minute, section: section) }
+        log(portions.map { FoodEntry($0.0, day: $0.day, minute: $0.minute, section: section) })
+    }
+
+    /// Logs new entries as they are, filling each one's section from its minute when it has none: Duplicate's copy,
+    /// which keeps an altered recipe altered.
+    func log(_ entries: [FoodEntry]) {
         write { db in
             let sections = try MealSection.current(db)
             for var entry in entries {

@@ -156,10 +156,34 @@ struct AlterationTests {
     @Test func aPlateOnAnEditedDayIsPartOfItsEditedTotals() {
         var day = NutritionDay(id: monday)
         let entry = logged()
-        #expect(PlateDayTotals.logged(day, [entry], plate: [.energy: 300])[.energy] == entry.amounts[.energy])
+        #expect(PlateDayTotals.counted(day, [entry], plate: [.energy: 300]).logged[.energy] == entry.amounts[.energy])
         day.override = [.energy: 2000]
-        let totals = PlateDayTotals.logged(day, [entry], plate: [.energy: 300, .protein: 20])
-        #expect(totals[.energy] == 1700)
-        #expect(totals[.protein] == entry.amounts[.protein])
+        let counted = PlateDayTotals.counted(day, [entry], plate: [.energy: 300, .protein: 20])
+        #expect(counted.logged[.energy] == 1700)
+        #expect(counted.plate?[.energy] == 300)
+        #expect(counted.logged[.protein] == entry.amounts[.protein])
+        #expect(counted.plate?[.protein] == 20)
+        // A plate over the edited total is all of it, never more.
+        let over = PlateDayTotals.counted(day, [entry], plate: [.energy: 2500])
+        #expect(over.logged[.energy] == 0)
+        #expect(over.plate?[.energy] == 2000)
+    }
+
+    @Test func alteringARecipeLoggedByWeightKeepsWhatWasEaten() throws {
+        let weight = try #require(recipe.snapshot.nutrition.allMeasures.first { $0.name == "g" })
+        let entry = FoodEntry(FoodPortion(recipe.snapshot, serving: Serving(measure: weight, quantity: 300)), day: monday, minute: 600)
+        let altered = entry.altered(to: altered())
+        #expect(abs(altered.serving.servings - entry.serving.servings) < 1e-9)
+        #expect(recipe.snapshot.nutrition.measures.contains(altered.serving.measure))
+        #expect(abs((altered.amounts[.energy] ?? 0) - 505) < 1e-6)
+    }
+
+    @Test func duplicatingAnAlteredRecipeKeepsItAltered() async throws {
+        let entry = logged().altered(to: altered())
+        store.log([entry.copy(day: monday.adding(days: 1), minute: 480, section: nil)])
+        try await store.write { _ in }.value
+        let copy = try #require(try store.readBlocking(FoodEntry.on(monday.adding(days: 1)).fetch).first)
+        #expect(copy.alterations == entry.alterations)
+        #expect(copy.section != nil)
     }
 }

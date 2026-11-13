@@ -171,7 +171,10 @@ struct EntryEditor: View {
             }
             action("Duplicate", systemImage: "plus.square.on.square") {
                 state.expectAdditions()
-                store.log([FoodPortion(food, serving: serving)], on: CalendarDay(time), minute: minute, section: section)
+                var copy = entry.copy(day: CalendarDay(time), minute: minute, section: section)
+                copy.food = food
+                copy.serving = serving
+                store.log([copy])
                 dismiss()
             }
             if entry.food.source == .recipe {

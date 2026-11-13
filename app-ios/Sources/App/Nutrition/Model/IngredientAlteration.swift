@@ -73,9 +73,14 @@ extension [IngredientAlteration] {
 extension FoodEntry {
     /// The entry with `alterations` in place of its current ones: the recipe's name and id stay, and the nutrition
     /// becomes the sum of what one serving now holds, so the day's totals follow. The weight of a serving moves by
-    /// the weight the ingredients gained or lost. An empty or unchanged list returns the recipe as it was.
+    /// the weight the ingredients gained or lost, so an amount logged in a weight or volume, whose measure carries the
+    /// old weight, is rewritten in the recipe's own measure first, keeping the servings eaten. An empty or unchanged
+    /// list returns the recipe as it was.
     func altered(to alterations: [IngredientAlteration]) -> FoodEntry {
         var entry = self
+        if !food.nutrition.measures.contains(serving.measure), let measure = food.nutrition.measures.first {
+            entry.serving = Serving(measure: measure, quantity: serving.servings * measure.quantity / measure.servings)
+        }
         let isAltered = alterations.isAltered
         let portions = isAltered ? alterations.eaten : alterations.originals
         entry.food.nutrition.nutrients = portions.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts }

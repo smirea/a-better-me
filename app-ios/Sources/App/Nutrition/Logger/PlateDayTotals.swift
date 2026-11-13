@@ -26,8 +26,9 @@ struct PlateDayTotals: View {
 
     var body: some View {
         let display = settings.nutrition.logger.nutritionDisplay
+        let counted = Self.counted(dayRow, entries.filter { $0.id != replacing }, plate: plate)
         let lines = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: latestWeight?.weightKg)
-            .summary(Self.logged(dayRow, entries.filter { $0.id != replacing }, plate: plate), plate: plate, settings: settings)
+            .summary(counted.logged, plate: counted.plate, settings: settings)
         MacroTotalsBars(lines: lines, page: display.page)
             .gesture(DragGesture(minimumDistance: 20).onEnded { drag in
                 guard abs(drag.translation.width) > 30, abs(drag.translation.width) > abs(drag.translation.height) else { return }
@@ -44,13 +45,17 @@ struct PlateDayTotals: View {
 }
 
 extension PlateDayTotals {
-    /// The day's totals without the plate. An edited day's totals win over what is logged, so a plate changes none of
-    /// the nutrients they cover: there the plate is drawn as part of the edited total instead of on top of it.
-    static func logged(_ day: NutritionDay, _ entries: [FoodEntry], plate: NutrientAmounts?) -> NutrientAmounts {
+    /// The day's totals without the plate, and the plate, as the bars draw them. An edited day's totals win over what is
+    /// logged, so a plate changes none of the nutrients they cover: there the plate is drawn as part of the edited
+    /// total, at most all of it, instead of on top of it.
+    static func counted(_ day: NutritionDay, _ entries: [FoodEntry], plate: NutrientAmounts?) -> (logged: NutrientAmounts, plate: NutrientAmounts?) {
         var totals = day.totals(entries)
+        var plate = plate
         for (id, value) in day.override ?? [:] {
-            totals[id] = max(value - (plate?[id] ?? 0), 0)
+            let share = min(plate?[id] ?? 0, value)
+            if plate != nil { plate?[id] = share }
+            totals[id] = value - share
         }
-        return totals
+        return (totals, plate)
     }
 }
