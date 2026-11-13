@@ -284,8 +284,19 @@ private struct LiveWindow<Content: View>: View {
     let viewport: ChartViewport
     @ViewBuilder let content: (MetricWindow) -> Content
 
+    @State private var windows = ViewMemo<WindowKey, MetricWindow>()
+
     var body: some View {
-        content(plot.window(at: viewport.start(for: key) ?? plot.initialStart))
+        let start = viewport.start(for: key) ?? plot.initialStart
+        // The plot comes memoized, so comparing its arrays is a storage identity check until its data changes.
+        content(windows(WindowKey(key: key, start: start, drawn: plot.drawn, overlay: plot.overlay)) { plot.window(at: start) })
+    }
+
+    private struct WindowKey: Equatable {
+        var key: PlotKey
+        var start: Date
+        var drawn: [DatedValue]
+        var overlay: [DatedValue]
     }
 }
 
@@ -358,11 +369,12 @@ private struct MetricChart: View, @MainActor Equatable {
 
     var body: some View {
         let shown = plot.drawnInterval(page: page)
-        let points = plot.drawn.within(shown)
+        // A line keeps the points either side of the slice, whose segments can cross it however far apart they are.
+        let points = plot.drawn.within(shown, neighbours: tab.style == .line)
         let style = labelStyle
         Chart {
             if let line = tab.overlay {
-                ForEach(plot.overlay.within(shown), id: \.date) { point in
+                ForEach(plot.overlay.within(shown, neighbours: true), id: \.date) { point in
                     LineMark(x: .value("Date", point.date), y: .value(line.title, point.value), series: .value("Series", line.title))
                         .foregroundStyle(line.color)
                         .lineStyle(StrokeStyle(lineWidth: line.dashed ? 1.5 : 2, dash: line.dashed ? [2, 3] : []))
@@ -665,7 +677,7 @@ struct MetricPlot {
                 Dictionary(drawing.bucket(days.inside(history), calendar: calendar).map { ($0.date, $0.value) }, uniquingKeysWith: { first, _ in first })
             }
             steps = StepsPlot(flights: perBar(flights), meters: perBar(meters))
-            summary.steps = (goal.goal, meters)
+            summary.steps = (goal.goal, meters.sorted { $0.date < $1.date })
         }
         if case .energyBalance = footer {
             let differences = NutritionMetrics.differences(intake: tab.points, reference: tab.overlay?.points ?? [], calendar: calendar)
@@ -683,15 +695,15 @@ struct MetricPlot {
     /// distort.
     func window(at start: Date) -> MetricWindow {
         let interval = DateInterval(start: windowStart(at: start), duration: visibleLength)
-        let days = daily.inside(interval)
+        let days = Array(daily.within(interval))
         let tab = summary.tab
-        let points = drawn.inside(interval)
+        let points = Array(drawn.within(interval))
         let average = (drawing == averaging ? points : averaging.bucket(days, calendar: calendar)).average
         let stats = tab.stats?(interval) ?? [
             MetricTab.Stat(title: tab.averageTitle, value: average),
             MetricTab.Stat(title: tab.summary.title(tab.title), value: tab.summary.second(of: days.map(\.value))),
         ]
-        let values = (points + overlay.inside(interval)).map(\.value) + (tab.goal.map { [$0] } ?? [])
+        let values = (points + overlay.within(interval)).map(\.value) + (tab.goal.map { [$0] } ?? [])
         // A window runs past today when bars widen the domain to a whole week or month.
         let end = min(interval.end, latest.end)
         let labelStart = max(interval.start, historyStart)
@@ -702,7 +714,7 @@ struct MetricPlot {
             let first = max(interval.start, daily.first.map { calendar.startOfDay(for: $0.date) } ?? interval.start)
             let count = max(calendar.dateComponents([.day], from: first, to: end).day!, 1)
             steps = StepsSummary(
-                total: total, distance: summaryInputs.meters.inside(interval).map(\.value).reduce(0, +),
+                total: total, distance: summaryInputs.meters.within(interval).map(\.value).reduce(0, +),
                 goalShare: total / Double(summaryInputs.goal * count)
             )
         }

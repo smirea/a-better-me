@@ -170,6 +170,11 @@ struct StepsPlotTests {
             let interval = DateInterval(start: utc.date(byAdding: .day, value: from, to: day("2026-10-01", 0))!, end: utc.date(byAdding: .day, value: to, to: day("2026-10-01", 0))!)
             #expect(Array(points.within(interval)) == points.inside(interval))
         }
+        // Two weigh-ins three weeks apart still draw the segment across a week between them.
+        let sparse = [DatedValue(date: day("2026-10-01"), value: 80), DatedValue(date: day("2026-10-22"), value: 81)]
+        let week = DateInterval(start: day("2026-10-08", 0), duration: 7 * 86_400)
+        #expect(sparse.within(week).isEmpty)
+        #expect(Array(sparse.within(week, neighbours: true)) == sparse)
     }
 
     @Test func detailsDropFirstThenCountsShortenThenHide() {
