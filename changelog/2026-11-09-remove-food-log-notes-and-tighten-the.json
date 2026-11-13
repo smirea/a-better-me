@@ -1,5 +1,10 @@
 {
 	"title": "Remove food log notes and tighten the Food Log timeline",
-	"tasks": ["20e49bab-7e15-4754-a2fc-93228b359f2c"],
+	"tasks": [
+		{
+			"id": "20e49bab-7e15-4754-a2fc-93228b359f2c",
+			"title": "Today Feedback"
+		}
+	],
 	"build": "2026.1109.183350"
 }

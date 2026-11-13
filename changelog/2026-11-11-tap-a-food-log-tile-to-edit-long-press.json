@@ -1,5 +1,10 @@
 {
 	"title": "Tap a Food Log tile to edit, long-press to select",
-	"tasks": ["63781214-0b23-4c3b-b194-6196a43cdec3"],
+	"tasks": [
+		{
+			"id": "63781214-0b23-4c3b-b194-6196a43cdec3",
+			"title": "1 Today Feedback: fix tap to edit"
+		}
+	],
 	"build": "2026.1111.170234"
 }

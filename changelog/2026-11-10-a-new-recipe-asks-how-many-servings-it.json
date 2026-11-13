@@ -1,5 +1,10 @@
 {
 	"title": "A new recipe asks how many servings it makes",
-	"tasks": ["d9e86270-490d-4b48-87b3-1bd0cc33db49"],
+	"tasks": [
+		{
+			"id": "d9e86270-490d-4b48-87b3-1bd0cc33db49",
+			"title": "Should a new recipe ask how many servings it makes?"
+		}
+	],
 	"build": "2026.1111.22506"
 }

@@ -1,5 +1,10 @@
 {
 	"title": "Meal Rating: ratio-only tag, rated day/recipes/plate, animated skull border",
-	"tasks": ["b2e1ce49-990f-423c-aee9-2126f5ee0a07"],
+	"tasks": [
+		{
+			"id": "b2e1ce49-990f-423c-aee9-2126f5ee0a07",
+			"title": "1 Nutrition Feedback: update icons, add ratio display"
+		}
+	],
 	"build": "2026.1112.170758"
 }

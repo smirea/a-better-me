@@ -1,4 +1,9 @@
 {
 	"title": "Metric charts scroll smoothly, and the Steps range totals follow the chart as it moves",
-	"tasks": ["f7e46e4a-0921-4b3d-93d8-4082bd29ef74"]
+	"tasks": [
+		{
+			"id": "f7e46e4a-0921-4b3d-93d8-4082bd29ef74",
+			"title": "2 Steps Feedback: Fix jittery scrolling, render more bars"
+		}
+	]
 }

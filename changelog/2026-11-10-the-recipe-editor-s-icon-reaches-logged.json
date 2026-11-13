@@ -1,5 +1,10 @@
 {
 	"title": "The recipe editor's icon reaches logged entries",
-	"tasks": ["2d7b118c-7db5-4eeb-a500-538f592c3f8e"],
+	"tasks": [
+		{
+			"id": "2d7b118c-7db5-4eeb-a500-538f592c3f8e",
+			"title": "On-device icon model misreads non-English food names"
+		}
+	],
 	"build": "2026.1111.30604"
 }

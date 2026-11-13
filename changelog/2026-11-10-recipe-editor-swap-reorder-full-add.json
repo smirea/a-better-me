@@ -1,5 +1,14 @@
 {
 	"title": "Recipe editor: Swap, reorder, full Add Ingredient search, amount under long names",
-	"tasks": ["bba6c54c-db62-4f26-9dc8-9906c3c13fcc", "e2cffe32-0378-46ae-897e-182a5ef19098"],
+	"tasks": [
+		{
+			"id": "bba6c54c-db62-4f26-9dc8-9906c3c13fcc",
+			"title": "Create Recipe Feedback"
+		},
+		{
+			"id": "e2cffe32-0378-46ae-897e-182a5ef19098",
+			"title": "Add Ingredient Feedback"
+		}
+	],
 	"build": "2026.1110.221630"
 }

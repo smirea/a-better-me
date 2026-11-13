@@ -1,5 +1,10 @@
 {
 	"title": "Four sections, no title, and Back in place of \"+\" on More",
-	"tasks": ["1dbbd185-42b5-45c4-8c6a-5fac57f6a5a7"],
+	"tasks": [
+		{
+			"id": "1dbbd185-42b5-45c4-8c6a-5fac57f6a5a7",
+			"title": "More Feedback"
+		}
+	],
 	"build": "2026.1110.162600"
 }

@@ -1,5 +1,10 @@
 {
 	"title": "Sections display for the Food Log with editable meal sections",
-	"tasks": ["1af7a414-a96b-4ba5-abd1-88e5e45bb8e4"],
+	"tasks": [
+		{
+			"id": "1af7a414-a96b-4ba5-abd1-88e5e45bb8e4",
+			"title": "Today Feedback"
+		}
+	],
 	"build": "2026.1110.3451"
 }

@@ -1,5 +1,14 @@
 {
 	"title": "Red favorite heart that unsaves; unit switches keep the number",
-	"tasks": ["9328f261-b83a-4775-8dc4-fabed173c7fa", "cae15784-808b-461c-80af-969ca00f7d0e"],
+	"tasks": [
+		{
+			"id": "9328f261-b83a-4775-8dc4-fabed173c7fa",
+			"title": "1 Today Feedback: update button colors"
+		},
+		{
+			"id": "cae15784-808b-461c-80af-969ca00f7d0e",
+			"title": "When changing units do not convert, keep the same numeric value"
+		}
+	],
 	"build": "2026.1111.170234"
 }

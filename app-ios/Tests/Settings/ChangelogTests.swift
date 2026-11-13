@@ -6,7 +6,7 @@ struct ChangelogTests {
     /// The shape `scripts/changelog.ts bundle` writes, newest first.
     private let json = #"""
     {"build":"2026.1112.183941","entries":[
-      {"id":"2026-11-12-b","date":"2026-11-12","title":"B","tasks":["2ca9f3dd-67c0-4ffc-8670-266407c5df7b"],"build":"2026.1112.183941"},
+      {"id":"2026-11-12-b","date":"2026-11-12","title":"B","tasks":[{"id":"2ca9f3dd-67c0-4ffc-8670-266407c5df7b","title":"Add a changelog"},{"id":"d6c161bd-1f76-4dfb-aee8-8ec0e3a5bc85"}],"build":"2026.1112.183941"},
       {"id":"2026-11-12-a","date":"2026-11-12","title":"A","description":"Detail.","tasks":[],"build":"2026.1112.170758"},
       {"id":"2026-11-11-c","date":"2026-11-11","title":"C","tasks":[],"build":"2026.1111.184217"},
       {"id":"2026-10-30-d","date":"2026-10-30","title":"D","tasks":[],"build":"2026.1030.90000"}
@@ -23,6 +23,12 @@ struct ChangelogTests {
         #expect(days[0].entries[1].description == "Detail.")
         #expect(days[0].entries[0].buildTimeLabel != nil)
         #expect(changelog.entries.allSatisfy { $0.buildTimeLabel != nil })
+    }
+
+    @Test func tasksShowTheirTitleOrAFallback() throws {
+        let tasks = try JSONDecoder().decode(Changelog.self, from: Data(json.utf8)).entries[0].tasks
+        #expect(tasks.map(\.label) == ["Add a changelog", "ProcrastiMate task"])
+        #expect(tasks[1].url.absoluteString == "https://procrastimate.stf.lol/inbox?task=d6c161bd-1f76-4dfb-aee8-8ec0e3a5bc85")
     }
 
     @Test func taskLinksOpenProcrastiMate() {

@@ -13,7 +13,7 @@ struct Changelog: Decodable, Sendable {
         let date: CalendarDay
         let title: String
         let description: String?
-        let tasks: [String]
+        let tasks: [TaskLink]
         /// The first TestFlight build that held the change.
         let build: String
         /// When `build` was archived, in local time, with the date when that local day isn't `date`. Formatted while
@@ -29,7 +29,7 @@ struct Changelog: Decodable, Sendable {
             self.date = date
             title = try container.decode(String.self, forKey: .title)
             description = try container.decodeIfPresent(String.self, forKey: .description)
-            tasks = try container.decode([String].self, forKey: .tasks)
+            tasks = try container.decode([TaskLink].self, forKey: .tasks)
             build = try container.decode(String.self, forKey: .build)
             buildTimeLabel = Changelog.buildTime(build).map { made in
                 made.formatted(CalendarDay(made) == date
@@ -37,6 +37,16 @@ struct Changelog: Decodable, Sendable {
                     : .dateTime.month(.abbreviated).day().hour().minute())
             }
         }
+    }
+
+    /// A ProcrastiMate task the entry addressed. `title` is captured when the entry is written, since the app can't
+    /// look it up; entries written with a bare id have none.
+    struct TaskLink: Decodable, Identifiable, Sendable {
+        let id: String
+        let title: String?
+
+        var label: String { title ?? "ProcrastiMate task" }
+        var url: URL { Changelog.taskURL(id) }
     }
 
     struct Day: Identifiable, Sendable {
@@ -105,7 +115,7 @@ struct Changelog: Decodable, Sendable {
 
 /// More > General > Changelog: one section per day, newest first, under a centered title between two rules. Entries
 /// draw straight on the page, without the usual card, as the owner asked: a build and time line, the title across the
-/// full width, the description, and links to the entry's tasks.
+/// full width, the description, and a link per task, named after it.
 struct ChangelogView: View {
     @State private var loaded: (build: String, days: [Changelog.Day])?
 
@@ -191,18 +201,20 @@ private struct BuildLine: View {
     }
 }
 
-/// Nothing without a task; several are numbered.
+/// One line per task, its title cut to a single line. Nothing without a task.
 private struct TaskLinks: View {
-    let tasks: [String]
+    let tasks: [Changelog.TaskLink]
 
     var body: some View {
         if !tasks.isEmpty {
-            HStack(spacing: 16) {
-                ForEach(Array(tasks.enumerated()), id: \.element) { index, task in
-                    Link(destination: Changelog.taskURL(task)) {
-                        Label(tasks.count == 1 ? "Task" : "Task \(index + 1)", systemImage: "checklist")
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(tasks) { task in
+                    Link(destination: task.url) {
+                        Label(task.label, systemImage: "checklist")
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
-                    .accessibilityLabel(tasks.count == 1 ? "Open task in ProcrastiMate" : "Open task \(index + 1) in ProcrastiMate")
+                    .accessibilityLabel("Open \(task.label) in ProcrastiMate")
                 }
             }
             .font(AppFont.rowDetail)

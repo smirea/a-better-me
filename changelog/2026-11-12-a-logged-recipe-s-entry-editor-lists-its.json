@@ -1,4 +1,9 @@
 {
 	"title": "A logged recipe's entry editor lists its ingredients at the amount eaten",
-	"tasks": ["4325e1b5-99be-44a4-b9b9-3b8bf20d81a9"]
+	"tasks": [
+		{
+			"id": "4325e1b5-99be-44a4-b9b9-3b8bf20d81a9",
+			"title": "1 Nutrition Feedback: add ingredients above header"
+		}
+	]
 }
