@@ -84,11 +84,13 @@ struct FoodLibrary: Sendable {
         }
         // Bare columns beside MAX() come from the row holding the max, so each food brings its latest serving. Logging
         // or editing an entry sets updated_at, so a copy onto a future day ranks by when it was copied, not by its day.
+        // An altered recipe's snapshot holds its alterations' nutrition, which logging it again would carry without
+        // them, so only recipes logged as made bring theirs.
         let history = try Row.fetchAll(db, sql: """
             SELECT food, serving, MAX(updated_at || day || printf('%04d', minute) || created_at || id) AS latest,
                 COUNT(DISTINCT CASE WHEN day BETWEEN ? AND ? THEN day END) AS days
             FROM food_entries
-            WHERE json_extract(food, '$.source') <> 'quick_add'
+            WHERE json_extract(food, '$.source') <> 'quick_add' AND alterations IS NULL
             GROUP BY \(foodKey)
             ORDER BY latest DESC
             """, arguments: [usualStart.description, today.description]).compactMap { row -> Item? in
@@ -103,7 +105,7 @@ struct FoodLibrary: Sendable {
         let foods = try Food.filter(Column("archived") == false).fetchAll(db)
         let recent = try Row.fetchAll(db, sql: """
             SELECT food, serving, day, minute, section, updated_at || created_at || id AS written FROM food_entries
-            WHERE day BETWEEN ? AND ? AND json_extract(food, '$.source') <> 'quick_add'
+            WHERE day BETWEEN ? AND ? AND json_extract(food, '$.source') <> 'quick_add' AND alterations IS NULL
             """, arguments: [today.adding(days: -(HourPicks.days - 1)).description, today.description]).map { row in
             HourPicks.Entry(
                 portion: FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving), day: try row.day("day"),

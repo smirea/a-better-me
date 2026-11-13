@@ -11,6 +11,7 @@ extension FoodEntry {
 
     /// The tile lines of the day's logged recipes, by entry id. An entry holds a snapshot of its recipe's nutrition,
     /// not its ingredients, so they come from the recipe as it is now, as Explode reads them; a deleted one lists none.
+    /// An altered one lists its own alterations, which need no recipe.
     static func recipeIngredients(on day: CalendarDay) -> DatabaseQuery<[UUID: RecipeTileIngredients]> {
         DatabaseQuery([:]) { db in
             let entries = try FoodEntry.filter(Column("day") == day.description)
@@ -18,9 +19,13 @@ extension FoodEntry {
             var recipes: [String: Recipe] = [:]
             var ingredients: [UUID: RecipeTileIngredients] = [:]
             for entry in entries {
-                guard let id = entry.food.foodID else { continue }
-                if recipes[id] == nil { recipes[id] = try Recipe.fetchOne(db, key: id) }
-                if let recipe = recipes[id] { ingredients[entry.id] = FoodLog.tileIngredients(entry.serving, of: recipe) }
+                var recipe: Recipe?
+                if entry.alterations == nil, let id = entry.food.foodID {
+                    if recipes[id] == nil { recipes[id] = try Recipe.fetchOne(db, key: id) }
+                    recipe = recipes[id]
+                }
+                let lines = FoodLog.ingredients(entry.serving, of: entry, recipe: recipe)
+                if !lines.isEmpty { ingredients[entry.id] = FoodLog.tileIngredients(lines) }
             }
             return ingredients
         }

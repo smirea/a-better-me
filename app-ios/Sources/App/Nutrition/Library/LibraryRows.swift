@@ -48,6 +48,7 @@ struct FoodRow: View {
     let food: FoodSnapshot
     let serving: Serving
     var showsDetail = true
+    var titleColor = Theme.textPrimary
     /// The search's terms (`FoodText.terms`), whose matches draw bold.
     var matching: [String] = []
 
@@ -57,7 +58,8 @@ struct FoodRow: View {
             RowLabel(
                 title: title,
                 detail: showsDetail ? Text(macroLine: food.amounts(serving)) : nil,
-                trailingDetail: showsDetail ? Text(NutritionFormat.listed(serving, of: food)) : nil
+                trailingDetail: showsDetail ? Text(NutritionFormat.listed(serving, of: food)) : nil,
+                titleColor: titleColor
             )
             .lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)

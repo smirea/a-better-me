@@ -35,7 +35,8 @@ struct EntryEditor: View {
         _time = State(initialValue: entry.day.date(atMinute: entry.minute))
         _section = State(initialValue: entry.section)
         _icon = State(initialValue: entry.food.icon)
-        let recipeID = entry.food.source == .recipe ? entry.food.foodID.flatMap(UUID.init(uuidString:)) : nil
+        // An altered recipe lists its own alterations, so it needs no recipe.
+        let recipeID = entry.food.source == .recipe && entry.alterations == nil ? entry.food.foodID.flatMap(UUID.init(uuidString:)) : nil
         _recipe = Observe(recipeID.map(Recipe.one) ?? DatabaseQuery(nil) { _ in nil })
     }
 
@@ -99,7 +100,7 @@ struct EntryEditor: View {
                     }
                 }
                 ImpactGauges(amounts: amounts, day: CalendarDay(time), excluding: entry.id).id(CalendarDay(time))
-                if let recipe { EntryIngredients(ingredients: FoodLog.ingredients(serving, of: recipe)) }
+                EntryIngredients(ingredients: FoodLog.ingredients(serving, of: entry, recipe: recipe))
                 NutrientList(title: "Nutrients", rows: nutrientRows(reported) { NutrientListRow.rows { reported.amount(of: $0.id) != nil } }) { nutrient in
                     NutrientRow(nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id))
                 }
@@ -170,7 +171,10 @@ struct EntryEditor: View {
             }
             action("Duplicate", systemImage: "plus.square.on.square") {
                 state.expectAdditions()
-                store.log([FoodPortion(food, serving: serving)], on: CalendarDay(time), minute: minute, section: section)
+                var copy = entry.copy(day: CalendarDay(time), minute: minute, section: section)
+                copy.food = food
+                copy.serving = serving
+                store.log([copy])
                 dismiss()
             }
             if entry.food.source == .recipe {
@@ -207,15 +211,40 @@ struct EntryEditor: View {
     }
 }
 
-/// A logged recipe's ingredients at the amount in the editor, drawn as the recipe page draws them. A recipe with none
-/// shows no section.
+/// A logged recipe's ingredients at the amount in the editor, drawn as the recipe page draws them. An altered recipe's
+/// changed ingredient adds the recipe's amount under it, a removed one is struck through, and an added one is green, as
+/// its tile draws them. A recipe with none shows no section.
 private struct EntryIngredients: View {
-    let ingredients: [RecipeIngredient]
+    let ingredients: [IngredientAlteration]
 
     var body: some View {
         if !ingredients.isEmpty {
-            ThemedSection("Ingredients") {
-                ForEach(ingredients) { FoodRow(food: $0.food, serving: $0.serving) }
+            ThemedSection(ingredients.isAltered ? "Ingredients, Altered" : "Ingredients") {
+                ForEach(ingredients) { line in
+                    switch (line.change, line.original, line.serving) {
+                    case let (.removed, original?, _):
+                        FoodRow(food: line.food, serving: original)
+                            .strikethrough()
+                            .opacity(0.5)
+                            .accessibilityLabel("Removed \(line.food.displayName), \(NutritionFormat.serving(original))")
+                    case let (.changed, original?, eaten?):
+                        VStack(alignment: .leading, spacing: 2) {
+                            FoodRow(food: line.food, serving: eaten)
+                            Text("Was \(NutritionFormat.serving(original))")
+                                .font(AppFont.rowDetail)
+                                .foregroundStyle(Theme.textSecondary)
+                                .padding(.leading, 40)
+                        }
+                        .accessibilityElement(children: .combine)
+                    case let (.added, _, eaten?):
+                        FoodRow(food: line.food, serving: eaten, titleColor: Theme.ratingGreen)
+                            .accessibilityLabel("Added \(line.food.displayName), \(NutritionFormat.serving(eaten))")
+                    case let (_, _, eaten?):
+                        FoodRow(food: line.food, serving: eaten)
+                    default:
+                        EmptyView()
+                    }
+                }
             }
         }
     }

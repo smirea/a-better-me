@@ -162,7 +162,9 @@ final class RunningBorderView: UIView {
     }
 
     /// Core Animation drops a layer's animations when it leaves the window, so each return starts it again. Every
-    /// border's turn starts on a multiple of the period in host time, so all of them on screen turn together.
+    /// border's turn starts on a multiple of the period in host time, so all of them on screen turn together. The spin
+    /// is never removed on completion: suspending the app ends such animations, and a border still in its window
+    /// came back from the background standing still.
     override func didMoveToWindow() {
         super.didMoveToWindow()
         gradient.removeAllAnimations()
@@ -173,6 +175,7 @@ final class RunningBorderView: UIView {
         spin.toValue = 2 * Double.pi
         spin.duration = Self.period
         spin.repeatCount = .infinity
+        spin.isRemovedOnCompletion = false
         spin.beginTime = gradient.convertTime(now - now.truncatingRemainder(dividingBy: Self.period), from: nil)
         gradient.add(spin, forKey: "spin")
     }

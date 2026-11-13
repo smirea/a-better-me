@@ -640,6 +640,13 @@ const onePortion = [
 export const RecipeIngredient = z
 	.object({ id: z.string(), food: FoodSnapshot, serving: Serving })
 	.meta({ id: 'RecipeIngredient' });
+export const IngredientAlteration = z
+	.object({ id: z.string(), food: FoodSnapshot, original: Serving.optional(), serving: Serving.optional() })
+	.meta({
+		id: 'IngredientAlteration',
+		description:
+			"One ingredient of an altered recipe at one serving of it: `original` is the recipe's amount and `serving` what was eaten. Without `original` it was added, without `serving` removed.",
+	});
 export const Recipe = z
 	.object({
 		id: z.string(),
@@ -713,6 +720,10 @@ export const FoodEntry = z
 		section: z.string().nullable().meta({
 			description:
 				'The id of the meal section (`settings.nutrition.mealSections`) it was logged into, kept when the sections change. Null for entries logged before sections existed, which the app places by `minute`.',
+		}),
+		alterations: z.array(IngredientAlteration).nullable().meta({
+			description:
+				"A logged recipe eaten with changes: its ingredients at one serving with what changed, was removed, or was added. `food` keeps the recipe's name and id with the altered nutrition. Null when eaten as the recipe made it. Swapping `food` clears it.",
 		}),
 		amounts: NutrientAmounts.meta({ description: "What was eaten: the snapshot's nutrients scaled by the serving." }),
 		createdAt: z.string(),

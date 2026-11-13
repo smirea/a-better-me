@@ -15,6 +15,9 @@ struct FoodEntry: Stamped {
     /// The `MealSection` id it was logged into, kept when the sections or their times change later. Nil for entries
     /// logged before sections existed, which show in the section their minute falls in.
     var section: String?
+    /// A logged recipe eaten with changes, whose `food` then holds the altered nutrition under the recipe's name. Nil
+    /// for everything eaten as logged.
+    var alterations: [IngredientAlteration]?
     var createdAt: Date
     var updatedAt: Date
 
@@ -40,6 +43,7 @@ struct FoodEntry: Stamped {
         food = try row.json("food")
         serving = try row.json("serving")
         section = row["section"]
+        alterations = try (row["alterations"] as String?).map { try RowJSON.decoder.decode([IngredientAlteration].self, from: Data($0.utf8)) }
         createdAt = try row.instant("created_at")
         updatedAt = try row.instant("updated_at")
     }
@@ -51,6 +55,7 @@ struct FoodEntry: Stamped {
         container["food"] = try RowJSON.text(food)
         container["serving"] = try RowJSON.text(serving)
         container["section"] = section
+        container["alterations"] = try alterations.map(RowJSON.text)
         container["created_at"] = Instant.text(createdAt)
         container["updated_at"] = Instant.text(updatedAt)
     }

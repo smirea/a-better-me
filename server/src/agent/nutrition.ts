@@ -378,6 +378,7 @@ export const nutritionRoutes: Route[] = [
 				day,
 				minute,
 				section: entrySection(db, minute, section),
+				alterations: null,
 				...portion(db, input),
 				createdAt: now,
 				updatedAt: now,
@@ -397,7 +398,9 @@ export const nutritionRoutes: Route[] = [
 			const current = db.find('food_entries', params.id!, 'food entry');
 			const moved = body.section !== undefined || (body.minute !== undefined && body.minute !== current.minute);
 			const section = moved ? { section: entrySection(db, body.minute ?? current.minute, body.section) } : {};
-			db.commit(db.patch('food_entries', current.id, { ...body, ...section, updatedAt: now }));
+			// Alterations describe the recipe the entry was; another food leaves nothing for them to alter.
+			const swapped = body.food ? { alterations: null } : {};
+			db.commit(db.patch('food_entries', current.id, { ...body, ...section, ...swapped, updatedAt: now }));
 			return entry(db.find('food_entries', current.id, 'food entry'));
 		},
 	}),
