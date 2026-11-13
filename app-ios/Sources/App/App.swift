@@ -39,6 +39,14 @@ struct BetterMeApp: App {
         WidgetPublisher.shared.start(store: store, health: health)
         QuickActionInbox.shared.install()
         Feedback.enable()
+        Feedback.webhooks = [
+            FeedbackWebhook(
+                name: "GitHub Issue",
+                url: AppEnvironment.apiURL.appending(path: "api/feedback"),
+                image: Feedback.githubIcon,
+                headers: ["Authorization": "Bearer \(AppEnvironment.ownerToken)"]
+            ),
+        ]
         Feedback.context("Sync") {
             let position = store.syncPosition
             return (

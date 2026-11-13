@@ -1,6 +1,7 @@
 import { withBearer, type SyncResponse } from 'sync-engine/core';
 import { isOwner } from './auth';
 import type { Config } from './config';
+import { FEEDBACK_ROUTE, feedbackAnswer, fileFeedbackIssue } from './feedback';
 import { LIVE_RAMBLE_ROUTE, liveRambleSetup, type LiveRambleSetup } from './food/ramble-live';
 import { drain, errorResponse as error } from './http';
 
@@ -53,6 +54,17 @@ export async function handle<Upgraded = never>(request: Request, app: App<Upgrad
 		if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket')
 			return error(426, 'Expected a WebSocket upgrade');
 		return app.ramble(request, setup);
+	}
+	if (route === FEEDBACK_ROUTE) {
+		if (!(await isOwner(request, app.config.ownerToken))) {
+			await drain(request);
+			return feedbackAnswer(401, { message: 'Missing or wrong owner token.' });
+		}
+		if (!app.config.githubToken) {
+			await drain(request);
+			return feedbackAnswer(503, { message: 'Set GITHUB_TOKEN on the server to file feedback issues.' });
+		}
+		return reportFailure(route, await fileFeedbackIssue(request, app.config.githubToken), app.report);
 	}
 	if (route !== 'POST /api/sync' && route !== 'GET /api/live') {
 		if (url.pathname !== '/api' && !url.pathname.startsWith('/api/')) return error(404, 'Not found');
