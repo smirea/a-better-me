@@ -99,13 +99,7 @@ struct EntryEditor: View {
                     }
                 }
                 ImpactGauges(amounts: amounts, day: CalendarDay(time), excluding: entry.id).id(CalendarDay(time))
-                if let recipe, !recipe.ingredients.isEmpty {
-                    ThemedSection("Ingredients") {
-                        ForEach(RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: serving.servings)) { ingredient in
-                            FoodRow(food: ingredient.food, serving: ingredient.serving)
-                        }
-                    }
-                }
+                if let recipe { EntryIngredients(ingredients: FoodLog.ingredients(serving, of: recipe)) }
                 NutrientList(title: "Nutrients", rows: nutrientRows(reported) { NutrientListRow.rows { reported.amount(of: $0.id) != nil } }) { nutrient in
                     NutrientRow(nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id))
                 }
@@ -209,6 +203,20 @@ struct EntryEditor: View {
             $0.day = day
             $0.minute = minute
             $0.section = section
+        }
+    }
+}
+
+/// A logged recipe's ingredients at the amount in the editor, drawn as the recipe page draws them. A recipe with none
+/// shows no section.
+private struct EntryIngredients: View {
+    let ingredients: [RecipeIngredient]
+
+    var body: some View {
+        if !ingredients.isEmpty {
+            ThemedSection("Ingredients") {
+                ForEach(ingredients) { FoodRow(food: $0.food, serving: $0.serving) }
+            }
         }
     }
 }

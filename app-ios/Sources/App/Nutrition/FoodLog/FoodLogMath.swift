@@ -330,9 +330,13 @@ enum FoodLog {
     }
 
     /// A recipe logged at `serving`, as its ingredients at the amounts eaten: half a serving of a one-serving recipe
-    /// halves every ingredient.
+    /// halves every ingredient. The tile, the entry editor, and Explode all read a logged recipe's ingredients here.
+    static func ingredients(_ serving: Serving, of recipe: Recipe) -> [RecipeIngredient] {
+        RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: serving.servings)
+    }
+
     static func exploded(_ serving: Serving, of recipe: Recipe) -> [FoodPortion] {
-        RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: serving.servings).map { FoodPortion($0.food, serving: $0.serving) }
+        ingredients(serving, of: recipe).map { FoodPortion($0.food, serving: $0.serving) }
     }
 
     /// A logged recipe's tile lines: its ingredients at the amounts eaten, most calories first, the first `limit` of
