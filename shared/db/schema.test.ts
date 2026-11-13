@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'bun:test';
 import { generate } from 'sync-engine/schema';
 import { SWIFT_SCHEMA } from '../../scripts/generate';
-import { foodSnapshot, nutrientAmounts, schema, serving } from './schema';
+import { foodSnapshot, ingredientAlteration, nutrientAmounts, schema, serving } from './schema';
 
 const root = join(import.meta.dir, '../..');
 
@@ -21,6 +21,18 @@ describe('nutrition validators', () => {
 	test('accept what the app encodes', () => {
 		expect(foodSnapshot.safeParse(JSON.parse(yogurt)).success).toBe(true);
 		expect(serving.safeParse(JSON.parse(container)).success).toBe(true);
+		const id = '"id":"5D4F2C1A-0000-4000-8000-000000000001"';
+		for (const line of [
+			`{"food":${yogurt},${id},"original":${container},"serving":${container}}`,
+			`{"food":${yogurt},${id},"original":${container}}`,
+			`{"food":${yogurt},${id},"serving":${container}}`,
+		]) {
+			expect(ingredientAlteration.safeParse(JSON.parse(line)).success).toBe(true);
+		}
+	});
+
+	test('an alteration keeps what the recipe held or what was eaten', () => {
+		expect(ingredientAlteration.safeParse({ id: 'a', food: JSON.parse(yogurt) }).success).toBe(false);
 	});
 
 	test('refuse the column defaults and trees the app cannot decode', () => {

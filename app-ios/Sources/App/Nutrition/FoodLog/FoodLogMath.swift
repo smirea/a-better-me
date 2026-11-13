@@ -10,14 +10,31 @@ struct TimelineRow: Hashable, Identifiable {
 }
 
 /// What a logged recipe's tile lists under its totals: names and amounts only, since the tile's totals are the point.
+/// An altered recipe lists its alterations instead of its ingredients.
 struct RecipeTileIngredients: Hashable, Sendable {
     struct Line: Hashable, Sendable {
         let name: String
         let amount: String
+        var change = IngredientAlteration.Change.kept
+        /// The recipe's amount, for a changed one.
+        var was: String?
     }
 
     let lines: [Line]
     let more: Int
+    var isAltered = false
+
+    var spoken: String {
+        let lines = lines.map { line in
+            switch line.change {
+            case .kept: line.name
+            case .changed: "\(line.name) changed from \(line.was ?? "") to \(line.amount)"
+            case .removed: "removed \(line.name)"
+            case .added: "added \(line.name), \(line.amount)"
+            }
+        }
+        return (isAltered ? "Alterations: " : "Ingredients: ") + (lines + (more > 0 ? ["\(more) more"] : [])).joined(separator: ", ")
+    }
 }
 
 /// What a timeline group stands for: an hour of the Time display, or a meal section of the Sections display.
@@ -330,25 +347,47 @@ enum FoodLog {
     }
 
     /// A recipe logged at `serving`, as its ingredients at the amounts eaten: half a serving of a one-serving recipe
-    /// halves every ingredient. The tile, the entry editor, and Explode all read a logged recipe's ingredients here.
+    /// halves every ingredient.
     static func ingredients(_ serving: Serving, of recipe: Recipe) -> [RecipeIngredient] {
         RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: serving.servings)
+    }
+
+    /// A logged recipe's ingredients at `serving`, as the tile, the entry editor, and Explode all read them: an altered
+    /// entry's own alterations, else its recipe's ingredients as it is now, each kept. Empty when it has neither.
+    static func ingredients(_ serving: Serving, of entry: FoodEntry, recipe: Recipe?) -> [IngredientAlteration] {
+        if let alterations = entry.alterations {
+            return alterations.map { $0.scaled(by: serving.servings) }
+        }
+        guard let recipe else { return [] }
+        return ingredients(serving, of: recipe).map { IngredientAlteration(id: $0.id, food: $0.food, original: $0.serving, serving: $0.serving) }
     }
 
     static func exploded(_ serving: Serving, of recipe: Recipe) -> [FoodPortion] {
         ingredients(serving, of: recipe).map { FoodPortion($0.food, serving: $0.serving) }
     }
 
-    /// A logged recipe's tile lines: its ingredients at the amounts eaten, most calories first, the first `limit` of
-    /// them, and how many more there are.
-    static func tileIngredients(_ serving: Serving, of recipe: Recipe, limit: Int = 5) -> RecipeTileIngredients {
-        let portions = exploded(serving, of: recipe).enumerated()
-            .sorted { ($1.element.amounts[.energy] ?? 0, $0.offset) < ($0.element.amounts[.energy] ?? 0, $1.offset) }
-            .map(\.element)
-        return RecipeTileIngredients(
-            lines: portions.prefix(limit).map { .init(name: $0.food.displayName, amount: NutritionFormat.serving($0.serving)) },
-            more: max(portions.count - limit, 0)
-        )
+    /// A logged recipe's tile lines at the amounts eaten, the first `limit` of them and how many more there are. An
+    /// unaltered recipe lists its ingredients, most calories first; an altered one lists only what changed, was
+    /// removed, or was added, in the recipe's order with additions last.
+    static func tileIngredients(_ ingredients: [IngredientAlteration], limit: Int = 5) -> RecipeTileIngredients {
+        let isAltered = ingredients.isAltered
+        let lines: [RecipeTileIngredients.Line]
+        if isAltered {
+            lines = ingredients.compactMap { line in
+                let name = line.food.displayName
+                return switch (line.change, line.original, line.serving) {
+                case let (.changed, original?, eaten?): .init(name: name, amount: NutritionFormat.serving(eaten), change: .changed, was: NutritionFormat.serving(original))
+                case let (.removed, original?, _): .init(name: name, amount: NutritionFormat.serving(original), change: .removed)
+                case let (.added, _, eaten?): .init(name: name, amount: NutritionFormat.serving(eaten), change: .added)
+                default: nil
+                }
+            }
+        } else {
+            lines = ingredients.eaten.enumerated()
+                .sorted { ($1.element.amounts[.energy] ?? 0, $0.offset) < ($0.element.amounts[.energy] ?? 0, $1.offset) }
+                .map { .init(name: $0.element.food.displayName, amount: NutritionFormat.serving($0.element.serving)) }
+        }
+        return RecipeTileIngredients(lines: Array(lines.prefix(limit)), more: max(lines.count - limit, 0), isAltered: isAltered)
     }
 
     /// Create Recipe's starting draft: the selected entries as ingredients at their logged servings, with the number

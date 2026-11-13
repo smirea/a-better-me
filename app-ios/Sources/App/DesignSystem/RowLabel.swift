@@ -7,10 +7,15 @@ struct RowLabel: View {
     var trailingDetail: Text?
     var systemImage: String?
     var iconTint = Theme.textPrimary
+    var titleColor = Theme.textPrimary
     @ScaledMetric private var trailingMinWidth: CGFloat = 28
 
-    init(title: Text, detail: Text? = nil, trailingDetail: Text? = nil, systemImage: String? = nil, iconTint: Color = Theme.textPrimary) {
+    init(
+        title: Text, detail: Text? = nil, trailingDetail: Text? = nil, systemImage: String? = nil, iconTint: Color = Theme.textPrimary,
+        titleColor: Color = Theme.textPrimary
+    ) {
         self.title = title
+        self.titleColor = titleColor
         self.detail = detail
         self.trailingDetail = trailingDetail
         self.systemImage = systemImage
@@ -35,7 +40,7 @@ struct RowLabel: View {
 
     private var text: some View {
         VStack(alignment: .leading, spacing: 2) {
-            title.font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
+            title.font(AppFont.rowTitle).foregroundStyle(titleColor)
             Group {
                 if let detail, let trailingDetail {
                     // The trailing text's ideal width is pinned to its minimum so the HStack is chosen whenever `detail`

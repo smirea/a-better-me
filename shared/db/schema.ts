@@ -233,6 +233,11 @@ export const foodEntries = sqliteTable('food_entries', {
 	serving: json('serving').notNull().default({}),
 	/** The `MealSection` id the entry was logged into, kept when the sections change. Null before sections existed. */
 	section: text('section'),
+	/**
+	 * `[IngredientAlteration]`: a logged recipe's ingredients at one serving with what was changed, removed, or added,
+	 * or null when it was eaten as the recipe made it. `food` then holds the altered nutrition.
+	 */
+	alterations: json('alterations'),
 	createdAt: text('created_at').notNull(),
 	updatedAt: text('updated_at').notNull(),
 });
@@ -378,6 +383,10 @@ export const foodSnapshot = z.object({
 });
 const minute = z.int().min(0).max(1439);
 const recipeIngredient = z.object({ id: z.string(), food: foodSnapshot, serving });
+/** No `original` is an added food, no `serving` a removed one. */
+export const ingredientAlteration = z
+	.object({ id: z.string(), food: foodSnapshot, original: serving.optional(), serving: serving.optional() })
+	.refine(line => line.original || line.serving, 'An alteration keeps an original or a serving');
 const dayTarget = z.object({ energy: amount, protein: amount, fat: amount, carbs: amount });
 const nutritionGoal = z.object({
 	kind: z.enum(GOAL_KINDS),
@@ -438,7 +447,14 @@ export const schema = defineSchema({
 			prepMinutes: count,
 			cookMinutes: count,
 		},
-		food_entries: { day, minute, food: foodSnapshot, serving, section: z.string().min(1) },
+		food_entries: {
+			day,
+			minute,
+			food: foodSnapshot,
+			serving,
+			section: z.string().min(1),
+			alterations: z.array(ingredientAlteration).min(1),
+		},
 		food_favorites: { food: foodSnapshot, serving },
 		nutrition_days: { status: z.enum(DAY_STATUSES), override: nutrientAmounts },
 		food_log_notes: { day, minute, title: z.string().min(1), color: z.enum(NOTE_COLORS) },

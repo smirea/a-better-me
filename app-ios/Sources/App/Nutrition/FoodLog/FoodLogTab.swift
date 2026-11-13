@@ -37,6 +37,7 @@ struct FoodLogTab: View {
         .environment(state)
         .sheet(item: $state.logRequest) { LoggerSheet(start: LoggerStart($0)) }
         .sheet(item: $state.editing) { EntryEditor(entry: $0).environment(state) }
+        .sheet(item: $state.altering) { AlterEntry(entry: $0) }
         .sheet(item: $state.recipeRequest) { request in
             RecipeEditor(draft: request.draft, onCreate: { state.replace(request.entries, with: $0, in: store) })
         }

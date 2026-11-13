@@ -289,7 +289,7 @@ private enum IngredientSearchRequest: Identifiable {
 /// An ingredient with its quantity typed in place and its measure picked from the food's measures. Switching the
 /// measure converts the quantity, so the amount stays the same. The amount sits beside the name while the whole name
 /// fits on one line beside it, and under the name otherwise, so a long measure ("5 tbsp chopped") never squeezes it.
-private struct IngredientRow: View {
+struct IngredientRow: View {
     @Binding var ingredient: RecipeDraft.Ingredient
     let focus: FocusState<RecipeDraft.Field?>.Binding
 

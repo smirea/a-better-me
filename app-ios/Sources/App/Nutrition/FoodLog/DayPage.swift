@@ -429,7 +429,7 @@ private struct HourTotals: View {
 /// tile opens its editor, or toggles it in select mode. A long press starts select mode on it: the bar holds the
 /// selection's actions, so there is no context menu. Swiping
 /// a tile left reveals Remove and Copy, as MacroFactor's does; it has no full swipe, because a left swipe that misses
-/// the blank space was meant to page.
+/// the blank space was meant to page. Swiping a logged recipe right reveals Alter.
 private struct EntryRow: View {
     let row: TimelineRow
     /// A logged recipe's ingredients, which its tile lists under its totals.
@@ -474,14 +474,25 @@ private struct EntryRow: View {
                     RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textSecondary, lineWidth: 1)
                 }
             }
-            .rowSwipeActions(trailing: state.selecting ? [] : [
-                .destructive("Remove") { store.deleteEntries([entry.id]) },
-                SwipeAction(title: "Copy", systemImage: "doc.on.doc") { state.copy(entry) },
-            ])
+            .rowSwipeActions(
+                // Only a recipe with ingredients to alter takes a right swipe; every other tile still pages the day.
+                leading: state.selecting || ingredients == nil ? [] : [
+                    SwipeAction(title: "Alter", systemImage: "slider.horizontal.3") { state.altering = entry },
+                ],
+                trailing: state.selecting ? [] : [
+                    .destructive("Remove") { store.deleteEntries([entry.id]) },
+                    SwipeAction(title: "Copy", systemImage: "doc.on.doc") { state.copy(entry) },
+                ]
+            )
             .accessibilityAddTraits(isSelected ? .isSelected : [])
             .accessibilityAction { state.tap(entry) }
             .accessibilityAction(named: isSelected ? "Deselect" : "Select") { state.select(entry.id) }
             .accessibilityAction(named: "Edit") { state.editing = entry }
+            .accessibilityActions {
+                if ingredients != nil {
+                    Button("Alter") { state.altering = entry }
+                }
+            }
         }
         // On the row rather than the tile, whose swipe clips it.
         .overlay(alignment: .leading) {
@@ -510,7 +521,8 @@ private struct EntryRow: View {
 }
 
 /// A logged recipe's ingredients under its tile's name, one line each with its amount when the width allows, and no
-/// nutrition, since the tile's totals above are what counts.
+/// nutrition, since the tile's totals above are what counts. An altered recipe lists its alterations instead: a changed
+/// amount as the recipe's and what was eaten, a removed ingredient struck through, and an added one in green.
 private struct IngredientLines: View {
     let ingredients: RecipeTileIngredients
     let showsAmounts: Bool
@@ -518,16 +530,19 @@ private struct IngredientLines: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(Array(ingredients.lines.enumerated()), id: \.offset) { _, line in
+                let color = line.change == .added ? Theme.ratingGreen : Theme.textSecondary
                 ViewThatFits(in: .horizontal) {
                     if showsAmounts {
                         HStack(spacing: 8) {
-                            Text(line.name).fixedSize()
+                            name(line).fixedSize()
                             Spacer(minLength: 0)
-                            Text(line.amount).fixedSize().monospacedDigit()
+                            amount(line).fixedSize().monospacedDigit()
                         }
                     }
-                    Text(line.name).lineLimit(1)
+                    name(line).lineLimit(1)
                 }
+                .strikethrough(line.change == .removed)
+                .foregroundStyle(color)
             }
             if ingredients.more > 0 {
                 Text("+\(ingredients.more) more")
@@ -537,6 +552,15 @@ private struct IngredientLines: View {
         .foregroundStyle(Theme.textSecondary)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Ingredients: " + (ingredients.lines.map(\.name) + (ingredients.more > 0 ? ["\(ingredients.more) more"] : [])).joined(separator: ", "))
+        .accessibilityLabel(ingredients.spoken)
+    }
+
+    private func name(_ line: RecipeTileIngredients.Line) -> Text {
+        line.change == .added ? Text("+ \(line.name)") : Text(line.name)
+    }
+
+    private func amount(_ line: RecipeTileIngredients.Line) -> Text {
+        guard let was = line.was else { return Text(line.amount) }
+        return Text("\(was) → \(line.amount)")
     }
 }

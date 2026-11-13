@@ -1,4 +1,5 @@
 import Testing
+import UIKit
 @testable import App
 
 /// Calories per Protein: the ratio, its tier, and the skull.
@@ -47,5 +48,22 @@ struct MealRatingTests {
 
     @Test func namesEachTiersRange() {
         #expect(MealRating.Tier.allCases.map(formula.range) == ["≤6:1", "7–8:1", "9–10:1", "11–13:1", ">13:1"])
+    }
+
+    /// Suspending the app completes every animation that is removed on completion, which stopped the running border
+    /// of a meal still on screen when the owner came back to the app (feedback 2026-11-12).
+    @MainActor @Test func theRunningBorderTurnsInAWindowAndSurvivesSuspension() throws {
+        let border = RunningBorderView(frame: CGRect(x: 0, y: 0, width: 60, height: 22))
+        let gradient = try #require(border.layer.sublayers?.first)
+        #expect(gradient.animation(forKey: "spin") == nil)
+
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 200, height: 200))
+        window.addSubview(border)
+        let spin = try #require(gradient.animation(forKey: "spin"))
+        #expect(spin.repeatCount == .infinity)
+        #expect(!spin.isRemovedOnCompletion)
+
+        border.removeFromSuperview()
+        #expect(gradient.animation(forKey: "spin") == nil)
     }
 }

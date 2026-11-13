@@ -159,6 +159,62 @@ describe('nutrition agent API', () => {
 		expect(row!.serving).toBe('{"measure":{"name":"cup","quantity":1,"servings":0.8},"quantity":0.5}');
 	});
 
+	test("an altered recipe's alterations sync, survive a serving change, and go with a food swap", async () => {
+		const measure = { name: 'serving', quantity: 1, servings: 1 };
+		const grams = { name: 'g', quantity: 1, servings: 0.01 };
+		const snapshot = {
+			foodID: 'r1',
+			source: 'recipe',
+			name: 'Pasta sauce',
+			nutrition: { nutrients: { k: 200, p: 20 }, measures: [measure] },
+		};
+		const beef = {
+			foodID: 'usda-1',
+			source: 'usda',
+			name: 'Beef',
+			nutrition: { nutrients: { k: 200, p: 20 }, baseGrams: 100, measures: [grams] },
+		};
+		const alterations = [
+			{ id: 'a', food: beef, original: { measure: grams, quantity: 50 }, serving: { measure: grams, quantity: 100 } },
+			{ id: 'b', food: beef, original: { measure: grams, quantity: 20 } },
+		];
+		const write = (id: string, values: Record<string, unknown>) =>
+			handle(
+				new Request('http://api.test/api/sync', {
+					method: 'POST',
+					headers: { authorization: `Bearer ${config.ownerToken}` },
+					body: JSON.stringify({
+						protocol: 2,
+						client: `phone-${crypto.randomUUID()}`,
+						cursor: 0,
+						writes: [{ seq: 1, table: 'food_entries', id, op: 'put', values }],
+					}),
+				}),
+				app,
+			).then(response => response.json() as Promise<SyncResponse>);
+		const row = (alterations: unknown) => ({
+			day: '2026-10-25',
+			minute: 600,
+			food: JSON.stringify(snapshot),
+			serving: JSON.stringify({ measure, quantity: 1 }),
+			alterations: JSON.stringify(alterations),
+			created_at: '2026-10-25T10:00:00.000Z',
+			updated_at: '2026-10-25T10:00:00.000Z',
+		});
+		expect((await write('altered', row(alterations))).rejected).toEqual([]);
+		expect((await write('bad', row([{ id: 'c', food: beef }]))).rejected).toHaveLength(1);
+
+		expect((await ok('GET', '/food-entries/altered')).alterations).toEqual(alterations);
+		const doubled = await ok('PATCH', '/food-entries/altered', { serving: { measure, quantity: 2 } });
+		expect(doubled.alterations).toEqual(alterations);
+		expect(doubled.amounts).toEqual({ k: 400, p: 40 });
+		expect(
+			(await ok('PATCH', '/food-entries/altered', { food: beef, serving: { measure: grams, quantity: 100 } }))
+				.alterations,
+		).toBeNull();
+		expect((await phone('food_entries')).find(entry => entry.id === 'altered')!.alterations).toBeNull();
+	});
+
 	test('a day is marked or overridden with PUT, and the log takes no notes', async () => {
 		expect(await ok('PUT', '/nutrition-days/2026-10-22', { override: { k: 2000, p: 150 } })).toEqual({
 			id: '2026-10-22',

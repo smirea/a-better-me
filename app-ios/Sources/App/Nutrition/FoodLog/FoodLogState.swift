@@ -73,6 +73,8 @@ final class FoodLogState {
         }
     }
     var editing: FoodEntry?
+    /// The logged recipe Alter is open on.
+    var altering: FoodEntry?
     /// Untyped, so screens pushed here push their own routes too: Strategy, from a day without a plan, pushes `StrategyRoute`.
     var path = NavigationPath()
     var notice: Notice?
@@ -266,7 +268,7 @@ extension LocalStore {
                 let sections = try MealSection.current(db)
                 for copy in copies {
                     guard let source = try FoodEntry.fetchOne(db, key: FoodEntry.key(copy.source)) else { continue }
-                    var entry = FoodEntry(source.portion, day: copy.to.day, minute: copy.to.minute, section: copy.to.section(for: source, in: sections))
+                    var entry = source.copy(day: copy.to.day, minute: copy.to.minute, section: copy.to.section(for: source, in: sections))
                     entry.id = copy.id
                     try entry.insert(db)
                 }
@@ -319,7 +321,7 @@ extension LocalStore {
                 _ = try FoodEntry.deleteOne(db, key: FoodEntry.key(added))
                 if let recipe { _ = try Recipe.deleteOne(db, key: Recipe.key(recipe)) }
                 for entry in removed {
-                    try FoodEntry(entry.portion, day: entry.day, minute: entry.minute, section: entry.section).insert(db)
+                    try entry.copy(day: entry.day, minute: entry.minute, section: entry.section).insert(db)
                 }
             }
         case let .remove(ids):
@@ -343,18 +345,33 @@ extension LocalStore {
     }
 
     /// Replaces a logged recipe with its ingredients at the amounts eaten, on the entry's day and minute, in one
-    /// transaction. Resolves false when the entry is not a recipe or its recipe no longer exists.
+    /// transaction. An altered recipe explodes into what it was eaten as, so it needs no recipe. Resolves false when
+    /// the entry is not a recipe, or is unaltered and its recipe no longer exists.
     @discardableResult
     func explode(_ id: UUID) -> Task<Bool, any Error> {
         write { db in
-            guard let entry = try FoodEntry.fetchOne(db, key: FoodEntry.key(id)), entry.food.source == .recipe,
-                  let recipeID = entry.food.foodID, let recipe = try Recipe.fetchOne(db, key: recipeID)
-            else { return false }
+            guard let entry = try FoodEntry.fetchOne(db, key: FoodEntry.key(id)), entry.food.source == .recipe else { return false }
+            let recipe = try entry.alterations == nil ? entry.food.foodID.flatMap { try Recipe.fetchOne(db, key: $0) } : nil
+            let portions = FoodLog.ingredients(entry.serving, of: entry, recipe: recipe).eaten
+            guard !portions.isEmpty else { return false }
             try entry.delete(db)
-            for portion in FoodLog.exploded(entry.serving, of: recipe) {
+            for portion in portions {
                 try FoodEntry(portion, day: entry.day, minute: entry.minute, section: entry.section).insert(db)
             }
             return true
+        }
+    }
+
+    /// Saves Alter: the entry becomes `alterations` of its recipe, or the recipe as it made it when nothing differs.
+    /// Saving an entry that was never altered without a change writes nothing, so its snapshot from when it was logged
+    /// stays.
+    func alter(_ id: UUID, to alterations: [IngredientAlteration]) {
+        write { db in
+            guard let entry = try FoodEntry.fetchOne(db, key: FoodEntry.key(id)) else { return }
+            guard entry.alterations != nil || alterations.isAltered else { return }
+            var altered = entry.altered(to: alterations)
+            altered.updatedAt = .now
+            try altered.update(db, from: entry)
         }
     }
 }

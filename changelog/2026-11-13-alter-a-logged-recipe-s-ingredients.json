@@ -1,0 +1,5 @@
+{
+	"title": "Alter a logged recipe's ingredients without making a new recipe",
+	"description": "Swipe a recipe tile right for Alter; the tile and its editor list what changed, and the meal rating's border keeps turning.",
+	"tasks": ["604fc8c8-a557-412f-95e5-6b9d9887b662"]
+}

@@ -228,13 +228,17 @@ struct FoodLogMathTests {
         recipe.ingredients = [("Milk", 40.0, 200.0), ("Granola", 450, 80), ("Chia", 490, 20), ("Blueberries", 57, 100), ("Matcha", 300, 4), ("Honey", 300, 20)]
             .map { name, energy, grams in RecipeIngredient(FoodPortion(food(name, energy), serving: Serving(measure: Measure(name: "g", quantity: 100, servings: 1), quantity: grams))) }
 
-        let tile = FoodLog.tileIngredients(Serving(measure: Measure(name: "serving", quantity: 1, servings: 1), quantity: 1), of: recipe)
+        let entry = FoodEntry(FoodPortion(recipe.snapshot, serving: Serving(measure: recipe.nutrition.measures[0], quantity: 1)), day: monday, minute: 0)
+        let ingredients = FoodLog.ingredients(entry.serving, of: entry, recipe: recipe)
+        let tile = FoodLog.tileIngredients(ingredients)
         #expect(tile.lines == [
             .init(name: "Granola", amount: "40 g"), .init(name: "Chia", amount: "10 g"), .init(name: "Milk", amount: "100 g"),
             .init(name: "Honey", amount: "10 g"), .init(name: "Blueberries", amount: "50 g"),
         ])
         #expect(tile.more == 1)
-        #expect(FoodLog.tileIngredients(Serving(measure: Measure(name: "serving", quantity: 1, servings: 1), quantity: 1), of: recipe, limit: 6).more == 0)
+        #expect(!tile.isAltered)
+        #expect(FoodLog.tileIngredients(ingredients, limit: 6).more == 0)
+        #expect(FoodLog.ingredients(entry.serving, of: entry, recipe: nil).isEmpty)
     }
 
     @Test func draftsARecipeFromTheSelectionAtItsLoggedServings() {
