@@ -215,7 +215,9 @@ async function grantPermissions(target: Target, project: string, build: string) 
     try {
         await withBuildLock(build, () => command([
             "xcodebuild", "test", "-quiet", "-project", project, "-scheme", "GrantPermissions", "-destination", target.destination,
-            "-derivedDataPath", build, "CODE_SIGN_IDENTITY=-", "-only-testing:AppUITests/PermissionsGrant/testGrantAll",
+            // The build's own package checkout; without it xcodebuild cloned another 3.7 GB copy into the DerivedData.
+            "-derivedDataPath", build, "-clonedSourcePackagesDirPath", join(root, "DerivedData", "SourcePackages"),
+            "CODE_SIGN_IDENTITY=-", "-only-testing:AppUITests/PermissionsGrant/testGrantAll",
         ], true, undefined, { TEST_RUNNER_APP_ARGUMENTS: launchArguments.join(" ") }));
     } catch (error: any) {
         throw new Error(`Granting permissions failed; the next run tries again.\n${error.message.slice(-2000)}`);
@@ -370,7 +372,7 @@ Watching is enabled by default. Saves rebuild and restart the app. Ctrl-C stops 
 --headless also starts the worktree's server when nothing answers on its API_PORT, detached, logging to .data/server.log.
 --stop stops that server and shuts down this worktree's simulators, its paired watches included.
 --grant-permissions answers every permission prompt again; a run does it anyway when the last launch left one open.
---health on turns Apple Health on in the simulator build, seeds 60 days of weights, steps, flights, and distance into an
+--health on turns Apple Health on in the simulator build, seeds 60 days of weights and 400 of steps, flights, and distance into an
 empty Health store, and answers its sheet; --health off turns it off. Debug
 simulator builds start with it off, and the app keeps the last choice.
 --no-seed launches without the Debug seed, for a server restored from a backup (scripts/restore-backup.ts).`);

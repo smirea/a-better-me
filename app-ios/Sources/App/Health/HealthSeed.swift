@@ -1,8 +1,8 @@
 import HealthKit
 
 #if DEBUG
-/// Launch with `-seedHealthSamples` (`scripts/run --health on` passes it) to write 60 days of body mass, steps, flights
-/// climbed, and walking distance into the simulator's Health store so the Dashboard's HealthKit cards have data. Each
+/// Launch with `-seedHealthSamples` (`scripts/run --health on` passes it) to write 60 days of body mass and 400 of steps,
+/// flights climbed, and walking distance (the owner's real step history spans more than a year) into the simulator's Health store so the Dashboard's HealthKit cards have data. Each
 /// type is written once, when the store has none of it, so an install seeded before a type was added gets that type on
 /// its next launch.
 /// Debug builds ask for write access only for this.
@@ -19,7 +19,7 @@ enum HealthSeed {
         started = true
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: .now)
-        let days = (0..<60).map { (offset: $0, day: calendar.date(byAdding: .day, value: -$0, to: today)!) }
+        let days = (0..<400).map { (offset: $0, day: calendar.date(byAdding: .day, value: -$0, to: today)!) }
         func at(_ day: Date, hour: Double) -> Date { min(day.addingTimeInterval(hour * 3600), Date.now.addingTimeInterval(-60)) }
         func count(_ type: HKQuantityType, _ value: Double, _ date: Date) -> HKQuantitySample {
             HKQuantitySample(type: type, quantity: HKQuantity(unit: .count(), doubleValue: value), start: date, end: date)
@@ -28,7 +28,7 @@ enum HealthSeed {
         var samples: [HKQuantitySample] = []
         let bodyMass = HKQuantityType(.bodyMass)
         if try await isEmpty(bodyMass, store) {
-            for (offset, day) in days where offset % 4 != 3 {
+            for (offset, day) in days.prefix(60) where offset % 4 != 3 {
                 let kg = 84 - Double(60 - offset) * 0.04 + sin(Double(offset) * 1.7) * 0.6
                 samples.append(HKQuantitySample(type: bodyMass, quantity: HKQuantity(unit: .gramUnit(with: .kilo), doubleValue: (kg * 10).rounded() / 10), start: at(day, hour: 7), end: at(day, hour: 7)))
             }

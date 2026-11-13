@@ -105,5 +105,20 @@ extension [DatedValue] {
         filter { $0.date >= interval.start && $0.date < interval.end }
     }
 
+    /// `inside` for a date-sorted array, found by bisection.
+    func within(_ interval: DateInterval) -> ArraySlice<DatedValue> {
+        func first(atOrAfter date: Date) -> Int {
+            var low = startIndex
+            var high = endIndex
+            while low < high {
+                let middle = (low + high) / 2
+                if self[middle].date < date { low = middle + 1 } else { high = middle }
+            }
+            return low
+        }
+        let start = first(atOrAfter: interval.start)
+        return self[start..<Swift.max(start, first(atOrAfter: interval.end))]
+    }
+
     var average: Double? { isEmpty ? nil : map(\.value).reduce(0, +) / Double(count) }
 }
