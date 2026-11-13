@@ -5,7 +5,13 @@ import type { SpaceOptions } from 'sync-engine/core';
  * bindings, so this file imports neither. Secrets stay optional in the env schema so `env-manager gen --local` works
  * offline and in CI; production refuses to start without them instead of failing on the first request that reads one.
  */
-export const REQUIRED_IN_PRODUCTION = ['OWNER_TOKEN', 'SENTRY_DSN', 'GEMINI_API_KEY', 'XAI_API_KEY'] as const;
+export const REQUIRED_IN_PRODUCTION = [
+	'OWNER_TOKEN',
+	'SENTRY_DSN',
+	'GEMINI_API_KEY',
+	'XAI_API_KEY',
+	'GITHUB_TOKEN',
+] as const;
 
 /** The owner bearer of every local server and the tests. Never valid in production. */
 export const DEV_OWNER_TOKEN = 'insecure-local-dev-owner-token';
@@ -39,6 +45,8 @@ export type Config = {
 	xaiApiKey: string | null;
 	/** What live Ramble hears instead of the microphone on a development server (`scriptedTranscriber`). */
 	rambleScript: string | null;
+	/** Files the Feedback editor's posts as issues (`feedback.ts`). Null in development without one, where it answers 503. */
+	githubToken: string | null;
 };
 
 const DSN = /^https:\/\/[0-9a-f]+@[^/@\s]+\/\d+$/;
@@ -76,5 +84,6 @@ export function parseConfig(settings: Settings): Config {
 		geminiApiKey: read('GEMINI_API_KEY') ?? null,
 		xaiApiKey: read('XAI_API_KEY') ?? null,
 		rambleScript: read('RAMBLE_SCRIPT') ?? null,
+		githubToken: read('GITHUB_TOKEN') ?? null,
 	};
 }
