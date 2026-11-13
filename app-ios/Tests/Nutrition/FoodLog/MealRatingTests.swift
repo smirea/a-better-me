@@ -18,26 +18,20 @@ struct MealRatingTests {
     }
 
     @Test func gradesEachTierAtItsBounds() {
-        let tiers = [(120, 20), (130, 20), (160, 20), (200, 20), (260, 20), (280, 20)].map { score(Double($0), Double($1))?.tier }
-        #expect(tiers == [.excellent, .great, .great, .good, .fair, .poor])
-        #expect(score(205, 20)?.tier == .good)
+        let tiers = [(120, 20), (140, 20), (160, 20), (240, 20), (260, 20), (280, 20), (400, 20), (420, 20)]
+            .map { score(Double($0), Double($1))?.tier }
+        #expect(tiers == [.excellent, .great, .good, .good, .fair, .poor, .poor, .dire])
     }
 
-    @Test func addsTheSkullPastTwentyToOne() {
-        #expect(score(400, 20)?.isDire == false)
-        #expect(score(420, 20)?.isDire == true)
-        #expect(score(420, 20)?.tier == .poor)
-    }
-
-    @Test func runsTheBorderOnTheTwoBestTiersAndTheSkull() {
-        let animated = [(120, 20), (160, 20), (200, 20), (260, 20), (400, 20), (420, 20), (250, 0)].map { calories, protein in
-            score(Double(calories), Double(protein)).map { $0.tier.isAnimated(dire: $0.isDire) }
+    @Test func runsTheBorderUnderEightToOneAndOnTheSkull() {
+        let animated = [(120, 20), (140, 20), (160, 20), (260, 20), (400, 20), (420, 20), (250, 0)].map { calories, protein in
+            score(Double(calories), Double(protein))?.tier.isAnimated
         }
         #expect(animated == [true, true, false, false, false, true, true])
     }
 
     @Test func aMealWithoutProteinIsTheWorst() {
-        #expect(score(250, 0) == MealRating.Score(ratio: nil, tier: .poor, isDire: true))
+        #expect(score(250, 0) == MealRating.Score(ratio: nil, tier: .dire))
         #expect(score(250, 0)?.ratioText == "∞")
     }
 
@@ -47,7 +41,7 @@ struct MealRatingTests {
     }
 
     @Test func namesEachTiersRange() {
-        #expect(MealRating.Tier.allCases.map(formula.range) == ["≤6:1", "7–8:1", "9–10:1", "11–13:1", ">13:1"])
+        #expect(MealRating.Tier.allCases.map(formula.range) == ["≤6:1", "7:1", "8–12:1", "13:1", "14–20:1", ">20:1"])
     }
 
     /// Suspending the app completes every animation that is removed on completion, which stopped the running border

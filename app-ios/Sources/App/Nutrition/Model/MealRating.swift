@@ -17,10 +17,9 @@ struct MealRating: Codable, Hashable, Sendable {
                 + "protein, which keeps you full longer and protects muscle."
         }
 
-        /// The highest value each tier but `poor` takes, best first.
-        var bounds: [Int] { [6, 8, 10, 13] }
-        /// Past this, the tag also gets a skull.
-        var direAbove: Int { 20 }
+        /// The highest value each tier but the last takes, best first. The owner's split (2026-11-13): green for 8–12,
+        /// yellow above it, red from 14 as before, and the skull past 20; under 8 animates.
+        var bounds: [Int] { [6, 7, 12, 13, 20] }
 
         /// Nil when the meal has no calories to rate. No protein reads as infinite: the worst a meal can do. It divides
         /// the whole numbers the row's totals show, so "403 kcal, 28 P" reads 14:1 rather than the 15:1 of 403.4 ÷ 27.4.
@@ -29,25 +28,26 @@ struct MealRating: Codable, Hashable, Sendable {
             guard calories > 0 else { return nil }
             let protein = (amounts[.protein] ?? 0).rounded()
             let ratio = protein > 0 ? Int((calories / protein).rounded()) : nil
-            let tier = ratio.map { ratio in Tier.allCases.first { ratio <= bound(of: $0) ?? .max }! } ?? .poor
-            return Score(ratio: ratio, tier: tier, isDire: ratio.map { $0 > direAbove } ?? true)
+            let tier = ratio.map { ratio in Tier.allCases.first { ratio <= bound(of: $0) ?? .max }! } ?? .dire
+            return Score(ratio: ratio, tier: tier)
         }
 
         func bound(of tier: Tier) -> Int? {
             tier.rawValue < bounds.count ? bounds[tier.rawValue] : nil
         }
 
-        /// "≤6:1", "7–8:1", ">13:1".
+        /// "≤6:1", "7:1", "8–12:1", ">20:1".
         func range(of tier: Tier) -> String {
             guard let upper = bound(of: tier) else { return ">\(bounds.last!):1" }
             guard tier.rawValue > 0 else { return "≤\(upper):1" }
-            return "\(bounds[tier.rawValue - 1] + 1)–\(upper):1"
+            let lower = bounds[tier.rawValue - 1] + 1
+            return lower == upper ? "\(upper):1" : "\(lower)–\(upper):1"
         }
     }
 
-    /// Best first. The two best tiers draw a moving border, as does a dire score.
+    /// Best first. The two best tiers draw a moving border, as does the dire one, which also gets a skull.
     enum Tier: Int, CaseIterable, Sendable {
-        case excellent, great, good, fair, poor
+        case excellent, great, good, fair, poor, dire
 
         var title: String {
             switch self {
@@ -56,17 +56,17 @@ struct MealRating: Codable, Hashable, Sendable {
             case .good: "Good"
             case .fair: "Fair"
             case .poor: "Poor"
+            case .dire: "Dire"
             }
         }
 
-        func isAnimated(dire: Bool) -> Bool { dire || self == .excellent || self == .great }
+        var isAnimated: Bool { self == .excellent || self == .great || self == .dire }
     }
 
     struct Score: Hashable, Sendable {
         /// Calories per gram of protein, rounded; nil when the meal has none.
         let ratio: Int?
         let tier: Tier
-        let isDire: Bool
 
         /// "13:1", or "∞" for a meal without protein.
         var ratioText: String { ratio.map { "\($0):1" } ?? "∞" }
