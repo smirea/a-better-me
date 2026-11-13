@@ -14,7 +14,9 @@ struct MetricDetailView: View {
     @State private var averaging = Averaging.daily
     @State private var fitOverrides: [MetricTab.ID: Bool] = [:]
     /// Where the chart came to rest after a scroll; a new tab, range, or averaging opens on its newest window instead.
+    /// The y-axis follows it, while the summary follows `viewport` as the chart moves.
     @State private var scrolled: (key: PlotKey, start: Date)?
+    @State private var viewport = ChartViewport()
     @State private var loggingWeight = false
     @State private var loggingMetrics = false
     @State private var editingStepGoal = false
@@ -40,13 +42,17 @@ struct MetricDetailView: View {
                         chart(tab, plot, window, key: key, footer: detail.footer)
                             .frame(height: 460)
                             .feedback("\(tab.title) Chart", data: (range: window.label, averaging: averaging, points: window.points, steps: steps))
-                        StepsRangeSummary(steps: steps, unit: settings.nutrition.distanceUnit)
+                        LiveWindow(plot: plot, key: key, viewport: viewport) { window in
+                            if let steps = window.steps { StepsRangeSummary(steps: steps, unit: settings.nutrition.distanceUnit) }
+                        }
                     }
                     .padding(.horizontal, Theme.margin)
                 } else {
-                    summary(tab, window)
-                        .feedback("Summary", data: (stats: window.stats, range: window.label))
-                        .padding(.horizontal, Theme.margin)
+                    LiveWindow(plot: plot, key: key, viewport: viewport) { window in
+                        summary(tab, window)
+                            .feedback("Summary", data: (stats: window.stats, range: window.label))
+                    }
+                    .padding(.horizontal, Theme.margin)
                     chart(tab, plot, window, key: key, footer: detail.footer)
                         .frame(height: 320)
                         .feedback("\(tab.title) Chart", data: (range: window.label, averaging: averaging, points: window.points))
@@ -133,7 +139,6 @@ struct MetricDetailView: View {
                 Text(window.label)
                     .font(AppFont.caption(14))
                     .foregroundStyle(Theme.textSecondary)
-                    .contentTransition(.numericText())
             }
             Spacer()
             RoundIconButton(
@@ -143,18 +148,19 @@ struct MetricDetailView: View {
         }
     }
 
-    /// The marks redraw only when the data changes; the y-axis follows the shown window once a scroll comes to rest.
+    /// The marks redraw only when the data, the drawn page, or the y-axis changes; the y-axis follows the shown window
+    /// once a scroll comes to rest.
     private func chart(_ tab: MetricTab, _ plot: MetricPlot, _ window: MetricWindow, key: PlotKey, footer: MetricDetail.Footer) -> some View {
         var stepGoal: Int?
         if case let .steps(goal, _, _) = footer { stepGoal = goal.goal }
         let fit = stepGoal == nil && fitToData(tab)
         let low = fit ? window.low : 0
         let pad = fit ? max((window.high - low) * 0.1, 0.5) : stepGoal == nil ? window.high * 0.1 : window.high / (1 - StepBarLabels.headroom) - window.high
-        return ChartScroller(plot: plot, settle: { scrolled = (key, $0) }) {
-            MetricChart(tab: tab, plot: plot, range: range, stepGoal: stepGoal, distanceUnit: settings.nutrition.distanceUnit)
+        let yDomain = max(low - pad, fit ? -.infinity : 0)...(window.high + pad)
+        return ChartScroller(plot: plot, key: key, viewport: viewport, settle: { scrolled = (key, $0) }) { page in
+            MetricChart(tab: tab, plot: plot, page: page, yDomain: yDomain, range: range, stepGoal: stepGoal, distanceUnit: settings.nutrition.distanceUnit)
                 .equatable()
         }
-        .chartYScale(domain: max(low - pad, fit ? -.infinity : 0)...(window.high + pad))
         .id(key)
         .accessibilityLabel("\(tab.title) chart")
     }
@@ -254,28 +260,81 @@ struct PlotKey: Hashable {
     var averaging: Averaging
 }
 
+/// Where a scrolling chart's window starts while it moves, snapped to the nearest bar edge so it changes only as a bar
+/// crosses the edge. Views that read it re-evaluate per bar, never per scroll frame, and the screen's body never reads it.
+@Observable
+final class ChartViewport {
+    private var key: PlotKey?
+    private var start: Date?
+
+    func start(for key: PlotKey) -> Date? { key == self.key ? start : nil }
+
+    func follow(_ key: PlotKey, start: Date) {
+        guard key != self.key || start != self.start else { return }
+        self.key = key
+        self.start = start
+    }
+}
+
+/// Lays out what the screen says about the window the chart shows right now, re-evaluating on its own as the chart
+/// scrolls.
+private struct LiveWindow<Content: View>: View {
+    let plot: MetricPlot
+    let key: PlotKey
+    let viewport: ChartViewport
+    @ViewBuilder let content: (MetricWindow) -> Content
+
+    @State private var windows = ViewMemo<WindowKey, MetricWindow>()
+
+    var body: some View {
+        let start = viewport.start(for: key) ?? plot.initialStart
+        // The plot comes memoized, so comparing its arrays is a storage identity check until its data changes.
+        content(windows(WindowKey(key: key, start: start, drawn: plot.drawn, overlay: plot.overlay)) { plot.window(at: start) })
+    }
+
+    private struct WindowKey: Equatable {
+        var key: PlotKey
+        var start: Date
+        var drawn: [DatedValue]
+        var overlay: [DatedValue]
+    }
+}
+
 /// Scrolls a chart through `plot.xDomain`, a range's length at a time, opening on the newest window. It owns the scroll
-/// position, so a scroll re-evaluates only this view, and it reports where the scroll came to rest.
+/// position, so a scroll re-evaluates only this view; it hands the chart the page to draw, moves `viewport` bar by bar,
+/// and reports where the scroll came to rest.
 private struct ChartScroller<Content: View>: View {
     let plot: MetricPlot
+    let key: PlotKey
+    let viewport: ChartViewport
     let settle: (Date) -> Void
-    let content: Content
+    let content: (Int) -> Content
 
     @State private var position: Date
+    @State private var page: Int
 
-    init(plot: MetricPlot, settle: @escaping (Date) -> Void, @ViewBuilder content: () -> Content) {
+    init(plot: MetricPlot, key: PlotKey, viewport: ChartViewport, settle: @escaping (Date) -> Void, @ViewBuilder content: @escaping (Int) -> Content) {
         self.plot = plot
+        self.key = key
+        self.viewport = viewport
         self.settle = settle
-        self.content = content()
+        self.content = content
         _position = State(initialValue: plot.initialStart)
+        _page = State(initialValue: plot.page(at: plot.initialStart))
     }
 
     var body: some View {
-        content
+        content(page)
             .chartScrollableAxes(plot.scrolls ? .horizontal : [])
             .chartXVisibleDomain(length: plot.visibleLength)
             .chartScrollTargetBehavior(BinAligned(domain: plot.xDomain, unit: plot.drawnUnit, calendar: plot.calendar))
             .chartScrollPosition(x: $position)
+            .onAppear { viewport.follow(key, start: plot.windowStart(at: position)) }
+            .onChange(of: position) { _, position in
+                let page = plot.page(at: position)
+                if page != self.page { self.page = page }
+                viewport.follow(key, start: plot.windowStart(at: position))
+            }
             .task(id: position) {
                 try? await Task.sleep(for: .milliseconds(150))
                 guard !Task.isCancelled else { return }
@@ -284,26 +343,38 @@ private struct ChartScroller<Content: View>: View {
     }
 }
 
-/// A metric's marks over its whole history. Equatable on what it draws, so the detail screen re-rendering for a
-/// scroll, a selection, or the y-axis never rebuilds hundreds of marks.
+/// A metric's marks around the shown window: `page` and its neighbours (`MetricPlot.drawnInterval(page:)`), so a scroll
+/// through years of history lays out a few windows of bars rather than all of them, and the next ones are drawn before
+/// they come into view. Equatable on what it draws, so the detail screen re-rendering for a selection, and every scroll
+/// frame within a page, never rebuild the marks.
 private struct MetricChart: View, @MainActor Equatable {
     let tab: MetricTab
     let plot: MetricPlot
+    let page: Int
+    let yDomain: ClosedRange<Double>
     let range: ChartRange
     let stepGoal: Int?
     let distanceUnit: NutritionSettings.DistanceUnit
 
+    @State private var width: CGFloat = 0
+    @State private var plotHeight: CGFloat = 0
+    /// Measures every bar's text, so it runs once per bar width rather than once per page.
+    @State private var styles = ViewMemo<StepLabelKey, BarLabelStyle>()
+
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.tab.id == rhs.tab.id && lhs.tab.goal == rhs.tab.goal && lhs.range == rhs.range && lhs.stepGoal == rhs.stepGoal
+        lhs.page == rhs.page && lhs.yDomain == rhs.yDomain && lhs.tab.id == rhs.tab.id && lhs.tab.goal == rhs.tab.goal && lhs.range == rhs.range && lhs.stepGoal == rhs.stepGoal
             && lhs.distanceUnit == rhs.distanceUnit && lhs.plot.drawnUnit == rhs.plot.drawnUnit && lhs.plot.drawn == rhs.plot.drawn
             && lhs.plot.overlay == rhs.plot.overlay && lhs.plot.holding == rhs.plot.holding && lhs.plot.steps == rhs.plot.steps
     }
 
     var body: some View {
-        let points = plot.drawn
+        let shown = plot.drawnInterval(page: page)
+        // A line keeps the points either side of the slice, whose segments can cross it however far apart they are.
+        let points = plot.drawn.within(shown, neighbours: tab.style == .line)
+        let style = labelStyle
         Chart {
             if let line = tab.overlay {
-                ForEach(plot.overlay, id: \.date) { point in
+                ForEach(plot.overlay.within(shown, neighbours: true), id: \.date) { point in
                     LineMark(x: .value("Date", point.date), y: .value(line.title, point.value), series: .value("Series", line.title))
                         .foregroundStyle(line.color)
                         .lineStyle(StrokeStyle(lineWidth: line.dashed ? 1.5 : 2, dash: line.dashed ? [2, 3] : []))
@@ -318,9 +389,7 @@ private struct MetricChart: View, @MainActor Equatable {
                 switch tab.style {
                 case .bar:
                     if let stepGoal {
-                        BarMark(x: .value("Date", point.date, unit: plot.drawnUnit), y: .value(tab.title, point.value), width: .ratio(StepBarLabels.barRatio))
-                            .foregroundStyle(StepGoal.tier(point.value, goal: stepGoal).color)
-                            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 8, topTrailingRadius: 8, style: .continuous))
+                        stepBar(point, goal: stepGoal, style: style)
                     } else {
                         BarMark(x: .value("Date", point.date, unit: plot.drawnUnit), y: .value(tab.title, point.value))
                             .foregroundStyle(tab.color)
@@ -342,28 +411,70 @@ private struct MetricChart: View, @MainActor Equatable {
             }
         }
         .chartXScale(domain: plot.xDomain)
+        .chartYScale(domain: yDomain)
+        // The y-axis fits the window only once a scroll rests, so until then a line can run above the plot, over the
+        // summary; the mask stops it at the plot's top. It reaches below, where a scrolling chart draws its x-axis labels.
+        .chartPlotStyle { plot in
+            plot
+                .mask { Rectangle().padding(.bottom, -60) }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { plotHeight = $0 }
+        }
         .themedYAxis()
         .chartYAxis(stepGoal == nil ? .automatic : .hidden)
         .chartXAxis {
-            AxisMarks(values: axisValues) { _ in
-                AxisValueLabel(format: axisFormat)
-                    .font(stepGoal == nil ? nil : AppFont.medium(span == .week ? 16 : 13))
-                    .foregroundStyle(stepGoal == nil ? Theme.textSecondary : Theme.textPrimary)
-            }
-        }
-        .chartOverlay { proxy in
-            if let stepGoal, let steps = plot.steps {
-                StepBarLabels(proxy: proxy, points: points, centers: plot.scrubDates, goal: stepGoal, bars: points.map { point in
-                    StepBar(
-                        steps: point.value,
-                        flights: steps.flights[point.date].map(\.wholeText) ?? "",
-                        distance: steps.meters[point.date].map { distanceUnit.text(meters: $0, separator: "") } ?? ""
-                    )
-                })
+            if let dates = axisDates(shown) {
+                AxisMarks(values: dates) { _ in axisLabel }
+            } else {
+                AxisMarks(values: .automatic(desiredCount: 5)) { _ in axisLabel }
             }
         }
         // Nothing sits above the Steps chart but the title, which a callout above the plot would cover.
         .chartScrubbing(plot.scrubDates, placement: stepGoal == nil ? .above : .beside) { index in callout(index) }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+    }
+
+    /// A Steps bar in its tier's color with its count over it and, where they fit, its flights and distance inside its
+    /// foot. The labels are the bar's own annotations, so they move with it as the chart scrolls; a count masks the goal
+    /// line where it crosses it.
+    @ChartContentBuilder
+    private func stepBar(_ point: DatedValue, goal: Int, style: BarLabelStyle) -> some ChartContent {
+        let bar = BarMark(x: .value("Date", point.date, unit: plot.drawnUnit), y: .value(tab.title, point.value), width: .ratio(StepBarLabels.barRatio))
+            .foregroundStyle(StepGoal.tier(point.value, goal: goal).color)
+            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 8, topTrailingRadius: 8, style: .continuous))
+        if style == .hidden {
+            bar
+        } else {
+            bar
+                .annotation(position: .top, spacing: 1, overflowResolution: .init(x: .disabled, y: .disabled)) {
+                    StepBarLabels.count(style.text(point.value), color: StepGoal.tier(point.value, goal: goal).color)
+                }
+                .annotation(position: .overlay, alignment: .bottom, spacing: 0) {
+                    if style == .detailed {
+                        let detail = StepBarLabels.detail(stepBar(point))
+                        // Swift Charts hands an overlay annotation a zero target size, so the bar's height comes from the scale.
+                        if plotHeight * point.value / yDomain.upperBound >= detail.height + 10 {
+                            detail.view.padding(.bottom, 5)
+                        }
+                    }
+                }
+        }
+    }
+
+    private func stepBar(_ point: DatedValue) -> StepBar {
+        StepBar(
+            steps: point.value,
+            flights: plot.steps?.flights[point.date].map(\.wholeText) ?? "",
+            distance: plot.steps?.meters[point.date].map { distanceUnit.text(meters: $0, separator: "") } ?? ""
+        )
+    }
+
+    /// How much every bar's labels show, the same across the whole history so labels never change mid-scroll.
+    private var labelStyle: BarLabelStyle {
+        guard stepGoal != nil, width > 0, let steps = plot.steps else { return .hidden }
+        let slot = (width / plot.visibleBars).rounded()
+        return styles(StepLabelKey(slot: slot, unit: distanceUnit, points: plot.drawn, steps: steps)) {
+            StepBarLabels.style(plot.drawn.map(stepBar), slot: slot)
+        }
     }
 
     /// The labels the shown window's length fits, whatever range and averaging made it: 1W averaged by month shows a
@@ -376,14 +487,30 @@ private struct MetricChart: View, @MainActor Equatable {
         return days <= 10 ? .week : days <= 45 ? .month : days <= 200 ? .months : .year
     }
 
-    /// Calendar-aligned marks, so the labels stay on the same days while the chart scrolls.
-    private var axisValues: AxisMarkValues {
+    /// Calendar-aligned marks, so the labels stay on the same days while the chart scrolls. Only the drawn interval
+    /// gets them: a stride over the whole history laid out a label for every day of it.
+    private func axisDates(_ shown: DateInterval) -> [Date]? {
+        let unit: Calendar.Component
         switch span {
-        case .week: .stride(by: .day)
-        case .month: .stride(by: .weekOfYear)
-        case .months, .year: .stride(by: .month)
-        case .all: .automatic(desiredCount: 5)
+        case .week: unit = .day
+        case .month: unit = .weekOfYear
+        case .months, .year: unit = .month
+        case .all: return nil
         }
+        let calendar = plot.calendar
+        var dates: [Date] = []
+        var date = calendar.dateInterval(of: unit, for: shown.start)!.start
+        while date <= shown.end {
+            dates.append(date)
+            date = calendar.date(byAdding: unit, value: 1, to: date)!
+        }
+        return dates
+    }
+
+    private var axisLabel: some AxisMark {
+        AxisValueLabel(format: axisFormat)
+            .font(stepGoal == nil ? nil : AppFont.medium(span == .week ? 16 : 13))
+            .foregroundStyle(stepGoal == nil ? Theme.textSecondary : Theme.textPrimary)
     }
 
     private var axisFormat: Date.FormatStyle {
@@ -455,6 +582,40 @@ struct MetricPlot {
     var scrolls: Bool { visibleLength < xDomain.upperBound.timeIntervalSince(xDomain.lowerBound) - 1 }
     var initialStart: Date { xDomain.upperBound.addingTimeInterval(-visibleLength) }
 
+    /// About how many bars a window shows, which sets the room each bar's labels have.
+    var visibleBars: Double {
+        let bar: TimeInterval = switch drawnUnit {
+        case .month: 30.44 * 86_400
+        case .weekOfYear: 7 * 86_400
+        default: 86_400
+        }
+        return max(visibleLength / bar, 1)
+    }
+
+    /// A quarter window: the chart redraws its marks each time the window crosses one. Each redraw lays out every drawn
+    /// mark at once, so a short page keeps one under a frame; window-length pages left 3M redrawing 364 bars at a time
+    /// and hitching on each.
+    private var pageLength: TimeInterval { visibleLength / 4 }
+
+    /// The page of `xDomain`, counted from its start, that holds a window starting at `start`.
+    func page(at start: Date) -> Int {
+        guard scrolls else { return 0 }
+        return Int((start.timeIntervalSince(xDomain.lowerBound) / pageLength).rounded(.down))
+    }
+
+    /// What the chart draws while the window starts on `page`: the five pages any such window touches, plus one either
+    /// side, so a fast scroll never reaches an undrawn bar before the page changes.
+    func drawnInterval(page: Int) -> DateInterval {
+        guard scrolls else { return DateInterval(start: xDomain.lowerBound, end: xDomain.upperBound) }
+        return DateInterval(start: xDomain.lowerBound.addingTimeInterval(Double(page - 1) * pageLength), duration: pageLength * 7)
+    }
+
+    /// Where the window starts when the chart is scrolled to `position`: within a point of a bar's edge, a scroll rests
+    /// on the nearest one, which could otherwise leave out that bar's day.
+    func windowStart(at position: Date) -> Date {
+        calendar.nearestEdge(of: drawnUnit, to: min(max(position, xDomain.lowerBound), initialStart))
+    }
+
     init(tab: MetricTab, footer: MetricDetail.Footer, range: ChartRange, averaging: Averaging, now: Date, calendar: Calendar, unit: WeightUnit) {
         let latest = range.interval(endingAt: now, earliest: tab.points.first?.date, calendar: calendar)
         let history = DateInterval(start: min(latest.start, tab.points.first.map { calendar.startOfDay(for: $0.date) } ?? latest.start), end: latest.end)
@@ -516,7 +677,7 @@ struct MetricPlot {
                 Dictionary(drawing.bucket(days.inside(history), calendar: calendar).map { ($0.date, $0.value) }, uniquingKeysWith: { first, _ in first })
             }
             steps = StepsPlot(flights: perBar(flights), meters: perBar(meters))
-            summary.steps = (goal.goal, meters)
+            summary.steps = (goal.goal, meters.sorted { $0.date < $1.date })
         }
         if case .energyBalance = footer {
             let differences = NutritionMetrics.differences(intake: tab.points, reference: tab.overlay?.points ?? [], calendar: calendar)
@@ -533,18 +694,16 @@ struct MetricPlot {
     /// drawn points, so it follows the averaging. Totals, bests, and change are over the days, which averaging would
     /// distort.
     func window(at start: Date) -> MetricWindow {
-        // A scroll rests within a point of a bar's edge, which could leave out that bar's day.
-        let start = calendar.nearestEdge(of: drawnUnit, to: min(max(start, xDomain.lowerBound), initialStart))
-        let interval = DateInterval(start: start, duration: visibleLength)
-        let days = daily.inside(interval)
+        let interval = DateInterval(start: windowStart(at: start), duration: visibleLength)
+        let days = Array(daily.within(interval))
         let tab = summary.tab
-        let points = drawn.inside(interval)
+        let points = Array(drawn.within(interval))
         let average = (drawing == averaging ? points : averaging.bucket(days, calendar: calendar)).average
         let stats = tab.stats?(interval) ?? [
             MetricTab.Stat(title: tab.averageTitle, value: average),
             MetricTab.Stat(title: tab.summary.title(tab.title), value: tab.summary.second(of: days.map(\.value))),
         ]
-        let values = (points + overlay.inside(interval)).map(\.value) + (tab.goal.map { [$0] } ?? [])
+        let values = (points + overlay.within(interval)).map(\.value) + (tab.goal.map { [$0] } ?? [])
         // A window runs past today when bars widen the domain to a whole week or month.
         let end = min(interval.end, latest.end)
         let labelStart = max(interval.start, historyStart)
@@ -555,7 +714,7 @@ struct MetricPlot {
             let first = max(interval.start, daily.first.map { calendar.startOfDay(for: $0.date) } ?? interval.start)
             let count = max(calendar.dateComponents([.day], from: first, to: end).day!, 1)
             steps = StepsSummary(
-                total: total, distance: summaryInputs.meters.inside(interval).map(\.value).reduce(0, +),
+                total: total, distance: summaryInputs.meters.within(interval).map(\.value).reduce(0, +),
                 goalShare: total / Double(summaryInputs.goal * count)
             )
         }

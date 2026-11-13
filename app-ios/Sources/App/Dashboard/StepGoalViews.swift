@@ -40,10 +40,9 @@ enum BarLabelStyle: Equatable {
     }
 }
 
-/// Each Steps bar's count over it in its tier's color and, where they fit, its flights and distance inside its foot,
-/// placed from the chart's own positions so the labels sit on their bars at any range. A count masks the goal line
-/// where it crosses it.
-struct StepBarLabels: View {
+/// The Steps bars' labels: each bar's count over it in its tier's color and, where they fit, its flights and distance
+/// inside its foot. `MetricChart` hangs them on each bar as annotations, so they scroll with it.
+enum StepBarLabels {
     static let countFont = UIFont(name: "DMSans-SemiBold", size: 15) ?? .systemFont(ofSize: 15, weight: .semibold)
     static let detailFont = UIFont(name: "DMSans-SemiBold", size: 13) ?? .systemFont(ofSize: 13, weight: .semibold)
     /// A bar's share of its slot; the rest is the gap between bars.
@@ -51,72 +50,22 @@ struct StepBarLabels: View {
     /// The plot's top share left free for the tallest bar's count.
     static let headroom = 0.1
 
-    let proxy: ChartProxy
-    let points: [DatedValue]
-    /// Each bar's middle, so the narrowest gap between two is the room a label has.
-    let centers: [Date]
-    let goal: Int
-    let bars: [StepBar]
-
-    /// Measures every bar's text, so it runs once per bar width rather than on every frame of a scroll.
-    @State private var styles = ViewMemo<StyleKey, BarLabelStyle>()
-
-    var body: some View {
-        GeometryReader { geometry in
-            if let frame = proxy.plotFrame, let baseline = proxy.position(forY: 0.0) {
-                let plot = geometry[frame]
-                // A scrolled chart positions every bar, so only the ones on screen get labels.
-                let shown = shown(width: plot.width)
-                let xs = shown.map { (index: $0, x: proxy.position(forX: centers[$0])) }
-                let slot = zip(xs.dropFirst(), xs).compactMap { next, x in next.x.flatMap { a in x.x.map { a - $0 } } }.min() ?? plot.width
-                let style = styles(StyleKey(slot: slot.rounded(), bars: bars)) {
-                    BarLabelStyle.fitting(bars, slot: slot, barWidth: slot * Self.barRatio, count: { Self.width($0, Self.countFont) }, detail: { Self.width($0, Self.detailFont) })
-                }
-                if style != .hidden {
-                    ForEach(xs, id: \.index) { index, x in
-                        let point = points[index]
-                        if let x, let top = proxy.position(forY: point.value) {
-                            Text(style.text(point.value))
-                                .font(Font(Self.countFont))
-                                .foregroundStyle(StepGoal.tier(point.value, goal: goal).color)
-                                .lineLimit(1)
-                                .fixedSize()
-                                .padding(.horizontal, 1)
-                                .background(Theme.background, in: .rect(cornerRadius: 3))
-                                .position(x: plot.minX + x, y: plot.minY + top - 11)
-                            if style == .detailed {
-                                let inside = detail(bars[index])
-                                if baseline - top >= inside.height + 10 {
-                                    inside.view.position(x: plot.minX + x, y: plot.minY + baseline - inside.height / 2 - 5)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .clipped()
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
+    static func style(_ bars: [StepBar], slot: CGFloat) -> BarLabelStyle {
+        BarLabelStyle.fitting(bars, slot: slot, barWidth: slot * barRatio, count: { width($0, countFont) }, detail: { width($0, detailFont) })
     }
 
-    /// The bars whose middles fall on the plot or one bar beyond either edge, found by bisection.
-    private func shown(width: CGFloat) -> Range<Int> {
-        guard centers.count > 1 else { return centers.indices }
-        func x(_ index: Int) -> CGFloat { proxy.position(forX: centers[index]) ?? 0 }
-        func first(after edge: CGFloat) -> Int {
-            var low = 0
-            var high = centers.count
-            while low < high {
-                let middle = (low + high) / 2
-                if x(middle) < edge { low = middle + 1 } else { high = middle }
-            }
-            return low
-        }
-        return max(first(after: 0) - 1, 0)..<min(first(after: width) + 1, centers.count)
+    /// Its background masks the goal line where the count crosses it.
+    static func count(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(Font(countFont))
+            .foregroundStyle(color)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 1)
+            .background(Theme.background, in: .rect(cornerRadius: 3))
     }
 
-    private func detail(_ bar: StepBar) -> (view: some View, height: CGFloat) {
+    static func detail(_ bar: StepBar) -> (view: some View, height: CGFloat) {
         let lines = (bar.flights.isEmpty ? 0 : 1) + (bar.distance.isEmpty ? 0 : 1)
         let view = VStack(spacing: 0) {
             if !bar.flights.isEmpty {
@@ -127,11 +76,11 @@ struct StepBarLabels: View {
             }
             if !bar.distance.isEmpty { Text(bar.distance) }
         }
-        .font(Font(Self.detailFont))
+        .font(Font(detailFont))
         .foregroundStyle(.black.opacity(0.8))
         .lineLimit(1)
         .fixedSize()
-        return (view, CGFloat(lines) * Self.detailFont.lineHeight)
+        return (view, CGFloat(lines) * detailFont.lineHeight)
     }
 
     private static func width(_ text: String, _ font: UIFont) -> CGFloat {
@@ -139,8 +88,17 @@ struct StepBarLabels: View {
     }
 }
 
-/// Under the Steps chart's days, Pedometer++'s bracket over the whole range: its steps, its distance, and the total as a
-/// share of the goal over every day of the range, in that share's tier color.
+/// Everything the Steps label style is measured from.
+struct StepLabelKey: Equatable {
+    var slot: CGFloat
+    var unit: NutritionSettings.DistanceUnit
+    var points: [DatedValue]
+    var steps: StepsPlot
+}
+
+/// Under the Steps chart's days, Pedometer++'s bracket over the shown range: its steps, its distance, and the total as a
+/// share of the goal over every day of the range, in that share's tier color. It follows the chart bar by bar as it
+/// scrolls.
 struct StepsRangeSummary: View {
     let steps: StepsSummary
     let unit: NutritionSettings.DistanceUnit
@@ -231,7 +189,3 @@ struct StepGoalSheet: View {
     }
 }
 
-private struct StyleKey: Equatable {
-    var slot: CGFloat
-    var bars: [StepBar]
-}

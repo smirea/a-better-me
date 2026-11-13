@@ -135,6 +135,48 @@ struct StepsPlotTests {
         #expect(plot.window(at: day("2026-10-01", 0)).interval == earlier.interval)
     }
 
+    @Test func aScrollDrawsOnlyTheBarsAroundItsWindowAndEveryBarItShows() {
+        let points = (0..<400).map { DatedValue(date: utc.date(byAdding: .day, value: $0, to: day("2025-10-01", 0))!, value: Double($0 + 1)) }
+        let tab = MetricTab(title: "Steps", points: points, unit: .whole("steps"), averageTitle: "Average Steps", summary: .total, style: .bar, color: Theme.coral, goal: 10_000)
+        let summary = StepGoal.summary(points, goal: 10_000, today: day("2026-11-04"), calendar: utc)
+        for range in [ChartRange.oneWeek, .oneMonth, .threeMonths] {
+            let plot = MetricPlot(tab: tab, footer: .steps(summary, flights: [], meters: []), range: range, averaging: .daily, now: day("2026-11-04"), calendar: utc, unit: .kg)
+            var start = plot.xDomain.lowerBound
+            while start <= plot.initialStart {
+                let page = plot.page(at: start)
+                let drawn = plot.drawn.within(plot.drawnInterval(page: page))
+                let shown = plot.window(at: start).points
+                #expect(Set(shown.map(\.date)).isSubset(of: Set(drawn.map(\.date))), "\(range) at \(start)")
+                #expect(Double(drawn.count) <= plot.visibleBars * 1.75 + 2, "\(range) draws \(drawn.count) bars")
+                start = start.addingTimeInterval(3 * 3600)
+            }
+        }
+    }
+
+    @Test func theLiveWindowSnapsToTheNearestBarEdgeInsideTheHistory() {
+        let points = (0..<30).map { DatedValue(date: utc.date(byAdding: .day, value: $0, to: day("2026-10-01", 0))!, value: 1000) }
+        let tab = MetricTab(title: "Steps", points: points, unit: .whole("steps"), averageTitle: "Average Steps", summary: .total, style: .bar, color: Theme.coral, goal: 10_000)
+        let summary = StepGoal.summary(points, goal: 10_000, today: day("2026-10-30"), calendar: utc)
+        let plot = MetricPlot(tab: tab, footer: .steps(summary, flights: [], meters: []), range: .oneWeek, averaging: .daily, now: day("2026-10-30"), calendar: utc, unit: .kg)
+        #expect(plot.windowStart(at: day("2026-10-10", 11)) == day("2026-10-10", 0))
+        #expect(plot.windowStart(at: day("2026-10-10", 13)) == day("2026-10-11", 0))
+        #expect(plot.windowStart(at: day("2026-09-01", 0)) == plot.xDomain.lowerBound)
+        #expect(plot.windowStart(at: day("2026-12-01", 0)) == plot.initialStart)
+    }
+
+    @Test func withinFindsTheSameDaysAsInside() {
+        let points = (0..<20).map { DatedValue(date: utc.date(byAdding: .day, value: 2 * $0, to: day("2026-10-01", 0))!, value: Double($0)) }
+        for (from, to) in [(0, 40), (3, 9), (-5, 2), (38, 60), (10, 10), (50, 70)] {
+            let interval = DateInterval(start: utc.date(byAdding: .day, value: from, to: day("2026-10-01", 0))!, end: utc.date(byAdding: .day, value: to, to: day("2026-10-01", 0))!)
+            #expect(Array(points.within(interval)) == points.inside(interval))
+        }
+        // Two weigh-ins three weeks apart still draw the segment across a week between them.
+        let sparse = [DatedValue(date: day("2026-10-01"), value: 80), DatedValue(date: day("2026-10-22"), value: 81)]
+        let week = DateInterval(start: day("2026-10-08", 0), duration: 7 * 86_400)
+        #expect(sparse.within(week).isEmpty)
+        #expect(Array(sparse.within(week, neighbours: true)) == sparse)
+    }
+
     @Test func detailsDropFirstThenCountsShortenThenHide() {
         let bars = [StepBar(steps: 10009, flights: "4", distance: "3.3mi"), StepBar(steps: 6612, flights: "", distance: "12.0mi"), StepBar(steps: 18116, flights: "16", distance: "")]
         let width = { (text: String) in CGFloat(text.count * 6) }
