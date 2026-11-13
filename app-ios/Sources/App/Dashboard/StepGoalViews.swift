@@ -18,17 +18,29 @@ enum BarLabelStyle: Equatable {
 
     /// The stairs glyph and its gap after the flights count.
     static let glyphWidth: CGFloat = 14
+    /// The room a bar's foot leaves its flights and distance on either side.
+    static let detailInset: CGFloat = 6
 
-    /// A count must fit the bar's slot, the gap included; the flights and distance must fit inside the bar itself.
+    /// A count must fit the bar's slot, the gap included, for every bar of the history. The flights and distance show
+    /// where the typical bar's fit inside it: the chart scrolls through every day of history, and one long hike in it
+    /// once hid them from every bar (Steps feedback, Nov 2026). A bar whose own don't fit drops them (`fitsInside`).
     static func fitting(_ bars: [StepBar], slot: CGFloat, barWidth: CGFloat, count: (String) -> CGFloat, detail: (String) -> CGFloat) -> BarLabelStyle {
-        let inside = barWidth - 6
         func fits(_ style: BarLabelStyle) -> Bool { bars.allSatisfy { count(style.text($0.steps)) <= slot } }
-        if fits(.full), bars.allSatisfy({ bar in
-            (bar.flights.isEmpty || detail(bar.flights) + glyphWidth <= inside) && (bar.distance.isEmpty || detail(bar.distance) <= inside)
-        }) {
-            return .detailed
-        }
-        return fits(.full) ? .full : fits(.compact) ? .compact : .hidden
+        guard fits(.full) else { return fits(.compact) ? .compact : .hidden }
+        let widths = bars.compactMap { bar in detailWidth(bar, detail: detail) }.sorted()
+        guard !widths.isEmpty else { return .full }
+        return widths[widths.count / 2] <= barWidth - detailInset ? .detailed : .full
+    }
+
+    /// Whether this bar's flights and distance fit inside it.
+    static func fitsInside(_ bar: StepBar, barWidth: CGFloat, detail: (String) -> CGFloat) -> Bool {
+        (detailWidth(bar, detail: detail) ?? 0) <= barWidth - detailInset
+    }
+
+    /// The wider of the flights with their glyph and the distance, or nil for a bar with neither.
+    private static func detailWidth(_ bar: StepBar, detail: (String) -> CGFloat) -> CGFloat? {
+        guard !bar.flights.isEmpty || !bar.distance.isEmpty else { return nil }
+        return max(bar.flights.isEmpty ? 0 : detail(bar.flights) + glyphWidth, bar.distance.isEmpty ? 0 : detail(bar.distance))
     }
 
     func text(_ value: Double) -> String {
@@ -52,6 +64,15 @@ enum StepBarLabels {
 
     static func style(_ bars: [StepBar], slot: CGFloat) -> BarLabelStyle {
         BarLabelStyle.fitting(bars, slot: slot, barWidth: slot * barRatio, count: { width($0, countFont) }, detail: { width($0, detailFont) })
+    }
+
+    static func fitsInside(_ bar: StepBar, slot: CGFloat) -> Bool {
+        BarLabelStyle.fitsInside(bar, barWidth: slot * barRatio, detail: { width($0, detailFont) })
+    }
+
+    /// A bar's distance: whole from 10 up, which keeps a long day's inside its bar.
+    static func distance(meters: Double, unit: NutritionSettings.DistanceUnit) -> String {
+        unit.text(meters: meters, separator: "", wholeFrom: 10)
     }
 
     /// Its background masks the goal line where the count crosses it.

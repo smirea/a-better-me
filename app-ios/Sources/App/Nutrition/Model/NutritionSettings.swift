@@ -11,9 +11,9 @@ struct NutritionSettings: Codable, Hashable, Sendable {
         case miles, kilometers
 
         /// One decimal, as Pedometer++ shows it: "3.3 mi", or "3.3mi" with no separator inside a bar.
-        func text(meters: Double, separator: String = " ") -> String {
+        func text(meters: Double, separator: String = " ", wholeFrom: Double = .infinity) -> String {
             let value = meters / (self == .miles ? 1609.344 : 1000)
-            return value.formatted(.number.precision(.fractionLength(1))) + separator + (self == .miles ? "mi" : "km")
+            return value.formatted(.number.precision(.fractionLength((value * 10).rounded() / 10 >= wholeFrom ? 0 : 1))) + separator + (self == .miles ? "mi" : "km")
         }
     }
 

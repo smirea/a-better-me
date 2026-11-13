@@ -181,10 +181,29 @@ struct StepsPlotTests {
         let bars = [StepBar(steps: 10009, flights: "4", distance: "3.3mi"), StepBar(steps: 6612, flights: "", distance: "12.0mi"), StepBar(steps: 18116, flights: "16", distance: "")]
         let width = { (text: String) in CGFloat(text.count * 6) }
         #expect(BarLabelStyle.fitting(bars, slot: 45, barWidth: 45, count: width, detail: width) == .detailed)
-        #expect(BarLabelStyle.fitting(bars, slot: 45, barWidth: 40, count: width, detail: width) == .full)
+        #expect(BarLabelStyle.fitting(bars, slot: 45, barWidth: 30, count: width, detail: width) == .full)
         #expect(BarLabelStyle.fitting(bars, slot: 30, barWidth: 30, count: width, detail: width) == .compact)
         #expect(BarLabelStyle.fitting(bars, slot: 10, barWidth: 10, count: width, detail: width) == .hidden)
         #expect(bars.map { BarLabelStyle.detailed.text($0.steps) } == ["10,009", "6,612", "18,116"])
         #expect(bars.map { BarLabelStyle.compact.text($0.steps) } == ["10K", "6.6K", "18K"])
+    }
+
+    @Test func oneLongDayKeepsTheOtherBarsDetails() {
+        let width = { (text: String) in CGFloat(text.count * 6) }
+        let week = (0..<7).map { StepBar(steps: 9000, flights: "\($0 + 3)", distance: "4.\($0)mi") }
+        let hike = StepBar(steps: 31200, flights: "112", distance: "14.3mi")
+        #expect(BarLabelStyle.fitting(week + [hike], slot: 45, barWidth: 40, count: width, detail: width) == .detailed)
+        #expect(BarLabelStyle.fitsInside(week[0], barWidth: 40, detail: width))
+        #expect(!BarLabelStyle.fitsInside(hike, barWidth: 40, detail: width))
+        #expect(BarLabelStyle.fitting([hike, hike, week[0]], slot: 45, barWidth: 40, count: width, detail: width) == .full)
+        #expect(BarLabelStyle.fitting([StepBar(steps: 9000, flights: "", distance: "")], slot: 45, barWidth: 40, count: width, detail: width) == .full)
+    }
+
+    @Test func barDistanceIsWholeFromTen() {
+        #expect(StepBarLabels.distance(meters: 5310, unit: .miles) == "3.3mi")
+        #expect(StepBarLabels.distance(meters: 23088, unit: .miles) == "14mi")
+        #expect(StepBarLabels.distance(meters: 16080, unit: .miles) == "10mi")
+        #expect(StepBarLabels.distance(meters: 9500, unit: .kilometers) == "9.5km")
+        #expect(NutritionSettings.DistanceUnit.miles.text(meters: 23088) == "14.3 mi")
     }
 }

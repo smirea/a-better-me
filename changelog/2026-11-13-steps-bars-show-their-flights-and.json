@@ -1,0 +1,10 @@
+{
+	"title": "Steps bars show their flights and distance again",
+	"description": "One long day in your history no longer hides them from every bar.",
+	"tasks": [
+		{
+			"id": "42baa4be-e71e-4312-814a-ca7835388e6d",
+			"title": "1 Steps Feedback: fix misleading bar info"
+		}
+	]
+}
