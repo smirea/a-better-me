@@ -4,7 +4,7 @@ import SwiftUI
 /// The food detail (`log-03-food-detail.jpg`): a card with the icon, the name, Favorite, the serving's calories and
 /// macros with each macro's share of calories, and Edit Icon, then the impact on the day's targets, every nutrient the
 /// food reports, and the quantity keypad pinned under them. A recipe adds Prepare, Edit, and Duplicate, as the
-/// library's recipe page does. A plate item opens here too, with Update and Remove. The logger's banner stays above it with its close button, so the
+/// library's recipe page does, and its ingredients at the typed amount above the nutrients. A plate item opens here too, with Update and Remove. The logger's banner stays above it with its close button, so the
 /// detail has no navigation bar of its own; a Ramble row's detail, which has no banner, keeps the back button.
 struct FoodDetailView: View {
     let session: LoggerSession
@@ -21,6 +21,8 @@ struct FoodDetailView: View {
     @State private var favorite: UUID?
     /// The pick's food, until the owner edits the recipe it is from here.
     @State private var food: FoodSnapshot
+    /// The recipe the pick is from, as it is now; nil for any other food, or once deleted.
+    @Observe private var recipe: Recipe?
     @State private var recipeSheet: LibraryEditorSheet?
     @State private var preparing: Recipe?
     @State private var choosingIcon = false
@@ -34,6 +36,8 @@ struct FoodDetailView: View {
         _measure = State(initialValue: pick.portion.serving.measure)
         _quantity = State(initialValue: QuantityText(pick.portion.serving.quantity))
         _food = State(initialValue: pick.portion.food)
+        let recipeID = pick.portion.food.source == .recipe ? pick.portion.food.foodID.flatMap(UUID.init(uuidString:)) : nil
+        _recipe = Observe(recipeID.map(Recipe.one) ?? DatabaseQuery(nil) { _ in nil })
     }
 
     private var serving: Serving { Serving(measure: measure, quantity: quantity.value ?? 0) }
@@ -49,11 +53,15 @@ struct FoodDetailView: View {
             }
             let day = ramble?.day ?? session.time.day
             ImpactGauges(amounts: amounts, day: day, adding: ramble?.others ?? restOfPlate).id(day)
+            if let recipe {
+                IngredientsSection(FoodLog.ingredients(serving, of: recipe))
+            }
             NutrientList(title: "Nutrients", rows: nutrientRows(reported) { NutrientListRow.rows { reported.amount(of: $0.id) != nil } }) { nutrient in
                 LabeledContent(nutrient.name, value: NutritionFormat.amount(amounts.amount(of: nutrient.id) ?? 0, nutrient.unit))
             }
         }
         .themedList()
+        .nutrientTableList()
         .contentMargins(.top, ramble == nil ? 8 : 0, for: .scrollContent)
         .contentMargins(.bottom, 12, for: .scrollContent)
         .toolbar(ramble == nil ? .hidden : .automatic, for: .navigationBar)
@@ -88,7 +96,7 @@ struct FoodDetailView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
+            HStack(spacing: 12) {
                 FoodIcon(food: food, size: 36)
                     .onTapGesture { if food.source != .quickAdd { choosingIcon = true } }
                 VStack(alignment: .leading, spacing: 2) {
@@ -119,14 +127,13 @@ struct FoodDetailView: View {
                 .sensoryFeedback(.success, trigger: favorite) { _, new in new != nil }
             }
             MacroHeader(amounts: amounts)
-            let recipeID = pick.portion.food.source == .recipe ? pick.portion.food.foodID.flatMap(UUID.init(uuidString:)) : nil
             if food.source != .quickAdd || editing != nil {
                 FlowLayout {
                     if food.source != .quickAdd {
                         Button("Edit Icon", systemImage: "face.smiling") { choosingIcon = true }
                     }
-                    if let recipeID {
-                        RecipeActions(recipeID: recipeID, session: session, prepare: { preparing = $0 }, present: { recipeSheet = $0 }, edited: recipeEdited)
+                    if let recipe {
+                        RecipeActions(recipe: recipe, session: session, prepare: { preparing = $0 }, present: { recipeSheet = $0 }, edited: recipeEdited)
                     }
                     if let editing {
                         Button("Remove", systemImage: "trash") {
@@ -136,7 +143,6 @@ struct FoodDetailView: View {
                     }
                 }
                 .chipButton()
-                .labelStyle(.titleAndIcon)
                 .controlSize(.small)
             }
         }
@@ -188,31 +194,18 @@ struct RambleEdit {
 /// A recipe's Prepare, Edit, and Duplicate in the logger. Duplicate offers Create & Add onto the plate, and an edit
 /// hands the detail the recipe's new snapshot. The detail presents what they open, outside its list.
 private struct RecipeActions: View {
+    let recipe: Recipe
     let session: LoggerSession
     let prepare: (Recipe) -> Void
     let present: (LibraryEditorSheet) -> Void
     let edited: (FoodSnapshot) -> Void
-    @Observe private var recipe: Recipe?
-
-    init(
-        recipeID: UUID, session: LoggerSession, prepare: @escaping (Recipe) -> Void, present: @escaping (LibraryEditorSheet) -> Void,
-        edited: @escaping (FoodSnapshot) -> Void
-    ) {
-        self.session = session
-        self.prepare = prepare
-        self.present = present
-        self.edited = edited
-        _recipe = Observe(Recipe.one(recipeID))
-    }
 
     var body: some View {
-        if let recipe {
-            Button("Prepare", systemImage: "frying.pan") { prepare(recipe) }
-            Button("Edit", systemImage: "pencil") { present(LibraryEditorSheet(.editRecipe(recipe))) }
-                .onChange(of: recipe.updatedAt) { edited(recipe.snapshot) }
-            Button("Duplicate", systemImage: "plus.square.on.square") {
-                present(LibraryEditorSheet(.newRecipe(RecipeDraft(recipe).duplicate()), add: { session.add(LoggerPick($0)) }))
-            }
+        Button("Prepare", systemImage: "frying.pan") { prepare(recipe) }
+        Button("Edit", systemImage: "pencil") { present(LibraryEditorSheet(.editRecipe(recipe))) }
+            .onChange(of: recipe.updatedAt) { edited(recipe.snapshot) }
+        Button("Duplicate", systemImage: "plus.square.on.square") {
+            present(LibraryEditorSheet(.newRecipe(RecipeDraft(recipe).duplicate()), add: { session.add(LoggerPick($0)) }))
         }
     }
 }

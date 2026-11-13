@@ -28,7 +28,18 @@ extension View {
 extension View {
     /// A small capsule action beside a row's value or a card's content: Edit, Change, Edit Icon.
     func chipButton() -> some View {
-        buttonStyle(.glass).buttonBorderShape(.capsule).font(AppFont.chip)
+        buttonStyle(.glass).buttonBorderShape(.capsule).font(AppFont.chip).labelStyle(ChipLabelStyle())
+    }
+}
+
+/// A chip's icon and title, as close as `Chip` draws them: the system's title-and-icon style leaves a gap sized for
+/// toolbars and menus, which the owner read as too much space inside a small capsule.
+private struct ChipLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 6) {
+            configuration.icon.imageScale(.small)
+            configuration.title
+        }
     }
 }
 

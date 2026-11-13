@@ -24,6 +24,11 @@ struct IngredientAlteration: Hashable, Codable, Identifiable, Sendable {
         self.serving = serving
     }
 
+    /// A recipe's ingredient eaten as the recipe holds it.
+    init(kept ingredient: RecipeIngredient) {
+        self.init(id: ingredient.id, food: ingredient.food, original: ingredient.serving, serving: ingredient.serving)
+    }
+
     /// The line for `factor` servings of the recipe.
     func scaled(by factor: Double) -> IngredientAlteration {
         let scale = { (serving: Serving) in Serving(measure: serving.measure, quantity: serving.quantity * factor) }
@@ -47,9 +52,7 @@ struct IngredientAlteration: Hashable, Codable, Identifiable, Sendable {
 extension [IngredientAlteration] {
     /// Alter's starting point for an entry that was not altered: the recipe's ingredients at one serving, each kept.
     static func unaltered(_ recipe: Recipe) -> Self {
-        RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: 1).map {
-            IngredientAlteration(id: $0.id, food: $0.food, original: $0.serving, serving: $0.serving)
-        }
+        RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: 1).map(IngredientAlteration.init(kept:))
     }
 
     var isAltered: Bool { contains { $0.change != .kept } }

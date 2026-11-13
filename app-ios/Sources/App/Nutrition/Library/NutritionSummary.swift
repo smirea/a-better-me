@@ -32,23 +32,13 @@ struct MacroSummary: View {
     }
 }
 
-/// Every nutrient `MacroSummary` leaves out, in one `NutrientList`: fiber and net carbs unlabeled, then the breakdowns.
-/// Without `showAll` only reported nutrients show.
+/// Every nutrient as a full Nutrition Facts table (`NutrientList`), an unreported one as "–". The recipe page, Prepare,
+/// and the recipe editor show it under `MacroSummary`.
 struct NutrientBreakdown: View {
     let amounts: NutrientAmounts
-    var showAll = false
-    @State private var rows = ViewMemo<Key, [NutrientListRow]>()
-
-    private struct Key: Equatable {
-        let amounts: NutrientAmounts
-        let showAll: Bool
-    }
 
     var body: some View {
-        let rows = rows(Key(amounts: amounts, showAll: showAll)) {
-            NutrientListRow.rows(labelsMacros: false) { !NutrientID.macros.contains($0.id) && (showAll || amounts.amount(of: $0.id) != nil) }
-        }
-        NutrientList(rows: rows) { nutrient in
+        NutrientList(title: "Nutrients", rows: NutrientListRow.all) { nutrient in
             LabeledContent(nutrient.name) {
                 Text(amounts.amount(of: nutrient.id).map { NutritionFormat.amount($0, nutrient.unit) } ?? "–")
                     .monospacedDigit()

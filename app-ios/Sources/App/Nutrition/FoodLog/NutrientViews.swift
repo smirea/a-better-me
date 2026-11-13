@@ -233,30 +233,66 @@ enum NutrientSection: String, CaseIterable, Identifiable {
     })
 }
 
-/// One row of a nutrient list: a section's label or one of its nutrients.
+/// A nutrient table's sections, read like a Nutrition Facts label: calories and the macros with what they contain,
+/// then vitamins, minerals, and the rest, each section ruled off from the next.
+enum NutrientTableSection: String, CaseIterable, Hashable {
+    case facts = "Calories & Macros"
+    case vitamins = "Vitamins"
+    case minerals = "Minerals"
+    case other = "Other"
+
+    /// Each nutrient with how deep it nests: the US label's order (fat, cholesterol, sodium, carbs, protein; vitamins
+    /// and minerals in the FDA's listing order), with the registry's extras placed under what holds them.
+    fileprivate var lines: [(id: NutrientID, depth: Int)] {
+        switch self {
+        case .facts:
+            [
+                (.energy, 0),
+                (.fat, 0), ("606", 1), ("693", 1), ("646", 1), ("645", 1), ("901", 1), ("851", 2), ("629", 2), ("621", 2), ("902", 1),
+                ("601", 0),
+                ("307", 0),
+                (.carbs, 0), (.fiber, 1), ("269", 1), ("539", 2), ("209", 1), (.netCarbs, 1),
+                (.protein, 0), ("507", 1), ("512", 1), ("503", 1), ("504", 1), ("505", 1), ("506", 1), ("508", 1), ("502", 1), ("501", 1), ("509", 1), ("510", 1),
+            ]
+        case .vitamins:
+            ["320", "401", "328", "323", "430", "404", "405", "406", "415", "417", "418", "410", "421"].map { ($0, 0) }
+        case .minerals:
+            ["301", "303", "306", "305", "304", "309", "317", "312", "315"].map { ($0, 0) }
+        case .other:
+            [(.alcohol, 0), ("262", 0), ("255", 0)]
+        }
+    }
+}
+
+/// One row of a nutrient table: a section's label, or a nutrient with how deep it nests and whether it is the last
+/// of its section, which draws the rule under it.
 enum NutrientListRow: Hashable, Identifiable {
-    case label(NutrientSection)
-    case nutrient(Nutrient)
+    case label(NutrientTableSection)
+    case nutrient(Nutrient, depth: Int, endsSection: Bool)
 
     var id: Self { self }
 
-    /// Each section's label, then its nutrients that `shows` keeps. A section that keeps none has no label, and
-    /// `labelsMacros: false` leaves the first section's label out where the macros are shown above the list.
-    static func rows(_ sections: [NutrientSection] = NutrientSection.allCases, labelsMacros: Bool = true, shows: (Nutrient) -> Bool) -> [NutrientListRow] {
-        sections.flatMap { section -> [NutrientListRow] in
-            let nutrients = section.nutrients.filter(shows)
-            guard !nutrients.isEmpty else { return [] }
-            return (section == .macros && !labelsMacros ? [] : [.label(section)]) + nutrients.map(NutrientListRow.nutrient)
+    /// The table's nutrients that `shows` keeps, each section's label before its own. The first section reads as the
+    /// label's top, so it has none, and a section that keeps nothing is left out.
+    static func rows(shows: (Nutrient) -> Bool) -> [NutrientListRow] {
+        NutrientTableSection.allCases.flatMap { section -> [NutrientListRow] in
+            let lines = section.lines.compactMap { line in NutrientRegistry.nutrient(line.id).map { ($0, line.depth) } }.filter { shows($0.0) }
+            guard !lines.isEmpty else { return [] }
+            let rows = lines.enumerated().map { index, line in
+                NutrientListRow.nutrient(line.0, depth: line.1, endsSection: index == lines.count - 1)
+            }
+            return (section == .facts ? [] : [.label(section)]) + rows
         }
     }
 
     /// Every nutrient, for a list that shows each whether or not it was reported.
     static let all = rows { _ in true }
-    static let macros = rows([.macros]) { _ in true }
+    static let macros = rows { NutrientID.summaryChoices.contains($0.id) }
 }
 
-/// Every nutrient section in one card, the sections' names as label rows between their nutrients. `rows` comes from
-/// `NutrientListRow.rows`, derived once per input, never per render.
+/// Every nutrient section in one card, as a compact Nutrition Facts label: no rules between nutrients, one under each
+/// section, and a nested nutrient indented under what holds it. `rows` comes from `NutrientListRow.rows`, derived once
+/// per input, never per render.
 struct NutrientList<Row: View>: View {
     var title: String?
     let rows: [NutrientListRow]
@@ -271,11 +307,21 @@ struct NutrientList<Row: View>: View {
     }
 }
 
+extension View {
+    /// The list a `NutrientList` sits in. Its compact rows are shorter than the 44-point floor a list gives every row,
+    /// and only the list's own environment lowers that floor, not the section's.
+    func nutrientTableList() -> some View {
+        environment(\.defaultMinListRowHeight, 0)
+    }
+}
+
 /// One `VStack` per element, so the `List` counts one row each without building them and lays out only those on
 /// screen. A bare `switch` between a label and a row made it build every row on open and on each keypress.
 private struct NutrientListItem<Row: View>: View {
     let item: NutrientListRow
     let row: (Nutrient) -> Row
+
+    private static var indent: CGFloat { 16 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -286,9 +332,18 @@ private struct NutrientListItem<Row: View>: View {
                     .foregroundStyle(Theme.textSecondary)
                     .padding(.top, 6)
                     .accessibilityAddTraits(.isHeader)
-            case .nutrient(let nutrient):
-                row(nutrient)
+            case let .nutrient(nutrient, depth, _):
+                row(nutrient).padding(.leading, CGFloat(depth) * Self.indent)
             }
         }
+        .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+        .listRowSeparator(endsSection ? .visible : .hidden, edges: .bottom)
+        .listRowSeparator(.hidden, edges: .top)
+        // The rule spans the card whatever the last row's indent, as a label's section rules do.
+        .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
+    }
+
+    private var endsSection: Bool {
+        if case .nutrient(_, _, true) = item { true } else { false }
     }
 }

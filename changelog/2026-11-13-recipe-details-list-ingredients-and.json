@@ -1,0 +1,14 @@
+{
+	"title": "Recipe details list ingredients, and nutrient tables read like a Nutrition Facts label",
+	"description": "The logger's recipe detail gains Ingredients, its header and chips line up, and Show all nutrients is gone.",
+	"tasks": [
+		{
+			"id": "464a2407-9e89-4023-b43b-a393453b8bdb",
+			"title": "3 Nutrition Feedback: fix spacing, align header elements, standardize components"
+		},
+		{
+			"id": "ab2421dc-93be-4ae5-873c-598be3e0cd54",
+			"title": "2 Matcha Granola Bowl Feedback: update header layout, reduce spacing, indent nested items"
+		}
+	]
+}

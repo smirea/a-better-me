@@ -100,12 +100,13 @@ struct EntryEditor: View {
                     }
                 }
                 ImpactGauges(amounts: amounts, day: CalendarDay(time), excluding: entry.id).id(CalendarDay(time))
-                EntryIngredients(ingredients: FoodLog.ingredients(serving, of: entry, recipe: recipe))
+                IngredientsSection(FoodLog.ingredients(serving, of: entry, recipe: recipe))
                 NutrientList(title: "Nutrients", rows: nutrientRows(reported) { NutrientListRow.rows { reported.amount(of: $0.id) != nil } }) { nutrient in
                     NutrientRow(nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id))
                 }
             }
             .themedList()
+            .nutrientTableList()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
@@ -207,45 +208,6 @@ struct EntryEditor: View {
             $0.day = day
             $0.minute = minute
             $0.section = section
-        }
-    }
-}
-
-/// A logged recipe's ingredients at the amount in the editor, drawn as the recipe page draws them. An altered recipe's
-/// changed ingredient adds the recipe's amount under it, a removed one is struck through, and an added one is green, as
-/// its tile draws them. A recipe with none shows no section.
-private struct EntryIngredients: View {
-    let ingredients: [IngredientAlteration]
-
-    var body: some View {
-        if !ingredients.isEmpty {
-            ThemedSection(ingredients.isAltered ? "Ingredients, Altered" : "Ingredients") {
-                ForEach(ingredients) { line in
-                    switch (line.change, line.original, line.serving) {
-                    case let (.removed, original?, _):
-                        FoodRow(food: line.food, serving: original)
-                            .strikethrough()
-                            .opacity(0.5)
-                            .accessibilityLabel("Removed \(line.food.displayName), \(NutritionFormat.serving(original))")
-                    case let (.changed, original?, eaten?):
-                        VStack(alignment: .leading, spacing: 2) {
-                            FoodRow(food: line.food, serving: eaten)
-                            Text("Was \(NutritionFormat.serving(original))")
-                                .font(AppFont.rowDetail)
-                                .foregroundStyle(Theme.textSecondary)
-                                .padding(.leading, 40)
-                        }
-                        .accessibilityElement(children: .combine)
-                    case let (.added, _, eaten?):
-                        FoodRow(food: line.food, serving: eaten, titleColor: Theme.ratingGreen)
-                            .accessibilityLabel("Added \(line.food.displayName), \(NutritionFormat.serving(eaten))")
-                    case let (_, _, eaten?):
-                        FoodRow(food: line.food, serving: eaten)
-                    default:
-                        EmptyView()
-                    }
-                }
-            }
         }
     }
 }

@@ -99,6 +99,7 @@ private struct OverviewList: View {
             }
         }
         .themedList()
+        .nutrientTableList()
     }
 }
 
