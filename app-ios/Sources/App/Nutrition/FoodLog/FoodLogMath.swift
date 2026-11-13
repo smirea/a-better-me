@@ -359,7 +359,7 @@ enum FoodLog {
             return alterations.map { $0.scaled(by: serving.servings) }
         }
         guard let recipe else { return [] }
-        return ingredients(serving, of: recipe).map { IngredientAlteration(id: $0.id, food: $0.food, original: $0.serving, serving: $0.serving) }
+        return ingredients(serving, of: recipe).map(IngredientAlteration.init(kept:))
     }
 
     static func exploded(_ serving: Serving, of recipe: Recipe) -> [FoodPortion] {

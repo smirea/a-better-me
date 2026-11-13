@@ -16,7 +16,6 @@ struct RecipeDetailView: View {
     @Observe private var recipe: Recipe?
     @State private var sheet: LibraryEditorSheet?
     @State private var confirmingDelete = false
-    @State private var showAllNutrients = false
     /// The favorite this page saved, which a second tap removes.
     @State private var favorite: UUID?
     @State private var preparing = false
@@ -62,20 +61,14 @@ struct RecipeDetailView: View {
                 }
                 if !recipe.notes.isEmpty { Text(recipe.notes).font(AppFont.body(15)) }
             }
-            ThemedSection("Ingredients") {
-                ForEach(recipe.ingredients) { ingredient in
-                    FoodRow(food: ingredient.food, serving: ingredient.serving)
-                }
-            }
+            IngredientsSection(recipe.ingredients)
             if !recipe.steps.isEmpty {
                 StepsSection(steps: recipe.steps)
             }
-            ThemedSection {
-                Toggle("Show all nutrients", isOn: $showAllNutrients).tint(Theme.accent)
-            }
-            NutrientBreakdown(amounts: portion.amounts, showAll: showAllNutrients)
+            NutrientBreakdown(amounts: portion.amounts)
         }
         .themedList()
+        .nutrientTableList()
         .detailTitle(recipe.name)
         .sheet(item: $sheet) { $0.editor }
         .navigationDestination(isPresented: $preparing) { RecipePrepareView(recipe: recipe) }
@@ -164,15 +157,12 @@ struct RecipePrepareView: View {
                     }
                 }
             }
-            ThemedSection("Ingredients") {
+            IngredientsSection(RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: servings)) {
                 Stepper(value: $servings, in: 0.5...100, step: 0.5) {
                     Text("Instructions for \(NumberText.plain(servings)) \(servings == 1 ? "serving" : "servings")")
                         .font(AppFont.rowTitle)
                 }
                 .accessibilityValue("\(NumberText.plain(servings)) servings")
-                ForEach(RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: servings)) { ingredient in
-                    FoodRow(food: ingredient.food, serving: ingredient.serving)
-                }
             }
             if recipe.steps.isEmpty {
                 ThemedSection {
@@ -188,6 +178,7 @@ struct RecipePrepareView: View {
             NutrientBreakdown(amounts: perServing)
         }
         .themedList()
+        .nutrientTableList()
         .detailTitle(recipe.name)
         .feedback(self)
     }

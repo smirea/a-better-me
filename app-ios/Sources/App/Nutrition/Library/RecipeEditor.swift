@@ -39,7 +39,7 @@ struct RecipeEditor: View {
                 ingredients(issues)
                 nutrition(preview)
                 if showAllNutrients {
-                    NutrientBreakdown(amounts: perServing ? preview.nutrition.nutrients : RecipeMath.total(preview.ingredients), showAll: true)
+                    NutrientBreakdown(amounts: perServing ? preview.nutrition.nutrients : RecipeMath.total(preview.ingredients))
                 }
                 preparation(issues)
                 steps
@@ -51,6 +51,7 @@ struct RecipeEditor: View {
                 }
             }
             .themedList()
+            .nutrientTableList()
             .scrollDismissesKeyboard(.interactively)
             .focusToolbar(draft.focusOrder, focus: $focus)
             .detailTitle(recipeID == nil ? "Create Recipe" : "Edit Recipe")
