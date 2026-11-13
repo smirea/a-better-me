@@ -27,4 +27,20 @@ struct ChangelogTests {
         #expect(Changelog.taskURL("2ca9f3dd-67c0-4ffc-8670-266407c5df7b").absoluteString
             == "https://procrastimate.stf.lol/inbox?task=2ca9f3dd-67c0-4ffc-8670-266407c5df7b")
     }
+
+    @Test func buildTimeReadsTheUTCArchiveTime() throws {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = .gmt
+        let made = try #require(Changelog.buildTime("2026.1112.212004"))
+        #expect(utc.dateComponents([.year, .month, .day, .hour, .minute, .second], from: made)
+            == DateComponents(year: 2026, month: 11, day: 12, hour: 21, minute: 20, second: 4))
+
+        let unpadded = try #require(Changelog.buildTime("2026.105.426"))
+        #expect(utc.dateComponents([.month, .day, .hour, .minute, .second], from: unpadded)
+            == DateComponents(month: 1, day: 5, hour: 0, minute: 4, second: 26))
+    }
+
+    @Test func aDevBuildHasNoTime() {
+        #expect(Changelog.buildTime("dev") == nil)
+    }
 }
