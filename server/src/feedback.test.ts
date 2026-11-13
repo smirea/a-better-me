@@ -112,6 +112,20 @@ test('a report too long for the body goes into comments that join back into the 
 	expect(parts.join('')).toBe(JSON.stringify(long));
 });
 
+test('items too long for an issue are cut in the body and kept whole in the comments', async () => {
+	const calls = fakeGitHub();
+	const long = { ...report, items: [{ ...report.items[0]!, text: 'y'.repeat(66_000) }] };
+	expect((await handle(post(DEV_OWNER_TOKEN, long), app)).status).toBe(201);
+
+	const issue = JSON.parse(calls.find(call => call.url.endsWith('/issues'))!.body);
+	expect(issue.body.length).toBeLessThanOrEqual(65_000);
+	expect(issue.body).toEndWith('…cut here. `feedback.json` in the comments has every item in full.');
+	const parts = calls
+		.filter(call => call.url.endsWith('/issues/7/comments'))
+		.map(call => /```json\n([\s\S]*)\n```/.exec(JSON.parse(call.body).body)![1]);
+	expect(parts.join('')).toBe(JSON.stringify(long));
+});
+
 test('a GitHub failure is a 502 whose message the editor shows', async () => {
 	globalThis.fetch = (async () => new Response('Bad credentials', { status: 401 })) as unknown as typeof fetch;
 	const response = await handle(post(DEV_OWNER_TOKEN), app);

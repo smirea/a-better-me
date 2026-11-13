@@ -62,6 +62,11 @@ function issueBody(id: string, title: string, image: string, report: Report) {
 	return [`![${title}](${image})`, ...items, environment, `<!-- feedback post ${id} -->`].filter(Boolean).join('\n\n');
 }
 
+const CUT = '\n\n…cut here. `feedback.json` in the comments has every item in full.';
+
+/** Items' own text can pass the limit, and GitHub rejects the issue then; the report in the comments keeps all of it. */
+const bounded = (body: string) => (body.length <= BODY_LIMIT ? body : body.slice(0, BODY_LIMIT - CUT.length) + CUT);
+
 /** Runs after the owner check in `api.ts`. */
 export async function fileFeedbackIssue(request: Request, token: string): Promise<Response> {
 	const form = await request.formData().catch(() => undefined);
@@ -87,7 +92,7 @@ export async function fileFeedbackIssue(request: Request, token: string): Promis
 			token,
 			'POST',
 			`${api}/issues`,
-			JSON.stringify({ title, body: whole.length <= BODY_LIMIT ? whole : body, labels: LABELS }),
+			JSON.stringify({ title, body: whole.length <= BODY_LIMIT ? whole : bounded(body), labels: LABELS }),
 		);
 		// A report too long for the issue's body goes into comments, in parts that join back into the file.
 		if (whole.length > BODY_LIMIT) {
