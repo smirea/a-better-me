@@ -51,10 +51,7 @@ struct DayPage: View {
                 let column = self.column
                 FillHeight(minHeight: isSections ? pageHeight - state.header.height - Self.bottomPadding : 0) {
                     VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
-                            if isSections, index > 0, group.rows.isEmpty || groups[index - 1].rows.isEmpty {
-                                Spacer(minLength: 0)
-                            }
+                        ForEach(groups) { group in
                             SlotRow(
                                 day: day, group: group, sections: settings.nutrition.mealSections, pillWidth: column.pillWidth,
                                 showsTotals: timeline.hourlyTotals, rating: settings.nutrition.mealRating,
@@ -199,9 +196,9 @@ struct ShownDayEntries: View {
     }
 }
 
-/// Offers its content at least `minHeight`, so the spacers around a short day's empty sections share what the page
-/// leaves; a day that scrolls is taller, so its spacers get nothing. `.frame(minHeight:)` sized itself to the height but
-/// still laid the stack out at its ideal height, leaving the sections bunched at the top.
+/// Offers its content at least `minHeight`, so a short day's empty sections share what the page leaves around their
+/// Log Food buttons; a day that scrolls is taller, so they get only the buttons' height. `.frame(minHeight:)` sized
+/// itself to the height but still laid the stack out at its ideal height, leaving the sections bunched at the top.
 private struct FillHeight: Layout {
     let minHeight: CGFloat
 
@@ -228,7 +225,8 @@ private struct TimelineColumn {
 
 /// The hour's or section's pill, its + (a paste button while pasting inline, a move button under Premove), and its
 /// Meal Rating tag, and its macro totals. Tapping the pill selects its entries; under the long-press setting, holding it
-/// adds food there.
+/// adds food there. An empty section also takes a share of the page's leftover height under its pill, with a big Log
+/// Food button centered in it that does what the + does.
 private struct SlotRow: View {
     static let spacing: CGFloat = 6
 
@@ -246,6 +244,16 @@ private struct SlotRow: View {
     @State private var explainsRating = false
 
     var body: some View {
+        VStack(spacing: 0) {
+            slotRow
+            if case .section = group.slot, group.rows.isEmpty {
+                emptySection(group.slot.label)
+            }
+        }
+        .feedback(self)
+    }
+
+    private var slotRow: some View {
         Group {
             let label = group.slot.label
             if state.pending?.inline == true {
@@ -259,7 +267,32 @@ private struct SlotRow: View {
                 row(pill: interactivePill(label), control: control(label))
             }
         }
-        .feedback(self)
+    }
+
+    /// Mirrors the +: it pastes while pasting inline, moves the selection under Premove, and is disabled in select mode
+    /// otherwise.
+    private func emptySection(_ label: String) -> some View {
+        Group {
+            if state.pending?.inline == true {
+                Button("Paste Here", systemImage: "doc.on.clipboard") { state.paste(to: target, in: store) }
+                    .accessibilityLabel("Paste into \(label)")
+            } else if premove, state.selecting, state.pending == nil {
+                Button("Move Here", systemImage: "arrow.down") {
+                    state.relocate(state.selectedEntries, .move, to: target, in: store)
+                }
+                .accessibilityLabel("Move into \(label)")
+                .disabled(state.selection.isEmpty)
+            } else {
+                Button("Log Food", systemImage: "plus") { requestLog() }
+                    .accessibilityLabel("Log food at \(label)")
+                    .disabled(state.selecting)
+            }
+        }
+        .buttonStyle(.glass)
+        .font(AppFont.headline())
+        .foregroundStyle(Theme.textPrimary)
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// The minute food added here lands at: the hour's start, or for a section now when today's clock is inside it,
