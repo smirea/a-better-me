@@ -16,6 +16,27 @@ struct Changelog: Decodable, Sendable {
         let tasks: [String]
         /// The first TestFlight build that held the change.
         let build: String
+        /// When `build` was archived, in local time, with the date when that local day isn't `date`. Formatted while
+        /// decoding, off the main thread, so a row only reads it.
+        let buildTimeLabel: String?
+
+        private enum CodingKeys: String, CodingKey { case id, date, title, description, tasks, build }
+
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(String.self, forKey: .id)
+            let date = try container.decode(CalendarDay.self, forKey: .date)
+            self.date = date
+            title = try container.decode(String.self, forKey: .title)
+            description = try container.decodeIfPresent(String.self, forKey: .description)
+            tasks = try container.decode([String].self, forKey: .tasks)
+            build = try container.decode(String.self, forKey: .build)
+            buildTimeLabel = Changelog.buildTime(build).map { made in
+                made.formatted(CalendarDay(made) == date
+                    ? .dateTime.hour().minute()
+                    : .dateTime.month(.abbreviated).day().hour().minute())
+            }
+        }
     }
 
     struct Day: Identifiable, Sendable {
@@ -162,11 +183,7 @@ private struct BuildLine: View {
         HStack {
             Text(entry.build)
             Spacer()
-            if let made = Changelog.buildTime(entry.build) {
-                Text(made, format: CalendarDay(made) == entry.date
-                    ? .dateTime.hour().minute()
-                    : .dateTime.month(.abbreviated).day().hour().minute())
-            }
+            if let time = entry.buildTimeLabel { Text(time) }
         }
         .font(AppFont.caption(11))
         .foregroundStyle(Theme.textTertiary)

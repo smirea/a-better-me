@@ -21,6 +21,8 @@ struct ChangelogTests {
         #expect(days[0].title == "Today")
         #expect(days[1].title == "Yesterday")
         #expect(days[0].entries[1].description == "Detail.")
+        #expect(days[0].entries[0].buildTimeLabel != nil)
+        #expect(changelog.entries.allSatisfy { $0.buildTimeLabel != nil })
     }
 
     @Test func taskLinksOpenProcrastiMate() {
@@ -40,7 +42,15 @@ struct ChangelogTests {
             == DateComponents(month: 1, day: 5, hour: 0, minute: 4, second: 26))
     }
 
-    @Test func aDevBuildHasNoTime() {
+    @Test func aDevBuildHasNoTime() throws {
         #expect(Changelog.buildTime("dev") == nil)
+        let entry = try JSONDecoder().decode(Changelog.Entry.self, from: Data(#"{"id":"x","date":"2026-11-12","title":"X","tasks":[],"build":"dev"}"#.utf8))
+        #expect(entry.buildTimeLabel == nil)
+    }
+
+    @Test func aBuildFromALaterDayNamesItsDate() throws {
+        let entry = try JSONDecoder().decode(Changelog.Entry.self, from: Data(#"{"id":"x","date":"2026-11-01","title":"X","tasks":[],"build":"2026.1112.212004"}"#.utf8))
+        let made = try #require(Changelog.buildTime(entry.build))
+        #expect(entry.buildTimeLabel == made.formatted(.dateTime.month(.abbreviated).day().hour().minute()))
     }
 }
