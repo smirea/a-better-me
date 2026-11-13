@@ -3,7 +3,7 @@ import SwiftUI
 
 /// The sheet over the timeline: the entry's icon and full name, calories and macros, and amount in one card, then Remove,
 /// Favorite, Duplicate, and for a recipe Explode, its day, time, and in the Sections display its section, the share of
-/// the day's targets it uses, and its nutrients. Done saves the amount, day, time, and section.
+/// the day's targets it uses, a recipe's ingredients, and its nutrients. Done saves the amount, day, time, and section.
 struct EntryEditor: View {
     let entry: FoodEntry
 
@@ -14,6 +14,8 @@ struct EntryEditor: View {
     @Observe(NutrientGoal.all) private var goals
     @Observe(AppSettings.current) private var settings
     @Observe(BodyWeight.latest) private var weight
+    /// A logged recipe's recipe as it is now, which lists the ingredients, as Explode reads them; nil once deleted.
+    @Observe private var recipe: Recipe?
     @State private var serving: Serving
     @State private var quantity: String
     @State private var time: Date
@@ -33,6 +35,8 @@ struct EntryEditor: View {
         _time = State(initialValue: entry.day.date(atMinute: entry.minute))
         _section = State(initialValue: entry.section)
         _icon = State(initialValue: entry.food.icon)
+        let recipeID = entry.food.source == .recipe ? entry.food.foodID.flatMap(UUID.init(uuidString:)) : nil
+        _recipe = Observe(recipeID.map(Recipe.one) ?? DatabaseQuery(nil) { _ in nil })
     }
 
     private var food: FoodSnapshot {
@@ -95,6 +99,7 @@ struct EntryEditor: View {
                     }
                 }
                 ImpactGauges(amounts: amounts, day: CalendarDay(time), excluding: entry.id).id(CalendarDay(time))
+                if let recipe { EntryIngredients(ingredients: FoodLog.ingredients(serving, of: recipe)) }
                 NutrientList(title: "Nutrients", rows: nutrientRows(reported) { NutrientListRow.rows { reported.amount(of: $0.id) != nil } }) { nutrient in
                     NutrientRow(nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id))
                 }
@@ -198,6 +203,20 @@ struct EntryEditor: View {
             $0.day = day
             $0.minute = minute
             $0.section = section
+        }
+    }
+}
+
+/// A logged recipe's ingredients at the amount in the editor, drawn as the recipe page draws them. A recipe with none
+/// shows no section.
+private struct EntryIngredients: View {
+    let ingredients: [RecipeIngredient]
+
+    var body: some View {
+        if !ingredients.isEmpty {
+            ThemedSection("Ingredients") {
+                ForEach(ingredients) { FoodRow(food: $0.food, serving: $0.serving) }
+            }
         }
     }
 }
