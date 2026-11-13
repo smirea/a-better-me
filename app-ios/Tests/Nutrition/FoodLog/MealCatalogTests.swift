@@ -183,12 +183,18 @@ struct MealCatalogTests {
     }
 
     /// The real model on the owner's breakfast, when this simulator or device can run it (CI's simulators can't).
+    /// A CI runner once reported the model available and then failed to load its assets (ModelManagerError 1026), so
+    /// a load failure from the framework is a known, intermittent issue of the machine rather than of the naming.
     @Test(.enabled(if: SystemLanguageModel.default.isAvailable))
     func theOnDeviceModelNamesAMealInAFewWords() async throws {
-        let name = MealCatalog.cleaned(try await OnDeviceMealNameModel().name(for: [
-            "Matcha latte, 1 cup", "Whole milk, 120 ml", "Oat milk, 100 ml", "Granola, 45 g", "Chia seeds, 1 tbsp", "Blueberries, 0.5 cup",
-        ]))
-        print("Named the breakfast \(name)")
-        #expect((1...5).contains(name.split(separator: " ").count))
+        try await withKnownIssue("The on-device model can be listed before its assets load", isIntermittent: true) {
+            let name = MealCatalog.cleaned(try await OnDeviceMealNameModel().name(for: [
+                "Matcha latte, 1 cup", "Whole milk, 120 ml", "Oat milk, 100 ml", "Granola, 45 g", "Chia seeds, 1 tbsp", "Blueberries, 0.5 cup",
+            ]))
+            print("Named the breakfast \(name)")
+            #expect((1...5).contains(name.split(separator: " ").count))
+        } matching: { issue in
+            (issue.error as NSError?)?.domain == "FoundationModels.LanguageModelError"
+        }
     }
 }
