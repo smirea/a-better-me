@@ -372,6 +372,7 @@ private struct MetricChart: View, @MainActor Equatable {
         // A line keeps the points either side of the slice, whose segments can cross it however far apart they are.
         let points = plot.drawn.within(shown, neighbours: tab.style == .line)
         let style = labelStyle
+        let slot = barSlot
         Chart {
             if let line = tab.overlay {
                 ForEach(plot.overlay.within(shown, neighbours: true), id: \.date) { point in
@@ -389,7 +390,7 @@ private struct MetricChart: View, @MainActor Equatable {
                 switch tab.style {
                 case .bar:
                     if let stepGoal {
-                        stepBar(point, goal: stepGoal, style: style)
+                        stepBar(point, goal: stepGoal, style: style, slot: slot)
                     } else {
                         BarMark(x: .value("Date", point.date, unit: plot.drawnUnit), y: .value(tab.title, point.value))
                             .foregroundStyle(tab.color)
@@ -437,7 +438,7 @@ private struct MetricChart: View, @MainActor Equatable {
     /// foot. The labels are the bar's own annotations, so they move with it as the chart scrolls; a count masks the goal
     /// line where it crosses it.
     @ChartContentBuilder
-    private func stepBar(_ point: DatedValue, goal: Int, style: BarLabelStyle) -> some ChartContent {
+    private func stepBar(_ point: DatedValue, goal: Int, style: BarLabelStyle, slot: CGFloat) -> some ChartContent {
         let bar = BarMark(x: .value("Date", point.date, unit: plot.drawnUnit), y: .value(tab.title, point.value), width: .ratio(StepBarLabels.barRatio))
             .foregroundStyle(StepGoal.tier(point.value, goal: goal).color)
             .clipShape(UnevenRoundedRectangle(topLeadingRadius: 8, topTrailingRadius: 8, style: .continuous))
@@ -449,8 +450,9 @@ private struct MetricChart: View, @MainActor Equatable {
                     StepBarLabels.count(style.text(point.value), color: StepGoal.tier(point.value, goal: goal).color)
                 }
                 .annotation(position: .overlay, alignment: .bottom, spacing: 0) {
-                    if style == .detailed {
-                        let detail = StepBarLabels.detail(stepBar(point))
+                    let labels = stepBar(point)
+                    if style == .detailed, StepBarLabels.fitsInside(labels, slot: slot) {
+                        let detail = StepBarLabels.detail(labels)
                         // Swift Charts hands an overlay annotation a zero target size, so the bar's height comes from the scale.
                         if plotHeight * point.value / yDomain.upperBound >= detail.height + 10 {
                             detail.view.padding(.bottom, 5)
@@ -464,18 +466,20 @@ private struct MetricChart: View, @MainActor Equatable {
         StepBar(
             steps: point.value,
             flights: plot.steps?.flights[point.date].map(\.wholeText) ?? "",
-            distance: plot.steps?.meters[point.date].map { distanceUnit.text(meters: $0, separator: "") } ?? ""
+            distance: plot.steps?.meters[point.date].map { StepBarLabels.distance(meters: $0, unit: distanceUnit) } ?? ""
         )
     }
 
     /// How much every bar's labels show, the same across the whole history so labels never change mid-scroll.
     private var labelStyle: BarLabelStyle {
         guard stepGoal != nil, width > 0, let steps = plot.steps else { return .hidden }
-        let slot = (width / plot.visibleBars).rounded()
+        let slot = barSlot
         return styles(StepLabelKey(slot: slot, unit: distanceUnit, points: plot.drawn, steps: steps)) {
             StepBarLabels.style(plot.drawn.map(stepBar), slot: slot)
         }
     }
+
+    private var barSlot: CGFloat { (width / plot.visibleBars).rounded() }
 
     /// The labels the shown window's length fits, whatever range and averaging made it: 1W averaged by month shows a
     /// month.

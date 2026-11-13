@@ -33,8 +33,12 @@ enum HealthSeed {
                 samples.append(HKQuantitySample(type: bodyMass, quantity: HKQuantity(unit: .gramUnit(with: .kilo), doubleValue: (kg * 10).rounded() / 10), start: at(day, hour: 7), end: at(day, hour: 7)))
             }
         }
-        // Yesterday and the two days before it meet the default goal, so the Steps screen shows a streak.
-        func steps(_ offset: Int) -> Double { (1...3).contains(offset) ? 10_400 + Double(offset * 1_337) : 4000 + Double((offset * 2731) % 9000) }
+        // Yesterday and the two days before it meet the default goal, so the Steps screen shows a streak. A hike months
+        // back is the kind of outlier a real history holds, whose distance is wider than a typical bar's.
+        let hike = 150
+        func steps(_ offset: Int) -> Double {
+            offset == hike ? 31_200 : (1...3).contains(offset) ? 10_400 + Double(offset * 1_337) : 4000 + Double((offset * 2731) % 9000)
+        }
         let stepCount = HKQuantityType(.stepCount)
         if try await isEmpty(stepCount, store) {
             for (offset, day) in days { samples.append(count(stepCount, steps(offset), at(day, hour: 12))) }
@@ -48,8 +52,8 @@ enum HealthSeed {
         }
         let flightsClimbed = HKQuantityType(.flightsClimbed)
         if try await isEmpty(flightsClimbed, store) {
-            for (offset, day) in days where (offset * 7) % 17 > 0 {
-                samples.append(count(flightsClimbed, Double((offset * 7) % 17), at(day, hour: 12)))
+            for (offset, day) in days where offset == hike || (offset * 7) % 17 > 0 {
+                samples.append(count(flightsClimbed, offset == hike ? 112 : Double((offset * 7) % 17), at(day, hour: 12)))
             }
         }
         if !samples.isEmpty { try await store.save(samples) }
