@@ -7,29 +7,29 @@ extension MealRating.Tier {
         case .excellent: Theme.ratingBlue
         case .great, .good: Theme.ratingGreen
         case .fair: Theme.ratingYellow
-        case .poor: Theme.ratingRed
+        case .poor, .dire: Theme.ratingRed
         }
     }
 }
 
-/// "13:1" in its tier's color, with a skull past the formula's dire line. Without text it is a dot in the same colors,
+/// "13:1" in its tier's color, with a skull in the dire tier. Without text it is a dot in the same colors,
 /// for a row with no width to spare.
 struct MealRatingTag: View {
     let text: String?
     let tier: MealRating.Tier
-    var isDire = false
+    var showsSkull = true
 
-    init(text: String?, tier: MealRating.Tier, isDire: Bool = false) {
+    init(text: String?, tier: MealRating.Tier, showsSkull: Bool = true) {
         self.text = text
         self.tier = tier
-        self.isDire = isDire
+        self.showsSkull = showsSkull
     }
 
     init(_ score: MealRating.Score, showsText: Bool = true) {
-        self.init(text: showsText ? score.ratioText : nil, tier: score.tier, isDire: score.isDire)
+        self.init(text: showsText ? score.ratioText : nil, tier: score.tier)
     }
 
-    private var isAnimated: Bool { tier.isAnimated(dire: isDire) }
+    private var isAnimated: Bool { tier.isAnimated }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -58,11 +58,17 @@ struct MealRatingTag: View {
                         Capsule().strokeBorder(color.opacity(isAnimated ? 1 : 0.5), lineWidth: isAnimated ? 1.5 : 1)
                     }
                 }
-            if isDire {
-                // No SF Symbol draws a skull; multiplying the emoji's white by red keeps its dark eyes.
-                Text(verbatim: "💀").font(.system(size: 13)).colorMultiply(Theme.ratingRed)
+            if tier == .dire, showsSkull {
+                MealRatingSkull()
             }
         }
+    }
+}
+
+/// No SF Symbol draws a skull; multiplying the emoji's white by red keeps its dark eyes.
+private struct MealRatingSkull: View {
+    var body: some View {
+        Text(verbatim: "💀").font(.system(size: 13)).colorMultiply(Theme.ratingRed)
     }
 }
 
@@ -209,19 +215,10 @@ struct MealRatingSheet: View {
                     }
                     .padding(.vertical, 4)
                 }
-                ThemedSection(formula.title, footer: "Over \(formula.direAbove):1 the tag also gets a skull and a running border.") {
-                    ForEach(MealRating.Tier.allCases, id: \.self) { tier in
-                        HStack(spacing: 12) {
-                            MealRatingTag(text: formula.range(of: tier), tier: tier)
-                                .frame(width: 72, alignment: .leading)
-                            Text(tier.title).font(AppFont.rowTitle)
-                            Spacer()
-                            if tier == score?.tier {
-                                Text(meal).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-                            }
-                        }
-                        .accessibilityElement(children: .combine)
-                    }
+                ThemedSection(formula.title) {
+                    MealRatingScale(formula: formula, meal: meal, current: score?.tier)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
                 }
                 MealRatingSettings(footer: nil)
             }
@@ -235,6 +232,51 @@ struct MealRatingSheet: View {
         }
         .presentationDetents([.medium, .large])
         .feedback(self)
+    }
+}
+
+/// Every tier as a marker on one vertical line, best at the top, like a timeline with no card behind it (feedback
+/// 2026-11-13). Each row draws its own stretch of the line, so the rows' heights can follow the text size.
+private struct MealRatingScale: View {
+    let formula: MealRating.Formula
+    let meal: String
+    let current: MealRating.Tier?
+
+    /// Wide enough for ">20:1" with the skull beside it, at the larger text sizes.
+    @ScaledMetric(relativeTo: .body) private var markerWidth: CGFloat = 100
+
+    var body: some View {
+        let tiers = MealRating.Tier.allCases
+        VStack(spacing: 0) {
+            ForEach(tiers, id: \.self) { tier in
+                HStack(spacing: 12) {
+                    HStack(spacing: 0) {
+                        // A hidden skull on the other side keeps the dire pill centered on the line like the rest.
+                        if tier == .dire { MealRatingSkull().hidden() }
+                        MealRatingTag(text: formula.range(of: tier), tier: tier, showsSkull: false)
+                            .padding(3)
+                            .background(Theme.background, in: .capsule)
+                        if tier == .dire { MealRatingSkull() }
+                    }
+                    .frame(width: markerWidth)
+                    Text(tier.title).font(AppFont.rowTitle)
+                    Spacer()
+                    if tier == current {
+                        Text(meal).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+                    }
+                }
+                .frame(minHeight: 44)
+                .background(alignment: .leading) {
+                    VStack(spacing: 0) {
+                        Rectangle().fill(tier == tiers.first ? .clear : Theme.textSecondary.opacity(0.4))
+                        Rectangle().fill(tier == tiers.last ? .clear : Theme.textSecondary.opacity(0.4))
+                    }
+                    .frame(width: 2)
+                    .offset(x: markerWidth / 2 - 1)
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
     }
 }
 
