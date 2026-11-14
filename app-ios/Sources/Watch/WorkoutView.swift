@@ -1,5 +1,4 @@
 import SwiftUI
-import WatchKit
 
 /// The workout in three pages, like the Workout app: controls, the current set or rest, and stats. It opens on the
 /// middle page and comes back to it whenever a rest starts or ends.
@@ -23,7 +22,7 @@ struct WorkoutView: View {
     }
 }
 
-/// The current set, or rest while it runs. The rest ends here on its own time, with a tap on the wrist.
+/// The current set, or rest while it runs. The rest ends here on its own time; `WatchModel` taps the wrist.
 private struct MainPage: View {
     let workout: WatchWorkout
     @Binding var showingExercises: Bool
@@ -58,8 +57,6 @@ private struct MainPage: View {
             try? await Task.sleep(for: .seconds(max(0, rest.endsAt.timeIntervalSinceNow)))
             guard !Task.isCancelled else { return }
             restOver = true
-            let haptic = RestEndHaptic.device(vibrate: workout.rules.rest.vibrate, watchRecords: WatchModel.shared.recording != nil)
-            if haptic == .watch { WKInterfaceDevice.current().play(.click) }
         }
     }
 }

@@ -1,8 +1,7 @@
 import Foundation
 
-/// Everything the phone and the watch app say to each other. During a workout it travels over the mirrored
-/// `HKWorkoutSession`'s data channel; otherwise, and when no session is mirrored, over WatchConnectivity. Both ends may
-/// run different builds for a moment, so like the live workout contract it only grows.
+/// Everything the phone and the watch app say to each other, over WatchConnectivity. Both ends may run different
+/// builds for a moment, so like the live workout contract it only grows.
 enum WatchMessage: Codable, Sendable {
     // Phone to watch.
     /// The workout in progress, or the one that just ended with `endedAt` set, and the watch events the phone has
@@ -17,7 +16,7 @@ enum WatchMessage: Codable, Sendable {
     /// The watch's outbox, oldest first, resent until the phone acknowledges each event.
     case events([WatchEvent])
     case recorded(sessionID: UUID, WorkoutHealthSummary)
-    /// The watch records the workout. Sent over WatchConnectivity, since a mirrored session can fail to reach the phone.
+    /// The watch records the workout.
     case recordingStarted
     /// The watch recording's numbers, for the phone and its Live Activity when no mirror carries them.
     case stats(WorkoutRecording.Stats)

@@ -3,8 +3,7 @@ import HealthKit
 import os
 
 /// One `HKWorkoutSession` and its live builder: the watch's own recording, the phone's own when no watch records, or
-/// the phone's mirror of the watch's. The recording device saves the workout; a mirror only reads its numbers and
-/// carries messages.
+/// the phone's mirror of the watch's. The recording device saves the workout; a mirror only reads its numbers.
 @MainActor
 final class WorkoutRecording: NSObject {
     let session: HKWorkoutSession
@@ -14,7 +13,6 @@ final class WorkoutRecording: NSObject {
 
     private(set) var stats = Stats()
     var onStats: ((Stats) -> Void)?
-    var onMessage: ((WatchMessage) -> Void)?
     /// The session ended, failed, or lost its remote device.
     var onEnd: (() -> Void)?
 
@@ -95,10 +93,6 @@ final class WorkoutRecording: NSObject {
 
     func resume() { if session.state == .paused { session.resume() } }
 
-    func send(_ message: WatchMessage) async throws {
-        try await session.sendToRemoteWorkoutSession(data: message.encoded())
-    }
-
     /// Ends the session and saves the workout with the plan's segments, name, and effort. The session id is the sync
     /// identifier, so saving the same workout again replaces it instead of adding a second one.
     func finish(_ plan: WorkoutRecordingPlan, source: WorkoutHealthSummary.Source) async throws -> WorkoutHealthSummary {
@@ -176,11 +170,6 @@ extension WorkoutRecording: HKWorkoutSessionDelegate, HKLiveWorkoutBuilderDelega
 
     nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: any Error) {
         Self.log.error("Workout session failed: \(String(describing: error))")
-    }
-
-    nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didReceiveDataFromRemoteWorkoutSession data: [Data]) {
-        let messages = data.compactMap { try? WatchMessage($0) }
-        Task { @MainActor in messages.forEach { onMessage?($0) } }
     }
 
     nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didDisconnectFromRemoteDeviceWithError error: (any Error)?) {

@@ -24,10 +24,9 @@ final class WatchModel: NSObject {
     private(set) var actedRows: [UUID] = []
 
     @ObservationIgnored let healthStore = HKHealthStore()
-    /// Set once a message arrives over the recording's data channel, which proves the phone holds its mirror. Until
-    /// then everything goes over WatchConnectivity: a mirror can start here and never reach the phone.
-    @ObservationIgnored private var isMirrorConfirmed = false
     @ObservationIgnored private var lastStatsSent = Date.distantPast
+    /// The rest the wrist is tapped at the end of, whoever started it.
+    @ObservationIgnored private var restEnd: (rest: LiveRest, task: Task<Void, Never>)?
     @ObservationIgnored private var connectivityTasks: [WKWatchConnectivityRefreshBackgroundTask] = []
     @ObservationIgnored private var pendingContentObservation: NSKeyValueObservation?
     /// A save outlives the delivery that triggered it; the refresh task stays held until it lands.
@@ -137,7 +136,7 @@ final class WatchModel: NSObject {
 
     private func flush() {
         guard !replica.outbox.isEmpty else { return }
-        send(.events(replica.outbox))
+        sendOverConnectivity(.events(replica.outbox), queued: false)
     }
 
     private func refresh() {
@@ -145,8 +144,24 @@ final class WatchModel: NSObject {
         if next != workout { workout = next }
         if let workout { recording?.session.follow(paused: workout.pausedAt != nil) }
         if let workout, workout.isFinished { saveRecording(for: workout) }
+        followRest()
         persist()
         recordIfNeeded()
+    }
+
+    /// Taps the wrist when the rest on screen ends, from the model rather than the view, so it fires with the wrist down
+    /// while the workout session keeps the app running.
+    private func followRest() {
+        let rest = workout.flatMap { $0.isFinished || $0.pausedAt != nil ? nil : $0.rest }
+        guard rest != restEnd?.rest else { return }
+        restEnd?.task.cancel()
+        guard let rest, rest.endsAt > .now else { return restEnd = nil }
+        restEnd = (rest, Task { [weak self] in
+            try? await Task.sleep(for: .seconds(rest.endsAt.timeIntervalSinceNow))
+            guard !Task.isCancelled, let self, let workout = self.workout else { return }
+            guard RestEndHaptic.device(vibrate: workout.rules.rest.vibrate, watchRecords: self.recording != nil) == .watch else { return }
+            WKInterfaceDevice.current().play(.notification)
+        })
     }
 
     /// The phone started a workout and launched this app to record it.
@@ -210,13 +225,8 @@ final class WatchModel: NSObject {
 
     private func adopt(_ recording: WorkoutRecording) {
         self.recording = recording
-        isMirrorConfirmed = false
         sendOverConnectivity(.recordingStarted, queued: true)
         recording.onStats = { [weak self] in self?.receive($0) }
-        recording.onMessage = { [weak self] in
-            self?.isMirrorConfirmed = true
-            self?.receive($0)
-        }
         recording.onEnd = { [weak self, weak recording] in
             guard let self, recording != nil, self.recording === recording else { return }
             self.recording = nil
@@ -225,10 +235,11 @@ final class WatchModel: NSObject {
         if let workout { recording.session.follow(paused: workout.pausedAt != nil) }
     }
 
-    /// The phone shows heart rate too; without a mirror it only hears it from here, every few seconds.
+    /// The phone shows heart rate too. A phone without the mirror only hears it from here, every few seconds; one with
+    /// the mirror reads its own copy and ignores these.
     private func receive(_ stats: WorkoutRecording.Stats) {
         self.stats = stats
-        guard !isMirrorConfirmed, Date.now.timeIntervalSince(lastStatsSent) >= 5 else { return }
+        guard Date.now.timeIntervalSince(lastStatsSent) >= 5 else { return }
         lastStatsSent = .now
         sendOverConnectivity(.stats(stats), queued: false)
     }
@@ -283,14 +294,6 @@ final class WatchModel: NSObject {
         guard let birth = try? healthStore.dateOfBirthComponents().date,
               let age = Calendar.current.dateComponents([.year], from: birth, to: .now).year else { return }
         maxHeartRate = Double(220 - age)
-    }
-
-    /// In a mirrored workout the data channel is fastest; WatchConnectivity covers everything else.
-    private func send(_ message: WatchMessage) {
-        guard let recording, recording.isRunning, isMirrorConfirmed else { return sendOverConnectivity(message, queued: false) }
-        Task {
-            do { try await recording.send(message) } catch { sendOverConnectivity(message, queued: false) }
-        }
     }
 
     /// A message that must arrive goes as queued user info when the phone is unreachable, which WatchConnectivity
@@ -358,6 +361,7 @@ final class WatchModel: NSObject {
         replica = saved.replica
         actedRows = saved.actedRows ?? []
         workout = replica.workout
+        followRest()
     }
 }
 
