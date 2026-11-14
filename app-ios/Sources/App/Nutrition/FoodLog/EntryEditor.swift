@@ -1,9 +1,10 @@
 import Feedback
 import SwiftUI
 
-/// The sheet over the timeline: the entry's icon and full name, calories and macros, and amount in one card, then Remove,
-/// Favorite, Duplicate, and for a recipe Explode, its day, time, and in the Sections display its section, the share of
-/// the day's targets it uses, a recipe's ingredients, and its nutrients. Done saves the amount, day, time, and section.
+/// The sheet over the timeline: the entry's icon and full name and its calories and macros flat on the sheet, its amount,
+/// then Remove, Favorite, Duplicate, and Update for a food or Explode for a recipe, its day, time, and in the Sections
+/// display its section, the share of the day's targets it uses, a recipe's ingredients, and its nutrients. Done saves the
+/// amount, day, time, and section; Update saves the food at once.
 struct EntryEditor: View {
     let entry: FoodEntry
 
@@ -23,9 +24,11 @@ struct EntryEditor: View {
     @State private var section: String?
     /// The favorite this sheet saved, which a second tap removes.
     @State private var favorite: UUID?
-    /// The food's icon, which Edit Icon changes on the food and everything logged of it at once (`LocalStore.setIcon`).
-    @State private var icon: String?
+    /// The entry's food, which Update corrects and a tap on its icon re-icons on the food and everything logged of it
+    /// at once (`LocalStore.setIcon`).
+    @State private var food: FoodSnapshot
     @State private var choosingIcon = false
+    @State private var updating: FoodUpdate?
     @State private var nutrientRows = ViewMemo<NutrientAmounts, [NutrientListRow]>()
 
     init(entry: FoodEntry) {
@@ -34,25 +37,19 @@ struct EntryEditor: View {
         _quantity = State(initialValue: NumberText.plain(entry.serving.quantity))
         _time = State(initialValue: entry.day.date(atMinute: entry.minute))
         _section = State(initialValue: entry.section)
-        _icon = State(initialValue: entry.food.icon)
+        _food = State(initialValue: entry.food)
         // An altered recipe lists its own alterations, so it needs no recipe.
         let recipeID = entry.food.source == .recipe && entry.alterations == nil ? entry.food.foodID.flatMap(UUID.init(uuidString:)) : nil
         _recipe = Observe(recipeID.map(Recipe.one) ?? DatabaseQuery(nil) { _ in nil })
     }
 
-    private var food: FoodSnapshot {
-        var food = entry.food
-        food.icon = icon
-        return food
-    }
-
-    private var amounts: NutrientAmounts { entry.food.amounts(serving) }
+    private var amounts: NutrientAmounts { food.amounts(serving) }
 
     /// The food's own measures, then the weights and volumes it allows, with the entry's measure kept when the
     /// food no longer lists it.
     private var measures: [Measure] {
-        let all = entry.food.nutrition.allMeasures
-        return all.contains { $0.name == entry.serving.measure.name } ? all : [entry.serving.measure] + all
+        let all = food.nutrition.allMeasures
+        return all.contains { $0.name == serving.measure.name } ? all : [serving.measure] + all
     }
 
     private var targets: NutrientTargets {
@@ -63,15 +60,18 @@ struct EntryEditor: View {
     var body: some View {
         let amounts = self.amounts
         let targets = self.targets
-        let reported = entry.food.nutrition.nutrients
+        let reported = food.nutrition.nutrients
         NavigationStack {
             Form {
-                ThemedSection {
+                Section {
                     VStack(alignment: .leading, spacing: 14) {
                         identity
                         MacroHeader(amounts: amounts)
                     }
-                    .padding(.vertical, 4)
+                }
+                .listRowBackground(Color.clear.feedback("Header"))
+                .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
+                ThemedSection {
                     HStack {
                         TextField("Quantity", text: $quantity)
                             .keyboardType(.decimalPad)
@@ -121,24 +121,38 @@ struct EntryEditor: View {
         }
         .presentationDetents([.large])
         .sheet(isPresented: $choosingIcon) {
-            FoodIconPicker(selection: Binding(get: { icon }, set: { picked in
-                icon = picked
+            FoodIconPicker(selection: Binding(get: { food.icon }, set: { picked in
+                food.icon = picked
                 store.setIcon(picked, of: food)
             }))
+        }
+        .sheet(item: $updating) { update in
+            FoodEditor(updating: update) { corrected in
+                let snapshot = corrected.snapshot
+                food = snapshot
+                serving = serving.fitted(to: snapshot.nutrition)
+                quantity = NumberText.plain(serving.quantity)
+                store.edit(FoodEntry.self, id: entry.id) {
+                    $0.food = snapshot
+                    $0.serving = $0.serving.fitted(to: snapshot.nutrition)
+                }
+            }
         }
         .feedback(self)
     }
 
-    /// The icon and the whole name, wrapped: the bar's inline title truncated long food names to one line. A quick add
-    /// is no food, so it has no icon to edit.
+    /// The icon, which a tap re-icons, and the whole name, wrapped: the bar's inline title truncated long food names to
+    /// one line. A quick add is no food, so it has no icon to edit.
     private var identity: some View {
         HStack(spacing: 12) {
-            let editable = entry.food.source != .quickAdd
-            FoodIcon(food: food, size: 36)
-                .onTapGesture { if editable { choosingIcon = true } }
+            if food.source == .quickAdd {
+                FoodIcon(food: food, size: 36)
+            } else {
+                FoodIcon(food: food, size: 36).editsIcon { choosingIcon = true }
+            }
             VStack(alignment: .leading, spacing: 2) {
-                Text(entry.food.name).font(AppFont.headline(18))
-                if let brand = entry.food.brand, !brand.isEmpty {
+                Text(food.name).font(AppFont.headline(18))
+                if let brand = food.brand, !brand.isEmpty {
                     Text(brand).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
                 }
             }
@@ -146,11 +160,6 @@ struct EntryEditor: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
-            if editable {
-                Button("Edit Icon") { choosingIcon = true }
-                    .chipButton()
-                    .controlSize(.small)
-            }
         }
     }
 
@@ -178,12 +187,20 @@ struct EntryEditor: View {
                 store.log([copy])
                 dismiss()
             }
-            if entry.food.source == .recipe {
+            switch food.source {
+            case .recipe:
                 action("Explode", systemImage: "square.grid.3x3.square") {
                     if isValid { write() }
                     state.explode(entry.id, in: store)
                     dismiss()
                 }
+            case .custom, .usda, .openFoodFacts:
+                action("Update", systemImage: "square.and.pencil") {
+                    let food = food
+                    Task { updating = try? await store.read { try FoodUpdate.of(food, in: $0) } }
+                }
+            case .quickAdd:
+                EmptyView()
             }
         }
         .buttonStyle(.borderless)

@@ -20,6 +20,14 @@ struct Serving: Hashable, Codable, Sendable {
 
     /// The base servings eaten, the one factor every amount scales by.
     var servings: Double { measure.servings * quantity / measure.quantity }
+
+    /// The same quantity in the corrected `nutrition`'s measure of this name, whose size may have changed with the
+    /// correction, else one of its default measure.
+    func fitted(to nutrition: FoodNutrition) -> Serving {
+        if let same = nutrition.allMeasures.first(where: { $0.name == measure.name }) { return Serving(measure: same, quantity: quantity) }
+        let base = nutrition.measures[0]
+        return Serving(measure: base, quantity: base.quantity)
+    }
 }
 
 /// A food's nutrition: sparse amounts per base serving and the measures it can be logged in, the first the default.
@@ -185,6 +193,9 @@ struct Food: Stamped {
     var barcode: String?
     /// The store a store-packed food is from; its barcode is that store's item code (`ScannedBarcode`).
     var store: String?
+    /// On the owner's correction of a USDA or Open Food Facts food, the `FoodSearchResult.key` of the food it stands in
+    /// for wherever that one would appear (`CurrentFoods`).
+    var replaces: String?
     var icon: String?
     var nutrition: FoodNutrition
     var isArchived = false
@@ -227,6 +238,7 @@ struct Food: Stamped {
         brand = row["brand"]
         barcode = row["barcode"]
         store = row["store"]
+        replaces = row["replaces"]
         icon = row["icon"]
         nutrition = try row.json("nutrition")
         isArchived = row.flag("archived")
@@ -241,6 +253,7 @@ struct Food: Stamped {
         container["brand"] = brand
         container["barcode"] = barcode
         container["store"] = store
+        container["replaces"] = replaces
         container["icon"] = icon
         container["nutrition"] = try RowJSON.text(nutrition)
         container["archived"] = isArchived ? 1 : 0

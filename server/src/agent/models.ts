@@ -584,6 +584,7 @@ export const Food = z
 		brand: z.string().nullable(),
 		barcode: z.string().nullable(),
 		store: z.string().nullable(),
+		replaces: z.string().nullable(),
 		icon: z.string().nullable(),
 		nutrition: FoodNutrition,
 		archived: z.boolean(),
@@ -603,6 +604,10 @@ const foodFields = {
 		.string()
 		.nullable()
 		.meta({ description: "The store a store-packed food is from; its barcode is that store's item code." }),
+	replaces: z.string().nullable().meta({
+		description:
+			"On a custom food that corrects a USDA or Open Food Facts food, the corrected food's id (or `<name>|<brand>` for a snapshot without one). The app shows this food wherever that one would appear.",
+	}),
 	icon: z.string().nullable().meta({ description: 'A food icon name; null for the default.' }),
 	nutrition: FoodNutrition,
 	archived: z.boolean(),
@@ -617,6 +622,7 @@ export const FoodCreate = z
 		brand: foodFields.brand.default(null),
 		barcode: foodFields.barcode.default(null),
 		store: foodFields.store.default(null),
+		replaces: foodFields.replaces.default(null),
 		icon: foodFields.icon.default(null),
 		archived: foodFields.archived.default(false),
 	})

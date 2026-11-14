@@ -99,7 +99,7 @@ struct RecipeEditor: View {
     private func build(_ issues: [RecipeDraft.Field: String], preview: Recipe) -> some View {
         ThemedSection("Recipe", footer: preview.servings == 1 ? nil : preview.cookedGrams.map { "\(NutritionFormat.amount($0 / preview.servings)) g per serving" }) {
             HStack(spacing: 12) {
-                FoodIcon(icon: draft.icon, source: .recipe, size: 36)
+                FoodIcon(icon: draft.icon, name: draft.name, source: .recipe, size: 36).editsIcon { choosingIcon = true }
                 RowLabel(
                     title: draft.name.isEmpty ? "Your New Recipe" : draft.name,
                     detail: Text(macroLine: preview.nutrition.nutrients),
@@ -107,9 +107,6 @@ struct RecipeEditor: View {
                 )
                 .lineLimit(1)
                 Spacer(minLength: 0)
-                Button("Edit Icon") { choosingIcon = true }
-                    .chipButton()
-                    .controlSize(.small)
             }
             TextField("Recipe Name", text: $draft.name)
                 .focused($focus, equals: .name)

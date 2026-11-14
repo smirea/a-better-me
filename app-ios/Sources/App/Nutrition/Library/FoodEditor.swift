@@ -1,12 +1,16 @@
 import Feedback
 import SwiftUI
 
-/// Create Food and Edit Food: MacroFactor's wizard (§6.1) folded into one Form. Nutrients use its Food Detail layout,
-/// every registry nutrient grouped as the app groups them. `onCreate` hears about a new food, and `onCreateAndAdd`
-/// adds the logger's "Create & Add".
+/// Create Food, Edit Food, and Update Food: MacroFactor's wizard (§6.1) folded into one Form. Nutrients use its Food
+/// Detail layout, every registry nutrient grouped as the app groups them. Update Food saves the owner's copy of a USDA
+/// or Open Food Facts food, which replaces it (`Food.replaces`). `onSave` hears about the saved food, and
+/// `onCreateAndAdd` adds the logger's "Create & Add".
 struct FoodEditor: View {
-    private let foodID: String?
-    private let onCreate: ((Food) -> Void)?
+    /// The owner's food being edited in place.
+    private let editing: Food?
+    /// The key of the database food a new food replaces.
+    private let replaces: String?
+    private let onSave: ((Food) -> Void)?
     private let onCreateAndAdd: ((Food) -> Void)?
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -23,9 +27,13 @@ struct FoodEditor: View {
 
     /// Edits `food`, or creates a food from `draft` (blank, a duplicate's copy, or a scanned barcode's). `photos` arrives
     /// already reading when a scan photographed the package.
-    init(food: Food? = nil, draft: FoodDraft? = nil, photos: FoodPhotoReader? = nil, onCreate: ((Food) -> Void)? = nil, onCreateAndAdd: ((Food) -> Void)? = nil) {
-        foodID = food?.id
-        self.onCreate = onCreate
+    init(
+        food: Food? = nil, draft: FoodDraft? = nil, replacing: String? = nil, photos: FoodPhotoReader? = nil,
+        onSave: ((Food) -> Void)? = nil, onCreateAndAdd: ((Food) -> Void)? = nil
+    ) {
+        editing = food
+        replaces = replacing
+        self.onSave = onSave
         self.onCreateAndAdd = onCreateAndAdd
         let initial = draft ?? food.map(FoodDraft.init) ?? FoodDraft()
         _draft = State(initialValue: initial)
@@ -37,6 +45,14 @@ struct FoodEditor: View {
         }))
     }
 
+    /// Update from a logged food: its own food in place, or a new copy that replaces a database food.
+    init(updating update: FoodUpdate, onSave: @escaping (Food) -> Void) {
+        switch update {
+        case let .edit(food): self.init(food: food, onSave: onSave)
+        case let .replace(copy): self.init(draft: FoodDraft(copy), replacing: copy.replaces, onSave: onSave)
+        }
+    }
+
     var body: some View {
         let issues = showErrors ? draft.issues : [:]
         NavigationStack {
@@ -46,7 +62,7 @@ struct FoodEditor: View {
                 serving(issues)
                 otherServings(issues)
                 ForEach(NutrientSection.allCases) { nutrients($0, issues: issues) }
-                if foodID != nil {
+                if editing != nil {
                     ThemedSection {
                         Button("Delete Food", systemImage: "trash", role: .destructive) { confirmingDelete = true }
                             .foregroundStyle(Theme.destructive)
@@ -56,7 +72,7 @@ struct FoodEditor: View {
             .themedList()
             .scrollDismissesKeyboard(.interactively)
             .focusToolbar(draft.focusOrder(expanded: expanded), focus: $focus)
-            .detailTitle(foodID == nil ? "Create Food" : "Edit Food")
+            .detailTitle(editing != nil ? "Edit Food" : replaces != nil ? "Update Food" : "Create Food")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .close) { dismiss() }
@@ -83,7 +99,7 @@ struct FoodEditor: View {
             .sheet(isPresented: $choosingIcon) { FoodIconPicker(selection: $draft.icon) }
             .alert("Delete Custom Food", isPresented: $confirmingDelete) {
                 Button("Delete", role: .destructive) {
-                    if let foodID { store.deleteFood(foodID) }
+                    if let editing { store.deleteFood(editing.id) }
                     dismiss()
                 }
                 Button("Cancel", role: .cancel) {}
@@ -99,12 +115,9 @@ struct FoodEditor: View {
     private func identity(_ issues: [FoodDraft.Field: String]) -> some View {
         ThemedSection("Food") {
             HStack(spacing: 12) {
-                FoodIcon(icon: draft.icon, source: .custom, size: 36)
+                FoodIcon(icon: draft.icon, name: draft.name, source: .custom, size: 36).editsIcon { choosingIcon = true }
                 RowLabel(title: draft.name.isEmpty ? "Custom Food" : draft.name, detail: draft.brand.isEmpty ? "Brand Unknown" : draft.brand)
                 Spacer()
-                Button("Edit Icon") { choosingIcon = true }
-                    .chipButton()
-                    .controlSize(.small)
             }
             TextField("Food Name", text: $draft.name)
                 .focused($focus, equals: .name)
@@ -223,15 +236,16 @@ struct FoodEditor: View {
     private func save(adding: Bool) {
         showErrors = true
         guard let valid = draft.valid else { return }
-        if let foodID {
-            store.edit(Food.self, id: foodID) { valid.write(into: &$0) }
-            if valid.icon != opened.icon {
-                store.setIcon(valid.icon, of: FoodSnapshot(foodID: foodID, source: .custom, name: valid.name, brand: valid.brand, nutrition: valid.nutrition))
-            }
+        if var food = editing {
+            valid.write(into: &food)
+            store.correctFood(food)
+            if valid.icon != opened.icon { store.setIcon(valid.icon, of: food.snapshot) }
+            onSave?(food)
         } else {
-            let food = valid.newFood()
-            store.saveFood(food)
-            onCreate?(food)
+            var food = valid.newFood()
+            food.replaces = replaces
+            if replaces == nil { store.saveFood(food) } else { store.correctFood(food) }
+            onSave?(food)
             if adding { onCreateAndAdd?(food) }
         }
         dismiss()

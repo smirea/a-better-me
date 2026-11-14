@@ -78,7 +78,7 @@ struct ScanTab: View {
             Text("Stores number their own items, so this code names a food at each of these stores.")
         }
         .sheet(item: $creating) { new in
-            FoodEditor(draft: new.draft, photos: new.photos, onCreate: { food in open(LoggerPick(new.barcode.portion(of: food))) })
+            FoodEditor(draft: new.draft, photos: new.photos, onSave: { food in open(LoggerPick(new.barcode.portion(of: food))) })
         }
         .feedback(self)
     }

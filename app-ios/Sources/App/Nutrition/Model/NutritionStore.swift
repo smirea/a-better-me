@@ -52,6 +52,40 @@ extension LocalStore {
         }
     }
 
+    /// Saves the owner's correction of a food: an edit of their own food, or a copy that replaces a USDA or Open Food
+    /// Facts food (`Food.replaces`). The favorites and recipe ingredients holding either one take it, at the same
+    /// quantity of their measure, since they log it again later. The log's entries keep what was logged.
+    func correctFood(_ food: Food) {
+        write { db in
+            var saved = food
+            if let existing = try Food.fetchOne(db, key: food.id) {
+                saved.createdAt = existing.createdAt
+                try saved.update(db, from: existing)
+            } else {
+                try saved.insert(db)
+            }
+            let keys = [saved.id, saved.replaces].compactMap(\.self)
+            let snapshot = saved.snapshot
+            let matching = "\(FoodSearchResult.keySQL("food")) IN (\(databaseQuestionMarks(count: keys.count)))"
+            for favorite in try FoodFavorite.fetchAll(db, sql: "SELECT * FROM food_favorites WHERE \(matching)", arguments: StatementArguments(keys)) {
+                var changed = favorite
+                changed.food = snapshot
+                changed.serving = favorite.serving.fitted(to: snapshot.nutrition)
+                try changed.updateChanges(db, from: favorite)
+            }
+            let ingredient = FoodSearchResult.keySQL("json_extract(value, '$.food')")
+            let recipes = "SELECT * FROM recipes WHERE EXISTS (SELECT 1 FROM json_each(recipes.ingredients) WHERE \(ingredient) IN (\(databaseQuestionMarks(count: keys.count))))"
+            for recipe in try Recipe.fetchAll(db, sql: recipes, arguments: StatementArguments(keys)) {
+                var changed = recipe
+                for index in changed.ingredients.indices where keys.contains(FoodSearchResult.key(changed.ingredients[index].food)) {
+                    changed.ingredients[index].food = snapshot
+                    changed.ingredients[index].serving = recipe.ingredients[index].serving.fitted(to: snapshot.nutrition)
+                }
+                try changed.updateChanges(db, from: recipe)
+            }
+        }
+    }
+
     /// A snapshot taken before its food's icon was inferred, picked, or cleared (a plate item, a recipe draft, a Ramble
     /// row) takes the food's icon as it is saved, since `setInferredIcon` and `setIcon` reach only the snapshots stored
     /// by then. A cached food's icon is the snapshot's, even none after Default; a food no longer stored leaves it as is.

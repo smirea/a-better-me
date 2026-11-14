@@ -192,6 +192,12 @@ export const foods = sqliteTable('foods', {
 	updatedAt: text('updated_at').notNull(),
 	/** The store a store-packed food was bought at; its barcode is the store's item code, which another store may reuse. */
 	store: text('store'),
+	/**
+	 * On the owner's correction of a USDA or Open Food Facts food, the search key of the food it stands in for: that
+	 * food's id, or `<name>|<brand>` for a logged snapshot without one. Search, scans, and the history show this food
+	 * wherever the replaced one would appear.
+	 */
+	replaces: text('replaces'),
 });
 
 export const recipes = sqliteTable('recipes', {
