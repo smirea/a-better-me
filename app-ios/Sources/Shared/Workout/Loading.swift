@@ -2,7 +2,7 @@ import Foundation
 
 /// What one resistance option can load in a gym, in the display unit. Working in the display unit keeps sums of lb
 /// plates exact for a lb owner (45 lb is 20.41165665 kg), and every comparison rounds to hundredths of that unit.
-enum Loading: Hashable {
+enum Loading: Hashable, Sendable {
     /// A loadable bar or a plate-loaded machine: a base weight plus plates on one or both sides.
     case plates(PlateLoading)
     /// Fixed loads in ascending order: dumbbells, kettlebells, fixed bars, or a pin stack's positions.
@@ -33,8 +33,8 @@ enum Loading: Hashable {
     }
 }
 
-struct PlateLoading: Hashable {
-    enum Base: Hashable { case bar, machine }
+struct PlateLoading: Hashable, Sendable {
+    enum Base: Hashable, Sendable { case bar, machine }
 
     var base: Base
     var baseWeight: Double
@@ -47,7 +47,7 @@ struct PlateLoading: Hashable {
     var baseID: EquipmentID?
     var baseWeights: [Double]
 
-    struct Plate: Hashable {
+    struct Plate: Hashable, Sendable {
         var weight: Double
         var perSide: Int?
         var isBumper = false
@@ -143,7 +143,7 @@ struct PlateLoading: Hashable {
 }
 
 /// The plates the calculator draws for one target, heaviest first, and the legend beside the drawing.
-struct PlatePlan: Equatable {
+struct PlatePlan: Equatable, Sendable {
     var loading: PlateLoading
     var target: Double
     /// One side's plates, heaviest first.

@@ -1,8 +1,9 @@
 import SwiftUI
 import WatchKit
 
-/// The set to do next: the exercise, its sets as dots, and a pill per value. Tap a pill and turn the Digital Crown to
-/// change it; the big button logs the set with those values, and the one beside it skips the set unlogged.
+/// The set to do next: the exercise, its sets as dots, a pill per value, and the plates for plate-loaded equipment. Tap a
+/// pill and turn the Digital Crown to change it; the big button logs the set with those values, and the one beside it
+/// skips the set unlogged.
 struct SetView: View {
     let workout: WatchWorkout
     let path: RowPath
@@ -38,14 +39,11 @@ struct SetView: View {
                 $crown, from: 0, through: Double(max(scale.count - 1, 0)), by: 1,
                 sensitivity: .medium, isContinuous: false, isHapticFeedbackEnabled: true
             )
-            if let reference = reference {
-                Text(reference)
-                    .font(AppFont.caption(11))
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+            if fields.contains(.weight), let plan = workout.exercise(item.exerciseID).plates?.plan(weightKg: values.weightKg, unit: workout.unit) {
+                PlateLine(plan: plan, unit: workout.unit)
             }
         }
+        .frame(maxHeight: .infinity, alignment: .top)
         .toolbar {
             ToolbarItem(placement: .bottomBar) {
                 HStack(spacing: 6) {
@@ -85,11 +83,6 @@ struct SetView: View {
         case .drop where row.isSubRow: "Log Drop"
         default: "Log Set"
         }
-    }
-
-    private var reference: String? {
-        if let previous = row.previous { return "Last \(previous)" }
-        return row.target.map { "Target \($0)" }
     }
 
     private func logSet() {
@@ -146,6 +139,26 @@ struct SetHeader: View {
                 }
             }
         }
+    }
+}
+
+/// The plates for the shown weight, as the phone's calculator reads them: "13 bar + 45 10 5", then how far off the
+/// plates fall when they can't load it exactly.
+struct PlateLine: View {
+    let plan: PlatePlan
+    let unit: WeightUnit
+
+    var body: some View {
+        let miss = plan.miss(unit: unit.rawValue)
+        HStack(spacing: 4) {
+            Text(plan.legend).foregroundStyle(Theme.textPrimary)
+            if let miss { Text(miss).foregroundStyle(Theme.amber) }
+        }
+        .font(AppFont.number(14))
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Plates \(plan.legend)\(miss.map { ", \($0)" } ?? "")")
     }
 }
 
