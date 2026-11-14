@@ -255,6 +255,11 @@ struct QuickAddDraftTests {
         #expect(draft.portion?.food.name == "Quick Add")
     }
 
+    @Test func aRenameIsTrimmedAndABlankOneIsQuickAdd() {
+        #expect(FoodSnapshot.quickAddName(" Protein shake\n") == "Protein shake")
+        #expect(FoodSnapshot.quickAddName("  ") == "Quick Add")
+    }
+
     @Test func storesKilojoulesAsKcal() {
         let draft = QuickAddDraft(energy: "836.8", unit: .kj, protein: "10")
         #expect(abs(draft.amounts![.energy]! - 200) < 1e-9)
