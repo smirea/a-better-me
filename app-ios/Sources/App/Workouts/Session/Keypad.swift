@@ -8,11 +8,16 @@ enum SetField: Hashable {
     case duration(perSide: Bool)
     case distance(long: Bool)
 
-    /// The exercise's columns in its metric order. An exercise the catalog no longer knows logs weight and reps.
+    /// The exercise's columns, weight first then reps, duration, or distance, whatever order the catalog lists its metrics in:
+    /// MF lists `repsPerSide` before `weightPerSide` on most dumbbell exercises. An exercise the catalog no longer knows logs weight and reps.
     static func fields(for exercise: Exercise?) -> [SetField] {
         guard let exercise else { return [.weight(perSide: false), .reps(perSide: false)] }
+        return fields(for: exercise.metrics)
+    }
+
+    static func fields(for metrics: [ExerciseMetric]) -> [SetField] {
         var fields: [SetField] = []
-        for metric in exercise.metrics {
+        for metric in metrics {
             let field: SetField = switch metric {
             case .weight, .assistanceWeight: .weight(perSide: false)
             case .weightPerSide, .weightPerSidePersistent: .weight(perSide: true)
@@ -25,7 +30,16 @@ enum SetField: Hashable {
             }
             if !fields.contains(field) { fields.append(field) }
         }
-        return Array(fields.prefix(2))
+        return fields.prefix(2).sorted { $0.column < $1.column }
+    }
+
+    private var column: Int {
+        switch self {
+        case .weight: 0
+        case .reps: 1
+        case .duration: 2
+        case .distance: 3
+        }
     }
 
     func header(unit: WeightUnit) -> String {
