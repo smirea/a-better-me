@@ -130,10 +130,10 @@ final class LoggerSession {
     }
 
     /// The meal section a log lands in: the one picked, else the one the time falls in. Search ranks its usual foods first.
-    var section: MealSection { time.section ?? sections.section(at: time.minute()) }
+    var section: MealSection { time.section(in: sections) }
 
     /// The hour, or in the Sections display the section, whose Picks show above Latest.
-    var picksSlot: TimelineSlot { showsSections ? .section(section) : .hour(time.hour) }
+    var picksSlot: TimelineSlot { time.slot(in: sections, showsSections: showsSections) }
 
     /// "8 AM Picks" or "Breakfast Picks" (`HourPicks`) while the query is empty.
     var picks: [FoodSearchResult] {

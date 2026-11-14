@@ -80,10 +80,20 @@ struct LogTime: Hashable, Sendable {
         hour * 60 + calendar.component(.minute, from: date)
     }
 
+    /// The meal section this time logs into: the one picked, else the one its minute falls in.
+    func section(in sections: [MealSection], at date: Date = .now, calendar: Calendar = .current) -> MealSection {
+        section ?? sections.section(at: minute(at: date, calendar: calendar))
+    }
+
+    /// The pill this time logs under: its hour, or in the Sections display its section.
+    func slot(in sections: [MealSection], showsSections: Bool, at date: Date = .now, calendar: Calendar = .current) -> TimelineSlot {
+        showsSections ? .section(section(in: sections, at: date, calendar: calendar)) : .hour(hour)
+    }
+
     /// "2 PM" today, "2 PM · Jul 31" on any other day. With `sections` (the Sections display), the section instead:
     /// "Lunch", "Lunch · Jul 31".
     func label(today: CalendarDay = .today, sections: [MealSection]? = nil, now: Date = .now) -> String {
-        let slot = section?.name ?? sections.map { $0.section(at: minute(at: now)).name } ?? NutritionFormat.hour(hour)
+        let slot = section?.name ?? sections.map { section(in: $0, at: now).name } ?? NutritionFormat.hour(hour)
         guard day != today else { return slot }
         return "\(slot) · \(NutritionFormat.shortDay(day))"
     }
