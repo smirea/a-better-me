@@ -487,6 +487,7 @@ describe('ramble', () => {
 						{ kind: 'food', name: 'steak', ref: 'e1', amount: 200, unit: 'g', scale: 0.5 },
 						{ kind: 'food', name: 'half a pear', scale: 0.5 },
 						{ kind: 'food', name: 'broccoli', ref: 'e3', meal: 'dinner' },
+						{ kind: 'food', name: 'oats', scale: 1, meal: 'dinner' },
 					],
 				}),
 			),
@@ -513,6 +514,8 @@ describe('ramble', () => {
 			['food', null, [], null, 0.5, 1],
 			// The broccoli from that dinner, eaten at dinner, is no change to the lunch.
 			['food', null, [], 'broc-uuid', 0, 1],
+			// A scale of 1 is no amount said, so the phone still logs the usual serving.
+			['food', null, [], null, 0, 1],
 		]);
 		const sent = await requests[0]!.json();
 		expect(sent.generationConfig.responseJsonSchema.properties.items.items.anyOf[0].properties.scale).toEqual({

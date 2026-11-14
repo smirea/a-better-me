@@ -286,15 +286,16 @@ function resolveAliases(
 		const sameMeal = follows && (!item.meal || item.meal === previous!.meal);
 		const ref = (item.kind === 'food' && refTo(names.entries.get(item.ref), item.name)) || null;
 		const amount = item.kind === 'food' ? item.amount || (item.unit.trim() ? 1 : 0) : 0;
-		// A scale without its ref ("half the potatoes" naming no logged food) is a count of the food.
-		const scale = ref && !amount && item.scale > 0 ? Math.min(item.scale, 10) : 1;
+		// A scale of 1 changes nothing, so it never stands in for an amount the speaker did not say.
+		const scaled = item.kind === 'food' && !amount && item.scale > 0 && item.scale !== 1 ? Math.min(item.scale, 10) : 0;
 		items.push({
 			kind: item.kind,
 			name: item.kind === 'food' ? item.name.trim() : '',
-			amount: amount || (!ref && item.kind === 'food' && item.scale > 0 ? item.scale : 0),
+			// A scale without its ref ("half the potatoes" naming no logged food) is a count of the food.
+			amount: amount || (ref ? 0 : scaled),
 			unit: item.kind === 'food' ? item.unit.trim().toLowerCase() : '',
 			ref,
-			scale,
+			scale: (ref && scaled) || 1,
 			copy: meal?.id ?? null,
 			except: item.except.map(alias => names.entries.get(alias)!).filter(id => id && inMeal.has(id)),
 			day,
