@@ -72,10 +72,8 @@ struct WorkoutDetailView: View {
                     Button("Delete Workout", systemImage: "trash", role: .destructive) { confirmingDelete = true }
                 }
             }
-            .pinnedActions {
-                PinnedActionButton("Start Workout") {
-                    presenter.startOrResume({ WorkoutSession(startingFrom: template) }, in: store)
-                }
+            .floatingAction("Start Workout") {
+                presenter.startOrResume({ WorkoutSession(startingFrom: template) }, in: store)
             }
             .onChange(of: blocks) { _, blocks in
                 guard let blocks, blocks != template.blocks else { return }

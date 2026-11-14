@@ -43,7 +43,7 @@ private struct ChipLabelStyle: LabelStyle {
     }
 }
 
-/// The primary pill of a screen's `pinnedActions`: Start Workout, Next, Save to Library, Save.
+/// The primary pill of a screen's `pinnedActions`: Next, Save to Library, Activate Program, Save.
 struct PinnedActionButton: View {
     let title: String
     let action: () -> Void
@@ -63,6 +63,36 @@ extension View {
     /// inset, so content scrolling under it gets the system's edge blur, as a wizard's summary line needs.
     func pinnedActions<Actions: View>(@ViewBuilder _ actions: () -> Actions) -> some View {
         safeAreaBar(edge: .bottom) { PinnedStack { actions() } }
+    }
+}
+
+extension View {
+    /// A lone action floating over a scrolling list in a large glass capsule, with no band behind it: the list runs under
+    /// it and its bottom inset is the button's height, so the last row scrolls clear. Start Workout on a workout or
+    /// program day. A nil title shows nothing and takes no room.
+    func floatingAction(_ title: String?, action: @escaping () -> Void) -> some View {
+        safeAreaInset(edge: .bottom, spacing: 0) {
+            if let title { FloatingActionButton(title: title, action: action) }
+        }
+    }
+}
+
+private struct FloatingActionButton: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(AppFont.headline())
+                .foregroundStyle(Theme.textPrimary)
+                .frame(maxWidth: .infinity, minHeight: 60)
+                .contentShape(.capsule)
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .capsule)
+        .padding(.horizontal, Theme.margin)
+        .padding(.bottom, 8)
     }
 }
 

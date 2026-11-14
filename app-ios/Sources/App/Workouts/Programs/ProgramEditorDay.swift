@@ -112,39 +112,104 @@ extension [WorkoutBlock] {
     }
 }
 
-/// An exercise's horizontal row of week cards, then its pinned Program Note.
+/// An exercise's week cards and its pinned Program Note. The note sits beside the cards when they leave it room, as the
+/// single card of an unperiodized program does on a phone, and under their scrolling row otherwise.
 struct WeekCardsRow: View {
     let item: BlockExercise
     let program: ProgramDayContext
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ScrollView(.horizontal) {
-                HStack(alignment: .top, spacing: 10) {
-                    ForEach(ProgramEditorRules.cards(of: program.program)) { card in
-                        Button { program.openCard(item.id, card) } label: {
-                            WeekCardView(title: card.title, sets: program.program.sets(of: item, cycle: card.cycle))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("\(card.title) targets")
-                    }
-                }
-                .padding(.horizontal, 16)
-            }
-            .padding(.horizontal, -16)
-            .scrollIndicators(.hidden)
+        let cards = ProgramEditorRules.cards(of: program.program)
+        Group {
             if let note = item.note, !note.isEmpty {
-                Label {
-                    Text(note).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-                } icon: {
-                    Image(systemName: "pin.fill").foregroundStyle(Theme.textPrimary)
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 10) {
+                        cardButtons(cards)
+                        PinnedNote(note: note).frame(minWidth: 160, idealWidth: 160, maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 10) {
+                        scrollingCards(cards)
+                        PinnedNote(note: note)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
-                .accessibilityLabel("Program Note: \(note)")
+            } else {
+                scrollingCards(cards)
             }
         }
+        .feedback(self)
+    }
+
+    private func scrollingCards(_ cards: [WeekCard]) -> some View {
+        ScrollView(.horizontal) {
+            HStack(alignment: .top, spacing: 10) { cardButtons(cards) }
+                .padding(.horizontal, 16)
+        }
+        .padding(.horizontal, -16)
+        .scrollIndicators(.hidden)
+        // A List row kept a horizontal scroll view at a stale height and cut the cards' last set off.
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func cardButtons(_ cards: [WeekCard]) -> some View {
+        ForEach(cards) { card in
+            Button { program.openCard(item.id, card) } label: {
+                WeekCardView(title: card.title, sets: program.program.sets(of: item, cycle: card.cycle))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(card.title) targets")
+        }
+    }
+}
+
+/// The exercise's Program Note, cut to a few lines so it stays beside its card; a tap shows the rest.
+private struct PinnedNote: View {
+    let note: String
+
+    @State private var expanded = false
+    @State private var fullHeight: CGFloat = 0
+    @State private var shownHeight: CGFloat = 0
+
+    var body: some View {
+        let cut = fullHeight > shownHeight + 1
+        Button { expanded.toggle() } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: "pin.fill").imageScale(.small).foregroundStyle(Theme.textPrimary)
+                VStack(alignment: .leading, spacing: 4) {
+                    if expanded {
+                        Text(note).frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        // Five lines set the note's own height; beside a taller card it fills the card's height instead.
+                        Text(note)
+                            .lineLimit(5)
+                            .hidden()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                            .overlay(alignment: .topLeading) {
+                                Text(note).onGeometryChange(for: CGFloat.self) { $0.size.height } action: { shownHeight = $0 }
+                            }
+                            .background(alignment: .top) {
+                                Text(note)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .hidden()
+                                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fullHeight = $0 }
+                            }
+                    }
+                    if cut || expanded {
+                        Text(expanded ? "Show Less" : "Show More").foregroundStyle(Theme.textPrimary)
+                    }
+                }
+                .foregroundStyle(Theme.textSecondary)
+            }
+            .font(AppFont.rowDetail)
+            .padding(12)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .allowsHitTesting(cut || expanded)
+        .accessibilityLabel("Program Note: \(note)")
         .feedback(self)
     }
 }
