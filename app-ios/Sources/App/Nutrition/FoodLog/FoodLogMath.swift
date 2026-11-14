@@ -54,8 +54,6 @@ enum TimelineSlot: Hashable {
 struct TimelineGroup: Hashable, Identifiable {
     let slot: TimelineSlot
     let rows: [TimelineRow]
-    /// The minutes of the day it covers, which mark the current one with a dot.
-    let minutes: Range<Int>
 
     /// Summed once here, since `DayPage` memoizes the groups and every render of the row reads them.
     let totals: NutrientAmounts
@@ -64,10 +62,9 @@ struct TimelineGroup: Hashable, Identifiable {
     /// What the meal line shows while the meal has neither a recipe nor a stored name.
     let mealFallbackName: String?
 
-    init(slot: TimelineSlot, rows: [TimelineRow], minutes: Range<Int>) {
+    init(slot: TimelineSlot, rows: [TimelineRow]) {
         self.slot = slot
         self.rows = rows
-        self.minutes = minutes
         totals = rows.map(\.entry).totals
         meal = if case .section = slot { MealComponents(rows.map(\.entry.food)) } else { nil }
         mealFallbackName = meal == nil ? nil : MealComponents.fallbackName(rows.map(\.entry.portion))
@@ -204,7 +201,7 @@ enum FoodLog {
         if !timeline.hideEmptyHours, timeline.firstHour <= timeline.lastHour {
             hours.formUnion(timeline.firstHour...timeline.lastHour)
         }
-        return hours.sorted().map { TimelineGroup(slot: .hour($0), rows: rows(byHour[$0] ?? []), minutes: $0 * 60..<($0 + 1) * 60) }
+        return hours.sorted().map { TimelineGroup(slot: .hour($0), rows: rows(byHour[$0] ?? [])) }
     }
 
     /// The day's meal sections in order, each with the entries logged into it, or for an entry without one (or whose
@@ -213,8 +210,16 @@ enum FoodLog {
         let bySection = Dictionary(grouping: entries) { sections.section(of: $0).id }
         return sections.compactMap { section in
             let entries = bySection[section.id] ?? []
-            return hideEmpty && entries.isEmpty ? nil : TimelineGroup(slot: .section(section), rows: rows(entries), minutes: sections.range(of: section))
+            return hideEmpty && entries.isEmpty ? nil : TimelineGroup(slot: .section(section), rows: rows(entries))
         }
+    }
+
+    /// The pill that wears the current-time ring: the one the tab bar's + and the search field log into right now,
+    /// asked of the logger's own `LogTime` so the two can't disagree. Only today has one.
+    static func currentSlot(on day: CalendarDay, sections: [MealSection], showsSections: Bool, now: Date, calendar: Calendar = .current) -> TimelineSlot? {
+        let time = LogTime.now(now, calendar: calendar)
+        guard time.day == day else { return nil }
+        return time.slot(in: sections, showsSections: showsSections, at: now, calendar: calendar)
     }
 
     private static func rows(_ entries: [FoodEntry]) -> [TimelineRow] {

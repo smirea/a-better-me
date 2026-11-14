@@ -28,7 +28,6 @@ struct FoodLogMathTests {
 
         let hours = FoodLog.hours([third, second, early, first], timeline: timeline)
         #expect(hours.map(\.slot) == [.hour(6), .hour(12), .hour(13), .hour(14), .hour(15)])
-        #expect(hours[3].minutes == 840..<900)
         #expect(hours[3].rows.map(\.entry.id) == [first.id, second.id, third.id])
         #expect(hours[3].rows.map(\.showsTime) == [true, false, true])
         #expect(hours[3].totals[.energy] == 960)

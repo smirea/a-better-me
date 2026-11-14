@@ -1,0 +1,10 @@
+{
+	"title": "Empty meal sections say Log <section>, and only the section + logs into now gets the ring",
+	"description": "At noon, AM Snack no longer keeps the ring next to Lunch.",
+	"tasks": [
+		{
+			"id": "f013e711-6c09-4a5b-bb65-fa17fe6f3b1b",
+			"title": "2 Nutrition Feedback: update button labels, fix highlight timing"
+		}
+	]
+}

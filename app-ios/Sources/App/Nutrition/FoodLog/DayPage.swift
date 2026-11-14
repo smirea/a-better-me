@@ -197,7 +197,7 @@ struct ShownDayEntries: View {
 }
 
 /// Offers its content at least `minHeight`, so a short day's empty sections share what the page leaves around their
-/// Log Food buttons; a day that scrolls is taller, so they get only the buttons' height. `.frame(minHeight:)` sized
+/// Log buttons; a day that scrolls is taller, so they get only the buttons' height. `.frame(minHeight:)` sized
 /// itself to the height but still laid the stack out at its ideal height, leaving the sections bunched at the top.
 private struct FillHeight: Layout {
     let minHeight: CGFloat
@@ -225,8 +225,8 @@ private struct TimelineColumn {
 
 /// The hour's or section's pill, its + (a paste button while pasting inline, a move button under Premove), and its
 /// Meal Rating tag, and its macro totals. Tapping the pill selects its entries; under the long-press setting, holding it
-/// adds food there. An empty section also takes a share of the page's leftover height under its pill, with a big Log
-/// Food button centered in it that does what the + does.
+/// adds food there. An empty section also takes a share of the page's leftover height under its pill, with a big "Log
+/// <section>" button centered in it that does what the + does.
 private struct SlotRow: View {
     static let spacing: CGFloat = 6
 
@@ -283,8 +283,7 @@ private struct SlotRow: View {
                 .accessibilityLabel("Move into \(label)")
                 .disabled(state.selection.isEmpty)
             } else {
-                Button("Log Food", systemImage: "plus") { requestLog() }
-                    .accessibilityLabel("Log food at \(label)")
+                Button("Log \(label)") { requestLog() }
                     .disabled(state.selecting)
             }
         }
@@ -363,12 +362,20 @@ private struct SlotRow: View {
     }
 
     private func pill(_ label: String, isActive: Bool) -> some View {
-        let isCurrent = day == .today && group.minutes.contains(Date.now.minuteOfDay())
-        return Chip(title: label, isActive: isActive, size: .small, width: pillWidth)
+        Chip(title: label, isActive: isActive, size: .small, width: pillWidth)
             // A ring standing off the pill, drawn behind it so the pills keep one width; selection fills the pill instead.
+            // The row re-renders only when its inputs change, so it reads the clock each minute itself: reading
+            // `Date.now` in `body` left the ring on AM Snack past noon while Lunch, re-rendered by a log, had it too.
             .background {
-                if isCurrent { Capsule().strokeBorder(Theme.textPrimary, lineWidth: 1.5).padding(-3) }
+                TimelineView(.everyMinute) { context in
+                    if isCurrent(at: context.date) { Capsule().strokeBorder(Theme.textPrimary, lineWidth: 1.5).padding(-3) }
+                }
             }
+    }
+
+    private func isCurrent(at now: Date) -> Bool {
+        let showsSections = if case .section = group.slot { true } else { false }
+        return FoodLog.currentSlot(on: day, sections: sections, showsSections: showsSections, now: now) == group.slot
     }
 
     private func interactivePill(_ label: String) -> some View {
