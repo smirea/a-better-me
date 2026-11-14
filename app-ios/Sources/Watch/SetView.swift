@@ -22,50 +22,33 @@ struct SetView: View {
     private var scale: [Double] { MetricScale.values(for: focus, unit: workout.unit, loadableKg: workout.exercise(item.exerciseID).loadableWeightsKg) }
 
     var body: some View {
-        VStack(spacing: 6) {
-            Button(action: showExercises) {
-                SetHeader(workout: workout, path: path, row: row)
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Shows the workout's exercises")
-            HStack(spacing: 4) {
-                ForEach(fields, id: \.self) { field in
-                    MetricPill(field: field, values: values, unit: workout.unit, isFocused: field == focus) { focus = field }
-                        .accessibilityAdjustableAction { direction in step(field, by: direction == .increment ? 1 : -1) }
+        VStack(spacing: 0) {
+            VStack(spacing: SetMetrics.spacing) {
+                Button(action: showExercises) {
+                    SetHeader(workout: workout, path: path, row: row)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Shows the workout's exercises")
+                HStack(spacing: 4) {
+                    ForEach(fields, id: \.self) { field in
+                        MetricPill(field: field, values: values, unit: workout.unit, isFocused: field == focus) { focus = field }
+                            .accessibilityAdjustableAction { direction in step(field, by: direction == .increment ? 1 : -1) }
+                    }
+                }
+                .focusable()
+                .digitalCrownRotation(
+                    $crown, from: 0, through: Double(max(scale.count - 1, 0)), by: 1,
+                    sensitivity: .medium, isContinuous: false, isHapticFeedbackEnabled: true
+                )
+                if fields.contains(.weight), let plan = workout.exercise(item.exerciseID).plates?.plan(weightKg: values.weightKg, unit: workout.unit) {
+                    PlateLine(plan: plan, unit: workout.unit)
                 }
             }
-            .focusable()
-            .digitalCrownRotation(
-                $crown, from: 0, through: Double(max(scale.count - 1, 0)), by: 1,
-                sensitivity: .medium, isContinuous: false, isHapticFeedbackEnabled: true
-            )
-            if fields.contains(.weight), let plan = workout.exercise(item.exerciseID).plates?.plan(weightKg: values.weightKg, unit: workout.unit) {
-                PlateLine(plan: plan, unit: workout.unit)
-            }
+            Spacer(minLength: 4)
+            actions
         }
-        .frame(maxHeight: .infinity, alignment: .top)
-        .toolbar {
-            ToolbarItem(placement: .bottomBar) {
-                HStack(spacing: 6) {
-                    Button(action: skipSet) {
-                        Image(systemName: "forward.end.fill").font(.system(size: 15, weight: .semibold))
-                    }
-                    .buttonStyle(.glass)
-                    .frame(width: 52)
-                    .accessibilityLabel("Skip set")
-                    Button(action: logSet) {
-                        Label(logTitle, systemImage: "checkmark")
-                            .font(AppFont.headline(16))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.glassProminent)
-                    .tint(Theme.accent)
-                    .accessibilityLabel("Log set")
-                }
-            }
-        }
+        // The page container proposes no height, so a flexible frame stayed at the content's size, centered.
+        .containerRelativeFrame(.vertical, alignment: .top) { height, _ in height + SetMetrics.bottomOverhang }
         .onAppear { load() }
         .onChange(of: row.id) { load() }
         .onChange(of: focus) { syncCrown() }
@@ -74,6 +57,35 @@ struct SetView: View {
             guard index != crownIndex, scale.indices.contains(index) else { return }
             crownIndex = index
             MetricScale.set(scale[index], of: focus, in: &values)
+        }
+    }
+
+    /// In the page itself rather than the bottom toolbar, which pinned them to the screen's rounded bottom edge over the
+    /// page dots. Glass button styles hold a 52 pt minimum on watchOS that `controlSize` doesn't lower, so these are
+    /// plain buttons drawn as glass, shorter: the plates line needed the room.
+    private var actions: some View {
+        HStack(spacing: 6) {
+            Button(action: skipSet) {
+                Image(systemName: "forward.end.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(width: 48, height: SetMetrics.buttonHeight)
+                    .contentShape(.capsule)
+            }
+            .buttonStyle(.plain)
+            .glassEffect(.regular.interactive(), in: .capsule)
+            .accessibilityLabel("Skip set")
+            Button(action: logSet) {
+                Label(logTitle, systemImage: "checkmark")
+                    .font(AppFont.headline(16))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .padding(.horizontal, 8)
+                    .frame(maxWidth: .infinity, minHeight: SetMetrics.buttonHeight)
+                    .contentShape(.capsule)
+            }
+            .buttonStyle(.plain)
+            .glassEffect(.regular.tint(Theme.accent).interactive(), in: .capsule)
+            .accessibilityLabel("Log set")
         }
     }
 
@@ -128,8 +140,8 @@ struct SetHeader: View {
             Text(row.exerciseName)
                 .font(AppFont.headline(15))
                 .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
+                .lineLimit(SetMetrics.isCompact ? 1 : 2)
+                .minimumScaleFactor(SetMetrics.isCompact ? 0.7 : 0.8)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 5) {
                 if block.isSuperset { MemberBadge(member: path.exercise) }
@@ -140,6 +152,19 @@ struct SetHeader: View {
             }
         }
     }
+}
+
+/// The set screen's sizes. Under 230 pt tall (40 to 44 mm) the name takes one line and the pills and buttons slim down,
+/// so the plates line and both buttons fit; 45 mm and up keep the full sizes.
+enum SetMetrics {
+    static let screenHeight = WKInterfaceDevice.current().screenBounds.height
+    static let isCompact = screenHeight < 230
+    static let spacing: CGFloat = isCompact ? 4 : 5
+    static let pillHeight: CGFloat = isCompact ? 38 : 44
+    static let buttonHeight: CGFloat = isCompact ? 36 : 40
+    /// How far the page runs into the bottom safe area. From 45 mm up it reserves about 35 pt for the page dots, twice
+    /// what they need; on smaller screens it is already tight.
+    static let bottomOverhang: CGFloat = isCompact ? 0 : 14
 }
 
 /// The plates for the shown weight, as the phone's calculator reads them: "13 bar + 45 10 5", then how far off the
@@ -154,7 +179,7 @@ struct PlateLine: View {
             Text(plan.legend).foregroundStyle(Theme.textPrimary)
             if let miss { Text(miss).foregroundStyle(Theme.amber) }
         }
-        .font(AppFont.number(14))
+        .font(AppFont.number(SetMetrics.isCompact ? 13 : 14))
         .lineLimit(1)
         .minimumScaleFactor(0.6)
         .accessibilityElement(children: .combine)
@@ -262,10 +287,10 @@ struct MetricPill: View {
             action?()
         } label: {
             VStack(spacing: 0) {
-                Text(text.value).font(AppFont.number(22)).lineLimit(1).minimumScaleFactor(0.5)
+                Text(text.value).font(AppFont.number(SetMetrics.isCompact ? 20 : 22)).lineLimit(1).minimumScaleFactor(0.5)
                 Text(text.caption).font(AppFont.headline(9)).foregroundStyle(isFocused ? tint : Theme.textSecondary)
             }
-            .frame(maxWidth: .infinity, minHeight: 44)
+            .frame(maxWidth: .infinity, minHeight: SetMetrics.pillHeight)
             .background(tint.opacity(isFocused ? 0.32 : 0.14), in: RoundedRectangle(cornerRadius: 14))
             .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(isFocused ? tint : .clear, lineWidth: 2))
         }

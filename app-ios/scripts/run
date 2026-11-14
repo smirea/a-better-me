@@ -21,6 +21,7 @@ const { values } = parseArgs({
         "no-watch": { type: "boolean" },
         headless: { type: "boolean" },
         "pair-watch": { type: "boolean" },
+        "watch-model": { type: "string" },
         delete: { type: "boolean" },
         stop: { type: "boolean" },
         "grant-permissions": { type: "boolean" },
@@ -227,7 +228,7 @@ async function grantPermissions(target: Target, project: string, build: string) 
 /** Pairs a watch when asked, then boots the phone and its watch side by side while the app builds, so cold boots stay
  * off a fresh simulator's first launch. */
 async function boot(target: Target) {
-    if (values["pair-watch"]) await pairWatch(target);
+    if (values["pair-watch"] || values["watch-model"]) await pairWatch(target, values["watch-model"]);
     const watch = (await pairs()).find(pair => pair.phone.udid === target.id && pair.active)?.watch;
     await Promise.all([target.id, ...(watch ? [watch.udid] : [])].map(udid => command(["xcrun", "simctl", "bootstatus", udid, "-b"], true)));
 }
@@ -240,23 +241,44 @@ async function pairs(): Promise<Pair[]> {
 }
 
 /** The phone's active pair, activating an inactive one, or a new watch paired with it: the newest model on the newest
- * watchOS runtime, named after the phone. Pairing takes a tenth of a second and connects once both boot. */
-async function pairWatch(target: Target) {
+ * watchOS runtime, named after the phone. `model` (a part of a device type's name, such as "40mm") picks the phone's
+ * watch of that model instead, pairing a new one when it has none, so a layout can be checked on each size. Pairing
+ * takes a tenth of a second and connects once both boot. */
+async function pairWatch(target: Target, model?: string) {
     const own = (await pairs()).filter(pair => pair.phone.udid === target.id);
-    if (own.some(pair => pair.active)) return;
-    if (own.length) {
-        await command(["xcrun", "simctl", "pair_activate", own[0].id], true);
-        return;
-    }
     const runtime = (JSON.parse(await command(["xcrun", "simctl", "list", "runtimes", "--json"], true)).runtimes as any[])
         .filter(runtime => runtime.platform === "watchOS" && runtime.isAvailable)
         .sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }))[0];
+    if (!runtime) throw new Error("No watchOS simulator runtime. Add one in Xcode's settings.");
+    const types = runtime.supportedDeviceTypes as { name: string; identifier: string }[];
+    if (!model) {
+        if (own.some(pair => pair.active)) return;
+        if (own.length) {
+            await command(["xcrun", "simctl", "pair_activate", own[0].id], true);
+            return;
+        }
+    }
     // Each runtime lists its device types newest first.
-    const model = runtime?.supportedDeviceTypes?.[0];
-    if (!model) throw new Error("No watchOS simulator runtime. Add one in Xcode's settings.");
-    const watch = (await command(["xcrun", "simctl", "create", `${target.name} Watch`, model.identifier, runtime.identifier], true)).trim();
-    await command(["xcrun", "simctl", "pair", watch, target.id], true);
-    console.log(`Paired ${model.name} (${runtime.name}) with ${target.name}.`);
+    const type = model ? types.find(type => type.name.toLowerCase().includes(model.toLowerCase())) : types[0];
+    if (!type) throw new Error(`No watch model matches "${model}" on ${runtime.name}: ${types.map(type => type.name).join(", ")}.`);
+    const name = model ? `${target.name} Watch (${type.name})` : `${target.name} Watch`;
+    const existing = own.find(pair => pair.watch.name === name);
+    if (existing?.active) return;
+    // A booted phone never links its app to a watch paired or activated after it booted (WCSession reads
+    // appInstalled NO for good), so the phone shuts down too and boots fresh with the new pair.
+    for (const udid of [target.id, ...own.filter(pair => pair.active).map(pair => pair.watch.udid)]) {
+        await command(["xcrun", "simctl", "shutdown", udid], true).catch(() => {});
+    }
+    if (existing) {
+        await command(["xcrun", "simctl", "pair_activate", existing.id], true);
+        console.log("The phone links to a newly active watch from the next run: run again if the watch asks you to open the phone app.");
+        return;
+    }
+    const watch = (await command(["xcrun", "simctl", "create", name, type.identifier, runtime.identifier], true)).trim();
+    const pair = (await command(["xcrun", "simctl", "pair", watch, target.id], true)).trim();
+    if (own.length) await command(["xcrun", "simctl", "pair_activate", pair], true);
+    console.log(`Paired ${type.name} (${runtime.name}) with ${target.name}.`);
+    if (own.length) console.log("The phone links to a newly active watch from the next run: run again if the watch asks you to open the phone app.");
 }
 
 async function listening(port: string) {
@@ -361,13 +383,15 @@ async function launchWatchApp(watch: { udid: string; name: string; bundle: strin
 
 async function main() {
     if (values.help) {
-        console.log(`Usage: ${runCommand} [-t simulator|mac|<target-name-or-id>] [--targets] [--watch|-w] [--no-watch] [--headless] [--pair-watch] [--delete] [--stop] [--grant-permissions] [--health on|off] [--no-seed] [--team TEAM_ID]
+        console.log(`Usage: ${runCommand} [-t simulator|mac|<target-name-or-id>] [--targets] [--watch|-w] [--no-watch] [--headless] [--pair-watch] [--watch-model <name>] [--delete] [--stop] [--grant-permissions] [--health on|off] [--no-seed] [--team TEAM_ID]
 
 Defaults to a connected iOS device, then a booted simulator, then an available simulator, then My Mac.
 SWIFT_RUN_DEFAULT_TARGET overrides this choice when -t/--target is omitted. --targets marks the effective default with *.
 Watching is enabled by default. Saves rebuild and restart the app. Ctrl-C stops watching.
 --headless skips opening Simulator.app or Device Hub; the simulator still boots and runs the app.
 --pair-watch pairs a watch with the simulator first, reusing its pair if it has one, and runs the watch app on it.
+--watch-model <name> pairs and runs the phone's watch of that model instead ("40mm", "Series 9 (45mm)"), pairing a new one
+the first time, so a layout can be checked on each watch size. After a switch the phone links to the watch only from the next run.
 --delete shuts down and deletes the simulator and its paired watches instead of running.
 --headless also starts the worktree's server when nothing answers on its API_PORT, detached, logging to .data/server.log.
 --stop stops that server and shuts down this worktree's simulators, its paired watches included.

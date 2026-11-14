@@ -1,0 +1,10 @@
+{
+	"title": "The watch's set screen lists the plates to load and keeps Log Set fully on screen",
+	"description": "Barbell, Smith, and plate machine sets show \"13 bar + 45 10 5\" under the weight; the gray Last line is gone.",
+	"tasks": [
+		{
+			"id": "8f7a9cbc-9e91-44d0-a95a-8236945d2160",
+			"title": "Use space better: wasted at the top and squished at bottom. Drop the gray text. Show plates where relevant"
+		}
+	]
+}
