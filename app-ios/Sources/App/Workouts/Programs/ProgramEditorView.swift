@@ -104,7 +104,10 @@ private struct ProgramEditorScreen: View {
                 Button("Program Settings", systemImage: "slider.horizontal.3") { settingsShown = true }
             }
         }
-        .pinnedActions { bottomButtons(program, template: template) }
+        .pinnedActions { bottomButtons(program) }
+        .floatingAction(draft == nil && program.isActive && template != nil ? "Start Workout" : nil) {
+            if let template { store.startProgramDay(program, template: template, presenter: presenter) }
+        }
         .onChange(of: program.days.map(\.id)) { _, ids in
             if let pendingIndex, ids.indices.contains(pendingIndex) {
                 selection = ids[pendingIndex]
@@ -213,7 +216,7 @@ private struct ProgramEditorScreen: View {
     }
 
     @ViewBuilder
-    private func bottomButtons(_ program: Program, template: WorkoutTemplate?) -> some View {
+    private func bottomButtons(_ program: Program) -> some View {
         if let draft {
             Button("Save to Library") { draft.save() }.secondaryPill()
             PinnedActionButton("Activate Program") { draft.activate() }
@@ -221,8 +224,6 @@ private struct ProgramEditorScreen: View {
             PinnedActionButton("Activate Program") {
                 store.activate(program.id)
             }
-        } else if let template {
-            PinnedActionButton("Start Workout") { store.startProgramDay(program, template: template, presenter: presenter) }
         }
     }
 }

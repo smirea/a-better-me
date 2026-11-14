@@ -26,6 +26,12 @@ enum ProgramSeed {
         }
     }
 
+    /// Program Notes on each day's first exercises, one long enough to be cut beside its card, as a coached program has.
+    private static let notes = [
+        "Main lift today, heavier than the other day. Add a back-off set manually if form holds. When all sets hit the top of the range at the target RIR, add 10 lb next time. Weeks 1–2: do only 2 sets at 3 RIR. Weeks 3–4: all sets at 2 RIR. Week 5+: last set at 1 RIR.",
+        "When all sets hit 12 reps at the target RIR, add 5 lb next time.",
+    ]
+
     /// A program whose days open its own copies of the named library templates, `nil` for a rest day. Nil when the
     /// library lacks one of them.
     private static func insertProgram(
@@ -39,6 +45,9 @@ enum ProgramSeed {
         for templateName in layout.compactMap({ $0 }) where owned[templateName] == nil {
             guard let source = library.first(where: { $0.id == DevSeed.id("template/\(templateName)") }) else { return nil }
             var template = WorkoutTemplate(programID: program.id, name: source.name, blocks: source.blocks.copyingCycleTargets(), gymID: nil)
+            for (index, note) in notes.enumerated() where template.blocks.indices.contains(index) && !template.blocks[index].exercises.isEmpty {
+                template.blocks[index].exercises[0].note = note
+            }
             template.id = DevSeed.id("\(id)/template/\(templateName)")
             owned[templateName] = template
         }
