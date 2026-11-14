@@ -61,6 +61,8 @@ struct RambleItem: Decodable, Hashable, Sendable {
     /// "g", "cup", "slice", or "" for a count of the food itself.
     var unit: String
     var ref: String?
+    /// A multiple of the `ref`'s logged serving ("only half the potatoes" is 0.5); 1 otherwise.
+    var scale: Double
     var copy: String?
     var except: [String]
     /// Days from today, 0 or less; nil when the speaker named no day, so the row follows the logger's day.
@@ -72,7 +74,7 @@ struct RambleItem: Decodable, Hashable, Sendable {
     var said: String
 
     init(
-        kind: Kind = .food, name: String = "", amount: Double = 0, unit: String = "", ref: String? = nil, copy: String? = nil,
+        kind: Kind = .food, name: String = "", amount: Double = 0, unit: String = "", ref: String? = nil, scale: Double = 1, copy: String? = nil,
         except: [String] = [], day: Int? = nil, meal: RambleMealKind? = nil, minute: Int? = nil, options: Bool = false,
         said: String = ""
     ) {
@@ -81,6 +83,7 @@ struct RambleItem: Decodable, Hashable, Sendable {
         self.amount = amount
         self.unit = unit
         self.ref = ref
+        self.scale = scale
         self.copy = copy
         self.except = except
         self.day = day
@@ -91,7 +94,7 @@ struct RambleItem: Decodable, Hashable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case kind, name, amount, unit, ref, copy, except, day, meal, time, options, said
+        case kind, name, amount, unit, ref, scale, copy, except, day, meal, time, options, said
     }
 
     init(from decoder: any Decoder) throws {
@@ -101,6 +104,8 @@ struct RambleItem: Decodable, Hashable, Sendable {
         amount = try container.decode(Double.self, forKey: .amount)
         unit = try container.decode(String.self, forKey: .unit)
         ref = try container.decodeIfPresent(String.self, forKey: .ref)
+        // A server from before `scale` sends none.
+        scale = try container.decodeIfPresent(Double.self, forKey: .scale) ?? 1
         copy = try container.decodeIfPresent(String.self, forKey: .copy)
         except = try container.decode([String].self, forKey: .except)
         day = try container.decodeIfPresent(Int.self, forKey: .day)

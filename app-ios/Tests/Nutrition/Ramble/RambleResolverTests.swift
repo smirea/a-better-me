@@ -50,7 +50,7 @@ struct RambleResolverTests {
         rows.map { row in
             switch row.content {
             case let .food(food): "\(food.pick.portion.food.name): \(NutritionFormat.serving(food.pick.portion.serving))"
-            case let .copy(copy): "copy \(copy.meal.id): \(copy.entries.map(\.food.name).joined(separator: ", "))"
+            case let .copy(copy): "copy \(copy.meal.id): \(copy.kept.map(\.entry.food.name).joined(separator: ", "))"
             case .searching: "searching \(row.item.name)"
             case .unmatched: "unmatched \(row.item.name)"
             }
@@ -325,6 +325,82 @@ struct RambleResolverTests {
             ["Greek Yogurt 2026-10-28 485 1.0", "Banana 2026-10-28 490 2.0"],
             [],
         ])
+    }
+
+    /// Yesterday's dinner: steak, a potato, and broccoli, at 19:00.
+    func dinner() -> (context: RambleContext, entries: [FoodEntry], meal: String) {
+        let food = { (name: String, kcal: Double, measure: String) in
+            FoodSnapshot(source: .custom, name: name, nutrition: FoodNutrition(nutrients: [.energy: kcal, .protein: kcal / 20], measures: [Measure(name: measure, quantity: 1, servings: 1)]))
+        }
+        let yesterday = today.adding(days: -1)
+        let entries = [
+            FoodEntry(FoodPortion(food("Beef, top sirloin, steak", 400, "steak")), day: yesterday, minute: 19 * 60),
+            FoodEntry(FoodPortion(food("Potato, baked", 160, "medium")), day: yesterday, minute: 19 * 60),
+            FoodEntry(FoodPortion(food("Broccoli, cooked", 55, "cup")), day: yesterday, minute: 19 * 60 + 5),
+        ]
+        return (RambleContext(entries: entries, today: today), entries, "\(yesterday)-dinner")
+    }
+
+    func lines(_ rows: [RambleRow]) -> [String] {
+        rows.lines.map { line in
+            let indent = line.row.parent == nil ? "" : "  "
+            guard case let .food(food) = line.row.content else { return "\(indent)\(describe([line.row])[0])" }
+            return "\(indent)\(food.pick.portion.food.name): \(NutritionFormat.serving(food.pick.portion.serving))"
+        }
+    }
+
+    @Test func aCopiedMealListsItsFoodsUnderItAndAChangeLandsOnThatFood() async throws {
+        let (context, entries, meal) = dinner()
+        let resolver = try await resolver(context: context)
+        let copy = RambleItem(kind: .copy, copy: meal, meal: .lunch)
+        let plain = try resolver.rows([copy], previous: [], choices: [:])
+        #expect(lines(plain) == ["copy \(meal): Beef, top sirloin, steak, Potato, baked, Broccoli, cooked", "  Beef, top sirloin, steak: 1 steak", "  Potato, baked: 1 medium", "  Broccoli, cooked: 1 cup"])
+
+        // "Only half the potatoes": the potato's line becomes the row that changes it, in its place.
+        var halved = copy
+        halved.except = [entries[1].key]
+        let potato = RambleItem(name: "potatoes", ref: entries[1].key, scale: 0.5, meal: .lunch)
+        let changed = try resolver.rows([halved, potato], previous: plain, choices: [:])
+        #expect(lines(changed) == ["copy \(meal): Beef, top sirloin, steak, Broccoli, cooked", "  Beef, top sirloin, steak: 1 steak", "  Potato, baked: 0.5 medium", "  Broccoli, cooked: 1 cup"])
+        #expect(plain.lines.map(\.id) == changed.lines.map(\.id))
+        #expect(changed[1].changesCopiedFood)
+        let logged = changed.flatMap(\.planned).map { "\($0.pick.portion.food.name) \($0.minute) \($0.pick.portion.serving.quantity)" }
+        #expect(logged == ["Beef, top sirloin, steak 750 1.0", "Broccoli, cooked 750 1.0", "Potato, baked 750 0.5"])
+        guard case let .copy(head) = changed[0].content else { Issue.record("not a copy"); return }
+        #expect(Int((head.amounts[.energy] ?? 0).rounded()) == 400 + 80 + 55)
+
+        // A ref the model forgot to leave out still stands in for its food, so the potato is never logged twice; "no
+        // steak" drops the steak; a food said after it at the same meal joins the meal; one at another meal does not.
+        let rest = try resolver.rows([
+            RambleItem(kind: .copy, copy: meal, except: [entries[0].key], meal: .lunch), potato,
+            RambleItem(name: "egg", amount: 2, meal: .lunch), RambleItem(name: "potatoes", ref: entries[1].key, meal: .dinner),
+        ], previous: [], choices: [:])
+        #expect(lines(rest) == ["copy \(meal): Broccoli, cooked", "  Potato, baked: 0.5 medium", "  Broccoli, cooked: 1 cup", "  Egg: 2 medium", "Potato, baked: 1 medium"])
+    }
+
+    @Test func aReplacementSharingAWordWithALeftOutFoodTakesItsPlace() async throws {
+        let (context, entries, meal) = dinner()
+        let rows = try await resolver(context: context).rows([
+            RambleItem(kind: .copy, copy: meal, except: [entries[1].key], meal: .lunch),
+            RambleItem(name: "sweet potatoes", meal: .lunch),
+        ], previous: [], choices: [:])
+        let key = rows[0].key
+        #expect(rows.lines.map(\.id) == ["\(key)", "\(key) \(entries[0].key)", "\(key) \(entries[1].key)", "\(key) \(entries[2].key)"])
+        #expect(rows.lines[2].row.item.name == "sweet potatoes")
+        #expect(RambleResolver.related("sweet potatoes", "Potato, baked"))
+        #expect(RambleResolver.singular("berries") == "berry" && RambleResolver.singular("glass") == "glass")
+    }
+
+    @Test func theOwnersServingAndRemovalOfAKeptFoodHoldOnTheCopy() async throws {
+        let (context, entries, meal) = dinner()
+        let resolver = try await resolver(context: context)
+        let copy = RambleItem(kind: .copy, copy: meal, meal: .lunch)
+        let steak = try #require(entries[0].food.nutrition.measures.first)
+        let choice = RambleChoice(name: copy.identity, keptServings: [entries[0].key: Serving(measure: steak, quantity: 2)], keptRemoved: [entries[2].key])
+        let rows = try resolver.rows([copy], previous: [], choices: [0: choice])
+        #expect(lines(rows) == ["copy \(meal): Beef, top sirloin, steak, Potato, baked", "  Beef, top sirloin, steak: 2 steak", "  Potato, baked: 1 medium"])
+        let kept = rows.lines[1].row
+        #expect(kept.kept == entries[0].key && kept.id == rows[0].id && kept.item == copy && kept.key < 0)
     }
 
     @Test func aNameThatIsAnOptionOnScreenPicksItAndKeepsTheList() async throws {

@@ -12,6 +12,9 @@ struct RambleChoice: Hashable, Sendable {
     var removed = false
     /// For a removal, the transcript word after the removed row's words.
     var through: Int?
+    /// For a copy, the servings the owner set on the foods it keeps, and the ones they removed, by `FoodEntry.key`.
+    var keptServings: [String: Serving] = [:]
+    var keptRemoved: Set<String> = []
 }
 
 /// One food a row will log, at its own day and minute.
@@ -40,8 +43,32 @@ struct RambleRow: Identifiable, Hashable, Sendable {
 
     struct Copy: Hashable, Sendable {
         var meal: RambleMeal
-        /// The meal's entries without the ones the speaker left out.
-        var entries: [FoodEntry]
+        /// The meal's foods in its order, then the foods added to it (`RambleResolver.nest`).
+        var children: [Child]
+        /// Every child's calories and macros, which the copy's line shows.
+        var amounts = NutrientAmounts()
+
+        /// The foods kept as logged, which the copy itself logs; the other children are rows of their own.
+        var kept: [(entry: FoodEntry, pick: LoggerPick)] {
+            children.compactMap { if case let .kept(entry, pick) = $0 { (entry, pick) } else { nil } }
+        }
+    }
+
+    /// One food of a copied meal.
+    enum Child: Hashable, Sendable {
+        /// An entry as logged, at the owner's serving if they changed it.
+        case kept(FoodEntry, LoggerPick)
+        /// The food row, by `id`, that changes the entry ("only half the potatoes"), or joins the meal when `entry` is nil.
+        case row(Int, entry: String?)
+
+        /// What a line stands for across reads: the entry, whichever form it takes, so a kept food turning into the row
+        /// that changes it is one line that animates the change.
+        var slot: String {
+            switch self {
+            case let .kept(entry, _): entry.key
+            case let .row(id, entry): entry ?? "row \(id)"
+            }
+        }
     }
 
     enum Content: Hashable, Sendable {
@@ -62,11 +89,19 @@ struct RambleRow: Identifiable, Hashable, Sendable {
     /// The row on screen this one continues, so a correction animates as a change and a removal as a removal, where
     /// `id` would shift every row after a removed one onto its neighbour (`keyed(after:next:)`).
     var key = 0
+    /// For a food of a copied meal, the copy row's `id`. The list draws it under the copy.
+    var parent: Int?
+    /// For a food kept as logged, its entry: such a row is drawn from the copy (`RambleCapture.lines`), with the copy's
+    /// `id` and `item`, so the owner's changes to it land on the copy's choice.
+    var kept: String?
+
+    /// A food row that changes one of a copied meal's foods by pointing back at it ("only half the potatoes").
+    var changesCopiedFood: Bool { parent != nil && item.ref != nil }
 
     var planned: [RamblePlanned] {
         switch content {
         case let .food(food): [RamblePlanned(pick: food.pick, day: day, minute: minute ?? 0)]
-        case let .copy(copy): copy.entries.map { RamblePlanned(pick: LoggerPick($0.portion), day: day, minute: minute ?? $0.minute) }
+        case let .copy(copy): copy.kept.map { RamblePlanned(pick: $0.pick, day: day, minute: minute ?? $0.entry.minute) }
         case .searching, .unmatched: []
         }
     }
@@ -117,7 +152,42 @@ enum RambleAlignment {
     }
 }
 
+/// A line of the ramble's list: a row, or a food of a copied meal drawn under it.
+struct RambleListLine: Identifiable, Hashable, Sendable {
+    /// A copy's food keeps its line whether it is kept as logged or changed by a row, so the change animates in place.
+    let id: String
+    let row: RambleRow
+}
+
 extension [RambleRow] {
+    /// The rows in list order, each copy followed by its foods (`RambleRow.Copy.children`). A kept food is drawn as a
+    /// food row with the copy's `id` and `item`, and a key of its own that no row has.
+    var lines: [RambleListLine] {
+        let byID = Dictionary(map { ($0.id, $0) }, uniquingKeysWith: { $1 })
+        return flatMap { row -> [RambleListLine] in
+            guard row.parent == nil else { return [] }
+            var lines = [RambleListLine(id: "\(row.key)", row: row)]
+            guard case let .copy(copy) = row.content else { return lines }
+            for child in copy.children {
+                let id = "\(row.key) \(child.slot)"
+                switch child {
+                case let .kept(entry, pick):
+                    var kept = row
+                    kept.content = .food(.init(pick: pick, key: FoodSearchResult.key(entry.food), options: [], showsOptions: false))
+                    kept.minute = row.minute ?? entry.minute
+                    kept.parent = row.id
+                    kept.kept = entry.key
+                    // A copy holds at most `RambleContext.entriesPerMeal` foods, so 64 keys per copy never meet.
+                    kept.key = -(row.key * 64 + (copy.meal.entries.firstIndex { $0.id == entry.key } ?? 0) + 1)
+                    lines.append(RambleListLine(id: id, row: kept))
+                case let .row(childID, _):
+                    if let child = byID[childID] { lines.append(RambleListLine(id: id, row: child)) }
+                }
+            }
+            return lines
+        }
+    }
+
     /// These rows at the positions of the `items` they continue (`RambleAlignment`), for the resolver, which reads the
     /// previous row by position: after "remove the pear" the dates move into the pear's place and must find their own row.
     func lined(up items: [RambleItem]) -> [RambleRow] {
@@ -167,7 +237,7 @@ struct RambleResolver: Sendable {
             if choice?.removed == true { continue }
             rows.append(try row(position, item, previous: previous[position], choice: choice, search: search))
         }
-        return rows
+        return Self.nest(rows)
     }
 
     private func row(_ id: Int, _ item: RambleItem, previous: RambleRow?, choice: RambleChoice?, search: Bool) throws -> RambleRow {
@@ -178,9 +248,13 @@ struct RambleResolver: Sendable {
             guard let mealID = item.copy, let meal = context.meals.first(where: { $0.id == mealID }) else {
                 return RambleRow(id: id, item: item, day: day, minute: minute ?? fallback.minute, content: .unmatched)
             }
-            let except = Set(item.except)
-            let entries = (context.mealEntries[mealID] ?? []).filter { !except.contains($0.key) }
-            return RambleRow(id: id, item: item, day: day, minute: minute, content: .copy(.init(meal: meal, entries: entries)))
+            let except = Set(item.except).union(choice?.keptRemoved ?? [])
+            let kept = (context.mealEntries[mealID] ?? []).filter { !except.contains($0.key) }.map { entry in
+                var portion = entry.portion
+                if let serving = choice?.keptServings[entry.key] { portion.serving = serving }
+                return RambleRow.Child.kept(entry, LoggerPick(portion))
+            }
+            return RambleRow(id: id, item: item, day: day, minute: minute, content: .copy(.init(meal: meal, children: kept)))
         case .food:
             return RambleRow(id: id, item: item, day: day, minute: minute ?? fallback.minute, content: try food(item, previous: previous, choice: choice, search: search))
         }
@@ -204,6 +278,8 @@ struct RambleResolver: Sendable {
             var portion = entry.portion
             if item.amount > 0 {
                 portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, food: item.name, of: entry.food.nutrition, history: entry.serving)
+            } else {
+                portion.serving.quantity *= item.scale
             }
             if let serving = choice?.serving { portion.serving = serving }
             let pick = LoggerPick(portion)
@@ -257,8 +333,53 @@ struct RambleResolver: Sendable {
 
 extension RambleResolver {
     static func related(_ a: String, _ b: String) -> Bool {
-        let words = { (text: String) in Set(text.lowercased().split(whereSeparator: { !$0.isLetter }).map { $0.hasSuffix("s") ? String($0.dropLast()) : String($0) }) }
+        let words = { (text: String) in Set(text.lowercased().split(whereSeparator: { !$0.isLetter }).map { singular(String($0)) }) }
         return !words(a).isDisjoint(with: words(b))
+    }
+
+    /// "potatoes" is "potato" and "berries" is "berry", where dropping the "s" alone made "potatoe".
+    static func singular(_ word: String) -> String {
+        guard word.count > 3, word.hasSuffix("s"), !word.hasSuffix("ss") else { return word }
+        if word.hasSuffix("ies") { return word.dropLast(3) + "y" }
+        if word.hasSuffix("oes") { return String(word.dropLast(2)) }
+        return String(word.dropLast())
+    }
+
+    /// Moves the food rows that change or join a copied meal under it, as its children: the foods said right after the
+    /// copy at its day, meal, and time, since the model lists a copy's changes right after it. A food that refs one of
+    /// the meal's entries ("only half the potatoes") takes that entry's place, as does one sharing a word with an entry
+    /// the speaker left out ("sweet potatoes instead"); the others join the meal at its end.
+    static func nest(_ rows: [RambleRow]) -> [RambleRow] {
+        var rows = rows
+        for index in rows.indices {
+            guard case var .copy(copy) = rows[index].content else { continue }
+            let head = rows[index]
+            let left = Set(head.item.except)
+            var slots: [String: Int] = [:]
+            var added: [Int] = []
+            var next = index + 1
+            while next < rows.count, rows[next].item.kind == .food, rows[next].day == head.day,
+                  rows[next].item.meal == head.item.meal, rows[next].item.minute == head.item.minute {
+                let row = rows[next]
+                if let ref = row.item.ref, copy.meal.entries.contains(where: { $0.id == ref }), slots[ref] == nil {
+                    slots[ref] = row.id
+                } else if row.item.ref == nil,
+                          let replaced = copy.meal.entries.first(where: { left.contains($0.id) && slots[$0.id] == nil && related($0.name, row.item.name) }) {
+                    slots[replaced.id] = row.id
+                } else {
+                    added.append(row.id)
+                }
+                rows[next].parent = head.id
+                next += 1
+            }
+            let kept = Dictionary(copy.kept.map { ($0.entry.key, RambleRow.Child.kept($0.entry, $0.pick)) }, uniquingKeysWith: { $1 })
+            copy.children = copy.meal.entries.compactMap { entry in slots[entry.id].map { .row($0, entry: entry.id) } ?? kept[entry.id] }
+                + added.map { .row($0, entry: nil) }
+            let portions = copy.kept.map(\.pick.portion) + rows[(index + 1)..<next].flatMap(\.planned).map(\.pick.portion)
+            copy.amounts = portions.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts }
+            rows[index].content = .copy(copy)
+        }
+        return rows
     }
 }
 

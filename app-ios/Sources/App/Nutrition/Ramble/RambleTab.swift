@@ -40,9 +40,10 @@ struct RambleTab: View {
                         if capture.rows.isEmpty, capture.words.words.isEmpty, capture.phase != .review {
                             hints.transition(.opacity)
                         }
-                        let headers = Self.headers(capture.rows)
-                        ForEach(capture.rows, id: \.key) { row in
-                            if let header = headers[row.key] {
+                        let headers = Self.headers(capture.rows.filter { $0.parent == nil })
+                        ForEach(capture.lines) { line in
+                            let row = line.row
+                            if row.parent == nil, let header = headers[row.key] {
                                 Chip(title: header, size: .small)
                                     .fixedSize()
                                     .padding(.top, 14)
@@ -59,7 +60,14 @@ struct RambleTab: View {
                                 },
                                 open: { open(row) }
                             )
-                            .id(row.key)
+                            .padding(.leading, row.parent == nil ? 0 : Self.childInset)
+                            .overlay(alignment: .leading) {
+                                // A guide down from the copy's icon ties its foods to it.
+                                if row.parent != nil {
+                                    Capsule().fill(Theme.separator).frame(width: 2).padding(.vertical, 6).offset(x: 13)
+                                }
+                            }
+                            .id(line.id)
                             .zIndex(focused == row.key ? 1 : 0)
                             .transition(arrival)
                         }
@@ -76,13 +84,13 @@ struct RambleTab: View {
                     .padding(.vertical, 8)
                 }
                 .scrollIndicators(.hidden)
-                .onChange(of: capture.rows.count) { old, new in
-                    guard new > old, focused == nil, let last = capture.rows.last else { return }
-                    withAnimation(.smooth) { proxy.scrollTo(last.key, anchor: .bottom) }
+                .onChange(of: capture.lines.count) { old, new in
+                    guard new > old, focused == nil, let last = capture.lines.last else { return }
+                    withAnimation(.smooth) { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
                 .onChange(of: focused) { _, key in
-                    guard let key else { return }
-                    withAnimation(.smooth) { proxy.scrollTo(key, anchor: .top) }
+                    guard let key, let line = capture.lines.first(where: { $0.row.key == key }) else { return }
+                    withAnimation(.smooth) { proxy.scrollTo(line.id, anchor: .top) }
                 }
             }
         }
@@ -126,6 +134,9 @@ struct RambleTab: View {
         .feedback(self)
     }
 
+    /// How far a copied meal's foods sit in from it: their icons under its title.
+    private static let childInset: CGFloat = 28
+
     /// Each row that starts a new hour, or a new day, gets that hour as a header, as the Food Log groups its foods.
     static func headers(_ rows: [RambleRow], today: CalendarDay = .today) -> [Int: String] {
         var headers: [Int: String] = [:]
@@ -147,7 +158,9 @@ struct RambleTab: View {
         for row in new {
             guard let span = capture.spans[row.key] else { continue }
             let kind: Flight.Kind
-            if let earlier = before[row.key] {
+            if row.changesCopiedFood, before[row.key] == nil {
+                kind = .correction
+            } else if let earlier = before[row.key] {
                 // Only words said after the item's own are a correction; a requote of the same words is the model settling.
                 let changed = earlier.item.name != row.item.name || earlier.item.amount != row.item.amount || earlier.item.unit != row.item.unit
                 guard changed, let was = capture.words.span(of: earlier.item.said), span.lowerBound > was.lowerBound else { continue }
@@ -555,7 +568,7 @@ private struct RambleLine: View {
         let placement = "\(row.day) \(row.minute ?? -1)"
         return switch row.content {
         case let .food(food): Face(title: food.pick.portion.food.displayName, serving: NutritionFormat.serving(food.pick.portion.serving), placement: placement, resolved: true)
-        case let .copy(copy): Face(title: Self.title(copy), serving: "\(copy.entries.count)", placement: placement, resolved: true)
+        case let .copy(copy): Face(title: Self.title(copy), serving: "", placement: placement, resolved: true)
         case .searching: Face(title: row.item.name, serving: Self.spoken(row.item) ?? "", placement: placement, resolved: false)
         case .unmatched: Face(title: row.item.name, serving: "", placement: placement, resolved: true)
         }
@@ -702,7 +715,8 @@ private struct RambleLine: View {
     }
 
     @ViewBuilder private var title: some View {
-        let text = parsing ? row.item.name : face.title
+        // A copy knows its meal's name at once; only a food's name waits on its match.
+        let text = parsing && row.item.kind == .food ? row.item.name : face.title
         Text(text.isEmpty ? "A meal" : text)
             .font(AppFont.rowTitle)
             .foregroundStyle(parsing ? Theme.accent : Theme.textPrimary)
@@ -716,17 +730,8 @@ private struct RambleLine: View {
                     .contentTransition(.opacity)
             } else {
                 switch row.content {
-                case let .food(food):
-                    // The old line fades out before the new one fades in, so their digits never overlap.
-                    ZStack(alignment: .leading) {
-                        Text(macroLine: food.pick.portion.amounts)
-                            .id(face.serving)
-                            .transition(.asymmetric(
-                                insertion: .opacity.animation(.easeIn(duration: 0.18).delay(0.14)),
-                                removal: .opacity.animation(.easeOut(duration: 0.12))
-                            ))
-                    }
-                case let .copy(copy): Text(copy.entries.map(\.food.name).joined(separator: " · "))
+                case let .food(food): RambleMacros(amounts: food.pick.portion.amounts)
+                case let .copy(copy): RambleMacros(amounts: copy.amounts)
                 case .searching, .unmatched: Text(onlineSearch ? "Searching online…" : "Not found. Tap to search for it.")
                 }
             }
@@ -738,19 +743,14 @@ private struct RambleLine: View {
 
     /// The serving, right-aligned: a menu of the food's measures, and Custom for the serving keyboard.
     @ViewBuilder private var serving: some View {
-        // The old amount fades out before the new one fades in, so they never overlap.
-        let label = ZStack {
-            Text(face.serving)
-                .font(AppFont.chip)
-                .monospacedDigit()
-                .lineLimit(1)
-                .id(face.serving)
-                .transition(.asymmetric(
-                    insertion: .opacity.animation(.easeIn(duration: 0.18).delay(0.14)),
-                    removal: .opacity.animation(.easeOut(duration: 0.12))
-                ))
-        }
-        .padding(.horizontal, 10)
+        // A new amount rolls its digits to the new serving.
+        let label = Text(face.serving)
+            .font(AppFont.chip)
+            .monospacedDigit()
+            .lineLimit(1)
+            .contentTransition(.numericText())
+            .animation(reduceMotion ? nil : .snappy(duration: 0.35), value: face.serving)
+            .padding(.horizontal, 10)
         .frame(minHeight: 32)
         .background(Theme.surfaceRaised, in: .capsule)
         if !parsing, case let .food(food) = row.content {
@@ -810,8 +810,13 @@ private struct RambleLine: View {
         withAnimation(.easeOut(duration: 0.18)) { removing = true }
         Task {
             try? await Task.sleep(for: .milliseconds(180))
-            // A read landing meanwhile may have moved the row to another position; its key still finds it.
-            if let current = capture.rows.first(where: { $0.key == row.key }) { capture.remove(current) }
+            // A read landing meanwhile may have moved the row to another position; its key still finds it. A kept food
+            // of a copy is the copy's to drop.
+            if row.kept != nil {
+                capture.remove(row)
+            } else if let current = capture.rows.first(where: { $0.key == row.key }) {
+                capture.remove(current)
+            }
         }
     }
 
@@ -828,6 +833,54 @@ private struct RambleLine: View {
     private func light() {
         glow = 1
         withAnimation(.easeOut(duration: 1.6)) { glow = 0 }
+    }
+}
+
+/// A row's calories and macros. When they change, the old values stay a moment struck through above the new ones, then
+/// leave, so a new serving shows what it changed.
+private struct RambleMacros: View {
+    let amounts: NutrientAmounts
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var was: NutrientAmounts?
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 4) {
+            ForEach(NutrientID.macros, id: \.self) { id in
+                VStack(alignment: .leading, spacing: 0) {
+                    if let was, Self.value(id, was) != Self.value(id, amounts) {
+                        Self.text(id, was)
+                            .strikethrough(color: Theme.accent)
+                            .foregroundStyle(Theme.textTertiary)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                    Self.text(id, amounts).contentTransition(.numericText())
+                }
+            }
+        }
+        .onChange(of: amounts) { old, new in
+            guard !reduceMotion, NutrientID.macros.contains(where: { Self.value($0, old) != Self.value($0, new) }) else { return }
+            withAnimation(.smooth(duration: 0.3)) { was = old }
+        }
+        .task(id: was) {
+            guard was != nil else { return }
+            try? await Task.sleep(for: .seconds(1.4))
+            withAnimation(.easeOut(duration: 0.35)) { was = nil }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Self.spoken(amounts))
+    }
+
+    private static func value(_ id: NutrientID, _ amounts: NutrientAmounts) -> String {
+        id == .energy ? NutritionFormat.calories(amounts) : "\((amounts[id] ?? 0).wholeText)\(id.macroLetter)"
+    }
+
+    private static func text(_ id: NutrientID, _ amounts: NutrientAmounts) -> Text {
+        id == .energy ? Text("\(value(id, amounts))\(calorieGlyph)") : Text(value(id, amounts))
+    }
+
+    private static func spoken(_ amounts: NutrientAmounts) -> String {
+        let grams = { (id: NutrientID) in (amounts[id] ?? 0).wholeText }
+        return "\(NutritionFormat.calories(amounts)) kilocalories, \(grams(.protein)) grams protein, \(grams(.fat)) grams fat, \(grams(.carbs)) grams carbs"
     }
 }
 

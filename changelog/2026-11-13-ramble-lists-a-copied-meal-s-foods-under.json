@@ -1,0 +1,10 @@
+{
+	"title": "Ramble lists a copied meal's foods under it, and spoken changes land on those foods",
+	"description": "Say \"only half the potatoes\" and the potatoes change in place; a new serving strikes through the old values.",
+	"tasks": [
+		{
+			"id": "653ed069-fe97-4bc2-a173-c69d703b1429",
+			"title": "2 Nutrition Feedback: Update hierarchy, animate updates"
+		}
+	]
+}

@@ -94,6 +94,7 @@ export function diff(expected: Expected, actual: RambleItem, text: string): stri
 			misses.push(`unit "${actual.unit}"`);
 	}
 	if (!anyOf(expected.ref ?? null, actual.ref)) misses.push(`ref ${actual.ref}`);
+	if (Math.abs((expected.scale ?? 1) - (actual.scale ?? 1)) > 0.01) misses.push(`scale ${actual.scale}`);
 	if ((expected.copy ?? null) !== actual.copy) misses.push(`copy ${actual.copy}`);
 	if ((expected.except ?? []).toSorted().join() !== actual.except.toSorted().join())
 		misses.push(`except [${actual.except}]`);
