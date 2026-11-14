@@ -34,10 +34,10 @@ enum HealthSeed {
             }
         }
         // Yesterday and the two days before it meet the default goal, so the Steps screen shows a streak. A hike months
-        // back is the kind of outlier a real history holds, whose distance is wider than a typical bar's.
+        // back is the kind of outlier a real history holds, whose count and distance are wider than a typical bar's.
         let hike = 150
         func steps(_ offset: Int) -> Double {
-            offset == hike ? 31_200 : (1...3).contains(offset) ? 10_400 + Double(offset * 1_337) : 4000 + Double((offset * 2731) % 9000)
+            offset == hike ? 40_800 : (1...3).contains(offset) ? 10_400 + Double(offset * 1_337) : 4000 + Double((offset * 2731) % 9000)
         }
         let stepCount = HKQuantityType(.stepCount)
         if try await isEmpty(stepCount, store) {

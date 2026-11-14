@@ -10,9 +10,8 @@ struct StepBar: Equatable {
     var distance: String
 }
 
-/// How much of each bar's labels fit, the same for every bar of a range. Pedometer++ labels a bar only where its text
-/// fits the bar's width, so a denser range drops the flights and distance first, then shortens the counts, then drops
-/// them.
+/// How much of the bars' labels a range shows. Pedometer++ labels a bar only where its text fits the bar's width, so a
+/// denser range drops the flights and distance first, then shortens the counts, then drops them.
 enum BarLabelStyle: Equatable {
     case detailed, full, compact, hidden
 
@@ -21,15 +20,24 @@ enum BarLabelStyle: Equatable {
     /// The room a bar's foot leaves its flights and distance on either side.
     static let detailInset: CGFloat = 6
 
-    /// A count must fit the bar's slot, the gap included, for every bar of the history. The flights and distance show
-    /// where the typical bar's fit inside it: the chart scrolls through every day of history, and one long hike in it
-    /// once hid them from every bar (Steps feedback, Nov 2026). A bar whose own don't fit drops them (`fitsInside`).
+    /// What the typical bar's labels fit: its count in the bar's slot, the gap included, and its flights and distance
+    /// inside the bar. The chart scrolls through every day of history, and measuring every bar let one long hike there
+    /// shorten every count and hide every bar's details (Steps feedback, Nov 2026): DM Sans's digits are proportional,
+    /// so "40,800" is wider than a 1W bar's slot on a 393pt phone while "14,012" fits. A bar whose own labels don't fit
+    /// drops to what does (`count(_:slot:width:)`, `fitsInside`).
     static func fitting(_ bars: [StepBar], slot: CGFloat, barWidth: CGFloat, count: (String) -> CGFloat, detail: (String) -> CGFloat) -> BarLabelStyle {
-        func fits(_ style: BarLabelStyle) -> Bool { bars.allSatisfy { count(style.text($0.steps)) <= slot } }
-        guard fits(.full) else { return fits(.compact) ? .compact : .hidden }
-        let widths = bars.compactMap { bar in detailWidth(bar, detail: detail) }.sorted()
-        guard !widths.isEmpty else { return .full }
-        return widths[widths.count / 2] <= barWidth - detailInset ? .detailed : .full
+        func typical(_ widths: [CGFloat]) -> CGFloat? { widths.isEmpty ? nil : widths.sorted()[widths.count / 2] }
+        guard let counts = typical(bars.map { count(BarLabelStyle.full.text($0.steps)) }) else { return .hidden }
+        guard counts <= slot else {
+            return typical(bars.map { count(BarLabelStyle.compact.text($0.steps)) })! <= slot ? .compact : .hidden
+        }
+        guard let details = typical(bars.compactMap { detailWidth($0, detail: detail) }) else { return .full }
+        return details <= barWidth - detailInset ? .detailed : .full
+    }
+
+    /// A bar's count in this style, shortened, then dropped, where it is wider than the slot.
+    func count(_ steps: Double, slot: CGFloat, width: (String) -> CGFloat) -> String {
+        [text(steps), BarLabelStyle.compact.text(steps)].first { width($0) <= slot } ?? ""
     }
 
     /// Whether this bar's flights and distance fit inside it.
@@ -64,6 +72,10 @@ enum StepBarLabels {
 
     static func style(_ bars: [StepBar], slot: CGFloat) -> BarLabelStyle {
         BarLabelStyle.fitting(bars, slot: slot, barWidth: slot * barRatio, count: { width($0, countFont) }, detail: { width($0, detailFont) })
+    }
+
+    static func count(_ steps: Double, style: BarLabelStyle, slot: CGFloat) -> String {
+        style.count(steps, slot: slot) { width($0, countFont) }
     }
 
     static func fitsInside(_ bar: StepBar, slot: CGFloat) -> Bool {
