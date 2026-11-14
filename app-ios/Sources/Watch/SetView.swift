@@ -15,6 +15,7 @@ struct SetView: View {
     @State private var crown = 0.0
     /// The scale index the shown value sits nearest, so focusing a pill doesn't snap an untidy value.
     @State private var crownIndex = 0
+    @State private var plan: PlatePlan?
 
     private var row: LiveSet { workout.set(at: path) }
     private var item: BlockExercise { workout.blocks[path.block].exercises[path.exercise] }
@@ -40,7 +41,7 @@ struct SetView: View {
                     $crown, from: 0, through: Double(max(scale.count - 1, 0)), by: 1,
                     sensitivity: .medium, isContinuous: false, isHapticFeedbackEnabled: true
                 )
-                if fields.contains(.weight), let plan = workout.exercise(item.exerciseID).plates?.plan(weightKg: values.weightKg, unit: workout.unit) {
+                if let plan {
                     PlateLine(plan: plan, unit: workout.unit)
                 }
             }
@@ -52,6 +53,8 @@ struct SetView: View {
         .onAppear { load() }
         .onChange(of: row.id) { load() }
         .onChange(of: focus) { syncCrown() }
+        .onChange(of: values.weightKg) { updatePlan() }
+        .onChange(of: plates) { updatePlan() }
         .onChange(of: crown) { _, crown in
             let index = min(max(Int(crown.rounded()), 0), scale.count - 1)
             guard index != crownIndex, scale.indices.contains(index) else { return }
@@ -111,7 +114,17 @@ struct SetView: View {
         rowID = row.id
         values = row.values
         if !sameExercise || !fields.contains(focus) { focus = fields.first ?? .reps }
+        updatePlan()
         syncCrown()
+    }
+
+    private var plates: WatchPlates? {
+        fields.contains(.weight) ? workout.exercise(item.exerciseID).plates : nil
+    }
+
+    private func updatePlan() {
+        let next = plates?.plan(weightKg: values.weightKg, unit: workout.unit)
+        if next != plan { plan = next }
     }
 
     private func syncCrown() {
