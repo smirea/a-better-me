@@ -44,7 +44,7 @@ extension SessionEditor {
             let offset = plateOffset(of: exerciseID)
             PlateCalculatorView(
                 plan: plates.plan(for: offset?.applied(to: typed, unit: unit) ?? typed), unit: unit, isExpanded: store.platesExpanded,
-                requested: typed, offset: offset, showsOffset: calculatorOptions.offsetWeight,
+                offset: offset, showsOffset: calculatorOptions.offsetWeight,
                 onBar: { weight in
                     guard let baseID = plates.baseID else { return }
                     let kg = unit.toKg(weight)

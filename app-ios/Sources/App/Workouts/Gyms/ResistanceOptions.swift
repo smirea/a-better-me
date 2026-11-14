@@ -75,6 +75,8 @@ extension Loading {
     /// MF's Weight Plates, which plate-loaded bars and machines take even when their option doesn't name them.
     static let weightPlatesID: EquipmentID = "25a5c6f170d880c1a55ac08cf52671ab"
     private static let barCategory = "Loadable Bars"
+    /// A plate-loaded machine whose base is a bar, so the calculator calls it one.
+    private static let smithMachineID: EquipmentID = "19e5c6f170d880d29affc687810a9a8a"
     private static let machineCategory = "Plate Loaded Machines"
     private static let accessoryCategory = "Loadable Accessories"
     private static let plateLoadedCategories: Set<String> = [barCategory, machineCategory, accessoryCategory]
@@ -162,7 +164,7 @@ extension Loading {
             PlateLoading.Plate(weight: unit.fromKg(option.kg), perSide: option.count.map { $0 / sides }, isBumper: isBumper)
         }
         let baseWeight = unit.fromKg(baseKg ?? 0) * Double(loaded) / Double(sides)
-        return .plates(PlateLoading(base: isBar ? .bar : .machine, baseWeight: baseWeight, plates: plates, sides: loaded, baseID: base.id, baseWeights: baseWeights))
+        return .plates(PlateLoading(base: isBar || base.id == smithMachineID ? .bar : .machine, baseWeight: baseWeight, plates: plates, sides: loaded, baseID: base.id, baseWeights: baseWeights))
     }
 
     /// The loads a rack or pin stack offers, ascending. `nil` for an empty list, so the stepper keeps its increment.

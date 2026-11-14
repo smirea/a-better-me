@@ -1,56 +1,61 @@
 import Feedback
 import SwiftUI
 
-/// The weight keypad's plate calculator: one sleeve of the bar with its plates, the legend, and MF's sentence. The
-/// context key switches the expanded view, which draws the sleeve larger with each plate's weight on it. Bumper plates
-/// are drawn full height and wider, as they are on a bar. A bar the gym lists in several weights gets a menu, and a
-/// gym with Offset Weight on gets the offset chip.
+/// The weight keypad's plate calculator: one sleeve of the bar with its plates beside a legend that reads it out, "13 bar
+/// + 45 10 5". The context key switches the expanded view, which draws the sleeve larger with each plate's weight on it.
+/// Bumper plates are drawn full height and wider, as they are on a bar. A bar the gym lists in several weights gets a
+/// menu, and a gym with Offset Weight on gets the offset chip.
 struct PlateCalculatorView: View {
     let plan: PlatePlan
     let unit: WeightUnit
     let isExpanded: Bool
-    /// The typed weight, named in the sentence when an offset moved it.
-    var requested: Double? = nil
     var offset: PlateOffset? = nil
     var showsOffset = false
     var onBar: ((Double) -> Void)? = nil
     var onOffset: (() -> Void)? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 16) {
-                    sleeve
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(Array(plan.legend.enumerated()), id: \.offset) { _, line in
-                            HStack(spacing: 6) {
-                                swatch(line.weight, isBumper: line.isBumper)
-                                Text("\(line.count) x \(NumberText.plain(line.weight))\(line.isBumper ? " bumper" : "")")
-                            }
-                        }
-                    }
-                    .font(AppFont.medium(isExpanded ? 15 : 13))
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Plate calculator")
-                    .accessibilityValue(sentence)
-                    Spacer(minLength: 0)
-                    // The expanded sleeve leaves no room beside the legend, so the chips go under it.
-                    if !isExpanded { controls }
-                }
-                if isExpanded { controls }
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 16) {
+                sleeve
+                legend
+                Spacer(minLength: 0)
+                // The expanded sleeve leaves no room beside the legend, so the chips go under it.
+                if !isExpanded { controls }
             }
-            .padding(.horizontal, Theme.margin)
-            .padding(.vertical, 10)
-            Divider().overlay(Theme.separator)
-            Text(sentence)
-                .font(AppFont.rowDetail)
-                .foregroundStyle(Theme.textSecondary)
-                .padding(.horizontal, Theme.margin)
-                .padding(.vertical, 8)
+            if isExpanded { controls }
         }
+        .padding(.horizontal, Theme.margin)
+        .padding(.vertical, 10)
         .foregroundStyle(Theme.textPrimary)
         .background(Theme.header)
         .feedback(self)
+    }
+
+    /// The base, then one entry per plate as on the sleeve, wrapping to more rows when a heavy load doesn't fit.
+    private var legend: some View {
+        let miss = plan.miss(unit: unit.rawValue)
+        return FlowLayout(spacing: isExpanded ? 8 : 6) {
+            if let base = plan.baseLabel {
+                Text(base)
+                if !plan.loaded.isEmpty { Text("+").foregroundStyle(Theme.textSecondary) }
+            } else if plan.loaded.isEmpty {
+                Text("No plates").foregroundStyle(Theme.textSecondary)
+            }
+            ForEach(Array(plan.loaded.enumerated()), id: \.offset) { _, plate in
+                HStack(spacing: 4) {
+                    swatch(plate.weight, isBumper: plate.isBumper)
+                    Text(NumberText.plain(plate.weight))
+                }
+            }
+            if let miss { Text(miss).foregroundStyle(Theme.amber) }
+        }
+        .font(AppFont.medium(isExpanded ? 15 : 13))
+        .monospacedDigit()
+        .layoutPriority(1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Plate calculator")
+        .accessibilityValue([plan.legend.isEmpty ? "No plates" : plan.legend, miss].compactMap(\.self).joined(separator: ", "))
     }
 
     @ViewBuilder
@@ -64,12 +69,6 @@ struct PlateCalculatorView: View {
             }
         }
         .fixedSize()
-    }
-
-    private var sentence: String {
-        let base = plan.sentence(unit: unit.rawValue)
-        guard let offset, let requested else { return base }
-        return "\(base) (\(NumberText.plain(requested)) \(unit.rawValue) \(offset.label(unit: unit)))"
     }
 
     private func barMenu(_ onBar: @escaping (Double) -> Void) -> some View {

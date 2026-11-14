@@ -52,11 +52,6 @@ struct WorkoutSettingsView: View {
                     title: "Workout Timer", detail: "Show elapsed time during workout sessions",
                     systemImage: "clock.fill", isOn: store.binding(settings, \.workout.display.workoutTimer)
                 )
-                SettingToggle(
-                    title: "Bodyweight Contribution",
-                    detail: "Display scale weight and body weight contribution during workout sessions",
-                    systemImage: "scalemass", isOn: store.binding(settings, \.workout.display.bodyweightContribution)
-                )
                 SettingChoice(
                     title: "Calendar Scrolling", systemImage: "calendar.day.timeline.left",
                     selection: store.binding(settings, \.workout.display.calendarScrolling),

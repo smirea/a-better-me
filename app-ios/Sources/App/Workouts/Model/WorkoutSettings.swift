@@ -81,7 +81,6 @@ enum PreviousReference: String, Codable {
 struct DisplaySettings: Codable, Hashable {
     var keepAlive = false
     var workoutTimer = true
-    var bodyweightContribution = true
     var calendarScrolling = CalendarScrolling.daily
 }
 
