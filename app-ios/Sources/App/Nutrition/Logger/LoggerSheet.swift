@@ -88,10 +88,7 @@ private struct LoggerContent: View {
                             FoodDetailView(session: session, editing: nil, pick: food.pick, ramble: RambleEdit(
                                 update: { session.ramble.setServing($0, of: row) },
                                 day: row.day,
-                                others: session.ramble.rows
-                                    .filter { $0.id != row.id && $0.day == row.day }
-                                    .flatMap(\.planned)
-                                    .reduce(into: NutrientAmounts()) { $0 = $0 + $1.pick.portion.amounts }
+                                others: session.ramble.others(than: row)
                             ))
                         }
                     }

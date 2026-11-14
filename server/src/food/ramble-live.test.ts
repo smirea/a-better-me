@@ -20,6 +20,7 @@ const outline = (...names: string[]): RambleOutline => ({
 		amount: 0,
 		unit: '',
 		ref: null,
+		scale: 1,
 		copy: null,
 		except: [],
 		day: null,

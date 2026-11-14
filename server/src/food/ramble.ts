@@ -50,7 +50,9 @@ export type RambleRequest = z.input<typeof RambleRequest>;
 /**
  * One line of the ramble's list. `food` is searched on the phone by `name`; `ref` names a logged entry to reuse
  * instead. `copy` is a whole logged meal minus `except`. Amount 0 means none was said, so the phone logs one of the
- * food's usual serving; a unit always comes with an amount. `day` is an offset from today, or null when the speaker
+ * food's usual serving; a unit always comes with an amount. `scale` multiplies a `ref`'s logged serving ("only half
+ * the potatoes" is 0.5), and is 1 otherwise. A food that refs an entry of a copied meal changes that entry, so the
+ * copy's `except` always lists it. `day` is an offset from today, or null when the speaker
  * named no day and the phone's open day applies; `time` is a 24-hour clock or empty. `said` quotes the transcript's
  * words the item came from, which the phone highlights and flies into the row; it may be empty or misquoted.
  */
@@ -61,6 +63,7 @@ export const RambleItem = z
 		amount: z.number().min(0),
 		unit: z.string(),
 		ref: z.string().nullable(),
+		scale: z.number().positive(),
 		copy: z.string().nullable(),
 		except: z.array(z.string()),
 		day: z.int().min(-30).max(0).nullable(),
@@ -129,8 +132,9 @@ Each item is one of two kinds.
 - "food": one food or drink.
   - name: the food to search a food database for, in the speaker's words without the amount, the meal, or filler: "oats", "blueberries", "chia seeds", "kefir", "pepperoni pizza", "2% milk". Keep words that tell foods apart (brand, flavor, cut, cooked or raw). A brand goes first, however it was said ("milk from Fairlife" is "Fairlife milk", "yogurt by Chobani" is "Chobani yogurt"), with spoken numbers as digits ("nonfat milk from three six five" is "365 nonfat milk"). Fix obvious speech-to-text mishearings of food names, and write the word a food database uses ("no fat milk" is "nonfat milk"). Name a seasoning the way a food database does, since a bare word also names other foods flavored with it: "salt" is "table salt", and "pepper" said as a seasoning is "black pepper".
   - amount and unit: the amount, after corrections. Fractions are decimals: "half a cup" is 0.5 cup, "a cup and a half" is 1.5 cup. unit is g, kg, oz, lb, ml, l, fl oz, cup, tbsp, or tsp when the speaker used one of those, written that way ("grams" is g, "tablespoons" is tbsp). For counted foods unit is the counted thing in the singular ("slice", "egg", "scoop", "bar", "piece", "bowl", "glass", "can"), or "" when the count is of the food itself ("2 bananas" is amount 2, unit ""). Leave the amount out when none was said; a bare "a" or "an" ("a banana", "a beer") is no amount, but "a cup of", "a slice of" is 1 cup, 1 slice.
-  - ref: the id of a logged entry when the speaker points back at a food they logged before: "my usual pancake", "the same coffee", "the oats from yesterday", "the pancakes from Sunday", or a food of a meal they copy ("but the steak should be 180 grams"). Prefer a usual food (u…) for "my usual" or "my regular". Naming a food is not pointing back: "40 grams of oats" has no ref even when they logged oats before, because the app matches a name to the speaker's own foods itself. With a ref, name is still the food's name, and amount stays 0 unless they said a new amount.
-- "copy": a whole logged meal again: "the same breakfast as yesterday", "yesterday's lunch", "the steak dinner from last night". copy is that meal's id (m…). Only when the speaker means the whole meal; one food from a meal ("the pancakes from Sunday") is a food item with that entry's ref. When they leave foods out, replace them, or change one's amount ("but with raspberries instead of blueberries", "without the syrup"), except lists the ids of those entries (e…), and each replacement is its own food item right after the copy. Otherwise copy and except are empty for a food item.
+  - ref: the id of a logged entry when the speaker points back at a food they logged before: "my usual pancake", "the same coffee", "the oats from yesterday", "the pancakes from Sunday", or a food of a meal they copy ("but the steak should be 180 grams", "only half the potatoes"). Prefer a usual food (u…) for "my usual" or "my regular". Naming a food is not pointing back: "40 grams of oats" has no ref even when they logged oats before, because the app matches a name to the speaker's own foods itself. With a ref, name is still the food's name, and amount stays 0 unless they said a new amount.
+  - scale: with a ref, a change relative to that entry's logged serving: "only half the potatoes" is 0.5, "double the rice" is 2, "a third of the pasta" is 0.33. Leave scale out for a said amount ("make the steak 180 grams") and when nothing changes.
+- "copy": a whole logged meal again: "the same breakfast as yesterday", "yesterday's lunch", "the steak dinner from last night". copy is that meal's id (m…). Only when the speaker means the whole meal; one food from a meal ("the pancakes from Sunday") is a food item with that entry's ref. When they leave foods out, replace them, or change one's amount ("but with raspberries instead of blueberries", "without the syrup", "only half the potatoes"), except lists the ids of those entries (e…), and each replacement is its own food item right after the copy. Otherwise copy and except are empty for a food item.
 
 For every item:
 - meal: breakfast, lunch, dinner, or snack when the speaker said it or it follows from what they said ("at 3pm" alone is not a meal); otherwise "". A meal said once applies to the items that follow it until another is said. For a copy, meal is the meal it is logged as now ("for lunch, the steak dinner from last night" is lunch), which defaults to the copied meal's.
@@ -173,6 +177,7 @@ function responseSchema(names: Aliases) {
 			amount: { type: 'number' },
 			unit: { type: 'string' },
 			ref: { type: 'string', enum: ['', ...entries] },
+			scale: { type: 'number' },
 			...when,
 			options: { type: 'boolean' },
 			said: { type: 'string' },
@@ -203,6 +208,7 @@ const ModelItem = z.object({
 	amount: z.number().min(0).default(0),
 	unit: z.string().default(''),
 	ref: z.string().default(''),
+	scale: z.number().default(0),
 	copy: z.string().default(''),
 	except: z.array(z.string()).default([]),
 	meal: z.enum(['', ...MEALS]).default(''),
@@ -219,13 +225,20 @@ const clock = (time: string) => {
 	return `${match[1]!.padStart(2, '0')}:${match[2]}`;
 };
 
+/** "potatoes" is "potato" and "berries" is "berry", where dropping the "s" alone made "potatoe". */
+const singular = (word: string) => {
+	if (word.length <= 3 || !word.endsWith('s') || word.endsWith('ss')) return word;
+	if (word.endsWith('ies')) return `${word.slice(0, -3)}y`;
+	if (word.endsWith('oes')) return word.slice(0, -2);
+	return word.slice(0, -1);
+};
 const nameWords = (name: string) =>
 	new Set(
 		name
 			.toLowerCase()
 			.split(/[^\p{L}\p{N}]+/u)
 			.filter(word => word.length > 2)
-			.map(word => word.replace(/s$/, '')),
+			.map(singular),
 	);
 /** A trailing "snack was one" read once as a food named "one": a name of only numbers is no food yet. */
 const NUMBERS =
@@ -271,12 +284,17 @@ function resolveAliases(
 		const follows = item.kind === 'food' && previous !== undefined && day === previous.day;
 		const carried = follows && !item.meal && !item.time ? previous!.meal : '';
 		const sameMeal = follows && (!item.meal || item.meal === previous!.meal);
+		const ref = (item.kind === 'food' && refTo(names.entries.get(item.ref), item.name)) || null;
+		const amount = item.kind === 'food' ? item.amount || (item.unit.trim() ? 1 : 0) : 0;
+		// A scale without its ref ("half the potatoes" naming no logged food) is a count of the food.
+		const scale = ref && !amount && item.scale > 0 ? Math.min(item.scale, 10) : 1;
 		items.push({
 			kind: item.kind,
 			name: item.kind === 'food' ? item.name.trim() : '',
-			amount: item.kind === 'food' ? item.amount || (item.unit.trim() ? 1 : 0) : 0,
+			amount: amount || (!ref && item.kind === 'food' && item.scale > 0 ? item.scale : 0),
 			unit: item.kind === 'food' ? item.unit.trim().toLowerCase() : '',
-			ref: (item.kind === 'food' && refTo(names.entries.get(item.ref), item.name)) || null,
+			ref,
+			scale,
 			copy: meal?.id ?? null,
 			except: item.except.map(alias => names.entries.get(alias)!).filter(id => id && inMeal.has(id)),
 			day,
@@ -297,6 +315,15 @@ function resolveAliases(
 		if (same >= 0) merged[same] = item;
 		else merged.push(item);
 	}
+	// A food at a copied meal's day, meal, and time that refs one of its entries ("only half the potatoes") stands in for
+	// it, so the copy leaves it out even when the model forgot to, and the entry is never logged twice.
+	const entriesOf = new Map(input.meals.map(meal => [meal.id, new Set(meal.entries.map(entry => entry.id))]));
+	merged.forEach((item, i) => {
+		if (!item.ref) return;
+		const copy = merged.slice(0, i).findLast(other => other.kind === 'copy');
+		if (!copy || !entriesOf.get(copy.copy!)?.has(item.ref) || copy.except.includes(item.ref)) return;
+		if (item.day === copy.day && item.meal === copy.meal && item.time === copy.time) copy.except.push(item.ref);
+	});
 	return { items: merged };
 
 	function refTo(id: string | undefined, name: string) {

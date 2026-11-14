@@ -32,10 +32,13 @@ final class RambleCapture {
     }
     private(set) var rows: [RambleRow] = [] {
         didSet {
+            lines = rows.lines
             respan(leaving: oldValue)
             holdParsed(after: oldValue)
         }
     }
+    /// The rows as the list draws them, each copied meal with its foods under it.
+    private(set) var lines: [RambleListLine] = []
     /// Rows, by key, still showing what was said before their match: a new row while the speaker talks, for
     /// `parsedFor`, and a row searching again for a renamed food. The parse and the match read as two steps, and the
     /// totals leave the row out until its match shows.
@@ -116,6 +119,14 @@ final class RambleCapture {
     }
 
     var planned: [RamblePlanned] { rows.flatMap(\.planned) }
+
+    /// What the ramble logs on `row`'s day besides `row`, for its detail's Impact on Targets.
+    func others(than row: RambleRow) -> NutrientAmounts {
+        var rest = rows.filter { $0.day == row.day }.flatMap(\.planned).map(\.pick.portion.amounts)
+        let own = row.planned.map(\.pick.portion.amounts)
+        for amounts in own { if let index = rest.firstIndex(of: amounts) { rest.remove(at: index) } }
+        return rest.reduce(into: NutrientAmounts()) { $0 = $0 + $1 }
+    }
     /// What the summary counts: the rows whose match shows.
     var shownPlanned: [RamblePlanned] { rows.filter { !uncounted.contains($0.key) }.flatMap(\.planned) }
 
@@ -275,6 +286,17 @@ final class RambleCapture {
     /// False when the row no longer holds the food `row` showed, and nothing changed.
     @discardableResult
     func setServing(_ serving: Serving, of row: RambleRow) -> Bool {
+        if let entry = row.kept {
+            guard holds(row) else { return false }
+            var choice = choices[row.id].flatMap { $0.name == row.item.identity ? $0 : nil } ?? RambleChoice(name: row.item.identity)
+            choice.keptServings[entry] = serving
+            choices[row.id] = choice
+            editedKey = row.key
+            edited += 1
+            // A copy needs no search, so the resolution's first pass, before this returns, already holds the serving.
+            resolve()
+            return true
+        }
         // The detail was opened on `row`; a later read may have put another food at its position since, and a measure
         // never moves to a food it was not made for.
         guard holds(row), let index = rows.firstIndex(where: { $0.id == row.id }), case var .food(food) = rows[index].content
@@ -294,6 +316,11 @@ final class RambleCapture {
 
     /// Whether the row at `row`'s position is still the same item and food, as when a detail opened on it.
     func holds(_ row: RambleRow) -> Bool {
+        if let entry = row.kept {
+            guard let current = rows.first(where: { $0.id == row.id }), current.item.identity == row.item.identity,
+                  case let .copy(copy) = current.content else { return false }
+            return copy.kept.contains { $0.entry.key == entry }
+        }
         guard let current = rows.first(where: { $0.id == row.id }), current.item.identity == row.item.identity,
               case let .food(food) = current.content, case let .food(opened) = row.content
         else { return false }
@@ -307,6 +334,13 @@ final class RambleCapture {
     }
 
     func remove(_ row: RambleRow) {
+        if let entry = row.kept {
+            var choice = choices[row.id].flatMap { $0.name == row.item.identity ? $0 : nil } ?? RambleChoice(name: row.item.identity)
+            choice.keptRemoved.insert(entry)
+            choices[row.id] = choice
+            resolve()
+            return
+        }
         choices[row.id] = RambleChoice(name: row.item.identity, removed: true, through: spans[row.key]?.upperBound)
         // The owner took the whole row back: every word of it, corrections included, is struck.
         if let span = spans[row.key] { struck.formUnion(span) }
@@ -343,7 +377,8 @@ final class RambleCapture {
         let live = phase == .listening || phase == .finishing
         let held = rows.filter { row in
             guard !parsing.contains(row.key) else { return false }
-            guard let earlier = before[row.key] else { return live }
+            // A change to a copied meal's food ("only half the potatoes") is that food changing, not a new one.
+            guard let earlier = before[row.key] else { return live && !row.changesCopiedFood }
             return row.content == .searching && earlier.content != .searching
         }
         guard !held.isEmpty else { return }

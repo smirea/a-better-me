@@ -891,6 +891,40 @@ export const LAB: LabCase[] = [
 			text: 'Today for lunch the whole salmon dinner from Sunday again, and for dinner yesterday’s whole lunch, without the salad.',
 			items: [copy('2d', 'lunch', [], { day: 0 }), copy('yl', 'dinner', ['yl-salad'], { day: 0 })],
 		},
+		{
+			use: 'copy',
+			scenario: 'Copy last night’s dinner as lunch, the owner’s own words',
+			text: 'For lunch, I had the same thing I had for dinner yesterday.',
+			items: [copy('yd', 'lunch')],
+		},
+		{
+			use: 'substitute',
+			scenario: 'A relative change to one food of a copied meal, said a sentence later',
+			text: 'For lunch, I had the same thing I had for dinner yesterday. Only half the potatoes though.',
+			items: [
+				copy('yd', 'lunch', ['yd-potato']),
+				f(['potatoes', 'baked potato', 'potato'], 0, '', 'lunch', { ref: 'yd-potato', scale: 0.5 }),
+			],
+		},
+		{
+			use: 'substitute',
+			scenario: 'Copied dinner losing one food and doubling another',
+			text: 'Lunch was yesterday’s dinner again, but no steak, and double the broccoli.',
+			items: [
+				copy('yd', 'lunch', ['yd-steak', 'yd-broc']),
+				f(['broccoli', 'cooked broccoli'], 0, '', 'lunch', { ref: 'yd-broc', scale: 2 }),
+			],
+		},
+		{
+			use: 'substitute',
+			scenario: 'A said amount and a relative change on two foods of one copy',
+			text: 'Same dinner as yesterday, but the steak was 200 grams, and only half the potatoes.',
+			items: [
+				copy('yd', 'dinner', ['yd-steak', 'yd-potato']),
+				f(['steak', 'ribeye steak', 'beef ribeye steak grilled'], 200, 'g', 'dinner', { ref: [null, 'yd-steak'] }),
+				f(['potatoes', 'baked potato', 'potato'], 0, '', 'dinner', { ref: 'yd-potato', scale: 0.5 }),
+			],
+		},
 	]),
 	...group('picker', [
 		{

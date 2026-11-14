@@ -1,8 +1,8 @@
 import { MILK_TOP5, PIZZA_TOP10, PIZZA_TOP5, SCANNED, type MEALS, type USUAL } from './history';
 
 /**
- * A labelled item. Absent keys are not scored, except `ref`, `except`, `day`, `time`, and `options`, which default to
- * "none said" (null, [], 0, '', false) so an invented reference counts as a miss. A list means any of these values.
+ * A labelled item. Absent keys are not scored, except `ref`, `scale`, `except`, `day`, `time`, and `options`, which
+ * default to "none said" (null, 1, [], 0, '', false) so an invented reference counts as a miss. A list means any of these values.
  * `day` is the day the speaker named; leave it out when they named none, which expects no day back.
  * `name` lists accepted names: one matches when the output contains all its words and at most two more.
  */
@@ -12,6 +12,8 @@ export type Expected = {
 	amount?: number | number[];
 	unit?: string | string[];
 	ref?: string | null | (string | null)[];
+	/** A multiple of the ref's logged serving; 1 when absent. */
+	scale?: number;
 	copy?: string;
 	except?: string[];
 	meal?: string | string[];

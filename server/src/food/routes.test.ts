@@ -2,7 +2,7 @@ import { afterEach, describe, expect, spyOn, test } from 'bun:test';
 import { foodNutrition } from '../../../shared/db/schema';
 import { handle } from '../api';
 import { GEMINI_MODEL } from './mealPhoto';
-import { RAMBLE_MODEL } from './ramble';
+import { RAMBLE_MODEL, type RambleItem } from './ramble';
 import { testServer } from '../testing';
 import { USER_AGENT } from './openFoodFacts';
 
@@ -345,6 +345,7 @@ describe('ramble', () => {
 		amount: 0,
 		unit: '',
 		ref: '',
+		scale: 1,
 		copy: '',
 		except: [],
 		meal: '',
@@ -474,6 +475,49 @@ describe('ramble', () => {
 			['365 nonfat milk', 'milk-uuid'],
 			['Fairlife nonfat milk', null],
 		]);
+	});
+
+	test('a change to a food of a copied meal stands in for that entry, relative changes scale its serving', async () => {
+		stub(() =>
+			geminiText(
+				JSON.stringify({
+					items: [
+						{ kind: 'copy', copy: 'm1', meal: 'lunch' },
+						{ kind: 'food', name: 'potatoes', ref: 'e2', scale: 0.5 },
+						{ kind: 'food', name: 'steak', ref: 'e1', amount: 200, unit: 'g', scale: 0.5 },
+						{ kind: 'food', name: 'half a pear', scale: 0.5 },
+						{ kind: 'food', name: 'broccoli', ref: 'e3', meal: 'dinner' },
+					],
+				}),
+			),
+		);
+		const dinner = {
+			id: 'dinner-uuid',
+			day: '2026-10-26',
+			meal: 'dinner',
+			entries: [
+				{ id: 'steak-uuid', name: 'Beef, top sirloin, steak', serving: '250 g' },
+				{ id: 'potato-uuid', name: 'Potato, baked', serving: '1 medium' },
+				{ id: 'broc-uuid', name: 'Broccoli, cooked', serving: '1 cup' },
+			],
+		};
+		const { items } = await (await ramble('gemini-key', { ...body, meals: [dinner] })).json();
+		expect(
+			items.map((item: RambleItem) => [item.kind, item.copy, item.except, item.ref, item.amount, item.scale]),
+		).toEqual([
+			['copy', 'dinner-uuid', ['potato-uuid', 'steak-uuid'], null, 0, 1],
+			['food', null, [], 'potato-uuid', 0, 0.5],
+			// A said amount wins over a scale.
+			['food', null, [], 'steak-uuid', 200, 1],
+			// A scale with no logged food to scale counts the food.
+			['food', null, [], null, 0.5, 1],
+			// The broccoli from that dinner, eaten at dinner, is no change to the lunch.
+			['food', null, [], 'broc-uuid', 0, 1],
+		]);
+		const sent = await requests[0]!.json();
+		expect(sent.generationConfig.responseJsonSchema.properties.items.items.anyOf[0].properties.scale).toEqual({
+			type: 'number',
+		});
 	});
 
 	test('a said day carries to the items after it, copies included, until another is said', async () => {
