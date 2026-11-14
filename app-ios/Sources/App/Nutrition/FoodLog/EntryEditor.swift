@@ -3,8 +3,9 @@ import SwiftUI
 
 /// The sheet over the timeline: the entry's icon and full name and its calories and macros flat on the sheet, its amount,
 /// then Remove, Favorite, Duplicate, and Update for a food or Explode for a recipe, its day, time, and in the Sections
-/// display its section, the share of the day's targets it uses, a recipe's ingredients, and its nutrients. Done saves the
-/// amount, day, time, and section; Update saves the food at once.
+/// display its section, the share of the day's targets it uses, a recipe's ingredients, and its nutrients. A quick add's
+/// name is a field and it has no amount, since its one "serving" is all it is. Done saves the amount, a quick add's name,
+/// the day, time, and section; Update saves the food at once.
 struct EntryEditor: View {
     let entry: FoodEntry
 
@@ -27,6 +28,9 @@ struct EntryEditor: View {
     /// The entry's food, which Update corrects and a tap on its icon re-icons on the food and everything logged of it
     /// at once (`LocalStore.setIcon`).
     @State private var food: FoodSnapshot
+    /// A quick add's name as typed, empty for the default so the field shows "Quick Add" as its prompt.
+    @State private var title: String
+    @FocusState private var naming: Bool
     @State private var choosingIcon = false
     @State private var updating: FoodUpdate?
     @State private var nutrientRows = ViewMemo<NutrientAmounts, [NutrientListRow]>()
@@ -38,12 +42,21 @@ struct EntryEditor: View {
         _time = State(initialValue: entry.day.date(atMinute: entry.minute))
         _section = State(initialValue: entry.section)
         _food = State(initialValue: entry.food)
+        _title = State(initialValue: entry.food.name == FoodSnapshot.quickAddName ? "" : entry.food.name)
         // An altered recipe lists its own alterations, so it needs no recipe.
         let recipeID = entry.food.source == .recipe && entry.alterations == nil ? entry.food.foodID.flatMap(UUID.init(uuidString:)) : nil
         _recipe = Observe(recipeID.map(Recipe.one) ?? DatabaseQuery(nil) { _ in nil })
     }
 
     private var amounts: NutrientAmounts { food.amounts(serving) }
+
+    /// The food with a quick add's typed name, which Done, Favorite, and Duplicate keep.
+    private var named: FoodSnapshot {
+        guard food.source == .quickAdd else { return food }
+        var named = food
+        named.name = FoodSnapshot.quickAddName(title)
+        return named
+    }
 
     /// The food's own measures, then the weights and volumes it allows, with the entry's measure kept when the
     /// food no longer lists it.
@@ -71,18 +84,20 @@ struct EntryEditor: View {
                 }
                 .listRowBackground(Color.clear.feedback("Header"))
                 .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
-                ThemedSection {
-                    HStack {
-                        TextField("Quantity", text: $quantity)
-                            .keyboardType(.decimalPad)
-                            .font(AppFont.number(20))
-                            .onChange(of: quantity) { _, text in
-                                if let value = Double(text.replacingOccurrences(of: ",", with: ".")) { serving.quantity = value }
+                if food.source != .quickAdd {
+                    ThemedSection {
+                        HStack {
+                            TextField("Quantity", text: $quantity)
+                                .keyboardType(.decimalPad)
+                                .font(AppFont.number(20))
+                                .onChange(of: quantity) { _, text in
+                                    if let value = Double(text.replacingOccurrences(of: ",", with: ".")) { serving.quantity = value }
+                                }
+                            Picker("Unit", selection: $serving.measure) {
+                                ForEach(measures, id: \.self) { Text($0.name).tag($0) }
                             }
-                        Picker("Unit", selection: $serving.measure) {
-                            ForEach(measures, id: \.self) { Text($0.name).tag($0) }
+                            .labelsHidden()
                         }
-                        .labelsHidden()
                     }
                 }
                 ThemedSection { actions }
@@ -142,24 +157,37 @@ struct EntryEditor: View {
     }
 
     /// The icon, which a tap re-icons, and the whole name, wrapped: the bar's inline title truncated long food names to
-    /// one line. A quick add is no food, so it has no icon to edit.
-    private var identity: some View {
-        HStack(spacing: 12) {
-            if food.source == .quickAdd {
+    /// one line. A quick add is no food, so it has no icon to edit, and its name belongs to the entry alone, so it is
+    /// typed in place.
+    @ViewBuilder private var identity: some View {
+        if food.source == .quickAdd {
+            HStack(spacing: 12) {
                 FoodIcon(food: food, size: 36)
-            } else {
-                FoodIcon(food: food, size: 36).editsIcon { choosingIcon = true }
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(food.name).font(AppFont.headline(18))
-                if let brand = food.brand, !brand.isEmpty {
-                    Text(brand).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                TextField(FoodSnapshot.quickAddName, text: $title)
+                    .font(AppFont.headline(18))
+                    .submitLabel(.done)
+                    .focused($naming)
+                    .accessibilityLabel("Name")
+                Button { naming = true } label: {
+                    Image(systemName: "pencil").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.textSecondary)
                 }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Edit Name")
             }
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isHeader)
+        } else {
+            HStack(spacing: 12) {
+                FoodIcon(food: food, size: 36).editsIcon { choosingIcon = true }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(food.name).font(AppFont.headline(18))
+                    if let brand = food.brand, !brand.isEmpty {
+                        Text(brand).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isHeader)
+            }
         }
     }
 
@@ -175,14 +203,14 @@ struct EntryEditor: View {
                     self.favorite = nil
                 } else {
                     let id = UUID()
-                    store.addFavorite(FoodPortion(food, serving: serving), id: id)
+                    store.addFavorite(FoodPortion(named, serving: serving), id: id)
                     favorite = id
                 }
             }
             action("Duplicate", systemImage: "plus.square.on.square") {
                 state.expectAdditions()
                 var copy = entry.copy(day: CalendarDay(time), minute: minute, section: section)
-                copy.food = food
+                copy.food = named
                 copy.serving = serving
                 store.log([copy])
                 dismiss()
@@ -216,11 +244,13 @@ struct EntryEditor: View {
     private var isValid: Bool { (Double(quantity.replacingOccurrences(of: ",", with: ".")) ?? 0) > 0 }
 
     private func write() {
+        let food = named
         let serving = serving
         let day = CalendarDay(time)
         let minute = minute
         let section = section
         store.edit(FoodEntry.self, id: entry.id) {
+            if food.source == .quickAdd { $0.food.name = food.name }
             $0.serving = serving
             $0.day = day
             $0.minute = minute

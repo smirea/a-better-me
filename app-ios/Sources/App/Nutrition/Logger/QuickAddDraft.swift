@@ -39,8 +39,7 @@ struct QuickAddDraft: Hashable, Sendable {
 
     var portion: FoodPortion? {
         guard let amounts else { return nil }
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
-        return FoodPortion(.quickAdd(amounts, name: trimmed.isEmpty ? nil : trimmed))
+        return FoodPortion(.quickAdd(amounts, name: name))
     }
 
     /// An empty field is zero; anything else must parse.

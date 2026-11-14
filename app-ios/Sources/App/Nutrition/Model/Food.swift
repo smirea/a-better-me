@@ -155,9 +155,17 @@ struct FoodSnapshot: Hashable, Codable, Sendable {
         return "\(name) By \(brand)"
     }
 
+    static let quickAddName = "Quick Add"
+
+    /// A quick add's name as typed, trimmed, or "Quick Add" when left blank.
+    static func quickAddName(_ typed: String?) -> String {
+        let trimmed = typed?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? quickAddName : trimmed
+    }
+
     static func quickAdd(_ amounts: NutrientAmounts, name: String? = nil) -> FoodSnapshot {
         FoodSnapshot(
-            source: .quickAdd, name: name ?? "Quick Add",
+            source: .quickAdd, name: quickAddName(name),
             nutrition: FoodNutrition(nutrients: amounts, measures: [Measure(name: "serving", quantity: 1, servings: 1)])
         )
     }
