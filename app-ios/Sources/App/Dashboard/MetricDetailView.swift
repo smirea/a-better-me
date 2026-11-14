@@ -447,7 +447,7 @@ private struct MetricChart: View, @MainActor Equatable {
         } else {
             bar
                 .annotation(position: .top, spacing: 1, overflowResolution: .init(x: .disabled, y: .disabled)) {
-                    StepBarLabels.count(style.text(point.value), color: StepGoal.tier(point.value, goal: goal).color)
+                    StepBarLabels.count(StepBarLabels.count(point.value, style: style, slot: slot), color: StepGoal.tier(point.value, goal: goal).color)
                 }
                 .annotation(position: .overlay, alignment: .bottom, spacing: 0) {
                     let labels = stepBar(point)

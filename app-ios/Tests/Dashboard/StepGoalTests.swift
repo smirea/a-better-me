@@ -199,6 +199,23 @@ struct StepsPlotTests {
         #expect(BarLabelStyle.fitting([StepBar(steps: 9000, flights: "", distance: "")], slot: 45, barWidth: 40, count: width, detail: width) == .full)
     }
 
+    /// Stefan's week on his 393pt phone, whose 1W bars get a 50pt slot, with one long hike in its history. DM Sans's
+    /// digits are proportional, so the hike's count measures wider than the slot while the week's fit theirs.
+    @Test func oneWideCountKeepsTheOtherBarsDetailed() {
+        #expect(StepBarLabels.countFont.fontName == "DMSans-SemiBold")
+        let slot: CGFloat = 50
+        let week = [14_012, 5_105, 6_903, 5_811, 14_204, 7_642, 1_930].enumerated().map { index, steps in
+            StepBar(steps: Double(steps), flights: "\(index + 4)", distance: StepBarLabels.distance(meters: Double(steps) * 0.74, unit: .miles))
+        }
+        let hike = StepBar(steps: 40_800, flights: "112", distance: "19mi")
+        #expect(StepBarLabels.style(week + [hike], slot: slot) == .detailed)
+        #expect(week.allSatisfy { StepBarLabels.fitsInside($0, slot: slot) })
+        #expect(StepBarLabels.count(week[0].steps, style: .detailed, slot: slot) == "14,012")
+        #expect(StepBarLabels.count(hike.steps, style: .detailed, slot: slot) == "41K")
+        #expect(StepBarLabels.count(hike.steps, style: .detailed, slot: 20) == "")
+        #expect(StepBarLabels.count(hike.steps, style: .hidden, slot: slot) == "")
+    }
+
     @Test func barDistanceIsWholeFromTen() {
         #expect(StepBarLabels.distance(meters: 5310, unit: .miles) == "3.3mi")
         #expect(StepBarLabels.distance(meters: 23088, unit: .miles) == "14mi")
