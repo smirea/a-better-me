@@ -1035,7 +1035,6 @@ const WorkoutSettingsPatch = z
 			.object({
 				keepAlive: z.boolean(),
 				workoutTimer: z.boolean(),
-				bodyweightContribution: z.boolean(),
 				calendarScrolling: z.enum(['daily', 'weekly']),
 			})
 			.partial(),

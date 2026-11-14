@@ -142,7 +142,7 @@ struct PlateLoading: Hashable {
     }
 }
 
-/// The plates the calculator draws for one target, heaviest first, and the sentence under the drawing.
+/// The plates the calculator draws for one target, heaviest first, and the legend beside the drawing.
 struct PlatePlan: Equatable {
     var loading: PlateLoading
     var target: Double
@@ -153,31 +153,24 @@ struct PlatePlan: Equatable {
 
     var total: Double { loading.baseWeight + perSide.reduce(0, +) * Double(loading.sides) }
 
-    /// "1 x 45", "2 x 25": one line per plate weight on a side, heaviest first, bumpers apart from steel of the same
-    /// weight.
-    var legend: [(count: Int, weight: Double, isBumper: Bool)] {
-        var lines: [(count: Int, weight: Double, isBumper: Bool)] = []
-        for plate in loaded {
-            if let last = lines.last, last.weight == plate.weight, last.isBumper == plate.isBumper {
-                lines[lines.count - 1].count += 1
-            } else {
-                lines.append((1, plate.weight, plate.isBumper))
-            }
-        }
-        return lines
+    /// "13 bar + 45 10 5": the bar (or a machine's base) when it weighs anything, then a side's plates in loading order,
+    /// each written out rather than counted, so it reads like the sleeve. Empty for a weightless base with no plates.
+    var legend: String {
+        [baseLabel, plateLabels.isEmpty ? nil : plateLabels.joined(separator: " ")].compactMap(\.self).joined(separator: " + ")
     }
 
-    /// "70 lb on both sides + 45 lb bar weight = 185 lb". A target the plates can't reach ends "- missing 5 lb"; one
-    /// below the base ends "+ extra 45 lb", as MF showed for 0 lb.
-    func sentence(unit: String) -> String {
-        func label(_ value: Double) -> String { "\(NumberText.plain(value)) \(unit)" }
-        let sides = loading.sides == 2 ? "on both sides" : "on one side"
-        let base = loading.base == .bar ? "bar weight" : "base weight"
-        let start = "\(label(perSide.reduce(0, +))) \(sides) + \(label(loading.baseWeight)) \(base) = \(label(target))"
+    var baseLabel: String? {
+        loading.baseWeight > 0 ? "\(NumberText.plain(loading.baseWeight)) \(loading.base == .bar ? "bar" : "base")" : nil
+    }
+
+    var plateLabels: [String] { perSide.map(NumberText.plain) }
+
+    /// "5 lb short" when the plates can't reach the target, "45 lb over" when the bar alone is past it, nil when they
+    /// load it exactly.
+    func miss(unit: String) -> String? {
         let difference = Hundredths(of: total).value - Hundredths(of: target).value
-        if difference > 0 { return "\(start) + extra \(label(Double(difference) / 100))" }
-        if difference < 0 { return "\(start) - missing \(label(Double(-difference) / 100))" }
-        return start
+        guard difference != 0 else { return nil }
+        return "\(NumberText.plain(Double(abs(difference)) / 100)) \(unit) \(difference < 0 ? "short" : "over")"
     }
 }
 

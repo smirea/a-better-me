@@ -1,0 +1,14 @@
+{
+	"title": "The plate calculator reads the bar and every plate on one line, like 13 bar + 45 10 5",
+	"description": "The equation under it and the body weight line above it are gone; a weight the plates can't make says how far short it is.",
+	"tasks": [
+		{
+			"id": "2e5503bc-28fe-447f-8027-ea6a7d6081bc",
+			"title": "1 Recomp v3 (6-day) Feedback: rewrite equation for clarity"
+		},
+		{
+			"id": "36e75225-83e3-4699-9069-0f2b1e8f56b3",
+			"title": "2 Recomp v3 (6-day) Feedback: clean text, add bar weight"
+		}
+	]
+}
