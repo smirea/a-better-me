@@ -153,7 +153,6 @@ final class WorkoutHealth {
         let mirror = WorkoutRecording.mirror(session, in: healthStore)
         if case .phone(let own) = recorder { own.discard() }
         adopt(.mirror(mirror))
-        WatchBridge.shared.sendState()
     }
 
     private func adopt(_ recorder: Recorder) {
@@ -166,7 +165,6 @@ final class WorkoutHealth {
 
     private func observe(_ recording: WorkoutRecording) {
         recording.onStats = { [weak self] in self?.receive($0) }
-        recording.onMessage = { WatchBridge.shared.receive($0) }
         recording.onEnd = { [weak self, weak recording] in
             guard let self, let recording, self.mirror === recording else { return }
             // The mirror dropped mid-workout; the watch still records and answers over WatchConnectivity.
@@ -199,8 +197,7 @@ final class WorkoutHealth {
             stats = nil
             switch recorder {
             case .phone(let recording): recording.discard()
-            case .mirror(let recording): try? await recording.send(.discardRecording(sessionID: id))
-            case .watch: WatchBridge.shared.deliver(.discardRecording(sessionID: id))
+            case .mirror, .watch: WatchBridge.shared.deliver(.discardRecording(sessionID: id))
             }
             return
         }

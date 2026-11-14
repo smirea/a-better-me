@@ -5,9 +5,8 @@ import WatchConnectivity
 
 /// The phone's end of the watch app's link. The phone sends the workout in progress as a `WatchWorkout` the watch can
 /// run alone, and a ready-to-start plan per workout on the watch's home list. The watch sends back its outbox of
-/// `WatchEvent`s, which `LiveWorkoutController` applies and acknowledges. In a workout messages take the mirrored
-/// session's data channel when it works and WatchConnectivity otherwise; the application context always holds the
-/// latest home list and workout, so a watch app that opens later starts from them.
+/// `WatchEvent`s, which `LiveWorkoutController` applies and acknowledges. Everything rides WatchConnectivity; the
+/// application context always holds the latest home list and workout, so a watch app that opens later starts from them.
 @MainActor @Observable
 final class WatchBridge: NSObject {
     static let shared = WatchBridge()
@@ -153,20 +152,13 @@ final class WatchBridge: NSObject {
         send(.workout(workout, acknowledged: acknowledged))
     }
 
+    /// Dropped while the watch is unreachable; it asks again with `hello` and reads the application context.
     private func send(_ message: WatchMessage) {
-        guard let data = try? message.encoded() else { return }
-        if let mirror = WorkoutHealth.shared.mirror {
-            Task {
-                do { try await mirror.send(message) } catch { self.sendMessage(data) }
-            }
-        } else {
-            sendMessage(data)
+        guard let session, session.activationState == .activated, session.isReachable, let data = try? message.encoded() else { return }
+        // WatchConnectivity calls the error handler on its own queue.
+        session.sendMessage([WatchMessage.messageKey: data], replyHandler: nil) { @Sendable error in
+            LocalStore.log.error("Sending the watch \(data.count) bytes failed: \(String(describing: error))")
         }
-    }
-
-    private func sendMessage(_ data: Data) {
-        guard let session, session.activationState == .activated, session.isReachable else { return }
-        session.sendMessage([WatchMessage.messageKey: data], replyHandler: nil)
     }
 
     /// What must arrive even if the watch app is closed, like the plan that saves its recording: right away when the

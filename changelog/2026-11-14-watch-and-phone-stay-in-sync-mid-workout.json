@@ -1,0 +1,18 @@
+{
+	"title": "Watch and phone stay in sync mid-workout, and the watch buzzes when a rest ends",
+	"description": "A set logged on either device shows on the other within seconds, a late watch update no longer restarts the rest timer, and the rest-end tap is stronger.",
+	"tasks": [
+		{
+			"id": "3b998603-885c-470a-9b46-208a65c2ae09",
+			"title": "Watch updates should automatically update the app and vice versa, right now for example logging a set on the watch does not show up in the app"
+		},
+		{
+			"id": "934b8e1c-c95e-4427-b897-cc8669d07349",
+			"title": "1 Recomp v3 (6-day) Feedback: make timer reset less sensitive"
+		},
+		{
+			"id": "8a98e6ae-ea52-4a21-802e-a57e1a246dd7",
+			"title": "Watch needs to vibrate when timer is done"
+		}
+	]
+}

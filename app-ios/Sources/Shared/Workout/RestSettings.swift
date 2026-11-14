@@ -17,7 +17,7 @@ struct RestScaling: Codable, Hashable {
     var betweenSides = 50
 }
 
-/// The device that taps once, lightly, when a rest ends.
+/// The device that taps when a rest ends.
 enum RestEndHaptic: Equatable {
     case phone, watch
 

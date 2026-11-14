@@ -54,9 +54,11 @@ final class LiveSessionStore {
     private static let notificationID = "rest-timer"
 
     func startRest(seconds: Int, alerts: RestSettings, from start: Date = .now) {
+        let next = LiveRest.afterLogging(TimeInterval(seconds), at: start, now: .now, replacing: rest)
+        guard next != rest else { return }
         self.alerts = alerts
         setRestSeconds = seconds
-        setRest(.starting(TimeInterval(seconds), at: start, now: .now))
+        setRest(next)
     }
 
     func restartRest(seconds: Int) {

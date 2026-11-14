@@ -37,6 +37,14 @@ struct LiveRest: Codable, Hashable, Sendable {
         return duration > 0 && rest.endsAt > now ? rest : nil
     }
 
+    /// The rest once a set logged at `start` ends with `duration`. Only a set logged after the running rest began replaces
+    /// it: an event the watch queued a while ago reaches the phone late, and edits arrive between, but the countdown on
+    /// screen belongs to the latest set.
+    static func afterLogging(_ duration: TimeInterval, at start: Date, now: Date, replacing running: LiveRest?) -> LiveRest? {
+        if let running, running.startedAt > start { return running }
+        return starting(duration, at: start, now: now)
+    }
+
     /// The Rest Timer's −15 and +15. Nil once it has run out by `now`.
     func adjusted(by seconds: TimeInterval, now: Date) -> LiveRest? {
         var rest = self

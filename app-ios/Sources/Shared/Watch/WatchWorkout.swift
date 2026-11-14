@@ -118,7 +118,7 @@ extension WatchWorkout {
             case .logged(let path):
                 prefill[blocks.rowID(at: path)] = nil
                 let step = SessionFlow.afterCompleting(path, in: blocks, settings: rules) { [restSeconds] _, set in restSeconds[set.id] ?? 90 }
-                if let seconds = step.restSeconds, let started = LiveRest.starting(TimeInterval(seconds), at: at, now: at) { rest = started }
+                if let seconds = step.restSeconds, let next = LiveRest.afterLogging(TimeInterval(seconds), at: at, now: at, replacing: rest) { rest = next }
                 if let next = step.next { current = next }
                 if current == nil { current = blocks[path.block].exercises[path.exercise].id }
             case .unlogged(let path, let log):

@@ -41,6 +41,15 @@ struct WatchWorkoutTests {
         #expect(workout.set(at: RowPath(block: 0, exercise: 0, set: 1)).previous == "102.1 kg · 4 @ 1 RIR")
     }
 
+    @Test func aSetLoggedBeforeThePhonesRestLeavesThatRestRunning() {
+        var workout = Self.workout()
+        let phoneRest = LiveRest(endsAt: Self.start.addingTimeInterval(220), duration: 120)
+        workout.rest = phoneRest
+        workout.apply(Self.event(.log(rowID: Self.id(21), values: LiveValues(weightKg: 100, reps: 5)), after: 60))
+        #expect(workout.blocks[0].exercises[0].sets[0].log != nil)
+        #expect(workout.rest == phoneRest)
+    }
+
     @Test func supersetMembersAlternateAndRestOnlyAfterTheRound() {
         var workout = Self.workout()
         workout.apply(Self.event(.select(exerciseID: Self.id(4)), after: 0))
