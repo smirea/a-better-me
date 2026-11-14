@@ -38,6 +38,14 @@ struct FoodSearchResult: Identifiable, Hashable, Sendable {
     }
 }
 
+extension CurrentFoods {
+    /// The result with its food as stored now. A stored food needs no caching, so it drops the copy to cache.
+    func resolve(_ result: FoodSearchResult) -> FoodSearchResult {
+        let portion = resolve(result.portion)
+        return portion == result.portion ? result : FoodSearchResult(result.group, portion)
+    }
+}
+
 /// The owner's side of a search, read once when the logger opens: one history row per food (its latest serving, most
 /// recently logged first, and the days it was logged lately, in all and per meal section), each hour's and section's
 /// Picks, favorites, custom foods, recipes, and the Open Food Facts foods already cached, which keep branded results
@@ -65,8 +73,9 @@ struct FoodLibrary: Sendable {
     fileprivate var items: [FoodSearchGroup: [Item]] = [:]
     fileprivate var picks: [Int: [FoodSearchResult]] = [:]
     fileprivate var sectionPicks: [String: [FoodSearchResult]] = [:]
-    /// The icons of cached USDA foods, by id, which the bundled catalog's copies lack.
-    fileprivate var usdaIcons: [String: String] = [:]
+    /// The stored foods, which stand in for the history's snapshots and the catalog's and Open Food Facts' copies: a
+    /// correction or an edit, and a cached USDA food's icon.
+    private(set) var current = CurrentFoods([])
     private(set) var sections = MealSection.defaults
     private(set) var display = NutritionSettings.Timeline.Display.time
 
@@ -74,45 +83,51 @@ struct FoodLibrary: Sendable {
         let settings = try AppSettings.fetchOne(db, key: AppSettings.key(AppSettings.rowID))?.nutrition ?? NutritionSettings()
         let sections = settings.mealSections
         let usualStart = today.adding(days: -(usualDays - 1))
+        let foods = try Food.filter(Column("archived") == false).fetchAll(db)
+        let recipes = try Recipe.filter(Column("archived") == false).fetchAll(db)
+        let current = CurrentFoods(foods, recipes: recipes)
         var sectionDays: [String: [String: Set<CalendarDay>]] = [:]
         for row in try Row.fetchAll(db, sql: """
             SELECT \(foodKey) AS key, day, minute, section FROM food_entries
             WHERE day BETWEEN ? AND ? AND json_extract(food, '$.source') <> 'quick_add'
             """, arguments: [usualStart.description, today.description]) {
             let section = sections.section(of: row["section"] as String?, minute: row["minute"]).id
-            sectionDays[row["key"], default: [:]][section, default: []].insert(try row.day("day"))
+            sectionDays[current.key(row["key"]), default: [:]][section, default: []].insert(try row.day("day"))
         }
         // Bare columns beside MAX() come from the row holding the max, so each food brings its latest serving. Logging
         // or editing an entry sets updated_at, so a copy onto a future day ranks by when it was copied, not by its day.
         // An altered recipe's snapshot holds its alterations' nutrition, which logging it again would carry without
-        // them, so only recipes logged as made bring theirs.
+        // them, so only recipes logged as made bring theirs. A food and its correction are one row, at the later one's
+        // latest serving, so the search lists the correction once.
+        var listed = Set<String>()
         let history = try Row.fetchAll(db, sql: """
-            SELECT food, serving, MAX(updated_at || day || printf('%04d', minute) || created_at || id) AS latest,
-                COUNT(DISTINCT CASE WHEN day BETWEEN ? AND ? THEN day END) AS days
+            SELECT food, serving, MAX(updated_at || day || printf('%04d', minute) || created_at || id) AS latest
             FROM food_entries
             WHERE json_extract(food, '$.source') <> 'quick_add' AND alterations IS NULL
             GROUP BY \(foodKey)
             ORDER BY latest DESC
-            """, arguments: [usualStart.description, today.description]).compactMap { row -> Item? in
-            let result = FoodSearchResult(.history, FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving))
+            """).compactMap { row -> Item? in
+            let logged = FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving)
+            let result = FoodSearchResult(.history, current.resolve(logged))
             // `latest` leads with the entry's updated_at, a fixed-width instant; a second MAX() would break the bare columns.
             let latest: String = row["latest"]
-            if let hidden = settings.hiddenHistory[result.key], let logged = Instant.parse(String(latest.prefix(24))), logged <= hidden {
-                return nil
-            }
-            return Item(result, days: row["days"], sectionDays: sectionDays[result.key]?.mapValues(\.count) ?? [:])
+            let hidden = settings.hiddenHistory[result.key] ?? settings.hiddenHistory[FoodSearchResult.key(logged.food)]
+            if let hidden, let written = Instant.parse(String(latest.prefix(24))), written <= hidden { return nil }
+            guard listed.insert(result.key).inserted else { return nil }
+            let days = sectionDays[result.key] ?? [:]
+            return Item(result, days: days.values.reduce(into: Set<CalendarDay>()) { $0.formUnion($1) }.count, sectionDays: days.mapValues(\.count))
         }
-        let foods = try Food.filter(Column("archived") == false).fetchAll(db)
         let recent = try Row.fetchAll(db, sql: """
             SELECT food, serving, day, minute, section, updated_at || created_at || id AS written FROM food_entries
             WHERE day BETWEEN ? AND ? AND json_extract(food, '$.source') <> 'quick_add' AND alterations IS NULL
             """, arguments: [today.adding(days: -(HourPicks.days - 1)).description, today.description]).map { row in
             HourPicks.Entry(
-                portion: FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving), day: try row.day("day"),
+                portion: current.resolve(FoodPortion(try row.json("food"), serving: try row.json("serving") as Serving)), day: try row.day("day"),
                 minute: row["minute"], section: row["section"], written: row["written"]
             )
         }
         var library = FoodLibrary()
+        library.current = current
         library.sections = sections
         library.display = settings.timeline.display
         library.picks = HourPicks.picks(recent, today: today, by: { $0.minute / 60 }, hidden: settings.hiddenPicks)
@@ -121,12 +136,11 @@ struct FoodLibrary: Sendable {
             .mapValues { $0.map { FoodSearchResult(.picks, $0) } }
         library.items[.history] = history
         library.items[.favorites] = try FoodFavorite.fetchAll(db).sorted { $0.createdAt < $1.createdAt }
-            .map { Item(FoodSearchResult(.favorites, $0.portion)) }
+            .map { Item(FoodSearchResult(.favorites, current.resolve($0.portion))) }
         library.items[.custom] = foods.filter { $0.source == .custom }.map { Item(FoodSearchResult(.custom, FoodPortion($0.snapshot))) }
-        library.items[.recipes] = try Recipe.filter(Column("archived") == false).fetchAll(db)
-            .map { Item(FoodSearchResult(.recipes, FoodPortion($0.snapshot))) }
-        library.usdaIcons = Dictionary(uniqueKeysWithValues: foods.compactMap { food in food.source == .usda ? food.icon.map { (food.id, $0) } : nil })
-        library.items[.branded] = foods.filter { $0.source == .openFoodFacts }.map { Item(FoodSearchResult(.branded, FoodPortion($0.snapshot))) }
+        library.items[.recipes] = recipes.map { Item(FoodSearchResult(.recipes, FoodPortion($0.snapshot))) }
+        library.items[.branded] = foods.filter { $0.source == .openFoodFacts && current.key($0.id) == $0.id }
+            .map { Item(FoodSearchResult(.branded, FoodPortion($0.snapshot))) }
         return library
     }
 
@@ -200,24 +214,26 @@ final class FoodSearch {
         }
         var shown = Set(results.map(\.key))
         let cached = results.count { $0.group == .branded }
-        for food in remote.prefix(max(0, Self.limit - cached)) where shown.insert(food.id).inserted {
-            results.append(FoodSearchResult(.branded, FoodPortion(food.snapshot), food: food))
+        for food in remote.prefix(max(0, Self.limit - cached)) {
+            let result = library.current.resolve(FoodSearchResult(.branded, FoodPortion(food.snapshot), food: food))
+            if shown.insert(result.key).inserted { results.append(result) }
         }
         return results
     }
 
     /// The food with this barcode: a custom or cached food first, so a known barcode works offline, then Open Food
-    /// Facts, whose answer is cached under `off-<barcode>`. Nil when neither knows it; throws when the server is
-    /// unreachable.
+    /// Facts, whose answer is cached under `off-<barcode>`. Either gives way to the owner's correction of it. Nil when
+    /// neither knows it; throws when the server is unreachable.
     func lookup(barcode: String) async throws -> Food? {
-        let known = try await store.read { db in
-            try Food.filter(Column("barcode") == barcode && Column("archived") == false).fetchAll(db)
+        let (known, current) = try await store.read { db in
+            let known = try Food.filter(Column("barcode") == barcode && Column("archived") == false).fetchAll(db)
                 .min { ($0.source == .custom ? 0 : 1, $0.createdAt) < ($1.source == .custom ? 0 : 1, $1.createdAt) }
+            return (known, try CurrentFoods.read(db))
         }
-        if let known { return known }
+        if let known { return current.food(known.id) ?? known }
         guard let food = try await branded.food(barcode: barcode) else { return nil }
         store.saveFood(food)
-        return food
+        return current.food(food.id) ?? food
     }
 
     /// The owner's foods with this store item code, newest first: one per store that reuses the code. Never online,
@@ -263,11 +279,7 @@ struct FoodIndex: Sendable {
         let matches = catalog.search(terms, limit: Self.limit + shown.count)
         let foods = try catalog.foods(matches.map(\.entry.fdcID))
         add(Array(matches.compactMap { match in
-            foods[match.entry.fdcID].map { food in
-                var snapshot = food.snapshot
-                snapshot.icon = library.usdaIcons[food.id] ?? snapshot.icon
-                return FoodSearchResult(.common, FoodPortion(snapshot), food: food)
-            }
+            foods[match.entry.fdcID].map { library.current.resolve(FoodSearchResult(.common, FoodPortion($0.snapshot), food: $0)) }
         }.filter { !shown.contains($0.key) }.prefix(Self.limit)))
         add(Self.rank(library.items[.branded] ?? [], terms))
         return results

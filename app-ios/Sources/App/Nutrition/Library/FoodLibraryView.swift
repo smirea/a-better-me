@@ -22,7 +22,7 @@ struct LibraryEditorSheet: Identifiable {
     @MainActor @ViewBuilder var editor: some View {
         switch kind {
         case let .newFood(draft):
-            FoodEditor(draft: draft, onCreate: { _ in created?(.foods) }, onCreateAndAdd: add.map { add in { add(FoodPortion($0.snapshot)) } })
+            FoodEditor(draft: draft, onSave: { _ in created?(.foods) }, onCreateAndAdd: add.map { add in { add(FoodPortion($0.snapshot)) } })
         case let .editFood(food): FoodEditor(food: food)
         case let .newRecipe(draft):
             RecipeEditor(draft: draft, onCreate: { _ in created?(.recipes) }, onCreateAndAdd: add.map { add in { add(FoodPortion($0.snapshot)) } })

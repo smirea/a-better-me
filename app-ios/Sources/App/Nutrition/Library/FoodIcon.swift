@@ -165,6 +165,25 @@ struct FoodIcon: View {
     }
 }
 
+extension FoodIcon {
+    /// The icon as the button that opens the icon picker, with a pencil badge so it reads as one, in place of an Edit
+    /// Icon button beside the name.
+    func editsIcon(_ edit: @escaping () -> Void) -> some View {
+        Button(action: edit) {
+            self.overlay(alignment: .bottomTrailing) {
+                Image(systemName: "pencil")
+                    .font(.system(size: size * 0.24, weight: .bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(width: size * 0.42, height: size * 0.42)
+                    .background(Theme.surfaceRaised, in: .circle)
+                    .offset(x: size * 0.12, y: size * 0.08)
+            }
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel("Edit Icon")
+    }
+}
+
 /// Choose Icon: every icon by category, with a search over the names.
 struct FoodIconPicker: View {
     @Binding var selection: String?

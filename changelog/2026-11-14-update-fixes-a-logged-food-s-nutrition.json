@@ -1,0 +1,10 @@
+{
+	"title": "Update fixes a logged food's nutrition everywhere; tap a food's icon to change it",
+	"description": "A USDA or Open Food Facts food becomes your own copy that search, scans, and Picks return instead.",
+	"tasks": [
+		{
+			"id": "5b0fa59e-233c-4d66-97a3-ded7f6769152",
+			"title": "3 Nutrition Feedback: update row with edit button"
+		}
+	]
+}

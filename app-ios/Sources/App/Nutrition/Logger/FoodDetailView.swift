@@ -2,7 +2,7 @@ import Feedback
 import SwiftUI
 
 /// The food detail (`log-03-food-detail.jpg`): a card with the icon, the name, Favorite, the serving's calories and
-/// macros with each macro's share of calories, and Edit Icon, then the impact on the day's targets, every nutrient the
+/// macros with each macro's share of calories, the icon a tap re-icons, then the impact on the day's targets, every nutrient the
 /// food reports, and the quantity keypad pinned under them. A recipe adds Prepare, Edit, and Duplicate, as the
 /// library's recipe page does, and its ingredients at the typed amount above the nutrients. A plate item opens here too, with Update and Remove. The logger's banner stays above it with its close button, so the
 /// detail has no navigation bar of its own; a Ramble row's detail, which has no banner, keeps the back button.
@@ -97,8 +97,11 @@ struct FoodDetailView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
-                FoodIcon(food: food, size: 36)
-                    .onTapGesture { if food.source != .quickAdd { choosingIcon = true } }
+                if food.source == .quickAdd {
+                    FoodIcon(food: food, size: 36)
+                } else {
+                    FoodIcon(food: food, size: 36).editsIcon { choosingIcon = true }
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(food.name).font(AppFont.headline(18)).fixedSize(horizontal: false, vertical: true)
                     if let brand = food.brand, !brand.isEmpty {
@@ -127,11 +130,8 @@ struct FoodDetailView: View {
                 .sensoryFeedback(.success, trigger: favorite) { _, new in new != nil }
             }
             MacroHeader(amounts: amounts)
-            if food.source != .quickAdd || editing != nil {
+            if recipe != nil || editing != nil {
                 FlowLayout {
-                    if food.source != .quickAdd {
-                        Button("Edit Icon", systemImage: "face.smiling") { choosingIcon = true }
-                    }
                     if let recipe {
                         RecipeActions(recipe: recipe, session: session, prepare: { preparing = $0 }, present: { recipeSheet = $0 }, edited: recipeEdited)
                     }
