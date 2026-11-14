@@ -11,6 +11,8 @@ struct WatchWorkout: Codable, Hashable, Sendable {
         /// The totals its equipment loads in the session's gym, ascending, for the Digital Crown. Empty steps by the
         /// unit's plate increment.
         var loadableWeightsKg: [Double] = []
+        /// Set for plate-loaded equipment (bars, the Smith machine, plate machines), so the set screen lists the plates.
+        var plates: WatchPlates?
     }
 
     var sessionID: UUID

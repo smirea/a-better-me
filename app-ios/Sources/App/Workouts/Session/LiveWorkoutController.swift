@@ -144,9 +144,11 @@ final class LiveWorkoutController {
             for (e, item) in block.exercises.enumerated() {
                 let exercise = catalog?.exercise(item.exerciseID)
                 if exercises[item.exerciseID] == nil {
+                    let loading = catalog.flatMap { self.loading(for: item, catalog: $0, gym: gym) }
                     exercises[item.exerciseID] = WatchWorkout.Exercise(
                         name: exercise?.name ?? "Exercise", fields: SetField.fields(for: exercise).map(\.live),
-                        loadableWeightsKg: catalog.flatMap { loadableWeights(for: item, catalog: $0, unit: unit, gym: gym) } ?? []
+                        loadableWeightsKg: loading.map { loadableWeights(of: $0, unit: unit) } ?? [],
+                        plates: loading?.plates.map { WatchPlates($0, offset: plateOffset(of: item.exerciseID, gym: gym)) }
                     )
                 }
                 for set in item.sets {
@@ -309,16 +311,24 @@ final class LiveWorkoutController {
         return status
     }
 
-    /// Every total the exercise's equipment loads up to a ceiling no lift reaches, in kilograms. Plate math is slow next
-    /// to a rebuild, which runs on every draft keystroke and heart rate sample, so lists are kept per loading.
-    private func loadableWeights(for item: BlockExercise, catalog: ExerciseCatalog, unit: WeightUnit, gym: GymProfile? = nil) -> [Double]? {
-        let answer = loadings.answer(for: item, gym: gym ?? inputs.gym, catalog: catalog, settings: inputs.settings, exerciseSettings: inputs.exerciseSettings)
-        guard let loading = answer.loading else { return nil }
+    private func loading(for item: BlockExercise, catalog: ExerciseCatalog, gym: GymProfile?) -> Loading? {
+        loadings.answer(for: item, gym: gym ?? inputs.gym, catalog: catalog, settings: inputs.settings, exerciseSettings: inputs.exerciseSettings).loading
+    }
+
+    /// Every total `loading` puts together up to a ceiling no lift reaches, in kilograms. Plate math is slow next to a
+    /// rebuild, which runs on every draft keystroke and heart rate sample, so lists are kept per loading.
+    private func loadableWeights(of loading: Loading, unit: WeightUnit) -> [Double] {
         let key = LoadableKey(loading: loading, unit: unit)
         if let cached = loadableKg[key] { return cached }
         let kg = loading.totals(upTo: unit == .kg ? 500 : 1100, limit: 400).map(unit.toKg)
         loadableKg[key] = kg
         return kg
+    }
+
+    /// The editor's calculator offset for the exercise, where the session's gym turns Offset Weight on.
+    private func plateOffset(of exerciseID: ExerciseID, gym: GymProfile?) -> PlateOffset? {
+        guard let gym = gym ?? inputs.gym, inputs.settings.workout.plateCalculator(for: gym.id).offsetWeight else { return nil }
+        return ExerciseSettings.of(exerciseID, in: inputs.exerciseSettings)?.overrides.plateOffset
     }
 
     private struct LoadableKey: Hashable {
