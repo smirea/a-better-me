@@ -84,7 +84,8 @@ struct FoodLibrary: Sendable {
         let sections = settings.mealSections
         let usualStart = today.adding(days: -(usualDays - 1))
         let foods = try Food.filter(Column("archived") == false).fetchAll(db)
-        let current = CurrentFoods(foods)
+        let recipes = try Recipe.filter(Column("archived") == false).fetchAll(db)
+        let current = CurrentFoods(foods, recipes: recipes)
         var sectionDays: [String: [String: Set<CalendarDay>]] = [:]
         for row in try Row.fetchAll(db, sql: """
             SELECT \(foodKey) AS key, day, minute, section FROM food_entries
@@ -137,8 +138,7 @@ struct FoodLibrary: Sendable {
         library.items[.favorites] = try FoodFavorite.fetchAll(db).sorted { $0.createdAt < $1.createdAt }
             .map { Item(FoodSearchResult(.favorites, current.resolve($0.portion))) }
         library.items[.custom] = foods.filter { $0.source == .custom }.map { Item(FoodSearchResult(.custom, FoodPortion($0.snapshot))) }
-        library.items[.recipes] = try Recipe.filter(Column("archived") == false).fetchAll(db)
-            .map { Item(FoodSearchResult(.recipes, FoodPortion($0.snapshot))) }
+        library.items[.recipes] = recipes.map { Item(FoodSearchResult(.recipes, FoodPortion($0.snapshot))) }
         library.items[.branded] = foods.filter { $0.source == .openFoodFacts && current.key($0.id) == $0.id }
             .map { Item(FoodSearchResult(.branded, FoodPortion($0.snapshot))) }
         return library

@@ -107,6 +107,21 @@ struct FoodCorrectionTests {
         #expect(recipe.ingredients[0].food.amounts(recipe.ingredients[0].serving)[.energy] == 240)
     }
 
+    @Test func aLoggedRecipeIsOfferedAgainWithItsCorrectedIngredient() async throws {
+        store.saveFood(kefir)
+        var smoothie = Recipe(name: "Smoothie", servings: 1)
+        smoothie.ingredients = [RecipeIngredient(FoodPortion(kefir.snapshot))]
+        store.saveRecipe(smoothie)
+        store.log([FoodPortion(smoothie.snapshot)], on: today, minute: 480)
+        store.correctFood(try corrected(try await update(kefir.snapshot)))
+
+        let search = try await search()
+        for results in [try search.local(""), try search.local("smoothie"), search.picks(.hour(8))] {
+            #expect(results.map(\.portion.food.name) == ["Smoothie"])
+            #expect(results.first?.portion.amounts[.energy] == 120)
+        }
+    }
+
     @Test func anEditedCustomFoodOffersItsNewValuesFromTheHistory() async throws {
         let bar = Food(name: "Protein bar", nutrition: FoodNutrition(nutrients: [.energy: 200], measures: [Measure(name: "bar", quantity: 1, servings: 1)]))
         store.saveFood(bar)

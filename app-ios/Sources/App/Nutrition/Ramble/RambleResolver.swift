@@ -250,7 +250,7 @@ struct RambleResolver: Sendable {
             }
             let except = Set(item.except).union(choice?.keptRemoved ?? [])
             let kept = (context.mealEntries[mealID] ?? []).filter { !except.contains($0.key) }.map { entry in
-                var portion = index.library.current.resolve(entry.portion)
+                var portion = index.library.current.resolve(entry)
                 if let serving = choice?.keptServings[entry.key] { portion.serving = serving }
                 return RambleRow.Child.kept(entry, LoggerPick(portion))
             }
@@ -275,7 +275,7 @@ struct RambleResolver: Sendable {
             return .food(.init(pick: pick, key: earlier.key, options: earlier.options, searched: earlier.searched, showsOptions: item.options))
         }
         if let entry = refEntry, choice?.option.map({ $0 == FoodSearchResult.key(entry.food) }) ?? true {
-            var portion = index.library.current.resolve(entry.portion)
+            var portion = index.library.current.resolve(entry)
             if item.amount > 0 {
                 portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, food: item.name, of: portion.food.nutrition, history: portion.serving)
             } else {

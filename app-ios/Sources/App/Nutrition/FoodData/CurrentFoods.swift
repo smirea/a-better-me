@@ -1,21 +1,28 @@
 import GRDB
 
 /// What each food key (`FoodSearchResult.key`) stands for now: the owner's correction of it (`Food.replaces`), else its
-/// stored row as last saved. Logged entries keep what was logged, but whatever offers a food to log again (search, a
-/// scan, Latest, Picks, Ramble) reads it through this, so a corrected or edited food never offers its old values.
+/// stored food or recipe as last saved. Logged entries keep what was logged, but whatever offers a food to log again
+/// (search, a scan, Latest, Picks, Ramble) reads it through this, so a corrected or edited food, or a recipe whose
+/// ingredient was corrected, never offers its old values.
 struct CurrentFoods: Sendable {
     private var foods: [String: Food] = [:]
+    private var snapshots: [String: FoodSnapshot] = [:]
 
-    init(_ stored: [Food]) {
+    init(_ stored: [Food], recipes: [Recipe] = []) {
         let live = stored.filter { !$0.isArchived }
         for food in live { foods[food.id] = food }
         for food in live {
             if let replaced = food.replaces { foods[replaced] = food }
         }
+        snapshots = foods.mapValues(\.snapshot)
+        for recipe in recipes where !recipe.isArchived {
+            let snapshot = recipe.snapshot
+            if let key = snapshot.foodID { snapshots[key] = snapshot }
+        }
     }
 
     static func read(_ db: Database) throws -> CurrentFoods {
-        CurrentFoods(try Food.filter(Column("archived") == false).fetchAll(db))
+        CurrentFoods(try Food.filter(Column("archived") == false).fetchAll(db), recipes: try Recipe.filter(Column("archived") == false).fetchAll(db))
     }
 
     func food(_ key: String) -> Food? { foods[key] }
@@ -23,12 +30,16 @@ struct CurrentFoods: Sendable {
     /// The key a food is listed under now: its correction's id, else its own key.
     func key(_ key: String) -> String { foods[key]?.id ?? key }
 
-    /// The portion with its food as stored now, at the same quantity of its measure (`Serving.fitted`).
+    /// The portion with its food as stored now, at the same quantity of its measure (`Serving.fitted`). An altered
+    /// recipe's snapshot holds its alterations, which its recipe lacks, so only unaltered portions are passed here.
     func resolve(_ portion: FoodPortion) -> FoodPortion {
-        guard let food = foods[FoodSearchResult.key(portion.food)] else { return portion }
-        let snapshot = food.snapshot
-        guard snapshot != portion.food else { return portion }
-        return FoodPortion(snapshot, serving: portion.serving.fitted(to: food.nutrition))
+        guard let snapshot = snapshots[FoodSearchResult.key(portion.food)], snapshot != portion.food else { return portion }
+        return FoodPortion(snapshot, serving: portion.serving.fitted(to: snapshot.nutrition))
+    }
+
+    /// A logged entry's portion to log again: as stored now, except an altered recipe, which logs its alterations.
+    func resolve(_ entry: FoodEntry) -> FoodPortion {
+        entry.alterations == nil ? resolve(entry.portion) : entry.portion
     }
 }
 
