@@ -1,0 +1,10 @@
+{
+	"title": "The live workout's set table always shows weight before reps",
+	"description": "Dumbbell exercises like 45° Incline Dumbbell Press listed Reps/Side before Lb/Side.",
+	"tasks": [
+		{
+			"id": "081e8801-d039-4fe8-9a6b-2466772b0dec",
+			"title": "1 Recomp v3 (6-day) Feedback: Fix flipped layout, change reps to weight"
+		}
+	]
+}
