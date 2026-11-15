@@ -39,6 +39,7 @@ struct BetterMeApp: App {
         WidgetPublisher.shared.start(store: store, health: health)
         QuickActionInbox.shared.install()
         Feedback.enable()
+        Feedback.pinned = ["ProcrastiMate"]
         Feedback.webhooks = [
             FeedbackWebhook(
                 name: "GitHub Issue",
