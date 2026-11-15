@@ -92,4 +92,15 @@ struct TileMetricsTests {
         #expect(removedSince.insights == [.workouts])
         #expect(try decode("{}").insights == [.workouts, .weightTrend, .expenditure, .energyBalance, .goalProgress, .steps])
     }
+
+    @Test func savedLayoutsOpenOnTheOverviewOnce() throws {
+        func decode(_ json: String) throws -> DashboardLayout { try RowJSON.decoder.decode(DashboardLayout.self, from: Data(json.utf8)) }
+        let customized = try decode(#"{"revision":3,"primaryFocus":["dailyNutrition","workouts"]}"#)
+        #expect(customized.primaryFocus == [.overview, .dailyNutrition, .workouts])
+        var removed = customized
+        removed.primaryFocus.removeAll { $0 == .overview }
+        let reread = try decode(RowJSON.text(removed.saved))
+        #expect(reread.primaryFocus == [.dailyNutrition, .workouts])
+        #expect(try decode("{}").primaryFocus.first == .overview)
+    }
 }

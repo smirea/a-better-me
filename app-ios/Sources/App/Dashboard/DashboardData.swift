@@ -4,7 +4,7 @@ enum DashboardRoute: Hashable {
     case workouts, weightTrend, scaleWeight, steps
     case muscle(Muscle, MuscleMetric)
     case exercise(ExerciseID, ExerciseChartMetric)
-    case allMuscles, allExercises, customize
+    case allMuscles, allExercises, customize, levels, muscleLevels(Muscle)
     case expenditure, energyBalance, goalProgress, foodLogging, nutritionData
     case nutrient(NutrientID), macros, allNutrition
     case bodyMetric(BodyMetricCard), allBodyMetrics
@@ -351,7 +351,7 @@ struct DashboardData {
             return macrosDetail
         case let .bodyMetric(card):
             return bodyMetricDetail(card)
-        case .allMuscles, .allExercises, .customize, .goalProgress, .foodLogging, .nutritionData, .allNutrition, .allBodyMetrics:
+        case .allMuscles, .allExercises, .customize, .goalProgress, .foodLogging, .nutritionData, .allNutrition, .allBodyMetrics, .levels, .muscleLevels:
             preconditionFailure("\(route) is not a metric detail")
         }
     }
@@ -373,6 +373,7 @@ struct DashboardValues: DynamicProperty {
         case cycle(DashboardMetrics.CycleScope, Program?, [WorkoutTemplate])
         case detail(DashboardRoute), plot(DashboardRoute, MetricTab.ID?, ChartRange, Averaging)
         case expenditureDays, expenditureCard, balance(BalanceReference, days: Int), week, todayNutrition, foodLogging
+        case todaySummary([NutrientID], overages: Bool)
         case goal(GoalProgressValues.Source)
         case nutrientTile(NutritionCard), macrosCard, bodyMetricCard(BodyMetricCard)
     }
@@ -430,6 +431,9 @@ struct DashboardValues: DynamicProperty {
     func balance(_ reference: BalanceReference, days: Int) -> BalanceValues { memo(.balance(reference, days: days), usesNutrition: true) { $0.balance(reference, days: days) } }
     var week: [NutritionMetrics.DayNutrition] { memo(.week, usesNutrition: true) { $0.week } }
     var todayNutrition: NutritionMetrics.DayNutrition { memo(.todayNutrition, usesNutrition: true) { $0.todayNutrition } }
+    func todaySummary(_ nutrients: [NutrientID], overages: Bool) -> [MacroLine] {
+        memo(.todaySummary(nutrients, overages: overages), usesNutrition: true) { $0.todaySummary(nutrients, overages: overages) }
+    }
     var foodLogging: FoodLoggingValues { memo(.foodLogging, usesNutrition: true) { $0.foodLogging } }
     func goalProgress(_ source: GoalProgressValues.Source) -> GoalProgressValues? {
         memo(.goal(source), usesNutrition: true) { GoalProgressValues(data: $0, source: source) }

@@ -4,9 +4,9 @@ import Foundation
 /// array is hidden, so there is no `hidden` flag that could disagree with the order.
 struct DashboardLayout: Codable, Hashable {
     /// Bumped when a release adds cards; see `init(from:)`.
-    static let revision = 3
+    static let revision = 4
 
-    var primaryFocus: [FocusCard] = [.workouts, .recentRecords, .weeklyNutrition, .energyBalance, .dailyNutrition]
+    var primaryFocus: [FocusCard] = [.overview, .workouts, .recentRecords, .weeklyNutrition, .energyBalance, .dailyNutrition]
     var sections = DashboardSection.allCases
     var insights: [InsightCard] = [.workouts, .weightTrend, .expenditure, .energyBalance, .goalProgress, .steps]
     var habits: [HabitCard] = [.weighIn, .foodLogging, .workouts]
@@ -59,6 +59,9 @@ extension DashboardLayout {
             let general = try decoder.container(keyedBy: LegacyKeys.self).decodeIfPresent([String].self, forKey: .general)
             if general?.contains("steps") ?? true { insights.adopt([.steps], from: defaults.insights) }
         }
+        if saved < 4 {
+            primaryFocus.adopt([.overview], from: defaults.primaryFocus)
+        }
         revision = Self.revision
     }
 
@@ -77,7 +80,7 @@ private extension Array where Element: Equatable {
 }
 
 enum FocusCard: String, Codable, CaseIterable {
-    case workouts, recentRecords, weeklyNutrition, energyBalance, dailyNutrition
+    case overview, workouts, recentRecords, weeklyNutrition, energyBalance, dailyNutrition
 }
 
 enum DashboardSection: String, Codable, CaseIterable {

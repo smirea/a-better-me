@@ -1,8 +1,10 @@
 import Feedback
 import SwiftUI
 
-/// Levels, pushed from More: average weekly sets per muscle as a body heat map and two ranked lists.
-struct LevelsView: View {
+/// Levels, pushed from More and from the Dashboard's Overview: average weekly sets per muscle as a body heat map and
+/// two ranked lists. A row pushes `route(muscle)`, since the Dashboard's typed path takes only its own routes.
+struct LevelsView<Route: Hashable>: View {
+    let route: (Muscle) -> Route
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(SessionHistory.self) private var history
     @AppStorage(LevelsPeriod.storageKey) private var period = LevelsPeriod.oneWeek
@@ -29,8 +31,8 @@ struct LevelsView: View {
                 }
                 .listRowBackground(Color.clear)
             }
-            LevelsSection(title: "Upper Body Levels", muscles: Muscle.upperBody, weekly: weekly)
-            LevelsSection(title: "Lower Body Levels", muscles: Muscle.lowerBody, weekly: weekly)
+            LevelsSection(title: "Upper Body Levels", muscles: Muscle.upperBody, weekly: weekly, route: route)
+            LevelsSection(title: "Lower Body Levels", muscles: Muscle.lowerBody, weekly: weekly, route: route)
         }
         .themedList()
         .detailTitle("Levels")
@@ -38,10 +40,15 @@ struct LevelsView: View {
     }
 }
 
-private struct LevelsSection: View {
+extension LevelsView where Route == Muscle {
+    init() { route = { $0 } }
+}
+
+private struct LevelsSection<Route: Hashable>: View {
     let title: String
     let muscles: [Muscle]
     let weekly: WeeklySets
+    let route: (Muscle) -> Route
 
     var body: some View {
         ThemedSection(title) {
@@ -49,7 +56,7 @@ private struct LevelsSection: View {
                 let row = MuscleLevelRow(muscle: muscle, sets: sets, top: weekly.top)
                 // Untrained muscles have nothing to list, so the reference shows them without a chevron.
                 if sets > 0 {
-                    NavigationLink(value: muscle) { row }
+                    NavigationLink(value: route(muscle)) { row }
                 } else {
                     row
                 }

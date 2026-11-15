@@ -205,6 +205,7 @@ extension HabitCard {
 extension FocusCard {
     var title: String {
         switch self {
+        case .overview: "Overview"
         case .workouts: "Weekly Workouts"
         case .recentRecords: "Recent Records"
         case .weeklyNutrition: "Weekly Nutrition"
@@ -338,6 +339,15 @@ private struct PrimaryFocusPicker: View {
     @ViewBuilder
     private func preview(_ card: FocusCard) -> some View {
         switch card {
+        case .overview:
+            HStack(spacing: 10) {
+                BodyMap(values: [.chest: 10, .quads: 6, .biceps: 3], side: .front).frame(height: 56)
+                VStack(alignment: .leading, spacing: 7) {
+                    ForEach(NutrientID.macros, id: \.self) { id in
+                        Capsule().fill(id.color).frame(width: 44, height: 3)
+                    }
+                }
+            }
         case .workouts:
             HStack(spacing: 6) {
                 ProgressRing(fraction: 1, color: Theme.muscle, lineWidth: 2.5).frame(width: 26, height: 26)
