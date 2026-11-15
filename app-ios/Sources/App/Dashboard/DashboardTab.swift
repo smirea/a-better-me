@@ -29,6 +29,8 @@ struct DashboardTab: View {
                     case .nutritionData: NutritionDataManagerView()
                     case .allNutrition: AllNutritionView()
                     case .allBodyMetrics: AllBodyMetricsView()
+                    case .levels: LevelsView { DashboardRoute.muscleLevels($0) }
+                    case let .muscleLevels(muscle): MuscleLevelsView(muscle: muscle)
                     default: MetricDetailView(route: route)
                     }
                 }
@@ -152,6 +154,7 @@ private struct FocusPager: View {
     @ViewBuilder
     private func page(_ card: FocusCard) -> some View {
         switch card {
+        case .overview: OverviewFocus()
         case .workouts: CycleFocus()
         case .recentRecords: RecordsFocus()
         case .weeklyNutrition: WeeklyNutritionFocus()

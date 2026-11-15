@@ -33,6 +33,7 @@ export const screens: Screen[] = [
 
 	{ name: 'dashboard', steps: ['shot top', ...scrolled(1), 'shot mid', ...scrolled(2)] },
 	{ name: 'dashboard-customize', steps: [...tap('Customize Dashboard')] },
+	{ name: 'dashboard-levels', steps: [...tap('Levels'), 'wait 1000'] },
 	{ name: 'dashboard-workouts-detail', steps: [...scrollTo('Workouts'), ...tap('Workouts'), 'wait 1000'] },
 	{
 		name: 'dashboard-weight-detail',

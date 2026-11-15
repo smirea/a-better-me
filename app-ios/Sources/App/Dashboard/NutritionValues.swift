@@ -84,6 +84,13 @@ extension DashboardData {
 
     var todayNutrition: NutritionMetrics.DayNutrition { NutritionMetrics.day(today, log: log, plans: plans) }
 
+    /// Today's Food Log summary lines, against the same targets the Food Log fills its columns to.
+    func todaySummary(_ nutrients: [NutrientID], overages: Bool) -> [MacroLine] {
+        let targets = NutrientTargets.of(today, plans: plans, goals: goals, profile: profile, latestWeightKg: weighIns.last?.kg)
+        let consumed = log.first { $0.day == today }?.consumed ?? [:]
+        return FoodLog.summary(consumed, nutrients: nutrients, targets: targets.goals(nutrients), showOverages: overages)
+    }
+
     var foodLogging: FoodLoggingValues {
         let dates = NutritionMetrics.loggedDates(log, calendar: calendar)
         let byDay = Dictionary(log.map { ($0.day, $0) }, uniquingKeysWith: { $1 })

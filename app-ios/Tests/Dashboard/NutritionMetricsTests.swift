@@ -215,17 +215,17 @@ struct NutritionMetricsTests {
     @Test func savedLayoutsAdoptTheNutritionCardsOnce() throws {
         let old = #"{"primaryFocus":["recentRecords"],"insights":["workouts","weightTrend"],"habits":["weighIn","workouts"]}"#
         let adopted = try RowJSON.decoder.decode(DashboardLayout.self, from: Data(old.utf8))
-        #expect(adopted.primaryFocus == [.recentRecords, .weeklyNutrition, .energyBalance, .dailyNutrition])
+        #expect(adopted.primaryFocus == [.overview, .recentRecords, .weeklyNutrition, .energyBalance, .dailyNutrition])
         #expect(adopted.insights == [.workouts, .weightTrend, .expenditure, .energyBalance, .goalProgress, .steps])
         #expect(adopted.habits == [.weighIn, .foodLogging, .workouts])
-        #expect(adopted.revision == 3)
+        #expect(adopted.revision == DashboardLayout.revision)
         let trimmed = #"{"revision":1,"insights":["weightTrend"],"habits":["weighIn"],"primaryFocus":[],"general":[]}"#
         let kept = try RowJSON.decoder.decode(DashboardLayout.self, from: Data(trimmed.utf8))
         #expect(kept.insights == [.weightTrend])
         #expect(kept.habits == [.weighIn])
-        #expect(kept.primaryFocus.isEmpty)
+        #expect(kept.primaryFocus == [.overview])
         let encoded = try RowJSON.text(kept)
-        #expect(encoded.contains(#""revision":3"#))
+        #expect(encoded.contains(#""revision":\#(DashboardLayout.revision)"#))
         var reset = DashboardLayout()
         reset.insights.removeAll { $0 == .expenditure }
         let reread = try RowJSON.decoder.decode(DashboardLayout.self, from: Data(RowJSON.text(reset.saved).utf8))
