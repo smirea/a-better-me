@@ -205,7 +205,7 @@ extension HabitCard {
 extension FocusCard {
     var title: String {
         switch self {
-        case .overview: "Overview"
+        case .overview: "Today"
         case .workouts: "Weekly Workouts"
         case .recentRecords: "Recent Records"
         case .weeklyNutrition: "Weekly Nutrition"
