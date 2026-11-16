@@ -101,7 +101,9 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Generate environment from tracked defaults
         if: needs.changes.outputs.bun == 'true'
-        run: bun run env:generate
+        run: |
+          bun add -g @stefan.inc/env-manager@^1
+          bun run env:generate
       - name: Checks
         if: needs.changes.outputs.bun == 'true' && matrix.task == 'checks'
         run: bun run lint:ci && bun run typecheck
@@ -154,6 +156,7 @@ jobs:
         if: needs.changes.outputs.swift == 'true'
         run: |
           bun install --frozen-lockfile
+          bun add -g @stefan.inc/env-manager@^1
           bun run env:generate
 
       - name: Identify Xcode and Swift toolchain

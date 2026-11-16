@@ -6,7 +6,7 @@ Actions are pinned to commit SHAs. Dependabot checks for action updates weekly. 
 
 Bun tasks run the root `lint:ci` and `typecheck`, `test`, and `build` scripts. Keep CI checks read-only. Tests pass until tests are added, and failures then fail CI. `.bun-version` and `packageManager` pin Bun to the version used during scaffolding; update them together. Commit `bun.lock` after changing dependencies. CI caches package downloads, then always installs with `--frozen-lockfile`.
 
-Apps using env-manager regenerate ignored outputs from the tracked `.env` defaults with the pinned development dependency. Keep defaults harmless and complete enough for CI. If a test needs a credential, supply it explicitly through GitHub Actions secrets. Never commit `.env.local` or native local secrets, and never cache environment outputs.
+Apps using env-manager regenerate ignored outputs from the tracked `.env` defaults with `bun run env:generate`, after CI installs env-manager globally (`bun add -g @stefan.inc/env-manager@^1`); projects never depend on it. Keep defaults harmless and complete enough for CI. If a test needs a credential, supply it explicitly through GitHub Actions secrets. Never commit `.env.local` or native local secrets, and never cache environment outputs.
 
 Builds compile the shared `App` Xcode scheme for a generic iOS simulator without signing. Tests run the scheme's testables on an available iPhone simulator. Native jobs use the macOS runner's installed Xcode and Swift, and cache only package dependencies with a key including both toolchain versions. `Package.resolved` is not tracked, so each run resolves the owner's own packages at their latest `master` commit ([iOS decisions](../docs/decisions/ios.md)).
 

@@ -51,7 +51,6 @@
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20261010.1",
 		"@sentry/cli": "^3.8.2",
-		"@stefan.inc/env-manager": "^1.0.0",
 		"wrangler": "^4.149.0"
 	},
 	"packageManager": "bun@1.4.4"
