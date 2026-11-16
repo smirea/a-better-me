@@ -1,0 +1,4 @@
+{
+	"title": "Server settings load through env-manager 1.0 from npm",
+	"description": "No behavior change: the server's generated settings reader comes from the published @stefan.inc/env-manager package."
+}
