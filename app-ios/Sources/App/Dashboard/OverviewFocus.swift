@@ -12,7 +12,7 @@ struct OverviewFocus: View {
     var body: some View {
         let settings = values.nutritionSettings
         VStack(alignment: .leading, spacing: 14) {
-            SectionHeader("Overview")
+            SectionHeader("Today")
             HStack(alignment: .center, spacing: 16) {
                 MuscleState(sets: WeeklySets.memoized(in: history, period: period, catalog: catalog).totals, period: period)
                 TodayTargets(lines: values.todaySummary(settings.summaryNutrients, overages: settings.showOverages))
@@ -28,21 +28,11 @@ private struct MuscleState: View {
 
     var body: some View {
         NavigationLink(value: DashboardRoute.levels) {
-            VStack(spacing: 10) {
-                HStack(spacing: 2) {
-                    BodyMap(values: sets, side: .front)
-                    BodyMap(values: sets, side: .back)
-                }
-                .frame(height: 190)
-                HStack(spacing: 6) {
-                    Circle().fill(Theme.muscle).frame(width: 7, height: 7)
-                    Text("Weekly sets, \(period.rawValue)")
-                }
-                .font(AppFont.rowDetail)
-                .foregroundStyle(Theme.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+            HStack(spacing: 2) {
+                BodyMap(values: sets, side: .front)
+                BodyMap(values: sets, side: .back)
             }
+            .frame(height: 190)
             .frame(maxWidth: .infinity)
             .contentShape(.rect)
         }
@@ -58,7 +48,6 @@ private struct TodayTargets: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Today").font(AppFont.headline(14)).foregroundStyle(Theme.textSecondary)
             ForEach(lines) { line in
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline) {
