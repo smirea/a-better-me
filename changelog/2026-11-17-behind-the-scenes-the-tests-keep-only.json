@@ -1,0 +1,4 @@
+{
+	"title": "Behind the scenes: the tests keep only the rules worth guarding, so changes ship faster",
+	"description": "Nothing in the app changes; checks of layout, wording, and wiring are gone."
+}
