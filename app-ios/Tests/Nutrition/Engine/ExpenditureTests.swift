@@ -94,7 +94,7 @@ struct ExpenditureTests {
 }
 
 struct BMRTests {
-    @Test func macroFactorEquationByHeightAndWeight() {
+    @Test func bmrFollowsMacroFactorsEquationBySexAgeHeightAndWeight() {
         #expect((Engine.BMR.macroFactor(weightKg: 100, heightCm: 180, ageYears: 30, sex: .male) * 10).rounded() / 10 == 1929.2)
         #expect((Engine.BMR.macroFactor(weightKg: 100, heightCm: 180, ageYears: 30, sex: .female) * 10).rounded() / 10 == 1715.4)
         #expect((Engine.BMR.macroFactor(weightKg: 100, heightCm: 180, ageYears: 65, sex: .male) * 10).rounded() / 10 == 1669.5)

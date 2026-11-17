@@ -27,7 +27,7 @@ struct SmartWarmUpTests {
 }
 
 struct WarmUpSchemeTests {
-    @Test func standardSchemeAt100kg() {
+    @Test func theStandardSchemeWarmsUpAtFortySixtyAndEightyPercent() {
         let steps = WarmUpScheme.sets(workingWeight: 100, loadable: LoadableWeights(loading: nil, unit: .kg), steps: WarmUpStep.standard)
         #expect(steps.map(\.weight) == [40, 60, 80])
         #expect(steps.map(\.reps) == [5, 5, 3])

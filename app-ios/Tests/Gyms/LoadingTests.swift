@@ -10,21 +10,21 @@ private func bar(_ plates: [Double], counts: [Int?]? = nil, base: Double = 45) -
 private let lb = WeightUnit.lb
 
 struct PlateCalculatorTests {
-    @Test func researchExample185OnA45Bar() {
+    @Test func theHeaviestPlatesLoadFirstOnEachSideOfTheBar() {
         let plan = bar([45, 25]).plan(for: 185)
         #expect(plan.perSide == [45, 25])
         #expect(plan.legend == "45 25 + 45 bar")
         #expect(plan.miss(unit: "lb") == nil)
     }
 
-    @Test func researchExampleTargetBelowTheBar() {
+    @Test func aTargetBelowTheBarLoadsTheBarAndSaysHowFarOver() {
         let plan = bar([45, 25]).plan(for: 0)
         #expect(plan.perSide == [])
         #expect(plan.legend == "45 bar")
         #expect(plan.miss(unit: "lb") == "45 lb over")
     }
 
-    @Test func researchExamplesOnTheDefaultPlates() {
+    @Test func theDefaultPlatesReachEachTargetGreedilyFromTheHeaviest() {
         let plates = bar([2.5, 5, 10, 25, 35, 45])
         #expect(plates.plan(for: 150).perSide == [45, 5, 2.5])
         #expect(plates.plan(for: 135).perSide == [45])

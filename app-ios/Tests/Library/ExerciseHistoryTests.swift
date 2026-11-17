@@ -3,7 +3,7 @@ import Testing
 @testable import App
 
 struct EstimatedRepMaxTests {
-    @Test func inverseEpleyFromA120KilogramOneRepMax() {
+    @Test func repMaxesFollowTheInverseEpleyFormula() {
         #expect(abs(WorkoutMetrics.estimatedRepMaxKg(oneRepMaxKg: 120, reps: 3) - 109.090909) < 0.0001)
         #expect(abs(WorkoutMetrics.estimatedRepMaxKg(oneRepMaxKg: 120, reps: 10) - 90) < 0.0001)
     }

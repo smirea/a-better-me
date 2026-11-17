@@ -41,7 +41,7 @@ struct DashboardMetricsTests {
         #expect(DashboardMetrics.muscle(.biceps, sessions: sessions, metric: .sets, catalog: catalog).isEmpty)
     }
 
-    @Test func exerciseMetricsPerSession() {
+    @Test func eachChartMetricOfASessionLeavesOutItsWarmUps() {
         let items = [BlockExercise(exerciseID: "press", sets: [logged(50, 10, type: .warmUp), logged(100, 5, rir: 1), logged(90, 8, rir: 0)])]
         let byMetric = DashboardMetrics.values(of: items, exercise: press)
         let values = ExerciseChartMetric.allCases.map { byMetric[$0].map { ($0 * 10).rounded() / 10 } }

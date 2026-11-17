@@ -19,7 +19,7 @@ struct TargetsTests {
         #expect(Engine.Targets.initialDailyBudget(expenditure: expenditure, goal: Engine.Goal(kind: .gain, ratePercentPerWeek: 0.5), weightKg: weightKg) == 2625)
     }
 
-    @Test func balancedModerateProteinWithTwoHighDays() {
+    @Test func aBalancedWeekRaisesItsTwoHighDaysAboveTheRest() {
         let program = Engine.CoachedProgram(diet: .balanced, protein: .moderate, floor: floor, highDays: [.friday, .saturday])
         let plan = Engine.Targets.weekly(program: program, goal: lose, expenditure: expenditure, weightKg: weightKg)
         #expect(plan.diet == .balanced)
