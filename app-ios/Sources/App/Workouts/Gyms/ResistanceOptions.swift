@@ -92,13 +92,15 @@ extension Loading {
     /// stack decides the steps, before a loadable accessory, which in "Dumbbells, Fat Grip Attachments" only changes the
     /// grip but in "Dip Belt, Weight Plates" carries the plates. Bands and items without a load give `nil`, and the
     /// stepper falls back to the increment. A `perSide` weight field logs one side, so it loads one side of the base.
+    /// A base the calculator leaves out (`includesBase` unless the gym's options choose for it) weighs 0, so the
+    /// stepper, the calculator, and the watch all count the plates alone.
     static func resolve(
         option ids: [EquipmentID], catalog: [EquipmentID: Equipment], unit: WeightUnit, perSide: Bool = false,
-        calculator: PlateCalculatorOptions = PlateCalculatorOptions(), barWeightKg: [EquipmentID: Double] = [:],
-        load: (EquipmentID) -> EquipmentLoad?
+        calculator: PlateCalculatorOptions = PlateCalculatorOptions(), includesBase: Bool = true,
+        barWeightKg: [EquipmentID: Double] = [:], load: (EquipmentID) -> EquipmentLoad?
     ) -> Loading? {
         let items = ids.compactMap { catalog[$0] }
-        let context = PlateContext(unit: unit, perSide: perSide, calculator: calculator, barWeightKg: barWeightKg)
+        let context = PlateContext(unit: unit, perSide: perSide, calculator: calculator, includesBase: includesBase, barWeightKg: barWeightKg)
         if let base = items.first(where: { $0.category == barCategory || $0.category == machineCategory }) {
             return plates(on: base, context, load: load)
         }
@@ -125,6 +127,7 @@ extension Loading {
         var unit: WeightUnit
         var perSide: Bool
         var calculator: PlateCalculatorOptions
+        var includesBase: Bool
         var barWeightKg: [EquipmentID: Double]
     }
 
@@ -164,7 +167,11 @@ extension Loading {
             PlateLoading.Plate(weight: unit.fromKg(option.kg), perSide: option.count.map { $0 / sides }, isBumper: isBumper)
         }
         let baseWeight = unit.fromKg(baseKg ?? 0) * Double(loaded) / Double(sides)
-        return .plates(PlateLoading(base: isBar || base.id == smithMachineID ? .bar : .machine, baseWeight: baseWeight, plates: plates, sides: loaded, baseID: base.id, baseWeights: baseWeights))
+        let counted = context.calculator.includeBase[base.id] ?? context.includesBase
+        return .plates(PlateLoading(
+            base: isBar || base.id == smithMachineID ? .bar : .machine, baseWeight: counted ? baseWeight : 0, plates: plates, sides: loaded,
+            baseID: base.id, baseWeights: baseWeights, ignoredBaseWeight: counted ? nil : baseWeight
+        ))
     }
 
     /// The loads a rack or pin stack offers, ascending. `nil` for an empty list, so the stepper keeps its increment.

@@ -16,7 +16,7 @@ struct LoadingCacheTests {
         let cache = LoadingCache()
         let answer = cache.answer(for: bench, gym: gym(), catalog: catalog, settings: AppSettings(), exerciseSettings: [])
         let plates = try #require(answer.loading?.plates)
-        #expect(plates.plan(for: 185).legend == "45 bar + 45 25")
+        #expect(plates.plan(for: 185).legend == "45 25 + 45 bar")
         #expect(plates.plan(for: 185).miss(unit: "lb") == nil)
         #expect(answer.loadable.lightest == 45)
         #expect(answer.loadable.nearest(186) == 185)

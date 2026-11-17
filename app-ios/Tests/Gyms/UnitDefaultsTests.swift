@@ -31,7 +31,7 @@ struct UnitDefaultsTests {
         let plates = try #require(bench.plates)
         #expect(plates.baseWeight == 20)
         #expect(plates.plates.map(\.weight) == [25, 20, 15, 10, 5, 2.5, 1.25])
-        #expect(plates.plan(for: 70).legend == "20 bar + 25")
+        #expect(plates.plan(for: 70).legend == "25 + 20 bar")
         #expect(plates.plan(for: 70).miss(unit: "kg") == nil)
         let benchWeights = LoadableWeights(loading: bench, unit: .kg)
         #expect(benchWeights.nearest(70.31) == 70)
@@ -46,7 +46,7 @@ struct UnitDefaultsTests {
         let gym = GymProfile(name: "Home", equipment: [barbell: GymEquipment(), Loading.weightPlatesID: GymEquipment()])
         let loads = GymLoads(gym: gym, overrides: [:], unit: .lb, catalog: catalog)
         let plates = try #require(Loading.resolve(option: [barbell], catalog: catalog, unit: .lb, load: loads.load)?.plates)
-        #expect(plates.plan(for: 185).legend == "45 bar + 45 25")
+        #expect(plates.plan(for: 185).legend == "45 25 + 45 bar")
         #expect(plates.plan(for: 185).miss(unit: "lb") == nil)
     }
 
@@ -57,7 +57,7 @@ struct UnitDefaultsTests {
         ])
         let loads = GymLoads(gym: gym, overrides: [:], unit: .lb, catalog: catalog)
         let plates = try #require(Loading.resolve(option: [smith], catalog: catalog, unit: .lb, load: loads.load)?.plates)
-        #expect(plates.plan(for: 133).legend == "13 bar + 45 10 5")
+        #expect(plates.plan(for: 133).legend == "45 10 5 + 13 bar")
     }
 
     @Test func aStoredLoadKeepsItsPlatesInEitherUnit() throws {

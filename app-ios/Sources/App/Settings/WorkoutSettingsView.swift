@@ -42,6 +42,11 @@ struct WorkoutSettingsView: View {
                     title: "Exercise Auto-Next", detail: "Scroll next automatically when an exercise is completed",
                     systemImage: "chevron.forward.2", isOn: store.binding(settings, \.workout.exerciseAutoNext)
                 )
+                SettingToggle(
+                    title: "Include Bar Weight",
+                    detail: "The plate calculator counts the bar or machine's own weight. Tap the bar in the calculator to change it for one machine",
+                    systemImage: "dumbbell", isOn: store.binding(settings, \.workout.plateCalculatorIncludesBase)
+                )
             }
             ThemedSection("Display") {
                 SettingToggle(

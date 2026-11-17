@@ -1,0 +1,10 @@
+{
+	"title": "Plate calculator reads plates first, and tapping the bar leaves it out per machine",
+	"description": "Plates get plate-shaped markers; Settings > Workout > Include Bar Weight sets the default, and the watch follows.",
+	"tasks": [
+		{
+			"id": "93434b5a-d4e8-44d7-a259-a19cbe5513e2",
+			"title": "+bar at the end. Also show plate icons instead square."
+		}
+	]
+}

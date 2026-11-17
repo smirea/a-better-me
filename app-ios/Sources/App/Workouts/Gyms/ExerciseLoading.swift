@@ -62,6 +62,7 @@ final class LoadingCache {
         return Loading.resolve(
             option: option, catalog: catalog.equipment, unit: settings.weightUnit, perSide: weight == .weight(perSide: true),
             calculator: gym.map { settings.workout.plateCalculator(for: $0.id) } ?? PlateCalculatorOptions(),
+            includesBase: settings.workout.plateCalculatorIncludesBase,
             barWeightKg: overrides?.barWeightKg ?? [:], load: loads.load
         )
     }

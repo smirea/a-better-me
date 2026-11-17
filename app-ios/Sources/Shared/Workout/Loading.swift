@@ -46,6 +46,12 @@ struct PlateLoading: Hashable, Sendable {
     /// offer the choice `ExerciseOverrides.barWeightKg` stores.
     var baseID: EquipmentID?
     var baseWeights: [Double]
+    /// The base's own weight while the calculator leaves it out (`PlateCalculatorOptions.includeBase`), when
+    /// `baseWeight` is 0 so the plates alone make the target. The legend shows it struck through to put it back.
+    var ignoredBaseWeight: Double?
+
+    /// The base's weight whether or not it counts, as the bar menu lists it.
+    var ownBaseWeight: Double { ignoredBaseWeight ?? baseWeight }
 
     struct Plate: Hashable, Sendable {
         var weight: Double
@@ -53,9 +59,13 @@ struct PlateLoading: Hashable, Sendable {
         var isBumper = false
     }
 
-    init(base: Base, baseWeight: Double, plates: [Plate], sides: Int, baseID: EquipmentID? = nil, baseWeights: [Double] = []) {
+    init(
+        base: Base, baseWeight: Double, plates: [Plate], sides: Int, baseID: EquipmentID? = nil, baseWeights: [Double] = [],
+        ignoredBaseWeight: Double? = nil
+    ) {
         self.base = base
         self.baseWeight = baseWeight
+        self.ignoredBaseWeight = ignoredBaseWeight
         self.plates = plates.filter { $0.weight > 0 && $0.perSide != 0 }.sorted { $0.weight > $1.weight }
         self.sides = sides
         self.baseID = baseID
@@ -153,14 +163,23 @@ struct PlatePlan: Equatable, Sendable {
 
     var total: Double { loading.baseWeight + perSide.reduce(0, +) * Double(loading.sides) }
 
-    /// "13 bar + 45 10 5": the bar (or a machine's base) when it weighs anything, then a side's plates in loading order,
-    /// each written out rather than counted, so it reads like the sleeve. Empty for a weightless base with no plates.
+    /// "45 10 5 + 13 bar": a side's plates in loading order, each written out rather than counted so it reads like the
+    /// sleeve, then the bar (or a machine's base) when it weighs anything. Empty for a weightless base with no plates.
     var legend: String {
-        [baseLabel, plateLabels.isEmpty ? nil : plateLabels.joined(separator: " ")].compactMap(\.self).joined(separator: " + ")
+        [plateLabels.isEmpty ? nil : plateLabels.joined(separator: " "), baseLabel].compactMap(\.self).joined(separator: " + ")
     }
 
     var baseLabel: String? {
-        loading.baseWeight > 0 ? "\(NumberText.plain(loading.baseWeight)) \(loading.base == .bar ? "bar" : "base")" : nil
+        loading.baseWeight > 0 ? Self.label(base: loading.baseWeight, loading.base) : nil
+    }
+
+    /// "13 bar" for a base the calculator leaves out.
+    var ignoredBaseLabel: String? {
+        loading.ignoredBaseWeight.flatMap { $0 > 0 ? Self.label(base: $0, loading.base) : nil }
+    }
+
+    private static func label(base weight: Double, _ base: PlateLoading.Base) -> String {
+        "\(NumberText.plain(weight)) \(base == .bar ? "bar" : "base")"
     }
 
     var plateLabels: [String] { perSide.map(NumberText.plain) }

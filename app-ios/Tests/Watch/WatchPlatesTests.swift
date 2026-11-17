@@ -8,8 +8,8 @@ private let smith = PlateLoading(base: .bar, baseWeight: 13, plates: [45.0, 25, 
 struct WatchPlatesTests {
     @Test func theWatchReadsThePhonesLegendForTheLoggedKilograms() {
         let plates = WatchPlates(smith, offset: nil)
-        #expect(plates.plan(weightKg: lb.toKg(133), unit: lb)?.legend == "13 bar + 45 10 5")
-        #expect(plates.plan(weightKg: lb.toKg(123), unit: lb)?.legend == "13 bar + 45 10")
+        #expect(plates.plan(weightKg: lb.toKg(133), unit: lb)?.legend == "45 10 5 + 13 bar")
+        #expect(plates.plan(weightKg: lb.toKg(123), unit: lb)?.legend == "45 10 + 13 bar")
         #expect(plates.plan(weightKg: lb.toKg(123), unit: lb)?.miss(unit: "lb") == nil)
     }
 
@@ -23,7 +23,14 @@ struct WatchPlatesTests {
 
     @Test func theCalculatorOffsetMovesTheTarget() {
         let plates = WatchPlates(smith, offset: .kilograms(lb.toKg(10)))
-        #expect(plates.plan(weightKg: lb.toKg(123), unit: lb)?.legend == "13 bar + 45 10 5")
+        #expect(plates.plan(weightKg: lb.toKg(123), unit: lb)?.legend == "45 10 5 + 13 bar")
+    }
+
+    @Test func aLeftOutBarLeavesTheWatchLineToThePlates() {
+        var leftOut = smith
+        leftOut.baseWeight = 0
+        leftOut.ignoredBaseWeight = 13
+        #expect(WatchPlates(leftOut, offset: nil).plan(weightKg: lb.toKg(120), unit: lb)?.legend == "45 10 5")
     }
 
     @Test func aWorkoutFromAnOlderPhoneDecodesWithoutPlates() throws {
