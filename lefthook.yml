@@ -19,9 +19,12 @@ pre-commit:
           - name: typecheck
             glob: '*.{js,mjs,mts,ts,tsx,json,jsonc}'
             run: bun check
+          # The whole suite: it runs in under a second, and selecting tests by diff could miss one whose input is not an
+          # import. Git exports GIT_DIR and GIT_INDEX_FILE to hooks, so a test that runs git in a temp directory would
+          # act on this repository unless they are unset first.
           - name: test
-            glob: '*.{js,mjs,mts,ts,tsx}'
-            run: bun --no-env-file scripts/test-changed.ts {staged_files}
+            glob: '*.{js,mjs,mts,ts,tsx,json}'
+            run: unset $(git rev-parse --local-env-vars); bun run test
           - name: generated
             run: bun scripts/check-generated.ts
           - name: swift-lint
