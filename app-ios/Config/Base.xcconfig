@@ -1,4 +1,6 @@
-#include "LocalSecrets.xcconfig"
+// The worktree's values, written by `env-manager gen --local`. Optional, because CI builds without it: xcodebuild
+// resolves $(API_URL) from its environment, and Config/check-env.sh fails the build when no value arrives either way.
+#include? "LocalSecrets.xcconfig"
 // The asset version every build downloads, written by `bun run assets version`.
 #include "Assets.xcconfig"
 // Release values from env-manager prod, written by `bun run env:ios`. Debug keeps LocalSecrets' API_URL, which carries

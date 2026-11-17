@@ -1,0 +1,4 @@
+{
+	"title": "A build stops before compiling when a setting is missing",
+	"description": "No change in the app: Xcode now checks its settings first, and CI builds without env-manager."
+}

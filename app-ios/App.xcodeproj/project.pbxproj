@@ -183,6 +183,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = A00000000000000000000011 /* Build configuration list for PBXNativeTarget "App" */;
 			buildPhases = (
+				E00000000000000000000012 /* Check environment */,
 				A00000000000000000000007 /* Sources */,
 				A00000000000000000000008 /* Frameworks */,
 				A00000000000000000000009 /* Resources */,
@@ -377,6 +378,23 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		E00000000000000000000012 /* Check environment */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Config/check-env.sh",
+			);
+			name = "Check environment";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/Config/check-env.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 		E00000000000000000000011 /* Bundle Changelog */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;

@@ -14,6 +14,15 @@ concurrency:
   # A push to master deploys, and a newer push must not cancel a deploy halfway.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# The schema defaults that the committed readers and app-ios/Config/check-env.sh require. CI never runs env-manager,
+# so no per-target values file exists: scripts that run from a subdirectory and xcodebuild read these instead. Nothing
+# here is secret. A job that needs a credential takes it from a repository secret.
+env:
+  API_URL: http://127.0.0.1:6151
+  API_PORT: 6151
+  CLIENT_PORT: 6150
+  APP_ENV: development
+
 defaults:
   run:
     shell: bash
@@ -99,11 +108,6 @@ jobs:
       - name: Install dependencies
         if: needs.changes.outputs.bun == 'true'
         run: bun install --frozen-lockfile
-      - name: Generate environment from tracked defaults
-        if: needs.changes.outputs.bun == 'true'
-        run: |
-          bun add -g @stefan.inc/env-manager@^1
-          bun run env:generate
       - name: Checks
         if: needs.changes.outputs.bun == 'true' && matrix.task == 'checks'
         run: bun run lint:ci && bun run typecheck
@@ -152,12 +156,9 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-bun-${{ hashFiles('.bun-version') }}-${{ hashFiles('bun.lock', 'bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-bun-${{ hashFiles('.bun-version') }}-
-      - name: Generate native environment from tracked defaults
+      - name: Install dependencies
         if: needs.changes.outputs.swift == 'true'
-        run: |
-          bun install --frozen-lockfile
-          bun add -g @stefan.inc/env-manager@^1
-          bun run env:generate
+        run: bun install --frozen-lockfile
 
       - name: Identify Xcode and Swift toolchain
         if: needs.changes.outputs.swift == 'true'
