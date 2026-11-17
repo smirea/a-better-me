@@ -20,6 +20,7 @@ export const BODY_WEIGHT_SOURCES = ['manual', 'healthkit'] as const;
 const FOOD_SOURCES = ['custom', 'usda', 'open_food_facts', 'recipe', 'quick_add'] as const;
 export const FOOD_ROW_SOURCES = ['custom', 'usda', 'open_food_facts'] as const;
 export const DAY_STATUSES = ['none', 'complete', 'partial', 'fasted'] as const;
+export const SUPPLEMENT_TIMINGS = ['morning', 'afternoon', 'evening'] as const;
 export const NOTE_COLORS = ['red', 'blue', 'green', 'yellow', 'purple'] as const;
 export const BODY_METRIC_KINDS = [
 	'visual_body_fat',
@@ -341,6 +342,36 @@ const foodShortNames = sqliteTable('food_short_names', {
 	createdAt: text('created_at').notNull(),
 });
 
+/**
+ * A pill the owner takes or took. `components` is the label's Supplement Facts per `serving`, in label order.
+ * `regimens` is when it is taken, oldest first: a supplement shows on a day one of them covers, so nothing is logged
+ * per day. `image_at` is when its picture last changed, or null without one; the picture itself is the
+ * `supplement_images` row of the same id.
+ */
+const supplements = sqliteTable('supplements', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	brand: text('brand'),
+	serving: json('serving').notNull().default({}),
+	components: json('components').notNull().default([]),
+	regimens: json('regimens').notNull().default([]),
+	note: text('note').notNull().default(''),
+	imageAt: text('image_at'),
+	createdAt: text('created_at').notNull(),
+	updatedAt: text('updated_at').notNull(),
+});
+
+/**
+ * A supplement's picture, keyed by the supplement's id: a JPEG no longer than 640 px, as base64. The engine carries
+ * values, not files, so the picture is small enough to be one, and it sits apart from `supplements` so reading the
+ * list never loads the pictures.
+ */
+const supplementImages = sqliteTable('supplement_images', {
+	id: text('id').primaryKey(),
+	jpeg: text('jpeg').notNull(),
+	updatedAt: text('updated_at').notNull(),
+});
+
 /** The order here is the order of the generated Swift schema and of a snapshot pull. */
 export const SYNCED_TABLES = {
 	workout_templates: workoutTemplates,
@@ -363,6 +394,8 @@ export const SYNCED_TABLES = {
 	nutrient_goals: nutrientGoals,
 	meal_names: mealNames,
 	food_short_names: foodShortNames,
+	supplements,
+	supplement_images: supplementImages,
 } as const;
 
 export type SyncedTable = keyof typeof SYNCED_TABLES;
@@ -407,6 +440,23 @@ const recipeIngredient = z.object({ id: z.string(), food: foodSnapshot, serving 
 export const ingredientAlteration = z
 	.object({ id: z.string(), food: foodSnapshot, original: serving.optional(), serving: serving.optional() })
 	.refine(line => line.original || line.serving, 'An alteration keeps an original or a serving');
+const supplementServing = z.object({ quantity: positive, unit: z.string().min(1) });
+/** A label row. A proprietary blend's ingredient has no amount. */
+const supplementComponent = z.object({
+	name: z.string().min(1),
+	amount: amount.optional(),
+	unit: z.string().optional(),
+});
+/** `count` servings on each day from `start` through `end` (open without one) that is one of `weekdays`, ISO, Monday 1; none means every day. */
+export const supplementRegimen = z.object({
+	start: day,
+	end: day.optional(),
+	count: positive,
+	timing: z.enum(SUPPLEMENT_TIMINGS).optional(),
+	weekdays: z.array(z.int().min(1).max(7)),
+});
+/** Base64 of the 640 px JPEG the app writes, which is under 150 KB; the cap keeps a row well inside a Durable Object's 2 MB. */
+const supplementJpeg = z.base64().min(1).max(600_000);
 const dayTarget = z.object({ energy: amount, protein: amount, fat: amount, carbs: amount });
 const nutritionGoal = z.object({
 	kind: z.enum(GOAL_KINDS),
@@ -497,5 +547,12 @@ export const schema = defineSchema({
 		},
 		meal_names: { name: z.string().min(1), version: atLeastOne },
 		food_short_names: { name: z.string().min(1) },
+		supplements: {
+			name: z.string().min(1),
+			serving: supplementServing,
+			components: z.array(supplementComponent),
+			regimens: z.array(supplementRegimen),
+		},
+		supplement_images: { jpeg: supplementJpeg },
 	},
 });
