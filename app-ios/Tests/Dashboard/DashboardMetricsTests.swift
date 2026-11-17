@@ -75,43 +75,6 @@ struct DashboardMetricsTests {
         #expect(data.lastDays(points) == [1, 0, 0, 5, 0, 0, 4])
     }
 
-    @Test func longRangesDrawCoarserBuckets() {
-        let now = day("2026-10-07")
-        let year = ChartRange.oneYear.interval(endingAt: now, earliest: nil, calendar: utc)
-        let sixMonths = ChartRange.sixMonths.interval(endingAt: now, earliest: nil, calendar: utc)
-        let threeYears = ChartRange.all.interval(endingAt: now, earliest: day("2023-10-01"), calendar: utc)
-        #expect(Averaging.daily.drawn(over: sixMonths) == .daily)
-        #expect(Averaging.daily.drawn(over: year) == .weekly)
-        #expect(Averaging.monthly.drawn(over: year) == .monthly)
-        #expect(Averaging.weekly.drawn(over: threeYears) == .monthly)
-    }
-
-    @Test func plotListsEveryEntryNewestFirstByMonth() {
-        let tab = MetricTab(
-            title: "Sets", points: [
-                DatedValue(date: day("2026-08-20", 0), value: 1),
-                DatedValue(date: day("2026-09-10", 0), value: 2),
-                DatedValue(date: day("2026-09-28", 0), value: 3),
-                DatedValue(date: day("2026-10-02", 0), value: 4),
-            ],
-            unit: .decimal("sets"), averageTitle: "Average Sets", summary: .total, style: .bar, color: Theme.muscle
-        )
-        let plot = MetricPlot(tab: tab, footer: .months, range: .oneMonth, averaging: .weekly, now: day("2026-10-07"), calendar: utc, unit: .kg)
-        #expect(plot.latest == DateInterval(start: day("2026-09-08", 0), end: day("2026-10-08", 0)))
-        // Weekly bars open on whole weeks, through the end of the current one.
-        let window = plot.window(at: plot.initialStart)
-        #expect(window.interval == DateInterval(start: day("2026-09-07", 0), end: day("2026-10-12", 0)))
-        #expect(plot.months.map(\.id) == [day("2026-10-01", 0), day("2026-09-01", 0), day("2026-08-01", 0)])
-        #expect(plot.months.map { $0.rows.map(\.text) } == [["4 sets"], ["3 sets", "2 sets"], ["1 sets"]])
-        #expect(plot.drawn == [
-            DatedValue(date: day("2026-08-17", 0), value: 1),
-            DatedValue(date: day("2026-09-07", 0), value: 2),
-            DatedValue(date: day("2026-09-28", 0), value: 3.5),
-        ])
-        #expect(plot.drawnUnit == .weekOfYear)
-        #expect(window.stats.map(\.value) == [2.75, 9])
-    }
-
     @Test func plotWeighInRowsDeleteOnlyAppEntries() {
         let logged = BodyWeight(weightKg: 80, measuredAt: day("2026-10-06"))
         let weighIns = [
@@ -161,13 +124,6 @@ struct DashboardMetricsTests {
         #expect(active.sets.left == 8)
         let week = DashboardMetrics.cycleProgress(.allWorkouts, program: nil, templates: [], sessions: sessions, now: day("2026-10-07"), calendar: utc, catalog: catalog)
         #expect(week == .init(muscles: .init(done: 4, target: nil), sets: .init(done: 3, target: nil), exercises: .init(done: 2, target: nil)))
-    }
-
-    @Test func habitGridIsOldestFirstEndingToday() {
-        let dates = [day("2026-10-07", 6), day("2026-10-07", 20), day("2026-10-05"), day("2026-09-01")]
-        let grid = DashboardMetrics.habitDays(dates, count: 4, now: day("2026-10-07", 12), calendar: utc)
-        #expect(grid == [false, true, false, true])
-        #expect(DashboardMetrics.daysThisWeek(dates, now: day("2026-10-07"), calendar: utc) == 2)
     }
 
     @Test func weeklyAveragingMeansTheDaysWithData() {

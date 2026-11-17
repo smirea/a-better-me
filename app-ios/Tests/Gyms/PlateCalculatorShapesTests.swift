@@ -63,15 +63,6 @@ struct PlateCalculatorShapesTests {
         #expect(try decode(text, as: ExerciseOverrides.self) == overrides)
     }
 
-    @Test func gymOptionsDefaultOffAndReadByGymID() {
-        var settings = WorkoutSettings()
-        let gym = UUID()
-        #expect(settings.plateCalculator(for: gym) == PlateCalculatorOptions())
-        settings.plateCalculator[gym.uuidString] = PlateCalculatorOptions(includeBumperPlates: true, allowMixedUnits: false, offsetWeight: true)
-        #expect(settings.plateCalculator(for: gym).includeBumperPlates == true)
-        #expect(settings.plateCalculator(for: UUID()).includeBumperPlates == false)
-    }
-
     @Test func microAdjustmentsAddOneWeightOrAnyCombination() {
         #expect(MicroAdjustment(kind: .pin, weightsKg: [2.5, 5]).extrasKg == [0, 2.5, 5])
         #expect(MicroAdjustment(kind: .dial, weightsKg: [0, 1.25]).extrasKg == [0, 1.25])

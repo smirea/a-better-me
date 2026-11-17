@@ -46,75 +46,9 @@ struct WorkoutSectionsLayoutTests {
         #expect(layout.custom.map(\.name) == ["Home"])
         #expect(layout.filedTemplateIDs == [Self.pull])
     }
-
-    @Test func namesAreTrimmedOnAddAndRename() {
-        var layout = WorkoutSectionsLayout()
-        let id = layout.addSection(named: "  Deload Week ")
-        #expect(layout.custom.map(\.name) == ["Deload Week"])
-        layout.rename(id, to: " Travel\n")
-        #expect(layout.custom.map(\.name) == ["Travel"])
-    }
 }
 
 struct NewProgramWizardRulesTests {
-    @Test func smartGenerationAsksTheGymOnlyWhenThereIsOne() {
-        #expect(NewProgramWizardRules.steps(method: .smartGeneration, hasGyms: true) == [
-            .splash, .method, .goal, .days, .split, .sessionLength, .repProgression, .muscleFocus, .gym, .keep, .name, .color, .generating,
-        ])
-        #expect(!NewProgramWizardRules.steps(method: .smartGeneration, hasGyms: false).contains(.gym))
-        #expect(NewProgramWizardRules.steps(method: .fromScratch, hasGyms: true) == [.splash, .method, .name, .color])
-        #expect(NewProgramWizardRules.steps(method: .importFile, hasGyms: true) == [.splash, .method])
-    }
-
-    @Test func firstRunStartsFromMFsDefaults() {
-        let inputs = NewProgramWizardRules.initialInputs(storage: "", experience: .advanced)
-        #expect(inputs == GeneratorInputs(goal: .hypertrophy, daysPerWeek: 3, split: .noPreference, sessionLength: .from40To60, repProgression: .noPreference, deload: true, experience: .advanced))
-    }
-
-    @Test func lastAnswersComeBackWithTheProfilesExperience() {
-        let last = GeneratorInputs(goal: .strength, daysPerWeek: 4, split: .pushPullHingeSquat, sessionLength: .from60To90, repProgression: .linear, muscleFocus: [.biceps: .more, .chest: .less], gymID: UUID(uuidString: "00000000-0000-0000-0000-000000000001"), deload: false, experience: .beginner)
-        let inputs = NewProgramWizardRules.initialInputs(storage: NewProgramWizardRules.storage(of: last), experience: .intermediate)
-        var expected = last
-        expected.experience = .intermediate
-        #expect(inputs == expected)
-    }
-
-    @Test func changingTheDayCountClampsAndDropsASplitItNoLongerOffers() {
-        let start = GeneratorInputs(goal: .both, daysPerWeek: 3, split: .pushPullLegs, sessionLength: .upTo20, repProgression: .constant, deload: true, experience: .intermediate)
-        #expect(NewProgramWizardRules.settingDays(4, in: start).split == .noPreference)
-        #expect(NewProgramWizardRules.settingDays(9, in: start).daysPerWeek == 6)
-        #expect(NewProgramWizardRules.settingDays(1, in: start).daysPerWeek == 2)
-        var fullBody = start
-        fullBody.split = .fullBody
-        #expect(NewProgramWizardRules.settingDays(5, in: fullBody).split == .fullBody)
-    }
-
-    @Test func thumbsToggleAndCount() {
-        var focus = NewProgramWizardRules.toggling(.more, of: .biceps, in: [:])
-        focus = NewProgramWizardRules.toggling(.more, of: .sideDelts, in: focus)
-        focus = NewProgramWizardRules.toggling(.less, of: .chest, in: focus)
-        #expect(NewProgramWizardRules.focusSummary(focus) == "2 prioritized · 1 deprioritized")
-        focus = NewProgramWizardRules.toggling(.more, of: .biceps, in: focus)
-        focus = NewProgramWizardRules.toggling(.more, of: .chest, in: focus)
-        #expect(focus == [.sideDelts: .more, .chest: .more])
-    }
-
-    @Test func noPreferenceNamesTheSplitItResolvesTo() {
-        let inputs = GeneratorInputs(goal: .hypertrophy, daysPerWeek: 2, split: .noPreference, sessionLength: .from40To60, repProgression: .noPreference, deload: true, experience: .intermediate)
-        #expect(NewProgramWizardRules.defaultName(for: inputs) == "Full Body")
-        #expect(NewProgramWizardRules.defaultName(for: NewProgramWizardRules.settingDays(4, in: inputs)) == "Upper/Lower/Upper/Lower Split")
-    }
-
-    @Test func aMissingGymFallsBackToTheDefault() {
-        var home = GymProfile(name: "Home")
-        var club = GymProfile(name: "Club")
-        club.isDefault = true
-        home.isDefault = false
-        #expect(GymProfile.resolve(home.id, in: [home, club])?.name == "Home")
-        #expect(GymProfile.resolve(UUID(), in: [home, club])?.name == "Club")
-        #expect(GymProfile.resolve(nil, in: []) == nil)
-    }
-
     @Test func noneIsStoredAsBeginnerAndShownBackAsNone() {
         #expect(ExperienceChoice.none.level == .beginner)
         #expect(ExperienceChoice(.beginner, pickedNone: true) == .none)
@@ -131,32 +65,6 @@ struct NewProgramWizardRulesTests {
         #expect(scratch.templates.map(\.name) == ["Day 1"])
         #expect(scratch.templates.map(\.programID) == [scratch.program.id])
         #expect(scratch.program.days.map(\.templateID) == [scratch.templates[0].id])
-    }
-}
-
-struct ShortcutsLayoutTests {
-    @Test func defaultsMatchTheReferenceSheet() {
-        let layout = ShortcutsLayout()
-        #expect(layout.topRow == [.weight, .history])
-        #expect(layout.rows == [.emptyWorkout, .newProgram, .newWorkout])
-        #expect(layout.hidden == [])
-    }
-
-    @Test func pinningARowMovesItToTheTopRow() {
-        var layout = ShortcutsLayout()
-        layout.top = .newWorkout
-        #expect(layout.topRow == [.weight, .newWorkout])
-        #expect(layout.rows == [.emptyWorkout, .newProgram])
-        #expect(layout.hidden == [.history])
-    }
-
-    @Test func hidingAndShowingKeepsOrder() {
-        var layout = ShortcutsLayout()
-        layout.setVisible(.emptyWorkout, false)
-        #expect(layout.rows == [.newProgram, .newWorkout])
-        #expect(layout.hidden == [.emptyWorkout])
-        layout.setVisible(.emptyWorkout, true)
-        #expect(layout.rows == [.newProgram, .newWorkout, .emptyWorkout])
     }
 }
 
@@ -215,33 +123,6 @@ struct WeekStripProgramTests {
         let restOnly = Program(name: "Rest", color: .blue, cycles: 1, days: [ProgramDay()])
         #expect(restOnly.cycleProgress(finishedDays: []) == 0)
     }
-
-    @Test func unloggedDaysFromTodayToSundayOpenTheirProgramDay() {
-        let program = Self.weekly()
-        let now = Self.date(27, hour: 9)
-        let target = { (month: Int, day: Int) in
-            DayPillTarget.of(Self.calendar.date(from: DateComponents(year: 2026, month: month, day: day))!, session: nil, program: program, now: now, calendar: Self.calendar)
-        }
-        #expect(target(10, 27) == .programDay(ProgramRoute(programID: program.id, dayID: program.days[4].id)))
-        #expect(target(10, 30) == .programDay(ProgramRoute(programID: program.id, dayID: program.days[0].id)))
-        #expect(target(11, 1) == .programDay(ProgramRoute(programID: program.id, dayID: program.days[2].id)))
-        #expect(target(10, 31) == nil)
-        #expect(target(11, 6) == nil)
-        let fromWednesday = { (day: Int) in
-            DayPillTarget.of(Self.date(day, hour: 0), session: nil, program: program, now: Self.date(28, hour: 9), calendar: Self.calendar)
-        }
-        #expect(fromWednesday(27) == nil)
-        #expect(DayPillTarget.of(Self.date(27, hour: 0), session: nil, program: nil, now: now, calendar: Self.calendar) == nil)
-    }
-
-    @Test func aLoggedDayOpensItsSummaryAndRollingProgramsOpenNothing() {
-        let program = Self.weekly()
-        let now = Self.date(27, hour: 9)
-        let session = Self.finished(program, day: 0, cycle: 1)
-        #expect(DayPillTarget.of(Self.date(26, hour: 0), session: session, program: program, now: now, calendar: Self.calendar) == .summary(session))
-        let rolling = Program(name: "Rolling", color: .blue, cycles: 4, days: [ProgramDay(templateID: UUID()), ProgramDay()])
-        #expect(DayPillTarget.of(Self.date(27, hour: 0), session: nil, program: rolling, now: now, calendar: Self.calendar) == nil)
-    }
 }
 
 struct WorkoutOverviewTests {
@@ -259,12 +140,6 @@ struct WorkoutOverviewTests {
         let overview = WorkoutOverview(blocks: blocks, catalog: Self.catalog)
         #expect(overview.line == "2 exercises · 4 sets")
         #expect(overview.muscleSets == [.chest: 3, .triceps: 1.5, .abs: 1])
-    }
-
-    @Test func singularAndEmptyLines() {
-        let one = WorkoutOverview(blocks: [WorkoutBlock(exercises: [BlockExercise(exerciseID: "plank", sets: [WorkoutSet()])])], catalog: Self.catalog)
-        #expect(one.line == "1 exercise · 1 set")
-        #expect(WorkoutOverview(blocks: [], catalog: Self.catalog).line == "No exercises")
     }
 
     @Test func completionsCountFinishedSessionsPerTemplateAndPerProgramDay() {

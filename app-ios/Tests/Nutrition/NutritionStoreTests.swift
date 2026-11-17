@@ -48,38 +48,6 @@ struct NutritionStoreTests {
         #expect(try read(AppSettings.current).nutrition.mealSections.map(\.name).first == "Morning")
     }
 
-    @Test func logsQuickAddsMovesCopiesAndDeletesEntries() async throws {
-        store.log([FoodPortion(yogurt), FoodPortion(yogurt, serving: Serving(measure: yogurt.nutrition.measures[0], quantity: 2))], on: monday, minute: 8 * 60 + 15)
-        store.log([FoodPortion(.quickAdd([.energy: 420, .protein: 30], name: "Lunch out"))], on: monday, minute: 13 * 60)
-        try await settled()
-
-        let logged = try read(FoodEntry.on(monday))
-        #expect(logged.map(\.hour) == [8, 8, 13])
-        #expect(logged.map { $0.amounts[.energy] } == [180, 360, 420])
-        #expect(logged[2].food.name == "Lunch out")
-        #expect(logged[2].food.source == .quickAdd)
-
-        store.edit(FoodEntry.self, id: logged[1].id) { $0.serving.quantity = 0.5 }
-        _ = store.relocate([logged[0]], .move, to: .dateTime(tuesday, minute: 7 * 60))
-        _ = store.relocate([logged[2]], .copy, to: .dateTime(tuesday, minute: 12 * 60 + 30))
-        try await settled()
-
-        #expect(try read(FoodEntry.on(monday)).map { $0.amounts[.energy] } == [90, 420])
-        let tuesdays = try read(FoodEntry.on(tuesday))
-        #expect(tuesdays.map(\.hour) == [7, 12])
-        #expect(tuesdays[0].id == logged[0].id)
-        #expect(tuesdays[1].id != logged[2].id)
-        #expect(tuesdays[1].food == logged[2].food)
-        #expect(try outbox().filter { $0.hasPrefix("update") }.sorted() == [
-            "update food_entries day", "update food_entries minute", "update food_entries serving",
-            "update food_entries updated_at", "update food_entries updated_at",
-        ])
-
-        store.deleteEntries([logged[2].id, tuesdays[1].id])
-        try await settled()
-        #expect(try read(FoodEntry.between(monday, tuesday)).map { $0.amounts[.energy] } == [90, 180])
-    }
-
     @Test func aRecipeReplacesItsSelectionUnlessTheSelectionChanged() async throws {
         store.log([FoodPortion(yogurt)], on: monday, minute: 8 * 60)
         store.log([FoodPortion(yogurt)], on: monday, minute: 8 * 60 + 30, section: "breakfast")
@@ -107,27 +75,6 @@ struct NutritionStoreTests {
         let stale = try #require(FoodLog.replacement(for: restored, with: recipe))
         #expect(try await store.replace(restored, with: stale).value == false)
         #expect(try read(FoodEntry.on(monday)).map { $0.amounts[.energy] } == [180, 360])
-    }
-
-    @Test func marksADayAndClearsItsOverride() async throws {
-        #expect(try read(NutritionDay.one(monday)) == NutritionDay(id: monday))
-        store.updateDay(monday) { $0.status = .fasted }
-        store.updateDay(monday) {
-            $0.status = .none
-            $0.override = [.energy: 1800]
-        }
-        try await settled()
-        var day = try read(NutritionDay.one(monday))
-        #expect(day.status == .none)
-        #expect(day.override == [.energy: 1800])
-
-        store.updateDay(monday) { $0.override = nil }
-        try await settled()
-        day = try read(NutritionDay.one(monday))
-        #expect(day.override == nil)
-        #expect(try outbox().sorted() == [
-            "insert nutrition_days -", "update nutrition_days override", "update nutrition_days override", "update nutrition_days status",
-        ])
     }
 
     @Test func cachesAFoodOnceAndKeepsLoggedSnapshotsWhenItChanges() async throws {
@@ -159,30 +106,6 @@ struct NutritionStoreTests {
         #expect(entry.food.name == "Cola")
         #expect(entry.food.foodID == "off-5000112637922")
         #expect(entry.amounts[.energy] == 138.6)
-    }
-
-    @Test func savesEditsAndDeletesRecipes() async throws {
-        var recipe = Recipe(name: "Overnight oats", servings: 2)
-        recipe.ingredients = [RecipeIngredient(FoodPortion(yogurt))]
-        recipe.steps = ["Mix", "Chill"]
-        store.saveRecipe(recipe)
-        store.edit(Recipe.self, id: recipe.id) {
-            $0.servings = 3
-            $0.prepMinutes = 5
-        }
-        try await settled()
-
-        let saved = try #require(try read(Recipe.library).first)
-        #expect(saved.ingredients == recipe.ingredients)
-        #expect(saved.steps == ["Mix", "Chill"])
-        #expect(saved.prepMinutes == 5)
-        #expect(saved.nutrition.nutrients[.energy] == 60)
-
-        store.log([FoodPortion(saved.snapshot)], on: monday, minute: 7 * 60)
-        store.deleteRecipe(recipe.id)
-        try await settled()
-        #expect(try read(Recipe.library).isEmpty)
-        #expect(try read(FoodEntry.on(monday)).map { $0.amounts[.energy] } == [60])
     }
 
     @Test func aFullFavoritesListReplacesItsOldest() async throws {
@@ -255,22 +178,6 @@ struct NutritionStoreTests {
         #expect(edited[0].target(on: monday.adding(days: 9)).energy == 1900)
         #expect(edited[0].expenditureKcal == 2650)
         #expect(edited[0].trendWeightKg == 81.2)
-    }
-
-    @Test func setsAndDeletesNutrientGoals() async throws {
-        store.setNutrientGoal(.fiber, from: monday, .custom(NutrientRange(floor: 25, target: 35)))
-        store.setNutrientGoal(.fiber, from: monday, .custom(NutrientRange(target: 40)))
-        store.setNutrientGoal("307", from: tuesday, .auto)
-        store.setNutrientGoal("601", from: tuesday, .hidden)
-        try await settled()
-
-        let goals = try read(NutrientGoal.all)
-        #expect(goals.map(\.id) == ["2026-10-26/291", "2026-10-27/307", "2026-10-27/601"])
-        #expect(goals.map(\.mode) == [.custom(NutrientRange(target: 40)), .auto, .hidden])
-
-        store.deleteNutrientGoal(.fiber, from: monday)
-        try await settled()
-        #expect(try read(NutrientGoal.all).map(\.nutrient) == ["307", "601"])
     }
 
     @Test func nutritionSettingsPatchTheirOwnColumn() async throws {

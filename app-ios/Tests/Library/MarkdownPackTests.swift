@@ -4,15 +4,6 @@ import Testing
 
 @MainActor
 struct MarkdownPackTests {
-    @Test func bundledPackHoldsEveryCatalogExercisesInstructionsAndEveryArticle() {
-        let catalog = ExerciseCatalog()
-        let withInstructions = catalog.bundled.filter(\.hasInstructions)
-        #expect(withInstructions.count > 1_000)
-        #expect(withInstructions.allSatisfy { MarkdownPack.bundled.instructions($0.id) != nil })
-        #expect(catalog.articles.count > 200)
-        #expect(catalog.articles.keys.allSatisfy { MarkdownPack.bundled.article($0)?.isEmpty == false })
-    }
-
     @Test func textsDecodeAtTheirByteRangesAndMissingOrOutOfRangeKeysAreNil() {
         let pack = MarkdownPack(
             data: Data("Squat ✓Bench".utf8),

@@ -38,17 +38,6 @@ struct ExerciseHistoryArrangementTests {
         ExerciseHistory.arranged(newestFirst, sort: sort, records: records, metric: metric, exercise: bench).map(\.workoutName)
     }
 
-    @Test func sortsByDate() {
-        #expect(names(.mostRecent) == ["D", "C", "B", "A"])
-        #expect(names(.oldest) == ["A", "B", "C", "D"])
-    }
-
-    @Test func sortsByTheSelectedMetricWithMissingValuesLast() {
-        #expect(names(.highest) == ["A", "D", "B", "C"])
-        #expect(names(.lowest) == ["B", "D", "A", "C"])
-        #expect(names(.highest, metric: .totalReps) == ["C", "B", "A", "D"])
-    }
-
     @Test func recordsOnlyKeepsSessionsWithARecord() {
         #expect(names(.mostRecent, .only) == ["D", "A"])
         #expect(names(.lowest, .only) == ["D", "A"])

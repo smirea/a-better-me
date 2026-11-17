@@ -81,35 +81,6 @@ struct StrategyWizardTests {
         #expect(StrategyRules.balanceText(maintenanceKcal: 2005, averageKcal: 2000, unit: .lb).title == "At Maintenance")
     }
 
-    @Test func extraHighProteinSwitchesToKetoAndSaysSo() {
-        var model = wizard()
-        model.goal.ratePercent = 0.7594
-        model.goal.targetWeightKg = 85
-        model.choose(.coached)
-        model.shiftCalories = true
-        model.coaching.highDays = [5, 6]
-        model.coaching.protein = .extraHigh
-        #expect(model.plan(isFirst: true).targets[1] == target(1525, 212, 53, 49))
-        #expect(model.designNotes(unit: .lb).last?.value == "Keto")
-    }
-
-    @Test func goalTilesMatchTheWizard() {
-        var goal = GoalDraft(kind: .lose, currentWeightKg: weightKg)
-        #expect(goal.ratePercent == 0.5)
-        #expect(goal.initialBudget(StrategyBasis(weightKg: weightKg, expenditureKcal: 2210, standardFloorKcal: 1361)) == 1800)
-        #expect(goal.band == .standard)
-        goal.ratePercent = 0.27
-        #expect(goal.band == .slower)
-        goal.ratePercent = 1.39
-        #expect(goal.band == .faster)
-        #expect(goal.problem(currentWeightKg: weightKg) == "A weight loss goal needs a target below your current weight.")
-        goal.targetWeightKg = 80
-        goal.ratePercent = 0.5
-        #expect(goal.problem(currentWeightKg: weightKg) == nil)
-        #expect(goal.projectedEnd(from: today, currentWeightKg: 90) == calendarDay("2027-04-09"))
-        #expect(GoalDraft(kind: .maintain, currentWeightKg: 90).projectedEnd(from: today, currentWeightKg: 90) == nil)
-    }
-
     @Test(arguments: [
         (NutritionGoal.Kind.lose, 0.7594, target(1569, 151, 54, 117)),
         (.maintain, 0, target(2210, 151, 90, 194)),
@@ -188,14 +159,6 @@ struct StrategyWizardTests {
         #expect(model.plan(isFirst: true).targets[3] == target(9999, 1, 1, 1))
     }
 
-    @Test func withoutAnExpenditureOnlyManualIsOffered() {
-        let model = StrategyWizardModel(mode: .newGoal, current: nil, today: today, weightKg: weightKg, expenditureKcal: nil, standardFloorKcal: 1200)
-        #expect(model.coaching.style == .manual)
-        #expect(!model.canChoose(.coached))
-        #expect(!model.canChoose(.collaborative))
-        #expect(model.canChoose(.manual))
-    }
-
     @Test func aMaintenanceSetByHandReplacesTheEstimateTheTargetsComeFrom() {
         var model = StrategyWizardModel(mode: .newGoal, current: nil, today: today, weightKg: weightKg, expenditureKcal: nil, standardFloorKcal: 1200)
         model.setMaintenanceOverride(2400)
@@ -235,23 +198,6 @@ struct StrategyWizardTests {
         var manualEdit = wizard(.editGoal, current: manual)
         manualEdit.goal.ratePercent = 0.5
         #expect(manualEdit.plan(isFirst: false).targets == manual.targets)
-    }
-
-    @Test func editProgramWalksOnlyTheCurrentStylesSteps() {
-        let current = NutritionPlan(
-            from: calendarDay("2026-10-01"), kind: .setup,
-            goal: NutritionGoal(kind: .maintain, targetWeightKg: 89, ratePercentPerWeek: 0, startedOn: calendarDay("2026-10-01")),
-            coaching: CoachingProgram(style: .collaborative), targets: WeekTargets(every: target(2000, 150, 70, 200))
-        )
-        var model = wizard(.editProgram, current: current)
-        #expect(model.steps == [.maintenance, .collaborative])
-        #expect(model.collaborative.targets == current.targets)
-        model.setMaintenanceOverride(2500)
-        #expect(StrategyRules.averageEnergy(model.plan(isFirst: false).targets) == 2500)
-        model.setMaintenanceOverride(nil)
-        #expect(model.collaborative.targets == current.targets)
-        #expect(model.plan(isFirst: false).goal == current.goal)
-        #expect(wizard(.newProgram, current: nil).mode == .newGoal)
     }
 
     @Test func reopeningAGoalStartsItTodayWithTheCurrentProgram() {

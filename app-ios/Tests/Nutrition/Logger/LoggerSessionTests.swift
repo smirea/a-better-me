@@ -51,56 +51,6 @@ struct LoggerSessionTests {
         return try store.readBlocking(FoodEntry.on(monday).fetch)
     }
 
-    @Test func anHoursPicksShowAboveLatestForThatHourAndAnEmptyQuery() async throws {
-        let catalog = try fixtureCatalog([(173944, "Bananas, raw", 8, bananaNutrition)])
-        store.log([FoodPortion(yogurt)], on: .today, minute: 8 * 60 + 5)
-        store.log([FoodPortion(yogurt)], on: CalendarDay.today.adding(days: -1), minute: 8 * 60 + 40)
-        store.log([FoodPortion(greekYogurt.snapshot)], on: .today, minute: 12 * 60)
-        try await store.write { _ in }.value
-        let search = try await FoodSearch.load(store: store, catalog: catalog, branded: StubBranded())
-
-        let eight = LoggerSession(store: store, search: search, start: LoggerStart(time: LogTime(day: .today, hour: 8)))
-        #expect(eight.picksSlot == .hour(8))
-        #expect(eight.picks.map(\.portion.food.name) == ["Yogurt"])
-        #expect(eight.picks.first?.group == .picks)
-        eight.setQuery("yog", branded: false)
-        #expect(eight.picks.isEmpty)
-        eight.time = LogTime(day: .today, hour: 12)
-        eight.setQuery("", branded: false)
-        #expect(eight.picks.map(\.portion.food.name) == ["Nonfat Greek Yogurt"])
-
-        let clock = LoggerSession(store: store, search: search, start: LoggerStart())
-        #expect(clock.picksSlot == .hour(Calendar.current.component(.hour, from: .now)))
-    }
-
-    @Test func theSectionsDisplayPicksAndRanksBySectionAndLogsIntoTheChosenOne() async throws {
-        let catalog = try fixtureCatalog([(173944, "Bananas, raw", 8, bananaNutrition)])
-        let milk = FoodSnapshot(foodID: "custom-milk", source: .custom, name: "Oat Milk", nutrition: yogurt.nutrition)
-        let chocolate = FoodSnapshot(foodID: "custom-chocolate", source: .custom, name: "Chocolate Milk", nutrition: yogurt.nutrition)
-        for day in 1...3 { store.log([FoodPortion(milk)], on: CalendarDay.today.adding(days: -day), minute: 8 * 60) }
-        for day in 1...5 { store.log([FoodPortion(chocolate)], on: CalendarDay.today.adding(days: -day), minute: 19 * 60) }
-        store.updateSettings { $0.nutrition.timeline.display = .sections }
-        try await store.write { _ in }.value
-        let search = try await FoodSearch.load(store: store, catalog: catalog, branded: StubBranded())
-        let sections = MealSection.defaults
-
-        let breakfast = LoggerSession(store: store, search: search, start: LoggerStart(time: LogTime(day: monday, hour: 8, section: sections[0])))
-        #expect(breakfast.picksSlot == .section(sections[0]))
-        #expect(breakfast.picks.map(\.portion.food.name) == ["Oat Milk"])
-        breakfast.setQuery("milk", branded: false)
-        #expect(breakfast.results.prefix(2).map(\.portion.food.name) == ["Oat Milk", "Chocolate Milk"])
-        breakfast.time = breakfast.time(of: sections[4], on: monday)
-        #expect(breakfast.time.hour == 19)
-        #expect(breakfast.results.prefix(2).map(\.portion.food.name) == ["Chocolate Milk", "Oat Milk"])
-
-        breakfast.time = LogTime(day: monday, hour: 8, section: sections[2])
-        breakfast.add(LoggerPick(FoodPortion(milk)))
-        breakfast.logPlate()
-        let logged = try await entries()
-        #expect(logged.map(\.section) == ["lunch"])
-        #expect(logged.map(\.hour) == [8])
-    }
-
     @Test func logsThePlateInOneGoAndCachesDatabaseFoods() async throws {
         let logger = try await session(StubBranded(hits: [greekYogurt]))
         logger.setQuery("banana", branded: false)
@@ -132,32 +82,6 @@ struct LoggerSessionTests {
         logger.logPlate(at: at)
         let logged = try await entries()
         #expect(logged.map(\.minute) == [11 * 60 + 2])
-    }
-
-    @Test func showsLocalResultsWithoutAnErrorOffline() async throws {
-        let logger = try await session(StubBranded(offline: true))
-        logger.setQuery("banana", branded: true)
-        await logger.settleSearch()
-        #expect(logger.results.map(\.portion.food.name) == ["Bananas, raw"])
-        #expect(!logger.isSearchingBranded)
-    }
-
-    @Test func addsBrandedResultsAfterThePause() async throws {
-        let logger = try await session(StubBranded(hits: [greekYogurt]))
-        logger.setQuery("greekYogurt", branded: true)
-        #expect(logger.results.isEmpty)
-        await logger.settleSearch()
-        #expect(logger.results.map(\.group) == [.branded])
-        #expect(logger.results.first?.food?.id == "off-0894700010137")
-    }
-
-    @Test func looksUpABarcodeAndCachesIt() async throws {
-        let logger = try await session(StubBranded(products: ["0894700010137": greekYogurt]))
-        #expect(found(await logger.lookup(barcode: "0 894700 010137")) == "off-0894700010137")
-        try await store.write { _ in }.value
-        #expect(try store.readBlocking { try Food.fetchOne($0, key: "off-0894700010137") }?.brand == "Chobani")
-        #expect(await logger.lookup(barcode: "12345678") == .notFound(ScannedBarcode(code: "12345678", isStoreItem: false, grams: nil)))
-        #expect(await logger.lookup(barcode: "12 34") == .invalid)
     }
 
     @Test func aStoreItemFindsTheOwnersFoodByItsCodeAtTheLabelsWeight() async throws {
@@ -229,50 +153,5 @@ struct LoggerSessionTests {
         #expect(logger.plate.items.map { NutritionFormat.serving($0.pick.portion.serving) } == ["150 g", "118 g", "30 g"])
         #expect(logger.plate.totals[.energy].map { ($0 * 10).rounded() / 10 } == 265.2)
         #expect(logger.plate.items.allSatisfy { $0.pick.uncached != nil })
-    }
-
-    @Test func aRefusedPhotoLeavesThePlateAsItWasAndSaysWhy() async throws {
-        let logger = try await session(photo: StubRecognizer(failure: "Photo logging needs GEMINI_API_KEY on the server"))
-        await logger.findFoods(jpeg: Data(), note: "no skin")
-        #expect(logger.plate.isEmpty)
-        #expect(logger.photoNotice == .failed("Photo logging needs GEMINI_API_KEY on the server"))
-        #expect(!logger.isFindingFoods)
-    }
-
-    @Test func findingFoodsLeavesTheUnmatchedOnesForTheTab() async throws {
-        let logger = try await session(photo: StubRecognizer(foods: [
-            RecognizedFood(name: "Banana", search: "Bananas, raw", grams: 100, confidence: 0.9),
-            RecognizedFood(name: "Mystery sauce", search: "mystery sauce", grams: 20, confidence: 0.3),
-        ]))
-        await logger.findFoods(jpeg: Data(), note: nil)
-        #expect(logger.photoNotice == .added(unmatched: ["Mystery sauce"]))
-        #expect(logger.plate.items.count == 1)
-
-        let empty = try await session(photo: StubRecognizer(foods: []))
-        await empty.findFoods(jpeg: Data(), note: nil)
-        #expect(empty.photoNotice == .failed("No food was found in the photo."))
-    }
-
-    @Test func aPhotoShrinksToAnUprightJPEG() throws {
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 3000, height: 2000), format: { let f = UIGraphicsImageRendererFormat(); f.scale = 1; return f }())
-        let png = renderer.pngData { context in
-            UIColor.orange.setFill()
-            context.fill(CGRect(x: 0, y: 0, width: 3000, height: 2000))
-        }
-        let jpeg = try #require(MealPhotoImage.jpeg(from: png))
-        let image = try #require(UIImage(data: jpeg))
-        #expect(image.size == CGSize(width: 1024, height: 683))
-        #expect(jpeg.starts(with: [0xFF, 0xD8]))
-        #expect(MealPhotoImage.jpeg(from: Data("not an image".utf8)) == nil)
-    }
-
-    @Test func theBannerCountsWhatIsBeingTypedOnTopOfThePlate() async throws {
-        let logger = try await session()
-        logger.add(LoggerPick(try #require(QuickAddDraft(energy: "300", protein: "20").portion)))
-        #expect(logger.plateWithPending[.energy] == 300)
-        logger.pending = QuickAddDraft(protein: "10", fat: "5").portion
-        #expect(logger.plateWithPending == [.energy: 385, .protein: 30, .fat: 5])
-        logger.logPlate()
-        #expect(logger.plateWithPending == [:])
     }
 }

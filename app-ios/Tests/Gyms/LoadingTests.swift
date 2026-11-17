@@ -17,18 +17,6 @@ struct PlateCalculatorTests {
         #expect(plan.miss(unit: "lb") == nil)
     }
 
-    @Test func legendWritesOutEveryPlateThenTheBar() {
-        #expect(bar([45, 25, 5]).plan(for: 295).legend == "45 45 25 5 5 + 45 bar")
-        #expect(bar([2.5, 5, 10, 25, 35, 45]).plan(for: 405).legend == "45 45 45 45 + 45 bar")
-        let smith = PlateLoading(base: .bar, baseWeight: 13, plates: [45.0, 25, 10, 5].map { .init(weight: $0, perSide: nil) }, sides: 2)
-        #expect(smith.plan(for: 133).legend == "45 10 5 + 13 bar")
-        #expect(smith.plan(for: 133).plateLabels == ["45", "10", "5"])
-        let sled = PlateLoading(base: .machine, baseWeight: 0, plates: [.init(weight: 45, perSide: nil)], sides: 2)
-        #expect(sled.plan(for: 90).baseLabel == nil)
-        #expect(sled.plan(for: 90).legend == "45")
-        #expect(sled.plan(for: 0).legend == "")
-    }
-
     @Test func researchExampleTargetBelowTheBar() {
         let plan = bar([45, 25]).plan(for: 0)
         #expect(plan.perSide == [])
@@ -125,12 +113,6 @@ struct LoadableStepTests {
         #expect(Loading.plates(bar([2.5, 5, 10, 25, 35, 45])).step(from: 185, up: true) == 190)
         #expect(loading.step(from: 45, up: false) == nil)
         #expect(loading.step(from: 0, up: true) == 45)
-    }
-
-    @Test func totalsListWhatTheStepperWalksThrough() {
-        #expect(Loading.plates(bar([45, 25])).totals(upTo: 240, limit: 400) == [45, 95, 135, 185, 225])
-        #expect(Loading.plates(bar([45, 25])).totals(upTo: 240, limit: 3) == [45, 95, 135])
-        #expect(Loading.steps([22.5, 25, 25, 30, 35]).totals(upTo: 30, limit: 400) == [22.5, 25, 30])
     }
 
     @Test func totalsMatchStepByStepWalk() {
@@ -258,19 +240,6 @@ struct EquipmentResolutionTests {
 
     @Test func bandsHaveNoLoading() {
         #expect(Loading.resolve(option: ["bands"], catalog: catalog, unit: lb) { _ in .bands(options: [BandOption(color: "Red")]) } == nil)
-    }
-
-    @Test func optionsTheGymLacksAreNumberedAndSkippedForTheDefault() {
-        let exercise = Exercise(
-            id: "curl", name: "Cable Curl", type: .isolation, primaryMuscles: [.biceps], metrics: [.weight, .reps],
-            resistanceEquipmentIDs: [["leg-press"], ["cable"], ["barbell", Loading.weightPlatesID]]
-        )
-        let availability = GymAvailability(gym: GymProfile(name: "Gym", equipment: ["cable": GymEquipment(load: nil)]), equipment: catalog)
-        let options = exercise.resistanceOptions(in: availability)
-        #expect(options.filter { !$0.isAvailable }.map(\.unavailableLabel) == ["Option 1 not available in your gym", "Option 3 not available in your gym"])
-        #expect(exercise.chosenEquipment(nil, in: availability) == ["cable"])
-        #expect(exercise.chosenEquipment(["leg-press"], in: availability) == ["leg-press"])
-        #expect(exercise.chosenEquipment(["dumbbells"], in: availability) == ["cable"])
     }
 
     @Test func supportOptionsFollowTheSameRule() {

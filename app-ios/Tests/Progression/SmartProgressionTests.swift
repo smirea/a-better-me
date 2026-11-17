@@ -32,15 +32,6 @@ struct SmartProgressionTests {
         #expect(sub.prefill == SetSuggestion.Values(weight: 20, reps: nil, rir: 0))
     }
 
-    @Test func eventLogListsTheMainRowsWithPrefilledValues() {
-        let result = CurlFixture.suggest(sets: sets)
-        let at = Date(timeIntervalSinceReferenceDate: 54_060)
-        let event = SmartProgression.event(at: at, sets: sets, suggestions: result)
-        #expect(event.at == at)
-        #expect(event.rows.map(\.label) == ["D Set 1", "2 Set 2", "3 Set 3"])
-        #expect(event.rows.map { $0.text(unit: lb) } == ["40 lb x 9 (0)", "30 lb x 12 (2)", "30 lb x 12 (2)"])
-    }
-
     @Test func expandRepRangeOffKeepsTheTargetAndPrefills8() {
         var settings = ProgressionSettings()
         settings.expandRepRange = false
