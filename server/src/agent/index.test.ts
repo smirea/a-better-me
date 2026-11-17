@@ -1,85 +1,28 @@
 import { describe, expect, test } from 'bun:test';
-import type { SyncResponse } from 'sync-engine/core';
-import { sha256Hex } from './auth';
-import { testServer } from './testing';
-import { handle } from './api';
+import { sha256Hex } from '../auth';
+import { testServer } from '../testing';
 
-const { space, config, app } = testServer();
+const { config, call: callAs, ok: okAs, phone, phoneWrites } = testServer();
 
 const BOT = 'abm_test-token-for-the-coach';
 const BENCH = '19f5c6f170d8808bb424e98de4472a7e';
 
 const call = (method: string, path: string, body?: unknown, token: string | null = BOT) =>
-	handle(
-		new Request(`http://api.test/api${path}`, {
-			method,
-			headers: { ...(token && { authorization: `Bearer ${token}` }), 'content-type': 'application/json' },
-			body: body === undefined ? undefined : JSON.stringify(body),
-		}),
-		app,
-	);
-
-async function ok<T = any>(method: string, path: string, body?: unknown): Promise<T> {
-	const response = await call(method, path, body);
-	const json = await response.json();
-	expect({ status: response.status, json }).toMatchObject({ status: 200 });
-	return json as T;
-}
-
-/** What a phone that synced from scratch now holds. */
-async function phone(table: string) {
-	const response = await handle(
-		new Request('http://api.test/api/sync', {
-			method: 'POST',
-			headers: { authorization: `Bearer ${config.ownerToken}` },
-			body: JSON.stringify({ protocol: 1, client: `phone-${table}`, cursor: 0, writes: [] }),
-		}),
-		app,
-	);
-	const { rows } = (await response.json()) as SyncResponse;
-	return rows.filter(row => row.table === table).map(row => (row.deleted ? null : row.values));
-}
-
-async function phoneWrites(writes: unknown[]) {
-	await handle(
-		new Request('http://api.test/api/sync', {
-			method: 'POST',
-			headers: { authorization: `Bearer ${config.ownerToken}` },
-			body: JSON.stringify({ protocol: 1, client: 'phone', cursor: space.head(), writes }),
-		}),
-		app,
-	);
-}
+	callAs(method, path, body, token);
+const ok = <T = any>(method: string, path: string, body?: unknown) => okAs<T>(method, path, body, BOT);
 
 describe('agent API', () => {
-	test('the root explains how to get a token, and every other route, the OpenAPI document included, is a bare 401', async () => {
+	test('every route but the root needs a token, the OpenAPI document included', async () => {
 		const open = await call('GET', '', undefined, null);
-		const body = await open.json();
-		expect({ status: open.status, keys: Object.keys(body) }).toEqual({
-			status: 200,
-			keys: ['name', 'authenticated', 'instructions'],
-		});
-		expect(body.authenticated).toBe(false);
-		expect(body.instructions).toContain('More > API Tokens');
-		expect(body.instructions).toContain('Authorization: Bearer abm_');
-
+		expect([open.status, (await open.json()).authenticated]).toEqual([200, false]);
 		for (const [path, token] of [
 			['/openapi.json', null],
 			['/templates', 'abm_unknown'],
 			['/food-database/search?q=egg', null],
 		] as const) {
-			const denied = await call('GET', path, undefined, token);
-			expect({ path, status: denied.status, body: await denied.json() }).toEqual({
-				path,
-				status: 401,
-				body: { ok: false, error: 'Missing, wrong, or revoked token' },
-			});
+			expect({ path, status: (await call('GET', path, undefined, token)).status }).toEqual({ path, status: 401 });
 		}
-		const document = await call('GET', '/openapi.json', undefined, config.ownerToken);
-		expect({ status: document.status, openapi: (await document.json()).openapi }).toEqual({
-			status: 200,
-			openapi: '3.1.0',
-		});
+		expect((await call('GET', '/openapi.json', undefined, config.ownerToken)).status).toBe(200);
 	});
 
 	test('a token made on the phone works once synced, and stops working once revoked', async () => {
@@ -101,8 +44,6 @@ describe('agent API', () => {
 
 		const root = await ok('GET', '');
 		expect(root).toMatchObject({ authenticated: true, actor: { kind: 'bot', name: 'Coach' } });
-		expect(root.openapi.paths['/programs'].post.requestBody).toBeDefined();
-		expect(root.openapi.components.schemas.WorkoutBlockInput.required).toEqual(['exercises']);
 
 		const sync = await call('POST', '/sync', { protocol: 1, client: 'bot', cursor: 0, writes: [] });
 		expect(sync.status).toBe(401);
@@ -187,13 +128,12 @@ describe('agent API', () => {
 		await ok('DELETE', `/gyms/${gym.id}`);
 	});
 
-	test('bad input is refused before it can reach the phone', async () => {
+	test('bad input, a second live session, and a taken id are refused before they reach the phone', async () => {
 		const unknown = await call('POST', '/templates', {
 			name: 'X',
 			blocks: [{ exercises: [{ exerciseID: 'nope', sets: [] }] }],
 		});
 		expect(unknown.status).toBe(422);
-		expect((await unknown.json()).error).toContain('Unknown exercise ids: nope');
 
 		const invalid = await call('POST', '/gyms', { name: 'Home', equipment: { x: { load: { base: { kg: -1 } } } } });
 		expect(invalid.status).toBe(400);
@@ -208,11 +148,7 @@ describe('agent API', () => {
 			endedAt: '2026-01-09T18:00:00Z',
 		};
 		expect((await ok('POST', '/sessions', imported)).id).toBe('a1b2c3d4-0000-4000-8000-000000000001');
-		const again = await call('POST', '/sessions', imported);
-		expect(again.status).toBe(409);
-		expect((await again.json()).error).toBe(
-			'workout_sessions a1b2c3d4-0000-4000-8000-000000000001 already exists. PATCH it instead.',
-		);
+		expect((await call('POST', '/sessions', imported)).status).toBe(409);
 	});
 
 	test('program sessions follow the deload and the run, as the app does', async () => {

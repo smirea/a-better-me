@@ -7,7 +7,7 @@ export type RambleModel = { model: string; thinking?: 'minimal' | 'low' | 'mediu
  * Picked by `scripts/ramble-lab/replay.ts` (docs/decisions/nutrition.md, Ramble logging): the fastest model that kept
  * the labelled rambles near 100% when read live, with no final read.
  */
-export const RAMBLE_MODEL: RambleModel = { model: 'gemini-3.5-flash', thinking: 'minimal' };
+const RAMBLE_MODEL: RambleModel = { model: 'gemini-3.5-flash', thinking: 'minimal' };
 const TIMEOUT_MS = 15_000;
 
 export const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;

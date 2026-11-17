@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, describe, expect, spyOn, test } from 'bun:test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -148,9 +148,12 @@ const LOG: Sheet = [
 	['2026-01-09', '06:00 PM', 'Test Bowl', 'serving', 1, 200, 350, 10, 50, 10],
 ];
 
-const { config, app } = testServer();
-const server = Bun.serve({ port: 0, fetch: request => handle(request, app) });
-afterAll(() => server.stop(true));
+const { config, app, ok } = testServer();
+// The importers talk to the server over fetch, so every request goes to the in-process API instead of a port.
+const SERVER = 'http://api.test';
+const routed = spyOn(globalThis, 'fetch').mockImplementation(((input: RequestInfo | URL, init?: RequestInit) =>
+	handle(new Request(input, init), app)) as typeof fetch);
+afterAll(() => routed.mockRestore());
 
 const directory = mkdtempSync(join(tmpdir(), 'macrofactor-'));
 function file(name: string, sheets: Record<string, Sheet>) {
@@ -162,13 +165,8 @@ const granular = file('granular.xlsx', GRANULAR);
 const quick = file('quick.xlsx', { 'Quick Export': [['Date']], 'Food Log': [FOOD_LOG_HEADER, ...LOG] });
 
 const run = (files: string[], dryRun = false) =>
-	importMacroFactor({ server: server.url.href, token: config.ownerToken, files, dryRun });
-async function get(path: string) {
-	const response = await fetch(new URL(`/api${path}`, server.url), {
-		headers: { authorization: `Bearer ${config.ownerToken}` },
-	});
-	return response.json() as Promise<any>;
-}
+	importMacroFactor({ server: SERVER, token: config.ownerToken, files, dryRun });
+const get = (path: string) => ok('GET', path);
 const row = (created: number, updated = 0, unchanged = 0, skipped = 0) => ({ created, updated, unchanged, skipped });
 const round = (amounts: Record<string, number>) =>
 	Object.fromEntries(Object.entries(amounts).map(([key, value]) => [key, Math.round(value * 1e6) / 1e6]));
@@ -316,11 +314,7 @@ describe('import-macrofactor', () => {
 	});
 
 	test('a weigh-in already stored that day at the same weight is the same reading, and gains the export body fat', async () => {
-		await fetch(new URL('/api/body-weights', server.url), {
-			method: 'POST',
-			headers: { authorization: `Bearer ${config.ownerToken}`, 'content-type': 'application/json' },
-			body: JSON.stringify({ weightKg: 95, measuredAt: '2026-02-01T17:00:00Z' }),
-		});
+		await ok('POST', '/body-weights', { weightKg: 95, measuredAt: '2026-02-01T17:00:00Z' });
 		const scale = file('scale.xlsx', {
 			'Scale Weight': [
 				['Date', 'Weight (kg)', 'Fat Percent'],
@@ -339,11 +333,7 @@ describe('import-macrofactor', () => {
 	});
 
 	test('an overlapping export adds only its new rows, and a weigh-in already there is not doubled', async () => {
-		await fetch(new URL('/api/body-weights', server.url), {
-			method: 'POST',
-			headers: { authorization: `Bearer ${config.ownerToken}`, 'content-type': 'application/json' },
-			body: JSON.stringify({ weightKg: 91, measuredAt: '2026-01-11T12:00:30Z' }),
-		});
+		await ok('POST', '/body-weights', { weightKg: 91, measuredAt: '2026-01-11T12:00:30Z' });
 		const later = file('quick-later.xlsx', {
 			'Food Log': [
 				FOOD_LOG_HEADER,

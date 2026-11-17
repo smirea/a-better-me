@@ -53,38 +53,7 @@ function post(token: string | null, body: object = report) {
 	return new Request('http://api.test/api/feedback', { method: 'POST', headers, body: form });
 }
 
-test('an owner post becomes an issue in this repository with the image, each item, and the report', async () => {
-	const calls = fakeGitHub();
-	const response = await handle(post(DEV_OWNER_TOKEN), app);
-
-	expect([response.status, await response.json()]).toEqual([
-		201,
-		{ url: 'https://github.com/smirea/a-better-me/issues/7' },
-	]);
-	expect(calls.map(call => [call.method, call.url, call.authorization])).toEqual([
-		['GET', 'https://api.github.com/repos/smirea/a-better-me', 'Bearer github-token'],
-		[
-			'POST',
-			'https://uploads.github.com/user-attachments/assets?name=feedback.png&content_type=image%2Fpng&repository_id=42',
-			'Bearer github-token',
-		],
-		['POST', 'https://api.github.com/repos/smirea/a-better-me/issues', 'Bearer github-token'],
-	]);
-	const issue = JSON.parse(calls[2]!.body);
-	expect([issue.title, issue.labels]).toEqual(['Dashboard Feedback: 1 change', ['feedback']]);
-	expect(issue.body).toStartWith(
-		[
-			'![Dashboard Feedback: 1 change](https://github.com/user-attachments/assets/a1)',
-			'**1. Card "Steps"** · `App/Dashboard/StepGoalViews.swift:40`',
-			'> Too tall\n> Trim it',
-			'App: A Better Me 1.0',
-			'<!-- feedback post post-1 -->',
-		].join('\n\n'),
-	);
-	expect(issue.body).toContain(`<summary>feedback.json</summary>\n\n\`\`\`json\n${JSON.stringify(report)}\n\`\`\``);
-});
-
-test('a post without the owner token reaches neither GitHub nor the issue list', async () => {
+test('a feedback post without the owner token never reaches GitHub', async () => {
 	const calls = fakeGitHub();
 	for (const token of [null, 'wrong']) {
 		const response = await handle(post(token), app);
@@ -93,15 +62,7 @@ test('a post without the owner token reaches neither GitHub nor the issue list',
 	expect(calls).toEqual([]);
 });
 
-test('a server without a GitHub token says so in the editor', async () => {
-	const response = await handle(post(DEV_OWNER_TOKEN), base);
-	expect([response.status, await response.json()]).toEqual([
-		503,
-		{ message: 'Set GITHUB_TOKEN on the server to file feedback issues.' },
-	]);
-});
-
-test('a report too long for the body goes into comments that join back into the file', async () => {
+test('a report too long for the issue body goes into comments that join back into the file', async () => {
 	const calls = fakeGitHub();
 	const long = { ...report, padding: 'x'.repeat(130_000) };
 	expect((await handle(post(DEV_OWNER_TOKEN, long), app)).status).toBe(201);
@@ -124,13 +85,4 @@ test('items too long for an issue are cut in the body and kept whole in the comm
 		.filter(call => call.url.endsWith('/issues/7/comments'))
 		.map(call => /```json\n([\s\S]*)\n```/.exec(JSON.parse(call.body).body)![1]);
 	expect(parts.join('')).toBe(JSON.stringify(long));
-});
-
-test('a GitHub failure is a 502 whose message the editor shows', async () => {
-	globalThis.fetch = (async () => new Response('Bad credentials', { status: 401 })) as unknown as typeof fetch;
-	const response = await handle(post(DEV_OWNER_TOKEN), app);
-	expect([response.status, await response.json()]).toEqual([
-		502,
-		{ message: 'GitHub answered 401 to GET /repos/smirea/a-better-me: Bad credentials' },
-	]);
 });

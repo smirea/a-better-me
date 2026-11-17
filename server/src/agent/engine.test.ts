@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { addDays, dayIn, eachDay, expenditure, expenditureDays, initialEstimate, weightTrend } from './agent/engine';
+import { addDays, dayIn, eachDay, expenditure, expenditureDays, initialEstimate, weightTrend } from './engine';
 
 /** The literals are the iOS engine tests' (`app-ios/Tests/Nutrition/Engine/`), so the port answers what the phone does. */
 const round = (values: number[], places: number) => values.map(value => Number(value.toFixed(places)));

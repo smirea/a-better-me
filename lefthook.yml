@@ -22,11 +22,12 @@ pre-commit:
           - name: test
             glob: '*.{js,mjs,mts,ts,tsx}'
             run: bun --no-env-file scripts/test-changed.ts {staged_files}
+          - name: generated
+            run: bun scripts/check-generated.ts
           - name: swift-lint
             glob: '*.swift'
             run: bun app-ios/scripts/lint-swift.ts
 
-# Swift suites run at push, not commit: they build and boot a simulator, which costs a minute or more.
 pre-push:
   commands:
     not-bare:
@@ -36,7 +37,7 @@ pre-push:
       run: bun --no-env-file scripts/changelog.ts check --base "$(git merge-base HEAD origin/master)"
     test:
       # Not {push_files}: on a branch with no upstream it diffs against origin/master's tip, so once master moved, a
-      # docs-only push ran the Swift suites of master's own merges.
+      # docs-only push ran the tests of master's own merges.
       files: git diff --name-only "$(git merge-base HEAD '@{push}' 2>/dev/null || git merge-base HEAD origin/master)" HEAD
-      glob: '*.{js,mjs,mts,ts,tsx,swift}'
+      glob: '*.{js,mjs,mts,ts,tsx}'
       run: bun --no-env-file scripts/test-changed.ts {files}

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { addDays } from './agent/engine';
-import { maintenance, screenIntake } from './agent/maintenance';
+import { addDays } from './engine';
+import { maintenance, screenIntake } from './maintenance';
 
 /** The literals are the iOS engine tests' (`app-ios/Tests/Nutrition/Engine/MaintenanceTests.swift`), so the port answers what the phone does. */
 const at = (index: number) => addDays('2026-01-01', index);
