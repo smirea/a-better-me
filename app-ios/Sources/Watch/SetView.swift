@@ -180,7 +180,7 @@ enum SetMetrics {
     static let bottomOverhang: CGFloat = isCompact ? 0 : 14
 }
 
-/// The plates for the shown weight, as the phone's calculator reads them: "13 bar + 45 10 5", then how far off the
+/// The plates for the shown weight, as the phone's calculator reads them: "45 10 5 + 13 bar", then how far off the
 /// plates fall when they can't load it exactly.
 struct PlateLine: View {
     let plan: PlatePlan

@@ -24,7 +24,7 @@ function workoutPatch(current: Record<string, unknown>, patch: z.output<typeof M
 	const stored = (current.plateCalculator ?? {}) as Record<string, Record<string, unknown>>;
 	const byGym = Object.fromEntries(Object.entries(stored).map(([gym, options]) => [gym.toUpperCase(), options]));
 	for (const [gym, options] of Object.entries(patch.plateCalculator)) {
-		byGym[gym.toUpperCase()] = { ...byGym[gym.toUpperCase()], ...options };
+		byGym[gym.toUpperCase()] = deepMerge(byGym[gym.toUpperCase()] ?? {}, options);
 	}
 	return deepMerge({ ...current, plateCalculator: byGym }, { ...patch, plateCalculator: byGym });
 }

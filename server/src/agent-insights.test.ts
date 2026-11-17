@@ -170,6 +170,12 @@ describe('agent API insights', () => {
 		expect(plates.workout.plateCalculator).toEqual({
 			[gym.toUpperCase()]: { offsetWeight: true, includeBumperPlates: true },
 		});
+		await ok('PATCH', '/settings', { workout: { plateCalculator: { [gym]: { includeBase: { smith: false } } } } });
+		const bases = await ok('PATCH', '/settings', {
+			workout: { plateCalculatorIncludesBase: false, plateCalculator: { [gym]: { includeBase: { barbell: true } } } },
+		});
+		expect(bases.workout.plateCalculatorIncludesBase).toBe(false);
+		expect(bases.workout.plateCalculator[gym.toUpperCase()].includeBase).toEqual({ smith: false, barbell: true });
 
 		await ok('PATCH', `/exercises/${BENCH}/settings`, {
 			overrides: { expandRepRange: false, warmUpAutomation: 'scheme' },

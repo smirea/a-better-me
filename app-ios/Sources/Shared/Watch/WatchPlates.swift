@@ -1,7 +1,7 @@
 import Foundation
 
-/// An exercise's plate loading in the session's gym, as the watch's set screen draws it under the weight: "13 bar + 45
-/// 10 5". It is the wire copy of `PlateLoading`, in the display unit, with only what the calculator's plan reads, so
+/// An exercise's plate loading in the session's gym, as the watch's set screen draws it under the weight: "45 10 5 +
+/// 13 bar". It is the wire copy of `PlateLoading`, in the display unit, with only what the calculator's plan reads, so
 /// `PlateLoading` can change without breaking a watch on an older build.
 struct WatchPlates: Codable, Hashable, Sendable {
     struct Plate: Codable, Hashable, Sendable {

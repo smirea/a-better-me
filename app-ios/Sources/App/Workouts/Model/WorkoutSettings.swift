@@ -16,6 +16,8 @@ struct WorkoutSettings: Codable, Hashable {
     var sections = WorkoutSectionsLayout()
     /// Per gym, keyed by the gym's id. A gym without an entry has every option off.
     var plateCalculator: [String: PlateCalculatorOptions] = [:]
+    /// Whether the plate calculator counts a bar's or machine's own weight, for every machine without its own choice.
+    var plateCalculatorIncludesBase = true
 
     func plateCalculator(for gymID: UUID) -> PlateCalculatorOptions {
         plateCalculator[gymID.uuidString] ?? PlateCalculatorOptions()
@@ -28,6 +30,9 @@ struct PlateCalculatorOptions: Codable, Hashable {
     var includeBumperPlates = false
     var allowMixedUnits = false
     var offsetWeight = false
+    /// The calculator's choice per bar or plate-loaded machine, by equipment id, made by tapping the bar in the
+    /// calculator. A machine without one follows `WorkoutSettings.plateCalculatorIncludesBase`.
+    var includeBase: [EquipmentID: Bool] = [:]
 }
 
 extension PlateCalculatorOptions {
@@ -38,6 +43,7 @@ extension PlateCalculatorOptions {
         includeBumperPlates = try container.decodeIfPresent(Bool.self, forKey: .includeBumperPlates) ?? false
         allowMixedUnits = try container.decodeIfPresent(Bool.self, forKey: .allowMixedUnits) ?? false
         offsetWeight = try container.decodeIfPresent(Bool.self, forKey: .offsetWeight) ?? false
+        includeBase = try container.decodeIfPresent([EquipmentID: Bool].self, forKey: .includeBase) ?? [:]
     }
 }
 

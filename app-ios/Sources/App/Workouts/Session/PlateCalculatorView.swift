@@ -1,10 +1,11 @@
 import Feedback
 import SwiftUI
 
-/// The weight keypad's plate calculator: one sleeve of the bar with its plates beside a legend that reads it out, "13 bar
-/// + 45 10 5". The context key switches the expanded view, which draws the sleeve larger with each plate's weight on it.
-/// Bumper plates are drawn full height and wider, as they are on a bar. A bar the gym lists in several weights gets a
-/// menu, and a gym with Offset Weight on gets the offset chip.
+/// The weight keypad's plate calculator: one sleeve of the bar with its plates beside a legend that reads it out, "45 10
+/// 5 + 13 bar". The context key switches the expanded view, which draws the sleeve larger with each plate's weight on it.
+/// Bumper plates are drawn full height and wider, as they are on a bar. Tapping the bar in the legend leaves it out of
+/// the math, struck through, and back. A bar the gym lists in several weights gets a menu, and a gym with Offset Weight
+/// on gets the offset chip.
 struct PlateCalculatorView: View {
     let plan: PlatePlan
     let unit: WeightUnit
@@ -13,6 +14,8 @@ struct PlateCalculatorView: View {
     var showsOffset = false
     var onBar: ((Double) -> Void)? = nil
     var onOffset: (() -> Void)? = nil
+    var onBase: (() -> Void)? = nil
+    @ScaledMetric(relativeTo: .body) private var markerHeight: CGFloat = 13
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -32,30 +35,44 @@ struct PlateCalculatorView: View {
         .feedback(self)
     }
 
-    /// The base, then one entry per plate as on the sleeve, wrapping to more rows when a heavy load doesn't fit.
+    /// One entry per plate as on the sleeve, then the base, wrapping to more rows when a heavy load doesn't fit.
     private var legend: some View {
         let miss = plan.miss(unit: unit.rawValue)
+        let heaviest = plan.perSide.max() ?? 1
         return FlowLayout(spacing: isExpanded ? 8 : 6) {
-            if let base = plan.baseLabel {
-                Text(base)
-                if !plan.loaded.isEmpty { Text("+").foregroundStyle(Theme.textSecondary) }
-            } else if plan.loaded.isEmpty {
-                Text("No plates").foregroundStyle(Theme.textSecondary)
-            }
             ForEach(Array(plan.loaded.enumerated()), id: \.offset) { _, plate in
-                HStack(spacing: 4) {
-                    swatch(plate.weight, isBumper: plate.isBumper)
+                HStack(spacing: isExpanded ? 5 : 4) {
+                    marker(plate, heaviest: heaviest)
                     Text(NumberText.plain(plate.weight))
                 }
+            }
+            if let base = plan.baseLabel ?? plan.ignoredBaseLabel {
+                if !plan.loaded.isEmpty { Text("+").foregroundStyle(Theme.textSecondary) }
+                baseButton(base, isIgnored: plan.baseLabel == nil)
+            } else if plan.loaded.isEmpty {
+                Text("No plates").foregroundStyle(Theme.textSecondary)
             }
             if let miss { Text(miss).foregroundStyle(Theme.amber) }
         }
         .font(AppFont.medium(isExpanded ? 15 : 13))
         .monospacedDigit()
         .layoutPriority(1)
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("Plate calculator")
         .accessibilityValue([plan.legend.isEmpty ? "No plates" : plan.legend, miss].compactMap(\.self).joined(separator: ", "))
+    }
+
+    @ViewBuilder
+    private func baseButton(_ label: String, isIgnored: Bool) -> some View {
+        let text = Text(label).strikethrough(isIgnored).foregroundStyle(isIgnored ? Theme.textTertiary : Theme.textPrimary)
+        if let onBase {
+            Button(action: onBase) { text.contentShape(.rect) }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isIgnored ? "\(label), left out" : label)
+                .accessibilityHint(isIgnored ? "Counts the \(plan.loading.base == .bar ? "bar" : "base") again" : "Leaves it out so the plates make the weight")
+        } else {
+            text
+        }
     }
 
     @ViewBuilder
@@ -73,23 +90,28 @@ struct PlateCalculatorView: View {
 
     private func barMenu(_ onBar: @escaping (Double) -> Void) -> some View {
         Menu {
-            Picker("Bar Weight", selection: Binding(get: { plan.loading.baseWeight }, set: onBar)) {
+            Picker("Bar Weight", selection: Binding(get: { plan.loading.ownBaseWeight }, set: onBar)) {
                 ForEach(plan.loading.baseWeights, id: \.self) { Text("\(NumberText.plain($0)) \(unit.rawValue)").tag($0) }
             }
         } label: {
-            Chip(title: "\(NumberText.plain(plan.loading.baseWeight)) \(unit.rawValue) bar", systemImage: "chevron.up.chevron.down")
+            Chip(title: "\(NumberText.plain(plan.loading.ownBaseWeight)) \(unit.rawValue) bar", systemImage: "chevron.up.chevron.down")
         }
-        .accessibilityLabel("Bar weight, \(NumberText.plain(plan.loading.baseWeight)) \(unit.rawValue)")
+        .accessibilityLabel("Bar weight, \(NumberText.plain(plan.loading.ownBaseWeight)) \(unit.rawValue)")
     }
 
-    @ViewBuilder
-    private func swatch(_ weight: Double, isBumper: Bool) -> some View {
-        if isBumper {
-            Circle().fill(Self.color(weight, unit: unit)).frame(width: 10, height: 10)
-                .overlay { Circle().strokeBorder(.black.opacity(0.6), lineWidth: 2).padding(2) }
-        } else {
-            RoundedRectangle(cornerRadius: 2).fill(Self.color(weight, unit: unit)).frame(width: 10, height: 10)
-        }
+    /// A plate as the sleeve draws it, scaled to the legend's text: as tall relative to the heaviest plate, and a bumper
+    /// full height, wider, and rimmed.
+    private func marker(_ plate: PlateLoading.Plate, heaviest: Double) -> some View {
+        let height = markerHeight * (isExpanded ? 15 : 13) / 13
+        let width = (isExpanded ? 5 : 4) * markerHeight / 13
+        let shape = RoundedRectangle(cornerRadius: 1.5)
+        return shape.fill(Self.color(plate.weight, unit: unit))
+            .overlay { if plate.isBumper { shape.strokeBorder(.black.opacity(0.5), lineWidth: 1) } }
+            .frame(
+                width: plate.isBumper ? width * 1.6 : width,
+                height: plate.isBumper ? height : height * (0.45 + 0.55 * plate.weight / heaviest)
+            )
+            .frame(height: height)
     }
 
     private var sleeve: some View {

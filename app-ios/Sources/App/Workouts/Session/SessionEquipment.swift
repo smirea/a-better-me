@@ -35,7 +35,8 @@ extension SessionEditor {
     }
 
     /// The calculator above the weight keypad, for plate-loaded equipment. It loads the typed weight moved by the
-    /// exercise's offset, and its bar menu writes the bar choice to the exercise's overrides.
+    /// exercise's offset, and its bar menu writes the bar choice to the exercise's overrides. Tapping the bar in its
+    /// legend leaves the bar out, or puts it back, for that machine in the session's gym.
     @ViewBuilder
     func plateCalculator(for focus: KeypadFocus) -> some View {
         if focus.field.isWeight, blocks.contains(focus.row), let plates = loading(at: focus.row)?.plates {
@@ -52,8 +53,16 @@ extension SessionEditor {
                         $0.overrides.barWeightKg = ($0.overrides.barWeightKg ?? [:]).merging([baseID: kg]) { $1 }
                     }
                 },
-                onOffset: { sheet = .equipmentSettings }
+                onOffset: { sheet = .equipmentSettings },
+                onBase: sessionGym.flatMap { gym in plates.baseID.map { baseID in { toggleBase(baseID, of: plates, in: gym) } } }
             )
+        }
+    }
+
+    private func toggleBase(_ baseID: EquipmentID, of plates: PlateLoading, in gym: GymProfile) {
+        let include = plates.ignoredBaseWeight != nil
+        localStore.updateSettings {
+            $0.workout.plateCalculator[gym.id.uuidString, default: PlateCalculatorOptions()].includeBase[baseID] = include
         }
     }
 

@@ -1042,10 +1042,21 @@ const WorkoutSettingsPatch = z
 			.record(
 				z.guid(),
 				z
-					.object({ includeBumperPlates: z.boolean(), allowMixedUnits: z.boolean(), offsetWeight: z.boolean() })
+					.object({
+						includeBumperPlates: z.boolean(),
+						allowMixedUnits: z.boolean(),
+						offsetWeight: z.boolean(),
+						includeBase: z.record(z.string(), z.boolean()).meta({
+							description:
+								'Whether the calculator counts the bar or machine, per base equipment id. One left out follows `plateCalculatorIncludesBase`.',
+						}),
+					})
 					.partial(),
 			)
 			.meta({ description: 'Per gym id.' }),
+		plateCalculatorIncludesBase: z
+			.boolean()
+			.meta({ description: "Whether the plate calculator counts a bar's or machine's own weight by default." }),
 	})
 	.partial()
 	.meta({ id: 'WorkoutSettingsPatch', description: 'Merges into the stored Workout settings, object by object.' });
