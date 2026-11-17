@@ -77,7 +77,7 @@ extension View {
     }
 }
 
-/// "P" for Protein, the first letter MacroFactor's compact macro rows use.
+/// "P" for Protein: a summary column's letters, as the app's rows write them, else the name's first letter.
 extension NutrientProgress {
-    var initial: String { String(nutrient.name.prefix(1)) }
+    var initial: String { NutritionSnapshot.columnLetters(nutrient.id) ?? String(nutrient.name.prefix(1)) }
 }

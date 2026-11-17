@@ -26,6 +26,18 @@ enum NutritionFormat {
         (amounts[.energy] ?? 0).wholeText
     }
 
+    /// A summary column's whole amount, with net carbs derived for a food that reports only carbs and fiber.
+    static func column(_ id: NutrientID, _ amounts: NutrientAmounts) -> String {
+        (amounts.amount(of: id) ?? 0).wholeText
+    }
+
+    /// "607 kilocalories, 46 grams protein, 9 grams fiber": a compact row of summary columns as VoiceOver reads it.
+    static func spoken(_ amounts: NutrientAmounts, _ columns: [NutrientID]) -> String {
+        columns.map { id in
+            id == .energy ? "\(column(id, amounts)) kilocalories" : "\(column(id, amounts)) grams \(id.title.lowercased())"
+        }.joined(separator: ", ")
+    }
+
     /// "1.25 cup", "100 g", or with the food's weight when it knows its grams, "1 large (136 g)".
     static func serving(_ serving: Serving, of food: FoodSnapshot? = nil) -> String {
         let text = "\(NumberText.plain(serving.quantity)) \(serving.measure.name)"

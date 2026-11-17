@@ -34,14 +34,7 @@ struct NutrientID: RawRepresentable, Hashable, Codable, CodingKeyRepresentable, 
 
     /// A summary column's letters. Fat is "Fa" so it never reads as fiber's "Fb"; calories draw the flame instead.
     var columnLetters: String {
-        switch self {
-        case .protein: "P"
-        case .fat: "Fa"
-        case .carbs: "C"
-        case .fiber: "Fb"
-        case .netCarbs: "Nc"
-        default: NutrientRegistry.nutrient(self)?.short ?? rawValue
-        }
+        NutritionSnapshot.columnLetters(rawValue) ?? NutrientRegistry.nutrient(self)?.short ?? rawValue
     }
 }
 

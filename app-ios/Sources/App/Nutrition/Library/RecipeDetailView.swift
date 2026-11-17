@@ -13,6 +13,7 @@ extension Recipe {
 struct RecipeDetailView: View {
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.summaryNutrients) private var columns
     @Observe private var recipe: Recipe?
     @State private var sheet: LibraryEditorSheet?
     @State private var confirmingDelete = false
@@ -52,7 +53,7 @@ struct RecipeDetailView: View {
                     LabeledContent("Total Weight", value: "\(NutritionFormat.amount(cookedGrams)) g")
                 }
                 if let perGram = RecipeMath.perGram(recipe) {
-                    LabeledContent("Per 100 g") { Text(macroLine: perGram.scaled(by: 100)) }
+                    LabeledContent("Per 100 g") { Text(macroLine: perGram.scaled(by: 100), columns: columns) }
                 }
                 if let prep = recipe.prepMinutes { LabeledContent("Preparation Time", value: "\(prep) min") }
                 if let cook = recipe.cookMinutes { LabeledContent("Cooking Time", value: "\(cook) min") }

@@ -1,0 +1,10 @@
+{
+	"title": "Every four-nutrient row follows your summary columns, and meal names use two foods",
+	"description": "Section totals, food rows, the plate, recipes, Ramble, and the Current & Remaining widget now show the nutrients you picked, and recipe ingredients never show a long name.",
+	"tasks": [
+		{
+			"id": "f9d3914a-7974-4c43-b217-5e0eb8775c12",
+			"title": "2 Nutrition Feedback: fix text consistency"
+		}
+	]
+}

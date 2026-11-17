@@ -32,6 +32,12 @@ struct NutritionSnapshot: Codable, Equatable, Sendable {
 
     static func isMacro(_ id: String) -> Bool { id == energy || macros.contains(id) }
 
+    /// A summary column's letters, the same in the app and the widgets. Fat is "Fa" so it never reads as fiber's "Fb";
+    /// calories draw the flame instead.
+    static func columnLetters(_ id: String) -> String? {
+        ["p": "P", "f": "Fa", "c": "C", "291": "Fb", "nc": "Nc"][id]
+    }
+
     /// Every nutrient the owner hasn't hidden, in registry order.
     let nutrients: [Nutrient]
     /// The Food Log summary's columns (`summaryNutrients`), the default picks for a new widget.

@@ -321,11 +321,13 @@ const nutrientGoals = sqliteTable('nutrient_goals', {
 /**
  * The name the on-device model suggested for a meal, keyed by the meal's hash (`MealComponents`: its distinct foods,
  * not their servings), stored when first suggested so the meal keeps that name on every device, created or not.
+ * `version` is the instructions that named it (`MealName.version`); a device asks again for a name an older one wrote.
  */
 const mealNames = sqliteTable('meal_names', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
 	createdAt: text('created_at').notNull(),
+	version: integer('version').notNull().default(1),
 });
 
 /**
@@ -493,7 +495,7 @@ export const schema = defineSchema({
 			target: amount,
 			ceiling: amount,
 		},
-		meal_names: { name: z.string().min(1) },
+		meal_names: { name: z.string().min(1), version: atLeastOne },
 		food_short_names: { name: z.string().min(1) },
 	},
 });

@@ -29,6 +29,7 @@ struct RootView: View {
     @Environment(LiveWorkoutPresenter.self) private var presenter
     @Environment(LocalStore.self) private var store
     @Observe(WorkoutSession.inProgressID) private var activeSessionID
+    @Observe(AppSettings.summaryNutrients) private var summaryNutrients
     @Environment(HealthData.self) private var health
     @State private var tab = AppTab.dashboard
     /// The tab More was opened from, where its back button returns. Dashboard until another tab opens More.
@@ -98,6 +99,7 @@ struct RootView: View {
             inbox.pending = nil
             Task { await open(action) }
         }
+        .environment(\.summaryNutrients, summaryNutrients)
     }
 
     private func open(_ action: QuickAction) async {

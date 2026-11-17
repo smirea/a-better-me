@@ -31,7 +31,7 @@ struct FoodLogSettingsView: View {
             if timeline.display == .sections {
                 MealSectionsEditor(sections: settings.nutrition.mealSections)
             }
-            ThemedSection("Daily Summary", footer: "Shown over the timeline and in the logger's banner. Hold a column there to change it.") {
+            ThemedSection("Daily Summary", footer: "Every row of four nutrients shows these, in this order: the summary, the logger's banner, meal totals, and each food. Hold a summary column to change it.") {
                 ForEach(Array(settings.nutrition.summaryNutrients.enumerated()), id: \.offset) { index, nutrient in
                     Picker("Column \(index + 1)", selection: Binding(
                         get: { nutrient },

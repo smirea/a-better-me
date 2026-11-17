@@ -10,6 +10,7 @@ struct RecipeEditor: View {
     private let onCreateAndAdd: ((Recipe) -> Void)?
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.summaryNutrients) private var columns
     /// The draft as the editor opened, so a swipe down cannot drop unsaved changes.
     @State private var opened: RecipeDraft
     @State private var draft: RecipeDraft
@@ -102,7 +103,7 @@ struct RecipeEditor: View {
                 FoodIcon(icon: draft.icon, name: draft.name, source: .recipe, size: 36).editsIcon { choosingIcon = true }
                 RowLabel(
                     title: draft.name.isEmpty ? "Your New Recipe" : draft.name,
-                    detail: Text(macroLine: preview.nutrition.nutrients),
+                    detail: Text(macroLine: preview.nutrition.nutrients, columns: columns),
                     trailingDetail: Text(servingLabel(preview))
                 )
                 .lineLimit(1)
@@ -290,10 +291,11 @@ private enum IngredientSearchRequest: Identifiable {
 struct IngredientRow: View {
     @Binding var ingredient: RecipeDraft.Ingredient
     let focus: FocusState<RecipeDraft.Field?>.Binding
+    @Environment(\.summaryNutrients) private var columns
 
     var body: some View {
         let food = ingredient.value.food
-        let macros = Text(macroLine: food.amounts(ingredient.value.serving))
+        let macros = Text(macroLine: food.amounts(ingredient.value.serving), columns: columns)
         HStack(spacing: 10) {
             FoodIcon(food: food)
             ViewThatFits(in: .horizontal) {
