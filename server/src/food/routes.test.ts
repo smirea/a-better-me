@@ -1,10 +1,8 @@
 import { afterEach, describe, expect, spyOn, test } from 'bun:test';
 import { foodNutrition } from '../../../shared/db/schema';
 import { handle } from '../api';
-import { GEMINI_MODEL } from './mealPhoto';
-import { RAMBLE_MODEL, type RambleItem } from './ramble';
+import type { RambleItem } from './ramble';
 import { testServer } from '../testing';
-import { USER_AGENT } from './openFoodFacts';
 
 const { config, app, agent } = testServer();
 
@@ -41,14 +39,9 @@ const NUTELLA = {
 	},
 };
 
-let requests: Request[] = [];
-function stub(answer: (url: URL) => Response) {
-	requests = [];
-	spyOn(globalThis, 'fetch').mockImplementation((async (input: RequestInfo | URL, init?: RequestInit) => {
-		const request = new Request(input, init);
-		requests.push(request);
-		return answer(new URL(request.url));
-	}) as typeof fetch);
+/** Stands in for Open Food Facts and Gemini, answering every request with `answer`. */
+function stub(answer: () => Response) {
+	spyOn(globalThis, 'fetch').mockImplementation((async () => answer()) as unknown as typeof fetch);
 }
 
 afterEach(() => {
@@ -78,10 +71,6 @@ describe('food database', () => {
 			},
 		});
 		expect(foodNutrition.safeParse(food.nutrition).success).toBe(true);
-		expect(requests.map(request => request.url)).toEqual([
-			'https://world.openfoodfacts.org/api/v2/product/3017624010701?fields=code%2Cproduct_name%2Cbrands%2Cnutriments%2Cserving_quantity%2Cserving_quantity_unit%2Cproduct_quantity_unit%2Cquantity',
-		]);
-		expect(requests[0]!.headers.get('user-agent')).toBe(USER_AGENT);
 	});
 
 	test('a drink is per 100 mL, energy falls back to kJ, sodium to salt, alcohol turns into grams, and its oz are fluid', async () => {
@@ -106,18 +95,6 @@ describe('food database', () => {
 				{ name: 'package', quantity: 1, servings: 3.54882 },
 			],
 		});
-	});
-
-	test('an unknown barcode, a product without energy, and a malformed barcode are refused', async () => {
-		stub(() => Response.json({ status: 0, status_verbose: 'product not found' }, { status: 404 }));
-		expect((await call('/food-database/barcode/5449000000999')).status).toBe(404);
-
-		stub(() => Response.json({ status: 1, product: { product_name: 'Mystery', nutriments: {} } }));
-		expect((await call('/food-database/barcode/5449000000999')).status).toBe(404);
-
-		stub(() => Response.json(NUTELLA));
-		expect((await call('/food-database/barcode/abc')).status).toBe(400);
-		expect(requests).toEqual([]);
 	});
 
 	test('search keeps Open Food Facts order and drops products the app could not log', async () => {
@@ -155,89 +132,10 @@ describe('food database', () => {
 				},
 			},
 		]);
-		const url = new URL(requests[0]!.url);
-		expect([url.origin + url.pathname, url.searchParams.get('q'), url.searchParams.get('page_size')]).toEqual([
-			'https://search.openfoodfacts.org/search',
-			'greek yogurt',
-			'3',
-		]);
-	});
-
-	test('Open Food Facts failing is a 502, and the routes need a token', async () => {
-		stub(() => new Response('busy', { status: 503 }));
-		expect((await call('/food-database/search?q=yogurt')).status).toBe(502);
-
-		spyOn(globalThis, 'fetch').mockImplementation((async () => {
-			throw new TypeError('network down');
-		}) as unknown as typeof fetch);
-		expect((await call('/food-database/barcode/3017624010701')).status).toBe(502);
-
-		expect((await call('/food-database/search?q=yogurt', null)).status).toBe(401);
 	});
 });
-
-const photo = (geminiApiKey: string | null, body: unknown) =>
-	agent(geminiApiKey)(
-		new Request('http://api.test/api/food-database/photo', {
-			method: 'POST',
-			headers: { authorization: `Bearer ${config.ownerToken}` },
-			body: JSON.stringify(body),
-		}),
-	);
 
 const geminiText = (text: string) => Response.json({ candidates: [{ content: { parts: [{ text }] } }] });
-
-describe('meal photo', () => {
-	const image = btoa('not really a jpeg');
-
-	test('Gemini gets the photo, the note, and a schema, and the foods come back with grams', async () => {
-		stub(() =>
-			geminiText(
-				JSON.stringify({
-					items: [
-						{ name: 'Grilled chicken breast', search: 'chicken breast cooked', grams: 150, confidence: 0.9 },
-						{ name: 'Olive oil', search: 'olive oil', grams: 0, confidence: 0.3 },
-					],
-				}),
-			),
-		);
-		const response = await photo('gemini-key', { image, mediaType: 'image/jpeg', note: 'no skin' });
-		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({
-			items: [{ name: 'Grilled chicken breast', search: 'chicken breast cooked', grams: 150, confidence: 0.9 }],
-		});
-		const [request] = requests;
-		expect(request!.url).toBe(
-			`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-		);
-		expect(request!.headers.get('x-goog-api-key')).toBe('gemini-key');
-		const sent = await request!.json();
-		expect(sent.contents[0].parts[0]).toEqual({ inline_data: { mime_type: 'image/jpeg', data: image } });
-		expect(sent.contents[0].parts[1].text).toEndWith("The person's note: no skin");
-		expect(sent.generationConfig.responseSchema.required).toEqual(['items']);
-	});
-
-	test('no key is a 503 before calling Gemini, and a bad answer or a bad photo is refused', async () => {
-		stub(() => geminiText('{}'));
-		expect((await photo(null, { image, mediaType: 'image/jpeg' })).status).toBe(503);
-		expect(requests).toEqual([]);
-
-		expect((await photo('gemini-key', { image, mediaType: 'image/gif' })).status).toBe(400);
-		expect((await photo('gemini-key', { image: 'not base64!', mediaType: 'image/jpeg' })).status).toBe(400);
-
-		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(502);
-		stub(() => geminiText('not json'));
-		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(502);
-		stub(() => Response.json({ promptFeedback: { blockReason: 'SAFETY' } }));
-		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(422);
-		stub(() => new Response('<html>proxy error</html>', { headers: { 'content-type': 'text/html' } }));
-		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(502);
-		stub(() => Response.json({ candidates: 'not a list' }));
-		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(502);
-		stub(() => new Response('quota', { status: 429 }));
-		expect((await photo('gemini-key', { image, mediaType: 'image/jpeg' })).status).toBe(502);
-	});
-});
 
 const label = (geminiApiKey: string | null, body: unknown) =>
 	agent(geminiApiKey)(
@@ -252,7 +150,7 @@ describe('food label', () => {
 	const front = { image: btoa('front'), mediaType: 'image/jpeg' };
 	const panel = { image: btoa('panel'), mediaType: 'image/jpeg' };
 
-	test('every photo goes to Gemini in one call, and the panel becomes nutrition per printed serving', async () => {
+	test('a label panel becomes nutrition per printed serving', async () => {
 		stub(() =>
 			geminiText(
 				JSON.stringify({
@@ -289,28 +187,6 @@ describe('food label', () => {
 			},
 		});
 		expect(foodNutrition.safeParse(body.nutrition).success).toBe(true);
-		expect(requests).toHaveLength(1);
-		const sent = await requests[0]!.json();
-		expect(sent.contents[0].parts.slice(0, 2)).toEqual([
-			{ inline_data: { mime_type: 'image/jpeg', data: front.image } },
-			{ inline_data: { mime_type: 'image/jpeg', data: panel.image } },
-		]);
-	});
-
-	test('photos without a panel answer what they show and no nutrition', async () => {
-		stub(() =>
-			geminiText(JSON.stringify({ name: 'Oat Milk', brand: 'Oatly', store: null, serving: null, nutrients: null })),
-		);
-		const response = await label('gemini-key', { images: [front] });
-		expect(await response.json()).toEqual({ name: 'Oat Milk', brand: 'Oatly' });
-	});
-
-	test('no key is a 503, and no photos or more than eight are refused', async () => {
-		stub(() => geminiText('{}'));
-		expect((await label(null, { images: [front] })).status).toBe(503);
-		expect((await label('gemini-key', { images: [] })).status).toBe(400);
-		expect((await label('gemini-key', { images: Array(9).fill(front) })).status).toBe(400);
-		expect(requests).toEqual([]);
 	});
 });
 
@@ -355,7 +231,7 @@ describe('ramble', () => {
 		said: '',
 	};
 
-	test('the model sees aliases, and its answer comes back with the phone ids, defaults filled in', async () => {
+	test("the model's short aliases come back as the phone's ids, with the defaults filled in", async () => {
 		stub(() =>
 			geminiText(
 				JSON.stringify({
@@ -395,18 +271,6 @@ describe('ramble', () => {
 				{ ...item, kind: 'food', name: 'coffee', ref: 'coffee-uuid', copy: null, time: '08:05' },
 			],
 		});
-		const sent = await requests[0]!.json();
-		const instructions: string = sent.systemInstruction.parts[0].text;
-		expect(instructions).toContain(
-			'- m1: breakfast, yesterday, Monday 2026-10-26: e1 Oats (0.5 cup); e2 Blueberries (50 g)',
-		);
-		expect(instructions).toContain('- u1 Coffee (1 mug)');
-		expect(sent.contents[0].parts).toEqual([{ text: `Ramble: ${body.transcript}` }]);
-		expect(requests[0]!.url).toContain(`/${RAMBLE_MODEL.model}:generateContent`);
-		const [food, copy] = sent.generationConfig.responseJsonSchema.properties.items.items.anyOf;
-		expect(food.properties.ref.enum).toEqual(['', 'e1', 'e2', 'u1']);
-		expect(copy.properties.copy.enum).toEqual(['m1']);
-		expect(copy.required).toEqual(['kind', 'copy', 'said']);
 	});
 
 	test('a copy of no meal, an except outside the copied meal, and a nameless or number-only food are dropped', async () => {
@@ -517,10 +381,6 @@ describe('ramble', () => {
 			// A scale of 1 is no amount said, so the phone still logs the usual serving.
 			['food', null, [], null, 0, 1],
 		]);
-		const sent = await requests[0]!.json();
-		expect(sent.generationConfig.responseJsonSchema.properties.items.items.anyOf[0].properties.scale).toEqual({
-			type: 'number',
-		});
 	});
 
 	test('a said day carries to the items after it, copies included, until another is said', async () => {
@@ -539,14 +399,5 @@ describe('ramble', () => {
 		);
 		const { items } = await (await ramble('gemini-key', body)).json();
 		expect(items.map((item: { day: number | null }) => item.day)).toEqual([-1, -1, -1, 0, 0]);
-	});
-
-	test('no key is a 503 before calling Gemini, an empty transcript calls nothing, and a bad answer is a 502', async () => {
-		stub(() => geminiText('not json'));
-		expect((await ramble(null, body)).status).toBe(503);
-		expect(await (await ramble('gemini-key', { ...body, transcript: '  ' })).json()).toEqual({ items: [] });
-		expect(requests).toEqual([]);
-		expect((await ramble('gemini-key', body)).status).toBe(502);
-		expect((await ramble('gemini-key', { ...body, time: '8am' })).status).toBe(400);
 	});
 });

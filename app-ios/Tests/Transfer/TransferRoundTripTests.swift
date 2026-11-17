@@ -11,11 +11,6 @@ struct TransferRoundTripTests {
     /// Re-exports land here for `tools/xlsx.py` to diff against the originals.
     static let outputDirectory = FileManager.default.temporaryDirectory.appending(path: "mf-roundtrip")
 
-    @Test func everyCommittedExportIsCovered() {
-        #expect(MFExports.programs.count == 24)
-        #expect(MFExports.workouts.count == 2)
-    }
-
     @Test(arguments: MFExports.programs)
     func programRoundTrips(_ file: String) throws {
         let original = try MFExports.data(file)

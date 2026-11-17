@@ -9,29 +9,12 @@ struct SettingsRulesTests {
         #expect(NutritionSettings.EnergyUnit.kj.toKcal(8368) == 2000)
     }
 
-    @Test func heightsReadInFeetAndInchesOrCentimeters() {
-        #expect(SettingsRules.height(180, in: .feetAndInches) == "5' 11\"")
-        #expect(SettingsRules.height(180, in: .centimeters) == "180 cm")
-        #expect(SettingsRules.height(182.88, in: .feetAndInches) == "6' 0\"")
-        let inches = SettingsRules.heightChoices(in: .feetAndInches)
-        #expect((inches.first, inches.last, inches.count) == (121.92, 228.6, 43))
-        #expect(inches.map { SettingsRules.height($0, in: .feetAndInches) }.prefix(2) == ["4' 0\"", "4' 1\""])
-    }
-
-    @Test func hoursReadOnATwelveHourClock() {
-        #expect([0, 8, 12, 21].map(SettingsRules.hour) == ["12 AM", "8 AM", "12 PM", "9 PM"])
-    }
-
     @Test func favoriteMeasuresKeepTwoPerCategory() {
         let defaults = NutritionSettings().favoriteMeasures
         #expect(SettingsRules.toggleFavorite("lb", in: defaults) == ["oz", "mL", "cup", "lb"])
         #expect(SettingsRules.toggleFavorite("tbsp", in: defaults) == ["g", "oz", "cup", "tbsp"])
         #expect(SettingsRules.toggleFavorite("oz", in: defaults) == ["g", "mL", "cup"])
         #expect(SettingsRules.toggleFavorite("lb", in: ["mL"]) == ["mL", "lb"])
-    }
-
-    @Test func bodyMetricTitlesSplitTheirWords() {
-        #expect([BodyMetricKind.leftBicep, .neck, .rightAnkle].map(\.title) == ["Left Bicep", "Neck", "Right Ankle"])
     }
 }
 

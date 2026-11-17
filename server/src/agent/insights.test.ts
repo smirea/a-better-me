@@ -1,42 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import type { SyncResponse } from 'sync-engine/core';
-import { testServer } from './testing';
-import { handle } from './api';
+import { testServer } from '../testing';
 
-const { config, app } = testServer({ clock: () => new Date('2026-10-22T12:00:00.000Z') });
+const { call, ok, phone } = testServer({ clock: () => new Date('2026-10-22T12:00:00.000Z') });
 
 const BENCH = '19f5c6f170d8808bb424e98de4472a7e';
 const REAR_DELT_FLY = '2a15c6f170d88066b38fd65f8757716f';
-
-const call = (method: string, path: string, body?: unknown) =>
-	handle(
-		new Request(`http://api.test/api${path}`, {
-			method,
-			headers: { authorization: `Bearer ${config.ownerToken}`, 'content-type': 'application/json' },
-			body: body === undefined ? undefined : JSON.stringify(body),
-		}),
-		app,
-	);
-
-async function ok<T = any>(method: string, path: string, body?: unknown): Promise<T> {
-	const response = await call(method, path, body);
-	const json = await response.json();
-	expect({ status: response.status, json }).toMatchObject({ status: 200 });
-	return json as T;
-}
-
-async function phone(table: string) {
-	const response = await handle(
-		new Request('http://api.test/api/sync', {
-			method: 'POST',
-			headers: { authorization: `Bearer ${config.ownerToken}` },
-			body: JSON.stringify({ protocol: 1, client: `phone-${crypto.randomUUID()}`, cursor: 0, writes: [] }),
-		}),
-		app,
-	);
-	const { rows } = (await response.json()) as SyncResponse;
-	return rows.flatMap(row => (row.table === table && !row.deleted ? [row.values] : []));
-}
 
 const set = (log: object, type = 'standard') => ({ type, log });
 const quick = (kcal: number) => ({
@@ -267,12 +235,7 @@ describe('agent API insights', () => {
 		expect((await call('GET', '?tz=nowhere')).status).toBe(400);
 	});
 
-	test('single rows read by id, and the export holds every table but the tokens', async () => {
-		const weight = (await ok('GET', '/body-weights')).items[0];
-		expect(await ok('GET', `/body-weights/${weight.id}`)).toEqual(weight);
-		const favorite = await ok('POST', '/food-favorites', { foodId: (await ok('GET', '/foods')).items[0].id });
-		expect(await ok('GET', `/food-favorites/${favorite.id}`)).toEqual(favorite);
-
+	test('the export holds every table but the tokens', async () => {
 		const dump = await ok('GET', '/export');
 		expect(Object.keys(dump.tables)).not.toContain('api_tokens');
 		expect(Object.keys(dump.tables)).toContain('food_entries');

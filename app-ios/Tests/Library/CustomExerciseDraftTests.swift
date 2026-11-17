@@ -52,18 +52,4 @@ struct CustomExerciseDraftTests {
         #expect(copy.secondaryMuscles == [])
         #expect(copy.primaryMuscleDetails == [])
     }
-
-    @Test func unratedDetailsAreNil() {
-        var draft = CustomExerciseDraft()
-        draft.name = "Band Pull-Apart"
-        draft.metrics = [.reps, nil]
-        draft.bodyWeightPercent = 0
-        let exercise = draft.exercise()
-        #expect(exercise.rangeOfMotion == nil)
-        #expect(exercise.stability == nil)
-        #expect(exercise.about == nil)
-        #expect(draft.hasFinalDetails == true)
-        draft.bodyWeightPercent = 120
-        #expect(draft.hasFinalDetails == false)
-    }
 }

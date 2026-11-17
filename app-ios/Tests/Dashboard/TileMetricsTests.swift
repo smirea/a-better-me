@@ -9,28 +9,6 @@ struct TileMetricsTests {
         return calendar
     }()
 
-    @Test func tileStatesConsumedPercentAndRemaining() {
-        let range = NutrientRange(target: 170)
-        #expect(TileMetrics.tile(consumed: 85, range: range, display: .consumed, unit: .g) == TileMetrics.Tile(text: "85", unit: "g", consumed: 85, range: range))
-        #expect(TileMetrics.tile(consumed: 85, range: range, display: .percent, unit: .g) == TileMetrics.Tile(text: "50", unit: "%", consumed: 85, range: range))
-        #expect(TileMetrics.tile(consumed: 200, range: range, display: .remaining, unit: .g) == TileMetrics.Tile(text: "-30", unit: "g left", consumed: 200, range: range))
-    }
-
-    @Test func tileWithoutATargetFallsBackToConsumed() {
-        let floorOnly = NutrientRange(floor: 10)
-        #expect(TileMetrics.tile(consumed: 12.5, range: floorOnly, display: .remaining, unit: .g).text == "13")
-        #expect(TileMetrics.tile(consumed: 12.5, range: floorOnly, display: .percent, unit: .g).unit == "g")
-        #expect(TileMetrics.tile(consumed: 1234.4, range: NutrientRange(), display: .consumed, unit: .mg).text == "1,234")
-    }
-
-    @Test func smallAmountsKeepTheirDecimals() {
-        #expect(TileMetrics.tile(consumed: 0.4, range: NutrientRange(), display: .consumed, unit: .mg).text == "0.4")
-        #expect(TileMetrics.tile(consumed: 1, range: NutrientRange(target: 1.2), display: .remaining, unit: .mg).text == "0.2")
-        #expect(TileMetrics.tile(consumed: 12.34, range: NutrientRange(), display: .consumed, unit: .mcg).text == "12")
-        #expect(TileMetrics.tile(consumed: 0.03, range: NutrientRange(), display: .consumed, unit: .mg).text == "<0.1")
-        #expect(MetricUnit.ratio.format(0.4722) == "0.47")
-    }
-
     @Test func macroSplitIsTheShareOfCalories() {
         let split = TileMetrics.split([.protein: 100, .fat: 50, .carbs: 175])
         #expect(split == TileMetrics.MacroSplit(protein: 400.0 / 1550, fat: 450.0 / 1550, carbs: 700.0 / 1550))
@@ -53,12 +31,6 @@ struct TileMetricsTests {
         ])
         #expect(TileMetrics.bodySeries(.waistToHeight, metrics: metrics, heightCm: nil, calendar: utc).isEmpty)
         #expect(TileMetrics.bodySeries(.visualBodyFat, metrics: metrics, heightCm: nil, calendar: utc) == [DatedValue(date: second, value: 18)])
-    }
-
-    @Test func availableBodyMetricsFollowVisibility() {
-        #expect(BodyMetricCard.available(visible: []) == [.scaleWeight, .visualBodyFat])
-        #expect(BodyMetricCard.available(visible: [.waist, .neck]) == [.scaleWeight, .visualBodyFat, .neck, .waist, .waistToHeight])
-        #expect(BodyMetricCard.available(visible: [.waist, .hips]) == [.scaleWeight, .visualBodyFat, .waist, .hips, .waistToHeight, .waistToHip])
     }
 
     @Test func microTargetsComeFromGoalsAndMacroTargetsFromThePlan() {

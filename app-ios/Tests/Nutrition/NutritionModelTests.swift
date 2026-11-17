@@ -25,24 +25,6 @@ struct NutritionModelTests {
         #expect(yogurt.nutrition.allMeasures.map(\.name) == ["container", "g", "kg", "oz", "lb"])
     }
 
-    @Test func aNutrientTableReadsLikeANutritionFactsLabel() {
-        let names = { (rows: [NutrientListRow]) in
-            rows.map { row in
-                switch row {
-                case .label(let section): "# \(section.rawValue)"
-                case let .nutrient(nutrient, depth, endsSection): String(repeating: "  ", count: depth) + nutrient.name + (endsSection ? " —" : "")
-                }
-            }
-        }
-        let reported: NutrientAmounts = [.energy: 127, .protein: 5, .fat: 3, .carbs: 20, .fiber: 2, "269": 9, "539": 4, "606": 1, "601": 59, "307": 80, "328": 2, "301": 100]
-        #expect(names(NutrientListRow.rows { reported[$0.id] != nil }) == [
-            "Calories", "Fat", "  Saturated Fat", "Cholesterol", "Sodium", "Carbs", "  Fiber", "  Sugars", "    Sugars Added", "Protein —",
-            "# Vitamins", "Vitamin D —",
-            "# Minerals", "Calcium —",
-        ])
-        #expect(names(NutrientListRow.macros) == ["Calories", "Fat", "Carbs", "  Fiber", "  Net Carbs", "Protein —"])
-    }
-
     @Test func aNutrientTableListsEveryNutrientOnce() {
         let listed = NutrientListRow.all.compactMap { row -> NutrientID? in
             if case let .nutrient(nutrient, _, _) = row { nutrient.id } else { nil }

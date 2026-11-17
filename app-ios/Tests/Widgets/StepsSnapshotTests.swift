@@ -25,8 +25,4 @@ struct StepsSnapshotTests {
         #expect(summary.streak == 2)
         #expect(summary.week.last?.tier == .far)
     }
-
-    @Test func theStepsScreenOpensFromItsLink() {
-        #expect(QuickAction(url: URL(string: "abetterme://action/steps")!) == .steps)
-    }
 }

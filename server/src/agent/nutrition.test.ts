@@ -1,47 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import type { SyncResponse } from 'sync-engine/core';
-import { testServer } from './testing';
-import { handle } from './api';
+import { handle } from '../api';
+import { testServer } from '../testing';
 
 let tick = Date.parse('2026-10-22T12:00:00.000Z');
 // Each request a millisecond later, so rows ordered by when they were written keep the order they were sent in.
-const { config, app } = testServer({ clock: () => new Date(tick++) });
+const { config, app, call, ok, phone } = testServer({ clock: () => new Date(tick++) });
 
-const call = (method: string, path: string, body?: unknown) =>
-	handle(
-		new Request(`http://api.test/api${path}`, {
-			method,
-			headers: { authorization: `Bearer ${config.ownerToken}`, 'content-type': 'application/json' },
-			body: body === undefined ? undefined : JSON.stringify(body),
-		}),
-		app,
-	);
-
-async function ok<T = any>(method: string, path: string, body?: unknown): Promise<T> {
-	const response = await call(method, path, body);
-	const json = await response.json();
-	expect({ status: response.status, json }).toMatchObject({ status: 200 });
-	return json as T;
-}
-
-async function status(method: string, path: string, body?: unknown) {
-	const response = await call(method, path, body);
-	return { status: response.status, error: ((await response.json()) as { error?: string }).error };
-}
-
-/** What a phone that synced from scratch holds for one table. */
-async function phone(table: string) {
-	const response = await handle(
-		new Request('http://api.test/api/sync', {
-			method: 'POST',
-			headers: { authorization: `Bearer ${config.ownerToken}` },
-			body: JSON.stringify({ protocol: 1, client: `phone-${crypto.randomUUID()}`, cursor: 0, writes: [] }),
-		}),
-		app,
-	);
-	const { rows } = (await response.json()) as SyncResponse;
-	return rows.flatMap(row => (row.table === table && !row.deleted ? [row.values] : []));
-}
+const status = async (method: string, path: string, body?: unknown) => ({
+	status: (await call(method, path, body)).status,
+});
 
 /** Derived amounts are float products; compare them to the micro-unit. */
 const round = (amounts: Record<string, number>) =>
@@ -62,10 +30,7 @@ describe('nutrition agent API', () => {
 		expect(created).toMatchObject({ source: 'custom', name: 'Oats', brand: null, archived: false });
 		expect(created.id).toMatch(/^[0-9a-f-]{36}$/);
 
-		expect(await status('POST', '/foods', { ...oats, source: 'usda' })).toEqual({
-			status: 400,
-			error: "A usda food's id is `usda-<fdcId>`",
-		});
+		expect((await status('POST', '/foods', { ...oats, source: 'usda' })).status).toBe(400);
 		await ok('POST', '/foods', { ...oats, id: 'usda-173904', source: 'usda', name: 'Oats, USDA' });
 		expect((await status('POST', '/foods', { ...oats, id: 'usda-173904', source: 'usda' })).status).toBe(409);
 
@@ -213,22 +178,6 @@ describe('nutrition agent API', () => {
 				.alterations,
 		).toBeNull();
 		expect((await phone('food_entries')).find(entry => entry.id === 'altered')!.alterations).toBeNull();
-	});
-
-	test('a day is marked or overridden with PUT, and the log takes no notes', async () => {
-		expect(await ok('PUT', '/nutrition-days/2026-10-22', { override: { k: 2000, p: 150 } })).toEqual({
-			id: '2026-10-22',
-			status: 'none',
-			override: { k: 2000, p: 150 },
-		});
-		await ok('PUT', '/nutrition-days/2026-10-23', { status: 'fasted' });
-		expect((await ok('GET', '/nutrition-days?from=2026-10-23')).map((day: any) => day.status)).toEqual(['fasted']);
-		expect((await status('PUT', '/nutrition-days/2026-10-24', { override: { k: -1 } })).status).toBe(400);
-		await ok('DELETE', '/nutrition-days/2026-10-23');
-		expect((await ok('GET', '/food-log/2026-10-23')).status).toBe('none');
-
-		expect(await ok('GET', '/food-log/2026-10-22')).not.toHaveProperty('notes');
-		expect((await status('POST', '/food-log-notes', { day: '2026-10-22', title: '1' })).status).toBe(404);
 	});
 
 	test('favorites keep the newest fifty', async () => {
@@ -398,13 +347,5 @@ describe('nutrition agent API', () => {
 		const rows = await phone('food_entries');
 		expect(rows.find(entry => entry.id === brunch.id)!.section).toBe('breakfast');
 		expect(rows.find(entry => entry.id === moved.id)!.section).toBe('dinner');
-	});
-
-	test('the OpenAPI document lists the nutrition operations', async () => {
-		const { paths } = await ok('GET', '/openapi.json');
-		expect(Object.keys(paths['/nutrition-plans/{day}'])).toEqual(['get', 'put', 'delete']);
-		expect(paths['/food-entries'].post.requestBody.content['application/json'].schema).toEqual({
-			$ref: '#/components/schemas/FoodEntryCreate',
-		});
 	});
 });

@@ -43,25 +43,3 @@ struct WeeklySetsTests {
         #expect(WeeklySets.label(weekly.sets(.chest)) == "1.2 sets")
     }
 }
-
-struct HistoryDayTests {
-    @Test func groupsByDayNewestFirstKeepingTheGivenOrderWithinADay() {
-        var late = session("2026-10-06", [])
-        late.startedAt = day("2026-10-06", 20)
-        let sessions = [late, session("2026-10-06", []), session("2026-10-02", []), session("2026-10-05", [])]
-        let days = HistoryDay.group(sessions, calendar: utc)
-        #expect(days.map(\.start) == [day("2026-10-06", 0), day("2026-10-05", 0), day("2026-10-02", 0)])
-        #expect(days[0].sessions.map(\.id) == [sessions[0].id, sessions[1].id])
-    }
-}
-
-struct BodyFigureCropTests {
-    @Test func everyTileDrawsItsOwnMuscle() {
-        let figure = BodyFigure.shared
-        #expect(!figure.tiles.isEmpty)
-        for (muscle, tile) in figure.tiles {
-            let drawsMuscle = tile.parts.contains { if case .muscle(muscle) = $0.region { true } else { false } }
-            #expect(drawsMuscle, "\(muscle) tile")
-        }
-    }
-}

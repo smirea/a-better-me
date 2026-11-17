@@ -36,11 +36,7 @@ type Load =
 const catalog: Equipment[] = await Bun.file(join(root, 'Sources/App/Resources/Catalog/equipment.json')).json();
 const markdown = await Bun.file(markdownPath).text();
 
-const normalize = (name: string) =>
-	name
-		.replace(/[‘’]/g, "'")
-		.trim()
-		.toLowerCase();
+const normalize = (name: string) => name.replace(/[‘’]/g, "'").trim().toLowerCase();
 const singulars = new Set(catalog.flatMap(item => (item.pluralOf ? [item.pluralOf] : [])));
 const byName = new Map<string, Equipment[]>();
 for (const item of catalog) {

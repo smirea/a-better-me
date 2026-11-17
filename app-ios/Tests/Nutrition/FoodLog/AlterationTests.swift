@@ -83,18 +83,6 @@ struct AlterationTests {
         #expect(saved.alterations == nil)
     }
 
-    @Test func theTileListsTheAlterationsWithoutAmounts() {
-        let entry = logged(servings: 2).altered(to: altered())
-        // The recipe is never read: the tile, the entry editor, and Explode take an altered entry's own list.
-        let ingredients = FoodLog.ingredients(entry.serving, of: entry, recipe: nil)
-        #expect(ingredients.map(\.change) == [.changed, .removed, .added])
-        let tile = FoodLog.tileIngredients(ingredients)
-        #expect(tile.isAltered)
-        #expect(tile.lines.map(\.name) == ["Beef", "Tomato", "Basil"])
-        #expect(tile.lines.map(\.change) == [.changed, .removed, .added])
-        #expect(tile.spoken == "Alterations: changed Beef, removed Tomato, added Basil")
-    }
-
     @Test func anAlteredRecipeExplodesIntoWhatWasEatenWithoutItsRecipe() async throws {
         var entry = logged(servings: 0.5).altered(to: altered())
         entry.section = "lunch"

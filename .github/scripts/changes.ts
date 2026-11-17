@@ -8,7 +8,7 @@ if (!head || !event || !output) throw new Error('Missing change detection enviro
 
 const full = event === 'workflow_dispatch' || !base || /^0+$/.test(base);
 const comparison = event === 'pull_request' ? `${base}...${head}` : `${base}..${head}`;
-// Downloaded assets include Markdown, and a Bun test checks the tracked asset version against them.
+// Downloaded assets include Markdown, and scripts/check-generated.ts checks the tracked asset version against them.
 const assets = ['app-ios/Assets/', 'app-ios/Config/Assets.xcconfig'];
 const paths = (full ? [] : (await $`git diff --name-only -z ${comparison}`.text()).split('\0')).filter(
 	name =>
@@ -17,7 +17,7 @@ const paths = (full ? [] : (await $`git diff --name-only -z ${comparison}`.text(
 			(!['.md', '.rst'].includes(extname(name).toLowerCase()) && !name.startsWith('docs/'))),
 );
 const common = full || paths.some(name => name.startsWith('.github/'));
-// Bun tests read app-ios files too (the catalog the Worker bundles, the nutrient registry, the Swift lint, the
+// Bun checks read app-ios files too (the catalog the Worker bundles, the nutrient registry, the Swift lint, the
 // generated schema), and the Bun jobs are cheap, so any change but docs runs them.
 const bun = common || paths.length > 0;
 const swift =

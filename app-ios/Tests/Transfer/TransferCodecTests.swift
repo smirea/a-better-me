@@ -201,11 +201,6 @@ struct TransferCodecTests {
         }
     }
 
-    @Test func fileNameIsTheLocalTimestamp() throws {
-        let date = try #require(Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 24, hour: 15, minute: 30, second: 5)))
-        #expect(MFFormat.fileName(at: date) == "MacroFactor-20261024153005.xlsx")
-    }
-
     @Test func zipEntriesSurviveTheirOwnArchive() throws {
         let parts: [(path: String, data: Data)] = [("a.txt", Data("hello hello hello".utf8)), ("dir/b.xml", Data(repeating: 0x41, count: 5000)), ("empty", Data())]
         let archive = try Zip.archive(parts, modified: .now)

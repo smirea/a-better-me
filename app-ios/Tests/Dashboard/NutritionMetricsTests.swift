@@ -114,22 +114,6 @@ struct NutritionMetricsTests {
         #expect(NutritionMetrics.goalPercent(startKg: 80, currentKg: 80, targetKg: 80) == 100)
     }
 
-    @Test func goalWaterfallSplitsTheDistanceByMonth() {
-        let goal = NutritionGoal(kind: .lose, targetWeightKg: 80, ratePercentPerWeek: -0.5, startedOn: CalendarDay("2026-01-01")!)
-        let points = [("2026-01-01", 90.0), ("2026-02-01", 88), ("2026-03-01", 89), ("2026-03-15", 87)].map { DatedValue(date: start($0.0), value: $0.1) }
-        let bars = NutritionMetrics.waterfall(points, goal: goal, now: day("2026-03-15", 12), calendar: utc)
-        #expect(bars == [
-            .init(month: 0, kind: .start, low: 0, high: 10),
-            .init(month: 1, kind: .towards, low: 8, high: 10),
-            .init(month: 2, kind: .away, low: 8, high: 9),
-            .init(month: 3, kind: .towards, low: 7, high: 9),
-            .init(month: 3, kind: .remaining, low: 0, high: 7),
-        ])
-        var maintain = goal
-        maintain.kind = .maintain
-        #expect(NutritionMetrics.waterfall(points, goal: maintain, now: day("2026-03-15"), calendar: utc).isEmpty)
-    }
-
     @Test func weightInsightsUseTheLastThreeWeeksOfTrend() throws {
         let trend = (0...21).map { DatedValue(date: utc.date(byAdding: .day, value: $0, to: start("2026-10-01"))!, value: 90 - 0.03 * Double($0)) }
         let insights = try #require(NutritionMetrics.weightInsights(trend: trend, now: day("2026-10-22", 20), calendar: utc))

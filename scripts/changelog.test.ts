@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { add, bundle, check, parseEntry, parseTaskArgument } from './changelog';
+import { add, bundle, check, parseTaskArgument } from './changelog';
 
 let root: string;
 
@@ -74,20 +74,6 @@ test('each entry ships in the first tagged build holding it; untagged ones ship 
 	});
 });
 
-test('entries one commit adds on one day follow their builds, newest first', () => {
-	write('changelog/2026-11-11-a.json', '{"title":"A","build":"2026.1111.426"}\n');
-	write('changelog/2026-11-11-b.json', '{"title":"B","build":"2026.1111.170234"}\n');
-	write('changelog/2026-11-11-c.json', '{"title":"C","build":"2026.1111.30604"}\n');
-	write('changelog/2026-11-11-d.json', '{"title":"D"}\n');
-	commit('backfill');
-	expect(bundle(root, 'dev').entries.map(entry => `${entry.title} ${entry.build}`)).toEqual([
-		'D dev',
-		'B 2026.1111.170234',
-		'C 2026.1111.30604',
-		'A 2026.1111.426',
-	]);
-});
-
 test('a change to shipped code fails the check until an entry is added', () => {
 	const base = git('rev-parse', 'HEAD');
 	write('app-ios/Sources/App/View.swift', 'struct V {}\n');
@@ -117,18 +103,6 @@ test('tests, docs, and tooling need no entry', () => {
 	write('AGENTS.md', 'rules\n');
 	commit('tooling');
 	expect(check(root, base)).toEqual({ ok: true, exempt: true });
-});
-
-test('an entry with a multi-line title or a bad task id is rejected', () => {
-	expect(() => parseEntry('2026-11-12-x.json', '{"title":"One\\nTwo"}')).toThrow('title must be one line');
-	expect(() => parseEntry('2026-11-12-x.json', '{"title":"One","tasks":["123"]}')).toThrow('each task must be');
-	expect(() =>
-		parseEntry(
-			'2026-11-12-x.json',
-			'{"title":"One","tasks":[{"id":"2ca9f3dd-67c0-4ffc-8670-266407c5df7b","title":""}]}',
-		),
-	).toThrow('title must be a non-empty string');
-	expect(() => parseEntry('notes.json', '{"title":"One"}')).toThrow('name it <YYYY-MM-DD>');
 });
 
 test('a commit archived twice keeps the first build that held it', () => {

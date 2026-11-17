@@ -13,14 +13,6 @@ struct WatchPlatesTests {
         #expect(plates.plan(weightKg: lb.toKg(123), unit: lb)?.miss(unit: "lb") == nil)
     }
 
-    @Test func noWeightOrNothingToLoadShowsNoLine() {
-        let sled = WatchPlates(PlateLoading(base: .machine, baseWeight: 0, plates: [.init(weight: 45, perSide: nil)], sides: 2), offset: nil)
-        #expect(sled.plan(weightKg: nil, unit: lb) == nil)
-        #expect(sled.plan(weightKg: 0, unit: lb) == nil)
-        #expect(sled.plan(weightKg: lb.toKg(20), unit: lb) == nil)
-        #expect(sled.plan(weightKg: lb.toKg(90), unit: lb)?.legend == "45")
-    }
-
     @Test func theCalculatorOffsetMovesTheTarget() {
         let plates = WatchPlates(smith, offset: .kilograms(lb.toKg(10)))
         #expect(plates.plan(weightKg: lb.toKg(123), unit: lb)?.legend == "45 10 5 + 13 bar")

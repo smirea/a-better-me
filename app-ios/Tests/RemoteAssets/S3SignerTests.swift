@@ -4,7 +4,7 @@ import Testing
 
 struct S3SignerTests {
     /// AWS's published GET Object example from the Signature Version 4 header-based authentication docs.
-    @Test func awsGetObjectVector() {
+    @Test func aSignedGetMatchesAWSsPublishedSignatureExample() {
         var request = URLRequest(url: URL(string: "https://examplebucket.s3.amazonaws.com/test.txt")!)
         request.setValue("bytes=0-9", forHTTPHeaderField: "Range")
         let signed = S3Signer.sign(

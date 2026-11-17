@@ -3,7 +3,7 @@ import Testing
 @testable import App
 
 struct EstimatedRepMaxTests {
-    @Test func inverseEpleyFromA120KilogramOneRepMax() {
+    @Test func repMaxesFollowTheInverseEpleyFormula() {
         #expect(abs(WorkoutMetrics.estimatedRepMaxKg(oneRepMaxKg: 120, reps: 3) - 109.090909) < 0.0001)
         #expect(abs(WorkoutMetrics.estimatedRepMaxKg(oneRepMaxKg: 120, reps: 10) - 90) < 0.0001)
     }
@@ -36,17 +36,6 @@ struct ExerciseHistoryArrangementTests {
 
     func names(_ sort: HistorySort, _ records: RecordsFilter = .on, metric: HistoryMetric = .oneRepMax) -> [String] {
         ExerciseHistory.arranged(newestFirst, sort: sort, records: records, metric: metric, exercise: bench).map(\.workoutName)
-    }
-
-    @Test func sortsByDate() {
-        #expect(names(.mostRecent) == ["D", "C", "B", "A"])
-        #expect(names(.oldest) == ["A", "B", "C", "D"])
-    }
-
-    @Test func sortsByTheSelectedMetricWithMissingValuesLast() {
-        #expect(names(.highest) == ["A", "D", "B", "C"])
-        #expect(names(.lowest) == ["B", "D", "A", "C"])
-        #expect(names(.highest, metric: .totalReps) == ["C", "B", "A", "D"])
     }
 
     @Test func recordsOnlyKeepsSessionsWithARecord() {

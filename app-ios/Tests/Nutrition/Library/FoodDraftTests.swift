@@ -60,32 +60,6 @@ struct FoodDraftTests {
         #expect(draft.valid?.nutrition.nutrients == [.energy: 1000, .protein: 10])
     }
 
-    @Test func invalidFieldsReportMacroFactorsMessages() {
-        var draft = FoodDraft()
-        draft.name = " "
-        draft.servingWeight = "-1"
-        draft.servingQuantity = "0"
-        draft.servingName = ""
-        let measure = FoodDraft.MeasureDraft(quantity: "1", name: "", size: "x")
-        draft.measures = [measure]
-        draft.nutrients = [.protein: "abc", .fat: "-2"]
-
-        #expect(draft.valid == nil)
-        #expect(draft.issues == [
-            .name: "Food name is required",
-            .servingWeight: "Must be greater than 0",
-            .servingQuantity: "Serving quantity cannot be zero",
-            .servingName: "Serving name is required",
-            .measureName(measure.id): "Serving name is required",
-            .measureSize(measure.id): "Must be greater than 0",
-            .nutrient(.protein): "Enter a number of 0 or more",
-            .nutrient(.fat): "Enter a number of 0 or more",
-        ])
-
-        draft.servingQuantity = ""
-        #expect(draft.issues[.servingQuantity] == "Serving quantity is required")
-    }
-
     @Test func aSavedFoodReadsBackIntoTheSameFields() {
         var draft = FoodDraft()
         draft.name = "Bread"

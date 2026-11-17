@@ -16,7 +16,7 @@ struct TransferImportTests {
         try MFTransfer.importProgram(MFExports.data(file), exercises: catalog, gyms: gyms).value
     }
 
-    @Test func dropFailureSupersetWorkout() throws {
+    @Test func aSupersetWorkoutExportKeepsItsDropAndFailureSets() throws {
         let template = try Self.workout("workout-zz-sp-test-superset-drop-failure-rest.xlsx")
         #expect(template.name == "ZZ SP Test")
         #expect(template.gymID == MFExports.gym.id)
@@ -33,7 +33,7 @@ struct TransferImportTests {
         #expect(template.blocks[1].exercises[1].sets.map(\.summary) == Array(repeating: "standard 10-10 @1", count: 3))
     }
 
-    @Test func plainWorkout() throws {
+    @Test func aPlainWorkoutExportImportsEachExerciseWithItsSets() throws {
         let template = try Self.workout("workout-zz-sp-test.xlsx")
         #expect(template.name == "ZZ SP Test")
         #expect(template.blocks.map(\.exercises.count) == [1, 1, 1])
@@ -47,7 +47,7 @@ struct TransferImportTests {
         ])
     }
 
-    @Test func fiveDayPushPullLegs() throws {
+    @Test func aProgramExportKeepsItsCyclesDeloadDayPatternAndColor() throws {
         let p3 = try Self.program("program-p3-hyp-5x-ppl-60-90.xlsx")
         #expect(p3.program.name == "ZZ P3 Hyp 5x PPL 60-90")
         #expect(p3.program.cycles == 7)
@@ -85,7 +85,7 @@ struct TransferImportTests {
         #expect(first.sets.map(\.summary) == ["standard 7-9 @3", "standard 7-9 @2", "standard 7-9 @1"])
     }
 
-    @Test func programWithoutDeload() throws {
+    @Test func aProgramExportedWithoutADeloadImportsWithNone() throws {
         let p18 = try Self.program("program-p18-hyp-3x-fb-40-60-nodeload.xlsx")
         #expect(p18.program.config.deload == .none)
         #expect(p18.program.cycles == 7)

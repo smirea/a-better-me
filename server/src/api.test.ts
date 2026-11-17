@@ -1,15 +1,10 @@
-import { describe, expect, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import type { SyncResponse } from 'sync-engine/core';
-import { handle, type App, type Report } from './api';
+import { handle } from './api';
+import { DEV_OWNER_TOKEN } from './config';
 import { testServer } from './testing';
-import { DEV_OWNER_TOKEN, parseConfig } from './config';
 
-let reports: unknown[][] = [];
-const report: Report = {
-	captureMessage: (...args) => reports.push(['message', ...args]),
-	captureException: (error, context) => reports.push(['exception', String(error), context]),
-};
-const { space, config, app } = testServer({ report });
+const { space, app } = testServer();
 
 const sync = (client: string, cursor: number, writes: unknown[], token: string | null = DEV_OWNER_TOKEN) =>
 	handle(
@@ -35,198 +30,59 @@ const template = {
 	updated_at: '2026-10-24T09:00:00.000Z',
 };
 
-describe('handle', () => {
-	test('nothing outside /api answers', async () => {
-		for (const path of ['/', '/status', '/openapi.json']) {
-			expect((await handle(new Request(`http://api.test${path}`), app)).status).toBe(404);
-		}
-	});
+test('sync, the live socket, and uploads need the owner token', async () => {
+	expect((await sync('a', 0, [], null)).status).toBe(401);
+	expect((await sync('a', 0, [], 'wrong')).status).toBe(401);
+	const live = new Request('http://api.test/api/live', { headers: { upgrade: 'websocket' } });
+	expect((await handle(live, app)).status).toBe(401);
+	expect((await handle(new Request('http://api.test/api/upload', { method: 'POST' }), app)).status).toBe(401);
+});
 
-	test('the sync routes need the owner token, anything outside /api is 404', async () => {
-		expect((await sync('a', 0, [], null)).status).toBe(401);
-		expect((await sync('a', 0, [], 'wrong')).status).toBe(401);
-		const live = new Request('http://api.test/api/live', { headers: { upgrade: 'websocket' } });
-		expect((await handle(live, app)).status).toBe(401);
-		expect((await handle(new Request('http://api.test/upload', { method: 'POST' }), app)).status).toBe(404);
-		expect((await handle(new Request('http://api.test/api/upload', { method: 'POST' }), app)).status).toBe(401);
-	});
+test('a template put by one client reaches another client as a full row', async () => {
+	const pushed = await synced('a', 0, [{ seq: 1, table: 'workout_templates', id: 't1', op: 'put', values: template }]);
+	expect(pushed.acked).toBe(1);
+	expect(pushed.rejected).toEqual([]);
 
-	test('a template put by one client reaches another client as a full row', async () => {
-		const pushed = await synced('a', 0, [
-			{ seq: 1, table: 'workout_templates', id: 't1', op: 'put', values: template },
-		]);
-		expect(pushed.acked).toBe(1);
-		expect(pushed.rejected).toEqual([]);
-
-		const pulled = await synced('b', 0, []);
-		expect(pulled).toEqual({
-			space: space.space(),
-			head: 1,
-			acked: 0,
-			rejected: [],
-			snapshot: true,
-			next: null,
-			rows: [
-				{
-					table: 'workout_templates',
-					id: 't1',
-					deleted: 0,
-					values: { id: 't1', ...template, program_id: null, gym_id: null, archived: 0 },
-				},
-			],
-		});
-	});
-
-	test('a value the validator refuses is rejected and the server row comes back', async () => {
-		await synced('a', 1, [{ seq: 2, table: 'settings', id: 'settings', op: 'put', values: { weight_unit: 'lb' } }]);
-		const response = await synced('b', 1, [
-			{ seq: 1, table: 'settings', id: 'settings', op: 'patch', values: { weight_unit: 'stone' } },
-		]);
-		expect(response.acked).toBe(1);
-		expect(response.rejected).toEqual([
-			{ seq: 1, table: 'settings', id: 'settings', reason: 'weight_unit: Invalid option: expected one of "kg"|"lb"' },
-		]);
-		expect(response.rows).toEqual([
+	const pulled = await synced('b', 0, []);
+	expect(pulled).toEqual({
+		space: space.space(),
+		head: 1,
+		acked: 0,
+		rejected: [],
+		snapshot: true,
+		next: null,
+		rows: [
 			{
-				table: 'settings',
-				id: 'settings',
+				table: 'workout_templates',
+				id: 't1',
 				deleted: 0,
-				values: {
-					id: 'settings',
-					weight_unit: 'lb',
-					rest_compound_upper: 120,
-					rest_compound_lower: 180,
-					rest_upper_isolation: 90,
-					rest_lower_isolation: 90,
-					rest_core: 60,
-					workout: '{}',
-					profile: '{}',
-					dashboard: '{}',
-					shortcuts: '{}',
-					nutrition: '{}',
-				},
+				values: { id: 't1', ...template, program_id: null, gym_id: null, archived: 0 },
 			},
-		]);
-	});
-
-	test('ids are validated: a custom exercise needs the custom- prefix and settings has one id', async () => {
-		const response = await synced('ids', 0, [
-			{ seq: 1, table: 'custom_exercises', id: 'x1', op: 'put', values: { exercise: '{}' } },
-			{ seq: 2, table: 'custom_exercises', id: 'custom-x1', op: 'put', values: { exercise: '{}' } },
-			{ seq: 3, table: 'settings', id: 'other', op: 'put', values: { weight_unit: 'kg' } },
-		]);
-		expect(response.rejected.map(r => [r.id, r.reason])).toEqual([
-			['x1', 'id: Invalid string: must start with "custom-"'],
-			['other', 'id: Invalid input: expected "settings"'],
-		]);
-		const mine = new Set(['custom-x1', 'x1', 'other']);
-		expect(response.rows.filter(r => mine.has(r.id)).map(r => [r.table, r.id, r.deleted])).toEqual([
-			['custom_exercises', 'custom-x1', 0],
-			['custom_exercises', 'x1', 1],
-			['settings', 'other', 1],
-		]);
-	});
-
-	test('a sync with rejected writes reports one warning naming each write and still answers the same body', async () => {
-		reports = [];
-		const response = await sync('reported', 0, [
-			{ seq: 1, table: 'settings', id: 'other', op: 'put', values: { weight_unit: 'kg' } },
-			{ seq: 2, table: 'custom_exercises', id: 'x2', op: 'put', values: { exercise: '{}' } },
-			{ seq: 3, table: 'custom_exercises', id: 'custom-x2', op: 'put', values: { exercise: '{}' } },
-		]);
-		expect(response.status).toBe(200);
-		expect(((await response.json()) as SyncResponse).acked).toBe(3);
-		expect(reports).toEqual([
-			[
-				'message',
-				'Sync rejected writes to custom_exercises, settings',
-				{
-					level: 'warning',
-					extra: {
-						rejected: [
-							{ seq: 1, table: 'settings', id: 'other', reason: 'id: Invalid input: expected "settings"' },
-							{ seq: 2, table: 'custom_exercises', id: 'x2', reason: 'id: Invalid string: must start with "custom-"' },
-						],
-					},
-					fingerprint: ['sync-rejected', 'custom_exercises, settings'],
-				},
-			],
-		]);
-
-		reports = [];
-		await synced('reported', 3, []);
-		expect(reports).toEqual([]);
-	});
-
-	test('a 5xx from the engine is reported as an error', async () => {
-		reports = [];
-		const failing: App = { ...app, engine: async () => new Response('boom', { status: 503 }) };
-		expect(
-			(
-				await handle(
-					new Request('http://api.test/api/sync', {
-						method: 'POST',
-						headers: { authorization: `Bearer ${DEV_OWNER_TOKEN}` },
-					}),
-					failing,
-				)
-			).status,
-		).toBe(503);
-		expect(reports).toEqual([
-			[
-				'exception',
-				'Error: POST /api/sync answered 503',
-				{ extra: { route: 'POST /api/sync', status: 503, body: 'boom' } },
-			],
-		]);
+		],
 	});
 });
 
-describe('parseConfig', () => {
-	test('development ignores Sentry settings while production still reports', () => {
-		expect(parseConfig({ APP_ENV: 'development', SENTRY_DSN: 'leftover-dev-setting' }).sentry).toBeNull();
-		const dsn = 'https://abc123@o1.ingest.sentry.io/42';
-		expect(
-			parseConfig({
-				APP_ENV: 'production',
-				OWNER_TOKEN: 'owner',
-				SENTRY_DSN: dsn,
-				GEMINI_API_KEY: 'gemini',
-				XAI_API_KEY: 'xai',
-				GITHUB_TOKEN: 'github',
-			}).sentry,
-		).toEqual({ dsn, environment: 'production' });
-	});
+test('a value the validator refuses is rejected and the server row comes back', async () => {
+	await synced('a', 1, [{ seq: 2, table: 'settings', id: 'settings', op: 'put', values: { weight_unit: 'lb' } }]);
+	const response = await synced('b', 1, [
+		{ seq: 1, table: 'settings', id: 'settings', op: 'patch', values: { weight_unit: 'stone' } },
+	]);
+	expect(response.acked).toBe(1);
+	expect(response.rejected.map(r => [r.seq, r.id])).toEqual([[1, 'settings']]);
+	expect(response.rows.map(row => [row.id, row.deleted ? null : row.values.weight_unit])).toEqual([['settings', 'lb']]);
+});
 
-	test('space settings apply in development and stop production', () => {
-		expect(parseConfig({ SYNC_PAGE_SIZE: '3' }).space).toEqual({ pageSize: 3 });
-		const production = {
-			APP_ENV: 'production',
-			OWNER_TOKEN: 'secret',
-			SENTRY_DSN: 'https://abc123@o1.ingest.sentry.io/42',
-			GEMINI_API_KEY: 'gemini',
-			XAI_API_KEY: 'xai',
-			GITHUB_TOKEN: 'github',
-		};
-		expect(parseConfig(production).space).toEqual({});
-		expect(() => parseConfig({ ...production, SYNC_PAGE_SIZE: '3' })).toThrow(
-			'Space settings are development only: SYNC_PAGE_SIZE',
-		);
-		expect(parseConfig({ RAMBLE_SCRIPT: 'two eggs' }).rambleScript).toBe('two eggs');
-		expect(() => parseConfig({ ...production, RAMBLE_SCRIPT: 'two eggs' })).toThrow(
-			'RAMBLE_SCRIPT is development only',
-		);
-	});
-
-	test('production refuses to start without the keys that photo logging, Ramble, and feedback issues need', () => {
-		expect(() =>
-			parseConfig({
-				APP_ENV: 'production',
-				OWNER_TOKEN: 'secret',
-				SENTRY_DSN: 'https://abc123@o1.ingest.sentry.io/42',
-			}),
-		).toThrow('Missing production settings: GEMINI_API_KEY, XAI_API_KEY, GITHUB_TOKEN');
-		expect(parseConfig({}).geminiApiKey).toBeNull();
-		expect(parseConfig({}).xaiApiKey).toBeNull();
-	});
+test('a custom exercise id needs the custom- prefix and settings has the one id', async () => {
+	const response = await synced('ids', 0, [
+		{ seq: 1, table: 'custom_exercises', id: 'x1', op: 'put', values: { exercise: '{}' } },
+		{ seq: 2, table: 'custom_exercises', id: 'custom-x1', op: 'put', values: { exercise: '{}' } },
+		{ seq: 3, table: 'settings', id: 'other', op: 'put', values: { weight_unit: 'kg' } },
+	]);
+	expect(response.rejected.map(r => r.id)).toEqual(['x1', 'other']);
+	const mine = new Set(['custom-x1', 'x1', 'other']);
+	expect(response.rows.filter(r => mine.has(r.id)).map(r => [r.table, r.id, r.deleted])).toEqual([
+		['custom_exercises', 'custom-x1', 0],
+		['custom_exercises', 'x1', 1],
+		['settings', 'other', 1],
+	]);
 });

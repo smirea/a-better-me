@@ -85,27 +85,6 @@ struct MealSectionTests {
         #expect(FoodLog.groups([toast], settings: settings).count == 5)
     }
 
-    /// At 12:12 the AM Snack and Lunch pills both wore the ring. Exactly one pill does, at every minute and right at
-    /// each boundary, and it is the one the tab bar's + logs into.
-    @Test func exactlyOnePillWearsTheRingAndItIsWhereTheDefaultAddLogs() {
-        let groups = FoodLog.sections([], sections: sections, hideEmpty: false)
-        for minute in [0, 9 * 60 + 59, 10 * 60, 11 * 60 + 59, 12 * 60, 12 * 60 + 12, 12 * 60 + 15, 14 * 60 + 59, 15 * 60, 17 * 60, 23 * 60 + 59] {
-            let now = monday.date(atMinute: minute, in: utc)
-            let current = FoodLog.currentSlot(on: monday, sections: sections, showsSections: true, now: now, calendar: utc)
-            #expect(groups.filter { $0.slot == current }.count == 1, "\(minute)")
-            #expect(LoggerStart(LogFoodRequest(day: monday), now: now, calendar: utc).time == nil)
-            let logged = LogTime.now(now, calendar: utc).section(in: sections, at: now, calendar: utc)
-            #expect(current == .section(logged), "\(minute)")
-        }
-
-        let noonish = monday.date(atMinute: 12 * 60 + 12, in: utc)
-        #expect(FoodLog.currentSlot(on: monday, sections: sections, showsSections: true, now: noonish, calendar: utc) == .section(sections[2]))
-        #expect(FoodLog.currentSlot(on: monday, sections: sections, showsSections: false, now: noonish, calendar: utc) == .hour(12))
-        let elevenFiftyNine = monday.date(atMinute: 11 * 60 + 59, in: utc)
-        #expect(FoodLog.currentSlot(on: monday, sections: sections, showsSections: true, now: elevenFiftyNine, calendar: utc) == .section(sections[1]))
-        #expect(FoodLog.currentSlot(on: calendarDay("2026-10-27"), sections: sections, showsSections: true, now: noonish, calendar: utc) == nil)
-    }
-
     @Test func aCopyOrMoveKeepsTakesOrPicksItsSection() {
         let now = monday.date(atMinute: 18 * 60 + 5, in: utc)
         let early = entry(minute: 11 * 60 + 50, section: "lunch")

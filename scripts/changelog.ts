@@ -55,7 +55,7 @@ export function isShipped(path: string): boolean {
 	return shippedPrefixes.some(prefix => path.startsWith(prefix)) && !/\.test\.tsx?$/.test(path);
 }
 
-export function parseEntry(name: string, text: string): Entry {
+function parseEntry(name: string, text: string): Entry {
 	const fail = (problem: string): never => {
 		throw new Error(`${changelogDir}/${name}: ${problem}`);
 	};

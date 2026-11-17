@@ -1,9 +1,8 @@
 /**
  * Runs the unit tests related to the files lefthook passes in: every `*.test.ts(x)` whose imports reach a changed
  * file, followed through the import graph. Imports resolve the way Bun resolves them, so tsconfig paths and
- * workspace packages count; anything that lands in node_modules does not. Changed Swift files run, through
- * `app-ios/scripts/test`, every AppTests suite in a changed test file or naming a type a changed source declares.
- * `--dry-run` prints what would run.
+ * workspace packages count; anything that lands in node_modules does not. The Swift tests need a simulator, which no
+ * hook boots, so they run only in CI. `--dry-run` prints what would run.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
@@ -11,7 +10,7 @@ import { dirname, join } from 'node:path';
 import { assertNotBare } from './check-not-bare';
 import { dropGitEnv } from './git-env';
 
-// The hooks run every test through here, so this is where their GIT_* stops (see git-env.ts).
+// Pre-commit runs every test through here, so this is where their GIT_* stops (see git-env.ts).
 dropGitEnv();
 
 const root = realpathSync(join(import.meta.dir, '..'));
@@ -70,49 +69,12 @@ for (let i = 0; i < queue.length; i++) {
 
 const selected = [...seen].filter(file => TEST.test(file) && existsSync(file)).toSorted();
 
-const app = join(root, 'app-ios');
-const swiftFiles = (dir: string) =>
-	readdirSync(join(app, dir), { recursive: true })
-		.map(String)
-		.filter(file => file.endsWith('.swift'))
-		.map(file => join(app, dir, file));
-const suitesIn = (source: string) =>
-	[...source.matchAll(/\b(?:struct|class|enum|actor) (\w+Tests)\b/g)].map(m => m[1]!);
-const changedSwift = files.filter(file => file.endsWith('.swift') && existsSync(file));
-const suites = new Set<string>();
-if (changedSwift.length > 0) {
-	// Extensions count only for the app's own types: `extension View` would name every suite.
-	const appTypes = new Set(
-		swiftFiles('Sources').flatMap(file =>
-			[...readFileSync(file, 'utf8').matchAll(/\b(?:struct|class|enum|actor|protocol) (\w+)/g)].map(m => m[1]!),
-		),
-	);
-	const changedTypes = new Set<string>();
-	for (const file of changedSwift) {
-		const source = readFileSync(file, 'utf8');
-		if (file.startsWith(join(app, 'Tests'))) for (const suite of suitesIn(source)) suites.add(suite);
-		for (const [, type] of source.matchAll(/\b(?:struct|class|enum|actor|protocol|extension) (\w+)/g))
-			if (appTypes.has(type!)) changedTypes.add(type!);
+if (selected.length > 0) {
+	const command = ['bun', 'test', ...selected];
+	if (dryRun) console.log(command.join(' '));
+	else {
+		const result = spawnSync(command[0]!, command.slice(1), { cwd: root, stdio: 'inherit' });
+		assertNotBare(command.join(' '));
+		if (result.status !== 0) process.exit(result.status ?? 1);
 	}
-	if (changedTypes.size > 0) {
-		const named = new RegExp(`\\b(?:${[...changedTypes].join('|')})\\b`);
-		for (const file of swiftFiles('Tests')) {
-			const source = readFileSync(file, 'utf8');
-			if (named.test(source)) for (const suite of suitesIn(source)) suites.add(suite);
-		}
-	}
-}
-
-const runs: [string[], string][] = [];
-if (selected.length > 0) runs.push([['bun', 'test', ...selected], root]);
-if (suites.size > 0) runs.push([['./scripts/test', ...[...suites].toSorted()], app]);
-for (const [command, cwd] of runs) {
-	if (dryRun) {
-		console.log(command.join(' '));
-		continue;
-	}
-	const result = spawnSync(command[0]!, command.slice(1), { cwd, stdio: 'inherit' });
-	if (result.status === 3) console.error('The Mac was too busy to boot a simulator for the Swift suites: rerun.');
-	assertNotBare(command.join(' '));
-	if (result.status !== 0) process.exit(result.status ?? 1);
 }

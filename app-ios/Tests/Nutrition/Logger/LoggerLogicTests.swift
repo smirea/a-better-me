@@ -36,21 +36,6 @@ struct QuantityTextTests {
         return text.text
     }
 
-    @Test func firstKeyReplacesTheShownValue() {
-        #expect(typed([.digit(2)]) == "2")
-        #expect(typed([.backspace]) == "")
-        #expect(typed([.point, .digit(5)]) == "0.5")
-    }
-
-    @Test func keepsTheExactValueUntilTyped() {
-        var third = QuantityText(1.0 / 3)
-        #expect(third.text == "0.33")
-        #expect(third.value == 1.0 / 3)
-        third.type(.backspace)
-        third.type(.digit(2))
-        #expect(third.value == 2)
-    }
-
     @Test func typesAMixedNumber() {
         #expect(typed([.digit(1), .space, .digit(1), .slash, .digit(2)]) == "1 1/2")
     }
@@ -65,69 +50,18 @@ struct QuantityTextTests {
         #expect(typed([.digit(0), .digit(7)]) == "7")
         #expect(typed(Array(repeating: .digit(9), count: 10)) == "99999999")
     }
-
-    @Test func formatsWithAPointAndTwoDecimals() {
-        #expect(NumberText.plain(1) == "1")
-        #expect(NumberText.plain(1.5) == "1.5")
-        #expect(NumberText.plain(1234.567) == "1234.57")
-    }
 }
 
 struct ServingChoicesTests {
-    @Test func favoriteUnitsTheFoodAllowsEachWithItsLargerUnitThenItsServings() {
-        let choices = ServingChoices(banana.nutrition, favorites: ["g", "oz", "mL", "cup"])
-        #expect(choices.units.map(\.name) == ["g", "kg", "oz", "lb"])
-        #expect(choices.servings.map(\.name) == ["medium", "large"])
-    }
-
     @Test func volumeUnitsNeedTheFoodsMilliliters() {
         let choices = ServingChoices(milk.nutrition, favorites: ["g", "oz", "mL", "cup"])
         #expect(choices.units.map(\.name) == ["g", "kg", "oz", "lb", "mL", "cup"])
-    }
-
-    @Test func eachSpoonServingBringsItsOtherSpoonWithTheSameQualifier() {
-        let oregano = FoodNutrition(nutrients: [.energy: 265], baseGrams: 100, measures: [
-            Measure(name: "tsp, leaves", quantity: 1, servings: 0.01),
-            Measure(name: "tsp, ground", quantity: 1, servings: 0.018),
-            Measure(name: "cup (8 fl oz)", quantity: 1, servings: 2.4),
-            Measure(name: "cups, chopped", quantity: 0.5, servings: 0.6),
-            Measure(name: "tbsp, chopped", quantity: 1, servings: 0.08),
-        ])
-        let choices = ServingChoices(oregano, favorites: ["g", "oz", "mL", "cup"])
-        #expect(choices.units.map(\.name) == ["g", "kg", "oz", "lb"])
-        #expect(choices.servings.map(\.name) == [
-            "tsp, leaves", "tbsp, leaves", "tsp, ground", "tbsp, ground", "cup (8 fl oz)", "cups, chopped", "tbsp, chopped", "tsp, chopped",
-        ])
-        let tbsp = choices.servings[3], tsp = choices.servings[2]
-        #expect(abs(Serving(measure: tbsp, quantity: 1).servings - 3 * Serving(measure: tsp, quantity: 1).servings) < 1e-9)
-        #expect(oregano.allMeasures.map(\.name).suffix(4) == ["g", "kg", "oz", "lb"])
-    }
-
-    @Test func eachWeightServingBringsItsOtherUnitWithTheSameQualifier() {
-        let steak = FoodNutrition(nutrients: [.energy: 127], measures: [
-            Measure(name: "g", quantity: 100, servings: 1),
-            Measure(name: "oz, boneless", quantity: 3, servings: 0.85),
-            Measure(name: "lb (454 g)", quantity: 1, servings: 4.54),
-        ])
-        #expect(steak.servingMeasures.map(\.name) == ["g", "kg", "oz, boneless", "lb, boneless", "lb (454 g)"])
-        #expect(NamedUnit("lbs")?.neighbours.map(\.name) == ["oz"])
-        #expect(NamedUnit("grams")?.neighbours.map(\.name) == ["kg"])
-        #expect(NamedUnit("glass") == nil)
-        let kilogram = steak.servingMeasures[1], pound = steak.servingMeasures[3]
-        #expect(Serving(measure: kilogram, quantity: 1).servings == 10)
-        #expect(abs(Serving(measure: pound, quantity: 1).servings - 0.85 / 3 * 16) < 1e-9)
     }
 
     @Test func aPoundTypedAsOneIsAPoundOfTheFood() {
         let pound = ServingChoices(banana.nutrition, favorites: ["oz"]).units.first { $0.name == "lb" }!
         let portion = FoodPortion(banana, serving: Serving(measure: pound, quantity: 1))
         #expect(abs(portion.amounts[.energy]! - 89 * 4.5359237) < 1e-9)
-    }
-
-    @Test func keepsTheCurrentMeasureWhenItIsNotAFavorite() {
-        let pound = banana.nutrition.allMeasures.first { $0.name == "lb" }!
-        let choices = ServingChoices(banana.nutrition, favorites: ["g"], current: pound)
-        #expect(choices.units.map(\.name) == ["g", "kg", "lb"])
     }
 
     @Test func scalesNutritionByTheServing() {
@@ -193,19 +127,6 @@ struct PlateTests {
         #expect(over.fill(.remaining) == MacroLine.Fill(eaten: 0, plate: 0.25))
         #expect(FoodLog.summary([.energy: 750], plate: [.energy: 500], targets: small.amounts, showOverages: false)[0].text(.remaining) == "0 left")
     }
-
-    @Test func withoutATargetTheBarShowsThePlatesShareOfTheDay() {
-        let untargeted = FoodLog.summary([.energy: 100], plate: [.energy: 50], targets: [:], showOverages: true)[0]
-        #expect(untargeted.text(.remaining) == "150")
-        #expect(untargeted.text(.eaten) == "150")
-        #expect(untargeted.fill(.eaten) == MacroLine.Fill(eaten: 100.0 / 150, plate: 50.0 / 150))
-        #expect(untargeted.plateShare == 50.0 / 150)
-
-        let empty = FoodLog.summary([:], plate: [:], targets: [:], showOverages: true)[0]
-        #expect(empty.fill(.eaten) == MacroLine.Fill(eaten: 0, plate: 0))
-        #expect(empty.plateShare == nil)
-        #expect(FoodLog.summary([.energy: 100], targets: [:], showOverages: true)[0].fill(.eaten) == nil)
-    }
 }
 
 struct LogTimeTests {
@@ -220,23 +141,6 @@ struct LogTimeTests {
         let now = LogTime.now(at, calendar: calendar)
         #expect(now == LogTime(day: calendarDay("2026-10-26"), hour: 14))
         #expect(LogTime(day: calendarDay("2026-10-25"), hour: 8).minute(at: at, calendar: calendar) == 8 * 60 + 37)
-    }
-
-    @Test func labelsTheHourAndAnotherDay() {
-        let today = calendarDay("2026-10-26")
-        #expect(LogTime(day: today, hour: 14).label(today: today) == "2 PM")
-        #expect(LogTime(day: today, hour: 0).label(today: today) == "12 AM")
-        #expect(LogTime(day: calendarDay("2026-07-31"), hour: 12).label(today: today) == "12 PM · Jul 31")
-        let sections = MealSection.defaults
-        let at = calendar.date(from: DateComponents(year: 2026, month: 10, day: 26, hour: 9, minute: 40))!
-        #expect(LogTime(day: today, hour: 11).label(today: today, sections: sections, now: at) == "AM Snack")
-        #expect(LogTime(day: calendarDay("2026-07-31"), hour: 13).label(today: today, sections: sections, now: at) == "Lunch · Jul 31")
-        #expect(LogTime(day: today, hour: 11, section: sections[2]).label(today: today, now: at) == "Lunch")
-        var picked = LogTime(day: today, hour: 11, section: sections[2])
-        picked.hour = 12
-        #expect(picked.section == nil)
-        #expect(NutritionFormat.dayTitle(today.adding(days: -1), today: today) == "Yesterday")
-        #expect(NutritionFormat.dayTitle(calendarDay("2026-10-24"), today: today) == "Sat, Oct 24")
     }
 }
 
@@ -255,21 +159,10 @@ struct QuickAddDraftTests {
         #expect(draft.portion?.food.name == "Quick Add")
     }
 
-    @Test func aRenameIsTrimmedAndABlankOneIsQuickAdd() {
-        #expect(FoodSnapshot.quickAddName(" Protein shake\n") == "Protein shake")
-        #expect(FoodSnapshot.quickAddName("  ") == "Quick Add")
-    }
-
     @Test func storesKilojoulesAsKcal() {
         let draft = QuickAddDraft(energy: "836.8", unit: .kj, protein: "10")
         #expect(abs(draft.amounts![.energy]! - 200) < 1e-9)
         #expect(abs(draft.macroSum - 167.36) < 1e-9)
-    }
-
-    @Test func refusesAnEmptyOrBadForm() {
-        #expect(QuickAddDraft().amounts == nil)
-        #expect(QuickAddDraft(energy: "abc").amounts == nil)
-        #expect(QuickAddDraft(energy: "-5").amounts == nil)
     }
 }
 

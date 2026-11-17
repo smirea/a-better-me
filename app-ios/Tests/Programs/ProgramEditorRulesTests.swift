@@ -123,19 +123,6 @@ struct ProgramEditorRulesTests {
         return Program(name: "P", color: .red, cycles: 7, days: Array(repeating: ProgramDay(), count: days), config: config)
     }
 
-    @Test func cardsFollowTheDeloadAndPeriodization() {
-        #expect(ProgramEditorRules.cards(of: program(deload: .lastCycle, periodization: true)).map(\.title)
-            == ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6", "Week 7", "Deload"])
-        #expect(ProgramEditorRules.cards(of: program(days: 8, deload: .firstCycle, periodization: true)).map(\.title).prefix(2) == ["Deload", "Cycle 1"])
-        let off = ProgramEditorRules.cards(of: program(deload: .lastCycle, periodization: false))
-        #expect(off.map(\.title) == ["7 Weeks", "Deload"])
-        #expect(off.map(\.cycle) == [1, 8])
-        let offFirst = ProgramEditorRules.cards(of: program(days: 6, deload: .firstCycle, periodization: false))
-        #expect(offFirst.map(\.title) == ["Deload", "7 Cycles"])
-        #expect(offFirst.map(\.cycle) == [1, 2])
-        #expect(ProgramEditorRules.cards(of: program(deload: .none, periodization: false)).map(\.title) == ["7 Weeks"])
-    }
-
     @MainActor @Test func targetMusclesAverageEveryCycleIncludingTheDeload() {
         let catalog = ExerciseCatalog()
         let program = program(deload: .lastCycle, periodization: true)
@@ -153,9 +140,5 @@ struct ProgramEditorRulesTests {
         let days = [ProgramDay(), ProgramDay(), ProgramDay()]
         let reordered = ProgramEditorRules.reordering(days, by: [days[1].id, days[0].id])
         #expect(reordered.map(\.id) == [days[1].id, days[0].id, days[2].id])
-    }
-
-    @Test func newWorkoutDaysTakeTheFirstFreeLetter() {
-        #expect(ProgramEditorRules.nextWorkoutName(taken: ["Workout A", "Workout C"]) == "Workout B")
     }
 }

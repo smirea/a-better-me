@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, describe, expect, spyOn, test } from 'bun:test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -62,24 +62,18 @@ const GRANULAR: Record<string, Sheet> = {
 	Workouts: [[null, 'Exercise', 'Notes', 'Set 1 Type', 'Set 1 RIR', 'Set 1 Rest']],
 };
 
-const { config, app } = testServer();
-const server = Bun.serve({ port: 0, fetch: request => handle(request, app) });
-afterAll(() => server.stop(true));
+const { config, app, ok } = testServer();
+// The importers talk to the server over fetch, so every request goes to the in-process API instead of a port.
+const SERVER = 'http://api.test';
+const routed = spyOn(globalThis, 'fetch').mockImplementation(((input: RequestInfo | URL, init?: RequestInit) =>
+	handle(new Request(input, init), app)) as typeof fetch);
+afterAll(() => routed.mockRestore());
 
 const granular = join(mkdtempSync(join(tmpdir(), 'macrofactor-workouts-')), 'granular.xlsx');
 writeFileSync(granular, writeXlsx(GRANULAR));
 
 const run = (dryRun = false) =>
-	importMacroFactorWorkouts({ server: server.url.href, token: config.ownerToken, files: [granular], dryRun });
-async function api(method: string, path: string, body?: unknown) {
-	const response = await fetch(new URL(`/api${path}`, server.url), {
-		method,
-		headers: { authorization: `Bearer ${config.ownerToken}`, 'content-type': 'application/json' },
-		...(body !== undefined && { body: JSON.stringify(body) }),
-	});
-	if (!response.ok) throw new Error(`${method} ${path}: ${response.status} ${await response.text()}`);
-	return response.json() as Promise<any>;
-}
+	importMacroFactorWorkouts({ server: SERVER, token: config.ownerToken, files: [granular], dryRun });
 const loggedSets = (session: any, exerciseID: string) =>
 	session.blocks
 		.flatMap((block: any) => block.exercises)
@@ -134,7 +128,7 @@ describe('import-macrofactor-workouts', () => {
 	});
 
 	test('a dry run counts the days it would log and writes nothing', async () => {
-		await api('POST', '/templates', {
+		await ok('POST', '/templates', {
 			name: 'Push Day',
 			blocks: [
 				{ exercises: [{ exerciseID: FLY, sets: [{}] }] },
@@ -142,7 +136,7 @@ describe('import-macrofactor-workouts', () => {
 				{ exercises: [{ exerciseID: PLANK, sets: [{}] }] },
 			],
 		});
-		await api('POST', '/sessions', {
+		await ok('POST', '/sessions', {
 			name: 'Logged in the app',
 			startedAt: '2026-01-10T15:00:00.000Z',
 			endedAt: '2026-01-10T16:00:00.000Z',
@@ -150,7 +144,7 @@ describe('import-macrofactor-workouts', () => {
 		const { counts, warnings } = await run(true);
 		expect(counts).toEqual({ workout_sessions: { created: 2, updated: 0, unchanged: 0, skipped: 1 } });
 		expect(warnings).toEqual(["2026-01-10: a session is already logged that day, so MacroFactor's is not added"]);
-		expect((await api('GET', '/sessions')).total).toBe(1);
+		expect((await ok('GET', '/sessions')).total).toBe(1);
 	});
 
 	test('each day becomes one finished session named after the template it matches', async () => {
@@ -158,8 +152,8 @@ describe('import-macrofactor-workouts', () => {
 		expect(counts).toEqual({ workout_sessions: { created: 2, updated: 0, unchanged: 0, skipped: 1 } });
 		expect(worstVolumeDriftPercent).toBe(0);
 
-		const push = await api('GET', `/sessions/${stableId('workout-session', '2026-01-08')}`);
-		const template = (await api('GET', '/templates')).find((row: any) => row.name === 'Push Day');
+		const push = await ok('GET', `/sessions/${stableId('workout-session', '2026-01-08')}`);
+		const template = (await ok('GET', '/templates')).find((row: any) => row.name === 'Push Day');
 		expect(push.name).toBe('Push Day');
 		expect(push.templateId).toBe(template.id);
 		expect(push.gymId).toBeNull();
@@ -179,7 +173,7 @@ describe('import-macrofactor-workouts', () => {
 		expect(Math.round(push.stats.exercises.find((e: any) => e.exerciseID === BENCH).volumeKg / LB)).toBe(3710);
 		expect(Math.round(push.stats.exercises.find((e: any) => e.exerciseID === FLY).volumeKg / LB)).toBe(900);
 
-		const row = await api('GET', `/sessions/${stableId('workout-session', '2026-01-09')}`);
+		const row = await ok('GET', `/sessions/${stableId('workout-session', '2026-01-09')}`);
 		expect(row.name).toBe('Workout');
 		expect(row.templateId).toBeNull();
 		expect(
@@ -190,6 +184,6 @@ describe('import-macrofactor-workouts', () => {
 	test('a second run changes nothing', async () => {
 		const { counts } = await run();
 		expect(counts).toEqual({ workout_sessions: { created: 0, updated: 0, unchanged: 2, skipped: 1 } });
-		expect((await api('GET', '/sessions')).total).toBe(3);
+		expect((await ok('GET', '/sessions')).total).toBe(3);
 	});
 });
