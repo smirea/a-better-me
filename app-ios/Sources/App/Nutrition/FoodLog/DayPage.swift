@@ -51,6 +51,7 @@ struct DayPage: View {
                 let column = self.column
                 FillHeight(minHeight: isSections ? pageHeight - state.header.height - Self.bottomPadding : 0) {
                     VStack(alignment: .leading, spacing: 0) {
+                        DaySupplementsRow(day: day)
                         ForEach(groups) { group in
                             SlotRow(
                                 day: day, group: group, sections: settings.nutrition.mealSections, pillWidth: column.pillWidth,

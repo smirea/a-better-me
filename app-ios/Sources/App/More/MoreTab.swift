@@ -24,6 +24,7 @@ struct MoreTab: View {
                     row(.foodLog)
                     row(.expenditure)
                     row(.foodsRecipes)
+                    row(.supplements)
                 }
                 ThemedSection("Workouts") {
                     row(.levels)
@@ -45,6 +46,7 @@ struct MoreTab: View {
             .navigationDestination(for: MoreRoute.self) { $0.destination }
             .navigationDestination(for: Muscle.self) { MuscleLevelsView(muscle: $0) }
             .navigationDestination(for: StrategyRoute.self) { $0.destination }
+            .navigationDestination(for: SupplementRoute.self) { $0.destination }
         }
         .feedback(self)
     }
@@ -57,7 +59,7 @@ struct MoreTab: View {
 /// More's screens are path values registered at its root, with the destinations Levels and Strategy push. A
 /// value link inside a screen pushed with a view destination never fired, so nothing here pushes by view.
 private enum MoreRoute: Hashable {
-    case levels, strategy, workoutHistory, units, profile, dashboard, workout, exercises, gymProfiles, foodLog, expenditure, foodsRecipes, appleHealth, changelog, dataVisibility, apiTokens
+    case levels, strategy, workoutHistory, units, profile, dashboard, workout, exercises, gymProfiles, foodLog, expenditure, foodsRecipes, supplements, appleHealth, changelog, dataVisibility, apiTokens
 
     var title: String {
         switch self {
@@ -73,6 +75,7 @@ private enum MoreRoute: Hashable {
         case .foodLog: "Food Log"
         case .expenditure: "Expenditure"
         case .foodsRecipes: "Foods & Recipes"
+        case .supplements: "Supplements"
         case .appleHealth: "Apple Health"
         case .changelog: "Changelog"
         case .dataVisibility: "Data Visibility"
@@ -94,6 +97,7 @@ private enum MoreRoute: Hashable {
         case .foodLog: "fork.knife"
         case .expenditure: "bolt.fill"
         case .foodsRecipes: "carrot"
+        case .supplements: "pills"
         case .appleHealth: "heart.fill"
         case .changelog: "clock.arrow.circlepath"
         case .dataVisibility: "eye"
@@ -116,6 +120,7 @@ private enum MoreRoute: Hashable {
         case .foodLog: FoodLogSettingsView()
         case .expenditure: ExpenditureSettingsView()
         case .foodsRecipes: FoodLibraryView()
+        case .supplements: SupplementsView()
         case .appleHealth: HealthSettingsView()
         case .changelog: ChangelogView()
         case .dataVisibility: DataVisibilityView()

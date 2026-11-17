@@ -326,6 +326,7 @@ struct DayMenu: View {
         Menu {
             Button("Nutrition Overview", systemImage: "list.bullet.rectangle") { state.path.append(FoodLogRoute.overview(day)) }
             Button("Strategy", systemImage: "chart.line.uptrend.xyaxis") { state.path.append(FoodLogRoute.strategy) }
+            Button("Supplements", systemImage: "pills") { state.path.append(SupplementRoute.library) }
             Button("Copy Day", systemImage: "doc.on.doc") {
                 state.selecting = true
                 state.selection = Set(entries.map(\.id))
