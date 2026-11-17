@@ -166,8 +166,9 @@ final class FoodShortNaming {
 
     private func receive(_ candidates: [Candidate]) {
         guard model.isAvailable else { return }
-        let queued = Set(queue.map(\.key))
-        queue += candidates.filter { !asked.contains($0.key) && !queued.contains($0.key) }
+        // Rebuilt in the candidates' order, so a recipe saved during the first launch's backfill goes next rather
+        // than after the whole backlog.
+        queue = candidates.filter { !asked.contains($0.key) }
         guard worker == nil, !queue.isEmpty else { return }
         worker = Task {
             while !queue.isEmpty {
