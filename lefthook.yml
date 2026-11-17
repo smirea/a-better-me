@@ -35,9 +35,3 @@ pre-push:
     # The same check as CI's "Changelog entry" job, so a missing entry fails before the PR opens.
     changelog:
       run: bun --no-env-file scripts/changelog.ts check --base "$(git merge-base HEAD origin/master)"
-    test:
-      # Not {push_files}: on a branch with no upstream it diffs against origin/master's tip, so once master moved, a
-      # docs-only push ran the tests of master's own merges.
-      files: git diff --name-only "$(git merge-base HEAD '@{push}' 2>/dev/null || git merge-base HEAD origin/master)" HEAD
-      glob: '*.{js,mjs,mts,ts,tsx}'
-      run: bun --no-env-file scripts/test-changed.ts {files}

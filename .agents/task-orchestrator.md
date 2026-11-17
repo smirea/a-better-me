@@ -25,7 +25,7 @@ Repo config for the global `task-orchestrator` skill (`~/code/ai-files/skills/ta
 - Read `docs/decisions/README.md`, and the `AGENTS.md` of every folder you change (`app-ios/`, `server/`, `shared/`, `app-web/`).
 - Your server runs on your own ports from `.env.override` over a SQLite file in your worktree's `.data/`; nothing is shared. Rung 3's `app-ios/scripts/run --headless` starts it when nothing answers on your `API_PORT`, detached, logging to `.data/server.log`, and Debug builds sign in with the bundled development token. For server-only work run `bun run start` in `server/` as a harness background task, never with `&` in the same call as another command: both died together once. From the repo root, the root `.env.local` hands the server the main checkout's `API_PORT`.
 - The one env exception: an eval of food ramble (`scripts/ramble-lab/`) or photo logging needs a real Gemini key, because your worktree's is a placeholder. Read the single-quoted value after `GEMINI_API_KEY=` in `~/code/a-better-me/server/.env.local` and export it only into the eval or server process. Never write it to a file. Probe it with one request first; a 402 means the credits are depleted, so end with `blocked`.
-- Pre-commit and pre-push already run `scripts/test-changed.ts` for the Bun tests. No hook runs the Swift tests; CI's Swift `tests` job does.
+- Pre-commit already runs `scripts/test-changed.ts` for the Bun tests. No hook runs the Swift tests; CI's Swift `tests` job does.
 
 ## iOS: boot a simulator only to look at the app
 

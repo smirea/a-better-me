@@ -10,7 +10,7 @@ import { dirname, join } from 'node:path';
 import { assertNotBare } from './check-not-bare';
 import { dropGitEnv } from './git-env';
 
-// The hooks run every test through here, so this is where their GIT_* stops (see git-env.ts).
+// Pre-commit runs every test through here, so this is where their GIT_* stops (see git-env.ts).
 dropGitEnv();
 
 const root = realpathSync(join(import.meta.dir, '..'));
