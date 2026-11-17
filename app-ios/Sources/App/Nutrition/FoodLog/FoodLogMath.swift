@@ -9,15 +9,15 @@ struct TimelineRow: Hashable, Identifiable {
     var id: UUID { entry.id }
 }
 
-/// What a logged recipe's tile lists under its totals: names and amounts only, since the tile's totals are the point.
-/// An altered recipe lists its alterations instead of its ingredients.
+/// What a logged recipe's tile lists under its totals: each food's icon and short name, and no amounts or nutrition,
+/// since the tile's totals are the point. An altered recipe lists its alterations instead of its ingredients.
 struct RecipeTileIngredients: Hashable, Sendable {
     struct Line: Hashable, Sendable {
         let name: String
-        let amount: String
+        /// `FoodIcon`'s emoji, resolved once in the query rather than per render.
+        let emoji: String?
+        let source: FoodSource
         var change = IngredientAlteration.Change.kept
-        /// The recipe's amount, for a changed one.
-        var was: String?
     }
 
     let lines: [Line]
@@ -28,12 +28,28 @@ struct RecipeTileIngredients: Hashable, Sendable {
         let lines = lines.map { line in
             switch line.change {
             case .kept: line.name
-            case .changed: "\(line.name) changed from \(line.was ?? "") to \(line.amount)"
+            case .changed: "changed \(line.name)"
             case .removed: "removed \(line.name)"
-            case .added: "added \(line.name), \(line.amount)"
+            case .added: "added \(line.name)"
             }
         }
         return (isAltered ? "Alterations: " : "Ingredients: ") + (lines + (more > 0 ? ["\(more) more"] : [])).joined(separator: ", ")
+    }
+}
+
+/// What a tile line draws for a food, read in one query for a day's tiles: the stored short names by
+/// `FoodShortName.rowID`, and the icons of foods whose snapshot has none (an alteration taken before the model's icon
+/// landed), by food id.
+struct IngredientLabels: Sendable {
+    var shortNames: [String: String] = [:]
+    var icons: [String: String] = [:]
+
+    func line(_ food: FoodSnapshot, change: IngredientAlteration.Change = .kept) -> RecipeTileIngredients.Line {
+        let icon = food.icon ?? food.foodID.flatMap { icons[$0] }
+        return RecipeTileIngredients.Line(
+            name: shortNames[FoodShortName.rowID(for: food)] ?? FoodShortName.fallback(food),
+            emoji: FoodIconChoice.emoji(icon: icon, name: food.name), source: food.source, change: change
+        )
     }
 }
 
@@ -371,26 +387,20 @@ enum FoodLog {
         ingredients(serving, of: recipe).map { FoodPortion($0.food, serving: $0.serving) }
     }
 
-    /// A logged recipe's tile lines at the amounts eaten, the first `limit` of them and how many more there are. An
-    /// unaltered recipe lists its ingredients, most calories first; an altered one lists only what changed, was
-    /// removed, or was added, in the recipe's order with additions last.
-    static func tileIngredients(_ ingredients: [IngredientAlteration], limit: Int = 5) -> RecipeTileIngredients {
+    /// A logged recipe's tile lines, the first `limit` of them and how many more there are. An unaltered recipe lists
+    /// its ingredients, most calories first at the amounts eaten; an altered one lists only what changed, was removed,
+    /// or was added, in the recipe's order with additions last.
+    static func tileIngredients(_ ingredients: [IngredientAlteration], labels: IngredientLabels = IngredientLabels(), limit: Int = 5) -> RecipeTileIngredients {
         let isAltered = ingredients.isAltered
         let lines: [RecipeTileIngredients.Line]
         if isAltered {
             lines = ingredients.compactMap { line in
-                let name = line.food.displayName
-                return switch (line.change, line.original, line.serving) {
-                case let (.changed, original?, eaten?): .init(name: name, amount: NutritionFormat.serving(eaten), change: .changed, was: NutritionFormat.serving(original))
-                case let (.removed, original?, _): .init(name: name, amount: NutritionFormat.serving(original), change: .removed)
-                case let (.added, _, eaten?): .init(name: name, amount: NutritionFormat.serving(eaten), change: .added)
-                default: nil
-                }
+                line.change == .kept ? nil : labels.line(line.food, change: line.change)
             }
         } else {
             lines = ingredients.eaten.enumerated()
                 .sorted { ($1.element.amounts[.energy] ?? 0, $0.offset) < ($0.element.amounts[.energy] ?? 0, $1.offset) }
-                .map { .init(name: $0.element.food.displayName, amount: NutritionFormat.serving($0.element.serving)) }
+                .map { labels.line($0.element.food) }
         }
         return RecipeTileIngredients(lines: Array(lines.prefix(limit)), more: max(lines.count - limit, 0), isAltered: isAltered)
     }

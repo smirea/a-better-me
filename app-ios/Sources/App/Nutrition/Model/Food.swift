@@ -149,8 +149,10 @@ struct FoodSnapshot: Hashable, Codable, Sendable {
 
     func amounts(_ serving: Serving) -> NutrientAmounts { nutrition.nutrients.scaled(by: serving.servings) }
 
+    var displayName: String { Self.displayName(name: name, brand: brand) }
+
     /// "ZZ Test Food By ZZ Brand", as MacroFactor names branded foods.
-    var displayName: String {
+    static func displayName(name: String, brand: String?) -> String {
         guard let brand, !brand.isEmpty else { return name }
         return "\(name) By \(brand)"
     }

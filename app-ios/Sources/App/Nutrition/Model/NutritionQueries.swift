@@ -11,13 +11,14 @@ extension FoodEntry {
 
     /// The tile lines of the day's logged recipes, by entry id. An entry holds a snapshot of its recipe's nutrition,
     /// not its ingredients, so they come from the recipe as it is now, as Explode reads them; a deleted one lists none.
-    /// An altered one lists its own alterations, which need no recipe.
+    /// An altered one lists its own alterations, which need no recipe. Each line takes its food's stored short name,
+    /// so this observation also redraws the tiles when `FoodShortNaming` writes one.
     static func recipeIngredients(on day: CalendarDay) -> DatabaseQuery<[UUID: RecipeTileIngredients]> {
         DatabaseQuery([:]) { db in
             let entries = try FoodEntry.filter(Column("day") == day.description)
                 .filter(sql: "json_extract(food, '$.source') = ?", arguments: [FoodSource.recipe.rawValue]).fetchAll(db)
             var recipes: [String: Recipe] = [:]
-            var ingredients: [UUID: RecipeTileIngredients] = [:]
+            var lists: [(UUID, [IngredientAlteration])] = []
             for entry in entries {
                 var recipe: Recipe?
                 if entry.alterations == nil, let id = entry.food.foodID {
@@ -25,9 +26,19 @@ extension FoodEntry {
                     recipe = recipes[id]
                 }
                 let lines = FoodLog.ingredients(entry.serving, of: entry, recipe: recipe)
-                if !lines.isEmpty { ingredients[entry.id] = FoodLog.tileIngredients(lines) }
+                if !lines.isEmpty { lists.append((entry.id, lines)) }
             }
-            return ingredients
+            let foods = lists.flatMap { $0.1.map(\.food) }
+            var labels = IngredientLabels()
+            for name in try FoodShortName.filter(keys: Set(foods.map { FoodShortName.rowID(for: $0) })).fetchAll(db) {
+                labels.shortNames[name.id] = name.name
+            }
+            let iconless = Set(foods.filter { $0.icon == nil }.compactMap(\.foodID))
+            for row in try Food.select(Column("id"), Column("icon")).filter(keys: iconless).filter(Column("icon") != nil)
+                .asRequest(of: Row.self).fetchAll(db) {
+                labels.icons[row["id"]] = row["icon"]
+            }
+            return Dictionary(uniqueKeysWithValues: lists.map { ($0.0, FoodLog.tileIngredients($0.1, labels: labels)) })
         }
     }
 

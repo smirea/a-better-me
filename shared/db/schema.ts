@@ -328,6 +328,17 @@ const mealNames = sqliteTable('meal_names', {
 	createdAt: text('created_at').notNull(),
 });
 
+/**
+ * The on-device model's one- or two-word name for a food ("Rolled oats"), keyed by a digest of the food's name and
+ * brand (`FoodShortName.rowID`), so every snapshot of a food with that name shares it, whatever its id. A logged
+ * recipe's tile shows it on each ingredient line.
+ */
+const foodShortNames = sqliteTable('food_short_names', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	createdAt: text('created_at').notNull(),
+});
+
 /** The order here is the order of the generated Swift schema and of a snapshot pull. */
 export const SYNCED_TABLES = {
 	workout_templates: workoutTemplates,
@@ -349,6 +360,7 @@ export const SYNCED_TABLES = {
 	nutrition_plans: nutritionPlans,
 	nutrient_goals: nutrientGoals,
 	meal_names: mealNames,
+	food_short_names: foodShortNames,
 } as const;
 
 export type SyncedTable = keyof typeof SYNCED_TABLES;
@@ -482,5 +494,6 @@ export const schema = defineSchema({
 			ceiling: amount,
 		},
 		meal_names: { name: z.string().min(1) },
+		food_short_names: { name: z.string().min(1) },
 	},
 });

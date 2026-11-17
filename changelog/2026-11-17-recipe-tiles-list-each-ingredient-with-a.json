@@ -1,0 +1,10 @@
+{
+	"title": "Recipe tiles list each ingredient with a tiny icon and a short name, without amounts",
+	"description": "The on-device model names each ingredient in one or two words, stored so it stays after a relaunch.",
+	"tasks": [
+		{
+			"id": "fe5effae-f7a4-4f44-b432-e2cae55e0631",
+			"title": "Do not show nutrition for individual items Also use the built in model to create short 1-2 word names for each ingredient that is stored in the db on save and used in these situations instead of truncating. Also show tiny icons for each item"
+		}
+	]
+}

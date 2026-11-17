@@ -497,7 +497,7 @@ private struct EntryRow: View {
             VStack(alignment: .leading, spacing: 6) {
                 FoodRow(food: entry.food, serving: entry.serving, showsDetail: !hidesDetails)
                 if let ingredients {
-                    IngredientLines(ingredients: ingredients, showsAmounts: !hidesDetails)
+                    IngredientLines(ingredients: ingredients)
                         // Under the name, past the 28 pt icon and the row's 12 pt spacing.
                         .padding(.leading, 40)
                 }
@@ -560,32 +560,27 @@ private struct EntryRow: View {
     }
 }
 
-/// A logged recipe's ingredients under its tile's name, one line each with its amount when the width allows, and no
-/// nutrition, since the tile's totals above are what counts. An altered recipe lists its alterations instead: a changed
-/// amount as the recipe's and what was eaten, a removed ingredient struck through, and an added one in green.
+/// A logged recipe's ingredients under its tile's name, one line each: a tiny icon and the food's short name, and no
+/// amount or nutrition, since the tile's totals above are what counts. An altered recipe lists its alterations instead:
+/// a changed ingredient in yellow, a removed one struck through, and an added one in green.
 private struct IngredientLines: View {
     let ingredients: RecipeTileIngredients
-    let showsAmounts: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(Array(ingredients.lines.enumerated()), id: \.offset) { _, line in
-                let color = line.change == .added ? Theme.ratingGreen : Theme.textSecondary
-                ViewThatFits(in: .horizontal) {
-                    if showsAmounts {
-                        HStack(spacing: 8) {
-                            name(line).fixedSize()
-                            Spacer(minLength: 0)
-                            amount(line).fixedSize().monospacedDigit()
-                        }
-                    }
-                    name(line).lineLimit(1)
+                HStack(spacing: 6) {
+                    FoodIcon(emoji: line.emoji, source: line.source, size: 14)
+                    Text(line.change == .added ? "+ \(line.name)" : line.name)
+                        .lineLimit(1)
+                        .strikethrough(line.change == .removed)
                 }
-                .strikethrough(line.change == .removed)
-                .foregroundStyle(color)
+                .foregroundStyle(Self.color(line.change))
             }
             if ingredients.more > 0 {
                 Text("+\(ingredients.more) more")
+                    // Under the names, past the icons.
+                    .padding(.leading, 20)
             }
         }
         .font(AppFont.rowDetail)
@@ -595,12 +590,11 @@ private struct IngredientLines: View {
         .accessibilityLabel(ingredients.spoken)
     }
 
-    private func name(_ line: RecipeTileIngredients.Line) -> Text {
-        line.change == .added ? Text("+ \(line.name)") : Text(line.name)
-    }
-
-    private func amount(_ line: RecipeTileIngredients.Line) -> Text {
-        guard let was = line.was else { return Text(line.amount) }
-        return Text("\(was) → \(line.amount)")
+    private static func color(_ change: IngredientAlteration.Change) -> Color {
+        switch change {
+        case .added: Theme.ratingGreen
+        case .changed: Theme.ratingYellow
+        case .kept, .removed: Theme.textSecondary
+        }
     }
 }
