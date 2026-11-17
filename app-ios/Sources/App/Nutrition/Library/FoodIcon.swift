@@ -133,7 +133,12 @@ struct FoodIcon: View {
     }
 
     init(icon: String?, name: String? = nil, source: FoodSource, size: CGFloat = 28) {
-        emoji = FoodIconChoice.emoji(icon: icon, name: name)
+        self.init(emoji: FoodIconChoice.emoji(icon: icon, name: name), source: source, size: size)
+    }
+
+    /// An emoji already resolved by `FoodIconChoice.emoji`, for a row that resolves it once outside `body`.
+    init(emoji: String?, source: FoodSource, size: CGFloat = 28) {
+        self.emoji = emoji
         self.source = source
         self.size = size
     }

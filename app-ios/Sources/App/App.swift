@@ -36,6 +36,7 @@ struct BetterMeApp: App {
         WorkoutHealth.shared.start(store: store, catalog: catalog)
         NutritionHealth.shared.start(store: store)
         FoodIconInference.shared.start(store: store)
+        FoodShortNaming.shared.start(store: store)
         WidgetPublisher.shared.start(store: store, health: health)
         QuickActionInbox.shared.install()
         Feedback.enable()

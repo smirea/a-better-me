@@ -219,7 +219,7 @@ struct FoodLogMathTests {
         #expect(half.map { FoodEntry($0, day: monday, minute: 0) }.totals[.energy]?.rounded() == 306)
     }
 
-    @Test func aLoggedRecipesTileListsFiveIngredientsByCaloriesAtTheAmountEaten() {
+    @Test func aLoggedRecipesTileListsFiveIngredientsByCaloriesEaten() {
         func food(_ name: String, _ energy: Double) -> FoodSnapshot {
             FoodSnapshot(source: .custom, name: name, nutrition: FoodNutrition(nutrients: [.energy: energy], measures: [Measure(name: "g", quantity: 100, servings: 1)]))
         }
@@ -230,10 +230,7 @@ struct FoodLogMathTests {
         let entry = FoodEntry(FoodPortion(recipe.snapshot, serving: Serving(measure: recipe.nutrition.measures[0], quantity: 1)), day: monday, minute: 0)
         let ingredients = FoodLog.ingredients(entry.serving, of: entry, recipe: recipe)
         let tile = FoodLog.tileIngredients(ingredients)
-        #expect(tile.lines == [
-            .init(name: "Granola", amount: "40 g"), .init(name: "Chia", amount: "10 g"), .init(name: "Milk", amount: "100 g"),
-            .init(name: "Honey", amount: "10 g"), .init(name: "Blueberries", amount: "50 g"),
-        ])
+        #expect(tile.lines.map(\.name) == ["Granola", "Chia", "Milk", "Honey", "Blueberries"])
         #expect(tile.more == 1)
         #expect(!tile.isAltered)
         #expect(FoodLog.tileIngredients(ingredients, limit: 6).more == 0)

@@ -29,8 +29,7 @@ struct MealComponents: Hashable, Sendable {
     static func fallbackName(_ portions: [FoodPortion]) -> String {
         var calories: [String: (name: String, energy: Double)] = [:]
         for portion in portions where portion.food.source != .quickAdd {
-            let name = (portion.food.name.split(separator: ",", maxSplits: 1).first.map(String.init) ?? portion.food.name)
-                .trimmingCharacters(in: .whitespaces)
+            let name = FoodShortName.fallback(portion.food)
             calories[name.lowercased(), default: (name, 0)].energy += portion.amounts[.energy] ?? 0
         }
         let top = calories.values.sorted { ($0.energy, $1.name) > ($1.energy, $0.name) }.prefix(2).map(\.name)

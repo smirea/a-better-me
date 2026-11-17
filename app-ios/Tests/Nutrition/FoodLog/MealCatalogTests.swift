@@ -137,7 +137,7 @@ struct MealCatalogTests {
         #expect(catalog.index.line(for: meal, fallback: "") == .saved(.init(id: recipe.id, name: "Yogurt Granola Bowl"), count: 1))
         #expect(state.notice?.message == "Replaced 3 foods with Yogurt Granola Bowl")
         let lines = try #require(try store.readBlocking(FoodEntry.recipeIngredients(on: monday).fetch)[replaced[0].id]).lines
-        #expect(lines.first == .init(name: "Yogurt", amount: "2 container"))
+        #expect(lines.first?.name == "Yogurt")
         #expect(Set(lines.dropFirst().map(\.name)) == ["Granola", "Oat milk"])
 
         state.undo(in: store)
