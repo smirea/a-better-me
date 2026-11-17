@@ -25,7 +25,8 @@ struct MealComponents: Hashable, Sendable {
     }
 
     /// The meal line's name until the model's lands, and for good where the model can't run: the two foods with the
-    /// most calories, each up to its first comma, so USDA's "Beef, top sirloin, steak" reads "Beef and Potatoes".
+    /// most calories, each as an ingredient line's fallback (`FoodShortName.fallback`), so USDA's "Beef, top sirloin,
+    /// steak" reads "Beef and Potatoes".
     static func fallbackName(_ portions: [FoodPortion]) -> String {
         var calories: [String: (name: String, energy: Double)] = [:]
         for portion in portions where portion.food.source != .quickAdd {
@@ -42,9 +43,13 @@ struct MealComponents: Hashable, Sendable {
 /// the owner ever creates it; nothing but the Food Log's meal line reads it, so a suggestion never shows in search.
 struct MealName: SyncedRecord {
     static let table = "meal_names"
+    /// The instructions `OnDeviceMealNameModel` names meals with. A name an older version wrote still shows, and the
+    /// meal is asked again when a page shows it: version 1 often named a meal after one of its foods.
+    static let version = 2
 
     var id: String
     var name: String
+    var version = Self.version
     var createdAt = Date.now
 
     init(id: String, name: String) {
@@ -55,12 +60,14 @@ struct MealName: SyncedRecord {
     init(row: Row) throws {
         id = row["id"]
         name = row["name"]
+        version = row["version"] ?? 1
         createdAt = try row.instant("created_at")
     }
 
     func encode(to container: inout PersistenceContainer) throws {
         container["id"] = id
         container["name"] = name
+        container["version"] = version
         container["created_at"] = Instant.text(createdAt)
     }
 }

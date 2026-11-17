@@ -72,9 +72,11 @@ struct FoodShortNamesTests {
         naming.start(store: store)
         await naming.idle()
 
-        // Honey is short already; the kefir's three words are no short name, so its line keeps the fallback.
+        // Honey is short already; the kefir's three words are cut to two rather than dropped.
         #expect(Set(model.asked) == [oats.displayName, "Pepper, banana, raw", kefir.displayName])
-        #expect(try stored() == [FoodShortName.rowID(for: oats): "Rolled oats", FoodShortName.rowID(for: pepper): "Banana pepper"])
+        #expect(try stored() == [
+            FoodShortName.rowID(for: oats): "Rolled oats", FoodShortName.rowID(for: pepper): "Banana pepper", FoodShortName.rowID(for: kefir): "Kefir milk",
+        ])
 
         store.saveRecipe(recipe("Kefir oats", [oats, kefir, food("Chia seeds, dried", energy: 490)]))
         await naming.idle()
@@ -82,7 +84,7 @@ struct FoodShortNamesTests {
         #expect(model.asked.last == "Chia seeds, dried")
     }
 
-    @Test func withoutTheModelNothingIsAskedAndTheLinesShowTheNameBeforeItsFirstComma() async throws {
+    @Test func withoutTheModelNothingIsAskedAndTheLinesShowTwoWordsOfTheName() async throws {
         let bowl = recipe("Oat bowl", [oats, pepper])
         store.saveRecipe(bowl)
         store.log([FoodPortion(bowl.snapshot)], on: monday, minute: 8 * 60)
@@ -94,7 +96,7 @@ struct FoodShortNamesTests {
         #expect(model.asked.isEmpty)
         #expect(try stored().isEmpty)
         let tile = try #require(try store.readBlocking(FoodEntry.recipeIngredients(on: monday).fetch).values.first)
-        #expect(tile.lines.map(\.name) == ["Organic Old-Fashioned Rolled Oats", "Pepper"])
+        #expect(tile.lines.map(\.name) == ["Rolled Oats", "Pepper"])
     }
 
     @Test func theTileShowsTheStoredShortNameAndTheFoodsIconWhereTheSnapshotHasNone() async throws {
@@ -119,7 +121,7 @@ struct FoodShortNamesTests {
     @Test func aShortNameIsOneOrTwoWordsInSentenceCase() {
         #expect(FoodShortName.cleaned("chia seeds") == "Chia seeds")
         #expect(FoodShortName.cleaned(" \"Coke Zero\". ") == "Coke Zero")
-        #expect(FoodShortName.cleaned("Mixed Berry Yogurt") == nil)
+        #expect(FoodShortName.cleaned("Mixed Berry Yogurt") == "Berry Yogurt")
         #expect(FoodShortName.cleaned("  ") == nil)
         #expect(!FoodShortName.needsModel("Whey Protein"))
         #expect(FoodShortName.needsModel("Bananas, raw"))

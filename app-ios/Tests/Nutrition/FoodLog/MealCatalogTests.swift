@@ -182,17 +182,43 @@ struct MealCatalogTests {
         #expect(catalog.index.line(for: meal, fallback: "Granola and Yogurt") == .suggested("Granola and Yogurt"))
     }
 
-    /// The real model on the owner's breakfast, when this simulator or device can run it (CI's simulators can't).
-    /// A CI runner once reported the model available and then failed to load its assets (ModelManagerError 1026), so
-    /// a load failure from the framework is a known, intermittent issue of the machine rather than of the naming.
+    /// The real model on meals as the owner logs them, the first two from the owner's log on 2026-11-17, when this
+    /// simulator or device can run it (CI's simulators can't). A CI runner once reported the model available and then
+    /// failed to load its assets (ModelManagerError 1026), so a load failure from the framework is a known,
+    /// intermittent issue of the machine rather than of the naming.
     @Test(.enabled(if: SystemLanguageModel.default.isAvailable))
-    func theOnDeviceModelNamesAMealInAFewWords() async throws {
+    func theOnDeviceModelNamesEachMealFromTwoOfItsFoods() async throws {
+        let meals: [[String]] = [
+            ["Pomegranate Arils By POM Wonderful, 70 g", "Matcha Granola Bowl, 1 serving (129 g)"],
+            ["Rotini By Carbe Diem!, 56 g", "Pasta sauce, 1 serving (292 g)"],
+            ["Chicken, broilers or fryers, breast, meat only, cooked, roasted, 150 g", "Rice, white, long-grain, regular, enriched, cooked, 1 cup", "Broccoli, raw, 100 g"],
+            ["Yogurt, Greek, plain, nonfat, 200 g", "Blueberries By Fruitist Jumbo, 0.5 cup", "Homemade Granola, 45 g", "Syrups, maple, 1 tbsp"],
+            ["Egg, Whole, Raw, 2 large", "Sourdough Bread, 1 slice", "Avocados, raw, all commercial varieties, 0.5 avocado"],
+            ["Whey Protein By Optimum Nutrition, 1 scoop", "Bananas, raw, 1 medium", "Milk, reduced fat, fluid, 2% milkfat, 1 cup"],
+            ["Salmon, Atlantic, farmed, cooked, dry heat, 150 g", "Sweet potato, cooked, baked in skin, flesh, without salt, 1 medium", "Spinach, raw, 50 g"],
+            ["Bagels, plain, enriched, 1 bagel", "Cream cheese, 2 tbsp", "Salmon, smoked, 50 g"],
+            ["Matcha latte, 1 cup", "Whole milk, 120 ml", "Oat milk, 100 ml", "Granola, 45 g", "Chia seeds, 1 tbsp", "Blueberries, 0.5 cup"],
+            ["Ground turkey, 93% lean, 7% fat, pan-broiled crumbles, 150 g", "Tortillas, ready-to-bake or -fry, flour, 2 tortilla", "Cheese, cheddar, 30 g"],
+            ["Coca-Cola Zero Sugar, 1 can", "Quest Protein Bar Cookies & Cream, 1 bar"],
+            ["Oatmeal Bowl, 1 serving (350 g)", "Cold Brew with Oat Milk By Chamberlain, 1 bottle"],
+            ["Protein Boost Fusilli no. 34 By De Cecco, 85 g", "Hamburger or Ground Beef, 120 g", "San Marzano Tomatoes, 200 g"],
+            ["Peanut butter, smooth style, with salt, 2 tbsp", "Dave's Killer Bread 21 Whole Grains and Seeds, 2 slices", "Bananas, raw, 1 medium"],
+        ]
         try await withKnownIssue("The on-device model can be listed before its assets load", isIntermittent: true) {
-            let name = MealCatalog.cleaned(try await OnDeviceMealNameModel().name(for: [
-                "Matcha latte, 1 cup", "Whole milk, 120 ml", "Oat milk, 100 ml", "Granola, 45 g", "Chia seeds, 1 tbsp", "Blueberries, 0.5 cup",
-            ]))
-            print("Named the breakfast \(name)")
-            #expect((1...5).contains(name.split(separator: " ").count))
+            var names: [String] = []
+            var fromOne: [String] = []
+            for foods in meals {
+                let name = MealCatalog.cleaned(try await OnDeviceMealNameModel().name(for: foods))
+                names.append(name)
+                // Each line without its amount, the part after the last comma.
+                let mentioned = foods.filter { MealCatalog.mentions(name, String($0[..<($0.lastIndex(of: ",") ?? $0.endIndex)])) }
+                if mentioned.count < 2 { fromOne.append(name) }
+                #expect((2...6).contains(name.split(separator: " ").count), "\(name)")
+            }
+            // On macOS 27's model (2026-11-17) every name came from two foods, and three said so in other words, which
+            // a shared word can't see: "Pasta and Sauce" for rotini, "Soda and Cookies", and "Beef and Pasta" for
+            // fusilli. Version 1's instructions shared a word with two foods in 7 of the 14.
+            #expect(fromOne.count <= 3, "Named from one food by shared words: \(fromOne); all: \(names)")
         } matching: { issue in
             (issue.error as NSError?)?.domain == "FoundationModels.LanguageModelError"
         }

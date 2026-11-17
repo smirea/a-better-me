@@ -20,6 +20,8 @@ struct MealIndex: Equatable, Sendable {
 
     var recipes: [String: SavedRecipe] = [:]
     var names: [String: String] = [:]
+    /// Meals whose stored name older instructions wrote (`MealName.version`), which are asked again.
+    var stale: Set<String> = []
     /// The meal sections holding exactly the meal's foods, on any day, plus the entries of the recipe it was saved as.
     var counts: [String: Int] = [:]
 
@@ -71,11 +73,17 @@ struct MealIndex: Equatable, Sendable {
             index.counts[hash, default: 0] += recipeEntries[recipe.id.uuidString.lowercased(), default: 0]
         }
 
-        for row in try Row.fetchAll(db, sql: "SELECT id, name FROM meal_names") {
+        for row in try Row.fetchAll(db, sql: "SELECT id, name, version FROM meal_names") {
             index.names[row["id"]] = row["name"]
+            if (row["version"] as Int? ?? 1) < MealName.version { index.stale.insert(row["id"]) }
         }
         return index
     }
+}
+
+extension MealIndex {
+    /// Whether the model should name the meal: it has no stored name, or older instructions wrote the one it has.
+    func needsName(_ hash: String) -> Bool { names[hash] == nil || stale.contains(hash) }
 }
 
 /// Names a meal from its foods and their servings, one "name, amount" line each.
@@ -95,19 +103,30 @@ struct OnDeviceMealNameModel: MealNameModel {
     func name(for foods: [String]) async throws -> String {
         let session = LanguageModelSession(model: model, instructions: Self.instructions)
         let prompt = "Foods:\n" + foods.map { "- \($0)" }.joined(separator: "\n")
-        return try await session.respond(to: prompt, generating: MealTitle.self, options: GenerationOptions(samplingMode: .greedy)).content.name
+        let title = try await session.respond(to: prompt, generating: MealTitle.self, options: GenerationOptions(samplingMode: .greedy)).content
+        return MealCatalog.titled(title.name, from: title.foods)
     }
 
+    /// The owner wants every name drawn from at least two of the meal's foods. Version 1's instructions, whose example
+    /// was "Matcha Granola Bowl", gave 7 of 14 real meals a name sharing a word with two of their foods, and the phone
+    /// named the owner's breakfast after its recipe alone. These name all 14 from two foods on macOS 27's model
+    /// (2026-11-17), "Granola and Pomegranate" or "Pasta and Sauce" for rotini with pasta sauce. Model versions differ,
+    /// so the model also picks the two foods before the name (`MealTitle.foods`), and `MealCatalog.titled` holds the
+    /// name to them.
     private static let instructions = """
-        You name meals in a food log. Given the foods eaten together and their amounts, answer the short name a \
-        person would call the meal, naming the dish or its main foods rather than listing every one, such as \
-        "Matcha Granola Bowl" or "Chicken and Rice". Use two to four words. No brands or amounts.
+        You name meals in a food log. Given the foods eaten together and their amounts, first pick the two foods \
+        that make up most of the meal and call each what a person would. Then name the meal from both of them, as a \
+        person would say it, such as "Chicken and Rice", "Bagel and Cream Cheese", "Peanut Butter Banana Toast", or \
+        "Granola Bowl with Pomegranate". No brands or amounts.
         """
 }
 
+/// Generated in order, so the model commits to two foods before it writes the name.
 @Generable
 private struct MealTitle {
-    @Guide(description: "The meal's name, two to four words in title case")
+    @Guide(description: "The two foods that make up most of the meal, each as a person calls it in one or two words", .count(2))
+    var foods: [String]
+    @Guide(description: "The meal's name in two to five words, title case, naming both foods")
     var name: String
 }
 
@@ -150,7 +169,7 @@ final class MealCatalog {
 
     /// Asks for a name for a meal shown without one: `entries` are its foods as logged, whose servings the model reads.
     func suggest(_ meal: MealComponents, from entries: [FoodEntry]) {
-        guard model.isAvailable, !asked.contains(meal.hash), index.names[meal.hash] == nil else { return }
+        guard model.isAvailable, !asked.contains(meal.hash), index.needsName(meal.hash) else { return }
         wanted[meal.hash] = entries.filter { $0.food.source != .quickAdd }.map {
             "\($0.food.displayName), \(NutritionFormat.serving($0.serving, of: $0.food))"
         }
@@ -175,7 +194,7 @@ final class MealCatalog {
     private func askWanted() {
         for (hash, foods) in wanted where index.recipes[hash] == nil {
             wanted[hash] = nil
-            guard index.names[hash] == nil, !asked.contains(hash) else { continue }
+            guard index.needsName(hash), !asked.contains(hash) else { continue }
             asked.insert(hash)
             queue.append((hash, foods))
         }
@@ -194,8 +213,8 @@ final class MealCatalog {
             let name = Self.cleaned(try await model.name(for: foods))
             guard !name.isEmpty else { return Self.log.error("The model named a meal with nothing") }
             try await store?.write { db in
-                guard try !MealName.exists(db, key: hash) else { return }
-                try MealName(id: hash, name: name).insert(db)
+                if let stored = try MealName.fetchOne(db, key: hash), stored.version >= MealName.version { return }
+                try MealName(id: hash, name: name).save(db)
             }.value
         } catch {
             Self.log.error("Naming a meal failed: \(String(describing: error))")
@@ -206,5 +225,31 @@ final class MealCatalog {
     nonisolated static func cleaned(_ name: String) -> String {
         name.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "\"'“”.")))
             .split(whereSeparator: \.isWhitespace).joined(separator: " ")
+    }
+
+    /// The model's name when it mentions both foods it picked, else the two picks joined, "Granola and Pomegranate",
+    /// so a name never comes from one food.
+    nonisolated static func titled(_ name: String, from foods: [String]) -> String {
+        let picks = foods.map(cleaned).filter { !$0.isEmpty }
+        guard picks.count >= 2 else { return name }
+        return picks.allSatisfy { mentions(name, $0) } ? name : picks.prefix(2).joined(separator: " and ")
+    }
+
+    /// Whether `name` shares a word with `food`: one contains the other once plurals are singular, or they start with
+    /// the same four letters, so "Berry" mentions "Blueberries" and "Tortilla" mentions "Tortillas".
+    nonisolated static func mentions(_ name: String, _ food: String) -> Bool {
+        let named = words(name)
+        return words(food).contains { word in
+            named.contains { $0.contains(word) || word.contains($0) || $0.commonPrefix(with: word).count >= 4 }
+        }
+    }
+
+    private nonisolated static let connectives: Set<String> = ["and", "with", "the", "plus"]
+
+    private nonisolated static func words(_ text: String) -> [String] {
+        text.lowercased().split { !$0.isLetter }.map(String.init).filter { $0.count >= 3 && !connectives.contains($0) }.map { word in
+            if word.hasSuffix("ies") { return word.dropLast(3) + "y" }
+            return word.hasSuffix("s") && word.count > 3 ? String(word.dropLast()) : word
+        }
     }
 }

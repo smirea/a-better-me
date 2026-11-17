@@ -40,11 +40,31 @@ struct FoodShortName: SyncedRecord {
 
     static func rowID(for food: FoodSnapshot) -> String { rowID(name: food.name, brand: food.brand) }
 
-    /// What a line shows until the model's name lands, and for good where the model can't run: the name up to its
-    /// first comma, without the brand, so USDA's "Pepper, banana, raw" reads "Pepper".
+    /// What a line shows until the model's name lands, and for good where the model can't run: the name without the
+    /// brand, up to its first comma, cut to two words (`shortened`), so USDA's "Pepper, banana, raw" reads "Pepper" and
+    /// "Organic Kefir cultured lowfat milk" reads "Kefir milk".
     static func fallback(_ food: FoodSnapshot) -> String {
         let lead = food.name.split(separator: ",", maxSplits: 1).first.map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
-        return lead.isEmpty ? food.name : lead
+        return shortened(lead.isEmpty ? food.name : lead)
+    }
+
+    /// How a food is sold or prepared rather than what it is, which a short name leaves out.
+    private static let descriptors: Set<String> = [
+        "organic", "raw", "cooked", "plain", "fresh", "natural", "original", "classic", "unsweetened", "sweetened",
+        "lowfat", "low-fat", "nonfat", "non-fat", "fat-free", "reduced-fat", "cultured", "grass-fed", "old-fashioned",
+        "whole", "premium", "homemade", "frozen", "free-range", "pasture-raised", "wild-caught", "extra", "virgin",
+        "unsalted", "salted", "no.", "and", "&", "'n",
+    ]
+
+    /// At most two words of `text`: what comes before "with", "or", "in", or "from", without the descriptors or
+    /// numbers, then the last two words, where English puts the food ("Old-Fashioned Rolled Oats" is "Rolled Oats").
+    /// Measured on the 55 names of `FoodShortNamesTests`, the last two words match a person's name for the food more
+    /// often than the first two, which tend to be a brand ("Nature Valley").
+    static func shortened(_ text: String) -> String {
+        let lead = text.split(separator: /\s+(?i:with|or|in|from)\s+/, maxSplits: 1).first.map(String.init) ?? text
+        let words = lead.split(whereSeparator: \.isWhitespace)
+        let kept = words.filter { !descriptors.contains($0.lowercased()) && !$0.contains(where: \.isNumber) && $0.contains(where: \.isLetter) }
+        return (kept.isEmpty ? words : kept).suffix(2).joined(separator: " ")
     }
 
     /// A name of one or two words and no comma is short already, so the model is never asked about it.
@@ -52,12 +72,14 @@ struct FoodShortName: SyncedRecord {
         name.contains(",") || name.split(whereSeparator: \.isWhitespace).count > 2
     }
 
-    /// The answer as a line shows it, sentence case, or nil when it isn't one or two words.
+    /// The answer as a line shows it, in sentence case and cut to two words (`shortened`), or nil when it is empty.
+    /// With greedy sampling the model gives the same answer every launch, so dropping a long one would leave the food
+    /// on its fallback for good.
     static func cleaned(_ answer: String) -> String? {
-        let words = answer.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "\"'“”.")))
-            .split(whereSeparator: \.isWhitespace)
-        guard (1...2).contains(words.count) else { return nil }
-        let name = words.joined(separator: " ")
+        let trimmed = answer.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "\"'“”.")))
+        let words = trimmed.split(whereSeparator: \.isWhitespace)
+        guard !words.isEmpty else { return nil }
+        let name = words.count > 2 ? shortened(trimmed) : words.joined(separator: " ")
         return name.prefix(1).uppercased() + name.dropFirst()
     }
 }
@@ -70,7 +92,7 @@ protocol FoodShortNameModel: Sendable {
 }
 
 /// Apple's on-device general model with greedy sampling, as `OnDeviceFoodIconModel` uses it. A regex guide limiting
-/// the answer to two words fails with UnsupportedGuide, so `FoodShortName.cleaned` drops a longer one instead. The
+/// the answer to two words fails with UnsupportedGuide, so `FoodShortName.cleaned` cuts a longer one instead. The
 /// instructions are the best of eight measured on 55 names (`FoodShortNamesTests`): an example kind such as "sourdough
 /// bread" made the model name other breads sourdough, and "in words from its name" stopped it inventing kinds.
 struct OnDeviceFoodShortNameModel: FoodShortNameModel {
@@ -144,15 +166,18 @@ final class FoodShortNaming {
         try? await store.write { _ in }.value
     }
 
-    /// The newest recipes' ingredients first, so a recipe just saved is named before an old backlog.
+    /// The recipes saved or logged last first, so a recipe just saved, or on today's log, is named before an old backlog.
+    /// A day ("2026-11-17") sorts with the instants ("2026-11-17T08:00:00.000Z") as the start of that day.
     nonisolated static let candidates: @Sendable (Database) throws -> [Candidate] = { db in
         let named = try Set(String.fetchAll(db, sql: "SELECT id FROM food_short_names"))
         let rows = try Row.fetchAll(db, sql: """
             SELECT json_extract(i.value, '$.food.name') AS name, json_extract(i.value, '$.food.brand') AS brand
-            FROM (SELECT ingredients AS foods, updated_at FROM recipes
-                  UNION ALL SELECT alterations, updated_at FROM food_entries WHERE alterations IS NOT NULL) AS lists,
+            FROM (SELECT r.ingredients AS foods, max(r.updated_at, coalesce(logged.day, '')) AS recency FROM recipes r
+                  LEFT JOIN (SELECT lower(json_extract(food, '$.foodID')) AS id, max(day) AS day FROM food_entries
+                             WHERE json_extract(food, '$.source') = 'recipe' GROUP BY 1) AS logged ON logged.id = lower(r.id)
+                  UNION ALL SELECT alterations, max(updated_at, day) FROM food_entries WHERE alterations IS NOT NULL) AS lists,
                  json_each(lists.foods) AS i
-            ORDER BY lists.updated_at DESC
+            ORDER BY lists.recency DESC
             """)
         var seen: Set<String> = []
         return rows.compactMap { row in
@@ -183,9 +208,7 @@ final class FoodShortNaming {
     private func name(_ candidate: Candidate) async {
         do {
             let answer = try await model.shortName(for: candidate.food)
-            guard let name = FoodShortName.cleaned(answer) else {
-                return Self.log.error("The model's short name \(answer, privacy: .public) is not one or two words")
-            }
+            guard let name = FoodShortName.cleaned(answer) else { return Self.log.error("The model gave a food no short name") }
             try await store?.write { db in
                 guard try !FoodShortName.exists(db, key: candidate.key) else { return }
                 try FoodShortName(id: candidate.key, name: name).insert(db)
