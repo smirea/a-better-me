@@ -3,7 +3,8 @@ import GRDB
 import UIKit
 
 /// The dev seed's (`DevSeed`) supplements: a stack being taken at different times and days, one still to start, and
-/// two stopped, so the Food Log's row, the library's sections, and a page's history all have something to show.
+/// two stopped, one of them eight times over, so the Food Log's row, the library's sections, and a page's truncated
+/// history all have something to show.
 /// Pictures are drawn here; one has none, for the letter placeholder.
 enum SupplementSeed {
     private static func component(_ name: String, _ amount: Double? = nil, _ unit: String? = nil) -> Supplement.Component {
@@ -43,7 +44,8 @@ enum SupplementSeed {
              [regimen(from: -150, to: -40, .evening, today: today)], ""),
             ("vitamin-c", "Vitamin C", "Nature Made", .init(quantity: 1, unit: "tablet"), .systemRed,
              [component("Vitamin C", 500, "mg")],
-             [regimen(from: -300, to: -240, today: today), regimen(from: -100, to: -70, count: 2, today: today)], ""),
+             // Taken for three weeks out of every six, so its History is long enough to truncate.
+             (0..<8).reversed().map { regimen(from: -70 - $0 * 42, to: -50 - $0 * 42, count: $0 % 2 == 0 ? 2 : 1, today: today) }, "Only through cold season."),
         ]
         for (index, row) in rows.enumerated() {
             var supplement = Supplement(name: row.name)

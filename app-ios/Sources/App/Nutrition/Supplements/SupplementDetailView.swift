@@ -80,21 +80,22 @@ struct SupplementDetailView: View {
                     }
                 }
             }
-            let past = supplement.regimens.enumerated().filter { $0.offset != current }.reversed()
-            if !past.isEmpty {
-                ThemedSection("History") {
-                    ForEach(Array(past), id: \.offset) { _, regimen in
-                        RowLabel(
-                            title: StrategyFormat.range(regimen.start, regimen.end),
-                            detail: SupplementFormat.schedule(regimen, of: supplement.serving)
-                        )
-                    }
-                }
-            }
             if !supplement.note.isEmpty {
                 ThemedSection("Notes") {
                     Text(supplement.note).font(AppFont.body(15))
                 }
+            }
+            let past = PastRegimen.all(of: supplement, except: current)
+            if !past.isEmpty {
+                Section {
+                    TruncatedList("History", items: past, inList: true) { item in
+                        PastRegimenRow(item: item, serving: supplement.serving).padding(.horizontal, 16).padding(.vertical, 10)
+                    } destination: {
+                        SupplementHistoryView(supplementID: supplement.id)
+                    }
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
             }
         }
         .themedList()
@@ -109,5 +110,49 @@ struct SupplementDetailView: View {
         } message: {
             Text("Are you sure you want to delete \(supplement.name)? It leaves every day it was on. This action cannot be undone.")
         }
+    }
+}
+
+/// A regimen that is over, newest first: every one but the current.
+private struct PastRegimen: Identifiable, Hashable {
+    let id: Int
+    let regimen: SupplementRegimen
+
+    static func all(of supplement: Supplement, except current: Int?) -> [PastRegimen] {
+        supplement.regimens.enumerated().filter { $0.offset != current }.reversed().map { PastRegimen(id: $0.offset, regimen: $0.element) }
+    }
+}
+
+private struct PastRegimenRow: View {
+    let item: PastRegimen
+    let serving: Supplement.Serving
+
+    var body: some View {
+        RowLabel(title: StrategyFormat.range(item.regimen.start, item.regimen.end), detail: SupplementFormat.schedule(item.regimen, of: serving))
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Every past regimen of a supplement, pushed by History's See All.
+private struct SupplementHistoryView: View {
+    @Observe private var supplement: Supplement?
+
+    init(supplementID: UUID) {
+        _supplement = Observe(Supplement.one(supplementID))
+    }
+
+    var body: some View {
+        List {
+            if let supplement {
+                ThemedSection {
+                    ForEach(PastRegimen.all(of: supplement, except: supplement.currentRegimen(on: .today))) {
+                        PastRegimenRow(item: $0, serving: supplement.serving)
+                    }
+                }
+            }
+        }
+        .themedList()
+        .detailTitle("History", subtitle: supplement?.name)
+        .feedback(self)
     }
 }

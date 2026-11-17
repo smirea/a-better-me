@@ -11,13 +11,17 @@ struct TruncatedList<Item: Identifiable, Row: View, Destination: View>: View {
     let items: [Item]
     @ViewBuilder let row: (Item) -> Row
     @ViewBuilder let destination: () -> Destination
+    /// Set inside a `Form` or `List`, where the section is one clear cell: the title takes a list section's size and
+    /// inset, so it lines up with the `ThemedSection`s around it and clears the cell's rounded corner.
+    private let inList: Bool
     /// Feedback names the call site, since this file says nothing about which list it is.
     private let source: (file: String, line: Int)
 
     init(
-        _ title: String, items: [Item], @ViewBuilder row: @escaping (Item) -> Row, @ViewBuilder destination: @escaping () -> Destination,
-        file: String = #fileID, line: Int = #line
+        _ title: String, items: [Item], inList: Bool = false, @ViewBuilder row: @escaping (Item) -> Row,
+        @ViewBuilder destination: @escaping () -> Destination, file: String = #fileID, line: Int = #line
     ) {
+        self.inList = inList
         self.title = title
         self.items = items
         self.row = row
@@ -29,11 +33,15 @@ struct TruncatedList<Item: Identifiable, Row: View, Destination: View>: View {
         let shown = Int(Self.visibleRows.rounded(.up))
         let truncated = items.count > shown
         VStack(alignment: .leading, spacing: 10) {
-            SectionHeader(title) {
-                if truncated {
-                    NavigationLink("See All \(items.count)", destination: destination)
-                        .accessibilityLabel("See All \(title)")
+            if inList {
+                HStack(spacing: 12) {
+                    SectionTitle(title)
+                    Spacer()
+                    seeAll(truncated).font(AppFont.rowTitle).underline().foregroundStyle(Theme.textPrimary)
                 }
+                .padding(.horizontal, 16)
+            } else {
+                SectionHeader(title) { seeAll(truncated) }
             }
             PeekStack(visibleRows: truncated ? Self.visibleRows : nil) {
                 ForEach(Array(items.prefix(shown).enumerated()), id: \.element.id) { index, item in
@@ -49,6 +57,14 @@ struct TruncatedList<Item: Identifiable, Row: View, Destination: View>: View {
             .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
         }
         .feedback(title, data: "\(items.count) rows", file: source.file, line: source.line)
+    }
+
+    @ViewBuilder
+    private func seeAll(_ truncated: Bool) -> some View {
+        if truncated {
+            NavigationLink("See All \(items.count)", destination: destination)
+                .accessibilityLabel("See All \(title)")
+        }
     }
 }
 

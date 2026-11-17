@@ -4,6 +4,7 @@ import SwiftUI
 
 /// A supplement's picture filling the square it is given, or the first letter of its name without one. The JPEG is read
 /// from `supplement_images` and decoded off main at the drawn pixel size; a cached decode shows in the first frame.
+/// A sync can deliver the supplement a page before its picture, so the read waits for the row instead of giving up.
 struct SupplementPicture: View {
     let id: UUID
     let imageAt: Date?
@@ -50,9 +51,8 @@ struct SupplementPicture: View {
             .onGeometryChange(for: CGFloat.self) { min($0.size.width, $0.size.height) } action: { side = $0 }
             .task(id: request) {
                 guard let request, SupplementPictures.cached(request) == nil else { return }
-                let key = Supplement.key(request.id)
-                let text = try? await store.read { try String.fetchOne($0, sql: "SELECT jpeg FROM supplement_images WHERE id = ?", arguments: [key]) }
-                guard let text, let image = await SupplementPictures.decode(base64: text, pixels: request.pixels) else { return }
+                guard let text = await SupplementPictures.jpeg(of: request.id, in: store.database.pool),
+                      let image = await SupplementPictures.decode(base64: text, pixels: request.pixels) else { return }
                 SupplementPictures.store(image, for: request)
                 loaded = (request.version, image)
             }
@@ -93,6 +93,23 @@ enum SupplementPictures {
         let cost = image.cgImage.map { $0.bytesPerRow * $0.height } ?? 0
         bySize.setObject(image, forKey: request.cacheKey as NSString, cost: cost)
         byVersion.setObject(image, forKey: request.version as NSString, cost: cost)
+    }
+
+    /// The picture's base64 once its row is there, which a sync may deliver after the supplement. Nil when the wait
+    /// is cancelled or the read fails.
+    @concurrent nonisolated static func jpeg(of id: UUID, in pool: DatabasePool) async -> String? {
+        let key = Supplement.key(id)
+        let rows = ValueObservation.tracking {
+            try String.fetchOne($0, sql: "SELECT jpeg FROM supplement_images WHERE id = ?", arguments: [key])
+        }
+        do {
+            for try await text in rows.values(in: pool) {
+                if let text { return text }
+            }
+        } catch {
+            LocalStore.log.error("Reading a supplement picture failed: \(String(describing: error))")
+        }
+        return nil
     }
 
     /// A bitmap whose short side covers a `pixels` square, so filling it never upsamples or decodes on main.
