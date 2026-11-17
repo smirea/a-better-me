@@ -101,8 +101,7 @@ struct FoodShortNamesTests {
         var fusilli = Food(.openFoodFacts(barcode: "1"), name: "Protein Boost Fusilli no. 34", brand: "De Cecco", nutrition: oats.nutrition)
         fusilli.icon = "pasta"
         store.saveFood(fusilli)
-        var added = fusilli.snapshot
-        added.icon = nil
+        let added = FoodSnapshot(foodID: fusilli.id, source: .openFoodFacts, name: fusilli.name, brand: fusilli.brand, nutrition: fusilli.nutrition)
         let bowl = recipe("Oat bowl", [oats, honey])
         store.saveRecipe(bowl)
         let entry = FoodEntry(FoodPortion(bowl.snapshot), day: monday, minute: 8 * 60)
@@ -128,7 +127,7 @@ struct FoodShortNamesTests {
     }
 
     /// The real model on food names as the owner logs them, when this simulator or device can run it (CI's simulators
-    /// can't). The first 36 shaped the instructions; the last 20 were held out.
+    /// can't). The first 35 shaped the instructions; the last 20 were held out.
     @Test(.enabled(if: SystemLanguageModel.default.isAvailable))
     func theOnDeviceModelNamesFoodsInOneOrTwoWords() async throws {
         let model = OnDeviceFoodShortNameModel()
@@ -204,9 +203,9 @@ struct FoodShortNamesTests {
             answers.append("\(food): \(answer)")
             if !names.contains(where: { $0.caseInsensitiveCompare(name ?? "") == .orderedSame }) { misses.append(food) }
         }
-        // Greedy sampling makes this repeatable. On macOS 27's model (2026-11-17) 47 of 56 fit. The misses were Coke Zero
-        // as Soda, cottage cheese as Cottage, romaine as Lettuce, chicken thigh as Chicken, matcha latte as Matcha,
-        // fusilli as Protein Pasta, the lentil pasta as Lentil pâté, cheddar as Cheese, and Core Power as Chocolate.
+        // Greedy sampling makes this repeatable. On macOS 27's model (2026-11-17) 48 of 55 fit, and the iOS 27 simulator
+        // passed. The misses were Coke Zero as Soda, cottage cheese as Cottage, romaine as Lettuce, chicken thigh as
+        // Chicken, the lentil pasta as Lentil pâté, cheddar as Cheese, and Core Power as Chocolate.
         #expect(misses.count <= 12, "\(misses.count) misses of \(fitting.count): \(answers.joined(separator: "; "))")
     }
 

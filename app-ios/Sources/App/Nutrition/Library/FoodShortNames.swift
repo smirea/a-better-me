@@ -71,7 +71,7 @@ protocol FoodShortNameModel: Sendable {
 
 /// Apple's on-device general model with greedy sampling, as `OnDeviceFoodIconModel` uses it. A regex guide limiting
 /// the answer to two words fails with UnsupportedGuide, so `FoodShortName.cleaned` drops a longer one instead. The
-/// instructions are the best of eight measured on 56 names (`FoodShortNamesTests`): an example kind such as "sourdough
+/// instructions are the best of eight measured on 55 names (`FoodShortNamesTests`): an example kind such as "sourdough
 /// bread" made the model name other breads sourdough, and "in words from its name" stopped it inventing kinds.
 struct OnDeviceFoodShortNameModel: FoodShortNameModel {
     private let model = SystemLanguageModel.default
