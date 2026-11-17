@@ -26,6 +26,13 @@ extension NutrientID {
 /// The calorie glyph that follows a number in compact rows, where MacroFactor writes "149ઠ".
 let calorieGlyph = Image(systemName: "flame.fill")
 
+extension EnvironmentValues {
+    /// The owner's summary columns (`NutritionSettings.summaryNutrients`), which every compact row of four nutrients
+    /// draws in their order. `RootView` sets it from the settings, so a change in Settings or on the summary moves
+    /// every row at once.
+    @Entry var summaryNutrients = NutrientID.macros
+}
+
 /// A nutrient's track: the goal range as a faint band, the amount as the fill, and a tick at the target.
 struct NutrientBar: View {
     let value: Double

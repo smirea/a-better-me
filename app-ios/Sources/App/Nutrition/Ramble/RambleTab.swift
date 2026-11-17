@@ -841,11 +841,12 @@ private struct RambleLine: View {
 private struct RambleMacros: View {
     let amounts: NutrientAmounts
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.summaryNutrients) private var columns
     @State private var was: NutrientAmounts?
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 4) {
-            ForEach(NutrientID.macros, id: \.self) { id in
+            ForEach(columns, id: \.self) { id in
                 VStack(alignment: .leading, spacing: 0) {
                     if let was, Self.value(id, was) != Self.value(id, amounts) {
                         Self.text(id, was)
@@ -858,7 +859,7 @@ private struct RambleMacros: View {
             }
         }
         .onChange(of: amounts) { old, new in
-            guard !reduceMotion, NutrientID.macros.contains(where: { Self.value($0, old) != Self.value($0, new) }) else { return }
+            guard !reduceMotion, columns.contains(where: { Self.value($0, old) != Self.value($0, new) }) else { return }
             withAnimation(.smooth(duration: 0.3)) { was = old }
         }
         .task(id: was) {
@@ -867,20 +868,15 @@ private struct RambleMacros: View {
             withAnimation(.easeOut(duration: 0.35)) { was = nil }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Self.spoken(amounts))
+        .accessibilityLabel(NutritionFormat.spoken(amounts, columns))
     }
 
     private static func value(_ id: NutrientID, _ amounts: NutrientAmounts) -> String {
-        id == .energy ? NutritionFormat.calories(amounts) : "\((amounts[id] ?? 0).wholeText)\(id.macroLetter)"
+        id == .energy ? NutritionFormat.column(id, amounts) : "\(NutritionFormat.column(id, amounts))\(id.columnLetters)"
     }
 
     private static func text(_ id: NutrientID, _ amounts: NutrientAmounts) -> Text {
         id == .energy ? Text("\(value(id, amounts))\(calorieGlyph)") : Text(value(id, amounts))
-    }
-
-    private static func spoken(_ amounts: NutrientAmounts) -> String {
-        let grams = { (id: NutrientID) in (amounts[id] ?? 0).wholeText }
-        return "\(NutritionFormat.calories(amounts)) kilocalories, \(grams(.protein)) grams protein, \(grams(.fat)) grams fat, \(grams(.carbs)) grams carbs"
     }
 }
 

@@ -97,4 +97,6 @@ enum LiftingExperience: String, Codable, CaseIterable {
 
 extension AppSettings {
     static let current = DatabaseQuery(AppSettings()) { try AppSettings.fetchOne($0, key: rowID) ?? AppSettings() }
+    /// Only the summary's columns, so a view that observes them re-renders when they change and on no other setting.
+    static let summaryNutrients = DatabaseQuery(NutrientID.macros) { try current.fetch($0).nutrition.summaryNutrients }
 }

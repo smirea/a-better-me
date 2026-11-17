@@ -25,6 +25,13 @@ struct NutritionEntry: TimelineEntry {
 enum NutritionTimeline {
     static let currentAndRemaining = [NutritionSnapshot.energy] + NutritionSnapshot.macros
 
+    /// Current & Remaining's calories ring, then the Food Log summary's other columns in their order, so the widget
+    /// shows the nutrients the app's rows do.
+    static func currentAndRemaining(pinned: [String]?) -> [String] {
+        guard let pinned else { return currentAndRemaining }
+        return [NutritionSnapshot.energy] + pinned.filter { $0 != NutritionSnapshot.energy }.prefix(3)
+    }
+
     static func timeline(picks: (NutritionSnapshot?) -> [String], now: Date = .now, calendar: Calendar = .current) -> Timeline<NutritionEntry> {
         let snapshot = NutritionSnapshot.load()
         let picks = picks(snapshot)
@@ -56,7 +63,7 @@ enum NutritionTimeline {
 }
 
 struct CurrentAndRemainingProvider: TimelineProvider {
-    private let picks: (NutritionSnapshot?) -> [String] = { _ in NutritionTimeline.currentAndRemaining }
+    private let picks: (NutritionSnapshot?) -> [String] = { NutritionTimeline.currentAndRemaining(pinned: $0?.pinned) }
 
     func placeholder(in context: Context) -> NutritionEntry { NutritionTimeline.placeholder(picks: picks(nil)) }
 

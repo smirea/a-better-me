@@ -441,26 +441,29 @@ private struct HourIconStyle: ButtonStyle {
     }
 }
 
-/// "510 ઠ 33 P 18 F 56 C", each amount followed by its letter badge.
+/// "510 ઠ 33 P 18 Fa 56 C" in the summary's columns, each amount followed by its letter badge.
 private struct HourTotals: View {
     let amounts: NutrientAmounts
+    @Environment(\.summaryNutrients) private var columns
 
     var body: some View {
         HStack(spacing: 10) {
-            ForEach(NutrientID.macros, id: \.self) { id in
+            ForEach(columns, id: \.self) { id in
                 HStack(spacing: 4) {
-                    Text((amounts[id] ?? 0).wholeText).font(AppFont.medium(12)).monospacedDigit()
+                    Text(NutritionFormat.column(id, amounts)).font(AppFont.medium(12)).monospacedDigit()
                     Group {
-                        if id == .energy { calorieGlyph } else { Text(id.rawValue.uppercased()) }
+                        if id == .energy { calorieGlyph } else { Text(id.columnLetters) }
                     }
                     .font(.system(size: 8, weight: .heavy))
-                    .frame(width: 15, height: 15)
-                    .background(Theme.surfaceRaised, in: Circle())
+                    .padding(.horizontal, id.columnLetters.count > 1 ? 2.5 : 0)
+                    .frame(minWidth: 15, minHeight: 15)
+                    .background(Theme.surfaceRaised, in: Capsule())
                 }
             }
         }
         .foregroundStyle(Theme.textPrimary)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(NutritionFormat.spoken(amounts, columns))
     }
 }
 

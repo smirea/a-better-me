@@ -1,17 +1,19 @@
 import Feedback
 import SwiftUI
 
+/// A recipe's numbers at the top of its page, Prepare, the editor, and Alter, in the summary's columns.
 struct MacroSummary: View {
     let amounts: NutrientAmounts
     var caption: String?
+    @Environment(\.summaryNutrients) private var columns
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                ForEach(NutrientID.macros, id: \.self) { id in
+                ForEach(columns, id: \.self) { id in
                     let nutrient = NutrientRegistry.nutrient(id)
                     VStack(spacing: 2) {
-                        Text(NutritionFormat.amount(amounts[id] ?? 0))
+                        Text(NutritionFormat.amount(amounts.amount(of: id) ?? 0))
                             .font(AppFont.number(id == .energy ? 26 : 18))
                             .foregroundStyle(Theme.textPrimary)
                         Text(nutrient?.name ?? "")

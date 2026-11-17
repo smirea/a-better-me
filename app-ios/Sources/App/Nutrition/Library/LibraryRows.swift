@@ -42,7 +42,7 @@ enum LibraryFilter {
 }
 
 /// A food everywhere one is listed (the timeline, search, the library, the plate, a recipe), one line each like
-/// MacroFactor's 47 pt rows: its icon, "Name By Brand" with the words a search matched in bold, and "120ઠ 1P 0F 31C" at
+/// MacroFactor's 47 pt rows: its icon, "Name By Brand" with the words a search matched in bold, and "120ઠ 1P 0Fa 31C" at
 /// `serving` with "1 large" at the trailing edge, which truncates before the macros do.
 struct FoodRow: View {
     let food: FoodSnapshot
@@ -51,13 +51,14 @@ struct FoodRow: View {
     var titleColor = Theme.textPrimary
     /// The search's terms (`FoodText.terms`), whose matches draw bold.
     var matching: [String] = []
+    @Environment(\.summaryNutrients) private var columns
 
     var body: some View {
         HStack(spacing: 12) {
             FoodIcon(food: food)
             RowLabel(
                 title: title,
-                detail: showsDetail ? Text(macroLine: food.amounts(serving)) : nil,
+                detail: showsDetail ? Text(macroLine: food.amounts(serving), columns: columns) : nil,
                 trailingDetail: showsDetail ? Text(NutritionFormat.listed(serving, of: food)) : nil,
                 titleColor: titleColor
             )
@@ -84,10 +85,13 @@ struct FoodRow: View {
 }
 
 extension Text {
-    /// "105ઠ 1P 0F 27C": MacroFactor's compact nutrition, with the calorie glyph in place of "kcal".
-    init(macroLine amounts: NutrientAmounts) {
-        let grams = { (id: NutrientID) in (amounts[id] ?? 0).wholeText }
-        self = Text("\(NutritionFormat.calories(amounts))\(calorieGlyph) \(NutritionFormat.macros(amounts))")
-            .accessibilityLabel("\(NutritionFormat.calories(amounts)) kilocalories, \(grams(.protein)) grams protein, \(grams(.fat)) grams fat, \(grams(.carbs)) grams carbs")
+    /// "105ઠ 1P 0Fa 27C": MacroFactor's compact nutrition in the summary's columns, the calorie glyph in place of "kcal".
+    init(macroLine amounts: NutrientAmounts, columns: [NutrientID]) {
+        let parts = columns.map { id in
+            let value = NutritionFormat.column(id, amounts)
+            return id == .energy ? Text("\(value)\(calorieGlyph)") : Text("\(value)\(id.columnLetters)")
+        }
+        self = parts.dropFirst().reduce(parts.first ?? Text("")) { Text("\($0) \($1)") }
+            .accessibilityLabel(NutritionFormat.spoken(amounts, columns))
     }
 }

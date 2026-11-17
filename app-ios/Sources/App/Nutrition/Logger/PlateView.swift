@@ -8,11 +8,15 @@ struct PlateView: View {
     let session: LoggerSession
     let open: (UUID) -> Void
     @Observe(NutritionPlan.all) private var plans
+    @Observe(NutrientGoal.all) private var goals
+    @Observe(BodyWeight.latest) private var latestWeight
+    @Observe(AppSettings.current) private var settings
     @Observe<[FoodEntry]> private var entries: [FoodEntry]
     @Observe<NutritionDay> private var dayRow: NutritionDay
     @State private var withDay = false
     @State private var allNutrients = false
     @State private var editing: UUID?
+    @Environment(\.summaryNutrients) private var columns
 
     init(session: LoggerSession, open: @escaping (UUID) -> Void) {
         self.session = session
@@ -24,7 +28,8 @@ struct PlateView: View {
     var body: some View {
         let plate = session.plate.totals
         let day = dayRow.totals(entries)
-        let target = NutritionPlan.effective(on: session.time.day, in: plans)?.target(on: session.time.day)
+        let targets = NutrientTargets.of(session.time.day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: latestWeight?.weightKg)
+            .goals(columns)
         List {
             Section {
                 ForEach(session.plate.items) { item in
@@ -46,13 +51,12 @@ struct PlateView: View {
             .listRowBackground(Theme.surface.feedback("Your Plate Row"))
             Section {
                 Grid(horizontalSpacing: 8, verticalSpacing: 8) {
-                    GridRow {
-                        tile(.energy, plate: plate, day: day, target: target)
-                        tile(.protein, plate: plate, day: day, target: target)
-                    }
-                    GridRow {
-                        tile(.fat, plate: plate, day: day, target: target)
-                        tile(.carbs, plate: plate, day: day, target: target)
+                    ForEach(Array(stride(from: 0, to: columns.count, by: 2)), id: \.self) { start in
+                        GridRow {
+                            ForEach(columns[start..<min(start + 2, columns.count)], id: \.self) { id in
+                                tile(id, plate: plate, day: day, goal: targets[id])
+                            }
+                        }
                     }
                 }
                 .listRowBackground(Color.clear)
@@ -73,7 +77,7 @@ struct PlateView: View {
                 Toggle("Show all nutrients", isOn: $allNutrients).tint(Theme.accent)
                 if allNutrients {
                     let total = withDay ? day + plate : plate
-                    ForEach(NutrientSection.allCases.flatMap(\.nutrients).filter { !NutrientID.macros.contains($0.id) && total.amount(of: $0.id) != nil }) { nutrient in
+                    ForEach(NutrientSection.allCases.flatMap(\.nutrients).filter { !columns.contains($0.id) && total.amount(of: $0.id) != nil }) { nutrient in
                         LabeledContent(nutrient.name, value: NutritionFormat.amount(total.amount(of: nutrient.id) ?? 0, nutrient.unit))
                     }
                 }
@@ -112,7 +116,7 @@ struct PlateView: View {
             } label: {
                 HStack(spacing: 12) {
                     FoodIcon(food: portion.food)
-                    RowLabel(title: portion.food.displayName, detail: Text(macroLine: portion.amounts))
+                    RowLabel(title: portion.food.displayName, detail: Text(macroLine: portion.amounts, columns: columns))
                         .lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -128,10 +132,9 @@ struct PlateView: View {
         }
     }
 
-    private func tile(_ id: NutrientID, plate: NutrientAmounts, day: NutrientAmounts, target: DayTarget?) -> some View {
-        let goal = target?.amount(id)
+    private func tile(_ id: NutrientID, plate: NutrientAmounts, day: NutrientAmounts, goal: Double?) -> some View {
         let unit = id == .energy ? "kcal" : "g"
-        let amount = (withDay ? day[id] ?? 0 : 0) + (plate[id] ?? 0)
+        let amount = (withDay ? day.amount(of: id) ?? 0 : 0) + (plate.amount(of: id) ?? 0)
         let caption = withDay ? "\(amount.wholeText)\(goal.map { " / \($0.wholeText)" } ?? "") \(unit) with plate" : "\(amount.wholeText) \(unit) in plate"
         return VStack(alignment: .leading, spacing: 6) {
             Text(id.title).font(AppFont.rowTitle)
