@@ -1,15 +1,20 @@
 import Feedback
+import QuickLook
 import SwiftUI
 
-/// A supplement's page: its picture, how it is taken, the Supplement Facts, and its past regimens, with Edit, Stop or
-/// Start, and Delete. Opened from a Food Log day it shows that day's amounts; from the library, one serving's.
+/// A supplement's page: its pictures, tags, and product page, how it is taken, the Supplement Facts, and its past
+/// regimens, with Edit, Stop or Start, and Delete. Opened from a Food Log day it shows that day's amounts; from the
+/// library, one serving's. A picture opens all of them in Quick Look, where a label can be zoomed and read.
 struct SupplementDetailView: View {
     private let day: CalendarDay?
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @Observe private var supplement: Supplement?
+    @Observe(Tag.byID) private var tags
     @State private var editing: Supplement?
     @State private var confirmingDelete = false
+    @State private var viewing: URL?
+    @State private var viewable: [URL] = []
 
     init(supplementID: UUID, day: CalendarDay?) {
         self.day = day
@@ -34,18 +39,28 @@ struct SupplementDetailView: View {
         return Form {
             ThemedSection {
                 HStack(spacing: 14) {
-                    SupplementPicture(supplement, cornerRadius: Theme.cornerRadius).frame(width: 96, height: 96)
+                    picture(supplement.images.first, of: supplement, side: 96, cornerRadius: Theme.cornerRadius)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(supplement.name).font(AppFont.sectionTitle)
                         if let brand = supplement.brand {
                             Text(brand).font(AppFont.body(15)).foregroundStyle(Theme.textSecondary)
                         }
                         Text(SupplementFormat.status(supplement, on: today)).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+                        TagChips(tags: supplement.tags.compactMap { tags[$0] })
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .combine)
                 }
-                .accessibilityElement(children: .combine)
                 .listRowSeparator(.hidden)
+                if supplement.images.count > 1 {
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 8) {
+                            ForEach(supplement.images.dropFirst(), id: \.self) { picture($0, of: supplement, side: 72, cornerRadius: Theme.smallCornerRadius) }
+                        }
+                    }
+                    .scrollIndicators(.hidden)
+                    .listRowSeparator(.hidden)
+                }
                 HStack {
                     Button { editing = supplement } label: { ActionLabel(title: "Edit", systemImage: "pencil") }
                     if status == .stopped {
@@ -56,6 +71,17 @@ struct SupplementDetailView: View {
                     Button { confirmingDelete = true } label: { ActionLabel(title: "Delete", systemImage: "trash") }
                 }
                 .buttonStyle(.plain)
+                if let url = supplement.url.flatMap(URL.init(string:)) {
+                    Link(destination: url) {
+                        HStack {
+                            Label("Product Page", systemImage: "safari")
+                            Spacer()
+                            Text(url.host() ?? url.absoluteString).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                            Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                    .foregroundStyle(Theme.textPrimary)
+                }
             }
             if !supplement.components.isEmpty {
                 let count = dayRegimen?.count ?? 1
@@ -77,6 +103,10 @@ struct SupplementDetailView: View {
                     LabeledContent(regimen.start > today ? "Starts" : "Since", value: StrategyFormat.day(regimen.start, year: true))
                     if let end = regimen.end {
                         LabeledContent("Last Day", value: StrategyFormat.day(end, year: true))
+                    }
+                    let regimenTags = (regimen.tags ?? []).compactMap { tags[$0] }
+                    if !regimenTags.isEmpty {
+                        LabeledContent("Tags") { TagChips(tags: regimenTags) }
                     }
                 }
             }
@@ -101,6 +131,7 @@ struct SupplementDetailView: View {
         .themedList()
         .detailTitle(supplement.name)
         .sheet(item: $editing) { SupplementEditor(supplement: $0) }
+        .quickLookPreview($viewing, in: viewable)
         .alert("Delete Supplement", isPresented: $confirmingDelete) {
             Button("Delete", role: .destructive) {
                 store.deleteSupplement(supplement.id)
@@ -110,6 +141,61 @@ struct SupplementDetailView: View {
         } message: {
             Text("Are you sure you want to delete \(supplement.name)? It leaves every day it was on. This action cannot be undone.")
         }
+    }
+}
+
+extension SupplementDetailView {
+    /// One of the supplement's pictures as a button that opens all of them in Quick Look, on this one.
+    @ViewBuilder
+    private func picture(_ image: UUID?, of supplement: Supplement, side: CGFloat, cornerRadius: CGFloat) -> some View {
+        let view = SupplementPicture(image: image, name: supplement.name, cornerRadius: cornerRadius).frame(width: side, height: side)
+        if let image {
+            Button {
+                Task {
+                    let files = await SupplementPictures.files(of: supplement.images, named: supplement.name, in: store.database.pool)
+                    guard let opened = files.first(where: { $0.id == image }) else { return }
+                    viewable = files.map(\.url)
+                    viewing = opened.url
+                }
+            } label: { view }
+                .buttonStyle(.plain)
+                .accessibilityLabel(supplement.images.count > 1 ? "Photo \((supplement.images.firstIndex(of: image) ?? 0) + 1) of \(supplement.images.count)" : "Photo")
+                .accessibilityHint("Opens the photos")
+        } else {
+            view
+        }
+    }
+}
+
+/// A supplement's or a regimen's tags, each a dot in its color beside its name. Nothing when there are none.
+private struct TagChips: View {
+    let tags: [Tag]
+
+    var body: some View {
+        if !tags.isEmpty {
+            HStack(spacing: 6) {
+                ForEach(tags) { tag in
+                    HStack(spacing: 5) {
+                        Circle().fill(tag.swatch).frame(width: 8, height: 8)
+                        Text(tag.name).font(AppFont.badge).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Theme.surfaceRaised, in: .capsule)
+                }
+            }
+            .padding(.top, 2)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Tags: \(tags.map(\.name).joined(separator: ", "))")
+        }
+    }
+}
+
+private extension Tag {
+    /// The stored `#rrggbb`, or the accent when it is not one.
+    var swatch: Color {
+        guard color.hasPrefix("#"), color.count == 7, let hex = UInt32(color.dropFirst(), radix: 16) else { return Theme.accent }
+        return Color(hex: hex)
     }
 }
 

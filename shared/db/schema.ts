@@ -345,30 +345,45 @@ const foodShortNames = sqliteTable('food_short_names', {
 /**
  * A pill the owner takes or took. `components` is the label's Supplement Facts per `serving`, in label order.
  * `regimens` is when it is taken, oldest first: a supplement shows on a day one of them covers, so nothing is logged
- * per day. `image_at` is when its picture last changed, or null without one; the picture itself is the
- * `supplement_images` row of the same id.
+ * per day. `images` is the ids of its pictures in `supplement_images`, in order, and the first is the one lists show.
+ * `tags` is ids in `tags`, and `url` is where it is bought.
  */
 const supplements = sqliteTable('supplements', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
 	brand: text('brand'),
+	url: text('url'),
 	serving: json('serving').notNull().default({}),
 	components: json('components').notNull().default([]),
 	regimens: json('regimens').notNull().default([]),
 	note: text('note').notNull().default(''),
-	imageAt: text('image_at'),
+	images: json('images').notNull().default([]),
+	tags: json('tags').notNull().default([]),
 	createdAt: text('created_at').notNull(),
 	updatedAt: text('updated_at').notNull(),
 });
 
 /**
- * A supplement's picture, keyed by the supplement's id: a JPEG no longer than 640 px, as base64. The engine carries
- * values, not files, so the picture is small enough to be one, and it sits apart from `supplements` so reading the
- * list never loads the pictures.
+ * One picture of a supplement, named by `supplements.images`: a JPEG no longer than 1024 px, as base64. The engine
+ * carries values, not files, so a picture is small enough to be one, and it sits apart from `supplements` so reading
+ * the list never loads the pictures. A row is never rewritten: a changed picture is a new row with a new id.
  */
 const supplementImages = sqliteTable('supplement_images', {
 	id: text('id').primaryKey(),
 	jpeg: text('jpeg').notNull(),
+	updatedAt: text('updated_at').notNull(),
+});
+
+/**
+ * A label the owner groups supplements and their regimens under, such as a protocol they belong to: a name, a
+ * `#rrggbb` color, and a note on what it is for.
+ */
+const tags = sqliteTable('tags', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	color: text('color').notNull(),
+	note: text('note').notNull().default(''),
+	createdAt: text('created_at').notNull(),
 	updatedAt: text('updated_at').notNull(),
 });
 
@@ -396,6 +411,7 @@ export const SYNCED_TABLES = {
 	food_short_names: foodShortNames,
 	supplements,
 	supplement_images: supplementImages,
+	tags,
 } as const;
 
 export type SyncedTable = keyof typeof SYNCED_TABLES;
@@ -447,15 +463,20 @@ const supplementComponent = z.object({
 	amount: amount.optional(),
 	unit: z.string().optional(),
 });
-/** `count` servings on each day from `start` through `end` (open without one) that is one of `weekdays`, ISO, Monday 1; none means every day. */
+const ids = z.array(z.string().min(1));
+/**
+ * `count` servings on each day from `start` through `end` (open without one) that is one of `weekdays`, ISO, Monday 1;
+ * none means every day. `tags` is ids in `tags`.
+ */
 export const supplementRegimen = z.object({
 	start: day,
 	end: day.optional(),
 	count: positive,
 	timing: z.enum(SUPPLEMENT_TIMINGS).optional(),
 	weekdays: z.array(z.int().min(1).max(7)),
+	tags: ids.optional(),
 });
-/** Base64 of the 640 px JPEG the app writes, which is under 150 KB; the cap keeps a row well inside a Durable Object's 2 MB. */
+/** Base64 of a JPEG no longer than 1024 px, which is under 300 KB; the cap keeps a row well inside a Durable Object's 2 MB. */
 const supplementJpeg = z.base64().min(1).max(600_000);
 const dayTarget = z.object({ energy: amount, protein: amount, fat: amount, carbs: amount });
 const nutritionGoal = z.object({
@@ -552,7 +573,10 @@ export const schema = defineSchema({
 			serving: supplementServing,
 			components: z.array(supplementComponent),
 			regimens: z.array(supplementRegimen),
+			images: ids,
+			tags: ids,
 		},
 		supplement_images: { jpeg: supplementJpeg },
+		tags: { name: z.string().min(1), color: z.string().regex(/^#[0-9a-f]{6}$/i) },
 	},
 });

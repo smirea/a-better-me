@@ -17,6 +17,8 @@ struct SupplementRegimen: Codable, Hashable, Sendable {
     var timing: Timing?
     /// ISO weekdays, Monday 1. Empty is every day.
     var weekdays: [Int] = []
+    /// Ids of `Tag` rows, such as the protocol this range belonged to.
+    var tags: [UUID]?
 
     func spans(_ day: CalendarDay) -> Bool {
         start <= day && end.map { day <= $0 } != false
@@ -48,13 +50,17 @@ struct Supplement: Stamped {
     var id = UUID()
     var name: String
     var brand: String?
+    /// Where it is bought.
+    var url: String?
     var serving = Serving()
     var components: [Component] = []
     /// Oldest first.
     var regimens: [SupplementRegimen] = []
     var note = ""
-    /// When the picture last changed, which is also its cache key; nil without one.
-    var imageAt: Date?
+    /// Its pictures' ids in `supplement_images`, in order. The first is the one lists show.
+    var images: [UUID] = []
+    /// Ids of `Tag` rows.
+    var tags: [UUID] = []
     var createdAt = Date.now
     var updatedAt = Date.now
 
@@ -66,11 +72,13 @@ struct Supplement: Stamped {
         id = try row.uuid("id")
         name = row["name"]
         brand = row["brand"]
+        url = row["url"]
         serving = try row.json("serving")
         components = try row.json("components")
         regimens = try row.json("regimens")
         note = row["note"] ?? ""
-        imageAt = try row.instant("image_at", optional: true)
+        images = try row.json("images")
+        tags = try row.json("tags")
         createdAt = try row.instant("created_at")
         updatedAt = try row.instant("updated_at")
     }
@@ -79,11 +87,14 @@ struct Supplement: Stamped {
         container["id"] = key
         container["name"] = name
         container["brand"] = brand
+        container["url"] = url
         container["serving"] = try RowJSON.text(serving)
         container["components"] = try RowJSON.text(components)
         container["regimens"] = try RowJSON.text(regimens)
         container["note"] = note
-        container["image_at"] = imageAt.map(Instant.text)
+        // As row ids are written, lowercase, where `UUID`'s own encoding is uppercase.
+        container["images"] = try RowJSON.text(images.map(SupplementImage.key))
+        container["tags"] = try RowJSON.text(tags.map(Tag.key))
         container["created_at"] = Instant.text(createdAt)
         container["updated_at"] = Instant.text(updatedAt)
     }
@@ -117,12 +128,14 @@ extension Supplement {
         }
     }
 
-    /// Takes it again from `today`, the way it was last taken.
+    /// Takes it again from `today`, the way it was last taken. The new range takes no tags: the protocol the last one
+    /// belonged to is not this one's until the owner says so.
     mutating func start(on today: CalendarDay) {
         guard currentRegimen(on: today) == nil else { return }
         var regimen = regimens.last ?? SupplementRegimen(start: today)
         regimen.start = today
         regimen.end = nil
+        regimen.tags = nil
         regimens.append(regimen)
     }
 }
@@ -152,12 +165,11 @@ extension [Supplement] {
     }
 }
 
-/// A row of the synced `supplement_images` table: a supplement's picture, keyed by the supplement's id. It is a small
-/// JPEG stored as base64 text, because the sync engine carries values, not files.
+/// A row of the synced `supplement_images` table: one picture of a supplement, named by `Supplement.images`. It is a
+/// JPEG no longer than `MealPhotoImage.maxPixels`, the size an editor's photo already has, stored as base64 text
+/// because the sync engine carries values, not files. A row is never rewritten, so its id is also its cache key.
 struct SupplementImage: SyncedRecord {
     static let table = "supplement_images"
-    /// Long side in pixels. A tile draws it at about a third of the screen's width and the detail page at half.
-    static let maxPixels = 640
 
     var id: UUID
     var jpeg: Data
@@ -183,6 +195,42 @@ struct SupplementImage: SyncedRecord {
     }
 }
 
+/// A row of the synced `tags` table: a label supplements and their regimens are grouped under, such as a protocol.
+struct Tag: Stamped {
+    static let table = "tags"
+
+    var id = UUID()
+    var name: String
+    /// `#rrggbb`.
+    var color: String
+    var note = ""
+    var createdAt = Date.now
+    var updatedAt = Date.now
+
+    init(name: String, color: String) {
+        self.name = name
+        self.color = color
+    }
+
+    init(row: Row) throws {
+        id = try row.uuid("id")
+        name = row["name"]
+        color = row["color"]
+        note = row["note"] ?? ""
+        createdAt = try row.instant("created_at")
+        updatedAt = try row.instant("updated_at")
+    }
+
+    func encode(to container: inout PersistenceContainer) throws {
+        container["id"] = key
+        container["name"] = name
+        container["color"] = color
+        container["note"] = note
+        container["created_at"] = Instant.text(createdAt)
+        container["updated_at"] = Instant.text(updatedAt)
+    }
+}
+
 enum SupplementFormat {
     static let weekdayShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -193,10 +241,11 @@ enum SupplementFormat {
     }
 
     /// The unit as typed, made plural for more than one when it ends in a singular word, so a serving of 1 capsule
-    /// taken twice reads "2 capsules". Abbreviations ("g", "ml", "CFU") and units already plural stay as typed.
+    /// taken twice reads "2 capsules" and 2 of "Veggie Capsule" reads "2 Veggie Capsules". Abbreviations ("g", "ml",
+    /// "CFU") and units already plural stay as typed.
     static func unit(_ unit: String, for quantity: Double) -> String {
         guard quantity > 1, let last = unit.split(separator: " ").last, last.count >= 4, last.allSatisfy(\.isLetter),
-              last == last.lowercased(), last.last != "s" else { return unit }
+              last.dropFirst() == last.dropFirst().lowercased(), last.last != "s" else { return unit }
         if last.hasSuffix("y"), let before = last.dropLast().last, !"aeiou".contains(before) { return unit.dropLast() + "ies" }
         return unit + (["ch", "sh", "x"].contains { last.hasSuffix($0) } ? "es" : "s")
     }

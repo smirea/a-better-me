@@ -25,6 +25,9 @@ const discardWorkout = [
 	...tap('Discard'),
 	'wait 800',
 ];
+// The day's supplements row and its tiles also exist on the pages beside today's, so a label matches three of each.
+// They are tapped by position: the row, then its first tile.
+const supplementsRow = ['wait \'label="Supplements"\' 8000', 'press 201 196', 'wait 600'];
 const loggerTab = (tab: string) => [...tapTab('Nutrition'), ...tap('Your Foods'), ...tapButton(tab)];
 const scrolled = (count = 1) => Array.from({ length: count }, () => 'scroll down').concat('wait 600');
 
@@ -51,11 +54,8 @@ export const screens: Screen[] = [
 	// Swipes the timeline back to yesterday, which the seed marks incomplete with edited totals, beside the page dots.
 	{ name: 'foodlog-marked-day', steps: [...tapTab('Nutrition'), 'swipe 60 500 340 500', 'wait 800'] },
 	{ name: 'foodlog-menu', steps: [...tapTab('Nutrition'), ...trailingToolbarButton] },
-	{ name: 'foodlog-supplements', steps: [...tapTab('Nutrition'), ...tap('Supplements'), 'wait 600'] },
-	{
-		name: 'foodlog-supplement',
-		steps: [...tapTab('Nutrition'), ...tap('Supplements'), ...tap('Magnesium Glycinate, 2 capsules · Evening')],
-	},
+	{ name: 'foodlog-supplements', steps: [...tapTab('Nutrition'), ...supplementsRow] },
+	{ name: 'foodlog-supplement', steps: [...tapTab('Nutrition'), ...supplementsRow, 'press 201 250', 'wait 600'] },
 	{ name: 'foodlog-calendar', steps: [...tapTab('Nutrition'), ...tap('Calendar')] },
 	{ name: 'foodlog-overview', steps: [...tapTab('Nutrition'), ...trailingToolbarButton, 'press 260 93'] },
 	{ name: 'foodlog-select', steps: [...tapTab('Nutrition'), ...trailingToolbarButton, ...tap('Select All')] },
@@ -99,6 +99,20 @@ export const screens: Screen[] = [
 	{ name: 'settings-strategy', steps: [...more('Strategy'), 'press 362 84', 'wait 800', ...tap('Strategy Settings')] },
 	{ name: 'foods-recipes', steps: more('Foods & Recipes') },
 	{ name: 'supplements', steps: [...more('Supplements'), 'shot top', ...scrolled(1)] },
+	// The seed's one supplement with two pictures, a tag, and a product page.
+	{
+		name: 'supplement',
+		steps: [...more('Supplements'), ...tap('Essential Multivitamin, 2 capsules · Every day · Morning'), 'wait 600'],
+	},
+	{
+		name: 'supplement-edit',
+		steps: [
+			...more('Supplements'),
+			...tap('Essential Multivitamin, 2 capsules · Every day · Morning'),
+			...tapButton('Edit'),
+			'wait 1000',
+		],
+	},
 	{
 		name: 'supplement-new',
 		steps: [...more('Supplements'), ...tap('New Supplement'), 'wait 800', 'shot top', ...scrolled(1)],

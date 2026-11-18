@@ -9,6 +9,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
+import { hashedId } from './lib';
 import { readXlsx, type Cell, type Sheet } from './xlsx';
 
 type Amounts = Record<string, number>;
@@ -92,12 +93,7 @@ const SAME_MOMENT_MS = 60_000;
 /** The export has no time of day, so a weigh-in already stored that day at this weight is the same reading. */
 const SAME_WEIGHT_KG = 0.05;
 
-/** A UUID (version 8, RFC 9562) hashed from the source row, so importing the row again lands on the same id. */
-export function stableId(...parts: (string | number)[]): string {
-	const hex = new Bun.CryptoHasher('sha256').update(JSON.stringify(['macrofactor', ...parts])).digest('hex');
-	const variant = ((Number.parseInt(hex[16]!, 16) & 3) | 8).toString(16);
-	return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-8${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
-}
+export const stableId = (...parts: (string | number)[]): string => hashedId('macrofactor', ...parts);
 
 const splitUnit = (header: string) => {
 	const match = /^(.*?) \(([^()]*)\)$/.exec(header);

@@ -19,6 +19,7 @@ final class PhotoReader<Label: Equatable & Sendable> {
     private(set) var state = State.idle
     @ObservationIgnored private let reading: @Sendable ([Data]) async throws -> Label
     @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored private var restored: Set<PhotoUpload.ID> = []
 
     init(photos: [PhotoUpload] = [], reading: @escaping @Sendable ([Data]) async throws -> Label) {
         self.photos = photos
@@ -33,6 +34,13 @@ final class PhotoReader<Label: Equatable & Sendable> {
         read()
     }
 
+    /// Photos the editor opens with, which its fields already reflect. They go first and start no read, and neither
+    /// does removing one: only a photo added here is news, and then all of them are read together.
+    func restore(_ stored: [PhotoUpload]) {
+        restored.formUnion(stored.map(\.id))
+        photos = stored + photos
+    }
+
     func remove(_ id: PhotoUpload.ID) {
         photos.removeAll { $0.id == id }
         read()
@@ -40,7 +48,7 @@ final class PhotoReader<Label: Equatable & Sendable> {
 
     func read() {
         task?.cancel()
-        guard !photos.isEmpty else {
+        guard photos.contains(where: { !restored.contains($0.id) }) else {
             state = .idle
             return
         }

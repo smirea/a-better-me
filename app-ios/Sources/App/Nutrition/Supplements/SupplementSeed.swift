@@ -5,7 +5,8 @@ import UIKit
 /// The dev seed's (`DevSeed`) supplements: a stack being taken at different times and days, one still to start, and
 /// two stopped, one of them eight times over, so the Food Log's row, the library's sections, and a page's truncated
 /// history all have something to show.
-/// Pictures are drawn here; one has none, for the letter placeholder.
+/// Pictures are drawn here: one has none, for the letter placeholder, and the multivitamin has a second, its label.
+/// Two tags and a few product pages cover the rest of a page.
 enum SupplementSeed {
     private static func component(_ name: String, _ amount: Double? = nil, _ unit: String? = nil) -> Supplement.Component {
         Supplement.Component(name: name, amount: amount, unit: unit)
@@ -47,17 +48,60 @@ enum SupplementSeed {
              // Taken for three weeks out of every six, so its History is long enough to truncate.
              (0..<8).reversed().map { regimen(from: -70 - $0 * 42, to: -50 - $0 * 42, count: $0 % 2 == 0 ? 2 : 1, today: today) }, "Only through cold season."),
         ]
+        var morning = Tag(name: "Morning Stack", color: "#096dd9")
+        morning.id = DevSeed.id("tag/morning")
+        var sleep = Tag(name: "Sleep", color: "#722ed1")
+        sleep.id = DevSeed.id("tag/sleep")
+        sleep.note = "Wind-down protocol since the spring."
+        try LocalStore.put(morning, in: db)
+        try LocalStore.put(sleep, in: db)
+        let tags = ["d3": [morning.id], "omega": [morning.id], "multi": [morning.id], "magnesium": [sleep.id], "melatonin": [sleep.id]]
+        let urls = ["d3": "https://www.nowfoods.com/products/supplements/vitamin-d-3-5000-iu-softgels", "multi": "https://ritual.com/products/essential-for-men-multivitamin-18"]
         for (index, row) in rows.enumerated() {
             var supplement = Supplement(name: row.name)
             supplement.id = DevSeed.id("supplement/\(row.key)")
+            supplement.url = urls[row.key]
+            supplement.tags = tags[row.key] ?? []
             supplement.brand = row.brand
             supplement.serving = row.serving
             supplement.components = row.components
             supplement.regimens = row.regimens
             supplement.note = row.note
             supplement.createdAt = .now.addingTimeInterval(-Double(rows.count - index) * 86400)
-            let picture = row.color.flatMap { picture($0, letter: String(row.name.prefix(1))) }
-            try LocalStore.save(supplement, picture: picture.map { .replace($0) } ?? .keep, in: db)
+            var pictures = [row.color.flatMap { picture($0, letter: String(row.name.prefix(1))) }]
+            if row.key == "multi" { pictures.append(label(row.name, serving: SupplementFormat.amount(row.serving), components: row.components)) }
+            let images = pictures.enumerated().compactMap { number, jpeg in
+                jpeg.map { SupplementImage(id: DevSeed.id("supplement/\(row.key)/picture/\(number)"), jpeg: $0) }
+            }
+            supplement.images = images.map(\.id)
+            try LocalStore.save(supplement, adding: images, in: db)
+        }
+    }
+
+    /// A Supplement Facts panel, tall and narrow as a photographed one is.
+    private static func label(_ name: String, serving: String, components: [Supplement.Component]) -> Data? {
+        let size = CGSize(width: 420, height: 150 + CGFloat(components.count) * 44)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        return UIGraphicsImageRenderer(size: size, format: format).jpegData(withCompressionQuality: 0.8) { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+            func draw(_ text: String, at point: CGPoint, size: CGFloat, weight: UIFont.Weight = .regular) {
+                NSAttributedString(string: text, attributes: [.font: UIFont.systemFont(ofSize: size, weight: weight), .foregroundColor: UIColor.black]).draw(at: point)
+            }
+            draw("Supplement Facts", at: CGPoint(x: 20, y: 16), size: 34, weight: .black)
+            draw("\(name) · Serving Size \(serving)", at: CGPoint(x: 20, y: 66), size: 15)
+            UIColor.black.setFill()
+            context.fill(CGRect(x: 20, y: 98, width: size.width - 40, height: 8))
+            for (index, component) in components.enumerated() {
+                let y = 120 + CGFloat(index) * 44
+                draw(component.name, at: CGPoint(x: 20, y: y), size: 18, weight: .semibold)
+                let amount = SupplementFormat.component(component) ?? ""
+                let width = (amount as NSString).size(withAttributes: [.font: UIFont.systemFont(ofSize: 18)]).width
+                draw(amount, at: CGPoint(x: size.width - 20 - width, y: y), size: 18)
+                context.fill(CGRect(x: 20, y: y + 32, width: size.width - 40, height: 1))
+            }
         }
     }
 
