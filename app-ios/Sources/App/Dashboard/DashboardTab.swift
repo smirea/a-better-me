@@ -365,10 +365,3 @@ struct AllExercisesView: View {
         .feedback(self)
     }
 }
-
-extension Array where Element: Hashable {
-    func firstOccurrences() -> [Element] {
-        var seen = Set<Element>()
-        return filter { seen.insert($0).inserted }
-    }
-}

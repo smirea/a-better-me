@@ -3,7 +3,7 @@
  * Regenerates the default equipment loads a gym profile shows: `bun app-ios/scripts/gym-defaults.ts`.
  * MF's per-item default weight lists are not in its bundle. They were captured from a gym profile into
  * docs/research/mf-workouts/equipment.md (in lb); this resolves each name against the bundled equipment catalog and
- * writes `Sources/App/Resources/Gyms/equipment-loads.json` in the JSON Swift's synthesized `Codable` gives
+ * writes `Sources/CoreResources/Gyms/equipment-loads.json` in the JSON Swift's synthesized `Codable` gives
  * `[EquipmentID: EquipmentLoad]`. Items listed as `Default` have no load and get no entry.
  *
  * It also writes `equipment-loads-kg.json`, the loads a gym seeded while the unit is kg stores explicitly. MF's bundle
@@ -16,7 +16,7 @@ import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dir, '..');
 const markdownPath = resolve(root, '../docs/research/mf-workouts/equipment.md');
-const outDir = join(root, 'Sources/App/Resources/Gyms');
+const outDir = join(root, 'Sources/CoreResources/Gyms');
 const kgPerLb = 0.45359237;
 
 type Equipment = {
@@ -33,7 +33,7 @@ type Load =
 	| { base: { kg: number } }
 	| { bands: { options: { color: string }[] } };
 
-const catalog: Equipment[] = await Bun.file(join(root, 'Sources/App/Resources/Catalog/equipment.json')).json();
+const catalog: Equipment[] = await Bun.file(join(root, 'Sources/CoreResources/Catalog/equipment.json')).json();
 const markdown = await Bun.file(markdownPath).text();
 
 const normalize = (name: string) => name.replace(/[‘’]/g, "'").trim().toLowerCase();

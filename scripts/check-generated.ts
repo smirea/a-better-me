@@ -45,7 +45,7 @@ if (undecodable.length > 0) {
 }
 
 const registry: { id: string; unit: string }[] = JSON.parse(
-	readFileSync(join(root, 'app-ios/Sources/App/Resources/Nutrition/nutrients.json'), 'utf8'),
+	readFileSync(join(root, 'app-ios/Sources/CoreResources/Nutrition/nutrients.json'), 'utf8'),
 );
 const research = readFileSync(join(root, 'docs/research/macrofactor/nutrients.md'), 'utf8')
 	.split('<!-- generated:nutrients:start -->')[1]

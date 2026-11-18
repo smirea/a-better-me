@@ -208,16 +208,6 @@ private struct LoggerBanner: View {
     }
 }
 
-extension NutritionSettings.Logger.NutritionDisplay {
-    var page: MacroLine.Page {
-        switch self {
-        case .plateOnly: .plate
-        case .dayAndPlate: .eaten
-        case .remainingAfterPlate: .remaining
-        }
-    }
-}
-
 extension LoggerSession {
     /// The plate as the banner counts it: with the food detail's amount or the Quick Add being typed.
     var plateWithPending: NutrientAmounts {

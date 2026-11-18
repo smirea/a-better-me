@@ -33,11 +33,6 @@ extension ExerciseMetric {
         case .distanceLong: "Track long distances, like runs or rows"
         }
     }
-
-    static let wizardOrder: [ExerciseMetric] = [
-        .reps, .repsPerSide, .weight, .weightPerSide, .weightPerSidePersistent, .assistanceWeight,
-        .duration, .durationPerSide, .distanceShort, .distanceShortPerSide, .distanceLong,
-    ]
 }
 
 extension Laterality {

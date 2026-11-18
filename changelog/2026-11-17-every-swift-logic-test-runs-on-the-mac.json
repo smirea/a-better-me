@@ -1,0 +1,4 @@
+{
+	"title": "Every Swift logic test runs on the Mac; the app has no simulator test target",
+	"description": "Nothing the app shows or does changes."
+}
