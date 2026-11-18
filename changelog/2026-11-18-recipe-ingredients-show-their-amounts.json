@@ -1,0 +1,10 @@
+{
+	"title": "Recipe ingredients show their amounts, and past sections drop their Log buttons",
+	"description": "An altered recipe lists every ingredient with only the changed amounts in yellow, and the Log buttons share one width.",
+	"tasks": [
+		{
+			"id": "3ad6f302-1d41-418a-84f5-b19e417f9d1a",
+			"title": "3 Nutrition Feedback: align text, same width, hide buttons"
+		}
+	]
+}

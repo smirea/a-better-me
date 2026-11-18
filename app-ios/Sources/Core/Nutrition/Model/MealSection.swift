@@ -58,6 +58,14 @@ extension [MealSection] {
         if day == CalendarDay(now, in: calendar), range(of: section).contains(minute) { return minute }
         return typicalMinute(of: section)
     }
+
+    /// Whether `section`'s time is over on `day` at `now`: once the next section has started today, every section of a
+    /// past day, and none of a future one. The last section runs to midnight, so today it never is.
+    func hasEnded(_ section: MealSection, on day: CalendarDay, now: Date, calendar: Calendar = .current) -> Bool {
+        let today = CalendarDay(now, in: calendar)
+        guard day == today else { return day < today }
+        return now.minuteOfDay(in: calendar) >= range(of: section).upperBound
+    }
 }
 
 /// The sections editor's rules (Settings > Food Log). Every edit keeps the sections tiling the day: the first starts at
