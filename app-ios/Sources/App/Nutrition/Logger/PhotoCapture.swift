@@ -3,12 +3,19 @@ import UIKit
 
 /// A photo as it is sent to the server, and the same pixels to show.
 struct PhotoUpload: Identifiable, Sendable {
-    let id = UUID()
+    let id: UUID
     let jpeg: Data
     let preview: UIImage
 
     init?(_ data: Data) {
-        guard let jpeg = MealPhotoImage.jpeg(from: data), let preview = UIImage(data: jpeg) else { return nil }
+        guard let jpeg = MealPhotoImage.jpeg(from: data) else { return nil }
+        self.init(id: UUID(), jpeg: jpeg)
+    }
+
+    /// A JPEG kept as it is, such as a stored picture an editor opens with, under the id it is stored by.
+    init?(id: UUID, jpeg: Data) {
+        guard let preview = UIImage(data: jpeg) else { return nil }
+        self.id = id
         self.jpeg = jpeg
         self.preview = preview
     }
@@ -19,6 +26,7 @@ struct PhotoUpload: Identifiable, Sendable {
         let scale = min(1, Double(MealPhotoImage.maxPixels) / max(pixels.width, pixels.height))
         guard let small = image.preparingThumbnail(of: CGSize(width: pixels.width * scale, height: pixels.height * scale)),
               let jpeg = small.jpegData(compressionQuality: 0.7) else { return nil }
+        id = UUID()
         self.jpeg = jpeg
         preview = small
     }

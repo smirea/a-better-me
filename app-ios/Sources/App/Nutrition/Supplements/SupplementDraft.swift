@@ -61,12 +61,13 @@ struct SupplementDraft: Equatable, Sendable {
     }
 
     enum Field: Hashable, Sendable {
-        case name, brand, servingQuantity, servingUnit, count, weekdays, end, note
+        case name, brand, url, servingQuantity, servingUnit, count, weekdays, end, note
         case componentName(UUID), componentAmount(UUID), componentUnit(UUID)
     }
 
     var name = ""
     var brand = ""
+    var url = ""
     var servingQuantity = "1"
     var servingUnit = "capsule"
     var components: [ComponentDraft] = []
@@ -83,6 +84,7 @@ struct SupplementDraft: Equatable, Sendable {
     init(_ supplement: Supplement, today: CalendarDay = .today) {
         name = supplement.name
         brand = supplement.brand ?? ""
+        url = supplement.url ?? ""
         servingQuantity = NumberText.plain(supplement.serving.quantity)
         servingUnit = supplement.serving.unit
         components = supplement.components.map {
@@ -104,6 +106,7 @@ struct SupplementDraft: Equatable, Sendable {
     var issues: [Field: String] {
         var issues: [Field: String] = [:]
         if name.trimmingCharacters(in: .whitespaces).isEmpty { issues[.name] = "Name the supplement" }
+        if !url.trimmingCharacters(in: .whitespaces).isEmpty, Self.link(url) == nil { issues[.url] = "Enter a web address" }
         if NumberText.parse(servingQuantity).map({ $0 > 0 }) != true { issues[.servingQuantity] = "Enter how many make a serving" }
         if servingUnit.trimmingCharacters(in: .whitespaces).isEmpty { issues[.servingUnit] = "Enter what a serving is counted in" }
         for component in components where !component.isBlank {
@@ -119,14 +122,15 @@ struct SupplementDraft: Equatable, Sendable {
         return issues
     }
 
-    /// The supplement these fields describe, or nil while a field is wrong. Editing keeps `editing`'s id, picture, and
-    /// past regimens: Taking It replaces the regimen that is running or still to start, or adds one, and off stops it.
+    /// The supplement these fields describe, or nil while a field is wrong. Editing keeps `editing`'s id, pictures, tags,
+    /// and past regimens: Taking It replaces the regimen that is running or still to start, or adds one, and off stops it.
     func supplement(editing: Supplement? = nil, today: CalendarDay = .today) -> Supplement? {
         guard issues.isEmpty, let quantity = NumberText.parse(servingQuantity) else { return nil }
         let name = name.trimmingCharacters(in: .whitespaces)
         var supplement = editing ?? Supplement(name: name)
         supplement.name = name
         supplement.brand = Self.text(brand)
+        supplement.url = Self.link(url)?.absoluteString
         supplement.serving = Supplement.Serving(quantity: quantity, unit: servingUnit.trimmingCharacters(in: .whitespaces))
         supplement.components = components.filter { !$0.isBlank }.map {
             Supplement.Component(name: $0.name.trimmingCharacters(in: .whitespaces), amount: NumberText.parse($0.amount), unit: Self.text($0.unit))
@@ -149,6 +153,15 @@ struct SupplementDraft: Equatable, Sendable {
         return supplement
     }
 
+    /// A typed web address as a link, `https` when it names no scheme. Nil when it is not one.
+    private static func link(_ value: String) -> URL? {
+        let trimmed = value.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, !trimmed.contains(" "),
+              let url = URL(string: trimmed.contains("://") ? trimmed : "https://\(trimmed)"),
+              ["http", "https"].contains(url.scheme?.lowercased()), url.host()?.contains(".") == true else { return nil }
+        return url
+    }
+
     private static func text(_ value: String) -> String? {
         let trimmed = value.trimmingCharacters(in: .whitespaces)
         return trimmed.isEmpty ? nil : trimmed
@@ -156,7 +169,7 @@ struct SupplementDraft: Equatable, Sendable {
 
     var focusOrder: FocusOrder<Field> {
         FocusOrder(
-            [.name, .brand, .servingQuantity, .servingUnit]
+            [.name, .brand, .url, .servingQuantity, .servingUnit]
                 + components.flatMap { [.componentName($0.id), .componentAmount($0.id), .componentUnit($0.id)] }
                 + (taking ? [.count] : []) + [.note]
         )

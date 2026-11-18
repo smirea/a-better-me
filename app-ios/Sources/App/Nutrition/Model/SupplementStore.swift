@@ -12,35 +12,44 @@ extension Supplement {
     }
 }
 
-/// What a save does to a supplement's picture. `replace` takes any image data and stores it at `SupplementImage.maxPixels`.
-enum SupplementPictureChange: Sendable {
-    case keep
-    case replace(Data)
+extension Tag {
+    static let byID = DatabaseQuery([UUID: Tag]()) { db in
+        try Dictionary(uniqueKeysWithValues: Tag.fetchAll(db).map { ($0.id, $0) })
+    }
 }
 
 extension LocalStore {
-    /// Inserts or updates the supplement, and its picture in the same transaction, so `imageAt` never names a picture
-    /// that is not there.
-    func saveSupplement(_ supplement: Supplement, picture: SupplementPictureChange = .keep) {
-        write { try Self.save(supplement, picture: picture, in: $0) }
+    /// Inserts or updates the supplement. `pictures` is every picture it should have, in order, or nil to leave them:
+    /// the ones it lacks are inserted and the ones left out deleted in the same transaction, so `images` never names a
+    /// picture that is not there.
+    func saveSupplement(_ supplement: Supplement, pictures: [SupplementImage]? = nil) {
+        write { try Self.save(supplement, pictures: pictures, in: $0) }
     }
 
-    nonisolated static func save(_ supplement: Supplement, picture: SupplementPictureChange, in db: Database) throws {
+    nonisolated static func save(_ supplement: Supplement, pictures: [SupplementImage]? = nil, in db: Database) throws {
         var saved = supplement
         saved.updatedAt = .now
-        if case let .replace(data) = picture, let jpeg = MealPhotoImage.jpeg(from: data, maxPixels: SupplementImage.maxPixels) {
-            var image = SupplementImage(id: saved.id, jpeg: jpeg)
-            image.updatedAt = saved.updatedAt
-            try put(image, in: db)
-            saved.imageAt = saved.updatedAt
+        if let pictures {
+            let stored = try Supplement.fetchOne(db, key: saved.key)?.images ?? []
+            let kept = Set(pictures.map(\.id))
+            for id in stored where !kept.contains(id) {
+                _ = try SupplementImage.deleteOne(db, key: SupplementImage.key(id))
+            }
+            for picture in pictures where !stored.contains(picture.id) {
+                try put(picture, in: db)
+            }
+            saved.images = pictures.map(\.id)
         }
         try put(saved, in: db)
     }
 
     func deleteSupplement(_ id: UUID) {
         write { db in
-            _ = try Supplement.deleteOne(db, key: Supplement.key(id))
-            _ = try SupplementImage.deleteOne(db, key: SupplementImage.key(id))
+            let key = Supplement.key(id)
+            for image in try Supplement.fetchOne(db, key: key)?.images ?? [] {
+                _ = try SupplementImage.deleteOne(db, key: SupplementImage.key(image))
+            }
+            _ = try Supplement.deleteOne(db, key: key)
         }
     }
 

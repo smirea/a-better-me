@@ -12,6 +12,8 @@ struct SupplementEditor: View {
     @State private var baseline: SupplementDraft
     private let opened: SupplementDraft
     @State private var photos = SupplementPhotoReader()
+    /// False until the pictures it has are in `photos`. A save before then leaves them as they are.
+    @State private var picturesLoaded: Bool
     @State private var showErrors = false
     @State private var confirmingDelete = false
     @FocusState private var focus: SupplementDraft.Field?
@@ -21,6 +23,7 @@ struct SupplementEditor: View {
         let initial = supplement.map { SupplementDraft($0) } ?? SupplementDraft()
         _draft = State(initialValue: initial)
         _baseline = State(initialValue: initial)
+        _picturesLoaded = State(initialValue: supplement?.images.isEmpty != false)
         opened = initial
     }
 
@@ -30,7 +33,7 @@ struct SupplementEditor: View {
             Form {
                 PhotosSection(
                     reader: photos,
-                    footer: "The first photo becomes the supplement's picture. Add the Supplement Facts panel and Gemini fills in the name, serving, and ingredients; a field you change stays yours.",
+                    footer: "The first photo is the one lists show. Add the Supplement Facts panel and Gemini fills in the name, serving, and ingredients; a field you change stays yours.",
                     nothingRead: SupplementLabel()
                 )
                 identity(issues)
@@ -67,6 +70,12 @@ struct SupplementEditor: View {
                 draft.merge(read, over: baseline)
                 baseline = read
             }
+            .task {
+                guard let editing, !picturesLoaded else { return }
+                let stored = await SupplementPictures.stored(editing.images, in: store.database.pool)
+                photos.restore(stored.compactMap { PhotoUpload(id: $0.id, jpeg: $0.jpeg) })
+                picturesLoaded = true
+            }
             .onDisappear { photos.cancel() }
             .alert("Delete Supplement", isPresented: $confirmingDelete) {
                 Button("Delete", role: .destructive) {
@@ -79,7 +88,7 @@ struct SupplementEditor: View {
             }
         }
         // A read takes seconds and fills the whole label; a stray swipe should not throw that away. Close still does.
-        .interactiveDismissDisabled(draft != opened || !photos.photos.isEmpty)
+        .interactiveDismissDisabled(draft != opened || picturesLoaded && photos.photos.map(\.id) != editing?.images ?? [])
         .feedback(self)
     }
 
@@ -100,6 +109,13 @@ struct SupplementEditor: View {
             TextField("Brand", text: $draft.brand)
                 .focused($focus, equals: .brand)
                 .accessibilityLabel("Brand")
+            TextField("Product Page", text: $draft.url)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .focused($focus, equals: .url)
+                .accessibilityLabel("Product Page")
+            FieldIssue(issues[.url])
             HStack {
                 TextField("1", text: $draft.servingQuantity)
                     .keyboardType(.decimalPad)
@@ -116,7 +132,7 @@ struct SupplementEditor: View {
         }
     }
 
-    /// The picture as it will be saved: the first new photo, else the one it has.
+    /// The picture lists will show: the first photo, or the one it has until its photos are loaded.
     @ViewBuilder private var picture: some View {
         if let preview = photos.photos.first?.preview {
             Color.clear
@@ -124,7 +140,7 @@ struct SupplementEditor: View {
                 .clipShape(.rect(cornerRadius: Theme.smallCornerRadius))
                 .accessibilityHidden(true)
         } else {
-            SupplementPicture(id: editing?.id ?? UUID(), imageAt: editing?.imageAt, name: draft.name)
+            SupplementPicture(image: picturesLoaded ? nil : editing?.images.first, name: draft.name)
         }
     }
 
@@ -221,7 +237,7 @@ struct SupplementEditor: View {
     private func save() {
         showErrors = true
         guard let supplement = draft.supplement(editing: editing) else { return }
-        store.saveSupplement(supplement, picture: photos.photos.first.map { .replace($0.jpeg) } ?? .keep)
+        store.saveSupplement(supplement, pictures: picturesLoaded ? photos.photos.map { SupplementImage(id: $0.id, jpeg: $0.jpeg) } : nil)
         dismiss()
     }
 }
