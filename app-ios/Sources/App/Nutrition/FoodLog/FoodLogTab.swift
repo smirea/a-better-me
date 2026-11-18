@@ -105,7 +105,7 @@ private struct HeaderSlide: ViewModifier {
 }
 
 private extension View {
-    /// The bottom bar's Your Foods circle: a fixed frame, so the Calendar button and the ⋯ menu match.
+    /// A fixed 48 pt glass circle, so the Calendar button and the ⋯ menu match.
     func headerButton() -> some View {
         labelStyle(.iconOnly)
             .foregroundStyle(Theme.textPrimary)

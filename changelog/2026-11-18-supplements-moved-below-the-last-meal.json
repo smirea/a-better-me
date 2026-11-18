@@ -1,0 +1,18 @@
+{
+	"title": "Supplements moved below the last meal, showing every picture; Your Foods button removed",
+	"description": "The strip has no card and wraps larger pictures; Your Foods stays in + > Library and More.",
+	"tasks": [
+		{
+			"id": "7fd39ac0-9468-40ca-a22e-65d08c577beb",
+			"title": "1 Nutrition Feedback: move page to bottom"
+		},
+		{
+			"id": "c73ba8fb-6454-4ad0-902d-061a3baedec7",
+			"title": "1 Nutrition Feedback: make buttons show all supplements"
+		},
+		{
+			"id": "2386490d-5329-4cef-a23f-ae76e8c79aa2",
+			"title": "1 Nutrition Feedback: remove button"
+		}
+	]
+}

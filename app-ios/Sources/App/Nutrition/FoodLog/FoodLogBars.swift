@@ -1,9 +1,8 @@
 import Feedback
 import SwiftUI
 
-/// The bar under the timeline: the round Your Foods button, or in select mode the selection's actions, or a copy or
-/// move's targets. A notice of what was just copied or moved sits over it. Its height is the timeline's bottom inset,
-/// so the last row scrolls clear of the button; until then the foods show beside and under it.
+/// The bar under the timeline in select mode, with the selection's actions, or a copy or move's targets, and the notice
+/// of what was just copied or moved. Its height is the timeline's bottom inset, so the last row scrolls clear of it.
 struct FoodLogBottomBar: View {
     @Environment(FoodLogState.self) private var state
 
@@ -19,8 +18,6 @@ struct FoodLogBottomBar: View {
                     PasteBar(pending: pending)
                 } else if state.selecting {
                     SelectionBar()
-                } else {
-                    LibraryButton().frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
         }
@@ -29,7 +26,6 @@ struct FoodLogBottomBar: View {
         .padding(.bottom, 8)
         // The day pages scroll inside the pager, out of reach of a bar's scroll edge effect, so the timeline fades
         // out here instead; hour pills showing through the glass buttons made the selection's actions hard to read.
-        // The lone Your Foods circle needs no fade, so the foods run to the tab bar.
         .background {
             if acting {
                 LinearGradient(colors: [Theme.background.opacity(0), Theme.background], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.2))
@@ -69,21 +65,6 @@ private struct NoticeBar: View {
             if state.notice?.id == notice.id { state.notice = nil }
         }
         .feedback(self)
-    }
-}
-
-/// Opens the logger on its Library tab; its Search tab is one segment away.
-private struct LibraryButton: View {
-    @Environment(FoodLogState.self) private var state
-
-    var body: some View {
-        Button("Your Foods", systemImage: "books.vertical.fill") { state.requestLog(start: .library) }
-            .labelStyle(.iconOnly)
-            .frame(width: 48, height: 48)
-            .contentShape(.circle)
-            .glassEffect(.regular.interactive(), in: .circle)
-            .buttonStyle(.plain)
-            .feedback(self)
     }
 }
 
