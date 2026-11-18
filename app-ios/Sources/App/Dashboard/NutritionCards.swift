@@ -106,10 +106,13 @@ struct DailyNutritionCard: View {
             if let first = lines.first {
                 let center = shown == .consumed ? first.total : first.remaining
                 let other = shown == .consumed ? first.remaining : first.total
+                // Calories need no name; any other first column says which nutrient and unit the gauge measures.
+                let unit = first.nutrient == .energy ? "" : " g"
+                let title = first.nutrient == .energy ? shown.rawValue : "\(first.nutrient.title) \(shown.rawValue.lowercased())"
                 HStack {
-                    StatView(title: shown == .consumed ? "Remaining" : "Consumed", value: other?.wholeText ?? "--", size: .compact)
-                    gauge(center: center, title: shown.rawValue, fill: first.fill(shown == .consumed ? .eaten : .remaining)?.eaten ?? 0, color: first.nutrient.color)
-                    StatView(title: "Target", value: first.target?.wholeText ?? "--", size: .compact)
+                    StatView(title: shown == .consumed ? "Remaining" : "Consumed", value: other.map { "\($0.wholeText)\(unit)" } ?? "--", size: .compact)
+                    gauge(center: center, title: title, fill: first.fill(shown == .consumed ? .eaten : .remaining)?.eaten ?? 0, color: first.nutrient.color)
+                    StatView(title: "Target", value: first.target.map { "\($0.wholeText)\(unit)" } ?? "--", size: .compact)
                 }
             }
             HStack(spacing: 18) {
@@ -126,7 +129,10 @@ struct DailyNutritionCard: View {
             VStack(spacing: 0) {
                 Text(center?.wholeText ?? "--").font(AppFont.number(26))
                 Text(title).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
+            .padding(.horizontal, 10)
         }
         .frame(width: 112, height: 112)
         .accessibilityElement(children: .combine)
