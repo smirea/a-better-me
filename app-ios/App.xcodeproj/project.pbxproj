@@ -89,6 +89,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		A00000000000000000000040 /* Sources/Core */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/Core; sourceTree = "<group>"; };
 		A00000000000000000000004 /* Sources/App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/App; sourceTree = "<group>"; };
 		A00000000000000000000030 /* Tests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Tests; sourceTree = "<group>"; };
 		B00000000000000000000001 /* Sources/Watch */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/Watch; sourceTree = "<group>"; };
@@ -155,6 +156,7 @@
 				FA0000000000000000000001 /* UITests/App */,
 				A00000000000000000000016 /* Config/Base.xcconfig */,
 				A00000000000000000000004 /* Sources/App */,
+				A00000000000000000000040 /* Sources/Core */,
 				D00000000000000000000001 /* Sources/Shared */,
 				B00000000000000000000001 /* Sources/Watch */,
 				C00000000000000000000001 /* Sources/Widgets */,
@@ -200,6 +202,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				A00000000000000000000004 /* Sources/App */,
+				A00000000000000000000040 /* Sources/Core */,
 				D00000000000000000000001 /* Sources/Shared */,
 			);
 			name = App;

@@ -10,3 +10,4 @@ Config/Env.xcconfig
 
 # Own packages track their branch; scripts/own-packages.ts refreshes local pins.
 App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+/Package.resolved

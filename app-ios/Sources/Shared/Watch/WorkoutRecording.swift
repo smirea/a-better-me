@@ -16,13 +16,7 @@ final class WorkoutRecording: NSObject {
     /// The session ended, failed, or lost its remote device.
     var onEnd: (() -> Void)?
 
-    struct Stats: Codable, Equatable, Sendable {
-        var heartRate: Double?
-        var averageHeartRate: Double?
-        var maxHeartRate: Double?
-        var activeEnergyKcal: Double?
-        var basalEnergyKcal: Double?
-    }
+    typealias Stats = WorkoutStats
 
     nonisolated static let log = Logger(subsystem: "com.stefan.a-better-me", category: "workout-recording")
     nonisolated static let heartRate = HKQuantityType(.heartRate)
