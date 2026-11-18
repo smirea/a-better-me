@@ -13,10 +13,9 @@ protocol FoodLabelReader: Sendable {
     func read(jpegs: [Data]) async throws -> FoodLabel
 }
 
-/// `POST /api/food-database/label` with the bundled owner token, the same server and token sync uses.
-struct FoodLabelClient: FoodLabelReader {
-    static let live = FoodLabelClient(endpoint: AppEnvironment.apiURL.appending(path: "api/food-database/label"), token: AppEnvironment.ownerToken)
-
+/// Posts package photos to one of the server's label routes with the bundled owner token, the same server and token
+/// sync uses, and decodes what the model read.
+struct LabelClient<Label: Decodable & Sendable>: Sendable {
     let endpoint: URL
     let token: String
     var session = URLSession.shared
@@ -32,7 +31,7 @@ struct FoodLabelClient: FoodLabelReader {
 
     private struct Failure: Decodable { let error: String }
 
-    func read(jpegs: [Data]) async throws -> FoodLabel {
+    func read(jpegs: [Data]) async throws -> Label {
         // A label took 5 to 6 seconds in testing; more photos take longer.
         var request = URLRequest(url: endpoint, timeoutInterval: 60)
         request.httpMethod = "POST"
@@ -44,7 +43,16 @@ struct FoodLabelClient: FoodLabelReader {
         guard response.statusCode == 200 else {
             throw MealPhotoError(message: (try? JSONDecoder().decode(Failure.self, from: data))?.error ?? "The server answered \(response.statusCode).")
         }
-        return try JSONDecoder().decode(FoodLabel.self, from: data)
+        return try JSONDecoder().decode(Label.self, from: data)
+    }
+}
+
+/// `POST /api/food-database/label`.
+typealias FoodLabelClient = LabelClient<FoodLabel>
+
+extension LabelClient: FoodLabelReader where Label == FoodLabel {
+    static var live: FoodLabelClient {
+        FoodLabelClient(endpoint: AppEnvironment.apiURL.appending(path: "api/food-database/label"), token: AppEnvironment.ownerToken)
     }
 }
 

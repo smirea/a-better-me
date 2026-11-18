@@ -75,6 +75,8 @@ final class FoodLogState {
     var editing: FoodEntry?
     /// The logged recipe Alter is open on.
     var altering: FoodEntry?
+    /// Whether the days list their supplements under the row of pictures. Shared, so paging keeps it.
+    var supplementsExpanded = false
     /// Untyped, so screens pushed here push their own routes too: Strategy, from a day without a plan, pushes `StrategyRoute`.
     var path = NavigationPath()
     var notice: Notice?

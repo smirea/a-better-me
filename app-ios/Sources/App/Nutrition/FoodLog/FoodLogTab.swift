@@ -33,6 +33,7 @@ struct FoodLogTab: View {
                     }
                 }
                 .navigationDestination(for: StrategyRoute.self) { $0.destination }
+                .navigationDestination(for: SupplementRoute.self) { $0.destination }
         }
         .environment(state)
         .sheet(item: $state.logRequest) { LoggerSheet(start: LoggerStart($0)) }

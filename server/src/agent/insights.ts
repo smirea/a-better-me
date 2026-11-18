@@ -110,8 +110,12 @@ export function maintenanceFor(db: Db, timeZone: string, now: string) {
 
 const best = (a: number | null, b: number | null) => (a === null ? b : b === null ? a : Math.max(a, b));
 
-/** Every synced table but the token hashes, decoded as the API returns rows. */
-const EXPORTED = (Object.keys(SYNCED_TABLES) as SyncedTable[]).filter(table => table !== 'api_tokens');
+/**
+ * Every synced table but the token hashes and the supplement pictures, decoded as the API returns rows. The pictures
+ * are base64 JPEGs, megabytes an agent reading the export has no use for; the R2 backups keep them.
+ */
+const UNEXPORTED = new Set<SyncedTable>(['api_tokens', 'supplement_images']);
+const EXPORTED = (Object.keys(SYNCED_TABLES) as SyncedTable[]).filter(table => !UNEXPORTED.has(table));
 
 export const insightRoutes: Route[] = [
 	route({
@@ -232,7 +236,7 @@ export const insightRoutes: Route[] = [
 		tag: 'Insights',
 		summary: 'Every stored row of every table, in one response',
 		description:
-			'A backup or a full analysis in one call. Rows are as stored: JSON trees whole, weights in kg, no derived fields. The token table is left out.',
+			'A backup or a full analysis in one call. Rows are as stored: JSON trees whole, weights in kg, no derived fields. The token table and the supplement pictures are left out.',
 		response: z.object({
 			exportedAt: z.string(),
 			tables: z.record(z.string(), z.array(z.record(z.string(), z.unknown()))),

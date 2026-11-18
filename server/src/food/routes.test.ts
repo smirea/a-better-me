@@ -401,3 +401,42 @@ describe('ramble', () => {
 		expect(items.map((item: { day: number | null }) => item.day)).toEqual([-1, -1, -1, 0, 0]);
 	});
 });
+
+const supplementLabel = (geminiApiKey: string | null, body: unknown) =>
+	agent(geminiApiKey)(
+		new Request('http://api.test/api/food-database/supplement-label', {
+			method: 'POST',
+			headers: { authorization: `Bearer ${config.ownerToken}` },
+			body: JSON.stringify(body),
+		}),
+	);
+
+describe('supplement label', () => {
+	const front = { image: btoa('front'), mediaType: 'image/jpeg' };
+	const panel = { image: btoa('panel'), mediaType: 'image/jpeg' };
+
+	test('a supplement panel becomes the serving and one component per row, and a blend row keeps no amount', async () => {
+		stub(() =>
+			geminiText(
+				JSON.stringify({
+					name: ' Immune Defense ',
+					brand: 'Northwind',
+					serving: { quantity: 2, unit: ' veggie capsules ' },
+					components: [
+						{ name: 'Vitamin C', amount: 250, unit: 'mg' },
+						{ name: 'Withanolides', amount: null, unit: null },
+						{ name: ' ', amount: 5, unit: 'mg' },
+					],
+				}),
+			),
+		);
+		const response = await supplementLabel('gemini-key', { images: [front, panel] });
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({
+			name: 'Immune Defense',
+			brand: 'Northwind',
+			serving: { quantity: 2, unit: 'veggie capsules' },
+			components: [{ name: 'Vitamin C', amount: 250, unit: 'mg' }, { name: 'Withanolides' }],
+		});
+	});
+});

@@ -2,27 +2,27 @@ import Feedback
 import PhotosUI
 import SwiftUI
 
-/// The food editor's package photos and their read. Every change to the photos reads all of them again in one call,
-/// replacing a read still running, so the answer always covers every photo shown.
+/// An editor's package photos and their read into a `Label`: a food's or a supplement's. Every change to the photos
+/// reads all of them again in one call, replacing a read still running, so the answer always covers every photo shown.
 @MainActor @Observable
-final class FoodPhotoReader {
+final class PhotoReader<Label: Equatable & Sendable> {
     enum State: Equatable {
         case idle, reading
-        case read(FoodLabel)
+        case read(Label)
         case failed(String)
     }
 
     /// The server takes eight.
-    static let limit = 8
+    static var limit: Int { 8 }
 
     private(set) var photos: [PhotoUpload]
     private(set) var state = State.idle
-    @ObservationIgnored private let reader: any FoodLabelReader
+    @ObservationIgnored private let reading: @Sendable ([Data]) async throws -> Label
     @ObservationIgnored private var task: Task<Void, Never>?
 
-    init(photos: [PhotoUpload] = [], reader: any FoodLabelReader = FoodLabelClient.live) {
+    init(photos: [PhotoUpload] = [], reading: @escaping @Sendable ([Data]) async throws -> Label) {
         self.photos = photos
-        self.reader = reader
+        self.reading = reading
         read()
     }
 
@@ -46,13 +46,13 @@ final class FoodPhotoReader {
         }
         state = .reading
         let jpegs = photos.map(\.jpeg)
-        task = Task { [reader] in
+        task = Task { [reading] in
             do {
-                let label = try await reader.read(jpegs: jpegs)
+                let label = try await reading(jpegs)
                 if !Task.isCancelled { state = .read(label) }
             } catch {
                 guard !Task.isCancelled else { return }
-                FoodSearch.log.info("Reading food photos failed: \(String(describing: error))")
+                FoodSearch.log.info("Reading photos failed: \(String(describing: error))")
                 state = .failed((error as? MealPhotoError)?.message ?? "The server can't be reached. Check the connection and try again.")
             }
         }
@@ -63,9 +63,20 @@ final class FoodPhotoReader {
     }
 }
 
-/// Photos of the package at the top of the food editor: thumbnails, the camera, and the library (several at once).
-struct FoodPhotosSection: View {
-    let reader: FoodPhotoReader
+typealias FoodPhotoReader = PhotoReader<FoodLabel>
+
+extension PhotoReader where Label == FoodLabel {
+    convenience init(photos: [PhotoUpload] = [], reader: any FoodLabelReader = FoodLabelClient.live) {
+        self.init(photos: photos) { try await reader.read(jpegs: $0) }
+    }
+}
+
+/// Photos of the package at the top of an editor: thumbnails, the camera, and the library (several at once).
+/// `nothingRead` is the label of photos that show nothing to fill in.
+struct PhotosSection<Label: Equatable & Sendable>: View {
+    let reader: PhotoReader<Label>
+    let footer: String
+    let nothingRead: Label
     @State private var capturing = false
     @State private var choosing = false
     @State private var picked: [PhotosPickerItem] = []
@@ -74,7 +85,7 @@ struct FoodPhotosSection: View {
     private let cameraWorks = UIImagePickerController.isSourceTypeAvailable(.camera)
 
     var body: some View {
-        ThemedSection("Photos", footer: "Photograph the front, the nutrition facts, and any store label. Gemini reads them together and fills in what they show; a field you change stays yours.") {
+        ThemedSection("Photos", footer: footer) {
             if !reader.photos.isEmpty {
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
@@ -84,7 +95,7 @@ struct FoodPhotosSection: View {
                                 .scaledToFill()
                                 .frame(width: 72, height: 72)
                                 .clipShape(.rect(cornerRadius: 10))
-                                .accessibilityLabel("Food photo")
+                                .accessibilityLabel("Photo")
                                 .overlay(alignment: .topTrailing) {
                                     Button("Remove Photo", systemImage: "xmark.circle.fill") { reader.remove(photo.id) }
                                         .labelStyle(.iconOnly)
@@ -104,9 +115,9 @@ struct FoodPhotosSection: View {
                 }
                 Button("Photos", systemImage: "photo.on.rectangle") { choosing = true }.secondaryPill().accessibilityLabel("Choose Photos")
             }
-            .disabled(reader.photos.count >= FoodPhotoReader.limit || loading)
+            .disabled(reader.photos.count >= PhotoReader<Label>.limit || loading)
             // On the row, not the section: a section hands its modifiers to every row, which presented a picker per row.
-            .photosPicker(isPresented: $choosing, selection: $picked, maxSelectionCount: FoodPhotoReader.limit - reader.photos.count, matching: .images)
+            .photosPicker(isPresented: $choosing, selection: $picked, maxSelectionCount: PhotoReader<Label>.limit - reader.photos.count, matching: .images)
             .fullScreenCover(isPresented: $capturing) {
                 CameraCapture { image in load { [PhotoUpload(image)].compactMap(\.self) } }.ignoresSafeArea()
             }
@@ -136,7 +147,7 @@ struct FoodPhotosSection: View {
                     .foregroundStyle(Theme.textSecondary)
             }
         case let .read(label):
-            Label(label == FoodLabel() ? "Nothing to read in the photos" : "Filled in from the photos", systemImage: label == FoodLabel() ? "questionmark.circle" : "checkmark.circle")
+            SwiftUI.Label(label == nothingRead ? "Nothing to read in the photos" : "Filled in from the photos", systemImage: label == nothingRead ? "questionmark.circle" : "checkmark.circle")
                 .foregroundStyle(Theme.textSecondary)
         case let .failed(message):
             HStack {

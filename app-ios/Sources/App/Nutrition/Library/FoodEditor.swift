@@ -57,7 +57,11 @@ struct FoodEditor: View {
         let issues = showErrors ? draft.issues : [:]
         NavigationStack {
             Form {
-                FoodPhotosSection(reader: photos)
+                PhotosSection(
+                    reader: photos,
+                    footer: "Photograph the front, the nutrition facts, and any store label. Gemini reads them together and fills in what they show; a field you change stays yours.",
+                    nothingRead: FoodLabel()
+                )
                 identity(issues)
                 serving(issues)
                 otherServings(issues)

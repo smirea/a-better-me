@@ -46,6 +46,7 @@ enum DevSeed {
             try FoodLogSeed.insertHistory(in: db)
             try FoodLogSeed.insert(in: db)
         }
+        if try Supplement.fetchCount(db) == 0 { try SupplementSeed.insert(in: db) }
     }
 }
 #endif

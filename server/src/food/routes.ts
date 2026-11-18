@@ -4,6 +4,7 @@ import { limit, route, type Route } from '../agent/route';
 import { FoodLabel, FoodLabelRequest, readFoodLabel } from './foodLabel';
 import { MealPhoto, MealPhotoRequest, recognizeMeal } from './mealPhoto';
 import { outlineRamble, RambleOutline, RambleRequest } from './ramble';
+import { readSupplementLabel, SupplementLabel, SupplementLabelRequest } from './supplementLabel';
 import { BrandedFood, lookupBarcode, searchProducts } from './openFoodFacts';
 
 /**
@@ -65,6 +66,20 @@ export const foodRoutes = ({ geminiApiKey }: { geminiApiKey: string | null }): R
 		run({ body }) {
 			if (!geminiApiKey) throw new ApiError(503, 'Reading labels needs GEMINI_API_KEY on the server');
 			return readFoodLabel(body, geminiApiKey);
+		},
+	}),
+	route({
+		method: 'POST',
+		path: '/food-database/supplement-label',
+		tag: 'Food database',
+		summary: 'Read a supplement from photos of its package',
+		description:
+			'Gemini reads every photo in one call (the front, the Supplement Facts panel) and answers one supplement: its name, brand, the serving size, and one component per panel row with its amount per serving. A field no photo shows is left out. 503 when the server has no Gemini key.',
+		body: SupplementLabelRequest,
+		response: SupplementLabel,
+		run({ body }) {
+			if (!geminiApiKey) throw new ApiError(503, 'Reading labels needs GEMINI_API_KEY on the server');
+			return readSupplementLabel(body, geminiApiKey);
 		},
 	}),
 	route({

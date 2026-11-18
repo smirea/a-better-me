@@ -9,7 +9,7 @@ A Better Me's concepts, goals, paradigms, and high-level system decisions, one f
 - [Workouts](workouts.md): milestone scope, the exercise catalog source, the workout domain model, and feature ownership.
 - [iOS](ios.md): platform targets, SwiftData persistence, the design system, code layout, and verification.
 - [Design language](design.md): one way to draw each concept across both halves: cards, titles, toolbars, one row of controls, actions, selection, stats, bottom bars, empty states, and the screen tour that proves a change.
-- [Nutrition](nutrition.md): the MacroFactor half, its navigation shell, food data sources and photo logging, the domain model and the log's snapshot rule, nutrient ids and the registry, the one settings tree and writing food to Apple Health, what is computed instead of stored, the MacroFactor import, and what it defers.
+- [Nutrition](nutrition.md): the MacroFactor half, its navigation shell, food data sources and photo logging, the domain model and the log's snapshot rule, nutrient ids and the registry, the one settings tree and writing food to Apple Health, what is computed instead of stored, the MacroFactor import, supplements, and what it defers.
 - [Live workout surfaces](live-workout.md): the Apple Watch app, which runs workouts without the phone, the Live Activity, and Apple Health.
 - [Widgets](widgets.md): the Home Screen and Lock Screen widgets, the Control Center control, the nutrition and steps snapshots in the app group, the step widgets' own Health and pedometer read and their refresh cadence, and quick action routing.
 - [Sync](sync.md): offline first, the sync engine's one space, the shared SQLite schema and its validators, the owner token, the write rules, local servers, and the iOS client.
