@@ -52,11 +52,17 @@ private struct RowSwipe: ViewModifier {
                 changed: drag, ended: settle
             ))
             .sensoryFeedback(.impact(weight: .medium), trigger: armed) { _, armed in armed }
+            // Select mode takes a Food Log tile's actions away; an open tile kept its offset, past the screen's edge.
+            .onChange(of: openActionsGone) { _, gone in if gone { close() } }
             .accessibilityActions {
                 ForEach(leading + trailing) { action in
                     Button(action.title, action: action.action)
                 }
             }
+    }
+
+    private var openActionsGone: Bool {
+        resting > 0 ? leading.isEmpty : resting < 0 ? trailing.isEmpty : false
     }
 
     private var revealed: some View {

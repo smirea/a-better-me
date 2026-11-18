@@ -96,8 +96,8 @@ private struct SelectionBar: View {
                         }
                     }
                 }
-                Button("Copy") { state.pending = .init(action: .copy, entries: state.selectedEntries) }
-                Button("Move") { state.pending = .init(action: .move, entries: state.selectedEntries) }
+                Button("Copy") { state.hold(.copy, state.selectedEntries) }
+                Button("Move") { state.hold(.move, state.selectedEntries) }
                 Button("Remove") { confirmingRemove = true }
                 if settings.nutrition.timeline.display == .time {
                     Button("Modify Timestamp") { prompt = .timestamp }
@@ -128,7 +128,8 @@ private struct SelectionBar: View {
     }
 }
 
-/// Copy or Move's targets. Paste Inline turns every hour's or section's + into a paste button, on any day the owner swipes to.
+/// Copy or Move's targets, which stay up while the owner changes days. Paste Inline turns every hour's or section's +
+/// into a paste button on whichever day is shown; To Now, To Today, and To Tomorrow name the same days from any.
 private struct PasteBar: View {
     private enum Prompt: Identifiable {
         case dateTime, dates
@@ -146,9 +147,7 @@ private struct PasteBar: View {
     var body: some View {
         let title = pending.action == .copy ? "Copy" : "Move"
         FlowLayout {
-            BarTitle(title: title, count: pending.entries.count, systemImage: "chevron.left") {
-                if pending.inline { state.pending?.inline = false } else { state.pending = nil }
-            }
+            BarTitle(title: title, count: pending.entries.count, systemImage: "chevron.left") { state.back() }
             if pending.inline {
                 Text(settings.nutrition.timeline.display == .sections ? "Tap a section to paste" : "Tap an hour to paste")
                     .font(AppFont.chip)
@@ -308,11 +307,7 @@ struct DayMenu: View {
             Button("Nutrition Overview", systemImage: "list.bullet.rectangle") { state.path.append(FoodLogRoute.overview(day)) }
             Button("Strategy", systemImage: "chart.line.uptrend.xyaxis") { state.path.append(FoodLogRoute.strategy) }
             Button("Supplements", systemImage: "pills") { state.path.append(SupplementRoute.library) }
-            Button("Copy Day", systemImage: "doc.on.doc") {
-                state.selecting = true
-                state.selection = Set(entries.map(\.id))
-                state.pending = .init(action: .copy, entries: entries)
-            }
+            Button("Copy Day", systemImage: "doc.on.doc") { state.hold(.copy, entries) }
             .disabled(entries.isEmpty)
             Button("Select All", systemImage: "checkmark.circle") {
                 state.selecting = true

@@ -33,8 +33,8 @@ struct FoodLogStateTests {
         let breakfast = [entry(minute: 482), entry(minute: 485, quantity: 2)]
         try await log(breakfast)
         let state = FoodLogState()
-        state.selectHour(breakfast.map(\.id))
-        state.pending = .init(action: .copy, entries: breakfast)
+        state.day = monday
+        state.hold(.copy, breakfast)
 
         state.paste(to: .hour(monday, hour: 16), in: store)
         #expect(!state.selecting)
@@ -46,6 +46,69 @@ struct FoodLogStateTests {
         state.undo(in: store)
         #expect(state.notice == nil)
         #expect(try await entries(on: monday).map(\.id) == breakfast.map(\.id))
+    }
+
+    @Test func aSelectionEndsWithItsDayButAPendingCopyOrMoveCarriesTheFoodsToAnother() async throws {
+        let breakfast = [entry(minute: 482), entry(minute: 485)]
+        let state = FoodLogState()
+        state.day = monday
+        state.selectHour(breakfast.map(\.id))
+        state.day = monday.adding(days: 1)
+        #expect(!state.selecting)
+
+        state.day = monday
+        state.selectHour(breakfast.map(\.id))
+        state.hold(.copy, breakfast)
+        state.day = monday.adding(days: 2)
+        #expect(state.pending?.entries == breakfast)
+        #expect(state.selecting)
+        #expect(!state.showsCircles(on: monday.adding(days: 2)))
+        #expect(state.showsCircles(on: monday))
+    }
+
+    @Test func aMovePastedOnAnotherDayLeavesItsDayOnceAndUndoReturnsIt() async throws {
+        let breakfast = [entry(minute: 482), entry(minute: 485)]
+        try await log(breakfast)
+        let wednesday = monday.adding(days: 2)
+        let state = FoodLogState()
+        state.day = monday
+        state.hold(.move, breakfast)
+        state.day = wednesday
+        state.pending?.inline = true
+
+        state.paste(to: .hour(wednesday, hour: 12), in: store)
+        #expect(try await entries(on: monday).isEmpty)
+        #expect(try await entries(on: wednesday).map(\.id) == breakfast.map(\.id))
+        #expect(state.pending == nil)
+
+        state.undo(in: store)
+        #expect(try await entries(on: monday).map(\.minute) == [482, 485])
+        #expect(try await entries(on: wednesday).isEmpty)
+    }
+
+    @Test func aPendingCopyOrMoveHoldsItsSelectionStill() {
+        let breakfast = [entry(minute: 482), entry(minute: 485)]
+        let state = FoodLogState()
+        state.hold(.copy, [breakfast[0]])
+        state.select(breakfast[1].id)
+        state.selectHour([breakfast[1].id])
+        #expect(state.selection == [breakfast[0].id])
+    }
+
+    @Test func backingOutOfTheTargetsOnAnotherDayEndsTheSelection() {
+        let state = FoodLogState()
+        state.day = monday
+        state.hold(.move, [entry(minute: 482)])
+        state.back()
+        #expect(state.selecting && state.pending == nil)
+
+        state.hold(.move, [entry(minute: 482)])
+        state.day = monday.adding(days: 1)
+        state.pending?.inline = true
+        state.back()
+        #expect(state.pending?.inline == false)
+        state.back()
+        #expect(!state.selecting && state.pending == nil)
     }
 
     @Test func undoingAMovePutsEachEntryBackAtItsOwnTime() async throws {
