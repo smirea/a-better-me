@@ -17,9 +17,6 @@ const paths = (full ? [] : (await $`git diff --name-only -z ${comparison}`.text(
 			(!['.md', '.rst'].includes(extname(name).toLowerCase()) && !name.startsWith('docs/'))),
 );
 const common = full || paths.some(name => name.startsWith('.github/'));
-// Bun checks read app-ios files too (the catalog the Worker bundles, the nutrient registry, the Swift lint, the
-// generated schema), and the Bun jobs are cheap, so any change but docs runs them.
-const bun = common || paths.length > 0;
 const swift =
 	common ||
 	paths.some(
@@ -33,4 +30,4 @@ const uploadsAssets =
 	full ||
 	paths.some(name => [...assets, 'server/src/assets.ts', 'scripts/assets.ts'].some(path => name.startsWith(path)));
 
-appendFileSync(output, `bun=${bun}\nswift=${swift}\nassets=${uploadsAssets}\n`);
+appendFileSync(output, `swift=${swift}\nassets=${uploadsAssets}\n`);
