@@ -57,7 +57,7 @@ private struct TodayTargets: View {
                     }
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
-                    ProgressView(value: line.fill(.eaten)?.eaten ?? 0).progressViewStyle(.bar(line.nutrient.color, height: 5))
+                    TargetBar(fill: line.fill(.eaten) ?? MacroLine.Fill(eaten: 0, plate: 0), color: line.nutrient.color, height: 5)
                 }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(line.spoken)

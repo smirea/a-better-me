@@ -135,18 +135,30 @@ struct NutritionMetricsTests {
         #expect(NutritionMetrics.direction(nil, tolerance: 0.5) == .noChange)
     }
 
-    @Test func weeklyNutritionRunsMondayToSundayWithRemainingAgainstTargets() {
+    @Test func weeklyNutritionRunsMondayToSundayInTheSummaryColumnsAgainstEachDaysTargets() {
         let log = [logDay("2026-10-26", kcal: [1500, 700]), logDay("2026-10-27", kcal: [300])]
+        let columns: [NutrientID] = [.energy, .protein, .fiber, .netCarbs]
+        let week = { (plans: [NutritionPlan], overages: Bool) in
+            NutritionMetrics.week(
+                of: CalendarDay("2026-10-28")!, log: log,
+                targets: { NutrientTargets.of($0, plans: plans, goals: [], profile: ProfileSettings(), latestWeightKg: nil) },
+                columns: columns, showOverages: overages
+            )
+        }
         let plans = [plan("2026-10-27", kcal: 2000)]
-        let week = NutritionMetrics.week(of: CalendarDay("2026-10-28")!, log: log, plans: plans)
-        #expect(week.map(\.day.description) == ["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01"])
-        #expect(week[0].consumed(.energy) == 2200)
-        #expect(week[0].target(.energy) == nil)
-        #expect(week[1].target(.protein) == 150)
-        #expect(week[1].remaining(.energy, overages: true) == 1700)
-        let over = NutritionMetrics.day(CalendarDay("2026-10-26")!, log: log, plans: [plan("2026-10-20", kcal: 2000)])
-        #expect(over.remaining(.energy, overages: true) == -200)
-        #expect(over.remaining(.energy, overages: false) == 0)
+        let days = week(plans, true)
+        #expect(days.map(\.day.description) == ["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01"])
+        #expect(days.allSatisfy { $0.lines.map(\.nutrient) == columns })
+        #expect(days[0].lines[0].consumed == 2200)
+        #expect(days[0].lines[0].target == nil)
+        #expect(days[1].lines[1].target == 150)
+        #expect(days[1].lines[0].remaining == 1700)
+        let fiber = days[1].lines[2].target
+        #expect(fiber != nil)
+        #expect(days[1].lines[3].target == 200 - (fiber ?? 0))
+        let earlier = [plan("2026-10-20", kcal: 2000)]
+        #expect(week(earlier, true)[0].lines[0].remaining == -200)
+        #expect(week(earlier, false)[0].lines[0].remaining == 0)
     }
 
     @Test func expenditureStartsAtTheFirstDataAndNeedsAnInitialEstimate() throws {

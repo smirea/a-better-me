@@ -17,7 +17,8 @@ struct NutrientSummary: Equatable {
 }
 
 extension DashboardData {
-    private func targets(on day: CalendarDay) -> NutrientTargets {
+    /// The owner's targets on `day`, as every Food Log screen reads them.
+    func targets(on day: CalendarDay) -> NutrientTargets {
         NutrientTargets.of(day, plans: plans, goals: goals, profile: profile, latestWeightKg: weighIns.last?.kg)
     }
 

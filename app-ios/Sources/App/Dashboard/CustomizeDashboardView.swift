@@ -286,6 +286,7 @@ private struct MetricMenuLabel: View {
 /// Every page as a tile with a toggle; the arrows move a shown page one place in the carousel's order.
 private struct PrimaryFocusPicker: View {
     @Binding var order: [FocusCard]
+    @Environment(\.summaryNutrients) private var columns
 
     private var shown: [FocusCard] {
         order + FocusCard.allCases.filter { !order.contains($0) }
@@ -343,7 +344,7 @@ private struct PrimaryFocusPicker: View {
             HStack(spacing: 10) {
                 BodyMap(values: [.chest: 10, .quads: 6, .biceps: 3], side: .front).frame(height: 56)
                 VStack(alignment: .leading, spacing: 7) {
-                    ForEach(NutrientID.macros, id: \.self) { id in
+                    ForEach(columns, id: \.self) { id in
                         Capsule().fill(id.color).frame(width: 44, height: 3)
                     }
                 }
@@ -362,7 +363,7 @@ private struct PrimaryFocusPicker: View {
             }
         case .weeklyNutrition:
             Grid(horizontalSpacing: 7, verticalSpacing: 5) {
-                ForEach(NutrientID.macros, id: \.self) { id in
+                ForEach(columns, id: \.self) { id in
                     GridRow {
                         ForEach(0..<7, id: \.self) { _ in
                             Capsule().fill(id.color).frame(width: 4, height: 10)

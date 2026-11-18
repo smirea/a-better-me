@@ -231,7 +231,7 @@ struct DashboardValues: DynamicProperty {
         case weighInHabit, workoutHabit, records(ExerciseRecord.Kind), trained
         case cycle(DashboardMetrics.CycleScope, Program?, [WorkoutTemplate])
         case detail(DashboardRoute), plot(DashboardRoute, MetricTab.ID?, ChartRange, Averaging)
-        case expenditureDays, expenditureCard, balance(BalanceReference, days: Int), week, todayNutrition, foodLogging
+        case expenditureDays, expenditureCard, balance(BalanceReference, days: Int), week([NutrientID], overages: Bool), foodLogging
         case todaySummary([NutrientID], overages: Bool)
         case goal(GoalProgressValues.Source)
         case nutrientTile(NutritionCard), macrosCard, bodyMetricCard(BodyMetricCard)
@@ -288,10 +288,11 @@ struct DashboardValues: DynamicProperty {
 
     var expenditureCard: CardValues { memo(.expenditureCard, usesNutrition: true) { $0.expenditureCard } }
     func balance(_ reference: BalanceReference, days: Int) -> BalanceValues { memo(.balance(reference, days: days), usesNutrition: true) { $0.balance(reference, days: days) } }
-    var week: [NutritionMetrics.DayNutrition] { memo(.week, usesNutrition: true) { $0.week } }
-    var todayNutrition: NutritionMetrics.DayNutrition { memo(.todayNutrition, usesNutrition: true) { $0.todayNutrition } }
-    func todaySummary(_ nutrients: [NutrientID], overages: Bool) -> [MacroLine] {
-        memo(.todaySummary(nutrients, overages: overages), usesNutrition: true) { $0.todaySummary(nutrients, overages: overages) }
+    func week(_ columns: [NutrientID], overages: Bool) -> [NutritionMetrics.DaySummary] {
+        memo(.week(columns, overages: overages), usesNutrition: true) { $0.week(columns, overages: overages) }
+    }
+    func todaySummary(_ columns: [NutrientID], overages: Bool) -> [MacroLine] {
+        memo(.todaySummary(columns, overages: overages), usesNutrition: true) { $0.todaySummary(columns, overages: overages) }
     }
     var foodLogging: FoodLoggingValues { memo(.foodLogging, usesNutrition: true) { $0.foodLogging } }
     func goalProgress(_ source: GoalProgressValues.Source) -> GoalProgressValues? {

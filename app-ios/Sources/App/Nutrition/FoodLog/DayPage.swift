@@ -473,13 +473,11 @@ private struct HourTotals: View {
             ForEach(columns, id: \.self) { id in
                 HStack(spacing: 4) {
                     Text(NutritionFormat.column(id, amounts)).font(AppFont.medium(12)).monospacedDigit()
-                    Group {
-                        if id == .energy { calorieGlyph } else { Text(id.columnLetters) }
-                    }
-                    .font(.system(size: 8, weight: .heavy))
-                    .padding(.horizontal, id.columnLetters.count > 1 ? 2.5 : 0)
-                    .frame(minWidth: 15, minHeight: 15)
-                    .background(Theme.surfaceRaised, in: Capsule())
+                    id.columnLabel
+                        .font(.system(size: 8, weight: .heavy))
+                        .padding(.horizontal, id.columnLetters.count > 1 ? 2.5 : 0)
+                        .frame(minWidth: 15, minHeight: 15)
+                        .background(Theme.surfaceRaised, in: Capsule())
                 }
             }
         }

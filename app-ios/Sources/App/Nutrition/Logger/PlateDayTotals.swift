@@ -9,10 +9,7 @@ struct PlateDayTotals: View {
     let plate: NutrientAmounts?
     var replacing: UUID?
     @Environment(LocalStore.self) private var store
-    @Observe(AppSettings.current) private var settings
-    @Observe(NutritionPlan.all) private var plans
-    @Observe(NutrientGoal.all) private var goals
-    @Observe(BodyWeight.latest) private var latestWeight
+    private var targets = OwnerTargets()
     @Observe<[FoodEntry]> private var entries: [FoodEntry]
     @Observe<NutritionDay> private var dayRow: NutritionDay
 
@@ -25,10 +22,9 @@ struct PlateDayTotals: View {
     }
 
     var body: some View {
-        let display = settings.nutrition.logger.nutritionDisplay
+        let display = targets.settings.nutrition.logger.nutritionDisplay
         let counted = NutritionDay.counted(dayRow, entries.filter { $0.id != replacing }, plate: plate)
-        let lines = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: latestWeight?.weightKg)
-            .summary(counted.logged, plate: counted.plate, settings: settings)
+        let lines = targets.on(day).summary(counted.logged, plate: counted.plate, settings: targets.settings)
         MacroTotalsBars(lines: lines, page: display.page)
             .gesture(DragGesture(minimumDistance: 20).onEnded { drag in
                 guard abs(drag.translation.width) > 30, abs(drag.translation.width) > abs(drag.translation.height) else { return }
