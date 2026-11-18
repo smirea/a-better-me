@@ -488,7 +488,7 @@ private struct HourTotals: View {
 }
 
 /// A food tile with its time on the timeline's line, and in select mode a check circle floating half over its left
-/// edge. Pasting inline hides the circles, so the destination day's foods don't read as a new selection. Tapping the
+/// edge, on the selection's day only (`FoodLogState.showsCircles`). Tapping the
 /// tile opens its editor, or toggles it in select mode. A long press starts select mode on it: the bar holds the
 /// selection's actions, so there is no context menu. Swiping
 /// a tile left reveals Remove and Copy, as MacroFactor's does; it has no full swipe, because a left swipe that misses
@@ -509,7 +509,7 @@ private struct EntryRow: View {
     var body: some View {
         let entry = row.entry
         let isSelected = state.selection.contains(entry.id)
-        let showsCircle = state.selecting && state.pending?.inline != true
+        let showsCircle = state.showsCircles(on: entry.day)
         HStack(spacing: 0) {
             Color.clear.frame(width: column.tileInset).overlay(alignment: .leading) {
                 if showsTime, row.showsTime {

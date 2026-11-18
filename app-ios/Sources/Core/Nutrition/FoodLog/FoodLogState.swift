@@ -27,9 +27,11 @@ final class FoodLogState {
     enum Action: Hashable { case copy, move }
 
     /// Selected entries waiting for a paste target: the bar lists targets, and with `inline` every hour's + pastes.
+    /// It outlives a change of day, so the owner pastes onto another day as onto `source`, where the entries were picked.
     struct Pending: Hashable {
         var action: Action
         var entries: [FoodEntry]
+        var source: CalendarDay
         var inline = false
     }
 
@@ -53,12 +55,12 @@ final class FoodLogState {
     static let daysBack = 730
     static let daysAhead = 365
 
-    /// A selection belongs to the day it was made on, so leaving that day ends it. Paste Inline keeps going: its
-    /// pending copy carries the entries.
+    /// A selection belongs to the day it was made on, so leaving that day ends it. A pending copy or move keeps going:
+    /// it carries the entries.
     var day = CalendarDay.today {
         didSet {
             guard day != oldValue else { return }
-            if selecting, pending?.inline != true { endSelection() }
+            if selecting, pending == nil { endSelection() }
         }
     }
     /// The shown day's entries in timeline order, so the bars never read the database.
@@ -92,7 +94,36 @@ final class FoodLogState {
 
     var selectedEntries: [FoodEntry] { entries.filter { selection.contains($0.id) } }
 
+    /// The check circles show on the selection's own day only, so another day's foods never read as selected, and not
+    /// while pasting inline, where the destination's foods would.
+    func showsCircles(on day: CalendarDay) -> Bool {
+        guard selecting else { return false }
+        guard let pending else { return true }
+        return !pending.inline && pending.source == day
+    }
+
+    /// Copy or Move: the entries wait for a paste target, and the selection holds still until it is picked.
+    func hold(_ action: Action, _ entries: [FoodEntry]) {
+        selecting = true
+        selection = Set(entries.map(\.id))
+        pending = Pending(action: action, entries: entries, source: day)
+    }
+
+    /// The paste bar's back: out of Paste Inline to the targets, then to the selection, unless the owner has since
+    /// left its day, which ends it as leaving the day always does.
+    func back() {
+        guard let pending else { return }
+        if pending.inline {
+            self.pending?.inline = false
+        } else if pending.source == day {
+            self.pending = nil
+        } else {
+            endSelection()
+        }
+    }
+
     func select(_ id: UUID) {
+        guard pending == nil else { return }
         if selecting {
             if selection.remove(id) == nil { selection.insert(id) }
         } else {
@@ -108,12 +139,13 @@ final class FoodLogState {
 
     /// A long press: select mode with the entry selected, never toggling it off.
     func startSelection(at id: UUID) {
+        guard pending == nil else { return }
         selecting = true
         selection.insert(id)
     }
 
     func selectHour(_ ids: [UUID]) {
-        guard !ids.isEmpty else { return }
+        guard !ids.isEmpty, pending == nil else { return }
         if selecting {
             selection = FoodLog.toggling(ids, in: selection)
         } else {
@@ -124,9 +156,7 @@ final class FoodLogState {
 
     /// A tile's Copy swipe: that entry alone, waiting for a paste target.
     func copy(_ entry: FoodEntry) {
-        selecting = true
-        selection = [entry.id]
-        pending = Pending(action: .copy, entries: [entry])
+        hold(.copy, [entry])
     }
 
     func createRecipe() {

@@ -203,7 +203,8 @@ private struct DaySummary: View {
     }
 }
 
-/// The days as horizontal pages: swiping the timeline moves a day, as MacroFactor's does. Select mode holds the page.
+/// The days as horizontal pages: swiping the timeline moves a day, as MacroFactor's does. Select mode holds the page,
+/// until Copy or Move picks the foods up to carry to another day.
 private struct DayPager: View {
     @Environment(FoodLogState.self) private var state
     @State private var origin = CalendarDay.today
@@ -222,7 +223,7 @@ private struct DayPager: View {
         .scrollTargetBehavior(.paging)
         .scrollPosition(id: $position)
         .scrollIndicators(.hidden)
-        .scrollDisabled(state.selecting && state.pending?.inline != true)
+        .scrollDisabled(state.selecting && state.pending == nil)
         .onAppear { position = origin.days(to: state.day) }
         .onChange(of: position) { _, position in
             guard let position else { return }
