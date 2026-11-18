@@ -31,6 +31,13 @@ export function run(cmd: string[], { allowFail = false, stdio = 'pipe', env, cwd
 	return (result.stdout ?? '').trim();
 }
 
+/** A UUID (version 8, RFC 9562) hashed from a source row's key, so importing the row again lands on the same id. */
+export function hashedId(...parts: (string | number)[]): string {
+	const hex = new Bun.CryptoHasher('sha256').update(JSON.stringify(parts)).digest('hex');
+	const variant = ((Number.parseInt(hex[16]!, 16) & 3) | 8).toString(16);
+	return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-8${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
 /** Empty values count as unset and are left out. */
 export function parseDotenv(text: string): Values {
 	const values: Values = {};
