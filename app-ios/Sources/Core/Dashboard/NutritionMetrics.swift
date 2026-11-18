@@ -96,31 +96,20 @@ enum NutritionMetrics {
         return result
     }
 
-    struct DayNutrition: Equatable {
+    /// A day of the Weekly Nutrition grid: the summary's lines against that day's targets.
+    struct DaySummary: Equatable {
         var day: CalendarDay
-        var consumed: NutrientAmounts
-        var target: DayTarget?
-
-        func consumed(_ id: NutrientID) -> Double { consumed[id] ?? 0 }
-
-        func target(_ id: NutrientID) -> Double? { target?.amount(id) }
-
-        func remaining(_ id: NutrientID, overages: Bool) -> Double? {
-            target(id).map { FoodLog.remaining(consumed: consumed(id), target: $0, showOverages: overages) }
-        }
-    }
-
-    static func day(_ day: CalendarDay, log: [NutritionLogDay], plans: [NutritionPlan]) -> DayNutrition {
-        DayNutrition(
-            day: day,
-            consumed: log.first { $0.day == day }?.consumed ?? [:],
-            target: NutritionPlan.effective(on: day, in: plans)?.target(on: day)
-        )
+        var lines: [MacroLine]
     }
 
     /// Monday through Sunday of the week holding `today`, as MacroFactor's Weekly Nutrition grid.
-    static func week(of today: CalendarDay, log: [NutritionLogDay], plans: [NutritionPlan]) -> [DayNutrition] {
-        return today.week.map { day($0, log: log, plans: plans) }
+    static func week(
+        of today: CalendarDay, log: [NutritionLogDay], targets: (CalendarDay) -> NutrientTargets, columns: [NutrientID], showOverages: Bool
+    ) -> [DaySummary] {
+        let consumed = Dictionary(log.map { ($0.day, $0.consumed) }, uniquingKeysWith: { $1 })
+        return today.week.map { day in
+            DaySummary(day: day, lines: targets(day).summary(consumed[day] ?? [:], columns: columns, showOverages: showOverages))
+        }
     }
 
     /// Percent of the way from the start weight to the target, 0 when the weight moved away and 100 once there.

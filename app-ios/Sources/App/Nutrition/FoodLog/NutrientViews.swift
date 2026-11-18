@@ -7,10 +7,49 @@ extension Nutrient {
 
 extension NutrientID {
     var color: Color { NutrientRegistry.nutrient(self)?.color ?? Theme.calories }
+
+    /// A summary column's label in compact rows: the flame for calories, else its letters ("P", "Fb", "Nc").
+    var columnLabel: Text { self == .energy ? Text(calorieGlyph) : Text(columnLetters) }
 }
 
 /// The calorie glyph that follows a number in compact rows, where MacroFactor writes "149ઠ".
 let calorieGlyph = Image(systemName: "flame.fill")
+
+/// The owner's targets on any day, read the one way every screen that measures against them does: the plan's
+/// calories and macros, every other nutrient's goal, and net carbs derived (`NutrientTargets`). Their `summary` gives
+/// the lines in the summary's columns.
+struct OwnerTargets: DynamicProperty {
+    @Observe(NutritionPlan.all) private var plans
+    @Observe(NutrientGoal.all) private var goals
+    @Observe(BodyWeight.latest) private var weight
+    @Observe(AppSettings.current) var settings
+
+    func on(_ day: CalendarDay) -> NutrientTargets {
+        NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: weight?.weightKg)
+    }
+}
+
+/// A summary column's progress against its target, the bar every target view draws: what was eaten, then the plate
+/// after it. Inside the logger the plate is lit and what was eaten dims behind it.
+struct TargetBar: View {
+    let fill: MacroLine.Fill
+    let color: Color
+    var dimsEaten = false
+    var height: CGFloat = 4
+
+    var body: some View {
+        GeometryReader { proxy in
+            HStack(spacing: 0) {
+                Rectangle().fill(color.opacity(dimsEaten ? 0.45 : 1)).frame(width: proxy.size.width * fill.eaten)
+                Rectangle().fill(color).frame(width: proxy.size.width * fill.plate)
+            }
+        }
+        .background(Theme.surfaceRaised)
+        .clipShape(Capsule())
+        .frame(height: height)
+        .accessibilityHidden(true)
+    }
+}
 
 extension EnvironmentValues {
     /// The owner's summary columns (`NutritionSettings.summaryNutrients`), which every compact row of four nutrients
@@ -49,26 +88,30 @@ struct NutrientBar: View {
     }
 }
 
-/// A Nutrition Overview row: the name, "value / target", the percent of the target or "No Target", and the bar.
+/// A Nutrition Overview row: the name, the amount ("value / target"), how it stands against the target, and the bar.
+/// The amount is right-aligned against a fixed last column, so amounts line up whatever a row's indent. Only a row
+/// with a target has a bar; one with only a ceiling or floor says so in the last column instead.
 struct NutrientRow: View {
     let nutrient: Nutrient
     let value: Double
     let range: NutrientRange
     var contributors: [Contributor]? = nil
+    @ScaledMetric private var standingWidth: CGFloat = 70
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(nutrient.name).font(AppFont.rowTitle)
-                Spacer()
+                Spacer(minLength: 0)
                 Text(range.target.map { "\(NutritionFormat.amount(value)) / \(NutritionFormat.amount($0, nutrient.unit))" } ?? NutritionFormat.amount(value, nutrient.unit))
                     .font(AppFont.caption(14))
                     .monospacedDigit()
-                Spacer()
-                Text(range.target.map { "\((value / max($0, 0.0001) * 100).wholeText)%" } ?? "No Target")
+                Text(standing)
                     .font(AppFont.caption(13))
                     .foregroundStyle(Theme.textSecondary)
-                    .frame(width: 70, alignment: .trailing)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .frame(width: standingWidth, alignment: .trailing)
             }
             if let maximum = FoodLog.barMaximum(value: value, range: range) {
                 NutrientBar(value: value, range: range, maximum: maximum, color: nutrient.color)
@@ -89,6 +132,13 @@ struct NutrientRow: View {
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
         .feedback(self)
+    }
+
+    private var standing: String {
+        if let target = range.target { return "\((value / max(target, 0.0001) * 100).wholeText)%" }
+        if let ceiling = range.ceiling { return "Max \(NutritionFormat.amount(ceiling, nutrient.unit))" }
+        if let floor = range.floor { return "Min \(NutritionFormat.amount(floor, nutrient.unit))" }
+        return "No Target"
     }
 }
 
@@ -122,17 +172,17 @@ struct MacroHeader: View {
     }
 }
 
-/// "Impact on Targets": a ring per macro with the rest of the day dimmed and this food lit after it, and in the middle
-/// the share of the target the food takes. A day no plan covers has no target to fill, so the rings measure the day
-/// with the food instead and the section says what the food adds to it. `day` is the rest of the day the food lands
-/// on: its entries without the one being edited, plus `adding` (the logger's plate). It reads the day once, so a caller
-/// whose day can change gives it `.id(day)`.
+/// "Impact on Targets": a ring per summary column, against the same targets as the Food Log's summary, with the rest
+/// of the day dimmed and this food lit after it, and in the middle the share of the target the food takes. A column
+/// with no target measures the day with the food instead, and when no column has one the section says what the food
+/// adds to the day. `day` is the rest of the day the food lands on: its entries without the one being edited, plus
+/// `adding` (the logger's plate). It reads the day once, so a caller whose day can change gives it `.id(day)`.
 struct ImpactGauges: View {
     let amounts: NutrientAmounts
     let day: CalendarDay
     let adding: NutrientAmounts
     let excluding: UUID?
-    @Observe(NutritionPlan.all) private var plans
+    private var targets = OwnerTargets()
     @Observe<[FoodEntry]> private var entries: [FoodEntry]
     @Observe<NutritionDay> private var row: NutritionDay
 
@@ -146,24 +196,26 @@ struct ImpactGauges: View {
     }
 
     var body: some View {
-        let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day)
         let rest = row.totals(entries.filter { $0.id != excluding }) + adding
-        let lines = FoodLog.summary(rest, plate: amounts, targets: target?.amounts ?? [:], showOverages: true)
+        let lines = targets.on(day).summary(rest, plate: amounts, settings: targets.settings)
+        let targeted = lines.contains { $0.target != nil }
         ThemedSection(
-            target == nil ? "Share of the Day" : "Impact on Targets",
-            subtitle: target == nil ? "No targets for this day" : nil
+            targeted ? "Impact on Targets" : "Share of the Day",
+            subtitle: targeted ? nil : "No targets for this day"
         ) {
             HStack {
                 ForEach(lines) { line in
                     VStack(spacing: 6) {
                         ImpactRing(fill: line.fill(.eaten) ?? MacroLine.Fill(eaten: 0, plate: 0), color: line.nutrient.color) {
-                            Text(line.plateShare.map { "\(target == nil ? "" : "+")\(($0 * 100).wholeText)%" } ?? "–")
+                            Text(line.plateShare.map { "\(line.target == nil ? "" : "+")\(($0 * 100).wholeText)%" } ?? "–")
                                 .font(AppFont.rowDetail)
                                 .monospacedDigit()
                         }
                         Text(line.nutrient.title)
                             .font(AppFont.rowDetail)
                             .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     .frame(maxWidth: .infinity)
                     .accessibilityElement(children: .ignore)

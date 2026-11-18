@@ -7,16 +7,14 @@ import SwiftUI
 struct PlateView: View {
     let session: LoggerSession
     let open: (UUID) -> Void
-    @Observe(NutritionPlan.all) private var plans
-    @Observe(NutrientGoal.all) private var goals
-    @Observe(BodyWeight.latest) private var latestWeight
-    @Observe(AppSettings.current) private var settings
+    private var targets = OwnerTargets()
     @Observe<[FoodEntry]> private var entries: [FoodEntry]
     @Observe<NutritionDay> private var dayRow: NutritionDay
     @State private var withDay = false
     @State private var allNutrients = false
     @State private var editing: UUID?
     @Environment(\.summaryNutrients) private var columns
+    private var settings: AppSettings { targets.settings }
 
     init(session: LoggerSession, open: @escaping (UUID) -> Void) {
         self.session = session
@@ -28,8 +26,9 @@ struct PlateView: View {
     var body: some View {
         let plate = session.plate.totals
         let day = dayRow.totals(entries)
-        let targets = NutrientTargets.of(session.time.day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: latestWeight?.weightKg)
-            .goals(columns)
+        let lines = targets.on(session.time.day).summary(
+            withDay ? day : [:], plate: plate, columns: columns, showOverages: settings.nutrition.showOverages
+        )
         List {
             Section {
                 ForEach(session.plate.items) { item in
@@ -51,11 +50,9 @@ struct PlateView: View {
             .listRowBackground(Theme.surface.feedback("Your Plate Row"))
             Section {
                 Grid(horizontalSpacing: 8, verticalSpacing: 8) {
-                    ForEach(Array(stride(from: 0, to: columns.count, by: 2)), id: \.self) { start in
+                    ForEach(Array(stride(from: 0, to: lines.count, by: 2)), id: \.self) { start in
                         GridRow {
-                            ForEach(columns[start..<min(start + 2, columns.count)], id: \.self) { id in
-                                tile(id, plate: plate, day: day, goal: targets[id])
-                            }
+                            ForEach(lines[start..<min(start + 2, lines.count)]) { tile($0) }
                         }
                     }
                 }
@@ -132,15 +129,14 @@ struct PlateView: View {
         }
     }
 
-    private func tile(_ id: NutrientID, plate: NutrientAmounts, day: NutrientAmounts, goal: Double?) -> some View {
-        let unit = id == .energy ? "kcal" : "g"
-        let amount = (withDay ? day.amount(of: id) ?? 0 : 0) + (plate.amount(of: id) ?? 0)
-        let caption = withDay ? "\(amount.wholeText)\(goal.map { " / \($0.wholeText)" } ?? "") \(unit) with plate" : "\(amount.wholeText) \(unit) in plate"
+    private func tile(_ line: MacroLine) -> some View {
+        let unit = line.nutrient == .energy ? "kcal" : "g"
+        let caption = withDay ? "\(line.text(.eaten)) \(unit) with plate" : "\(line.total.wholeText) \(unit) in plate"
         return VStack(alignment: .leading, spacing: 6) {
-            Text(id.title).font(AppFont.rowTitle)
+            Text(line.nutrient.title).font(AppFont.rowTitle)
             Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
-            ProgressView(value: goal.map { min(1, amount / max($0, 1)) } ?? 0)
-                .progressViewStyle(.bar(id.color))
+            // The plate alone against no target would fill the whole track, so the track stays empty, as it did.
+            TargetBar(fill: (withDay || line.target != nil ? line.fill(.eaten) : nil) ?? MacroLine.Fill(eaten: 0, plate: 0), color: line.nutrient.color, dimsEaten: withDay)
                 .padding(.top, 6)
         }
         .padding(12)

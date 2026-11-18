@@ -11,9 +11,10 @@ struct WeeklyNutritionFocus: View {
 
     var body: some View {
         let context = values.context
+        let settings = values.nutritionSettings
         WeeklyNutritionCard(
-            week: values.week, today: CalendarDay(context.today, in: context.calendar), calendar: context.calendar,
-            overages: values.nutritionSettings.showOverages
+            week: values.week(settings.summaryNutrients, overages: settings.showOverages),
+            today: CalendarDay(context.today, in: context.calendar), calendar: context.calendar
         )
         .feedback(self)
     }
@@ -23,30 +24,35 @@ struct DailyNutritionFocus: View {
     private var values = DashboardValues()
 
     var body: some View {
-        DailyNutritionCard(day: values.todayNutrition, overages: values.nutritionSettings.showOverages)
+        let settings = values.nutritionSettings
+        DailyNutritionCard(lines: values.todaySummary(settings.summaryNutrients, overages: settings.showOverages))
             .feedback(self)
     }
 }
 
+/// The week's summary columns, a row each, against each day's targets.
 struct WeeklyNutritionCard: View {
-    let week: [NutritionMetrics.DayNutrition]
+    let week: [NutritionMetrics.DaySummary]
     let today: CalendarDay
     let calendar: Calendar
-    let overages: Bool
     @State private var shown = NutritionShown.consumed
 
     var body: some View {
+        let columns = week.first?.lines.map(\.nutrient) ?? []
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader("Weekly Nutrition")
             Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 8) {
-                ForEach(NutrientID.macros, id: \.self) { id in
+                ForEach(Array(columns.enumerated()), id: \.element) { index, id in
                     GridRow {
-                        rowLabel(id).frame(width: 18)
-                        ForEach(week, id: \.day) { cell(id, $0) }
+                        id.columnLabel
+                            .font(AppFont.headline(12))
+                            .accessibilityLabel(id.title)
+                            .frame(width: 20)
+                        ForEach(week, id: \.day) { cell($0.lines[index], on: $0.day) }
                     }
                 }
                 GridRow {
-                    Color.clear.frame(width: 18, height: 1)
+                    Color.clear.frame(width: 20, height: 1)
                     ForEach(week, id: \.day) { day in
                         Text(day.day.date(in: calendar).formatted(.dateTime.weekday(.abbreviated)))
                             .font(day.day == today ? AppFont.headline(12) : AppFont.rowDetail)
@@ -59,37 +65,27 @@ struct WeeklyNutritionCard: View {
         }
     }
 
-    @ViewBuilder
-    private func rowLabel(_ id: NutrientID) -> some View {
-        if id == .energy {
-            Image(systemName: "flame.fill").font(.caption).foregroundStyle(Theme.calories).accessibilityLabel("Calories")
-        } else {
-            Text(id.rawValue.uppercased()).font(AppFont.headline(12)).accessibilityLabel(id.title)
-        }
-    }
-
-    private func cell(_ id: NutrientID, _ day: NutritionMetrics.DayNutrition) -> some View {
-        let target = day.target(id)
-        let value = shown == .consumed ? day.consumed(id) : day.remaining(id, overages: overages)
-        let fill = target.map { $0 > 0 ? min(max(day.consumed(id) / $0, 0), 1) : 0 } ?? 0
+    private func cell(_ line: MacroLine, on day: CalendarDay) -> some View {
+        let value = shown == .consumed ? line.total : line.remaining
+        let fill = line.fill(.eaten)?.eaten ?? 0
         return HStack(alignment: .top, spacing: 3) {
             Capsule()
                 .fill(Theme.surfaceRaised)
                 .frame(width: 5, height: 26)
                 .overlay(alignment: .bottom) {
-                    Capsule().fill(id.color).frame(height: 26 * fill)
+                    Capsule().fill(line.nutrient.color).frame(height: 26 * fill)
                 }
             VStack(alignment: .leading, spacing: 0) {
                 Text(value?.wholeText ?? "--").font(AppFont.badge)
-                Text(target?.wholeText ?? "--").font(AppFont.caption(10)).foregroundStyle(Theme.textSecondary)
+                Text(line.target?.wholeText ?? "--").font(AppFont.caption(10)).foregroundStyle(Theme.textSecondary)
             }
             .lineLimit(1)
             .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(id.title) \(day.day.date(in: calendar).formatted(.dateTime.weekday(.wide)))")
-        .accessibilityValue("\(value?.wholeText ?? "none") \(shown.rawValue.lowercased()) of \(target?.wholeText ?? "no target")")
+        .accessibilityLabel("\(line.nutrient.title) \(day.date(in: calendar).formatted(.dateTime.weekday(.wide)))")
+        .accessibilityValue("\(value?.wholeText ?? "none") \(shown.rawValue.lowercased()) of \(line.target?.wholeText ?? "no target")")
     }
 }
 
@@ -99,34 +95,34 @@ private func shownPicker(_ shown: Binding<NutritionShown>) -> some View {
     }
 }
 
+/// Today's first summary column as a gauge, calories unless the owner moved them, and the other columns as bars.
 struct DailyNutritionCard: View {
-    let day: NutritionMetrics.DayNutrition
-    let overages: Bool
+    let lines: [MacroLine]
     @State private var shown = NutritionShown.consumed
 
     var body: some View {
-        let consumed = day.consumed(.energy)
-        let target = day.target(.energy)
-        let remaining = day.remaining(.energy, overages: overages)
-        let center = shown == .consumed ? consumed : remaining
         VStack(alignment: .leading, spacing: 14) {
             SectionHeader("Daily Nutrition")
-            HStack {
-                StatView(title: shown == .consumed ? "Remaining" : "Consumed", value: (shown == .consumed ? remaining : consumed)?.wholeText ?? "--", size: .compact)
-                gauge(center: center, title: shown.rawValue, fill: target.map { $0 > 0 ? (center ?? 0) / $0 : 0 } ?? 0)
-                StatView(title: "Target", value: target?.wholeText ?? "--", size: .compact)
+            if let first = lines.first {
+                let center = shown == .consumed ? first.total : first.remaining
+                let other = shown == .consumed ? first.remaining : first.total
+                HStack {
+                    StatView(title: shown == .consumed ? "Remaining" : "Consumed", value: other?.wholeText ?? "--", size: .compact)
+                    gauge(center: center, title: shown.rawValue, fill: first.fill(shown == .consumed ? .eaten : .remaining)?.eaten ?? 0, color: first.nutrient.color)
+                    StatView(title: "Target", value: first.target?.wholeText ?? "--", size: .compact)
+                }
             }
             HStack(spacing: 18) {
-                ForEach([NutrientID.protein, .fat, .carbs], id: \.self) { macroBar($0) }
+                ForEach(lines.dropFirst()) { macroBar($0) }
             }
             shownPicker($shown)
         }
     }
 
     /// MacroFactor's 270° gauge, open at the bottom.
-    private func gauge(center: Double?, title: String, fill: Double) -> some View {
+    private func gauge(center: Double?, title: String, fill: Double, color: Color) -> some View {
         ZStack {
-            ProgressRing(fraction: fill, color: Theme.calories, lineWidth: 6, arc: 0.75)
+            ProgressRing(fraction: fill, color: color, lineWidth: 6, arc: 0.75)
             VStack(spacing: 0) {
                 Text(center?.wholeText ?? "--").font(AppFont.number(26))
                 Text(title).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
@@ -136,14 +132,13 @@ struct DailyNutritionCard: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func macroBar(_ id: NutrientID) -> some View {
-        let target = day.target(id)
-        let value = shown == .consumed ? day.consumed(id) : day.remaining(id, overages: overages)
-        let fill = target.map { $0 > 0 ? (value ?? 0) / $0 : 0 } ?? 0
+    private func macroBar(_ line: MacroLine) -> some View {
+        let value = shown == .consumed ? line.total : line.remaining
+        let unit = line.nutrient == .energy ? "" : "g"
         return VStack(spacing: 4) {
-            Text(id.title).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-            ProgressView(value: min(max(fill, 0), 1)).progressViewStyle(.bar(id.color))
-            Text("\(value?.wholeText ?? "--") / \(target.map { "\($0.niceText)g" } ?? "--")")
+            Text(line.nutrient.title).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+            TargetBar(fill: line.fill(shown == .consumed ? .eaten : .remaining) ?? MacroLine.Fill(eaten: 0, plate: 0), color: line.nutrient.color)
+            Text("\(value?.wholeText ?? "--") / \(line.target.map { "\($0.wholeText)\(unit)" } ?? "--")")
                 .font(AppFont.headline(12))
         }
         .frame(maxWidth: .infinity)

@@ -13,14 +13,14 @@ struct MacroTotalsBars: View {
         HStack(spacing: 10) {
             ForEach(Array(lines.enumerated()), id: \.element.id) { index, line in
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("\(prefix(line.nutrient)) \(Text(line.text(page)).font(AppFont.rowDetail))")
+                    Text("\(line.nutrient.columnLabel) \(Text(line.text(page)).font(AppFont.rowDetail))")
                         .font(AppFont.headline(12))
                         .monospacedDigit()
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                         .contentTransition(.numericText())
                     if let fill = line.fill(page) {
-                        TotalsBar(fill: fill, color: line.nutrient.color, dimsEaten: line.plate != nil)
+                        TargetBar(fill: fill, color: line.nutrient.color, dimsEaten: line.plate != nil, height: 3)
                             .scaleEffect(x: page == .remaining && line.target != nil ? -1 : 1)
                     }
                 }
@@ -34,10 +34,6 @@ struct MacroTotalsBars: View {
         .contentShape(Rectangle())
     }
 
-    private func prefix(_ id: NutrientID) -> Text {
-        id == .energy ? Text(calorieGlyph) : Text(id.columnLetters)
-    }
-
     private func columnPicker(_ index: Int, showing nutrient: NutrientID) -> some View {
         let choice = Binding(
             get: { nutrient },
@@ -49,24 +45,5 @@ struct MacroTotalsBars: View {
             ForEach(NutrientID.summaryChoices, id: \.self) { Text($0.title).tag($0) }
         }
         .pickerStyle(.inline)
-    }
-}
-
-private struct TotalsBar: View {
-    let fill: MacroLine.Fill
-    let color: Color
-    let dimsEaten: Bool
-
-    var body: some View {
-        GeometryReader { proxy in
-            HStack(spacing: 0) {
-                Rectangle().fill(color.opacity(dimsEaten ? 0.45 : 1)).frame(width: proxy.size.width * fill.eaten)
-                Rectangle().fill(color).frame(width: proxy.size.width * fill.plate)
-            }
-        }
-        .background(Theme.surfaceRaised)
-        .clipShape(Capsule())
-        .frame(height: 3)
-        .accessibilityHidden(true)
     }
 }

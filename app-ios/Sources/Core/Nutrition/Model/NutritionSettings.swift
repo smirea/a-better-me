@@ -165,5 +165,9 @@ extension NutritionSettings.HeightUnit {
 }
 
 extension NutritionSettings {
-    func shows(_ nutrient: NutrientID) -> Bool { NutrientID.macros.contains(nutrient) || !hiddenNutrients.contains(nutrient) }
+    /// Calories, the macros, and the summary's columns always show, so a hidden fiber picked as a column still reaches
+    /// the widgets with the rest of the summary.
+    func shows(_ nutrient: NutrientID) -> Bool {
+        NutrientID.macros.contains(nutrient) || summaryNutrients.contains(nutrient) || !hiddenNutrients.contains(nutrient)
+    }
 }

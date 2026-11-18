@@ -80,15 +80,13 @@ extension DashboardData {
         return CardValues(values: values, text: values.last?.wholeText)
     }
 
-    var week: [NutritionMetrics.DayNutrition] { NutritionMetrics.week(of: today, log: log, plans: plans) }
-
-    var todayNutrition: NutritionMetrics.DayNutrition { NutritionMetrics.day(today, log: log, plans: plans) }
+    func week(_ columns: [NutrientID], overages: Bool) -> [NutritionMetrics.DaySummary] {
+        NutritionMetrics.week(of: today, log: log, targets: targets(on:), columns: columns, showOverages: overages)
+    }
 
     /// Today's Food Log summary lines, against the same targets the Food Log fills its columns to.
-    func todaySummary(_ nutrients: [NutrientID], overages: Bool) -> [MacroLine] {
-        let targets = NutrientTargets.of(today, plans: plans, goals: goals, profile: profile, latestWeightKg: weighIns.last?.kg)
-        let consumed = log.first { $0.day == today }?.consumed ?? [:]
-        return FoodLog.summary(consumed, nutrients: nutrients, targets: targets.goals(nutrients), showOverages: overages)
+    func todaySummary(_ columns: [NutrientID], overages: Bool) -> [MacroLine] {
+        targets(on: today).summary(log.first { $0.day == today }?.consumed ?? [:], columns: columns, showOverages: overages)
     }
 
     var foodLogging: FoodLoggingValues {

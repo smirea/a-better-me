@@ -78,7 +78,7 @@ private struct FoodLogHeader: View {
             }
             .padding(.horizontal, Theme.margin)
             .onGeometryChange(for: Double.self) { $0.size.height } action: { state.header.row = $0 + 6 }
-            DaySummary(day: state.day, plans: plans).id(state.day)
+            DaySummary(day: state.day).id(state.day)
         }
         .background(Theme.background)
         .onGeometryChange(for: Double.self) { $0.size.height } action: { state.header.height = $0 }
@@ -121,29 +121,25 @@ private extension View {
 /// Tapping the lines opens the Nutrition Overview. The day's status and edited totals sit beside the page dots.
 private struct DaySummary: View {
     let day: CalendarDay
-    let plans: [NutritionPlan]
 
     @Environment(FoodLogState.self) private var state
-    @Observe(AppSettings.current) private var settings
-    @Observe(NutrientGoal.all) private var goals
-    @Observe(BodyWeight.latest) private var latestWeight
+    private var owner = OwnerTargets()
     @Observe private var entries: [FoodEntry]
     @Observe private var row: NutritionDay
     /// Per-device view state, as the Workout tab's collapsed cards are, so the page survives a relaunch and a day change.
     @AppStorage("nutrition.foodLog.summaryPage") private var page = MacroLine.Page.eaten
 
-    init(day: CalendarDay, plans: [NutritionPlan]) {
+    init(day: CalendarDay) {
         self.day = day
-        self.plans = plans
         _entries = Observe(FoodEntry.on(day))
         _row = Observe(NutritionDay.one(day))
     }
 
     var body: some View {
-        let targets = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: latestWeight?.weightKg)
+        let targets = owner.on(day)
         let target = targets.target
         let totals = row.totals(entries)
-        let lines = targets.summary(totals, settings: settings)
+        let lines = targets.summary(totals, settings: owner.settings)
         let status = row.status == .none ? nil : row.status.title
         let edited = row.override == nil ? nil : "Edited totals"
         VStack(spacing: 4) {

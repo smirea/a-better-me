@@ -1,0 +1,10 @@
+{
+	"title": "Every target view shows your summary nutrients, with the same targets and colors",
+	"description": "Impact on Targets and the Dashboard follow your Daily Summary columns, food lists read as a table, and the food sheet is tighter.",
+	"tasks": [
+		{
+			"id": "e0c4a8bc-7dd5-4ef5-9235-3fcd77dc0725",
+			"title": "7 Nutrition Feedback: refactor targets, align, and audit"
+		}
+	]
+}

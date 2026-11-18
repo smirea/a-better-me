@@ -460,18 +460,24 @@ enum FoodLog {
         return target < row / 2 ? 0 : row
     }
 
-    /// The bar's full length for `value` against `range`: the reference bound sits at 60% of the track, as
-    /// MacroFactor draws its target tick, and an amount past the end stretches the track.
+    /// The bar's full length for `value` against `range`: the target sits at 60% of the track, as MacroFactor draws
+    /// its target tick, and an amount past the end stretches the track. A nutrient without a target has no bar, even
+    /// with a floor or ceiling: an empty track under "No Target" read as broken (2026-11-18).
     static func barMaximum(value: Double, range: NutrientRange) -> Double? {
-        guard let reference = range.target ?? range.ceiling ?? range.floor, reference > 0 else { return nil }
-        return max(reference / 0.6, value)
+        guard let target = range.target, target > 0 else { return nil }
+        return max(target / 0.6, value)
     }
 }
 
 extension NutrientTargets {
-    /// The summary's lines for the day: `settings` picks the columns and whether remaining goes negative.
+    /// The summary's lines for the day, the one way every screen that measures nutrients against the owner's targets
+    /// gets them: the Food Log's summary, the logger's banner and plate, Impact on Targets, and the Dashboard's Today,
+    /// Daily, and Weekly Nutrition. `columns` is `summaryNutrients`.
+    func summary(_ amounts: NutrientAmounts, plate: NutrientAmounts? = nil, columns: [NutrientID], showOverages: Bool) -> [MacroLine] {
+        FoodLog.summary(amounts, plate: plate, nutrients: columns, targets: goals(columns), showOverages: showOverages)
+    }
+
     func summary(_ amounts: NutrientAmounts, plate: NutrientAmounts? = nil, settings: AppSettings) -> [MacroLine] {
-        let columns = settings.nutrition.summaryNutrients
-        return FoodLog.summary(amounts, plate: plate, nutrients: columns, targets: goals(columns), showOverages: settings.nutrition.showOverages)
+        summary(amounts, plate: plate, columns: settings.nutrition.summaryNutrients, showOverages: settings.nutrition.showOverages)
     }
 }

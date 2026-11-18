@@ -65,10 +65,7 @@ private struct OverviewList: View {
     let period: NutritionOverview.Period
     let contributors: Bool
 
-    @Observe(AppSettings.current) private var settings
-    @Observe(NutritionPlan.all) private var plans
-    @Observe(NutrientGoal.all) private var goals
-    @Observe(BodyWeight.latest) private var weight
+    private var owner = OwnerTargets()
     @Observe private var entries: [FoodEntry]
     @Observe private var rows: [NutritionDay]
 
@@ -84,9 +81,9 @@ private struct OverviewList: View {
     var body: some View {
         let days = (0..<period.rawValue).map { day.adding(days: -$0) }
         let amounts = period == .today ? (rows.first { $0.id == day } ?? NutritionDay(id: day)).totals(entries) : FoodLog.dailyAverage(entries, rows: rows, days: days)
-        let targets = NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: weight?.weightKg)
+        let targets = owner.on(day)
         List {
-            NutrientList(rows: settings.nutrition.hideAdditionalNutrients ? NutrientListRow.macros : NutrientListRow.all) { nutrient in
+            NutrientList(rows: owner.settings.nutrition.hideAdditionalNutrients ? NutrientListRow.macros : NutrientListRow.all) { nutrient in
                 let row = NutrientRow(
                     nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id),
                     contributors: contributors ? FoodLog.contributors(entries, of: nutrient.id, limit: 3) : nil

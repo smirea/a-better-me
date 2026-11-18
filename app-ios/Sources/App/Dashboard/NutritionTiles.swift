@@ -57,15 +57,17 @@ struct BodyMetricCardView: View {
     }
 }
 
-/// The Food Log's nutrient bar, centered in a card's chart area.
+/// The Food Log's nutrient bar, centered in a card's chart area; a nutrient without a target has none, as in the list.
 private struct TileBar: View {
     let value: Double
     let range: NutrientRange
     let color: Color
 
     var body: some View {
-        NutrientBar(value: value, range: range, maximum: FoodLog.barMaximum(value: value, range: range) ?? max(value, 1), color: color)
-            .frame(maxHeight: .infinity)
+        if let maximum = FoodLog.barMaximum(value: value, range: range) {
+            NutrientBar(value: value, range: range, maximum: maximum, color: color)
+                .frame(maxHeight: .infinity)
+        }
     }
 }
 

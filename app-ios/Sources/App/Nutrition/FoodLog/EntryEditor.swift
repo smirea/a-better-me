@@ -1,21 +1,18 @@
 import Feedback
 import SwiftUI
 
-/// The sheet over the timeline: the entry's icon and full name and its calories and macros flat on the sheet, its amount,
-/// then Remove, Favorite, Duplicate, and Update for a food or Explode for a recipe, its day, time, and in the Sections
-/// display its section, the share of the day's targets it uses, a recipe's ingredients, and its nutrients. A quick add's
-/// name is a field and it has no amount, since its one "serving" is all it is. Done saves the amount, a quick add's name,
-/// the day, time, and section; Update saves the food at once.
+/// The sheet over the timeline: the entry's icon, full name, and meal rating and its calories and macros flat on the
+/// sheet, then one card with its amount, day and time, its section in the Sections display, and Remove, Favorite,
+/// Duplicate, and Update for a food or Explode for a recipe, then the share of the day's targets it uses, a recipe's
+/// ingredients, and its nutrients. A quick add's name is a field and it has no amount, since its one "serving" is all
+/// it is. Done saves the amount, a quick add's name, the day, time, and section; Update saves the food at once.
 struct EntryEditor: View {
     let entry: FoodEntry
 
     @Environment(LocalStore.self) private var store
     @Environment(FoodLogState.self) private var state
     @Environment(\.dismiss) private var dismiss
-    @Observe(NutritionPlan.all) private var plans
-    @Observe(NutrientGoal.all) private var goals
-    @Observe(AppSettings.current) private var settings
-    @Observe(BodyWeight.latest) private var weight
+    private var owner = OwnerTargets()
     /// A logged recipe's recipe as it is now, which lists the ingredients, as Explode reads them; nil once deleted.
     @Observe private var recipe: Recipe?
     @State private var serving: Serving
@@ -65,27 +62,24 @@ struct EntryEditor: View {
         return all.contains { $0.name == serving.measure.name } ? all : [serving.measure] + all
     }
 
-    private var targets: NutrientTargets {
-        let day = CalendarDay(time)
-        return NutrientTargets.of(day, plans: plans, goals: goals, profile: settings.profile, latestWeightKg: weight?.weightKg)
-    }
+    private var settings: AppSettings { owner.settings }
 
     var body: some View {
         let amounts = self.amounts
-        let targets = self.targets
+        let targets = owner.on(CalendarDay(time))
         let reported = food.nutrition.nutrients
         NavigationStack {
             Form {
                 Section {
                     VStack(alignment: .leading, spacing: 14) {
-                        identity
+                        identity(amounts)
                         MacroHeader(amounts: amounts)
                     }
                 }
                 .listRowBackground(Color.clear.feedback("Header"))
                 .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
-                if food.source != .quickAdd {
-                    ThemedSection {
+                ThemedSection {
+                    if food.source != .quickAdd {
                         HStack {
                             TextField("Quantity", text: $quantity)
                                 .keyboardType(.decimalPad)
@@ -99,20 +93,23 @@ struct EntryEditor: View {
                             .labelsHidden()
                         }
                     }
-                }
-                ThemedSection { actions }
-                ThemedSection {
-                    DatePicker(
-                        "Date & Time", selection: $time,
-                        in: CalendarDay.today.adding(days: -FoodLogState.daysBack).date...CalendarDay.today.adding(days: FoodLogState.daysAhead).date(atMinute: 24 * 60 - 1),
-                        displayedComponents: [.date, .hourAndMinute]
-                    )
-                    .onChange(of: minute) { _, minute in section = sections.section(at: minute).id }
                     if settings.nutrition.timeline.display == .sections {
-                        Picker("Section", selection: Binding(get: { sections.section(of: section, minute: minute).id }, set: { section = $0 })) {
-                            ForEach(sections) { Text($0.name).tag($0.id) }
+                        // The day, time, and section share a row while they fit, since each says which it is.
+                        ViewThatFits(in: .horizontal) {
+                            HStack {
+                                when.labelsHidden()
+                                Spacer(minLength: 8)
+                                sectionPicker.labelsHidden()
+                            }
+                            VStack(spacing: 12) {
+                                when
+                                sectionPicker
+                            }
                         }
+                    } else {
+                        when
                     }
+                    actions.listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 8, trailing: 16))
                 }
                 ImpactGauges(amounts: amounts, day: CalendarDay(time), excluding: entry.id).id(CalendarDay(time))
                 IngredientsSection(FoodLog.ingredients(serving, of: entry, recipe: recipe))
@@ -122,6 +119,7 @@ struct EntryEditor: View {
             }
             .themedList()
             .nutrientTableList()
+            .onChange(of: minute) { _, minute in section = sections.section(at: minute).id }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
@@ -159,7 +157,7 @@ struct EntryEditor: View {
     /// The icon, which a tap re-icons, and the whole name, wrapped: the bar's inline title truncated long food names to
     /// one line. A quick add is no food, so it has no icon to edit, and its name belongs to the entry alone, so it is
     /// typed in place.
-    @ViewBuilder private var identity: some View {
+    @ViewBuilder private func identity(_ amounts: NutrientAmounts) -> some View {
         if food.source == .quickAdd {
             HStack(spacing: 12) {
                 FoodIcon(food: food, size: 36)
@@ -173,6 +171,7 @@ struct EntryEditor: View {
                 }
                 .buttonStyle(.borderless)
                 .accessibilityLabel("Edit Name")
+                MealRatingBadge(title: named.name, amounts: amounts)
             }
         } else {
             HStack(spacing: 12) {
@@ -187,7 +186,22 @@ struct EntryEditor: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityElement(children: .combine)
                 .accessibilityAddTraits(.isHeader)
+                MealRatingBadge(title: food.name, amounts: amounts)
             }
+        }
+    }
+
+    private var when: some View {
+        DatePicker(
+            "Date & Time", selection: $time,
+            in: CalendarDay.today.adding(days: -FoodLogState.daysBack).date...CalendarDay.today.adding(days: FoodLogState.daysAhead).date(atMinute: 24 * 60 - 1),
+            displayedComponents: [.date, .hourAndMinute]
+        )
+    }
+
+    private var sectionPicker: some View {
+        Picker("Section", selection: Binding(get: { sections.section(of: section, minute: minute).id }, set: { section = $0 })) {
+            ForEach(sections) { Text($0.name).tag($0.id) }
         }
     }
 
