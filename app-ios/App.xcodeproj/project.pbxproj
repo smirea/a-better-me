@@ -16,13 +16,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		A00000000000000000000037 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = A00000000000000000000001 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = A00000000000000000000005;
-			remoteInfo = App;
-		};
 		B0000000000000000000000B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A00000000000000000000001 /* Project object */;
@@ -81,7 +74,6 @@
 /* Begin PBXFileReference section */
 		A00000000000000000000006 /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000016 /* Config/Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Base.xcconfig; sourceTree = "<group>"; };
-		A00000000000000000000032 /* AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B00000000000000000000003 /* Watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Watch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C00000000000000000000003 /* Widgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Widgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F00000000000000000000003 /* WatchUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WatchUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -90,8 +82,8 @@
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A00000000000000000000040 /* Sources/Core */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/Core; sourceTree = "<group>"; };
+		A00000000000000000000042 /* Sources/CoreResources */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/CoreResources; sourceTree = "<group>"; };
 		A00000000000000000000004 /* Sources/App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/App; sourceTree = "<group>"; };
-		A00000000000000000000030 /* Tests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Tests; sourceTree = "<group>"; };
 		B00000000000000000000001 /* Sources/Watch */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/Watch; sourceTree = "<group>"; };
 		C00000000000000000000001 /* Sources/Widgets */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/Widgets; sourceTree = "<group>"; };
 		D00000000000000000000001 /* Sources/Shared */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sources/Shared; sourceTree = "<group>"; };
@@ -108,13 +100,6 @@
 				A00000000000000000000024 /* GRDB in Frameworks */,
 				E00000000000000000000003 /* Sentry-Dynamic in Frameworks */,
 				FB0000000000000000000003 /* Feedback in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		A00000000000000000000035 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -157,10 +142,10 @@
 				A00000000000000000000016 /* Config/Base.xcconfig */,
 				A00000000000000000000004 /* Sources/App */,
 				A00000000000000000000040 /* Sources/Core */,
+				A00000000000000000000042 /* Sources/CoreResources */,
 				D00000000000000000000001 /* Sources/Shared */,
 				B00000000000000000000001 /* Sources/Watch */,
 				C00000000000000000000001 /* Sources/Widgets */,
-				A00000000000000000000030 /* Tests */,
 				A00000000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -171,7 +156,6 @@
 				F00000000000000000000003 /* WatchUITests.xctest */,
 				FA0000000000000000000003 /* AppUITests.xctest */,
 				A00000000000000000000006 /* App.app */,
-				A00000000000000000000032 /* AppTests.xctest */,
 				B00000000000000000000003 /* Watch.app */,
 				C00000000000000000000003 /* Widgets.appex */,
 			);
@@ -203,6 +187,7 @@
 			fileSystemSynchronizedGroups = (
 				A00000000000000000000004 /* Sources/App */,
 				A00000000000000000000040 /* Sources/Core */,
+				A00000000000000000000042 /* Sources/CoreResources */,
 				D00000000000000000000001 /* Sources/Shared */,
 			);
 			name = App;
@@ -215,26 +200,6 @@
 			productName = App;
 			productReference = A00000000000000000000006 /* App.app */;
 			productType = "com.apple.product-type.application";
-		};
-		A00000000000000000000031 /* AppTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = A00000000000000000000036 /* Build configuration list for PBXNativeTarget "AppTests" */;
-			buildPhases = (
-				A00000000000000000000034 /* Sources */,
-				A00000000000000000000035 /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				A00000000000000000000033 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				A00000000000000000000030 /* Tests */,
-			);
-			name = AppTests;
-			productName = AppTests;
-			productReference = A00000000000000000000032 /* AppTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		B00000000000000000000002 /* Watch */ = {
 			isa = PBXNativeTarget;
@@ -347,7 +312,6 @@
 			projectRoot = "";
 			targets = (
 				A00000000000000000000005 /* App */,
-				A00000000000000000000031 /* AppTests */,
 				B00000000000000000000002 /* Watch */,
 				C00000000000000000000002 /* Widgets */,
 				F00000000000000000000002 /* WatchUITests */,
@@ -442,13 +406,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A00000000000000000000034 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		B00000000000000000000004 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -480,11 +437,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		A00000000000000000000033 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = A00000000000000000000005 /* App */;
-			targetProxy = A00000000000000000000037 /* PBXContainerItemProxy */;
-		};
 		B0000000000000000000000A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = B00000000000000000000002 /* Watch */;
@@ -598,42 +550,6 @@
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Release;
-		};
-		A00000000000000000000038 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = FNYFHG5SV7;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me.tests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App.app/App";
-			};
-			name = Debug;
-		};
-		A00000000000000000000039 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = FNYFHG5SV7;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.stefan.a-better-me.tests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App.app/App";
 			};
 			name = Release;
 		};
@@ -842,15 +758,6 @@
 			buildConfigurations = (
 				A00000000000000000000014 /* Debug */,
 				A00000000000000000000015 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		A00000000000000000000036 /* Build configuration list for PBXNativeTarget "AppTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A00000000000000000000038 /* Debug */,
-				A00000000000000000000039 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -1,20 +1,5 @@
 import SwiftUI
 
-/// A form's fields in the order the keyboard's previous and next buttons walk them.
-struct FocusOrder<Field: Hashable> {
-    let fields: [Field]
-
-    init(_ fields: [Field]) { self.fields = fields }
-
-    func field(after current: Field?) -> Field? { step(from: current, by: 1) }
-    func field(before current: Field?) -> Field? { step(from: current, by: -1) }
-
-    private func step(from current: Field?, by offset: Int) -> Field? {
-        guard let current, let index = fields.firstIndex(of: current), fields.indices.contains(index + offset) else { return nil }
-        return fields[index + offset]
-    }
-}
-
 extension View {
     /// The keyboard's bar while a field of `order` is focused: previous and next through it, then `actions`, then Done.
     /// The decimal pad has no return key, so without it every field is its own tap and the keyboard never leaves.
@@ -38,5 +23,3 @@ extension View {
         }
     }
 }
-
-extension FocusOrder: Sendable where Field: Sendable {}

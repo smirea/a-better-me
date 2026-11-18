@@ -4,48 +4,18 @@ import { env } from 'node:process';
 const directory = env.SWIFT_DIRECTORY ?? '';
 if (!directory) throw new Error('Missing SWIFT_DIRECTORY');
 
-const xcodeArgs = [
-	'-project',
-	'App.xcodeproj',
-	'-scheme',
-	'App',
-	'-derivedDataPath',
-	'DerivedData/ci',
-	'-clonedSourcePackagesDirPath',
-	'.build/SourcePackages',
-	'CODE_SIGNING_ALLOWED=NO',
-];
-
-async function testSimulator() {
-	const simulators: { devices: Record<string, { udid: string; name: string }[]> } =
-		await $`xcrun simctl list devices available --json`.cwd(directory).json();
-	const simulator = Object.entries(simulators.devices)
-		.sort(([a], [b]) => b.localeCompare(a))
-		.filter(([runtime]) => runtime.includes('iOS'))
-		.flatMap(([, devices]) => devices)
-		.find(device => device.name.includes('iPhone'));
-	if (!simulator) throw new Error('No available iPhone simulator');
-	return simulator.udid;
-}
-
-const task = Bun.argv[2];
-if (task !== 'tests' && task !== 'build') throw new Error(`Unknown Swift task: ${task}`);
-
-// Booting the simulator alongside the build made the tests job slower (13 minutes before, 14.6 and 17.8 after): on
-// one runner the build started 9 minutes late, and on the other it took 8.8 minutes instead of 2.3. xcodebuild boots
-// it after the build.
-const simulator = task === 'tests' ? await testSimulator() : undefined;
-
-if (task === 'tests') await $`bun app-ios/scripts/lint-swift.ts`;
-// Core's tests need no simulator. Until the app-hosted suites have all moved to Core, they share this job's runner
-// instead of queueing for a third macOS one.
-if (task === 'tests') await $`swift test`.cwd(directory);
-await $`bun scripts/own-packages.ts .build/SourcePackages`.cwd(directory);
-
-if (task === 'build') {
-	await $`xcodebuild build ${xcodeArgs} -configuration Release -destination ${'generic/platform=iOS Simulator'}`.cwd(
-		directory,
-	);
-} else {
-	await $`xcodebuild test ${xcodeArgs} -destination ${`platform=iOS Simulator,id=${simulator}`}`.cwd(directory);
+switch (Bun.argv[2]) {
+	// Core's tests on the Mac: no simulator and no app build (app-ios/Package.swift).
+	case 'package':
+		await $`bun app-ios/scripts/lint-swift.ts`;
+		await $`swift test`.cwd(directory);
+		break;
+	case 'app':
+		await $`bun scripts/own-packages.ts .build/SourcePackages`.cwd(directory);
+		await $`xcodebuild build -project App.xcodeproj -scheme App -derivedDataPath DerivedData/ci -clonedSourcePackagesDirPath .build/SourcePackages CODE_SIGNING_ALLOWED=NO -configuration Release -destination ${'generic/platform=iOS Simulator'}`.cwd(
+			directory,
+		);
+		break;
+	default:
+		throw new Error(`Unknown Swift task: ${Bun.argv[2]}`);
 }

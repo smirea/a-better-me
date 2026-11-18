@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Regenerates the bundled USDA generic foods, `Sources/App/Resources/Nutrition/usda-foods.sqlite`:
+ * Regenerates the bundled USDA generic foods, `Sources/CoreResources/Nutrition/usda-foods.sqlite`:
  * `bun app-ios/scripts/usda-foods.ts`. It downloads the pinned FoodData Central release once into `.cache/usda/`,
  * checks its sha256, and writes a read-only SQLite file the app's `FoodSearch` opens. Each row holds a food's name, a
  * ranking prior, and its `FoodNutrition` JSON exactly as Swift decodes it, so a search reads names into memory and
@@ -19,8 +19,8 @@ export const DATASET = {
 	sha256: 'b80817294b8850530aaedf2e515c02593b1824f763a0ff356e5c2081643e6fd0',
 };
 
-export const OUT = resolve(import.meta.dir, '../Sources/App/Resources/Nutrition/usda-foods.sqlite');
-const REGISTRY = resolve(import.meta.dir, '../Sources/App/Resources/Nutrition/nutrients.json');
+export const OUT = resolve(import.meta.dir, '../Sources/CoreResources/Nutrition/usda-foods.sqlite');
+const REGISTRY = resolve(import.meta.dir, '../Sources/CoreResources/Nutrition/nutrients.json');
 const CACHE = resolve(import.meta.dir, '../../.cache/usda');
 
 /** The script's own text: any change to the mapping, the staples, or the priors makes the bundled file stale. */

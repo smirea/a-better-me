@@ -37,11 +37,7 @@ struct LibraryEditorSheet: Identifiable {
 /// for Create & Add. Without `onOpen`, a food opens its editor and a recipe its detail page. Creating a food or recipe
 /// shows its segment.
 struct FoodLibraryView: View {
-    enum Tab: String, CaseIterable, Identifiable {
-        case recipes = "Recipes", foods = "Foods", favorites = "Favorites"
-
-        var id: Self { self }
-    }
+    typealias Tab = FoodLibraryTab
 
     enum Item {
         case food(Food), recipe(Recipe), favorite(FoodFavorite)

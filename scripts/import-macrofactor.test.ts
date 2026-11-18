@@ -2,7 +2,7 @@ import { afterAll, describe, expect, spyOn, test } from 'bun:test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import registry from '../app-ios/Sources/App/Resources/Nutrition/nutrients.json';
+import registry from '../app-ios/Sources/CoreResources/Nutrition/nutrients.json';
 import { handle } from '../server/src/api';
 import { importMacroFactor, NUTRIENT_COLUMNS, parseCsv, stableId } from './import-macrofactor';
 import { testServer } from '../server/src/testing';

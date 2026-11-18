@@ -93,7 +93,7 @@ final class RambleCapture {
             let aligned = RambleAlignment.align(oldValue.map(\.identity), items.map(\.identity)).filter(\.value.same)
             let moved = Dictionary(uniqueKeysWithValues: aligned.map { ($0.value.old, $0.key) })
             choices = Dictionary(uniqueKeysWithValues: choices.compactMap { old, choice in moved[old].map { ($0, choice) } })
-            choices = Self.unsaid(choices, items: items, words: words)
+            choices = RambleRowRules.unsaid(choices, items: items, words: words)
         }
     }
     @ObservationIgnored private var choices: [Int: RambleChoice] = [:]
@@ -174,7 +174,7 @@ final class RambleCapture {
                 case let .heard(words):
                     heard = words
                 case let .outline(outline):
-                    let shown = Self.held(outline.items, showing: items, last: lastOutline)
+                    let shown = RambleRowRules.held(outline.items, showing: items, last: lastOutline)
                     lastOutline = outline.items
                     guard shown != items else { continue }
                     items = shown
@@ -473,34 +473,6 @@ final class RambleCapture {
         }
         resolving = task
         return task
-    }
-
-    /// The outline's items and every shown item the last outline still had, in their places: an item leaves only when
-    /// two outlines in a row lack it, since the model sometimes drops a food mid-sentence ("remove the pear, make the")
-    /// and brings it back a read later. A spoken removal still lands, one read later.
-    nonisolated static func held(_ new: [RambleItem], showing: [RambleItem], last: [RambleItem]) -> [RambleItem] {
-        let aligned = RambleAlignment.align(showing.map(\.identity), new.map(\.identity))
-        let continued = Set(aligned.values.map(\.old))
-        let before = Set(last.map(\.identity))
-        var result = new
-        var inserted = 0
-        for (i, item) in showing.enumerated() where !continued.contains(i) && before.contains(item.identity) {
-            let at = aligned.filter { $0.value.old > i }.map(\.key).min() ?? new.count
-            result.insert(item, at: at + inserted)
-            inserted += 1
-        }
-        return result
-    }
-
-    /// The choices without the removals the speaker took back by saying the food again: the model updates a food said
-    /// again in place ("2 tablespoons of salt … 1 tablespoon of salt"), so the removed item keeps its name, and only its
-    /// quote, now past the removed words, tells.
-    nonisolated static func unsaid(_ choices: [Int: RambleChoice], items: [RambleItem], words: RambleWords) -> [Int: RambleChoice] {
-        choices.filter { position, choice in
-            guard let through = choice.through, items.indices.contains(position), let span = words.span(of: items[position].said)
-            else { return true }
-            return span.upperBound <= through
-        }
     }
 
     /// Searches online for each unmatched name not asked yet, and resolves again when one finds something.

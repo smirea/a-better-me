@@ -1,6 +1,6 @@
 import type { z } from 'zod';
-import equipmentJson from '../../../app-ios/Sources/App/Resources/Catalog/equipment.json';
-import exercisesJson from '../../../app-ios/Sources/App/Resources/Catalog/exercises.json';
+import equipmentJson from '../../../app-ios/Sources/CoreResources/Catalog/equipment.json';
+import exercisesJson from '../../../app-ios/Sources/CoreResources/Catalog/exercises.json';
 import type { Db } from './db';
 import type { StoredExercise } from './models';
 

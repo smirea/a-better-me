@@ -14,7 +14,7 @@
 		"app-web/src/env.ts",
 		"server/src/env.ts",
 		"scripts/env.ts",
-		"app-ios/Sources/App/Resources/Catalog",
+		"app-ios/Sources/CoreResources/Catalog",
 		"app-ios/Assets"
 	],
 	"printWidth": 120,

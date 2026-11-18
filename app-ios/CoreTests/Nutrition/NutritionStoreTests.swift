@@ -1,0 +1,193 @@
+import Foundation
+import GRDB
+import Testing
+@testable import Core
+
+/// Every Nutrition write in `LocalStore`, over a fresh migrated database that never syncs.
+@MainActor
+struct NutritionStoreTests {
+    let store: LocalStore
+    let monday = calendarDay("2026-10-26")
+    let tuesday = calendarDay("2026-10-27")
+
+    init() throws {
+        store = try LocalStore(unsyncedAt: FileManager.default.temporaryDirectory.appending(path: "nutrition-\(UUID().uuidString)/a.sqlite"))
+    }
+
+    /// Waits for every write called so far, since writes run in call order.
+    func settled() async throws {
+        try await store.write { _ in }.value
+    }
+
+    func read<T>(_ query: DatabaseQuery<T>) throws -> T {
+        try store.readBlocking(query.fetch)
+    }
+
+    func outbox() throws -> [String] {
+        try store.readBlocking { db in
+            try Row.fetchAll(db, sql: #"SELECT op, "table" AS tbl, col FROM _outbox ORDER BY seq"#).map {
+                "\($0["op"] as String) \($0["tbl"] as String) \($0["col"] as String? ?? "-")"
+            }
+        }
+    }
+
+    @Test func aLogStoresTheSectionItLandsInAndKeepsItWhenTheSectionsChange() async throws {
+        let legacy = FoodEntry(FoodPortion(yogurt), day: monday, minute: 9 * 60 + 45)
+        store.write { try legacy.insert($0) }
+        store.log([FoodPortion(yogurt)], on: monday, minute: 9 * 60 + 30)
+        store.log([FoodPortion(yogurt)], on: monday, minute: 9 * 60 + 30, section: "lunch")
+        store.updateMealSections { MealSectionsEditing.renaming(0, to: "Morning", in: $0) }
+        try await settled()
+        #expect(try read(FoodEntry.on(monday)).map(\.section) == ["breakfast", "lunch", nil])
+
+        store.updateMealSections { MealSectionsEditing.settingStart(9 * 60, of: 1, in: $0) }
+        store.log([FoodPortion(yogurt)], on: monday, minute: 9 * 60 + 30)
+        try await settled()
+        #expect(try read(FoodEntry.on(monday)).map(\.section) == ["breakfast", "lunch", "am-snack", "breakfast"])
+        #expect(try read(FoodEntry.on(monday)).last.map { Instant.text($0.updatedAt) } == Instant.text(legacy.updatedAt))
+        #expect(try read(AppSettings.current).nutrition.mealSections.map(\.name).first == "Morning")
+    }
+
+    @Test func aRecipeReplacesItsSelectionUnlessTheSelectionChanged() async throws {
+        store.log([FoodPortion(yogurt)], on: monday, minute: 8 * 60)
+        store.log([FoodPortion(yogurt)], on: monday, minute: 8 * 60 + 30, section: "breakfast")
+        try await settled()
+        let selection = try read(FoodEntry.on(monday))
+        var recipe = Recipe(name: "Yogurt Bowl", servings: 1)
+        recipe.ingredients = selection.map { RecipeIngredient($0.portion) }
+        let replacement = try #require(FoodLog.replacement(for: selection, with: recipe))
+
+        #expect(try await store.replace(selection, with: replacement).value)
+        let replaced = try read(FoodEntry.on(monday))
+        #expect(replaced.map(\.food.name) == ["Yogurt Bowl"])
+        #expect(replaced.map(\.minute) == [8 * 60])
+        #expect(replaced.map(\.section) == ["breakfast"])
+        #expect(replaced.map { $0.amounts[.energy] } == [360])
+
+        store.undo(.unreplace(added: replacement.id, removed: selection))
+        try await settled()
+        let restored = try read(FoodEntry.on(monday))
+        #expect(restored.map(\.food.name) == [yogurt.name, yogurt.name])
+        #expect(restored.map(\.minute) == [8 * 60, 8 * 60 + 30])
+
+        store.edit(FoodEntry.self, id: restored[1].id) { $0.serving.quantity = 2 }
+        try await settled()
+        let stale = try #require(FoodLog.replacement(for: restored, with: recipe))
+        #expect(try await store.replace(restored, with: stale).value == false)
+        #expect(try read(FoodEntry.on(monday)).map { $0.amounts[.energy] } == [180, 360])
+    }
+
+    @Test func cachesAFoodOnceAndKeepsLoggedSnapshotsWhenItChanges() async throws {
+        let cached = Food(.openFoodFacts(barcode: "5000112637922"), name: "Cola", nutrition: FoodNutrition(nutrients: [.energy: 42], baseMilliliters: 100, measures: [Measure(name: "can", quantity: 1, servings: 3.3)]))
+        store.saveFood(cached)
+        try await settled()
+        let firstSaved = try #require(try read(Food.library).first)
+        var refreshed = Food(.openFoodFacts(barcode: "5000112637922"), name: "Cola Classic", nutrition: cached.nutrition)
+        refreshed.createdAt = .now.addingTimeInterval(60)
+        store.saveFood(refreshed)
+        store.log([FoodPortion(firstSaved.snapshot)], on: monday, minute: 18 * 60)
+        try await settled()
+
+        let foods = try read(Food.library)
+        #expect(foods.map(\.id) == ["off-5000112637922"])
+        #expect(foods[0].name == "Cola Classic")
+        #expect(foods[0].barcode == "5000112637922")
+        #expect(foods[0].createdAt == firstSaved.createdAt)
+
+        let custom = Food(name: "Oats", nutrition: FoodNutrition(nutrients: [.energy: 380], baseGrams: 100, measures: [Measure(name: "g", quantity: 100, servings: 1)]))
+        store.saveFood(custom)
+        store.edit(Food.self, id: custom.id) { $0.name = "Rolled oats" }
+        store.edit(Food.self, id: cached.id) { $0.nutrition.nutrients[.energy] = 0 }
+        store.deleteFood(cached.id)
+        try await settled()
+
+        #expect(try read(Food.library).map(\.name) == ["Rolled oats"])
+        let entry = try #require(try read(FoodEntry.on(monday)).first)
+        #expect(entry.food.name == "Cola")
+        #expect(entry.food.foodID == "off-5000112637922")
+        #expect(entry.amounts[.energy] == 138.6)
+    }
+
+    @Test func aFullFavoritesListReplacesItsOldest() async throws {
+        let start = Date(timeIntervalSince1970: 1_761_321_600)
+        for index in 0..<FoodFavorite.limit {
+            store.insert(FoodFavorite(FoodPortion(.quickAdd([.energy: Double(index)])), at: start.addingTimeInterval(Double(index))))
+        }
+        store.addFavorite(FoodPortion(yogurt))
+        try await settled()
+
+        let favorites = try read(FoodFavorite.all)
+        #expect(favorites.count == 50)
+        #expect(favorites.first?.food.nutrition.nutrients[.energy] == 1)
+        #expect(favorites.last?.food == yogurt)
+
+        store.deleteFavorite(favorites[0].id)
+        try await settled()
+        #expect(try read(FoodFavorite.all).count == 49)
+    }
+
+    @Test func setsReplacesAndClearsABodyMetricPerDay() async throws {
+        store.setBodyMetric(.waist, on: monday, value: 84)
+        store.setBodyMetric(.waist, on: monday, value: 83.5)
+        store.setBodyMetric(.visualBodyFat, on: monday, value: 17.5)
+        store.setBodyMetric(.waist, on: tuesday, value: 83)
+        try await settled()
+
+        #expect(try read(BodyMetric.series(.waist)).map(\.value) == [83.5, 83])
+        #expect(try read(BodyMetric.series(.visualBodyFat)).map(\.id) == ["2026-10-26/visual_body_fat"])
+
+        store.setBodyMetric(.waist, on: monday, value: nil)
+        try await settled()
+        #expect(try read(BodyMetric.series(.waist)).map(\.day) == [tuesday])
+    }
+
+    @Test func aPlanOnTheSameDayReplacesTheEarlierOne() async throws {
+        let goal = NutritionGoal(kind: .lose, targetWeightKg: 75, ratePercentPerWeek: -0.5, startedOn: monday)
+        let setup = NutritionPlan(from: monday, kind: .setup, goal: goal, coaching: CoachingProgram(), targets: WeekTargets(every: DayTarget(energy: 2200, protein: 160, fat: 70, carbs: 230)))
+        var checkIn = NutritionPlan(from: monday.adding(days: 7), kind: .checkIn, goal: goal, coaching: CoachingProgram(), targets: WeekTargets(every: DayTarget(energy: 2100, protein: 160, fat: 65, carbs: 220)))
+        checkIn.expenditureKcal = 2650
+        checkIn.trendWeightKg = 81.2
+        store.savePlan(setup)
+        var editedSetup = setup
+        editedSetup.kind = .edit
+        store.savePlan(editedSetup)
+        store.savePlan(checkIn)
+        var redo = checkIn
+        redo.targets = WeekTargets(every: DayTarget(energy: 2050, protein: 160, fat: 65, carbs: 210))
+        store.savePlan(redo)
+        try await settled()
+
+        let plans = try read(NutritionPlan.all)
+        #expect(plans.map(\.id.description) == ["2026-10-26", "2026-11-02"])
+        #expect(plans[1].target(on: monday.adding(days: 9)).energy == 2050)
+        #expect(plans[1].expenditureKcal == 2650)
+        #expect(plans[1].kind == .checkIn)
+        #expect(plans[0].kind == .setup)
+
+        store.delete(NutritionPlan.self, id: monday)
+        try await settled()
+        #expect(try read(NutritionPlan.all).map(\.kind) == [.checkIn])
+
+        var edit = NutritionPlan(from: monday.adding(days: 7), kind: .edit, goal: goal, coaching: CoachingProgram(), targets: WeekTargets(every: DayTarget(energy: 1900, protein: 170, fat: 60, carbs: 190)))
+        edit.goal.targetWeightKg = 72
+        store.savePlan(edit)
+        try await settled()
+        let edited = try read(NutritionPlan.all)
+        #expect(edited.map(\.kind) == [.checkIn])
+        #expect(edited[0].goal.targetWeightKg == 72)
+        #expect(edited[0].target(on: monday.adding(days: 9)).energy == 1900)
+        #expect(edited[0].expenditureKcal == 2650)
+        #expect(edited[0].trendWeightKg == 81.2)
+    }
+
+    @Test func nutritionSettingsPatchTheirOwnColumn() async throws {
+        store.updateSettings { $0.workout.rest.enabled = false }
+        store.updateSettings { $0.nutrition.energyUnit = .kj }
+        try await settled()
+
+        let settings = try #require(try store.readBlocking { try AppSettings.fetchOne($0, key: AppSettings.rowID) })
+        #expect(settings.nutrition.energyUnit == .kj)
+        #expect(settings.nutrition.summaryNutrients == [.energy, .protein, .fat, .carbs])
+        #expect(try outbox() == ["insert settings -", "update settings nutrition"])
+    }
+}

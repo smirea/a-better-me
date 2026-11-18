@@ -4,7 +4,7 @@
  * `bun app-ios/scripts/catalog.ts [path/to/Runner.app]`.
  * Reads the app's own catalog export (`packages/macrofactor/assets/import/app_file.json`), its instruction and
  * article Markdown, and its exercise and equipment images. It writes the JSON and the Markdown pack to
- * `Sources/App/Resources/Catalog/`, which the app bundles, and the images to `Assets/`, which the app downloads after
+ * `Sources/CoreResources/Catalog/`, which the app bundles, and the images to `Assets/`, which the app downloads after
  * install, then refreshes the tracked asset version.
  * The default weight lists MF shows per equipment item (dumbbells 2.5 to 165 lb and so on) are not in the bundle;
  * they come from docs/research/mf-workouts/equipment.md.
@@ -18,7 +18,7 @@ import { writeMarkdownPack } from './markdown-pack';
 
 const app = resolve(process.argv[2] ?? '/Applications/Runner.app');
 const assets = join(app, 'Wrapper/Runner.app/Frameworks/App.framework/flutter_assets');
-const out = resolve(import.meta.dir, '../Sources/App/Resources/Catalog');
+const out = resolve(import.meta.dir, '../Sources/CoreResources/Catalog');
 if (!existsSync(assets)) throw new Error(`No Flutter assets at ${assets}. Is MacroFactor Workouts installed?`);
 
 type Ref = { type: string; name: string; [key: string]: unknown };

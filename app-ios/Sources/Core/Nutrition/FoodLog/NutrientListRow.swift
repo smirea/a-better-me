@@ -1,0 +1,58 @@
+import Foundation
+
+/// One row of a nutrient table: a section's label, or a nutrient with how deep it nests and whether it is the last
+/// of its section, which draws the rule under it.
+enum NutrientListRow: Hashable, Identifiable {
+    case label(NutrientTableSection)
+    case nutrient(Nutrient, depth: Int, endsSection: Bool)
+
+    var id: Self { self }
+
+    /// The table's nutrients that `shows` keeps, each section's label before its own. The first section reads as the
+    /// label's top, so it has none, and a section that keeps nothing is left out.
+    static func rows(shows: (Nutrient) -> Bool) -> [NutrientListRow] {
+        NutrientTableSection.allCases.flatMap { section -> [NutrientListRow] in
+            let lines = section.lines.compactMap { line in NutrientRegistry.nutrient(line.id).map { ($0, line.depth) } }.filter { shows($0.0) }
+            guard !lines.isEmpty else { return [] }
+            let rows = lines.enumerated().map { index, line in
+                NutrientListRow.nutrient(line.0, depth: line.1, endsSection: index == lines.count - 1)
+            }
+            return (section == .facts ? [] : [.label(section)]) + rows
+        }
+    }
+
+    /// Every nutrient, for a list that shows each whether or not it was reported.
+    static let all = rows { _ in true }
+    static let macros = rows { NutrientID.summaryChoices.contains($0.id) }
+}
+
+/// A nutrient table's sections, read like a Nutrition Facts label: calories and the macros with what they contain,
+/// then vitamins, minerals, and the rest, each section ruled off from the next.
+enum NutrientTableSection: String, CaseIterable, Hashable {
+    case facts = "Calories & Macros"
+    case vitamins = "Vitamins"
+    case minerals = "Minerals"
+    case other = "Other"
+
+    /// Each nutrient with how deep it nests: the US label's order (fat, cholesterol, sodium, carbs, protein; vitamins
+    /// and minerals in the FDA's listing order), with the registry's extras placed under what holds them.
+    fileprivate var lines: [(id: NutrientID, depth: Int)] {
+        switch self {
+        case .facts:
+            [
+                (.energy, 0),
+                (.fat, 0), ("606", 1), ("693", 1), ("646", 1), ("645", 1), ("901", 1), ("851", 2), ("629", 2), ("621", 2), ("902", 1),
+                ("601", 0),
+                ("307", 0),
+                (.carbs, 0), (.fiber, 1), ("269", 1), ("539", 2), ("209", 1), (.netCarbs, 1),
+                (.protein, 0), ("507", 1), ("512", 1), ("503", 1), ("504", 1), ("505", 1), ("506", 1), ("508", 1), ("502", 1), ("501", 1), ("509", 1), ("510", 1),
+            ]
+        case .vitamins:
+            ["320", "401", "328", "323", "430", "404", "405", "406", "415", "417", "418", "410", "421"].map { ($0, 0) }
+        case .minerals:
+            ["301", "303", "306", "305", "304", "309", "317", "312", "315"].map { ($0, 0) }
+        case .other:
+            [(.alcohol, 0), ("262", 0), ("255", 0)]
+        }
+    }
+}

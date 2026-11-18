@@ -119,7 +119,7 @@ struct Nutrient: Decodable, Hashable, Identifiable, Sendable {
 /// The registry in display order: grouped, and in MacroFactor's order within a group.
 enum NutrientRegistry {
     static let all: [Nutrient] = {
-        guard let url = Bundle.main.url(forResource: "nutrients", withExtension: "json") else {
+        guard let url = Bundle.core.url(forResource: "nutrients", withExtension: "json") else {
             fatalError("Missing nutrients.json in the app bundle.")
         }
         do {
@@ -160,6 +160,22 @@ extension NutrientGroup {
         case .fats: "Fat Breakdown"
         case .vitamins: "Vitamins"
         case .minerals: "Minerals"
+        }
+    }
+}
+
+extension Nutrient {
+    var tint: NutrientTint {
+        switch (id, group) {
+        case (.energy, _): .calories
+        case (.fiber, _): .fiber
+        case (.netCarbs, _): .netCarbs
+        case (_, .protein): .protein
+        case (_, .fats): .fat
+        case (_, .carbohydrates): .carbs
+        case (_, .vitamins): .vitamins
+        case (_, .minerals): .minerals
+        case (_, .general): .calories
         }
     }
 }

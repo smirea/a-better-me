@@ -1,0 +1,148 @@
+import Foundation
+
+struct ExerciseHistoryEntry: Identifiable {
+    let id: UUID
+    let date: Date
+    let workoutName: String
+    /// Completed sets, warm-ups included, in workout order.
+    let sets: [WorkoutSet]
+    var records: [HistoryMetric: Double] = [:]
+
+    var workingSets: [WorkoutSet] { sets.filter { $0.type.isWorking } }
+}
+
+/// The "Exercise Display" dropdown.
+enum HistoryMetric: String, CaseIterable, Identifiable {
+    case oneRepMax = "1-RM"
+    case threeRepMax = "3-RM"
+    case tenRepMax = "10-RM"
+    case heaviestWeight = "Heaviest Weight"
+    case totalVolume = "Total Volume"
+    case bestSetVolume = "Best Set Volume"
+    case totalReps = "Total Reps"
+    case bestSetReps = "Best Set Reps"
+    case totalSets = "Total Sets"
+
+    var id: Self { self }
+
+    static let recordKinds: [HistoryMetric] = [.totalVolume, .bestSetReps, .oneRepMax]
+
+    var recordIcon: String {
+        switch self {
+        case .totalVolume: "trophy.fill"
+        case .bestSetReps: "asterisk"
+        default: "medal.fill"
+        }
+    }
+
+    func value(of entry: ExerciseHistoryEntry, exercise: Exercise) -> Double? {
+        let sets = entry.workingSets
+        let logs = sets.flatMap { [$0.log] + $0.subSets.map(\.log) }.compactMap { $0 }
+        let setReps = sets.map { ([$0.log] + $0.subSets.map(\.log)).compactMap { $0?.reps }.reduce(0, +) }
+        // An assistance weight lightens the lift, so a bigger one is not a stronger set.
+        let isAssisted = exercise.metrics.contains(.assistanceWeight)
+        let result: Double? = switch self {
+        case .oneRepMax where isAssisted, .threeRepMax where isAssisted, .tenRepMax where isAssisted, .heaviestWeight where isAssisted: nil
+        case .oneRepMax: Self.bestRepMax(logs, reps: 1)
+        case .threeRepMax: Self.bestRepMax(logs, reps: 3)
+        case .tenRepMax: Self.bestRepMax(logs, reps: 10)
+        case .heaviestWeight: logs.compactMap(\.weightKg).max()
+        case .totalVolume: entry.sets.map { WorkoutMetrics.volumeKg(of: $0, exercise: exercise) }.reduce(0, +)
+        case .bestSetVolume: sets.map { WorkoutMetrics.volumeKg(of: $0, exercise: exercise) }.max()
+        case .totalReps: Double(setReps.reduce(0, +))
+        case .bestSetReps: setReps.max().map(Double.init)
+        case .totalSets: Double(sets.count)
+        }
+        return result.flatMap { $0 > 0 ? $0 : nil }
+    }
+
+    private static func bestRepMax(_ logs: [SetLog], reps: Int) -> Double? {
+        logs.compactMap { log in
+            guard let weight = log.weightKg, weight > 0, let logged = log.reps, logged > 0 else { return nil }
+            let oneRepMax = WorkoutMetrics.estimatedOneRepMaxKg(weightKg: weight, reps: logged, rir: log.rir)
+            return WorkoutMetrics.estimatedRepMaxKg(oneRepMaxKg: oneRepMax, reps: reps)
+        }.max()
+    }
+
+    func format(_ value: Double, unit: WeightUnit) -> String {
+        switch self {
+        case .oneRepMax, .threeRepMax, .tenRepMax, .heaviestWeight, .totalVolume, .bestSetVolume: "\(unit.label(kg: value))"
+        case .totalReps, .bestSetReps: "\(Int(value)) reps"
+        case .totalSets: "\(Int(value)) sets"
+        }
+    }
+}
+
+enum HistorySort: String, CaseIterable, Identifiable {
+    case mostRecent = "Most Recent", oldest = "Oldest", highest = "Highest", lowest = "Lowest"
+    var id: Self { self }
+}
+
+/// On shows record badges, Only also hides sessions without a record, and Off hides the badges.
+enum RecordsFilter: String, CaseIterable, Identifiable {
+    case on = "Records On", only = "Records Only", off = "Records Off"
+    var id: Self { self }
+}
+
+enum ExerciseHistory {
+    /// Newest first. A record is a value that beats every earlier session's.
+    static func entries(of exercise: Exercise, in sessions: [WorkoutSession]) -> [ExerciseHistoryEntry] {
+        var best: [HistoryMetric: Double] = [:]
+        var entries: [ExerciseHistoryEntry] = []
+        for session in sessions.sorted(by: { $0.startedAt < $1.startedAt }) where !session.isInProgress {
+            let sets = session.blocks.flatMap(\.exercises).filter { $0.exerciseID == exercise.id }.flatMap(\.sets).filter(\.isCompleted)
+            guard !sets.isEmpty else { continue }
+            var entry = ExerciseHistoryEntry(id: session.id, date: session.startedAt, workoutName: session.name, sets: sets)
+            for kind in HistoryMetric.recordKinds {
+                guard let value = kind.value(of: entry, exercise: exercise) else { continue }
+                if let previous = best[kind], value > previous { entry.records[kind] = value }
+                best[kind] = max(value, best[kind] ?? 0)
+            }
+            entries.append(entry)
+        }
+        return entries.reversed()
+    }
+
+    /// Sessions without a value go last, and ties fall back to newest first.
+    static func arranged(
+        _ entries: [ExerciseHistoryEntry], sort: HistorySort, records: RecordsFilter, metric: HistoryMetric, exercise: Exercise
+    ) -> [ExerciseHistoryEntry] {
+        let shown = records == .only ? entries.filter { !$0.records.isEmpty } : entries
+        switch sort {
+        case .mostRecent: return shown.sorted { $0.date > $1.date }
+        case .oldest: return shown.sorted { $0.date < $1.date }
+        case .highest, .lowest:
+            let values = Dictionary(uniqueKeysWithValues: shown.map { ($0.id, metric.value(of: $0, exercise: exercise)) })
+            return shown.sorted { a, b in
+                switch (values[a.id] ?? nil, values[b.id] ?? nil) {
+                case let (x?, y?) where x != y: sort == .highest ? x > y : x < y
+                case (_?, nil): true
+                case (nil, _?): false
+                default: a.date > b.date
+                }
+            }
+        }
+    }
+
+    /// "50 lb (per side) x 9 (per side)": the logged values in the exercise's metrics, load first.
+    static func describe(_ log: SetLog, exercise: Exercise, unit: WeightUnit) -> String {
+        let metrics = exercise.metrics.sorted { $0.isWeight && !$1.isWeight }
+        return metrics.compactMap { metric -> String? in
+            let side = metric.isPerSide ? " (per side)" : ""
+            switch metric {
+            case .weight, .weightPerSide, .weightPerSidePersistent:
+                return log.weightKg.map { "\(unit.label(kg: $0))\(side)" }
+            case .assistanceWeight:
+                return log.weightKg.map { "\(unit.label(kg: $0)) assist" }
+            case .reps, .repsPerSide:
+                return log.reps.map { "\($0)\(side)" }
+            case .duration, .durationPerSide:
+                return log.durationSeconds.map { $0.minuteSecond + side }
+            case .distanceShort, .distanceShortPerSide, .distanceLong:
+                return log.distanceMeters.map {
+                    Measurement(value: $0, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated, usage: .road)) + side
+                }
+            }
+        }.joined(separator: " x ")
+    }
+}
