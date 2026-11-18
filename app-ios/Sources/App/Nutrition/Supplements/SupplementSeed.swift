@@ -2,9 +2,9 @@
 import GRDB
 import UIKit
 
-/// The dev seed's (`DevSeed`) supplements: a stack being taken at different times and days, one still to start, and
-/// two stopped, one of them eight times over, so the Food Log's row, the library's sections, and a page's truncated
-/// history all have something to show.
+/// The dev seed's (`DevSeed`) supplements: a stack being taken at different times and days, one still to start, two
+/// stopped, one of them eight times over, and one never taken, so the Food Log's row, the library's sections and
+/// ranges, and a page's truncated history all have something to show.
 /// Pictures are drawn here: one has none, for the letter placeholder, and the multivitamin has a second, its label.
 /// Two tags and a few product pages cover the rest of a page.
 enum SupplementSeed {
@@ -47,6 +47,8 @@ enum SupplementSeed {
              [component("Vitamin C", 500, "mg")],
              // Taken for three weeks out of every six, so its History is long enough to truncate.
              (0..<8).reversed().map { regimen(from: -70 - $0 * 42, to: -50 - $0 * 42, count: $0 % 2 == 0 ? 2 : 1, today: today) }, "Only through cold season."),
+            ("probiotic", "Acidophilus Probiotic", "Nature's Bounty", .init(quantity: 1, unit: "capsule"), .systemGreen,
+             [component("Lactobacillus acidophilus", 100, "million CFU")], [], "Bought, never started."),
         ]
         var morning = Tag(name: "Morning Stack", color: "#096dd9")
         morning.id = DevSeed.id("tag/morning")

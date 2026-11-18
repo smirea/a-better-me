@@ -266,6 +266,29 @@ enum SupplementFormat {
         ([amount(serving, count: regimen.count)] + [regimen.timing?.title].compactMap(\.self)).joined(separator: " · ")
     }
 
+    /// The page's line: how it is taken now, when it starts, or when it stopped.
+    static func status(_ supplement: Supplement, on today: CalendarDay) -> String {
+        guard let index = supplement.currentRegimen(on: today) else {
+            return supplement.regimens.last?.end.map { "Stopped \(day($0, on: today))" } ?? "Not taking"
+        }
+        let regimen = supplement.regimens[index]
+        return regimen.start > today ? "Starts \(day(regimen.start, on: today))" : schedule(regimen, of: supplement.serving)
+    }
+
+    /// The library's line: the dates of the current regimen, or of the last one when none is current, since that is
+    /// when it was last taken. Nil for one never taken.
+    static func range(_ supplement: Supplement, on today: CalendarDay) -> String? {
+        guard let regimen = supplement.currentRegimen(on: today).map({ supplement.regimens[$0] }) ?? supplement.regimens.last else { return nil }
+        guard let end = regimen.end else { return "\(regimen.start > today ? "Starts" : "Since") \(day(regimen.start, on: today))" }
+        if end == regimen.start { return day(end, on: today) }
+        // The start names its year only when it differs from the end's, so a range in a past year names it once.
+        return "\(StrategyFormat.day(regimen.start, year: regimen.start.year != end.year)) – \(day(end, on: today))"
+    }
+
+    private static func day(_ day: CalendarDay, on today: CalendarDay) -> String {
+        StrategyFormat.day(day, year: day.year != today.year)
+    }
+
     static func component(_ component: Supplement.Component, count: Double = 1) -> String? {
         guard let amount = component.amount else { return nil }
         return [NumberText.plain(amount * count), component.unit].compactMap(\.self).joined(separator: " ")
