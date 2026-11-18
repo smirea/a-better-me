@@ -28,6 +28,11 @@ const discardWorkout = [
 // The day's supplements row and its tiles also exist on the pages beside today's, so a label matches three of each.
 // They are tapped by position: the row, then its first tile.
 const supplementsRow = ['wait \'label="Supplements"\' 8000', 'press 201 196', 'wait 600'];
+// A library row's label carries its range, which moves with the seed's dates, so it is pressed by id.
+const multivitamin = [
+	'wait \'id="supplement-Essential Multivitamin"\' 8000',
+	'press \'id="supplement-Essential Multivitamin"\'',
+];
 const loggerTab = (tab: string) => [...tapTab('Nutrition'), ...tap('Your Foods'), ...tapButton(tab)];
 const scrolled = (count = 1) => Array.from({ length: count }, () => 'scroll down').concat('wait 600');
 
@@ -102,16 +107,11 @@ export const screens: Screen[] = [
 	// The seed's one supplement with two pictures, a tag, and a product page.
 	{
 		name: 'supplement',
-		steps: [...more('Supplements'), ...tap('Essential Multivitamin, 2 capsules · Every day · Morning'), 'wait 600'],
+		steps: [...more('Supplements'), ...multivitamin, 'wait 600'],
 	},
 	{
 		name: 'supplement-edit',
-		steps: [
-			...more('Supplements'),
-			...tap('Essential Multivitamin, 2 capsules · Every day · Morning'),
-			...tapButton('Edit'),
-			'wait 1000',
-		],
+		steps: [...more('Supplements'), ...multivitamin, ...tapButton('Edit'), 'wait 1000'],
 	},
 	{
 		name: 'supplement-new',

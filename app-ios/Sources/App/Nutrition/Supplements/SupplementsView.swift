@@ -16,7 +16,8 @@ enum SupplementRoute: Hashable {
     }
 }
 
-/// The supplement library: a tile per pill, the ones being taken first. A tile opens its page, and + adds one.
+/// The supplement library: a row per pill, the ones being taken first, with its picture, name, and the dates of its
+/// latest regimen. A row opens its page, and + adds one.
 struct SupplementsView: View {
     @Observe(Supplement.all) private var supplements
     @State private var creating = false
@@ -28,28 +29,23 @@ struct SupplementsView: View {
     }
 
     private struct Sections {
-        var taking: [Supplement] = []
-        var stopped: [Supplement] = []
+        var taking: [SupplementRow.Item] = []
+        var stopped: [SupplementRow.Item] = []
     }
-
-    private static let columns = Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3)
 
     var body: some View {
         let today = CalendarDay.today
         let sections = self.sections(SectionsKey(supplements: supplements, today: today)) {
             supplements.reduce(into: Sections()) { sections, supplement in
-                if supplement.status(on: today) == .stopped { sections.stopped.append(supplement) } else { sections.taking.append(supplement) }
+                let item = SupplementRow.Item(supplement: supplement, range: SupplementFormat.range(supplement, on: today))
+                if supplement.status(on: today) == .stopped { sections.stopped.append(item) } else { sections.taking.append(item) }
             }
         }
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                grid("Taking", sections.taking, today: today)
-                grid("Not Taking", sections.stopped, today: today)
-            }
-            .padding(.horizontal, Theme.margin)
-            .padding(.vertical, 12)
+        List {
+            section("Taking", sections.taking)
+            section("Not Taking", sections.stopped)
         }
-        .background(Theme.background)
+        .themedList()
         .overlay {
             if supplements.isEmpty {
                 ContentUnavailableView {
@@ -72,17 +68,12 @@ struct SupplementsView: View {
     }
 
     @ViewBuilder
-    private func grid(_ title: String, _ supplements: [Supplement], today: CalendarDay) -> some View {
-        if !supplements.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                SectionHeader(title)
-                LazyVGrid(columns: Self.columns, spacing: 16) {
-                    ForEach(supplements) { supplement in
-                        NavigationLink(value: SupplementRoute.detail(supplement.id, day: nil)) {
-                            SupplementTile(supplement: supplement, caption: SupplementFormat.status(supplement, on: today))
-                        }
-                        .buttonStyle(.plain)
-                    }
+    private func section(_ title: String, _ items: [SupplementRow.Item]) -> some View {
+        if !items.isEmpty {
+            ThemedSection(title) {
+                ForEach(items) { item in
+                    NavigationLink(value: SupplementRoute.detail(item.id, day: nil)) { SupplementRow(item: item) }
+                        .accessibilityIdentifier("supplement-\(item.supplement.name)")
                 }
             }
             .feedback(title)
@@ -90,36 +81,23 @@ struct SupplementsView: View {
     }
 }
 
-/// A square picture over the supplement's name and how it is taken.
-private struct SupplementTile: View {
-    let supplement: Supplement
-    let caption: String
+/// The supplement's picture beside its name, over its range when it has one.
+private struct SupplementRow: View {
+    struct Item: Identifiable, Equatable {
+        let supplement: Supplement
+        let range: String?
+
+        var id: UUID { supplement.id }
+    }
+
+    let item: Item
+    @ScaledMetric private var pictureSize: CGFloat = 44
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            SupplementPicture(supplement, cornerRadius: Theme.cornerRadius).aspectRatio(1, contentMode: .fit)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(supplement.name).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(2)
-                Text(caption).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).lineLimit(2)
-            }
-            .multilineTextAlignment(.leading)
+        HStack(spacing: 12) {
+            SupplementPicture(item.supplement).frame(width: pictureSize, height: pictureSize)
+            RowLabel(title: item.supplement.name, detail: item.range)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(.rect)
-        .accessibilityElement(children: .combine)
         .feedback(self)
-    }
-}
-
-extension SupplementFormat {
-    /// A library tile's line: how it is taken now, when it starts, or when it stopped.
-    static func status(_ supplement: Supplement, on today: CalendarDay) -> String {
-        guard let index = supplement.currentRegimen(on: today) else {
-            return supplement.regimens.last?.end.map { "Stopped \(StrategyFormat.day($0, year: $0.year != today.year))" } ?? "Not taking"
-        }
-        let regimen = supplement.regimens[index]
-        return regimen.start > today
-            ? "Starts \(StrategyFormat.day(regimen.start, year: regimen.start.year != today.year))"
-            : schedule(regimen, of: supplement.serving)
     }
 }
