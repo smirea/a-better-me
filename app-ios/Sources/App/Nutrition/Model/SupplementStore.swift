@@ -19,26 +19,22 @@ extension Tag {
 }
 
 extension LocalStore {
-    /// Inserts or updates the supplement. `pictures` is every picture it should have, in order, or nil to leave them:
-    /// the ones it lacks are inserted and the ones left out deleted in the same transaction, so `images` never names a
-    /// picture that is not there.
-    func saveSupplement(_ supplement: Supplement, pictures: [SupplementImage]? = nil) {
-        write { try Self.save(supplement, pictures: pictures, in: $0) }
+    /// Inserts or updates the supplement, whose `images` says which pictures it has. `pictures` holds the ones that may
+    /// be new: those it names and lacks are inserted, and stored ones it no longer names are deleted, in the same
+    /// transaction. A picture it names whose row has not synced yet is left to arrive.
+    func saveSupplement(_ supplement: Supplement, adding pictures: [SupplementImage] = []) {
+        write { try Self.save(supplement, adding: pictures, in: $0) }
     }
 
-    nonisolated static func save(_ supplement: Supplement, pictures: [SupplementImage]? = nil, in db: Database) throws {
+    nonisolated static func save(_ supplement: Supplement, adding pictures: [SupplementImage] = [], in db: Database) throws {
         var saved = supplement
         saved.updatedAt = .now
-        if let pictures {
-            let stored = try Supplement.fetchOne(db, key: saved.key)?.images ?? []
-            let kept = Set(pictures.map(\.id))
-            for id in stored where !kept.contains(id) {
-                _ = try SupplementImage.deleteOne(db, key: SupplementImage.key(id))
-            }
-            for picture in pictures where !stored.contains(picture.id) {
-                try put(picture, in: db)
-            }
-            saved.images = pictures.map(\.id)
+        let stored = try Supplement.fetchOne(db, key: saved.key)?.images ?? []
+        for id in stored where !saved.images.contains(id) {
+            _ = try SupplementImage.deleteOne(db, key: SupplementImage.key(id))
+        }
+        for picture in pictures where saved.images.contains(picture.id) && !stored.contains(picture.id) {
+            try put(picture, in: db)
         }
         try put(saved, in: db)
     }

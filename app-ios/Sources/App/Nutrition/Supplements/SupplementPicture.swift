@@ -109,7 +109,19 @@ enum SupplementPictures {
         return nil
     }
 
-    /// The pictures that are on this device, in the order asked: what an editor opens with and what Quick Look shows.
+    /// Every picture asked for, in order, once all of their rows are on this device: what an editor opens with. A
+    /// sync may deliver them after the supplement, so this waits. Nil when the wait is cancelled or the read fails.
+    @concurrent nonisolated static func complete(_ ids: [UUID], in pool: DatabasePool) async -> [SupplementImage]? {
+        let rows = ValueObservation.tracking { db in try ids.compactMap { try SupplementImage.fetchOne(db, key: SupplementImage.key($0)) } }
+        do {
+            for try await pictures in rows.values(in: pool) where pictures.count == ids.count { return pictures }
+        } catch {
+            LocalStore.log.error("Reading supplement pictures failed: \(String(describing: error))")
+        }
+        return nil
+    }
+
+    /// The pictures that are on this device now, in the order asked, which is what Quick Look can show.
     @concurrent nonisolated static func stored(_ ids: [UUID], in pool: DatabasePool) async -> [SupplementImage] {
         do {
             return try await pool.read { db in try ids.compactMap { try SupplementImage.fetchOne(db, key: SupplementImage.key($0)) } }

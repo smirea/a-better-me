@@ -128,12 +128,14 @@ extension Supplement {
         }
     }
 
-    /// Takes it again from `today`, the way it was last taken.
+    /// Takes it again from `today`, the way it was last taken. The new range takes no tags: the protocol the last one
+    /// belonged to is not this one's until the owner says so.
     mutating func start(on today: CalendarDay) {
         guard currentRegimen(on: today) == nil else { return }
         var regimen = regimens.last ?? SupplementRegimen(start: today)
         regimen.start = today
         regimen.end = nil
+        regimen.tags = nil
         regimens.append(regimen)
     }
 }

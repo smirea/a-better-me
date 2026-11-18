@@ -203,6 +203,8 @@ async function pictures(images: Image[], now: string): Promise<Row[]> {
 }
 
 type SyncResponse = {
+	space: string;
+	snapshot: boolean;
 	head: number;
 	acked: number;
 	rejected: { table: string; id: string; reason: string }[];
@@ -220,8 +222,8 @@ async function importPills(options: { server: string; token: string; db: string;
 		if (!response.ok) throw new Error(`${path} answered ${response.status}: ${(await response.text()).slice(0, 300)}`);
 		return response.json();
 	};
-	const sync = (cursor: number, writes: unknown[]): Promise<SyncResponse> =>
-		request('/sync', { protocol: 2, client: CLIENT, cursor, writes });
+	const sync = (cursor: number, writes: unknown[], space?: string): Promise<SyncResponse> =>
+		request('/sync', { protocol: 2, client: CLIENT, cursor, writes, space });
 
 	const held = (await request('/export')) as { tables: Record<string, { id: string }[] | undefined> };
 	if (!held.tables.tags) throw new Error('The server has no tags table. Deploy the schema that holds a pill first.');
@@ -256,15 +258,18 @@ async function importPills(options: { server: string; token: string; db: string;
 	);
 	if (options.dryRun) return console.log('Dry run: nothing was written.');
 
+	// A cursor of 0 answers a snapshot's first page, which is read only for the head, the space, and this client's seq.
 	const start = await sync(0, []);
 	let seq = start.acked;
+	let cursor = start.head;
 	const send = async (rows: Row[]) => {
 		if (!rows.length) return;
 		const writes = rows.map(row => ({ ...row, op: 'put', seq: ++seq }));
-		const { rejected } = await sync(start.head, writes);
+		const { rejected, head } = await sync(cursor, writes, start.space);
 		if (rejected.length) {
 			throw new Error(`Refused: ${rejected.map(r => `${r.table} ${r.id}: ${r.reason}`).join('; ')}`);
 		}
+		cursor = head;
 	};
 	// Tags go first: a server that lacks this schema refuses them, before any supplement lands without its new columns.
 	await send(tags);
@@ -274,7 +279,10 @@ async function importPills(options: { server: string; token: string; db: string;
 	}
 
 	const sent = [...tags, ...images, ...supplements];
-	const stored = new Map((await sync(start.head, [])).rows.map(row => [`${row.table}/${row.id}`, row.values]));
+	// A delta from the head before the writes is one response with every row written since, these among them.
+	const delta = await sync(start.head, [], start.space);
+	if (delta.snapshot) throw new Error('Written, but the server answered the read-back with a snapshot, not a delta.');
+	const stored = new Map(delta.rows.map(row => [`${row.table}/${row.id}`, row.values]));
 	const wrong = sent.flatMap(row => {
 		const values = stored.get(`${row.table}/${row.id}`);
 		const columns = Object.keys(row.values).filter(column => values?.[column] !== row.values[column]);

@@ -12,7 +12,8 @@ struct SupplementEditor: View {
     @State private var baseline: SupplementDraft
     private let opened: SupplementDraft
     @State private var photos = SupplementPhotoReader()
-    /// False until the pictures it has are in `photos`. A save before then leaves them as they are.
+    /// False until every picture it has is in `photos`. Until then `photos` holds only new ones, and a save keeps the
+    /// stored ones ahead of them, so a picture still syncing in is never taken for a removed one.
     @State private var picturesLoaded: Bool
     @State private var showErrors = false
     @State private var confirmingDelete = false
@@ -71,9 +72,11 @@ struct SupplementEditor: View {
                 baseline = read
             }
             .task {
-                guard let editing, !picturesLoaded else { return }
-                let stored = await SupplementPictures.stored(editing.images, in: store.database.pool)
-                photos.restore(stored.compactMap { PhotoUpload(id: $0.id, jpeg: $0.jpeg) })
+                guard let editing, !picturesLoaded,
+                      let stored = await SupplementPictures.complete(editing.images, in: store.database.pool) else { return }
+                let uploads = stored.compactMap { PhotoUpload(id: $0.id, jpeg: $0.jpeg) }
+                guard uploads.count == stored.count else { return }
+                photos.restore(uploads)
                 picturesLoaded = true
             }
             .onDisappear { photos.cancel() }
@@ -88,7 +91,7 @@ struct SupplementEditor: View {
             }
         }
         // A read takes seconds and fills the whole label; a stray swipe should not throw that away. Close still does.
-        .interactiveDismissDisabled(draft != opened || picturesLoaded && photos.photos.map(\.id) != editing?.images ?? [])
+        .interactiveDismissDisabled(draft != opened || pictures != editing?.images ?? [])
         .feedback(self)
     }
 
@@ -234,10 +237,16 @@ struct SupplementEditor: View {
         Binding { day.wrappedValue.date } set: { day.wrappedValue = CalendarDay($0) }
     }
 
+    /// The pictures a save leaves it with, in order.
+    private var pictures: [UUID] {
+        (picturesLoaded ? [] : editing?.images ?? []) + photos.photos.map(\.id)
+    }
+
     private func save() {
         showErrors = true
-        guard let supplement = draft.supplement(editing: editing) else { return }
-        store.saveSupplement(supplement, pictures: picturesLoaded ? photos.photos.map { SupplementImage(id: $0.id, jpeg: $0.jpeg) } : nil)
+        guard var supplement = draft.supplement(editing: editing) else { return }
+        supplement.images = pictures
+        store.saveSupplement(supplement, adding: photos.photos.map { SupplementImage(id: $0.id, jpeg: $0.jpeg) })
         dismiss()
     }
 }

@@ -73,7 +73,8 @@ enum SupplementSeed {
             let images = pictures.enumerated().compactMap { number, jpeg in
                 jpeg.map { SupplementImage(id: DevSeed.id("supplement/\(row.key)/picture/\(number)"), jpeg: $0) }
             }
-            try LocalStore.save(supplement, pictures: images, in: db)
+            supplement.images = images.map(\.id)
+            try LocalStore.save(supplement, adding: images, in: db)
         }
     }
 

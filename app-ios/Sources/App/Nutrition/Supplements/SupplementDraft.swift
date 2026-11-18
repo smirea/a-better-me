@@ -44,6 +44,8 @@ struct SupplementDraft: Equatable, Sendable {
         var timing: SupplementRegimen.Timing?
         /// Every day while all seven are on, which is how it is stored (`SupplementRegimen.weekdays` empty).
         var weekdays = Set(1...7)
+        /// The regimen's tags, which the form does not edit and a save keeps.
+        var tags: [UUID]?
 
         init(start: CalendarDay) {
             self.start = start
@@ -57,6 +59,7 @@ struct SupplementDraft: Equatable, Sendable {
             count = NumberText.plain(regimen.count)
             timing = regimen.timing
             weekdays = regimen.weekdays.isEmpty ? Set(1...7) : Set(regimen.weekdays)
+            tags = regimen.tags
         }
     }
 
@@ -99,6 +102,7 @@ struct SupplementDraft: Equatable, Sendable {
             restart.start = today
             restart.ends = false
             restart.end = today
+            restart.tags = nil
             regimen = restart
         }
     }
@@ -139,7 +143,7 @@ struct SupplementDraft: Equatable, Sendable {
         if taking, let count = NumberText.parse(regimen.count) {
             let saved = SupplementRegimen(
                 start: regimen.start, end: regimen.ends ? regimen.end : nil, count: count, timing: regimen.timing,
-                weekdays: regimen.weekdays.count == 7 ? [] : regimen.weekdays.sorted()
+                weekdays: regimen.weekdays.count == 7 ? [] : regimen.weekdays.sorted(), tags: regimen.tags
             )
             if let index = supplement.currentRegimen(on: today) {
                 supplement.regimens[index] = saved
