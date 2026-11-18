@@ -30,6 +30,12 @@ pre-commit:
           - name: swift-lint
             glob: '*.swift'
             run: bun app-ios/scripts/lint-swift.ts
+          # Core's tests run on the Mac with no simulator (app-ios/Package.swift). The first run in a new worktree also
+          # resolves and compiles the packages.
+          - name: swift-test
+            root: app-ios/
+            glob: '*.swift'
+            run: unset $(git rev-parse --local-env-vars); swift test --quiet
 
 pre-push:
   commands:

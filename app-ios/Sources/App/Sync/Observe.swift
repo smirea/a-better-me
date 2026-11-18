@@ -2,17 +2,6 @@ import Feedback
 import GRDB
 import SwiftUI
 
-/// What a screen observes: a fetch over the local database and the value shown until the first read lands.
-struct DatabaseQuery<Value: Sendable & Equatable>: Sendable {
-    let placeholder: Value
-    let fetch: @Sendable (Database) throws -> Value
-
-    init(_ placeholder: Value, _ fetch: @escaping @Sendable (Database) throws -> Value) {
-        self.placeholder = placeholder
-        self.fetch = fetch
-    }
-}
-
 /// `@Observe(WorkoutTemplate.all) var templates`: the query's value, re-read whenever a local write or a sync changes
 /// a table it reads. The first value is read synchronously, so the first frame shows the data.
 @propertyWrapper

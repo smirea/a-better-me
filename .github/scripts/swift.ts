@@ -37,6 +37,9 @@ if (task !== 'tests' && task !== 'build') throw new Error(`Unknown Swift task: $
 const simulator = task === 'tests' ? await testSimulator() : undefined;
 
 if (task === 'tests') await $`bun app-ios/scripts/lint-swift.ts`;
+// Core's tests need no simulator. Until the app-hosted suites have all moved to Core, they share this job's runner
+// instead of queueing for a third macOS one.
+if (task === 'tests') await $`swift test`.cwd(directory);
 await $`bun scripts/own-packages.ts .build/SourcePackages`.cwd(directory);
 
 if (task === 'build') {

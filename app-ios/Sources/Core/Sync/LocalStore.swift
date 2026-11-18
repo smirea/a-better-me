@@ -1,0 +1,132 @@
+import Foundation
+import GRDB
+import Observation
+import os
+import SyncEngine
+
+/// The app's one database and its sync client. Every screen reads it through `@Observe` and writes through the
+/// methods here, which run one after another in the order they were called, each in one transaction.
+@MainActor @Observable
+final class LocalStore {
+    nonisolated static let log = Logger(subsystem: "com.stefan.a-better-me", category: "store")
+
+    @ObservationIgnored let database: LocalDatabase
+    @ObservationIgnored let client: SyncClient
+    /// Writes called but not yet committed. An editor adopts a change from another device only while this is zero.
+    private(set) var pendingWrites = 0
+
+    @ObservationIgnored private var lastWrite: Task<Void, Never>?
+
+    /// The app opens its store through `init()`, which builds both and starts syncing.
+    init(database: LocalDatabase, client: SyncClient) {
+        self.database = database
+        self.client = client
+    }
+
+    /// A store over a fresh file at `url` that migrates but never syncs, for tests.
+    init(unsyncedAt url: URL) throws {
+        database = try LocalDatabase(at: url)
+        client = SyncClient(database: database.pool, schema: syncSchema, endpoint: URL(string: "http://localhost")!, token: { nil })
+        try client.migrate()
+    }
+
+    /// The server space the cursor belongs to, re-read off the main thread after each sync, for the feedback capture.
+    @ObservationIgnored private var syncSpace = "none"
+
+    /// The pull cursor and the server space it belongs to, from memory, so a feedback capture never waits on the database.
+    var syncPosition: (cursor: Int, space: String) { (client.head, syncSpace) }
+
+    func watchSyncSpace() {
+        let pool = database.pool
+        Task { [client] in
+            for await _ in Observations({ client.lastSyncAt }) {
+                let space = try? await pool.read { try String.fetchOne($0, sql: "SELECT value FROM _meta WHERE key = 'space'") }
+                syncSpace = (space ?? nil) ?? "none"
+            }
+        }
+    }
+
+    /// Runs `body` in one write transaction after every write called before it. The task resolves with its result.
+    @discardableResult
+    func write<T: Sendable>(_ body: @escaping @Sendable (Database) throws -> T) -> Task<T, any Error> {
+        pendingWrites += 1
+        let previous = lastWrite
+        let pool = database.pool
+        let task = Task<T, any Error> {
+            defer { pendingWrites -= 1 }
+            await previous?.value
+            do {
+                return try await pool.write(body)
+            } catch {
+                Self.log.error("A write failed: \(String(describing: error))")
+                throw error
+            }
+        }
+        lastWrite = Task { _ = await task.result }
+        return task
+    }
+
+    func insert(_ record: some SyncedRecord) {
+        write { try record.insert($0) }
+    }
+
+    func delete<R: SyncedRecord>(_: R.Type, id: R.ID) {
+        write { _ = try R.deleteOne($0, key: R.key(id)) }
+    }
+
+    /// Changes the row with `id`, writing only the columns that differ. A missing row is made from `orInsert` first, or
+    /// left alone when there is none to make.
+    func modify<R: SyncedRecord>(
+        _: R.Type, id: R.ID, orInsert make: (@Sendable () -> R)? = nil, _ change: @escaping @Sendable (inout R) -> Void
+    ) {
+        write { db in
+            if let existing = try R.fetchOne(db, key: R.key(id)) {
+                var changed = existing
+                change(&changed)
+                try changed.updateChanges(db, from: existing)
+            } else if let make {
+                var fresh = make()
+                change(&fresh)
+                try fresh.insert(db)
+            }
+        }
+    }
+
+    /// Writes `record` whole under its id: inserted when new, otherwise only the columns that differ. For rows keyed by
+    /// what they describe (a day, a cached food), so writing one twice converges on one row.
+    func put(_ record: some SyncedRecord) {
+        write { try Self.put(record, in: $0) }
+    }
+
+    nonisolated static func put<R: SyncedRecord>(_ record: R, in db: Database) throws {
+        guard let existing = try R.fetchOne(db, key: record.key) else { return try record.insert(db) }
+        var changed = record
+        try changed.updateChanges(db, from: existing)
+    }
+
+    /// `modify` for a stamped row: `updatedAt` moves with the edit.
+    func edit<R: Stamped>(_: R.Type, id: R.ID, _ change: @escaping @Sendable (inout R) -> Void) {
+        modify(R.self, id: id) {
+            change(&$0)
+            $0.updatedAt = .now
+        }
+    }
+
+    /// The settings row is patched, never put whole, except the first time a device creates it.
+    func updateSettings(_ change: @escaping @Sendable (inout AppSettings) -> Void) {
+        modify(AppSettings.self, id: AppSettings.rowID, orInsert: { AppSettings() }, change)
+    }
+
+    /// Reads outside an observation, off the main thread.
+    func read<T: Sendable>(_ body: @escaping @Sendable (Database) throws -> T) async throws -> T {
+        try await database.pool.read(body)
+    }
+
+    /// The same read, blocking the caller: for tests, never for the main thread.
+    func readBlocking<T>(_ body: (Database) throws -> T) throws -> T {
+        try database.pool.read(body)
+    }
+
+    var lastSyncedAt: Date? { client.lastSyncAt }
+    var snapshotRows: Int? { client.snapshotRows }
+}

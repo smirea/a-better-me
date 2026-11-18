@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path';
 import { generate } from 'sync-engine/schema';
 import { schema } from '../shared/db/schema';
 
-export const SWIFT_SCHEMA = 'app-ios/Sources/App/Sync/Generated/SyncSchema.swift';
+export const SWIFT_SCHEMA = 'app-ios/Sources/Core/Sync/Generated/SyncSchema.swift';
 
 if (import.meta.main) {
 	const swift = join(import.meta.dir, '..', SWIFT_SCHEMA);
