@@ -46,6 +46,14 @@ enum NutritionFormat {
         return "\(text) (\(amount(grams)) g)"
     }
 
+    /// A recipe tile's ingredient amount, "50 g" or "1 scoop": one decimal under 10, and the measure's name without
+    /// its qualifier, so "2 tbsp, ground" and "1 container (170 g)" read "2 tbsp" and "1 container".
+    static func shortServing(_ serving: Serving) -> String {
+        let name = serving.measure.name
+        let cut = [name.firstIndex(of: ","), name.range(of: " (")?.lowerBound].compactMap { $0 }.min() ?? name.endIndex
+        return "\(serving.quantity.niceText) \(name[..<cut])"
+    }
+
     /// A listed row's serving. A recipe adds its weight, "1 serving (365 g)", since its serving is whatever share of
     /// the pot its yield makes, and one that makes a single serving is the whole pot.
     static func listed(_ serving: Serving, of food: FoodSnapshot) -> String {

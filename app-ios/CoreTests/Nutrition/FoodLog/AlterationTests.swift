@@ -129,6 +129,16 @@ struct AlterationTests {
         #expect(!draft.isValid)
     }
 
+    @Test func anAlteredTileListsEveryIngredientWithItsAlterationsFirst() {
+        var draft = AlterDraft(.unaltered(recipe))
+        draft.rows[1].ingredient.type("150")
+        let tile = FoodLog.tileIngredients(draft.alterations, limit: 1)
+        #expect(tile.isAltered)
+        #expect(tile.lines.map(\.change) == [.changed])
+        #expect(tile.more == 1)
+        #expect(FoodLog.tileIngredients(draft.alterations).lines.map(\.change) == [.changed, .kept])
+    }
+
     @Test func theColumnHoldsWhatTheServerValidates() throws {
         let id = try #require(UUID(uuidString: "5D4F2C1A-0000-4000-8000-000000000001"))
         let line = IngredientAlteration(id: id, food: beef, original: Serving(measure: grams, quantity: 50), serving: nil)

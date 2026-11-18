@@ -36,6 +36,15 @@ struct MealSectionTests {
         #expect(one.typicalMinute(of: one[0]) == 720)
     }
 
+    @Test func aSectionsTimeEndsWhenTheNextOneStartsTodayAndEveryPastDaysHasEnded() {
+        let one = monday.date(atMinute: 13 * 60, in: utc)
+        #expect(sections.map { sections.hasEnded($0, on: monday, now: one, calendar: utc) } == [true, true, false, false, false])
+        let late = monday.date(atMinute: 23 * 60 + 59, in: utc)
+        #expect(sections.map { sections.hasEnded($0, on: monday, now: late, calendar: utc) } == [true, true, true, true, false])
+        #expect(sections.allSatisfy { sections.hasEnded($0, on: monday.adding(days: -1), now: one, calendar: utc) })
+        #expect(!sections.contains { sections.hasEnded($0, on: monday.adding(days: 1), now: late, calendar: utc) })
+    }
+
     @Test func movingABoundaryStaysBetweenItsNeighbors() {
         #expect(MealSectionsEditing.settingStart(11 * 60, of: 2, in: sections)[2].start == 11 * 60)
         #expect(MealSectionsEditing.settingStart(8 * 60, of: 2, in: sections)[2].start == 601)

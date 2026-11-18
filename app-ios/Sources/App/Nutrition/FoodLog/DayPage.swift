@@ -247,8 +247,8 @@ private struct SlotRow: View {
     var body: some View {
         VStack(spacing: 0) {
             slotRow
-            if case .section = group.slot, group.rows.isEmpty {
-                emptySection(group.slot.label)
+            if case let .section(section) = group.slot, group.rows.isEmpty {
+                emptySection(section)
             }
         }
         .feedback(self)
@@ -271,28 +271,49 @@ private struct SlotRow: View {
     }
 
     /// Mirrors the +: it pastes while pasting inline, moves the selection under Premove, and is disabled in select mode
-    /// otherwise.
-    private func emptySection(_ label: String) -> some View {
+    /// otherwise. It is gone once the section's time has passed (`hasEnded`), leaving the pill and its +; the clock is
+    /// read here each minute, so crossing a section's end re-renders only this button.
+    private func emptySection(_ section: MealSection) -> some View {
+        TimelineView(.everyMinute) { context in
+            if !sections.hasEnded(section, on: day, now: context.date) {
+                emptySectionButton(section.name)
+            }
+        }
+    }
+
+    private func emptySectionButton(_ label: String) -> some View {
         Group {
             if state.pending?.inline == true {
-                Button("Paste Here", systemImage: "doc.on.clipboard") { state.paste(to: target, in: store) }
-                    .accessibilityLabel("Paste into \(label)")
+                Button { state.paste(to: target, in: store) } label: {
+                    widestLabel(Label("Paste Here", systemImage: "doc.on.clipboard"))
+                }
+                .accessibilityLabel("Paste into \(label)")
             } else if premove, state.selecting, state.pending == nil {
-                Button("Move Here", systemImage: "arrow.down") {
-                    state.relocate(state.selectedEntries, .move, to: target, in: store)
+                Button { state.relocate(state.selectedEntries, .move, to: target, in: store) } label: {
+                    widestLabel(Label("Move Here", systemImage: "arrow.down"))
                 }
                 .accessibilityLabel("Move into \(label)")
                 .disabled(state.selection.isEmpty)
             } else {
-                Button("Log \(label)") { requestLog() }
+                Button { requestLog() } label: { widestLabel(Text("Log \(label)")) }
                     .disabled(state.selecting)
             }
         }
         .buttonStyle(.glass)
         .font(AppFont.headline())
         .foregroundStyle(Theme.textPrimary)
+        .lineLimit(1)
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Every section's button is as wide as the widest "Log <section>", so they line up down the page whichever are
+    /// empty.
+    private func widestLabel(_ label: some View) -> some View {
+        ZStack {
+            ForEach(sections) { Text("Log \($0.name)").hidden() }
+            label
+        }
     }
 
     /// The minute food added here lands at: the hour's start, or for a section now when today's clock is inside it,
@@ -564,27 +585,34 @@ private struct EntryRow: View {
     }
 }
 
-/// A logged recipe's ingredients under its tile's name, one line each: a tiny icon and the food's short name, and no
-/// amount or nutrition, since the tile's totals above are what counts. An altered recipe lists its alterations instead:
-/// a changed ingredient in yellow, a removed one struck through, and an added one in green.
+/// A logged recipe's ingredients under its tile's name, one line each: the amount eaten, a tiny icon, and the food's
+/// short name, and no nutrition, since the tile's totals above are what counts. The amounts sit in a column ending at
+/// the icons, so the icons and names line up; a long line truncates the name. An altered recipe lists its alterations
+/// first and colors only what changed: a changed amount yellow, an added line green, and a removed one struck through.
 private struct IngredientLines: View {
     let ingredients: RecipeTileIngredients
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 2) {
             ForEach(Array(ingredients.lines.enumerated()), id: \.offset) { _, line in
-                HStack(spacing: 6) {
+                GridRow {
+                    Text(line.amount)
+                        .foregroundStyle(Self.amountColor(line.change))
+                        .fixedSize()
+                        .gridColumnAlignment(.trailing)
                     FoodIcon(emoji: line.emoji, source: line.source, size: 14)
                     Text(line.change == .added ? "+ \(line.name)" : line.name)
                         .lineLimit(1)
-                        .strikethrough(line.change == .removed)
+                        .foregroundStyle(line.change == .added ? Theme.ratingGreen : Theme.textSecondary)
                 }
-                .foregroundStyle(Self.color(line.change))
+                .strikethrough(line.change == .removed)
             }
             if ingredients.more > 0 {
-                Text("+\(ingredients.more) more")
-                    // Under the names, past the icons.
-                    .padding(.leading, 20)
+                GridRow {
+                    Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                    Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                    Text("+\(ingredients.more) more")
+                }
             }
         }
         .font(AppFont.rowDetail)
@@ -594,7 +622,7 @@ private struct IngredientLines: View {
         .accessibilityLabel(ingredients.spoken)
     }
 
-    private static func color(_ change: IngredientAlteration.Change) -> Color {
+    private static func amountColor(_ change: IngredientAlteration.Change) -> Color {
         switch change {
         case .added: Theme.ratingGreen
         case .changed: Theme.ratingYellow
