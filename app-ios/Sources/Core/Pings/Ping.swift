@@ -119,6 +119,15 @@ extension PingLog {
         try PingLog.filter(Column("logged_at") >= Instant.text(date)).fetchAll(db)
     }
 
+    /// Whether the ping was ever logged. A log's value means a step of the ping as it was, so the editor fixes the
+    /// kind and the number of steps from the first log on. Nil is a ping not made yet.
+    static func exists(for pingID: UUID?) -> DatabaseQuery<Bool> {
+        DatabaseQuery(false) { db in
+            guard let pingID else { return false }
+            return try !PingLog.filter(Column("ping_id") == Ping.key(pingID)).isEmpty(db)
+        }
+    }
+
     /// Every log of one ping, newest first.
     static func history(_ pingID: UUID) -> DatabaseQuery<[PingLog]> {
         DatabaseQuery([]) { db in

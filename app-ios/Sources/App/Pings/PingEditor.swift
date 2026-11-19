@@ -19,9 +19,11 @@ struct PingEditor: View {
     @State private var stepCount: Int
     @State private var confirmingDelete = false
     @FocusState private var nameFocused: Bool
+    @Observe private var isLogged: Bool
 
     init(ping: Ping? = nil) {
         editing = ping
+        _isLogged = Observe(PingLog.exists(for: ping?.id))
         let steps = ping?.kind.steps ?? []
         _name = State(initialValue: ping?.name ?? "")
         _icon = State(initialValue: ping?.icon ?? PingIcons.all[0])
@@ -35,7 +37,7 @@ struct PingEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                ThemedSection {
+                ThemedSection(footer: isLogged ? "Its type and number of steps are fixed, so what is already logged keeps its meaning." : nil) {
                     TextField("Name", text: $name)
                         .focused($nameFocused)
                         .accessibilityLabel("Ping Name")
@@ -43,6 +45,7 @@ struct PingEditor: View {
                         ForEach(Kind.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                     }
                     .pickerStyle(.segmented)
+                    .disabled(isLogged)
                 }
                 ThemedSection("Icon") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 4) {
@@ -62,7 +65,11 @@ struct PingEditor: View {
                 }
                 if kind == .range {
                     ThemedSection("Steps", footer: "A label is optional, such as Terrible for 1 and Great for 5.") {
-                        Stepper("\(stepCount) steps", value: $stepCount, in: PingKind.stepLimits)
+                        if isLogged {
+                            Text("\(stepCount) steps")
+                        } else {
+                            Stepper("\(stepCount) steps", value: $stepCount, in: PingKind.stepLimits)
+                        }
                         ForEach(0..<stepCount, id: \.self) { index in
                             HStack(spacing: 12) {
                                 Text("\(index + 1)").font(AppFont.number(15)).foregroundStyle(Theme.textSecondary).frame(width: 24)

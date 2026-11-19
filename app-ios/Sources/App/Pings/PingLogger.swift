@@ -52,13 +52,15 @@ struct PingLogger<Header: View, Empty: View>: View {
             if !selection.isEmpty {
                 PinnedActionButton("Log") {
                     store.logPings(selection.logs())
-                    selection = PingSelection()
-                    expanded = []
+                    selection = selection.afterLogging
+                    expanded = Set(selection.notes.keys)
                     logged += 1
-                    onLogged()
+                    if selection.notes.isEmpty { onLogged() }
                 }
             }
         }
+        // One bar at a time: the Log pill takes the tab bar's place while something is picked.
+        .toolbarVisibility(selection.isEmpty ? .automatic : .hidden, for: .tabBar)
         .sensoryFeedback(.success, trigger: logged)
         .animation(.snappy(duration: 0.25), value: expanded)
         .animation(.snappy(duration: 0.25), value: selection.isEmpty)
@@ -88,7 +90,8 @@ struct PingLogger<Header: View, Empty: View>: View {
 
 /// One ping: its icon and name, and the least that says where today stands beside the control that picks it. A tap
 /// anywhere but the control opens it: a range's steps drop under the name with their labels, each on its own row when
-/// they don't fit side by side, and every ping gets a note.
+/// they don't fit side by side, and every ping gets a note. A note on a range with no step picked stays in the row
+/// after a Log, since there is no value to log it with yet.
 struct PingRow: View {
     let status: PingStatus
     let picked: Int?
@@ -119,36 +122,25 @@ struct PingRow: View {
                     if labels.contains(where: { !$0.isEmpty }) {
                         ViewThatFits(in: .horizontal) {
                             HStack(alignment: .top, spacing: 10) {
-                                ForEach(labels.indices, id: \.self) { index in
-                                    VStack(spacing: 2) {
-                                        step(index + 1, labels)
-                                        Text(labels[index]).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).lineLimit(1).fixedSize()
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                }
+                                ForEach(labels.indices, id: \.self) { step($0 + 1, labels, .column) }
                             }
                             VStack(alignment: .leading, spacing: 0) {
-                                ForEach(labels.indices, id: \.self) { index in
-                                    HStack(spacing: 6) {
-                                        step(index + 1, labels)
-                                        Text(labels[index]).font(AppFont.rowTitle).foregroundStyle(Theme.textSecondary)
-                                    }
-                                }
+                                ForEach(labels.indices, id: \.self) { step($0 + 1, labels, .line) }
                             }
                         }
                     } else {
-                        steps(labels, stretched: true)
+                        steps(labels, .stretched)
                     }
                 } else {
                     ViewThatFits(in: .horizontal) {
                         HStack(spacing: 8) {
                             title
                             Spacer(minLength: 8)
-                            steps(labels, stretched: false)
+                            steps(labels, .compact)
                         }
                         VStack(alignment: .leading, spacing: 0) {
                             title.frame(minHeight: 44)
-                            steps(labels, stretched: true)
+                            steps(labels, .stretched)
                         }
                     }
                 }
@@ -186,29 +178,52 @@ struct PingRow: View {
         .accessibilityAddTraits(.isButton)
     }
 
-    private func steps(_ labels: [String], stretched: Bool) -> some View {
+    private func steps(_ labels: [String], _ layout: StepLayout) -> some View {
         HStack(spacing: 0) {
-            ForEach(labels.indices, id: \.self) { index in
-                step(index + 1, labels).frame(maxWidth: stretched ? .infinity : nil)
-            }
+            ForEach(labels.indices, id: \.self) { step($0 + 1, labels, layout) }
         }
     }
 
+    /// How a step draws, from least to most room: a fixed circle beside the name, circles sharing the row's width, a
+    /// circle over its label, and a circle before its label on a row of its own. The label is part of the button.
+    private enum StepLayout {
+        case compact, stretched, column, line
+    }
+
     /// Filled white while picked; ringed when it is the step today's latest log holds.
-    private func step(_ value: Int, _ labels: [String]) -> some View {
+    private func step(_ value: Int, _ labels: [String], _ layout: StepLayout) -> some View {
         let isPicked = picked == value
+        let label = labels[value - 1]
+        let circle = Text("\(value)")
+            .font(AppFont.number(14))
+            .foregroundStyle(isPicked ? Theme.onPrimary : Theme.textPrimary)
+            .frame(width: 30, height: 30)
+            .background(isPicked ? Theme.textPrimary : Theme.surfaceRaised, in: .circle)
+            .overlay { if status.step == value, !isPicked { Circle().strokeBorder(Theme.ping, lineWidth: 2) } }
         return Button { pick(value) } label: {
-            Text("\(value)")
-                .font(AppFont.number(14))
-                .foregroundStyle(isPicked ? Theme.onPrimary : Theme.textPrimary)
-                .frame(width: 30, height: 30)
-                .background(isPicked ? Theme.textPrimary : Theme.surfaceRaised, in: .circle)
-                .overlay { if status.step == value, !isPicked { Circle().strokeBorder(Theme.ping, lineWidth: 2) } }
-                .frame(width: 36, height: 44)
-                .contentShape(.rect)
+            Group {
+                switch layout {
+                case .compact: circle.frame(width: 38, height: 44)
+                case .stretched: circle.frame(maxWidth: .infinity, minHeight: 44)
+                case .column:
+                    VStack(spacing: 4) {
+                        circle
+                        Text(label).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).lineLimit(1).fixedSize()
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                case .line:
+                    HStack(spacing: 12) {
+                        circle
+                        Text(label).font(AppFont.rowTitle).foregroundStyle(isPicked ? Theme.textPrimary : Theme.textSecondary)
+                        Spacer(minLength: 0)
+                    }
+                    .frame(minHeight: 44)
+                }
+            }
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(status.ping.name) \(value)" + (labels[value - 1].isEmpty ? "" : ", \(labels[value - 1])"))
+        .accessibilityLabel("\(status.ping.name) \(value)" + (label.isEmpty ? "" : ", \(label)"))
         .accessibilityValue(isPicked ? "Picked" : status.step == value ? "Logged" : "")
     }
 }

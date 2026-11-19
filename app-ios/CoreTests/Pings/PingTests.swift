@@ -13,16 +13,16 @@ struct PingTests {
         #expect(card.value == 2)
     }
 
-    @Test func aRangePingsDayIsTheAverageOfItsLogsAndItsWeekSkipsDaysWithoutOne() {
-        let logs = [(day("2026-11-19", 9), 2), (day("2026-11-19", 20), 5), (day("2026-11-17", 9), 1)].map {
+    @Test func aRangePingsDayIsTheAverageOfItsLogsAndItsWeekTheAverageOfEveryLog() {
+        let logs = [(day("2026-11-19", 9), 2), (day("2026-11-19", 20), 5), (day("2026-11-17", 9), 2)].map {
             PingLog(pingID: mood.id, value: $0.1, at: $0.0)
         }
         let card = PingCard.cards([mood], logs: logs, now: day("2026-11-19", 21), calendar: utc)[0]
-        #expect(card.chart == .week([0, 0, 0, 0, 1, 0, 3.5], steps: 5))
-        #expect(card.value == 2.25)
+        #expect(card.chart == .week([0, 0, 0, 0, 2, 0, 3.5], steps: 5))
+        #expect(card.value == 3)
     }
 
-    @Test func pickingAValueAgainTakesItBackAndOnlyPickedPingsAreLogged() {
+    @Test func pickingAValueAgainTakesItBackAndANoteWithoutAPickStaysUnlogged() {
         var selection = PingSelection()
         selection.toggle(mood.id, value: 4)
         selection.toggle(mood.id, value: 2)
@@ -33,5 +33,7 @@ struct PingTests {
         #expect(logs.map(\.pingID) == [mood.id])
         #expect(logs.first?.value == 2)
         #expect(logs.first?.note == "tired")
+        #expect(selection.afterLogging.notes == [water.id: "not logged"])
+        #expect(selection.afterLogging.isEmpty)
     }
 }

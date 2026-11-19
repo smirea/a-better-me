@@ -11,10 +11,12 @@ const tapTab = (tab: 'Nutrition' | 'Workout' | 'Pings' | 'New') => [`press 'role
 const scrollTo = (label: string) => [`scroll down --until ${quote(label)}`];
 // Settings opens from the gear on the Dashboard, where every path starts.
 const openSettings = [...tap('Settings'), 'wait 800'];
+// A row is pressed as a cell: the Dashboard under Settings holds buttons with the same labels (Levels, Workouts).
 const settings = (row: string) => [
 	...openSettings,
 	...(bottomRows.has(row) ? ['scroll bottom', 'wait 500'] : []),
-	...tap(row),
+	`wait ${quote(row)} 8000`,
+	`press 'role="cell" label="${row}"'`,
 ];
 // The trailing toolbar menu of a tab root (Day Options on the Food Log, Workout Tab Options on the Workout tab).
 const trailingToolbarButton = ['press 364 84', 'wait 800'];

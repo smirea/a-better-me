@@ -70,8 +70,8 @@ struct PingHistoryView: View {
                     StatView(title: "30 Days", value: "\(history.count(days: 30))")
                 } else {
                     StatView(title: "Latest", value: history.logs.first.map { "\($0.value)" } ?? "--")
-                    StatView(title: "7-Day Average", value: history.average(days: 7, calendar: .current)?.niceText ?? "--")
-                    StatView(title: "30-Day Average", value: history.average(days: 30, calendar: .current)?.niceText ?? "--")
+                    StatView(title: "7-Day Average", value: history.average(days: 7)?.niceText ?? "--")
+                    StatView(title: "30-Day Average", value: history.average(days: 30)?.niceText ?? "--")
                 }
             }
             .feedback("Stats")

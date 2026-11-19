@@ -12,7 +12,7 @@ struct PingCard: Identifiable, Hashable, Sendable {
 
     var ping: Ping
     var chart: Chart
-    /// Today's count for a boolean ping, and the average of the week's logged days for a range ping.
+    /// Today's count for a boolean ping, and the average of the week's logs for a range ping, as its history shows.
     var value: Double?
 
     var id: UUID { ping.id }
@@ -37,11 +37,10 @@ struct PingCard: Identifiable, Hashable, Sendable {
                 let counts = PingStats.byDay(logs, days: habitDays, now: now, calendar: calendar).map(\.count)
                 return PingCard(ping: ping, chart: .days(PingStats.intensities(counts)), value: Double(counts.last ?? 0))
             case let .range(steps):
-                let averages = PingStats.byDay(logs, days: weekDays, now: now, calendar: calendar).map(PingStats.average)
-                let logged = averages.compactMap(\.self)
+                let week = PingStats.byDay(logs, days: weekDays, now: now, calendar: calendar)
                 return PingCard(
-                    ping: ping, chart: .week(averages.map { $0 ?? 0 }, steps: steps.count),
-                    value: logged.isEmpty ? nil : logged.reduce(0, +) / Double(logged.count)
+                    ping: ping, chart: .week(week.map { PingStats.average($0) ?? 0 }, steps: steps.count),
+                    value: PingStats.average(week.flatMap(\.self))
                 )
             }
         }
@@ -104,7 +103,7 @@ struct PingHistory: Equatable, Sendable {
     }
 
     /// The average step over every log of the last `days` days.
-    func average(days: Int, calendar: Calendar) -> Double? {
+    func average(days: Int) -> Double? {
         guard let first = self.days.suffix(days).first?.date else { return nil }
         return PingStats.average(logs.filter { $0.loggedAt >= first })
     }

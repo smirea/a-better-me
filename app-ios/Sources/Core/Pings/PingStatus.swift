@@ -58,6 +58,13 @@ struct PingSelection: Equatable {
         if values[ping] == nil { values[ping] = value }
     }
 
+    /// What is left once the picks are logged: the notes typed on pings that were not picked, which no log carried.
+    var afterLogging: PingSelection {
+        var rest = PingSelection()
+        rest.notes = notes.filter { values[$0.key] == nil && !$0.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        return rest
+    }
+
     /// One log per picked ping with its note. A note on a ping that was not picked is not logged.
     func logs(at date: Date = .now) -> [PingLog] {
         values.map { ping, value in
