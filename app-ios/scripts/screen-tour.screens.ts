@@ -20,7 +20,15 @@ const settings = (row: string) => [
 ];
 // The trailing toolbar menu of a tab root (Day Options on the Food Log, Workout Tab Options on the Workout tab).
 const trailingToolbarButton = ['press 364 84', 'wait 800'];
-const bottomRows = new Set(['Exercises', 'Gym Profiles', 'Data Visibility', 'API Tokens']);
+const bottomRows = new Set([
+	'Levels',
+	'Workout History',
+	'Workout',
+	'Exercises',
+	'Gym Profiles',
+	'Data Visibility',
+	'API Tokens',
+]);
 // The live workout's menu reads as a button or a popup button from one launch to the next, so it is tapped by position.
 const discardWorkout = [
 	'wait \'label="Workout Options"\' 8000',
@@ -44,7 +52,7 @@ export const screens: Screen[] = [
 	{ name: 'add-choose', steps: tapTab('New') },
 
 	{ name: 'dashboard', steps: ['shot top', ...scrolled(1), 'shot mid', ...scrolled(2)] },
-	{ name: 'dashboard-customize', steps: [...openSettings, `press 'role="cell" label="Dashboard"'`] },
+	{ name: 'dashboard-customize', steps: settings('Dashboard') },
 	{ name: 'dashboard-levels', steps: [...tap('Levels'), 'wait 1000'] },
 	{ name: 'dashboard-workouts-detail', steps: [...scrollTo('Workouts'), ...tap('Workouts'), 'wait 1000'] },
 	{
@@ -147,7 +155,7 @@ export const screens: Screen[] = [
 	{ name: 'dashboard-steps', steps: ['scroll bottom', 'wait 600', 'press 56 617', 'wait 1000'] },
 	{
 		name: 'dashboard-add-remove',
-		steps: [...tap('Customize Dashboard'), ...scrollTo('Add or Remove Nutrition'), ...tap('Add or Remove Nutrition')],
+		steps: [...settings('Dashboard'), ...scrollTo('Add or Remove Nutrition'), ...tap('Add or Remove Nutrition')],
 	},
 	{ name: 'foodlog-entry-editor', steps: [...tapTab('Nutrition'), ...tap('Overnight Oats')] },
 	{
@@ -219,14 +227,14 @@ export const screens: Screen[] = [
 	{ name: 'exercises-custom', steps: [...settings('Exercises'), ...tap('Create Custom Exercise')] },
 	{
 		name: 'settings-rest-timer',
-		steps: [...openSettings, `press 'role="cell" label="Workout"'`, ...tap('Rest Timer')],
+		steps: [...settings('Workout'), ...tap('Rest Timer')],
 	},
-	{ name: 'settings-warm-up', steps: [...openSettings, `press 'role="cell" label="Workout"'`, ...tap('Warm-Up')] },
+	{ name: 'settings-warm-up', steps: [...settings('Workout'), ...tap('Warm-Up')] },
 	{
 		name: 'settings-smart-progression',
-		steps: [...openSettings, `press 'role="cell" label="Workout"'`, ...tap('Smart Progression')],
+		steps: [...settings('Workout'), ...tap('Smart Progression')],
 	},
 	{ name: 'settings-bmr', steps: [...settings('Expenditure'), ...tap('BMR Equation')] },
-	{ name: 'settings-hour-range', steps: [...settings('Food Log'), ...tap('Hour Range')] },
+	{ name: 'settings-hour-range', steps: [...settings('Food Log'), ...scrollTo('Hour Range'), ...tap('Hour Range')] },
 	{ name: 'settings-nutrient-visibility', steps: [...settings('Data Visibility'), ...tap('Nutrient Visibility')] },
 ];

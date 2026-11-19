@@ -203,7 +203,7 @@ struct PingRow: View {
         return Button { pick(value) } label: {
             Group {
                 switch layout {
-                case .compact: circle.frame(width: 38, height: 44)
+                case .compact: circle.frame(width: 36, height: 44)
                 case .stretched: circle.frame(maxWidth: .infinity, minHeight: 44)
                 case .column:
                     VStack(spacing: 4) {
