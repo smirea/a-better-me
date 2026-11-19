@@ -12,10 +12,17 @@ struct PingDrawer<Content: View>: View {
     @ViewBuilder let content: Content
 
     @State private var drag: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
+
+    /// Whether every control shows without scrolling, which is when a drag anywhere on the drawer closes it. When they
+    /// scroll, a drag on them scrolls and the grabber closes.
+    private var fits: Bool { contentHeight <= Self.maxContentHeight }
 
     private static var barHeight: CGFloat { 60 }
     private static var barInset: CGFloat { 22 }
     private static var inset: CGFloat { 8 }
+    /// Seven rows of chips, which leaves the header and a few rows of the timeline above the drawer.
+    private static var maxContentHeight: CGFloat { 360 }
 
     var body: some View {
         // Closed, the shape is the bar's: narrower and higher than the drawer. The controls keep the drawer's width
@@ -27,11 +34,19 @@ struct PingDrawer<Content: View>: View {
                 Capsule().fill(Theme.textTertiary).frame(width: 36, height: 5).frame(maxWidth: .infinity, minHeight: 22)
                     .contentShape(.rect)
                     .onTapGesture { isOpen = false }
+                    .gesture(dismissDrag)
                     .accessibilityElement()
                     .accessibilityLabel("Close")
                     .accessibilityAddTraits(.isButton)
                     .transition(.opacity)
-                content.transition(.opacity)
+                // More controls than the drawer may take scroll inside it, and the grabber stays above them.
+                ScrollView {
+                    content.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+                }
+                .scrollDisabled(fits)
+                .scrollIndicators(.hidden)
+                .frame(height: min(contentHeight, Self.maxContentHeight))
+                .transition(.opacity)
             }
         }
         .padding(.horizontal, 14)
@@ -54,8 +69,10 @@ struct PingDrawer<Content: View>: View {
         .allowsHitTesting(isOpen)
         // Over the chips' own taps: the drawer follows the finger, so a drag that began on a chip would end inside it
         // and log it.
-        .highPriorityGesture(dismissDrag)
+        .highPriorityGesture(dismissDrag, including: fits ? .all : .subviews)
         .animation(.spring(duration: 0.45, bounce: 0.18), value: isOpen)
+        // The controls report their height a frame after they are built, and again when a chip opens into its steps.
+        .animation(.spring(duration: 0.3, bounce: 0.1), value: contentHeight)
         .frame(maxHeight: .infinity, alignment: .bottom)
         // The keyboard covers the drawer while a note is typed, instead of lifting it over the timeline.
         .ignoresSafeArea(.keyboard)
