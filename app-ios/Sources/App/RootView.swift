@@ -140,9 +140,8 @@ private struct AddSheetView: View {
         case .workout: NewWorkoutSheet()
         case .ping: PingEditor()
         case .choose:
-            let today = Calendar.current.startOfDay(for: .now)
             NavigationStack {
-                PingLogger(today: today, onLogged: { dismiss() }) {
+                PingLogger(day: .constant(.today), onLogged: { dismiss() }) {
                     HStack(spacing: 12) {
                         choice("Log Food", systemImage: "fork.knife") { sheet = .food }
                         choice("Workout", systemImage: "dumbbell") { sheet = .workout }

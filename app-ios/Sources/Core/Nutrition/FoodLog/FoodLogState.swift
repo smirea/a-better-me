@@ -51,10 +51,6 @@ final class FoodLogState {
         let entries: [FoodEntry]
     }
 
-    /// How far the pager, the day strip, and the calendar reach from today, in days.
-    static let daysBack = 730
-    static let daysAhead = 365
-
     /// A selection belongs to the day it was made on, so leaving that day ends it. A pending copy or move keeps going:
     /// it carries the entries.
     var day = CalendarDay.today {

@@ -1,7 +1,8 @@
 import Feedback
 import SwiftUI
 
-/// Every ping in the order it lists everywhere: drag to reorder, tap to edit, + to add one.
+/// Every ping in the order it lists everywhere: drag to reorder, tap to edit, + to add one. The rows sit on the page
+/// with no card or separators, as the logger's do.
 struct ManagePingsView: View {
     @Environment(LocalStore.self) private var store
     @Observe(Ping.all) private var pings
@@ -13,23 +14,23 @@ struct ManagePingsView: View {
     var body: some View {
         let shown = moved ?? pings
         List {
-            if !shown.isEmpty {
-                ThemedSection(footer: "Pings list in this order everywhere.") {
-                    ForEach(shown) { ping in
-                        Button { editing = ping } label: {
-                            RowLabel(title: ping.name, detail: ping.kind.summary, systemImage: ping.icon, iconTint: Theme.ping)
-                        }
-                        .accessibilityIdentifier("ping-\(ping.name)")
-                    }
-                    .onMove { offsets, destination in
-                        var order = shown
-                        order.move(fromOffsets: offsets, toOffset: destination)
-                        moved = order
-                        store.orderPings(order.map(\.id))
-                    }
+            ForEach(shown) { ping in
+                Button { editing = ping } label: {
+                    RowLabel(title: ping.name, detail: ping.kind.summary, systemImage: ping.icon, iconTint: Theme.ping)
                 }
+                .accessibilityIdentifier("ping-\(ping.name)")
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 8, leading: Theme.margin, bottom: 8, trailing: Theme.margin))
+            }
+            .onMove { offsets, destination in
+                var order = shown
+                order.move(fromOffsets: offsets, toOffset: destination)
+                moved = order
+                store.orderPings(order.map(\.id))
             }
         }
+        .listStyle(.plain)
         .environment(\.editMode, .constant(.active))
         .themedList()
         .overlay {

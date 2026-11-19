@@ -6,15 +6,14 @@ import SwiftUI
 struct FoodLogTab: View {
     @Environment(LocalStore.self) private var store
     @Bindable var state: FoodLogState
-    @State private var showingCalendar = false
 
     var body: some View {
         NavigationStack(path: $state.path) {
-            DayPager()
+            DayPager(day: $state.day, held: state.selecting && state.pending == nil) { DayPage(day: $0) }
                 // The pages still scroll under the bottom bars, but not under the status bar once the header row has
                 // slid away.
                 .mask { Rectangle().ignoresSafeArea(edges: .bottom) }
-                .overlay(alignment: .top) { FoodLogHeader(showingCalendar: $showingCalendar) }
+                .overlay(alignment: .top) { FoodLogHeader() }
                 .background(Theme.background)
                 .background { ShownDayEntries(day: state.day).id(state.day) }
                 .safeAreaInset(edge: .bottom, spacing: 0) { FoodLogBottomBar() }
@@ -42,7 +41,6 @@ struct FoodLogTab: View {
         .sheet(item: $state.recipeRequest) { request in
             RecipeEditor(draft: request.draft, onCreate: { state.replace(request.entries, with: $0, in: store) })
         }
-        .sheet(isPresented: $showingCalendar) { CalendarSheet().environment(state) }
         .feedback(self)
     }
 }
@@ -51,32 +49,25 @@ struct FoodLogTab: View {
 /// row, and the row slides away 1:1 as the shown day scrolls down, as if it were the timeline's own first row, unless
 /// Calendar Week Banner pins it. Sliding moves only this overlay, so nothing under the finger is laid out again.
 private struct FoodLogHeader: View {
-    @Binding var showingCalendar: Bool
-
     @Environment(FoodLogState.self) private var state
     @Observe(NutritionPlan.all) private var plans
     @Observe(AppSettings.current) private var settings
 
     var body: some View {
+        @Bindable var state = state
         let banner = settings.nutrition.timeline.calendarWeekBanner
         VStack(spacing: 6) {
-            HStack(spacing: 8) {
-                let onToday = state.day == .today
-                Button(onToday ? "Calendar" : "Go to Today", systemImage: onToday ? "calendar" : "arrow.uturn.backward") {
-                    if onToday { showingCalendar = true } else { state.day = .today }
-                }
-                .contentTransition(.symbolEffect(.replace))
-                .animation(.snappy, value: onToday)
-                .accessibilityHint(onToday ? "Opens the calendar" : "")
-                .headerButton()
+            DayHeaderRow(day: $state.day) {
                 if banner == .hide {
                     Spacer(minLength: 0)
                 } else {
-                    DayStrip(selected: state.day, plans: plans)
+                    DayStrip(selected: state.day) { day in
+                        CaloriePill(day: day, plans: plans, isSelected: day == state.day) { state.day = day }
+                    }
                 }
-                DayMenu(day: state.day).id(state.day).headerButton()
+            } menu: {
+                DayMenu(day: state.day).id(state.day)
             }
-            .padding(.horizontal, Theme.margin)
             .onGeometryChange(for: Double.self) { $0.size.height } action: { state.header.row = $0 + 6 }
             DaySummary(day: state.day).id(state.day)
         }
@@ -104,15 +95,34 @@ private struct HeaderSlide: ViewModifier {
     }
 }
 
-private extension View {
-    /// A fixed 48 pt glass circle, so the Calendar button and the ⋯ menu match.
-    func headerButton() -> some View {
-        labelStyle(.iconOnly)
-            .foregroundStyle(Theme.textPrimary)
-            .frame(width: 48, height: 48)
-            .contentShape(.circle)
-            .glassEffect(.regular.interactive(), in: .circle)
-            .buttonStyle(.plain)
+/// A day's pill, its outline filling with the day's calories against its target. Each observes only its own day, and
+/// the strip is lazy, so only the pills on screen query.
+private struct CaloriePill: View {
+    let day: CalendarDay
+    let plans: [NutritionPlan]
+    let isSelected: Bool
+    let action: () -> Void
+
+    @Observe private var entries: [FoodEntry]
+    @Observe private var row: NutritionDay
+
+    init(day: CalendarDay, plans: [NutritionPlan], isSelected: Bool, action: @escaping () -> Void) {
+        self.day = day
+        self.plans = plans
+        self.isSelected = isSelected
+        self.action = action
+        _entries = Observe(FoodEntry.on(day))
+        _row = Observe(NutritionDay.one(day))
+    }
+
+    var body: some View {
+        let kcal = row.totals(entries)[.energy] ?? 0
+        let target = NutritionPlan.effective(on: day, in: plans)?.target(on: day).energy
+        DayPill(
+            day: day, isSelected: isSelected,
+            ring: DayRing(fraction: FoodLog.ringProgress(kcal: kcal, target: target), color: Theme.calories),
+            action: action
+        )
     }
 }
 
@@ -199,78 +209,6 @@ private struct DaySummary: View {
             }
         }
         .padding(.horizontal, Theme.margin)
-        .feedback(self)
-    }
-}
-
-/// The days as horizontal pages: swiping the timeline moves a day, as MacroFactor's does. Select mode holds the page,
-/// until Copy or Move picks the foods up to carry to another day.
-private struct DayPager: View {
-    @Environment(FoodLogState.self) private var state
-    @State private var origin = CalendarDay.today
-    @State private var position: Int?
-
-    var body: some View {
-        ScrollView(.horizontal) {
-            LazyHStack(spacing: 0) {
-                ForEach(-FoodLogState.daysBack...FoodLogState.daysAhead, id: \.self) { offset in
-                    DayPage(day: origin.adding(days: offset))
-                        .containerRelativeFrame(.horizontal)
-                }
-            }
-            .scrollTargetLayout()
-        }
-        .scrollTargetBehavior(.paging)
-        .scrollPosition(id: $position)
-        .scrollIndicators(.hidden)
-        .scrollDisabled(state.selecting && state.pending == nil)
-        .onAppear { position = origin.days(to: state.day) }
-        .onChange(of: position) { _, position in
-            guard let position else { return }
-            let day = origin.adding(days: position)
-            if day != state.day { state.day = day }
-        }
-        .onChange(of: state.day) { _, day in
-            let target = origin.days(to: day)
-            guard position != target else { return }
-            if let position, abs(position - target) == 1 {
-                withAnimation { self.position = target }
-            } else {
-                position = target
-            }
-        }
-    }
-}
-
-/// Select Date: the native month calendar, and Go to Today.
-private struct CalendarSheet: View {
-    @Environment(FoodLogState.self) private var state
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            DatePicker(
-                "Day",
-                selection: Binding(get: { state.day.date }, set: { state.day = CalendarDay($0); dismiss() }),
-                in: CalendarDay.today.adding(days: -FoodLogState.daysBack).date...CalendarDay.today.adding(days: FoodLogState.daysAhead).date,
-                displayedComponents: .date
-            )
-            .datePickerStyle(.graphical)
-            .padding(.horizontal, Theme.margin)
-            .detailTitle("Select Date")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(role: .close) { dismiss() }
-                }
-                ToolbarItem(placement: .bottomBar) {
-                    Button("Go to Today") {
-                        state.day = .today
-                        dismiss()
-                    }
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
         .feedback(self)
     }
 }

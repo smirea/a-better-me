@@ -119,6 +119,30 @@ extension PingLog {
         try PingLog.filter(Column("logged_at") >= Instant.text(date)).fetchAll(db)
     }
 
+    static func on(_ day: CalendarDay, in db: Database, calendar: Calendar = .current) throws -> [PingLog] {
+        try during(day, calendar: calendar).fetchAll(db)
+    }
+
+    /// How many different pings were logged on `day`, which fills its pill on the Pings tab.
+    static func pingsLogged(on day: CalendarDay) -> DatabaseQuery<Int> {
+        DatabaseQuery(0) { db in
+            try during(day, calendar: .current).select(Column("ping_id")).distinct().fetchCount(db)
+        }
+    }
+
+    private static func during(_ day: CalendarDay, calendar: Calendar) -> QueryInterfaceRequest<PingLog> {
+        PingLog.filter(
+            Column("logged_at") >= Instant.text(day.date(in: calendar))
+                && Column("logged_at") < Instant.text(day.adding(days: 1).date(in: calendar))
+        )
+    }
+
+    /// When a ping picked on `day` is logged: now on today, and the clock's time of day on any other day, as the Food
+    /// Log logs a food onto the day it shows.
+    static func instant(on day: CalendarDay, now: Date = .now, calendar: Calendar = .current) -> Date {
+        day == CalendarDay(now, in: calendar) ? now : day.date(atMinute: now.minuteOfDay(in: calendar), in: calendar)
+    }
+
     /// Whether the ping was ever logged. A log's value means a step of the ping as it was, so the editor fixes the
     /// kind and the number of steps from the first log on. Nil is a ping not made yet.
     static func exists(for pingID: UUID?) -> DatabaseQuery<Bool> {

@@ -75,10 +75,18 @@ export const screens: Screen[] = [
 	},
 	{ name: 'pings-picked', steps: [...tapTab('Pings'), ...tap('Mood 4, Good'), ...tap('Log Water'), 'wait 600'] },
 	{ name: 'ping-history', steps: [...tapTab('Pings'), ...tap('Mood'), ...tap('Mood history'), 'wait 1000'] },
-	{ name: 'pings-manage', steps: [...tapTab('Pings'), ...tap('Edit Pings')] },
+	{ name: 'pings-manage', steps: [...tapTab('Pings'), ...tap('Ping Options'), ...tap('Edit Pings')] },
 	{
 		name: 'ping-editor',
-		steps: [...tapTab('Pings'), ...tap('Edit Pings'), `press 'id="ping-Mood"'`, 'wait 800', 'shot top', ...scrolled(1)],
+		steps: [
+			...tapTab('Pings'),
+			...tap('Ping Options'),
+			...tap('Edit Pings'),
+			`press 'id="ping-Mood"'`,
+			'wait 800',
+			'shot top',
+			...scrolled(1),
+		],
 	},
 	{ name: 'ping-new', steps: [...tapTab('Pings'), ...tapTab('New')] },
 
