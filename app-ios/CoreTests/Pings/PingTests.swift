@@ -36,4 +36,10 @@ struct PingTests {
         #expect(selection.afterLogging.notes == [water.id: "not logged"])
         #expect(selection.afterLogging.isEmpty)
     }
+
+    @Test func aPingLoggedOnAnotherDayLandsOnThatDayAtTheClocksTimeAndOnTodayAtNow() {
+        let now = day("2026-11-19", 9).addingTimeInterval(25 * 60 + 20.5)
+        #expect(PingLog.instant(on: CalendarDay("2026-11-17")!, now: now, calendar: utc) == day("2026-11-17", 9).addingTimeInterval(25 * 60 + 20.5))
+        #expect(PingLog.instant(on: CalendarDay("2026-11-19")!, now: now, calendar: utc) == now)
+    }
 }

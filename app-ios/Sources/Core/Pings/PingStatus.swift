@@ -1,19 +1,19 @@
 import Foundation
 import GRDB
 
-/// A ping with what was logged for it today, which is all its row shows.
+/// A ping with what was logged for it on one day, which is all its row shows.
 struct PingStatus: Identifiable, Hashable, Sendable {
     var ping: Ping
     var count = 0
-    /// Today's latest log.
+    /// The day's latest log.
     var last: PingLog?
 
     var id: UUID { ping.id }
 
-    /// Every ping in order with today's logs, where today starts at `start`.
-    static func today(from start: Date) -> DatabaseQuery<[PingStatus]> {
+    /// Every ping in order with `day`'s logs.
+    static func on(_ day: CalendarDay) -> DatabaseQuery<[PingStatus]> {
         DatabaseQuery([]) { db in
-            statuses(try Ping.ordered(db), logs: try PingLog.since(start, in: db))
+            statuses(try Ping.ordered(db), logs: try PingLog.on(day, in: db))
         }
     }
 
@@ -32,7 +32,7 @@ struct PingStatus: Identifiable, Hashable, Sendable {
         return count == 1 ? last.loggedAt.formatted(date: .omitted, time: .shortened) : "\(count) times"
     }
 
-    /// The step a range ping was last set to today.
+    /// The step a range ping was last set to that day.
     var step: Int? {
         ping.kind == .boolean ? nil : last?.value
     }

@@ -194,7 +194,7 @@ struct EntryEditor: View {
     private var when: some View {
         DatePicker(
             "Date & Time", selection: $time,
-            in: CalendarDay.today.adding(days: -FoodLogState.daysBack).date...CalendarDay.today.adding(days: FoodLogState.daysAhead).date(atMinute: 24 * 60 - 1),
+            in: CalendarDay.today.adding(days: DayPaging.offsets.lowerBound).date...CalendarDay.today.adding(days: DayPaging.offsets.upperBound).date(atMinute: 24 * 60 - 1),
             displayedComponents: [.date, .hourAndMinute]
         )
     }

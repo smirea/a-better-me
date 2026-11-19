@@ -1,0 +1,18 @@
+{
+	"title": "Pings has the Food Log's day header: pick or swipe to a day, see its pings, log onto it",
+	"description": "Ping rows and Edit Pings sit on the page without a card, and the step buttons are slightly larger rounded squares.",
+	"tasks": [
+		{
+			"id": "861ce9fb-0df4-4133-9187-220d1c175979",
+			"title": "1 Pings Feedback: update calendar header on pings"
+		},
+		{
+			"id": "2dcbc1f4-d265-49ff-aa34-60bbd2f0f796",
+			"title": "2 Pings Feedback: update button shapes, adjust sizes"
+		},
+		{
+			"id": "dcd9d7ed-97ff-4f8f-aa29-1e3d96127b30",
+			"title": "2 Pings Feedback: clean up text, remove button background"
+		}
+	]
+}

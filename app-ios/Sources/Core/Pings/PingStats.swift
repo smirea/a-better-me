@@ -93,7 +93,11 @@ struct PingHistory: Equatable, Sendable {
         DatabaseQuery(PingHistory()) { db in
             let today = calendar.startOfDay(for: now)
             let start = calendar.date(byAdding: .day, value: 1 - PingCard.habitDays, to: today)!
-            let logs = try PingLog.filter(Column("ping_id") == Ping.key(id) && Column("logged_at") >= Instant.text(start)).fetchAll(db)
+            // A log on a later day, which the Pings tab can write, is not part of the last 30 days yet.
+            let end = calendar.date(byAdding: .day, value: 1, to: today)!
+            let logs = try PingLog.filter(
+                Column("ping_id") == Ping.key(id) && Column("logged_at") >= Instant.text(start) && Column("logged_at") < Instant.text(end)
+            ).fetchAll(db)
             let days = PingStats.byDay(logs, days: PingCard.habitDays, now: now, calendar: calendar).enumerated().map { index, logs in
                 Day(date: calendar.date(byAdding: .day, value: index, to: start)!, count: logs.count, average: PingStats.average(logs))
             }
