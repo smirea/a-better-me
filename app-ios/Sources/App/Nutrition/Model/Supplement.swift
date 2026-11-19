@@ -57,7 +57,7 @@ struct Supplement: Stamped {
     /// Oldest first.
     var regimens: [SupplementRegimen] = []
     var note = ""
-    /// Its pictures' ids in `supplement_images`, in order. The first is the one lists show.
+    /// Its pictures' ids, in order. The first is the one lists show. Their bytes are files (`PictureFiles`).
     var images: [UUID] = []
     /// Ids of `Tag` rows.
     var tags: [UUID] = []
@@ -93,7 +93,7 @@ struct Supplement: Stamped {
         container["regimens"] = try RowJSON.text(regimens)
         container["note"] = note
         // As row ids are written, lowercase, where `UUID`'s own encoding is uppercase.
-        container["images"] = try RowJSON.text(images.map(SupplementImage.key))
+        container["images"] = try RowJSON.text(images.map { Self.key($0) })
         container["tags"] = try RowJSON.text(tags.map(Tag.key))
         container["created_at"] = Instant.text(createdAt)
         container["updated_at"] = Instant.text(updatedAt)
@@ -162,36 +162,6 @@ extension [Supplement] {
                 guard order.0 == order.1 else { return order.0 < order.1 }
                 return lhs.supplement.name.localizedCaseInsensitiveCompare(rhs.supplement.name) == .orderedAscending
             }
-    }
-}
-
-/// A row of the synced `supplement_images` table: one picture of a supplement, named by `Supplement.images`. It is a
-/// JPEG no longer than `MealPhotoImage.maxPixels`, the size an editor's photo already has, stored as base64 text
-/// because the sync engine carries values, not files. A row is never rewritten, so its id is also its cache key.
-struct SupplementImage: SyncedRecord {
-    static let table = "supplement_images"
-
-    var id: UUID
-    var jpeg: Data
-    var updatedAt = Date.now
-
-    init(id: UUID, jpeg: Data) {
-        self.id = id
-        self.jpeg = jpeg
-    }
-
-    init(row: Row) throws {
-        id = try row.uuid("id")
-        let text: String = row["jpeg"]
-        guard let jpeg = Data(base64Encoded: text) else { throw RowDecodingError(description: "jpeg is not base64") }
-        self.jpeg = jpeg
-        updatedAt = try row.instant("updated_at")
-    }
-
-    func encode(to container: inout PersistenceContainer) throws {
-        container["id"] = key
-        container["jpeg"] = jpeg.base64EncodedString()
-        container["updated_at"] = Instant.text(updatedAt)
     }
 }
 

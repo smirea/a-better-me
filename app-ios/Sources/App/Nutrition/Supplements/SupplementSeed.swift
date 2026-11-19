@@ -73,7 +73,7 @@ enum SupplementSeed {
             var pictures = [row.color.flatMap { picture($0, letter: String(row.name.prefix(1))) }]
             if row.key == "multi" { pictures.append(label(row.name, serving: SupplementFormat.amount(row.serving), components: row.components)) }
             let images = pictures.enumerated().compactMap { number, jpeg in
-                jpeg.map { SupplementImage(id: DevSeed.id("supplement/\(row.key)/picture/\(number)"), jpeg: $0) }
+                jpeg.map { NewPicture(id: DevSeed.id("supplement/\(row.key)/picture/\(number)"), jpeg: $0) }
             }
             supplement.images = images.map(\.id)
             try LocalStore.save(supplement, adding: images, in: db)

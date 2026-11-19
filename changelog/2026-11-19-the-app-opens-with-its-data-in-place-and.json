@@ -1,0 +1,4 @@
+{
+	"title": "The app opens with its data in place, and supplement pictures no longer sync as rows",
+	"description": "Health cards and Strategy show their last values at once, and pictures moved to private storage, cutting a full sync from 10.9 MB to about 3 MB."
+}

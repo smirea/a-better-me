@@ -110,11 +110,8 @@ export function maintenanceFor(db: Db, timeZone: string, now: string) {
 
 const best = (a: number | null, b: number | null) => (a === null ? b : b === null ? a : Math.max(a, b));
 
-/**
- * Every synced table but the token hashes and the supplement pictures, decoded as the API returns rows. The pictures
- * are base64 JPEGs, megabytes an agent reading the export has no use for; the R2 backups keep them.
- */
-const UNEXPORTED = new Set<SyncedTable>(['api_tokens', 'supplement_images']);
+/** Every synced table but the token hashes, decoded as the API returns rows. */
+const UNEXPORTED = new Set<SyncedTable>(['api_tokens']);
 const EXPORTED = (Object.keys(SYNCED_TABLES) as SyncedTable[]).filter(table => !UNEXPORTED.has(table));
 
 export const insightRoutes: Route[] = [

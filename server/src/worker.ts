@@ -14,11 +14,12 @@ import { BACKUP_CRON, backup } from './backup';
 import { parseConfig, type Config, type Settings } from './config';
 import { liveRambleSetup, serveLiveRamble } from './food/ramble-live';
 import { errorResponse } from './http';
+import { imagesRoute, listedImages, moveSupplementImageRows, sweepImages } from './images';
 import { SENTRY_DEFAULTS, withoutDedupe } from './sentry';
 
 declare const WebSocketPair: typeof import('@cloudflare/workers-types').WebSocketPair;
 
-type Env = Settings & { SPACE: DurableObjectNamespace; BACKUPS: R2Bucket };
+type Env = Settings & { SPACE: DurableObjectNamespace; BACKUPS: R2Bucket; IMAGES: R2Bucket };
 
 /**
  * The owner's one space. `/dump` is reachable only through the stub, which the Worker calls from the cron alone. The
@@ -26,13 +27,17 @@ type Env = Settings & { SPACE: DurableObjectNamespace; BACKUPS: R2Bucket };
  */
 class OwnerSpace extends SpaceObject<Env> {
 	private readonly agent;
+	private readonly driver;
+	/** The move of the old picture rows into the bucket, a batch beside each request until none are left. */
+	private moving: Promise<boolean> = Promise.resolve(true);
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		const config = configOf(env);
 		super(ctx, env, schema, config.space);
+		this.driver = durableDriver(ctx.storage);
 		this.agent = agentApi({
 			space: this.space,
-			driver: durableDriver(ctx.storage),
+			driver: this.driver,
 			ownerToken: config.ownerToken,
 			geminiApiKey: config.geminiApiKey,
 			publish: head => {
@@ -48,6 +53,14 @@ class OwnerSpace extends SpaceObject<Env> {
 	}
 
 	override async fetch(request: Request): Promise<Response> {
+		// A move that fails is reported and tried again beside the next request; it never fails the request itself.
+		this.moving = this.moving
+			.then(async left => left && !!(await moveSupplementImageRows(this.driver, this.env.IMAGES)))
+			.catch(error => {
+				Sentry.captureException(error);
+				return true;
+			});
+		await this.moving;
 		const { pathname } = new URL(request.url);
 		if (pathname === '/dump') return Response.json(this.space.dump());
 		if (pathname === '/ramble-live') return this.rambleLive();
@@ -128,6 +141,7 @@ async function fetch(request: Request, env: Env): Promise<Response> {
 		return await handle(request, {
 			config,
 			report: Sentry,
+			images: request => imagesRoute(request, env.IMAGES),
 			engine(request) {
 				const url = new URL(request.url);
 				url.pathname = url.pathname.slice('/api'.length);
@@ -147,11 +161,14 @@ async function fetch(request: Request, env: Env): Promise<Response> {
 	}
 }
 
-/** The daily dump to R2. A throw marks the cron run failed in the Cloudflare dashboard. */
+/** The daily dump to R2, then the sweep of pictures no row lists. A throw marks the cron run failed in the Cloudflare dashboard. */
 async function scheduled(controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
 	if (controller.cron !== BACKUP_CRON) throw new Error(`No job for cron ${controller.cron}`);
 	const tables = (await (await owner(env).fetch('https://space/dump')).json()) as Record<string, unknown[]>;
-	console.log(`Backed up the space to ${await backup(tables, env.BACKUPS, new Date(controller.scheduledTime))}`);
+	const at = new Date(controller.scheduledTime);
+	console.log(`Backed up the space to ${await backup(tables, env.BACKUPS, at)}`);
+	const swept = await sweepImages(env.IMAGES, listedImages(tables), at);
+	console.log(`Swept ${swept.length} pictures no row lists`);
 }
 
 export const Space = Sentry.instrumentDurableObjectWithSentry(sentryOptions, OwnerSpace);

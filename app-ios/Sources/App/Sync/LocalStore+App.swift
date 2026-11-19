@@ -11,9 +11,11 @@ extension LocalStore {
             database = try LocalDatabase()
             client = SyncClient(
                 database: database.pool, schema: syncSchema, endpoint: AppEnvironment.apiURL.appending(path: "api"),
-                token: { AppEnvironment.ownerToken }
+                token: { AppEnvironment.ownerToken },
+                beforePush: { try await PictureFiles.shared.uploadQueued() }
             )
             try LegacyImport.run(database.pool, tables: syncSchema.tables, migrate: client.migrate)
+            try LegacySupplementImages.move(database.pool, into: .shared)
             try SpaceResync.backUpIfNeeded(database.pool)
         } catch {
             fatalError("Could not open the local database at \(LocalDatabase.url.path): \(error)")

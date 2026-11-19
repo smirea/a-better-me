@@ -347,7 +347,8 @@ const foodShortNames = sqliteTable('food_short_names', {
 /**
  * A pill the owner takes or took. `components` is the label's Supplement Facts per `serving`, in label order.
  * `regimens` is when it is taken, oldest first: a supplement shows on a day one of them covers, so nothing is logged
- * per day. `images` is the ids of its pictures in `supplement_images`, in order, and the first is the one lists show.
+ * per day. `images` is the ids of its pictures, in order, and the first is the one lists show; their bytes are in the
+ * pictures bucket (`shared/images.ts`), never in a row.
  * `tags` is ids in `tags`, and `url` is where it is bought.
  */
 const supplements = sqliteTable('supplements', {
@@ -362,17 +363,6 @@ const supplements = sqliteTable('supplements', {
 	images: json('images').notNull().default([]),
 	tags: json('tags').notNull().default([]),
 	createdAt: text('created_at').notNull(),
-	updatedAt: text('updated_at').notNull(),
-});
-
-/**
- * One picture of a supplement, named by `supplements.images`: a JPEG no longer than 1024 px, as base64. The engine
- * carries values, not files, so a picture is small enough to be one, and it sits apart from `supplements` so reading
- * the list never loads the pictures. A row is never rewritten: a changed picture is a new row with a new id.
- */
-const supplementImages = sqliteTable('supplement_images', {
-	id: text('id').primaryKey(),
-	jpeg: text('jpeg').notNull(),
 	updatedAt: text('updated_at').notNull(),
 });
 
@@ -444,7 +434,6 @@ export const SYNCED_TABLES = {
 	meal_names: mealNames,
 	food_short_names: foodShortNames,
 	supplements,
-	supplement_images: supplementImages,
 	tags,
 	pings,
 	ping_logs: pingLogs,
@@ -512,8 +501,6 @@ export const supplementRegimen = z.object({
 	weekdays: z.array(z.int().min(1).max(7)),
 	tags: ids.optional(),
 });
-/** Base64 of a JPEG no longer than 1024 px, which is under 300 KB; the cap keeps a row well inside a Durable Object's 2 MB. */
-const supplementJpeg = z.base64().min(1).max(600_000);
 const dayTarget = z.object({ energy: amount, protein: amount, fat: amount, carbs: amount });
 const nutritionGoal = z.object({
 	kind: z.enum(GOAL_KINDS),
@@ -612,7 +599,6 @@ export const schema = defineSchema({
 			images: ids,
 			tags: ids,
 		},
-		supplement_images: { jpeg: supplementJpeg },
 		tags: { name: z.string().min(1), color: z.string().regex(/^#[0-9a-f]{6}$/i) },
 		pings: {
 			name: z.string().min(1),

@@ -152,7 +152,7 @@ extension SupplementDetailView {
         if let image {
             Button {
                 Task {
-                    let files = await SupplementPictures.files(of: supplement.images, named: supplement.name, in: store.database.pool)
+                    let files = await SupplementPictures.files(of: supplement.images, named: supplement.name)
                     guard let opened = files.first(where: { $0.id == image }) else { return }
                     viewable = files.map(\.url)
                     viewing = opened.url

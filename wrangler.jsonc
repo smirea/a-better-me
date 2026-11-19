@@ -15,6 +15,10 @@
 	// The owner's one space: a SQLite-backed Durable Object holding every synced table.
 	"durable_objects": { "bindings": [{ "name": "SPACE", "class_name": "Space" }] },
 	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["Space"] }],
-	"r2_buckets": [{ "binding": "BACKUPS", "bucket_name": "a-better-me-backups" }],
+	"r2_buckets": [
+		{ "binding": "BACKUPS", "bucket_name": "a-better-me-backups" },
+		// Picture bytes, reached only through `/api/images` (`server/src/images.ts`). No public address, no S3 key.
+		{ "binding": "IMAGES", "bucket_name": "a-better-me-images" },
+	],
 	"observability": { "enabled": true },
 }

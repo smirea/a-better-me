@@ -14,6 +14,7 @@ A Better Me's concepts, goals, paradigms, and high-level system decisions, one f
 - [Live workout surfaces](live-workout.md): the Apple Watch app, which runs workouts without the phone, the Live Activity, and Apple Health.
 - [Widgets](widgets.md): the Home Screen and Lock Screen widgets, the Control Center control, the nutrition and steps snapshots in the app group, the step widgets' own Health and pedometer read and their refresh cadence, and quick action routing.
 - [Sync](sync.md): offline first, the sync engine's one space, the shared SQLite schema and its validators, the owner token, the write rules, local servers, and the iOS client.
+- [Pictures](images.md): picture bytes outside the database, the private bucket and its route, the phone's upload queue and cache, the sweep, and the one-time move of the old rows.
 - [Agent API](agent-api.md): the REST and OpenAPI surface for automation, its entry point, and bot tokens.
 - [Hosting](hosting.md): the Cloudflare Worker, the Durable Object space, the R2 backups, secrets, and the CI deploy.
 - [Changelog](changelog.md): the per-PR entries under `changelog/`, how each gets the build it shipped in, the More > Changelog screen, and the check that makes every PR add one.
