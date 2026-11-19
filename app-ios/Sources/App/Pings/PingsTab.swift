@@ -15,38 +15,65 @@ enum PingRoute: Hashable {
     }
 }
 
-/// The Pings tab: the Food Log's header row over a day's pings, logged onto that day by picking them and tapping Log.
-/// Swiping pages between days.
+/// The Pings tab: the Food Log's header row over a day's timeline, bottom up. "+" turns the tab bar into a drawer of
+/// the pings, where a tap logs one onto the day shown and its row lands on the timeline, open for editing. Swiping
+/// pages between days.
 struct PingsTab: View {
+    /// Whether the drawer is open, which "+" in the tab bar sets.
+    @Binding var adding: Bool
+
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(LocalStore.self) private var store
+    @Observe(Ping.count) private var pingCount
     @State private var path: [PingRoute] = []
     @State private var day = CalendarDay.today
     /// The day that was today when the tab last looked, so a return on a new day moves today's page with it.
     @State private var today = CalendarDay.today
     @State private var creating = false
+    @State private var sleep = SleepLog()
+    @State private var editing: Set<UUID> = []
+    @State private var added: UUID?
+    @State private var drawerCover: CGFloat = 0
 
     var body: some View {
         NavigationStack(path: $path) {
-            PingLogger(day: $day, pages: true, history: { path.append(.history($0.id)) }) {
-                EmptyView()
-            } empty: {
-                ContentUnavailableView {
-                    Label("No Pings", systemImage: "hand.tap")
-                } description: {
-                    Text("Track a mood, a glass of water, or anything else in a tap.")
-                } actions: {
-                    Button("New Ping") { creating = true }.secondaryPill().fixedSize()
+            DayPager(day: $day) { shown in
+                PingTimelinePage(
+                    day: shown, editing: $editing, added: added, sleep: sleep.markers[shown] ?? [], covered: adding ? drawerCover : 0,
+                    pingCount: pingCount, history: { push(.history($0.id)) }, create: { creating = true }
+                )
+                .task(id: scenePhase) {
+                    if scenePhase == .active { await sleep.load(shown) }
                 }
-                .padding(.top, 80)
             }
+            .background(Theme.background)
             .safeAreaInset(edge: .top, spacing: 0) {
-                PingsHeader(day: $day, create: { creating = true }, manage: { path.append(.manage) })
+                PingsHeader(day: $day, pingCount: pingCount, create: { creating = true }, manage: { push(.manage) })
             }
+            .overlay {
+                PingDrawer(isOpen: $adding, covers: { drawerCover = $0 }) {
+                    PingControls(day: day, log: log).id(day)
+                }
+            }
+            // One bar at a time: the drawer takes the tab bar's place.
+            .toolbarVisibility(adding ? .hidden : .automatic, for: .tabBar)
+            .animation(.snappy, value: adding)
             // The header row replaces the bar; the title still names the screen for VoiceOver and pushed screens' back button.
             .navigationTitle("Pings")
             .toolbarVisibility(.hidden, for: .navigationBar)
             .navigationDestination(for: PingRoute.self) { $0.destination }
             .sheet(isPresented: $creating) { PingEditor() }
+        }
+        .sensoryFeedback(.success, trigger: added)
+        .onChange(of: adding) { _, adding in
+            guard adding else { return }
+            // The drawer belongs to the timeline, so "+" on a pushed screen comes back to it.
+            path = []
+            // With no pings there is nothing to pick, so "+" makes the first one.
+            if pingCount == 0 {
+                self.adding = false
+                creating = true
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active, today != .today else { return }
@@ -55,15 +82,27 @@ struct PingsTab: View {
         }
         .feedback(self)
     }
+
+    /// A pushed screen brings the tab bar back, so the drawer closes first.
+    private func push(_ route: PingRoute) {
+        adding = false
+        path.append(route)
+    }
+
+    private func log(_ ping: Ping, value: Int) {
+        let log = PingLog(pingID: ping.id, value: value, at: PingLog.instant(on: day))
+        store.insert(log)
+        editing.insert(log.id)
+        added = log.id
+    }
 }
 
 /// Calendar, the day strip, and the ⋯ menu. A day's pill fills with the share of the pings logged that day.
 private struct PingsHeader: View {
     @Binding var day: CalendarDay
+    let pingCount: Int
     let create: () -> Void
     let manage: () -> Void
-
-    @Observe(Ping.count) private var pingCount
 
     var body: some View {
         DayHeaderRow(day: $day) {

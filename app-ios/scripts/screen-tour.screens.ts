@@ -68,13 +68,36 @@ export const screens: Screen[] = [
 	{ name: 'dashboard-see-all-body-metrics', steps: ['scroll bottom', 'wait 600', 'press 358 331'] },
 
 	{ name: 'pings', steps: tapTab('Pings') },
-	// Mood's labels fit side by side, Sleep Quality's take a row each, and Water shows a boolean's note.
+	// "+" turns the tab bar into the drawer of pings.
+	{ name: 'pings-drawer', steps: [...tapTab('Pings'), ...tapTab('New'), 'wait 600'] },
+	// A boolean lands as a row with a note, and Mood's chip opens into its steps.
 	{
-		name: 'pings-expanded',
-		steps: [...tapTab('Pings'), ...tap('Mood'), ...tap('Water'), ...tap('Sleep Quality'), 'wait 600'],
+		name: 'pings-drawer-steps',
+		steps: [...tapTab('Pings'), ...tapTab('New'), ...tap('Log Water'), ...tap('Log Mood'), 'wait 600'],
 	},
-	{ name: 'pings-picked', steps: [...tapTab('Pings'), ...tap('Mood 4, Good'), ...tap('Log Water'), 'wait 600'] },
-	{ name: 'ping-history', steps: [...tapTab('Pings'), ...tap('Mood'), ...tap('Mood history'), 'wait 1000'] },
+	// Mood's row lands open, with its steps and their labels.
+	{
+		name: 'pings-added',
+		steps: [
+			...tapTab('Pings'),
+			...tapTab('New'),
+			...tap('Log Mood'),
+			...tap('Mood 4, Good'),
+			...tap('Close'),
+			'wait 800',
+		],
+	},
+	{
+		name: 'ping-history',
+		steps: [
+			...tapTab('Pings'),
+			...tapTab('New'),
+			...tap('Log Mood'),
+			...tap('Mood 4, Good'),
+			...tap('Mood history'),
+			'wait 1000',
+		],
+	},
 	{ name: 'pings-manage', steps: [...tapTab('Pings'), ...tap('Ping Options'), ...tap('Edit Pings')] },
 	{
 		name: 'ping-editor',
@@ -88,7 +111,10 @@ export const screens: Screen[] = [
 			...scrolled(1),
 		],
 	},
-	{ name: 'ping-new', steps: [...tapTab('Pings'), ...tapTab('New')] },
+	{
+		name: 'ping-new',
+		steps: [...tapTab('Pings'), ...tap('Ping Options'), `press 'role="cell" label="New Ping"'`, 'wait 800'],
+	},
 
 	{ name: 'foodlog', steps: tapTab('Nutrition') },
 	// Swipes the timeline back to yesterday, which the seed marks incomplete with edited totals, beside the page dots.
