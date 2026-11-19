@@ -138,9 +138,10 @@ extension PingLog {
     }
 
     /// When a ping picked on `day` is logged: now on today, and the clock's time of day on any other day, as the Food
-    /// Log logs a food onto the day it shows.
+    /// Log logs a food onto the day it shows. The time keeps its seconds, so two logs a moment apart keep their order.
     static func instant(on day: CalendarDay, now: Date = .now, calendar: Calendar = .current) -> Date {
-        day == CalendarDay(now, in: calendar) ? now : day.date(atMinute: now.minuteOfDay(in: calendar), in: calendar)
+        let today = CalendarDay(now, in: calendar)
+        return day == today ? now : day.date(in: calendar) + now.timeIntervalSince(today.date(in: calendar))
     }
 
     /// Whether the ping was ever logged. A log's value means a step of the ping as it was, so the editor fixes the
