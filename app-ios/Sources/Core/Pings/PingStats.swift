@@ -84,6 +84,10 @@ struct PingHistory: Equatable, Sendable {
     var logs: [PingLog] = []
     /// Oldest first, today last.
     var days: [Day] = []
+    /// The average step over every log of the last 7 and 30 days, worked out with the fetch so the screen only shows
+    /// them.
+    var weekAverage: Double?
+    var monthAverage: Double?
 
     static func recent(_ id: UUID, now: Date, calendar: Calendar) -> DatabaseQuery<PingHistory> {
         DatabaseQuery(PingHistory()) { db in
@@ -93,18 +97,16 @@ struct PingHistory: Equatable, Sendable {
             let days = PingStats.byDay(logs, days: PingCard.habitDays, now: now, calendar: calendar).enumerated().map { index, logs in
                 Day(date: calendar.date(byAdding: .day, value: index, to: start)!, count: logs.count, average: PingStats.average(logs))
             }
-            return PingHistory(ping: try Ping.fetchOne(db, key: Ping.key(id)), logs: logs.sorted { $0.loggedAt > $1.loggedAt }, days: days)
+            let weekStart = calendar.date(byAdding: .day, value: 1 - PingCard.weekDays, to: today)!
+            return PingHistory(
+                ping: try Ping.fetchOne(db, key: Ping.key(id)), logs: logs.sorted { $0.loggedAt > $1.loggedAt }, days: days,
+                weekAverage: PingStats.average(logs.filter { $0.loggedAt >= weekStart }), monthAverage: PingStats.average(logs)
+            )
         }
     }
 
     /// The logs of the last `days` days.
     func count(days: Int) -> Int {
         self.days.suffix(days).reduce(0) { $0 + $1.count }
-    }
-
-    /// The average step over every log of the last `days` days.
-    func average(days: Int) -> Double? {
-        guard let first = self.days.suffix(days).first?.date else { return nil }
-        return PingStats.average(logs.filter { $0.loggedAt >= first })
     }
 }

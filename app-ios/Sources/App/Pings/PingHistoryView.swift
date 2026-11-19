@@ -44,6 +44,15 @@ struct PingHistoryView: View {
                             PingLogsView(pingID: pingID, steps: steps)
                         }
                     }
+                    // The list links to every log only when it is cut short, so a ping with few logs this month, or
+                    // none, gets its own way to the older ones.
+                    if history.logs.count <= Int(TruncatedList<PingLog, EmptyView, EmptyView>.visibleRows.rounded(.up)) {
+                        NavigationLink("All History") { PingLogsView(pingID: pingID, steps: steps) }
+                            .font(AppFont.rowTitle)
+                            .underline()
+                            .foregroundStyle(Theme.textPrimary)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
                 }
                 .padding(.horizontal, Theme.margin)
                 .padding(.vertical, 8)
@@ -70,8 +79,8 @@ struct PingHistoryView: View {
                     StatView(title: "30 Days", value: "\(history.count(days: 30))")
                 } else {
                     StatView(title: "Latest", value: history.logs.first.map { "\($0.value)" } ?? "--")
-                    StatView(title: "7-Day Average", value: history.average(days: 7)?.niceText ?? "--")
-                    StatView(title: "30-Day Average", value: history.average(days: 30)?.niceText ?? "--")
+                    StatView(title: "7-Day Average", value: history.weekAverage?.niceText ?? "--")
+                    StatView(title: "30-Day Average", value: history.monthAverage?.niceText ?? "--")
                 }
             }
             .feedback("Stats")
