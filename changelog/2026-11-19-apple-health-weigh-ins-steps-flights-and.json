@@ -1,0 +1,4 @@
+{
+	"title": "Apple Health weigh-ins, steps, flights, and distance sync, so the API sees them too",
+	"description": "The app copies Health into its own database on every open, skipping readings you already logged, so the server and bots get the full history up to today."
+}
