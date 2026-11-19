@@ -42,7 +42,7 @@ final class HealthData {
     }
     static let readTypes: Set<HKObjectType> = [bodyMass, stepCount, flightsClimbed, distanceWalkingRunning]
     #if DEBUG
-    static let shareTypes: Set<HKSampleType> = HealthSeed.isRequested ? [bodyMass, stepCount, flightsClimbed, distanceWalkingRunning] : []
+    static let shareTypes: Set<HKSampleType> = HealthSeed.isRequested ? [bodyMass, stepCount, flightsClimbed, distanceWalkingRunning, SleepLog.type] : []
     #else
     static let shareTypes: Set<HKSampleType> = []
     #endif

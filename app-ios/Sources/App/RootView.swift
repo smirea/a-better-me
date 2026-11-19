@@ -6,10 +6,10 @@ enum AppTab: Hashable {
     case dashboard, nutrition, workout, pings, add
 }
 
-/// What "+" opens from the root: the New Workout sheet, New Ping on Pings, or on Dashboard a choice between the halves
-/// over today's pings. On Nutrition "+" opens the Food Log's scanner instead.
+/// What "+" opens from the root: the New Workout sheet, or on Dashboard a choice between the halves over today's pings.
+/// On Nutrition "+" opens the Food Log's scanner instead, and on Pings it turns the tab bar into the pings' drawer.
 enum AddSheet: Identifiable {
-    case food, workout, ping, choose
+    case food, workout, choose
 
     var id: Self { self }
 }
@@ -36,6 +36,7 @@ struct RootView: View {
     @State private var sheet: RootSheet?
     /// Here rather than in the tab, so "+" can open the scanner on the day the Food Log shows.
     @State private var foodLog = FoodLogState()
+    @State private var addingPings = false
     @State private var inbox = QuickActionInbox.shared
 
     var body: some View {
@@ -44,7 +45,7 @@ struct RootView: View {
             Tab("Dashboard", systemImage: "square.grid.2x2", value: .dashboard) { DashboardTab(path: $dashboardPath).tint(Theme.textPrimary) }
             Tab("Nutrition", systemImage: "fork.knife", value: .nutrition) { FoodLogTab(state: foodLog).tint(Theme.textPrimary) }
             Tab("Workout", systemImage: "dumbbell", value: .workout) { WorkoutTab().tint(Theme.textPrimary) }
-            Tab("Pings", systemImage: "hand.tap", value: .pings) { PingsTab().tint(Theme.textPrimary) }
+            Tab("Pings", systemImage: "hand.tap", value: .pings) { PingsTab(adding: $addingPings).tint(Theme.textPrimary) }
             Tab("New", systemImage: "plus", value: .add, role: .prominent) { Color.clear }
         }
         .tint(Theme.accent)
@@ -58,7 +59,7 @@ struct RootView: View {
             case .nutrition: foodLog.requestLog(start: .scan)
             case .workout: sheet = .add(.workout)
             case .dashboard, .add: sheet = .add(.choose)
-            case .pings: sheet = .add(.ping)
+            case .pings: addingPings = true
             }
         }
         .sheet(item: $sheet) { sheet in
@@ -138,10 +139,9 @@ private struct AddSheetView: View {
         switch sheet {
         case .food: LoggerSheet(start: LoggerStart(tab: .scan))
         case .workout: NewWorkoutSheet()
-        case .ping: PingEditor()
         case .choose:
             NavigationStack {
-                PingLogger(day: .constant(.today), onLogged: { dismiss() }) {
+                PingLogger(onLogged: { dismiss() }) {
                     HStack(spacing: 12) {
                         choice("Log Food", systemImage: "fork.knife") { sheet = .food }
                         choice("Workout", systemImage: "dumbbell") { sheet = .workout }

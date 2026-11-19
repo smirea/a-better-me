@@ -1,8 +1,9 @@
 import HealthKit
 
 #if DEBUG
-/// Launch with `-seedHealthSamples` (`scripts/run --health on` passes it) to write 60 days of body mass and 400 of steps,
-/// flights climbed, and walking distance (the owner's real step history spans more than a year) into the simulator's Health store so the Dashboard's HealthKit cards have data. Each
+/// Launch with `-seedHealthSamples` (`scripts/run --health on` passes it) to write 60 days of body mass and of sleep and
+/// 400 of steps, flights climbed, and walking distance (the owner's real step history spans more than a year) into the
+/// simulator's Health store, so the Dashboard's HealthKit cards and the Pings timeline have data. Each
 /// type is written once, when the store has none of it, so an install seeded before a type was added gets that type on
 /// its next launch.
 /// Debug builds ask for write access only for this.
@@ -25,7 +26,7 @@ enum HealthSeed {
             HKQuantitySample(type: type, quantity: HKQuantity(unit: .count(), doubleValue: value), start: date, end: date)
         }
 
-        var samples: [HKQuantitySample] = []
+        var samples: [HKSample] = []
         let bodyMass = HKQuantityType(.bodyMass)
         if try await isEmpty(bodyMass, store) {
             for (offset, day) in days.prefix(60) where offset % 4 != 3 {
@@ -56,11 +57,25 @@ enum HealthSeed {
                 samples.append(count(flightsClimbed, offset == hike ? 112 : Double((offset * 7) % 17), at(day, hour: 12)))
             }
         }
+        if try await isEmpty(SleepLog.type, store) {
+            // A night from the evening before each day: its stages back to back, with a stretch awake in the middle.
+            let stages: [(HKCategoryValueSleepAnalysis, hours: Double)] = [
+                (.asleepCore, 1.5), (.asleepDeep, 1), (.awake, 0.25), (.asleepREM, 1.25), (.asleepCore, 3), (.asleepREM, 0.5),
+            ]
+            for (offset, day) in days.prefix(60) {
+                var start = day.addingTimeInterval((-1 + Double((offset * 7) % 5) * 0.25) * 3600)
+                for (stage, hours) in stages {
+                    let end = start.addingTimeInterval(hours * 3600)
+                    if end < .now { samples.append(HKCategorySample(type: SleepLog.type, value: stage.rawValue, start: start, end: end)) }
+                    start = end
+                }
+            }
+        }
         if !samples.isEmpty { try await store.save(samples) }
     }
 
-    private static func isEmpty(_ type: HKQuantityType, _ store: HKHealthStore) async throws -> Bool {
-        try await HKSampleQueryDescriptor(predicates: [.quantitySample(type: type)], sortDescriptors: [], limit: 1).result(for: store).isEmpty
+    private static func isEmpty(_ type: HKSampleType, _ store: HKHealthStore) async throws -> Bool {
+        try await HKSampleQueryDescriptor(predicates: [.sample(type: type)], sortDescriptors: [], limit: 1).result(for: store).isEmpty
     }
 }
 #endif

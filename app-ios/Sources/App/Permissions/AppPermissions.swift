@@ -7,7 +7,7 @@ import UserNotifications
 @MainActor
 enum AppPermissions {
     static let healthShare: Set<HKSampleType> = HealthData.shareTypes.union(WorkoutRecording.shareTypes).union(DietaryHealth.shareTypes)
-    static let healthRead: Set<HKObjectType> = HealthData.readTypes.union(WorkoutRecording.readTypes)
+    static let healthRead: Set<HKObjectType> = HealthData.readTypes.union(WorkoutRecording.readTypes).union([SleepLog.type])
 
     /// The prompts after Health's sheet, one at a time since the system shows one alert at once. Each returns
     /// immediately once answered, so calling this on every launch costs nothing. Live Activities have no request API:
