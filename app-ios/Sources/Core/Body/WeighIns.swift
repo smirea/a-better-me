@@ -1,6 +1,6 @@
 import Foundation
 
-struct HealthWeight: Hashable {
+struct HealthWeight: Codable, Hashable, Sendable {
     var date: Date
     var kg: Double
 }

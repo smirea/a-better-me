@@ -11,6 +11,8 @@ import { parseConfig } from './config';
 import { DATA_FILE } from './data-file';
 import { serveLiveRamble, type LiveRambleSetup } from './food/ramble-live';
 import { errorResponse } from './http';
+import { imagesRoute, moveSupplementImageRows } from './images';
+import { localBucket } from './local-bucket';
 import { SENTRY_DEFAULTS, withoutDedupe } from './sentry';
 import env from './env';
 
@@ -22,6 +24,9 @@ mkdirSync(dirname(DATA_FILE), { recursive: true });
 const driver = bunSqlite(DATA_FILE);
 const space = createSpace(driver, schema, config.space);
 space.migrate();
+// Beside the database, so a checkout's pictures go with its rows.
+const pictures = localBucket(`${DATA_FILE}.images`);
+while (await moveSupplementImageRows(driver, pictures));
 
 const publish = (head: number) => server.publish('live', JSON.stringify({ head }));
 const agent = agentApi({ space, driver, ownerToken: config.ownerToken, geminiApiKey: config.geminiApiKey, publish });
@@ -41,6 +46,7 @@ const server = Bun.serve<Socket>({
 		handle<undefined>(request, {
 			config,
 			report: Sentry,
+			images: request => imagesRoute(request, pictures),
 			async ramble(request, setup) {
 				if (server.upgrade(request, { data: { setup } })) return undefined;
 				return errorResponse(400, 'Expected a WebSocket upgrade');

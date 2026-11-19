@@ -72,8 +72,7 @@ struct SupplementEditor: View {
                 baseline = read
             }
             .task {
-                guard let editing, !picturesLoaded,
-                      let stored = await SupplementPictures.complete(editing.images, in: store.database.pool) else { return }
+                guard let editing, !picturesLoaded, let stored = await SupplementPictures.complete(editing.images) else { return }
                 let uploads = stored.compactMap { PhotoUpload(id: $0.id, jpeg: $0.jpeg) }
                 guard uploads.count == stored.count else { return }
                 photos.restore(uploads)
@@ -246,7 +245,7 @@ struct SupplementEditor: View {
         showErrors = true
         guard var supplement = draft.supplement(editing: editing) else { return }
         supplement.images = pictures
-        store.saveSupplement(supplement, adding: photos.photos.map { SupplementImage(id: $0.id, jpeg: $0.jpeg) })
+        store.saveSupplement(supplement, adding: photos.photos.map { NewPicture(id: $0.id, jpeg: $0.jpeg) })
         dismiss()
     }
 }

@@ -30,12 +30,15 @@ const template = {
 	updated_at: '2026-10-24T09:00:00.000Z',
 };
 
-test('sync, the live socket, and uploads need the owner token', async () => {
+test('sync, the live socket, uploads, and pictures need the owner token', async () => {
 	expect((await sync('a', 0, [], null)).status).toBe(401);
 	expect((await sync('a', 0, [], 'wrong')).status).toBe(401);
 	const live = new Request('http://api.test/api/live', { headers: { upgrade: 'websocket' } });
 	expect((await handle(live, app)).status).toBe(401);
 	expect((await handle(new Request('http://api.test/api/upload', { method: 'POST' }), app)).status).toBe(401);
+	const picture = 'http://api.test/api/images?id=0b0e7a52-6f0c-4b65-9d57-2a0d3c1e9f10';
+	expect((await handle(new Request(picture), app)).status).toBe(401);
+	expect((await handle(new Request(picture, { method: 'PUT', body: 'x' }), app)).status).toBe(401);
 });
 
 test('a template put by one client reaches another client as a full row', async () => {

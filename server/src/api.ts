@@ -1,4 +1,5 @@
 import { withBearer, type SyncResponse } from 'sync-engine/core';
+import { IMAGES_PATH } from '../../shared/images';
 import { isOwner } from './auth';
 import type { Config } from './config';
 import { FEEDBACK_ROUTE, feedbackAnswer, fileFeedbackIssue } from './feedback';
@@ -28,6 +29,8 @@ export type App<Upgraded = never> = {
 	report: Report;
 	engine(request: Request): Promise<Response | Upgraded>;
 	agent(request: Request): Promise<Response>;
+	/** Picture bytes (`images.ts`), after the owner check, between the request and the host's bucket. */
+	images(request: Request): Promise<Response>;
 	/** The live Ramble socket (`food/ramble-live.ts`), after the owner check and with the setup the settings allow. */
 	ramble(request: Request, setup: LiveRambleSetup): Promise<Response | Upgraded>;
 };
@@ -65,6 +68,10 @@ export async function handle<Upgraded = never>(request: Request, app: App<Upgrad
 			return feedbackAnswer(503, { message: 'Set GITHUB_TOKEN on the server to file feedback issues.' });
 		}
 		return reportFailure(route, await fileFeedbackIssue(request, app.config.githubToken), app.report);
+	}
+	if (url.pathname === IMAGES_PATH) {
+		if (!(await isOwner(request, app.config.ownerToken))) return unauthorized(request);
+		return reportFailure(route, await app.images(request), app.report);
 	}
 	if (route !== 'POST /api/sync' && route !== 'GET /api/live') {
 		if (url.pathname !== '/api' && !url.pathname.startsWith('/api/')) return error(404, 'Not found');

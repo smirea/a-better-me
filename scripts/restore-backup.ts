@@ -21,6 +21,8 @@ if (!path) throw new Error('Usage: bun scripts/restore-backup.ts <backup.json>')
 if (existsSync(file)) throw new Error(`${file} exists; stop the server and trash it first`);
 
 const backup = (await Bun.file(path).json()) as { at: string; tables: Record<string, ({ id: string } & Values)[]> };
+// A backup from before pictures moved to the bucket still carries their rows, which nothing reads any more.
+delete backup.tables.supplement_images;
 const unknown = Object.keys(backup.tables).filter(name => !schema.tables.some(table => table.name === name));
 if (unknown.length) throw new Error(`The backup has tables the schema lacks: ${unknown.join(', ')}`);
 

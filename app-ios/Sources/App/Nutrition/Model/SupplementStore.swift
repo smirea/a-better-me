@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 extension Supplement {
-    /// The library by name. Rows are small, since the pictures live in `supplement_images`.
+    /// The library by name. Rows are small, since a picture's bytes are a file.
     static let all = DatabaseQuery([Supplement]()) { db in
         try Supplement.fetchAll(db).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
@@ -20,32 +20,29 @@ extension Tag {
 
 extension LocalStore {
     /// Inserts or updates the supplement, whose `images` says which pictures it has. `pictures` holds the ones that may
-    /// be new: those it names and lacks are inserted, and stored ones it no longer names are deleted, in the same
-    /// transaction. A picture it names whose row has not synced yet is left to arrive.
-    func saveSupplement(_ supplement: Supplement, adding pictures: [SupplementImage] = []) {
+    /// be new: those it names and lacks are queued for upload before the row that lists them is written, and the files
+    /// of ones it no longer names are dropped.
+    func saveSupplement(_ supplement: Supplement, adding pictures: [NewPicture] = []) {
         write { try Self.save(supplement, adding: pictures, in: $0) }
     }
 
-    nonisolated static func save(_ supplement: Supplement, adding pictures: [SupplementImage] = [], in db: Database) throws {
+    nonisolated static func save(_ supplement: Supplement, adding pictures: [NewPicture] = [], in db: Database) throws {
         var saved = supplement
         saved.updatedAt = .now
         let stored = try Supplement.fetchOne(db, key: saved.key)?.images ?? []
-        for id in stored where !saved.images.contains(id) {
-            _ = try SupplementImage.deleteOne(db, key: SupplementImage.key(id))
-        }
         for picture in pictures where saved.images.contains(picture.id) && !stored.contains(picture.id) {
-            try put(picture, in: db)
+            try PictureFiles.shared.add(picture)
         }
         try put(saved, in: db)
+        for id in stored where !saved.images.contains(id) { PictureFiles.shared.remove(id) }
     }
 
     func deleteSupplement(_ id: UUID) {
         write { db in
             let key = Supplement.key(id)
-            for image in try Supplement.fetchOne(db, key: key)?.images ?? [] {
-                _ = try SupplementImage.deleteOne(db, key: SupplementImage.key(image))
-            }
+            let images = try Supplement.fetchOne(db, key: key)?.images ?? []
             _ = try Supplement.deleteOne(db, key: key)
+            for image in images { PictureFiles.shared.remove(image) }
         }
     }
 

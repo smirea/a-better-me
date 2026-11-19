@@ -3,6 +3,8 @@ import { createSpace, handleSync, type SyncResponse } from 'sync-engine/core';
 import { schema } from '../../shared/db/schema';
 import { agentApi } from './agent';
 import { handle, type App, type Report } from './api';
+import { imagesRoute } from './images';
+import { localBucket } from './local-bucket';
 import { parseConfig } from './config';
 
 const silent: Report = { captureMessage: () => undefined, captureException: () => undefined };
@@ -13,6 +15,7 @@ export function testServer(options: { report?: Report; clock?: () => Date } = {}
 	const space = createSpace(driver, schema);
 	space.migrate();
 	const config = parseConfig({});
+	const bucket = localBucket(null);
 	const agent = (geminiApiKey: string | null) =>
 		agentApi({
 			space,
@@ -26,6 +29,7 @@ export function testServer(options: { report?: Report; clock?: () => Date } = {}
 		config,
 		report: options.report ?? silent,
 		engine: request => handleSync(space, request),
+		images: request => imagesRoute(request, bucket),
 		ramble: async () => new Response('A test server opens no sockets', { status: 501 }),
 		agent: agent(null),
 	};
@@ -60,5 +64,5 @@ export function testServer(options: { report?: Report; clock?: () => Date } = {}
 	/** Pushes `writes` the way the phone does, from the current head. */
 	const phoneWrites = (writes: unknown[]) => sync(space.head(), writes);
 
-	return { space, config, app, agent, call, ok, phone, phoneWrites };
+	return { space, driver, bucket, config, app, agent, call, ok, phone, phoneWrites };
 }

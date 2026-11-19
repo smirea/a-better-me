@@ -24,25 +24,33 @@ struct StrategyData {
     }
 }
 
+/// What the Strategy inputs are computed from. A screen recomputes only when one of these changed.
+private struct StrategySources: Equatable {
+    var weighIns: [WeighIn]
+    var log: [NutritionLogDay]
+    var settings: NutritionSettings
+    var profile: ProfileSettings
+    var plans: [NutritionPlan]
+    var steps: [DatedValue]
+    var workouts: [DatedValue]
+    var today: CalendarDay
+
+    func inputs() -> StrategyInputs {
+        StrategyInputs.make(
+            weighIns: weighIns, log: log, settings: settings, profile: profile, plans: plans, steps: steps, workouts: workouts, today: today, calendar: .current
+        )
+    }
+}
+
+/// The last inputs any Strategy screen computed, with what they came from, so opening a screen again shows them in its
+/// first frame and recomputes only when a source changed since.
+@MainActor
+private enum StrategyResults {
+    static var last: (sources: StrategySources, inputs: StrategyInputs)?
+}
+
 struct StrategyDataReader<Content: View>: View {
     @ViewBuilder let content: (StrategyData) -> Content
-
-    private struct Sources: Equatable {
-        var weighIns: [WeighIn]
-        var log: [NutritionLogDay]
-        var settings: NutritionSettings
-        var profile: ProfileSettings
-        var plans: [NutritionPlan]
-        var steps: [DatedValue]
-        var workouts: [DatedValue]
-        var today: CalendarDay
-
-        func inputs() -> StrategyInputs {
-            StrategyInputs.make(
-                weighIns: weighIns, log: log, settings: settings, profile: profile, plans: plans, steps: steps, workouts: workouts, today: today, calendar: .current
-            )
-        }
-    }
 
     @Environment(\.scenePhase) private var scenePhase
     @Environment(HealthData.self) private var health
@@ -51,18 +59,18 @@ struct StrategyDataReader<Content: View>: View {
     @Observe(AppSettings.current) private var settings
     @Observe(BodyMetric.series(.steps)) private var importedSteps
     @Observe(WorkoutSession.activeMinutes) private var workouts
-    @State private var inputs: StrategyInputs?
+    @State private var inputs = StrategyResults.last?.inputs
 
     var body: some View {
         // Reading `scenePhase` re-renders on return to the app, so `today` moves past midnight.
         let _ = scenePhase
-        let sources = Sources(
+        let sources = StrategySources(
             weighIns: health.weighIns, log: log, settings: settings.nutrition, profile: settings.profile, plans: plans,
             steps: NutritionExpenditure.steps(health: health.steps, imported: importedSteps, calendar: .current), workouts: workouts,
             today: .today
         )
-        // The maintenance estimate screens and fits the whole history, so it is computed off the main thread; until the
-        // first result lands the page shows a spinner, and later changes keep the previous result on screen.
+        // The maintenance estimate screens and fits the whole history, so it is computed off the main thread. Only the
+        // launch's first result shows a spinner: later changes, and later visits, keep the previous result on screen.
         Group {
             if let inputs {
                 content(StrategyData(plans: plans, settings: settings, inputs: inputs))
@@ -71,8 +79,13 @@ struct StrategyDataReader<Content: View>: View {
             }
         }
         .task(id: sources) {
+            if let last = StrategyResults.last, last.sources == sources {
+                inputs = last.inputs
+                return
+            }
             let computed = await Task.detached(priority: .userInitiated) { sources.inputs() }.value
             guard !Task.isCancelled else { return }
+            StrategyResults.last = (sources, computed)
             inputs = computed
         }
     }

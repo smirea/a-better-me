@@ -5,6 +5,7 @@ import os
 
 /// Read live and never copied into the database; see docs/decisions/workouts.md. HealthKit hides read denial, so a
 /// denied store reads as no data. The app's own weigh-ins merge in here, so the dashboard has one weigh-in source.
+/// The last read is kept in `HealthSnapshot` and shown from launch until Health answers.
 @MainActor @Observable
 final class HealthData {
     private(set) var weighIns: [WeighIn] = []
@@ -18,7 +19,8 @@ final class HealthData {
     @ObservationIgnored private var weights: [HealthWeight] = []
     @ObservationIgnored private var logged: [BodyWeight] = []
 
-    /// Whether Health answered once, available or not. The steps widget keeps its last file until then.
+    /// Whether Health answered once this launch, available or not; the snapshot a launch starts from does not count.
+    /// The steps widget keeps its last file until then.
     private(set) var hasRead = false
 
     /// Flips when HealthKit says it should ask, which makes `healthDataAccessRequest` present its sheet.
@@ -29,6 +31,9 @@ final class HealthData {
 
     /// The app's own weigh-ins merge into Health's, so it observes them itself.
     init(store localStore: LocalStore) {
+        if let last = HealthSnapshot.load() {
+            update(weights: last.weights, steps: last.steps, flights: last.flights, distance: last.distance, logged: [])
+        }
         loggedObservation = ValueObservation.trackingConstantRegion { try BodyWeight.all.fetch($0) }
             .removeDuplicates()
             .start(
@@ -84,8 +89,11 @@ final class HealthData {
             async let distance = readDailySums(Self.distanceWalkingRunning, unit: .meter())
             let today = Calendar.current.startOfDay(for: .now)
             let read = PhonePedometer.merge(await PhonePedometer.steps(from: today, to: .now), into: try await steps, today: today)
-            update(weights: try await weights, steps: read, flights: try await flights, distance: try await distance, logged: logged)
+            let snapshot = HealthSnapshot(weights: try await weights, steps: read, flights: try await flights, distance: try await distance)
+            let changed = snapshot != HealthSnapshot(weights: self.weights, steps: self.steps, flights: self.flights, distance: self.distance)
+            update(weights: snapshot.weights, steps: snapshot.steps, flights: snapshot.flights, distance: snapshot.distance, logged: logged)
             hasRead = true
+            if changed { Task.detached(priority: .utility) { snapshot.save() } }
         } catch {
             Self.log.error("Reading HealthKit failed: \(String(describing: error))")
         }
