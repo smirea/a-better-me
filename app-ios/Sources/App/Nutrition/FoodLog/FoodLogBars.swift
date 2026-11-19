@@ -128,8 +128,8 @@ private struct SelectionBar: View {
     }
 }
 
-/// Copy or Move's targets, which stay up while the owner changes days. Paste Inline turns every hour's or section's +
-/// into a paste button on whichever day is shown; To Now, To Today, and To Tomorrow name the same days from any.
+/// Copy or Move's targets, which stay up while the owner changes days. Every hour's or section's + is a paste arrow on
+/// whichever day is shown meanwhile (`SlotRow`); To Now, To Today, and To Tomorrow name the same days from any.
 private struct PasteBar: View {
     private enum Prompt: Identifiable {
         case dateTime, dates
@@ -141,32 +141,22 @@ private struct PasteBar: View {
 
     @Environment(FoodLogState.self) private var state
     @Environment(LocalStore.self) private var store
-    @Observe(AppSettings.current) private var settings
     @State private var prompt: Prompt?
 
     var body: some View {
-        let title = pending.action == .copy ? "Copy" : "Move"
+        let title = pending.action.title
         FlowLayout {
             BarTitle(title: title, count: pending.entries.count, systemImage: "chevron.left") { state.back() }
-            if pending.inline {
-                Text(settings.nutrition.timeline.display == .sections ? "Tap a section to paste" : "Tap an hour to paste")
-                    .font(AppFont.chip)
-                    .padding(.horizontal, 16)
-                    .frame(height: 44)
-                    .glassEffect(.regular, in: .capsule)
-            } else {
-                Group {
-                    Button("To Now") { paste(.now) }
-                    Button("To Today") { paste(.today) }
-                    Button("To Tomorrow") { paste(.tomorrow) }
-                    if pending.action == .copy {
-                        Button("To Dates") { prompt = .dates }
-                    }
-                    Button("To Date & Time") { prompt = .dateTime }
-                    Button("Paste Inline") { state.pending?.inline = true }
+            Group {
+                Button("To Now") { paste(.now) }
+                Button("To Today") { paste(.today) }
+                Button("To Tomorrow") { paste(.tomorrow) }
+                if pending.action == .copy {
+                    Button("To Dates") { prompt = .dates }
                 }
-                .chipButton()
+                Button("To Date & Time") { prompt = .dateTime }
             }
+            .chipButton()
         }
         .sheet(item: $prompt) { prompt in
             switch prompt {
