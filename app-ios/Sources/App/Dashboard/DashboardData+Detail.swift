@@ -4,7 +4,8 @@ enum DashboardRoute: Hashable {
     case workouts, weightTrend, scaleWeight, steps
     case muscle(Muscle, MuscleMetric)
     case exercise(ExerciseID, ExerciseChartMetric)
-    case allMuscles, allExercises, customize, levels, muscleLevels(Muscle)
+    case allMuscles, allExercises, settings, levels, muscleLevels(Muscle)
+    case ping(UUID)
     case expenditure, energyBalance, goalProgress, foodLogging, nutritionData
     case nutrient(NutrientID), macros, allNutrition
     case bodyMetric(BodyMetricCard), allBodyMetrics
@@ -210,7 +211,7 @@ extension DashboardData {
             return macrosDetail
         case let .bodyMetric(card):
             return bodyMetricDetail(card)
-        case .allMuscles, .allExercises, .customize, .goalProgress, .foodLogging, .nutritionData, .allNutrition, .allBodyMetrics, .levels, .muscleLevels:
+        case .allMuscles, .allExercises, .settings, .ping, .goalProgress, .foodLogging, .nutritionData, .allNutrition, .allBodyMetrics, .levels, .muscleLevels:
             preconditionFailure("\(route) is not a metric detail")
         }
     }

@@ -40,11 +40,13 @@ struct MiniBars: View {
     var colors: [Color]?
     /// Drawn as a dashed rule, and the scale reaches it.
     var goal: Double?
+    /// The value a full-height bar stands for, when the scale is fixed instead of fitted, as a range ping's steps.
+    var top: Double?
 
     var body: some View {
         Canvas { context, size in
             guard !values.isEmpty else { return }
-            let top = max(values.max() ?? 0, goal ?? 0, 1)
+            let top = top ?? max(values.max() ?? 0, goal ?? 0, 1)
             let band = size.width / CGFloat(values.count)
             for (index, value) in values.enumerated() {
                 let height = size.height * value / top
@@ -95,9 +97,20 @@ struct MiniLine: View {
     }
 }
 
+/// Thirty days as dots, oldest first. A level is how strongly a day draws, from 0 for an empty day to 1, so a habit is
+/// on or off and a count shades by how much.
 struct DotGrid: View {
-    let days: [Bool]
+    let levels: [Double]
     let color: Color
+
+    init(levels: [Double], color: Color) {
+        self.levels = levels
+        self.color = color
+    }
+
+    init(days: [Bool], color: Color) {
+        self.init(levels: days.map { $0 ? 1 : 0 }, color: color)
+    }
 
     var body: some View {
         // Each dot centers in a flexible column, so ten fit a half-width card at any screen size.
@@ -106,8 +119,9 @@ struct DotGrid: View {
                 GridRow {
                     ForEach(0..<10, id: \.self) { column in
                         let index = row * 10 + column
+                        let level = levels.indices.contains(index) ? levels[index] : 0
                         RoundedRectangle(cornerRadius: 2)
-                            .fill(days.indices.contains(index) && days[index] ? color : Theme.surfaceRaised)
+                            .fill(level > 0 ? color.opacity(0.3 + 0.7 * level) : Theme.surfaceRaised)
                             .frame(width: 9, height: 9)
                             .frame(maxWidth: .infinity)
                     }

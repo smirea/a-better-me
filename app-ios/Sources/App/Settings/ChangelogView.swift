@@ -1,7 +1,7 @@
 import Feedback
 import SwiftUI
 
-/// More > General > Changelog: one section per day, newest first, under a centered title between two rules. Entries
+/// Settings > General > Changelog: one section per day, newest first, under a centered title between two rules. Entries
 /// draw straight on the page, without the usual card, as the owner asked: a build and time line, the title across the
 /// full width, the description, and a link per task, named after it.
 struct ChangelogView: View {

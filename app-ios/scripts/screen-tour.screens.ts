@@ -7,16 +7,28 @@ const quote = (label: string) => `'label="${label}"'`;
 const tap = (label: string) => [`wait ${quote(label)} 8000`, `press ${quote(label)}`];
 // For a label a full-screen cover also names its window by, such as the live workout's Workout Options.
 const tapButton = (label: string) => [`wait ${quote(label)} 8000`, `press 'role="button" label="${label}"'`];
-const tapTab = (tab: 'Nutrition' | 'Workout' | 'More' | 'New') => [`press 'role="button" label="${tab}"'`, 'wait 800'];
+const tapTab = (tab: 'Nutrition' | 'Workout' | 'Pings' | 'New') => [`press 'role="button" label="${tab}"'`, 'wait 800'];
 const scrollTo = (label: string) => [`scroll down --until ${quote(label)}`];
-const more = (row: string) => [
-	...tapTab('More'),
+// Settings opens from the gear on the Dashboard, where every path starts.
+const openSettings = [...tap('Settings'), 'wait 800'];
+// A row is pressed as a cell: the Dashboard under Settings holds buttons with the same labels (Levels, Workouts).
+const settings = (row: string) => [
+	...openSettings,
 	...(bottomRows.has(row) ? ['scroll bottom', 'wait 500'] : []),
-	...tap(row),
+	`wait ${quote(row)} 8000`,
+	`press 'role="cell" label="${row}"'`,
 ];
 // The trailing toolbar menu of a tab root (Day Options on the Food Log, Workout Tab Options on the Workout tab).
 const trailingToolbarButton = ['press 364 84', 'wait 800'];
-const bottomRows = new Set(['Exercises', 'Gym Profiles', 'Data Visibility', 'API Tokens']);
+const bottomRows = new Set([
+	'Levels',
+	'Workout History',
+	'Workout',
+	'Exercises',
+	'Gym Profiles',
+	'Data Visibility',
+	'API Tokens',
+]);
 // The live workout's menu reads as a button or a popup button from one launch to the next, so it is tapped by position.
 const discardWorkout = [
 	'wait \'label="Workout Options"\' 8000',
@@ -40,7 +52,7 @@ export const screens: Screen[] = [
 	{ name: 'add-choose', steps: tapTab('New') },
 
 	{ name: 'dashboard', steps: ['shot top', ...scrolled(1), 'shot mid', ...scrolled(2)] },
-	{ name: 'dashboard-customize', steps: [...tap('Customize Dashboard')] },
+	{ name: 'dashboard-customize', steps: settings('Dashboard') },
 	{ name: 'dashboard-levels', steps: [...tap('Levels'), 'wait 1000'] },
 	{ name: 'dashboard-workouts-detail', steps: [...scrollTo('Workouts'), ...tap('Workouts'), 'wait 1000'] },
 	{
@@ -54,6 +66,21 @@ export const screens: Screen[] = [
 		steps: [`scroll down --until 'label="See All Nutrition"'`, ...tap('See All Nutrition')],
 	},
 	{ name: 'dashboard-see-all-body-metrics', steps: ['scroll bottom', 'wait 600', 'press 358 331'] },
+
+	{ name: 'pings', steps: tapTab('Pings') },
+	// Mood's labels fit side by side, Sleep Quality's take a row each, and Water shows a boolean's note.
+	{
+		name: 'pings-expanded',
+		steps: [...tapTab('Pings'), ...tap('Mood'), ...tap('Water'), ...tap('Sleep Quality'), 'wait 600'],
+	},
+	{ name: 'pings-picked', steps: [...tapTab('Pings'), ...tap('Mood 4, Good'), ...tap('Log Water'), 'wait 600'] },
+	{ name: 'ping-history', steps: [...tapTab('Pings'), ...tap('Mood'), ...tap('Mood history'), 'wait 1000'] },
+	{ name: 'pings-manage', steps: [...tapTab('Pings'), ...tap('Edit Pings')] },
+	{
+		name: 'ping-editor',
+		steps: [...tapTab('Pings'), ...tap('Edit Pings'), `press 'id="ping-Mood"'`, 'wait 800', 'shot top', ...scrolled(1)],
+	},
+	{ name: 'ping-new', steps: [...tapTab('Pings'), ...tapTab('New')] },
 
 	{ name: 'foodlog', steps: tapTab('Nutrition') },
 	// Swipes the timeline back to yesterday, which the seed marks incomplete with edited totals, beside the page dots.
@@ -87,45 +114,48 @@ export const screens: Screen[] = [
 		after: discardWorkout,
 	},
 
-	{ name: 'more', steps: [...tapTab('More'), 'shot top', ...scrolled(2)] },
-	{ name: 'levels', steps: more('Levels') },
-	{ name: 'strategy', steps: [...more('Strategy'), 'shot top', ...scrolled(1)] },
-	{ name: 'settings-units', steps: more('Units') },
-	{ name: 'settings-profile', steps: more('Profile') },
-	{ name: 'changelog', steps: [...more('Changelog'), 'shot top', ...scrolled(2)] },
+	{ name: 'settings', steps: [...openSettings, 'shot top', ...scrolled(2)] },
+	{ name: 'levels', steps: settings('Levels') },
+	{ name: 'strategy', steps: [...settings('Strategy'), 'shot top', ...scrolled(1)] },
+	{ name: 'settings-units', steps: settings('Units') },
+	{ name: 'settings-profile', steps: settings('Profile') },
+	{ name: 'changelog', steps: [...settings('Changelog'), 'shot top', ...scrolled(2)] },
 	{
 		name: 'settings-workout',
-		steps: [...tapTab('More'), 'scroll bottom', 'wait 500', `press 'role="cell" label="Workout"'`],
+		steps: [...openSettings, 'scroll bottom', 'wait 500', `press 'role="cell" label="Workout"'`],
 	},
-	{ name: 'exercises', steps: more('Exercises') },
-	{ name: 'gym-profiles', steps: more('Gym Profiles') },
-	{ name: 'settings-food-log', steps: more('Food Log') },
-	{ name: 'settings-expenditure', steps: more('Expenditure') },
-	{ name: 'settings-strategy', steps: [...more('Strategy'), 'press 362 84', 'wait 800', ...tap('Strategy Settings')] },
-	{ name: 'foods-recipes', steps: more('Foods & Recipes') },
-	{ name: 'supplements', steps: [...more('Supplements'), 'shot top', ...scrolled(1)] },
+	{ name: 'exercises', steps: settings('Exercises') },
+	{ name: 'gym-profiles', steps: settings('Gym Profiles') },
+	{ name: 'settings-food-log', steps: settings('Food Log') },
+	{ name: 'settings-expenditure', steps: settings('Expenditure') },
+	{
+		name: 'settings-strategy',
+		steps: [...settings('Strategy'), 'press 362 84', 'wait 800', ...tap('Strategy Settings')],
+	},
+	{ name: 'foods-recipes', steps: settings('Foods & Recipes') },
+	{ name: 'supplements', steps: [...settings('Supplements'), 'shot top', ...scrolled(1)] },
 	// The seed's one supplement with two pictures, a tag, and a product page.
 	{
 		name: 'supplement',
-		steps: [...more('Supplements'), ...multivitamin, 'wait 600'],
+		steps: [...settings('Supplements'), ...multivitamin, 'wait 600'],
 	},
 	{
 		name: 'supplement-edit',
-		steps: [...more('Supplements'), ...multivitamin, ...tapButton('Edit'), 'wait 1000'],
+		steps: [...settings('Supplements'), ...multivitamin, ...tapButton('Edit'), 'wait 1000'],
 	},
 	{
 		name: 'supplement-new',
-		steps: [...more('Supplements'), ...tap('New Supplement'), 'wait 800', 'shot top', ...scrolled(1)],
+		steps: [...settings('Supplements'), ...tap('New Supplement'), 'wait 800', 'shot top', ...scrolled(1)],
 	},
-	{ name: 'settings-health', steps: more('Apple Health') },
-	{ name: 'settings-data-visibility', steps: more('Data Visibility') },
-	{ name: 'settings-api-tokens', steps: more('API Tokens') },
+	{ name: 'settings-health', steps: settings('Apple Health') },
+	{ name: 'settings-data-visibility', steps: settings('Data Visibility') },
+	{ name: 'settings-api-tokens', steps: settings('API Tokens') },
 	{ name: 'dashboard-food-logging', steps: [...scrollTo('Food Logging'), ...tap('Food Logging'), 'wait 1000'] },
 	{ name: 'dashboard-scale-weight', steps: ['scroll bottom', 'wait 500', ...tap('Scale Weight'), 'wait 1000'] },
 	{ name: 'dashboard-steps', steps: ['scroll bottom', 'wait 600', 'press 56 617', 'wait 1000'] },
 	{
 		name: 'dashboard-add-remove',
-		steps: [...tap('Customize Dashboard'), ...scrollTo('Add or Remove Nutrition'), ...tap('Add or Remove Nutrition')],
+		steps: [...settings('Dashboard'), ...scrollTo('Add or Remove Nutrition'), ...tap('Add or Remove Nutrition')],
 	},
 	{ name: 'foodlog-entry-editor', steps: [...tapTab('Nutrition'), ...tap('Overnight Oats')] },
 	{
@@ -138,12 +168,12 @@ export const screens: Screen[] = [
 	},
 	{
 		name: 'foodlog-strategy-wizard',
-		steps: [...more('Strategy'), 'press 362 84', 'wait 800', ...tap('Edit Goal'), 'wait 1000'],
+		steps: [...settings('Strategy'), 'press 362 84', 'wait 800', ...tap('Edit Goal'), 'wait 1000'],
 	},
 	{
 		name: 'strategy-maintenance-breakdown',
 		steps: [
-			...more('Strategy'),
+			...settings('Strategy'),
 			'press 362 84',
 			'wait 800',
 			...tap('Edit Goal'),
@@ -154,7 +184,7 @@ export const screens: Screen[] = [
 	},
 	{
 		name: 'foodlog-nutrient-goals',
-		steps: [...more('Strategy'), 'press 362 84', 'wait 800', ...tap('Nutrient Goals')],
+		steps: [...settings('Strategy'), 'press 362 84', 'wait 800', ...tap('Nutrient Goals')],
 	},
 	{ name: 'add-weight', steps: [...tapTab('Nutrition'), ...tapTab('New'), ...tap('Weight')] },
 	{ name: 'add-edit-day', steps: [...tapTab('Nutrition'), ...tapTab('New'), ...tap('Edit Day')] },
@@ -164,9 +194,9 @@ export const screens: Screen[] = [
 	},
 	{
 		name: 'foods-recipe-detail',
-		steps: [...more('Foods & Recipes'), 'press 80 185', 'wait 600', 'press 200 260', 'wait 1000'],
+		steps: [...settings('Foods & Recipes'), 'press 80 185', 'wait 600', 'press 200 260', 'wait 1000'],
 	},
-	{ name: 'foods-create-food', steps: [...more('Foods & Recipes'), 'press 361 84', 'wait 800', 'press 260 93'] },
+	{ name: 'foods-create-food', steps: [...settings('Foods & Recipes'), 'press 361 84', 'wait 800', 'press 260 93'] },
 	{ name: 'workout-program-editor', steps: [...tapTab('Workout'), ...tap('Upper Lower, 3 workouts')] },
 	{
 		name: 'workout-detail',
@@ -180,7 +210,7 @@ export const screens: Screen[] = [
 	{
 		name: 'workout-summary',
 		// Rows name their session's date, which the seed derives from the launch time, so the first row is tapped by position.
-		steps: [...more('Workout History'), 'wait 1000', 'press 200 200', 'wait 1200'],
+		steps: [...settings('Workout History'), 'wait 1000', 'press 200 200', 'wait 1200'],
 	},
 	{ name: 'workout-create', steps: [...tapTab('Workout'), ...tapTab('New'), ...tap('New Workout')] },
 	{ name: 'workout-new-program', steps: [...tapTab('Workout'), ...tapTab('New'), ...tap('New Program')] },
@@ -191,20 +221,20 @@ export const screens: Screen[] = [
 		after: [...tapButton('Close'), ...discardWorkout],
 	},
 	// The first muscle row, whichever muscle the seed's sets put there.
-	{ name: 'levels-muscle', steps: [...more('Levels'), 'wait 1000', 'press 200 667'] },
-	{ name: 'gym-editor', steps: [...more('Gym Profiles'), ...tap('Your Gym')] },
-	{ name: 'gym-new', steps: [...more('Gym Profiles'), ...tap('Add New Gym Profile')] },
-	{ name: 'exercises-custom', steps: [...more('Exercises'), ...tap('Create Custom Exercise')] },
+	{ name: 'levels-muscle', steps: [...settings('Levels'), 'wait 1000', 'press 200 667'] },
+	{ name: 'gym-editor', steps: [...settings('Gym Profiles'), ...tap('Your Gym')] },
+	{ name: 'gym-new', steps: [...settings('Gym Profiles'), ...tap('Add New Gym Profile')] },
+	{ name: 'exercises-custom', steps: [...settings('Exercises'), ...tap('Create Custom Exercise')] },
 	{
 		name: 'settings-rest-timer',
-		steps: [...tapTab('More'), `press 'role="cell" label="Workout"'`, ...tap('Rest Timer')],
+		steps: [...settings('Workout'), ...tap('Rest Timer')],
 	},
-	{ name: 'settings-warm-up', steps: [...tapTab('More'), `press 'role="cell" label="Workout"'`, ...tap('Warm-Up')] },
+	{ name: 'settings-warm-up', steps: [...settings('Workout'), ...tap('Warm-Up')] },
 	{
 		name: 'settings-smart-progression',
-		steps: [...tapTab('More'), `press 'role="cell" label="Workout"'`, ...tap('Smart Progression')],
+		steps: [...settings('Workout'), ...tap('Smart Progression')],
 	},
-	{ name: 'settings-bmr', steps: [...more('Expenditure'), ...tap('BMR Equation')] },
-	{ name: 'settings-hour-range', steps: [...more('Food Log'), ...tap('Hour Range')] },
-	{ name: 'settings-nutrient-visibility', steps: [...more('Data Visibility'), ...tap('Nutrient Visibility')] },
+	{ name: 'settings-bmr', steps: [...settings('Expenditure'), ...tap('BMR Equation')] },
+	{ name: 'settings-hour-range', steps: [...settings('Food Log'), ...scrollTo('Hour Range'), ...tap('Hour Range')] },
+	{ name: 'settings-nutrient-visibility', steps: [...settings('Data Visibility'), ...tap('Nutrient Visibility')] },
 ];

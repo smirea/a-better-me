@@ -389,6 +389,38 @@ const tags = sqliteTable('tags', {
 	updatedAt: text('updated_at').notNull(),
 });
 
+export const PING_KINDS = ['boolean', 'range'] as const;
+export const PING_MAX_STEPS = 10;
+
+/**
+ * Something the owner logs in a tap: an event that happened (a glass of water) or a step on a scale (mood 1 to 5).
+ * `steps` is a range ping's step labels in order, one string per step and empty for a step without a label, so
+ * its length is the number of steps; a boolean ping has none. `position` orders the pings everywhere they list.
+ */
+const pings = sqliteTable('pings', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	/** An SF Symbol name. */
+	icon: text('icon').notNull().default('circle'),
+	kind: text('kind', { enum: PING_KINDS }).notNull().default('boolean'),
+	steps: json('steps').notNull().default([]),
+	position: integer('position').notNull().default(0),
+	createdAt: text('created_at').notNull(),
+	updatedAt: text('updated_at').notNull(),
+});
+
+/**
+ * One time a ping was logged. `value` is the step of a range ping, from 1, and 1 for a boolean ping, so a day's
+ * count is its rows. Deleting a ping deletes its logs on the device that deletes it.
+ */
+const pingLogs = sqliteTable('ping_logs', {
+	id: text('id').primaryKey(),
+	pingId: text('ping_id').notNull(),
+	loggedAt: text('logged_at').notNull(),
+	value: integer('value').notNull().default(1),
+	note: text('note').notNull().default(''),
+});
+
 /** The order here is the order of the generated Swift schema and of a snapshot pull. */
 export const SYNCED_TABLES = {
 	workout_templates: workoutTemplates,
@@ -414,6 +446,8 @@ export const SYNCED_TABLES = {
 	supplements,
 	supplement_images: supplementImages,
 	tags,
+	pings,
+	ping_logs: pingLogs,
 } as const;
 
 export type SyncedTable = keyof typeof SYNCED_TABLES;
@@ -580,5 +614,13 @@ export const schema = defineSchema({
 		},
 		supplement_images: { jpeg: supplementJpeg },
 		tags: { name: z.string().min(1), color: z.string().regex(/^#[0-9a-f]{6}$/i) },
+		pings: {
+			name: z.string().min(1),
+			icon: z.string().min(1),
+			kind: z.enum(PING_KINDS),
+			steps: z.array(z.string()).max(PING_MAX_STEPS),
+			position: count,
+		},
+		ping_logs: { value: z.number().int().min(1).max(PING_MAX_STEPS) },
 	},
 });

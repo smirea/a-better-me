@@ -93,7 +93,7 @@ enum StrategyRoute: Hashable {
     }
 }
 
-/// Strategy, pushed from More: the program and its week of targets, the goal and its progress, the weekly check-in,
+/// Strategy, pushed from Settings: the program and its week of targets, the goal and its progress, the weekly check-in,
 /// and the goal and program history.
 struct StrategyView: View {
     @Environment(LocalStore.self) private var store

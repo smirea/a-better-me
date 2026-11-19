@@ -3,13 +3,13 @@ import SwiftUI
 import UIKit
 
 enum AppTab: Hashable {
-    case dashboard, nutrition, workout, more, add
+    case dashboard, nutrition, workout, pings, add
 }
 
-/// What "+" opens from the root: the New Workout sheet, or on Dashboard a choice between the halves. On Nutrition "+"
-/// opens the Food Log's scanner instead, and on More it goes back.
+/// What "+" opens from the root: the New Workout sheet, New Ping on Pings, or on Dashboard a choice between the halves
+/// over today's pings. On Nutrition "+" opens the Food Log's scanner instead.
 enum AddSheet: Identifiable {
-    case food, workout, choose
+    case food, workout, ping, choose
 
     var id: Self { self }
 }
@@ -32,9 +32,7 @@ struct RootView: View {
     @Observe(AppSettings.summaryNutrients) private var summaryNutrients
     @Environment(HealthData.self) private var health
     @State private var tab = AppTab.dashboard
-    /// The tab More was opened from, where its back button returns. Dashboard until another tab opens More.
-    @State private var beforeMore = AppTab.dashboard
-    @State private var dashboardPath: [DashboardRoute] = []
+    @State private var dashboardPath = NavigationPath()
     @State private var sheet: RootSheet?
     /// Here rather than in the tab, so "+" can open the scanner on the day the Food Log shows.
     @State private var foodLog = FoodLogState()
@@ -46,23 +44,21 @@ struct RootView: View {
             Tab("Dashboard", systemImage: "square.grid.2x2", value: .dashboard) { DashboardTab(path: $dashboardPath).tint(Theme.textPrimary) }
             Tab("Nutrition", systemImage: "fork.knife", value: .nutrition) { FoodLogTab(state: foodLog).tint(Theme.textPrimary) }
             Tab("Workout", systemImage: "dumbbell", value: .workout) { WorkoutTab().tint(Theme.textPrimary) }
-            Tab("More", systemImage: "ellipsis", value: .more) { MoreTab().tint(Theme.textPrimary) }
-            Tab(tab == .more ? "Back" : "New", systemImage: tab == .more ? "chevron.backward" : "plus", value: .add, role: .prominent) { Color.clear }
+            Tab("Pings", systemImage: "hand.tap", value: .pings) { PingsTab().tint(Theme.textPrimary) }
+            Tab("New", systemImage: "plus", value: .add, role: .prominent) { Color.clear }
         }
         .tint(Theme.accent)
         .tabViewBottomAccessory(isEnabled: activeSessionID != nil) { ActiveSessionBar() }
         .resolvingWorkoutStart()
         .onChange(of: tab) { previous, current in
-            if current == .more { beforeMore = previous }
-            // "+" acts like a button: it acts for the previous tab and keeps that tab selected, or on More returns to the
-            // tab More was opened from.
+            // "+" acts like a button: it acts for the previous tab and keeps that tab selected.
             guard current == .add else { return }
-            tab = previous == .more ? beforeMore : previous
+            tab = previous
             switch previous {
             case .nutrition: foodLog.requestLog(start: .scan)
             case .workout: sheet = .add(.workout)
             case .dashboard, .add: sheet = .add(.choose)
-            case .more: break
+            case .pings: sheet = .add(.ping)
             }
         }
         .sheet(item: $sheet) { sheet in
@@ -117,7 +113,7 @@ struct RootView: View {
         case .dashboard: tab = .dashboard
         case .steps:
             tab = .dashboard
-            dashboardPath = [.steps]
+            dashboardPath = NavigationPath([DashboardRoute.steps])
         case .foodLog: tab = .nutrition
         case .weight: sheet = .weight
         case .newWorkout:
@@ -132,24 +128,37 @@ struct RootView: View {
 }
 
 /// "+" from Dashboard asks which half to add to, then becomes that half's sheet in place: Log Food opens the scanner, as
-/// "+" does on Nutrition.
+/// "+" does on Nutrition. Today's pings list under the two, logged from here without leaving the Dashboard.
 private struct AddSheetView: View {
     @State var sheet: AddSheet
+    @Environment(\.dismiss) private var dismiss
+    @Observe(Ping.count) private var pingCount
 
     var body: some View {
         switch sheet {
         case .food: LoggerSheet(start: LoggerStart(tab: .scan))
         case .workout: NewWorkoutSheet()
+        case .ping: PingEditor()
         case .choose:
-            VStack(spacing: 12) {
-                Text("Add").font(AppFont.headline())
-                HStack(spacing: 12) {
-                    choice("Log Food", systemImage: "fork.knife") { sheet = .food }
-                    choice("Workout", systemImage: "dumbbell") { sheet = .workout }
+            let today = Calendar.current.startOfDay(for: .now)
+            NavigationStack {
+                PingLogger(today: today, onLogged: { dismiss() }) {
+                    HStack(spacing: 12) {
+                        choice("Log Food", systemImage: "fork.knife") { sheet = .food }
+                        choice("Workout", systemImage: "dumbbell") { sheet = .workout }
+                    }
+                } empty: {
+                    EmptyView()
+                }
+                .detailTitle("Add")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(role: .close) { dismiss() }
+                    }
                 }
             }
-            .padding(Theme.margin)
-            .presentationDetents([.height(190)])
+            .presentationDetents(pingCount == 0 ? [.height(210)] : [.medium, .large])
+            .feedback("Add")
         }
     }
 
