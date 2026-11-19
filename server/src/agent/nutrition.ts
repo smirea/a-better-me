@@ -483,6 +483,7 @@ export const nutritionRoutes: Route[] = [
 			const row: RowOf<'food_favorites'> = {
 				id: fresh(db, 'food_favorites', id),
 				...portion(db, input),
+				alterations: null,
 				createdAt: now,
 			};
 			const existing = db.all('food_favorites', '1 ORDER BY created_at, id');

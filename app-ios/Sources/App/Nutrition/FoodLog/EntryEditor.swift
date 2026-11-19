@@ -217,7 +217,7 @@ struct EntryEditor: View {
                     self.favorite = nil
                 } else {
                     let id = UUID()
-                    store.addFavorite(FoodPortion(named, serving: serving), id: id)
+                    store.addFavorite(FoodPortion(named, serving: serving), alterations: entry.alterations, id: id)
                     favorite = id
                 }
             }

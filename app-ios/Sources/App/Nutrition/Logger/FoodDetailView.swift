@@ -36,7 +36,8 @@ struct FoodDetailView: View {
         _measure = State(initialValue: pick.portion.serving.measure)
         _quantity = State(initialValue: QuantityText(pick.portion.serving.quantity))
         _food = State(initialValue: pick.portion.food)
-        let recipeID = pick.portion.food.source == .recipe ? pick.portion.food.foodID.flatMap(UUID.init(uuidString:)) : nil
+        // An altered recipe lists its own changes; its recipe as stored is the one it was not eaten as.
+        let recipeID = pick.portion.food.source == .recipe && pick.alterations == nil ? pick.portion.food.foodID.flatMap(UUID.init(uuidString:)) : nil
         _recipe = Observe(recipeID.map(Recipe.one) ?? DatabaseQuery(nil) { _ in nil })
     }
 
@@ -53,7 +54,9 @@ struct FoodDetailView: View {
             }
             let day = ramble?.day ?? session.time.day
             ImpactGauges(amounts: amounts, day: day, adding: ramble?.others ?? restOfPlate).id(day)
-            if let recipe {
+            if let alterations = pick.alterations {
+                IngredientsSection(alterations.map { $0.scaled(by: serving.servings) })
+            } else if let recipe {
                 IngredientsSection(FoodLog.ingredients(serving, of: recipe))
             }
             NutrientList(title: "Nutrients", rows: nutrientRows(reported) { NutrientListRow.rows { reported.amount(of: $0.id) != nil } }) { nutrient in
@@ -123,7 +126,7 @@ struct FoodDetailView: View {
                     } else {
                         let id = UUID()
                         favorite = id
-                        Task { await session.favorite(portion, id: id, uncached: pick.uncached) }
+                        Task { await session.favorite(portion, alterations: pick.alterations, id: id, uncached: pick.uncached) }
                     }
                 }
                 .disabled(serving.quantity <= 0 && favorite == nil)
@@ -178,7 +181,7 @@ struct FoodDetailView: View {
         } else if let editing {
             session.plate.setServing(serving, of: editing)
         } else {
-            session.add(LoggerPick(portion, uncached: pick.uncached))
+            session.add(LoggerPick(portion, uncached: pick.uncached, alterations: pick.alterations))
         }
     }
 }

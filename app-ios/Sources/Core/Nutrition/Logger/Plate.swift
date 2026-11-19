@@ -5,14 +5,26 @@ import Foundation
 struct LoggerPick: Hashable, Sendable {
     var portion: FoodPortion
     var uncached: Food?
+    /// An altered recipe logged again (Ramble's copy or ref of an entry, a favorite saved from one): its changes at one
+    /// serving, as `FoodEntry.alterations` holds them, so the new entry is the same altered recipe and not the recipe as
+    /// made with the altered nutrition. A serving change keeps them; another food must not.
+    var alterations: [IngredientAlteration]?
 
-    init(_ portion: FoodPortion, uncached: Food? = nil) {
+    init(_ portion: FoodPortion, uncached: Food? = nil, alterations: [IngredientAlteration]? = nil) {
         self.portion = portion
         self.uncached = uncached
+        self.alterations = alterations
     }
 
     init(_ result: FoodSearchResult) {
-        self.init(result.portion, uncached: result.food)
+        self.init(result.portion, uncached: result.food, alterations: result.alterations)
+    }
+
+    /// The entry logging this pick. It is the only way a pick becomes an entry, so no log drops `alterations`.
+    func entry(day: CalendarDay, minute: Int, section: String?) -> FoodEntry {
+        var entry = FoodEntry(portion, day: day, minute: minute, section: section)
+        entry.alterations = alterations
+        return entry
     }
 }
 
@@ -27,7 +39,6 @@ struct Plate: Hashable, Sendable {
     private(set) var items: [Item] = []
 
     var isEmpty: Bool { items.isEmpty }
-    var portions: [FoodPortion] { items.map(\.pick.portion) }
     var totals: NutrientAmounts { items.reduce(into: NutrientAmounts()) { $0 = $0 + $1.pick.portion.amounts } }
 
     @discardableResult

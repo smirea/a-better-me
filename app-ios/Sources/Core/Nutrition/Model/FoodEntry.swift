@@ -70,12 +70,16 @@ struct FoodFavorite: SyncedRecord {
     var id: UUID
     var food: FoodSnapshot
     var serving: Serving
+    /// Saved from an altered recipe's entry: its changes, as `FoodEntry.alterations`, so logging the favorite logs the
+    /// same altered recipe. Nil for everything else.
+    var alterations: [IngredientAlteration]?
     var createdAt: Date
 
-    init(_ portion: FoodPortion, at date: Date = .now) {
+    init(_ portion: FoodPortion, alterations: [IngredientAlteration]? = nil, at date: Date = .now) {
         id = UUID()
         food = portion.food
         serving = portion.serving
+        self.alterations = alterations
         createdAt = date
     }
 
@@ -85,6 +89,7 @@ struct FoodFavorite: SyncedRecord {
         id = try row.uuid("id")
         food = try row.json("food")
         serving = try row.json("serving")
+        alterations = try (row["alterations"] as String?).map { try RowJSON.decoder.decode([IngredientAlteration].self, from: Data($0.utf8)) }
         createdAt = try row.instant("created_at")
     }
 
@@ -92,6 +97,7 @@ struct FoodFavorite: SyncedRecord {
         container["id"] = key
         container["food"] = try RowJSON.text(food)
         container["serving"] = try RowJSON.text(serving)
+        container["alterations"] = try alterations.map(RowJSON.text)
         container["created_at"] = Instant.text(createdAt)
     }
 }

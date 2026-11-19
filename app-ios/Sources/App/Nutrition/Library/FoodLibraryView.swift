@@ -44,7 +44,7 @@ struct FoodLibraryView: View {
     }
 
     private let onOpen: ((Item) -> Void)?
-    private let onAdd: ((FoodPortion) -> Void)?
+    private let onAdd: ((LoggerPick) -> Void)?
     @Environment(LocalStore.self) private var store
     @Observe(Food.library) private var foods
     @Observe(Recipe.library) private var recipes
@@ -58,7 +58,7 @@ struct FoodLibraryView: View {
     @State private var pendingDelete: Item?
     @State private var favorited = false
 
-    init(tab: Tab = .foods, onOpen: ((Item) -> Void)? = nil, onAdd: ((FoodPortion) -> Void)? = nil) {
+    init(tab: Tab = .foods, onOpen: ((Item) -> Void)? = nil, onAdd: ((LoggerPick) -> Void)? = nil) {
         _tab = State(initialValue: tab)
         self.onOpen = onOpen
         self.onAdd = onAdd
@@ -175,7 +175,7 @@ struct FoodLibraryView: View {
 
     private var favoriteRows: some View {
         ForEach(LibraryFilter.favorites(favorites, matching: query)) { favorite in
-            row(favorite.food, serving: favorite.serving) { onOpen?(.favorite(favorite)) }
+            row(favorite.food, serving: favorite.serving, alterations: favorite.alterations) { onOpen?(.favorite(favorite)) }
                 .swipeActions { deleteButton(.favorite(favorite), title: "Remove") }
                 .contextMenu {
                     Button("Remove", systemImage: "heart.slash", role: .destructive) { pendingDelete = .favorite(favorite) }
@@ -184,25 +184,25 @@ struct FoodLibraryView: View {
     }
 
     /// In the logger a row also swipes right onto the plate, as Search's rows do.
-    private func row(_ food: FoodSnapshot, serving: Serving?, open: @escaping () -> Void) -> some View {
-        let serving = serving ?? FoodPortion(food).serving
+    private func row(_ food: FoodSnapshot, serving: Serving?, alterations: [IngredientAlteration]? = nil, open: @escaping () -> Void) -> some View {
+        let pick = LoggerPick(FoodPortion(food, serving: serving ?? FoodPortion(food).serving), alterations: alterations)
         return HStack {
-            Button(action: open) { FoodRow(food: food, serving: serving) }
+            Button(action: open) { FoodRow(food: food, serving: pick.portion.serving) }
                 .buttonStyle(.plain)
             if let onAdd {
-                AddToPlateButton(food: food) { onAdd(FoodPortion(food, serving: serving)) }
+                AddToPlateButton(food: food) { onAdd(pick) }
             }
         }
         .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 8))
         .swipeActions(edge: .leading) {
             if let onAdd {
-                Button("Add to Plate", systemImage: "plus") { onAdd(FoodPortion(food, serving: serving)) }.tint(Theme.accent)
+                Button("Add to Plate", systemImage: "plus") { onAdd(pick) }.tint(Theme.accent)
             }
         }
     }
 
     private func create(_ kind: LibraryEditorSheet.Kind) {
-        sheet = LibraryEditorSheet(kind, created: { tab = $0 }, add: onAdd)
+        sheet = LibraryEditorSheet(kind, created: { tab = $0 }, add: onAdd.map { add in { add(LoggerPick($0)) } })
     }
 
     private func editButton(_ kind: LibraryEditorSheet.Kind) -> some View {

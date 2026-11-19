@@ -254,6 +254,8 @@ const foodFavorites = sqliteTable('food_favorites', {
 	id: text('id').primaryKey(),
 	food: json('food').notNull().default({}),
 	serving: json('serving').notNull().default({}),
+	/** `[IngredientAlteration]` of the altered recipe entry it was saved from, as `food_entries.alterations`; else null. */
+	alterations: json('alterations'),
 	createdAt: text('created_at').notNull(),
 });
 
@@ -546,7 +548,7 @@ export const schema = defineSchema({
 			section: z.string().min(1),
 			alterations: z.array(ingredientAlteration).min(1),
 		},
-		food_favorites: { food: foodSnapshot, serving },
+		food_favorites: { food: foodSnapshot, serving, alterations: z.array(ingredientAlteration).min(1) },
 		nutrition_days: { status: z.enum(DAY_STATUSES), override: nutrientAmounts },
 		food_log_notes: { day, minute, title: z.string().min(1), color: z.enum(NOTE_COLORS) },
 		body_metrics: { day, kind: z.enum(BODY_METRIC_KINDS), value: amount },

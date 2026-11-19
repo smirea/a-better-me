@@ -22,6 +22,9 @@ struct RamblePlanned: Hashable, Sendable {
     var pick: LoggerPick
     var day: CalendarDay
     var minute: Int
+
+    /// Its section is the one its minute falls in when logged (`LocalStore.log`).
+    var entry: FoodEntry { pick.entry(day: day, minute: minute, section: nil) }
 }
 
 /// A line of the ramble's list. Its id is its position: a ramble grows at its end, so the item at index i is the same
@@ -250,9 +253,9 @@ struct RambleResolver: Sendable {
             }
             let except = Set(item.except).union(choice?.keptRemoved ?? [])
             let kept = (context.mealEntries[mealID] ?? []).filter { !except.contains($0.key) }.map { entry in
-                var portion = index.library.current.resolve(entry)
-                if let serving = choice?.keptServings[entry.key] { portion.serving = serving }
-                return RambleRow.Child.kept(entry, LoggerPick(portion))
+                var pick = index.library.current.pick(entry)
+                if let serving = choice?.keptServings[entry.key] { pick.portion.serving = serving }
+                return RambleRow.Child.kept(entry, pick)
             }
             return RambleRow(id: id, item: item, day: day, minute: minute, content: .copy(.init(meal: meal, children: kept)))
         case .food:
@@ -275,14 +278,14 @@ struct RambleResolver: Sendable {
             return .food(.init(pick: pick, key: earlier.key, options: earlier.options, searched: earlier.searched, showsOptions: item.options))
         }
         if let entry = refEntry, choice?.option.map({ $0 == FoodSearchResult.key(entry.food) }) ?? true {
-            var portion = index.library.current.resolve(entry)
+            var pick = index.library.current.pick(entry)
+            let logged = pick.portion
             if item.amount > 0 {
-                portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, food: item.name, of: portion.food.nutrition, history: portion.serving)
+                pick.portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, food: item.name, of: logged.food.nutrition, history: logged.serving)
             } else {
-                portion.serving.quantity *= item.scale
+                pick.portion.serving.quantity *= item.scale
             }
-            if let serving = choice?.serving { portion.serving = serving }
-            let pick = LoggerPick(portion)
+            if let serving = choice?.serving { pick.portion.serving = serving }
             return .food(.init(pick: pick, key: FoodSearchResult.key(entry.food), options: [], showsOptions: false))
         }
         let options: [FoodSearchResult]
@@ -327,7 +330,7 @@ struct RambleResolver: Sendable {
         portion.serving = RambleServing.serving(amount: item.amount, unit: item.unit, food: item.name, of: result.portion.food.nutrition, history: history)
         // A measure belongs to the food it was set on; another food in the row's place keeps its own serving.
         if let serving = choice?.serving, choice?.option == result.key { portion.serving = serving }
-        return .food(.init(pick: LoggerPick(portion, uncached: result.food), key: result.key, options: options, searched: item.name, showsOptions: item.options))
+        return .food(.init(pick: LoggerPick(portion, uncached: result.food, alterations: result.alterations), key: result.key, options: options, searched: item.name, showsOptions: item.options))
     }
 }
 
