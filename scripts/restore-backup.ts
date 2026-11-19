@@ -3,6 +3,7 @@ import { bunSqlite } from 'sync-engine/bun-sqlite';
 import { createSpace, type Values } from 'sync-engine/core';
 import { schema } from '../shared/db/schema';
 import { DATA_FILE as file } from '../server/src/data-file';
+import { localBucket } from '../server/src/local-bucket';
 
 /**
  * Loads a daily backup (`server/src/backup.ts`, `{ at, tables }`) into this checkout's local database, the file
@@ -21,7 +22,12 @@ if (!path) throw new Error('Usage: bun scripts/restore-backup.ts <backup.json>')
 if (existsSync(file)) throw new Error(`${file} exists; stop the server and trash it first`);
 
 const backup = (await Bun.file(path).json()) as { at: string; tables: Record<string, ({ id: string } & Values)[]> };
-// A backup from before pictures moved to the bucket still carries their rows, which nothing reads any more.
+// A backup from before pictures moved to the bucket carries them as base64 rows. They go where the local server reads
+// pictures from, under the same ids the supplements list.
+const pictures = localBucket(`${file}.images`);
+for (const { id, jpeg } of backup.tables.supplement_images ?? []) {
+	await pictures.put(id, Buffer.from(String(jpeg), 'base64'), { httpMetadata: { contentType: 'image/jpeg' } });
+}
 delete backup.tables.supplement_images;
 const unknown = Object.keys(backup.tables).filter(name => !schema.tables.some(table => table.name === name));
 if (unknown.length) throw new Error(`The backup has tables the schema lacks: ${unknown.join(', ')}`);
