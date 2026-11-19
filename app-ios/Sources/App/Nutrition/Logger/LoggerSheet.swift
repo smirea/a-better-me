@@ -130,7 +130,7 @@ private struct LoggerContent: View {
         case .search: SearchTab(session: session, open: open).toolbar(.hidden, for: .navigationBar)
         case .quickAdd: QuickAddTab(session: session).toolbar(.hidden, for: .navigationBar)
         case .library:
-            FoodLibraryView(tab: session.library, onOpen: { open(LoggerPick($0.portion)) }, onAdd: { session.add(LoggerPick($0)) })
+            FoodLibraryView(tab: session.library, onOpen: { open($0.pick) }, onAdd: { session.add($0) })
                 .safeAreaInset(edge: .bottom) {
                     HStack {
                         Spacer()
@@ -216,12 +216,12 @@ extension LoggerSession {
 }
 
 extension FoodLibraryView.Item {
-    /// A food or recipe at its default serving, a favorite at its saved one.
-    var portion: FoodPortion {
+    /// A food or recipe at its default serving, a favorite at its saved one, with the changes of an altered recipe.
+    var pick: LoggerPick {
         switch self {
-        case let .food(food): FoodPortion(food.snapshot)
-        case let .recipe(recipe): FoodPortion(recipe.snapshot)
-        case let .favorite(favorite): favorite.portion
+        case let .food(food): LoggerPick(FoodPortion(food.snapshot))
+        case let .recipe(recipe): LoggerPick(FoodPortion(recipe.snapshot))
+        case let .favorite(favorite): LoggerPick(favorite.portion, alterations: favorite.alterations)
         }
     }
 }

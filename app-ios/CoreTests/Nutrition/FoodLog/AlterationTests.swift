@@ -173,6 +173,33 @@ struct AlterationTests {
         #expect(abs((altered.amounts[.energy] ?? 0) - 505) < 1e-6)
     }
 
+    /// The bug reported on "Same breakfast as yesterday": the copy logged the altered nutrition under the recipe with no
+    /// alterations, so the tile listed the recipe as made. The recipe is stored, so nothing may resolve it back either.
+    @Test func rambleAndFavoritesLogAnAlteredRecipeAltered() async throws {
+        store.saveRecipe(recipe)
+        let entry = logged().altered(to: altered())
+        let tuesday = monday.adding(days: 1)
+        let search = try await FoodSearch.load(store: store, catalog: try fixtureCatalog([]), branded: StubBranded())
+        let resolver = RambleResolver(index: search.index, context: RambleContext(entries: [entry], today: tuesday), today: tuesday, fallback: (tuesday, 12 * 60))
+        let rows = try resolver.rows([
+            RambleItem(kind: .copy, copy: "\(monday)-breakfast", meal: .breakfast),
+            RambleItem(name: "pasta sauce", amount: 2, unit: "", ref: entry.key, meal: .dinner),
+        ], previous: [], choices: [:])
+        store.addFavorite(entry.portion, alterations: entry.alterations)
+        try await store.write { _ in }.value
+        let favorite = try #require(try await FoodSearch.load(store: store, catalog: try fixtureCatalog([]), branded: StubBranded()).local("pasta sauce").first { $0.group == .favorites })
+        store.log(rows.flatMap(\.planned).map(\.entry) + [LoggerPick(favorite).entry(day: tuesday, minute: 15 * 60, section: nil)])
+        try await store.write { _ in }.value
+
+        let copies = try store.readBlocking(FoodEntry.on(tuesday).fetch)
+        #expect(copies.count == 3)
+        for copy in copies {
+            #expect(copy.alterations == entry.alterations)
+            #expect(copy.food == entry.food)
+            #expect(abs((copy.amounts[.energy] ?? 0) - (entry.amounts[.energy] ?? 0) * copy.serving.servings / entry.serving.servings) < 1e-6)
+        }
+    }
+
     @Test func duplicatingAnAlteredRecipeKeepsItAltered() async throws {
         let entry = logged().altered(to: altered())
         store.log([entry.copy(day: monday.adding(days: 1), minute: 480, section: nil)])

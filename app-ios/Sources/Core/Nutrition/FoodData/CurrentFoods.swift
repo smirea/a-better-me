@@ -37,9 +37,10 @@ struct CurrentFoods: Sendable {
         return FoodPortion(snapshot, serving: portion.serving.fitted(to: snapshot.nutrition))
     }
 
-    /// A logged entry's portion to log again: as stored now, except an altered recipe, which logs its alterations.
-    func resolve(_ entry: FoodEntry) -> FoodPortion {
-        entry.alterations == nil ? resolve(entry.portion) : entry.portion
+    /// A logged entry to log again: its food as stored now, except an altered recipe, which keeps its snapshot and
+    /// carries its alterations into the new entry.
+    func pick(_ entry: FoodEntry) -> LoggerPick {
+        entry.alterations == nil ? LoggerPick(resolve(entry.portion)) : LoggerPick(entry.portion, alterations: entry.alterations)
     }
 }
 

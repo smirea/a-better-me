@@ -186,8 +186,8 @@ extension LocalStore {
 
     /// Saves a favorite. At the limit it replaces the oldest, as MacroFactor replaces one when full. A screen that can
     /// take the favorite back passes its `id`.
-    func addFavorite(_ portion: FoodPortion, id: UUID = UUID()) {
-        let made = FoodFavorite(portion)
+    func addFavorite(_ portion: FoodPortion, alterations: [IngredientAlteration]? = nil, id: UUID = UUID()) {
+        let made = FoodFavorite(portion, alterations: alterations)
         write { db in
             var favorite = made
             favorite.id = id

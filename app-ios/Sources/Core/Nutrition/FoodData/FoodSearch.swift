@@ -20,6 +20,8 @@ struct FoodSearchResult: Identifiable, Hashable, Sendable {
     let food: Food?
     /// One food appears once across groups: its id, or its name and brand when its snapshot has none.
     let key: String
+    /// A favorite saved from an altered recipe: its changes, which logging it carries (`LoggerPick.alterations`).
+    var alterations: [IngredientAlteration]?
 
     var id: String { "\(group.rawValue)/\(key)" }
 
@@ -28,6 +30,17 @@ struct FoodSearchResult: Identifiable, Hashable, Sendable {
         self.portion = portion
         self.food = food
         self.key = key ?? Self.key(portion.food)
+    }
+
+    /// A favorite as saved. One saved from an altered recipe keeps its snapshot, since its recipe as stored now lacks the
+    /// changes, and is listed apart from that recipe, which it would otherwise hide.
+    fileprivate init(favorite: FoodFavorite, current: CurrentFoods) {
+        guard let alterations = favorite.alterations else {
+            self = current.resolve(FoodSearchResult(.favorites, favorite.portion))
+            return
+        }
+        self.init(.favorites, favorite.portion, key: "\(Self.key(favorite.food))#\(favorite.id.uuidString)")
+        self.alterations = alterations
     }
 
     static func key(_ food: FoodSnapshot) -> String { food.foodID ?? "\(food.name)|\(food.brand ?? "")" }
@@ -136,7 +149,7 @@ struct FoodLibrary: Sendable {
             .mapValues { $0.map { FoodSearchResult(.picks, $0) } }
         library.items[.history] = history
         library.items[.favorites] = try FoodFavorite.fetchAll(db).sorted { $0.createdAt < $1.createdAt }
-            .map { Item(FoodSearchResult(.favorites, current.resolve($0.portion))) }
+            .map { Item(FoodSearchResult(favorite: $0, current: current)) }
         library.items[.custom] = foods.filter { $0.source == .custom }.map { Item(FoodSearchResult(.custom, FoodPortion($0.snapshot))) }
         library.items[.recipes] = recipes.map { Item(FoodSearchResult(.recipes, FoodPortion($0.snapshot))) }
         library.items[.branded] = foods.filter { $0.source == .openFoodFacts && current.key($0.id) == $0.id }

@@ -148,7 +148,8 @@ final class LoggerSession {
             if let food = item.pick.uncached { store.saveFood(food) }
         }
         let time = chosenTime ?? .now(date)
-        store.log(plate.portions, on: time.day, minute: time.minute(at: date), section: time.section?.id)
+        let minute = time.minute(at: date)
+        store.log(plate.items.map { $0.pick.entry(day: time.day, minute: minute, section: time.section?.id) })
         plate = Plate()
         pending = nil
         logged += 1
@@ -170,7 +171,7 @@ final class LoggerSession {
         for item in planned {
             if let food = item.pick.uncached { store.saveFood(food) }
         }
-        store.log(planned.map { ($0.pick.portion, $0.day, $0.minute) })
+        store.log(planned.map(\.entry))
         ramble.reset()
         logged += 1
     }
@@ -210,9 +211,9 @@ final class LoggerSession {
         await reloadSearch()
     }
 
-    func favorite(_ portion: FoodPortion, id: UUID = UUID(), uncached: Food?) async {
+    func favorite(_ portion: FoodPortion, alterations: [IngredientAlteration]? = nil, id: UUID = UUID(), uncached: Food?) async {
         if let uncached { store.saveFood(uncached) }
-        store.addFavorite(portion, id: id)
+        store.addFavorite(portion, alterations: alterations, id: id)
         await reloadSearch()
     }
 

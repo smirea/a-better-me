@@ -749,7 +749,16 @@ export const FoodEntryPatch = z
 	});
 
 export const FoodFavorite = z
-	.object({ id: z.string(), food: FoodSnapshot, serving: Serving, createdAt: z.string() })
+	.object({
+		id: z.string(),
+		food: FoodSnapshot,
+		serving: Serving,
+		alterations: z.array(IngredientAlteration).nullable().meta({
+			description:
+				'Saved from an altered recipe entry: its `alterations`, which logging the favorite in the app carries over. Null otherwise.',
+		}),
+		createdAt: z.string(),
+	})
 	.meta({ id: 'FoodFavorite', description: 'A food saved at a chosen serving. Several may come from one food.' });
 export const FoodFavoriteCreate = z
 	.object({ id: createdId.optional(), ...portionFields })
