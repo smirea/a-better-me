@@ -51,8 +51,13 @@ final class HealthData {
     private static let flightsClimbed = HKQuantityType(.flightsClimbed)
     private static let distanceWalkingRunning = HKQuantityType(.distanceWalkingRunning)
     private static let log = Logger(subsystem: "com.stefan.a-better-me", category: "health")
-    /// Set once Health's whole history of daily totals is copied; later reads go two years back.
-    private static let historyCopiedKey = "healthHistoryCopied"
+    private static let activity: [(kind: BodyMetricKind, type: HKQuantityType, unit: HKUnit)] = [
+        (.steps, stepCount, .count()), (.flightsClimbed, flightsClimbed, .count()), (.walkingDistance, distanceWalkingRunning, .meter()),
+    ]
+
+    /// Set once Health answered with a kind's whole history of daily totals; later reads of it go two years back. Per
+    /// kind, because Health grants each type on its own and a denied one answers with nothing.
+    private static func historyCopiedKey(_ kind: BodyMetricKind) -> String { "healthHistoryCopied.\(kind.rawValue)" }
 
     /// Loads, or flips `requestTrigger` when any type the app uses is still undecided, and returns whether it asked.
     @discardableResult
@@ -84,28 +89,25 @@ final class HealthData {
         do {
             let calendar = Calendar.current
             let today = calendar.startOfDay(for: .now)
-            let historyCopied = UserDefaults.standard.bool(forKey: Self.historyCopiedKey)
-            // Two years covers every chart range but All, and a day older than that no longer changes in Health.
-            let from = historyCopied
-                ? calendar.date(byAdding: .day, value: 1, to: calendar.date(byAdding: .year, value: -2, to: today)!)!
-                : calendar.date(from: DateComponents(year: 2010))!
+            // A day older than two years no longer changes in Health, so only a kind's first copy reads further back.
+            let recent = calendar.date(byAdding: .day, value: 1, to: calendar.date(byAdding: .year, value: -2, to: today)!)!
+            let whole = calendar.date(from: DateComponents(year: 2010))!
             async let weights = readWeights()
-            async let steps = store.dailySums(of: Self.stepCount, unit: .count(), from: from, through: .now, calendar: calendar)
-            async let flights = store.dailySums(of: Self.flightsClimbed, unit: .count(), from: from, through: .now, calendar: calendar)
-            async let distance = store.dailySums(of: Self.distanceWalkingRunning, unit: .meter(), from: from, through: .now, calendar: calendar)
-            let read = HealthRead(
-                weights: try await weights,
-                days: [
-                    .steps: PhonePedometer.merge(await PhonePedometer.steps(from: today, to: .now), into: try await steps, today: today),
-                    .flightsClimbed: try await flights,
-                    .walkingDistance: try await distance,
-                ],
-                from: from
-            )
-            try await localStore.write { try HealthMirror.apply(read, to: $0, calendar: calendar) }.value
-            if !historyCopied, read.days.values.contains(where: { !$0.isEmpty }) {
-                UserDefaults.standard.set(true, forKey: Self.historyCopiedKey)
+            async let phoneSteps = PhonePedometer.steps(from: today, to: .now)
+            let days = try await withThrowingTaskGroup(of: (BodyMetricKind, HealthRead.Days).self) { group in
+                for (kind, type, unit) in Self.activity {
+                    let from = UserDefaults.standard.bool(forKey: Self.historyCopiedKey(kind)) ? recent : whole
+                    group.addTask { [store] in
+                        (kind, HealthRead.Days(totals: try await store.dailySums(of: type, unit: unit, from: from, through: .now, calendar: calendar), from: from))
+                    }
+                }
+                var days: [BodyMetricKind: HealthRead.Days] = [:]
+                for try await (kind, read) in group { days[kind] = read }
+                return days
             }
+            let read = HealthRead(weights: try await weights, days: days, phoneStepsToday: await phoneSteps.map { DatedValue(date: today, value: $0) })
+            try await localStore.write { try HealthMirror.apply(read, to: $0, calendar: calendar) }.value
+            for (kind, read) in days where !read.totals.isEmpty { UserDefaults.standard.set(true, forKey: Self.historyCopiedKey(kind)) }
             hasRead = true
         } catch {
             Self.log.error("Copying HealthKit failed: \(String(describing: error))")

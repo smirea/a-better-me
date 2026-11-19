@@ -64,13 +64,31 @@ struct HealthMirrorTests {
         #expect(HealthMirror.days(.steps, health: [], rows: rows, from: from, calendar: utc, now: day("2026-10-03")) == HealthMirror.DayChanges())
     }
 
+    @Test func thePhonePedometerRaisesTodayButDeletesNothingWhenHealthAnsweredNothing() {
+        let rows = [
+            BodyMetric(.steps, on: calendarDay("2026-10-01"), value: 9000, source: .healthKit),
+            BodyMetric(.steps, on: calendarDay("2026-10-03"), value: 2000, source: .healthKit),
+        ]
+        let from = calendarDay("2026-09-01")
+        let denied = HealthMirror.days(.steps, health: [], phoneToday: total("2026-10-03", 2500), rows: rows, from: from, calendar: utc, now: day("2026-10-03"))
+        #expect(denied.puts.map(\.value) == [2500])
+        #expect(denied.deletes.isEmpty)
+        let lower = HealthMirror.days(
+            .steps, health: [total("2026-10-01", 9000), total("2026-10-03", 2000)], phoneToday: total("2026-10-03", 1500), rows: rows, from: from,
+            calendar: utc, now: day("2026-10-03")
+        )
+        #expect(lower == HealthMirror.DayChanges())
+    }
+
     @MainActor
     @Test func copyingAnUnchangedHealthReadAgainWritesNothing() async throws {
         let store = try LocalStore(unsyncedAt: FileManager.default.temporaryDirectory.appending(path: "mirror-\(UUID().uuidString)/a.sqlite"))
         let read = HealthRead(
             weights: [sample("2026-10-01", plus: 0.123456, kg: 81.93), sample("2026-10-02", plus: 0.9996, kg: 81.2)],
-            days: [.steps: [total("2026-10-01", 9000)], .walkingDistance: [total("2026-10-01", 6540.7)]],
-            from: day("2026-09-01")
+            days: [
+                .steps: HealthRead.Days(totals: [total("2026-10-01", 9000)], from: day("2026-09-01")),
+                .walkingDistance: HealthRead.Days(totals: [total("2026-10-01", 6540.7)], from: day("2026-09-01")),
+            ]
         )
         func outbox() async throws -> Int {
             try await store.write { db in

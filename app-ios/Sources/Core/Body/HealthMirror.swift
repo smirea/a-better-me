@@ -8,11 +8,17 @@ struct HealthWeight: Hashable, Sendable {
     var kg: Double
 }
 
-/// One read of Apple Health: every body mass sample, and each activity kind's daily totals from `from` on.
+/// One read of Apple Health: every body mass sample, each activity kind's daily totals from its `from` on, and the
+/// phone pedometer's count for today, which is not Health's.
 struct HealthRead: Sendable {
+    struct Days: Sendable {
+        var totals: [DatedValue]
+        var from: Date
+    }
+
     var weights: [HealthWeight]
-    var days: [BodyMetricKind: [DatedValue]]
-    var from: Date
+    var days: [BodyMetricKind: Days]
+    var phoneStepsToday: DatedValue?
 }
 
 /// Copies Apple Health into the synced tables, so the phone's screens, the server, and the agent API all read one
@@ -65,14 +71,17 @@ enum HealthMirror {
 
     /// What makes a kind's rows match Health's daily totals from `from` on. Health's total takes its day, over a manual
     /// value too; a manual value stays on a day Health has none; a copy whose day Health no longer counts goes. An empty
-    /// read deletes nothing, as with the weigh-ins.
+    /// read deletes nothing, as with the weigh-ins. `phoneToday` raises today to the pedometer's count; it is not Health's
+    /// answer, so on its own it deletes nothing either.
     static func days(
-        _ kind: BodyMetricKind, health: [DatedValue], rows: [BodyMetric], from: CalendarDay, calendar: Calendar, now: Date
+        _ kind: BodyMetricKind, health: [DatedValue], phoneToday: DatedValue? = nil, rows: [BodyMetric], from: CalendarDay, calendar: Calendar,
+        now: Date
     ) -> DayChanges {
+        let totals = phoneToday.map { PhonePedometer.merge($0.value, into: health, today: $0.date) } ?? health
         let stored = Dictionary(rows.filter { $0.kind == kind }.map { ($0.day, $0) }, uniquingKeysWith: { $1 })
         var changes = DayChanges()
         var counted: Set<CalendarDay> = []
-        for total in health {
+        for total in totals {
             let day = CalendarDay(total.date, in: calendar)
             let value = total.value.rounded()
             counted.insert(day)
@@ -87,14 +96,17 @@ enum HealthMirror {
 
     /// Runs inside one write, so the rows it compares against are the rows it changes.
     static func apply(_ read: HealthRead, to db: Database, calendar: Calendar, now: Date = .now) throws {
+        let phoneStepsToday = read.phoneStepsToday
         let weighIns = weighIns(health: read.weights, rows: try BodyWeight.fetchAll(db), calendar: calendar)
         for row in weighIns.puts { try LocalStore.put(row, in: db) }
         for id in weighIns.deletes { _ = try BodyWeight.deleteOne(db, key: BodyWeight.key(id)) }
 
-        let from = CalendarDay(read.from, in: calendar)
-        for (kind, totals) in read.days {
+        for (kind, read) in read.days {
+            let from = CalendarDay(read.from, in: calendar)
             let rows = try BodyMetric.filter(Column("kind") == kind.rawValue && Column("day") >= from.description).fetchAll(db)
-            let days = days(kind, health: totals, rows: rows, from: from, calendar: calendar, now: now)
+            let days = days(
+                kind, health: read.totals, phoneToday: kind == .steps ? phoneStepsToday : nil, rows: rows, from: from, calendar: calendar, now: now
+            )
             for row in days.puts { try LocalStore.put(row, in: db) }
             for id in days.deletes { _ = try BodyMetric.deleteOne(db, key: id) }
         }
