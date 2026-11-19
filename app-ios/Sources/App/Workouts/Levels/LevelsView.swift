@@ -1,7 +1,7 @@
 import Feedback
 import SwiftUI
 
-/// Levels, pushed from More and from the Dashboard's Overview: average weekly sets per muscle as a body heat map and
+/// Levels, pushed from Settings and from the Dashboard's Overview: average weekly sets per muscle as a body heat map and
 /// two ranked lists. A row pushes `route(muscle)`, since the Dashboard's typed path takes only its own routes.
 struct LevelsView<Route: Hashable>: View {
     let route: (Muscle) -> Route

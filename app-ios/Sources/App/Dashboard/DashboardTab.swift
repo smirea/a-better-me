@@ -2,7 +2,7 @@ import Feedback
 import SwiftUI
 
 struct DashboardTab: View {
-    @Binding var path: [DashboardRoute]
+    @Binding var path: NavigationPath
     @Environment(\.scenePhase) private var scenePhase
     @Environment(ExerciseCatalog.self) private var catalog
     @State private var nutrition = NutritionData()
@@ -19,7 +19,8 @@ struct DashboardTab: View {
             DashboardHome(layout: settings.dashboard)
                 .navigationDestination(for: DashboardRoute.self) { route in
                     switch route {
-                    case .customize: CustomizeDashboardView()
+                    case .settings: SettingsView()
+                    case let .ping(id): PingHistoryView(pingID: id)
                     case .allMuscles: AllMusclesView()
                     case .allExercises: AllExercisesView()
                     case let .muscle(_, metric): MetricDetailView(route: route, initialTab: metric.title)
@@ -34,6 +35,7 @@ struct DashboardTab: View {
                     default: MetricDetailView(route: route)
                     }
                 }
+                .settingsDestinations()
         }
         .environment(nutrition)
         .environment(\.dashboardContext, DashboardContext(
@@ -53,6 +55,7 @@ struct DashboardTab: View {
 
 private struct DashboardHome: View {
     let layout: DashboardLayout
+    @Environment(\.dashboardContext) private var context
 
     var body: some View {
         ScrollView {
@@ -70,10 +73,10 @@ private struct DashboardHome: View {
         .screenTitle("Dashboard")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink(value: DashboardRoute.customize) {
-                    Image(systemName: "slider.horizontal.3")
+                NavigationLink(value: DashboardRoute.settings) {
+                    Image(systemName: "gearshape")
                 }
-                .accessibilityLabel("Customize Dashboard")
+                .accessibilityLabel("Settings")
             }
         }
         .feedback(self)
@@ -81,11 +84,14 @@ private struct DashboardHome: View {
 
     @ViewBuilder
     private func section(_ section: DashboardSection) -> some View {
-        if !isEmpty(section) {
+        if section == .pings {
+            PingCardsSection(today: context.today).id(context.today)
+        } else if !isEmpty(section) {
             DashboardSectionView(title: section.title, seeAll: section.seeAll) {
                 switch section {
                 case .insights: ForEach(layout.insights, id: \.self) { InsightCardView(card: $0) }
                 case .habits: ForEach(layout.habits, id: \.self) { HabitCardView(card: $0) }
+                case .pings: EmptyView()
                 case .nutrition: ForEach(layout.nutrition, id: \.self) { NutritionCardView(card: $0) }
                 case .bodyMetrics: ForEach(layout.bodyMetrics, id: \.self) { BodyMetricCardView(card: $0) }
                 case .muscles: ForEach(layout.muscles, id: \.self) { MuscleCardView(card: $0) }
@@ -99,6 +105,7 @@ private struct DashboardHome: View {
         switch section {
         case .insights: layout.insights.isEmpty
         case .habits: layout.habits.isEmpty
+        case .pings: false
         case .nutrition: layout.nutrition.isEmpty
         case .bodyMetrics: layout.bodyMetrics.isEmpty
         case .muscles: layout.muscles.isEmpty
@@ -114,7 +121,7 @@ private extension DashboardSection {
         case .bodyMetrics: .allBodyMetrics
         case .muscles: .allMuscles
         case .exercises: .allExercises
-        case .insights, .habits: nil
+        case .insights, .habits, .pings: nil
         }
     }
 }

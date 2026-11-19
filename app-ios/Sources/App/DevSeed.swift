@@ -4,7 +4,7 @@ import Foundation
 import GRDB
 
 /// Debug simulator builds fill each empty area of the store at launch with enough history to show what a few months of
-/// use looks like: 30 workouts, an active program, 45 days of food and weigh-ins, a food library, and a nutrition plan.
+/// use looks like: 30 workouts, an active program, 45 days of food and weigh-ins, a food library, a nutrition plan, and seven pings.
 /// Lists then hold 20 to 50 rows, so a screen that only works with three rows shows it. Launch with `-noSeed` for an
 /// empty store, or with `-seedSampleData` to seed a Debug build on a device.
 enum DevSeed {
@@ -47,6 +47,7 @@ enum DevSeed {
             try FoodLogSeed.insert(in: db)
         }
         if try Supplement.fetchCount(db) == 0 { try SupplementSeed.insert(in: db) }
+        if try Ping.fetchCount(db) == 0 { try PingSeed.insert(in: db) }
     }
 }
 #endif

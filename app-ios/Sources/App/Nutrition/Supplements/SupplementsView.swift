@@ -1,7 +1,7 @@
 import Feedback
 import SwiftUI
 
-/// The supplement screens, pushed as values from More and the Food Log, which register `destination` at their roots.
+/// The supplement screens, pushed as values from Settings and the Food Log, which register `destination` at their roots.
 enum SupplementRoute: Hashable {
     case library
     /// `day` is the Food Log day it was opened from, whose amounts the page shows.

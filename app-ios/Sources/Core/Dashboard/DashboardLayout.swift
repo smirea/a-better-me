@@ -4,7 +4,7 @@ import Foundation
 /// array is hidden, so there is no `hidden` flag that could disagree with the order.
 struct DashboardLayout: Codable, Hashable {
     /// Bumped when a release adds cards; see `init(from:)`.
-    static let revision = 4
+    static let revision = 5
 
     var primaryFocus: [FocusCard] = [.overview, .workouts, .recentRecords, .weeklyNutrition, .energyBalance, .dailyNutrition]
     var sections = DashboardSection.allCases
@@ -62,6 +62,9 @@ extension DashboardLayout {
         if saved < 4 {
             primaryFocus.adopt([.overview], from: defaults.primaryFocus)
         }
+        if saved < 5 {
+            sections.adopt([.pings], from: defaults.sections)
+        }
         revision = Self.revision
     }
 
@@ -83,8 +86,9 @@ enum FocusCard: String, Codable, CaseIterable {
     case overview, workouts, recentRecords, weeklyNutrition, energyBalance, dailyNutrition
 }
 
+/// Pings has no card list of its own: it shows every ping, in the pings' order.
 enum DashboardSection: String, Codable, CaseIterable {
-    case insights, habits, nutrition, bodyMetrics, muscles, exercises
+    case insights, habits, pings, nutrition, bodyMetrics, muscles, exercises
 }
 
 enum InsightCard: String, Codable, CaseIterable {

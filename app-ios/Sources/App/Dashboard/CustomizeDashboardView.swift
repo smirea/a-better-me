@@ -20,7 +20,7 @@ struct CustomizeDashboardView: View {
                 ForEach(layout.sections) { RowLabel(title: $0.title) }
                     .onMove { binding(\.sections).wrappedValue.move(fromOffsets: $0, toOffset: $1) }
             }
-            ForEach(layout.sections) { section in
+            ForEach(layout.sections.filter { $0 != .pings }) { section in
                 ThemedSection(section.title) {
                     rows(section)
                     Button("Add or Remove \(section.addTitle)") { editing = section }
@@ -72,6 +72,7 @@ struct CustomizeDashboardView: View {
         case .habits:
             ForEach(binding(\.habits).wrappedValue, id: \.self) { CardRow(title: $0.title, icon: $0.icon) }
                 .onMove { binding(\.habits).wrappedValue.move(fromOffsets: $0, toOffset: $1) }
+        case .pings: EmptyView()
         case .nutrition:
             ForEach(binding(\.nutrition)) { $card in
                 if let id = card.nutrient {
@@ -141,6 +142,7 @@ extension DashboardSection: Identifiable {
         switch self {
         case .insights: "Insights & Analytics"
         case .habits: "Habits"
+        case .pings: "Pings"
         case .nutrition: "Nutrition"
         case .bodyMetrics: "Body Metrics"
         case .muscles: "Muscle Groups"
@@ -152,6 +154,7 @@ extension DashboardSection: Identifiable {
         switch self {
         case .insights: "Insights"
         case .habits: "Habits"
+        case .pings: "Pings"
         case .nutrition: "Nutrition"
         case .bodyMetrics: "Body Metrics"
         case .muscles: "Muscle Groups"
@@ -439,6 +442,7 @@ private struct AddRemoveSheet: View {
             ThemedSection {
                 ForEach(HabitCard.allCases, id: \.self) { toggle($0.title, $0.icon, \.habits, $0) }
             }
+        case .pings: EmptyView()
         case .nutrition:
             ThemedSection("Calories & Macros") {
                 toggle("Macros", .macros, \.nutrition, .macros, matching: { $0.nutrient == nil })

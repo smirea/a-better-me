@@ -69,13 +69,13 @@ Milestone 2 builds what milestone 1 cut, so the app does everything the owner us
 
 ## Code layout
 
-- **Shared code.** The app shell and tab bar, the design system (`Sources/App/DesignSystem/`), the domain model, persistence, and derived metrics (`Sources/App/Workouts/Model/`), shared row parts (`Sources/App/Workouts/Components/`: muscle tags and tiles, RIR and set badges), the catalog loader and data, and More's settings.
+- **Shared code.** The app shell and tab bar, the design system (`Sources/App/DesignSystem/`), the domain model, persistence, and derived metrics (`Sources/App/Workouts/Model/`), shared row parts (`Sources/App/Workouts/Components/`: muscle tags and tiles, RIR and set badges), the catalog loader and data, and Settings.
 - **Cross-feature views live in one feature's folder.** The exercise picker and detail sheet (`Library/ExercisePicker.swift`) belong to the library. The Targets sheet (`Builder/SetTargetsSheet.swift`) belongs to the builder; the live session presents it with warm-ups allowed. The live workout and the summary (`Session/LiveWorkoutView.swift`, `Session/WorkoutSummaryView.swift`) belong to the live session; the builder starts workouts and history and the calendar open summaries.
 - **One presenter owns the full-screen workout.** `LiveWorkoutPresenter` (in `Session/`) says whether the in-progress session fills the screen. The builder calls `start`, the live session minimizes by setting `isExpanded` to false and the bottom accessory sets it back, and the root view presents the cover.
 - **Exercise library.** `Sources/App/Workouts/Library/`: Settings > Exercises, search, filters, the picker, the detail sheet with its Instructions, Details, and History tabs, Exercise Settings, and creating custom exercises.
 - **Workout builder.** `Sources/App/Workouts/Builder/`: the Workout tab (week strip, Workout Library), the workout detail editor, the Targets sheet, supersets, and the "+" sheet with Empty Workout and New Workout.
 - **Live session and history.** `Sources/App/Workouts/Session/` and `Sources/App/Workouts/History/`: the live workout and its keypad, rest timer, warm-up scheme, finishing, the Workout Complete summary, Update Workout Plan, the in-progress bottom accessory, and Workout History.
-- **Levels.** `Sources/App/Workouts/Levels/`: the Levels screen (pushed from More and from the Dashboard's Overview), the muscle detail with Contributing Lifts, and the front and back body heat map. The summary's body figures reuse that heat map.
+- **Levels.** `Sources/App/Workouts/Levels/`: the Levels screen (pushed from Settings and from the Dashboard's Overview), the muscle detail with Contributing Lifts, and the front and back body heat map. The summary's body figures reuse that heat map.
 
 ## Exercise library
 

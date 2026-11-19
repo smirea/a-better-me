@@ -40,15 +40,15 @@ struct TileMetricsTests {
         #expect(NutrientTargets(target: nil, goals: [], day: day, sex: .male, weightKg: nil).range(.protein) == NutrientRange())
     }
 
-    @Test func layoutsSavedBeforeRevisionTwoAdoptNutritionAndVisualBodyFat() throws {
+    @Test func layoutsSavedBeforeRevisionFiveAdoptNutritionVisualBodyFatAndPings() throws {
         let old = #"{"revision":1,"sections":["insights","habits","bodyMetrics","general"],"bodyMetrics":["scaleWeight"]}"#
         let adopted = try RowJSON.decoder.decode(DashboardLayout.self, from: Data(old.utf8))
-        #expect(adopted.sections == [.insights, .habits, .nutrition, .bodyMetrics])
+        #expect(adopted.sections == [.insights, .habits, .pings, .nutrition, .bodyMetrics])
         #expect(adopted.bodyMetrics == [.scaleWeight, .visualBodyFat])
         #expect(adopted.nutrition == NutritionCard.defaults)
         let saved = #"{"revision":2,"sections":["insights"],"bodyMetrics":["scaleWeight"],"nutrition":[]}"#
         let kept = try RowJSON.decoder.decode(DashboardLayout.self, from: Data(saved.utf8))
-        #expect(kept.sections == [.insights])
+        #expect(kept.sections == [.insights, .pings])
         #expect(kept.bodyMetrics == [.scaleWeight])
         #expect(kept.nutrition.isEmpty)
     }
@@ -56,7 +56,7 @@ struct TileMetricsTests {
     @Test func stepsMoveFromGeneralIntoInsightsOnce() throws {
         func decode(_ json: String) throws -> DashboardLayout { try RowJSON.decoder.decode(DashboardLayout.self, from: Data(json.utf8)) }
         let shown = try decode(#"{"revision":2,"sections":["general","insights"],"insights":["weightTrend","workouts"],"general":["steps"]}"#)
-        #expect(shown.sections == [.insights])
+        #expect(shown.sections == [.insights, .pings])
         #expect(shown.insights == [.weightTrend, .steps, .workouts])
         let hidden = try decode(#"{"revision":2,"insights":["workouts"],"general":[]}"#)
         #expect(hidden.insights == [.workouts])
