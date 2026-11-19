@@ -10,7 +10,7 @@ struct DashboardTab: View {
     @Observe(NutritionLogDay.all) private var foodLog
     @Observe(NutritionPlan.all) private var plans
     @Observe(NutrientGoal.all) private var goals
-    @Observe(BodyMetric.all) private var bodyMetrics
+    @Observe(BodyMetric.measurements) private var bodyMetrics
 
     var body: some View {
         // Reading `scenePhase` rebuilds the context when the scene becomes active, so a new day shows on return.

@@ -22,8 +22,9 @@ export const bodyRoutes: Route[] = [
 		method: 'GET',
 		path: '/body-weights',
 		tag: 'Body weight',
-		summary: 'List logged body weights, newest first',
-		description: 'Only weigh-ins logged in the app or here. HealthKit samples never leave the phone.',
+		summary: 'List body weights, newest first',
+		description:
+			"Every weigh-in: the ones logged in the app or here (`manual`) and the phone's copies of Apple Health's (`healthkit`). A Health sample that is the same reading as a manual weigh-in is not copied.",
 		query: z.object({ from: M.instant.optional(), to: M.instant.optional(), limit: limit(100, 1000), offset }),
 		response: paged(M.BodyWeight),
 		run({ db, query }) {
@@ -83,7 +84,10 @@ export const bodyRoutes: Route[] = [
 		method: 'GET',
 		path: '/body-metrics',
 		tag: 'Body weight',
-		summary: 'List visual body fat, tape measurements, and step counts, oldest first',
+		summary:
+			'List visual body fat, tape measurements, and daily steps, flights climbed, and walking distance, oldest first',
+		description:
+			"Steps, flights climbed, and walking distance are Apple Health's daily totals, copied by the phone (`healthkit`); a `manual` step count stays on a day Health has none.",
 		query: days.extend({ kind: z.enum(BODY_METRIC_KINDS).optional(), ...page }),
 		response: paged(M.BodyMetric),
 		run({ db, query }) {
@@ -97,13 +101,21 @@ export const bodyRoutes: Route[] = [
 		path: '/body-metrics/{day}/{kind}',
 		tag: 'Body weight',
 		summary: "Set a day's value of a body metric",
-		description: 'Centimeters for tape measurements, a percent for `visual_body_fat`, a count for `steps`.',
+		description:
+			"Centimeters for tape measurements, a percent for `visual_body_fat`, a count for `steps` and `flights_climbed`, meters for `walking_distance`. The row becomes `manual`; the phone replaces it with Apple Health's total on a day Health has one.",
 		body: M.BodyMetricPut,
 		response: M.BodyMetric,
 		run({ db, params, body, now }) {
 			const day = dayParam(params);
 			const kind = z.enum(BODY_METRIC_KINDS).parse(params.kind);
-			const row: RowOf<'body_metrics'> = { id: `${day}/${kind}`, day, kind, value: body.value, updatedAt: now };
+			const row: RowOf<'body_metrics'> = {
+				id: `${day}/${kind}`,
+				day,
+				kind,
+				value: body.value,
+				source: 'manual',
+				updatedAt: now,
+			};
 			db.commit(db.put('body_metrics', row));
 			return row;
 		},

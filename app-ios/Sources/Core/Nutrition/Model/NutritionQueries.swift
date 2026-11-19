@@ -85,16 +85,11 @@ extension FoodFavorite {
 }
 
 extension BodyMetric {
-    /// Every manual metric of every kind, oldest first.
-    static let all = DatabaseQuery([BodyMetric]()) { db in
-        try BodyMetric.fetchAll(db).sorted { ($0.day, $0.kind.rawValue) < ($1.day, $1.kind.rawValue) }
-    }
-
-    /// Every value of `kind`, oldest first.
-    static func series(_ kind: BodyMetricKind) -> DatabaseQuery<[BodyMetric]> {
-        DatabaseQuery([]) { db in
-            try BodyMetric.filter(Column("kind") == kind.rawValue).fetchAll(db).sorted { $0.day < $1.day }
-        }
+    /// Every visual body fat and tape measurement, oldest first. The activity totals are years of days, which the
+    /// screens read through `BodyReadings` instead.
+    static let measurements = DatabaseQuery([BodyMetric]()) { db in
+        try BodyMetric.filter(!BodyMetricKind.activity.map(\.rawValue).contains(Column("kind"))).fetchAll(db)
+            .sorted { ($0.day, $0.kind.rawValue) < ($1.day, $1.kind.rawValue) }
     }
 }
 

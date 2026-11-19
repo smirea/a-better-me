@@ -119,9 +119,8 @@ struct StrategyCheckInTests {
 
         var settings = NutritionSettings()
         settings.expenditure.initialKcal = 2000
-        let logged = try store.readBlocking(BodyWeight.all.fetch)
         let inputs = StrategyInputs.make(
-            weighIns: WeighIns.merge(logged: logged, health: []), log: try store.readBlocking(NutritionLogDay.all.fetch),
+            weighIns: try store.readBlocking { try BodyReadings.fetch($0, calendar: utc) }.weighIns, log: try store.readBlocking(NutritionLogDay.all.fetch),
             settings: settings, profile: ProfileSettings(), today: today, calendar: utc
         )
         #expect(inputs.trendWeightKg == 80)

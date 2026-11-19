@@ -15,7 +15,8 @@ const bool = (name: string) => integer(name, { mode: 'boolean' });
 
 export const SETTINGS_ID = 'settings';
 export const WEIGHT_UNITS = ['kg', 'lb'] as const;
-export const BODY_WEIGHT_SOURCES = ['manual', 'healthkit'] as const;
+/** `healthkit` rows mirror Apple Health: the phone copies them in, rewrites them when Health changes, and deletes them when Health drops them. */
+export const BODY_SOURCES = ['manual', 'healthkit'] as const;
 /** Where a food snapshot came from. Only the first three are rows of `foods`; recipes and quick adds are snapshots. */
 const FOOD_SOURCES = ['custom', 'usda', 'open_food_facts', 'recipe', 'quick_add'] as const;
 export const FOOD_ROW_SOURCES = ['custom', 'usda', 'open_food_facts'] as const;
@@ -25,6 +26,8 @@ export const NOTE_COLORS = ['red', 'blue', 'green', 'yellow', 'purple'] as const
 export const BODY_METRIC_KINDS = [
 	'visual_body_fat',
 	'steps',
+	'flights_climbed',
+	'walking_distance',
 	'neck',
 	'shoulders',
 	'bust',
@@ -150,11 +153,12 @@ const gymProfiles = sqliteTable('gym_profiles', {
 	updatedAt: text('updated_at').notNull(),
 });
 
+/** A weigh-in. A `healthkit` row's id is its Health sample's UUID, so copying a sample again changes nothing. */
 export const bodyWeights = sqliteTable('body_weights', {
 	id: text('id').primaryKey(),
 	measuredAt: text('measured_at').notNull(),
 	weightKg: real('weight_kg').notNull(),
-	source: text('source', { enum: BODY_WEIGHT_SOURCES }).notNull().default('manual'),
+	source: text('source', { enum: BODY_SOURCES }).notNull().default('manual'),
 	/** The scale's body fat percent, entered with the weight. */
 	bodyFatPercent: real('body_fat_percent'),
 });
@@ -277,13 +281,17 @@ const foodLogNotes = sqliteTable('food_log_notes', {
 	color: text('color', { enum: NOTE_COLORS }).notNull().default('blue'),
 });
 
-/** A manual visual body fat, tape measurement, or step count for a day. The id is `<day>/<kind>`, so one value per day. */
+/**
+ * A visual body fat, tape measurement, or activity total (steps, flights climbed, walking distance) for a day. The id
+ * is `<day>/<kind>`, so one value per day, and Apple Health's total replaces a manual one for its day.
+ */
 const bodyMetrics = sqliteTable('body_metrics', {
 	id: text('id').primaryKey(),
 	day: text('day').notNull(),
 	kind: text('kind', { enum: BODY_METRIC_KINDS }).notNull(),
-	/** Percent for `visual_body_fat`, a count for `steps`, centimeters for the rest. */
+	/** Percent for `visual_body_fat`, a count for `steps` and `flights_climbed`, meters for `walking_distance`, centimeters for the rest. */
 	value: real('value').notNull(),
+	source: text('source', { enum: BODY_SOURCES }).notNull().default('manual'),
 	updatedAt: text('updated_at').notNull(),
 });
 
@@ -547,7 +555,7 @@ export const schema = defineSchema({
 		gym_profiles: { equipment: object },
 		body_weights: {
 			weightKg: z.number().positive(),
-			source: z.enum(BODY_WEIGHT_SOURCES),
+			source: z.enum(BODY_SOURCES),
 			bodyFatPercent: z.number().min(0).max(100),
 		},
 		api_tokens: { tokenHash: z.string().regex(/^[0-9a-f]{64}$/) },
@@ -572,7 +580,7 @@ export const schema = defineSchema({
 		food_favorites: { food: foodSnapshot, serving, alterations: z.array(ingredientAlteration).min(1) },
 		nutrition_days: { status: z.enum(DAY_STATUSES), override: nutrientAmounts },
 		food_log_notes: { day, minute, title: z.string().min(1), color: z.enum(NOTE_COLORS) },
-		body_metrics: { day, kind: z.enum(BODY_METRIC_KINDS), value: amount },
+		body_metrics: { day, kind: z.enum(BODY_METRIC_KINDS), value: amount, source: z.enum(BODY_SOURCES) },
 		nutrition_plans: {
 			kind: z.enum(PLAN_KINDS),
 			goal: nutritionGoal,

@@ -57,7 +57,6 @@ struct StrategyDataReader<Content: View>: View {
     @Observe(NutritionPlan.all) private var plans
     @Observe(NutritionLogDay.all) private var log
     @Observe(AppSettings.current) private var settings
-    @Observe(BodyMetric.series(.steps)) private var importedSteps
     @Observe(WorkoutSession.activeMinutes) private var workouts
     @State private var inputs = StrategyResults.last?.inputs
 
@@ -66,7 +65,7 @@ struct StrategyDataReader<Content: View>: View {
         let _ = scenePhase
         let sources = StrategySources(
             weighIns: health.weighIns, log: log, settings: settings.nutrition, profile: settings.profile, plans: plans,
-            steps: NutritionExpenditure.steps(health: health.steps, imported: importedSteps, calendar: .current), workouts: workouts,
+            steps: health.steps, workouts: workouts,
             today: .today
         )
         // The maintenance estimate screens and fits the whole history, so it is computed off the main thread. Only the

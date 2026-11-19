@@ -7,7 +7,7 @@ struct BodyMetricsLogSheet: View {
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @Observe(AppSettings.current) private var settings
-    @Observe(BodyMetric.all) private var metrics
+    @Observe(BodyMetric.measurements) private var metrics
     @State private var date = Date.now
     @State private var values: [BodyMetricKind: Double] = [:]
     @State private var original: [BodyMetricKind: Double] = [:]

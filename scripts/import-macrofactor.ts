@@ -88,7 +88,7 @@ const UNSUPPORTED: Record<string, string> = {
 	'Micronutrient Goals': 'the importer does not read this sheet yet',
 	'Food Log Notes': 'the app has no food log notes',
 };
-/** WeighIns.sameMomentTolerance: another weigh-in this close is the same one. */
+/** HealthMirror.sameMomentTolerance: another weigh-in this close is the same one. */
 const SAME_MOMENT_MS = 60_000;
 /** The export has no time of day, so a weigh-in already stored that day at this weight is the same reading. */
 const SAME_WEIGHT_KG = 0.05;
@@ -693,13 +693,14 @@ export async function importMacroFactor(options: {
 		post('/body-weights'),
 		patch('/body-weights'),
 	);
-	reconcile(
-		'body_metrics',
-		parsed.metrics,
-		byId(await every(api, '/body-metrics')),
-		put('/body-metrics'),
-		put('/body-metrics'),
-	);
+	const metrics = byId(await every(api, '/body-metrics'));
+	// Apple Health's total owns its day: the phone would put it back over an imported count.
+	for (const key of parsed.metrics.keys()) {
+		if (metrics.get(key)?.source !== 'healthkit') continue;
+		parsed.metrics.delete(key);
+		parsed.skipped.body_metrics = (parsed.skipped.body_metrics ?? 0) + 1;
+	}
+	reconcile('body_metrics', parsed.metrics, metrics, put('/body-metrics'), put('/body-metrics'));
 
 	const existingDays = byId(await api('GET', '/nutrition-days'));
 	const itemized = new Set([
