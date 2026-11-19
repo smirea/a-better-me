@@ -31,7 +31,8 @@ final class HealthData {
 
     /// The app's own weigh-ins merge into Health's, so it observes them itself.
     init(store localStore: LocalStore) {
-        if let last = HealthSnapshot.load() {
+        // A Debug simulator with Health off must read as denied, not as the last launch that had it on.
+        if HealthStore.isAvailable, let last = HealthSnapshot.load() {
             update(weights: last.weights, steps: last.steps, flights: last.flights, distance: last.distance, logged: [])
         }
         loggedObservation = ValueObservation.trackingConstantRegion { try BodyWeight.all.fetch($0) }
