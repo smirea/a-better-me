@@ -26,21 +26,6 @@ private func plan(_ text: String, kcal: Double, goal: NutritionGoal? = nil) -> N
 }
 
 struct NutritionMetricsTests {
-    @Test func healthStepsWinTheirDaysAndImportedStepsFillTheRest() {
-        let health = [DatedValue(date: start("2026-10-01"), value: 9000), DatedValue(date: start("2026-10-02"), value: 4000)]
-        let imported = [
-            BodyMetric(.steps, on: CalendarDay("2026-10-02")!, value: 12000),
-            BodyMetric(.steps, on: CalendarDay("2026-09-30")!, value: 7000),
-            BodyMetric(.waist, on: CalendarDay("2026-09-29")!, value: 80),
-        ]
-        let steps = NutritionExpenditure.steps(health: health, imported: imported, calendar: utc)
-        #expect(steps == [
-            DatedValue(date: start("2026-09-30"), value: 7000),
-            DatedValue(date: start("2026-10-01"), value: 9000),
-            DatedValue(date: start("2026-10-02"), value: 4000),
-        ])
-    }
-
     @Test func logDaysCountOverridesFastsAndSkipIncompleteDays() {
         let log = [
             logDay("2026-10-01", kcal: [500, 700]),

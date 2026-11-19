@@ -33,15 +33,6 @@ struct NutritionLogDay: Equatable, Sendable {
 /// The expenditure the Dashboard shows and a Strategy check-in freezes, from the log, the weigh-ins, and the settings.
 /// Both read it through here, so the two never disagree.
 enum NutritionExpenditure {
-    /// HealthKit wins on a day it has steps; an imported count fills a day HealthKit lacks.
-    static func steps(health: [DatedValue], imported: [BodyMetric], calendar: Calendar) -> [DatedValue] {
-        let healthDays = Set(health.map { calendar.startOfDay(for: $0.date) })
-        let filled = imported.filter { $0.kind == .steps }
-            .map { DatedValue(date: $0.day.date(in: calendar), value: $0.value) }
-            .filter { !healthDays.contains($0.date) }
-        return (health + filled).sorted { $0.date < $1.date }
-    }
-
     enum ExpenditureStrategy: Equatable {
         case updating, holding, fixed
     }

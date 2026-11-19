@@ -32,7 +32,7 @@ function nutritionInputs(db: Db) {
 	return { settings: nutrition.expenditure ?? {}, profile: (row?.profile ?? {}) as Profile };
 }
 
-/** The app's weigh-ins on the owner's calendar. HealthKit samples never reach the server, so they are not in here. */
+/** Every weigh-in on the owner's calendar, the phone's copies of Apple Health's among them. */
 function weighIns(db: Db, timeZone: string) {
 	return db.all('body_weights').map(row => ({ day: dayIn(row.measuredAt, timeZone), value: row.weightKg }));
 }
@@ -136,7 +136,7 @@ export const insightRoutes: Route[] = [
 		tag: 'Insights',
 		summary: 'The daily energy expenditure (TDEE) estimate, by the algorithm the Dashboard and the check-in use',
 		description:
-			'Recomputed from the app weigh-ins (not Apple Health), the food log, the plans, the imported steps (not Apple Health), and `settings.nutrition.expenditure` on every call, so an edit to a past day is reflected at once.',
+			'Recomputed from the weigh-ins, the food log, the plans, the daily steps, and `settings.nutrition.expenditure` on every call, so an edit to a past day is reflected at once.',
 		query: range,
 		response: M.ExpenditureSeries,
 		run({ db, query, now }) {
@@ -169,7 +169,7 @@ export const insightRoutes: Route[] = [
 		tag: 'Insights',
 		summary: 'The maintenance estimate Strategy sets targets from, with how it was reached',
 		description:
-			"The stretches of the log dense enough to measure (60% of days logged and six weigh-ins in any three weeks, less each stretch's first two weeks), each moved to today's trend weight, steps, and workouts, and pooled with the BMR or initial-estimate prior by inverse variance. `incomplete` lists the counted days left out as almost certainly incomplete, which `GET /expenditure` skips too. Like the other insights it reads the app's weigh-ins and imported steps, not Apple Health, so it can differ from the phone's. A static expenditure in the settings replaces it in the app.",
+			"The stretches of the log dense enough to measure (60% of days logged and six weigh-ins in any three weeks, less each stretch's first two weeks), each moved to today's trend weight, steps, and workouts, and pooled with the BMR or initial-estimate prior by inverse variance. `incomplete` lists the counted days left out as almost certainly incomplete, which `GET /expenditure` skips too. A static expenditure in the settings replaces it in the app.",
 		query: z.object({ tz: M.timeZone }),
 		response: M.MaintenanceEstimate,
 		run({ db, query, now }) {

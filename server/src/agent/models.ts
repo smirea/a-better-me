@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { isTimeZone } from './engine';
 import {
 	BODY_METRIC_KINDS,
-	BODY_WEIGHT_SOURCES,
+	BODY_SOURCES,
 	CALORIE_FLOORS,
 	DAY_STATUSES,
 	DIET_STYLES,
@@ -812,12 +812,22 @@ export const FoodLogSummary = z
 	})
 	.meta({ id: 'FoodLogSummary', description: 'A day of the food log without its entries.' });
 
+const healthSource =
+	'`healthkit` rows mirror Apple Health: the phone copies them in and, each time it reads Health, restores one that was edited and re-creates one that was deleted. `manual` rows were logged in the app, imported, or written here.';
+
 export const BodyMetric = z
-	.object({ id: z.string(), day, kind: z.enum(BODY_METRIC_KINDS), value: z.number(), updatedAt: z.string() })
+	.object({
+		id: z.string(),
+		day,
+		kind: z.enum(BODY_METRIC_KINDS),
+		value: z.number(),
+		source: z.enum(BODY_SOURCES).meta({ description: healthSource }),
+		updatedAt: z.string(),
+	})
 	.meta({
 		id: 'BodyMetric',
 		description:
-			'One value per day and kind, id `<day>/<kind>`: a percent for `visual_body_fat`, a count for `steps`, centimeters for the rest.',
+			'One value per day and kind, id `<day>/<kind>`: a percent for `visual_body_fat`, a count for `steps` and `flights_climbed`, meters for `walking_distance`, centimeters for the rest.',
 	});
 export const BodyMetricPut = z.object({ value: nonnegative }).meta({ id: 'BodyMetricPut' });
 
@@ -1113,7 +1123,7 @@ export const BodyWeight = z
 		id: z.string(),
 		measuredAt: z.string(),
 		weightKg: z.number(),
-		source: z.enum(BODY_WEIGHT_SOURCES),
+		source: z.enum(BODY_SOURCES).meta({ description: healthSource }),
 		bodyFatPercent: z.number().nullable().meta({ description: "The scale's body fat, entered with the weight." }),
 	})
 	.meta({ id: 'BodyWeight' });

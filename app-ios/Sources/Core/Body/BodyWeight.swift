@@ -1,22 +1,23 @@
 import Foundation
 import GRDB
 
-/// A row of the synced `body_weights` table: a weigh-in logged in the app. HealthKit samples are read live and never
-/// copied here.
+/// A row of the synced `body_weights` table: a weigh-in logged in the app (`manual`), or the copy of an Apple Health
+/// sample (`healthKit`) that `HealthMirror` keeps, whose id is the sample's UUID.
 struct BodyWeight: SyncedRecord {
     static let table = "body_weights"
 
     var id: UUID
     var measuredAt: Date
     var weightKg: Double
-    var source = BodyWeightSource.manual
+    var source = BodySource.manual
     /// The scale's body fat percent, entered with the weight in Nutrition's weigh-in sheet.
     var bodyFatPercent: Double?
 
-    init(weightKg: Double, measuredAt: Date = .now) {
-        id = UUID()
+    init(id: UUID = UUID(), weightKg: Double, measuredAt: Date = .now, source: BodySource = .manual) {
+        self.id = id
         self.weightKg = weightKg
         self.measuredAt = measuredAt
+        self.source = source
     }
 
     init(row: Row) throws {
@@ -24,7 +25,7 @@ struct BodyWeight: SyncedRecord {
         measuredAt = try row.instant("measured_at")
         guard let kg: Double = row["weight_kg"] else { throw RowDecodingError(description: "weight_kg is null") }
         weightKg = kg
-        source = (row["source"] as String?).flatMap(BodyWeightSource.init(rawValue:)) ?? .manual
+        source = (row["source"] as String?).flatMap(BodySource.init(rawValue:)) ?? .manual
         bodyFatPercent = row["body_fat_percent"]
     }
 
@@ -37,7 +38,9 @@ struct BodyWeight: SyncedRecord {
     }
 }
 
-enum BodyWeightSource: String {
+/// Who owns a `body_weights` or `body_metrics` row. A `healthKit` row follows Apple Health: `HealthMirror` rewrites it
+/// when Health changes and deletes it when Health drops it, so the app never edits one.
+enum BodySource: String, Sendable {
     case manual, healthKit = "healthkit"
 }
 

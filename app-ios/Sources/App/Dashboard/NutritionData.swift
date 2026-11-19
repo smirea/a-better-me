@@ -1,7 +1,7 @@
 import Observation
 
 /// What the Dashboard's nutrition values read besides the workout history and Health: the food log, the plans, the
-/// nutrient goals, the settings they use, and the manual body metrics (imported steps among them). `DashboardTab` feeds
+/// nutrient goals, the settings they use, and the body measurements. `DashboardTab` feeds
 /// it from its observations, and values derived from it key on `revision`, as Health values key on
 /// `HealthData.revision`.
 @MainActor @Observable
@@ -28,7 +28,6 @@ final class NutritionData {
     var goals: [NutrientGoal] { inputs.goals }
     var profile: ProfileSettings { inputs.profile }
     var bodyMetrics: [BodyMetric] { inputs.bodyMetrics }
-    var importedSteps: [BodyMetric] { inputs.bodyMetrics.filter { $0.kind == .steps } }
 
     func update(_ inputs: Inputs) {
         guard inputs != self.inputs else { return }

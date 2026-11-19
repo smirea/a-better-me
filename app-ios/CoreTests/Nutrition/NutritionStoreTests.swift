@@ -133,12 +133,12 @@ struct NutritionStoreTests {
         store.setBodyMetric(.waist, on: tuesday, value: 83)
         try await settled()
 
-        #expect(try read(BodyMetric.series(.waist)).map(\.value) == [83.5, 83])
-        #expect(try read(BodyMetric.series(.visualBodyFat)).map(\.id) == ["2026-10-26/visual_body_fat"])
+        #expect(try read(BodyMetric.measurements).map(\.id) == ["2026-10-26/visual_body_fat", "2026-10-26/waist", "2026-10-27/waist"])
+        #expect(try read(BodyMetric.measurements).map(\.value) == [17.5, 83.5, 83])
 
         store.setBodyMetric(.waist, on: monday, value: nil)
         try await settled()
-        #expect(try read(BodyMetric.series(.waist)).map(\.day) == [tuesday])
+        #expect(try read(BodyMetric.measurements).map(\.id) == ["2026-10-26/visual_body_fat", "2026-10-27/waist"])
     }
 
     @Test func aPlanOnTheSameDayReplacesTheEarlierOne() async throws {

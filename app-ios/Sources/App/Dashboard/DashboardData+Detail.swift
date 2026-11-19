@@ -17,7 +17,7 @@ enum DashboardRoute: Hashable {
         }
     }
 
-    /// Reads the food log, plans, or imported steps, and the weigh-ins with them.
+    /// Reads the food log or plans, and the weigh-ins and steps with them.
     var usesNutrition: Bool {
         switch self {
         case .steps, .expenditure, .energyBalance, .nutrient, .macros, .bodyMetric: true
@@ -249,8 +249,8 @@ struct DashboardValues: DynamicProperty {
     }
 
     /// Without `usesHealth`, `compute` sees no weigh-ins or steps, so a value that reads them without keying on Health
-    /// shows up empty instead of silently stale. `usesNutrition` adds the food log, plans, nutrition settings, the
-    /// expenditure, and the imported steps, and implies Health, because the expenditure reads the weigh-ins.
+    /// shows up empty instead of silently stale. `usesNutrition` adds the food log, plans, nutrition settings, and
+    /// the expenditure, and implies Health, because the expenditure reads the weigh-ins and steps.
     private func memo<Value>(_ name: Name, usesHealth: Bool = false, usesNutrition: Bool = false, _ compute: (DashboardData) -> Value) -> Value {
         let today = context.calendar.startOfDay(for: .now)
         let readsHealth = usesHealth || usesNutrition
@@ -269,7 +269,6 @@ struct DashboardValues: DynamicProperty {
                 data.meters = health.distance
             }
             if usesNutrition {
-                data.steps = NutritionExpenditure.steps(health: health.steps, imported: nutrition.importedSteps, calendar: context.calendar)
                 data.log = nutrition.log
                 data.plans = nutrition.plans
                 data.expenditureSettings = nutrition.inputs.expenditure
