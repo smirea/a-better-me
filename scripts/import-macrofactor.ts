@@ -681,7 +681,8 @@ export async function importMacroFactor(options: {
 		);
 		if (!twin) continue;
 		parsed.weights.delete(id);
-		if (row.bodyFatPercent !== null && twin.bodyFatPercent === null) {
+		// A copy of an Apple Health reading is read-only in the API, so it cannot take the export's body fat.
+		if (row.bodyFatPercent !== null && twin.bodyFatPercent === null && twin.source !== 'healthkit') {
 			fatFills.set(String(twin.id), { ...twin, bodyFatPercent: row.bodyFatPercent });
 		} else parsed.skipped.body_weights = (parsed.skipped.body_weights ?? 0) + 1;
 	}
@@ -694,7 +695,7 @@ export async function importMacroFactor(options: {
 		patch('/body-weights'),
 	);
 	const metrics = byId(await every(api, '/body-metrics'));
-	// Apple Health's total owns its day: the phone would put it back over an imported count.
+	// Apple Health's total owns its day, and the API refuses a write over it.
 	for (const key of parsed.metrics.keys()) {
 		if (metrics.get(key)?.source !== 'healthkit') continue;
 		parsed.metrics.delete(key);

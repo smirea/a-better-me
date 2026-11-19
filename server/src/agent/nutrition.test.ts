@@ -5,7 +5,7 @@ import { testServer } from '../testing';
 
 let tick = Date.parse('2026-10-22T12:00:00.000Z');
 // Each request a millisecond later, so rows ordered by when they were written keep the order they were sent in.
-const { config, app, call, ok, phone } = testServer({ clock: () => new Date(tick++) });
+const { config, app, call, ok, phone, phoneWrites } = testServer({ clock: () => new Date(tick++) });
 
 const status = async (method: string, path: string, body?: unknown) => ({
 	status: (await call(method, path, body)).status,
@@ -239,6 +239,40 @@ describe('nutrition agent API', () => {
 			ceiling: null,
 		});
 		expect((await status('PUT', '/nutrient-goals/2026-10-01/fiber', { mode: 'none' })).status).toBe(400);
+	});
+
+	test('a row copied from Apple Health is read-only, and a manual value cannot replace it', async () => {
+		const weighIn = '00000000-0000-4000-8000-0000000000bb';
+		const steps = '2026-10-21/steps';
+		await phoneWrites([
+			{
+				seq: 1,
+				table: 'body_weights',
+				id: weighIn,
+				op: 'put',
+				values: { measured_at: '2026-10-21T07:00:00.000Z', weight_kg: 88, source: 'healthkit' },
+			},
+			{
+				seq: 2,
+				table: 'body_metrics',
+				id: steps,
+				op: 'put',
+				values: {
+					day: '2026-10-21',
+					kind: 'steps',
+					value: 9000,
+					source: 'healthkit',
+					updated_at: '2026-10-21T20:00:00.000Z',
+				},
+			},
+		]);
+		expect((await status('PATCH', `/body-weights/${weighIn}`, { weightKg: 70 })).status).toBe(409);
+		expect((await status('DELETE', `/body-weights/${weighIn}`)).status).toBe(409);
+		expect((await status('PUT', `/body-metrics/${steps}`, { value: 1 })).status).toBe(409);
+		expect((await status('DELETE', `/body-metrics/${steps}`)).status).toBe(409);
+		expect((await ok('GET', `/body-weights/${weighIn}`)).weightKg).toBe(88);
+		expect((await ok('GET', '/body-metrics?kind=steps&from=2026-10-21&to=2026-10-21')).items[0].value).toBe(9000);
+		expect((await ok('PUT', '/body-metrics/2026-10-22/steps', { value: 7000 })).source).toBe('manual');
 	});
 
 	test('weigh-ins take a given id and body fat; settings merge the profile and the Nutrition settings', async () => {

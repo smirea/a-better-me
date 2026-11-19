@@ -1,0 +1,4 @@
+{
+	"title": "The API refuses edits to Apple Health readings, which only Health can change",
+	"description": "Editing or deleting a weigh-in or daily total copied from Health answers 409 with where to change it; manual entries stay editable."
+}

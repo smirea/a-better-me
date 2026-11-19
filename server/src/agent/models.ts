@@ -813,7 +813,7 @@ export const FoodLogSummary = z
 	.meta({ id: 'FoodLogSummary', description: 'A day of the food log without its entries.' });
 
 const healthSource =
-	'`healthkit` rows mirror Apple Health: the phone copies them in and, each time it reads Health, restores one that was edited and re-creates one that was deleted. `manual` rows were logged in the app, imported, or written here.';
+	"`healthkit` rows are the phone's copies of Apple Health and are read-only here: editing or deleting one answers 409, because only Health can change its own readings. `manual` rows were logged in the app, imported, or written here.";
 
 export const BodyMetric = z
 	.object({
