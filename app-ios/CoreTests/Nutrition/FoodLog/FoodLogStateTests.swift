@@ -74,7 +74,6 @@ struct FoodLogStateTests {
         state.day = monday
         state.hold(.move, breakfast)
         state.day = wednesday
-        state.pending?.inline = true
 
         state.paste(to: .hour(wednesday, hour: 12), in: store)
         #expect(try await entries(on: monday).isEmpty)
@@ -104,9 +103,6 @@ struct FoodLogStateTests {
 
         state.hold(.move, [entry(minute: 482)])
         state.day = monday.adding(days: 1)
-        state.pending?.inline = true
-        state.back()
-        #expect(state.pending?.inline == false)
         state.back()
         #expect(!state.selecting && state.pending == nil)
     }

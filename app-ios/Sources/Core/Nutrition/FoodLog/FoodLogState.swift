@@ -24,15 +24,18 @@ struct FoodLogHeaderSize: Equatable {
 /// this holds only what the owner is doing.
 @MainActor @Observable
 final class FoodLogState {
-    enum Action: Hashable { case copy, move }
+    enum Action: Hashable {
+        case copy, move
 
-    /// Selected entries waiting for a paste target: the bar lists targets, and with `inline` every hour's + pastes.
+        var title: String { self == .copy ? "Copy" : "Move" }
+    }
+
+    /// Selected entries waiting for a paste target: the bar lists targets, and every hour's or section's + pastes.
     /// It outlives a change of day, so the owner pastes onto another day as onto `source`, where the entries were picked.
     struct Pending: Hashable {
         var action: Action
         var entries: [FoodEntry]
         var source: CalendarDay
-        var inline = false
     }
 
     /// "Copied 3 foods to Today" over the bottom bar, with Undo when it can be taken back.
@@ -90,12 +93,11 @@ final class FoodLogState {
 
     var selectedEntries: [FoodEntry] { entries.filter { selection.contains($0.id) } }
 
-    /// The check circles show on the selection's own day only, so another day's foods never read as selected, and not
-    /// while pasting inline, where the destination's foods would.
+    /// The check circles show on the selection's own day only, so another day's foods never read as selected.
     func showsCircles(on day: CalendarDay) -> Bool {
         guard selecting else { return false }
         guard let pending else { return true }
-        return !pending.inline && pending.source == day
+        return pending.source == day
     }
 
     /// Copy or Move: the entries wait for a paste target, and the selection holds still until it is picked.
@@ -105,13 +107,11 @@ final class FoodLogState {
         pending = Pending(action: action, entries: entries, source: day)
     }
 
-    /// The paste bar's back: out of Paste Inline to the targets, then to the selection, unless the owner has since
-    /// left its day, which ends it as leaving the day always does.
+    /// The paste bar's back: to the selection, unless the owner has since left its day, which ends it as leaving the
+    /// day always does.
     func back() {
         guard let pending else { return }
-        if pending.inline {
-            self.pending?.inline = false
-        } else if pending.source == day {
+        if pending.source == day {
             self.pending = nil
         } else {
             endSelection()

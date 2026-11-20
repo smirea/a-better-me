@@ -224,7 +224,7 @@ private struct TimelineColumn {
     let hasLine: Bool
 }
 
-/// The hour's or section's pill, its + (a paste button while pasting inline, a move button under Premove), and its
+/// The hour's or section's pill, its + (a paste arrow while a Copy or Move is pending, a move arrow under Premove), and its
 /// Meal Rating tag, and its macro totals. Tapping the pill selects its entries; under the long-press setting, holding it
 /// adds food there. An empty section also takes a share of the page's leftover height under its pill, with a big "Log
 /// <section>" button centered in it that does what the + does.
@@ -257,22 +257,22 @@ private struct SlotRow: View {
     private var slotRow: some View {
         Group {
             let label = group.slot.label
-            if state.pending?.inline == true {
+            if let pending = state.pending {
                 Button { state.paste(to: target, in: store) } label: {
-                    let paste = Image(systemName: "doc.on.clipboard.fill").hourIcon(isPrimary: true).frame(width: 32, height: 40)
-                    row(pill: pill(label, isActive: false), control: paste).contentShape(.rect)
+                    let arrow = Image(systemName: "arrow.left").hourIcon(isPrimary: true).frame(width: 32, height: 40)
+                    row(pill: pill(label, isActive: false), control: arrow).contentShape(.rect)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Paste at \(label)")
+                .accessibilityLabel("\(pending.action.title) to \(label)")
             } else {
                 row(pill: interactivePill(label), control: control(label))
             }
         }
     }
 
-    /// Mirrors the +: it pastes while pasting inline, moves the selection under Premove, and is disabled in select mode
-    /// otherwise. It is gone once the section's time has passed (`hasEnded`), leaving the pill and its +; the clock is
-    /// read here each minute, so crossing a section's end re-renders only this button.
+    /// Mirrors the +: it pastes while a Copy or Move is pending, moves the selection under Premove, and is disabled in
+    /// select mode otherwise. It is gone once the section's time has passed (`hasEnded`), pending or not, leaving the
+    /// pill and its arrow; the clock is read here each minute, so crossing a section's end re-renders only this button.
     private func emptySection(_ section: MealSection) -> some View {
         TimelineView(.everyMinute) { context in
             if !sections.hasEnded(section, on: day, now: context.date) {
@@ -283,11 +283,11 @@ private struct SlotRow: View {
 
     private func emptySectionButton(_ label: String) -> some View {
         Group {
-            if state.pending?.inline == true {
+            if let pending = state.pending {
                 Button { state.paste(to: target, in: store) } label: {
-                    widestLabel(Label("Paste Here", systemImage: "doc.on.clipboard"))
+                    widestLabel(Label("\(pending.action.title) Here", systemImage: "arrow.down"))
                 }
-                .accessibilityLabel("Paste into \(label)")
+                .accessibilityLabel("\(pending.action.title) into \(label)")
             } else if premove, state.selecting, state.pending == nil {
                 Button { state.relocate(state.selectedEntries, .move, to: target, in: store) } label: {
                     widestLabel(Label("Move Here", systemImage: "arrow.down"))
@@ -373,10 +373,10 @@ private struct SlotRow: View {
         }
     }
 
-    /// Pasting inline turns the whole row into the paste button, so there the tag is not a button of its own.
+    /// A pending Copy or Move turns the whole row into the paste button, so there the tag is not a button of its own.
     @ViewBuilder
     private func ratingTag(_ score: MealRating.Score, showsText: Bool) -> some View {
-        if state.pending?.inline == true {
+        if state.pending != nil {
             MealRatingTag(score, showsText: showsText)
         } else {
             MealRatingButton(title: group.slot.label, score: score, formula: rating.formula, showsText: showsText) { explainsRating = true }
