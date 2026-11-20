@@ -27,8 +27,11 @@ struct MealRatingTests {
         #expect(score(250, 0)?.ratioText == "∞")
     }
 
-    @Test func aMealWithoutCaloriesHasNoRating() {
+    @Test func foodsUnderFiftyCaloriesHaveNoRating() {
         #expect(score(0, 0) == nil)
         #expect(formula.score([:]) == nil)
+        #expect(score(5, 0) == nil)
+        #expect(score(49.4, 10) == nil)
+        #expect(score(49.5, 0)?.tier == .dire)
     }
 }

@@ -6,6 +6,9 @@ struct MealRating: Codable, Hashable, Sendable {
     var enabled = false
     var formula = Formula.caloriesPerProtein
 
+    /// The owner's floor (2026-11-20, "Don't show for < 50cal"), after a 5-cal electrolyte drink read ∞ with a skull.
+    static let minimumCalories: Double = 50
+
     enum Formula: String, Codable, CaseIterable, Sendable {
         case caloriesPerProtein
 
@@ -21,11 +24,12 @@ struct MealRating: Codable, Hashable, Sendable {
         /// yellow above it, red from 14 as before, and the skull past 20; under 8 animates.
         var bounds: [Int] { [6, 7, 12, 13, 20] }
 
-        /// Nil when the meal has no calories to rate. No protein reads as infinite: the worst a meal can do. It divides
-        /// the whole numbers the row's totals show, so "403 cal, 28 P" reads 14:1 rather than the 15:1 of 403.4 ÷ 27.4.
+        /// Nil under `minimumCalories`: a drink or a bite isn't a meal worth grading. No protein reads as infinite: the
+        /// worst a meal can do. It divides the whole numbers the row's totals show, so "403 cal, 28 P" reads 14:1 rather
+        /// than the 15:1 of 403.4 ÷ 27.4.
         func score(_ amounts: NutrientAmounts) -> Score? {
             let calories = (amounts[.energy] ?? 0).rounded()
-            guard calories > 0 else { return nil }
+            guard calories >= MealRating.minimumCalories else { return nil }
             let protein = (amounts[.protein] ?? 0).rounded()
             let ratio = protein > 0 ? Int((calories / protein).rounded()) : nil
             let tier = ratio.map { ratio in Tier.allCases.first { ratio <= bound(of: $0) ?? .max }! } ?? .dire
