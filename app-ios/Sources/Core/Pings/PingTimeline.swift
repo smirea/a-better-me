@@ -23,13 +23,57 @@ struct PingEntry: Identifiable, Hashable, Sendable {
     var id: UUID { log.id }
 }
 
+/// Logs the timeline draws as one row at the first one's time: the same ping at the same value logged again with
+/// nothing between, or boolean pings logged within `window` of the first. A log with a note stays on its own row, where
+/// the note shows.
+struct PingGroup: Hashable, Sendable {
+    /// A ping in the group and how many times it was logged in it.
+    struct Item: Hashable, Sendable {
+        var ping: Ping
+        var count: Int
+        /// A range's step; every log of a ping in a group holds the same one.
+        var value: Int
+    }
+
+    static let window: TimeInterval = 600
+
+    /// Oldest first, at least two.
+    var entries: [PingEntry]
+    /// Each ping once, in the order it was first logged.
+    var items: [Item]
+
+    init(_ entries: [PingEntry]) {
+        self.entries = entries
+        var items: [Item] = []
+        for entry in entries {
+            if let index = items.firstIndex(where: { $0.ping.id == entry.ping.id }) {
+                items[index].count += 1
+            } else {
+                items.append(Item(ping: entry.ping, count: 1, value: entry.log.value))
+            }
+        }
+        self.items = items
+    }
+
+    /// Whether `entry` joins `run`, the rows right before it.
+    static func joins(_ entry: PingEntry, _ run: [PingEntry]) -> Bool {
+        guard let first = run.first, entry.log.note.isEmpty, run.allSatisfy({ $0.log.note.isEmpty }) else { return false }
+        if run.allSatisfy({ $0.ping.id == entry.ping.id && $0.log.value == entry.log.value }) { return true }
+        return entry.ping.kind == .boolean && run.allSatisfy { $0.ping.kind == .boolean }
+            && entry.log.loggedAt.timeIntervalSince(first.log.loggedAt) <= window
+    }
+}
+
 enum PingTimelineRow: Identifiable, Hashable, Sendable {
     case entry(PingEntry)
+    case group(PingGroup)
     case marker(TimelineMarker)
 
+    /// A group takes its first log's id, so a row that a second log joins stays the same row.
     var id: String {
         switch self {
         case let .entry(entry): entry.log.key
+        case let .group(group): group.entries[0].log.key
         case let .marker(marker): marker.id
         }
     }
@@ -37,7 +81,16 @@ enum PingTimelineRow: Identifiable, Hashable, Sendable {
     var at: Date {
         switch self {
         case let .entry(entry): entry.log.loggedAt
+        case let .group(group): group.entries[0].log.loggedAt
         case let .marker(marker): marker.at
+        }
+    }
+
+    var entries: [PingEntry] {
+        switch self {
+        case let .entry(entry): [entry]
+        case let .group(group): group.entries
+        case .marker: []
         }
     }
 }
@@ -50,7 +103,25 @@ struct PingTimeline: Equatable, Sendable {
 
     /// The day oldest first, so waking up heads the timeline and the latest log ends it, beside the drawer.
     func rows(sleep: [TimelineMarker] = []) -> [PingTimelineRow] {
-        (entries.map(PingTimelineRow.entry) + (markers + sleep).map(PingTimelineRow.marker)).sorted { ($0.at, $0.id) < ($1.at, $1.id) }
+        let sorted = (entries.map(PingTimelineRow.entry) + (markers + sleep).map(PingTimelineRow.marker))
+            .sorted { ($0.at, $0.id) < ($1.at, $1.id) }
+        var rows: [PingTimelineRow] = []
+        var run: [PingEntry] = []
+        func close() {
+            if run.count == 1 { rows.append(.entry(run[0])) } else if run.count > 1 { rows.append(.group(PingGroup(run))) }
+            run = []
+        }
+        for row in sorted {
+            guard case let .entry(entry) = row else {
+                close()
+                rows.append(row)
+                continue
+            }
+            if !PingGroup.joins(entry, run) { close() }
+            run.append(entry)
+        }
+        close()
+        return rows
     }
 
     static func on(_ day: CalendarDay, calendar: Calendar = .current) -> DatabaseQuery<PingTimeline> {
