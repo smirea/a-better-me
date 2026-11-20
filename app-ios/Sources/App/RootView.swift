@@ -34,8 +34,12 @@ struct RootView: View {
     @State private var tab = AppTab.dashboard
     @State private var dashboardPath = NavigationPath()
     @State private var sheet: RootSheet?
-    /// Here rather than in the tab, so "+" can open the scanner on the day the Food Log shows.
+    /// Here rather than in the tab, so "+" can open the scanner on the day the Food Log shows. Its `day` is the app's
+    /// one shown day: Nutrition, Workout, and Pings all read and write it, so the Food Log's rules for a day change (a
+    /// bare selection ends, a pending copy or move follows) run whichever tab moved it.
     @State private var foodLog = FoodLogState()
+    /// The day that was today when the app last came forward, so a return on a new day moves the shown day with it.
+    @State private var today = CalendarDay.today
     @State private var addingPings = false
     @State private var inbox = QuickActionInbox.shared
 
@@ -44,8 +48,8 @@ struct RootView: View {
             // The tab bar's selection keeps the accent, so each tab's content restores the app's white tint.
             Tab("Dashboard", systemImage: "square.grid.2x2", value: .dashboard) { DashboardTab(path: $dashboardPath).tint(Theme.textPrimary) }
             Tab("Nutrition", systemImage: "fork.knife", value: .nutrition) { FoodLogTab(state: foodLog).tint(Theme.textPrimary) }
-            Tab("Workout", systemImage: "dumbbell", value: .workout) { WorkoutTab().tint(Theme.textPrimary) }
-            Tab("Pings", systemImage: "hand.tap", value: .pings) { PingsTab(adding: $addingPings).tint(Theme.textPrimary) }
+            Tab("Workout", systemImage: "dumbbell", value: .workout) { WorkoutTab(day: $foodLog.day).tint(Theme.textPrimary) }
+            Tab("Pings", systemImage: "hand.tap", value: .pings) { PingsTab(day: $foodLog.day, adding: $addingPings).tint(Theme.textPrimary) }
             Tab("New", systemImage: "plus", value: .add, role: .prominent) { Color.clear }
         }
         .tint(Theme.accent)
@@ -80,7 +84,12 @@ struct RootView: View {
             }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await health.refresh() } }
+            guard phase == .active else { return }
+            Task { await health.refresh() }
+            if today != .today {
+                if foodLog.day == today { foodLog.day = .today }
+                today = .today
+            }
         }
         .task {
             AppPermissions.launchStarted()
@@ -115,14 +124,18 @@ struct RootView: View {
         case .steps:
             tab = .dashboard
             dashboardPath = NavigationPath([DashboardRoute.steps])
-        case .foodLog: tab = .nutrition
+        case .foodLog:
+            tab = .nutrition
+            foodLog.day = .today
         case .weight: sheet = .weight
         case .newWorkout:
             tab = .workout
             sheet = .add(.workout)
         case .emptyWorkout: presenter.startOrResume({ .empty }, in: store)
         case .search, .barcode, .quickAdd, .ramble, .foods, .recipes, .favorites:
+            // A widget logs now, so the Food Log under the logger shows today too.
             tab = .nutrition
+            foodLog.day = .today
             sheet = action.logger.map(RootSheet.logger)
         }
     }

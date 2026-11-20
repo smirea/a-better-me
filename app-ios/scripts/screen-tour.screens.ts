@@ -18,7 +18,7 @@ const settings = (row: string) => [
 	`wait ${quote(row)} 8000`,
 	`press 'role="cell" label="${row}"'`,
 ];
-// The trailing toolbar menu of a tab root (Day Options on the Food Log, Workout Tab Options on the Workout tab).
+// The trailing toolbar menu of a tab root (Day Options on the Food Log).
 const trailingToolbarButton = ['press 364 84', 'wait 800'];
 const bottomRows = new Set([
 	'Levels',
@@ -134,13 +134,16 @@ export const screens: Screen[] = [
 	{ name: 'logger-ramble', steps: loggerTab('Ramble') },
 
 	{ name: 'workout', steps: [...tapTab('Workout'), 'shot top', ...scrolled(1)] },
-	{ name: 'workout-calendar', steps: [...tapTab('Workout'), ...tap('Calendar')] },
+	{
+		name: 'workout-calendar',
+		steps: [...tapTab('Workout'), ...tap('Workout Tab Options'), ...tap('Workout Calendar')],
+	},
 	{ name: 'workout-shortcuts', steps: [...tapTab('Workout'), ...tapTab('New')] },
-	{ name: 'workout-history', steps: [...tapTab('Workout'), ...trailingToolbarButton, ...tap('Workout History')] },
-	{ name: 'workout-archive', steps: [...tapTab('Workout'), ...trailingToolbarButton, ...tap('Archive')] },
+	{ name: 'workout-history', steps: [...tapTab('Workout'), ...tap('Workout Tab Options'), ...tap('Workout History')] },
+	{ name: 'workout-archive', steps: [...tapTab('Workout'), ...tap('Workout Tab Options'), ...tap('Archive')] },
 	{
 		name: 'workout-customize-sections',
-		steps: [...tapTab('Workout'), ...trailingToolbarButton, ...tap('Customize Sections')],
+		steps: [...tapTab('Workout'), ...tap('Workout Tab Options'), ...tap('Customize Sections')],
 	},
 	{
 		name: 'live-workout',

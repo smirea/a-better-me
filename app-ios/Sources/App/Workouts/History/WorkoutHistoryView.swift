@@ -17,7 +17,7 @@ struct WorkoutHistoryView: View {
                         .padding(.top, 20)
                         .padding(.bottom, 4)
                     ForEach(day.sessions) { session in
-                        Button { selected = session } label: { HistoryRow(session: session) }
+                        Button { selected = session } label: { SessionRow(session: session) }
                             .foregroundStyle(Theme.textPrimary)
                     }
                 }
@@ -51,14 +51,34 @@ struct HistoryDay {
 
 private struct HistoryDaysKey: Hashable {}
 
-private struct HistoryRow: View {
+/// A finished session: its name, the exercises it logged, and their muscles. The history lists them, and the Workout tab
+/// shows one under its day strip.
+struct SessionRow: View {
     let session: WorkoutSession
     @Environment(ExerciseCatalog.self) private var catalog
+    @State private var details = ViewMemo<DetailsKey, Details>()
+
+    private struct DetailsKey: Equatable {
+        let blocks: [WorkoutBlock]
+        let catalogRevision: Int
+    }
+
+    private struct Details {
+        let names: String
+        let primary: [Muscle]
+        let secondary: [Muscle]
+    }
 
     var body: some View {
-        let exercises = session.blocks.flatMap(\.exercises).filter(\.hasLoggedSets).compactMap { catalog.exercise($0.exerciseID) }
-        let primary = exercises.flatMap(\.primaryMuscles).uniqued()
-        let secondary = exercises.flatMap(\.secondaryMuscles).uniqued().filter { !primary.contains($0) }
+        let details = details(DetailsKey(blocks: session.blocks, catalogRevision: catalog.revision)) {
+            let exercises = session.blocks.flatMap(\.exercises).filter(\.hasLoggedSets).compactMap { catalog.exercise($0.exerciseID) }
+            let primary = exercises.flatMap(\.primaryMuscles).uniqued()
+            return Details(
+                names: exercises.map(\.name).joined(separator: ", "),
+                primary: primary,
+                secondary: exercises.flatMap(\.secondaryMuscles).uniqued().filter { !primary.contains($0) }
+            )
+        }
         HStack(spacing: 14) {
             Image(systemName: "dumbbell.fill")
                 .foregroundStyle(Theme.textPrimary)
@@ -66,11 +86,11 @@ private struct HistoryRow: View {
                 .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
             VStack(alignment: .leading, spacing: 4) {
                 Text(session.name).font(AppFont.headline(16))
-                Text(exercises.map(\.name).joined(separator: ", "))
+                Text(details.names)
                     .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)
-                MuscleTags(primary: primary, secondary: secondary)
+                MuscleTags(primary: details.primary, secondary: details.secondary)
             }
             Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
         }

@@ -1,7 +1,7 @@
 import Feedback
 import SwiftUI
 
-/// Finished sessions by day, for the week strip and the month calendar.
+/// Finished sessions by day, for the day strip, the shown day, and the month calendar.
 struct LoggedDays {
     private let byDay: [CalendarDay: [WorkoutSession]]
 
@@ -42,32 +42,32 @@ struct WorkoutDayPill: View {
     let day: CalendarDay
     let isLogged: Bool
     let program: DayRing?
-    let target: DayPillTarget?
-    let onOpen: (DayPillTarget) -> Void
+    var isSelected = false
+    var hint = ""
+    let action: () -> Void
 
     var body: some View {
-        DayPill(day: day, ring: ring) {
-            if let target { onOpen(target) }
-        }
-        .accessibilityValue(day == .today ? program.map { "Program \(Int(($0.fraction * 100).rounded())) percent done" } ?? "" : "")
-        .accessibilityHint(hint)
+        DayPill(day: day, isSelected: isSelected, ring: ring, action: action)
+            .accessibilityValue(day == .today ? program.map { "Program \(Int(($0.fraction * 100).rounded())) percent done" } ?? "" : "")
+            .accessibilityHint(hint)
     }
 
     private var ring: DayRing? {
         if day == .today, let program { return program }
         return isLogged ? DayRing(fraction: 1, color: Theme.amber) : nil
     }
+}
 
-    private var hint: String {
-        switch target {
+extension DayPillTarget {
+    var hint: String {
+        switch self {
         case .summary: "Opens the workout summary"
         case .programDay: "Opens the program day"
-        case nil: ""
         }
     }
 }
 
-/// The calendar button's scrolling month grid. Months alternate shades and their first day carries a month chip.
+/// Workout Calendar, from the ⋯ menu: a scrolling month grid whose days open what the shown day's row would. Months alternate shades and their first day carries a month chip.
 struct MonthCalendar<Pill: View>: View {
     let weeks: ClosedRange<Int>
     @ViewBuilder let pill: (CalendarDay) -> Pill

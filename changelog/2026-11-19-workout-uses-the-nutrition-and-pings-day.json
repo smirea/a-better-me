@@ -1,0 +1,10 @@
+{
+	"title": "Workout uses the Nutrition and Pings day header, and all three show the same day",
+	"description": "Picking a day on any of them picks it on all three; the old calendar is Workout Calendar in the ⋯ menu.",
+	"tasks": [
+		{
+			"id": "303273fd-b81e-4a4b-ae3a-808e8da7aa78",
+			"title": "1 Workout Feedback: sync date, use same header"
+		}
+	]
+}
