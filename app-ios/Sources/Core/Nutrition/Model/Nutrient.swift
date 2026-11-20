@@ -75,6 +75,9 @@ extension Dictionary where Key == NutrientID, Value == Double {
 
 enum NutrientUnit: String, Decodable, Sendable {
     case kcal, g, mg, mcg, mL
+
+    /// What the app prints after an amount. Energy stays in kilocalories but reads "cal", the k implied.
+    var label: String { self == .kcal ? "cal" : rawValue }
 }
 
 enum NutrientGroup: String, Decodable, CaseIterable, Sendable {
@@ -142,7 +145,7 @@ extension NutrientID {
     /// The banner's and the plate's short names.
     var macroLetter: String {
         switch self {
-        case .energy: "kcal"
+        case .energy: "cal"
         case .protein: "P"
         case .fat: "F"
         case .carbs: "C"

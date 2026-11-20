@@ -221,9 +221,9 @@ private struct BalanceScrub: ViewModifier {
         if let reference {
             content.chartScrubbing(bars.map { $0.date.addingTimeInterval(12 * 3600) }, placement: .beside) { index in
                 let bar = bars[index]
-                var lines = [ChartCallout.Line(label: "Nutrition", value: "\(bar.value.wholeText) kcal", color: Theme.calories)]
+                var lines = [ChartCallout.Line(label: "Nutrition", value: "\(bar.value.wholeText) cal", color: Theme.calories)]
                 if let value = line.first(where: { $0.date == bar.date })?.value {
-                    lines.append(ChartCallout.Line(label: reference, value: "\(value.wholeText) kcal", color: lineColor))
+                    lines.append(ChartCallout.Line(label: reference, value: "\(value.wholeText) cal", color: lineColor))
                 }
                 return ChartCallout(title: bar.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()), lines: lines)
             }
@@ -241,7 +241,7 @@ struct EnergyBalanceInsightCard: View {
         NavigationLink(value: DashboardRoute.energyBalance) {
             DashboardCard(
                 title: "Energy Balance", period: "Last 7 Days", value: mean.map { abs($0).wholeText },
-                unit: (mean ?? 0) > 0 ? "kcal surplus" : "kcal deficit"
+                unit: (mean ?? 0) > 0 ? "cal surplus" : "cal deficit"
             ) {
                 BalanceChart(bars: balance.bars, line: balance.line, lineColor: Theme.coral, domain: balance.interval)
             }

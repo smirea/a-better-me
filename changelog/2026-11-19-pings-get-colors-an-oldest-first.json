@@ -1,0 +1,14 @@
+{
+	"title": "Pings get colors, an oldest-first timeline, and full-swipe delete; calories read \"cal\"",
+	"description": "Twelve swatches with the on-device model suggesting a color and icon, new rows land closed, and timeline times line up.",
+	"tasks": [
+		{
+			"id": "a881814e-2506-4401-9de8-ad91f60dc42a",
+			"title": "5 A Better Me Feedback: update button controls, fix collapsed state, align text, rename units, add color options"
+		},
+		{
+			"id": "35d26363-1b40-4c59-9027-3b0642c3a442",
+			"title": "3 A Better Me Feedback: update font, flip timeline, swipe button"
+		}
+	]
+}

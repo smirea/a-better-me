@@ -82,7 +82,7 @@ struct AlterEntry: View {
                 Spacer(minLength: 8)
                 MealRatingBadge(title: entry.food.displayName, amounts: perServing)
             }
-            MacroSummary(amounts: perServing, caption: was.map { "Was \(($0[.energy] ?? 0).wholeText) kcal, \(($0[.protein] ?? 0).wholeText) g protein" })
+            MacroSummary(amounts: perServing, caption: was.map { "Was \(($0[.energy] ?? 0).wholeText) cal, \(($0[.protein] ?? 0).wholeText) g protein" })
             PlateDayTotals(day: entry.day, plate: perServing.scaled(by: entry.serving.servings), replacing: entry.id)
                 .padding(.vertical, 4)
         }

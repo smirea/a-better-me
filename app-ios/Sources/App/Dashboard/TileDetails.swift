@@ -47,7 +47,7 @@ extension DashboardData {
 
     func nutrientDetail(_ id: NutrientID) -> MetricDetail {
         let nutrient = NutrientRegistry.nutrient(id)
-        let unit = nutrient?.unit.rawValue ?? ""
+        let unit = nutrient?.unit.label ?? ""
         let metricUnit = nutrient.map { MetricUnit($0.unit) } ?? .decimal("")
         let days = TileMetrics.nutrientDays(id, log: log, targets: targets(on:), calendar: calendar)
         let color = id.color

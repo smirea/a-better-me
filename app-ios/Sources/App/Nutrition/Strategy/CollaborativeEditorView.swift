@@ -33,20 +33,20 @@ struct CollaborativeEditorView: View {
             calories
             protein
             ratio
-            Text("Weekly budget: \(Double(week.weeklyKcal).wholeText) kcal").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+            Text("Weekly budget: \(Double(week.weeklyKcal).wholeText) cal").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
         }
         .feedback(self)
     }
 
     private var calories: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Calorie targets: set between 0 and \(Double(maxKcal).wholeText) kcal").font(AppFont.chip)
+            Text("Calorie targets: set between 0 and \(Double(maxKcal).wholeText) cal").font(AppFont.chip)
             HStack {
                 TextField("Calories", value: Binding(get: { Int(day.energy) }, set: { week.setCalories(min(maxKcal, max(0, $0)), on: weekday) }), format: .number)
                     .keyboardType(.numberPad)
                     .font(AppFont.number(18))
                     .accessibilityLabel("Calorie target")
-                Text("kcal").foregroundStyle(Theme.textSecondary)
+                Text("cal").foregroundStyle(Theme.textSecondary)
                 Stepper("Calories", onIncrement: { step(25) }, onDecrement: { step(-25) }).labelsHidden()
             }
             .card()

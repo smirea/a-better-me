@@ -48,9 +48,9 @@ struct PingTimeline: Equatable, Sendable {
     var entries: [PingEntry] = []
     var markers: [TimelineMarker] = []
 
-    /// The day newest first, so the latest log heads the timeline and waking up ends it.
+    /// The day oldest first, so waking up heads the timeline and the latest log ends it, beside the drawer.
     func rows(sleep: [TimelineMarker] = []) -> [PingTimelineRow] {
-        (entries.map(PingTimelineRow.entry) + (markers + sleep).map(PingTimelineRow.marker)).sorted { ($0.at, $0.id) > ($1.at, $1.id) }
+        (entries.map(PingTimelineRow.entry) + (markers + sleep).map(PingTimelineRow.marker)).sorted { ($0.at, $0.id) < ($1.at, $1.id) }
     }
 
     static func on(_ day: CalendarDay, calendar: Calendar = .current) -> DatabaseQuery<PingTimeline> {

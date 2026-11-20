@@ -15,8 +15,8 @@ enum PingRoute: Hashable {
     }
 }
 
-/// The Pings tab: the Food Log's header row over a day's timeline, bottom up. "+" turns the tab bar into a drawer of
-/// the pings, where a tap logs one onto the day shown and its row lands on the timeline, open for editing. Swiping
+/// The Pings tab: the Food Log's header row over a day's timeline, oldest first. "+" turns the tab bar into a drawer of
+/// the pings, where a tap logs one onto the day shown and its row lands closed on the timeline. Swiping
 /// pages between days.
 struct PingsTab: View {
     /// The app's shown day, which the Food Log and the Workout tab share.
@@ -86,7 +86,6 @@ struct PingsTab: View {
     private func log(_ ping: Ping, value: Int) {
         let log = PingLog(pingID: ping.id, value: value, at: PingLog.instant(on: day))
         store.insert(log)
-        editing.insert(log.id)
         added = log.id
     }
 }

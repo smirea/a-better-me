@@ -3,22 +3,22 @@ import Foundation
 import GRDB
 
 /// Seven pings and 45 days of their logs: booleans logged from never to eight times a day, a labelled and an unlabelled
-/// range, one with ten steps, and one whose labels are too long to sit side by side.
+/// range, one with ten steps, one whose labels are too long to sit side by side, and one made before pings had colors.
 enum PingSeed {
     static func insert(in db: Database, now: Date = .now, calendar: Calendar = .current) throws {
-        let pings: [(name: String, icon: String, kind: PingKind, perDay: ClosedRange<Int>)] = [
-            ("Mood", "face.smiling", .range(["Terrible", "Bad", "Okay", "Good", "Great"]), 0...2),
-            ("Energy", "bolt", .range(Array(repeating: "", count: 5)), 0...2),
-            ("Water", "drop", .boolean, 2...8),
-            ("Bathroom", "toilet", .boolean, 0...3),
-            ("Coffee", "cup.and.saucer", .boolean, 0...2),
-            ("Pain", "bandage", .range(Array(repeating: "", count: 10)), 0...1),
-            ("Sleep Quality", "moon.zzz", .range(["Barely slept at all", "Restless, woke up often", "Fine", "Slept well", "Fully rested"]), 0...1),
+        let pings: [(name: String, icon: String, color: PingColor?, kind: PingKind, perDay: ClosedRange<Int>)] = [
+            ("Mood", "face.smiling", .yellow, .range(["Terrible", "Bad", "Okay", "Good", "Great"]), 0...2),
+            ("Energy", "bolt", .orange, .range(Array(repeating: "", count: 5)), 0...2),
+            ("Water", "drop", .sky, .boolean, 2...8),
+            ("Bathroom", "toilet", .tan, .boolean, 0...3),
+            ("Coffee", "cup.and.saucer", nil, .boolean, 0...2),
+            ("Pain", "bandage", .red, .range(Array(repeating: "", count: 10)), 0...1),
+            ("Sleep Quality", "moon.zzz", .violet, .range(["Barely slept at all", "Restless, woke up often", "Fine", "Slept well", "Fully rested"]), 0...1),
         ]
         let today = calendar.startOfDay(for: now)
         var random = SeededGenerator(seed: 41)
         for (position, seed) in pings.enumerated() {
-            let ping = Ping(id: DevSeed.id("ping/\(seed.name)"), name: seed.name, icon: seed.icon, kind: seed.kind, position: position, at: today)
+            let ping = Ping(id: DevSeed.id("ping/\(seed.name)"), name: seed.name, icon: seed.icon, color: seed.color, kind: seed.kind, position: position, at: today)
             try ping.insert(db)
             for ago in 0..<45 {
                 let day = calendar.date(byAdding: .day, value: -ago, to: today)!

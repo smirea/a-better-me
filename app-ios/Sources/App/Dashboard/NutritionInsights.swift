@@ -11,11 +11,11 @@ struct ExpenditureInsights: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader("Insights & Data")
             ChangeRows(title: "Expenditure Changes", changes: changes, color: Theme.coral, tolerance: 0.5) {
-                "\($0.wholeText) kcal"
+                "\($0.wholeText) cal"
             }
             InsightTiles(tiles: [
                 InsightTile(
-                    value: summary.currentKcal?.wholeText ?? "--", unit: "kcal",
+                    value: summary.currentKcal?.wholeText ?? "--", unit: "cal",
                     title: "Current Expenditure",
                     text: "The latest estimate of your daily energy expenditure based on your weight trend and nutrition data."
                 ),
@@ -73,7 +73,7 @@ struct WeightTrendInsights: View {
                     text: "Your typical weekly rate of weight \(losing ? "loss" : "gain") over the past three weeks."
                 ),
                 InsightTile(
-                    value: insights?.energyBalanceKcal.map { abs($0).wholeText } ?? "--", unit: "kcal/day",
+                    value: insights?.energyBalanceKcal.map { abs($0).wholeText } ?? "--", unit: "cal/day",
                     title: losing ? "Energy Deficit" : "Energy Surplus",
                     text: "Our estimate of your average daily caloric \(losing ? "deficit" : "surplus"), based on your rate of weight \(losing ? "loss" : "gain") over the past three weeks."
                 ),
@@ -104,7 +104,7 @@ struct EnergyBalanceInsights: View {
                 ForEach(rows, id: \.days) { row in
                     HStack {
                         Text("\(row.days)-day").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).frame(width: 60, alignment: .leading)
-                        Text(row.mean.map { "\(BalanceTag.signed($0)) kcal" } ?? "--").font(AppFont.headline(14))
+                        Text(row.mean.map { "\(BalanceTag.signed($0)) cal" } ?? "--").font(AppFont.headline(14))
                         Spacer()
                         if let mean = row.mean { BalanceTag(balance: NutritionMetrics.balance(mean), isExpenditure: isExpenditure) }
                     }

@@ -147,7 +147,7 @@ struct NutritionSettings: Codable, Hashable, Sendable {
 extension NutritionSettings.EnergyUnit {
     static let kilojoulesPerKcal = 4.184
 
-    var label: String { self == .kj ? "kJ" : "kcal" }
+    var label: String { self == .kj ? "kJ" : "cal" }
 
     /// Stored energy is kcal; the unit only changes what a field shows.
     func fromKcal(_ kcal: Double) -> Double { self == .kj ? kcal * Self.kilojoulesPerKcal : kcal }

@@ -16,7 +16,7 @@ struct QuickAddDraft: Hashable, Sendable {
 
     static let focusOrder = FocusOrder(Field.allCases)
 
-    /// "Macro sum is 250 kcal", in the chosen unit.
+    /// "Macro sum is 250 cal", in the chosen unit.
     var macroSum: Double {
         let grams: NutrientAmounts = [.protein: Self.grams(protein), .fat: Self.grams(fat), .carbs: Self.grams(carbs), .alcohol: Self.grams(alcohol)]
         return unit.fromKcal(grams.keys.map(grams.kcal(from:)).reduce(0, +))

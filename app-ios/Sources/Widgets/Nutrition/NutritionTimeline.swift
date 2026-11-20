@@ -116,7 +116,7 @@ extension NutritionSnapshot {
     /// The gallery's sample day: midway through a 2,400 kcal day.
     static let sample: NutritionSnapshot = {
         let nutrients = [
-            Nutrient(id: "k", name: "Calories", short: "cal", unit: "kcal", tint: .calories),
+            Nutrient(id: "k", name: "Calories", short: "cal", unit: "cal", tint: .calories),
             Nutrient(id: "p", name: "Protein", short: "prot", unit: "g", tint: .protein),
             Nutrient(id: "f", name: "Fat", short: "fat", unit: "g", tint: .fat),
             Nutrient(id: "c", name: "Carbs", short: "carbs", unit: "g", tint: .carbs),

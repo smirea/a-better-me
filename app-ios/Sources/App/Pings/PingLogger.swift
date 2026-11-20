@@ -1,10 +1,6 @@
 import Feedback
 import SwiftUI
 
-extension Theme {
-    static let ping = Color(hex: 0x5AC8C8)
-}
-
 /// Today's pings as rows the owner picks from, under `header`, and a Log pill once something is picked: the Dashboard's
 /// "+" sheet. The Pings tab logs from its drawer instead, where a tap writes at once.
 struct PingLogger<Header: View, Empty: View>: View {
@@ -150,7 +146,7 @@ struct PingTitle: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: ping.icon).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.ping).frame(width: 24)
+            Image(systemName: ping.icon).font(.system(size: 16, weight: .semibold)).foregroundStyle(ping.tint).frame(width: 24)
             Text(ping.name).font(AppFont.rowTitle).lineLimit(1)
         }
         .accessibilityElement(children: .combine)
@@ -236,7 +232,7 @@ struct PingSteps: View {
             .foregroundStyle(isPicked ? Theme.onPrimary : Theme.textPrimary)
             .frame(minWidth: 20, maxWidth: 34, minHeight: 34, maxHeight: 34)
             .background(isPicked ? Theme.textPrimary : fill, in: .rect(cornerRadius: 8))
-            .overlay { if ringed == value, !isPicked { RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.ping, lineWidth: 2) } }
+            .overlay { if ringed == value, !isPicked { RoundedRectangle(cornerRadius: 8).strokeBorder(ping.tint, lineWidth: 2) } }
         return Button { pick(value) } label: {
             Group {
                 switch cell {

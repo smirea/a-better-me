@@ -11,7 +11,7 @@ enum MaintenanceFormat {
     }
 
     static func signedKcal(_ kcal: Double) -> String {
-        "\(kcal.rounded().formatted(.number.sign(strategy: .always(includingZero: false)))) kcal"
+        "\(kcal.rounded().formatted(.number.sign(strategy: .always(includingZero: false)))) cal"
     }
 
     static func range(_ period: NutritionEngine.Maintenance.Period) -> String {
@@ -87,11 +87,11 @@ struct MaintenanceSection: View {
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 100)
                             .accessibilityLabel("Maintenance calories")
-                            Text("kcal").foregroundStyle(Theme.textSecondary)
+                            Text("cal").foregroundStyle(Theme.textSecondary)
                         }
                     }
                     if !draftIsPlausible {
-                        Text("Enter a number from 800 to 6,000 kcal.")
+                        Text("Enter a number from 800 to 6,000 cal.")
                             .font(AppFont.caption())
                             .foregroundStyle(Theme.amber)
                             .frame(maxWidth: .infinity, alignment: .leading)

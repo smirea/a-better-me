@@ -85,6 +85,8 @@ enum AppFont {
     static let rowDetail = caption(12)
     static let chip = medium(14)
     static let badge = headline(11)
+    /// A time in a column, such as the Pings timeline's gutter: monospaced, so "1:00 PM" and "8:16 AM" line up.
+    static let time = Font.system(.caption, design: .monospaced)
 
     static let displayName = "MacroSansDisplay-Black"
 

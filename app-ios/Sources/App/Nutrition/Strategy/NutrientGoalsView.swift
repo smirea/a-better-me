@@ -135,7 +135,7 @@ private struct NutrientGoalEditor: View {
                 HStack {
                     TextField("\(name) \(title)", value: Binding(get: { draft.range[keyPath: path] ?? 0 }, set: { draft.range[keyPath: path] = $0 }), format: .number)
                         .keyboardType(.decimalPad)
-                    Text(info?.unit.rawValue ?? "").foregroundStyle(Theme.textSecondary)
+                    Text(info?.unit.label ?? "").foregroundStyle(Theme.textSecondary)
                 }
             }
         }

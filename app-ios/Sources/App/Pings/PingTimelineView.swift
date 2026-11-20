@@ -2,7 +2,7 @@ import Feedback
 import SwiftUI
 
 /// One day of the Pings tab: a bar down the left with a row per log at its time, and a line across for each thing the
-/// rest of the app recorded that day. It reads bottom up: the latest row is the first one, waking up the last, and a
+/// rest of the app recorded that day. It reads top down, oldest first, so the latest row sits beside the drawer, and a
 /// day too short to fill the page rests on the bottom.
 struct PingTimelinePage: View {
     let day: CalendarDay
@@ -20,7 +20,8 @@ struct PingTimelinePage: View {
 
     @Observe private var timeline: PingTimeline
     @State private var rows = ViewMemo<RowsKey, [PingTimelineRow]>()
-    @ScaledMetric private var gutter: CGFloat = 58
+    /// Fits "12:51 PM" in the monospaced time font on one line.
+    @ScaledMetric private var gutter: CGFloat = 68
     @State private var safeBottom: CGFloat = 0
 
     init(
@@ -64,11 +65,9 @@ struct PingTimelinePage: View {
             } else {
                 ScrollViewReader { proxy in
                     ScrollView { timeline(rows, ids: ids) }
-                        // A short day rests on the bottom; a day taller than the page keeps its latest row in view,
-                        // also when the drawer opens and takes the page's lower part.
-                        .defaultScrollAnchor(.bottom, for: .alignment)
-                        .defaultScrollAnchor(.top, for: .initialOffset)
-                        .defaultScrollAnchor(.top, for: .sizeChanges)
+                        // A short day rests on the bottom; a day taller than the page opens on its latest row and
+                        // keeps it in view, also when the drawer opens and takes the page's lower part.
+                        .defaultScrollAnchor(.bottom)
                         .contentMargins(.bottom, bottomInset, for: .scrollContent)
                         // The drawer reports its height a frame after it opens, outside the tab's own animation.
                         .animation(.snappy, value: bottomInset)
@@ -76,7 +75,7 @@ struct PingTimelinePage: View {
                         .scrollDismissesKeyboard(.interactively)
                         .onChange(of: ids) { old, new in
                             guard let added = added.map(PingLog.key), new.contains(added), !old.contains(added) else { return }
-                            withAnimation(.snappy(duration: 0.3)) { proxy.scrollTo(added) }
+                            withAnimation(.snappy(duration: 0.3)) { proxy.scrollTo(added, anchor: .bottom) }
                         }
                 }
             }
@@ -131,7 +130,7 @@ private struct PingEntryRow: View {
         let log = entry.log
         HStack(alignment: .top, spacing: 0) {
             PingTimeLabel(log: log, isEditing: isEditing).frame(width: gutter, height: 44, alignment: .trailing)
-            Circle().fill(Theme.ping).frame(width: 9, height: 9)
+            Circle().fill(entry.ping.tint).frame(width: 9, height: 9)
                 .padding(3).background(Theme.background, in: .circle)
                 .frame(width: PingTimelineMetrics.node, height: 44)
                 .accessibilityHidden(true)
@@ -162,7 +161,7 @@ private struct PingEntryRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(.rect)
         .onTapGesture(perform: toggle)
-        .rowSwipeActions(trailing: [.destructive("Delete") { store.delete(PingLog.self, id: log.id) }])
+        .rowSwipeActions(trailing: [.destructive("Delete") { store.delete(PingLog.self, id: log.id) }], fullSwipe: true)
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: isEditing ? "Collapse" : "Edit", toggle)
         .feedback(self)
@@ -204,7 +203,7 @@ private struct PingTimeLabel: View {
                 picking = true
             }
             .buttonStyle(.plain)
-            .font(AppFont.rowDetail)
+            .font(AppFont.time).lineLimit(1).minimumScaleFactor(0.8)
             .underline()
             .foregroundStyle(Theme.textPrimary)
             .frame(maxHeight: .infinity)
@@ -223,7 +222,7 @@ private struct PingTimeLabel: View {
                     }
             }
         } else {
-            Text(text).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).monospacedDigit()
+            Text(text).font(AppFont.time).lineLimit(1).minimumScaleFactor(0.8).foregroundStyle(Theme.textSecondary)
         }
     }
 }
@@ -268,22 +267,24 @@ private struct TimelineMarkerRow: View {
     var body: some View {
         HStack(spacing: 0) {
             Text(marker.at.formatted(date: .omitted, time: .shortened))
-                .font(AppFont.rowDetail)
+                .font(AppFont.time).lineLimit(1).minimumScaleFactor(0.8)
                 .foregroundStyle(Theme.textTertiary)
-                .monospacedDigit()
                 .frame(width: gutter, alignment: .trailing)
             line.padding(.leading, PingTimelineMetrics.node / 2).frame(width: PingTimelineMetrics.node + 4)
             HStack(spacing: 6) {
                 Image(systemName: marker.kind.systemImage).font(.system(size: 11, weight: .semibold)).accessibilityHidden(true)
                 Text(marker.title).font(AppFont.chip).lineLimit(1)
-                if !marker.detail.isEmpty {
-                    Text(marker.detail).font(AppFont.rowDetail).foregroundStyle(Theme.textTertiary).lineLimit(1)
-                }
             }
             .foregroundStyle(Theme.textSecondary)
             .padding(.horizontal, 8)
             .layoutPriority(1)
             line.frame(minWidth: 12)
+            // On the right, where a ping row puts its value.
+            if !marker.detail.isEmpty {
+                Text(marker.detail).font(AppFont.rowDetail).foregroundStyle(Theme.textTertiary).lineLimit(1)
+                    .padding(.leading, 8)
+                    .layoutPriority(1)
+            }
         }
         .frame(height: 32)
         .accessibilityElement(children: .combine)

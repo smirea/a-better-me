@@ -12,7 +12,7 @@ enum StrategyFormat {
         "\(day(start, year: true)) – \(end.map { day($0, year: true) } ?? "Now")"
     }
 
-    static func kcal(_ value: Double) -> String { "\(value.wholeText) kcal" }
+    static func kcal(_ value: Double) -> String { "\(value.wholeText) cal" }
 
     static func weight(_ kg: Double?, _ unit: WeightUnit) -> String {
         kg.map { "\(unit.fromKg($0).formatted(.number.precision(.fractionLength(1)))) \(unit.rawValue)" } ?? "—"

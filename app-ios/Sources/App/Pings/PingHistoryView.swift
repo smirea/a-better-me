@@ -95,7 +95,7 @@ struct PingHistoryView: View {
                     y: .value("Value", steps.isEmpty ? Double(day.count) : day.average ?? 0),
                     width: .ratio(0.7)
                 )
-                .foregroundStyle(Theme.ping)
+                .foregroundStyle(history.ping?.tint ?? Theme.ping)
             }
             .chartYScale(domain: 0...Double(steps.isEmpty ? max(days.map(\.count).max() ?? 0, 1) : steps.count))
             .chartXAxis {
@@ -109,7 +109,7 @@ struct PingHistoryView: View {
                 let value = steps.isEmpty ? "\(day.count)" : day.average?.niceText ?? "--"
                 return ChartCallout(
                     title: day.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()),
-                    lines: [ChartCallout.Line(label: steps.isEmpty ? "Logged" : "Average", value: value, color: Theme.ping)]
+                    lines: [ChartCallout.Line(label: steps.isEmpty ? "Logged" : "Average", value: value, color: history.ping?.tint ?? Theme.ping)]
                 )
             }
             .frame(height: 160)
