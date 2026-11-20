@@ -68,7 +68,9 @@ private struct NoticeBar: View {
     }
 }
 
-/// "✕ Select · N Foods" and what can be done with the selection.
+/// The selection's actions. The first row ends select mode and copies the selection straight to today, keeping each
+/// entry's time, or to now, the one-tap copies the owner asked for when catching a past day up into today; the second
+/// row holds the rest. Today drops Copy: Today, which would only duplicate the foods in place.
 private struct SelectionBar: View {
     private enum Prompt: Identifiable {
         case timestamp
@@ -84,30 +86,43 @@ private struct SelectionBar: View {
 
     var body: some View {
         let count = state.selection.count
-        FlowLayout {
-            BarTitle(title: "Select", count: count, systemImage: "xmark") { state.endSelection() }
-            Group {
-                if count == 1, let entry = state.selectedEntries.first {
-                    Button("Edit") { state.editing = entry }
-                    if entry.food.source == .recipe {
-                        Button("Explode") {
-                            state.explode(entry.id, in: store)
-                            state.endSelection()
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                BarTitle(systemImage: "xmark", accessibilityLabel: "End selection, \(count) \(count == 1 ? "food" : "foods") selected") { state.endSelection() }
+                Group {
+                    if state.day != .today {
+                        Button("Copy: Today") { copy(to: .today) }
+                    }
+                    Button("Copy: Now") { copy(to: .now) }
+                }
+                .chipButton()
+                .disabled(count == 0)
+            }
+            FlowLayout {
+                Group {
+                    Button("Copy") { state.hold(.copy, state.selectedEntries) }
+                    Button("Move") { state.hold(.move, state.selectedEntries) }
+                    if count > 1 {
+                        Button("+ Recipe") { state.createRecipe() }
+                            .accessibilityLabel("Create Recipe")
+                    }
+                    if count == 1, let entry = state.selectedEntries.first {
+                        Button("Edit") { state.editing = entry }
+                        if entry.food.source == .recipe {
+                            Button("Explode") {
+                                state.explode(entry.id, in: store)
+                                state.endSelection()
+                            }
                         }
                     }
+                    Button("Remove") { confirmingRemove = true }
+                    if settings.nutrition.timeline.display == .time {
+                        Button("Modify Timestamp") { prompt = .timestamp }
+                    }
                 }
-                Button("Copy") { state.hold(.copy, state.selectedEntries) }
-                Button("Move") { state.hold(.move, state.selectedEntries) }
-                Button("Remove") { confirmingRemove = true }
-                if settings.nutrition.timeline.display == .time {
-                    Button("Modify Timestamp") { prompt = .timestamp }
-                }
-                if count > 1 {
-                    Button("Create Recipe") { state.createRecipe() }
-                }
+                .chipButton()
+                .disabled(count == 0)
             }
-            .chipButton()
-            .disabled(count == 0)
         }
         .alert("Remove Foods", isPresented: $confirmingRemove) {
             Button("Remove", role: .destructive) {
@@ -125,6 +140,10 @@ private struct SelectionBar: View {
             }
         }
         .feedback(self)
+    }
+
+    private func copy(to target: PasteTarget) {
+        state.relocate(state.selectedEntries, .copy, to: target, in: store)
     }
 }
 
@@ -146,7 +165,7 @@ private struct PasteBar: View {
     var body: some View {
         let title = pending.action.title
         FlowLayout {
-            BarTitle(title: title, count: pending.entries.count, systemImage: "chevron.left") { state.back() }
+            BarTitle(title: title, count: pending.entries.count, systemImage: "chevron.left", accessibilityLabel: "Back") { state.back() }
             Group {
                 Button("To Now") { paste(.now) }
                 Button("To Today") { paste(.today) }
@@ -176,10 +195,12 @@ private struct PasteBar: View {
     }
 }
 
+/// The bar's leading button: the paste bar's back, with what is pending under it, or the selection's bare ✕.
 private struct BarTitle: View {
-    let title: String
-    let count: Int
+    var title: String?
+    var count = 0
     let systemImage: String
+    let accessibilityLabel: String
     let action: () -> Void
 
     var body: some View {
@@ -190,14 +211,17 @@ private struct BarTitle: View {
                     .foregroundStyle(Theme.onPrimary)
                     .frame(width: 26, height: 26)
                     .background(Theme.textPrimary, in: Circle())
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(title).font(AppFont.headline(13))
-                    Text("\(count) \(count == 1 ? "Food" : "Foods")").font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
+                if let title {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(title).font(AppFont.headline(13))
+                        Text("\(count) \(count == 1 ? "Food" : "Foods")").font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
+                    }
                 }
             }
         }
+        .buttonBorderShape(title == nil ? .circle : .capsule)
         .chipButton()
-        .accessibilityLabel(systemImage == "xmark" ? "End selection" : "Back")
+        .accessibilityLabel(accessibilityLabel)
     }
 }
 
