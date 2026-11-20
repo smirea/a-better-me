@@ -1,0 +1,14 @@
+{
+	"title": "Pings start at the top of the day; Edit Ping loses its hint and name card",
+	"description": "A new log scrolls into view with room above the drawer.",
+	"tasks": [
+		{
+			"id": "8fefc923-6797-41e9-b629-6ef7ae9c1fec",
+			"title": "2 Edit Ping Feedback: clean up text, clear row bg"
+		},
+		{
+			"id": "09a89909-f729-4d83-b55b-c8fb49ea94c2",
+			"title": "1 Pings Feedback: Adjust layout for new items"
+		}
+	]
+}
