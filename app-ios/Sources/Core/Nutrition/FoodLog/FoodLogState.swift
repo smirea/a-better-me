@@ -54,8 +54,9 @@ final class FoodLogState {
         let entries: [FoodEntry]
     }
 
-    /// A selection belongs to the day it was made on, so leaving that day ends it. A pending copy or move keeps going:
-    /// it carries the entries.
+    /// The app's one shown day, which the Workout and Pings tabs read and write too (`RootView`). A selection belongs to
+    /// the day it was made on, so leaving that day, from any tab, ends it. A pending copy or move keeps going: it
+    /// carries the entries.
     var day = CalendarDay.today {
         didSet {
             guard day != oldValue else { return }

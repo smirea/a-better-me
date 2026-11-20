@@ -17,7 +17,7 @@ struct WorkoutHistoryView: View {
                         .padding(.top, 20)
                         .padding(.bottom, 4)
                     ForEach(day.sessions) { session in
-                        Button { selected = session } label: { HistoryRow(session: session) }
+                        Button { selected = session } label: { SessionRow(session: session) }
                             .foregroundStyle(Theme.textPrimary)
                     }
                 }
@@ -51,7 +51,9 @@ struct HistoryDay {
 
 private struct HistoryDaysKey: Hashable {}
 
-private struct HistoryRow: View {
+/// A finished session: its name, the exercises it logged, and their muscles. The history lists them, and the Workout tab
+/// shows one under its day strip.
+struct SessionRow: View {
     let session: WorkoutSession
     @Environment(ExerciseCatalog.self) private var catalog
 

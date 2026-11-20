@@ -19,6 +19,8 @@ enum PingRoute: Hashable {
 /// the pings, where a tap logs one onto the day shown and its row lands on the timeline, open for editing. Swiping
 /// pages between days.
 struct PingsTab: View {
+    /// The app's shown day, which the Food Log and the Workout tab share.
+    @Binding var day: CalendarDay
     /// Whether the drawer is open, which "+" in the tab bar sets.
     @Binding var adding: Bool
 
@@ -26,9 +28,6 @@ struct PingsTab: View {
     @Environment(LocalStore.self) private var store
     @Observe(Ping.count) private var pingCount
     @State private var path: [PingRoute] = []
-    @State private var day = CalendarDay.today
-    /// The day that was today when the tab last looked, so a return on a new day moves today's page with it.
-    @State private var today = CalendarDay.today
     @State private var creating = false
     @State private var sleep = SleepLog()
     @State private var editing: Set<UUID> = []
@@ -74,11 +73,6 @@ struct PingsTab: View {
                 self.adding = false
                 creating = true
             }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active, today != .today else { return }
-            if day == today { day = .today }
-            today = .today
         }
         .feedback(self)
     }
