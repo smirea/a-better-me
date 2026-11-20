@@ -19,7 +19,7 @@ struct SummaryView: View {
                         ("Sets", "\(workout.completedSets)"),
                         ("Volume", "\(workout.unit.fromKg(workout.volumeKg).formatted(.number.precision(.fractionLength(0)))) \(workout.unit.rawValue)"),
                         ("Avg HR", health?.averageHeartRate.map { "\(Int($0.rounded()))" } ?? "–"),
-                        ("Kcal", health?.activeEnergyKcal.map { "\(Int($0.rounded()))" } ?? "–"),
+                        ("Cal", health?.activeEnergyKcal.map { "\(Int($0.rounded()))" } ?? "–"),
                     ])
                     Button {
                         model.dismissSummary()

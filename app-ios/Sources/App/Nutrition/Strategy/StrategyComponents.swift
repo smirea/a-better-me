@@ -38,7 +38,7 @@ struct WeekTargetsChart: View {
             dayLabel(weekday)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(StrategyFormat.weekdayNames[weekday - 1]): \(Int(target.energy)) kcal, \(NutritionFormat.macros(target.amounts))")
+        .accessibilityLabel("\(StrategyFormat.weekdayNames[weekday - 1]): \(Int(target.energy)) calories, \(NutritionFormat.macros(target.amounts))")
     }
 
     private func block(_ label: String, _ height: Double, _ color: Color) -> some View {

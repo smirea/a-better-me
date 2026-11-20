@@ -31,7 +31,7 @@ struct WidgetSnapshotTests {
         #expect(today.ranges["k"] == NutritionSnapshot.Range(target: 2200))
         #expect(snapshot.days[1].consumed["k"] == nil)
         #expect(snapshot.days[1].ranges["p"] == NutritionSnapshot.Range(target: 160))
-        #expect(snapshot.progress("k", on: today)?.remainingLabel == "2,020 kcal left")
+        #expect(snapshot.progress("k", on: today)?.remainingLabel == "2,020 cal left")
         #expect(snapshot.pinned == ["k", "p", "f", "c"])
         #expect(snapshot.nutrients.prefix(2).map(\.short) == ["cal", "alcohol"])
     }

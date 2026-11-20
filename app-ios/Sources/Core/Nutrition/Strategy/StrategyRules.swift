@@ -106,9 +106,9 @@ enum StrategyRules {
         let difference = averageKcal - maintenanceKcal
         let weeklyKg = difference * 7 / NutritionEngine.kcalPerLb * NutritionEngine.kgPerLb
         let weekly = abs(unit.fromKg(weeklyKg)).formatted(.number.precision(.fractionLength(0...2)))
-        let density = "\((unit.toKg(1) / NutritionEngine.kgPerLb * NutritionEngine.kcalPerLb).wholeText) kcal per \(unit.rawValue)"
+        let density = "\((unit.toKg(1) / NutritionEngine.kgPerLb * NutritionEngine.kcalPerLb).wholeText) cal per \(unit.rawValue)"
         guard abs(difference) >= 10 else {
-            return BalanceText(title: "At Maintenance", value: "0 kcal", text: "Eating at maintenance holds your weight.")
+            return BalanceText(title: "At Maintenance", value: "0 cal", text: "Eating at maintenance holds your weight.")
         }
         let amount = StrategyFormat.kcal(abs(difference))
         return difference < 0

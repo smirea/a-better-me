@@ -22,7 +22,7 @@ struct MealRating: Codable, Hashable, Sendable {
         var bounds: [Int] { [6, 7, 12, 13, 20] }
 
         /// Nil when the meal has no calories to rate. No protein reads as infinite: the worst a meal can do. It divides
-        /// the whole numbers the row's totals show, so "403 kcal, 28 P" reads 14:1 rather than the 15:1 of 403.4 ÷ 27.4.
+        /// the whole numbers the row's totals show, so "403 cal, 28 P" reads 14:1 rather than the 15:1 of 403.4 ÷ 27.4.
         func score(_ amounts: NutrientAmounts) -> Score? {
             let calories = (amounts[.energy] ?? 0).rounded()
             guard calories > 0 else { return nil }

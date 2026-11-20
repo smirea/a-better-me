@@ -29,7 +29,7 @@ extension NutritionSnapshot {
             return NutritionSnapshot.Day(day: day.description, consumed: consumed, ranges: ranges)
         }
         return NutritionSnapshot(
-            nutrients: nutrients.map { NutritionSnapshot.Nutrient(id: $0.id.rawValue, name: $0.name, short: $0.short, unit: $0.unit.rawValue, tint: $0.tint) },
+            nutrients: nutrients.map { NutritionSnapshot.Nutrient(id: $0.id.rawValue, name: $0.name, short: $0.short, unit: $0.unit.label, tint: $0.tint) },
             pinned: settings.nutrition.summaryNutrients.filter(settings.nutrition.shows).map(\.rawValue),
             showOverages: settings.nutrition.showOverages,
             days: days

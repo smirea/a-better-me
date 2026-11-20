@@ -130,7 +130,7 @@ struct PlateView: View {
     }
 
     private func tile(_ line: MacroLine) -> some View {
-        let unit = line.nutrient == .energy ? "kcal" : "g"
+        let unit = line.nutrient == .energy ? "cal" : "g"
         let caption = withDay ? "\(line.text(.eaten)) \(unit) with plate" : "\(line.total.wholeText) \(unit) in plate"
         return VStack(alignment: .leading, spacing: 6) {
             Text(line.nutrient.title).font(AppFont.rowTitle)

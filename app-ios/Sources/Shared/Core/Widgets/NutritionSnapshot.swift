@@ -117,14 +117,14 @@ struct NutrientProgress: Hashable, Sendable {
 
     var consumedLabel: String { number(consumed) }
 
-    /// "1,240 kcal left", "120 kcal over", or the amount eaten when there is no goal.
+    /// "1,240 cal left", "120 cal over", or the amount eaten when there is no goal.
     var remainingLabel: String {
         guard let remaining else { return "\(consumedLabel) \(nutrient.unit)" }
         if goalIsFloor, remaining == 0, consumed > 0, consumed <= range.ceiling ?? .infinity { return "Minimum met" }
         return "\(number(remaining)) \(nutrient.unit) \(remaining < 0 ? "over" : "left")"
     }
 
-    /// "1,860 / 2,400 kcal", or "1,860 kcal" with no goal.
+    /// "1,860 / 2,400 cal", or "1,860 cal" with no goal.
     var totalLabel: String {
         goal.map { "\(consumedLabel) / \(number($0)) \(nutrient.unit)" } ?? "\(consumedLabel) \(nutrient.unit)"
     }

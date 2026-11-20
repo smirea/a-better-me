@@ -224,7 +224,7 @@ private struct InsightCardView: View {
             case .expenditure:
                 let card = values.expenditureCard
                 NavigationLink(value: DashboardRoute.expenditure) {
-                    DashboardCard(title: "Expenditure", period: "Last 7 Days", value: card.text, unit: "kcal") {
+                    DashboardCard(title: "Expenditure", period: "Last 7 Days", value: card.text, unit: "cal") {
                         MiniLine(values: card.values, color: Theme.coral)
                     }
                 }

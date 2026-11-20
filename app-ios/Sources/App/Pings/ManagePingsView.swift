@@ -16,7 +16,7 @@ struct ManagePingsView: View {
         List {
             ForEach(shown) { ping in
                 Button { editing = ping } label: {
-                    RowLabel(title: ping.name, detail: ping.kind.summary, systemImage: ping.icon, iconTint: Theme.ping)
+                    RowLabel(title: ping.name, detail: ping.kind.summary, systemImage: ping.icon, iconTint: ping.tint)
                 }
                 .accessibilityIdentifier("ping-\(ping.name)")
                 .listRowBackground(Color.clear)

@@ -7,9 +7,9 @@ enum NutritionFormat {
         value.niceText
     }
 
-    /// Calories are always whole, "33 kcal"; every other unit reads like `amount`, "6.7 g".
+    /// Calories are always whole, "33 cal"; every other unit reads like `amount`, "6.7 g".
     static func amount(_ value: Double, _ unit: NutrientUnit) -> String {
-        "\(unit == .kcal ? value.wholeText : value.niceText) \(unit.rawValue)"
+        "\(unit == .kcal ? value.wholeText : value.niceText) \(unit.label)"
     }
 
     static func amount(_ value: Double, of id: NutrientID) -> String {
@@ -31,10 +31,10 @@ enum NutritionFormat {
         (amounts.amount(of: id) ?? 0).wholeText
     }
 
-    /// "607 kilocalories, 46 grams protein, 9 grams fiber": a compact row of summary columns as VoiceOver reads it.
+    /// "607 calories, 46 grams protein, 9 grams fiber": a compact row of summary columns as VoiceOver reads it.
     static func spoken(_ amounts: NutrientAmounts, _ columns: [NutrientID]) -> String {
         columns.map { id in
-            id == .energy ? "\(column(id, amounts)) kilocalories" : "\(column(id, amounts)) grams \(id.title.lowercased())"
+            id == .energy ? "\(column(id, amounts)) calories" : "\(column(id, amounts)) grams \(id.title.lowercased())"
         }.joined(separator: ", ")
     }
 

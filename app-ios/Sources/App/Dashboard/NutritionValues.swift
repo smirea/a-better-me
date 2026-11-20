@@ -109,7 +109,7 @@ extension DashboardData {
         let intake = intake
         let differences = NutritionMetrics.differences(intake: intake, reference: points, calendar: calendar)
         return MetricTab(
-            title: title, points: intake, unit: .whole("kcal"), seriesTitle: "Calories", averageTitle: "Average", summary: .total, style: .bar,
+            title: title, points: intake, unit: .whole("cal"), seriesTitle: "Calories", averageTitle: "Average", summary: .total, style: .bar,
             color: Theme.calories,
             overlay: MetricTab.Overlay(title: reference.rawValue, points: points, color: color, dashed: true),
             stats: { interval in

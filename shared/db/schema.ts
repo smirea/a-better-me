@@ -389,17 +389,34 @@ const tags = sqliteTable('tags', {
 
 export const PING_KINDS = ['boolean', 'range'] as const;
 export const PING_MAX_STEPS = 10;
+/** The swatches a ping's editor offers, by id. The app holds each one's color. */
+export const PING_COLORS = [
+	'red',
+	'orange',
+	'yellow',
+	'lime',
+	'green',
+	'teal',
+	'sky',
+	'blue',
+	'violet',
+	'purple',
+	'pink',
+	'tan',
+] as const;
 
 /**
  * Something the owner logs in a tap: an event that happened (a glass of water) or a step on a scale (mood 1 to 5).
  * `steps` is a range ping's step labels in order, one string per step and empty for a step without a label, so
  * its length is the number of steps; a boolean ping has none. `position` orders the pings everywhere they list.
+ * `color` is one of `PING_COLORS`, null for a ping made before pings had colors, which draws in the default tint.
  */
 const pings = sqliteTable('pings', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
 	/** An SF Symbol name. */
 	icon: text('icon').notNull().default('circle'),
+	color: text('color', { enum: PING_COLORS }),
 	kind: text('kind', { enum: PING_KINDS }).notNull().default('boolean'),
 	steps: json('steps').notNull().default([]),
 	position: integer('position').notNull().default(0),
@@ -611,6 +628,7 @@ export const schema = defineSchema({
 		pings: {
 			name: z.string().min(1),
 			icon: z.string().min(1),
+			color: z.enum(PING_COLORS),
 			kind: z.enum(PING_KINDS),
 			steps: z.array(z.string()).max(PING_MAX_STEPS),
 			position: count,

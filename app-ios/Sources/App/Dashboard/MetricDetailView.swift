@@ -733,7 +733,7 @@ struct MetricPlot {
         return NutritionMetrics.differences(intake: tab.points, reference: tab.overlay?.points ?? [], calendar: calendar).reversed().map { day in
             let tag = BalanceTag(balance: NutritionMetrics.balance(day.value), isExpenditure: isExpenditure)
             return MonthRow(
-                date: day.date, text: "\(BalanceTag.signed(day.value)) kcal", subtitle: day.date.formatted(.dateTime.weekday().month().day()),
+                date: day.date, text: "\(BalanceTag.signed(day.value)) cal", subtitle: day.date.formatted(.dateTime.weekday().month().day()),
                 tag: MonthRow.Tag(text: tag.title, symbol: tag.symbol, color: tag.color)
             )
         }

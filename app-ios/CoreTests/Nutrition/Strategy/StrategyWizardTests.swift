@@ -43,9 +43,9 @@ struct StrategyWizardTests {
         #expect(plan.targets[7] == target(1525, 151, 52, 111))
         let notes = model.designNotes(unit: .lb)
         #expect(notes.map(\.title) == ["Maintenance Calories", "Daily Deficit", "Average Target", "Calorie Shift", "Target Protein", "Diet Type"])
-        #expect(notes[0].value == "2,210 kcal")
-        #expect(notes[1].value == "−641 kcal")
-        #expect(notes[2].value == "1,569 kcal")
+        #expect(notes[0].value == "2,210 cal")
+        #expect(notes[1].value == "−641 cal")
+        #expect(notes[2].value == "1,569 cal")
         #expect(plan.expenditureKcal == 2210)
         #expect(plan.trendWeightKg == weightKg)
     }
@@ -55,7 +55,7 @@ struct StrategyWizardTests {
     /// Protein is 0.77 g/lb × 201.2 = 154.9, truncated to 154 g (616 kcal); fat and carbs split what is left 50.5/48.3.
     /// The phone planned from 2734 kcal, an estimate seeded from the owner's 2015 weigh-ins and never updated because the
     /// phone held four logged days; three years of the log put maintenance at 2139 kcal.
-    @Test(arguments: [(2734.0, target(2303, 154, 95, 204), "−431 kcal"), (2139, target(1708, 154, 61, 132), "−431 kcal")])
+    @Test(arguments: [(2734.0, target(2303, 154, 95, 204), "−431 cal"), (2139, target(1708, 154, 61, 132), "−431 cal")])
     func theOwnersProgramIsMaintenanceLessTheRatesDeficit(maintenance: Double, expected: DayTarget, deficit: String) {
         let trend = 201.2 * Engine.kgPerLb
         let goal = NutritionGoal(kind: .lose, targetWeightKg: 170 * Engine.kgPerLb, ratePercentPerWeek: -0.5, startedOn: today)
@@ -67,7 +67,7 @@ struct StrategyWizardTests {
         let balance = StrategyRules.balanceText(maintenanceKcal: StrategyRules.maintenance(plan, expenditureKcal: 9999)!, averageKcal: StrategyRules.averageEnergy(plan.targets), unit: .lb)
         #expect(balance.title == "Daily Deficit")
         #expect(balance.value == deficit)
-        #expect(balance.text == "431 kcal a day under maintenance loses about 1.01 lb a week at 3,000 kcal per lb.")
+        #expect(balance.text == "431 cal a day under maintenance loses about 1.01 lb a week at 3,000 cal per lb.")
     }
 
     @Test func aManualProgramMeasuresAgainstTodaysExpenditure() {
@@ -76,8 +76,8 @@ struct StrategyWizardTests {
         manual.expenditureKcal = 2500
         #expect(StrategyRules.maintenance(manual, expenditureKcal: 2205) == 2205)
         let surplus = StrategyRules.balanceText(maintenanceKcal: 1800, averageKcal: 2000, unit: .kg)
-        #expect(surplus.value == "+200 kcal")
-        #expect(surplus.text == "200 kcal a day over maintenance gains about 0.21 kg a week at 6,614 kcal per kg.")
+        #expect(surplus.value == "+200 cal")
+        #expect(surplus.text == "200 cal a day over maintenance gains about 0.21 kg a week at 6,614 cal per kg.")
         #expect(StrategyRules.balanceText(maintenanceKcal: 2005, averageKcal: 2000, unit: .lb).title == "At Maintenance")
     }
 

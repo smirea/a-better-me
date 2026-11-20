@@ -276,13 +276,13 @@ private struct NutrientInputRow: View {
                 .accessibilityLabel(nutrient.name)
             if nutrient.id == .energy {
                 Picker("Energy Unit", selection: $energyUnit) {
-                    Text("kcal").tag(NutritionSettings.EnergyUnit.kcal)
+                    Text("cal").tag(NutritionSettings.EnergyUnit.kcal)
                     Text("kJ").tag(NutritionSettings.EnergyUnit.kj)
                 }
                 .labelsHidden()
                 .fixedSize()
             } else {
-                Text(nutrient.unit.rawValue).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary).frame(width: 36, alignment: .leading)
+                Text(nutrient.unit.label).font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary).frame(width: 36, alignment: .leading)
             }
         }
     }

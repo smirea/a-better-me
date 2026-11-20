@@ -128,13 +128,13 @@ struct StrategyWizardView: View {
             dietOption(step, .keto, "Keto", "Carbs will be very restricted to allow for higher fat intake")
         case .floor:
             let standard = model.basis?.standardFloorKcal ?? settings.nutrition.standardFloorKcal
-            WizardOption(title: "Standard Floor", subtitle: "Your Calorie targets will never go below \(standard) kcal", selected: model.coaching.floor == .standard) { answer(step) { model.coaching.floor = .standard } }
-            WizardOption(title: "Low Floor", subtitle: "Proceed with caution: targets may go as low as \(NutritionEngine.CalorieFloor.low(standardKcal: standard).kcal) kcal", selected: model.coaching.floor == .low) { answer(step) { model.coaching.floor = .low } }
+            WizardOption(title: "Standard Floor", subtitle: "Your Calorie targets will never go below \(standard) cal", selected: model.coaching.floor == .standard) { answer(step) { model.coaching.floor = .standard } }
+            WizardOption(title: "Low Floor", subtitle: "Proceed with caution: targets may go as low as \(NutritionEngine.CalorieFloor.low(standardKcal: standard).kcal) cal", selected: model.coaching.floor == .low) { answer(step) { model.coaching.floor = .low } }
             Stepper(value: Binding(get: { standard }, set: { kcal in
                 model.setStandardFloor(kcal)
                 store.updateSettings { $0.nutrition.standardFloorKcal = kcal }
             }), in: 800...2500, step: 10) {
-                LabeledContent("Your Standard Floor", value: "\(standard) kcal")
+                LabeledContent("Your Standard Floor", value: "\(standard) cal")
             }
             .card()
             Text("MacroFactor sets the Standard Floor for you; set yours here. The Low Floor is two thirds of it.")
@@ -225,7 +225,7 @@ struct StrategyWizardView: View {
             }
             if let basis = model.basis {
                 StrategyCard(title: "Initial Daily Budget") {
-                    Text("\(Double(model.goal.initialBudget(basis)).wholeText) kcal").font(AppFont.number())
+                    Text("\(Double(model.goal.initialBudget(basis)).wholeText) cal").font(AppFont.number())
                 }
             }
             if let end = model.goal.projectedEnd(from: model.today, currentWeightKg: model.weightKg) {
@@ -282,7 +282,7 @@ private struct GoalWeightRateStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 10) {
-                tile(model.basis.map { "\(Double(model.goal.initialBudget($0)).wholeText) kcal" } ?? "—", "initial daily budget", highlighted: true)
+                tile(model.basis.map { "\(Double(model.goal.initialBudget($0)).wholeText) cal" } ?? "—", "initial daily budget", highlighted: true)
                 tile(model.goal.projectedEnd(from: model.today, currentWeightKg: model.weightKg).map { StrategyFormat.day($0, year: true) } ?? "—", "projected end date", highlighted: false)
             }
             Text("What is your target weight?").font(AppFont.sectionTitle)
@@ -370,7 +370,7 @@ private struct ManualTargetsStep: View {
                 Text(StrategyFormat.weekdayNames[weekday - 1]).font(AppFont.headline())
             }
             let day = sameAllWeek ? 1 : weekday
-            field("Energy", "kcal", \.energy, day)
+            field("Energy", "cal", \.energy, day)
             field("Protein", "g", \.protein, day)
             field("Fat", "g", \.fat, day)
             field("Carbs", "g", \.carbs, day)

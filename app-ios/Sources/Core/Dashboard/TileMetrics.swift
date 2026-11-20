@@ -30,9 +30,9 @@ enum TileMetrics {
         case let (.percent, target?) where target > 0:
             return Tile(text: (consumed / target * 100).wholeText, unit: "%", consumed: consumed, range: range)
         case let (.remaining, target?):
-            return Tile(text: format(target - consumed), unit: "\(unit.rawValue) left", consumed: consumed, range: range)
+            return Tile(text: format(target - consumed), unit: "\(unit.label) left", consumed: consumed, range: range)
         default:
-            return Tile(text: format(consumed), unit: unit.rawValue, consumed: consumed, range: range)
+            return Tile(text: format(consumed), unit: unit.label, consumed: consumed, range: range)
         }
     }
 

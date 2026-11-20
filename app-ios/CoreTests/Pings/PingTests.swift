@@ -42,4 +42,14 @@ struct PingTests {
         #expect(PingLog.instant(on: CalendarDay("2026-11-17")!, now: now, calendar: utc) == day("2026-11-17", 9).addingTimeInterval(25 * 60 + 20.5))
         #expect(PingLog.instant(on: CalendarDay("2026-11-19")!, now: now, calendar: utc) == now)
     }
+
+    @Test func aNewPingStartsOnTheFirstSwatchNoPingDrawsInAndAColorlessPingDrawsInTheFallback() {
+        let colorless = Ping(name: "Old", icon: "circle", kind: .boolean)
+        let red = Ping(name: "Red", icon: "circle", color: .red, kind: .boolean)
+        #expect(PingColor.unused(by: []) == .red)
+        #expect(PingColor.unused(by: [red]) == .orange)
+        let allButTeal = PingColor.allCases.filter { $0 != .teal }.map { Ping(name: $0.rawValue, icon: "circle", color: $0, kind: .boolean) }
+        #expect(PingColor.unused(by: allButTeal) == .teal)
+        #expect(PingColor.unused(by: allButTeal + [colorless, red]) == .orange)
+    }
 }

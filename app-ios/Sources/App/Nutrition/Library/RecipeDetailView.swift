@@ -185,7 +185,7 @@ struct RecipePrepareView: View {
     }
 
     private func summaryTile(_ id: NutrientID, perServing: NutrientAmounts, total: NutrientAmounts) -> some View {
-        let unit = id == .energy ? "kcal" : "g"
+        let unit = id == .energy ? "cal" : "g"
         return HStack(spacing: 8) {
             Capsule().fill(id.color).frame(width: 4)
             RowLabel(

@@ -19,7 +19,7 @@ struct NutritionCardView: View {
             } else if card.nutrient == nil {
                 let macros = values.macrosCard
                 NavigationLink(value: DashboardRoute.macros) {
-                    DashboardCard(title: "Macros", period: "Last 7 Days", value: macros.text, unit: "kcal avg") {
+                    DashboardCard(title: "Macros", period: "Last 7 Days", value: macros.text, unit: "cal avg") {
                         MiniStackedBars(days: macros.days, colors: [Theme.protein, Theme.fat, Theme.carbs])
                     }
                 }

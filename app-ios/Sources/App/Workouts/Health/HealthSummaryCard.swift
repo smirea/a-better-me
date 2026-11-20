@@ -43,8 +43,8 @@ struct HealthSummaryCard: View {
                 }
                 row("Average Heart Rate", icon: "heart.fill", value: numbers.averageHeartRate.map { "\($0.wholeText) bpm" })
                 row("Max Heart Rate", icon: "bolt.heart.fill", value: numbers.maxHeartRate.map { "\($0.wholeText) bpm" })
-                row("Active Energy", icon: "flame.fill", value: numbers.activeEnergyKcal.map { "\($0.wholeText) kcal" })
-                row("Total Energy", icon: "flame", value: numbers.totalEnergyKcal.map { "\($0.wholeText) kcal" })
+                row("Active Energy", icon: "flame.fill", value: numbers.activeEnergyKcal.map { "\($0.wholeText) cal" })
+                row("Total Energy", icon: "flame", value: numbers.totalEnergyKcal.map { "\($0.wholeText) cal" })
             }
             .feedback(self)
             .padding(.horizontal, Theme.margin)

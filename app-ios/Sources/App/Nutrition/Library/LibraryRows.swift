@@ -54,7 +54,7 @@ struct FoodRow: View {
 }
 
 extension Text {
-    /// "105ઠ 1P 0Fa 27C": MacroFactor's compact nutrition in the summary's columns, the calorie glyph in place of "kcal".
+    /// "105ઠ 1P 0Fa 27C": MacroFactor's compact nutrition in the summary's columns, the calorie glyph in place of "cal".
     init(macroLine amounts: NutrientAmounts, columns: [NutrientID]) {
         let parts = columns.map { id in
             let value = NutritionFormat.column(id, amounts)

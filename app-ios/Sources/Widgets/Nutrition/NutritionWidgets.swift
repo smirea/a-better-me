@@ -112,7 +112,7 @@ private struct CaloriesRing: View {
                     .foregroundStyle(calories.isOver ? Theme.destructive : Theme.textPrimary)
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
-                Text(calories.goal == nil ? "kcal eaten" : calories.isOver ? "kcal over" : "kcal left")
+                Text(calories.goal == nil ? "cal eaten" : calories.isOver ? "cal over" : "cal left")
                     .font(AppFont.caption(11))
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)

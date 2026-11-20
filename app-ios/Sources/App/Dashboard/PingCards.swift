@@ -27,11 +27,11 @@ private struct PingCardView: View {
             switch card.chart {
             case let .days(levels):
                 DashboardCard(title: card.ping.name, period: "Last 30 Days", value: card.value?.wholeText, unit: "today") {
-                    DotGrid(levels: levels, color: Theme.ping)
+                    DotGrid(levels: levels, color: card.ping.tint)
                 }
             case let .week(averages, steps):
                 DashboardCard(title: card.ping.name, period: "Last 7 Days", value: card.value?.niceText, unit: "of \(steps) avg") {
-                    MiniBars(values: averages, color: Theme.ping, top: Double(steps))
+                    MiniBars(values: averages, color: card.ping.tint, top: Double(steps))
                 }
             }
         }

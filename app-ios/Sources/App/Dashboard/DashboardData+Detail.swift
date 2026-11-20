@@ -38,9 +38,9 @@ enum MetricUnit: Equatable {
 
     init(_ unit: NutrientUnit) {
         switch unit {
-        case .kcal: self = .whole(unit.rawValue)
-        case .mg, .mcg: self = .trace(unit.rawValue)
-        case .g, .mL: self = .decimal(unit.rawValue)
+        case .kcal: self = .whole(unit.label)
+        case .mg, .mcg: self = .trace(unit.label)
+        case .g, .mL: self = .decimal(unit.label)
         }
     }
 
@@ -163,7 +163,7 @@ extension DashboardData {
             )))
         case .expenditure:
             return MetricDetail(title: "Expenditure", tabs: [MetricTab(
-                title: "Expenditure", points: expenditurePoints, unit: .whole("kcal"), averageTitle: "Average",
+                title: "Expenditure", points: expenditurePoints, unit: .whole("cal"), averageTitle: "Average",
                 summary: .change, style: .line, color: Theme.coral,
                 holding: Set(expenditure.filter(\.isHolding).map(\.date))
             )], footer: .expenditure(ExpenditureSummary(

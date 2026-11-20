@@ -13,7 +13,7 @@ struct StatView: View {
         self.symbol = symbol
     }
 
-    /// A regular stat whose value already carries its unit, as Strategy writes "2,259 kcal".
+    /// A regular stat whose value already carries its unit, as Strategy writes "2,259 cal".
     init(value: String, caption: String) {
         self.init(title: caption, value: value)
     }

@@ -24,7 +24,7 @@ struct StatsPage: View {
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(metrics?.activeEnergyKcal.map { "\(Int($0.rounded()))" } ?? "–").font(AppFont.number(22)).foregroundStyle(metrics?.activeEnergyKcal == nil ? Theme.textTertiary : Theme.textPrimary)
-                    Text("KCAL").font(AppFont.headline(10)).foregroundStyle(Theme.textSecondary)
+                    Text("CAL").font(AppFont.headline(10)).foregroundStyle(Theme.textSecondary)
                 }
                 .accessibilityElement(children: .combine)
                 ProgressView(value: Double(workout.completedSets), total: Double(max(workout.totalSets, 1))) {

@@ -21,7 +21,7 @@ struct FoodLoggingHabitView: View {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(spacing: 16) {
                     HStack(alignment: .top) {
-                        StatView(title: "Today", value: habit.todayKcal?.wholeText ?? "--", unit: "kcal")
+                        StatView(title: "Today", value: habit.todayKcal?.wholeText ?? "--", unit: "cal")
                         Spacer()
                         StatView(title: "Streak", value: habit.streak.formatted(), unit: "days")
                         Spacer()

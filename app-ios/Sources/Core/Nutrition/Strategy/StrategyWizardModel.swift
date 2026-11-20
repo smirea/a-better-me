@@ -228,7 +228,7 @@ struct StrategyWizardModel {
                 text: "Your estimated expenditure, from your logged intake and weight trend, or from your BMR and activity until there is enough data."
             ),
             DesignNote(title: balance.title, value: balance.value, text: "\(goalText). \(balance.text)"),
-            DesignNote(title: "Average Target", value: "\(average) kcal", text: "So your daily average Calorie goal should be around \(average) kcal."),
+            DesignNote(title: "Average Target", value: "\(average) cal", text: "So your daily average Calorie goal should be around \(average) cal."),
         ]
         if !savedCoaching.highDays.isEmpty {
             notes.append(DesignNote(

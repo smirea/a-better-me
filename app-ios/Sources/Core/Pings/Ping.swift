@@ -18,6 +18,21 @@ enum PingKind: Hashable, Sendable {
     }
 }
 
+/// A ping's swatch, stored by id (the schema's `PING_COLORS`). The app holds each one's color.
+enum PingColor: String, CaseIterable, Sendable {
+    case red, orange, yellow, lime, green, teal, sky, blue, violet, purple, pink, tan
+
+    /// What a ping without a color draws in: the tint pings had before they had colors.
+    static let fallback = PingColor.teal
+
+    /// The swatch a new ping starts on: the first no ping draws in yet, or, once all twelve are taken, the one fewest
+    /// draw in. A ping without a color draws in `fallback`, so it takes that swatch.
+    static func unused(by pings: [Ping]) -> PingColor {
+        let counts = Dictionary(pings.map { ($0.color ?? fallback, 1) }, uniquingKeysWith: +)
+        return allCases.min { counts[$0, default: 0] < counts[$1, default: 0] } ?? fallback
+    }
+}
+
 /// A row of the synced `pings` table: something the owner logs in a tap, such as a glass of water or a mood from 1 to 5.
 struct Ping: Stamped {
     static let table = "pings"
@@ -26,16 +41,19 @@ struct Ping: Stamped {
     var name: String
     /// An SF Symbol name.
     var icon: String
+    /// Nil for a ping made before pings had colors, and for a swatch this app doesn't know.
+    var color: PingColor?
     var kind: PingKind
     /// Orders the pings everywhere they list, lowest first.
     var position: Int
     var createdAt: Date
     var updatedAt: Date
 
-    init(id: UUID = UUID(), name: String, icon: String, kind: PingKind, position: Int = 0, at date: Date = .now) {
+    init(id: UUID = UUID(), name: String, icon: String, color: PingColor? = nil, kind: PingKind, position: Int = 0, at date: Date = .now) {
         self.id = id
         self.name = name
         self.icon = icon
+        self.color = color
         self.kind = kind
         self.position = position
         createdAt = date
@@ -46,6 +64,7 @@ struct Ping: Stamped {
         id = try row.uuid("id")
         name = row["name"]
         icon = row["icon"]
+        color = (row["color"] as String?).flatMap(PingColor.init(rawValue:))
         kind = (row["kind"] as String?) == "range" ? .range(try row.json("steps")) : .boolean
         position = row["position"]
         createdAt = try row.instant("created_at")
@@ -56,6 +75,7 @@ struct Ping: Stamped {
         container["id"] = key
         container["name"] = name
         container["icon"] = icon
+        container["color"] = color?.rawValue
         switch kind {
         case .boolean: container["kind"] = "boolean"
         case .range: container["kind"] = "range"
