@@ -98,7 +98,7 @@ final class HealthData {
             let recent = calendar.date(byAdding: .day, value: 1, to: calendar.date(byAdding: .year, value: -2, to: today)!)!
             let whole = calendar.date(from: DateComponents(year: 2010))!
             let sessionsRecent = calendar.date(byAdding: .day, value: -Self.sessionsReach, to: today)!
-            let workoutsFrom = UserDefaults.standard.bool(forKey: Self.historyCopiedKey("workouts")) ? sessionsRecent : whole
+            let workoutsFrom = UserDefaults.standard.bool(forKey: Self.historyCopiedKey("workoutsWithHeartRate")) ? sessionsRecent : whole
             let sleepFrom = UserDefaults.standard.bool(forKey: Self.historyCopiedKey("sleep")) ? sessionsRecent : whole
             async let weights = readWeights()
             async let workouts = HealthSessions.workouts(from: workoutsFrom, in: store)
@@ -122,7 +122,7 @@ final class HealthData {
             )
             try await localStore.write { try HealthMirror.apply(read, to: $0, calendar: calendar) }.value
             for (kind, read) in days where !read.totals.isEmpty { UserDefaults.standard.set(true, forKey: Self.historyCopiedKey(kind)) }
-            if read.workouts?.samples.isEmpty == false { UserDefaults.standard.set(true, forKey: Self.historyCopiedKey("workouts")) }
+            if read.workouts?.samples.isEmpty == false { UserDefaults.standard.set(true, forKey: Self.historyCopiedKey("workoutsWithHeartRate")) }
             if read.sleep?.samples.isEmpty == false { UserDefaults.standard.set(true, forKey: Self.historyCopiedKey("sleep")) }
             hasRead = true
         } catch {
