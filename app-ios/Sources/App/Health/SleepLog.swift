@@ -15,9 +15,11 @@ final class SleepLog {
     func load(_ day: CalendarDay) async {
         guard HealthStore.isAvailable else { return }
         let calendar = Calendar.current
-        // A night that ends on the day began the day before, and one that begins on it is still a sleep a sample later.
+        // A night that ends on the day began the day before, and the day's bedtime can be early the next morning, with a
+        // sample after it that is still the same sleep.
         let from = day.adding(days: -1).date(in: calendar)
-        let through = day.adding(days: 1).date(in: calendar).addingTimeInterval(SleepSession.maxGap)
+        let through = day.adding(days: 1).date(in: calendar)
+            .addingTimeInterval(TimeInterval(SleepSession.nightEndsHour) * 3600 + SleepSession.maxGap)
         let query = HKSampleQueryDescriptor(
             predicates: [.categorySample(type: Self.type, predicate: HKQuery.predicateForSamples(withStart: from, end: through))],
             sortDescriptors: [SortDescriptor(\.startDate)]

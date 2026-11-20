@@ -47,6 +47,8 @@ struct PingTimelinePage: View {
     var body: some View {
         let rows = self.rows(RowsKey(timeline: timeline, sleep: sleep)) { timeline.rows(sleep: sleep) }
         let ids = rows.map(\.id)
+        // A log that joins a group adds no row, so the scroll to it watches the logs.
+        let logs = rows.flatMap { $0.entries.map(\.log.key) }
         // The scroll view already keeps its content out of the bottom safe area, which the drawer reaches into.
         // The gap over the drawer leaves a just-logged row, scrolled to its bottom edge, some room below it.
         let bottomInset = covered == 0 ? 0 : max(0, covered + 32 - safeBottom)
@@ -77,9 +79,10 @@ struct PingTimelinePage: View {
                         .animation(.snappy, value: bottomInset)
                         .scrollIndicators(.hidden)
                         .scrollDismissesKeyboard(.interactively)
-                        .onChange(of: ids) { old, new in
-                            guard let added = added.map(PingLog.key), new.contains(added), !old.contains(added) else { return }
-                            withAnimation(.snappy(duration: 0.3)) { proxy.scrollTo(added, anchor: .bottom) }
+                        .onChange(of: logs) { old, new in
+                            guard let added = added.map(PingLog.key), new.contains(added), !old.contains(added),
+                                  let row = rows.first(where: { $0.entries.contains { $0.log.key == added } }) else { return }
+                            withAnimation(.snappy(duration: 0.3)) { proxy.scrollTo(row.id, anchor: .bottom) }
                         }
                 }
             }
@@ -93,11 +96,15 @@ struct PingTimelinePage: View {
             ForEach(rows) { row in
                 switch row {
                 case let .entry(entry):
-                    PingEntryRow(
-                        entry: entry, isEditing: editing.contains(entry.id), gutter: gutter,
-                        toggle: { editing.formSymmetricDifference([entry.id]) }, history: { history(entry.ping) }
-                    )
-                    .transition(.scale(scale: 0.85, anchor: .leading).combined(with: .opacity))
+                    entryRow(entry)
+                case let .group(group):
+                    // Open, a group is its logs' own rows, each an editor; it closes back into one when they all do.
+                    if group.entries.contains(where: { editing.contains($0.id) }) {
+                        ForEach(group.entries) { entryRow($0) }
+                    } else {
+                        PingGroupRow(group: group, gutter: gutter) { editing.formUnion(group.entries.map(\.id)) }
+                            .transition(.opacity)
+                    }
                 case let .marker(marker):
                     TimelineMarkerRow(marker: marker, gutter: gutter)
                 }
@@ -111,6 +118,14 @@ struct PingTimelinePage: View {
         .padding(.vertical, 8)
         .animation(.snappy(duration: 0.3), value: ids)
         .animation(.snappy(duration: 0.25), value: editing)
+    }
+
+    private func entryRow(_ entry: PingEntry) -> some View {
+        PingEntryRow(
+            entry: entry, isEditing: editing.contains(entry.id), gutter: gutter,
+            toggle: { editing.formSymmetricDifference([entry.id]) }, history: { history(entry.ping) }
+        )
+        .transition(.scale(scale: 0.85, anchor: .leading).combined(with: .opacity))
     }
 }
 
@@ -142,7 +157,7 @@ private struct PingEntryRow: View {
                 HStack(spacing: 8) {
                     PingTitle(ping: entry.ping)
                     Spacer(minLength: 8)
-                    if !isEditing { value }
+                    if !isEditing { PingStepSquare(ping: entry.ping, value: log.value) }
                 }
                 .frame(minHeight: 44)
                 if isEditing {
@@ -171,21 +186,72 @@ private struct PingEntryRow: View {
         .feedback(self)
     }
 
-    /// A range's step as the square the editor fills, with its label before it.
-    @ViewBuilder
-    private var value: some View {
-        let steps = entry.ping.kind.steps
-        if steps.indices.contains(entry.log.value - 1) {
-            let label = steps[entry.log.value - 1]
+}
+
+/// A range's step as the square the editor fills, with its label before it. A boolean has none.
+private struct PingStepSquare: View {
+    let ping: Ping
+    let value: Int
+
+    var body: some View {
+        let steps = ping.kind.steps
+        if steps.indices.contains(value - 1) {
+            let label = steps[value - 1]
             if !label.isEmpty {
                 Text(label).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).lineLimit(1)
             }
-            Text("\(entry.log.value)")
+            Text("\(value)")
                 .font(AppFont.number(14))
                 .foregroundStyle(Theme.onPrimary)
                 .frame(width: 34, height: 34)
                 .background(Theme.textPrimary, in: .rect(cornerRadius: 8))
         }
+    }
+}
+
+/// Logs drawn as one row at the first one's time (`PingGroup`): each ping once, wrapping, with how many times it was
+/// logged in its color. A tap opens every log in it as its own row.
+private struct PingGroupRow: View {
+    let group: PingGroup
+    let gutter: CGFloat
+    let open: () -> Void
+
+    var body: some View {
+        let first = group.entries[0]
+        let time = first.log.loggedAt.formatted(date: .omitted, time: .shortened)
+        HStack(alignment: .top, spacing: 0) {
+            Text(time).font(AppFont.time).lineLimit(1).minimumScaleFactor(0.8).foregroundStyle(Theme.textSecondary)
+                .frame(width: gutter, height: 44, alignment: .trailing)
+            Circle().fill(first.ping.tint).frame(width: 9, height: 9)
+                .padding(3).background(Theme.background, in: .circle)
+                .frame(width: PingTimelineMetrics.node, height: 44)
+                .accessibilityHidden(true)
+            HStack(spacing: 8) {
+                FlowLayout(spacing: 12) {
+                    ForEach(group.items, id: \.ping.id) { item in
+                        HStack(spacing: 6) {
+                            PingTitle(ping: item.ping)
+                            if item.count > 1 {
+                                Text("×\(item.count)").font(AppFont.rowTitle).foregroundStyle(item.ping.tint)
+                            }
+                        }
+                        .frame(height: 32)
+                    }
+                }
+                .padding(.vertical, 6)
+                Spacer(minLength: 8)
+                if group.items.count == 1 { PingStepSquare(ping: first.ping, value: first.log.value).frame(height: 44) }
+            }
+            .padding(.leading, 4)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(.rect)
+        .onTapGesture(perform: open)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(([time] + group.items.map { $0.count > 1 ? "\($0.ping.name) \($0.count) times" : $0.ping.name }).joined(separator: ", "))
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction(named: "Edit", open)
+        .feedback(self)
     }
 }
 

@@ -1,0 +1,4 @@
+{
+	"title": "Repeated pings share a row in the Pings timeline",
+	"description": "The same ping logged again shows as ×N, and quick ones logged within 10 minutes sit inline on one row."
+}
