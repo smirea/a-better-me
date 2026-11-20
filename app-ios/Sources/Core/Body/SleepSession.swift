@@ -11,6 +11,9 @@ struct SleepSession: Hashable, Sendable {
     /// night leaves a gap between two of them.
     static let maxGap: TimeInterval = 3600
 
+    /// Falling asleep before this hour ends the evening before: a bedtime of 1 AM is that night's, not the next day's.
+    static let nightEndsHour = 6
+
     /// `asleep` is every sample of a stage asleep. A watch and a phone both write the same night, so time two samples
     /// share counts once.
     static func sessions(_ asleep: [DateInterval]) -> [SleepSession] {
@@ -27,10 +30,16 @@ struct SleepSession: Hashable, Sendable {
         return sessions
     }
 
+    /// The day whose evening this sleep began in, which is the day before when it began after midnight.
+    func bedtimeDay(calendar: Calendar = .current) -> CalendarDay {
+        let startDay = CalendarDay(start, in: calendar)
+        return calendar.component(.hour, from: start) < Self.nightEndsHour ? startDay.adding(days: -1) : startDay
+    }
+
     /// The moments of this sleep that fall on `day`: falling asleep on the evening's day, waking up on the morning's.
     func markers(on day: CalendarDay, calendar: Calendar = .current) -> [TimelineMarker] {
         var markers: [TimelineMarker] = []
-        if CalendarDay(start, in: calendar) == day {
+        if bedtimeDay(calendar: calendar) == day {
             markers.append(TimelineMarker(id: "asleep/\(start.timeIntervalSince1970)", kind: .asleep, at: start, title: "Fell Asleep"))
         }
         if CalendarDay(end, in: calendar) == day {

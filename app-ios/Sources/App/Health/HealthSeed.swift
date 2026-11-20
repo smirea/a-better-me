@@ -58,12 +58,13 @@ enum HealthSeed {
             }
         }
         if try await isEmpty(SleepLog.type, store) {
-            // A night from the evening before each day: its stages back to back, with a stretch awake in the middle.
+            // A night from the evening before each day, some begun after midnight: its stages back to back, with a stretch
+            // awake in the middle.
             let stages: [(HKCategoryValueSleepAnalysis, hours: Double)] = [
                 (.asleepCore, 1.5), (.asleepDeep, 1), (.awake, 0.25), (.asleepREM, 1.25), (.asleepCore, 3), (.asleepREM, 0.5),
             ]
             for (offset, day) in days.prefix(60) {
-                var start = day.addingTimeInterval((-1 + Double((offset * 7) % 5) * 0.25) * 3600)
+                var start = day.addingTimeInterval((-1 + Double((offset * 7) % 5) * 0.5) * 3600)
                 for (stage, hours) in stages {
                     let end = start.addingTimeInterval(hours * 3600)
                     if end < .now { samples.append(HKCategorySample(type: SleepLog.type, value: stage.rawValue, start: start, end: end)) }

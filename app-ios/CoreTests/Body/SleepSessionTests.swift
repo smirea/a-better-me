@@ -19,6 +19,12 @@ struct SleepSessionTests {
         #expect(night.markers(on: CalendarDay("2026-11-20")!, calendar: utc).isEmpty)
     }
 
+    @Test func aBedtimeAfterMidnightFallsAsleepOnTheEveningBefore() {
+        let night = SleepSession.sessions([interval("2026-11-20", 1, hours: 7)])[0]
+        #expect(night.markers(on: CalendarDay("2026-11-19")!, calendar: utc).map(\.kind) == [.asleep])
+        #expect(night.markers(on: CalendarDay("2026-11-20")!, calendar: utc).map(\.kind) == [.wake])
+    }
+
     private func interval(_ date: String, _ hour: Double, hours: Double) -> DateInterval {
         DateInterval(start: day(date, 0).addingTimeInterval(hour * 3600), duration: hours * 3600)
     }
