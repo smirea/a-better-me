@@ -1,0 +1,10 @@
+{
+	"title": "Meal Rating no longer tags meals under 50 calories",
+	"description": "A drink or a bite, like a 5-cal electrolyte mix, isn't graded anymore.",
+	"tasks": [
+		{
+			"id": "e6a9b222-1be1-4363-b4eb-7aa359407978",
+			"title": "Nutrition Feedback: 1 change"
+		}
+	]
+}

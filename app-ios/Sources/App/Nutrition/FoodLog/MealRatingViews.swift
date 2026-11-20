@@ -90,7 +90,7 @@ struct MealRatingButton: View {
 }
 
 /// The rating of a group of foods outside the Food Log's rows (a recipe, the plate), with its drawer. It draws
-/// nothing while Meal Rating is off or the foods have no calories. The drawer hangs on a stack that stays when the tag
+/// nothing while Meal Rating is off or the foods total under 50 cal. The drawer hangs on a stack that stays when the tag
 /// goes, so turning the rating off inside the drawer keeps it open, as the rows' does.
 struct MealRatingBadge: View {
     let title: String
