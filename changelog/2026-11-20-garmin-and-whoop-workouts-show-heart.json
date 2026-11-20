@@ -1,0 +1,4 @@
+{
+	"title": "Garmin and WHOOP workouts show heart rate; accidental 0-minute activities are dropped",
+	"description": "Heart rate comes from Health's heart-rate samples during the workout."
+}

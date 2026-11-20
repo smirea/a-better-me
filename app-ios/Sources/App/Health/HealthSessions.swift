@@ -19,9 +19,13 @@ enum HealthSessions {
         let query = HKSampleQueryDescriptor(
             predicates: [.workout(HKQuery.predicateForSamples(withStart: from, end: nil))], sortDescriptors: [SortDescriptor(\.startDate)]
         )
-        return try await query.result(for: store).map { workout in
-            let heartRate = workout.statistics(for: heartRate)
-            return HealthWorkout(
+        var workouts: [HealthWorkout] = []
+        for workout in try await query.result(for: store) {
+            // Garmin and WHOOP save workouts without heart-rate statistics, so the heart-rate samples any app wrote during
+            // the workout stand in.
+            var heartRate = workout.statistics(for: heartRate)
+            if heartRate == nil { heartRate = try await heartRateDuring(workout, in: store) }
+            workouts.append(HealthWorkout(
                 id: workout.uuid,
                 activityType: workout.workoutActivityType.snakeName,
                 start: workout.startDate,
@@ -31,7 +35,19 @@ enum HealthSessions {
                 averageHeartRate: heartRate?.averageQuantity()?.doubleValue(for: beatsPerMinute),
                 maxHeartRate: heartRate?.maximumQuantity()?.doubleValue(for: beatsPerMinute),
                 source: HealthSource(workout.sourceRevision.source)
-            )
+            ))
+        }
+        return workouts
+    }
+
+    private static func heartRateDuring(_ workout: HKWorkout, in store: HKHealthStore) async throws -> HKStatistics? {
+        guard workout.endDate.timeIntervalSince(workout.startDate) >= HealthActivity.shortest else { return nil }
+        let during = HKQuery.predicateForSamples(withStart: workout.startDate, end: workout.endDate, options: .strictStartDate)
+        let query = HKStatisticsQueryDescriptor(predicate: .quantitySample(type: heartRate, predicate: during), options: [.discreteAverage, .discreteMax])
+        do {
+            return try await query.result(for: store)
+        } catch let error as HKError where error.code == .errorNoData {
+            return nil
         }
     }
 

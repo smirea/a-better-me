@@ -77,12 +77,16 @@ struct HealthActivity: SyncedRecord {
     /// "Walking", "Traditional Strength Training".
     var title: String { activityType.split(separator: "_").map(\.capitalized).joined(separator: " ") }
 
+    /// A workout shorter than this was started by an accidental tap (Garmin keeps 0-minute "Timed Activity" sessions), so
+    /// it is not a session.
+    static let shortest: TimeInterval = 60
+
     /// One row per session. Two workouts from different apps are the same session when they share at least half of the
     /// shorter one, or start within a minute of each other; the best-ranked app's workout stands for it and takes what it
     /// lacks from the others: a type when it has only `other`, and missing energy, distance, or heart rate. An app's own
     /// workouts never merge with each other.
     static func deduplicated(_ workouts: [HealthWorkout]) -> [HealthActivity] {
-        let ordered = workouts.filter { !$0.source.isThisApp }.sorted {
+        let ordered = workouts.filter { !$0.source.isThisApp && $0.end.timeIntervalSince($0.start) >= shortest }.sorted {
             ($0.source.rank, $0.source.bundle, $0.start, $0.id.uuidString) < ($1.source.rank, $1.source.bundle, $1.start, $1.id.uuidString)
         }
         var kept: [(workout: HealthWorkout, activity: HealthActivity)] = []

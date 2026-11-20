@@ -62,6 +62,12 @@ struct HealthSessionTests {
         #expect(activities[1].averageHeartRate == 150)
     }
 
+    @Test func aWorkoutShorterThanAMinuteIsAnAccidentalStartAndNotASession() {
+        let tap = workout(garmin, "other", 7, minutes: 0.5)
+        let walk = workout(garmin, "walking", 8, minutes: 1)
+        #expect(HealthActivity.deduplicated([tap, walk]).map(\.id) == [walk.id])
+    }
+
     private func at(_ date: String, _ hour: Double) -> Date { day(date, 0).addingTimeInterval(hour * 3600) }
 
     private func sample(_ source: HealthSource, _ date: String, _ hour: Double, hours: Double, _ stage: HealthSleepSample.Stage) -> HealthSleepSample {
