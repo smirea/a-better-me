@@ -24,7 +24,7 @@ struct ScanTab: View {
     var body: some View {
         ZStack {
             if cameraWorks {
-                BarcodeScanner(paused: !visible || looking || typing || problem != nil || choosing != nil || creating != nil) { barcode, photo in
+                BarcodeScanner(running: visible && creating == nil, paused: looking || typing || problem != nil || choosing != nil) { barcode, photo in
                     lookup(barcode, photo: photo)
                 }
                 .ignoresSafeArea(edges: .bottom)
@@ -136,8 +136,11 @@ private struct NewFood: Identifiable {
 
 /// VisionKit's `DataScannerViewController` reading retail barcodes, reporting the first one it recognizes while not
 /// paused, with a photo it starts taking at that moment: the package is still in front of the camera, and a store's
-/// label shows its nutrition facts beside the barcode.
+/// label shows its nutrition facts beside the barcode. It holds the camera only while `running`, off screen or under
+/// Create Food: left scanning there, it competed with Create Food's own camera, which closed the moment it opened on the
+/// owner's phone. Pausing keeps the camera, since a lookup or the store question still waits on the photo.
 private struct BarcodeScanner: UIViewControllerRepresentable {
+    let running: Bool
     let paused: Bool
     let found: (String, Task<UIImage?, Never>) -> Void
 
@@ -152,6 +155,10 @@ private struct BarcodeScanner: UIViewControllerRepresentable {
 
     func updateUIViewController(_ scanner: DataScannerViewController, context: Context) {
         context.coordinator.parent = self
+        guard running else {
+            if scanner.isScanning { scanner.stopScanning() }
+            return
+        }
         guard !scanner.isScanning else { return }
         do {
             try scanner.startScanning()
@@ -170,7 +177,7 @@ private struct BarcodeScanner: UIViewControllerRepresentable {
         }
 
         func dataScanner(_ dataScanner: DataScannerViewController, didAdd addedItems: [RecognizedItem], allItems: [RecognizedItem]) {
-            guard !parent.paused else { return }
+            guard parent.running, !parent.paused else { return }
             for case let .barcode(barcode) in addedItems {
                 if let payload = barcode.payloadStringValue {
                     parent.found(payload, Task { try? await dataScanner.capturePhoto() })

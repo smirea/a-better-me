@@ -1,0 +1,10 @@
+{
+	"title": "Create Food's camera from a barcode scan no longer closes as it opens",
+	"description": "The barcode scanner lets go of the camera while Create Food is open.",
+	"tasks": [
+		{
+			"id": "57b065e8-5d80-4e19-a854-a85c80382a6e",
+			"title": "1 Create Food Feedback: fix button behavior"
+		}
+	]
+}
