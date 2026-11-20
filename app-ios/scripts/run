@@ -155,8 +155,11 @@ async function deploy(target: Target, project: string) {
             ...(target.kind === "device" ? ["-allowProvisioningUpdates", "-allowProvisioningDeviceRegistration"] : ["CODE_SIGN_IDENTITY=-"]),
             ...(values.team ? [`DEVELOPMENT_TEAM=${values.team}`] : []), "build",
         ], false, fd));
-    } catch {
-        console.error(readFileSync(log, "utf8"));
+    } catch (error) {
+        const output = readFileSync(log, "utf8");
+        // The build lock refuses to start (low disk) before xcodebuild writes a line; its reason is the error itself.
+        if (!output) throw error;
+        console.error(output);
         throw new Error(`Build failed. See ${log}. For a physical device, check signing in Xcode or use --team.`);
     } finally { closeSync(fd); }
     const products = join(build, "Build/Products", { device: "Debug-iphoneos", simulator: "Debug-iphonesimulator", mac: "Debug" }[target.kind]);
