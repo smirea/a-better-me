@@ -10,7 +10,6 @@ struct PingTimelinePage: View {
     @Binding var editing: Set<UUID>
     /// The log the drawer just wrote, which the page scrolls to when it lands.
     let added: UUID?
-    let sleep: [TimelineMarker]
     /// How much of the screen's bottom the drawer covers, so the last row scrolls clear of it.
     let covered: CGFloat
     /// How many pings exist, since a day with nothing on it says so differently when there is nothing to log.
@@ -19,19 +18,18 @@ struct PingTimelinePage: View {
     let create: () -> Void
 
     @Observe private var timeline: PingTimeline
-    @State private var rows = ViewMemo<RowsKey, [PingTimelineRow]>()
+    @State private var rows = ViewMemo<PingTimeline, [PingTimelineRow]>()
     /// Fits "12:51 PM" in the monospaced time font on one line.
     @ScaledMetric private var gutter: CGFloat = 68
     @State private var safeBottom: CGFloat = 0
 
     init(
-        day: CalendarDay, editing: Binding<Set<UUID>>, added: UUID?, sleep: [TimelineMarker], covered: CGFloat, pingCount: Int,
+        day: CalendarDay, editing: Binding<Set<UUID>>, added: UUID?, covered: CGFloat, pingCount: Int,
         history: @escaping (Ping) -> Void, create: @escaping () -> Void
     ) {
         self.day = day
         _editing = editing
         self.added = added
-        self.sleep = sleep
         self.covered = covered
         self.pingCount = pingCount
         self.history = history
@@ -39,13 +37,8 @@ struct PingTimelinePage: View {
         _timeline = Observe(PingTimeline.on(day))
     }
 
-    private struct RowsKey: Equatable {
-        let timeline: PingTimeline
-        let sleep: [TimelineMarker]
-    }
-
     var body: some View {
-        let rows = self.rows(RowsKey(timeline: timeline, sleep: sleep)) { timeline.rows(sleep: sleep) }
+        let rows = self.rows(timeline) { timeline.rows() }
         let ids = rows.map(\.id)
         // A log that joins a group adds no row, so the scroll to it watches the logs.
         let logs = rows.flatMap { $0.entries.map(\.log.key) }
@@ -374,6 +367,16 @@ extension TimelineMarker.Kind {
         case .meal: "fork.knife"
         case .workout: "dumbbell.fill"
         case .weighIn: "scalemass.fill"
+        case let .activity(type):
+            switch type {
+            case "walking", "hiking": "figure.walk"
+            case "running": "figure.run"
+            case "cycling": "figure.outdoor.cycle"
+            case "swimming": "figure.pool.swim"
+            case "traditional_strength_training", "functional_strength_training": "dumbbell.fill"
+            case "yoga": "figure.yoga"
+            default: "figure.mixed.cardio"
+            }
         }
     }
 }

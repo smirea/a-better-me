@@ -42,7 +42,7 @@ final class HealthData {
     }
     static let readTypes: Set<HKObjectType> = [bodyMass, stepCount, flightsClimbed, distanceWalkingRunning]
     #if DEBUG
-    static let shareTypes: Set<HKSampleType> = HealthSeed.isRequested ? [bodyMass, stepCount, flightsClimbed, distanceWalkingRunning, SleepLog.type] : []
+    static let shareTypes: Set<HKSampleType> = HealthSeed.isRequested ? [bodyMass, stepCount, flightsClimbed, distanceWalkingRunning, HealthSessions.sleepType] : []
     #else
     static let shareTypes: Set<HKSampleType> = []
     #endif
@@ -57,7 +57,12 @@ final class HealthData {
 
     /// Set once Health answered with a kind's whole history of daily totals; later reads of it go two years back. Per
     /// kind, because Health grants each type on its own and a denied one answers with nothing.
-    private static func historyCopiedKey(_ kind: BodyMetricKind) -> String { "healthHistoryCopied.\(kind.rawValue)" }
+    private static func historyCopiedKey(_ kind: BodyMetricKind) -> String { historyCopiedKey(kind.rawValue) }
+    private static func historyCopiedKey(_ name: String) -> String { "healthHistoryCopied.\(name)" }
+
+    /// Once workouts or sleep were copied whole, later reads go this far back: another app rewrites a night or a
+    /// session within days, not months.
+    private static let sessionsReach = 30
 
     /// Loads, or flips `requestTrigger` when any type the app uses is still undecided, and returns whether it asked.
     @discardableResult
@@ -92,7 +97,12 @@ final class HealthData {
             // A day older than two years no longer changes in Health, so only a kind's first copy reads further back.
             let recent = calendar.date(byAdding: .day, value: 1, to: calendar.date(byAdding: .year, value: -2, to: today)!)!
             let whole = calendar.date(from: DateComponents(year: 2010))!
+            let sessionsRecent = calendar.date(byAdding: .day, value: -Self.sessionsReach, to: today)!
+            let workoutsFrom = UserDefaults.standard.bool(forKey: Self.historyCopiedKey("workouts")) ? sessionsRecent : whole
+            let sleepFrom = UserDefaults.standard.bool(forKey: Self.historyCopiedKey("sleep")) ? sessionsRecent : whole
             async let weights = readWeights()
+            async let workouts = HealthSessions.workouts(from: workoutsFrom, in: store)
+            async let sleep = HealthSessions.sleep(from: sleepFrom.addingTimeInterval(-86400), in: store)
             async let phoneSteps = PhonePedometer.steps(from: today, to: .now)
             let days = try await withThrowingTaskGroup(of: (BodyMetricKind, HealthRead.Days).self) { group in
                 for (kind, type, unit) in Self.activity {
@@ -105,9 +115,15 @@ final class HealthData {
                 for try await (kind, read) in group { days[kind] = read }
                 return days
             }
-            let read = HealthRead(weights: try await weights, days: days, phoneStepsToday: await phoneSteps.map { DatedValue(date: today, value: $0) })
+            let read = HealthRead(
+                weights: try await weights, days: days, phoneStepsToday: await phoneSteps.map { DatedValue(date: today, value: $0) },
+                workouts: HealthRead.Window(samples: try await workouts, from: workoutsFrom),
+                sleep: HealthRead.Window(samples: try await sleep, from: sleepFrom)
+            )
             try await localStore.write { try HealthMirror.apply(read, to: $0, calendar: calendar) }.value
             for (kind, read) in days where !read.totals.isEmpty { UserDefaults.standard.set(true, forKey: Self.historyCopiedKey(kind)) }
+            if read.workouts?.samples.isEmpty == false { UserDefaults.standard.set(true, forKey: Self.historyCopiedKey("workouts")) }
+            if read.sleep?.samples.isEmpty == false { UserDefaults.standard.set(true, forKey: Self.historyCopiedKey("sleep")) }
             hasRead = true
         } catch {
             Self.log.error("Copying HealthKit failed: \(String(describing: error))")

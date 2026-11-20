@@ -829,6 +829,52 @@ export const BodyMetric = z
 		description:
 			'One value per day and kind, id `<day>/<kind>`: a percent for `visual_body_fat`, a count for `steps` and `flights_climbed`, meters for `walking_distance`, centimeters for the rest.',
 	});
+const healthCopy =
+	"Copied by the phone from Apple Health, where other apps (Garmin Connect, WHOOP, the Watch) write it; read-only. When several apps recorded the same session, one row stands for it: the best-ranked app's (Garmin Connect, then the Watch and iPhone, then WHOOP, then any other), and `sources` lists every app that recorded it, the kept one first.";
+const healthSources = z
+	.array(z.string())
+	.meta({ description: 'Every app that recorded it, as Health names them, the kept one first.' });
+
+export const HealthActivity = z
+	.object({
+		id: z.string().meta({ description: "The kept workout's Health UUID." }),
+		activityType: z.string().meta({
+			description: "Health's activity type in snake case: `walking`, `running`, `traditional_strength_training`.",
+		}),
+		startedAt: z.string(),
+		endedAt: z.string(),
+		activeKcal: z.number().nullable(),
+		distanceMeters: z.number().nullable(),
+		averageHeartRate: z.number().nullable().meta({ description: 'Beats per minute.' }),
+		maxHeartRate: z.number().nullable().meta({ description: 'Beats per minute.' }),
+		source: z.string().meta({ description: 'The app whose workout is kept, as Health names it.' }),
+		sourceBundle: z.string(),
+		sources: healthSources,
+	})
+	.meta({
+		id: 'HealthActivity',
+		description: `A workout another app recorded. The app's own workouts are sessions, never these. ${healthCopy}`,
+	});
+
+export const HealthSleep = z
+	.object({
+		id: z.string().meta({ description: 'The Health UUID of its first asleep sample.' }),
+		startedAt: z.string().meta({ description: 'Falling asleep: the first asleep sample.' }),
+		endedAt: z.string().meta({ description: 'Waking up: the end of the last asleep sample.' }),
+		asleepSeconds: z.number(),
+		awakeSeconds: z.number(),
+		deepSeconds: z.number(),
+		coreSeconds: z.number(),
+		remSeconds: z.number(),
+		source: z.string(),
+		sourceBundle: z.string(),
+		sources: healthSources,
+	})
+	.meta({
+		id: 'HealthSleep',
+		description: `A night or a nap, from one app's samples less than an hour apart. Another app's sleep within three hours of a better-ranked app's is the same night. ${healthCopy}`,
+	});
+
 export const BodyMetricPut = z.object({ value: nonnegative }).meta({ id: 'BodyMetricPut' });
 
 export const NutritionGoal = z

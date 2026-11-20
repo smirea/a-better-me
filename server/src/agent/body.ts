@@ -30,7 +30,39 @@ function refuseHealthCopy(row: { id: string; source: string }) {
 	);
 }
 
+function startedBetween(query: { from?: string; to?: string }) {
+	const conditions: Condition[] = [];
+	if (query.from) conditions.push(['started_at >= ?', query.from]);
+	if (query.to) conditions.push(['started_at < ?', query.to]);
+	return conditions;
+}
+
+const startedRange = z.object({
+	from: M.instant.optional(),
+	to: M.instant.optional(),
+	limit: limit(100, 1000),
+	offset,
+});
+
 export const bodyRoutes: Route[] = [
+	route({
+		method: 'GET',
+		path: '/health-activities',
+		tag: 'Apple Health',
+		summary: 'List workouts other apps recorded, newest first',
+		query: startedRange,
+		response: paged(M.HealthActivity),
+		run: ({ db, query }) => pagedList(db, 'health_activities', startedBetween(query), 'started_at DESC, id', query),
+	}),
+	route({
+		method: 'GET',
+		path: '/health-sleeps',
+		tag: 'Apple Health',
+		summary: 'List sleeps, newest first',
+		query: startedRange,
+		response: paged(M.HealthSleep),
+		run: ({ db, query }) => pagedList(db, 'health_sleeps', startedBetween(query), 'started_at DESC, id', query),
+	}),
 	route({
 		method: 'GET',
 		path: '/body-weights',
