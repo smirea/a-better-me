@@ -1,11 +1,13 @@
 import Foundation
 import GRDB
 
-/// What another part of the app recorded at a moment of a day: a meal, a workout, a weigh-in, falling asleep, or
-/// waking up. The Pings timeline draws each as a line with its title on it.
+/// What another part of the app recorded at a moment of a day: a meal, a workout, a weigh-in, an activity or sleep
+/// from Apple Health. The Pings timeline draws each as a line with its title on it.
 struct TimelineMarker: Identifiable, Hashable, Sendable {
     enum Kind: Hashable, Sendable {
         case asleep, wake, meal, workout, weighIn
+        /// A `health_activities` row, by its activity type.
+        case activity(String)
     }
 
     var id: String
@@ -95,15 +97,14 @@ enum PingTimelineRow: Identifiable, Hashable, Sendable {
     }
 }
 
-/// One day of the Pings tab: its logs, and the markers the database holds for it. Sleep comes from Apple Health, so the
-/// tab adds its markers when it asks for the rows.
+/// One day of the Pings tab: its logs, and the markers the database holds for it.
 struct PingTimeline: Equatable, Sendable {
     var entries: [PingEntry] = []
     var markers: [TimelineMarker] = []
 
     /// The day oldest first, so waking up heads the timeline and the latest log ends it, beside the drawer.
-    func rows(sleep: [TimelineMarker] = []) -> [PingTimelineRow] {
-        let sorted = (entries.map(PingTimelineRow.entry) + (markers + sleep).map(PingTimelineRow.marker))
+    func rows() -> [PingTimelineRow] {
+        let sorted = (entries.map(PingTimelineRow.entry) + markers.map(PingTimelineRow.marker))
             .sorted { ($0.at, $0.id) < ($1.at, $1.id) }
         var rows: [PingTimelineRow] = []
         var run: [PingEntry] = []
@@ -134,6 +135,8 @@ struct PingTimeline: Equatable, Sendable {
             let markers = try meals(on: day, sections: settings.nutrition.mealSections, in: db, calendar: calendar)
                 + workouts(on: day, in: db, calendar: calendar)
                 + weighIns(on: day, unit: settings.weightUnit, in: db, calendar: calendar)
+                + activities(on: day, in: db, calendar: calendar)
+                + sleeps(on: day, in: db, calendar: calendar)
             return PingTimeline(entries: entries, markers: markers)
         }
     }
@@ -166,6 +169,32 @@ struct PingTimeline: Equatable, Sendable {
                 detail: end.map { ($0.timeIntervalSince(start) - TimeInterval(paused)).hoursAndMinutes } ?? "In progress"
             )
         }
+    }
+
+    private static func activities(on day: CalendarDay, in db: Database, calendar: Calendar) throws -> [TimelineMarker] {
+        try HealthActivity.filter(
+            Column("started_at") >= Instant.text(day.date(in: calendar))
+                && Column("started_at") < Instant.text(day.adding(days: 1).date(in: calendar))
+        )
+        .fetchAll(db)
+        .map { activity in
+            let length = activity.endedAt.timeIntervalSince(activity.startedAt).hoursAndMinutes
+            let energy = activity.activeKcal.map { ", \(NutritionFormat.amount($0, .kcal))" } ?? ""
+            return TimelineMarker(
+                id: "activity/\(activity.key)", kind: .activity(activity.activityType), at: activity.startedAt, title: activity.title,
+                detail: length + energy
+            )
+        }
+    }
+
+    /// A sleep that ends on the day, or begins on its evening, which runs into the next morning.
+    private static func sleeps(on day: CalendarDay, in db: Database, calendar: Calendar) throws -> [TimelineMarker] {
+        let nightEnd = day.adding(days: 1).date(in: calendar).addingTimeInterval(TimeInterval(HealthSleep.nightEndsHour) * 3600)
+        return try HealthSleep.filter(
+            Column("ended_at") >= Instant.text(day.date(in: calendar)) && Column("started_at") < Instant.text(nightEnd)
+        )
+        .fetchAll(db)
+        .flatMap { $0.markers(on: day, calendar: calendar) }
     }
 
     private static func weighIns(on day: CalendarDay, unit: WeightUnit, in db: Database, calendar: Calendar) throws -> [TimelineMarker] {

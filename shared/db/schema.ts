@@ -436,6 +436,50 @@ const pingLogs = sqliteTable('ping_logs', {
 	note: text('note').notNull().default(''),
 });
 
+/**
+ * A workout another app wrote to Apple Health (Garmin Connect, WHOOP, the Watch's Workout app), copied by the phone. The
+ * app's own workouts are `workout_sessions`, never these. When several apps wrote the same session, one row stands
+ * for it: the best-ranked source's, with every app that wrote it in `sources` (docs/decisions/health.md). The id is
+ * that workout's Health UUID.
+ */
+const healthActivities = sqliteTable('health_activities', {
+	id: text('id').primaryKey(),
+	/** Health's activity type in snake case (`walking`, `running`, `traditional_strength_training`). */
+	activityType: text('activity_type').notNull(),
+	startedAt: text('started_at').notNull(),
+	endedAt: text('ended_at').notNull(),
+	activeKcal: real('active_kcal'),
+	distanceMeters: real('distance_meters'),
+	averageHeartRate: real('average_heart_rate'),
+	maxHeartRate: real('max_heart_rate'),
+	/** The app that wrote the kept workout, as Health names it (`Connect`, `WHOOP`). */
+	source: text('source').notNull(),
+	sourceBundle: text('source_bundle').notNull(),
+	/** Every app that wrote this session, kept source first. */
+	sources: json('sources').notNull().default([]),
+});
+
+/**
+ * A sleep, a night or a nap, joined from one app's Apple Health sleep samples and copied by the phone. When several
+ * apps tracked the same night, the best-ranked one's sleep stands for it (docs/decisions/health.md). The id is the
+ * Health UUID of its first asleep sample. Durations are seconds inside the sleep: `asleep` is every asleep stage
+ * together, so it is at least `deep + core + rem` (an app that does not stage writes only unspecified sleep).
+ */
+const healthSleeps = sqliteTable('health_sleeps', {
+	id: text('id').primaryKey(),
+	startedAt: text('started_at').notNull(),
+	endedAt: text('ended_at').notNull(),
+	asleepSeconds: real('asleep_seconds').notNull().default(0),
+	awakeSeconds: real('awake_seconds').notNull().default(0),
+	deepSeconds: real('deep_seconds').notNull().default(0),
+	coreSeconds: real('core_seconds').notNull().default(0),
+	remSeconds: real('rem_seconds').notNull().default(0),
+	source: text('source').notNull(),
+	sourceBundle: text('source_bundle').notNull(),
+	/** Every app that tracked this sleep, kept source first. */
+	sources: json('sources').notNull().default([]),
+});
+
 /** The order here is the order of the generated Swift schema and of a snapshot pull. */
 export const SYNCED_TABLES = {
 	workout_templates: workoutTemplates,
@@ -462,6 +506,8 @@ export const SYNCED_TABLES = {
 	tags,
 	pings,
 	ping_logs: pingLogs,
+	health_activities: healthActivities,
+	health_sleeps: healthSleeps,
 } as const;
 
 export type SyncedTable = keyof typeof SYNCED_TABLES;
@@ -634,5 +680,25 @@ export const schema = defineSchema({
 			position: count,
 		},
 		ping_logs: { value: z.number().int().min(1).max(PING_MAX_STEPS) },
+		health_activities: {
+			activityType: z.string().min(1),
+			activeKcal: amount,
+			distanceMeters: amount,
+			averageHeartRate: amount,
+			maxHeartRate: amount,
+			source: z.string().min(1),
+			sourceBundle: z.string().min(1),
+			sources: z.array(z.string().min(1)),
+		},
+		health_sleeps: {
+			asleepSeconds: amount,
+			awakeSeconds: amount,
+			deepSeconds: amount,
+			coreSeconds: amount,
+			remSeconds: amount,
+			source: z.string().min(1),
+			sourceBundle: z.string().min(1),
+			sources: z.array(z.string().min(1)),
+		},
 	},
 });

@@ -24,12 +24,10 @@ struct PingsTab: View {
     /// Whether the drawer is open, which "+" in the tab bar sets.
     @Binding var adding: Bool
 
-    @Environment(\.scenePhase) private var scenePhase
     @Environment(LocalStore.self) private var store
     @Observe(Ping.count) private var pingCount
     @State private var path: [PingRoute] = []
     @State private var creating = false
-    @State private var sleep = SleepLog()
     @State private var editing: Set<UUID> = []
     @State private var added: UUID?
     @State private var drawerCover: CGFloat = 0
@@ -38,12 +36,9 @@ struct PingsTab: View {
         NavigationStack(path: $path) {
             DayPager(day: $day) { shown in
                 PingTimelinePage(
-                    day: shown, editing: $editing, added: added, sleep: sleep.markers[shown] ?? [], covered: adding ? drawerCover : 0,
+                    day: shown, editing: $editing, added: added, covered: adding ? drawerCover : 0,
                     pingCount: pingCount, history: { push(.history($0.id)) }, create: { creating = true }
                 )
-                .task(id: scenePhase) {
-                    if scenePhase == .active { await sleep.load(shown) }
-                }
             }
             .background(Theme.background)
             .safeAreaInset(edge: .top, spacing: 0) {

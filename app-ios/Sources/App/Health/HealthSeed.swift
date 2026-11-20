@@ -57,7 +57,7 @@ enum HealthSeed {
                 samples.append(count(flightsClimbed, offset == hike ? 112 : Double((offset * 7) % 17), at(day, hour: 12)))
             }
         }
-        if try await isEmpty(SleepLog.type, store) {
+        if try await isEmpty(HealthSessions.sleepType, store) {
             // A night from the evening before each day, some begun after midnight: its stages back to back, with a stretch
             // awake in the middle.
             let stages: [(HKCategoryValueSleepAnalysis, hours: Double)] = [
@@ -67,7 +67,7 @@ enum HealthSeed {
                 var start = day.addingTimeInterval((-1 + Double((offset * 7) % 5) * 0.5) * 3600)
                 for (stage, hours) in stages {
                     let end = start.addingTimeInterval(hours * 3600)
-                    if end < .now { samples.append(HKCategorySample(type: SleepLog.type, value: stage.rawValue, start: start, end: end)) }
+                    if end < .now { samples.append(HKCategorySample(type: HealthSessions.sleepType, value: stage.rawValue, start: start, end: end)) }
                     start = end
                 }
             }

@@ -8,17 +8,26 @@ struct HealthWeight: Hashable, Sendable {
     var kg: Double
 }
 
-/// One read of Apple Health: every body mass sample, each activity kind's daily totals from its `from` on, and the
-/// phone pedometer's count for today, which is not Health's.
+/// One read of Apple Health: every body mass sample, each activity kind's daily totals from its `from` on, the
+/// phone pedometer's count for today, which is not Health's, and the workouts and sleep samples of other apps.
 struct HealthRead: Sendable {
     struct Days: Sendable {
         var totals: [DatedValue]
         var from: Date
     }
 
+    /// Samples from `from` on, and from a day before it for sleep, so a sleep that began just before `from` is whole
+    /// when it decides which app's sleep stands for a night. Only rows that start at `from` or later are compared.
+    struct Window<Sample: Sendable>: Sendable {
+        var samples: [Sample]
+        var from: Date
+    }
+
     var weights: [HealthWeight]
     var days: [BodyMetricKind: Days]
     var phoneStepsToday: DatedValue?
+    var workouts: Window<HealthWorkout>?
+    var sleep: Window<HealthSleepSample>?
 }
 
 /// Copies Apple Health into the synced tables, so the phone's screens, the server, and the agent API all read one
@@ -94,6 +103,13 @@ enum HealthMirror {
         return changes
     }
 
+    /// What makes the stored rows from `from` on match `fresh`: every fresh row is put (a put of an unchanged row
+    /// writes nothing), and a stored row Health no longer has goes. An empty read deletes nothing, as with the weigh-ins.
+    static func follow<R: SyncedRecord>(_ fresh: [R], stored: [R], read: Bool) -> (puts: [R], deletes: [String]) {
+        let kept = Set(fresh.map(\.key))
+        return (fresh, read ? stored.map(\.key).filter { !kept.contains($0) }.sorted() : [])
+    }
+
     /// Runs inside one write, so the rows it compares against are the rows it changes.
     static func apply(_ read: HealthRead, to db: Database, calendar: Calendar, now: Date = .now) throws {
         let phoneStepsToday = read.phoneStepsToday
@@ -109,6 +125,21 @@ enum HealthMirror {
             )
             for row in days.puts { try LocalStore.put(row, in: db) }
             for id in days.deletes { _ = try BodyMetric.deleteOne(db, key: id) }
+        }
+
+        if let read = read.workouts {
+            let fresh = HealthActivity.deduplicated(read.samples).filter { $0.startedAt >= read.from.storedInstant }
+            let stored = try HealthActivity.filter(Column("started_at") >= Instant.text(read.from)).fetchAll(db)
+            let changes = follow(fresh, stored: stored, read: !read.samples.isEmpty)
+            for row in changes.puts { try LocalStore.put(row, in: db) }
+            for key in changes.deletes { _ = try HealthActivity.deleteOne(db, key: key) }
+        }
+        if let read = read.sleep {
+            let fresh = HealthSleep.deduplicated(read.samples).filter { $0.startedAt >= read.from.storedInstant }
+            let stored = try HealthSleep.filter(Column("started_at") >= Instant.text(read.from)).fetchAll(db)
+            let changes = follow(fresh, stored: stored, read: !read.samples.isEmpty)
+            for row in changes.puts { try LocalStore.put(row, in: db) }
+            for key in changes.deletes { _ = try HealthSleep.deleteOne(db, key: key) }
         }
     }
 }
