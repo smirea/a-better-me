@@ -2,8 +2,8 @@ import Feedback
 import SwiftUI
 
 /// One day of the Pings tab: a bar down the left with a row per log at its time, and a line across for each thing the
-/// rest of the app recorded that day. It reads top down, oldest first, so the latest row sits beside the drawer, and a
-/// day too short to fill the page rests on the bottom.
+/// rest of the app recorded that day. It reads top down, oldest first. A day too short to fill the page starts under the
+/// header; a taller one opens on its latest row, beside the drawer.
 struct PingTimelinePage: View {
     let day: CalendarDay
     /// The logs whose rows are open as editors.
@@ -48,7 +48,8 @@ struct PingTimelinePage: View {
         let rows = self.rows(RowsKey(timeline: timeline, sleep: sleep)) { timeline.rows(sleep: sleep) }
         let ids = rows.map(\.id)
         // The scroll view already keeps its content out of the bottom safe area, which the drawer reaches into.
-        let bottomInset = covered == 0 ? 0 : max(0, covered + 8 - safeBottom)
+        // The gap over the drawer leaves a just-logged row, scrolled to its bottom edge, some room below it.
+        let bottomInset = covered == 0 ? 0 : max(0, covered + 32 - safeBottom)
         Group {
             // Outside the scroll view: sized to it from inside, the message sent the bottom-aligned scroll view into
             // an endless layout pass.
@@ -65,9 +66,12 @@ struct PingTimelinePage: View {
             } else {
                 ScrollViewReader { proxy in
                     ScrollView { timeline(rows, ids: ids) }
-                        // A short day rests on the bottom; a day taller than the page opens on its latest row and
-                        // keeps it in view, also when the drawer opens and takes the page's lower part.
-                        .defaultScrollAnchor(.bottom)
+                        // The owner asked (2026-11-19) for a short day to start at the top. A day taller than the
+                        // page opens on its latest row and keeps it in view, also when the drawer opens and takes the
+                        // page's lower part.
+                        .defaultScrollAnchor(.top, for: .alignment)
+                        .defaultScrollAnchor(.bottom, for: .initialOffset)
+                        .defaultScrollAnchor(.bottom, for: .sizeChanges)
                         .contentMargins(.bottom, bottomInset, for: .scrollContent)
                         // The drawer reports its height a frame after it opens, outside the tab's own animation.
                         .animation(.snappy, value: bottomInset)

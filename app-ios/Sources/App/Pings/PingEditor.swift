@@ -57,8 +57,10 @@ struct PingEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                ThemedSection(footer: isLogged ? "Its type and number of steps are fixed, so what is already logged keeps its meaning." : nil) {
+                // The owner asked (2026-11-19) for the name and type without a card, using the card's padding for them.
+                Section {
                     TextField("Name", text: $name)
+                        .font(AppFont.title(24))
                         .focused($nameFocused)
                         .accessibilityLabel("Ping Name")
                     Picker("Type", selection: $kind) {
@@ -66,8 +68,13 @@ struct PingEditor: View {
                     }
                     .pickerStyle(.segmented)
                     .disabled(isLogged)
+                } footer: {
+                    if isLogged { Text("Its type and number of steps are fixed, so what is already logged keeps its meaning.") }
                 }
-                ThemedSection("Color", footer: color == nil && suggestion != nil ? "Picked from the name until you choose one." : nil) {
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                ThemedSection("Color") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 6), spacing: 12) {
                         ForEach(PingColor.allCases, id: \.self) { swatch in
                             Button { color = swatch } label: {
@@ -85,7 +92,7 @@ struct PingEditor: View {
                     }
                     .padding(.vertical, 4)
                 }
-                ThemedSection("Icon", footer: icon == nil && suggestion != nil ? "Picked from the name until you choose one." : nil) {
+                ThemedSection("Icon") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 4) {
                         ForEach(PingIcons.all, id: \.self) { symbol in
                             let isShown = symbol == shownIcon
@@ -125,6 +132,7 @@ struct PingEditor: View {
                 }
             }
             .themedList()
+            .contentMargins(.top, 0, for: .scrollContent)
             .scrollDismissesKeyboard(.interactively)
             .detailTitle(editing != nil ? "Edit Ping" : "New Ping")
             .toolbar {
