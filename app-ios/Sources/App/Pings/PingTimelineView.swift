@@ -20,7 +20,8 @@ struct PingTimelinePage: View {
 
     @Observe private var timeline: PingTimeline
     @State private var rows = ViewMemo<RowsKey, [PingTimelineRow]>()
-    @ScaledMetric private var gutter: CGFloat = 58
+    /// Fits "12:51 PM" in the monospaced time font on one line.
+    @ScaledMetric private var gutter: CGFloat = 68
     @State private var safeBottom: CGFloat = 0
 
     init(
@@ -202,7 +203,7 @@ private struct PingTimeLabel: View {
                 picking = true
             }
             .buttonStyle(.plain)
-            .font(AppFont.time)
+            .font(AppFont.time).lineLimit(1).minimumScaleFactor(0.8)
             .underline()
             .foregroundStyle(Theme.textPrimary)
             .frame(maxHeight: .infinity)
@@ -221,7 +222,7 @@ private struct PingTimeLabel: View {
                     }
             }
         } else {
-            Text(text).font(AppFont.time).foregroundStyle(Theme.textSecondary)
+            Text(text).font(AppFont.time).lineLimit(1).minimumScaleFactor(0.8).foregroundStyle(Theme.textSecondary)
         }
     }
 }
@@ -266,7 +267,7 @@ private struct TimelineMarkerRow: View {
     var body: some View {
         HStack(spacing: 0) {
             Text(marker.at.formatted(date: .omitted, time: .shortened))
-                .font(AppFont.time)
+                .font(AppFont.time).lineLimit(1).minimumScaleFactor(0.8)
                 .foregroundStyle(Theme.textTertiary)
                 .frame(width: gutter, alignment: .trailing)
             line.padding(.leading, PingTimelineMetrics.node / 2).frame(width: PingTimelineMetrics.node + 4)
