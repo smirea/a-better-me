@@ -114,26 +114,36 @@ struct HealthSleep: SyncedRecord {
             span.end = max(span.end, sample.end)
             spans[spans.count - 1] = span
         }
-        return spans.map { span in
+        var sleeps = spans.map { span in
             var sleep = HealthSleep(id: span.first.id, startedAt: span.start, endedAt: span.end, source: source)
             sleep.asleepSeconds = span.asleep.rounded()
-            for sample in samples {
-                let inside = min(sample.end, span.end).timeIntervalSince(max(sample.start, span.start))
-                guard inside > 0 else { continue }
-                switch sample.stage {
-                case .awake: sleep.awakeSeconds += inside
-                case .deep: sleep.deepSeconds += inside
-                case .core: sleep.coreSeconds += inside
-                case .rem: sleep.remSeconds += inside
-                case .inBed, .asleep: break
-                }
-            }
-            sleep.awakeSeconds.round()
-            sleep.deepSeconds.round()
-            sleep.coreSeconds.round()
-            sleep.remSeconds.round()
             return sleep
         }
+        // Spans are apart and in order, so their ends rise too: a span that ends before a sample starts ends before every
+        // later sample, and one pass over each list adds every stage sample to the sleeps it falls in.
+        var first = 0
+        for sample in samples.sorted(by: { $0.start < $1.start }) where sample.stage != .inBed && sample.stage != .asleep {
+            while first < spans.count, spans[first].end <= sample.start { first += 1 }
+            var index = first
+            while index < spans.count, spans[index].start < sample.end {
+                let inside = min(sample.end, spans[index].end).timeIntervalSince(max(sample.start, spans[index].start))
+                switch sample.stage {
+                case .awake: sleeps[index].awakeSeconds += inside
+                case .deep: sleeps[index].deepSeconds += inside
+                case .core: sleeps[index].coreSeconds += inside
+                case .rem: sleeps[index].remSeconds += inside
+                case .inBed, .asleep: break
+                }
+                index += 1
+            }
+        }
+        for index in sleeps.indices {
+            sleeps[index].awakeSeconds.round()
+            sleeps[index].deepSeconds.round()
+            sleeps[index].coreSeconds.round()
+            sleeps[index].remSeconds.round()
+        }
+        return sleeps
     }
 
     /// The day whose evening this sleep began in, which is the day before when it began after midnight.
