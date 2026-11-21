@@ -80,12 +80,12 @@ const server = Bun.serve<Socket>({
 				if (url.pathname === '/api/garmin/status') return Response.json(garmin.status());
 				const force = url.searchParams.get('force') === '1' || url.searchParams.get('force') === 'true';
 				const daysParam = url.searchParams.get('days');
-				const tzParam = url.searchParams.get('tzOffsetMinutes');
+				const tzParam = url.searchParams.get('tz') ?? undefined;
 				return Response.json(
 					await garmin.sync({
 						force,
 						days: daysParam ? Number(daysParam) : undefined,
-						tzOffsetMinutes: tzParam ? Number(tzParam) : undefined,
+						timeZone: tzParam,
 					}),
 				);
 			},

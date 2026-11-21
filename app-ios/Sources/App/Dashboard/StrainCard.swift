@@ -1,15 +1,17 @@
 import Feedback
+import GRDB
 import SwiftUI
 
 /// WHOOP-style Strain & Stress chart card placed right below the Dashboard's main FocusPager carousel.
 /// Uses a single `Canvas` pass (no Swift Charts overhead on Dashboard) with activity bands and Ping markers.
 struct StrainDashboardCard: View {
+    @Environment(LocalStore.self) private var store
     let day: CalendarDay
-    @Observe private var snapshot: StrainDaySnapshot
+    @State private var snapshot: StrainDaySnapshot
 
     init(day: CalendarDay) {
         self.day = day
-        _snapshot = Observe(StrainDaySnapshot.query(for: day))
+        _snapshot = State(initialValue: .empty(for: day))
     }
 
     var body: some View {
@@ -79,6 +81,16 @@ struct StrainDashboardCard: View {
         .padding(.horizontal, Theme.margin)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Strain and Stress")
+        .task(id: day) {
+            let query = StrainDaySnapshot.query(for: day)
+            let observation = ValueObservation.trackingConstantRegion(query.fetch).removeDuplicates()
+            do {
+                for try await next in observation.values(in: store.database.pool) {
+                    guard !Task.isCancelled else { break }
+                    snapshot = next
+                }
+            } catch {}
+        }
         .feedback(self)
     }
 

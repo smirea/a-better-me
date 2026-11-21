@@ -41,6 +41,7 @@ export type GarminSyncMeta = {
 	consecutiveRateLimits: number;
 	lastError: string | null;
 	lastSyncedDays: string[];
+	timeZone: string | null;
 };
 
 export type SyncOutcome =
@@ -68,6 +69,7 @@ function defaultMeta(): GarminSyncMeta {
 		consecutiveRateLimits: 0,
 		lastError: null,
 		lastSyncedDays: [],
+		timeZone: null,
 	};
 }
 
@@ -100,9 +102,58 @@ function parseConnectTokens(raw: string | null): ConnectTokens | null {
 	return null;
 }
 
-/** `YYYY-MM-DD` in UTC offset (defaults to America/Chicago -6h when no tzOffsetMinutes is supplied). */
-function localDayString(nowMs: number, tzOffsetMinutes: number): string {
-	return new Date(nowMs + tzOffsetMinutes * 60_000).toISOString().slice(0, 10);
+const DEFAULT_TIME_ZONE = 'America/Chicago';
+
+function validTimeZone(tz: string | null | undefined): string | null {
+	if (!tz) return null;
+	try {
+		Intl.DateTimeFormat('en-US', { timeZone: tz });
+		return tz;
+	} catch {
+		return null;
+	}
+}
+
+/** `YYYY-MM-DD` in the given IANA time zone. */
+function localDayString(nowMs: number, timeZone: string): string {
+	const parts = new Intl.DateTimeFormat('en-CA', {
+		timeZone,
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+	}).formatToParts(new Date(nowMs));
+	const get = (type: string) => parts.find(p => p.type === type)?.value ?? '';
+	return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+/** UTC offset in milliseconds at `epochMs` for `timeZone` (e.g. -6h CST or -5h CDT), handling DST per date. */
+function timeZoneOffsetMs(epochMs: number, timeZone: string): number {
+	const parts = new Intl.DateTimeFormat('en-US', {
+		timeZone,
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+		hourCycle: 'h23',
+	}).formatToParts(new Date(epochMs));
+	const n = (type: string) => Number(parts.find(p => p.type === type)?.value ?? 0);
+	const asUtc = Date.UTC(n('year'), n('month') - 1, n('day'), n('hour'), n('minute'), n('second'));
+	return asUtc - Math.floor(epochMs / 1000) * 1000;
+}
+
+/** Exact UTC epoch seconds `[startSec, endSec)` for local calendar day `YYYY-MM-DD` in `timeZone`. */
+function localDayBoundsSec(dayStr: string, timeZone: string): [number, number] {
+	const nextDay = addDaysUtc(dayStr, 1);
+	const toUtcSec = (d: string) => {
+		const guess = Date.parse(`${d}T00:00:00Z`);
+		const off1 = timeZoneOffsetMs(guess, timeZone);
+		const candidate = guess - off1;
+		const off2 = timeZoneOffsetMs(candidate, timeZone);
+		return Math.floor((guess - off2) / 1000);
+	};
+	return [toUtcSec(dayStr), toUtcSec(nextDay)];
 }
 
 function addDaysUtc(dayStr: string, delta: number): string {
@@ -138,12 +189,14 @@ function toIso(epochMs: number | null | undefined): string | null {
 	return new Date(epochMs).toISOString();
 }
 
-function parseGarminLocalToIso(localStr: string | null | undefined, tzOffsetMinutes: number): string | null {
+function parseGarminLocalToIso(localStr: string | null | undefined, timeZone: string): string | null {
 	if (!localStr) return null;
 	const normalized = localStr.replace(' ', 'T');
-	const utcMs = Date.parse(`${normalized}Z`);
-	if (Number.isNaN(utcMs)) return null;
-	return new Date(utcMs - tzOffsetMinutes * 60_000).toISOString();
+	const guessUtcMs = Date.parse(`${normalized}Z`);
+	if (Number.isNaN(guessUtcMs)) return null;
+	const off1 = timeZoneOffsetMs(guessUtcMs, timeZone);
+	const off2 = timeZoneOffsetMs(guessUtcMs - off1, timeZone);
+	return new Date(guessUtcMs - off2).toISOString();
 }
 
 export class GarminSyncer {
@@ -203,7 +256,7 @@ export class GarminSyncer {
 			force?: boolean;
 			throttleMs?: number;
 			days?: number;
-			tzOffsetMinutes?: number;
+			timeZone?: string;
 		} = {},
 	): Promise<SyncOutcome> {
 		if (!this.credentials.personalApiKey && !parseConnectTokens(this.credentials.connectTokensJson)) {
@@ -213,6 +266,11 @@ export class GarminSyncer {
 
 		const now = this.clock();
 		const meta = { ...defaultMeta(), ...this.readState<Partial<GarminSyncMeta>>('meta') };
+		const incomingTz = validTimeZone(options.timeZone);
+		if (incomingTz && incomingTz !== meta.timeZone) {
+			meta.timeZone = incomingTz;
+			this.writeState('meta', meta);
+		}
 		const throttleMs = options.throttleMs ?? FOREGROUND_THROTTLE_MS;
 
 		if (!options.force) {
@@ -358,13 +416,10 @@ export class GarminSyncer {
 		return new Uint8Array(await res.arrayBuffer());
 	}
 
-	private async executeSync(
-		meta: GarminSyncMeta,
-		options: { days?: number; tzOffsetMinutes?: number },
-	): Promise<SyncOutcome> {
+	private async executeSync(meta: GarminSyncMeta, options: { days?: number; timeZone?: string }): Promise<SyncOutcome> {
 		const now = this.clock();
-		const tzOffset = options.tzOffsetMinutes ?? -360;
-		const today = localDayString(now, tzOffset);
+		const timeZone = validTimeZone(options.timeZone) ?? validTimeZone(meta.timeZone) ?? DEFAULT_TIME_ZONE;
+		const today = localDayString(now, timeZone);
 		const db = openDb(this.space, this.driver);
 
 		const existingDaysCount = db.count('garmin_days');
@@ -573,7 +628,7 @@ export class GarminSyncer {
 
 				const startIso = act.startTimeGMT
 					? new Date(`${act.startTimeGMT.replace(' ', 'T')}Z`).toISOString()
-					: (parseGarminLocalToIso(act.startTimeLocal, tzOffset) ?? new Date(now).toISOString());
+					: (parseGarminLocalToIso(act.startTimeLocal, timeZone) ?? new Date(now).toISOString());
 				const durationSec = act.duration ?? 0;
 				const startSec = Math.floor(Date.parse(startIso) / 1000);
 				const endSec = startSec + Math.round(durationSec);
@@ -689,9 +744,8 @@ export class GarminSyncer {
 					stepMinutes: 3,
 				});
 
-				// Day strain over local calendar day window
-				const dayStartSec = Math.floor((Date.parse(`${dayStr}T00:00:00Z`) - tzOffset * 60_000) / 1000);
-				const dayEndSec = dayStartSec + 86_400;
+				// Day strain over exact local calendar day window in the owner's IANA time zone (handles DST).
+				const [dayStartSec, dayEndSec] = localDayBoundsSec(dayStr, timeZone);
 				const strain = estimateStrain(heartRateSeries, activityStreams, dayStartSec, dayEndSec, hrStepMinutes);
 
 				const prev = db.get('garmin_days', dayStr);

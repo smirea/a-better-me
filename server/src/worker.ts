@@ -83,11 +83,11 @@ class OwnerSpace extends SpaceObject<Env> {
 	private async handleGarminSync(url: URL): Promise<Response> {
 		const force = url.searchParams.get('force') === '1' || url.searchParams.get('force') === 'true';
 		const daysParam = url.searchParams.get('days');
-		const tzParam = url.searchParams.get('tzOffsetMinutes');
+		const tzParam = url.searchParams.get('tz') ?? undefined;
 		const outcome = await this.garmin.sync({
 			force,
 			days: daysParam ? Number(daysParam) : undefined,
-			tzOffsetMinutes: tzParam ? Number(tzParam) : undefined,
+			timeZone: tzParam,
 		});
 		return Response.json(outcome);
 	}

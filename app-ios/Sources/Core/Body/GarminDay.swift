@@ -317,7 +317,8 @@ struct GarminActivity: SyncedRecord {
     }
 }
 
-/// Precomputed data for one day's Strain & Stress chart and detail view, built off the main thread in GRDB.
+/// Snapshot of one day's Strain & Stress chart and detail view. Consumers should observe `query(for:)`
+/// asynchronously (`ValueObservation.values(in:)`) on pushed screens so decoding stays off the main thread.
 struct StrainDaySnapshot: Equatable, Sendable {
     struct ActivityBand: Identifiable, Hashable, Sendable {
         enum Kind: Hashable, Sendable {

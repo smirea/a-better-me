@@ -1,15 +1,15 @@
 import Feedback
+import GRDB
 import SwiftUI
 
 /// Full Strain & Stress detail view with day navigation, interactive chart scrubbing, daily recovery/biometric stats,
-/// and a chronological timeline of the day's activities and pings.
+/// and a truncated chronological timeline of the day's activities and pings.
 struct StrainDetailView: View {
     @State private var day = CalendarDay.today
     @State private var selectedDate: Date?
 
     var body: some View {
         StrainDayDetailBody(day: $day, selectedDate: $selectedDate)
-            .id(day)
             .detailTitle("Strain & Stress")
             .background(Theme.background)
             .toolbar {
@@ -27,15 +27,26 @@ struct StrainDetailView: View {
     }
 }
 
+private struct StrainTimelineRow: Identifiable, Hashable {
+    var id: String
+    var at: Date
+    var icon: String
+    var tint: Color
+    var title: String
+    var subtitle: String
+}
+
 private struct StrainDayDetailBody: View {
+    @Environment(LocalStore.self) private var store
     @Binding var day: CalendarDay
     @Binding var selectedDate: Date?
-    @Observe private var snapshot: StrainDaySnapshot
+    @State private var snapshot: StrainDaySnapshot
+    @State private var loadedDay: CalendarDay?
 
     init(day: Binding<CalendarDay>, selectedDate: Binding<Date?>) {
         _day = day
         _selectedDate = selectedDate
-        _snapshot = Observe(StrainDaySnapshot.query(for: day.wrappedValue))
+        _snapshot = State(initialValue: .empty(for: day.wrappedValue))
     }
 
     var body: some View {
@@ -46,7 +57,11 @@ private struct StrainDayDetailBody: View {
                 VStack(alignment: .leading, spacing: 12) {
                     calloutHeader
 
-                    if snapshot.garmin?.stressSeries.isEmpty ?? true {
+                    if loadedDay != day {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 210)
+                    } else if snapshot.garmin?.stressSeries.isEmpty ?? true {
                         ContentUnavailableView(
                             "No Garmin Data",
                             systemImage: "waveform.path.ecg",
@@ -82,12 +97,35 @@ private struct StrainDayDetailBody: View {
                     biometricGrid(garmin)
                 }
 
-                if !snapshot.activities.isEmpty || !snapshot.pings.isEmpty {
-                    timelineSection
+                let items = mergedTimelineItems()
+                if !items.isEmpty {
+                    TruncatedList("Activities & Pings", items: items) { item in
+                        StrainTimelineRowView(item: item)
+                            .padding(.horizontal, 16)
+                    } destination: {
+                        StrainTimelineAllView(subtitle: formattedDay(day), items: items)
+                    }
                 }
             }
             .padding(.horizontal, Theme.margin)
             .padding(.bottom, 30)
+        }
+        .task(id: day) {
+            let target = day
+            if loadedDay != target {
+                snapshot = .empty(for: target)
+            }
+            let query = StrainDaySnapshot.query(for: target)
+            let observation = ValueObservation.trackingConstantRegion(query.fetch).removeDuplicates()
+            do {
+                for try await next in observation.values(in: store.database.pool) {
+                    guard !Task.isCancelled else { break }
+                    snapshot = next
+                    loadedDay = target
+                }
+            } catch {
+                if !Task.isCancelled { loadedDay = target }
+            }
         }
         .refreshable {
             await GarminSync.shared.refreshIfStale(force: true)
@@ -231,61 +269,15 @@ private struct StrainDayDetailBody: View {
         .card()
     }
 
-    private var timelineSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionHeader("Activities & Pings")
-
-            VStack(spacing: 0) {
-                let items = mergedTimelineItems()
-                ForEach(items.indices, id: \.self) { index in
-                    let item = items[index]
-                    HStack(spacing: 12) {
-                        Image(systemName: item.icon)
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(item.tint)
-                            .frame(width: 28, height: 28)
-                            .background(item.tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 8))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.title)
-                                .font(AppFont.headline(14))
-                                .foregroundStyle(Theme.textPrimary)
-                            if !item.subtitle.isEmpty {
-                                Text(item.subtitle)
-                                    .font(AppFont.rowDetail)
-                                    .foregroundStyle(Theme.textSecondary)
-                            }
-                        }
-                        Spacer()
-                        Text(item.at.formatted(date: .omitted, time: .shortened))
-                            .font(AppFont.rowDetail)
-                            .foregroundStyle(Theme.textTertiary)
-                    }
-                    .padding(.vertical, 10)
-                    if index + 1 < items.count {
-                        Divider().overlay(Theme.separator)
-                    }
-                }
-            }
-            .card()
-        }
-    }
-
-    private struct TimelineRow {
-        var at: Date
-        var icon: String
-        var tint: Color
-        var title: String
-        var subtitle: String
-    }
-
-    private func mergedTimelineItems() -> [TimelineRow] {
-        var rows: [TimelineRow] = []
+    private func mergedTimelineItems() -> [StrainTimelineRow] {
+        var rows: [StrainTimelineRow] = []
         for band in snapshot.activities {
             var sub = band.detail
             if let strain = band.strain {
                 sub += (sub.isEmpty ? "" : " · ") + "Strain \(strain.formatted(.number.precision(.fractionLength(1))))"
             }
-            rows.append(TimelineRow(
+            rows.append(StrainTimelineRow(
+                id: "act-\(band.id)",
                 at: band.start,
                 icon: band.symbol,
                 tint: band.kind == .sleep ? Color(hex: 0x94A3B8) : Color(hex: 0x3B82F6),
@@ -295,7 +287,8 @@ private struct StrainDayDetailBody: View {
         }
         for ping in snapshot.pings {
             let parts = [ping.valueText, ping.note.isEmpty ? nil : ping.note].compactMap { $0 }
-            rows.append(TimelineRow(
+            rows.append(StrainTimelineRow(
+                id: "ping-\(ping.id.uuidString)",
                 at: ping.at,
                 icon: ping.icon,
                 tint: ping.color.swatch,
@@ -320,5 +313,59 @@ private struct StrainDayDetailBody: View {
         if day == .today { return "Today" }
         if day == CalendarDay.today.adding(days: -1) { return "Yesterday" }
         return day.date(in: .current).formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+    }
+}
+
+private struct StrainTimelineRowView: View {
+    let item: StrainTimelineRow
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: item.icon)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(item.tint)
+                .frame(width: 28, height: 28)
+                .background(item.tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.title)
+                    .font(AppFont.headline(14))
+                    .foregroundStyle(Theme.textPrimary)
+                if !item.subtitle.isEmpty {
+                    Text(item.subtitle)
+                        .font(AppFont.rowDetail)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            Spacer()
+            Text(item.at.formatted(date: .omitted, time: .shortened))
+                .font(AppFont.rowDetail)
+                .foregroundStyle(Theme.textTertiary)
+        }
+        .padding(.vertical, 10)
+    }
+}
+
+private struct StrainTimelineAllView: View {
+    let subtitle: String
+    let items: [StrainTimelineRow]
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    StrainTimelineRowView(item: item)
+                        .padding(.horizontal, 16)
+                        .overlay(alignment: .top) {
+                            if index > 0 { Divider().overlay(Theme.separator) }
+                        }
+                }
+            }
+            .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+            .padding(.horizontal, Theme.margin)
+            .padding(.bottom, 30)
+        }
+        .background(Theme.background)
+        .detailTitle("Activities & Pings", subtitle: subtitle)
+        .feedback(self)
     }
 }

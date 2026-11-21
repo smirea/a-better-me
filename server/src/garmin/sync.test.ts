@@ -152,4 +152,34 @@ describe('GarminSyncer throttling, SSO caching, and backoff', () => {
 		expect(calls).toBe(2);
 		expect(syncer.status().consecutiveRateLimits).toBe(2);
 	});
+
+	it('persists the owner IANA timezone across foreground and scheduled cron syncs', async () => {
+		// 2026-11-21T02:30:00Z is 2026-11-20 in America/Los_Angeles (UTC-8) and 2026-11-21 in Europe/London (UTC+0).
+		let now = Date.parse('2026-11-21T02:30:00Z');
+		const fetchFn = (async (input: string | URL) => {
+			const url = String(input);
+			if (url.includes('/personal-api-key/token')) {
+				return new Response(makeJwt(Math.floor((now + 3600_000) / 1000)), { status: 200 });
+			}
+			if (url.includes('/v2/dailysummaries')) return Response.json({ data: [] });
+			if (url.includes('/dailySleepSummariesByDate')) return Response.json([]);
+			if (url.includes('/hrv/daily/')) return Response.json({ hrvSummaries: [] });
+			if (url.includes('/search/activities')) return Response.json([]);
+			if (url.includes('/usersummary/daily')) return Response.json({});
+			if (url.includes('/dailyHeartRate')) return Response.json({ heartRateValues: [] });
+			return new Response(null, { status: 404 });
+		}) as unknown as typeof fetch;
+
+		const { syncer } = createTestSyncer({ fetchFn, now: () => now });
+		const foreground = await syncer.sync({ days: 1, timeZone: 'Europe/London' });
+		expect(foreground.status).toBe('synced');
+		if (foreground.status === 'synced') expect(foreground.days).toEqual(['2026-11-21']);
+		expect(syncer.status().timeZone).toBe('Europe/London');
+
+		// Scheduled cron omits timeZone and must reuse persisted Europe/London.
+		now += FOREGROUND_THROTTLE_MS + 1000;
+		const scheduled = await syncer.sync({ days: 1 });
+		expect(scheduled.status).toBe('synced');
+		if (scheduled.status === 'synced') expect(scheduled.days).toEqual(['2026-11-21']);
+	});
 });

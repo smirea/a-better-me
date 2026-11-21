@@ -23,9 +23,8 @@ final class GarminSync {
         lastRequestedAt = .now
         defer { isSyncing = false }
 
-        let tzMinutes = TimeZone.current.secondsFromGMT() / 60
         var components = URLComponents(url: AppEnvironment.apiURL.appending(path: "api/garmin/sync"), resolvingAgainstBaseURL: false)
-        var items = [URLQueryItem(name: "tzOffsetMinutes", value: String(tzMinutes))]
+        var items = [URLQueryItem(name: "tz", value: TimeZone.current.identifier)]
         if force { items.append(URLQueryItem(name: "force", value: "1")) }
         components?.queryItems = items
         guard let url = components?.url else { return }
