@@ -70,7 +70,7 @@ final class LiveWorkoutController {
             in: store.database.pool,
             scheduling: .async(onQueue: .main),
             onError: { LocalStore.log.error("Live workout observation failed: \(String(describing: $0))") },
-            onChange: { inputs in MainActor.assumeIsolated { [weak self] in self?.receive(inputs) } }
+            onChange: { [weak self] inputs in MainActor.assumeIsolated { self?.receive(inputs) } }
         )
         track()
         trackWatch()

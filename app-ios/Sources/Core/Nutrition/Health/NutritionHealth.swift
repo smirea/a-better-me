@@ -45,7 +45,7 @@ final class NutritionHealth {
             in: store.database.pool,
             scheduling: .async(onQueue: .main),
             onError: { Self.log.error("Observing the log failed: \(String(describing: $0))") },
-            onChange: { digests in MainActor.assumeIsolated { [weak self] in self?.receive(digests) } }
+            onChange: { [weak self] digests in MainActor.assumeIsolated { self?.receive(digests) } }
         )
     }
 

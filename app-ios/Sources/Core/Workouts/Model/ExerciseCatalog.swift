@@ -53,7 +53,7 @@ final class ExerciseCatalog {
                 in: store.database.pool,
                 scheduling: .async(onQueue: .main),
                 onError: { LocalStore.log.error("Custom exercise observation failed: \(String(describing: $0))") },
-                onChange: { exercises in MainActor.assumeIsolated { [weak self] in self?.setCustom(exercises) } }
+                onChange: { [weak self] exercises in MainActor.assumeIsolated { self?.setCustom(exercises) } }
             )
     }
 

@@ -45,7 +45,7 @@ private final class Tracker<Value: Sendable & Equatable> {
                 in: store.database.pool,
                 scheduling: .async(onQueue: .main),
                 onError: { LocalStore.log.error("Observation failed: \(String(describing: $0))") },
-                onChange: { value in MainActor.assumeIsolated { [weak self] in self?.value = value } }
+                onChange: { [weak self] value in MainActor.assumeIsolated { self?.value = value } }
             )
         } else {
             cancellable = observation.start(

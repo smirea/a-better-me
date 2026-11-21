@@ -54,8 +54,8 @@ final class WatchBridge: NSObject {
             in: store.database.pool,
             scheduling: .async(onQueue: .main),
             onError: { LocalStore.log.error("Watch home observation failed: \(String(describing: $0))") },
-            onChange: { inputs in
-                MainActor.assumeIsolated { [weak self] in
+            onChange: { [weak self] inputs in
+                MainActor.assumeIsolated {
                     self?.homeInputs = inputs
                     self?.publish()
                 }

@@ -125,7 +125,7 @@ final class MealCatalog {
             in: store.database.pool,
             scheduling: .async(onQueue: .main),
             onError: { Self.log.error("Observing meals failed: \(String(describing: $0))") },
-            onChange: { index in MainActor.assumeIsolated { [weak self] in self?.receive(index) } }
+            onChange: { [weak self] index in MainActor.assumeIsolated { self?.receive(index) } }
         )
     }
 

@@ -122,7 +122,7 @@ final class FoodShortNaming {
             in: store.database.pool,
             scheduling: .async(onQueue: .main),
             onError: { Self.log.error("Observing ingredients without short names failed: \(String(describing: $0))") },
-            onChange: { candidates in MainActor.assumeIsolated { [weak self] in self?.receive(candidates) } }
+            onChange: { [weak self] candidates in MainActor.assumeIsolated { self?.receive(candidates) } }
         )
     }
 
