@@ -4,6 +4,7 @@ import { isOwner } from './auth';
 import type { Config } from './config';
 import { FEEDBACK_ROUTE, feedbackAnswer, fileFeedbackIssue } from './feedback';
 import { LIVE_RAMBLE_ROUTE, liveRambleSetup, type LiveRambleSetup } from './food/ramble-live';
+import { GARMIN_STATUS_ROUTE, GARMIN_SYNC_ROUTE } from './garmin/sync';
 import { drain, errorResponse as error } from './http';
 
 /**
@@ -33,6 +34,8 @@ export type App<Upgraded = never> = {
 	images(request: Request): Promise<Response>;
 	/** The live Ramble socket (`food/ramble-live.ts`), after the owner check and with the setup the settings allow. */
 	ramble(request: Request, setup: LiveRambleSetup): Promise<Response | Upgraded>;
+	/** Garmin sync trigger & status (`garmin/sync.ts`), after the owner check. Optional in tests that omit it. */
+	garmin?: (request: Request) => Promise<Response>;
 };
 
 async function unauthorized(request: Request): Promise<Response> {
@@ -68,6 +71,11 @@ export async function handle<Upgraded = never>(request: Request, app: App<Upgrad
 			return feedbackAnswer(503, { message: 'Set GITHUB_TOKEN on the server to file feedback issues.' });
 		}
 		return reportFailure(route, await fileFeedbackIssue(request, app.config.githubToken), app.report);
+	}
+	if (route === GARMIN_SYNC_ROUTE || route === GARMIN_STATUS_ROUTE) {
+		if (!(await isOwner(request, app.config.ownerToken))) return unauthorized(request);
+		if (!app.garmin) return error(503, 'Garmin sync is not available on this host');
+		return reportFailure(route, await app.garmin(request), app.report);
 	}
 	if (url.pathname === IMAGES_PATH) {
 		if (!(await isOwner(request, app.config.ownerToken))) return unauthorized(request);

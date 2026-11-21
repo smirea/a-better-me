@@ -48,6 +48,7 @@ enum DevSeed {
         }
         if try Supplement.fetchCount(db) == 0 { try SupplementSeed.insert(in: db) }
         if try Ping.fetchCount(db) == 0 { try PingSeed.insert(in: db) }
+        if try GarminDay.fetchCount(db) == 0 { try GarminSeed.insert(in: db) }
     }
 }
 #endif

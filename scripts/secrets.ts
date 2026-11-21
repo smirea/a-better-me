@@ -15,7 +15,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import { chmodSync, writeFileSync } from 'node:fs';
-import { REQUIRED_IN_PRODUCTION } from '../server/src/config';
+import { OPTIONAL_WORKER_SECRETS, REQUIRED_IN_PRODUCTION } from '../server/src/config';
 import { upload } from './assets';
 import { readEnv, type Values } from './lib';
 
@@ -67,7 +67,10 @@ function workerSecretNames(cloudflare: Values): Set<string> {
 
 function push() {
 	const values = readEnv('prod');
-	const secrets = require(values, WORKER_SECRETS, 'prod');
+	const secrets: Values = { ...require(values, WORKER_SECRETS, 'prod') };
+	for (const name of OPTIONAL_WORKER_SECRETS) {
+		if (values[name]) secrets[name] = values[name]!;
+	}
 	run(['bunx', 'wrangler', 'secret', 'bulk'], {
 		stdin: JSON.stringify(secrets),
 		env: require(values, CLOUDFLARE_SECRETS, 'prod'),

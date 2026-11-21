@@ -26,7 +26,14 @@ const SPACE_SETTINGS = {
 type Environment = 'development' | 'production';
 
 type SpaceSetting = keyof typeof SPACE_SETTINGS;
-type TextSetting = 'APP_ENV' | 'RAMBLE_SCRIPT' | (typeof REQUIRED_IN_PRODUCTION)[number];
+type OptionalServerSecret = 'GARMIN_PERSONAL_API_KEY' | 'GARMIN_CONNECT_TOKENS';
+type TextSetting = 'APP_ENV' | 'RAMBLE_SCRIPT' | OptionalServerSecret | (typeof REQUIRED_IN_PRODUCTION)[number];
+
+/** Optional Worker secrets pushed alongside `REQUIRED_IN_PRODUCTION` when set in env-manager. */
+export const OPTIONAL_WORKER_SECRETS: readonly OptionalServerSecret[] = [
+	'GARMIN_PERSONAL_API_KEY',
+	'GARMIN_CONNECT_TOKENS',
+];
 
 /** The generated `env.ts` parses the space settings to numbers; Worker bindings arrive as strings. */
 export type Settings = Partial<Record<TextSetting, string> & Record<SpaceSetting, string | number>>;
@@ -47,6 +54,10 @@ export type Config = {
 	rambleScript: string | null;
 	/** Files the Feedback editor's posts as issues (`feedback.ts`). Null in development without one, where it answers 503. */
 	githubToken: string | null;
+	/** Garmin Personal API key (`garmin/sync.ts`). Null disables Personal API pulls. */
+	garminPersonalApiKey: string | null;
+	/** Initial Garmin Connect OAuth JSON (`garmin/sync.ts`). Rotated tokens persist in DO storage. */
+	garminConnectTokens: string | null;
 };
 
 const DSN = /^https:\/\/[0-9a-f]+@[^/@\s]+\/\d+$/;
@@ -85,5 +96,7 @@ export function parseConfig(settings: Settings): Config {
 		xaiApiKey: read('XAI_API_KEY') ?? null,
 		rambleScript: read('RAMBLE_SCRIPT') ?? null,
 		githubToken: read('GITHUB_TOKEN') ?? null,
+		garminPersonalApiKey: read('GARMIN_PERSONAL_API_KEY') ?? null,
+		garminConnectTokens: read('GARMIN_CONNECT_TOKENS') ?? null,
 	};
 }

@@ -480,6 +480,76 @@ const healthSleeps = sqliteTable('health_sleeps', {
 	sources: json('sources').notNull().default([]),
 });
 
+/**
+ * One calendar day (`YYYY-MM-DD`) of Garmin CIRQA / Connect telemetry, pulled by the Worker cron and foreground sync.
+ * Intraday series are compact `[epochSec, value]` pairs so a full day stays ~10–15 KB and syncs offline to iOS.
+ */
+const garminDays = sqliteTable('garmin_days', {
+	id: text('id').primaryKey(),
+	restingHeartRate: integer('resting_heart_rate'),
+	hrvLastNight: real('hrv_last_night'),
+	hrvWeeklyAvg: real('hrv_weekly_avg'),
+	hrvStatus: text('hrv_status'),
+	bodyBatteryWake: integer('body_battery_wake'),
+	bodyBatteryHigh: integer('body_battery_high'),
+	bodyBatteryLow: integer('body_battery_low'),
+	bodyBatteryCharged: integer('body_battery_charged'),
+	bodyBatteryDrained: integer('body_battery_drained'),
+	stressAvg: integer('stress_avg'),
+	stressMax: integer('stress_max'),
+	sleepScore: integer('sleep_score'),
+	sleepStartAt: text('sleep_start_at'),
+	sleepEndAt: text('sleep_end_at'),
+	sleepSeconds: integer('sleep_seconds'),
+	deepSeconds: integer('deep_seconds'),
+	lightSeconds: integer('light_seconds'),
+	remSeconds: integer('rem_seconds'),
+	awakeSeconds: integer('awake_seconds'),
+	respirationAvg: real('respiration_avg'),
+	spo2Avg: real('spo2_avg'),
+	skinTempNightlyC: real('skin_temp_nightly_c'),
+	skinTempDeviationC: real('skin_temp_deviation_c'),
+	readinessScore: integer('readiness_score'),
+	readinessLevel: text('readiness_level'),
+	acuteLoad: real('acute_load'),
+	vo2Max: real('vo2_max'),
+	steps: integer('steps'),
+	activeKcal: real('active_kcal'),
+	totalKcal: real('total_kcal'),
+	/** WHOOP-style 0–21 strain computed from all-day HR + 1-second activity HR. */
+	strain: real('strain'),
+	syncedAt: text('synced_at').notNull(),
+	/** Calibrated WHOOP-style 0.0–3.0 stress monitor points as `[epochSec, value]`. */
+	stressSeries: json('stress_series').notNull().default([]),
+	/** All-day 1-minute (wellness FIT) or 2-minute (Personal API) heart rate as `[epochSec, bpm]`. */
+	heartRateSeries: json('heart_rate_series').notNull().default([]),
+	/** Raw 1-minute Garmin stress (0–100) as `[epochSec, value]`. */
+	rawStressSeries: json('raw_stress_series').notNull().default([]),
+	/** Intraday Body Battery (0–100) as `[epochSec, value]`. */
+	bodyBatterySeries: json('body_battery_series').notNull().default([]),
+	/** Contiguous motion/walk windows detected from Garmin stress `-2` flags: `[{ start, end }]` (epochSec). */
+	motionSpans: json('motion_spans').notNull().default([]),
+});
+
+/**
+ * One recorded Garmin activity (keyed by Garmin `activityId`), including its 1-second heart rate stream.
+ */
+const garminActivities = sqliteTable('garmin_activities', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	activityType: text('activity_type').notNull(),
+	startedAt: text('started_at').notNull(),
+	endedAt: text('ended_at').notNull(),
+	durationSeconds: real('duration_seconds').notNull().default(0),
+	calories: real('calories'),
+	distanceMeters: real('distance_meters'),
+	averageHeartRate: real('average_heart_rate'),
+	maxHeartRate: real('max_heart_rate'),
+	strain: real('strain'),
+	/** 1-second heart rate stream as `[epochSec, bpm]`. */
+	heartRateSeries: json('heart_rate_series').notNull().default([]),
+});
+
 /** The order here is the order of the generated Swift schema and of a snapshot pull. */
 export const SYNCED_TABLES = {
 	workout_templates: workoutTemplates,
@@ -508,6 +578,8 @@ export const SYNCED_TABLES = {
 	ping_logs: pingLogs,
 	health_activities: healthActivities,
 	health_sleeps: healthSleeps,
+	garmin_days: garminDays,
+	garmin_activities: garminActivities,
 } as const;
 
 export type SyncedTable = keyof typeof SYNCED_TABLES;
@@ -699,6 +771,49 @@ export const schema = defineSchema({
 			source: z.string().min(1),
 			sourceBundle: z.string().min(1),
 			sources: z.array(z.string().min(1)),
+		},
+		garmin_days: {
+			restingHeartRate: count,
+			hrvLastNight: amount,
+			hrvWeeklyAvg: amount,
+			bodyBatteryWake: count,
+			bodyBatteryHigh: count,
+			bodyBatteryLow: count,
+			bodyBatteryCharged: count,
+			bodyBatteryDrained: count,
+			stressAvg: count,
+			stressMax: count,
+			sleepScore: count,
+			sleepSeconds: count,
+			deepSeconds: count,
+			lightSeconds: count,
+			remSeconds: count,
+			awakeSeconds: count,
+			respirationAvg: amount,
+			spo2Avg: amount,
+			readinessScore: count,
+			acuteLoad: amount,
+			vo2Max: amount,
+			steps: count,
+			activeKcal: amount,
+			totalKcal: amount,
+			strain: amount,
+			stressSeries: array,
+			heartRateSeries: array,
+			rawStressSeries: array,
+			bodyBatterySeries: array,
+			motionSpans: array,
+		},
+		garmin_activities: {
+			name: z.string().min(1),
+			activityType: z.string().min(1),
+			durationSeconds: amount,
+			calories: amount,
+			distanceMeters: amount,
+			averageHeartRate: amount,
+			maxHeartRate: amount,
+			strain: amount,
+			heartRateSeries: array,
 		},
 	},
 });

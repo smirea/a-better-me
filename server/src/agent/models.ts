@@ -1305,3 +1305,68 @@ export const TrainingSummary = z
 		exercises: z.array(ExerciseStats.extend({ sessions: z.int() })),
 	})
 	.meta({ id: 'TrainingSummary', description: 'Finished sessions in the range, added up. Bests are over the range.' });
+
+const SeriesPoint = z.tuple([z.number(), z.number()]);
+
+export const GarminDay = z
+	.object({
+		id: day,
+		restingHeartRate: z.int().nullable(),
+		hrvLastNight: z.number().nullable(),
+		hrvWeeklyAvg: z.number().nullable(),
+		hrvStatus: z.string().nullable(),
+		bodyBatteryWake: z.int().nullable(),
+		bodyBatteryHigh: z.int().nullable(),
+		bodyBatteryLow: z.int().nullable(),
+		bodyBatteryCharged: z.int().nullable(),
+		bodyBatteryDrained: z.int().nullable(),
+		stressAvg: z.int().nullable(),
+		stressMax: z.int().nullable(),
+		sleepScore: z.int().nullable(),
+		sleepStartAt: z.string().nullable(),
+		sleepEndAt: z.string().nullable(),
+		sleepSeconds: z.int().nullable(),
+		deepSeconds: z.int().nullable(),
+		lightSeconds: z.int().nullable(),
+		remSeconds: z.int().nullable(),
+		awakeSeconds: z.int().nullable(),
+		respirationAvg: z.number().nullable(),
+		spo2Avg: z.number().nullable(),
+		skinTempNightlyC: z.number().nullable(),
+		skinTempDeviationC: z.number().nullable(),
+		readinessScore: z.int().nullable(),
+		readinessLevel: z.string().nullable(),
+		acuteLoad: z.number().nullable(),
+		vo2Max: z.number().nullable(),
+		steps: z.int().nullable(),
+		activeKcal: z.number().nullable(),
+		totalKcal: z.number().nullable(),
+		strain: z.number().nullable(),
+		syncedAt: z.string(),
+		stressSeries: z.array(SeriesPoint),
+		heartRateSeries: z.array(SeriesPoint),
+		rawStressSeries: z.array(SeriesPoint),
+		bodyBatterySeries: z.array(SeriesPoint),
+		motionSpans: z.array(z.object({ start: z.number(), end: z.number() })),
+	})
+	.meta({
+		id: 'GarminDay',
+		description: 'One calendar day of Garmin CIRQA telemetry and calibrated WHOOP-style stress & strain.',
+	});
+
+export const GarminActivity = z
+	.object({
+		id: z.string(),
+		name: z.string(),
+		activityType: z.string(),
+		startedAt: z.string(),
+		endedAt: z.string(),
+		durationSeconds: z.number(),
+		calories: z.number().nullable(),
+		distanceMeters: z.number().nullable(),
+		averageHeartRate: z.number().nullable(),
+		maxHeartRate: z.number().nullable(),
+		strain: z.number().nullable(),
+		heartRateSeries: z.array(SeriesPoint),
+	})
+	.meta({ id: 'GarminActivity', description: 'One recorded Garmin activity with its 1-second heart rate stream.' });

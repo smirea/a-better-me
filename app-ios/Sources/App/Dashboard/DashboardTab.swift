@@ -20,6 +20,7 @@ struct DashboardTab: View {
                 .navigationDestination(for: DashboardRoute.self) { route in
                     switch route {
                     case .settings: SettingsView()
+                    case .strain: StrainDetailView()
                     case let .ping(id): PingHistoryView(pingID: id)
                     case .allMuscles: AllMusclesView()
                     case .allExercises: AllExercisesView()
@@ -63,6 +64,8 @@ private struct DashboardHome: View {
                 if !layout.primaryFocus.isEmpty {
                     FocusPager(cards: layout.primaryFocus)
                 }
+                StrainDashboardCard(day: CalendarDay(context.today, in: context.calendar))
+                    .id(context.today)
                 ForEach(layout.sections, id: \.self) { section in
                     self.section(section)
                 }

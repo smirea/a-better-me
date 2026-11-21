@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum DashboardRoute: Hashable {
-    case workouts, weightTrend, scaleWeight, steps
+    case workouts, weightTrend, scaleWeight, steps, strain
     case muscle(Muscle, MuscleMetric)
     case exercise(ExerciseID, ExerciseChartMetric)
     case allMuscles, allExercises, settings, levels, muscleLevels(Muscle)
@@ -211,7 +211,7 @@ extension DashboardData {
             return macrosDetail
         case let .bodyMetric(card):
             return bodyMetricDetail(card)
-        case .allMuscles, .allExercises, .settings, .ping, .goalProgress, .foodLogging, .nutritionData, .allNutrition, .allBodyMetrics, .levels, .muscleLevels:
+        case .allMuscles, .allExercises, .settings, .strain, .ping, .goalProgress, .foodLogging, .nutritionData, .allNutrition, .allBodyMetrics, .levels, .muscleLevels:
             preconditionFailure("\(route) is not a metric detail")
         }
     }

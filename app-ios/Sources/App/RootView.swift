@@ -86,6 +86,7 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             Task { await health.refresh() }
+            Task { await GarminSync.shared.refreshIfStale() }
             if today != .today {
                 if foodLog.day == today { foodLog.day = .today }
                 today = .today
@@ -93,6 +94,7 @@ struct RootView: View {
         }
         .task {
             AppPermissions.launchStarted()
+            Task { await GarminSync.shared.refreshIfStale() }
             if await !health.refresh() { await AppPermissions.requestRest() }
         }
         .task { await GymSeed.run(store, equipment: catalog.equipment) }

@@ -25,6 +25,7 @@
 		"secrets:check": "bun scripts/secrets.ts check"
 	},
 	"dependencies": {
+		"@garmin/fitsdk": "^21.222.0",
 		"@phosphor-icons/react": "^2.1.10",
 		"@sentry/bun": "11.9.0",
 		"@sentry/cloudflare": "11.9.0",
