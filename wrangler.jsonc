@@ -8,8 +8,8 @@
 	"routes": [{ "pattern": "a-better-me.stf.lol", "custom_domain": true }],
 	"workers_dev": false,
 	"preview_urls": false,
-	// `server/src/backup.ts` names it: the daily JSON dump of the space to R2.
-	"triggers": { "crons": ["0 9 * * *"] },
+	// `server/src/backup.ts` (`0 9 * * *`) and `server/src/garmin/sync.ts` (`0 * * * *`, hourly).
+	"triggers": { "crons": ["0 9 * * *", "0 * * * *"] },
 	// Secrets are config.ts's REQUIRED_IN_PRODUCTION, pushed with `bun run secrets:push`.
 	"vars": { "APP_ENV": "production" },
 	// The owner's one space: a SQLite-backed Durable Object holding every synced table.

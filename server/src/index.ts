@@ -10,6 +10,7 @@ import { ASSETS_DIR, assetRoutes } from './assets';
 import { parseConfig } from './config';
 import { DATA_FILE } from './data-file';
 import { serveLiveRamble, type LiveRambleSetup } from './food/ramble-live';
+import { GarminSyncer } from './garmin/sync';
 import { errorResponse } from './http';
 import { imagesRoute, moveSupplementImageRows } from './images';
 import { localBucket } from './local-bucket';
@@ -30,6 +31,12 @@ while (await moveSupplementImageRows(driver, pictures));
 
 const publish = (head: number) => server.publish('live', JSON.stringify({ head }));
 const agent = agentApi({ space, driver, ownerToken: config.ownerToken, geminiApiKey: config.geminiApiKey, publish });
+const garmin = new GarminSyncer(
+	space,
+	driver,
+	{ personalApiKey: config.garminPersonalApiKey, connectTokensJson: config.garminConnectTokens },
+	publish,
+);
 
 // No auth: the files are already in git, and the Worker never serves them.
 const assets = assetRoutes(ASSETS_DIR);
@@ -68,6 +75,20 @@ const server = Bun.serve<Socket>({
 				return response;
 			},
 			agent,
+			async garmin(request) {
+				const url = new URL(request.url);
+				if (url.pathname === '/api/garmin/status') return Response.json(garmin.status());
+				const force = url.searchParams.get('force') === '1' || url.searchParams.get('force') === 'true';
+				const daysParam = url.searchParams.get('days');
+				const tzParam = url.searchParams.get('tz') ?? undefined;
+				return Response.json(
+					await garmin.sync({
+						force,
+						days: daysParam ? Number(daysParam) : undefined,
+						timeZone: tzParam,
+					}),
+				);
+			},
 		}),
 	websocket: {
 		open(ws) {

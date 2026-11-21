@@ -13,6 +13,7 @@ import { handle } from './api';
 import { BACKUP_CRON, backup } from './backup';
 import { parseConfig, type Config, type Settings } from './config';
 import { liveRambleSetup, serveLiveRamble } from './food/ramble-live';
+import { GARMIN_CRON, GarminSyncer } from './garmin/sync';
 import { errorResponse } from './http';
 import { imagesRoute, listedImages, moveSupplementImageRows, sweepImages } from './images';
 import { SENTRY_DEFAULTS, withoutDedupe } from './sentry';
@@ -28,6 +29,7 @@ type Env = Settings & { SPACE: DurableObjectNamespace; BACKUPS: R2Bucket; IMAGES
 class OwnerSpace extends SpaceObject<Env> {
 	private readonly agent;
 	private readonly driver;
+	private readonly garmin;
 	/** The move of the old picture rows into the bucket, a batch beside each request until none are left. */
 	private moving: Promise<boolean> = Promise.resolve(true);
 
@@ -35,21 +37,28 @@ class OwnerSpace extends SpaceObject<Env> {
 		const config = configOf(env);
 		super(ctx, env, schema, config.space);
 		this.driver = durableDriver(ctx.storage);
+		const publish = (head: number) => {
+			for (const socket of this.ctx.getWebSockets()) {
+				try {
+					socket.send(JSON.stringify({ head }));
+				} catch {
+					// A socket mid-close throws on send, and it has no one left to nudge.
+				}
+			}
+		};
 		this.agent = agentApi({
 			space: this.space,
 			driver: this.driver,
 			ownerToken: config.ownerToken,
 			geminiApiKey: config.geminiApiKey,
-			publish: head => {
-				for (const socket of this.ctx.getWebSockets()) {
-					try {
-						socket.send(JSON.stringify({ head }));
-					} catch {
-						// A socket mid-close throws on send, and it has no one left to nudge.
-					}
-				}
-			},
+			publish,
 		});
+		this.garmin = new GarminSyncer(
+			this.space,
+			this.driver,
+			{ personalApiKey: config.garminPersonalApiKey, connectTokensJson: config.garminConnectTokens },
+			publish,
+		);
 	}
 
 	override async fetch(request: Request): Promise<Response> {
@@ -61,11 +70,26 @@ class OwnerSpace extends SpaceObject<Env> {
 				return true;
 			});
 		await this.moving;
-		const { pathname } = new URL(request.url);
+		const url = new URL(request.url);
+		const { pathname } = url;
 		if (pathname === '/dump') return Response.json(this.space.dump());
 		if (pathname === '/ramble-live') return this.rambleLive();
+		if (pathname === '/garmin/status') return Response.json(this.garmin.status());
+		if (pathname === '/garmin/sync') return this.handleGarminSync(url);
 		if (pathname !== '/api' && !pathname.startsWith('/api/')) return super.fetch(request);
 		return this.agent(request);
+	}
+
+	private async handleGarminSync(url: URL): Promise<Response> {
+		const force = url.searchParams.get('force') === '1' || url.searchParams.get('force') === 'true';
+		const daysParam = url.searchParams.get('days');
+		const tzParam = url.searchParams.get('tz') ?? undefined;
+		const outcome = await this.garmin.sync({
+			force,
+			days: daysParam ? Number(daysParam) : undefined,
+			timeZone: tzParam,
+		});
+		return Response.json(outcome);
 	}
 
 	/**
@@ -123,8 +147,12 @@ function sentryOptions(env: Env): Sentry.CloudflareOptions {
 			...withoutDedupe(defaults),
 			Sentry.cronTriggersIntegration({
 				// A local `wrangler dev` run would open a development monitor that then misses every day.
-				monitorSlug: cron =>
-					cron === BACKUP_CRON && sentry.environment === 'production' ? 'a-better-me-backup' : undefined,
+				monitorSlug: cron => {
+					if (sentry.environment !== 'production') return undefined;
+					if (cron === BACKUP_CRON) return 'a-better-me-backup';
+					if (cron === GARMIN_CRON) return 'a-better-me-garmin-sync';
+					return undefined;
+				},
 			}),
 		],
 	};
@@ -153,6 +181,11 @@ async function fetch(request: Request, env: Env): Promise<Response> {
 				url.pathname = '/ramble-live';
 				return owner(env).fetch(new Request(url, request));
 			},
+			garmin(request) {
+				const url = new URL(request.url);
+				url.pathname = url.pathname.slice('/api'.length);
+				return owner(env).fetch(new Request(url, request));
+			},
 		});
 	} catch (error) {
 		console.error(error);
@@ -161,8 +194,14 @@ async function fetch(request: Request, env: Env): Promise<Response> {
 	}
 }
 
-/** The daily dump to R2, then the sweep of pictures no row lists. A throw marks the cron run failed in the Cloudflare dashboard. */
+/** Daily R2 backup (`0 9 * * *`) and hourly Garmin sync (`0 * * * *`). */
 async function scheduled(controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
+	if (controller.cron === GARMIN_CRON) {
+		const res = await owner(env).fetch('https://space/garmin/sync');
+		const outcome = await res.json();
+		console.log('Garmin hourly sync:', JSON.stringify(outcome));
+		return;
+	}
 	if (controller.cron !== BACKUP_CRON) throw new Error(`No job for cron ${controller.cron}`);
 	const tables = (await (await owner(env).fetch('https://space/dump')).json()) as Record<string, unknown[]>;
 	const at = new Date(controller.scheduledTime);

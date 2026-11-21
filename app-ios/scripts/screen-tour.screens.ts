@@ -52,6 +52,10 @@ export const screens: Screen[] = [
 	{ name: 'add-choose', steps: tapTab('New') },
 
 	{ name: 'dashboard', steps: ['shot top', ...scrolled(1), 'shot mid', ...scrolled(2)] },
+	{
+		name: 'dashboard-strain-detail',
+		steps: [...scrollTo('Strain and Stress'), ...tap('Strain and Stress'), 'wait 800'],
+	},
 	{ name: 'dashboard-customize', steps: settings('Dashboard') },
 	{ name: 'dashboard-levels', steps: [...tap('Levels'), 'wait 1000'] },
 	{ name: 'dashboard-workouts-detail', steps: [...scrollTo('Workouts'), ...tap('Workouts'), 'wait 1000'] },
