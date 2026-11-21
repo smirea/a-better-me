@@ -43,9 +43,9 @@ final class NutritionHealth {
         self.store = store
         observation = ValueObservation.tracking(Self.dayDigests).removeDuplicates().start(
             in: store.database.pool,
-            scheduling: .immediate,
+            scheduling: .async(onQueue: .main),
             onError: { Self.log.error("Observing the log failed: \(String(describing: $0))") },
-            onChange: { [weak self] in self?.receive($0) }
+            onChange: { digests in MainActor.assumeIsolated { [weak self] in self?.receive(digests) } }
         )
     }
 

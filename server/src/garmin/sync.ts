@@ -208,9 +208,16 @@ export class GarminSyncer {
 		private readonly driver: SqlDriver,
 		private readonly credentials: GarminCredentials,
 		private readonly publish: (head: number) => void,
-		private readonly fetchFn: typeof fetch = fetch,
+		private readonly fetchFn: (input: string | URL, init?: RequestInit) => Promise<Response> = (input, init) =>
+			fetch(input, init),
 		private readonly clock: () => number = () => Date.now(),
 	) {}
+
+	/** Calls `fetchFn` unbound so Cloudflare Workers never throws `TypeError: Illegal invocation` on `this`. */
+	private request(input: string | URL, init?: RequestInit): Promise<Response> {
+		const fn = this.fetchFn;
+		return fn(input, init);
+	}
 
 	private ensureStateTable() {
 		if (this.stateReady) return;
@@ -304,7 +311,7 @@ export class GarminSyncer {
 		const cached = this.readState<CachedPersonalToken>('personal_token');
 		if (cached && cached.expiresAt - now > TOKEN_REFRESH_MARGIN_MS) return cached.token;
 
-		const res = await this.fetchFn(PERSONAL_BASE + PERSONAL_TOKEN_PATH, {
+		const res = await this.request(PERSONAL_BASE + PERSONAL_TOKEN_PATH, {
 			method: 'POST',
 			headers: { Accept: '*/*', Authorization: `ApiKey ${apiKey}` },
 		});
@@ -349,7 +356,7 @@ export class GarminSyncer {
 
 		if (jwtExpiresAt(tokens.di_token) - now > TOKEN_REFRESH_MARGIN_MS) return tokens.di_token;
 
-		const res = await this.fetchFn(DI_TOKEN_URL, {
+		const res = await this.request(DI_TOKEN_URL, {
 			method: 'POST',
 			headers: {
 				Authorization: `Basic ${btoa(`${tokens.di_client_id}:`)}`,
@@ -383,7 +390,7 @@ export class GarminSyncer {
 		params: Record<string, string | number | undefined> = {},
 	): Promise<T | null> {
 		const url = buildUrl(source === 'personal' ? PERSONAL_BASE : CONNECT_BASE, pathname, params);
-		const res = await this.fetchFn(url, {
+		const res = await this.request(url, {
 			headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
 		});
 		if (res.status === 204 || res.status === 404) return null;
@@ -403,7 +410,7 @@ export class GarminSyncer {
 		pathname: string,
 	): Promise<Uint8Array | null> {
 		const url = buildUrl(source === 'personal' ? PERSONAL_BASE : CONNECT_BASE, pathname);
-		const res = await this.fetchFn(url, { headers: { Authorization: `Bearer ${token}` } });
+		const res = await this.request(url, { headers: { Authorization: `Bearer ${token}` } });
 		if (res.status === 204 || res.status === 404) return null;
 		if (!res.ok) {
 			const text = await res.text();

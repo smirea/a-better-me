@@ -182,4 +182,28 @@ describe('GarminSyncer throttling, SSO caching, and backoff', () => {
 		expect(scheduled.status).toBe('synced');
 		if (scheduled.status === 'synced') expect(scheduled.days).toEqual(['2026-11-21']);
 	});
+
+	it('invokes fetch without binding GarminSyncer as this', async () => {
+		const now = Date.parse('2026-11-21T12:00:00Z');
+		const strictFetch = async function (this: unknown, input: string | URL) {
+			if (this !== undefined && this !== globalThis) {
+				throw new TypeError('Illegal invocation: function called with incorrect `this` reference.');
+			}
+			const url = String(input);
+			if (url.includes('/personal-api-key/token')) {
+				return new Response(makeJwt(Math.floor((now + 3600_000) / 1000)), { status: 200 });
+			}
+			if (url.includes('/v2/dailysummaries')) return Response.json({ data: [] });
+			if (url.includes('/dailySleepSummariesByDate')) return Response.json([]);
+			if (url.includes('/hrv/daily/')) return Response.json({ hrvSummaries: [] });
+			if (url.includes('/search/activities')) return Response.json([]);
+			if (url.includes('/usersummary/daily')) return Response.json({});
+			if (url.includes('/dailyHeartRate')) return Response.json({ heartRateValues: [] });
+			return new Response(null, { status: 404 });
+		} as unknown as typeof fetch;
+
+		const { syncer } = createTestSyncer({ fetchFn: strictFetch, now: () => now });
+		const outcome = await syncer.sync({ days: 1 });
+		expect(outcome.status).toBe('synced');
+	});
 });

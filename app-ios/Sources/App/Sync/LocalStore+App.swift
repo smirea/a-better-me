@@ -15,6 +15,7 @@ extension LocalStore {
                 beforePush: { try await PictureFiles.shared.uploadQueued() }
             )
             try LegacyImport.run(database.pool, tables: syncSchema.tables, migrate: client.migrate)
+            try Self.ensureIndexes(in: database.pool)
             try LegacySupplementImages.move(database.pool, into: .shared)
             try SpaceResync.backUpIfNeeded(database.pool)
         } catch {

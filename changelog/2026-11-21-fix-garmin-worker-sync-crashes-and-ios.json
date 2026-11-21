@@ -1,0 +1,4 @@
+{
+	"title": "Fix Garmin Worker sync crashes and iOS launch and Food Log hangs",
+	"description": "Fixes GarminSyncer fetch Illegal invocation on Workers, adds SQLite indexes and async observations for heavy iOS queries, makes Dashboard lazy, caps Feedback cache reflection, and skips Sentry on simulators."
+}

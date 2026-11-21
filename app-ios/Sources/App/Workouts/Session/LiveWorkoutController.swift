@@ -68,9 +68,9 @@ final class LiveWorkoutController {
         .removeDuplicates()
         .start(
             in: store.database.pool,
-            scheduling: .immediate,
+            scheduling: .async(onQueue: .main),
             onError: { LocalStore.log.error("Live workout observation failed: \(String(describing: $0))") },
-            onChange: { [weak self] in self?.receive($0) }
+            onChange: { inputs in MainActor.assumeIsolated { [weak self] in self?.receive(inputs) } }
         )
         track()
         trackWatch()

@@ -111,8 +111,8 @@ private struct CaloriePill: View {
         self.plans = plans
         self.isSelected = isSelected
         self.action = action
-        _entries = Observe(FoodEntry.on(day))
-        _row = Observe(NutritionDay.one(day))
+        _entries = Observe(FoodEntry.on(day), async: true)
+        _row = Observe(NutritionDay.one(day), async: true)
     }
 
     var body: some View {
