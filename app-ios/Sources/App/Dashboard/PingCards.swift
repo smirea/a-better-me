@@ -7,7 +7,7 @@ struct PingCardsSection: View {
     @Observe private var cards: [PingCard]
 
     init(today: Date) {
-        _cards = Observe(PingCard.all(now: today, calendar: .current))
+        _cards = Observe(PingCard.all(now: today, calendar: .current), async: true)
     }
 
     var body: some View {

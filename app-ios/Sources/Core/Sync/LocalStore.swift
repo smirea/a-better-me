@@ -28,6 +28,19 @@ final class LocalStore {
         database = try LocalDatabase(at: url)
         client = SyncClient(database: database.pool, schema: syncSchema, endpoint: URL(string: "http://localhost")!, token: { nil })
         try client.migrate()
+        try Self.ensureIndexes(in: database.pool)
+    }
+
+    /// Local SQLite indexes on non-PK columns that views filter by (day, kind, session status), so queries never full-scan
+    /// growing tables on disk. Kept outside the synced schema because indexes are local read accelerators.
+    nonisolated static func ensureIndexes(in pool: DatabasePool) throws {
+        try pool.write { db in
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_food_entries_day ON food_entries(day)")
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_body_metrics_kind_day ON body_metrics(kind, day)")
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_ping_logs_logged_at ON ping_logs(logged_at)")
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_ping_logs_ping_id ON ping_logs(ping_id)")
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_workout_sessions_ended_at ON workout_sessions(ended_at)")
+        }
     }
 
     /// The server space the cursor belongs to, re-read off the main thread after each sync, for the feedback capture.

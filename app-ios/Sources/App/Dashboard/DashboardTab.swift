@@ -7,10 +7,10 @@ struct DashboardTab: View {
     @Environment(ExerciseCatalog.self) private var catalog
     @State private var nutrition = NutritionData()
     @Observe(AppSettings.current) private var settings
-    @Observe(NutritionLogDay.all) private var foodLog
+    @Observe(NutritionLogDay.all, async: true) private var foodLog
     @Observe(NutritionPlan.all) private var plans
     @Observe(NutrientGoal.all) private var goals
-    @Observe(BodyMetric.measurements) private var bodyMetrics
+    @Observe(BodyMetric.measurements, async: true) private var bodyMetrics
 
     var body: some View {
         // Reading `scenePhase` rebuilds the context when the scene becomes active, so a new day shows on return.
@@ -60,7 +60,7 @@ private struct DashboardHome: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 30) {
+            LazyVStack(alignment: .leading, spacing: 30) {
                 if !layout.primaryFocus.isEmpty {
                     FocusPager(cards: layout.primaryFocus)
                 }

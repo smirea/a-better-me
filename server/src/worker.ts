@@ -198,6 +198,7 @@ async function fetch(request: Request, env: Env): Promise<Response> {
 async function scheduled(controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
 	if (controller.cron === GARMIN_CRON) {
 		const res = await owner(env).fetch('https://space/garmin/sync');
+		if (!res.ok) throw new Error(`Garmin hourly sync answered ${res.status}: ${(await res.text()).slice(0, 200)}`);
 		const outcome = await res.json();
 		console.log('Garmin hourly sync:', JSON.stringify(outcome));
 		return;

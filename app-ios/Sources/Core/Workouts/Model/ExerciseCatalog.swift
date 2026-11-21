@@ -51,9 +51,9 @@ final class ExerciseCatalog {
             .removeDuplicates()
             .start(
                 in: store.database.pool,
-                scheduling: .immediate,
+                scheduling: .async(onQueue: .main),
                 onError: { LocalStore.log.error("Custom exercise observation failed: \(String(describing: $0))") },
-                onChange: { [weak self] in self?.setCustom($0) }
+                onChange: { [weak self] exercises in MainActor.assumeIsolated { self?.setCustom(exercises) } }
             )
     }
 

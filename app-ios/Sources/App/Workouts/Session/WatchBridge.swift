@@ -52,11 +52,13 @@ final class WatchBridge: NSObject {
         .removeDuplicates()
         .start(
             in: store.database.pool,
-            scheduling: .immediate,
+            scheduling: .async(onQueue: .main),
             onError: { LocalStore.log.error("Watch home observation failed: \(String(describing: $0))") },
-            onChange: { [weak self] in
-                self?.homeInputs = $0
-                self?.publish()
+            onChange: { [weak self] inputs in
+                MainActor.assumeIsolated {
+                    self?.homeInputs = inputs
+                    self?.publish()
+                }
             }
         )
         track()

@@ -55,9 +55,9 @@ struct StrategyDataReader<Content: View>: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(HealthData.self) private var health
     @Observe(NutritionPlan.all) private var plans
-    @Observe(NutritionLogDay.all) private var log
+    @Observe(NutritionLogDay.all, async: true) private var log
     @Observe(AppSettings.current) private var settings
-    @Observe(WorkoutSession.activeMinutes) private var workouts
+    @Observe(WorkoutSession.activeMinutes, async: true) private var workouts
     @State private var inputs = StrategyResults.last?.inputs
 
     var body: some View {
