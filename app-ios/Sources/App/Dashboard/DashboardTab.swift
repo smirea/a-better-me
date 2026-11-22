@@ -20,7 +20,7 @@ struct DashboardTab: View {
                 .navigationDestination(for: DashboardRoute.self) { route in
                     switch route {
                     case .settings: SettingsView()
-                    case .strain: StrainDetailView()
+                    case .strain: StrainDetailView { path.append(DashboardRoute.ping($0.id)) }
                     case let .ping(id): PingHistoryView(pingID: id)
                     case .allMuscles: AllMusclesView()
                     case .allExercises: AllExercisesView()

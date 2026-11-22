@@ -2,65 +2,92 @@ import Feedback
 import GRDB
 import SwiftUI
 
-/// Full Strain & Stress detail view with day navigation, interactive chart scrubbing, daily recovery/biometric stats,
-/// and a truncated chronological timeline of the day's activities and pings.
+/// Full Strain & Stress detail view with the shared day-strip header (Back left, Calendar / Go to Today right),
+/// cardless interactive stress chart, daily recovery/biometric stats, and the standard Pings timeline.
 struct StrainDetailView: View {
+    var openPing: (Ping) -> Void = { _ in }
+
+    @Environment(\.dismiss) private var dismiss
     @State private var day = CalendarDay.today
-    @State private var selectedDate: Date?
 
     var body: some View {
-        StrainDayDetailBody(day: $day, selectedDate: $selectedDate)
-            .detailTitle("Strain & Stress")
+        StrainDayDetailBody(day: day, openPing: openPing)
             .background(Theme.background)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    if day != .today {
-                        Button("Today") {
-                            selectedDate = nil
-                            day = .today
-                        }
-                        .accessibilityLabel("Jump to Today")
-                    }
-                }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                StrainDayHeader(day: $day, back: dismiss.callAsFunction)
             }
+            .navigationTitle("Strain & Stress")
+            .toolbarVisibility(.hidden, for: .navigationBar)
             .feedback(self)
     }
 }
 
-private struct StrainTimelineRow: Identifiable, Hashable {
-    var id: String
-    var at: Date
-    var icon: String
-    var tint: Color
-    var title: String
-    var subtitle: String
+private struct StrainDayHeader: View {
+    @Binding var day: CalendarDay
+    let back: () -> Void
+
+    var body: some View {
+        DayHeaderRow(day: $day) {
+            Button("Back", systemImage: "chevron.backward", action: back)
+        } strip: {
+            DayStrip(selected: day) { shown in
+                StrainDayPill(day: shown, isSelected: shown == day) { day = shown }
+            }
+        }
+        .padding(.bottom, 6)
+        .background(Theme.background)
+        .feedback(self)
+    }
+}
+
+private struct StrainDayPill: View {
+    let day: CalendarDay
+    let isSelected: Bool
+    let action: () -> Void
+
+    @Observe private var strain: Double?
+
+    init(day: CalendarDay, isSelected: Bool, action: @escaping () -> Void) {
+        self.day = day
+        self.isSelected = isSelected
+        self.action = action
+        _strain = Observe(GarminDay.strain(on: day))
+    }
+
+    var body: some View {
+        DayPill(
+            day: day,
+            isSelected: isSelected,
+            ring: strain.map { DayRing(fraction: max(0.05, min(1, $0 / 21.0)), color: Theme.accent) },
+            action: action
+        )
+    }
 }
 
 private struct StrainDayDetailBody: View {
     @Environment(LocalStore.self) private var store
-    @Binding var day: CalendarDay
-    @Binding var selectedDate: Date?
+    let day: CalendarDay
+    let openPing: (Ping) -> Void
+
     @State private var snapshot: StrainDaySnapshot
     @State private var loadedDay: CalendarDay?
 
-    init(day: Binding<CalendarDay>, selectedDate: Binding<Date?>) {
-        _day = day
-        _selectedDate = selectedDate
-        _snapshot = State(initialValue: .empty(for: day.wrappedValue))
+    init(day: CalendarDay, openPing: @escaping (Ping) -> Void) {
+        self.day = day
+        self.openPing = openPing
+        _snapshot = State(initialValue: .empty(for: day))
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                dayNavigator
-
                 VStack(alignment: .leading, spacing: 12) {
-                    calloutHeader
+                    chartHeader
 
                     if loadedDay != day {
                         ProgressView()
                             .frame(maxWidth: .infinity)
-                            .frame(height: 210)
+                            .frame(height: 230)
                     } else if snapshot.garmin?.stressSeries.isEmpty ?? true {
                         ContentUnavailableView(
                             "No Garmin Data",
@@ -69,47 +96,28 @@ private struct StrainDayDetailBody: View {
                         )
                         .frame(height: 180)
                     } else {
-                        GeometryReader { geo in
-                            StrainTimelineChart(snapshot: snapshot, selectedDate: selectedDate)
-                                .contentShape(.rect)
-                                .gesture(
-                                    DragGesture(minimumDistance: 0)
-                                        .onChanged { value in
-                                            let leftPad: CGFloat = 26
-                                            let rightPad: CGFloat = 6
-                                            let plotW = max(1, geo.size.width - leftPad - rightPad)
-                                            let frac = min(1, max(0, Double((value.location.x - leftPad) / plotW)))
-                                            let start = snapshot.windowStart.timeIntervalSince1970
-                                            let span = max(3600, snapshot.windowEnd.timeIntervalSince1970 - start)
-                                            selectedDate = Date(timeIntervalSince1970: start + frac * span)
-                                        }
-                                        .onEnded { _ in selectedDate = nil }
-                                )
-                        }
-                        .frame(height: 210)
+                        StrainTimelineChart(snapshot: snapshot, backdrop: Theme.background, interactive: true)
+                            .frame(height: 230)
+                            .feedback(
+                                "Strain Chart",
+                                data: (day: day, strain: snapshot.garmin?.strain, activities: snapshot.activities.count, pings: snapshot.pings.count)
+                            )
                     }
 
                     stressZoneBar
                 }
-                .card()
 
                 if let garmin = snapshot.garmin {
                     biometricGrid(garmin)
                 }
 
-                let items = mergedTimelineItems()
-                if !items.isEmpty {
-                    TruncatedList("Activities & Pings", items: items) { item in
-                        StrainTimelineRowView(item: item)
-                            .padding(.horizontal, 16)
-                    } destination: {
-                        StrainTimelineAllView(subtitle: formattedDay(day), items: items)
-                    }
-                }
+                EmbeddedPingTimeline(day: day, history: openPing)
             }
             .padding(.horizontal, Theme.margin)
+            .padding(.top, 8)
             .padding(.bottom, 30)
         }
+        .scrollDismissesKeyboard(.interactively)
         .task(id: day) {
             let target = day
             if loadedDay != target {
@@ -132,77 +140,26 @@ private struct StrainDayDetailBody: View {
         }
     }
 
-    private var dayNavigator: some View {
-        HStack {
-            Button {
-                selectedDate = nil
-                day = day.adding(days: -1)
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.body.weight(.semibold))
-                    .frame(width: 36, height: 36)
-            }
-            .accessibilityLabel("Previous Day")
-
-            Spacer()
-            Text(formattedDay(day))
-                .font(AppFont.headline(16))
-            Spacer()
-
-            Button {
-                selectedDate = nil
-                day = day.adding(days: 1)
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.body.weight(.semibold))
-                    .frame(width: 36, height: 36)
-            }
-            .disabled(day >= .today)
-            .opacity(day >= .today ? 0.3 : 1)
-            .accessibilityLabel("Next Day")
-        }
-        .padding(.horizontal, 4)
-    }
-
-    @ViewBuilder
-    private var calloutHeader: some View {
-        if let selectedDate, let point = nearestStress(to: selectedDate) {
-            let hr = nearestHR(to: selectedDate)
-            HStack(alignment: .firstTextBaseline) {
-                Text(point.value.formatted(.number.precision(.fractionLength(2))))
+    private var chartHeader: some View {
+        HStack(alignment: .firstTextBaseline) {
+            if let strain = snapshot.garmin?.strain {
+                Text(strain.formatted(.number.precision(.fractionLength(1))))
                     .font(AppFont.number(26))
-                    .foregroundStyle(stressColor(point.value))
-                Text(selectedDate.formatted(date: .omitted, time: .shortened))
+                Text("Day Strain")
                     .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
-                Spacer()
-                if let hr {
-                    Text("\(Int(hr.value.rounded())) bpm")
-                        .font(AppFont.number(16))
-                        .foregroundStyle(Theme.textPrimary)
-                }
+            } else {
+                Text("--")
+                    .font(AppFont.number(26))
+                Text("Day Strain")
+                    .font(AppFont.rowDetail)
+                    .foregroundStyle(Theme.textSecondary)
             }
-        } else {
-            HStack(alignment: .firstTextBaseline) {
-                if let strain = snapshot.garmin?.strain {
-                    Text(strain.formatted(.number.precision(.fractionLength(1))))
-                        .font(AppFont.number(26))
-                    Text("Day Strain")
-                        .font(AppFont.rowDetail)
-                        .foregroundStyle(Theme.textSecondary)
-                } else {
-                    Text("--")
-                        .font(AppFont.number(26))
-                    Text("Day Strain")
-                        .font(AppFont.rowDetail)
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                Spacer()
-                if let latest = snapshot.latestStress, let label = snapshot.stressLevelLabel {
-                    Text("\(latest.formatted(.number.precision(.fractionLength(1)))) · \(label)")
-                        .font(AppFont.number(14))
-                        .foregroundStyle(stressColor(latest))
-                }
+            Spacer()
+            if let latest = snapshot.latestStress, let label = snapshot.stressLevelLabel {
+                Text("\(latest.formatted(.number.precision(.fractionLength(1)))) · \(label)")
+                    .font(AppFont.number(14))
+                    .foregroundStyle(stressColor(latest))
             }
         }
     }
@@ -267,105 +224,5 @@ private struct StrainDayDetailBody: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .card()
-    }
-
-    private func mergedTimelineItems() -> [StrainTimelineRow] {
-        var rows: [StrainTimelineRow] = []
-        for band in snapshot.activities {
-            var sub = band.detail
-            if let strain = band.strain {
-                sub += (sub.isEmpty ? "" : " · ") + "Strain \(strain.formatted(.number.precision(.fractionLength(1))))"
-            }
-            rows.append(StrainTimelineRow(
-                id: "act-\(band.id)",
-                at: band.start,
-                icon: band.symbol,
-                tint: band.kind == .sleep ? Color(hex: 0x94A3B8) : Color(hex: 0x3B82F6),
-                title: band.title,
-                subtitle: sub
-            ))
-        }
-        for ping in snapshot.pings {
-            let parts = [ping.valueText, ping.note.isEmpty ? nil : ping.note].compactMap { $0 }
-            rows.append(StrainTimelineRow(
-                id: "ping-\(ping.id.uuidString)",
-                at: ping.at,
-                icon: ping.icon,
-                tint: ping.color.swatch,
-                title: ping.name,
-                subtitle: parts.joined(separator: " · ")
-            ))
-        }
-        return rows.sorted { $0.at < $1.at }
-    }
-
-    private func nearestStress(to date: Date) -> GarminSeriesPoint? {
-        let target = date.timeIntervalSince1970
-        return snapshot.garmin?.stressSeries.min { abs($0.epochSec - target) < abs($1.epochSec - target) }
-    }
-
-    private func nearestHR(to date: Date) -> GarminSeriesPoint? {
-        let target = date.timeIntervalSince1970
-        return snapshot.garmin?.heartRateSeries.min { abs($0.epochSec - target) < abs($1.epochSec - target) }
-    }
-
-    private func formattedDay(_ day: CalendarDay) -> String {
-        if day == .today { return "Today" }
-        if day == CalendarDay.today.adding(days: -1) { return "Yesterday" }
-        return day.date(in: .current).formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-    }
-}
-
-private struct StrainTimelineRowView: View {
-    let item: StrainTimelineRow
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: item.icon)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(item.tint)
-                .frame(width: 28, height: 28)
-                .background(item.tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 8))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.title)
-                    .font(AppFont.headline(14))
-                    .foregroundStyle(Theme.textPrimary)
-                if !item.subtitle.isEmpty {
-                    Text(item.subtitle)
-                        .font(AppFont.rowDetail)
-                        .foregroundStyle(Theme.textSecondary)
-                }
-            }
-            Spacer()
-            Text(item.at.formatted(date: .omitted, time: .shortened))
-                .font(AppFont.rowDetail)
-                .foregroundStyle(Theme.textTertiary)
-        }
-        .padding(.vertical, 10)
-    }
-}
-
-private struct StrainTimelineAllView: View {
-    let subtitle: String
-    let items: [StrainTimelineRow]
-
-    var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    StrainTimelineRowView(item: item)
-                        .padding(.horizontal, 16)
-                        .overlay(alignment: .top) {
-                            if index > 0 { Divider().overlay(Theme.separator) }
-                        }
-                }
-            }
-            .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
-            .padding(.horizontal, Theme.margin)
-            .padding(.bottom, 30)
-        }
-        .background(Theme.background)
-        .detailTitle("Activities & Pings", subtitle: subtitle)
-        .feedback(self)
     }
 }

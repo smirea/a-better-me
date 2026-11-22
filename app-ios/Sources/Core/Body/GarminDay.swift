@@ -239,6 +239,12 @@ struct GarminDay: SyncedRecord {
         container["body_battery_series"] = try RowJSON.text(bodyBatterySeries)
         container["motion_spans"] = try RowJSON.text(motionSpans)
     }
+
+    static func strain(on day: CalendarDay) -> DatabaseQuery<Double?> {
+        DatabaseQuery(nil) { db in
+            try Double.fetchOne(db, sql: "SELECT strain FROM garmin_days WHERE id = ?", arguments: [day.description])
+        }
+    }
 }
 
 /// A row of the synced `garmin_activities` table: one recorded Garmin activity with its 1-second heart rate stream.
@@ -546,4 +552,57 @@ struct StrainDaySnapshot: Equatable, Sendable {
         if lower.contains("cycl") || lower.contains("swim") || lower.contains("cardio") || lower.contains("row") { return .cardio }
         return .other
     }
+
+    func selection(
+        atX x: Double,
+        plotWidth: Double,
+        pingHitRadius: Double = 10,
+        activityHitRadius: Double = 6
+    ) -> StrainChartSelection {
+        let start = windowStart.timeIntervalSince1970
+        let end = max(start + 3600, windowEnd.timeIntervalSince1970)
+        let span = end - start
+        let width = max(1, plotWidth)
+        let clampedX = min(width, max(0, x))
+        let frac = clampedX / width
+        let targetEpoch = start + frac * span
+        let targetDate = Date(timeIntervalSince1970: targetEpoch)
+        let pxPerSec = width / span
+        let activityRadiusSec = activityHitRadius / pxPerSec
+
+        let maxGap: TimeInterval = 15 * 60
+        let stress = garmin?.stressSeries
+            .min { abs($0.epochSec - targetEpoch) < abs($1.epochSec - targetEpoch) }
+            .flatMap { abs($0.epochSec - targetEpoch) <= maxGap ? $0 : nil }
+        let heartRate = garmin?.heartRateSeries
+            .min { abs($0.epochSec - targetEpoch) < abs($1.epochSec - targetEpoch) }
+            .flatMap { abs($0.epochSec - targetEpoch) <= maxGap ? $0 : nil }
+
+        let matchingActivities = activities.filter { band in
+            let bandStart = band.start.timeIntervalSince1970
+            let bandEnd = band.end.timeIntervalSince1970
+            return targetEpoch >= bandStart - activityRadiusSec && targetEpoch <= bandEnd + activityRadiusSec
+        }
+
+        let matchingPings = pings.filter { ping in
+            let pingX = min(1, max(0, (ping.at.timeIntervalSince1970 - start) / span)) * width
+            return abs(pingX - clampedX) <= pingHitRadius
+        }
+
+        return StrainChartSelection(
+            date: targetDate,
+            stress: stress,
+            heartRate: heartRate,
+            activities: matchingActivities,
+            pings: matchingPings
+        )
+    }
+}
+
+struct StrainChartSelection: Equatable, Sendable {
+    var date: Date
+    var stress: GarminSeriesPoint?
+    var heartRate: GarminSeriesPoint?
+    var activities: [StrainDaySnapshot.ActivityBand]
+    var pings: [StrainDaySnapshot.PingMark]
 }

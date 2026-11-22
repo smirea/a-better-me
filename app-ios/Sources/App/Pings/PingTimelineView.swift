@@ -1,4 +1,5 @@
 import Feedback
+import GRDB
 import SwiftUI
 
 /// One day of the Pings tab: a bar down the left with a row per log at its time, and a line across for each thing the
@@ -19,8 +20,6 @@ struct PingTimelinePage: View {
 
     @Observe private var timeline: PingTimeline
     @State private var rows = ViewMemo<PingTimeline, [PingTimelineRow]>()
-    /// Fits "12:51 PM" in the monospaced time font on one line.
-    @ScaledMetric private var gutter: CGFloat = 68
     @State private var safeBottom: CGFloat = 0
 
     init(
@@ -39,7 +38,6 @@ struct PingTimelinePage: View {
 
     var body: some View {
         let rows = self.rows(timeline) { timeline.rows() }
-        let ids = rows.map(\.id)
         // A log that joins a group adds no row, so the scroll to it watches the logs.
         let logs = rows.flatMap { $0.entries.map(\.log.key) }
         // The scroll view already keeps its content out of the bottom safe area, which the drawer reaches into.
@@ -60,7 +58,11 @@ struct PingTimelinePage: View {
                 .padding(.bottom, bottomInset)
             } else {
                 ScrollViewReader { proxy in
-                    ScrollView { timeline(rows, ids: ids) }
+                    ScrollView {
+                        PingTimelineList(rows: rows, editing: $editing, history: history)
+                            .padding(.horizontal, Theme.margin)
+                            .padding(.vertical, 8)
+                    }
                         // The owner asked (2026-11-19) for a short day to start at the top. A day taller than the
                         // page opens on its latest row and keeps it in view, also when the drawer opens and takes the
                         // page's lower part.
@@ -83,8 +85,52 @@ struct PingTimelinePage: View {
         .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { safeBottom = $0 }
         .feedback(self)
     }
+}
 
-    private func timeline(_ rows: [PingTimelineRow], ids: [String]) -> some View {
+/// Embeddable Pings timeline for screens that already live inside their own `ScrollView` (such as Strain & Stress).
+/// Observes the day's timeline off the main thread so pushing the screen or changing days never blocks main.
+struct EmbeddedPingTimeline: View {
+    let day: CalendarDay
+    let history: (Ping) -> Void
+
+    @Environment(LocalStore.self) private var store
+    @State private var timeline = PingTimeline()
+    @State private var rows = ViewMemo<PingTimeline, [PingTimelineRow]>()
+    @State private var editing: Set<UUID> = []
+
+    var body: some View {
+        let rows = self.rows(timeline) { timeline.rows() }
+        VStack(spacing: 0) {
+            if !rows.isEmpty {
+                PingTimelineList(rows: rows, editing: $editing, history: history)
+                    .feedback(self)
+            }
+        }
+        .task(id: day) {
+            editing = []
+            let query = PingTimeline.on(day)
+            let observation = ValueObservation.trackingConstantRegion(query.fetch).removeDuplicates()
+            do {
+                for try await next in observation.values(in: store.database.pool) {
+                    guard !Task.isCancelled else { break }
+                    timeline = next
+                }
+            } catch {}
+        }
+    }
+}
+
+/// The Pings timeline's vertical bar and rows, shared between `PingTimelinePage` and `EmbeddedPingTimeline`.
+struct PingTimelineList: View {
+    let rows: [PingTimelineRow]
+    @Binding var editing: Set<UUID>
+    let history: (Ping) -> Void
+
+    /// Fits "12:51 PM" in the monospaced time font on one line.
+    @ScaledMetric private var gutter: CGFloat = 68
+
+    var body: some View {
+        let ids = rows.map(\.id)
         VStack(spacing: 0) {
             ForEach(rows) { row in
                 switch row {
@@ -107,8 +153,6 @@ struct PingTimelinePage: View {
             Rectangle().fill(Theme.separator).frame(width: 1).padding(.leading, gutter + PingTimelineMetrics.node / 2)
                 .accessibilityHidden(true)
         }
-        .padding(.horizontal, Theme.margin)
-        .padding(.vertical, 8)
         .animation(.snappy(duration: 0.3), value: ids)
         .animation(.snappy(duration: 0.25), value: editing)
     }
