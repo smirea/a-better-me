@@ -266,7 +266,7 @@ struct StrainTimelineChart: View {
                     let clampedX = min(max(preferredX, halfW), max(geo.size.width - halfW, halfW))
                     let clampedY = max(tooltipSize.height / 2, Self.topPad + tooltipSize.height / 2 + 4)
 
-                    StrainChartTooltip(selection: selection)
+                    StrainChartTooltip(selection: selection, maxWidth: max(120, geo.size.width - 16))
                         .onGeometryChange(for: CGSize.self) { $0.size } action: { tooltipSize = $0 }
                         .opacity(tooltipSize == .zero ? 0 : 1)
                         .position(x: clampedX, y: clampedY)
@@ -310,6 +310,7 @@ struct StrainTimelineChart: View {
 
 private struct StrainChartTooltip: View {
     let selection: StrainChartSelection
+    let maxWidth: CGFloat
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -341,10 +342,12 @@ private struct StrainChartTooltip: View {
                     Text(band.title)
                         .font(AppFont.headline(12))
                         .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
                     if !band.detail.isEmpty {
                         Text(band.detail)
                             .font(AppFont.caption())
                             .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
                     }
                 }
             }
@@ -357,10 +360,12 @@ private struct StrainChartTooltip: View {
                     Text(ping.name)
                         .font(AppFont.headline(12))
                         .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
                     if let value = ping.valueText {
                         Text(value)
                             .font(AppFont.caption())
                             .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
                     } else if !ping.note.isEmpty {
                         Text(ping.note)
                             .font(AppFont.caption())
@@ -370,12 +375,14 @@ private struct StrainChartTooltip: View {
                     Text(ping.at.formatted(date: .omitted, time: .shortened))
                         .font(AppFont.caption(10))
                         .foregroundStyle(Theme.textTertiary)
+                        .fixedSize()
                 }
             }
         }
-        .fixedSize(horizontal: true, vertical: true)
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
+        .frame(maxWidth: maxWidth, alignment: .leading)
         .background(Theme.surfaceRaised, in: .rect(cornerRadius: Theme.smallCornerRadius))
         .shadow(color: .black.opacity(0.35), radius: 8, y: 2)
         .accessibilityElement(children: .combine)
