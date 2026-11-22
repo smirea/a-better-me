@@ -11,11 +11,6 @@ struct CustomizeDashboardView: View {
     var body: some View {
         let layout = draft ?? settings.dashboard
         List {
-            ThemedSection("Primary Focus") {
-                PrimaryFocusPicker(order: binding(\.primaryFocus))
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-            }
             ThemedSection("Section Order") {
                 ForEach(layout.sections) { RowLabel(title: $0.title) }
                     .onMove { binding(\.sections).wrappedValue.move(fromOffsets: $0, toOffset: $1) }
@@ -205,19 +200,6 @@ extension HabitCard {
     }
 }
 
-extension FocusCard {
-    var title: String {
-        switch self {
-        case .overview: "Today"
-        case .workouts: "Weekly Workouts"
-        case .recentRecords: "Recent Records"
-        case .weeklyNutrition: "Weekly Nutrition"
-        case .energyBalance: "Energy Balance"
-        case .dailyNutrition: "Daily Nutrition"
-        }
-    }
-}
-
 enum CardIcon {
     case workouts, trend, weighInDots, workoutDots, scale, muscle, exercise, steps
     case expenditure, energyBalance, goalProgress, foodLoggingDots, nutrient, macros
@@ -283,114 +265,6 @@ private struct MetricMenuLabel: View {
         }
         .font(AppFont.chip)
         .foregroundStyle(Theme.textSecondary)
-    }
-}
-
-/// Every page as a tile with a toggle; the arrows move a shown page one place in the carousel's order.
-private struct PrimaryFocusPicker: View {
-    @Binding var order: [FocusCard]
-    @Environment(\.summaryNutrients) private var columns
-
-    private var shown: [FocusCard] {
-        order + FocusCard.allCases.filter { !order.contains($0) }
-    }
-
-    var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 14) {
-                ForEach(shown, id: \.self) { card in
-                    let index = order.firstIndex(of: card)
-                    VStack(spacing: 8) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Toggle(card.title, isOn: Binding(
-                                get: { order.contains(card) },
-                                set: { on in
-                                    if on { order.append(card) } else { order.removeAll { $0 == card } }
-                                }
-                            ))
-                            .font(AppFont.headline(12))
-                            .tint(Theme.accent)
-                            preview(card)
-                                .frame(maxWidth: .infinity, minHeight: 70)
-                        }
-                        .padding(10)
-                        .frame(width: 150)
-                        .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
-                        .overlay(RoundedRectangle(cornerRadius: Theme.smallCornerRadius).stroke(Theme.textPrimary.opacity(index != nil ? 0.9 : 0.2)))
-                        .feedback("Focus Page", data: (card: card, position: index))
-                        HStack(spacing: 18) {
-                            Button("Move \(card.title) Left", systemImage: "arrow.left") { move(card, by: -1) }
-                                .disabled(index.map { $0 == 0 } ?? true)
-                            Button("Move \(card.title) Right", systemImage: "arrow.right") { move(card, by: 1) }
-                                .disabled(index.map { $0 == order.count - 1 } ?? true)
-                        }
-                        .labelStyle(.iconOnly)
-                        .buttonStyle(.borderless)
-                        .foregroundStyle(Theme.textPrimary)
-                    }
-                }
-            }
-            .padding(.vertical, 4)
-        }
-        .scrollIndicators(.hidden)
-    }
-
-    private func move(_ card: FocusCard, by offset: Int) {
-        guard let index = order.firstIndex(of: card) else { return }
-        withAnimation { order.swapAt(index, index + offset) }
-    }
-
-    @ViewBuilder
-    private func preview(_ card: FocusCard) -> some View {
-        switch card {
-        case .overview:
-            HStack(spacing: 10) {
-                BodyMap(values: [.chest: 10, .quads: 6, .biceps: 3], side: .front).frame(height: 56)
-                VStack(alignment: .leading, spacing: 7) {
-                    ForEach(columns, id: \.self) { id in
-                        Capsule().fill(id.color).frame(width: 44, height: 3)
-                    }
-                }
-            }
-        case .workouts:
-            HStack(spacing: 6) {
-                ProgressRing(fraction: 1, color: Theme.muscle, lineWidth: 2.5).frame(width: 26, height: 26)
-                ProgressRing(fraction: 1, color: Theme.accent, lineWidth: 2.5).frame(width: 36, height: 36)
-                ProgressRing(fraction: 1, color: Theme.exercise, lineWidth: 2.5).frame(width: 26, height: 26)
-            }
-        case .recentRecords:
-            VStack(alignment: .leading, spacing: 5) {
-                ForEach([0.9, 0.7, 0.8, 0.6, 0.75], id: \.self) { width in
-                    Capsule().fill(Theme.records).frame(width: 90 * width, height: 4)
-                }
-            }
-        case .weeklyNutrition:
-            Grid(horizontalSpacing: 7, verticalSpacing: 5) {
-                ForEach(columns, id: \.self) { id in
-                    GridRow {
-                        ForEach(0..<7, id: \.self) { _ in
-                            Capsule().fill(id.color).frame(width: 4, height: 10)
-                        }
-                    }
-                }
-            }
-        case .energyBalance:
-            HStack(alignment: .bottom, spacing: 3) {
-                ForEach(Array([0.6, 0.8, 0.5, 0.9, 0.7, 0.75, 0.55, 0.85, 0.65, 0.8].enumerated()), id: \.offset) { _, height in
-                    Capsule().fill(Theme.calories).frame(width: 5, height: 40 * height)
-                }
-            }
-        case .dailyNutrition:
-            VStack(spacing: 8) {
-                ProgressRing(fraction: 1, color: Theme.calories, lineWidth: 2.5, arc: 0.75)
-                    .frame(width: 34, height: 34)
-                HStack(spacing: 10) {
-                    ForEach([NutrientID.protein, .fat, .carbs], id: \.self) { id in
-                        Capsule().fill(id.color).frame(width: 22, height: 3)
-                    }
-                }
-            }
-        }
     }
 }
 

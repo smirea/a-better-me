@@ -229,10 +229,9 @@ struct DashboardValues: DynamicProperty {
 
     private enum Name: Hashable {
         case muscleCard(MuscleCard), exerciseCard(ExerciseCard), workoutsCard, trendCard, scaleWeightCard, stepGoal
-        case weighInHabit, workoutHabit, records(ExerciseRecord.Kind), trained
-        case cycle(DashboardMetrics.CycleScope, Program?, [WorkoutTemplate])
+        case weighInHabit, workoutHabit, trained
         case detail(DashboardRoute), plot(DashboardRoute, MetricTab.ID?, ChartRange, Averaging)
-        case expenditureDays, expenditureCard, balance(BalanceReference, days: Int), week([NutrientID], overages: Bool), foodLogging
+        case expenditureDays, expenditureCard, balance(BalanceReference, days: Int), foodLogging
         case todaySummary([NutrientID], overages: Bool)
         case goal(GoalProgressValues.Source)
         case nutrientTile(NutritionCard), macrosCard, bodyMetricCard(BodyMetricCard)
@@ -288,9 +287,6 @@ struct DashboardValues: DynamicProperty {
 
     var expenditureCard: CardValues { memo(.expenditureCard, usesNutrition: true) { $0.expenditureCard } }
     func balance(_ reference: BalanceReference, days: Int) -> BalanceValues { memo(.balance(reference, days: days), usesNutrition: true) { $0.balance(reference, days: days) } }
-    func week(_ columns: [NutrientID], overages: Bool) -> [NutritionMetrics.DaySummary] {
-        memo(.week(columns, overages: overages), usesNutrition: true) { $0.week(columns, overages: overages) }
-    }
     func todaySummary(_ columns: [NutrientID], overages: Bool) -> [MacroLine] {
         memo(.todaySummary(columns, overages: overages), usesNutrition: true) { $0.todaySummary(columns, overages: overages) }
     }
@@ -312,11 +308,6 @@ struct DashboardValues: DynamicProperty {
     var weighInHabit: HabitValues { memo(.weighInHabit, usesHealth: true) { $0.weighInHabit } }
     var workoutHabit: HabitValues { memo(.workoutHabit) { $0.workoutHabit } }
     var trainedExercises: [ExerciseID] { memo(.trained) { $0.trainedExercises } }
-    func recentRecords(_ kind: ExerciseRecord.Kind) -> [RecordRow] { memo(.records(kind)) { $0.recentRecords(kind) } }
-
-    func cycleProgress(_ scope: DashboardMetrics.CycleScope, program: Program?, templates: [WorkoutTemplate]) -> DashboardMetrics.CycleProgress {
-        memo(.cycle(scope, program, templates)) { $0.cycleProgress(scope, program: program, templates: templates) }
-    }
 
     func detail(_ route: DashboardRoute) -> MetricDetail {
         memo(.detail(route), usesHealth: route.usesHealth, usesNutrition: route.usesNutrition) { $0.detail(route) }

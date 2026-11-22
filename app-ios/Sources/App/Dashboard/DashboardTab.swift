@@ -61,9 +61,8 @@ private struct DashboardHome: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 30) {
-                if !layout.primaryFocus.isEmpty {
-                    FocusPager(cards: layout.primaryFocus)
-                }
+                OverviewFocus()
+                    .padding(.horizontal, Theme.margin)
                 StrainDashboardCard(day: CalendarDay(context.today, in: context.calendar))
                     .id(context.today)
                 ForEach(layout.sections, id: \.self) { section in
@@ -126,78 +125,6 @@ private extension DashboardSection {
         case .exercises: .allExercises
         case .insights, .habits, .pings: nil
         }
-    }
-}
-
-/// A paging scroll view rather than a page-style `TabView`, which hosts each page in a recycled collection view cell:
-/// every swipe rebuilt the page coming in, Swift Charts and all, while the finger moved. The stack is eager so the
-/// handful of pages are built once and a swipe only moves them.
-private struct FocusPager: View {
-    let cards: [FocusCard]
-    @State private var shown: FocusCard?
-
-    var body: some View {
-        VStack(spacing: 6) {
-            ScrollView(.horizontal) {
-                HStack(alignment: .top, spacing: 0) {
-                    ForEach(cards, id: \.self) { card in
-                        page(card)
-                            .padding(.horizontal, Theme.margin)
-                            .containerRelativeFrame(.horizontal)
-                    }
-                }
-                .scrollTargetLayout()
-            }
-            .scrollTargetBehavior(.paging)
-            .scrollPosition(id: $shown)
-            .scrollIndicators(.hidden)
-            if cards.count > 1 {
-                PageControl(count: cards.count, current: Binding(
-                    get: { shown.flatMap(cards.firstIndex(of:)) ?? 0 },
-                    set: { index in withAnimation { shown = cards[index] } }
-                ))
-            }
-        }
-        .feedback(self)
-    }
-
-    @ViewBuilder
-    private func page(_ card: FocusCard) -> some View {
-        switch card {
-        case .overview: OverviewFocus()
-        case .workouts: CycleFocus()
-        case .recentRecords: RecordsFocus()
-        case .weeklyNutrition: WeeklyNutritionFocus()
-        case .energyBalance: EnergyBalanceFocusCard()
-        case .dailyNutrition: DailyNutritionFocus()
-        }
-    }
-}
-
-/// Owns its picker's state, so a tap re-renders this card alone.
-private struct CycleFocus: View {
-    @Observe(WorkoutTemplate.all) private var templates
-    @Observe(Program.active) private var program
-    @State private var scope = DashboardMetrics.CycleScope.activeProgram
-    private var values = DashboardValues()
-
-    var body: some View {
-        CycleRingsCard(
-            progress: values.cycleProgress(scope, program: program, templates: templates),
-            hasProgram: program != nil,
-            scope: $scope
-        )
-        .feedback(self)
-    }
-}
-
-private struct RecordsFocus: View {
-    @State private var kind = ExerciseRecord.Kind.volume
-    private var values = DashboardValues()
-
-    var body: some View {
-        RecentRecordsCard(records: values.recentRecords(kind), kind: $kind)
-        .feedback(self)
     }
 }
 

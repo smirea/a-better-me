@@ -10,14 +10,6 @@ struct HabitValues: Equatable {
     var text: String
 }
 
-struct RecordRow: Hashable {
-    var exerciseID: ExerciseID
-    var name: String
-    var label: String
-    /// The value over the largest one shown.
-    var fraction: Double
-}
-
 /// Weights are stored in kilograms and converted to the owner's unit here, once, for every chart.
 struct DashboardData {
     var sessions: [WorkoutSession]
@@ -113,28 +105,6 @@ struct DashboardData {
             days: DashboardMetrics.habitDays(dates, now: now, calendar: calendar),
             text: "\(dates.count { calendar.isDate($0, equalTo: now, toGranularity: .weekOfYear) })"
         )
-    }
-
-    func cycleProgress(_ scope: DashboardMetrics.CycleScope, program: Program?, templates: [WorkoutTemplate]) -> DashboardMetrics.CycleProgress {
-        DashboardMetrics.cycleProgress(
-            program == nil ? .allWorkouts : scope, program: program, templates: templates, sessions: sessions,
-            now: now, calendar: calendar, catalog: catalog
-        )
-    }
-
-    func recentRecords(_ kind: ExerciseRecord.Kind) -> [RecordRow] {
-        let records = DashboardMetrics.recentRecords(sessions, kind: kind, catalog: catalog)
-        let top = records.map(\.value).max() ?? 1
-        return records.map { record in
-            let label = switch kind {
-            case .reps: "\(Int(record.value)) reps"
-            case .volume, .oneRepMax: "\(unit.fromKg(record.value).dashboardText) \(unit.rawValue)"
-            }
-            return RecordRow(
-                exerciseID: record.exerciseID, name: catalog(record.exerciseID)?.name ?? Exercise.unknownName,
-                label: label, fraction: record.value / top
-            )
-        }
     }
 
     /// Newest first.
