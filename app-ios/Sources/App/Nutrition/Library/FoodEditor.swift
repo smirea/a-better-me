@@ -18,6 +18,7 @@ struct FoodEditor: View {
     /// The draft as the editor opened or the last photo read left it, so a new read skips the fields changed since.
     @State private var baseline: FoodDraft
     private let opened: FoodDraft
+    private let draftKey: String?
     @State private var photos: FoodPhotoReader
     @State private var showErrors = false
     @State private var choosingIcon = false
@@ -39,6 +40,7 @@ struct FoodEditor: View {
         _draft = State(initialValue: initial)
         _baseline = State(initialValue: initial)
         opened = initial
+        draftKey = food.map { "food.\($0.id)" } ?? (initial == FoodDraft() && photos == nil ? "food.new" : nil)
         _photos = State(initialValue: photos ?? FoodPhotoReader())
         _expanded = State(initialValue: Set(NutrientSection.allCases.filter { section in
             section.nutrients.contains { !(initial.nutrients[$0.id] ?? "").isEmpty }
@@ -79,7 +81,10 @@ struct FoodEditor: View {
             .detailTitle(editing != nil ? "Edit Food" : replaces != nil ? "Update Food" : "Create Food")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(role: .close) { dismiss() }
+                    Button(role: .close) {
+                        DraftStore.clear(draftKey)
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm) { save(adding: false) }
@@ -95,6 +100,9 @@ struct FoodEditor: View {
                 let read = baseline.reading(label)
                 draft.merge(read, over: baseline)
                 baseline = read
+            }
+            // A photo read or a restored draft fills nutrients in collapsed sections, which open to show them.
+            .onChange(of: draft.nutrients) {
                 expanded.formUnion(NutrientSection.allCases.filter { section in
                     section.nutrients.contains { !(draft.nutrients[$0.id] ?? "").isEmpty }
                 })
@@ -104,6 +112,7 @@ struct FoodEditor: View {
             .alert("Delete Custom Food", isPresented: $confirmingDelete) {
                 Button("Delete", role: .destructive) {
                     if let editing { store.deleteFood(editing.id) }
+                    DraftStore.clear(draftKey)
                     dismiss()
                 }
                 Button("Cancel", role: .cancel) {}
@@ -113,6 +122,7 @@ struct FoodEditor: View {
         }
         // A read takes seconds and fills dozens of fields; a stray swipe should not throw that away. Close still does.
         .interactiveDismissDisabled(draft != opened || !photos.photos.isEmpty)
+        .persistDraft($draft, key: draftKey)
         .feedback(self)
     }
 
@@ -252,6 +262,7 @@ struct FoodEditor: View {
             onSave?(food)
             if adding { onCreateAndAdd?(food) }
         }
+        DraftStore.clear(draftKey)
         dismiss()
     }
 }

@@ -4,7 +4,6 @@ import SwiftUI
 /// MacroFactor's Food Log: one header row (Calendar, the day strip, Day Options), the day's macro summary, and a
 /// timeline of hours that pages between days.
 struct FoodLogTab: View {
-    @Environment(LocalStore.self) private var store
     @Bindable var state: FoodLogState
 
     var body: some View {
@@ -35,12 +34,6 @@ struct FoodLogTab: View {
                 .navigationDestination(for: SupplementRoute.self) { $0.destination }
         }
         .environment(state)
-        .sheet(item: $state.logRequest) { LoggerSheet(start: LoggerStart($0)) }
-        .sheet(item: $state.editing) { EntryEditor(entry: $0).environment(state) }
-        .sheet(item: $state.altering) { AlterEntry(entry: $0) }
-        .sheet(item: $state.recipeRequest) { request in
-            RecipeEditor(draft: request.draft, onCreate: { state.replace(request.entries, with: $0, in: store) })
-        }
         .feedback(self)
     }
 }

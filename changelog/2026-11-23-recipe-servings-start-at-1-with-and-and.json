@@ -1,0 +1,14 @@
+{
+	"title": "Recipe servings start at 1 with − and +, and forms keep typed values",
+	"description": "Create and edit recipe and food forms survive a phone lock or relaunch; Close or save clears them.",
+	"tasks": [
+		{
+			"id": "65c0b74a-f3a3-48b9-968f-8bb75b370afa",
+			"title": "2 Create Recipe Feedback: update buttons, remove text"
+		},
+		{
+			"id": "7c02e01a-1d18-4e3b-a535-3fbb1fcf13fa",
+			"title": "1 Create Recipe Feedback: check form data persistence"
+		}
+	]
+}

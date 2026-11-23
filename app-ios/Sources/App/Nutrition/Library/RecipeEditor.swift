@@ -8,6 +8,7 @@ struct RecipeEditor: View {
     private let recipeID: UUID?
     private let onCreate: ((Recipe) -> Void)?
     private let onCreateAndAdd: ((Recipe) -> Void)?
+    private let draftKey: String?
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @Environment(\.summaryNutrients) private var columns
@@ -27,6 +28,7 @@ struct RecipeEditor: View {
         self.onCreate = onCreate
         self.onCreateAndAdd = onCreateAndAdd
         let opened = draft ?? recipe.map(RecipeDraft.init) ?? RecipeDraft()
+        draftKey = recipe.map { "recipe.\($0.id)" } ?? (opened == RecipeDraft() ? "recipe.new" : nil)
         _opened = State(initialValue: opened)
         _draft = State(initialValue: opened)
     }
@@ -58,7 +60,10 @@ struct RecipeEditor: View {
             .detailTitle(recipeID == nil ? "Create Recipe" : "Edit Recipe")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(role: .close) { dismiss() }
+                    Button(role: .close) {
+                        DraftStore.clear(draftKey)
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm) { save(adding: false) }
@@ -86,6 +91,7 @@ struct RecipeEditor: View {
             .alert("Delete Recipe", isPresented: $confirmingDelete) {
                 Button("Delete", role: .destructive) {
                     if let recipeID { store.deleteRecipe(recipeID) }
+                    DraftStore.clear(draftKey)
                     dismiss()
                 }
                 Button("Cancel", role: .cancel) {}
@@ -94,6 +100,7 @@ struct RecipeEditor: View {
             }
         }
         .interactiveDismissDisabled(draft != opened)
+        .persistDraft($draft, key: draftKey)
         .feedback(self)
     }
 
@@ -114,20 +121,18 @@ struct RecipeEditor: View {
                 .accessibilityLabel("Recipe Name")
             FieldIssue(issues[.name])
             LabeledContent("Serving Quantity") {
-                TextField("Required", text: $draft.servings)
-                    .keyboardType(.decimalPad)
-                    .focused($focus, equals: .servings)
-                    .multilineTextAlignment(.trailing)
-                    .accessibilityLabel("Serving Quantity")
+                HStack(spacing: 12) {
+                    TextField("Required", text: $draft.servings)
+                        .keyboardType(.decimalPad)
+                        .focused($focus, equals: .servings)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 56)
+                        .accessibilityLabel("Serving Quantity")
+                    Stepper("Serving Quantity", value: servingSteps, in: 1...999).labelsHidden()
+                }
             }
             // Save stays disabled without a serving count, so its message shows as it is typed rather than after Save.
-            if draft.servings.trimmingCharacters(in: .whitespaces).isEmpty {
-                Text("Enter how many servings the recipe makes to save it")
-                    .font(AppFont.rowDetail)
-                    .foregroundStyle(Theme.textSecondary)
-            } else {
-                FieldIssue(draft.servingsIssue)
-            }
+            FieldIssue(draft.servingsIssue)
             LabeledContent("Total Weight") {
                 HStack(spacing: 4) {
                     TextField(draft.ingredientGrams > 0 ? NutritionFormat.amount(draft.ingredientGrams) : "Weight after cooking", text: $draft.totalWeight)
@@ -235,6 +240,10 @@ struct RecipeEditor: View {
         }
     }
 
+    private var servingSteps: Binding<Double> {
+        Binding { draft.servingCount ?? 1 } set: { draft.servings = NumberText.text($0) }
+    }
+
     private func limited(_ text: Binding<String>, to limit: Int) -> Binding<String> {
         Binding { text.wrappedValue } set: { text.wrappedValue = String($0.prefix(limit)) }
     }
@@ -260,6 +269,7 @@ struct RecipeEditor: View {
             onCreate?(recipe)
             if adding { onCreateAndAdd?(recipe) }
         }
+        DraftStore.clear(draftKey)
         dismiss()
     }
 }

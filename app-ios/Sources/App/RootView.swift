@@ -73,6 +73,14 @@ struct RootView: View {
             case .weight: BodyWeightLogSheet()
             }
         }
+        // The Food Log's sheets present from here rather than from inside its tab: presented from the tab, the logger's
+        // own sheets (Create Recipe from its Library) lost everything typed whenever the app went to the background.
+        .sheet(item: $foodLog.logRequest) { LoggerSheet(start: LoggerStart($0)) }
+        .sheet(item: $foodLog.editing) { EntryEditor(entry: $0).environment(foodLog) }
+        .sheet(item: $foodLog.altering) { AlterEntry(entry: $0) }
+        .sheet(item: $foodLog.recipeRequest) { request in
+            RecipeEditor(draft: request.draft, onCreate: { foodLog.replace(request.entries, with: $0, in: store) })
+        }
         // A session's insert and the observation that shows it land a moment apart, so the cover waits for both.
         .fullScreenCover(isPresented: Binding(get: { presenter.isExpanded && activeSessionID != nil }, set: { presenter.isExpanded = $0 })) {
             LiveWorkoutView()

@@ -404,8 +404,7 @@ enum FoodLog {
         return RecipeTileIngredients(lines: Array(lines.prefix(limit)), more: max(lines.count - limit, 0), isAltered: !alterations.isEmpty)
     }
 
-    /// Create Recipe's starting draft: the selected entries as ingredients at their logged servings, with the number
-    /// of servings left for the owner to type.
+    /// Create Recipe's starting draft: the selected entries as ingredients at their logged servings.
     static func recipeDraft(_ entries: [FoodEntry]) -> RecipeDraft {
         var draft = RecipeDraft()
         draft.ingredients = entries.map { .init(RecipeIngredient($0.portion)) }

@@ -108,9 +108,8 @@ struct RecipeDraft: Codable, Equatable, Sendable {
 
     var icon: String?
     var name = ""
-    /// Blank in a new recipe: the owner types how many servings it makes before Save, since a default of 1 made the
-    /// whole pot one serving.
-    var servings = ""
+    /// 1 in a new recipe, with the editor's stepper beside it, at the owner's ask (2026-11-23).
+    var servings = "1"
     /// The cooked weight of the whole recipe in grams; blank falls back to the ingredients' weight.
     var totalWeight = ""
     var ingredients: [Ingredient] = []
