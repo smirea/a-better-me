@@ -119,7 +119,7 @@ struct WarmUpSheet: View {
             List {
                 Section {
                     if rows.isEmpty {
-                        Text(context.workingWeightKg == nil ? "Enter a weight for the first working set to calculate warm-ups." : "No warm-up lands below the working weight.")
+                        Text(context.workingWeightKg == nil ? "Needs a working weight." : "No warm-up below the working weight.")
                             .foregroundStyle(Theme.textSecondary)
                     }
                     ForEach(rows, id: \.self) { row in
@@ -158,20 +158,14 @@ struct WarmUpSheet: View {
                         .accessibilityLabel("Warm-up calculator")
                     }
                 }
-                Section("More Options") {
-                    Button {
+                Section {
+                    Button("Add Empty Warm-Up Set", systemImage: "plus") {
                         onAdd([(nil, nil)])
                         dismiss()
-                    } label: {
-                        Label {
-                            VStack(alignment: .leading) {
-                                Text("Add empty warm-up set")
-                                Text("Add a warm-up set to your workout").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-                            }
-                        } icon: { Image(systemName: "plus") }
                     }
                 }
             }
+            .flatList()
             .detailTitle("Warm Up")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

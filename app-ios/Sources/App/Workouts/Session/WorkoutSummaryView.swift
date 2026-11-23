@@ -400,9 +400,6 @@ private struct WorkoutChangesSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                if changes.isEmpty {
-                    Text("This workout matches its plan.").foregroundStyle(Theme.textSecondary)
-                }
                 if !changes.added.isEmpty {
                     section(.added, "Added Exercises") { ForEach(changes.added) { plan($0, title: catalog.name($0.exerciseID)) } }
                 }
@@ -427,6 +424,10 @@ private struct WorkoutChangesSheet: View {
                 if !changes.removed.isEmpty {
                     section(.removed, "Removed Exercises") { ForEach(changes.removed) { plan($0, title: catalog.name($0.exerciseID)) } }
                 }
+            }
+            .flatList()
+            .overlay {
+                if changes.isEmpty { ContentUnavailableView("No Changes", systemImage: "checkmark.circle") }
             }
             .detailTitle("Workout Changes")
             .toolbar {
