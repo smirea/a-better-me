@@ -19,13 +19,64 @@ struct SupplementRegimen: Codable, Hashable, Sendable {
     var weekdays: [Int] = []
     /// Ids of `Tag` rows, such as the protocol this range belonged to.
     var tags: [UUID]?
+    /// Days off inside the range, oldest first. Nil on rows written before pausing existed.
+    var pauses: [Pause]?
+
+    /// No servings from `start` through `end`, the last day off, which is absent while it is paused indefinitely.
+    struct Pause: Codable, Hashable, Sendable {
+        var start: CalendarDay
+        var end: CalendarDay?
+
+        func spans(_ day: CalendarDay) -> Bool {
+            start <= day && end.map { day <= $0 } != false
+        }
+    }
+
+    enum PauseLength: Hashable, Sendable {
+        case indefinitely, week, untilNextWeek
+        /// Back on that day.
+        case until(CalendarDay)
+
+        /// The last day off for a pause from `today`.
+        func end(from today: CalendarDay) -> CalendarDay? {
+            switch self {
+            case .indefinitely: nil
+            case .week: today.adding(days: 6)
+            case .untilNextWeek: today.monday.adding(days: 6)
+            case let .until(day): Swift.max(today, day.adding(days: -1))
+            }
+        }
+    }
 
     func spans(_ day: CalendarDay) -> Bool {
         start <= day && end.map { day <= $0 } != false
     }
 
     func covers(_ day: CalendarDay) -> Bool {
-        spans(day) && (weekdays.isEmpty || weekdays.contains(day.weekday))
+        spans(day) && (weekdays.isEmpty || weekdays.contains(day.weekday)) && pauses?.contains { $0.spans(day) } != true
+    }
+}
+
+extension [SupplementRegimen.Pause] {
+    /// The pause that has today off. One still to come is not it, so it never hides the one running.
+    func current(on today: CalendarDay) -> SupplementRegimen.Pause? {
+        first { $0.spans(today) }
+    }
+
+    /// Takes today off and the days `length` names after it, replacing a pause already running.
+    mutating func pause(_ length: SupplementRegimen.PauseLength, on today: CalendarDay) {
+        resume(on: today)
+        append(SupplementRegimen.Pause(start: today, end: length.end(from: today)))
+    }
+
+    /// Ends the pause that has today off yesterday, so today is back on. One that began today is dropped.
+    mutating func resume(on today: CalendarDay) {
+        guard let index = firstIndex(where: { $0.spans(today) }) else { return }
+        if self[index].start >= today {
+            remove(at: index)
+        } else {
+            self[index].end = today.adding(days: -1)
+        }
     }
 }
 
@@ -45,7 +96,7 @@ struct Supplement: Stamped {
         var unit: String?
     }
 
-    enum Status: Hashable, Sendable { case taking, upcoming, stopped }
+    enum Status: Hashable, Sendable { case taking, paused, upcoming, stopped }
 
     var id = UUID()
     var name: String
@@ -112,7 +163,9 @@ extension Supplement {
 
     func status(on today: CalendarDay) -> Status {
         guard let index = currentRegimen(on: today) else { return .stopped }
-        return regimens[index].start <= today ? .taking : .upcoming
+        let regimen = regimens[index]
+        if regimen.start > today { return .upcoming }
+        return regimen.pauses?.current(on: today) != nil ? .paused : .taking
     }
 
     /// Ends every regimen that reaches `today`, so yesterday is the last day it shows. One that would not have run a
@@ -124,6 +177,10 @@ extension Supplement {
             guard regimen.start <= yesterday else { return nil }
             var ended = regimen
             ended.end = yesterday
+            ended.pauses = regimen.pauses?.compactMap { pause in
+                guard pause.start <= yesterday else { return nil }
+                return SupplementRegimen.Pause(start: pause.start, end: Swift.min(pause.end ?? yesterday, yesterday))
+            }
             return ended
         }
     }
@@ -136,6 +193,7 @@ extension Supplement {
         regimen.start = today
         regimen.end = nil
         regimen.tags = nil
+        regimen.pauses = nil
         regimens.append(regimen)
     }
 }
@@ -242,7 +300,14 @@ enum SupplementFormat {
             return supplement.regimens.last?.end.map { "Stopped \(day($0, on: today))" } ?? "Not taking"
         }
         let regimen = supplement.regimens[index]
-        return regimen.start > today ? "Starts \(day(regimen.start, on: today))" : schedule(regimen, of: supplement.serving)
+        if regimen.start > today { return "Starts \(day(regimen.start, on: today))" }
+        if let pause = regimen.pauses?.current(on: today) { return paused(pause, on: today) }
+        return schedule(regimen, of: supplement.serving)
+    }
+
+    /// "Paused until Dec 1", naming the day it is back on.
+    static func paused(_ pause: SupplementRegimen.Pause, on today: CalendarDay) -> String {
+        pause.end.map { "Paused until \(day($0.adding(days: 1), on: today))" } ?? "Paused"
     }
 
     /// The library's line: the dates of the current regimen, or of the last one when none is current, since that is

@@ -634,7 +634,8 @@ const supplementComponent = z.object({
 const ids = z.array(z.string().min(1));
 /**
  * `count` servings on each day from `start` through `end` (open without one) that is one of `weekdays`, ISO, Monday 1;
- * none means every day. `tags` is ids in `tags`.
+ * none means every day. `tags` is ids in `tags`. `pauses` are days off inside the range, each from `start` through
+ * `end`, open without one.
  */
 export const supplementRegimen = z.object({
 	start: day,
@@ -643,6 +644,7 @@ export const supplementRegimen = z.object({
 	timing: z.enum(SUPPLEMENT_TIMINGS).optional(),
 	weekdays: z.array(z.int().min(1).max(7)),
 	tags: ids.optional(),
+	pauses: z.array(z.object({ start: day, end: day.optional() })).optional(),
 });
 const dayTarget = z.object({ energy: amount, protein: amount, fat: amount, carbs: amount });
 const nutritionGoal = z.object({

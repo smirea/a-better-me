@@ -17,6 +17,7 @@ struct SupplementEditor: View {
     @State private var picturesLoaded: Bool
     @State private var showErrors = false
     @State private var confirmingDelete = false
+    @State private var pickingResume = false
     @FocusState private var focus: SupplementDraft.Field?
 
     init(supplement: Supplement? = nil) {
@@ -79,6 +80,9 @@ struct SupplementEditor: View {
                 picturesLoaded = true
             }
             .onDisappear { photos.cancel() }
+            .sheet(isPresented: $pickingResume) {
+                ResumeDaySheet { pauseRegimen(.until($0)) }
+            }
             .alert("Delete Supplement", isPresented: $confirmingDelete) {
                 Button("Delete", role: .destructive) {
                     if let editing { store.deleteSupplement(editing.id) }
@@ -182,13 +186,9 @@ struct SupplementEditor: View {
     }
 
     private func regimen(_ issues: [SupplementDraft.Field: String]) -> some View {
-        ThemedSection(
-            "Regimen",
-            footer: draft.taking
-                ? "It shows in the Food Log on every day the regimen covers."
-                : "Off keeps it in the library and off the Food Log. Days it was taken before stay."
-        ) {
-            Toggle("Taking It", isOn: $draft.taking.animation()).tint(Theme.accent)
+        let today = CalendarDay.today
+        let pause = draft.taking ? draft.regimen.pauses.current(on: today) : nil
+        return ThemedSection("Regimen", subtitle: pause.map { SupplementFormat.paused($0, on: today) }) {
             if draft.taking {
                 DatePicker("Start", selection: day($draft.regimen.start), displayedComponents: .date)
                 HStack {
@@ -229,7 +229,27 @@ struct SupplementEditor: View {
                     FieldIssue(issues[.end])
                 }
             }
+        } actions: {
+            if !draft.taking {
+                Button("Start") { withAnimation { draft.taking = true } }
+            } else {
+                if pause != nil {
+                    Button("Resume") { withAnimation { draft.regimen.pauses.resume(on: .today) } }
+                } else if draft.regimen.start <= today {
+                    Menu("Pause") {
+                        Button("Indefinitely") { pauseRegimen(.indefinitely) }
+                        Button("1 Week") { pauseRegimen(.week) }
+                        Button("Until Next Week") { pauseRegimen(.untilNextWeek) }
+                        Button("Custom…") { pickingResume = true }
+                    }
+                }
+                Button("Stop") { withAnimation { draft.taking = false } }
+            }
         }
+    }
+
+    private func pauseRegimen(_ length: SupplementRegimen.PauseLength) {
+        withAnimation { draft.regimen.pauses.pause(length, on: .today) }
     }
 
     private func day(_ day: Binding<CalendarDay>) -> Binding<Date> {
@@ -247,5 +267,34 @@ struct SupplementEditor: View {
         supplement.images = pictures
         store.saveSupplement(supplement, adding: photos.photos.map { NewPicture(id: $0.id, jpeg: $0.jpeg) })
         dismiss()
+    }
+}
+
+/// Pause's Custom: the day it is back on.
+private struct ResumeDaySheet: View {
+    let onPick: (CalendarDay) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var date = CalendarDay.today.adding(days: 1).date
+
+    var body: some View {
+        NavigationStack {
+            DatePicker("Back On", selection: $date, in: CalendarDay.today.adding(days: 1).date..., displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .padding(.horizontal, Theme.margin)
+                .detailTitle("Pause Until")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(role: .close) { dismiss() }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(role: .confirm) {
+                                onPick(CalendarDay(date))
+                            dismiss()
+                        }
+                    }
+                }
+        }
+        .presentationDetents([.medium, .large])
+        .feedback("ResumeDaySheet")
     }
 }

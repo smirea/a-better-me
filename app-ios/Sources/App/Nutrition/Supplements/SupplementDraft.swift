@@ -46,6 +46,7 @@ struct SupplementDraft: Codable, Equatable, Sendable {
         var weekdays = Set(1...7)
         /// The regimen's tags, which the form does not edit and a save keeps.
         var tags: [UUID]?
+        var pauses: [SupplementRegimen.Pause] = []
 
         init(start: CalendarDay) {
             self.start = start
@@ -60,6 +61,7 @@ struct SupplementDraft: Codable, Equatable, Sendable {
             timing = regimen.timing
             weekdays = regimen.weekdays.isEmpty ? Set(1...7) : Set(regimen.weekdays)
             tags = regimen.tags
+            pauses = regimen.pauses ?? []
         }
     }
 
@@ -74,7 +76,7 @@ struct SupplementDraft: Codable, Equatable, Sendable {
     var servingQuantity = "1"
     var servingUnit = "capsule"
     var components: [ComponentDraft] = []
-    /// Off stops it: the regimen fields are kept only as what Taking It would start with.
+    /// False stops it: the regimen fields are kept only as what Start would take it again with.
     var taking = true
     var regimen: RegimenDraft
     var note = ""
@@ -83,7 +85,7 @@ struct SupplementDraft: Codable, Equatable, Sendable {
         regimen = RegimenDraft(start: today)
     }
 
-    /// A stopped supplement opens with its last regimen's amount and days, starting `today`, behind Taking It off.
+    /// A stopped supplement opens with its last regimen's amount and days, starting `today`, not taking.
     init(_ supplement: Supplement, today: CalendarDay = .today) {
         name = supplement.name
         brand = supplement.brand ?? ""
@@ -103,6 +105,7 @@ struct SupplementDraft: Codable, Equatable, Sendable {
             restart.ends = false
             restart.end = today
             restart.tags = nil
+            restart.pauses = []
             regimen = restart
         }
     }
@@ -127,7 +130,7 @@ struct SupplementDraft: Codable, Equatable, Sendable {
     }
 
     /// The supplement these fields describe, or nil while a field is wrong. Editing keeps `editing`'s id, pictures, tags,
-    /// and past regimens: Taking It replaces the regimen that is running or still to start, or adds one, and off stops it.
+    /// and past regimens: taking replaces the regimen that is running or still to start, or adds one, and not taking stops it.
     func supplement(editing: Supplement? = nil, today: CalendarDay = .today) -> Supplement? {
         guard issues.isEmpty, let quantity = NumberText.parse(servingQuantity) else { return nil }
         let name = name.trimmingCharacters(in: .whitespaces)
@@ -143,7 +146,8 @@ struct SupplementDraft: Codable, Equatable, Sendable {
         if taking, let count = NumberText.parse(regimen.count) {
             let saved = SupplementRegimen(
                 start: regimen.start, end: regimen.ends ? regimen.end : nil, count: count, timing: regimen.timing,
-                weekdays: regimen.weekdays.count == 7 ? [] : regimen.weekdays.sorted(), tags: regimen.tags
+                weekdays: regimen.weekdays.count == 7 ? [] : regimen.weekdays.sorted(), tags: regimen.tags,
+                pauses: regimen.pauses.isEmpty ? nil : regimen.pauses
             )
             if let index = supplement.currentRegimen(on: today) {
                 supplement.regimens[index] = saved
