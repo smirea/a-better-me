@@ -35,12 +35,11 @@ struct PingHistoryView: View {
                         stats(steps)
                         chart(steps)
                     }
-                    .card()
                     if !history.logs.isEmpty {
                         TruncatedList("Last 30 Days", items: history.logs, divider: false) { log in
                             PingLogRow(log: log, steps: steps)
                                 .padding(.vertical, 12)
-                                .rowSwipeActions(trailing: [.destructive("Delete") { store.delete(PingLog.self, id: log.id) }])
+                                .rowSwipeActions(trailing: [.destructive("Delete") { store.delete(PingLog.self, id: log.id) }], fullSwipe: true)
                         } destination: {
                             PingLogsView(pingID: pingID, steps: steps)
                         }
@@ -127,6 +126,7 @@ private struct PingLogsView: View {
     let steps: [String]
     @Environment(LocalStore.self) private var store
     @State private var logs: [PingLog] = []
+    @State private var loaded = false
 
     var body: some View {
         List {
@@ -143,10 +143,14 @@ private struct PingLogsView: View {
             }
         }
         .flatList()
+        .overlay {
+            if loaded, logs.isEmpty { ContentUnavailableView("No Logs", systemImage: "clock") }
+        }
         .detailTitle("History")
         .task {
             let query = PingLog.history(pingID)
             logs = (try? await store.read(query.fetch)) ?? []
+            loaded = true
         }
         .feedback(self)
     }
@@ -159,8 +163,8 @@ private struct PingLogRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             RowLabel(
-                title: log.loggedAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()),
-                detail: log.note.isEmpty ? nil : log.note
+                title: Text(log.loggedAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())).monospacedDigit(),
+                detail: log.note.isEmpty ? nil : Text(log.note)
             )
             Spacer(minLength: 8)
             if steps.indices.contains(log.value - 1) {
