@@ -1,0 +1,4 @@
+{
+	"title": "Flatten chart legends and insights, add flat design primitives, and round weights",
+	"description": "Flattened ChartLegend and InsightTiles, added FlatSection/FlatIngredientsSection/FlatNutrientBreakdown, editable StatView, PersistedIDSet and draft persistence helpers, and single-decimal rounding for weights ≥ 10."
+}

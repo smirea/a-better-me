@@ -124,15 +124,12 @@ struct GoalProgressView: View {
         return VStack(alignment: .leading, spacing: 12) {
             SectionHeader("Insights & Data")
             InsightTiles(tiles: [
+                InsightTile(value: goal.targetWeightKg.map { context.unit.fromKg($0).dashboardText } ?? "--", unit: context.unit.rawValue, title: "Target"),
+                InsightTile(value: progress.days.formatted(), unit: "days", title: "Duration"),
                 InsightTile(
-                    value: goal.targetWeightKg.map { context.unit.fromKg($0).dashboardText } ?? "--", unit: context.unit.rawValue,
-                    title: "Target Weight", text: "The target you selected during goal creation."
-                ),
-                InsightTile(value: progress.days.formatted(), unit: "days", title: "Duration", text: "The number of days that you have spent pursuing your current goal."),
-                InsightTile(
-                    value: eta.map { $0.formatted(.dateTime.month(.abbreviated).day()) } ?? "--", unit: eta.map { $0.formatted(.dateTime.year()) },
-                    title: "Optimistic ETA",
-                    text: "Estimate of when you would reach your goal if you achieve and sustain your intended rate of weight change based on \(source == .scale ? "scale" : "trend") weight."
+                    value: eta.map { $0.formatted(.dateTime.month(.abbreviated).day()) } ?? "--",
+                    unit: eta.map { $0.formatted(.dateTime.year()) },
+                    title: "ETA"
                 ),
             ])
         }

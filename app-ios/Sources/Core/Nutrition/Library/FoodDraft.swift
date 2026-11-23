@@ -2,17 +2,17 @@ import Foundation
 
 /// What the food's nutrition is entered for, MacroFactor's Serving | 100 g | 100 ml. All three become a base serving
 /// with its size, so the log scales them the same way.
-enum NutritionBasis: String, CaseIterable, Identifiable, Sendable {
+enum NutritionBasis: String, CaseIterable, Codable, Identifiable, Sendable {
     case serving = "Serving", hundredGrams = "100 g", hundredMilliliters = "100 ml"
 
     var id: Self { self }
 }
 
 /// The custom food editor's fields as typed, so the form binds text and validation and conversion stay testable.
-struct FoodDraft: Equatable, Sendable {
+struct FoodDraft: Codable, Equatable, Sendable {
     /// A named measure beyond the base serving: `quantity` `name` is `size`, in the food's size unit or, for a food
     /// with no weight or volume, in base servings.
-    struct MeasureDraft: Equatable, Identifiable, Sendable {
+    struct MeasureDraft: Codable, Equatable, Identifiable, Sendable {
         var id = UUID()
         var quantity = "1"
         var name = ""

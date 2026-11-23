@@ -20,15 +20,14 @@ struct ChartLegend: View {
     let items: [Item]
 
     var body: some View {
-        HStack(spacing: 20) {
+        HStack(spacing: 16) {
             ForEach(items, id: \.title) { item in
                 Label { Text(item.title) } icon: { Image(systemName: item.symbol).foregroundStyle(item.color) }
             }
         }
         .font(AppFont.chip)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
+        .foregroundStyle(Theme.textSecondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .feedback(self)
     }
 }

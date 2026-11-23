@@ -335,3 +335,51 @@ private struct NutrientListItem<Row: View>: View {
         if case .nutrient(_, _, true) = item { true } else { false }
     }
 }
+
+/// Flat `ScrollView`/`LazyVStack` variant of `NutrientList`: renders a compact Nutrition Facts table directly on
+/// `Theme.background`, with section dividers between sections, indented nested rows, and optional `Collapse` / `Expand`.
+struct FlatNutrientList<Row: View>: View {
+    var title: String? = "Nutrients"
+    let rows: [NutrientListRow]
+    var collapsed: Binding<Bool>? = nil
+    var divider = true
+    @ViewBuilder let row: (Nutrient) -> Row
+
+    private static var indent: CGFloat { 16 }
+
+    var body: some View {
+        let isCollapsed = collapsed?.wrappedValue ?? false
+        FlatSection(title, divider: divider, spacing: 8) {
+            if let collapsed {
+                Button(isCollapsed ? "Expand" : "Collapse") {
+                    withAnimation(.snappy) { collapsed.wrappedValue.toggle() }
+                }
+                .underline()
+            }
+        } content: {
+            if !isCollapsed {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(rows) { item in
+                        switch item {
+                        case .label(let section):
+                            Text(section.rawValue)
+                                .font(AppFont.headline(14))
+                                .foregroundStyle(Theme.textSecondary)
+                                .padding(.top, 10)
+                                .padding(.bottom, 4)
+                                .accessibilityAddTraits(.isHeader)
+                        case let .nutrient(nutrient, depth, endsSection):
+                            row(nutrient)
+                                .padding(.leading, CGFloat(depth) * Self.indent)
+                                .padding(.vertical, 5)
+                            if endsSection {
+                                Divider().overlay(Theme.separator).padding(.top, 4)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .feedback("Nutrients")
+    }
+}

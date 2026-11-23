@@ -274,7 +274,7 @@ struct Food: Stamped {
 
 /// The standard weights and volumes: what a food's size is typed in, the measures its size unlocks, the favorites
 /// Settings offers, and the units Ramble hears. Weights set the food's grams, volumes its milliliters.
-enum SizeUnit: String, CaseIterable, Identifiable, Sendable {
+enum SizeUnit: String, CaseIterable, Codable, Identifiable, Sendable {
     case g, kg, oz, lb, mL, flOz = "fl oz", cup
 
     var id: Self { self }

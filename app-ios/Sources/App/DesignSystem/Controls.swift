@@ -35,6 +35,49 @@ struct ThemedSection<Content: View>: View {
     }
 }
 
+/// A flat content section for `ScrollView` / `LazyVStack` screens: an optional top hairline divider, an optional
+/// `SectionHeader`, and content directly on `Theme.background` without a `Theme.surface` card wrapper.
+struct FlatSection<HeaderAction: View, Content: View>: View {
+    var title: String?
+    var divider = true
+    var spacing: CGFloat = 10
+    @ViewBuilder let headerAction: HeaderAction
+    @ViewBuilder let content: Content
+
+    init(
+        _ title: String? = nil,
+        divider: Bool = true,
+        spacing: CGFloat = 10,
+        @ViewBuilder headerAction: () -> HeaderAction,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.divider = divider
+        self.spacing = spacing
+        self.headerAction = headerAction()
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: spacing) {
+            if divider {
+                Divider().overlay(Theme.separator)
+            }
+            if let title {
+                SectionHeader(title) { headerAction }
+            }
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+extension FlatSection where HeaderAction == EmptyView {
+    init(_ title: String? = nil, divider: Bool = true, spacing: CGFloat = 10, @ViewBuilder content: () -> Content) {
+        self.init(title, divider: divider, spacing: spacing, headerAction: { EmptyView() }, content: content)
+    }
+}
+
 /// A capsule chip for filters, choices, and quick values. Active chips fill white. Small chips are the Food Log's hour
 /// pills, which share one `width` so their column lines up.
 struct Chip: View {
