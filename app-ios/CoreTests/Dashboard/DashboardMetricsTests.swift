@@ -75,42 +75,6 @@ struct DashboardMetricsTests {
         #expect(data.lastDays(points) == [1, 0, 0, 5, 0, 0, 4])
     }
 
-    @Test func recentRecordsAreTheNewestRecordPerExercise() {
-        let sessions = [
-            session("2026-10-01", [BlockExercise(exerciseID: "press", sets: [logged(100, 5)]), BlockExercise(exerciseID: "curl", sets: [logged(10, 10)])]),
-            session("2026-10-03", [BlockExercise(exerciseID: "press", sets: [logged(90, 5)])]),
-            session("2026-10-05", [BlockExercise(exerciseID: "curl", sets: [logged(12, 10)])]),
-            session("2026-10-07", [BlockExercise(exerciseID: "press", sets: [logged(105, 5)])]),
-        ]
-        let records = DashboardMetrics.recentRecords(sessions, kind: .volume, catalog: catalog)
-        #expect(records == [
-            .init(exerciseID: "press", value: 525, date: day("2026-10-07", 18)),
-            .init(exerciseID: "curl", value: 240, date: day("2026-10-05", 18)),
-        ])
-        let reps = DashboardMetrics.recentRecords(sessions, kind: .reps, catalog: catalog)
-        #expect(reps.map(\.date) == [day("2026-10-01", 18), day("2026-10-01", 18)])
-    }
-
-    @Test func cycleRingsCountTheActiveCycleAgainstItsPlan() {
-        let template = WorkoutTemplate(name: "A", blocks: [
-            WorkoutBlock(exercises: [BlockExercise(exerciseID: "press", sets: [WorkoutSet(type: .warmUp), WorkoutSet(), WorkoutSet(), WorkoutSet()])]),
-            WorkoutBlock(exercises: [BlockExercise(exerciseID: "curl", sets: [WorkoutSet(), WorkoutSet()])]),
-        ])
-        var program = Program(name: "P", color: .blue, cycles: 4, days: [ProgramDay(templateID: template.id), ProgramDay(), ProgramDay(templateID: template.id)])
-        program.currentCycle = 2
-        let position = ProgramPosition(programID: program.id, dayID: program.days[0].id, cycle: 2)
-        let sessions = [
-            session("2026-10-05", [BlockExercise(exerciseID: "press", sets: [logged(80, 8), logged(80, 8)])], program: position),
-            session("2026-10-06", [BlockExercise(exerciseID: "curl", sets: [logged(10, 10)])]),
-            session("2026-09-28", [BlockExercise(exerciseID: "curl", sets: [logged(10, 10)])], program: ProgramPosition(programID: program.id, dayID: program.days[0].id, cycle: 1)),
-        ]
-        let active = DashboardMetrics.cycleProgress(.activeProgram, program: program, templates: [template], sessions: sessions, now: day("2026-10-07"), calendar: utc, catalog: catalog)
-        #expect(active == .init(muscles: .init(done: 3, target: 4), sets: .init(done: 2, target: 10), exercises: .init(done: 1, target: 4)))
-        #expect(active.sets.left == 8)
-        let week = DashboardMetrics.cycleProgress(.allWorkouts, program: nil, templates: [], sessions: sessions, now: day("2026-10-07"), calendar: utc, catalog: catalog)
-        #expect(week == .init(muscles: .init(done: 4, target: nil), sets: .init(done: 3, target: nil), exercises: .init(done: 2, target: nil)))
-    }
-
     @Test func weeklyAveragingMeansTheDaysWithData() {
         let daily = DailyCombine.sum.combine([
             DatedValue(date: day("2026-10-05", 7), value: 3),

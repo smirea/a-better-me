@@ -17,9 +17,6 @@ struct BalanceValues {
     var bars: [DatedValue]
     var line: [DatedValue]
     var meanDifference: Double?
-    /// The means of intake and of the reference over the same paired days, so intake − reference = difference.
-    var meanIntake: Double?
-    var meanReference: Double?
 }
 
 enum BalanceReference: String, CaseIterable, Hashable {
@@ -66,22 +63,12 @@ extension DashboardData {
         let bars = intake.inside(interval)
         let line = (reference == .expenditure ? expenditurePoints : energyTargets).inside(interval)
         let differences = NutritionMetrics.differences(intake: bars, reference: line, calendar: calendar)
-        let paired = Set(differences.map(\.date))
-        let meanDifference = differences.average
-        let meanIntake = paired.isEmpty ? bars.average : bars.filter { paired.contains($0.date) }.average
-        return BalanceValues(
-            interval: interval, bars: bars, line: line, meanDifference: meanDifference, meanIntake: meanIntake,
-            meanReference: meanDifference.flatMap { difference in meanIntake.map { $0 - difference } } ?? line.average
-        )
+        return BalanceValues(interval: interval, bars: bars, line: line, meanDifference: differences.average)
     }
 
     var expenditureCard: CardValues {
         let values = expenditure.suffix(7).map(\.kcal)
         return CardValues(values: values, text: values.last?.wholeText)
-    }
-
-    func week(_ columns: [NutrientID], overages: Bool) -> [NutritionMetrics.DaySummary] {
-        NutritionMetrics.week(of: today, log: log, targets: targets(on:), columns: columns, showOverages: overages)
     }
 
     /// Today's Food Log summary lines, against the same targets the Food Log fills its columns to.

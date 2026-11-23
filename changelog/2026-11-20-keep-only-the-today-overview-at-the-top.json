@@ -1,0 +1,10 @@
+{
+	"title": "Keep only the Today overview at the top of Dashboard",
+	"description": "Removed the other five Dashboard focus carousel tabs, page indicator dots, and Primary Focus picker in Customize Dashboard.",
+	"tasks": [
+		{
+			"id": "633b2865-bb06-43b6-9518-01636e6b9a22",
+			"title": "1 Dashboard Feedback: keep only page 1 tabs"
+		}
+	]
+}

@@ -96,22 +96,6 @@ enum NutritionMetrics {
         return result
     }
 
-    /// A day of the Weekly Nutrition grid: the summary's lines against that day's targets.
-    struct DaySummary: Equatable {
-        var day: CalendarDay
-        var lines: [MacroLine]
-    }
-
-    /// Monday through Sunday of the week holding `today`, as MacroFactor's Weekly Nutrition grid.
-    static func week(
-        of today: CalendarDay, log: [NutritionLogDay], targets: (CalendarDay) -> NutrientTargets, columns: [NutrientID], showOverages: Bool
-    ) -> [DaySummary] {
-        let consumed = Dictionary(log.map { ($0.day, $0.consumed) }, uniquingKeysWith: { $1 })
-        return today.week.map { day in
-            DaySummary(day: day, lines: targets(day).summary(consumed[day] ?? [:], columns: columns, showOverages: showOverages))
-        }
-    }
-
     /// Percent of the way from the start weight to the target, 0 when the weight moved away and 100 once there.
     static func goalPercent(startKg: Double, currentKg: Double, targetKg: Double) -> Double {
         guard startKg != targetKg else { return 100 }

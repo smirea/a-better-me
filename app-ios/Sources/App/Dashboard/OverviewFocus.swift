@@ -1,8 +1,8 @@
 import Feedback
 import SwiftUI
 
-/// The pager's first page: the body heat map Levels draws, both sides at once since a page has no room for its rotate
-/// button, beside today's Food Log summary against its targets.
+/// The Dashboard's Today overview: the body heat map Levels draws, both sides at once, beside today's Food Log
+/// summary against its targets.
 struct OverviewFocus: View {
     @Environment(ExerciseCatalog.self) private var catalog
     @Environment(SessionHistory.self) private var history

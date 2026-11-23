@@ -120,32 +120,6 @@ struct NutritionMetricsTests {
         #expect(NutritionMetrics.direction(nil, tolerance: 0.5) == .noChange)
     }
 
-    @Test func weeklyNutritionRunsMondayToSundayInTheSummaryColumnsAgainstEachDaysTargets() {
-        let log = [logDay("2026-10-26", kcal: [1500, 700]), logDay("2026-10-27", kcal: [300])]
-        let columns: [NutrientID] = [.energy, .protein, .fiber, .netCarbs]
-        let week = { (plans: [NutritionPlan], overages: Bool) in
-            NutritionMetrics.week(
-                of: CalendarDay("2026-10-28")!, log: log,
-                targets: { NutrientTargets.of($0, plans: plans, goals: [], profile: ProfileSettings(), latestWeightKg: nil) },
-                columns: columns, showOverages: overages
-            )
-        }
-        let plans = [plan("2026-10-27", kcal: 2000)]
-        let days = week(plans, true)
-        #expect(days.map(\.day.description) == ["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01"])
-        #expect(days.allSatisfy { $0.lines.map(\.nutrient) == columns })
-        #expect(days[0].lines[0].consumed == 2200)
-        #expect(days[0].lines[0].target == nil)
-        #expect(days[1].lines[1].target == 150)
-        #expect(days[1].lines[0].remaining == 1700)
-        let fiber = days[1].lines[2].target
-        #expect(fiber != nil)
-        #expect(days[1].lines[3].target == 200 - (fiber ?? 0))
-        let earlier = [plan("2026-10-20", kcal: 2000)]
-        #expect(week(earlier, true)[0].lines[0].remaining == -200)
-        #expect(week(earlier, false)[0].lines[0].remaining == 0)
-    }
-
     @Test func expenditureStartsAtTheFirstDataAndNeedsAnInitialEstimate() throws {
         let log = [logDay("2026-10-05", kcal: [2000])]
         let weighIns = [DatedValue(date: day("2026-10-03"), value: 80)]
@@ -196,7 +170,6 @@ struct NutritionMetricsTests {
     @Test func savedLayoutsAdoptTheNutritionCardsOnce() throws {
         let old = #"{"primaryFocus":["recentRecords"],"insights":["workouts","weightTrend"],"habits":["weighIn","workouts"]}"#
         let adopted = try RowJSON.decoder.decode(DashboardLayout.self, from: Data(old.utf8))
-        #expect(adopted.primaryFocus == [.overview, .recentRecords, .weeklyNutrition, .energyBalance, .dailyNutrition])
         #expect(adopted.insights == [.workouts, .weightTrend, .expenditure, .energyBalance, .goalProgress, .steps])
         #expect(adopted.habits == [.weighIn, .foodLogging, .workouts])
         #expect(adopted.revision == DashboardLayout.revision)
@@ -204,7 +177,6 @@ struct NutritionMetricsTests {
         let kept = try RowJSON.decoder.decode(DashboardLayout.self, from: Data(trimmed.utf8))
         #expect(kept.insights == [.weightTrend])
         #expect(kept.habits == [.weighIn])
-        #expect(kept.primaryFocus == [.overview])
         let encoded = try RowJSON.text(kept)
         #expect(encoded.contains(#""revision":\#(DashboardLayout.revision)"#))
         var reset = DashboardLayout()

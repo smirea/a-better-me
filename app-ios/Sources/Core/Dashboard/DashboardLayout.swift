@@ -6,7 +6,6 @@ struct DashboardLayout: Codable, Hashable {
     /// Bumped when a release adds cards; see `init(from:)`.
     static let revision = 5
 
-    var primaryFocus: [FocusCard] = [.overview, .workouts, .recentRecords, .weeklyNutrition, .energyBalance, .dailyNutrition]
     var sections = DashboardSection.allCases
     var insights: [InsightCard] = [.workouts, .weightTrend, .expenditure, .energyBalance, .goalProgress, .steps]
     var habits: [HabitCard] = [.weighIn, .foodLogging, .workouts]
@@ -34,7 +33,6 @@ extension DashboardLayout {
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = DashboardLayout()
-        primaryFocus = try container.decodeIfPresent([FocusCard].self, forKey: .primaryFocus) ?? defaults.primaryFocus
         // Layouts saved before revision 3 list the General section, which Steps left for Insights.
         sections = try container.decodeIfPresent([String].self, forKey: .sections)?.compactMap(DashboardSection.init(rawValue:)) ?? defaults.sections
         insights = try container.decodeIfPresent([InsightCard].self, forKey: .insights) ?? defaults.insights
@@ -45,7 +43,6 @@ extension DashboardLayout {
         exercises = try container.decodeIfPresent([ExerciseCard].self, forKey: .exercises) ?? defaults.exercises
         let saved = try container.decodeIfPresent(Int.self, forKey: .revision) ?? 0
         if saved < 1 {
-            primaryFocus.adopt([.weeklyNutrition, .energyBalance, .dailyNutrition], from: defaults.primaryFocus)
             insights.adopt([.expenditure, .energyBalance, .goalProgress], from: defaults.insights)
             habits.adopt([.foodLogging], from: defaults.habits)
         }
@@ -58,9 +55,6 @@ extension DashboardLayout {
             // with no General list never saved one, and the defaults showed Steps.
             let general = try decoder.container(keyedBy: LegacyKeys.self).decodeIfPresent([String].self, forKey: .general)
             if general?.contains("steps") ?? true { insights.adopt([.steps], from: defaults.insights) }
-        }
-        if saved < 4 {
-            primaryFocus.adopt([.overview], from: defaults.primaryFocus)
         }
         if saved < 5 {
             sections.adopt([.pings], from: defaults.sections)
@@ -80,10 +74,6 @@ private extension Array where Element: Equatable {
             insert(card, at: anchor.flatMap { firstIndex(of: $0) }.map { $0 + 1 } ?? 0)
         }
     }
-}
-
-enum FocusCard: String, Codable, CaseIterable {
-    case overview, workouts, recentRecords, weeklyNutrition, energyBalance, dailyNutrition
 }
 
 /// Pings has no card list of its own: it shows every ping, in the pings' order.
