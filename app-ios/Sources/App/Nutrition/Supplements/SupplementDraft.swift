@@ -63,11 +63,6 @@ struct SupplementDraft: Codable, Equatable, Sendable {
             tags = regimen.tags
             pauses = regimen.pauses ?? []
         }
-
-        /// The pause that has `today` off, not one still to come.
-        func pause(on today: CalendarDay) -> SupplementRegimen.Pause? {
-            pauses.current(on: today).flatMap { $0.start <= today ? $0 : nil }
-        }
     }
 
     enum Field: Hashable, Sendable {

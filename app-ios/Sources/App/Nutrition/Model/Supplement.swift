@@ -58,9 +58,9 @@ struct SupplementRegimen: Codable, Hashable, Sendable {
 }
 
 extension [SupplementRegimen.Pause] {
-    /// The pause that has today off or is still to come.
+    /// The pause that has today off. One still to come is not it, so it never hides the one running.
     func current(on today: CalendarDay) -> SupplementRegimen.Pause? {
-        last { $0.end.map { $0 >= today } != false }
+        first { $0.spans(today) }
     }
 
     /// Takes today off and the days `length` names after it, replacing a pause already running.
@@ -69,9 +69,9 @@ extension [SupplementRegimen.Pause] {
         append(SupplementRegimen.Pause(start: today, end: length.end(from: today)))
     }
 
-    /// Ends the current pause yesterday, so today is back on. One that has not had a day off yet is dropped.
+    /// Ends the pause that has today off yesterday, so today is back on. One that began today is dropped.
     mutating func resume(on today: CalendarDay) {
-        guard let index = lastIndex(where: { $0.end.map { $0 >= today } != false }) else { return }
+        guard let index = firstIndex(where: { $0.spans(today) }) else { return }
         if self[index].start >= today {
             remove(at: index)
         } else {
@@ -165,7 +165,7 @@ extension Supplement {
         guard let index = currentRegimen(on: today) else { return .stopped }
         let regimen = regimens[index]
         if regimen.start > today { return .upcoming }
-        return regimen.pauses?.current(on: today).map { $0.start <= today } == true ? .paused : .taking
+        return regimen.pauses?.current(on: today) != nil ? .paused : .taking
     }
 
     /// Ends every regimen that reaches `today`, so yesterday is the last day it shows. One that would not have run a
@@ -301,7 +301,7 @@ enum SupplementFormat {
         }
         let regimen = supplement.regimens[index]
         if regimen.start > today { return "Starts \(day(regimen.start, on: today))" }
-        if let pause = regimen.pauses?.current(on: today), pause.start <= today { return paused(pause, on: today) }
+        if let pause = regimen.pauses?.current(on: today) { return paused(pause, on: today) }
         return schedule(regimen, of: supplement.serving)
     }
 

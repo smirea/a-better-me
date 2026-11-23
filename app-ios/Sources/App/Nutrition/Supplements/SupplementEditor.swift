@@ -187,7 +187,7 @@ struct SupplementEditor: View {
 
     private func regimen(_ issues: [SupplementDraft.Field: String]) -> some View {
         let today = CalendarDay.today
-        let pause = draft.taking ? draft.regimen.pause(on: today) : nil
+        let pause = draft.taking ? draft.regimen.pauses.current(on: today) : nil
         return ThemedSection("Regimen", subtitle: pause.map { SupplementFormat.paused($0, on: today) }) {
             if draft.taking {
                 DatePicker("Start", selection: day($draft.regimen.start), displayedComponents: .date)
