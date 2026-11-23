@@ -81,9 +81,9 @@ struct FoodDraft: Codable, Equatable, Sendable {
             }
         }
         let sizePerServing = nutrition.baseGrams ?? nutrition.baseMilliliters
-        measures = nutrition.measures.dropFirst().map { measure in
+        measures = nutrition.measures.dropFirst().enumerated().map { index, measure in
             let size = sizePerServing.map { measure.servings * $0 } ?? measure.servings / factor
-            return MeasureDraft(quantity: NumberText.text(measure.quantity), name: measure.name, size: NumberText.text(size))
+            return MeasureDraft(id: UUID(draftRow: index), quantity: NumberText.text(measure.quantity), name: measure.name, size: NumberText.text(size))
         }
         nutrients = nutrition.nutrients.mapValues { NumberText.text($0 * factor) }
     }
