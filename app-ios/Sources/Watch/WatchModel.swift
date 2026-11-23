@@ -158,9 +158,10 @@ final class WatchModel: NSObject {
     /// Taps the wrist when the rest on screen ends, from the model rather than the view, so it fires with the wrist down
     /// while the workout session keeps the app running.
     private func followRest() {
-        let rest = workout.flatMap { $0.isFinished || $0.pausedAt != nil ? nil : $0.rest }
+        let running = workout.flatMap { $0.isFinished || $0.pausedAt != nil ? nil : $0 }
+        let rest = running?.rest
         guard rest != restEnd?.rest else { return }
-        if rest == nil, let ending = restEnd?.rest, ending.ranOut(by: .now) { return }
+        if running != nil, rest == nil, let ending = restEnd?.rest, ending.ranOut(by: .now) { return }
         restEnd?.task.cancel()
         guard let rest, rest.endsAt > .now else { return restEnd = nil }
         restEnd = (rest, Task { [weak self] in
