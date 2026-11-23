@@ -585,34 +585,31 @@ private struct EntryRow: View {
 
 /// A logged recipe's ingredients under its tile's name, one line each: the amount eaten, a tiny icon, and the food's
 /// short name, and no nutrition, since the tile's totals above are what counts. The amounts sit in a column ending at
-/// the icons, so the icons and names line up; a long line truncates the name. An altered recipe lists its alterations
-/// first and colors only what changed: a changed amount yellow, an added line green, and a removed one struck through.
+/// the icons, so the icons and names line up; the column takes at most 30% of the width and a longer amount ends in an
+/// ellipsis, so the names keep the rest. An altered recipe lists its alterations first and colors only what changed: a
+/// changed amount yellow, an added line green, and a removed one struck through.
 private struct IngredientLines: View {
     let ingredients: RecipeTileIngredients
 
     var body: some View {
-        Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 2) {
+        IngredientColumns {
             ForEach(Array(ingredients.lines.enumerated()), id: \.offset) { _, line in
-                GridRow {
+                Group {
                     Text(line.amount)
                         .foregroundStyle(Self.amountColor(line.change))
-                        .fixedSize()
-                        .gridColumnAlignment(.trailing)
                     FoodIcon(emoji: line.emoji, source: line.source, size: 14)
                     Text(line.change == .added ? "+ \(line.name)" : line.name)
-                        .lineLimit(1)
                         .foregroundStyle(line.change == .added ? Theme.ratingGreen : Theme.textSecondary)
                 }
                 .strikethrough(line.change == .removed)
             }
             if ingredients.more > 0 {
-                GridRow {
-                    Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
-                    Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
-                    Text("+\(ingredients.more) more")
-                }
+                Color.clear.frame(width: 0, height: 0)
+                Color.clear.frame(width: 0, height: 0)
+                Text("+\(ingredients.more) more")
             }
         }
+        .lineLimit(1)
         .font(AppFont.rowDetail)
         .foregroundStyle(Theme.textSecondary)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -626,5 +623,74 @@ private struct IngredientLines: View {
         case .changed: Theme.ratingYellow
         case .kept, .removed: Theme.textSecondary
         }
+    }
+}
+
+/// The ingredient lines' three columns, from subviews in threes (amount, icon, name): the amounts trailing-aligned at
+/// their widest but never past `amountShare` of the width (design.md's width budget for serving text), the icons, then
+/// the names in what is left. A `Grid` sizes a column to its widest fixed cell, so a long amount squeezed the names.
+private struct IngredientColumns: Layout {
+    static let amountShare: CGFloat = 0.3
+    static let spacing: CGFloat = 6
+    static let rowSpacing: CGFloat = 2
+
+    private struct Columns {
+        var amount: CGFloat
+        var icon: CGFloat
+        var name: CGFloat
+        var heights: [CGFloat]
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let columns = columns(width: proposal.width, subviews: subviews)
+        let width = columns.amount + columns.icon + columns.name + 2 * Self.spacing
+        let height = columns.heights.reduce(0, +) + Self.rowSpacing * CGFloat(max(columns.heights.count - 1, 0))
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let columns = columns(width: bounds.width, subviews: subviews)
+        let iconX = bounds.minX + columns.amount + Self.spacing
+        let nameX = iconX + columns.icon + Self.spacing
+        var y = bounds.minY
+        for (row, height) in columns.heights.enumerated() {
+            let midY = y + height / 2
+            let cells = row * 3
+            subviews[cells].place(
+                at: CGPoint(x: bounds.minX + columns.amount, y: midY), anchor: .trailing,
+                proposal: ProposedViewSize(width: columns.amount, height: nil)
+            )
+            if cells + 1 < subviews.count {
+                subviews[cells + 1].place(at: CGPoint(x: iconX, y: midY), anchor: .leading, proposal: .unspecified)
+            }
+            if cells + 2 < subviews.count {
+                subviews[cells + 2].place(
+                    at: CGPoint(x: nameX, y: midY), anchor: .leading,
+                    proposal: ProposedViewSize(width: columns.name, height: nil)
+                )
+            }
+            y += height + Self.rowSpacing
+        }
+    }
+
+    private func columns(width: CGFloat?, subviews: Subviews) -> Columns {
+        let rows = stride(from: 0, to: subviews.count, by: 3).map { Array(subviews[$0..<min($0 + 3, subviews.count)]) }
+        func widest(_ column: Int) -> CGFloat {
+            rows.compactMap { $0.count > column ? $0[column].sizeThatFits(.unspecified).width : nil }.max() ?? 0
+        }
+        let icon = widest(1)
+        var amount = widest(0)
+        var name = widest(2)
+        if let width, width.isFinite {
+            amount = min(amount, (width * Self.amountShare).rounded(.down))
+            name = max(width - amount - icon - 2 * Self.spacing, 0)
+        }
+        let heights: [CGFloat] = rows.map { cells -> CGFloat in
+            cells.enumerated().map { column, cell in
+                let cellWidth: CGFloat? = column == 0 ? amount : column == 2 ? name : nil
+                return cell.sizeThatFits(ProposedViewSize(width: cellWidth, height: nil)).height
+            }.max() ?? 0
+        }
+        return Columns(amount: amount, icon: icon, name: name, heights: heights)
     }
 }

@@ -1,0 +1,9 @@
+{
+	"title": "Recipe tiles keep ingredient amounts to 30% of the width, so names stay readable",
+	"tasks": [
+		{
+			"id": "d9991291-245e-4902-ad0f-311a6af9c93a",
+			"title": "1 Nutrition Feedback: adjust width, max 30%"
+		}
+	]
+}
