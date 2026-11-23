@@ -62,7 +62,7 @@ struct NewProgramWizard: View {
         .alert("Import failed", isPresented: $importFailed) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("We only support select spreadsheet formats with a .xlsx extension. If the program spreadsheet wasn't exported from MacroFactor Workouts or explicitly advertised to work with MacroFactor Workouts, it will likely fail to import. Only upload content you have permission to use.")
+            Text("Only .xlsx programs exported from MacroFactor Workouts import.")
         }
         .unmatchedExercisesAlert($unmatched)
         .feedback(self)

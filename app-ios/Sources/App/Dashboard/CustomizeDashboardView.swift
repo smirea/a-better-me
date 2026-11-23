@@ -18,11 +18,9 @@ struct CustomizeDashboardView: View {
             ForEach(layout.sections.filter { $0 != .pings }) { section in
                 ThemedSection(section.title) {
                     rows(section)
-                    Button("Add or Remove \(section.addTitle)") { editing = section }
-                        .font(AppFont.medium(16))
-                        .frame(maxWidth: .infinity)
-                        .foregroundStyle(Theme.textPrimary)
-                        .moveDisabled(true)
+                } actions: {
+                    Button("Edit") { editing = section }
+                        .accessibilityLabel("Add or Remove \(section.addTitle)")
                 }
             }
             ThemedSection {
@@ -283,7 +281,7 @@ private struct AddRemoveSheet: View {
                 content
             }
             .themedList()
-            .detailTitle(section.title, subtitle: "Add or remove tiles")
+            .detailTitle(section.title)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm) { dismiss() }

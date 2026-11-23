@@ -104,28 +104,18 @@ struct StepSamplesExportSheet: View {
     @State private var phase = Phase.running(fraction: 0, rows: 0)
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Step Samples").font(AppFont.headline())
-            switch phase {
-            case let .running(fraction, rows):
-                ProgressView(value: fraction)
-                Text(rows == 0 ? "Reading Health…" : "\(rows.formatted()) samples")
-                    .font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).monospacedDigit()
-                Button("Cancel", role: .cancel) { dismiss() }
-                    .secondaryPill()
-            case let .done(url, rows):
-                Text("\(rows.formatted()) samples").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-                ShareLink(item: url) { Label("Share CSV", systemImage: "square.and.arrow.up") }
-                    .primaryPill()
-                    .accessibilityLabel("Share CSV")
-            case let .failed(message):
-                Text(message).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center)
-                Button("Close") { dismiss() }
-                    .secondaryPill()
-            }
+        NavigationStack {
+            content
+                .padding(Theme.margin)
+                .frame(maxHeight: .infinity, alignment: .top)
+                .detailTitle("Step Samples")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(role: .close) { dismiss() }
+                    }
+                }
         }
-        .padding(Theme.margin)
-        .presentationDetents([.height(210)])
+        .presentationDetents([.height(220)])
         .interactiveDismissDisabled(isRunning)
         .task {
             do {
@@ -137,6 +127,24 @@ struct StepSamplesExportSheet: View {
             }
         }
         .feedback(self)
+    }
+
+    private var content: some View {
+        VStack(spacing: 16) {
+            switch phase {
+            case let .running(fraction, rows):
+                ProgressView(value: fraction)
+                Text(rows == 0 ? "Reading Health…" : "\(rows.formatted()) samples")
+                    .font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).monospacedDigit()
+            case let .done(url, rows):
+                Text("\(rows.formatted()) samples").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+                ShareLink(item: url) { Label("Share CSV", systemImage: "square.and.arrow.up") }
+                    .primaryPill()
+                    .accessibilityLabel("Share CSV")
+            case let .failed(message):
+                Text(message).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center)
+            }
+        }
     }
 
     private var isRunning: Bool {

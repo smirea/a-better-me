@@ -56,7 +56,7 @@ struct CreateWorkoutView: View {
         .alert("Import failed", isPresented: $importFailed) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("We only support select spreadsheet formats with a .xlsx extension. If the workout spreadsheet wasn't exported from MacroFactor Workouts or explicitly advertised to work with MacroFactor Workouts, it will likely fail to import. Only upload content you have permission to use. Use the program importer, not this single day workout importer, in order to import a program.")
+            Text("Only .xlsx workouts exported from MacroFactor Workouts import. Import programs from New Program.")
         }
         .unmatchedExercisesAlert($unmatched)
         .feedback(self)
@@ -64,8 +64,8 @@ struct CreateWorkoutView: View {
 
     private var methodStep: some View {
         step(progress: 1.0 / 4, title: "How would you like to create your workout?") {
-            WizardOption(icon: "wrench.fill", title: "Build From Scratch", subtitle: "Start with a fully blank slate and no guidance", selected: method == .fromScratch) { method = .fromScratch }
-            WizardOption(icon: "icloud.and.arrow.up.fill", title: "Import Workout From File", subtitle: "You can upload .xlsx files from previously exported workouts", selected: method == .importFile) { method = .importFile }
+            WizardOption(icon: "wrench.fill", title: "Build From Scratch", subtitle: nil, selected: method == .fromScratch) { method = .fromScratch }
+            WizardOption(icon: "icloud.and.arrow.up.fill", title: "Import Workout From File", subtitle: nil, selected: method == .importFile) { method = .importFile }
         } next: {
             PinnedActionButton("Next") {
                 switch method {

@@ -37,15 +37,19 @@ const discardWorkout = [
 	...tap('Discard'),
 	'wait 800',
 ];
-// The day's supplements row and its tiles also exist on the pages beside today's, so a label matches three of each.
-// They are tapped by position: the row, then its first tile.
-const supplementsRow = ['wait \'label="Supplements"\' 8000', 'press 201 196', 'wait 600'];
+// The day's supplements row sits below the last meal, and the pages beside today's hold one too, so only the visible
+// one is pressed.
+const supplementsRow = [
+	`scroll down --until 'label="Supplements" visible=true'`,
+	`press 'role="button" label="Supplements" visible=true'`,
+	'wait 600',
+];
 // A library row's label carries its range, which moves with the seed's dates, so it is pressed by id.
 const multivitamin = [
 	'wait \'id="supplement-Essential Multivitamin"\' 8000',
 	'press \'id="supplement-Essential Multivitamin"\'',
 ];
-const loggerTab = (tab: string) => [...tapTab('Nutrition'), ...tap('Your Foods'), ...tapButton(tab)];
+const loggerTab = (tab: string) => [...tapTab('Nutrition'), ...tapTab('New'), ...tapButton(tab)];
 const scrolled = (count = 1) => Array.from({ length: count }, () => 'scroll down').concat('wait 600');
 
 export const screens: Screen[] = [
@@ -64,7 +68,6 @@ export const screens: Screen[] = [
 		steps: [...scrollTo('Weight Trend'), ...tap('Weight Trend'), 'wait 1000', 'shot top', ...scrolled(1)],
 	},
 	{ name: 'dashboard-expenditure-detail', steps: [...scrollTo('Expenditure'), ...tap('Expenditure'), 'wait 1000'] },
-	{ name: 'dashboard-goal-progress', steps: [...scrollTo('Goal Progress'), ...tap('Goal Progress'), 'wait 1000'] },
 	{
 		name: 'dashboard-see-all-nutrition',
 		steps: [`scroll down --until 'label="See All Nutrition"'`, ...tap('See All Nutrition')],
@@ -85,7 +88,7 @@ export const screens: Screen[] = [
 		steps: [
 			...tapTab('Pings'),
 			...tapTab('New'),
-			...tap('Log Mood'),
+			...tapButton('Log Mood'),
 			...tap('Mood 4, Good'),
 			...tap('Close'),
 			'wait 800',
@@ -96,7 +99,7 @@ export const screens: Screen[] = [
 		steps: [
 			...tapTab('Pings'),
 			...tapTab('New'),
-			...tap('Log Mood'),
+			...tapButton('Log Mood'),
 			...tap('Mood 4, Good'),
 			...tap('Mood history'),
 			'wait 1000',
@@ -125,13 +128,21 @@ export const screens: Screen[] = [
 	{ name: 'foodlog-marked-day', steps: [...tapTab('Nutrition'), 'swipe 60 500 340 500', 'wait 800'] },
 	{ name: 'foodlog-menu', steps: [...tapTab('Nutrition'), ...trailingToolbarButton] },
 	{ name: 'foodlog-supplements', steps: [...tapTab('Nutrition'), ...supplementsRow] },
-	{ name: 'foodlog-supplement', steps: [...tapTab('Nutrition'), ...supplementsRow, 'press 201 250', 'wait 600'] },
+	{
+		name: 'foodlog-supplement',
+		steps: [
+			...tapTab('Nutrition'),
+			...supplementsRow,
+			`press 'text="Essential Multivitamin" visible=true'`,
+			'wait 600',
+		],
+	},
 	{ name: 'foodlog-calendar', steps: [...tapTab('Nutrition'), ...tap('Calendar')] },
 	{ name: 'foodlog-overview', steps: [...tapTab('Nutrition'), ...trailingToolbarButton, 'press 260 93'] },
 	{ name: 'foodlog-select', steps: [...tapTab('Nutrition'), ...trailingToolbarButton, ...tap('Select All')] },
 	{ name: 'foodlog-copy', steps: [...tapTab('Nutrition'), ...trailingToolbarButton, ...tap('Copy Day')] },
 	{ name: 'logger-scan', steps: [...tapTab('Nutrition'), ...tapTab('New'), 'wait 800'] },
-	{ name: 'logger-library', steps: [...tapTab('Nutrition'), ...tap('Your Foods')] },
+	{ name: 'logger-library', steps: loggerTab('Library') },
 	{ name: 'logger-search', steps: [...loggerTab('Search'), 'wait 800'] },
 	{ name: 'logger-quick-add', steps: loggerTab('Quick Add') },
 	{ name: 'logger-photo', steps: loggerTab('Photo') },
@@ -227,11 +238,10 @@ export const screens: Screen[] = [
 		name: 'foodlog-nutrient-goals',
 		steps: [...settings('Strategy'), 'press 362 84', 'wait 800', ...tap('Nutrient Goals')],
 	},
-	{ name: 'add-weight', steps: [...tapTab('Nutrition'), ...tapTab('New'), ...tap('Weight')] },
-	{ name: 'add-edit-day', steps: [...tapTab('Nutrition'), ...tapTab('New'), ...tap('Edit Day')] },
+	{ name: 'add-weight', steps: [...tapTab('Workout'), ...tapTab('New'), ...tap('Weight')] },
 	{
 		name: 'logger-food-detail',
-		steps: [...tapTab('Nutrition'), ...tap('Your Foods'), ...tap('Homemade Granola'), 'wait 800'],
+		steps: [...loggerTab('Library'), ...tapButton('Foods'), `press 'text="Homemade Granola"'`, 'wait 800'],
 	},
 	{
 		name: 'foods-recipe-detail',
@@ -245,7 +255,7 @@ export const screens: Screen[] = [
 			...tapTab('Workout'),
 			...scrollTo('Workout Library'),
 			'scroll down',
-			...tap('Lower, Barbell Back Squat, Conventional Deadlift, 45° Leg Press'),
+			`press 'label="Lower  10 completed, 3 exercises · 9 sets"'`,
 		],
 	},
 	{

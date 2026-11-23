@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// A wizard's choice row, flat on the page: icon, title, optional detail, and its `SelectionMark` over a hairline.
 struct WizardOption: View {
     var icon: String?
     let title: String
@@ -28,12 +29,8 @@ struct WizardOption: View {
                 SelectionMark(isOn: selected)
             }
             .multilineTextAlignment(.leading)
-            .padding(14)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
-            .overlay {
-                RoundedRectangle(cornerRadius: Theme.smallCornerRadius)
-                    .strokeBorder(selected ? Theme.textPrimary : Theme.surfaceRaised, lineWidth: selected ? 2 : 1)
-            }
+            .padding(.vertical, 12)
+            .overlay(alignment: .bottom) { Divider().overlay(Theme.separator) }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

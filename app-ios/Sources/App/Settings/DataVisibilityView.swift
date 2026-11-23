@@ -29,11 +29,6 @@ private struct NutrientVisibilityView: View {
 
     var body: some View {
         Form {
-            ThemedSection("Calories & Macros") {
-                ForEach(Self.alwaysShown, id: \.self) { id in
-                    LabeledContent(NutrientRegistry.nutrient(id)?.name ?? id.rawValue, value: "Default")
-                }
-            }
             ForEach(NutrientGroup.allCases, id: \.self) { group in
                 let nutrients = NutrientRegistry.all.filter { $0.group == group && !Self.alwaysShown.contains($0.id) }
                 if !nutrients.isEmpty {
@@ -63,10 +58,6 @@ private struct BodyMetricsVisibilityView: View {
 
     var body: some View {
         Form {
-            ThemedSection("Weight & Body Fat") {
-                LabeledContent("Scale Weight", value: "Default")
-                LabeledContent("Visual Body Fat", value: "Default")
-            }
             ForEach([BodyMetricGroup.upperBody, .arms, .legs], id: \.self) { group in
                 ThemedSection(group.rawValue) {
                     ForEach(group.kinds, id: \.self) { kind in
