@@ -2,7 +2,7 @@ import Feedback
 import SwiftUI
 
 /// A section for a list that grows with use (weigh-ins, entries, past sessions). Draws flat on `Theme.background` with
-/// an optional top hairline divider by default, showing five and a half rows with the half row fading out so the list
+/// showing five and a half rows with the half row fading out so the list
 /// reads as continuing, and the header's See All pushes `destination` with every row. Six rows or fewer show whole and
 /// get no link. Pass `inList: true` inside a grouped `Form` or `List` to keep the card surface aligned with sibling
 /// `ThemedSection`s.
@@ -18,16 +18,14 @@ struct TruncatedList<Item: Identifiable, Row: View, Destination: View>: View {
     /// Set inside a `Form` or `List`, where the section is one clear cell: the title takes a list section's size and
     /// inset, so it lines up with the `ThemedSection`s around it and clears the cell's rounded corner.
     private let inList: Bool
-    private let divider: Bool
     /// Feedback names the call site, since this file says nothing about which list it is.
     private let source: (file: String, line: Int)
 
     init(
-        _ title: String, items: [Item], inList: Bool = false, divider: Bool = true, @ViewBuilder row: @escaping (Item) -> Row,
+        _ title: String, items: [Item], inList: Bool = false, @ViewBuilder row: @escaping (Item) -> Row,
         @ViewBuilder destination: @escaping () -> Destination, file: String = #fileID, line: Int = #line
     ) {
         self.inList = inList
-        self.divider = divider
         self.title = title
         self.items = items
         self.row = row
@@ -59,9 +57,6 @@ struct TruncatedList<Item: Identifiable, Row: View, Destination: View>: View {
                 .padding(.horizontal, 16)
                 list.background(flat ? .clear : Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
             } else {
-                if divider {
-                    Divider().overlay(Theme.separator)
-                }
                 SectionHeader(title) { seeAll(truncated) }
                 list
             }

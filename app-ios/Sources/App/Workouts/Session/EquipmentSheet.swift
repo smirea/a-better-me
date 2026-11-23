@@ -20,7 +20,7 @@ struct EquipmentSheet<Settings: View>: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    FlatSection("Resistance", divider: false, spacing: 0) {
+                    FlatSection("Resistance", spacing: 0) {
                         ForEach(exercise.resistanceOptions(in: availability)) { option in
                             row(option, isSelected: option.ids == chosen) { choice = option.ids }
                         }

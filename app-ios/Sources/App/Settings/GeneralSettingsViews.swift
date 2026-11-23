@@ -22,7 +22,7 @@ struct UnitsSettingsView: View {
                     title: "Height", systemImage: "ruler", selection: store.binding(settings, \.nutrition.heightUnit),
                     options: [
                         SettingOption(value: .feetAndInches, title: "Feet and Inches"),
-                        SettingOption(value: .centimeters, title: "Centimeters"),
+                        SettingOption(value: .centimeters, title: "Centimeters", detail: "Also body measurements"),
                     ]
                 )
                 SettingChoice(

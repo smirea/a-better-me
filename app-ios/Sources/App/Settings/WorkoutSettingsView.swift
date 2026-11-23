@@ -28,39 +28,46 @@ struct WorkoutSettingsView: View {
                 )
                 SettingToggle(
                     title: "Propagate Changes",
-                    systemImage: "arrowshape.turn.up.right", isOn: store.binding(settings, \.workout.propagateChanges)
+                    systemImage: "arrowshape.turn.up.right",
+                    info: "Weight and rep edits will propagate to all sets with same weight and reps", isOn: store.binding(settings, \.workout.propagateChanges)
                 )
                 SettingToggle(
                     title: "RIR Tracking",
-                    systemImage: "heart.text.square", isOn: store.binding(settings, \.workout.rirTracking)
+                    systemImage: "heart.text.square",
+                    info: "Automatically populate RIR selection in the session log based on program", isOn: store.binding(settings, \.workout.rirTracking)
                 )
                 SettingToggle(
                     title: "Superset Auto-Scroll",
-                    systemImage: "repeat", isOn: store.binding(settings, \.workout.supersetAutoScroll)
+                    systemImage: "repeat",
+                    info: "Scroll automatically between superset exercises after set completion", isOn: store.binding(settings, \.workout.supersetAutoScroll)
                 )
                 SettingToggle(
                     title: "Exercise Auto-Next",
-                    systemImage: "chevron.forward.2", isOn: store.binding(settings, \.workout.exerciseAutoNext)
+                    systemImage: "chevron.forward.2",
+                    info: "Scroll next automatically when an exercise is completed", isOn: store.binding(settings, \.workout.exerciseAutoNext)
                 )
                 SettingToggle(
                     title: "Include Bar Weight",
-                    systemImage: "dumbbell", isOn: store.binding(settings, \.workout.plateCalculatorIncludesBase)
+                    systemImage: "dumbbell",
+                    info: "The plate calculator counts the bar or machine's own weight. Tap the bar in the calculator to change it for one machine", isOn: store.binding(settings, \.workout.plateCalculatorIncludesBase)
                 )
             }
             ThemedSection("Display") {
                 SettingToggle(
                     title: "Keep Alive",
-                    systemImage: "sun.max", isOn: store.binding(settings, \.workout.display.keepAlive)
+                    systemImage: "sun.max",
+                    info: "Keep your phone alive during active workout sessions", isOn: store.binding(settings, \.workout.display.keepAlive)
                 )
                 SettingToggle(
                     title: "Workout Timer",
-                    systemImage: "clock.fill", isOn: store.binding(settings, \.workout.display.workoutTimer)
+                    systemImage: "clock.fill",
+                    info: "Show elapsed time during workout sessions", isOn: store.binding(settings, \.workout.display.workoutTimer)
                 )
                 SettingChoice(
                     title: "Calendar Scrolling", systemImage: "calendar.day.timeline.left",
                     selection: store.binding(settings, \.workout.display.calendarScrolling),
                     options: [
-                        SettingOption(value: .daily, title: "Daily Scroll"),
+                        SettingOption(value: .daily, title: "Daily Scroll", detail: "Scrolls freely and settles one day at a time"),
                         SettingOption(value: .weekly, title: "Weekly Swipe"),
                     ]
                 )
@@ -84,22 +91,25 @@ private struct SmartProgressionSettingsView: View {
                     selection: store.binding(settings, \.workout.progression.initialFill),
                     options: [
                         SettingOption(
-                            value: .smartProgression, title: "Smart Progression values"),
+                            value: .smartProgression, title: "Smart Progression values", detail: "When you start a workout, Smart Progression will pre-fill your weight and rep logs based on your workout history and goals"),
                         SettingOption(
-                            value: .previousValues, title: "Previous values"),
+                            value: .previousValues, title: "Previous values", detail: "When you start a workout, weight and rep logs will default to Previous workout values"),
                     ]
                 )
                 SettingToggle(
                     title: "Apply in Session",
-                    systemImage: "arrow.triangle.merge", isOn: store.binding(settings, \.workout.progression.applyInSession)
+                    systemImage: "arrow.triangle.merge",
+                    info: "Allow Smart Progression to fill in new values for exercise data entry fields mid-workout.", isOn: store.binding(settings, \.workout.progression.applyInSession)
                 )
                 SettingToggle(
                     title: "Expand Rep Range",
-                    systemImage: "arrow.left.and.right", isOn: store.binding(settings, \.workout.progression.expandRepRange)
+                    systemImage: "arrow.left.and.right",
+                    info: "Allow Smart Progression to widen your target rep range when adding or lowering weight alone can't achieve an optimal result.", isOn: store.binding(settings, \.workout.progression.expandRepRange)
                 )
                 SettingToggle(
                     title: "Weight Match",
-                    systemImage: "equal.square", isOn: store.binding(settings, \.workout.progression.weightMatch)
+                    systemImage: "equal.square",
+                    info: "Prefer matching the previous set's weight when possible.", isOn: store.binding(settings, \.workout.progression.weightMatch)
                 )
             }
         }

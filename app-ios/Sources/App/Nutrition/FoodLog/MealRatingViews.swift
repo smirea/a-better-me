@@ -289,7 +289,8 @@ struct MealRatingSettings: View {
         ThemedSection("Meal Rating") {
             SettingToggle(
                 title: "Meal Rating",
-                systemImage: "gauge.with.needle", isOn: store.binding(settings, \.nutrition.mealRating.enabled)
+                systemImage: "gauge.with.needle",
+                info: "Show a rating beside meals and recipes", isOn: store.binding(settings, \.nutrition.mealRating.enabled)
             )
             if settings.nutrition.mealRating.enabled {
                 SettingChoice(

@@ -326,14 +326,8 @@ private struct NutrientListItem<Row: View>: View {
             }
         }
         .listRowInsets(EdgeInsets(top: 5, leading: flat ? Theme.margin : 16, bottom: 5, trailing: flat ? Theme.margin : 16))
-        .listRowSeparator(endsSection ? .visible : .hidden, edges: .bottom)
-        .listRowSeparator(.hidden, edges: .top)
-        // The rule spans the card whatever the last row's indent, as a label's section rules do.
-        .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
-    }
-
-    private var endsSection: Bool {
-        if case .nutrient(_, _, true) = item { true } else { false }
+        // No rule closes a group: it would sit right above the next group's label.
+        .listRowSeparator(.hidden)
     }
 }
 
@@ -343,14 +337,13 @@ struct FlatNutrientList<Row: View>: View {
     var title: String? = "Nutrients"
     let rows: [NutrientListRow]
     var collapsed: Binding<Bool>? = nil
-    var divider = true
     @ViewBuilder let row: (Nutrient) -> Row
 
     private static var indent: CGFloat { 16 }
 
     var body: some View {
         let isCollapsed = collapsed?.wrappedValue ?? false
-        FlatSection(title, divider: divider, spacing: 8) {
+        FlatSection(title, spacing: 8) {
             if let collapsed {
                 Button(isCollapsed ? "Expand" : "Collapse") {
                     withAnimation(.snappy) { collapsed.wrappedValue.toggle() }
@@ -369,13 +362,10 @@ struct FlatNutrientList<Row: View>: View {
                                 .padding(.top, 10)
                                 .padding(.bottom, 4)
                                 .accessibilityAddTraits(.isHeader)
-                        case let .nutrient(nutrient, depth, endsSection):
+                        case let .nutrient(nutrient, depth, _):
                             row(nutrient)
                                 .padding(.leading, CGFloat(depth) * Self.indent)
                                 .padding(.vertical, 5)
-                            if endsSection {
-                                Divider().overlay(Theme.separator).padding(.top, 4)
-                            }
                         }
                     }
                 }

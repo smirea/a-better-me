@@ -30,7 +30,7 @@ struct ShortcutsPanel<Item: ShortcutItem, Banner: View>: View {
                 banner
                 VStack(spacing: 0) {
                     ForEach(rows, id: \.self) { item in
-                        Divider().overlay(Theme.separator).padding(.leading, item == rows.first ? 0 : 44)
+                        if item != rows.first { Divider().overlay(Theme.separator).padding(.leading, 44) }
                         row(item)
                     }
                 }

@@ -241,7 +241,6 @@ private struct EquipmentStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             section(.resistance, options: draft.resistance)
-            Divider().overlay(Theme.separator)
             section(.support, options: draft.support)
         }
         .sheet(item: $picking) { role in

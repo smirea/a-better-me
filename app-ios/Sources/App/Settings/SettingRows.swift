@@ -1,22 +1,71 @@
 import SwiftUI
 
+/// A setting row whose explanation stays out of the way: with `info`, the title carries a small info mark, a tap on it
+/// shows the explanation under the whole row, and a second tap hides it. Whether it is open persists per title.
+struct SettingRow<Control: View>: View {
+    let title: String
+    var systemImage: String?
+    var info: String?
+    @ViewBuilder let control: Control
+    @AppStorage private var expanded: Bool
+
+    init(title: String, systemImage: String? = nil, info: String? = nil, @ViewBuilder control: () -> Control) {
+        self.title = title
+        self.systemImage = systemImage
+        self.info = info
+        self.control = control()
+        _expanded = AppStorage(wrappedValue: false, "settings.info.\(title)")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 12) {
+                if info != nil {
+                    Button { withAnimation(.snappy) { expanded.toggle() } } label: { label.contentShape(.rect) }
+                        .buttonStyle(.plain)
+                        .accessibilityHint(expanded ? "Hides the explanation" : "Shows the explanation")
+                } else {
+                    label
+                }
+                Spacer(minLength: 8)
+                control
+            }
+            if let info, expanded {
+                Text(info)
+                    .font(AppFont.rowDetail)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .transition(.opacity)
+            }
+        }
+    }
+
+    private var label: some View {
+        let mark = info == nil ? Text("") : Text("  \(Image(systemName: "info.circle"))").font(.caption).foregroundStyle(Theme.textTertiary)
+        return RowLabel(title: Text(title) + mark, systemImage: systemImage)
+    }
+}
+
 struct SettingToggle: View {
     let title: String
-    var detail: String?
     let systemImage: String
+    var info: String?
     @Binding var isOn: Bool
 
-    init(title: String, detail: String? = nil, systemImage: String, isOn: Binding<Bool>) {
+    init(title: String, systemImage: String, info: String? = nil, isOn: Binding<Bool>) {
         self.title = title
-        self.detail = detail
         self.systemImage = systemImage
+        self.info = info
         _isOn = isOn
     }
 
     var body: some View {
-        Toggle(isOn: $isOn) { RowLabel(title: title, detail: detail, systemImage: systemImage) }
-            .tint(Theme.accent)
-            .accessibilityLabel(title)
+        SettingRow(title: title, systemImage: systemImage, info: info) {
+            Toggle(title, isOn: $isOn)
+                .labelsHidden()
+                .tint(Theme.accent)
+                .accessibilityLabel(title)
+        }
     }
 }
 
@@ -54,9 +103,10 @@ struct SettingChoice<Value: Hashable>: View {
     var systemImage: String?
     @Binding var selection: Value
     let options: [SettingOption<Value>]
+    var info: String?
 
     var body: some View {
-        LabeledContent {
+        SettingRow(title: title, systemImage: systemImage, info: info) {
             Menu {
                 // Menu toggles render as checkmark items and, unlike Picker rows, show a second Text as a subtitle.
                 ForEach(options) { option in
@@ -75,8 +125,6 @@ struct SettingChoice<Value: Hashable>: View {
             }
             .accessibilityLabel(title)
             .accessibilityValue(current)
-        } label: {
-            RowLabel(title: title, systemImage: systemImage)
         }
     }
 

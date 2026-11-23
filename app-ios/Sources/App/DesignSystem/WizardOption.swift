@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A wizard's choice row, flat on the page: icon, title, optional detail, and its `SelectionMark` over a hairline.
+/// A wizard's choice row, flat on the page: icon, title, optional detail, and its `SelectionMark`.
 struct WizardOption: View {
     var icon: String?
     let title: String
@@ -30,7 +30,6 @@ struct WizardOption: View {
             }
             .multilineTextAlignment(.leading)
             .padding(.vertical, 12)
-            .overlay(alignment: .bottom) { Divider().overlay(Theme.separator) }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

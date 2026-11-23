@@ -837,7 +837,7 @@ private struct MetricHistoryView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 20) {
                 ForEach(Array(months.enumerated()), id: \.element.id) { index, month in
-                    FlatSection(month.title, divider: index > 0) {
+                    FlatSection(month.title) {
                         VStack(spacing: 0) {
                             ForEach(Array(month.rows.enumerated()), id: \.element.id) { rowIndex, row in
                                 if rowIndex > 0 { Divider().overlay(Theme.separator) }

@@ -107,7 +107,7 @@ struct SupplementDetailView: View {
             let past = PastRegimen.all(of: supplement, except: current)
             if !past.isEmpty {
                 Section {
-                    TruncatedList("History", items: past, divider: false) { item in
+                    TruncatedList("History", items: past) { item in
                         PastRegimenRow(item: item, serving: supplement.serving).padding(.vertical, 10)
                     } destination: {
                         SupplementHistoryView(supplementID: supplement.id)

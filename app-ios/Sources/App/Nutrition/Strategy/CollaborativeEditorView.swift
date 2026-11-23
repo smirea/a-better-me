@@ -16,7 +16,6 @@ struct CollaborativeEditorView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             WeekTargetsChart(targets: week.targets, selection: $weekday, locked: week.locked, height: 120)
-            Divider().overlay(Theme.separator)
             HStack {
                 Text(StrategyFormat.weekdayNames[weekday - 1]).font(AppFont.sectionTitle)
                 Spacer()

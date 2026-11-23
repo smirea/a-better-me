@@ -12,7 +12,7 @@ struct WorkoutHistoryView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(days.enumerated()), id: \.element.start) { index, day in
-                    FlatSection(day.start.formatted(date: .abbreviated, time: .omitted), divider: index > 0, spacing: 4) {
+                    FlatSection(day.start.formatted(date: .abbreviated, time: .omitted), spacing: 4) {
                         ForEach(day.sessions) { session in
                             Button { selected = session } label: { SessionRow(session: session) }
                                 .foregroundStyle(Theme.textPrimary)

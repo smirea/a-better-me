@@ -32,22 +32,20 @@ struct IngredientsSection<Leading: View>: View {
 /// hairline dividers instead of a `Theme.surface` card.
 struct FlatIngredientsSection<Leading: View>: View {
     let ingredients: [IngredientAlteration]
-    var divider = true
     @ViewBuilder var leading: Leading
 
-    init(_ ingredients: [IngredientAlteration], divider: Bool = true, @ViewBuilder leading: () -> Leading = { EmptyView() }) {
+    init(_ ingredients: [IngredientAlteration], @ViewBuilder leading: () -> Leading = { EmptyView() }) {
         self.ingredients = ingredients
-        self.divider = divider
         self.leading = leading()
     }
 
-    init(_ ingredients: [RecipeIngredient], divider: Bool = true, @ViewBuilder leading: () -> Leading = { EmptyView() }) {
-        self.init(ingredients.map(IngredientAlteration.init(kept:)), divider: divider, leading: leading)
+    init(_ ingredients: [RecipeIngredient], @ViewBuilder leading: () -> Leading = { EmptyView() }) {
+        self.init(ingredients.map(IngredientAlteration.init(kept:)), leading: leading)
     }
 
     var body: some View {
         if !ingredients.isEmpty {
-            FlatSection("Ingredients", divider: divider, spacing: 8) {
+            FlatSection("Ingredients", spacing: 8) {
                 VStack(alignment: .leading, spacing: 0) {
                     leading
                     ForEach(Array(ingredients.enumerated()), id: \.element.id) { index, line in
