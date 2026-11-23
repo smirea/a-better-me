@@ -60,29 +60,47 @@ extension View {
     /// and SwiftUI rebuilding the sheet. A nil key persists nothing: a form opened prefilled from something else (a
     /// duplicate, a scan, a selection) must not be replaced by an older draft. `restored` runs after a saved draft
     /// replaces the opened one.
+    ///
+    /// A draft is kept with the form as it opened and restores only over that same form: once the record changed
+    /// elsewhere (Stop Taking, a sync) or a new form's defaults moved on (a new day's start), the draft is dropped rather
+    /// than reverting the change on the next save. A draft edited back to how the form opened is dropped too, since a
+    /// swipe can then close the sheet without clearing it. Rows built from a record need stable ids
+    /// (`UUID(draftRow:)`) for the two forms to compare equal.
     func persistDraft<Value: Codable & Equatable>(_ draft: Binding<Value>, key: String?, restored: (() -> Void)? = nil) -> some View {
         modifier(PersistDraftModifier(draft: draft, key: key, restored: restored))
     }
+}
+
+private struct SavedDraft<Value: Codable>: Codable {
+    var opened: Value
+    var draft: Value
 }
 
 private struct PersistDraftModifier<Value: Codable & Equatable>: ViewModifier {
     @Binding var draft: Value
     let key: String?
     let restored: (() -> Void)?
-    @State private var loaded = false
+    @State private var opened: Value?
 
     func body(content: Content) -> some View {
         content
             .onAppear {
-                guard let key, !loaded else { return }
-                loaded = true
-                guard let saved = DraftStore.load(Value.self, key: key) else { return }
-                draft = saved
+                guard let key, opened == nil else { return }
+                opened = draft
+                guard let saved = DraftStore.load(SavedDraft<Value>.self, key: key), saved.opened == draft else {
+                    DraftStore.clear(key)
+                    return
+                }
+                draft = saved.draft
                 restored?()
             }
             .onChange(of: draft) { _, newValue in
-                guard let key, loaded else { return }
-                DraftStore.save(newValue, key: key)
+                guard let key, let opened else { return }
+                if newValue == opened {
+                    DraftStore.clear(key)
+                } else {
+                    DraftStore.save(SavedDraft(opened: opened, draft: newValue), key: key)
+                }
             }
     }
 }

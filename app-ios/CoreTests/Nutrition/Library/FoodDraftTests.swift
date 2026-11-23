@@ -160,4 +160,20 @@ struct FoodDraftEnergyAndBarcodeTests {
         draft.barcode = "0894700010137"
         #expect(draft.valid?.barcode == "0894700010137")
     }
+
+    /// A saved form draft restores only over the form it was saved from (`persistDraft`), so reopening has to rebuild it.
+    @Test func reopeningAFoodOrRecipeBuildsTheSameDraft() {
+        let food = Food(
+            name: "Yogurt",
+            nutrition: FoodNutrition(
+                nutrients: [.energy: 120], baseGrams: 100,
+                measures: [Measure(name: "container", quantity: 1, servings: 1.5), Measure(name: "spoon", quantity: 1, servings: 0.2)]
+            )
+        )
+        #expect(FoodDraft(food) == FoodDraft(food))
+
+        var recipe = Recipe(name: "Bowl", servings: 2)
+        recipe.steps = ["Mix", "Chill"]
+        #expect(RecipeDraft(recipe) == RecipeDraft(recipe))
+    }
 }

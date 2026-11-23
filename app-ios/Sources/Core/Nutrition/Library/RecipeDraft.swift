@@ -134,7 +134,7 @@ struct RecipeDraft: Codable, Equatable, Sendable {
         cookMinutes = recipe.cookMinutes.map(String.init) ?? ""
         link = recipe.link ?? ""
         notes = recipe.notes
-        steps = recipe.steps.map { Step(text: $0) }
+        steps = recipe.steps.enumerated().map { Step(id: UUID(draftRow: $0), text: $1) }
     }
 
     func duplicate() -> RecipeDraft {

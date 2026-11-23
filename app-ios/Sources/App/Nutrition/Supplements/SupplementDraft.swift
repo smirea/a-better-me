@@ -92,8 +92,10 @@ struct SupplementDraft: Codable, Equatable, Sendable {
         url = supplement.url ?? ""
         servingQuantity = NumberText.plain(supplement.serving.quantity)
         servingUnit = supplement.serving.unit
-        components = supplement.components.map {
-            ComponentDraft(name: $0.name, amount: $0.amount.map(NumberText.text) ?? "", unit: $0.unit ?? "")
+        components = supplement.components.enumerated().map { index, component in
+            ComponentDraft(
+                id: UUID(draftRow: index), name: component.name, amount: component.amount.map(NumberText.text) ?? "", unit: component.unit ?? ""
+            )
         }
         note = supplement.note
         if let index = supplement.currentRegimen(on: today) {
