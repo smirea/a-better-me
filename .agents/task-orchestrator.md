@@ -29,7 +29,7 @@ Repo config for the global `task-orchestrator` skill (`~/code/ai-files/skills/ta
 
 ## iOS: boot a simulator only to look at the app
 
-The Mac runs many jobs at once, and each booted simulator slows all of them. Climb this ladder and stop at the first rung that proves the change, but a change to what the user sees or taps always reaches rung 3, and you tap it (`docs/decisions/ios.md`, Verification).
+The Mac runs many jobs at once, and each booted simulator slows all of them. Climb this ladder and stop at the first rung that proves the change: reusing existing `DesignSystem/` components and patterns stops at rung 2 once logic tests pass, while custom implementations, new gesture/scroll mechanics, or large layout/flow changes reach rung 3 and you tap them (`docs/decisions/ios.md`, Verification).
 
 1. Pure logic lives in `app-ios/Sources/Core` with Swift Testing suites under `app-ios/CoreTests/<Feature>/`. Write a test there only for a rule the tests skill (`~/code/ai-files/skills/tests/SKILL.md`) admits. `swift test` in `app-ios/` runs them on the Mac in seconds, and pre-commit runs it on every Swift commit.
 2. Does the app compile: from the repo root, `xcodebuild build -project app-ios/App.xcodeproj -scheme App -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO -derivedDataPath app-ios/DerivedData/simulator -clonedSourcePackagesDirPath app-ios/DerivedData/SourcePackages` (no boot). Skip it when rung 1 or 3 runs next: both build the app anyway, into the same folder. Use it after every rebase too, and as the check for a Swift conflict when `pr-ship` exits 2.

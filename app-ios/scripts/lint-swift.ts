@@ -23,7 +23,7 @@ const rules = [
 	{
 		pattern: /\.scrollContentBackground\(\.hidden\)/,
 		allowedIn: ['App/DesignSystem/Components.swift', 'App/Workouts/Library/CustomExerciseWizard.swift'],
-		fix: 'lists and forms call .themedList(), so every one draws its section cards on Theme.background, in sheets too',
+		fix: 'lists and forms call .themedList() to draw on Theme.background instead of the system grouped background (flat rows by default; use ThemedSection only for grouped cards)',
 	},
 	{
 		pattern: /"(largecircle\.fill\.circle|record\.circle\.fill)"/,
