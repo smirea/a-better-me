@@ -11,6 +11,7 @@ struct SupplementEditor: View {
     /// The draft as the editor opened or the last photo read left it, so a new read skips the fields changed since.
     @State private var baseline: SupplementDraft
     private let opened: SupplementDraft
+    private let draftKey: String
     @State private var photos = SupplementPhotoReader()
     /// False until every picture it has is in `photos`. Until then `photos` holds only new ones, and a save keeps the
     /// stored ones ahead of them, so a picture still syncing in is never taken for a removed one.
@@ -27,6 +28,7 @@ struct SupplementEditor: View {
         _baseline = State(initialValue: initial)
         _picturesLoaded = State(initialValue: supplement?.images.isEmpty != false)
         opened = initial
+        draftKey = supplement.map { "supplement.\($0.id)" } ?? "supplement.new"
     }
 
     var body: some View {
@@ -60,7 +62,10 @@ struct SupplementEditor: View {
             .detailTitle(editing != nil ? "Edit Supplement" : "New Supplement")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(role: .close) { dismiss() }
+                    Button(role: .close) {
+                        DraftStore.clear(draftKey)
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm) { save() }
@@ -86,6 +91,7 @@ struct SupplementEditor: View {
             .alert("Delete Supplement", isPresented: $confirmingDelete) {
                 Button("Delete", role: .destructive) {
                     if let editing { store.deleteSupplement(editing.id) }
+                    DraftStore.clear(draftKey)
                     dismiss()
                 }
                 Button("Cancel", role: .cancel) {}
@@ -95,6 +101,7 @@ struct SupplementEditor: View {
         }
         // A read takes seconds and fills the whole label; a stray swipe should not throw that away. Close still does.
         .interactiveDismissDisabled(draft != opened || pictures != editing?.images ?? [])
+        .persistDraft($draft, key: draftKey)
         .feedback(self)
     }
 
@@ -266,6 +273,7 @@ struct SupplementEditor: View {
         guard var supplement = draft.supplement(editing: editing) else { return }
         supplement.images = pictures
         store.saveSupplement(supplement, adding: photos.photos.map { NewPicture(id: $0.id, jpeg: $0.jpeg) })
+        DraftStore.clear(draftKey)
         dismiss()
     }
 }
