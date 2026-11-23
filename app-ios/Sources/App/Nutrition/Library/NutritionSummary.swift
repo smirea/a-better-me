@@ -49,3 +49,26 @@ struct NutrientBreakdown: View {
         }
     }
 }
+
+/// Flat `ScrollView`/`LazyVStack` variant of `NutrientBreakdown`, drawing directly on `Theme.background`.
+struct FlatNutrientBreakdown: View {
+    let amounts: NutrientAmounts
+    var collapsed: Binding<Bool>? = nil
+    var divider = true
+
+    var body: some View {
+        FlatNutrientList(title: "Nutrients", rows: NutrientListRow.all, collapsed: collapsed, divider: divider) { nutrient in
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(nutrient.name)
+                    .font(AppFont.body(15))
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer(minLength: 8)
+                Text(amounts.amount(of: nutrient.id).map { NutritionFormat.amount($0, nutrient.unit) } ?? "–")
+                    .font(AppFont.body(15))
+                    .foregroundStyle(amounts.amount(of: nutrient.id) == nil ? Theme.textTertiary : Theme.textSecondary)
+                    .monospacedDigit()
+            }
+            .accessibilityElement(children: .combine)
+        }
+    }
+}

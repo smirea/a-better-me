@@ -30,15 +30,15 @@ enum RecipeMath {
 }
 
 /// The recipe editor's fields as typed.
-struct RecipeDraft: Equatable, Sendable {
-    struct Step: Equatable, Identifiable, Sendable {
+struct RecipeDraft: Codable, Equatable, Sendable {
+    struct Step: Codable, Equatable, Identifiable, Sendable {
         var id = UUID()
         var text = ""
     }
 
     /// An ingredient and its quantity as typed. Typing a positive number sets the serving; switching the measure
     /// converts the serving at full precision and only displays it rounded, so a round trip never drifts.
-    struct Ingredient: Equatable, Identifiable, Sendable {
+    struct Ingredient: Codable, Equatable, Identifiable, Sendable {
         private(set) var value: RecipeIngredient
         private(set) var quantity: String
 

@@ -26,8 +26,8 @@ extension PhotoReader where Label == SupplementLabel {
 }
 
 /// The supplement editor's fields as typed, so the form binds text and validation and conversion stay testable.
-struct SupplementDraft: Equatable, Sendable {
-    struct ComponentDraft: Equatable, Identifiable, Sendable {
+struct SupplementDraft: Codable, Equatable, Sendable {
+    struct ComponentDraft: Codable, Equatable, Identifiable, Sendable {
         var id = UUID()
         var name = ""
         var amount = ""
@@ -36,7 +36,7 @@ struct SupplementDraft: Equatable, Sendable {
         var isBlank: Bool { [name, amount, unit].allSatisfy { $0.trimmingCharacters(in: .whitespaces).isEmpty } }
     }
 
-    struct RegimenDraft: Equatable, Sendable {
+    struct RegimenDraft: Codable, Equatable, Sendable {
         var start: CalendarDay
         var ends = false
         var end: CalendarDay

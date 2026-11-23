@@ -19,9 +19,12 @@ enum WeightUnit: String, CaseIterable, Identifiable, Codable {
         }
     }
 
-    /// "102.5" style: at most two decimals, no trailing zeros.
+    /// "102.5" / "1.25" style: up to two decimals under 10 (keeping fractional plates like 1.25 kg exact), and at most
+    /// one decimal from 10 up so converted weights never show hundredths noise (187.4 lb, not 187.39 lb).
     func format(kg: Double) -> String {
-        fromKg(kg).formatted(.number.precision(.fractionLength(0...2)))
+        let value = fromKg(kg)
+        let decimals = abs(value) < 10 ? 2 : 1
+        return value.formatted(.number.precision(.fractionLength(0...decimals)))
     }
 
     /// The step a weight moves by when no loading says which weights exist: the smallest common plate pair. The watch's

@@ -14,12 +14,8 @@ struct ExpenditureInsights: View {
                 "\($0.wholeText) cal"
             }
             InsightTiles(tiles: [
-                InsightTile(
-                    value: summary.currentKcal?.wholeText ?? "--", unit: "cal",
-                    title: "Current Expenditure",
-                    text: "The latest estimate of your daily energy expenditure based on your weight trend and nutrition data."
-                ),
-                InsightTile(value: strategy?.title ?? "--", unit: nil, title: "Current Strategy", text: strategy?.explanation ?? Self.missing),
+                InsightTile(value: summary.currentKcal?.wholeText ?? "--", unit: "cal", title: "Current Expenditure"),
+                InsightTile(value: strategy?.title ?? "--", title: "Current Strategy"),
             ])
             DataSources(sources: [
                 ("Nutrition Data Manager", "cylinder.split.1x2", .nutritionData),
@@ -28,8 +24,6 @@ struct ExpenditureInsights: View {
         }
         .feedback(self)
     }
-
-    static let missing = "Log your weight and nutrition, and add your height and birth date in Settings, to start the estimate."
 }
 
 extension NutritionExpenditure.ExpenditureStrategy {
@@ -38,14 +32,6 @@ extension NutritionExpenditure.ExpenditureStrategy {
         case .updating: "Updating"
         case .holding: "Holding"
         case .fixed: "Static"
-        }
-    }
-
-    var explanation: String {
-        switch self {
-        case .updating: "Your expenditure updates each day from the last four weeks of nutrition and weight trend data."
-        case .holding: "Holding safeguards your expenditure estimate against insufficient data. Updating requires at least 3 days of nutrition data and 1 day of weight data per 7-day period."
-        case .fixed: "You have set a static number for your daily energy expenditure."
         }
     }
 }
@@ -64,23 +50,10 @@ struct WeightTrendInsights: View {
                 "\(unit.fromKg($0).dashboardText) \(unit.rawValue)"
             }
             InsightTiles(tiles: [
-                InsightTile(
-                    value: insights.map { unit.fromKg($0.currentKg).dashboardText } ?? "--", unit: unit.rawValue, title: "Current Weight",
-                    text: "Our estimate of your true weight after smoothing out day-to-day fluctuations."
-                ),
-                InsightTile(
-                    value: insights?.weeklyChangeKg.map { signed(unit.fromKg($0)) } ?? "--", unit: "\(unit.rawValue)/wk", title: "Weekly Weight Change",
-                    text: "Your typical weekly rate of weight \(losing ? "loss" : "gain") over the past three weeks."
-                ),
-                InsightTile(
-                    value: insights?.energyBalanceKcal.map { abs($0).wholeText } ?? "--", unit: "cal/day",
-                    title: losing ? "Energy Deficit" : "Energy Surplus",
-                    text: "Our estimate of your average daily caloric \(losing ? "deficit" : "surplus"), based on your rate of weight \(losing ? "loss" : "gain") over the past three weeks."
-                ),
-                InsightTile(
-                    value: insights?.projectionKg.map { unit.fromKg($0).dashboardText } ?? "--", unit: unit.rawValue, title: "30-Day Projection",
-                    text: "Your projected weight in 30 days if your current rate of weight \(losing ? "loss" : "gain") is met."
-                ),
+                InsightTile(value: insights.map { unit.fromKg($0.currentKg).dashboardText } ?? "--", unit: unit.rawValue, title: "Current Weight"),
+                InsightTile(value: insights?.weeklyChangeKg.map { signed(unit.fromKg($0)) } ?? "--", unit: "\(unit.rawValue)/wk", title: "Weekly Change"),
+                InsightTile(value: insights?.energyBalanceKcal.map { abs($0).wholeText } ?? "--", unit: "cal/day", title: losing ? "Energy Deficit" : "Energy Surplus"),
+                InsightTile(value: insights?.projectionKg.map { unit.fromKg($0).dashboardText } ?? "--", unit: unit.rawValue, title: "30-Day Projection"),
             ])
             DataSources(sources: [("Scale Weight", "scalemass", .scaleWeight)])
         }
@@ -210,37 +183,25 @@ private extension NutritionMetrics.Direction {
 
 struct InsightTile {
     var value: String
-    var unit: String?
+    var unit: String? = nil
     var title: String
-    var text: String
 }
 
 struct InsightTiles: View {
     let tiles: [InsightTile]
 
+    private var columnCount: Int {
+        tiles.count == 3 || tiles.count >= 5 ? 3 : 2
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .leading), count: columnCount)
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {
             ForEach(tiles, id: \.title) { tile in
-                HStack(alignment: .top, spacing: 14) {
-                    VStack(spacing: 2) {
-                        Text(tile.value).font(AppFont.number(18)).lineLimit(1).minimumScaleFactor(0.6)
-                        if let unit = tile.unit {
-                            Text(unit).font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
-                        }
-                    }
-                    .frame(width: 86, height: 64)
-                    .background(Theme.surfaceRaised, in: .rect(cornerRadius: Theme.smallCornerRadius))
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(tile.title).font(AppFont.rowTitle)
-                        Text(tile.text).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-                    }
-                }
-                .accessibilityElement(children: .combine)
+                StatView(title: tile.title, value: tile.value, unit: tile.unit)
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+        .padding(.vertical, 4)
         .feedback(self)
     }
 }
