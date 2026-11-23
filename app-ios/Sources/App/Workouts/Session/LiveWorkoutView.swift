@@ -301,12 +301,10 @@ struct SessionEditor: View {
     }
 
     private func noteCard(_ title: String, _ text: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        FlatSection(spacing: 4) {
             Text(title).font(AppFont.headline(14))
             MarkdownBlocks(markdown: text, color: Theme.textSecondary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .card()
         .accessibilityElement(children: .combine)
         .feedback(title, data: text)
         .padding(.horizontal, Theme.margin)
@@ -320,19 +318,24 @@ struct SessionEditor: View {
                 Button { sheet = .warmUp } label: { chipLabel("Warm Up", "flame.fill", badge: hiddenWarmUps) }
                     .accessibilityLabel(hiddenWarmUps > 0 ? "Warm Up, \(hiddenWarmUps) completed hidden" : "Warm Up")
                 chip("Targets", "scope") { sheet = .targets }
-                chip("Swap", "arrow.left.arrow.right") { sheet = .swap(item.exerciseID) }
                 chip("Note", "note.text") { sheet = .note }
-                if isSuperset {
-                    Menu {
-                        Button("Detach from Superset", systemImage: "link.badge.minus") { blocks.detach(item.id) }
-                    } label: { chipLabel("Superset", "arrow.triangle.2.circlepath") }
-                }
-                if catalog.exercise(item.exerciseID)?.hasEquipmentChoice == true {
-                    chip("Equipment", "dumbbell.fill") { sheet = .equipment }
-                }
                 Menu {
+                    Button("Swap", systemImage: "arrow.left.arrow.right") { sheet = .swap(item.exerciseID) }
+                    if catalog.exercise(item.exerciseID)?.hasEquipmentChoice == true {
+                        Button("Equipment", systemImage: "dumbbell.fill") { sheet = .equipment }
+                    }
+                    if isSuperset {
+                        Button("Detach from Superset", systemImage: "link.badge.minus") { blocks.detach(item.id) }
+                    }
                     Button("Remove from Workout", systemImage: "trash", role: .destructive) { remove(item.id) }
-                } label: { chipLabel("More", "ellipsis") }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(AppFont.chip)
+                        .foregroundStyle(Theme.textPrimary)
+                        .frame(width: 32, height: 32)
+                        .background(Theme.surfaceRaised, in: .circle)
+                }
+                .accessibilityLabel("Exercise Options")
             }
             .padding(.horizontal, Theme.margin)
         }

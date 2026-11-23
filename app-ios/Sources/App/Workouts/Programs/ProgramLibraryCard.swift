@@ -119,7 +119,6 @@ struct ProgramCard: View {
                 }
             }
         }
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
         .feedback(self)
     }
 
@@ -146,7 +145,7 @@ struct ProgramCard: View {
             .frame(width: 32, height: 32)
             .buttonStyle(.plain)
         }
-        .padding()
+        .padding(.vertical, 12)
     }
 
     private var workoutCount: String {
@@ -182,8 +181,8 @@ struct ProgramCard: View {
                 }
             }
         }
-        .padding(.horizontal)
-        .padding(.vertical, 14)
+        .padding(.leading, 16)
+        .padding(.vertical, 12)
         .opacity(done ? 0.4 : 1)
     }
 
@@ -194,17 +193,11 @@ struct ProgramCard: View {
             if day.templateID != nil { Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary) }
         case let .checkbox(_, tickRest):
             if day.templateID == nil {
-                Button(done ? "Untick rest day" : "Tick rest day", systemImage: done ? "checkmark.square.fill" : "square") {
-                    tickRest(day, !done)
-                }
-                .labelStyle(.iconOnly)
-                .font(.system(size: 20))
-                .foregroundStyle(Theme.textSecondary)
-                .buttonStyle(.plain)
+                Button { tickRest(day, !done) } label: { SelectionMark(isOn: done, style: .check) }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(done ? "Untick rest day" : "Tick rest day")
             } else {
-                Image(systemName: done ? "checkmark.square.fill" : "square")
-                    .font(.system(size: 20))
-                    .foregroundStyle(Theme.textSecondary)
+                SelectionMark(isOn: done, style: .check)
                     .accessibilityLabel(done ? "Done" : "Not done")
             }
         }
@@ -220,7 +213,7 @@ struct TemplateCard: View {
             TemplateSummary(template: template)
             Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
         }
-        .card()
+        .padding(.vertical, 12)
         .contentShape(Rectangle())
         .feedback(self)
     }

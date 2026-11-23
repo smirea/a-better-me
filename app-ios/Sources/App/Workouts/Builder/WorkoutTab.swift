@@ -135,23 +135,24 @@ struct WorkoutTab: View {
         let filed = settings.workout.sections.filedTemplateIDs
         let templates = templates.filter { !filed.contains($0.id) }
         let libraryPrograms = programs.filter { $0.id != activeProgram?.id }
-        return VStack(alignment: .leading, spacing: 12) {
-            SectionHeader("Workout Library") {
-                if !templates.isEmpty || !libraryPrograms.isEmpty {
+        return Group {
+            if !templates.isEmpty || !libraryPrograms.isEmpty {
+                FlatSection("Workout Library", spacing: 4) {
                     Button(libraryCollapsed ? "Expand" : "Collapse") { withAnimation { libraryCollapsed.toggle() } }
-                }
-            }
-            if templates.isEmpty, libraryPrograms.isEmpty {
-                Text("Workouts you create appear here. Tap + to build one.")
-                    .font(AppFont.rowDetail)
-                    .foregroundStyle(Theme.textSecondary)
-            } else if !libraryCollapsed {
-                ForEach(templates) { template in
-                    NavigationLink(value: template.id) { TemplateCard(template: template) }
-                        .buttonStyle(.plain)
-                }
-                ForEach(libraryPrograms) { program in
-                    ProgramCard(program: program, templates: byID, accessory: .chevron)
+                } content: {
+                    if !libraryCollapsed {
+                        VStack(spacing: 0) {
+                            ForEach(Array(templates.enumerated()), id: \.element.id) { index, template in
+                                if index > 0 { Divider().overlay(Theme.separator) }
+                                NavigationLink(value: template.id) { TemplateCard(template: template) }
+                                    .buttonStyle(.plain)
+                            }
+                            ForEach(libraryPrograms) { program in
+                                if !templates.isEmpty || program.id != libraryPrograms.first?.id { Divider().overlay(Theme.separator) }
+                                ProgramCard(program: program, templates: byID, accessory: .chevron)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -208,10 +209,9 @@ private struct ShownWorkoutDay: View {
     var body: some View {
         let target = DayPillTarget.of(day.date, session: days.session(on: day), program: program, now: .now, calendar: WorkoutTab.calendar)
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(NutritionFormat.dayTitle(day))
             switch target {
             case let .summary(session):
-                Button { open(.summary(session)) } label: { SessionRow(session: session).card() }
+                Button { open(.summary(session)) } label: { SessionRow(session: session) }
                     .buttonStyle(.plain)
             case let .programDay(route):
                 Button { open(.programDay(route)) } label: {
@@ -224,15 +224,12 @@ private struct ShownWorkoutDay: View {
                         }
                         Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
                     }
-                    .card()
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint("Opens the program day")
             case nil:
-                Text(day < .today ? "No workout logged" : "No workout planned")
-                    .font(AppFont.rowDetail)
-                    .foregroundStyle(Theme.textSecondary)
+                EmptyView()
             }
         }
         .feedback("Shown Day", data: day.description)

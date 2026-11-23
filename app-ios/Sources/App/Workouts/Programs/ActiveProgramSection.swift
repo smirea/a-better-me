@@ -1,8 +1,8 @@
 import Feedback
 import SwiftUI
 
-/// The Workout tab's Active Program (research spec milestone-2.md §2.2): the position link, the program card with its
-/// day checkboxes, or the empty drop target when no program is active.
+/// The Workout tab's Active Program (research spec milestone-2.md §2.2): the position link and the program card with
+/// its day checkboxes. Nothing when no program is active.
 struct ActiveProgramSection: View {
     let program: Program?
     let templates: [UUID: WorkoutTemplate]
@@ -11,32 +11,18 @@ struct ActiveProgramSection: View {
     @State private var choosingCycle = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader("Active Program") {
-                if let program {
-                    Button(program.cycleLabel(program.currentCycle)) { choosingCycle = true }
-                        .accessibilityHint("Go to another \(program.cycleNoun.lowercased())")
-                }
-            }
-            if let program {
+        if let program {
+            FlatSection("Active Program", spacing: 4) {
+                Button(program.cycleLabel(program.currentCycle)) { choosingCycle = true }
+                    .accessibilityHint("Go to another \(program.cycleNoun.lowercased())")
+            } content: {
                 ProgramCard(program: program, templates: templates, accessory: .checkbox(finishedDays: finishedDays) { day, done in
                     store.tickRestDay(day.id, in: program.id, done: done)
                 })
-            } else {
-                Text("Drag a program block here")
-                    .font(AppFont.rowDetail)
-                    .foregroundStyle(Theme.textSecondary)
-                    .frame(maxWidth: .infinity, minHeight: 72)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: Theme.cornerRadius)
-                            .strokeBorder(Theme.surfaceRaised, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                    }
             }
+            .sheet(isPresented: $choosingCycle) { GoToCycleSheet(program: program) }
+            .feedback(self)
         }
-        .sheet(isPresented: $choosingCycle) {
-            if let program { GoToCycleSheet(program: program) }
-        }
-        .feedback(self)
     }
 }
 
@@ -56,11 +42,9 @@ private struct GoToCycleSheet: View {
                             dismiss()
                         } label: {
                             HStack(spacing: 16) {
-                                Image(systemName: cycle == program.currentCycle ? "mappin.and.ellipse" : "arrow.right")
-                                    .frame(width: 24)
                                 Text(program.cycleLabel(cycle)).font(AppFont.rowTitle)
                                 Spacer()
-                                Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
+                                SelectionMark(isOn: cycle == program.currentCycle)
                             }
                             .contentShape(Rectangle())
                         }
@@ -70,7 +54,7 @@ private struct GoToCycleSheet: View {
                 }
             }
             .flatList()
-            .detailTitle("Go to...")
+            .detailTitle("Go To")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .close) { dismiss() }
