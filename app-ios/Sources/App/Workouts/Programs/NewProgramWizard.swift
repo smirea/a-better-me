@@ -150,9 +150,9 @@ struct NewProgramWizard: View {
             }
             .frame(maxWidth: .infinity)
         case .method:
-            WizardOption(icon: "sparkles", title: "Use Smart Generation", subtitle: "We will create a custom plan tailored to your goals, fitness level, and gym equipment", tag: "Recommended", selected: method == .smartGeneration) { method = .smartGeneration }
-            WizardOption(icon: "wrench.fill", title: "Build From Scratch", subtitle: "Start with a fully blank slate and no guidance", selected: method == .fromScratch) { method = .fromScratch }
-            WizardOption(icon: "icloud.and.arrow.up.fill", title: "Import From File", subtitle: "You can upload .xlsx files from previously exported programs", selected: method == .importFile) { method = .importFile }
+            WizardOption(icon: "sparkles", title: "Use Smart Generation", subtitle: nil, tag: "Recommended", selected: method == .smartGeneration) { method = .smartGeneration }
+            WizardOption(icon: "wrench.fill", title: "Build From Scratch", subtitle: nil, selected: method == .fromScratch) { method = .fromScratch }
+            WizardOption(icon: "icloud.and.arrow.up.fill", title: "Import From File", subtitle: nil, selected: method == .importFile) { method = .importFile }
         case .goal:
             option("Muscle Hypertrophy", "Workouts will focus on increasing muscle size using moderate weights and reps.", \.goal, .hypertrophy)
             option("Muscle Strength", "Workouts will focus on increasing maximal strength using heavier weights for fewer reps.", \.goal, .strength)

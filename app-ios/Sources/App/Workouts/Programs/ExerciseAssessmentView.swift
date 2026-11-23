@@ -9,7 +9,7 @@ struct ExerciseAssessmentView: View {
 
     var body: some View {
         List {
-            ThemedSection(subtitle: "A few questions about your experience with the following exercises") {
+            ThemedSection {
                 ForEach(AssessmentQuestion.all) { question in
                     VStack(alignment: .leading, spacing: 10) {
                         Text(question.text).font(AppFont.rowTitle)
