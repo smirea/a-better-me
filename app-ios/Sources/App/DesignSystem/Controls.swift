@@ -39,10 +39,14 @@ struct ThemedSection<Content: View, Actions: View>: View {
                         .foregroundStyle(Theme.textPrimary)
                 }
                 .textCase(nil)
+                .listRowInsets(flat ? EdgeInsets(top: 16, leading: Theme.margin, bottom: 8, trailing: Theme.margin) : nil)
             }
         }
         // The background fills the whole cell, unlike the row's content, so a tap on a row's padding selects the row.
         .listRowBackground((flat ? Theme.background : Theme.surface).feedback(title.map { "\($0) Row" } ?? "Row"))
+        // `flatList()` zeroes the list's own margins, so flat rows and headers keep the app's margin.
+        .listRowInsets(flat ? EdgeInsets(top: 11, leading: Theme.margin, bottom: 11, trailing: Theme.margin) : nil)
+        .listSectionSeparator(flat ? .hidden : .automatic)
     }
 }
 
@@ -55,6 +59,14 @@ extension View {
     /// separators, every `ThemedSection` without its card. Grouped Settings keep `themedList()`'s cards.
     func flatList() -> some View {
         listStyle(.grouped)
+            .themedList()
+            .contentMargins(.horizontal, 0, for: .scrollContent)
+            .environment(\.flatSections, true)
+    }
+
+    /// `flatList()` for a plain list, which already runs rows edge to edge on the app's margin.
+    func flatPlainList() -> some View {
+        listStyle(.plain)
             .themedList()
             .environment(\.flatSections, true)
     }

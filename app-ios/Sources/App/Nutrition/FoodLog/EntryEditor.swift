@@ -77,7 +77,8 @@ struct EntryEditor: View {
                     }
                 }
                 .listRowBackground(Color.clear.feedback("Header"))
-                .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
+                .listRowInsets(EdgeInsets(top: 0, leading: Theme.margin, bottom: 0, trailing: Theme.margin))
+                .listSectionSeparator(.hidden)
                 ThemedSection {
                     if food.source != .quickAdd {
                         HStack {
@@ -109,7 +110,7 @@ struct EntryEditor: View {
                     } else {
                         when
                     }
-                    actions.listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 8, trailing: 16))
+                    actions.listRowInsets(EdgeInsets(top: 10, leading: Theme.margin, bottom: 8, trailing: Theme.margin))
                 }
                 ImpactGauges(amounts: amounts, day: CalendarDay(time), excluding: entry.id).id(CalendarDay(time))
                 IngredientsSection(FoodLog.ingredients(serving, of: entry, recipe: recipe))

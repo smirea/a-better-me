@@ -71,7 +71,7 @@ struct PingEditor: View {
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                .listRowInsets(EdgeInsets(top: 4, leading: Theme.margin, bottom: 4, trailing: Theme.margin))
                 ThemedSection("Color") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 6), spacing: 12) {
                         ForEach(PingColor.allCases, id: \.self) { swatch in

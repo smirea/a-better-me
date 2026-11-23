@@ -419,8 +419,7 @@ struct GoalHistoryView: View {
                 .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
                 .listRowBackground(Color.clear)
         }
-        .listStyle(.plain)
-        .flatList()
+        .flatPlainList()
         .detailTitle("Goal History")
         .feedback(self)
     }
@@ -436,8 +435,7 @@ struct PlanHistoryView: View {
                 .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
                 .listRowBackground(Color.clear)
         }
-        .listStyle(.plain)
-        .flatList()
+        .flatPlainList()
         .detailTitle("Program History")
         .feedback(self)
     }

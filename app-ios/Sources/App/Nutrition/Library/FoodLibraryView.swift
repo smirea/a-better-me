@@ -74,9 +74,8 @@ struct FoodLibraryView: View {
             case .favorites: favoriteRows
             }
         }
-        .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
-        .flatList()
+        .flatPlainList()
         .overlay { emptyState }
         .scrollDismissesKeyboard(.immediately)
         .modifier(FilterField(session: session, query: $query, prompt: "Filter \(tab.rawValue.lowercased())"))

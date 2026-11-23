@@ -277,10 +277,8 @@ private struct ProgramEditorGymOptions: View {
                     if on { onSelect(selected, true) }
                 }
             }
-            .listStyle(.plain)
-            .flatList()
+            .flatPlainList()
             .detailTitle("Gym Options")
-            .navigationSubtitle("Impacts exercise selection")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .close) { dismiss() }

@@ -41,7 +41,7 @@ struct PhotoTab: View {
                 }
             }
             .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+            .listRowInsets(EdgeInsets(top: 8, leading: Theme.margin, bottom: 8, trailing: Theme.margin))
             ThemedSection("Note") {
                 TextField("Optional", text: $note, axis: .vertical)
                     .focused($noteFocused)

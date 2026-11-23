@@ -211,7 +211,6 @@ struct MealRatingSheet: View {
                         }
                         Text("\((amounts[.energy] ?? 0).wholeText) cal ÷ \((amounts[.protein] ?? 0).wholeText) g protein")
                             .font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-                        Text(formula.explanation).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
                     }
                     .padding(.vertical, 4)
                 }

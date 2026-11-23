@@ -74,8 +74,7 @@ struct ExerciseBrowser<Trailing: View>: View {
                 .listRowBackground(Theme.background)
             }
         }
-        .listStyle(.plain)
-        .flatList()
+        .flatPlainList()
         .scrollDismissesKeyboard(.immediately)
         .safeAreaBar(edge: .top) {
             VStack(alignment: .leading, spacing: 10) {

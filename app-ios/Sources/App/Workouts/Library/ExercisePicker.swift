@@ -72,8 +72,7 @@ private struct SwapSubstitutions: View {
                 .listRowBackground(Theme.background)
             }
         }
-        .listStyle(.plain)
-        .flatList()
+        .flatPlainList()
         .detailTitle("Swap")
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {

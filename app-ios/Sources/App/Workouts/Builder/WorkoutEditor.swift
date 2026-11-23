@@ -31,8 +31,7 @@ struct WorkoutEditor: View {
                     .plainRow()
             }
         }
-        .listStyle(.plain)
-        .flatList()
+        .flatPlainList()
         .sheet(item: $sheet) { sheet in
             switch sheet {
             case .picker(let request):
