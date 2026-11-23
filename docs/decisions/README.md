@@ -8,7 +8,7 @@ A Better Me's concepts, goals, paradigms, and high-level system decisions, one f
 - [Workflow](workflow.md): threads, PRs, worktrees, git hooks, and which tests run where.
 - [Workouts](workouts.md): milestone scope, the exercise catalog source, the workout domain model, and feature ownership.
 - [iOS](ios.md): platform targets, SwiftData persistence, the design system, code layout, and verification.
-- [Design language](design.md): one way to draw each concept across both halves: cards, titles, toolbars, one row of controls, actions, selection, stats, bottom bars, empty states, and the screen tour that proves a change.
+- [Design language](design.md): high-level UI principles (reuse first, zero extra copy, flat density, direct manipulation, tabular alignment, state persistence) and this app's patterns (surfaces, titles, toolbars, actions, stats, charts, bottom bars, and proportional verification).
 - [Nutrition](nutrition.md): the MacroFactor half, its navigation shell, food data sources and photo logging, the domain model and the log's snapshot rule, nutrient ids and the registry, the one settings tree and writing food to Apple Health, what is computed instead of stored, the MacroFactor import, supplements, and what it defers.
 - [Pings](pings.md): quick logs of events and qualia, their two kinds, the day's bottom-up timeline and its markers from meals, workouts, weigh-ins, and sleep, the drawer the tab bar turns into, rows that edit in place, where pings are ordered, and their Dashboard cards.
 - [Health data](health.md): the standing rule that every reading the owner's devices record lands in the database, the activities and sleep copied from Apple Health, and how sessions several apps recorded become one row.

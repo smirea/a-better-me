@@ -3,6 +3,14 @@
 - Read [`docs/decisions/README.md`](docs/decisions/README.md) and the area files your work touches before starting.
 - Whenever a new concept, goal, paradigm, or high-level system decision comes up, record it in the matching area file under `docs/decisions/` in the same PR as the work. Add a new file and list it in the index when no area fits.
 
+# Design
+
+Full principles and app-specific patterns in [`docs/decisions/design.md`](docs/decisions/design.md).
+
+- **Start from high-level principles:** zero extra copy (no helper footers, explanatory captions, or redundant titles/buttons), flat dense content layouts (reserve `Theme.surface` cards for Dashboard summary tiles and grouped Settings, not content rows, editors, or timelines), direct manipulation over chrome (tap to edit, full-swipe delete, skip unnecessary dropdowns), tabular alignment with width budgets so primary numbers win, and persisted UI/draft state across reloads and phone locks.
+- **Look at similar interactions first.** Before building or editing a UI screen, row, header, or control, inspect sibling screens and existing `DesignSystem/` components and reuse them instead of inventing one-offs. When changing a shared concept, check sibling screens so the whole app stays consistent.
+- **Verify proportionally.** Reusing existing prebuilt components and patterns should just work once the build passes—reserve simulator runs for custom implementations, new gesture/scroll mechanics, or large layout/flow changes.
+
 # Workflow
 
 Full rules in [`docs/decisions/workflow.md`](docs/decisions/workflow.md).
