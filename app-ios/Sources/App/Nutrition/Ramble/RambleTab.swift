@@ -190,29 +190,9 @@ struct RambleTab: View {
     }
 
     private var hints: some View {
-        VStack(spacing: 8) {
-            Text("Just say what you ate.")
-                .font(AppFont.title(22))
-            Text("Amounts, meals, days, and corrections fall into place as you talk.")
-                .font(AppFont.caption(14))
-                .foregroundStyle(Theme.textSecondary)
-            VStack(spacing: 10) {
-                ForEach(Self.examples, id: \.self) { Text("“\($0)”") }
-            }
-            .font(AppFont.caption())
-            .foregroundStyle(Theme.textTertiary)
-            .padding(.top, 16)
-        }
-        .multilineTextAlignment(.center)
-        .frame(maxWidth: .infinity)
-        .padding(.top, 60)
+        ContentUnavailableView("Say What You Ate", systemImage: "mic", description: Text("Amounts, meals, and corrections land as you talk."))
+            .padding(.top, 40)
     }
-
-    private static let examples = [
-        "Two eggs and a slice of toast for breakfast",
-        "Same lunch as yesterday but without the rice",
-        "200 grams of chicken, actually make that 250",
-    ]
 
     private var footer: some View {
         VStack(spacing: 6) {

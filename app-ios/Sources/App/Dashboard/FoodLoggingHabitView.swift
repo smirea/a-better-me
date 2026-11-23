@@ -26,14 +26,14 @@ struct FoodLoggingHabitView: View {
                         StatView(title: "Streak", value: habit.streak.formatted(), unit: "days")
                         Spacer()
                     }
-                    monthGrid(shown, byDay: byDay)
                     HStack {
+                        Text(shown.formatted(.dateTime.month(.wide).year())).font(AppFont.listTitle)
+                        Spacer()
                         RoundIconButton("Previous Month", systemImage: "chevron.backward", size: .small) { step(shown, by: -1) }
                         RoundIconButton("Next Month", systemImage: "chevron.forward", size: .small) { step(shown, by: 1) }
                             .disabled(calendar.isDate(shown, equalTo: now, toGranularity: .month))
-                        Spacer()
-                        Text(shown.formatted(.dateTime.month(.wide).year())).font(AppFont.rowTitle)
                     }
+                    monthGrid(shown, byDay: byDay)
                 }
                 .feedback("Month", data: (month: shown, today: habit.todayKcal, streak: habit.streak))
                 legend
