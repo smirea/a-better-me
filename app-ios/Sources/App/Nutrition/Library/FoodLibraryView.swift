@@ -5,8 +5,7 @@ import SwiftUI
 /// plate, gives a new food or recipe the editor's Create & Add.
 struct LibraryEditorSheet: Identifiable {
     enum Kind {
-        /// A nil draft is a blank create, whose editor keeps its typing across relaunches.
-        case newFood(FoodDraft? = nil), editFood(Food), newRecipe(RecipeDraft? = nil), editRecipe(Recipe)
+        case newFood(FoodDraft), editFood(Food), newRecipe(RecipeDraft), editRecipe(Recipe)
     }
 
     let id = UUID()
@@ -105,12 +104,12 @@ struct FoodLibraryView: View {
             }
             ToolbarItem(placement: .primaryAction) {
                 switch tab {
-                case .recipes: Button("Create Recipe", systemImage: "plus") { create(.newRecipe()) }
-                case .foods: Button("Create Food", systemImage: "plus") { create(.newFood()) }
+                case .recipes: Button("Create Recipe", systemImage: "plus") { create(.newRecipe(RecipeDraft())) }
+                case .foods: Button("Create Food", systemImage: "plus") { create(.newFood(FoodDraft())) }
                 case .favorites:
                     Menu {
-                        Button("Create Food", systemImage: "carrot") { create(.newFood()) }
-                        Button("Create Recipe", systemImage: "frying.pan") { create(.newRecipe()) }
+                        Button("Create Food", systemImage: "carrot") { create(.newFood(FoodDraft())) }
+                        Button("Create Recipe", systemImage: "frying.pan") { create(.newRecipe(RecipeDraft())) }
                     } label: {
                         Label("Create", systemImage: "plus")
                     }
