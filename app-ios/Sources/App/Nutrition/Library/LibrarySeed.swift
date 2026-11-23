@@ -71,8 +71,27 @@ enum LibrarySeed {
         age: 6
     )
 
+    private static func usda(_ name: String, _ icon: String, _ nutrients: NutrientAmounts, grams: Double, _ measure: Measure) -> FoodSnapshot {
+        FoodSnapshot(source: .usda, name: name, icon: icon, nutrition: FoodNutrition(nutrients: nutrients, baseGrams: grams, measures: [measure]))
+    }
+
+    /// Long ingredient amounts ("1 tbsp chopped", "0.4 medium"), which the Food Log tile's amount column caps.
+    static let pastaSauce = recipe(
+        "pasta-sauce", "Pasta Sauce", "pasta", servings: 4, prep: 10, cook: 40,
+        [
+            (usda("Ground Beef, 93% Lean", "beef", [.energy: 172, .protein: 21, .fat: 9, .carbs: 0], grams: 113, Measure(name: "lb", quantity: 0.25, servings: 1)), 3.2),
+            (usda("Venison Burger", "meat", [.energy: 180, .protein: 23, .fat: 9, .carbs: 0], grams: 113, Measure(name: "oz", quantity: 4, servings: 1)), 3.2),
+            (usda("San Marzano Tomatoes", "tomato", [.energy: 25, .protein: 1, .fat: 0, .carbs: 5], grams: 113, Measure(name: "oz", quantity: 4, servings: 1)), 3.2),
+            (usda("Shallot", "onion", [.energy: 7, .protein: 0.3, .fat: 0, .carbs: 1.7], grams: 10, Measure(name: "tbsp chopped", quantity: 1, servings: 1)), 4),
+            (usda("Baby Squash", "cucumber", [.energy: 21, .protein: 2.7, .fat: 0.4, .carbs: 3.2], grams: 120, Measure(name: "medium", quantity: 1, servings: 1)), 1.6),
+            (usda("Olive Oil", "olive", [.energy: 119, .protein: 0, .fat: 13.5, .carbs: 0], grams: 13.5, Measure(name: "tbsp", quantity: 1, servings: 1)), 2),
+        ],
+        steps: ["Brown the meats with the shallot.", "Add the tomatoes and squash and simmer for 30 minutes."],
+        age: 3
+    )
+
     static let foods = [whey, sourdough, granola, coldBrew]
-    static let recipes = [overnightOats, chickenRiceBowl, salmonSalad, proteinPancakes]
+    static let recipes = [overnightOats, chickenRiceBowl, salmonSalad, proteinPancakes, pastaSauce]
 
     /// Favorites at the servings the owner reaches for: half a cup of granola, one and a half ounces of almonds.
     static let favorites: [FoodFavorite] = [

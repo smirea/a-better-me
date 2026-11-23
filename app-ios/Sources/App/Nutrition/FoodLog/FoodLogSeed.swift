@@ -29,7 +29,7 @@ enum FoodLogSeed {
     /// A day of meals: (minute, food, quantity of its measure).
     static let days: [[(Int, FoodSnapshot, Double)]] = [
         [(7 * 60 + 40, overnightOats, 1), (7 * 60 + 40, LibrarySeed.coldBrew.snapshot, 1), (12 * 60 + 15, chickenRiceBowl, 1), (15 * 60 + 30, yogurt, 1), (15 * 60 + 30, LibrarySeed.granola.snapshot, 0.5)],
-        [(8 * 60 + 5, yogurt, 1), (8 * 60 + 5, banana, 1), (8 * 60 + 5, LibrarySeed.granola.snapshot, 0.5), (13 * 60, salad, 1), (13 * 60, chicken, 1), (13 * 60, rice, 1), (16 * 60 + 10, almonds, 1.5), (16 * 60 + 10, LibrarySeed.whey.snapshot, 1), (19 * 60 + 47, salmonSalad, 1), (19 * 60 + 48, rice, 1)],
+        [(8 * 60 + 5, yogurt, 1), (8 * 60 + 5, banana, 1), (8 * 60 + 5, LibrarySeed.granola.snapshot, 0.5), (13 * 60, salad, 1), (13 * 60, chicken, 1), (13 * 60, rice, 1), (16 * 60 + 10, almonds, 1.5), (16 * 60 + 10, LibrarySeed.whey.snapshot, 1), (19 * 60 + 47, salmonSalad, 1), (19 * 60 + 48, rice, 1), (19 * 60, LibrarySeed.pastaSauce.snapshot, 1)],
         [(9 * 60, proteinPancakes, 0.5), (9 * 60, LibrarySeed.coldBrew.snapshot, 1), (12 * 60 + 30, chicken, 1.5), (12 * 60 + 30, rice, 1), (12 * 60 + 30, salad, 1), (18 * 60 + 45, salmon, 1), (18 * 60 + 45, salad, 2)],
         [],
         [(7 * 60 + 30, overnightOats, 0.5), (7 * 60 + 30, LibrarySeed.sourdough.snapshot, 2), (11 * 60 + 50, chicken, 1), (11 * 60 + 50, salad, 1), (20 * 60 + 15, almonds, 1)],
