@@ -29,17 +29,17 @@ struct ProgramSettingsView: View {
         NavigationStack {
             List {
                 row("Number of \(program.cycleNoun)s", program.weeksText, systemImage: "heart.fill") { weeksStepper }
-                row("Name", program.name, systemImage: "textformat.size") {
-                    editButton("Name") { renaming = true }
+                editRow { renaming = true } label: {
+                    row("Name", program.name, systemImage: "textformat.size") { EmptyView() }
                 }
-                row("Color & Icon", "\(program.color.title), \(ProgramIcon.title(of: program.icon))", icon: colorIconTile) {
-                    editButton("Color & Icon") { page = .colorIcon }
+                editRow { page = .colorIcon } label: {
+                    row("Color & Icon", "\(program.color.title), \(ProgramIcon.title(of: program.icon))", icon: colorIconTile) { EmptyView() }
                 }
-                row("Day Order", program.days.map { $0.templateID == nil ? "R" : "W" }.joined(separator: ", "), systemImage: "calendar") {
-                    editButton("Day Order") { page = .dayOrder }
+                editRow { page = .dayOrder } label: {
+                    row("Day Order", program.days.map { $0.templateID == nil ? "R" : "W" }.joined(separator: ", "), systemImage: "calendar") { EmptyView() }
                 }
-                row("Deload", program.config.deload.title(noun: program.cycleNoun), systemImage: "cloud.fill") {
-                    editButton("Deload") { page = .deload }
+                editRow { page = .deload } label: {
+                    row("Deload", program.config.deload.title(noun: program.cycleNoun), systemImage: "cloud.fill") { EmptyView() }
                 }
                 periodizationRow
                 actionRow("Duplicate Program", systemImage: "rectangle.on.rectangle", chevron: true) { page = .duplicate }
@@ -177,10 +177,16 @@ struct ProgramSettingsView: View {
         .padding(.vertical, 6)
     }
 
-    private func editButton(_ title: String, action: @escaping () -> Void) -> some View {
-        Button("Edit", action: action)
-            .chipButton()
-            .accessibilityLabel("Edit \(title)")
+    /// A row that edits its value on tap, with a chevron instead of a separate Edit button.
+    private func editRow(action: @escaping () -> Void, @ViewBuilder label: () -> some View) -> some View {
+        Button(action: action) {
+            HStack {
+                label()
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Theme.textTertiary)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
     }
 
     private var exportFile: TransferFile {

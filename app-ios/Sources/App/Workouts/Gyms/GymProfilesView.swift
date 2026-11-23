@@ -29,8 +29,6 @@ struct GymProfilesView: View {
                                 Button("Delete", systemImage: "trash") { deleting = gym }
                                     .tint(Theme.destructive)
                             }
-                            Button("Edit", systemImage: "pencil") { editing = gym.id }
-                                .tint(Theme.surfaceRaised)
                         }
                         .contextMenu {
                             Button("Set as Default", systemImage: "star") { store.setDefaultGym(gym.id) }
@@ -44,8 +42,10 @@ struct GymProfilesView: View {
         }
         .themedList()
         .detailTitle("Gym Profiles")
-        .pinnedActions {
-            PinnedActionButton("Add New Gym Profile") { adding = true }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Add New Gym Profile", systemImage: "plus") { adding = true }
+            }
         }
         .alert("Delete \(deleting?.name ?? "gym")?", isPresented: Binding { deleting != nil } set: { if !$0 { deleting = nil } }) {
             Button("Delete", role: .destructive) {
