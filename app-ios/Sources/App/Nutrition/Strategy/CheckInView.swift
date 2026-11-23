@@ -114,7 +114,6 @@ private struct CheckInPage: View {
                 }
                 WeekTargetsChart(targets: update.targets, today: data.today.weekday)
                 StatView(value: StrategyFormat.weight(update.trendWeightKg, data.unit), caption: "Trend Weight")
-                Text("Your new targets start today and run until your next check-in.").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
             }
             if data.current.map({ $0.coaching.style != .manual }) == true {
                 MaintenanceSection(
@@ -122,7 +121,7 @@ private struct CheckInPage: View {
                     estimatedKcal: data.inputs.expenditureKcal, overrideKcal: $maintenanceOverride, unit: data.unit
                 )
             } else {
-                Text("Your program keeps its targets. Manual programs are opted out of automatic weekly plan updates.")
+                Text("Manual programs keep their targets.")
                     .font(AppFont.body())
                     .foregroundStyle(Theme.textSecondary)
             }

@@ -22,20 +22,7 @@ struct EquipmentWeightsOverrideView: View {
         let overrides = current?.overrides.equipment ?? [:]
         let unit = settings.weightUnit
         Form {
-            Section {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("This impacts your workouts").font(AppFont.rowTitle)
-                        Text("Settings below will override your gym profile weights for this exercise. Equipment availability is still determined by the profile.")
-                            .font(AppFont.rowDetail)
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                } icon: {
-                    Image(systemName: "info.circle.fill")
-                }
-                .listRowBackground(Theme.coral.opacity(0.25))
-            }
-            ThemedSection("\(exercise?.name ?? "Exercise") Weights") {
+            ThemedSection {
                 ForEach(items(of: exercise)) { item in
                     HStack(spacing: 14) {
                         EquipmentImage(equipmentID: item.id).frame(width: 32, height: 32)

@@ -144,7 +144,7 @@ struct NewProgramWizard: View {
                     .font(.system(size: 56, weight: .semibold))
                     .padding(.top, 80)
                     .accessibilityHidden(true)
-                Text("We will create a personalized training program tailored to your goals. Or, you can import or build your own.")
+                Text("Build a program for your goals, or import your own.")
                     .font(AppFont.sectionTitle)
                     .multilineTextAlignment(.center)
             }
@@ -350,9 +350,6 @@ private struct KeepSelections: View {
             Toggle("Deload", isOn: $deload).labelsHidden().tint(Theme.accent)
         } text: {
             Text("Deload").font(AppFont.rowTitle)
-            Text("This program's training block will end with a lighter week to promote recovery and readiness for the next phase")
-                .font(AppFont.rowDetail)
-                .foregroundStyle(Theme.textSecondary)
             Text("Recommended").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
         }
         card(icon: "chart.bar.fill") {

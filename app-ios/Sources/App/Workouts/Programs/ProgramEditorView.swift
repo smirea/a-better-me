@@ -193,20 +193,7 @@ private struct ProgramEditorScreen: View {
     private var restDay: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Rest Day").font(AppFont.sectionTitle)
-                    HStack(spacing: 16) {
-                        Image(systemName: "beach.umbrella")
-                            .font(AppFont.title(24))
-                            .foregroundStyle(Theme.textTertiary)
-                        Text("You can convert the rest day into a workout day by adding exercises below")
-                            .font(AppFont.rowDetail)
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .overlay { RoundedRectangle(cornerRadius: Theme.smallCornerRadius).strokeBorder(Theme.textTertiary) }
-                }
+                ContentUnavailableView("Rest Day", systemImage: "beach.umbrella")
                 SectionHeader("0 Exercises") {
                     Button("Add Exercises") { addingToRestDay = true }
                 }
