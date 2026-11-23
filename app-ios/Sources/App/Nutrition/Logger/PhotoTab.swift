@@ -13,11 +13,8 @@ struct PhotoTab: View {
     @State private var note = ""
     @State private var choosing = false
     @State private var picked: PhotosPickerItem?
-    @State private var capturing = false
     @State private var unreadable = false
     @FocusState private var noteFocused: Bool
-
-    private let cameraWorks = UIImagePickerController.isSourceTypeAvailable(.camera)
 
     var body: some View {
         List {
@@ -37,8 +34,8 @@ struct PhotoTab: View {
                     }
                 }
                 HStack(spacing: 10) {
-                    if cameraWorks {
-                        Button("Camera", systemImage: "camera") { capturing = true }.secondaryPill()
+                    if Camera.isAvailable {
+                        Button("Camera", systemImage: "camera") { Camera.capture { image in load { PhotoUpload(image) } } }.secondaryPill()
                     }
                     Button("Photos", systemImage: "photo.on.rectangle") { choosing = true }.secondaryPill()
                 }
@@ -69,9 +66,6 @@ struct PhotoTab: View {
             }
         }
         .photosPicker(isPresented: $choosing, selection: $picked, matching: .images)
-        .fullScreenCover(isPresented: $capturing) {
-            CameraCapture { image in load { PhotoUpload(image) } }.ignoresSafeArea()
-        }
         .onChange(of: picked) {
             guard let picked else { return }
             Task {

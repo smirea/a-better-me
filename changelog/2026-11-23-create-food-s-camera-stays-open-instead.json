@@ -1,0 +1,9 @@
+{
+	"title": "Create Food's Camera stays open instead of closing as it opens",
+	"tasks": [
+		{
+			"id": "702d5170-63c5-49d9-9889-52254b4ffcda",
+			"title": "Device check: Create Food camera stays up after a barcode scan"
+		}
+	]
+}

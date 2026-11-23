@@ -85,12 +85,9 @@ struct PhotosSection<Label: Equatable & Sendable>: View {
     let reader: PhotoReader<Label>
     let footer: String
     let nothingRead: Label
-    @State private var capturing = false
     @State private var choosing = false
     @State private var picked: [PhotosPickerItem] = []
     @State private var loading = false
-
-    private let cameraWorks = UIImagePickerController.isSourceTypeAvailable(.camera)
 
     var body: some View {
         ThemedSection("Photos", footer: footer) {
@@ -118,17 +115,14 @@ struct PhotosSection<Label: Equatable & Sendable>: View {
             }
             status
             HStack(spacing: 10) {
-                if cameraWorks {
-                    Button("Camera", systemImage: "camera") { capturing = true }.secondaryPill()
+                if Camera.isAvailable {
+                    Button("Camera", systemImage: "camera") { Camera.capture { image in load { [PhotoUpload(image)].compactMap(\.self) } } }.secondaryPill()
                 }
                 Button("Photos", systemImage: "photo.on.rectangle") { choosing = true }.secondaryPill().accessibilityLabel("Choose Photos")
             }
             .disabled(reader.photos.count >= PhotoReader<Label>.limit || loading)
             // On the row, not the section: a section hands its modifiers to every row, which presented a picker per row.
             .photosPicker(isPresented: $choosing, selection: $picked, maxSelectionCount: PhotoReader<Label>.limit - reader.photos.count, matching: .images)
-            .fullScreenCover(isPresented: $capturing) {
-                CameraCapture { image in load { [PhotoUpload(image)].compactMap(\.self) } }.ignoresSafeArea()
-            }
             .onChange(of: picked) {
                 guard !picked.isEmpty else { return }
                 let items = picked

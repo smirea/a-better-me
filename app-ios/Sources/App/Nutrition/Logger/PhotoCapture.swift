@@ -32,35 +32,49 @@ struct PhotoUpload: Identifiable, Sendable {
     }
 }
 
-struct CameraCapture: UIViewControllerRepresentable {
-    let captured: (UIImage) -> Void
-    @Environment(\.dismiss) private var dismiss
+/// The system camera, presented by UIKit from whatever is on top rather than by a SwiftUI cover on the button's view:
+/// SwiftUI closes a cover by itself when its presenter's identity changes (FB25287840), which closed Create Food's
+/// camera as it opened (docs/decisions/nutrition.md). Over full screen keeps the screens underneath in the window, so
+/// their `onDisappear` (Create Food's cancels its photo read) doesn't run while the camera is up.
+@MainActor
+enum Camera {
+    static let isAvailable = UIImagePickerController.isSourceTypeAvailable(.camera)
 
-    func makeUIViewController(context: Context) -> UIImagePickerController {
+    static func capture(_ captured: @escaping (UIImage) -> Void) {
+        guard var top = UIApplication.shared.connectedScenes.lazy.compactMap({ ($0 as? UIWindowScene)?.keyWindow?.rootViewController }).first
+        else { return }
+        while let presented = top.presentedViewController, !presented.isBeingDismissed { top = presented }
         let picker = UIImagePickerController()
         picker.sourceType = .camera
-        picker.delegate = context.coordinator
-        return picker
+        picker.modalPresentationStyle = .overFullScreen
+        picker.modalPresentationCapturesStatusBarAppearance = true
+        let delegate = Delegate(captured: captured)
+        picker.delegate = delegate
+        Delegate.open = delegate
+        top.present(picker, animated: true)
     }
 
-    func updateUIViewController(_: UIImagePickerController, context _: Context) {}
+    private final class Delegate: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        /// The picker holds its delegate weakly.
+        static var open: Delegate?
+        let captured: (UIImage) -> Void
 
-    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
-
-    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: CameraCapture
-
-        init(parent: CameraCapture) {
-            self.parent = parent
+        init(captured: @escaping (UIImage) -> Void) {
+            self.captured = captured
         }
 
-        func imagePickerController(_: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            if let image = info[.originalImage] as? UIImage { parent.captured(image) }
-            parent.dismiss()
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let image = info[.originalImage] as? UIImage { captured(image) }
+            close(picker)
         }
 
-        func imagePickerControllerDidCancel(_: UIImagePickerController) {
-            parent.dismiss()
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            close(picker)
+        }
+
+        private func close(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
+            Self.open = nil
         }
     }
 }
