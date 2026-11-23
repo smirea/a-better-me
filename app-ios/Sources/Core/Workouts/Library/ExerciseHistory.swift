@@ -143,6 +143,6 @@ enum ExerciseHistory {
                     Measurement(value: $0, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated, usage: .road)) + side
                 }
             }
-        }.joined(separator: " x ")
+        }.joined(separator: " · ")
     }
 }

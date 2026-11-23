@@ -1,23 +1,23 @@
 import Feedback
 import SwiftUI
 
-/// A list section on the card surface with the app's section title. Lists use it instead of `Section` so every row
-/// draws on `Theme.surface`.
+/// A list section with the app's section title. Lists use it instead of `Section`. In a grouped Settings list its rows
+/// draw on the `Theme.surface` card; under `flatList()` (content and editors) they draw flat on `Theme.background`
+/// with a `FlatSection`-style header.
 struct ThemedSection<Content: View, Actions: View>: View {
+    @Environment(\.flatSections) private var flat
     var title: String?
     var subtitle: String?
-    var footer: String?
     @ViewBuilder let content: Content
     /// `SectionHeader`'s underlined text actions, trailing the title.
     @ViewBuilder let actions: Actions
 
     init(
-        _ title: String? = nil, subtitle: String? = nil, footer: String? = nil,
+        _ title: String? = nil, subtitle: String? = nil,
         @ViewBuilder content: () -> Content, @ViewBuilder actions: () -> Actions
     ) {
         self.title = title
         self.subtitle = subtitle
-        self.footer = footer
         self.content = content()
         self.actions = actions()
     }
@@ -39,18 +39,49 @@ struct ThemedSection<Content: View, Actions: View>: View {
                         .foregroundStyle(Theme.textPrimary)
                 }
                 .textCase(nil)
+                .listRowInsets(flat ? EdgeInsets(top: 16, leading: Theme.margin, bottom: 8, trailing: Theme.margin) : nil)
             }
-        } footer: {
-            if let footer { Text(footer) }
         }
         // The background fills the whole cell, unlike the row's content, so a tap on a row's padding selects the row.
-        .listRowBackground(Theme.surface.feedback(title.map { "\($0) Row" } ?? "Row"))
+        .listRowBackground((flat ? Theme.background : Theme.surface).feedback(title.map { "\($0) Row" } ?? "Row"))
+        // `flatList()` zeroes the list's own margins, so flat rows and headers keep the app's margin.
+        .listRowInsets(flat ? EdgeInsets(top: 11, leading: Theme.margin, bottom: 11, trailing: Theme.margin) : nil)
+        .listSectionSeparator(flat ? .hidden : .automatic)
+    }
+}
+
+extension EnvironmentValues {
+    @Entry var flatSections = false
+}
+
+extension View {
+    /// A content list or editor (a `Form` or `List`) drawn flat: full-width rows on `Theme.background` with hairline
+    /// separators, every `ThemedSection` without its card. Grouped Settings keep `themedList()`'s cards.
+    func flatList() -> some View {
+        listStyle(.grouped)
+            .themedList()
+            .contentMargins(.horizontal, 0, for: .scrollContent)
+            .environment(\.flatSections, true)
+    }
+
+    /// A raw `Section` inside `flatList()`, one that needs its own header, drawn as a flat `ThemedSection` draws its rows.
+    func flatSectionRows() -> some View {
+        listRowBackground(Theme.background)
+            .listRowInsets(EdgeInsets(top: 11, leading: Theme.margin, bottom: 11, trailing: Theme.margin))
+            .listSectionSeparator(.hidden)
+    }
+
+    /// `flatList()` for a plain list, which already runs rows edge to edge on the app's margin.
+    func flatPlainList() -> some View {
+        listStyle(.plain)
+            .themedList()
+            .environment(\.flatSections, true)
     }
 }
 
 extension ThemedSection where Actions == EmptyView {
-    init(_ title: String? = nil, subtitle: String? = nil, footer: String? = nil, @ViewBuilder content: () -> Content) {
-        self.init(title, subtitle: subtitle, footer: footer, content: content) { EmptyView() }
+    init(_ title: String? = nil, subtitle: String? = nil, @ViewBuilder content: () -> Content) {
+        self.init(title, subtitle: subtitle, content: content) { EmptyView() }
     }
 }
 

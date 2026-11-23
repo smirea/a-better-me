@@ -27,12 +27,11 @@ struct WorkoutEditor: View {
             }
             .onMove { blocks.move(fromOffsets: $0, toOffset: $1) }
             if current.isEmpty {
-                ContentUnavailableView("No Exercises", systemImage: "dumbbell", description: Text("Add exercises with +"))
+                ContentUnavailableView("No Exercises", systemImage: "dumbbell", description: Text("Tap Add Exercises."))
                     .plainRow()
             }
         }
-        .listStyle(.plain)
-        .themedList()
+        .flatPlainList()
         .sheet(item: $sheet) { sheet in
             switch sheet {
             case .picker(let request):
@@ -87,7 +86,7 @@ struct WorkoutEditor: View {
                 Button("Add Exercises") { sheet = .picker(.add) }
             }
             if program == nil {
-                Text("Estimated workout time is \(minutes) min")
+                Text("~\(minutes) min")
                     .font(AppFont.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
             }
@@ -248,7 +247,6 @@ private struct ExerciseRow: View {
             Section(catalog.name(item.exerciseID)) {
                 Button { sheet = .info(item.exerciseID) } label: {
                     Label("Info", systemImage: "chart.bar.fill")
-                    Text("Learn about the exercise")
                 }
                 if program == nil {
                     Button { sheet = .targets(item.id) } label: {
@@ -266,20 +264,16 @@ private struct ExerciseRow: View {
                     }
                 } label: {
                     Label("Superset", systemImage: "arrow.left.arrow.right")
-                    Text("Manage superset settings")
                 }
                 Button { sheet = .picker(.swap(item.id, item.exerciseID)) } label: {
                     Label("Swap", systemImage: "arrow.triangle.2.circlepath")
-                    Text("Replace with an alternate")
                 }
                 if let program {
                     Button { program.move(item.id) } label: {
                         Label("Move to a different day", systemImage: "arrow.up.and.down.and.arrow.left.and.right")
-                        Text("Relocate the exercise in your program")
                     }
                     Button { program.editNote(item.id) } label: {
                         Label("Program Note", systemImage: "pin")
-                        Text("Note will display on this exercise every time you work out")
                     }
                 }
                 Button("Duplicate Exercise", systemImage: "plus.square.on.square") { blocks.duplicate(item.id) }

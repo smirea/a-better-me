@@ -20,16 +20,19 @@ struct SmartProgressionSheet: View {
                 if adjustedCount > 0 {
                     Section { banner }
                         .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets())
+                        .listRowInsets(EdgeInsets(top: 0, leading: Theme.margin, bottom: 0, trailing: Theme.margin))
                 }
-                Section("Event Log") {
-                    if events.allSatisfy(\.rows.isEmpty) {
-                        Text("No fills yet").foregroundStyle(Theme.textSecondary)
-                    }
-                    ForEach(Array(events.enumerated()), id: \.offset) { _, event in
-                        if !event.rows.isEmpty { eventView(event) }
+                if !noFills {
+                    ThemedSection("Event Log") {
+                        ForEach(Array(events.enumerated()), id: \.offset) { _, event in
+                            if !event.rows.isEmpty { eventView(event) }
+                        }
                     }
                 }
+            }
+            .flatList()
+            .overlay {
+                if noFills, adjustedCount == 0 { ContentUnavailableView("No Fills Yet", systemImage: "wand.and.sparkles") }
             }
             .detailTitle("Smart Progression")
             .navigationDestination(isPresented: $isShowingSettings) { WorkoutSettingsView() }
@@ -46,14 +49,12 @@ struct SmartProgressionSheet: View {
         .feedback(self)
     }
 
+    private var noFills: Bool { events.allSatisfy(\.rows.isEmpty) }
+
     private var banner: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "info.circle").font(.title3).padding(.top, 2)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Target rep ranges were adjusted").font(AppFont.rowTitle)
-                Text("Smart Progression has widened the target rep range of \(adjustedCount) \(adjustedCount == 1 ? "set" : "sets") without making permanent changes to this workout")
-                    .font(AppFont.caption())
-            }
+            Text("Rep range widened on \(adjustedCount) \(adjustedCount == 1 ? "set" : "sets")").font(AppFont.rowTitle)
             Spacer()
             NavigationLink {
                 WorkoutTargetsView(exerciseName: exerciseName, sets: sets, suggestions: suggestions)
@@ -63,8 +64,7 @@ struct SmartProgressionSheet: View {
             .chipButton()
             .accessibilityLabel("Adjusted targets info")
         }
-        .padding(14)
-        .background(Theme.muscle.opacity(0.25), in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+        .padding(.vertical, 8)
     }
 
     private func eventView(_ event: ProgressionEvent) -> some View {
@@ -103,18 +103,19 @@ struct WorkoutTargetsView: View {
 
     var body: some View {
         List {
-            Section("Current Targets") {
+            ThemedSection("Current Targets") {
                 ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
                     row(set, number: sets.number(at: index), reps: SetSuggestion.repsText(min: set.target?.repsMin, max: set.target?.repsMax))
                 }
             }
-            Section("Adjusted Targets") {
+            ThemedSection("Adjusted Targets") {
                 ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
                     let adjusted = suggestions[set.id]?.adjustedReps
                     row(set, number: sets.number(at: index), reps: adjusted.map { SetSuggestion.repsText(min: $0.lowerBound, max: $0.upperBound) } ?? SetSuggestion.repsText(min: set.target?.repsMin, max: set.target?.repsMax))
                 }
             }
         }
+        .flatList()
         .detailTitle("Workout Targets", subtitle: exerciseName)
         .feedback(self)
     }

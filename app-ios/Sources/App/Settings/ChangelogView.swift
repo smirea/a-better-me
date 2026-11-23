@@ -25,7 +25,7 @@ struct ChangelogView: View {
             .padding(.bottom, 24)
         }
         .background(Theme.background)
-        .detailTitle("Changelog", subtitle: loaded.map { "This build: \($0.build)" })
+        .detailTitle("Changelog", subtitle: loaded?.build)
         .task { loaded = await Changelog.bundled() }
         .feedback(self)
     }
@@ -84,6 +84,7 @@ private struct BuildLine: View {
             if let time = entry.buildTimeLabel { Text(time) }
         }
         .font(AppFont.caption(11))
+        .monospacedDigit()
         .foregroundStyle(Theme.textTertiary)
         .accessibilityElement(children: .combine)
     }
@@ -106,7 +107,7 @@ private struct TaskLinks: View {
                 }
             }
             .font(AppFont.rowDetail)
-            .foregroundStyle(Theme.accent)
+            .foregroundStyle(Theme.textSecondary)
         }
     }
 }

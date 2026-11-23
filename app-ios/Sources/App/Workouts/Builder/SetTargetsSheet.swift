@@ -75,19 +75,13 @@ struct SetTargetsSheet: View {
                     .listRowSeparator(.hidden)
                 if let footer { footer }
                 Toggle(isOn: $restTimers) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Set Rest Timers").font(AppFont.rowTitle)
-                        Text("This will override default exercise settings")
-                            .font(AppFont.rowDetail)
-                            .foregroundStyle(Theme.textSecondary)
-                    }
+                    Text("Set Rest Timers").font(AppFont.rowTitle)
                 }
                 .padding(.vertical, 8)
                 .tint(Theme.accent)
             }
             .disabled(readOnlyNote != nil)
-            .listStyle(.plain)
-            .themedList()
+            .flatPlainList()
             .scrollDismissesKeyboard(.interactively)
             .environment(\.defaultMinListRowHeight, 40)
             .detailTitle(subtitle == nil ? "Targets" : catalog.name(draft.exerciseID))

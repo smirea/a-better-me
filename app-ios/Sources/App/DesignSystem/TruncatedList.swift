@@ -9,6 +9,8 @@ import SwiftUI
 struct TruncatedList<Item: Identifiable, Row: View, Destination: View>: View {
     static var visibleRows: Double { 5.5 }
 
+    @Environment(\.flatSections) private var flat
+
     let title: String
     let items: [Item]
     @ViewBuilder let row: (Item) -> Row
@@ -55,7 +57,7 @@ struct TruncatedList<Item: Identifiable, Row: View, Destination: View>: View {
                     seeAll(truncated).font(AppFont.rowTitle).underline().foregroundStyle(Theme.textPrimary)
                 }
                 .padding(.horizontal, 16)
-                list.background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
+                list.background(flat ? .clear : Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
             } else {
                 if divider {
                     Divider().overlay(Theme.separator)

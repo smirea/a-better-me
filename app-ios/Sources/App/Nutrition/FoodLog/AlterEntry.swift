@@ -34,10 +34,10 @@ struct AlterEntry: View {
         let perServing = Self.amounts(alterations.isAltered ? alterations.eaten : alterations.originals)
         NavigationStack {
             Form {
-                summary(perServing, was: alterations.isAltered ? Self.amounts(alterations.originals) : nil)
+                summary(perServing)
                 ingredients
             }
-            .themedList()
+            .flatList()
             .scrollDismissesKeyboard(.interactively)
             .focusToolbar(FocusOrder(draft.rows.filter { !$0.isRemoved }.map { .ingredientQuantity($0.id) }), focus: $focus)
             .detailTitle("Alter")
@@ -71,25 +71,22 @@ struct AlterEntry: View {
         portions.reduce(into: NutrientAmounts()) { $0 = $0 + $1.amounts }
     }
 
-    private func summary(_ perServing: NutrientAmounts, was: NutrientAmounts?) -> some View {
+    private func summary(_ perServing: NutrientAmounts) -> some View {
         ThemedSection {
             HStack(spacing: 12) {
                 FoodIcon(food: entry.food, size: 36)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.food.displayName).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
-                    Text("1 serving").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-                }
+                Text(entry.food.displayName).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
                 Spacer(minLength: 8)
                 MealRatingBadge(title: entry.food.displayName, amounts: perServing)
             }
-            MacroSummary(amounts: perServing, caption: was.map { "Was \(($0[.energy] ?? 0).wholeText) cal, \(($0[.protein] ?? 0).wholeText) g protein" })
+            MacroSummary(amounts: perServing, caption: "Per serving")
             PlateDayTotals(day: entry.day, plate: perServing.scaled(by: entry.serving.servings), replacing: entry.id)
                 .padding(.vertical, 4)
         }
     }
 
     private var ingredients: some View {
-        ThemedSection("Ingredients", subtitle: "In one serving. Swipe to remove one.") {
+        ThemedSection("Ingredients") {
             ForEach($draft.rows) { $row in
                 Group {
                     if row.isRemoved {
@@ -114,17 +111,16 @@ struct AlterEntry: View {
                     }
                 }
             }
-            Button("Add Food", systemImage: "plus") { adding = true }
+        } actions: {
+            Button("Add") { adding = true }
                 .disabled(opened == nil)
+                .accessibilityLabel("Add Food")
         }
     }
 
     @ViewBuilder
     private func change(_ row: AlterDraft.Row) -> some View {
         switch (row.alteration.change, row.original) {
-        case let (.changed, original?):
-            Text("Was \(NutritionFormat.serving(original))").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-                .padding(.leading, 38)
         case (.added, _):
             Text("Added").font(AppFont.rowDetail).foregroundStyle(Theme.ratingGreen)
                 .padding(.leading, 38)

@@ -10,8 +10,8 @@ struct PlateView: View {
     private var targets = OwnerTargets()
     @Observe<[FoodEntry]> private var entries: [FoodEntry]
     @Observe<NutritionDay> private var dayRow: NutritionDay
-    @State private var withDay = false
-    @State private var allNutrients = false
+    @AppStorage("plate.withDay") private var withDay = false
+    @AppStorage("plate.allNutrients") private var allNutrients = false
     @State private var editing: UUID?
     @Environment(\.summaryNutrients) private var columns
     private var settings: AppSettings { targets.settings }
@@ -42,12 +42,13 @@ struct PlateView: View {
                 }
             } header: {
                 HStack {
-                    SectionTitle("Your Plate")
                     Spacer()
                     MealRatingBadge(title: "Your Plate", amounts: plate)
                 }
+                .listRowInsets(EdgeInsets(top: 8, leading: Theme.margin, bottom: 4, trailing: Theme.margin))
             }
-            .listRowBackground(Theme.surface.feedback("Your Plate Row"))
+            .listRowBackground(Theme.background.feedback("Your Plate Row"))
+            .listRowInsets(EdgeInsets(top: 8, leading: Theme.margin, bottom: 8, trailing: Theme.margin))
             Section {
                 Grid(horizontalSpacing: 8, verticalSpacing: 8) {
                     ForEach(Array(stride(from: 0, to: lines.count, by: 2)), id: \.self) { start in
@@ -57,7 +58,7 @@ struct PlateView: View {
                     }
                 }
                 .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
+                .listRowInsets(EdgeInsets(top: 0, leading: Theme.margin, bottom: 0, trailing: Theme.margin))
             } header: {
                 HStack {
                     SectionTitle("Nutrition")
@@ -69,9 +70,11 @@ struct PlateView: View {
                     .pickerStyle(.segmented)
                     .fixedSize()
                 }
+                .textCase(nil)
+                .listRowInsets(EdgeInsets(top: 16, leading: Theme.margin, bottom: 8, trailing: Theme.margin))
             }
             ThemedSection {
-                Toggle("Show all nutrients", isOn: $allNutrients).tint(Theme.accent)
+                Toggle("All Nutrients", isOn: $allNutrients).tint(Theme.accent)
                 if allNutrients {
                     let total = withDay ? day + plate : plate
                     ForEach(NutrientSection.allCases.flatMap(\.nutrients).filter { !columns.contains($0.id) && total.amount(of: $0.id) != nil }) { nutrient in
@@ -80,10 +83,10 @@ struct PlateView: View {
                 }
             }
         }
-        .themedList()
+        .flatList()
         .overlay {
             if session.plate.isEmpty {
-                ContentUnavailableView("Your plate is empty", systemImage: "fork.knife", description: Text("Add foods from Search, Scan, Quick Add, or Library."))
+                ContentUnavailableView("Your plate is empty", systemImage: "fork.knife", description: Text("Add foods from any tab."))
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -139,9 +142,8 @@ struct PlateView: View {
             TargetBar(fill: (withDay || line.target != nil ? line.fill(.eaten) : nil) ?? MacroLine.Fill(eaten: 0, plate: 0), color: line.nutrient.color, dimsEaten: withDay)
                 .padding(.top, 6)
         }
-        .padding(12)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: .rect(cornerRadius: Theme.smallCornerRadius))
         .accessibilityElement(children: .combine)
     }
 }

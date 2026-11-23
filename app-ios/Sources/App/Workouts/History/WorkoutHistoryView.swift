@@ -11,15 +11,14 @@ struct WorkoutHistoryView: View {
         let days = history.memo(HistoryDaysKey()) { HistoryDay.group($0, calendar: .current) }
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(days, id: \.start) { day in
-                    Text(day.start.formatted(date: .abbreviated, time: .omitted))
-                        .font(AppFont.listTitle)
-                        .padding(.top, 20)
-                        .padding(.bottom, 4)
-                    ForEach(day.sessions) { session in
-                        Button { selected = session } label: { SessionRow(session: session) }
-                            .foregroundStyle(Theme.textPrimary)
+                ForEach(Array(days.enumerated()), id: \.element.start) { index, day in
+                    FlatSection(day.start.formatted(date: .abbreviated, time: .omitted), divider: index > 0, spacing: 4) {
+                        ForEach(day.sessions) { session in
+                            Button { selected = session } label: { SessionRow(session: session) }
+                                .foregroundStyle(Theme.textPrimary)
+                        }
                     }
+                    .padding(.top, 16)
                 }
             }
             .padding(.horizontal, Theme.margin)
@@ -27,7 +26,7 @@ struct WorkoutHistoryView: View {
         .background(Theme.background)
         .overlay {
             if days.isEmpty {
-                ContentUnavailableView("No Workouts Yet", systemImage: "clock.arrow.circlepath", description: Text("Finished workouts show up here."))
+                ContentUnavailableView("No Workouts Yet", systemImage: "clock.arrow.circlepath")
             }
         }
         .detailTitle("Workout History")
@@ -83,7 +82,7 @@ struct SessionRow: View {
             Image(systemName: "dumbbell.fill")
                 .foregroundStyle(Theme.textPrimary)
                 .frame(width: 40, height: 40)
-                .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
             VStack(alignment: .leading, spacing: 4) {
                 Text(session.name).font(AppFont.headline(16))
                 Text(details.names)

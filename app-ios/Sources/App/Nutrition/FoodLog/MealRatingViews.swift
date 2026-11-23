@@ -211,7 +211,6 @@ struct MealRatingSheet: View {
                         }
                         Text("\((amounts[.energy] ?? 0).wholeText) cal ÷ \((amounts[.protein] ?? 0).wholeText) g protein")
                             .font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-                        Text(formula.explanation).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
                     }
                     .padding(.vertical, 4)
                 }
@@ -220,7 +219,7 @@ struct MealRatingSheet: View {
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
                 }
-                MealRatingSettings(footer: nil)
+                MealRatingSettings()
             }
             .themedList()
             .detailTitle("Meal Rating")
@@ -282,15 +281,14 @@ private struct MealRatingScale: View {
 
 /// Meal Rating's rows, in Settings > Food Log and under a tag's explanation.
 struct MealRatingSettings: View {
-    var footer: String? = "Grades each meal, recipes, and your plate with a tag. Tap a tag to see what it means."
 
     @Environment(LocalStore.self) private var store
     @Observe(AppSettings.current) private var settings
 
     var body: some View {
-        ThemedSection("Meal Rating", footer: footer) {
+        ThemedSection("Meal Rating") {
             SettingToggle(
-                title: "Meal Rating", detail: "Show a rating beside meals and recipes",
+                title: "Meal Rating",
                 systemImage: "gauge.with.needle", isOn: store.binding(settings, \.nutrition.mealRating.enabled)
             )
             if settings.nutrition.mealRating.enabled {

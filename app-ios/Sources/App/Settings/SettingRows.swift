@@ -2,9 +2,16 @@ import SwiftUI
 
 struct SettingToggle: View {
     let title: String
-    let detail: String
+    var detail: String?
     let systemImage: String
     @Binding var isOn: Bool
+
+    init(title: String, detail: String? = nil, systemImage: String, isOn: Binding<Bool>) {
+        self.title = title
+        self.detail = detail
+        self.systemImage = systemImage
+        _isOn = isOn
+    }
 
     var body: some View {
         Toggle(isOn: $isOn) { RowLabel(title: title, detail: detail, systemImage: systemImage) }
@@ -15,9 +22,16 @@ struct SettingToggle: View {
 
 struct SettingLink<Destination: View>: View {
     let title: String
-    let detail: String
+    var detail: String?
     let systemImage: String
     @ViewBuilder let destination: () -> Destination
+
+    init(title: String, detail: String? = nil, systemImage: String, @ViewBuilder destination: @escaping () -> Destination) {
+        self.title = title
+        self.detail = detail
+        self.systemImage = systemImage
+        self.destination = destination
+    }
 
     var body: some View {
         NavigationLink(destination: destination) { RowLabel(title: title, detail: detail, systemImage: systemImage) }

@@ -19,16 +19,18 @@ struct EquipmentSheet<Settings: View>: View {
         let chosenSupport = exercise.chosenSupport(support, in: availability)
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Resistance").font(AppFont.headline(16))
-                    ForEach(exercise.resistanceOptions(in: availability)) { option in
-                        row(option, isSelected: option.ids == chosen) { choice = option.ids }
+                VStack(alignment: .leading, spacing: 20) {
+                    FlatSection("Resistance", divider: false, spacing: 0) {
+                        ForEach(exercise.resistanceOptions(in: availability)) { option in
+                            row(option, isSelected: option.ids == chosen) { choice = option.ids }
+                        }
                     }
                     let supports = exercise.supportOptions(in: availability)
                     if !supports.isEmpty {
-                        Text("Support").font(AppFont.headline(16)).padding(.top, 10)
-                        ForEach(supports) { option in
-                            row(option, isSelected: option.ids == chosenSupport) { support = option.ids }
+                        FlatSection("Support", spacing: 0) {
+                            ForEach(supports) { option in
+                                row(option, isSelected: option.ids == chosenSupport) { support = option.ids }
+                            }
                         }
                     }
                 }
@@ -45,9 +47,6 @@ struct EquipmentSheet<Settings: View>: View {
                 }
             }
             .navigationDestination(isPresented: $showingSettings) { settings() }
-            .pinnedActions {
-                PinnedActionButton("Done") { dismiss() }
-            }
         }
         .feedback(self)
     }
@@ -70,13 +69,9 @@ struct EquipmentSheet<Settings: View>: View {
                 SelectionMark(isOn: isSelected)
             }
             .foregroundStyle(Theme.textPrimary)
-            .padding(14)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
-            .overlay {
-                RoundedRectangle(cornerRadius: Theme.smallCornerRadius)
-                    .strokeBorder(isSelected ? Theme.textPrimary : Theme.separator, lineWidth: isSelected ? 2 : 1)
-            }
+            .contentShape(.rect)
             .opacity(option.isAvailable ? 1 : 0.45)
         }
         .disabled(!option.isAvailable)

@@ -11,7 +11,6 @@ struct RecipeEditor: View {
     private let draftKey: String?
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.summaryNutrients) private var columns
     /// The draft as the editor opened, so a swipe down cannot drop unsaved changes.
     @State private var opened: RecipeDraft
     @State private var draft: RecipeDraft
@@ -53,7 +52,7 @@ struct RecipeEditor: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .nutrientTableList()
             .scrollDismissesKeyboard(.interactively)
             .focusToolbar(draft.focusOrder, focus: $focus)
@@ -96,7 +95,7 @@ struct RecipeEditor: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Are you sure you want to delete \(draft.name)? Logged entries keep their copy. This action cannot be undone.")
+                Text("Logged entries keep their copy.")
             }
         }
         .interactiveDismissDisabled(draft != opened)
@@ -105,20 +104,13 @@ struct RecipeEditor: View {
     }
 
     private func build(_ issues: [RecipeDraft.Field: String], preview: Recipe) -> some View {
-        ThemedSection("Recipe", footer: preview.servings == 1 ? nil : preview.cookedGrams.map { "\(NutritionFormat.amount($0 / preview.servings)) g per serving" }) {
+        ThemedSection("Recipe", subtitle: preview.servings == 1 ? nil : preview.cookedGrams.map { "\(NutritionFormat.amount($0 / preview.servings)) g per serving" }) {
             HStack(spacing: 12) {
                 FoodIcon(icon: draft.icon, name: draft.name, source: .recipe, size: 36).editsIcon { choosingIcon = true }
-                RowLabel(
-                    title: draft.name.isEmpty ? "Your New Recipe" : draft.name,
-                    detail: Text(macroLine: preview.nutrition.nutrients, columns: columns),
-                    trailingDetail: Text(servingLabel(preview))
-                )
-                .lineLimit(1)
-                Spacer(minLength: 0)
+                TextField("Recipe Name", text: $draft.name)
+                    .focused($focus, equals: .name)
+                    .accessibilityLabel("Recipe Name")
             }
-            TextField("Recipe Name", text: $draft.name)
-                .focused($focus, equals: .name)
-                .accessibilityLabel("Recipe Name")
             FieldIssue(issues[.name])
             LabeledContent("Serving Quantity") {
                 HStack(spacing: 12) {
@@ -131,7 +123,6 @@ struct RecipeEditor: View {
                     Stepper("Serving Quantity", value: servingSteps, in: 1...999).labelsHidden()
                 }
             }
-            // Save stays disabled without a serving count, so its message shows as it is typed rather than after Save.
             FieldIssue(draft.servingsIssue)
             LabeledContent("Total Weight") {
                 HStack(spacing: 4) {
@@ -148,7 +139,7 @@ struct RecipeEditor: View {
     }
 
     private func ingredients(_ issues: [RecipeDraft.Field: String]) -> some View {
-        ThemedSection("Ingredients", subtitle: "Weight of ingredients is \(NutritionFormat.amount(draft.ingredientGrams)) g") {
+        ThemedSection("Ingredients", subtitle: "\(NutritionFormat.amount(draft.ingredientGrams)) g") {
             // One row per ingredient, its issue inside it, so List's move offsets are ingredient indexes.
             ForEach($draft.ingredients) { $ingredient in
                 VStack(alignment: .leading, spacing: 4) {
@@ -163,8 +154,10 @@ struct RecipeEditor: View {
                 }
             }
             .onMove { draft.ingredients.move(fromOffsets: $0, toOffset: $1) }
-            Button("Add Ingredient", systemImage: "plus") { search = .add }
             FieldIssue(issues[.ingredients])
+        } actions: {
+            Button("Add") { search = .add }
+                .accessibilityLabel("Add Ingredient")
         }
     }
 
@@ -185,7 +178,7 @@ struct RecipeEditor: View {
                 amounts: amounts,
                 caption: perServing ? "Per \(servingLabel(preview))" : "For \(NumberText.plain(preview.servings)) servings"
             )
-            Toggle("Show all nutrients", isOn: $showAllNutrients).tint(Theme.accent)
+            Toggle("All Nutrients", isOn: $showAllNutrients).tint(Theme.accent)
         }
     }
 
@@ -223,7 +216,9 @@ struct RecipeEditor: View {
             }
             .onDelete { draft.steps.remove(atOffsets: $0) }
             .onMove { draft.steps.move(fromOffsets: $0, toOffset: $1) }
-            Button("Add Step", systemImage: "plus") { draft.steps.append(RecipeDraft.Step()) }
+        } actions: {
+            Button("Add") { draft.steps.append(RecipeDraft.Step()) }
+                .accessibilityLabel("Add Step")
         }
     }
 

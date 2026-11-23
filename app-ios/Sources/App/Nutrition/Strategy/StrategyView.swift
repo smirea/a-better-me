@@ -145,11 +145,11 @@ private struct StrategyHome: View {
                         goalCard(current, period: periods.first)
                         weekCard(current)
                     }
-                    section("Goal History") {
-                        ForEach(periods) { GoalHistoryRow(period: $0, unit: data.unit) }
+                    TruncatedList("Goal History", items: periods) { GoalHistoryRow(period: $0, unit: data.unit) } destination: {
+                        GoalHistoryView(periods: periods, unit: data.unit)
                     }
-                    section("Program History", seeAll: data.plans.count > 5) {
-                        ForEach(data.plans.reversed().prefix(5)) { PlanRow(plan: $0) }
+                    TruncatedList("Program History", items: Array(data.plans.reversed())) { PlanRow(plan: $0) } destination: {
+                        PlanHistoryView()
                     }
                 } else {
                     emptyState
@@ -179,6 +179,11 @@ private struct StrategyHome: View {
                 Button("Edit Goal", systemImage: "pencil") { open(.editGoal) }
                 Button("New Program", systemImage: "arrow.clockwise") { open(.newProgram) }
                 Button("Edit Program", systemImage: "pencil") { open(.editProgram) }
+            }
+            if let current = data.current, periods.count > 1 {
+                Button("Reopen Previous Goal", systemImage: "arrow.uturn.backward") {
+                    store.savePlan(StrategyRules.reopenedPlan(previous: periods[1].goal, current: current, basis: data.basis, today: data.today))
+                }
             }
             Divider()
             NavigationLink(value: StrategyRoute.strategySettings) { Label("Strategy Settings", systemImage: "calendar") }
@@ -210,16 +215,14 @@ private struct StrategyHome: View {
     }
 
     private var checkInBanner: some View {
-        StrategyCard(title: "Check-In Ready", subtitle: "Review your week and update your targets.") {
+        StrategyCard(title: "Check-In Ready") {
             Button("Start Check-In") { checkingIn = true }.primaryPill()
         }
     }
 
-    private func section<Content: View>(_ title: String, seeAll: Bool = false, @ViewBuilder content: () -> Content) -> some View {
+    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionHeader(title) {
-                if seeAll { SeeAllLink(section: title, value: StrategyRoute.planHistory) }
-            }
+            SectionHeader(title)
             content()
         }
     }
@@ -234,12 +237,9 @@ private struct StrategyHome: View {
         ) {
             if let maintenance {
                 let balance = StrategyRules.balanceText(maintenanceKcal: maintenance, averageKcal: average, unit: data.unit)
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .top) {
-                        StatView(value: StrategyFormat.kcal(maintenance), caption: "Maintenance")
-                        StatView(value: balance.value, caption: balance.title)
-                    }
-                    Text(balance.text).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                HStack(alignment: .top) {
+                    StatView(value: StrategyFormat.kcal(maintenance), caption: "Maintenance")
+                    StatView(value: balance.value, caption: balance.title)
                 }
             }
             WeekTargetsChart(targets: plan.targets, today: data.today.weekday)
@@ -247,9 +247,6 @@ private struct StrategyHome: View {
                 StatView(value: StrategyFormat.kcal(todayTarget.energy), caption: "Today · \(NutritionFormat.macros(todayTarget.amounts))")
                 StatView(value: StrategyFormat.kcal(average), caption: "Daily average")
             }
-        } actions: {
-            Button("New Program", systemImage: "arrow.clockwise") { open(.newProgram) }
-            Button("Edit Program", systemImage: "pencil") { open(.editProgram) }
         }
     }
 
@@ -260,27 +257,19 @@ private struct StrategyHome: View {
             HStack(alignment: .top) {
                 StatView(value: StrategyFormat.weight(goal.targetWeightKg, data.unit), caption: "Goal Weight")
                 if goal.kind != .maintain {
-                    StatView(value: "\(StrategyFormat.signed(data.unit.fromKg(weeklyKg), digits: 2...2)) \(data.unit.rawValue)", caption: "Goal Rate / week")
-                    StatView(value: "\(StrategyFormat.signed(goal.ratePercentPerWeek, digits: 0...2)) %", caption: "Goal Rate / week")
+                    StatView(value: "\(StrategyFormat.signed(data.unit.fromKg(weeklyKg), digits: 2...2)) \(data.unit.rawValue)", caption: "Weekly Rate")
+                    StatView(value: "\(StrategyFormat.signed(goal.ratePercentPerWeek, digits: 0...2)) %", caption: "Weekly Rate %")
                 }
             }
             if let period { GoalTrendProgress(period: period, inputs: data.inputs, unit: data.unit) }
-        } actions: {
-            Button("New Goal", systemImage: "plus") { open(.newGoal) }
-            Button("Edit Goal", systemImage: "pencil") { open(.editGoal) }
-            if periods.count > 1 {
-                Button("Reopen Previous Goal", systemImage: "arrow.uturn.backward") {
-                    store.savePlan(StrategyRules.reopenedPlan(previous: periods[1].goal, current: plan, basis: data.basis, today: data.today))
-                }
-            }
         }
     }
 
     private func weekCard(_ plan: NutritionPlan) -> some View {
         let summary = CheckInRules.summary(data.inputs)
         let next = CheckInRules.nextCheckInDay(today: data.today, weekday: data.settings.nutrition.checkInWeekday)
-        let subtitle = plan.coaching.style == .manual
-            ? "Manual programs keep your targets; we keep tracking your expenditure."
+        let subtitle: String? = plan.coaching.style == .manual
+            ? nil
             : data.checkInDue ? "Check-in due" : "Next check-in \(StrategyFormat.day(next))"
         return StrategyCard(title: "This Week", subtitle: subtitle) {
             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 12) {
@@ -372,7 +361,7 @@ private struct GoalHistoryRow: View {
             Image(systemName: period.end == nil ? "hourglass" : "checkmark.circle.fill")
                 .foregroundStyle(period.end == nil ? Theme.textPrimary : Theme.goal)
         }
-        .card()
+        .padding(.vertical, 12)
         .accessibilityElement(children: .combine)
         .feedback(self)
     }
@@ -401,11 +390,11 @@ struct PlanRow: View {
             VStack(alignment: .trailing, spacing: 3) {
                 Text(StrategyFormat.kcal(StrategyRules.averageEnergy(plan.targets))).font(AppFont.rowTitle).monospacedDigit()
                 if let expenditure = plan.expenditureKcal {
-                    Text("Expenditure \(expenditure.wholeText)").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+                    Text("Expenditure \(StrategyFormat.kcal(expenditure))").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
                 }
             }
         }
-        .card()
+        .padding(.vertical, 12)
         .accessibilityElement(children: .combine)
         .feedback(self)
     }
@@ -419,6 +408,23 @@ struct PlanRow: View {
     }
 }
 
+/// Every goal period, newest first, pushed by Goal History's See All.
+struct GoalHistoryView: View {
+    let periods: [GoalPeriod]
+    let unit: WeightUnit
+
+    var body: some View {
+        List(periods) { period in
+            GoalHistoryRow(period: period, unit: unit)
+                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                .listRowBackground(Color.clear)
+        }
+        .flatPlainList()
+        .detailTitle("Goal History")
+        .feedback(self)
+    }
+}
+
 /// Every plan, newest first: the owner's imported history runs to dozens of rows.
 struct PlanHistoryView: View {
     @Observe(NutritionPlan.all) private var plans
@@ -426,12 +432,10 @@ struct PlanHistoryView: View {
     var body: some View {
         List(plans.reversed()) { plan in
             PlanRow(plan: plan)
-                .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 4, trailing: 20))
+                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
                 .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
         }
-        .listStyle(.plain)
-        .themedList()
+        .flatPlainList()
         .detailTitle("Program History")
         .feedback(self)
     }

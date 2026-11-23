@@ -43,11 +43,11 @@ struct GymProfileEditor: View {
                     isOn: calculatorBinding(gym, \.includeBumperPlates)
                 )
                 SettingToggle(
-                    title: "Utilize Mixed Unit Plates", detail: "Loads kg and lb plates together instead of only the plates in your unit",
+                    title: "Utilize Mixed Unit Plates",
                     systemImage: "scalemass", isOn: calculatorBinding(gym, \.allowMixedUnits)
                 )
                 SettingToggle(
-                    title: "Offset Weight", detail: "Adds the ability to optionally offset the total weight targeted by the weight calculator",
+                    title: "Offset Weight",
                     systemImage: "plusminus", isOn: calculatorBinding(gym, \.offsetWeight)
                 )
             } header: {

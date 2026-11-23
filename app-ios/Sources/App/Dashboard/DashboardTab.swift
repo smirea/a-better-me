@@ -215,14 +215,16 @@ private struct HabitCardView: View {
 }
 
 struct DashboardSectionView<Cards: View>: View {
-    let title: String
+    let title: String?
     var seeAll: DashboardRoute?
     @ViewBuilder let cards: Cards
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title) {
-                if let seeAll { SeeAllLink(section: title, value: seeAll) }
+            if let title {
+                SectionHeader(title) {
+                    if let seeAll { SeeAllLink(section: title, value: seeAll) }
+                }
             }
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                 cards
@@ -292,10 +294,15 @@ struct AllExercisesView: View {
 
     var body: some View {
         ScrollView {
-            DashboardSectionView(title: "Trained") {
+            DashboardSectionView(title: nil) {
                 ForEach(values.trainedExercises, id: \.self) { ExerciseCardView(card: ExerciseCard(exerciseID: $0)) }
             }
             .padding(.vertical, 16)
+        }
+        .overlay {
+            if values.trainedExercises.isEmpty {
+                ContentUnavailableView("No Exercises", systemImage: "dumbbell", description: Text("Finish a workout to see its exercises."))
+            }
         }
         .background(Theme.background)
         .detailTitle("Exercises")

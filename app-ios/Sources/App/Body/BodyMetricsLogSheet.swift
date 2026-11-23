@@ -25,7 +25,7 @@ struct BodyMetricsLogSheet: View {
                 ThemedSection {
                     DatePicker("Date", selection: $date, in: ...Date.now, displayedComponents: .date)
                 }
-                ThemedSection(footer: "Turn on more measurements in Settings > Data Visibility > Body Metrics.") {
+                ThemedSection {
                     ForEach(kinds, id: \.self) { kind in
                         HStack {
                             Text(kind.title)
@@ -45,7 +45,7 @@ struct BodyMetricsLogSheet: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle("Log Measurements")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -117,7 +117,7 @@ private struct BodyFatReferenceSheet: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle("Body Fat Reference")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

@@ -68,12 +68,10 @@ struct PingEditor: View {
                     }
                     .pickerStyle(.segmented)
                     .disabled(isLogged)
-                } footer: {
-                    if isLogged { Text("Its type and number of steps are fixed, so what is already logged keeps its meaning.") }
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                .listRowInsets(EdgeInsets(top: 4, leading: Theme.margin, bottom: 4, trailing: Theme.margin))
                 ThemedSection("Color") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 6), spacing: 12) {
                         ForEach(PingColor.allCases, id: \.self) { swatch in
@@ -110,7 +108,7 @@ struct PingEditor: View {
                     }
                 }
                 if kind == .range {
-                    ThemedSection("Steps", footer: "A label is optional, such as Terrible for 1 and Great for 5.") {
+                    ThemedSection("Steps") {
                         if isLogged {
                             Text("\(stepCount) steps")
                         } else {
@@ -131,7 +129,7 @@ struct PingEditor: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .contentMargins(.top, 0, for: .scrollContent)
             .scrollDismissesKeyboard(.interactively)
             .detailTitle(editing != nil ? "Edit Ping" : "New Ping")
@@ -150,7 +148,7 @@ struct PingEditor: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Are you sure you want to delete \(trimmedName)? Everything logged for it goes too. This action cannot be undone.")
+                Text("Everything logged for it goes too.")
             }
             .onAppear { nameFocused = editing == nil }
             .task(id: trimmedName) { await suggest() }

@@ -41,14 +41,14 @@ struct PhotoTab: View {
                 }
             }
             .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-            ThemedSection("Note", footer: "What the photo can't show, like \"skin removed\", \"cooked in a tablespoon of butter\", or \"ate half\".") {
+            .listRowInsets(EdgeInsets(top: 8, leading: Theme.margin, bottom: 8, trailing: Theme.margin))
+            ThemedSection("Note") {
                 TextField("Optional", text: $note, axis: .vertical)
                     .focused($noteFocused)
                     .lineLimit(1...4)
             }
         }
-        .themedList()
+        .flatList()
         .scrollDismissesKeyboard(.interactively)
         .overlay {
             if session.isFindingFoods {

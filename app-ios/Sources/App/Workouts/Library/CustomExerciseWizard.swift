@@ -328,7 +328,7 @@ private struct FinalDetailsStep: View {
             }
             FieldLabel(title: "Alternate Names", trailing: "\(draft.alternativeNames.count)/\(CustomExerciseDraft.alternativeNamesLimit)")
                 .padding(.top, 12)
-            TextField("Optionally add other names", text: $draft.alternativeNames, axis: .vertical)
+            TextField("Other names, comma separated", text: $draft.alternativeNames, axis: .vertical)
                 .lineLimit(3...6)
                 .padding(12)
                 .background(Theme.surfaceRaised, in: .rect(cornerRadius: Theme.smallCornerRadius))
@@ -337,7 +337,6 @@ private struct FinalDetailsStep: View {
                         draft.alternativeNames = String(text.prefix(CustomExerciseDraft.alternativeNamesLimit))
                     }
                 }
-            Text("Separate names with a comma").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Description").font(AppFont.rowTitle)
@@ -435,7 +434,7 @@ private struct JointActionPicker: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search joint actions")
             .detailTitle(title)
             .toolbar {

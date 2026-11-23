@@ -30,7 +30,7 @@ struct CustomizeSectionsView: View {
                 }
                 .onMove { from, to in store.updateSettings { $0.workout.sections.order.move(fromOffsets: from, toOffset: to) } }
             }
-            ThemedSection("Your Sections", footer: "Drag to reorder. Your sections appear on the Workout tab where the Your Sections row sits.") {
+            ThemedSection("Your Sections") {
                 if layout.custom.isEmpty { NoSectionsLabel() }
                 ForEach(layout.custom) { section in
                     Text(section.name).font(AppFont.rowTitle)

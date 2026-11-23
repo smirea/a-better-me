@@ -74,8 +74,7 @@ struct ExerciseBrowser<Trailing: View>: View {
                 .listRowBackground(Theme.background)
             }
         }
-        .listStyle(.plain)
-        .themedList()
+        .flatPlainList()
         .scrollDismissesKeyboard(.immediately)
         .safeAreaBar(edge: .top) {
             VStack(alignment: .leading, spacing: 10) {
@@ -283,7 +282,7 @@ struct EquipmentPickerSheet: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Filter equipment by name")
             .detailTitle(title)
             .toolbar {

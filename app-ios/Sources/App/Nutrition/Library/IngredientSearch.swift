@@ -44,7 +44,7 @@ struct IngredientSearch: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .overlay {
                 if let session, choices(session).isEmpty, !session.isSearchingBranded {
                     if query.isEmpty {

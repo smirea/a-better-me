@@ -92,7 +92,7 @@ private struct StrainDayDetailBody: View {
                         ContentUnavailableView(
                             "No Garmin Data",
                             systemImage: "waveform.path.ecg",
-                            description: Text("Pull down to sync or open Garmin Connect to upload from your band.")
+                            description: Text("Pull down to sync.")
                         )
                         .frame(height: 180)
                     } else {
@@ -142,19 +142,8 @@ private struct StrainDayDetailBody: View {
 
     private var chartHeader: some View {
         HStack(alignment: .firstTextBaseline) {
-            if let strain = snapshot.garmin?.strain {
-                Text(strain.formatted(.number.precision(.fractionLength(1))))
-                    .font(AppFont.number(26))
-                Text("Day Strain")
-                    .font(AppFont.rowDetail)
-                    .foregroundStyle(Theme.textSecondary)
-            } else {
-                Text("--")
-                    .font(AppFont.number(26))
-                Text("Day Strain")
-                    .font(AppFont.rowDetail)
-                    .foregroundStyle(Theme.textSecondary)
-            }
+            StatView(title: "Day Strain", value: snapshot.garmin?.strain.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "--")
+                .fixedSize()
             Spacer()
             if let latest = snapshot.latestStress, let label = snapshot.stressLevelLabel {
                 Text("\(latest.formatted(.number.precision(.fractionLength(1)))) · \(label)")
@@ -207,22 +196,13 @@ private struct StrainDayDetailBody: View {
     }
 
     private func biometricGrid(_ garmin: GarminDay) -> some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            statTile("Resting HR", garmin.restingHeartRate.map { "\($0) bpm" } ?? "--")
-            statTile("HRV", garmin.hrvLastNight.map { "\(Int($0.rounded())) ms" } ?? "--")
-            statTile("Body Battery", garmin.bodyBatteryWake.map { "\($0)" } ?? "--")
-            statTile("Sleep", garmin.sleepSeconds.map { "\($0 / 3600)h \(($0 % 3600) / 60)m" } ?? "--")
-            statTile("Sleep Score", garmin.sleepScore.map { "\($0)" } ?? "--")
-            statTile("Readiness", garmin.readinessScore.map { "\($0)" } ?? "--")
-        }
-    }
-
-    private func statTile(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(value).font(AppFont.number(17))
-            Text(title).font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .card()
+        InsightTiles(tiles: [
+            InsightTile(value: garmin.restingHeartRate.map { "\($0)" } ?? "--", unit: "bpm", title: "Resting HR"),
+            InsightTile(value: garmin.hrvLastNight.map { "\(Int($0.rounded()))" } ?? "--", unit: "ms", title: "HRV"),
+            InsightTile(value: garmin.bodyBatteryWake.map { "\($0)" } ?? "--", title: "Body Battery"),
+            InsightTile(value: garmin.sleepSeconds.map { "\($0 / 3600)h \(($0 % 3600) / 60)m" } ?? "--", title: "Sleep"),
+            InsightTile(value: garmin.sleepScore.map { "\($0)" } ?? "--", title: "Sleep Score"),
+            InsightTile(value: garmin.readinessScore.map { "\($0)" } ?? "--", title: "Readiness"),
+        ])
     }
 }

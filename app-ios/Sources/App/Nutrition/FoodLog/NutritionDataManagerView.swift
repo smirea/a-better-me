@@ -14,7 +14,7 @@ struct NutritionDataManagerView: View {
         let months = Dictionary(grouping: log.reversed()) { CalendarDay(calendar.dateInterval(of: .month, for: $0.day.date(in: calendar))!.start, in: calendar) }
         List {
             if log.isEmpty {
-                ContentUnavailableView("No Nutrition Data", systemImage: "cylinder.split.1x2", description: Text("Days you log foods or enter totals for appear here."))
+                ContentUnavailableView("No Nutrition Data", systemImage: "cylinder.split.1x2", description: Text("Logged days appear here."))
                     .listRowBackground(Color.clear)
             }
             ForEach(months.keys.sorted(by: >), id: \.self) { month in
@@ -25,7 +25,7 @@ struct NutritionDataManagerView: View {
                 }
             }
         }
-        .themedList()
+        .flatList()
         .detailTitle("Nutrition Data Manager")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -46,10 +46,6 @@ struct NutritionDataManagerView: View {
                     systemImage: day.hasOverride ? "square.and.pencil" : day.entryCount > 0 ? "fork.knife" : "moon.zzz"
                 )
                 Spacer()
-                Image(systemName: "pencil")
-                    .font(.footnote.weight(.semibold))
-                    .frame(width: 30, height: 30)
-                    .background(Theme.surfaceRaised, in: .circle)
             }
             .contentShape(.rect)
         }
@@ -107,12 +103,12 @@ struct NutritionDayEntrySheet: View {
                         }
                     }
                 }
-                ThemedSection(footer: "A fasting day counts as zero calories while nothing is logged. An incomplete day is left out of your expenditure.") {
+                ThemedSection {
                     Toggle("Are you fasting?", isOn: $fasting).tint(Theme.accent)
                     Toggle("Is this day incomplete?", isOn: $incomplete).tint(Theme.accent)
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle("Nutrition", subtitle: date.formatted(.dateTime.weekday().month().day()))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

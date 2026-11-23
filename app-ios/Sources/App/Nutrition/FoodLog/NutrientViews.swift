@@ -308,6 +308,7 @@ extension View {
 private struct NutrientListItem<Row: View>: View {
     let item: NutrientListRow
     let row: (Nutrient) -> Row
+    @Environment(\.flatSections) private var flat
 
     private static var indent: CGFloat { 16 }
 
@@ -324,7 +325,7 @@ private struct NutrientListItem<Row: View>: View {
                 row(nutrient).padding(.leading, CGFloat(depth) * Self.indent)
             }
         }
-        .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+        .listRowInsets(EdgeInsets(top: 5, leading: flat ? Theme.margin : 16, bottom: 5, trailing: flat ? Theme.margin : 16))
         .listRowSeparator(endsSection ? .visible : .hidden, edges: .bottom)
         .listRowSeparator(.hidden, edges: .top)
         // The rule spans the card whatever the last row's indent, as a label's section rules do.

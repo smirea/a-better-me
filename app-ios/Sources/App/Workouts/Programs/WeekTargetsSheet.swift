@@ -115,8 +115,7 @@ struct WeekTargetsSavingOptions: View {
                     }
                 }
             }
-            .listStyle(.plain)
-            .themedList()
+            .flatPlainList()
             .detailTitle("Saving Options")
             .navigationSubtitle(setCount == 1 ? "1 set" : "\(setCount) sets")
             .toolbar {

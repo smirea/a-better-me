@@ -19,7 +19,7 @@ struct BodyWeightLogSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                ThemedSection(footer: latest.map { "Last weigh-in: \(unit.label(kg: $0.weightKg)), \($0.measuredAt.formatted(.relative(presentation: .named)))" }) {
+                ThemedSection {
                     HStack {
                         TextField("Weight", value: $weight, format: .number.precision(.fractionLength(0...2)).grouping(.never))
                             .keyboardType(.decimalPad)
@@ -41,7 +41,7 @@ struct BodyWeightLogSheet: View {
                     DatePicker("Time", selection: $measuredAt, in: ...Date.now)
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle("Log Weight")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

@@ -10,6 +10,7 @@ extension Theme {
     static let goalTowards = Color(hex: 0x1F5A3A)
 }
 
+/// Names a chart's series. One series needs no legend, so it draws nothing below two.
 struct ChartLegend: View {
     struct Item {
         var title: String
@@ -20,15 +21,17 @@ struct ChartLegend: View {
     let items: [Item]
 
     var body: some View {
-        HStack(spacing: 16) {
-            ForEach(items, id: \.title) { item in
-                Label { Text(item.title) } icon: { Image(systemName: item.symbol).foregroundStyle(item.color) }
+        if items.count > 1 {
+            HStack(spacing: 16) {
+                ForEach(items, id: \.title) { item in
+                    Label { Text(item.title) } icon: { Image(systemName: item.symbol).foregroundStyle(item.color) }
+                }
             }
+            .font(AppFont.chip)
+            .foregroundStyle(Theme.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .feedback(self)
         }
-        .font(AppFont.chip)
-        .foregroundStyle(Theme.textSecondary)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .feedback(self)
     }
 }
 

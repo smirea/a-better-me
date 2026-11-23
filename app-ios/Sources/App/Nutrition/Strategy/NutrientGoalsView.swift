@@ -42,10 +42,8 @@ struct NutrientGoalsView: View {
                     }
                 }
             }
-            ThemedSection(footer: "All days before the first goal default to Auto: the floor, target, and ceiling are set for you from your sex and weight.") {
-            }
         }
-        .themedList()
+        .flatList()
         .detailTitle("\(info?.name ?? nutrient.rawValue) Goals")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -82,11 +80,13 @@ private struct NutrientGoalEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                DatePicker(
-                    "Goal Start Date",
-                    selection: Binding(get: { draft.startsOn.date }, set: { draft.startsOn = CalendarDay($0) }),
-                    displayedComponents: .date
-                )
+                ThemedSection {
+                    DatePicker(
+                        "Goal Start Date",
+                        selection: Binding(get: { draft.startsOn.date }, set: { draft.startsOn = CalendarDay($0) }),
+                        displayedComponents: .date
+                    )
+                }
                 ThemedSection("Goal Type") {
                     Picker("Goal Type", selection: $draft.kind) {
                         ForEach(NutrientGoalDraft.Kind.allCases, id: \.self) { kind in
@@ -109,7 +109,7 @@ private struct NutrientGoalEditor: View {
                     ThemedSection { Text(problem).foregroundStyle(Theme.destructive) }
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle(original == nil ? "New \(name) Goal" : "Edit \(name) Goal")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -162,7 +162,7 @@ struct NutrientGoalsListView: View {
     var body: some View {
         List {
             ForEach(NutrientGroup.allCases, id: \.self) { group in
-                Section(group.rawValue.capitalized) {
+                ThemedSection(group.rawValue.capitalized) {
                     ForEach(NutrientRegistry.all.filter { $0.group == group && !Self.fromProgram.contains($0.id) }) { nutrient in
                         NavigationLink(value: StrategyRoute.nutrient(nutrient.id)) {
                             LabeledContent(nutrient.name, value: Self.text(
@@ -174,7 +174,7 @@ struct NutrientGoalsListView: View {
                 }
             }
         }
-        .themedList()
+        .flatList()
         .detailTitle("Nutrient Goals")
         .feedback(self)
     }

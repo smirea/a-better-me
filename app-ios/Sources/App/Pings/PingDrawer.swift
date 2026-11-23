@@ -153,8 +153,10 @@ struct PingControls: View {
         let count = status.ping.kind == .boolean ? status.count : status.step ?? 0
         return Button(action: action) {
             HStack(spacing: 8) {
-                Image(systemName: status.ping.icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(status.ping.tint)
-                Text(status.ping.name).font(AppFont.chip).lineLimit(1)
+                HStack(spacing: 6) {
+                    Image(systemName: status.ping.icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(status.ping.tint)
+                    Text(status.ping.name).font(AppFont.chip).lineLimit(1)
+                }
                 if count > 0 {
                     Text("\(count)").font(AppFont.number(13)).foregroundStyle(Theme.textSecondary)
                 }

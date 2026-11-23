@@ -3,8 +3,9 @@ import HealthKitUI
 import Feedback
 import SwiftUI
 
-/// Settings > Apple Health: what the app reads and writes. Reads and workouts need no switch; writing food does,
-/// because MacroFactor may already write the same meals.
+/// Settings > Apple Health. Reads and workouts need no switch; writing food does, because MacroFactor may already write
+/// the same meals. Each day is written when its log changes, and only the last `DietaryHealth.recentDays` days, so food
+/// MacroFactor already sent is not doubled.
 struct HealthSettingsView: View {
     private let healthStore = HealthStore.shared
     @State private var requestTrigger = false
@@ -14,27 +15,23 @@ struct HealthSettingsView: View {
 
     var body: some View {
         Form {
-            ThemedSection("Reads") {
-                RowLabel(title: "Body Weight and Steps", detail: "Charted on the Dashboard", systemImage: "scalemass")
-                RowLabel(title: "Heart Rate and Energy", detail: "Read during workouts", systemImage: "heart.text.square")
-            }
-            ThemedSection("Writes", footer: footer) {
-                RowLabel(title: "Workouts", detail: "Each finished workout, with its heart rate and energy", systemImage: "figure.strengthtraining.traditional")
+            ThemedSection {
                 SettingToggle(
-                    title: "Nutrition", detail: "Logged food as dietary energy, macros, and the micronutrients Health has types for",
-                    systemImage: "fork.knife",
+                    title: "Write Nutrition", systemImage: "fork.knife",
                     isOn: Binding(get: { nutrition.isEnabled }, set: { on in
                         if on { Task { await enable() } } else { nutrition.isEnabled = false }
                     })
                 )
+                if let warning {
+                    RowLabel(title: warning.title, detail: warning.detail, systemImage: "exclamationmark.triangle.fill", iconTint: Theme.coral)
+                }
                 if nutrition.isEnabled, let last = nutrition.lastWrite {
-                    LabeledContent("Last written", value: "\(last.day) · \(last.samples) samples")
-                        .font(AppFont.rowDetail)
+                    LabeledContent("Last Written", value: "\(last.day) · \(last.samples) samples")
                 }
             }
-            ThemedSection("Export", footer: "Every step sample Health holds, one row per sample with the device that counted it, before Health removes the overlap between iPhone and Watch.") {
+            ThemedSection {
                 Button { exportingSteps = true } label: {
-                    RowLabel(title: "Step Samples", detail: "CSV", systemImage: "square.and.arrow.up")
+                    RowLabel(title: "Export Step Samples", systemImage: "square.and.arrow.up")
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Export Step Samples")
@@ -54,14 +51,14 @@ struct HealthSettingsView: View {
         .feedback(self)
     }
 
-    private var footer: String {
+    private var warning: (title: String, detail: String)? {
         if !HealthStore.isAvailable, HKHealthStore.isHealthDataAvailable() {
-            return "Health is off in Debug simulator builds. Launch with -health on to turn it on."
+            return ("Health Is Off", "Run with --health on")
         }
         if nutrition.isEnabled, !energyAllowed {
-            return "Health does not allow A Better Me to write dietary energy. Allow it in the Health app under Sharing > Apps."
+            return ("Dietary Energy Not Allowed", "Health › Sharing › Apps")
         }
-        return "Each day is written when its log changes, and re-writing a day replaces what the app wrote for it. History older than \(DietaryHealth.recentDays) days is not written, so food MacroFactor already sent to Health is not doubled."
+        return nil
     }
 
     private func enable() async {

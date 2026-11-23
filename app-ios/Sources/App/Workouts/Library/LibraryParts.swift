@@ -57,7 +57,7 @@ extension Exercise {
 
     /// "Weight x Reps", in the reference app's order: load before reps.
     var metricsLine: String {
-        metrics.sorted { $0.isWeight && !$1.isWeight }.map(\.displayName).joined(separator: " x ")
+        metrics.sorted { $0.isWeight && !$1.isWeight }.map(\.displayName).joined(separator: " · ")
     }
 }
 

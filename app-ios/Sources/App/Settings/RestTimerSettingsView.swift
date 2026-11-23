@@ -9,33 +9,33 @@ struct RestTimerSettingsView: View {
         Form {
             ThemedSection("Behavior") {
                 SettingToggle(
-                    title: "Use Rest Timers", detail: "Rest timers will count down after each exercise set",
+                    title: "Use Rest Timers",
                     systemImage: "stopwatch.fill", isOn: store.binding(settings, \.workout.rest.enabled)
                 )
                 SettingLink(
-                    title: "Notifications", detail: "Configure notification settings for when rest time is over", systemImage: "bell.fill"
+                    title: "Notifications", systemImage: "bell.fill"
                 ) {
                     RestNotificationSettingsView()
                 }
                 SettingLink(
-                    title: "Timer Duration", detail: "Configure rest duration for different exercise types", systemImage: "hourglass"
+                    title: "Timer Duration", systemImage: "hourglass"
                 ) {
                     RestDurationSettingsView()
                 }
                 SettingToggle(
-                    title: "Rest After Last Warm-up Set", detail: "Use rest timers after the last warm-up set",
+                    title: "Rest After Last Warm-up Set",
                     systemImage: "flag.fill", isOn: store.binding(settings, \.workout.rest.afterLastWarmUp)
                 )
                 SettingToggle(
-                    title: "Rest Between Exercises", detail: "Use rest timers when moving between exercises",
+                    title: "Rest Between Exercises",
                     systemImage: "checkmark.square.fill", isOn: store.binding(settings, \.workout.rest.betweenExercises)
                 )
                 SettingToggle(
-                    title: "Rest Between Left/Right Sets", detail: "Use rest timers in between left and right sets",
+                    title: "Rest Between Left/Right Sets",
                     systemImage: "arrow.triangle.branch", isOn: store.binding(settings, \.workout.rest.betweenSides)
                 )
             }
-            ThemedSection("Rest Scaling", footer: "Optionally reduce rest under specific conditions") {
+            ThemedSection("Rest Scaling") {
                 SettingChoice(
                     title: "Rest After Last Warm-up Set",
                     selection: store.binding(settings, \.workout.rest.scaling.afterLastWarmUp), options: .percents()
@@ -62,13 +62,13 @@ private struct RestNotificationSettingsView: View {
 
     var body: some View {
         Form {
-            ThemedSection("Notifications") {
+            ThemedSection {
                 SettingToggle(
-                    title: "Play Sound", detail: "Play sound when rest time is over",
+                    title: "Play Sound",
                     systemImage: "music.note", isOn: store.binding(settings, \.workout.rest.playSound)
                 )
                 SettingToggle(
-                    title: "Vibrate", detail: "Vibrate when rest time is over",
+                    title: "Vibrate",
                     systemImage: "iphone.radiowaves.left.and.right", isOn: store.binding(settings, \.workout.rest.vibrate)
                 )
             }
@@ -85,7 +85,7 @@ private struct RestDurationSettingsView: View {
 
     var body: some View {
         Form {
-            ThemedSection("Default Timers") {
+            ThemedSection {
                 ForEach(RestCategory.allCases) { category in
                     SettingChoice(
                         title: category.displayName,

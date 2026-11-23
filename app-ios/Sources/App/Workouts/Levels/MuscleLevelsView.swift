@@ -31,7 +31,7 @@ struct MuscleLevelsView: View {
                 }
             }
         }
-        .themedList()
+        .flatList()
         .detailTitle(muscle.displayName)
         .sheet(item: $shownExercise) { ExerciseDetailSheet(exerciseID: $0.id) }
         .feedback(self)

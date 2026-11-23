@@ -22,7 +22,7 @@ private struct NewSectionAlert: ViewModifier {
 /// The Your Sections placeholder on the Workout tab and in Customize Sections.
 struct NoSectionsLabel: View {
     var body: some View {
-        Label("You haven’t added new sections yet. You can add one by tapping + on this page", systemImage: "rectangle.split.1x2")
+        Label("No Sections", systemImage: "rectangle.split.1x2")
             .font(AppFont.rowDetail)
             .foregroundStyle(Theme.textSecondary)
     }
@@ -43,7 +43,7 @@ struct CustomSectionView: View {
         let byID = Dictionary(library.map { ($0.id, $0) }) { first, _ in first }
         let templates = section.templateIDs.compactMap { byID[$0] }
         let id = section.id
-        VStack(alignment: .leading, spacing: 12) {
+        FlatSection(spacing: 4) {
             SectionHeader(section.name) {
                 if !templates.isEmpty {
                     Button(section.collapsed ? "Expand" : "Collapse") {
@@ -59,12 +59,9 @@ struct CustomSectionView: View {
                 .labelStyle(.iconOnly)
                 .frame(width: 32, height: 32)
             }
-            if templates.isEmpty {
-                Text("Workouts you add to this section appear here. Tap ⋮ to add one from your library.")
-                    .font(AppFont.rowDetail)
-                    .foregroundStyle(Theme.textSecondary)
-            } else if !section.collapsed {
-                ForEach(templates) { template in
+            if !section.collapsed {
+                ForEach(Array(templates.enumerated()), id: \.element.id) { index, template in
+                    if index > 0 { Divider().overlay(Theme.separator) }
                     NavigationLink(value: template.id) { TemplateCard(template: template) }
                         .buttonStyle(.plain)
                         .contextMenu {
@@ -138,7 +135,7 @@ private struct SectionWorkoutsSheet: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle("Add Workout")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

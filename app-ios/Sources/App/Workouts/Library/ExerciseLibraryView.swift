@@ -91,14 +91,14 @@ struct ExerciseSettingsView: View {
         Form {
             ThemedSection("General") {
                 Button { showingInfo = true } label: {
-                    SettingsRow(title: "Info", subtitle: "View instructions, exercise details, and history", systemImage: "chart.bar.fill") {
+                    SettingsRow(title: "Info", systemImage: "chart.bar.fill") {
                         Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
                     }
                 }
                 .buttonStyle(.plain)
                 SettingsRow(
                     title: "Exercise Note",
-                    subtitle: current?.pinnedNote.nilIfEmpty ?? "Note will display on this exercise every time you work out",
+                    subtitle: current?.pinnedNote.nilIfEmpty,
                     systemImage: "pin.fill"
                 ) {
                     Button(current?.pinnedNote.isEmpty == false ? "Edit" : "Add") {
@@ -108,7 +108,6 @@ struct ExerciseSettingsView: View {
                 }
                 SettingsRow(
                     title: "Do Not Recommend",
-                    subtitle: "This exercise will not be recommended when creating programs",
                     systemImage: "hand.thumbsdown.fill"
                 ) {
                     Toggle("Do Not Recommend", isOn: Binding {
@@ -125,7 +124,6 @@ struct ExerciseSettingsView: View {
                     } label: {
                         SettingsRow(
                             title: "Edit Duplicate",
-                            subtitle: "To edit all available exercise properties, create a duplicate",
                             systemImage: "plus.square.on.square"
                         ) {
                             Image(systemName: "chevron.right").foregroundStyle(Theme.textTertiary)
@@ -136,7 +134,6 @@ struct ExerciseSettingsView: View {
                 if let customExercise {
                     SettingsRow(
                         title: customExercise.isArchived ? "Unarchive Exercise" : "Archive Exercise",
-                        subtitle: "This will hide the exercise in your custom library, but will not impact your history",
                         systemImage: "archivebox.fill"
                     ) {
                         Button(customExercise.isArchived ? "Unarchive" : "Archive") {
@@ -145,7 +142,6 @@ struct ExerciseSettingsView: View {
                     }
                     SettingsRow(
                         title: "Delete Exercise",
-                        subtitle: "This will remove the exercise from your custom library. Logged sets stay in your history.",
                         systemImage: "trash.fill",
                         iconTint: Theme.destructive
                     ) {
@@ -165,7 +161,6 @@ struct ExerciseSettingsView: View {
                 } label: {
                     SettingsRow(
                         title: "Reset Defaults",
-                        subtitle: "Remove all exercise level overrides",
                         systemImage: "arrow.counterclockwise",
                         iconTint: Theme.destructive
                     ) { EmptyView() }
@@ -187,8 +182,6 @@ struct ExerciseSettingsView: View {
                 change { $0.pinnedNote = note }
             }
             Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Pinned to this exercise and shown every time you work out.")
         }
         .alert("Delete this exercise?", isPresented: $confirmingDelete) {
             Button("Delete Exercise", role: .destructive) {
@@ -308,7 +301,7 @@ private struct WarmUpSchemeEditor: View {
 
     var body: some View {
         Form {
-            ThemedSection(footer: "Percent of the first working set's target weight.") {
+            ThemedSection {
                 ForEach(steps.indices, id: \.self) { index in
                     let step = step(at: index)
                     HStack(spacing: 12) {
@@ -358,7 +351,7 @@ private struct WarmUpSchemeEditor: View {
 
 private struct SettingsRow<Accessory: View>: View {
     let title: String
-    let subtitle: String
+    var subtitle: String?
     let systemImage: String
     var iconTint = Theme.textPrimary
     @ViewBuilder var accessory: Accessory

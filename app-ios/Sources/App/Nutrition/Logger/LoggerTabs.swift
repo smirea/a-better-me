@@ -30,11 +30,10 @@ struct SearchTab: View {
                 }
             }
         }
-        .listStyle(.plain)
         .listSectionSpacing(0)
         .environment(\.defaultMinListRowHeight, 0)
         .scrollDismissesKeyboard(.immediately)
-        .themedList()
+        .flatPlainList()
         .overlay {
             if session.results.isEmpty, !session.isSearchingBranded {
                 if session.query.isEmpty {
@@ -177,7 +176,7 @@ struct QuickAddTab: View {
 
     var body: some View {
         Form {
-            ThemedSection("Energy", footer: "Macro sum is \(Int(draft.macroSum.rounded())) \(draft.unit == .kj ? "kJ" : "cal")") {
+            ThemedSection("Energy", subtitle: "Macros sum to \(Int(draft.macroSum.rounded())) \(draft.unit == .kj ? "kJ" : "cal")") {
                 HStack {
                     TextField("Energy", text: $draft.energy)
                         .keyboardType(.decimalPad)
@@ -202,7 +201,7 @@ struct QuickAddTab: View {
                     .submitLabel(.done)
             }
         }
-        .themedList()
+        .flatList()
         .scrollDismissesKeyboard(.interactively)
         .focusToolbar(QuickAddDraft.focusOrder, focus: $focus) {
             Button("Quick Add", action: quickAdd)

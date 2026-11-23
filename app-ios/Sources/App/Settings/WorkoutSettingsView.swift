@@ -9,13 +9,13 @@ struct WorkoutSettingsView: View {
     var body: some View {
         Form {
             ThemedSection("General") {
-                SettingLink(title: "Rest Timer", detail: "Configure rest timer settings", systemImage: "stopwatch.fill") {
+                SettingLink(title: "Rest Timer", systemImage: "stopwatch.fill") {
                     RestTimerSettingsView()
                 }
-                SettingLink(title: "Smart Progression", detail: "Configure smart progression settings", systemImage: "wand.and.sparkles") {
+                SettingLink(title: "Smart Progression", systemImage: "wand.and.sparkles") {
                     SmartProgressionSettingsView()
                 }
-                SettingLink(title: "Warm-Up", detail: "Configure warm-up settings", systemImage: "figure.cooldown") {
+                SettingLink(title: "Warm-Up", systemImage: "figure.cooldown") {
                     WarmUpSettingsView()
                 }
                 SettingChoice(
@@ -27,41 +27,40 @@ struct WorkoutSettingsView: View {
                     ]
                 )
                 SettingToggle(
-                    title: "Propagate Changes", detail: "Weight and rep edits will propagate to all sets with same weight and reps",
+                    title: "Propagate Changes",
                     systemImage: "arrowshape.turn.up.right", isOn: store.binding(settings, \.workout.propagateChanges)
                 )
                 SettingToggle(
-                    title: "RIR Tracking", detail: "Automatically populate RIR selection in the session log based on program",
+                    title: "RIR Tracking",
                     systemImage: "heart.text.square", isOn: store.binding(settings, \.workout.rirTracking)
                 )
                 SettingToggle(
-                    title: "Superset Auto-Scroll", detail: "Scroll automatically between superset exercises after set completion",
+                    title: "Superset Auto-Scroll",
                     systemImage: "repeat", isOn: store.binding(settings, \.workout.supersetAutoScroll)
                 )
                 SettingToggle(
-                    title: "Exercise Auto-Next", detail: "Scroll next automatically when an exercise is completed",
+                    title: "Exercise Auto-Next",
                     systemImage: "chevron.forward.2", isOn: store.binding(settings, \.workout.exerciseAutoNext)
                 )
                 SettingToggle(
                     title: "Include Bar Weight",
-                    detail: "The plate calculator counts the bar or machine's own weight. Tap the bar in the calculator to change it for one machine",
                     systemImage: "dumbbell", isOn: store.binding(settings, \.workout.plateCalculatorIncludesBase)
                 )
             }
             ThemedSection("Display") {
                 SettingToggle(
-                    title: "Keep Alive", detail: "Keep your phone alive during active workout sessions",
+                    title: "Keep Alive",
                     systemImage: "sun.max", isOn: store.binding(settings, \.workout.display.keepAlive)
                 )
                 SettingToggle(
-                    title: "Workout Timer", detail: "Show elapsed time during workout sessions",
+                    title: "Workout Timer",
                     systemImage: "clock.fill", isOn: store.binding(settings, \.workout.display.workoutTimer)
                 )
                 SettingChoice(
                     title: "Calendar Scrolling", systemImage: "calendar.day.timeline.left",
                     selection: store.binding(settings, \.workout.display.calendarScrolling),
                     options: [
-                        SettingOption(value: .daily, title: "Daily Scroll", detail: "Scrolls freely and settles one day at a time"),
+                        SettingOption(value: .daily, title: "Daily Scroll"),
                         SettingOption(value: .weekly, title: "Weekly Swipe"),
                     ]
                 )
@@ -79,33 +78,27 @@ private struct SmartProgressionSettingsView: View {
 
     var body: some View {
         Form {
-            ThemedSection("Behavior") {
+            ThemedSection {
                 SettingChoice(
-                    title: "Initial log fill", systemImage: "book.pages",
+                    title: "Initial Log Fill", systemImage: "book.pages",
                     selection: store.binding(settings, \.workout.progression.initialFill),
                     options: [
                         SettingOption(
-                            value: .smartProgression, title: "Smart Progression values",
-                            detail: "When you start a workout, Smart Progression will pre-fill your weight and rep logs based on your workout history and goals"
-                        ),
+                            value: .smartProgression, title: "Smart Progression values"),
                         SettingOption(
-                            value: .previousValues, title: "Previous values",
-                            detail: "When you start a workout, weight and rep logs will default to Previous workout values"
-                        ),
+                            value: .previousValues, title: "Previous values"),
                     ]
                 )
                 SettingToggle(
-                    title: "Apply in session",
-                    detail: "Allow Smart Progression to fill in new values for exercise data entry fields mid-workout.",
+                    title: "Apply in Session",
                     systemImage: "arrow.triangle.merge", isOn: store.binding(settings, \.workout.progression.applyInSession)
                 )
                 SettingToggle(
                     title: "Expand Rep Range",
-                    detail: "Allow Smart Progression to widen your target rep range when adding or lowering weight alone can't achieve an optimal result.",
                     systemImage: "arrow.left.and.right", isOn: store.binding(settings, \.workout.progression.expandRepRange)
                 )
                 SettingToggle(
-                    title: "Weight Match", detail: "Prefer matching the previous set's weight when possible.",
+                    title: "Weight Match",
                     systemImage: "equal.square", isOn: store.binding(settings, \.workout.progression.weightMatch)
                 )
             }

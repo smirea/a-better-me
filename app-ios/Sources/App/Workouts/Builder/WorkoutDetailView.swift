@@ -1,7 +1,7 @@
 import Feedback
 import SwiftUI
 
-/// A library workout: the editor with Workout Options and a pinned Start Workout. Edits save as they happen. The editor
+/// A library workout: the editor with Plan Options and a pinned Start Workout. Edits save as they happen. The editor
 /// works on its own copy of the blocks and writes each change through; a change from another device replaces the copy
 /// only while no write of ours is still on its way.
 struct WorkoutDetailView: View {
@@ -47,16 +47,13 @@ struct WorkoutDetailView: View {
             .detailTitle(template.name)
             .toolbar(.hidden, for: .tabBar)
             .toolbar {
-                Menu("Workout Options", systemImage: "ellipsis") {
+                Menu("Plan Options", systemImage: "ellipsis") {
                     Button { renaming = true } label: {
                         Label("Name", systemImage: "textformat")
                         Text(template.name)
                     }
                     SwapGymMenu(templateID: templateID, gymID: template.gymID)
-                    Button { confirmingReset = true } label: {
-                        Label("Reset Workout", systemImage: "arrow.uturn.backward")
-                        Text("Reset workout time, sets, weights, and any other modifications you made")
-                    }
+                    Button("Reset Workout", systemImage: "arrow.uturn.backward") { confirmingReset = true }
                     .disabled(inProgress?.templateID != templateID)
                     Button("Duplicate Workout", systemImage: "plus.square.on.square") {
                         store.insert(WorkoutTemplate(name: "\(template.name) Copy", notes: template.notes, blocks: template.blocks.copy()))

@@ -117,7 +117,7 @@ struct StrategyWizardView: View {
             styleOption(step, .collaborative, "Collaborative", "Set your own macro targets and we'll adjust your Calorie budget based on your goal and progress.")
             styleOption(step, .manual, "Manual", "Set your own macro and Calorie targets using manual entry.")
             if model.basis == nil {
-                Text("Coached and collaborative programs need a maintenance estimate: add your height and birth date to your profile, or set your maintenance by hand above.")
+                Text("Needs height and birth date in Profile, or a manual maintenance.")
                     .font(AppFont.caption())
                     .foregroundStyle(Theme.textSecondary)
             }
@@ -137,9 +137,6 @@ struct StrategyWizardView: View {
                 LabeledContent("Your Standard Floor", value: "\(standard) cal")
             }
             .card()
-            Text("MacroFactor sets the Standard Floor for you; set yours here. The Low Floor is two thirds of it.")
-                .font(AppFont.caption())
-                .foregroundStyle(Theme.textSecondary)
         case .training:
             ForEach([CoachingProgram.Training.none, .lifting, .cardio, .cardioLifting], id: \.self) { training in
                 WizardOption(title: trainingName(training), subtitle: nil, selected: model.coaching.training == training) {
@@ -218,9 +215,7 @@ struct StrategyWizardView: View {
             }
             if goal.kind != .maintain {
                 StrategyCard(title: "Goal Rate") {
-                    Text("We will adjust your calorie targets as needed to keep you on track to \(goal.kind == .lose ? "lose" : "gain") \(rate)% of your body weight per week. The exact number of \(unit == .lb ? "pounds" : "kilograms") you \(goal.kind == .lose ? "lose" : "gain") each week will \(goal.kind == .lose ? "decrease as your overall body weight decreases" : "increase as your overall body weight increases").")
-                        .font(AppFont.body(15))
-                        .foregroundStyle(Theme.textSecondary)
+                    Text("\(rate)% / week").font(AppFont.number())
                 }
             }
             if let basis = model.basis {
@@ -231,9 +226,6 @@ struct StrategyWizardView: View {
             if let end = model.goal.projectedEnd(from: model.today, currentWeightKg: model.weightKg) {
                 StrategyCard(title: "Estimated End Date") {
                     Text(StrategyFormat.day(end, year: true)).font(AppFont.number())
-                    Text("This is an optimistic estimate. Plan for the goal to take a few more weeks.")
-                        .font(AppFont.caption())
-                        .foregroundStyle(Theme.textSecondary)
                 }
             }
         }
@@ -259,10 +251,6 @@ struct StrategyWizardView: View {
                     }
                 }
             }
-            Text("What's Next").font(AppFont.headline())
-            Text("We'll monitor your Calorie intake and changes in body weight to refine your estimated energy expenditure, and use it at each weekly check-in to adjust your Calorie budget and macro targets to keep you on track with your goal.")
-                .font(AppFont.caption())
-                .foregroundStyle(Theme.textSecondary)
         }
     }
 }
@@ -297,7 +285,7 @@ private struct GoalWeightRateStep: View {
                 Stepper("Target weight", value: targetBinding, step: unit == .lb ? 1 : 0.5).labelsHidden()
             }
             .card()
-            Text("Current trend weight: \(StrategyFormat.weight(model.weightKg, unit))").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
+            Text("Trend \(StrategyFormat.weight(model.weightKg, unit))").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
             if let problem = model.goal.problem(currentWeightKg: model.weightKg) {
                 Text(problem).font(AppFont.caption()).foregroundStyle(Theme.destructive)
             }

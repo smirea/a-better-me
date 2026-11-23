@@ -40,7 +40,6 @@ struct CollaborativeEditorView: View {
 
     private var calories: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Calorie targets: set between 0 and \(Double(maxKcal).wholeText) cal").font(AppFont.chip)
             HStack {
                 TextField("Calories", value: Binding(get: { Int(day.energy) }, set: { week.setCalories(min(maxKcal, max(0, $0)), on: weekday) }), format: .number)
                     .keyboardType(.numberPad)
@@ -70,7 +69,6 @@ struct CollaborativeEditorView: View {
                 in: 0...CollaborativeWeek.maxProteinPerLb
             ) { Text("Protein") }
                 .tint(Theme.protein)
-            Text("Set between 0.0 and \(CollaborativeWeek.maxProteinPerLb.formatted()) g per lb of body weight.").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
         }
     }
 
