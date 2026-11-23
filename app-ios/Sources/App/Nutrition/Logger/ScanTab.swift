@@ -24,10 +24,14 @@ struct ScanTab: View {
     var body: some View {
         ZStack {
             if cameraWorks {
-                BarcodeScanner(running: visible && creating == nil, paused: looking || typing || problem != nil || choosing != nil) { barcode, photo in
-                    lookup(barcode, photo: photo)
+                // Removed under Create Food, not just stopped: `stopScanning()` isn't documented to end the camera
+                // session, and a second session interrupts the first, so Create Food's Camera must hold the only one.
+                if creating == nil {
+                    BarcodeScanner(running: visible, paused: looking || typing || problem != nil || choosing != nil) { barcode, photo in
+                        lookup(barcode, photo: photo)
+                    }
+                    .ignoresSafeArea(edges: .bottom)
                 }
-                .ignoresSafeArea(edges: .bottom)
             } else {
                 ContentUnavailableView {
                     Label("Camera unavailable", systemImage: "camera")
@@ -136,9 +140,8 @@ private struct NewFood: Identifiable {
 
 /// VisionKit's `DataScannerViewController` reading retail barcodes, reporting the first one it recognizes while not
 /// paused, with a photo it starts taking at that moment: the package is still in front of the camera, and a store's
-/// label shows its nutrition facts beside the barcode. It holds the camera only while `running`, off screen or under
-/// Create Food: left scanning there, it competed with Create Food's own camera, which closed the moment it opened on the
-/// owner's phone. Pausing keeps the camera, since a lookup or the store question still waits on the photo.
+/// label shows its nutrition facts beside the barcode. It holds the camera only while `running`, so a pushed
+/// detail stops it. Pausing keeps the camera, since a lookup or the store question still waits on the photo.
 private struct BarcodeScanner: UIViewControllerRepresentable {
     let running: Bool
     let paused: Bool
