@@ -121,8 +121,7 @@ struct GoalProgressView: View {
         let eta = progress.currentKg
             .flatMap { NutritionEngine.Targets.estimatedDays(goal: rate, weightKg: $0) }
             .map { context.calendar.date(byAdding: .day, value: $0, to: context.today)! }
-        return VStack(alignment: .leading, spacing: 12) {
-            SectionHeader("Insights & Data")
+        return FlatSection("Insights & Data", spacing: 12) {
             InsightTiles(tiles: [
                 InsightTile(value: goal.targetWeightKg.map { context.unit.fromKg($0).dashboardText } ?? "--", unit: context.unit.rawValue, title: "Target"),
                 InsightTile(value: progress.days.formatted(), unit: "days", title: "Duration"),

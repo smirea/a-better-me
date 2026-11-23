@@ -107,18 +107,17 @@ struct NutrientTodaySection: View {
     private var contributors: [Contributor] { FoodLog.contributors(entries, of: summary.nutrient, limit: 3) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader("\(summary.name) Today") {
-                Button("About Nutrient Goals", systemImage: "info.circle") { showingAbout = true }
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(Theme.textSecondary)
-            }
+        FlatSection("\(summary.name) Today", spacing: 12) {
+            Button("About Nutrient Goals", systemImage: "info.circle") { showingAbout = true }
+                .labelStyle(.iconOnly)
+                .foregroundStyle(Theme.textSecondary)
+        } content: {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(amountText).font(AppFont.number(17))
                     Spacer()
                     if let target = summary.range.target, target > 0 {
-                        Text("\((summary.consumedToday / target * 100).wholeText)%").font(AppFont.body(14)).foregroundStyle(Theme.textSecondary)
+                        Text("\((summary.consumedToday / target * 100).wholeText)%").font(AppFont.number(15)).foregroundStyle(Theme.textSecondary)
                     }
                 }
                 TileBar(value: summary.consumedToday, range: summary.range, color: summary.nutrient.color).frame(height: 16)
@@ -133,17 +132,15 @@ struct NutrientTodaySection: View {
                 }
                 if !contributors.isEmpty {
                     Divider().overlay(Theme.separator)
-                    Text("Top 3 Contributors").font(AppFont.rowTitle)
                     ForEach(contributors) { item in
                         HStack {
                             Text(item.name).font(AppFont.rowTitle).lineLimit(1)
                             Spacer()
-                            Text("\(item.amount.dashboardText) \(summary.unit)").font(AppFont.rowTitle).foregroundStyle(Theme.textSecondary)
+                            Text("\(item.amount.dashboardText) \(summary.unit)").font(AppFont.number(15)).foregroundStyle(Theme.textSecondary)
                         }
                     }
                 }
             }
-            .card()
         }
         .sheet(isPresented: $showingAbout) { AboutNutrientGoalsSheet() }
         .feedback(self)
@@ -182,36 +179,56 @@ private struct AboutNutrientGoalsSheet: View {
 }
 
 struct MacroSplitList: View {
+    struct Day: Identifiable {
+        let date: Date
+        let split: TileMetrics.MacroSplit
+        var id: Date { date }
+    }
+
     let days: [(date: Date, split: TileMetrics.MacroSplit)]
 
     var body: some View {
-        LazyVStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(days.enumerated()), id: \.element.date) { index, day in
-                if index > 0 { Divider().overlay(Theme.separator) }
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text(day.date.formatted(.dateTime.weekday().month().day())).font(AppFont.rowTitle)
-                        Spacer()
-                        Text(day.split.text).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+        let items = days.map { Day(date: $0.date, split: $0.split) }
+        TruncatedList("Macro Split", items: items) { MacroSplitRow(day: $0) } destination: {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, day in
+                        if index > 0 { Divider().overlay(Theme.separator) }
+                        MacroSplitRow(day: day)
                     }
-                    GeometryReader { proxy in
-                        HStack(spacing: 2) {
-                            Theme.protein.frame(width: proxy.size.width * day.split.protein)
-                            Theme.fat.frame(width: proxy.size.width * day.split.fat)
-                            Theme.carbs
-                        }
-                        .clipShape(.capsule)
-                    }
-                    .frame(height: 6)
-                    .accessibilityHidden(true)
                 }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 14)
-                .accessibilityElement(children: .combine)
+                .padding(.horizontal, Theme.margin)
             }
+            .background(Theme.background)
+            .detailTitle("Macro Split")
         }
-        .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
         .feedback("Macro Split", data: "\(days.count) days")
+    }
+}
+
+private struct MacroSplitRow: View {
+    let day: MacroSplitList.Day
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(day.date.formatted(.dateTime.weekday().month().day())).font(AppFont.rowTitle)
+                Spacer()
+                Text(day.split.text).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+            }
+            GeometryReader { proxy in
+                HStack(spacing: 2) {
+                    Theme.protein.frame(width: proxy.size.width * day.split.protein)
+                    Theme.fat.frame(width: proxy.size.width * day.split.fat)
+                    Theme.carbs
+                }
+                .clipShape(.capsule)
+            }
+            .frame(height: 6)
+            .accessibilityHidden(true)
+        }
+        .padding(.vertical, 10)
+        .accessibilityElement(children: .combine)
     }
 }
 

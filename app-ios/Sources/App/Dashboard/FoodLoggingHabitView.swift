@@ -35,15 +35,11 @@ struct FoodLoggingHabitView: View {
                         Text(shown.formatted(.dateTime.month(.wide).year())).font(AppFont.rowTitle)
                     }
                 }
-                .card()
                 .feedback("Month", data: (month: shown, today: habit.todayKcal, streak: habit.streak))
                 legend
                 ForEach(habit.years, id: \.self) { year in
-                    VStack(alignment: .leading, spacing: 8) {
-                        SectionHeader(String(year))
+                    FlatSection(String(year), spacing: 8) {
                         YearHeatMap(year: year, states: byDay, calendar: calendar)
-                            .padding(10)
-                            .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
                             .feedback("Year Heat Map", data: year)
                     }
                 }

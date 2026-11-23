@@ -8,9 +8,8 @@ struct ExpenditureInsights: View {
     var body: some View {
         let changes = summary.changes
         let strategy = summary.strategy
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader("Insights & Data")
-            ChangeRows(title: "Expenditure Changes", changes: changes, color: Theme.coral, tolerance: 0.5) {
+        FlatSection("Insights & Data", spacing: 12) {
+            ChangeRows(changes: changes, color: Theme.coral, tolerance: 0.5) {
                 "\($0.wholeText) cal"
             }
             InsightTiles(tiles: [
@@ -44,9 +43,8 @@ struct WeightTrendInsights: View {
         let changes = summary.changes
         let insights = summary.insights
         let losing = (insights?.weeklyChangeKg ?? 0) < 0
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader("Insights & Data")
-            ChangeRows(title: "Weight Changes", changes: changes, color: Theme.weightTrend, tolerance: unit.toKg(0.05)) {
+        FlatSection("Insights & Data", spacing: 12) {
+            ChangeRows(changes: changes, color: Theme.weightTrend, tolerance: unit.toKg(0.05)) {
                 "\(unit.fromKg($0).dashboardText) \(unit.rawValue)"
             }
             InsightTiles(tiles: [
@@ -61,7 +59,7 @@ struct WeightTrendInsights: View {
     }
 
     private func signed(_ value: Double) -> String {
-        (value > 0 ? "+" : "") + value.formatted(.number.precision(.fractionLength(0...2)))
+        (value > 0 ? "+" : "") + value.dashboardText
     }
 }
 
@@ -70,21 +68,18 @@ struct EnergyBalanceInsights: View {
     let isExpenditure: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader("Insights & Data")
+        FlatSection("Insights & Data", spacing: 12) {
             VStack(alignment: .leading, spacing: 12) {
-                Text(isExpenditure ? "Relative to Expenditure" : "Relative to Targets").font(AppFont.headline(16))
                 ForEach(rows, id: \.days) { row in
                     HStack {
-                        Text("\(row.days)-day").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).frame(width: 60, alignment: .leading)
-                        Text(row.mean.map { "\(BalanceTag.signed($0)) cal" } ?? "--").font(AppFont.headline(14))
-                        Spacer()
+                        Text("\(row.days)-day").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).frame(width: 52, alignment: .leading)
                         if let mean = row.mean { BalanceTag(balance: NutritionMetrics.balance(mean), isExpenditure: isExpenditure) }
+                        Spacer()
+                        Text(row.mean.map { "\(BalanceTag.signed($0)) cal" } ?? "--").font(AppFont.number(15))
                     }
                     .accessibilityElement(children: .combine)
                 }
             }
-            .card()
             .feedback("Balance Changes", data: rows)
         }
         .feedback(self)
@@ -132,7 +127,6 @@ struct BalanceTag: View {
 
 /// 3- to 90-day change rows with a sparkline, as on the Expenditure and Weight Trend details.
 private struct ChangeRows: View {
-    let title: String
     let changes: [NutritionMetrics.Change]
     let color: Color
     let tolerance: Double
@@ -140,25 +134,23 @@ private struct ChangeRows: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title).font(AppFont.headline(16))
             ForEach(changes, id: \.days) { change in
                 let direction = NutritionMetrics.direction(change.delta, tolerance: tolerance)
                 HStack(spacing: 12) {
                     Text("\(change.days)-day").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).frame(width: 52, alignment: .leading)
                     MiniLine(values: change.values, color: color, rightAlignedSlots: max(change.values.count, 2), showsPoints: false)
                         .frame(width: 70, height: 18)
-                    Text(change.delta.map(format) ?? "--").font(AppFont.headline(14)).frame(minWidth: 70, alignment: .leading)
                     Spacer()
-                    Label(direction.title, systemImage: direction.symbol)
-                        .lineLimit(1)
-                        .fixedSize()
+                    Text(change.delta.map(format) ?? "--").font(AppFont.number(15))
+                    Image(systemName: direction.symbol)
                         .font(AppFont.rowDetail)
                         .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 16)
+                        .accessibilityLabel(direction.title)
                 }
                 .accessibilityElement(children: .combine)
             }
         }
-        .card()
         .feedback(self)
     }
 }
@@ -210,25 +202,20 @@ private struct DataSources: View {
     let sources: [(title: String, symbol: String, route: DashboardRoute)]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader("Data Sources")
-            VStack(spacing: 0) {
-                ForEach(Array(sources.enumerated()), id: \.offset) { index, source in
-                    if index > 0 { Divider().overlay(Theme.separator).padding(.leading, 40) }
-                    NavigationLink(value: source.route) {
-                        HStack {
-                            RowLabel(title: source.title, detail: "Manage Data", systemImage: source.symbol)
-                            Spacer()
-                            Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(Theme.textTertiary)
-                        }
-                        .padding(14)
-                        .contentShape(.rect)
+        FlatSection("Data Sources", spacing: 0) {
+            ForEach(Array(sources.enumerated()), id: \.offset) { index, source in
+                if index > 0 { Divider().overlay(Theme.separator).padding(.leading, 40) }
+                NavigationLink(value: source.route) {
+                    HStack {
+                        RowLabel(title: source.title, systemImage: source.symbol)
+                        Spacer()
+                        Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(Theme.textTertiary)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("\(source.title), Manage Data")
+                    .padding(.vertical, 12)
+                    .contentShape(.rect)
                 }
+                .buttonStyle(.plain)
             }
-            .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
         }
         .feedback(self)
     }

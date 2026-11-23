@@ -233,7 +233,7 @@ struct MetricDetailView: View {
         case .steps:
             EmptyView()
         case let .topExercises(top):
-            FlatSection("Top 5 Exercises by Sets", subtitle: "Last 30 Days") {
+            FlatSection("Top Exercises", subtitle: "Sets, last 30 days") {
                 VStack(spacing: 0) {
                     ForEach(Array(top.enumerated()), id: \.element.exerciseID) { index, entry in
                         if index > 0 { Divider().overlay(Theme.separator) }
@@ -861,9 +861,8 @@ private struct MonthRowView: View {
     let row: MonthRow
 
     var body: some View {
-        HStack {
-            RowLabel(title: row.text, detail: row.subtitle)
-            Spacer()
+        HStack(spacing: 10) {
+            Text(row.subtitle).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
             if let tag = row.tag {
                 Label {
                     Text(tag.text).foregroundStyle(Theme.textSecondary)
@@ -872,16 +871,13 @@ private struct MonthRowView: View {
                 }
                 .font(AppFont.rowDetail)
             }
+            Spacer()
+            Text(row.text).font(AppFont.number(15)).foregroundStyle(Theme.textPrimary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 10)
         .contentShape(.rect)
-        .contextMenu {
-            if let id = row.deletableID {
-                Button("Delete Weigh-In", systemImage: "trash", role: .destructive) { store.delete(BodyWeight.self, id: id) }
-            }
-        }
-        .rowSwipeActions(trailing: row.deletableID.map { id in [.destructive("Delete Weigh-In") { store.delete(BodyWeight.self, id: id) }] } ?? [])
+        .rowSwipeActions(trailing: row.deletableID.map { id in [.destructive("Delete Weigh-In") { store.delete(BodyWeight.self, id: id) }] } ?? [], fullSwipe: true)
         .accessibilityElement(children: .combine)
         .feedback(self)
     }
