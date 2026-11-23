@@ -42,6 +42,7 @@ struct ThemedSection<Content: View, Actions: View>: View {
                                         .foregroundStyle(Theme.textPrimary)
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel(title)
                                 .accessibilityHint(expanded ? "Hides the explanation" : "Shows the explanation")
                                 if expanded {
                                     Text(info).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)

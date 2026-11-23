@@ -23,6 +23,7 @@ struct SettingRow<Control: View>: View {
                 if info != nil {
                     Button { withAnimation(.snappy) { expanded.toggle() } } label: { label.contentShape(.rect) }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(title)
                         .accessibilityHint(expanded ? "Hides the explanation" : "Shows the explanation")
                 } else {
                     label
