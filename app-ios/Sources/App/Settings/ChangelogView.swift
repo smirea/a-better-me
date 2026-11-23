@@ -107,7 +107,7 @@ private struct TaskLinks: View {
                 }
             }
             .font(AppFont.rowDetail)
-            .foregroundStyle(Theme.textSecondary)
+            .foregroundStyle(Theme.accent)
         }
     }
 }

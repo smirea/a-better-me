@@ -26,20 +26,24 @@ struct FoodLoggingHabitView: View {
                         StatView(title: "Streak", value: habit.streak.formatted(), unit: "days")
                         Spacer()
                     }
+                    monthGrid(shown, byDay: byDay)
                     HStack {
-                        Text(shown.formatted(.dateTime.month(.wide).year())).font(AppFont.listTitle)
-                        Spacer()
                         RoundIconButton("Previous Month", systemImage: "chevron.backward", size: .small) { step(shown, by: -1) }
                         RoundIconButton("Next Month", systemImage: "chevron.forward", size: .small) { step(shown, by: 1) }
                             .disabled(calendar.isDate(shown, equalTo: now, toGranularity: .month))
+                        Spacer()
+                        Text(shown.formatted(.dateTime.month(.wide).year())).font(AppFont.rowTitle)
                     }
-                    monthGrid(shown, byDay: byDay)
                 }
+                .card()
                 .feedback("Month", data: (month: shown, today: habit.todayKcal, streak: habit.streak))
                 legend
                 ForEach(habit.years, id: \.self) { year in
-                    FlatSection(String(year), spacing: 8) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        SectionHeader(String(year))
                         YearHeatMap(year: year, states: byDay, calendar: calendar)
+                            .padding(10)
+                            .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
                             .feedback("Year Heat Map", data: year)
                     }
                 }

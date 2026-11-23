@@ -178,7 +178,7 @@ struct FoodEditor: View {
     }
 
     private func otherServings(_ issues: [FoodDraft.Field: String]) -> some View {
-        ThemedSection("Other Servings") {
+        ThemedSection("Other Servings", info: "More servings to log this food in, such as 1 slice = 30 g.") {
             ForEach($draft.measures) { $measure in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {

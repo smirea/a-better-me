@@ -108,7 +108,7 @@ struct PingEditor: View {
                     }
                 }
                 if kind == .range {
-                    ThemedSection("Steps") {
+                    ThemedSection("Steps", info: "A label is optional, such as Terrible for 1 and Great for 5.") {
                         if isLogged {
                             Text("\(stepCount) steps")
                         } else {

@@ -12,7 +12,7 @@ struct WorkoutHistoryView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(days.enumerated()), id: \.element.start) { index, day in
-                    FlatSection(day.start.formatted(date: .abbreviated, time: .omitted), divider: index > 0, spacing: 4) {
+                    FlatSection(day.start.formatted(date: .abbreviated, time: .omitted), spacing: 4) {
                         ForEach(day.sessions) { session in
                             Button { selected = session } label: { SessionRow(session: session) }
                                 .foregroundStyle(Theme.textPrimary)
@@ -82,7 +82,7 @@ struct SessionRow: View {
             Image(systemName: "dumbbell.fill")
                 .foregroundStyle(Theme.textPrimary)
                 .frame(width: 40, height: 40)
-                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+                .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
             VStack(alignment: .leading, spacing: 4) {
                 Text(session.name).font(AppFont.headline(16))
                 Text(details.names)

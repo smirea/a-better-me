@@ -36,7 +36,7 @@ struct PingHistoryView: View {
                         chart(steps)
                     }
                     if !history.logs.isEmpty {
-                        TruncatedList("Last 30 Days", items: history.logs, divider: false) { log in
+                        TruncatedList("Last 30 Days", items: history.logs) { log in
                             PingLogRow(log: log, steps: steps)
                                 .padding(.vertical, 12)
                                 .rowSwipeActions(trailing: [.destructive("Delete") { store.delete(PingLog.self, id: log.id) }], fullSwipe: true)

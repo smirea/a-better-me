@@ -54,10 +54,9 @@ struct NutrientBreakdown: View {
 struct FlatNutrientBreakdown: View {
     let amounts: NutrientAmounts
     var collapsed: Binding<Bool>? = nil
-    var divider = true
 
     var body: some View {
-        FlatNutrientList(title: "Nutrients", rows: NutrientListRow.all, collapsed: collapsed, divider: divider) { nutrient in
+        FlatNutrientList(title: "Nutrients", rows: NutrientListRow.all, collapsed: collapsed) { nutrient in
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(nutrient.name)
                     .font(AppFont.body(15))

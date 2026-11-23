@@ -18,6 +18,7 @@ struct HealthSettingsView: View {
             ThemedSection {
                 SettingToggle(
                     title: "Write Nutrition", systemImage: "fork.knife",
+                    info: "Logged food as dietary energy, macros, and the micronutrients Health has types for. Each day is written when its log changes, and only the last \(DietaryHealth.recentDays) days, so food MacroFactor already sent to Health is not doubled.",
                     isOn: Binding(get: { nutrition.isEnabled }, set: { on in
                         if on { Task { await enable() } } else { nutrition.isEnabled = false }
                     })

@@ -39,16 +39,18 @@ struct GymProfileEditor: View {
         return List {
             Section {
                 SettingToggle(
-                    title: "Include Bumper Plates", detail: bumperDetail(gym), systemImage: "circle.circle",
+                    title: "Include Bumper Plates", systemImage: "circle.circle", info: bumperDetail(gym),
                     isOn: calculatorBinding(gym, \.includeBumperPlates)
                 )
                 SettingToggle(
                     title: "Utilize Mixed Unit Plates",
-                    systemImage: "scalemass", isOn: calculatorBinding(gym, \.allowMixedUnits)
+                    systemImage: "scalemass",
+                    info: "Loads kg and lb plates together instead of only the plates in your unit", isOn: calculatorBinding(gym, \.allowMixedUnits)
                 )
                 SettingToggle(
                     title: "Offset Weight",
-                    systemImage: "plusminus", isOn: calculatorBinding(gym, \.offsetWeight)
+                    systemImage: "plusminus",
+                    info: "Adds the ability to optionally offset the total weight targeted by the weight calculator", isOn: calculatorBinding(gym, \.offsetWeight)
                 )
             } header: {
                 SectionTitle("Plate Calculator").textCase(nil)

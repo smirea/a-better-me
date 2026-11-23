@@ -3,23 +3,28 @@ import SwiftUI
 
 /// A list section with the app's section title. Lists use it instead of `Section`. In a grouped Settings list its rows
 /// draw on the `Theme.surface` card; under `flatList()` (content and editors) they draw flat on `Theme.background`
-/// with a `FlatSection`-style header.
+/// with a `FlatSection`-style header. A titled section with `info` explains itself the way `SettingRow` does: an info
+/// mark on the title, whose tap shows the explanation under it.
 struct ThemedSection<Content: View, Actions: View>: View {
     @Environment(\.flatSections) private var flat
     var title: String?
     var subtitle: String?
+    var info: String?
     @ViewBuilder let content: Content
     /// `SectionHeader`'s underlined text actions, trailing the title.
     @ViewBuilder let actions: Actions
+    @AppStorage private var expanded: Bool
 
     init(
-        _ title: String? = nil, subtitle: String? = nil,
+        _ title: String? = nil, subtitle: String? = nil, info: String? = nil,
         @ViewBuilder content: () -> Content, @ViewBuilder actions: () -> Actions
     ) {
         self.title = title
         self.subtitle = subtitle
+        self.info = info
         self.content = content()
         self.actions = actions()
+        _expanded = AppStorage(wrappedValue: false, "section.info.\(title ?? "")")
     }
 
     var body: some View {
@@ -29,7 +34,24 @@ struct ThemedSection<Content: View, Actions: View>: View {
             if title != nil || subtitle != nil {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
-                        if let title { SectionTitle(title) }
+                        if let title {
+                            if let info {
+                                Button { withAnimation(.snappy) { expanded.toggle() } } label: {
+                                    Text("\(title)  \(Text(Image(systemName: "info.circle")).font(.caption).foregroundStyle(Theme.textTertiary))")
+                                        .font(AppFont.listTitle)
+                                        .foregroundStyle(Theme.textPrimary)
+                                }
+                                .buttonStyle(.plain)
+                                // Its own name, so it never collides with a row that shares the section's title.
+                                .accessibilityLabel("\(title) Info")
+                                .accessibilityHint(expanded ? "Hides the explanation" : "Shows the explanation")
+                                if expanded {
+                                    Text(info).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                                }
+                            } else {
+                                SectionTitle(title)
+                            }
+                        }
                         if let subtitle { Text(subtitle).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary) }
                     }
                     Spacer(minLength: 0)
@@ -80,18 +102,17 @@ extension View {
 }
 
 extension ThemedSection where Actions == EmptyView {
-    init(_ title: String? = nil, subtitle: String? = nil, @ViewBuilder content: () -> Content) {
-        self.init(title, subtitle: subtitle, content: content) { EmptyView() }
+    init(_ title: String? = nil, subtitle: String? = nil, info: String? = nil, @ViewBuilder content: () -> Content) {
+        self.init(title, subtitle: subtitle, info: info, content: content) { EmptyView() }
     }
 }
 
-/// A flat content section for `ScrollView` / `LazyVStack` screens: an optional top hairline divider, an optional
+/// A flat content section for `ScrollView` / `LazyVStack` screens: an optional
 /// `SectionHeader` (with optional muted subtitle), and content directly on `Theme.background` without a `Theme.surface`
 /// card wrapper.
 struct FlatSection<HeaderAction: View, Content: View>: View {
     var title: String?
     var subtitle: String?
-    var divider = true
     var spacing: CGFloat = 10
     @ViewBuilder let headerAction: HeaderAction
     @ViewBuilder let content: Content
@@ -99,14 +120,12 @@ struct FlatSection<HeaderAction: View, Content: View>: View {
     init(
         _ title: String? = nil,
         subtitle: String? = nil,
-        divider: Bool = true,
         spacing: CGFloat = 10,
         @ViewBuilder headerAction: () -> HeaderAction,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.subtitle = subtitle
-        self.divider = divider
         self.spacing = spacing
         self.headerAction = headerAction()
         self.content = content()
@@ -114,9 +133,6 @@ struct FlatSection<HeaderAction: View, Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            if divider {
-                Divider().overlay(Theme.separator)
-            }
             if title != nil || subtitle != nil {
                 VStack(alignment: .leading, spacing: 4) {
                     if let title {
@@ -137,11 +153,10 @@ extension FlatSection where HeaderAction == EmptyView {
     init(
         _ title: String? = nil,
         subtitle: String? = nil,
-        divider: Bool = true,
         spacing: CGFloat = 10,
         @ViewBuilder content: () -> Content
     ) {
-        self.init(title, subtitle: subtitle, divider: divider, spacing: spacing, headerAction: { EmptyView() }, content: content)
+        self.init(title, subtitle: subtitle, spacing: spacing, headerAction: { EmptyView() }, content: content)
     }
 }
 

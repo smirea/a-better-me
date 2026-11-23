@@ -41,27 +41,29 @@ struct HealthSummaryCard: View {
                         .font(AppFont.rowDetail)
                         .foregroundStyle(Theme.textSecondary)
                 }
-                row("Average Heart Rate", icon: "heart.fill", value: numbers.averageHeartRate.map { "\($0.wholeText) bpm" })
-                row("Max Heart Rate", icon: "bolt.heart.fill", value: numbers.maxHeartRate.map { "\($0.wholeText) bpm" })
-                row("Active Energy", icon: "flame.fill", value: numbers.activeEnergyKcal.map { "\($0.wholeText) cal" })
-                row("Total Energy", icon: "flame", value: numbers.totalEnergyKcal.map { "\($0.wholeText) cal" })
+                let rows = [
+                    ("Average Heart Rate", "heart.fill", numbers.averageHeartRate.map { "\($0.wholeText) bpm" }),
+                    ("Max Heart Rate", "bolt.heart.fill", numbers.maxHeartRate.map { "\($0.wholeText) bpm" }),
+                    ("Active Energy", "flame.fill", numbers.activeEnergyKcal.map { "\($0.wholeText) cal" }),
+                    ("Total Energy", "flame", numbers.totalEnergyKcal.map { "\($0.wholeText) cal" }),
+                ].compactMap { title, icon, value in value.map { (title: title, icon: icon, value: $0) } }
+                ForEach(Array(rows.enumerated()), id: \.element.title) { index, row in
+                    if index > 0 { Divider().overlay(Theme.separator) }
+                    self.row(row.title, icon: row.icon, value: row.value)
+                }
             }
             .feedback(self)
             .padding(.horizontal, Theme.margin)
         }
     }
 
-    @ViewBuilder
-    private func row(_ title: String, icon: String, value: String?) -> some View {
-        if let value {
-            Divider().overlay(Theme.separator)
-            HStack(spacing: 16) {
-                RowLabel(title: title, systemImage: icon)
-                Spacer()
-                Text(value).font(AppFont.rowTitle)
-            }
-            .frame(minHeight: 52)
-            .accessibilityElement(children: .combine)
+    private func row(_ title: String, icon: String, value: String) -> some View {
+        HStack(spacing: 16) {
+            RowLabel(title: title, systemImage: icon)
+            Spacer()
+            Text(value).font(AppFont.rowTitle)
         }
+        .frame(minHeight: 52)
+        .accessibilityElement(children: .combine)
     }
 }

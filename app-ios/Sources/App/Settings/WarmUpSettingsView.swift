@@ -14,7 +14,7 @@ struct WarmUpSettingsView: View {
                     options: [
                         SettingOption(value: .none, title: "None"),
                         SettingOption(
-                            value: .smart, title: "Smart Warm-Up"),
+                            value: .smart, title: "Smart Warm-Up", detail: "Warm-ups will be automatically added to exercises in your workout depending on how fresh your muscles are and how heavy the weight is"),
                         SettingOption(value: .scheme, title: "Scheme Warm-Up"),
                     ]
                 )
@@ -26,11 +26,13 @@ struct WarmUpSettingsView: View {
                 }
                 SettingToggle(
                     title: "Hide Completed Sets",
-                    systemImage: "circle.lefthalf.filled", isOn: store.binding(settings, \.workout.warmUp.hideCompletedSets)
+                    systemImage: "circle.lefthalf.filled",
+                    info: "Completed warm-up sets will be hidden behind the Warm Up menu in your workout", isOn: store.binding(settings, \.workout.warmUp.hideCompletedSets)
                 )
                 SettingToggle(
                     title: "Simplify Warm-Up Plates",
-                    systemImage: "arrow.down.circle", isOn: store.binding(settings, \.workout.warmUp.simplifyPlates)
+                    systemImage: "arrow.down.circle",
+                    info: "Adjust warm-up weights to the nearest load that doesn't require trivially small plates", isOn: store.binding(settings, \.workout.warmUp.simplifyPlates)
                 )
             }
         }
