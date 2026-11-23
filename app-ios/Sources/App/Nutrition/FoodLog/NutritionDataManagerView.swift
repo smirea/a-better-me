@@ -107,7 +107,7 @@ struct NutritionDayEntrySheet: View {
                         }
                     }
                 }
-                ThemedSection(footer: "A fasting day counts as zero calories while nothing is logged. An incomplete day is left out of your expenditure.") {
+                ThemedSection {
                     Toggle("Are you fasting?", isOn: $fasting).tint(Theme.accent)
                     Toggle("Is this day incomplete?", isOn: $incomplete).tint(Theme.accent)
                 }

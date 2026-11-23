@@ -61,7 +61,6 @@ struct FoodEditor: View {
             Form {
                 PhotosSection(
                     reader: photos,
-                    footer: "Photograph the front, the nutrition facts, and any store label. Gemini reads them together and fills in what they show; a field you change stays yours.",
                     nothingRead: FoodLabel()
                 )
                 identity(issues)
@@ -146,10 +145,7 @@ struct FoodEditor: View {
     }
 
     private func serving(_ issues: [FoodDraft.Field: String]) -> some View {
-        ThemedSection(
-            "Nutrition For",
-            footer: draft.basis == .serving ? "With a serving weight, every standard unit of weight is available when you log this food. If a serving is 4 pieces, enter 4 and pieces." : nil
-        ) {
+        ThemedSection("Nutrition For") {
             Picker("Nutrition For", selection: $draft.basis) {
                 ForEach(NutritionBasis.allCases) { Text($0.rawValue).tag($0) }
             }
@@ -184,7 +180,7 @@ struct FoodEditor: View {
     }
 
     private func otherServings(_ issues: [FoodDraft.Field: String]) -> some View {
-        ThemedSection("Other Servings", footer: "More servings to log this food in, such as 1 slice = 30 g.") {
+        ThemedSection("Other Servings") {
             ForEach($draft.measures) { $measure in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {

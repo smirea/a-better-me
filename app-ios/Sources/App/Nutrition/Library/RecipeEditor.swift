@@ -105,7 +105,7 @@ struct RecipeEditor: View {
     }
 
     private func build(_ issues: [RecipeDraft.Field: String], preview: Recipe) -> some View {
-        ThemedSection("Recipe", footer: preview.servings == 1 ? nil : preview.cookedGrams.map { "\(NutritionFormat.amount($0 / preview.servings)) g per serving" }) {
+        ThemedSection("Recipe", subtitle: preview.servings == 1 ? nil : preview.cookedGrams.map { "\(NutritionFormat.amount($0 / preview.servings)) g per serving" }) {
             HStack(spacing: 12) {
                 FoodIcon(icon: draft.icon, name: draft.name, source: .recipe, size: 36).editsIcon { choosingIcon = true }
                 RowLabel(

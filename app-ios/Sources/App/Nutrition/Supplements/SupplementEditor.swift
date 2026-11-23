@@ -37,7 +37,6 @@ struct SupplementEditor: View {
             Form {
                 PhotosSection(
                     reader: photos,
-                    footer: "The first photo is the one lists show. Add the Supplement Facts panel and Gemini fills in the name, serving, and ingredients; a field you change stays yours.",
                     nothingRead: SupplementLabel()
                 )
                 identity(issues)
@@ -106,7 +105,7 @@ struct SupplementEditor: View {
     }
 
     private func identity(_ issues: [SupplementDraft.Field: String]) -> some View {
-        ThemedSection("Supplement", footer: "A serving is what the Supplement Facts are for, such as 2 capsules.") {
+        ThemedSection("Supplement") {
             HStack(spacing: 12) {
                 picture.frame(width: 44, height: 44)
                 RowLabel(

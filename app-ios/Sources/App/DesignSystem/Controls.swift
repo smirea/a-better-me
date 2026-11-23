@@ -6,18 +6,16 @@ import SwiftUI
 struct ThemedSection<Content: View, Actions: View>: View {
     var title: String?
     var subtitle: String?
-    var footer: String?
     @ViewBuilder let content: Content
     /// `SectionHeader`'s underlined text actions, trailing the title.
     @ViewBuilder let actions: Actions
 
     init(
-        _ title: String? = nil, subtitle: String? = nil, footer: String? = nil,
+        _ title: String? = nil, subtitle: String? = nil,
         @ViewBuilder content: () -> Content, @ViewBuilder actions: () -> Actions
     ) {
         self.title = title
         self.subtitle = subtitle
-        self.footer = footer
         self.content = content()
         self.actions = actions()
     }
@@ -40,8 +38,6 @@ struct ThemedSection<Content: View, Actions: View>: View {
                 }
                 .textCase(nil)
             }
-        } footer: {
-            if let footer { Text(footer) }
         }
         // The background fills the whole cell, unlike the row's content, so a tap on a row's padding selects the row.
         .listRowBackground(Theme.surface.feedback(title.map { "\($0) Row" } ?? "Row"))
@@ -49,8 +45,8 @@ struct ThemedSection<Content: View, Actions: View>: View {
 }
 
 extension ThemedSection where Actions == EmptyView {
-    init(_ title: String? = nil, subtitle: String? = nil, footer: String? = nil, @ViewBuilder content: () -> Content) {
-        self.init(title, subtitle: subtitle, footer: footer, content: content) { EmptyView() }
+    init(_ title: String? = nil, subtitle: String? = nil, @ViewBuilder content: () -> Content) {
+        self.init(title, subtitle: subtitle, content: content) { EmptyView() }
     }
 }
 

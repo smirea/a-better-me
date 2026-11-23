@@ -120,7 +120,7 @@ struct MaintenanceBreakdownView: View {
     var body: some View {
         NavigationStack {
             List {
-                ThemedSection(footer: "Each stretch below had enough logged days (60% of three weeks) and weigh-ins (six in three weeks) to measure: average intake, less the energy of the weight change. Each is moved to your weight and activity today, then they are averaged, weighting the precise and recent ones more. The first two weeks of a stretch are left out, because weight swings with water when eating changes.") {
+                ThemedSection {
                     LabeledContent("Maintenance", value: StrategyFormat.kcal(estimate.kcal))
                     LabeledContent("Uncertainty", value: "± \(StrategyFormat.kcal(estimate.sdKcal))")
                     LabeledContent("Trend weight today", value: StrategyFormat.weight(estimate.weightKg, unit))
@@ -147,10 +147,7 @@ struct MaintenanceBreakdownView: View {
                 if let prior = estimate.prior {
                     ThemedSection(
                         prior.source == .initial ? "Your initial estimate" : "BMR × activity",
-                        subtitle: "\(MaintenanceFormat.percent(prior.share)) of the estimate",
-                        footer: prior.source == .initial
-                            ? "The initial expenditure in Settings > Expenditure, a starting point that measured stretches outweigh."
-                            : "From your profile and your Activity and Exercise answers in Settings > Expenditure, a starting point that measured stretches outweigh."
+                        subtitle: "\(MaintenanceFormat.percent(prior.share)) of the estimate"
                     ) {
                         LabeledContent("Estimate", value: StrategyFormat.kcal(prior.kcal))
                     }
@@ -159,8 +156,7 @@ struct MaintenanceBreakdownView: View {
                     let excluded = estimate.incomplete.reversed()
                     ThemedSection(
                         "Left out as incomplete",
-                        subtitle: "\(excluded.count) day\(excluded.count == 1 ? "" : "s")",
-                        footer: "A day far below your typical intake (under 60% of the median of the days around it), or a light day with few entries or little protein, counts as if you had marked it incomplete. Mark the day Complete in the Food Log to count it."
+                        subtitle: "\(excluded.count) day\(excluded.count == 1 ? "" : "s")"
                     ) {
                         ForEach(Array(excluded.prefix(showsAllExcluded ? excluded.count : 8)), id: \.date) { day in
                             LabeledContent {

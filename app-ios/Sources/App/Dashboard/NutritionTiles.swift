@@ -162,7 +162,7 @@ private struct AboutNutrientGoalsSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                ThemedSection(footer: "A goal may have any of the three. Auto goals follow your age and sex; custom goals are set per nutrient from its detail.") {
+                ThemedSection {
                     LabeledContent("Floor", value: "A practical minimum: the lower threshold intake, below which nearly everyone falls short.")
                     LabeledContent("Target", value: "The recommended intake (RDA or AI), enough for about 98% of people.")
                     LabeledContent("Ceiling", value: "The tolerable upper intake level. Going over regularly may cause harm.")

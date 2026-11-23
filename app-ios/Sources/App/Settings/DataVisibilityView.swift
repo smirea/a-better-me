@@ -6,7 +6,7 @@ import SwiftUI
 struct DataVisibilityView: View {
     var body: some View {
         Form {
-            ThemedSection(footer: "Hide the metrics you do not use to simplify the app. Hidden data is kept, and you can show it again at any time.") {
+            ThemedSection {
                 NavigationLink { NutrientVisibilityView() } label: {
                     RowLabel(title: "Nutrient Visibility", systemImage: "leaf")
                 }
@@ -29,7 +29,7 @@ private struct NutrientVisibilityView: View {
 
     var body: some View {
         Form {
-            ThemedSection("Calories & Macros", footer: "Hidden nutrients still count toward totals and still go to Apple Health.") {
+            ThemedSection("Calories & Macros") {
                 ForEach(Self.alwaysShown, id: \.self) { id in
                     LabeledContent(NutrientRegistry.nutrient(id)?.name ?? id.rawValue, value: "Default")
                 }

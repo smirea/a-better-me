@@ -14,12 +14,12 @@ struct ApiTokensView: View {
 
     var body: some View {
         Form {
-            ThemedSection(footer: "An agent starts with GET on this URL. Without a token it explains how to authenticate; with one it returns the full guide and every operation.") {
+            ThemedSection {
                 LabeledContent("API", value: apiURL)
                     .font(AppFont.rowDetail)
                     .textSelection(.enabled)
             }
-            ThemedSection(tokens.count == 1 ? "1 Token" : "\(tokens.count) Tokens", footer: "A token works once the app has synced. Swipe left to revoke one.") {
+            ThemedSection(tokens.count == 1 ? "1 Token" : "\(tokens.count) Tokens") {
                 ForEach(tokens) { token in
                     RowLabel(title: token.name, detail: "\(token.hint)… · Created \(token.createdAt.formatted(date: .abbreviated, time: .omitted))")
                         .swipeActions {
@@ -83,7 +83,7 @@ private struct CreatedTokenSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                ThemedSection(footer: "Copy it now. It is shown only once; only its fingerprint is stored.") {
+                ThemedSection {
                     Text(created.token)
                         .font(.system(.footnote, design: .monospaced))
                         .textSelection(.enabled)

@@ -134,8 +134,6 @@ private struct CustomizeShortcutsSheet: View {
                 Section {
                     Toggle("Up Next", isOn: Binding(get: { layout.upNextBanner }, set: { on in store.updateSettings { $0.shortcuts.upNextBanner = on } }))
                         .tint(Theme.accent)
-                } footer: {
-                    Text("Shows the active program's next day.")
                 }
                 Section("Top Row") {
                     Picker("Pinned shortcut", selection: Binding(get: { layout.top }, set: { top in store.updateSettings { $0.shortcuts.top = top } })) {

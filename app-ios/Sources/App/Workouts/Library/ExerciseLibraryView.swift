@@ -308,7 +308,7 @@ private struct WarmUpSchemeEditor: View {
 
     var body: some View {
         Form {
-            ThemedSection(footer: "Percent of the first working set's target weight.") {
+            ThemedSection {
                 ForEach(steps.indices, id: \.self) { index in
                     let step = step(at: index)
                     HStack(spacing: 12) {

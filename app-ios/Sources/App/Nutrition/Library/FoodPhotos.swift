@@ -83,14 +83,13 @@ extension PhotoReader where Label == FoodLabel {
 /// `nothingRead` is the label of photos that show nothing to fill in.
 struct PhotosSection<Label: Equatable & Sendable>: View {
     let reader: PhotoReader<Label>
-    let footer: String
     let nothingRead: Label
     @State private var choosing = false
     @State private var picked: [PhotosPickerItem] = []
     @State private var loading = false
 
     var body: some View {
-        ThemedSection("Photos", footer: footer) {
+        ThemedSection("Photos") {
             if !reader.photos.isEmpty {
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {

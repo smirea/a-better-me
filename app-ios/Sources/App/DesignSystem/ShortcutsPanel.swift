@@ -30,12 +30,10 @@ struct ShortcutsPanel<Item: ShortcutItem, Banner: View>: View {
                 banner
                 VStack(spacing: 0) {
                     ForEach(rows, id: \.self) { item in
-                        if item != rows.first { Divider().overlay(Theme.separator).padding(.leading, 44) }
+                        Divider().overlay(Theme.separator).padding(.leading, item == rows.first ? 0 : 44)
                         row(item)
                     }
                 }
-                .padding(.horizontal, 16)
-                .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
             }
             .padding(.horizontal, Theme.margin)
             .padding(.bottom, 8)

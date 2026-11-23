@@ -42,7 +42,7 @@ struct NutrientGoalsView: View {
                     }
                 }
             }
-            ThemedSection(footer: "All days before the first goal default to Auto: the floor, target, and ceiling are set for you from your sex and weight.") {
+            ThemedSection {
             }
         }
         .themedList()

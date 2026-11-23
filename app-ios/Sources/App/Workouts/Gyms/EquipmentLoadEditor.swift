@@ -145,7 +145,7 @@ private struct MicroAdjustmentEditor: View {
     @State private var newWeight = ""
 
     var body: some View {
-        ThemedSection("Micro-Adjustments", footer: micro.map { Self.summary($0.kind) }) {
+        ThemedSection("Micro-Adjustments") {
             Picker("Add Micro-Adjustments", selection: Binding(get: { micro?.kind }, set: { kind in
                 onChange(kind.map { MicroAdjustment(kind: $0, weightsKg: micro?.weightsKg ?? []) })
             })) {

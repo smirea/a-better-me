@@ -25,7 +25,7 @@ struct BodyMetricsLogSheet: View {
                 ThemedSection {
                     DatePicker("Date", selection: $date, in: ...Date.now, displayedComponents: .date)
                 }
-                ThemedSection(footer: "Turn on more measurements in Settings > Data Visibility > Body Metrics.") {
+                ThemedSection {
                     ForEach(kinds, id: \.self) { kind in
                         HStack {
                             Text(kind.title)

@@ -177,7 +177,7 @@ struct QuickAddTab: View {
 
     var body: some View {
         Form {
-            ThemedSection("Energy", footer: "Macro sum is \(Int(draft.macroSum.rounded())) \(draft.unit == .kj ? "kJ" : "cal")") {
+            ThemedSection("Energy", subtitle: "Macros sum to \(Int(draft.macroSum.rounded())) \(draft.unit == .kj ? "kJ" : "cal")") {
                 HStack {
                     TextField("Energy", text: $draft.energy)
                         .keyboardType(.decimalPad)

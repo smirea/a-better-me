@@ -68,8 +68,6 @@ struct PingEditor: View {
                     }
                     .pickerStyle(.segmented)
                     .disabled(isLogged)
-                } footer: {
-                    if isLogged { Text("Its type and number of steps are fixed, so what is already logged keeps its meaning.") }
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -110,7 +108,7 @@ struct PingEditor: View {
                     }
                 }
                 if kind == .range {
-                    ThemedSection("Steps", footer: "A label is optional, such as Terrible for 1 and Great for 5.") {
+                    ThemedSection("Steps") {
                         if isLogged {
                             Text("\(stepCount) steps")
                         } else {

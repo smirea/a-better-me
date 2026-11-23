@@ -7,32 +7,29 @@ struct WarmUpSettingsView: View {
 
     var body: some View {
         Form {
-            ThemedSection("Behavior") {
+            ThemedSection {
                 SettingChoice(
                     title: "Warm-Up Automation", systemImage: "puzzlepiece.fill",
                     selection: store.binding(settings, \.workout.warmUp.automation),
                     options: [
                         SettingOption(value: .none, title: "None"),
                         SettingOption(
-                            value: .smart, title: "Smart Warm-Up",
-                            detail: "Warm-ups will be automatically added to exercises in your workout depending on how fresh your muscles are and how heavy the weight is"
-                        ),
+                            value: .smart, title: "Smart Warm-Up"),
                         SettingOption(value: .scheme, title: "Scheme Warm-Up"),
                     ]
                 )
                 SettingLink(
-                    title: "Warm-Up Scheme", detail: "Configure the default warm-up scheme used in the workout warm-up calculator",
+                    title: "Warm-Up Scheme",
                     systemImage: "list.bullet.indent"
                 ) {
                     WarmUpSchemeView()
                 }
                 SettingToggle(
-                    title: "Hide Completed Sets", detail: "Completed warm-up sets will be hidden behind the Warm Up menu in your workout",
+                    title: "Hide Completed Sets",
                     systemImage: "circle.lefthalf.filled", isOn: store.binding(settings, \.workout.warmUp.hideCompletedSets)
                 )
                 SettingToggle(
                     title: "Simplify Warm-Up Plates",
-                    detail: "Adjust warm-up weights to the nearest load that doesn't require trivially small plates",
                     systemImage: "arrow.down.circle", isOn: store.binding(settings, \.workout.warmUp.simplifyPlates)
                 )
             }
@@ -50,15 +47,15 @@ private struct WarmUpSchemeView: View {
 
     var body: some View {
         Form {
-            ThemedSection("Scheme") {
+            ThemedSection {
                 ForEach(RestCategory.allCases) { category in
-                    LabeledContent {
-                        Button("Edit") { editing = category }
-                            .chipButton()
-                            .accessibilityLabel("Edit \(category.displayName) scheme")
-                    } label: {
+                    Button { editing = category } label: {
                         RowLabel(title: category.displayName, detail: summary(steps(category)))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(.rect)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Edit \(category.displayName) scheme")
                 }
             }
             ThemedSection {
@@ -78,7 +75,7 @@ private struct WarmUpSchemeView: View {
     }
 
     private func summary(_ steps: [WarmUpStep]) -> String {
-        steps.isEmpty ? "No warm-up sets" : steps.map { "\($0.percent)% target weight x \($0.reps) reps" }.joined(separator: "\n")
+        steps.isEmpty ? "None" : steps.map { "\($0.percent)% · \($0.reps) reps" }.joined(separator: "\n")
     }
 }
 
@@ -91,45 +88,51 @@ private struct WarmUpSchemeEditor: View {
     var body: some View {
         NavigationStack {
             List {
-                ThemedSection {
-                    ForEach(steps.indices, id: \.self) { index in
-                        HStack(spacing: 12) {
-                            Text("W")
-                                .font(AppFont.headline(13))
-                                .frame(width: 30, height: 30)
-                                .background(Theme.surfaceRaised, in: .circle)
-                            Text("\(steps[index].percent)% of set \(index + 1)")
-                                .font(AppFont.rowDetail)
-                                .frame(maxWidth: .infinity)
-                            TextField("Percent", value: $steps[index].percent, format: .percent)
-                                .accessibilityLabel("Warm-up set \(index + 1) percent")
-                                .frame(width: 56)
-                            TextField("Reps", value: $steps[index].reps, format: .number)
-                                .accessibilityLabel("Warm-up set \(index + 1) reps")
-                                .frame(width: 56)
-                        }
-                        .textFieldStyle(.roundedBorder)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.center)
+                ForEach(steps.indices, id: \.self) { index in
+                    HStack(spacing: 12) {
+                        Text("W")
+                            .font(AppFont.badge)
+                            .frame(width: 30, height: 30)
+                            .background(Theme.surfaceRaised, in: .circle)
+                        Spacer()
+                        TextField("Percent", value: $steps[index].percent, format: .percent)
+                            .accessibilityLabel("Warm-up set \(index + 1) percent")
+                            .frame(width: 64)
+                        TextField("Reps", value: $steps[index].reps, format: .number)
+                            .accessibilityLabel("Warm-up set \(index + 1) reps")
+                            .frame(width: 48)
+                        Text("reps").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
                     }
-                    .onDelete { steps.remove(atOffsets: $0) }
-                    RoundIconButton("Add Warm-Up Set", systemImage: "plus") {
-                        let last = steps.last ?? WarmUpStep(percent: 30, reps: 5)
-                        steps.append(WarmUpStep(percent: min(last.percent + 10, 100), reps: last.reps))
-                    }
+                    .font(AppFont.number(17))
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .listRowBackground(Theme.background)
                 }
+                .onDelete { steps.remove(atOffsets: $0) }
+                Button("Add Set") {
+                    let last = steps.last ?? WarmUpStep(percent: 30, reps: 5)
+                    steps.append(WarmUpStep(percent: min(last.percent + 10, 100), reps: last.reps))
+                }
+                .font(AppFont.rowTitle)
+                .underline()
+                .listRowBackground(Theme.background)
             }
+            .listStyle(.plain)
             .themedList()
-            .pinnedActions {
-                    Button("Save To All Categories") { save(to: RestCategory.allCases) }
-                        .secondaryPill()
-                    Button("Save") { save(to: [category]) }
-                        .primaryPill()
-            }
-            .detailTitle("Default Scheme", subtitle: category.displayName)
+            .detailTitle(category.displayName)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .close) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Menu {
+                        Button("Save to All Categories") { save(to: RestCategory.allCases) }
+                    } label: {
+                        Text("Save")
+                    } primaryAction: {
+                        save(to: [category])
+                    }
+                    .accessibilityLabel("Save")
                 }
             }
         }

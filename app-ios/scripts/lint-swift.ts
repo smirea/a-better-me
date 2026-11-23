@@ -41,6 +41,11 @@ const rules = [
 		fix: 'use a Theme token: textPrimary, onPrimary, destructive, accent, or a named color',
 	},
 	{
+		pattern: /\}\s*footer:\s*\{/,
+		allowedIn: [],
+		fix: 'zero extra copy: no explanatory Section footers; show state as a row or a ThemedSection subtitle, or drop it',
+	},
+	{
 		pattern: /\.confirmationDialog\(/,
 		allowedIn: [],
 		fix: 'on iOS 26 and later a confirmationDialog shows as a popover, which drops its cancel button; use .alert with a Button(role: .cancel)',

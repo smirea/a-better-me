@@ -27,7 +27,7 @@ struct EquipmentSettingsView: View {
         let overrides = current?.overrides ?? ExerciseOverrides()
         Form {
             if let plates = loading?.plates, let baseID = plates.baseID, plates.baseWeights.count > 1 {
-                ThemedSection("Bar Weight", footer: "The \(catalog.equipment[baseID]?.name ?? "bar") weight the plate calculator loads on for this exercise.") {
+                ThemedSection("Bar Weight") {
                     Picker("Bar Weight", selection: Binding(
                         get: { overrides.barWeightKg?[baseID].flatMap { Loading.matchingBar($0, among: plates.baseWeights, kg: unit.toKg) } },
                         set: { weight in
@@ -45,7 +45,7 @@ struct EquipmentSettingsView: View {
                 }
             }
             if offsetEnabled {
-                ThemedSection("Offset Weight", footer: "Adds the ability to optionally offset the total weight targeted by the weight calculator. A negative offset loads less than the logged weight.") {
+                ThemedSection("Offset Weight") {
                     Picker("Offset", selection: Binding(get: { OffsetKind(overrides.plateOffset) }, set: { kind in
                         offsetText = ""
                         edit { $0.overrides.plateOffset = kind.offset(value: 0, unit: unit) }

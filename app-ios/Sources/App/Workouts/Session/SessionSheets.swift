@@ -221,19 +221,20 @@ struct NoteSheet: View {
                 .pickerStyle(.segmented)
                 switch tab {
                 case .session:
-                    editor("Session Note", text: $sessionText, prompt: "Note about this session", footer: "Note will be saved to your workout history")
+                    editor(text: $sessionText, prompt: "Session note")
                 case .exercise:
-                    editor("Pinned Note", text: $pinnedText, prompt: "Pinned note about this exercise", footer: "Pinned to exercise, not saved to your workout history")
+                    editor(text: $pinnedText, prompt: "Pinned to this exercise")
                 }
                 Spacer()
-                Button("Save", action: save)
-                    .primaryPill()
             }
             .padding(Theme.margin)
             .detailTitle("Note")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .close) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save", role: .confirm, action: save)
                 }
             }
         }
@@ -244,13 +245,8 @@ struct NoteSheet: View {
         .feedback(self)
     }
 
-    private func editor(_ title: String, text: Binding<String>, prompt: String, footer: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(title).font(AppFont.rowTitle)
-                Spacer()
-                Text("\(text.wrappedValue.count)/\(Self.limit)").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-            }
+    private func editor(text: Binding<String>, prompt: String) -> some View {
+        VStack(alignment: .trailing, spacing: 8) {
             TextField(prompt, text: text, axis: .vertical)
                 .lineLimit(3...8)
                 .padding(12)
@@ -258,7 +254,7 @@ struct NoteSheet: View {
                 .onChange(of: text.wrappedValue) { _, value in
                     if value.count > Self.limit { text.wrappedValue = String(value.prefix(Self.limit)) }
                 }
-            Text(footer).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+            Text("\(text.wrappedValue.count)/\(Self.limit)").font(AppFont.rowDetail).monospacedDigit().foregroundStyle(Theme.textSecondary)
         }
     }
 
