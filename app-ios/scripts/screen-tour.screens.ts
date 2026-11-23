@@ -250,7 +250,7 @@ export const screens: Screen[] = [
 	},
 	{
 		name: 'foods-create-food',
-		steps: [...settings('Foods & Recipes'), ...tapButton('Recipes'), ...tap('Create Recipe')],
+		steps: [...settings('Foods & Recipes'), ...tapButton('Foods'), ...tap('Create Food')],
 	},
 	{ name: 'workout-program-editor', steps: [...tapTab('Workout'), ...tap('Upper Lower, 3 workouts')] },
 	{

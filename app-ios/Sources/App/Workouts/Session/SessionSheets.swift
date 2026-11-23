@@ -157,13 +157,16 @@ struct WarmUpSheet: View {
                         .frame(width: 160)
                         .accessibilityLabel("Warm-up calculator")
                     }
+                    .listRowInsets(EdgeInsets(top: 16, leading: Theme.margin, bottom: 8, trailing: Theme.margin))
                 }
+                .flatSectionRows()
                 Section {
                     Button("Add Empty Warm-Up Set", systemImage: "plus") {
                         onAdd([(nil, nil)])
                         dismiss()
                     }
                 }
+                .flatSectionRows()
             }
             .flatList()
             .detailTitle("Warm Up")

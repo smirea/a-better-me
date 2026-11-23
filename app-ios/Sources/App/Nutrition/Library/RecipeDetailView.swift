@@ -41,9 +41,10 @@ struct RecipeDetailView: View {
             ThemedSection {
                 HStack(spacing: 12) {
                     FoodIcon(food: recipe.snapshot, size: 44)
-                    MacroSummary(amounts: portion.amounts, caption: "Per \(NutritionFormat.serving(portion.serving, of: portion.food))")
+                    Spacer(minLength: 0)
                     MealRatingBadge(title: recipe.name, amounts: portion.amounts)
                 }
+                MacroSummary(amounts: portion.amounts, caption: "Per \(NutritionFormat.serving(portion.serving, of: portion.food))")
             }
             ThemedSection("Details") {
                 LabeledContent("Makes", value: "\(NumberText.plain(recipe.servings)) \(recipe.servings == 1 ? "serving" : "servings")")

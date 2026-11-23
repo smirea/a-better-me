@@ -64,6 +64,13 @@ extension View {
             .environment(\.flatSections, true)
     }
 
+    /// A raw `Section` inside `flatList()`, one that needs its own header, drawn as a flat `ThemedSection` draws its rows.
+    func flatSectionRows() -> some View {
+        listRowBackground(Theme.background)
+            .listRowInsets(EdgeInsets(top: 11, leading: Theme.margin, bottom: 11, trailing: Theme.margin))
+            .listSectionSeparator(.hidden)
+    }
+
     /// `flatList()` for a plain list, which already runs rows edge to edge on the app's margin.
     func flatPlainList() -> some View {
         listStyle(.plain)

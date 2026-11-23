@@ -103,18 +103,19 @@ struct WorkoutTargetsView: View {
 
     var body: some View {
         List {
-            Section("Current Targets") {
+            ThemedSection("Current Targets") {
                 ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
                     row(set, number: sets.number(at: index), reps: SetSuggestion.repsText(min: set.target?.repsMin, max: set.target?.repsMax))
                 }
             }
-            Section("Adjusted Targets") {
+            ThemedSection("Adjusted Targets") {
                 ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
                     let adjusted = suggestions[set.id]?.adjustedReps
                     row(set, number: sets.number(at: index), reps: adjusted.map { SetSuggestion.repsText(min: $0.lowerBound, max: $0.upperBound) } ?? SetSuggestion.repsText(min: set.target?.repsMin, max: set.target?.repsMax))
                 }
             }
         }
+        .flatList()
         .detailTitle("Workout Targets", subtitle: exerciseName)
         .feedback(self)
     }

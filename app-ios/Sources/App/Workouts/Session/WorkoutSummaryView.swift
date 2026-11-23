@@ -457,7 +457,9 @@ private struct WorkoutChangesSheet: View {
                 .textCase(nil)
                 .accessibilityLabel("\(isUndone ? "Redo" : "Undo") \(title)")
             }
+            .listRowInsets(EdgeInsets(top: 16, leading: Theme.margin, bottom: 8, trailing: Theme.margin))
         }
+        .flatSectionRows()
     }
 
     private func plan(_ item: BlockExercise, title: String) -> some View {
