@@ -1,0 +1,9 @@
+{
+	"title": "TestFlight builds upload again after the watch's background audio fix",
+	"tasks": [
+		{
+			"id": "bbed6766-8266-4eaf-a052-fcf4db9ca5bb",
+			"title": "Check live workout sync and the rest-end buzz on the real iPhone and Apple Watch"
+		}
+	]
+}
