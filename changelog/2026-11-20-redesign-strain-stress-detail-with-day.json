@@ -1,0 +1,10 @@
+{
+	"title": "Redesign Strain & Stress detail with day-strip header and Pings timeline",
+	"description": "Drops the chart card, shows ping icons with a tap tooltip for events and nearby pings, and reuses the Pings timeline.",
+	"tasks": [
+		{
+			"id": "deb63c00-ec5a-4fc8-9d5e-5a453b107c74",
+			"title": "6 Strain & Stress Feedback: update layout, remove text, resize card, use icons, use timeline"
+		}
+	]
+}

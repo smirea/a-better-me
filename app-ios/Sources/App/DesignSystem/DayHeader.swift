@@ -1,30 +1,71 @@
 import Feedback
 import SwiftUI
 
-/// The header row of a screen that shows one day at a time, the Food Log and the Pings tab: Calendar (Go to Today on
-/// any other day), the day strip, and the screen's ⋯ menu, each in a matching glass circle.
-struct DayHeaderRow<Strip: View, Menu: View>: View {
+/// Where the Calendar / Go to Today button sits in `DayHeaderRow`: leading on tab roots beside a trailing ⋯ menu, or
+/// trailing on pushed screens so the Back button stays on the left.
+enum DayHeaderCalendarPlacement {
+    case leading
+    case trailing
+}
+
+/// The header row of a screen that shows one day at a time: Calendar (Go to Today on any other day), the day strip, and
+/// the screen's accessory button (a trailing ⋯ menu on tab roots, or a leading Back button on pushed screens), each in
+/// a matching glass circle.
+struct DayHeaderRow<Strip: View, Accessory: View>: View {
     @Binding var day: CalendarDay
+    let calendarPlacement: DayHeaderCalendarPlacement
     @ViewBuilder let strip: Strip
-    @ViewBuilder let menu: Menu
+    @ViewBuilder let accessory: Accessory
 
     @State private var showingCalendar = false
 
+    init(
+        day: Binding<CalendarDay>,
+        @ViewBuilder strip: () -> Strip,
+        @ViewBuilder menu: () -> Accessory
+    ) {
+        _day = day
+        self.calendarPlacement = .leading
+        self.strip = strip()
+        self.accessory = menu()
+    }
+
+    init(
+        day: Binding<CalendarDay>,
+        @ViewBuilder leading: () -> Accessory,
+        @ViewBuilder strip: () -> Strip
+    ) {
+        _day = day
+        self.calendarPlacement = .trailing
+        self.accessory = leading()
+        self.strip = strip()
+    }
+
     var body: some View {
         HStack(spacing: 8) {
-            let onToday = day == .today
-            Button(onToday ? "Calendar" : "Go to Today", systemImage: onToday ? "calendar" : "arrow.uturn.backward") {
-                if onToday { showingCalendar = true } else { day = .today }
+            if calendarPlacement == .leading {
+                calendarButton
+                strip
+                accessory.headerButton()
+            } else {
+                accessory.headerButton()
+                strip
+                calendarButton
             }
-            .contentTransition(.symbolEffect(.replace))
-            .animation(.snappy, value: onToday)
-            .accessibilityHint(onToday ? "Opens the calendar" : "")
-            .headerButton()
-            strip
-            menu.headerButton()
         }
         .padding(.horizontal, Theme.margin)
         .sheet(isPresented: $showingCalendar) { DayCalendarSheet(day: $day) }
+    }
+
+    private var calendarButton: some View {
+        let onToday = day == .today
+        return Button(onToday ? "Calendar" : "Go to Today", systemImage: onToday ? "calendar" : "arrow.uturn.backward") {
+            if onToday { showingCalendar = true } else { day = .today }
+        }
+        .contentTransition(.symbolEffect(.replace))
+        .animation(.snappy, value: onToday)
+        .accessibilityHint(onToday ? "Opens the calendar" : "")
+        .headerButton()
     }
 }
 

@@ -147,7 +147,7 @@ private struct ChartCalloutView: View {
 
 /// Calls `action` on a tap anywhere in the window outside its own frame, while it is on screen. The recognizer sits on
 /// the window and never cancels or delays the touch, so the tap still reaches whatever it landed on.
-private struct OutsideTap: UIViewRepresentable {
+struct OutsideTap: UIViewRepresentable {
     let action: () -> Void
 
     func makeUIView(context: Context) -> Catcher {
