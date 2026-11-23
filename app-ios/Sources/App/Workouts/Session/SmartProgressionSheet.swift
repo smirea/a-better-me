@@ -22,14 +22,15 @@ struct SmartProgressionSheet: View {
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets())
                 }
-                Section("Event Log") {
-                    if events.allSatisfy(\.rows.isEmpty) {
-                        Text("No fills yet").foregroundStyle(Theme.textSecondary)
-                    }
+                ThemedSection("Event Log") {
                     ForEach(Array(events.enumerated()), id: \.offset) { _, event in
                         if !event.rows.isEmpty { eventView(event) }
                     }
                 }
+            }
+            .flatList()
+            .overlay {
+                if events.allSatisfy(\.rows.isEmpty) { ContentUnavailableView("No Fills Yet", systemImage: "wand.and.sparkles") }
             }
             .detailTitle("Smart Progression")
             .navigationDestination(isPresented: $isShowingSettings) { WorkoutSettingsView() }
@@ -49,11 +50,7 @@ struct SmartProgressionSheet: View {
     private var banner: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "info.circle").font(.title3).padding(.top, 2)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Target rep ranges were adjusted").font(AppFont.rowTitle)
-                Text("Smart Progression has widened the target rep range of \(adjustedCount) \(adjustedCount == 1 ? "set" : "sets") without making permanent changes to this workout")
-                    .font(AppFont.caption())
-            }
+            Text("Rep range widened on \(adjustedCount) \(adjustedCount == 1 ? "set" : "sets")").font(AppFont.rowTitle)
             Spacer()
             NavigationLink {
                 WorkoutTargetsView(exerciseName: exerciseName, sets: sets, suggestions: suggestions)
@@ -63,8 +60,7 @@ struct SmartProgressionSheet: View {
             .chipButton()
             .accessibilityLabel("Adjusted targets info")
         }
-        .padding(14)
-        .background(Theme.muscle.opacity(0.25), in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+        .padding(.vertical, 8)
     }
 
     private func eventView(_ event: ProgressionEvent) -> some View {
