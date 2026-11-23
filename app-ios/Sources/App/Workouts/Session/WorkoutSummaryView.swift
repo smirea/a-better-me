@@ -71,9 +71,6 @@ struct WorkoutSummaryView: View {
                 ToolbarItem(placement: .primaryAction) {
                     Menu("Session Options", systemImage: "ellipsis") {
                         Section(session.name) {
-                            if !isFinishing {
-                                Button("Edit Workout", systemImage: "dumbbell") { isEditing = true }
-                            }
                             Button("Delete Workout", systemImage: "trash", role: .destructive) { confirmingDelete = true }
                         }
                     }
@@ -117,6 +114,12 @@ struct WorkoutSummaryView: View {
             if let template { WorkoutChangesSheet(changes: WorkoutChanges(before: template.blocks, after: SessionFlow.plan(from: blocks)), undone: $undone) }
         }
         .feedback(self)
+    }
+
+    /// "Today 3:01 PM" as in the reference, the date otherwise.
+    private static func startText(_ date: Date) -> String {
+        let time = date.formatted(date: .omitted, time: .shortened)
+        return Calendar.current.isDateInToday(date) ? "Today \(time)" : "\(date.formatted(date: .numeric, time: .omitted)) \(time)"
     }
 
     /// The records' baseline: every earlier session's bests, read once per history change rather than per render.
@@ -207,13 +210,39 @@ struct WorkoutSummaryView: View {
     }
 
     private func details(volumeKg: Double) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            StatView(title: "Volume", value: unit.fromKg(volumeKg).wholeText, unit: unit.rawValue)
-            StatView(title: "Start Time", value: session.startedAt.formatted(date: .omitted, time: .shortened)) { isEditingStart = true }
-            StatView(title: "Duration", value: Duration.seconds(duration).formatted(.time(pattern: .hourMinute))) { isEditingDuration = true }
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Workout Details").font(AppFont.sectionTitle).padding(.bottom, 8)
+            detailRow("Volume", icon: "scalemass.fill", value: volume(volumeKg))
+            Divider().overlay(Theme.separator)
+            detailRow("Start Time", icon: "arrow.right.to.line", subtitle: Self.startText(session.startedAt)) {
+                isEditingStart = true
+            }
+            Divider().overlay(Theme.separator)
+            detailRow("Duration", icon: "clock.fill", subtitle: Duration.seconds(duration).formatted(.time(pattern: .hourMinuteSecond))) {
+                isEditingDuration = true
+            }
+            if !isFinishing {
+                Divider().overlay(Theme.separator)
+                detailRow("Edit Workout", icon: "dumbbell.fill", subtitle: "Go to the workout editor") { isEditing = true }
+            }
         }
-        .feedback("Workout Details", data: (volumeKg: volumeKg, start: session.startedAt, duration: duration))
+        .feedback("Workout Details")
         .padding(.horizontal, Theme.margin)
+    }
+
+    private func detailRow(_ title: String, icon: String, subtitle: String? = nil, value: String? = nil, edit: (() -> Void)? = nil) -> some View {
+        HStack(spacing: 16) {
+            RowLabel(title: title, detail: subtitle, systemImage: icon)
+            Spacer()
+            if let value { Text(value).font(AppFont.rowTitle) }
+            if let edit {
+                Button("Edit", action: edit)
+                    .chipButton()
+                    .accessibilityLabel("Edit \(title)")
+            }
+        }
+        .frame(minHeight: 60)
+        .feedback(title, data: value ?? subtitle)
     }
 
     private func exerciseDetails(_ blocks: [WorkoutBlock], stats: [ExerciseID: ExerciseStats], records: [ExerciseRecord]) -> some View {

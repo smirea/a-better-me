@@ -9,7 +9,7 @@ struct ExpenditureInsights: View {
         let changes = summary.changes
         let strategy = summary.strategy
         FlatSection("Insights & Data", spacing: 12) {
-            ChangeRows(changes: changes, color: Theme.coral, tolerance: 0.5) {
+            ChangeRows(title: "Expenditure Changes", changes: changes, color: Theme.coral, tolerance: 0.5) {
                 "\($0.wholeText) cal"
             }
             InsightTiles(tiles: [
@@ -44,7 +44,7 @@ struct WeightTrendInsights: View {
         let insights = summary.insights
         let losing = (insights?.weeklyChangeKg ?? 0) < 0
         FlatSection("Insights & Data", spacing: 12) {
-            ChangeRows(changes: changes, color: Theme.weightTrend, tolerance: unit.toKg(0.05)) {
+            ChangeRows(title: "Weight Changes", changes: changes, color: Theme.weightTrend, tolerance: unit.toKg(0.05)) {
                 "\(unit.fromKg($0).dashboardText) \(unit.rawValue)"
             }
             InsightTiles(tiles: [
@@ -70,6 +70,7 @@ struct EnergyBalanceInsights: View {
     var body: some View {
         FlatSection("Insights & Data", spacing: 12) {
             VStack(alignment: .leading, spacing: 12) {
+                Text(isExpenditure ? "Relative to Expenditure" : "Relative to Targets").font(AppFont.headline(16))
                 ForEach(rows, id: \.days) { row in
                     HStack {
                         Text("\(row.days)-day").font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).frame(width: 52, alignment: .leading)
@@ -127,6 +128,7 @@ struct BalanceTag: View {
 
 /// 3- to 90-day change rows with a sparkline, as on the Expenditure and Weight Trend details.
 private struct ChangeRows: View {
+    let title: String
     let changes: [NutritionMetrics.Change]
     let color: Color
     let tolerance: Double
@@ -134,6 +136,7 @@ private struct ChangeRows: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Text(title).font(AppFont.headline(16))
             ForEach(changes, id: \.days) { change in
                 let direction = NutritionMetrics.direction(change.delta, tolerance: tolerance)
                 HStack(spacing: 12) {

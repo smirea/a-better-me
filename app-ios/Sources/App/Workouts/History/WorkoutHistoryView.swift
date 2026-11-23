@@ -82,7 +82,7 @@ struct SessionRow: View {
             Image(systemName: "dumbbell.fill")
                 .foregroundStyle(Theme.textPrimary)
                 .frame(width: 40, height: 40)
-                .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
+                .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.smallCornerRadius))
             VStack(alignment: .leading, spacing: 4) {
                 Text(session.name).font(AppFont.headline(16))
                 Text(details.names)

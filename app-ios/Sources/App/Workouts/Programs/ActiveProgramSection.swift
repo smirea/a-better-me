@@ -31,6 +31,8 @@ private struct GoToCycleSheet: View {
     let program: Program
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    /// The rows' height, which the sheet fits instead of a fixed half screen.
+    @State private var contentHeight: CGFloat = 300
 
     var body: some View {
         NavigationStack {
@@ -54,6 +56,7 @@ private struct GoToCycleSheet: View {
                 }
             }
             .flatList()
+            .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, height in contentHeight = height }
             .detailTitle("Go To")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -61,7 +64,8 @@ private struct GoToCycleSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        // The inline navigation bar and grabber sit above the measured rows.
+        .presentationDetents([.height(contentHeight + 76), .large])
         .feedback(self)
     }
 }
