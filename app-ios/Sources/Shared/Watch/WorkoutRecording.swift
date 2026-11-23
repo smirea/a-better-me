@@ -40,22 +40,33 @@ final class WorkoutRecording: NSObject {
         try await store.requestAuthorization(toShare: shareTypes, read: readTypes)
     }
 
-    /// Starts recording on this device. The watch mirrors its session to the phone first; without the mirror it still
+    /// Starts recording on this device. The watch also mirrors its session to the phone; without the mirror it still
     /// records, and the two talk over WatchConnectivity instead.
     static func start(in store: HKHealthStore, at date: Date = .now) async throws -> WorkoutRecording {
         let session = try HKWorkoutSession(healthStore: store, configuration: configuration)
         let recording = WorkoutRecording(session: session, store: store, isMirror: false)
-        #if os(watchOS)
-        do {
-            try await session.startMirroringToCompanionDevice()
-        } catch {
-            log.error("Mirroring the workout session failed: \(String(describing: error))")
-        }
-        #endif
         session.startActivity(with: date)
         try await recording.builder.beginCollection(at: date)
+        #if os(watchOS)
+        recording.startMirroring()
+        #endif
         return recording
     }
+
+    #if os(watchOS)
+    /// Only once the session runs, as Apple DTS advises for mirrors that dropped at once on 26.x
+    /// (https://developer.apple.com/forums/thread/804276), and never awaited: the call can hang without returning, and a
+    /// recording held up behind it left the watch without heart rate or its rest-end tap.
+    func startMirroring() {
+        Task {
+            do {
+                try await session.startMirroringToCompanionDevice()
+            } catch {
+                Self.log.error("Mirroring the workout session failed: \(String(describing: error))")
+            }
+        }
+    }
+    #endif
 
     /// The session HealthKit kept running across a crash or relaunch of this app. HealthKit also hands back one that
     /// already ended, which has nothing left to record.

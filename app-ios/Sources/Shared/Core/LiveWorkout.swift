@@ -30,6 +30,11 @@ struct LiveRest: Codable, Hashable, Sendable {
 
     func remaining(at date: Date) -> TimeInterval { max(0, endsAt.timeIntervalSince(date)) }
 
+    /// Whether this rest, gone from the workout at `date`, ran out rather than being skipped or replaced. The phone
+    /// clears a rest the moment it runs out, and that copy can reach the watch before the watch's own timer wakes: on
+    /// paired simulators it arrived 38 ms after the watch's tap one time, and before it another, which cancelled the tap.
+    func ranOut(by date: Date) -> Bool { endsAt.timeIntervalSince(date) < 3 }
+
     /// A rest of `duration` from `start`, which a set logged on the watch a while ago puts in the past. Nil when it is
     /// over by `now`.
     static func starting(_ duration: TimeInterval, at start: Date, now: Date) -> LiveRest? {
