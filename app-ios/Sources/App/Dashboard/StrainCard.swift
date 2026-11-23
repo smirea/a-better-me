@@ -2,7 +2,7 @@ import Feedback
 import GRDB
 import SwiftUI
 
-/// WHOOP-style Strain & Stress chart card placed right below the Dashboard's main FocusPager carousel.
+/// Strain & Stress chart card in the Dashboard's Today overview.
 /// Uses a single `Canvas` pass (no Swift Charts overhead on Dashboard) with activity bands and Ping markers.
 struct StrainDashboardCard: View {
     @Environment(LocalStore.self) private var store
@@ -17,22 +17,20 @@ struct StrainDashboardCard: View {
     var body: some View {
         NavigationLink(value: DashboardRoute.strain) {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Strain & Stress")
-                            .font(AppFont.headline(16))
-                            .foregroundStyle(Theme.textPrimary)
-                        if let garmin = snapshot.garmin {
-                            Text("Synced \(garmin.syncedAt.formatted(date: .omitted, time: .shortened))")
-                                .font(AppFont.rowDetail)
-                                .foregroundStyle(Theme.textSecondary)
-                        } else {
-                            Text("Garmin CIRQA")
-                                .font(AppFont.rowDetail)
-                                .foregroundStyle(Theme.textSecondary)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("Strain & Stress")
+                        .font(AppFont.headline(16))
+                        .foregroundStyle(Theme.textPrimary)
+                    if let garmin = snapshot.garmin {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                            Text(garmin.syncedAt.formatted(date: .omitted, time: .shortened))
                         }
+                        .font(AppFont.rowDetail)
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
                     }
-                    Spacer()
+                    Spacer(minLength: 0)
                     if let strain = snapshot.garmin?.strain {
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
                             Text(strain.formatted(.number.precision(.fractionLength(1))))
@@ -61,17 +59,7 @@ struct StrainDashboardCard: View {
                     .frame(height: 96)
                 } else {
                     StrainTimelineChart(snapshot: snapshot, backdrop: Theme.surface)
-                        .frame(height: 144)
-                }
-
-                if let garmin = snapshot.garmin {
-                    Divider().overlay(Theme.separator)
-                    HStack(spacing: 0) {
-                        miniStat("Stress", snapshot.latestStress.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "--", tint: stressColor(snapshot.latestStress ?? 1))
-                        miniStat("RHR", garmin.restingHeartRate.map { "\($0)" } ?? "--")
-                        miniStat("HRV", garmin.hrvLastNight.map { "\(Int($0.rounded())) ms" } ?? "--")
-                        miniStat("BB", garmin.bodyBatteryWake.map { "\($0)" } ?? "--")
-                    }
+                        .frame(height: 210)
                 }
             }
             .card()
@@ -92,18 +80,6 @@ struct StrainDashboardCard: View {
             } catch {}
         }
         .feedback(self)
-    }
-
-    private func miniStat(_ label: String, _ value: String, tint: Color = Theme.textPrimary) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(AppFont.caption())
-                .foregroundStyle(Theme.textSecondary)
-            Text(value)
-                .font(AppFont.number(14))
-                .foregroundStyle(tint)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
