@@ -100,12 +100,7 @@ struct FoodEditor: View {
                 let read = baseline.reading(label)
                 draft.merge(read, over: baseline)
                 baseline = read
-            }
-            // A photo read or a restored draft fills nutrients in collapsed sections, which open to show them.
-            .onChange(of: draft.nutrients) {
-                expanded.formUnion(NutrientSection.allCases.filter { section in
-                    section.nutrients.contains { !(draft.nutrients[$0.id] ?? "").isEmpty }
-                })
+                expandFilledSections()
             }
             .onDisappear { photos.cancel() }
             .sheet(isPresented: $choosingIcon) { FoodIconPicker(selection: $draft.icon) }
@@ -122,7 +117,7 @@ struct FoodEditor: View {
         }
         // A read takes seconds and fills dozens of fields; a stray swipe should not throw that away. Close still does.
         .interactiveDismissDisabled(draft != opened || !photos.photos.isEmpty)
-        .persistDraft($draft, key: draftKey)
+        .persistDraft($draft, key: draftKey, restored: expandFilledSections)
         .feedback(self)
     }
 
@@ -245,6 +240,13 @@ struct FoodEditor: View {
 
     private func nutrientText(_ id: NutrientID) -> Binding<String> {
         Binding { draft.nutrients[id] ?? "" } set: { draft.nutrients[id] = $0 }
+    }
+
+    /// A photo read or a restored draft fills nutrients in collapsed sections, which open to show them.
+    private func expandFilledSections() {
+        expanded.formUnion(NutrientSection.allCases.filter { section in
+            section.nutrients.contains { !(draft.nutrients[$0.id] ?? "").isEmpty }
+        })
     }
 
     private func save(adding: Bool) {
