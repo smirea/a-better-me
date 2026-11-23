@@ -107,13 +107,13 @@ struct SupplementDetailView: View {
             let past = PastRegimen.all(of: supplement, except: current)
             if !past.isEmpty {
                 Section {
-                    TruncatedList("History", items: past, inList: true) { item in
-                        PastRegimenRow(item: item, serving: supplement.serving).padding(.horizontal, 16).padding(.vertical, 10)
+                    TruncatedList("History", items: past, divider: false) { item in
+                        PastRegimenRow(item: item, serving: supplement.serving).padding(.vertical, 10)
                     } destination: {
                         SupplementHistoryView(supplementID: supplement.id)
                     }
                 }
-                .listRowInsets(EdgeInsets())
+                .listRowInsets(EdgeInsets(top: 16, leading: Theme.margin, bottom: 0, trailing: Theme.margin))
                 .listRowBackground(Color.clear)
             }
         }

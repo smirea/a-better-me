@@ -30,11 +30,10 @@ struct SearchTab: View {
                 }
             }
         }
-        .listStyle(.plain)
         .listSectionSpacing(0)
         .environment(\.defaultMinListRowHeight, 0)
         .scrollDismissesKeyboard(.immediately)
-        .flatList()
+        .flatPlainList()
         .overlay {
             if session.results.isEmpty, !session.isSearchingBranded {
                 if session.query.isEmpty {

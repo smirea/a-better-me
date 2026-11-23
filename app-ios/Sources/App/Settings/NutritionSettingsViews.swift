@@ -256,13 +256,18 @@ struct ExpenditureSettingsView: View {
             }
             Button("Reset to Default") { store.updateSettings { $0.nutrition.expenditure.calculationStart = nil } }
         } else {
-            LabeledContent {
-                Button("First Logged Day") { store.updateSettings { $0.nutrition.expenditure.calculationStart = .today } }
-                    .chipButton()
-                    .accessibilityLabel("Edit Calculation Start Date")
-            } label: {
-                RowLabel(title: "Calculation Start Date", systemImage: "calendar")
+            // The default has no date to pick, so a tap on the row gives it one, today, which shows the date picker.
+            Button { store.updateSettings { $0.nutrition.expenditure.calculationStart = .today } } label: {
+                LabeledContent {
+                    Text("First Logged Day").foregroundStyle(Theme.textSecondary)
+                } label: {
+                    RowLabel(title: "Calculation Start Date", systemImage: "calendar")
+                }
+                .contentShape(.rect)
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Edit Calculation Start Date")
+            .accessibilityValue("First Logged Day")
         }
     }
 }

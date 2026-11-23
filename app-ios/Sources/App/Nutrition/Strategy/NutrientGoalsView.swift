@@ -42,8 +42,6 @@ struct NutrientGoalsView: View {
                     }
                 }
             }
-            ThemedSection {
-            }
         }
         .flatList()
         .detailTitle("\(info?.name ?? nutrient.rawValue) Goals")

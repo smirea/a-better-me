@@ -20,17 +20,19 @@ struct SmartProgressionSheet: View {
                 if adjustedCount > 0 {
                     Section { banner }
                         .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets())
+                        .listRowInsets(EdgeInsets(top: 0, leading: Theme.margin, bottom: 0, trailing: Theme.margin))
                 }
-                ThemedSection("Event Log") {
-                    ForEach(Array(events.enumerated()), id: \.offset) { _, event in
-                        if !event.rows.isEmpty { eventView(event) }
+                if !noFills {
+                    ThemedSection("Event Log") {
+                        ForEach(Array(events.enumerated()), id: \.offset) { _, event in
+                            if !event.rows.isEmpty { eventView(event) }
+                        }
                     }
                 }
             }
             .flatList()
             .overlay {
-                if events.allSatisfy(\.rows.isEmpty) { ContentUnavailableView("No Fills Yet", systemImage: "wand.and.sparkles") }
+                if noFills, adjustedCount == 0 { ContentUnavailableView("No Fills Yet", systemImage: "wand.and.sparkles") }
             }
             .detailTitle("Smart Progression")
             .navigationDestination(isPresented: $isShowingSettings) { WorkoutSettingsView() }
@@ -46,6 +48,8 @@ struct SmartProgressionSheet: View {
         .presentationDetents([.medium, .large])
         .feedback(self)
     }
+
+    private var noFills: Bool { events.allSatisfy(\.rows.isEmpty) }
 
     private var banner: some View {
         HStack(alignment: .top, spacing: 12) {
