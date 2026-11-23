@@ -1,9 +1,11 @@
 import Feedback
 import SwiftUI
 
-/// A section for a list that grows with use (weigh-ins, entries, past sessions). The card shows five and a half rows,
-/// the half row fading out so the list reads as continuing, and the header's See All pushes `destination` with every
-/// row. Six rows or fewer show whole and get no link.
+/// A section for a list that grows with use (weigh-ins, entries, past sessions). Draws flat on `Theme.background` with
+/// an optional top hairline divider by default, showing five and a half rows with the half row fading out so the list
+/// reads as continuing, and the header's See All pushes `destination` with every row. Six rows or fewer show whole and
+/// get no link. Pass `inList: true` inside a grouped `Form` or `List` to keep the card surface aligned with sibling
+/// `ThemedSection`s.
 struct TruncatedList<Item: Identifiable, Row: View, Destination: View>: View {
     static var visibleRows: Double { 5.5 }
 
@@ -14,14 +16,16 @@ struct TruncatedList<Item: Identifiable, Row: View, Destination: View>: View {
     /// Set inside a `Form` or `List`, where the section is one clear cell: the title takes a list section's size and
     /// inset, so it lines up with the `ThemedSection`s around it and clears the cell's rounded corner.
     private let inList: Bool
+    private let divider: Bool
     /// Feedback names the call site, since this file says nothing about which list it is.
     private let source: (file: String, line: Int)
 
     init(
-        _ title: String, items: [Item], inList: Bool = false, @ViewBuilder row: @escaping (Item) -> Row,
+        _ title: String, items: [Item], inList: Bool = false, divider: Bool = true, @ViewBuilder row: @escaping (Item) -> Row,
         @ViewBuilder destination: @escaping () -> Destination, file: String = #fileID, line: Int = #line
     ) {
         self.inList = inList
+        self.divider = divider
         self.title = title
         self.items = items
         self.row = row
@@ -32,6 +36,17 @@ struct TruncatedList<Item: Identifiable, Row: View, Destination: View>: View {
     var body: some View {
         let shown = Int(Self.visibleRows.rounded(.up))
         let truncated = items.count > shown
+        let list = PeekStack(visibleRows: truncated ? Self.visibleRows : nil) {
+            ForEach(Array(items.prefix(shown).enumerated()), id: \.element.id) { index, item in
+                row(item).overlay(alignment: .top) {
+                    if index > 0 { Divider().overlay(Theme.separator) }
+                }
+            }
+        }
+        .clipped()
+        .mask {
+            LinearGradient(stops: [.init(color: .black, location: truncated ? 0.82 : 1), .init(color: .black.opacity(truncated ? 0.1 : 1), location: 1)], startPoint: .top, endPoint: .bottom)
+        }
         VStack(alignment: .leading, spacing: 10) {
             if inList {
                 HStack(spacing: 12) {
@@ -40,21 +55,14 @@ struct TruncatedList<Item: Identifiable, Row: View, Destination: View>: View {
                     seeAll(truncated).font(AppFont.rowTitle).underline().foregroundStyle(Theme.textPrimary)
                 }
                 .padding(.horizontal, 16)
+                list.background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
             } else {
-                SectionHeader(title) { seeAll(truncated) }
-            }
-            PeekStack(visibleRows: truncated ? Self.visibleRows : nil) {
-                ForEach(Array(items.prefix(shown).enumerated()), id: \.element.id) { index, item in
-                    row(item).overlay(alignment: .top) {
-                        if index > 0 { Divider().overlay(Theme.separator) }
-                    }
+                if divider {
+                    Divider().overlay(Theme.separator)
                 }
+                SectionHeader(title) { seeAll(truncated) }
+                list
             }
-            .clipped()
-            .mask {
-                LinearGradient(stops: [.init(color: .black, location: truncated ? 0.82 : 1), .init(color: .black.opacity(truncated ? 0.1 : 1), location: 1)], startPoint: .top, endPoint: .bottom)
-            }
-            .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
         }
         .feedback(title, data: "\(items.count) rows", file: source.file, line: source.line)
     }

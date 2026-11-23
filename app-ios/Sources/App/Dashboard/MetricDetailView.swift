@@ -233,21 +233,16 @@ struct MetricDetailView: View {
         case .steps:
             EmptyView()
         case let .topExercises(top):
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    SectionHeader("Top 5 Exercises by Sets")
-                    Text("Last 30 Days").font(AppFont.caption()).foregroundStyle(Theme.textSecondary)
-                }
+            FlatSection("Top 5 Exercises by Sets", subtitle: "Last 30 Days") {
                 VStack(spacing: 0) {
                     ForEach(Array(top.enumerated()), id: \.element.exerciseID) { index, entry in
-                        if index > 0 { Divider().overlay(Theme.separator).padding(.leading, 76) }
+                        if index > 0 { Divider().overlay(Theme.separator) }
                         Button { shownExercise = ShownExercise(id: entry.exerciseID) } label: {
                             TopExerciseRow(exercise: catalog.exercise(entry.exerciseID), sets: entry.sets)
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
                 .feedback("Top Exercises", data: top)
             }
         }
@@ -810,7 +805,6 @@ private struct TopExerciseRow: View {
             Text("\(sets) \(sets == 1 ? "set" : "sets")").font(AppFont.body(15))
             Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(Theme.textTertiary)
         }
-        .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .contentShape(.rect)
         .feedback(self)
@@ -839,18 +833,17 @@ private struct MetricHistoryView: View {
     }
 
     var body: some View {
+        let months = values.plot(route, tab: tab, range: range, averaging: averaging).months
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 20) {
-                ForEach(values.plot(route, tab: tab, range: range, averaging: averaging).months) { month in
-                    VStack(alignment: .leading, spacing: 10) {
-                        SectionHeader(month.title)
+                ForEach(Array(months.enumerated()), id: \.element.id) { index, month in
+                    FlatSection(month.title, divider: index > 0) {
                         VStack(spacing: 0) {
-                            ForEach(Array(month.rows.enumerated()), id: \.element.id) { index, row in
-                                if index > 0 { Divider().overlay(Theme.separator) }
+                            ForEach(Array(month.rows.enumerated()), id: \.element.id) { rowIndex, row in
+                                if rowIndex > 0 { Divider().overlay(Theme.separator) }
                                 MonthRowView(row: row)
                             }
                         }
-                        .background(Theme.surface, in: .rect(cornerRadius: Theme.cornerRadius))
                     }
                 }
             }
@@ -881,7 +874,7 @@ private struct MonthRowView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
+        .padding(.vertical, 10)
         .contentShape(.rect)
         .contextMenu {
             if let id = row.deletableID {

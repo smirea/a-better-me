@@ -37,8 +37,9 @@ struct PingHistoryView: View {
                     }
                     .card()
                     if !history.logs.isEmpty {
-                        TruncatedList("Last 30 Days", items: history.logs) { log in
+                        TruncatedList("Last 30 Days", items: history.logs, divider: false) { log in
                             PingLogRow(log: log, steps: steps)
+                                .padding(.vertical, 12)
                                 .rowSwipeActions(trailing: [.destructive("Delete") { store.delete(PingLog.self, id: log.id) }])
                         } destination: {
                             PingLogsView(pingID: pingID, steps: steps)
@@ -167,10 +168,8 @@ private struct PingLogRow: View {
                 Text("\(log.value)").font(AppFont.number(16))
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface)
+        .contentShape(.rect)
         .accessibilityElement(children: .combine)
         .feedback(self)
     }
