@@ -14,8 +14,8 @@ struct FoodLogSettingsView: View {
                 SettingChoice(
                     title: "Nutrient Reporting", systemImage: "minus.forwardslash.plus", selection: store.binding(settings, \.nutrition.showOverages),
                     options: [
-                        SettingOption(value: false, title: "No Overages", detail: "Expenditure updates from your intake and weight trend"),
-                        SettingOption(value: true, title: "Show Overages", detail: "A fixed value that pauses expenditure updates"),
+                        SettingOption(value: false, title: "No Overages", detail: "No negative numbers will be used if you exceed a nutrient target"),
+                        SettingOption(value: true, title: "Show Overages", detail: "Negative numbers will be used in nutrient remaining views if you exceed your target"),
                     ]
                 )
             }
@@ -196,7 +196,7 @@ struct ExpenditureSettingsView: View {
                         set: { manual in store.updateSettings { $0.nutrition.expenditure.initialKcal = manual ? expenditure.initialKcal ?? NutritionSettings.Expenditure.typedKcalStart : nil } }
                     ),
                     options: [
-                        SettingOption(value: false, title: "Default", detail: "Expenditure updates from your intake and weight trend"),
+                        SettingOption(value: false, title: "Default", detail: "A BMR equation and estimated activity factor estimate your initial expenditure"),
                         SettingOption(value: true, title: "Manual", detail: "Enter your own initial expenditure"),
                     ]
                 )

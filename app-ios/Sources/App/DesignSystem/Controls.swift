@@ -42,7 +42,8 @@ struct ThemedSection<Content: View, Actions: View>: View {
                                         .foregroundStyle(Theme.textPrimary)
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel(title)
+                                // Its own name, so it never collides with a row that shares the section's title.
+                                .accessibilityLabel("\(title) Info")
                                 .accessibilityHint(expanded ? "Hides the explanation" : "Shows the explanation")
                                 if expanded {
                                     Text(info).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
