@@ -21,6 +21,7 @@ const settings = (row: string) => [
 // The trailing toolbar menu of a tab root (Day Options on the Food Log).
 const trailingToolbarButton = ['press 364 84', 'wait 800'];
 const bottomRows = new Set([
+	'Supplements',
 	'Levels',
 	'Workout History',
 	'Workout',
@@ -245,9 +246,12 @@ export const screens: Screen[] = [
 	},
 	{
 		name: 'foods-recipe-detail',
-		steps: [...settings('Foods & Recipes'), 'press 80 185', 'wait 600', 'press 200 260', 'wait 1000'],
+		steps: [...settings('Foods & Recipes'), ...tapButton('Recipes'), `press 'text="Pasta Sauce"'`, 'wait 1000'],
 	},
-	{ name: 'foods-create-food', steps: [...settings('Foods & Recipes'), 'press 361 84', 'wait 800', 'press 260 93'] },
+	{
+		name: 'foods-create-food',
+		steps: [...settings('Foods & Recipes'), ...tapButton('Recipes'), ...tap('Create Recipe')],
+	},
 	{ name: 'workout-program-editor', steps: [...tapTab('Workout'), ...tap('Upper Lower, 3 workouts')] },
 	{
 		name: 'workout-detail',
