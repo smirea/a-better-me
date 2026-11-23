@@ -31,11 +31,11 @@ struct LibraryEditorSheet: Identifiable {
     }
 }
 
-/// MacroFactor's Library: Recipes | Foods | Favorites, each filtered by the search field, with Create Food and
-/// Create Recipe under +. Settings pushes it as is. The logger embeds it in its Library tab and passes `onOpen` to
-/// show its own food detail for a tapped row and `onAdd` for each row's + (the default serving onto the plate) and
-/// for Create & Add. Without `onOpen`, a food opens its editor and a recipe its detail page. Creating a food or recipe
-/// shows its segment.
+/// MacroFactor's Library: Recipes | Foods | Favorites, each filtered by the search field. + creates what the segment
+/// lists, and offers both on Favorites. Settings pushes it as is. The logger embeds it with its `session`, for each
+/// row's + onto the plate, the editors' Create & Add, and the filter beside Log Foods, and `onOpen` for its own food
+/// detail. Without `onOpen`, a food opens its editor and a recipe its detail page. Creating a food or recipe shows its
+/// segment.
 struct FoodLibraryView: View {
     typealias Tab = FoodLibraryTab
 
@@ -43,13 +43,13 @@ struct FoodLibraryView: View {
         case food(Food), recipe(Recipe), favorite(FoodFavorite)
     }
 
+    private let session: LoggerSession?
     private let onOpen: ((Item) -> Void)?
-    private let onAdd: ((LoggerPick) -> Void)?
     @Environment(LocalStore.self) private var store
     @Observe(Food.library) private var foods
     @Observe(Recipe.library) private var recipes
     @Observe(FoodFavorite.all) private var favorites
-    @State private var tab: Tab
+    @AppStorage(Tab.storageKey) private var tab = Tab.recipes
     @State private var sort = LibrarySort.created
     @State private var query = ""
     @State private var sheet: LibraryEditorSheet?
@@ -58,25 +58,28 @@ struct FoodLibraryView: View {
     @State private var pendingDelete: Item?
     @State private var favorited = false
 
-    init(tab: Tab = .foods, onOpen: ((Item) -> Void)? = nil, onAdd: ((LoggerPick) -> Void)? = nil) {
-        _tab = State(initialValue: tab)
+    init(session: LoggerSession? = nil, onOpen: ((Item) -> Void)? = nil) {
+        self.session = session
         self.onOpen = onOpen
-        self.onAdd = onAdd
     }
 
+    private var onAdd: ((LoggerPick) -> Void)? { session.map { session in { session.add($0) } } }
+
     var body: some View {
+        // Flat rows straight under the bar, as Search lists them: an inset card left a band of empty space above it.
         List {
-            ThemedSection {
-                switch tab {
-                case .recipes: recipeRows
-                case .foods: foodRows
-                case .favorites: favoriteRows
-                }
+            switch tab {
+            case .recipes: recipeRows
+            case .foods: foodRows
+            case .favorites: favoriteRows
             }
         }
+        .listStyle(.plain)
+        .environment(\.defaultMinListRowHeight, 0)
         .themedList()
         .overlay { emptyState }
-        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Filter \(tab.rawValue.lowercased())")
+        .scrollDismissesKeyboard(.immediately)
+        .modifier(FilterField(session: session, query: $query, prompt: "Filter \(tab.rawValue.lowercased())"))
         .detailTitle("Foods & Recipes")
         .toolbar {
             // The picker takes the title's place, so the bar holds the segments, sort, and create on one row.
@@ -101,11 +104,16 @@ struct FoodLibraryView: View {
                 }
             }
             ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Button("Create Food", systemImage: "carrot") { create(.newFood(FoodDraft())) }
-                    Button("Create Recipe", systemImage: "frying.pan") { create(.newRecipe(RecipeDraft())) }
-                } label: {
-                    Label("Create", systemImage: "plus")
+                switch tab {
+                case .recipes: Button("Create Recipe", systemImage: "plus") { create(.newRecipe(RecipeDraft())) }
+                case .foods: Button("Create Food", systemImage: "plus") { create(.newFood(FoodDraft())) }
+                case .favorites:
+                    Menu {
+                        Button("Create Food", systemImage: "carrot") { create(.newFood(FoodDraft())) }
+                        Button("Create Recipe", systemImage: "frying.pan") { create(.newRecipe(RecipeDraft())) }
+                    } label: {
+                        Label("Create", systemImage: "plus")
+                    }
                 }
             }
         }
@@ -193,7 +201,8 @@ struct FoodLibraryView: View {
                 AddToPlateButton(food: food) { onAdd(pick) }
             }
         }
-        .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 8))
+        .listRowInsets(EdgeInsets(top: 2, leading: Theme.margin, bottom: 2, trailing: onAdd == nil ? Theme.margin : 8))
+        .listRowBackground(Color.clear)
         .swipeActions(edge: .leading) {
             if let onAdd {
                 Button("Add to Plate", systemImage: "plus") { onAdd(pick) }.tint(Theme.accent)
@@ -259,6 +268,26 @@ struct FoodLibraryView: View {
         case let .recipe(recipe): "Are you sure you want to delete \(recipe.name)? Logged entries keep their copy. This action cannot be undone."
         case let .favorite(favorite): "\(favorite.food.name) will be removed from your favorites."
         case nil: ""
+        }
+    }
+}
+
+/// The logger's Library filters from its bottom bar, beside Log Foods, as Search does; Settings keeps the system field
+/// under the navigation bar.
+private struct FilterField: ViewModifier {
+    let session: LoggerSession?
+    @Binding var query: String
+    let prompt: String
+
+    func body(content: Content) -> some View {
+        if let session {
+            content.safeAreaInset(edge: .bottom) {
+                LoggerBottomBar(session: session, text: $query) {
+                    TextField(prompt, text: $query).autocorrectionDisabled()
+                }
+            }
+        } else {
+            content.searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: prompt)
         }
     }
 }
