@@ -1,0 +1,13 @@
+{
+	"title": "Pause or stop a supplement from its editor's Regimen header",
+	"tasks": [
+		{
+			"id": "f2345778-fb79-41f7-941f-bbe980845505",
+			"title": "1 Edit Supplement Feedback: Add pause options to regimen header"
+		},
+		{
+			"id": "afe1ec1b-a271-48d7-b0ca-46ef5f3f7f9a",
+			"title": "1 Edit Supplement Feedback: add a disable toggle"
+		}
+	]
+}

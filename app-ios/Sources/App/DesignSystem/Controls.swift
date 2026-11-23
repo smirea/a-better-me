@@ -3,17 +3,23 @@ import SwiftUI
 
 /// A list section on the card surface with the app's section title. Lists use it instead of `Section` so every row
 /// draws on `Theme.surface`.
-struct ThemedSection<Content: View>: View {
+struct ThemedSection<Content: View, Actions: View>: View {
     var title: String?
     var subtitle: String?
     var footer: String?
     @ViewBuilder let content: Content
+    /// `SectionHeader`'s underlined text actions, trailing the title.
+    @ViewBuilder let actions: Actions
 
-    init(_ title: String? = nil, subtitle: String? = nil, footer: String? = nil, @ViewBuilder content: () -> Content) {
+    init(
+        _ title: String? = nil, subtitle: String? = nil, footer: String? = nil,
+        @ViewBuilder content: () -> Content, @ViewBuilder actions: () -> Actions
+    ) {
         self.title = title
         self.subtitle = subtitle
         self.footer = footer
         self.content = content()
+        self.actions = actions()
     }
 
     var body: some View {
@@ -21,9 +27,16 @@ struct ThemedSection<Content: View>: View {
             content
         } header: {
             if title != nil || subtitle != nil {
-                VStack(alignment: .leading, spacing: 4) {
-                    if let title { SectionTitle(title) }
-                    if let subtitle { Text(subtitle).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary) }
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let title { SectionTitle(title) }
+                        if let subtitle { Text(subtitle).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary) }
+                    }
+                    Spacer(minLength: 0)
+                    actions
+                        .font(AppFont.rowTitle)
+                        .underline()
+                        .foregroundStyle(Theme.textPrimary)
                 }
                 .textCase(nil)
             }
@@ -32,6 +45,12 @@ struct ThemedSection<Content: View>: View {
         }
         // The background fills the whole cell, unlike the row's content, so a tap on a row's padding selects the row.
         .listRowBackground(Theme.surface.feedback(title.map { "\($0) Row" } ?? "Row"))
+    }
+}
+
+extension ThemedSection where Actions == EmptyView {
+    init(_ title: String? = nil, subtitle: String? = nil, footer: String? = nil, @ViewBuilder content: () -> Content) {
+        self.init(title, subtitle: subtitle, footer: footer, content: content) { EmptyView() }
     }
 }
 
