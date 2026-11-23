@@ -138,7 +138,7 @@ private struct SectionWorkoutsSheet: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle("Add Workout")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

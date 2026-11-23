@@ -63,7 +63,7 @@ struct FoodDetailView: View {
                 LabeledContent(nutrient.name, value: NutritionFormat.amount(amounts.amount(of: nutrient.id) ?? 0, nutrient.unit))
             }
         }
-        .themedList()
+        .flatList()
         .nutrientTableList()
         .contentMargins(.top, ramble == nil ? 8 : 0, for: .scrollContent)
         .contentMargins(.bottom, 12, for: .scrollContent)

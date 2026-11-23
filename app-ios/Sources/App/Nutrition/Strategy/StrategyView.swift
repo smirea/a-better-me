@@ -431,7 +431,7 @@ struct PlanHistoryView: View {
                 .listRowSeparator(.hidden)
         }
         .listStyle(.plain)
-        .themedList()
+        .flatList()
         .detailTitle("Program History")
         .feedback(self)
     }

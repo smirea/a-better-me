@@ -172,7 +172,7 @@ struct MaintenanceBreakdownView: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle("Maintenance")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

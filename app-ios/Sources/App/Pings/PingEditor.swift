@@ -129,7 +129,7 @@ struct PingEditor: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .contentMargins(.top, 0, for: .scrollContent)
             .scrollDismissesKeyboard(.interactively)
             .detailTitle(editing != nil ? "Edit Ping" : "New Ping")
@@ -148,7 +148,7 @@ struct PingEditor: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Are you sure you want to delete \(trimmedName)? Everything logged for it goes too. This action cannot be undone.")
+                Text("Everything logged for it goes too.")
             }
             .onAppear { nameFocused = editing == nil }
             .task(id: trimmedName) { await suggest() }

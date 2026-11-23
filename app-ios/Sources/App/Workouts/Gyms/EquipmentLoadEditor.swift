@@ -40,7 +40,7 @@ struct EquipmentLoadEditor: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .font(AppFont.rowTitle)
             .detailTitle(equipment.name)
             .toolbar {

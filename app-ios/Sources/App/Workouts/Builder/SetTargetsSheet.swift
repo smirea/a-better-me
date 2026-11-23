@@ -87,7 +87,7 @@ struct SetTargetsSheet: View {
             }
             .disabled(readOnlyNote != nil)
             .listStyle(.plain)
-            .themedList()
+            .flatList()
             .scrollDismissesKeyboard(.interactively)
             .environment(\.defaultMinListRowHeight, 40)
             .detailTitle(subtitle == nil ? "Targets" : catalog.name(draft.exerciseID))

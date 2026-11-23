@@ -8,8 +8,8 @@ extension Recipe {
     }
 }
 
-/// A recipe's page in the library: per-serving nutrition, MacroFactor's Prepare, Edit, Favorite, Duplicate, and
-/// Delete actions, the ingredients, and the steps.
+/// A recipe's page in the library: per-serving nutrition, the ingredients, and the steps, flat. Favorite is the toolbar's
+/// heart, and Prepare, Edit, Duplicate, and Delete sit in its Recipe Options menu.
 struct RecipeDetailView: View {
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -41,11 +41,9 @@ struct RecipeDetailView: View {
             ThemedSection {
                 HStack(spacing: 12) {
                     FoodIcon(food: recipe.snapshot, size: 44)
-                    Text(recipe.name).font(AppFont.sectionTitle).frame(maxWidth: .infinity, alignment: .leading)
+                    MacroSummary(amounts: portion.amounts, caption: "Per \(NutritionFormat.serving(portion.serving, of: portion.food))")
                     MealRatingBadge(title: recipe.name, amounts: portion.amounts)
                 }
-                MacroSummary(amounts: portion.amounts, caption: "Per \(NutritionFormat.serving(portion.serving, of: portion.food))")
-                actions(recipe, portion: portion)
             }
             ThemedSection("Details") {
                 LabeledContent("Makes", value: "\(NumberText.plain(recipe.servings)) \(recipe.servings == 1 ? "serving" : "servings")")
@@ -68,9 +66,10 @@ struct RecipeDetailView: View {
             }
             NutrientBreakdown(amounts: portion.amounts)
         }
-        .themedList()
+        .flatList()
         .nutrientTableList()
         .detailTitle(recipe.name)
+        .toolbar { toolbar(recipe, portion: portion) }
         .sheet(item: $sheet) { $0.editor }
         .navigationDestination(isPresented: $preparing) { RecipePrepareView(recipe: recipe) }
         .sensoryFeedback(.success, trigger: favorite) { _, new in new != nil }
@@ -81,15 +80,14 @@ struct RecipeDetailView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Are you sure you want to delete \(recipe.name)? Logged entries keep their copy. This action cannot be undone.")
+            Text("Logged entries keep their copy.")
         }
     }
 
-    private func actions(_ recipe: Recipe, portion: FoodPortion) -> some View {
-        HStack {
-            Button { preparing = true } label: { ActionLabel(title: "Prepare", systemImage: "frying.pan") }
-            Button { sheet = LibraryEditorSheet(.editRecipe(recipe)) } label: { ActionLabel(title: "Edit", systemImage: "pencil") }
-            Button {
+    @ToolbarContentBuilder
+    private func toolbar(_ recipe: Recipe, portion: FoodPortion) -> some ToolbarContent {
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button(favorite != nil ? "Remove Favorite" : "Favorite", systemImage: favorite != nil ? "heart.fill" : "heart") {
                 if let favorite {
                     store.deleteFavorite(favorite)
                     self.favorite = nil
@@ -98,16 +96,17 @@ struct RecipeDetailView: View {
                     store.addFavorite(portion, id: id)
                     favorite = id
                 }
-            } label: {
-                ActionLabel(
-                    title: favorite != nil ? "Favorited" : "Favorite", systemImage: favorite != nil ? "heart.fill" : "heart",
-                    tint: favorite != nil ? Theme.favorite : nil
-                )
             }
-            Button { sheet = LibraryEditorSheet(.newRecipe(RecipeDraft(recipe).duplicate())) } label: { ActionLabel(title: "Duplicate", systemImage: "plus.square.on.square") }
-            Button { confirmingDelete = true } label: { ActionLabel(title: "Delete", systemImage: "trash") }
+            .foregroundStyle(favorite != nil ? Theme.favorite : Theme.textPrimary)
+            Menu("Recipe Options", systemImage: "ellipsis") {
+                Button("Prepare", systemImage: "frying.pan") { preparing = true }
+                Button("Edit", systemImage: "pencil") { sheet = LibraryEditorSheet(.editRecipe(recipe)) }
+                Button("Duplicate", systemImage: "plus.square.on.square") {
+                    sheet = LibraryEditorSheet(.newRecipe(RecipeDraft(recipe).duplicate()))
+                }
+                Button("Delete", systemImage: "trash", role: .destructive) { confirmingDelete = true }
+            }
         }
-        .buttonStyle(.borderless)
     }
 }
 
@@ -139,65 +138,28 @@ struct RecipePrepareView: View {
 
     var body: some View {
         let perServing = recipe.nutrition.nutrients
-        let total = RecipeMath.total(recipe.ingredients)
+        let scaled = RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: servings)
+        let total = RecipeMath.total(scaled)
         Form {
-            ThemedSection("Recipe summary") {
-                Text(recipe.steps.count == 1 ? "1 step" : "\(recipe.steps.count) steps")
-                    .font(AppFont.rowDetail)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Theme.surfaceRaised, in: .capsule)
-                Grid(horizontalSpacing: 10, verticalSpacing: 10) {
-                    GridRow {
-                        summaryTile(.energy, perServing: perServing, total: total)
-                        summaryTile(.protein, perServing: perServing, total: total)
-                    }
-                    GridRow {
-                        summaryTile(.fat, perServing: perServing, total: total)
-                        summaryTile(.carbs, perServing: perServing, total: total)
-                    }
-                }
+            ThemedSection {
+                MacroSummary(amounts: perServing, caption: "Per serving")
+                MacroSummary(amounts: total, caption: "Total")
             }
-            IngredientsSection(RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: servings)) {
+            IngredientsSection(scaled) {
                 Stepper(value: $servings, in: 0.5...100, step: 0.5) {
-                    Text("Instructions for \(NumberText.plain(servings)) \(servings == 1 ? "serving" : "servings")")
+                    Text("\(NumberText.plain(servings)) \(servings == 1 ? "serving" : "servings")")
                         .font(AppFont.rowTitle)
                 }
                 .accessibilityValue("\(NumberText.plain(servings)) servings")
             }
-            if recipe.steps.isEmpty {
-                ThemedSection {
-                    Text("No preparation steps are available for this recipe").foregroundStyle(Theme.textSecondary)
-                }
-            } else {
+            if !recipe.steps.isEmpty {
                 StepsSection(steps: recipe.steps)
             }
-            Section {
-                Text("The following nutrition is displayed per serving.").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
-            }
-            .listRowBackground(Color.clear)
             NutrientBreakdown(amounts: perServing)
         }
-        .themedList()
+        .flatList()
         .nutrientTableList()
         .detailTitle(recipe.name)
         .feedback(self)
-    }
-
-    private func summaryTile(_ id: NutrientID, perServing: NutrientAmounts, total: NutrientAmounts) -> some View {
-        let unit = id == .energy ? "cal" : "g"
-        return HStack(spacing: 8) {
-            Capsule().fill(id.color).frame(width: 4)
-            RowLabel(
-                title: NutrientRegistry.nutrient(id)?.name ?? "",
-                detail: "\(NutritionFormat.amount(perServing[id] ?? 0)) \(unit)/serv, \(NutritionFormat.amount(total[id] ?? 0)) total"
-            )
-            .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
-        .padding(8)
-        .frame(maxWidth: .infinity)
-        .background(Theme.surfaceRaised, in: .rect(cornerRadius: Theme.smallCornerRadius))
-        .accessibilityElement(children: .combine)
     }
 }

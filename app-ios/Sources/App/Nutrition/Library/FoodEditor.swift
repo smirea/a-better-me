@@ -74,7 +74,7 @@ struct FoodEditor: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .scrollDismissesKeyboard(.interactively)
             .focusToolbar(draft.focusOrder(expanded: expanded), focus: $focus)
             .detailTitle(editing != nil ? "Edit Food" : replaces != nil ? "Update Food" : "Create Food")
@@ -111,7 +111,7 @@ struct FoodEditor: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Are you sure you want to delete \(draft.name)? Logged entries keep their copy. This action cannot be undone.")
+                Text("Logged entries keep their copy.")
             }
         }
         // A read takes seconds and fills dozens of fields; a stray swipe should not throw that away. Close still does.
@@ -124,12 +124,10 @@ struct FoodEditor: View {
         ThemedSection("Food") {
             HStack(spacing: 12) {
                 FoodIcon(icon: draft.icon, name: draft.name, source: .custom, size: 36).editsIcon { choosingIcon = true }
-                RowLabel(title: draft.name.isEmpty ? "Custom Food" : draft.name, detail: draft.brand.isEmpty ? "Brand Unknown" : draft.brand)
-                Spacer()
+                TextField("Food Name", text: $draft.name)
+                    .focused($focus, equals: .name)
+                    .accessibilityLabel("Food Name")
             }
-            TextField("Food Name", text: $draft.name)
-                .focused($focus, equals: .name)
-                .accessibilityLabel("Food Name")
             FieldIssue(issues[.name])
             TextField("Brand Name", text: $draft.brand)
                 .focused($focus, equals: .brand)
@@ -192,7 +190,6 @@ struct FoodEditor: View {
                         TextField("slice", text: $measure.name)
                             .focused($focus, equals: .measureName(measure.id))
                             .accessibilityLabel("Serving Name")
-                        Text("=").foregroundStyle(Theme.textSecondary)
                         TextField("0", text: $measure.size)
                             .keyboardType(.decimalPad)
                             .focused($focus, equals: .measureSize(measure.id))
@@ -205,7 +202,9 @@ struct FoodEditor: View {
                 }
             }
             .onDelete { draft.measures.remove(atOffsets: $0) }
-            Button("Add Serving", systemImage: "plus") { draft.measures.append(FoodDraft.MeasureDraft()) }
+        } actions: {
+            Button("Add") { draft.measures.append(FoodDraft.MeasureDraft()) }
+                .accessibilityLabel("Add Serving")
         }
     }
 
@@ -216,7 +215,7 @@ struct FoodEditor: View {
             FieldIssue(issues[.nutrient(nutrient.id)])
         }
         if section == .macros {
-            ThemedSection(section.rawValue, subtitle: "Serving Size: \(draft.basisLabel)") {
+            ThemedSection(section.rawValue) {
                 rows
             }
         } else {

@@ -69,7 +69,7 @@ private struct GoToCycleSheet: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle("Go to...")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

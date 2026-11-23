@@ -41,7 +41,7 @@ struct BodyWeightLogSheet: View {
                     DatePicker("Time", selection: $measuredAt, in: ...Date.now)
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle("Log Weight")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

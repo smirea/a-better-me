@@ -117,7 +117,7 @@ struct EntryEditor: View {
                     NutrientRow(nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id))
                 }
             }
-            .themedList()
+            .flatList()
             .nutrientTableList()
             .onChange(of: minute) { _, minute in section = sections.section(at: minute).id }
             .navigationBarTitleDisplayMode(.inline)
@@ -166,11 +166,6 @@ struct EntryEditor: View {
                     .submitLabel(.done)
                     .focused($naming)
                     .accessibilityLabel("Name")
-                Button { naming = true } label: {
-                    Image(systemName: "pencil").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.textSecondary)
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel("Edit Name")
                 MealRatingBadge(title: named.name, amounts: amounts)
             }
         } else {

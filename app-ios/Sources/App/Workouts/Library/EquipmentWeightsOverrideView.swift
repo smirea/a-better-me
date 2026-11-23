@@ -54,7 +54,7 @@ struct EquipmentWeightsOverrideView: View {
                 }
             }
         }
-        .themedList()
+        .flatList()
         .detailTitle("Weights")
         .sheet(item: $editing) { item in
             if let load = overrides[item.id] ?? gym.flatMap({ GymDefaults.effectiveLoad(item.id, in: $0, unit: unit) }) ?? GymDefaults.load(for: item.id, unit: unit) {

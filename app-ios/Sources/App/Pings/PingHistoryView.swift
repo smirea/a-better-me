@@ -142,7 +142,7 @@ private struct PingLogsView: View {
                 }
             }
         }
-        .themedList()
+        .flatList()
         .detailTitle("History")
         .task {
             let query = PingLog.history(pingID)

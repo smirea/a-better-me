@@ -55,7 +55,7 @@ struct SupplementEditor: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .scrollDismissesKeyboard(.interactively)
             .focusToolbar(draft.focusOrder, focus: $focus)
             .detailTitle(editing != nil ? "Edit Supplement" : "New Supplement")
@@ -95,7 +95,7 @@ struct SupplementEditor: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Are you sure you want to delete \(draft.name)? It leaves every day it was on. This action cannot be undone.")
+                Text("It leaves every day it was on.")
             }
         }
         // A read takes seconds and fills the whole label; a stray swipe should not throw that away. Close still does.
@@ -108,15 +108,10 @@ struct SupplementEditor: View {
         ThemedSection("Supplement") {
             HStack(spacing: 12) {
                 picture.frame(width: 44, height: 44)
-                RowLabel(
-                    title: draft.name.isEmpty ? "New Supplement" : draft.name,
-                    detail: draft.brand.isEmpty ? "Brand Unknown" : draft.brand
-                )
-                Spacer()
+                TextField("Name", text: $draft.name)
+                    .focused($focus, equals: .name)
+                    .accessibilityLabel("Supplement Name")
             }
-            TextField("Name", text: $draft.name)
-                .focused($focus, equals: .name)
-                .accessibilityLabel("Supplement Name")
             FieldIssue(issues[.name])
             TextField("Brand", text: $draft.brand)
                 .focused($focus, equals: .brand)
@@ -183,11 +178,13 @@ struct SupplementEditor: View {
                     Button("Delete", systemImage: "trash", role: .destructive) { draft.components.removeAll { $0.id == id } }
                 }
             }
-            Button("Add Ingredient", systemImage: "plus") {
+        } actions: {
+            Button("Add") {
                 let added = SupplementDraft.ComponentDraft()
                 draft.components.append(added)
                 focus = .componentName(added.id)
             }
+            .accessibilityLabel("Add Ingredient")
         }
     }
 
@@ -213,7 +210,6 @@ struct SupplementEditor: View {
                     ForEach(SupplementRegimen.Timing.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
                 }
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(SupplementFormat.days(draft.regimen.weekdays.sorted()))
                     HStack(spacing: 6) {
                         ForEach(1...7, id: \.self) { weekday in
                             let isOn = draft.regimen.weekdays.contains(weekday)

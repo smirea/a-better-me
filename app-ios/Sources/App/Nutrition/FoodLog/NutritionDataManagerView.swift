@@ -25,7 +25,7 @@ struct NutritionDataManagerView: View {
                 }
             }
         }
-        .themedList()
+        .flatList()
         .detailTitle("Nutrition Data Manager")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -112,7 +112,7 @@ struct NutritionDayEntrySheet: View {
                     Toggle("Is this day incomplete?", isOn: $incomplete).tint(Theme.accent)
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle("Nutrition", subtitle: date.formatted(.dateTime.weekday().month().day()))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

@@ -291,7 +291,7 @@ private struct ProgramEditorGymOptions: View {
                 }
             }
             .listStyle(.plain)
-            .themedList()
+            .flatList()
             .detailTitle("Gym Options")
             .navigationSubtitle("Impacts exercise selection")
             .toolbar {

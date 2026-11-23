@@ -95,7 +95,7 @@ private struct OverviewList: View {
                 }
             }
         }
-        .themedList()
+        .flatList()
         .nutrientTableList()
     }
 }
@@ -123,7 +123,7 @@ struct ContributorsView: View {
                 }
             }
         }
-        .themedList()
+        .flatList()
         .overlay {
             if FoodLog.contributors(entries, of: nutrient).isEmpty {
                 ContentUnavailableView("No Contributors", systemImage: "fork.knife")

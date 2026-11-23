@@ -131,7 +131,7 @@ private struct SelectionBar: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("\(count) food \(count == 1 ? "entry" : "entries") will be removed from the timeline. Are you sure you want to continue? This action cannot be undone.")
+            Text("\(count) food \(count == 1 ? "entry" : "entries") will be removed from the timeline.")
         }
         .sheet(item: $prompt) { _ in
             let entries = state.selectedEntries
@@ -352,7 +352,7 @@ struct DayMenu: View {
             Button("Clear", role: .destructive) { store.deleteEntries(entries.map(\.id)) }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("\(entries.count) food \(entries.count == 1 ? "entry" : "entries") will be removed from the timeline. This action cannot be undone.")
+            Text("\(entries.count) food \(entries.count == 1 ? "entry" : "entries") will be removed from the timeline.")
         }
     }
 }

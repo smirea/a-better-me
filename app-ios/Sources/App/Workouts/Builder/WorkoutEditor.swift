@@ -32,7 +32,7 @@ struct WorkoutEditor: View {
             }
         }
         .listStyle(.plain)
-        .themedList()
+        .flatList()
         .sheet(item: $sheet) { sheet in
             switch sheet {
             case .picker(let request):

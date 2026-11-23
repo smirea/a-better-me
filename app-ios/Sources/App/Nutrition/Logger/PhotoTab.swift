@@ -48,7 +48,7 @@ struct PhotoTab: View {
                     .lineLimit(1...4)
             }
         }
-        .themedList()
+        .flatList()
         .scrollDismissesKeyboard(.interactively)
         .overlay {
             if session.isFindingFoods {

@@ -41,7 +41,6 @@ struct SupplementDetailView: View {
                 HStack(spacing: 14) {
                     picture(supplement.images.first, of: supplement, side: 96, cornerRadius: Theme.cornerRadius)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(supplement.name).font(AppFont.sectionTitle)
                         if let brand = supplement.brand {
                             Text(brand).font(AppFont.body(15)).foregroundStyle(Theme.textSecondary)
                         }
@@ -61,16 +60,6 @@ struct SupplementDetailView: View {
                     .scrollIndicators(.hidden)
                     .listRowSeparator(.hidden)
                 }
-                HStack {
-                    Button { editing = supplement } label: { ActionLabel(title: "Edit", systemImage: "pencil") }
-                    if status == .stopped {
-                        Button { store.startSupplement(supplement.id) } label: { ActionLabel(title: "Start Taking", systemImage: "play") }
-                    } else {
-                        Button { store.stopSupplement(supplement.id) } label: { ActionLabel(title: "Stop Taking", systemImage: "stop") }
-                    }
-                    Button { confirmingDelete = true } label: { ActionLabel(title: "Delete", systemImage: "trash") }
-                }
-                .buttonStyle(.plain)
                 if let url = supplement.url.flatMap(URL.init(string:)) {
                     Link(destination: url) {
                         HStack {
@@ -128,8 +117,21 @@ struct SupplementDetailView: View {
                 .listRowBackground(Color.clear)
             }
         }
-        .themedList()
+        .flatList()
         .detailTitle(supplement.name)
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button("Edit") { editing = supplement }
+                Menu("Supplement Options", systemImage: "ellipsis") {
+                    if status == .stopped {
+                        Button("Start Taking", systemImage: "play") { store.startSupplement(supplement.id) }
+                    } else {
+                        Button("Stop Taking", systemImage: "stop") { store.stopSupplement(supplement.id) }
+                    }
+                    Button("Delete", systemImage: "trash", role: .destructive) { confirmingDelete = true }
+                }
+            }
+        }
         .sheet(item: $editing) { SupplementEditor(supplement: $0) }
         .quickLookPreview($viewing, in: viewable)
         .alert("Delete Supplement", isPresented: $confirmingDelete) {
@@ -139,7 +141,7 @@ struct SupplementDetailView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Are you sure you want to delete \(supplement.name)? It leaves every day it was on. This action cannot be undone.")
+            Text("It leaves every day it was on.")
         }
     }
 }
@@ -237,7 +239,7 @@ private struct SupplementHistoryView: View {
                 }
             }
         }
-        .themedList()
+        .flatList()
         .detailTitle("History", subtitle: supplement?.name)
         .feedback(self)
     }

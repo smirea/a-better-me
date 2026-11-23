@@ -76,7 +76,7 @@ struct FoodLibraryView: View {
         }
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
-        .themedList()
+        .flatList()
         .overlay { emptyState }
         .scrollDismissesKeyboard(.immediately)
         .modifier(FilterField(session: session, query: $query, prompt: "Filter \(tab.rawValue.lowercased())"))
@@ -149,10 +149,7 @@ struct FoodLibraryView: View {
             row(food.snapshot, serving: nil) {
                 if let onOpen { onOpen(.food(food)) } else { sheet = LibraryEditorSheet(.editFood(food)) }
             }
-            .swipeActions {
-                deleteButton(.food(food))
-                editButton(.editFood(food))
-            }
+            .swipeActions { deleteButton(.food(food)) }
             .contextMenu {
                 Button("Edit", systemImage: "pencil") { sheet = LibraryEditorSheet(.editFood(food)) }
                 Button("Favorite", systemImage: "heart") { favorite(FoodPortion(food.snapshot)) }
@@ -264,8 +261,7 @@ struct FoodLibraryView: View {
 
     private var deleteMessage: String {
         switch pendingDelete {
-        case let .food(food): "Are you sure you want to delete \(food.name)? Logged entries keep their copy. This action cannot be undone."
-        case let .recipe(recipe): "Are you sure you want to delete \(recipe.name)? Logged entries keep their copy. This action cannot be undone."
+        case .food, .recipe: "Logged entries keep their copy."
         case let .favorite(favorite): "\(favorite.food.name) will be removed from your favorites."
         case nil: ""
         }

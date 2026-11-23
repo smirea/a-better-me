@@ -24,7 +24,7 @@ struct ExerciseAssessmentView: View {
                 }
             }
         }
-        .themedList()
+        .flatList()
         .detailTitle("Exercise Assessment")
         .feedback(self)
     }

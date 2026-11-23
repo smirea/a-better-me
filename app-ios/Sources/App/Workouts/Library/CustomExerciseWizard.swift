@@ -435,7 +435,7 @@ private struct JointActionPicker: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search joint actions")
             .detailTitle(title)
             .toolbar {

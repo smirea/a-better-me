@@ -45,7 +45,7 @@ struct BodyMetricsLogSheet: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle("Log Measurements")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -117,7 +117,7 @@ private struct BodyFatReferenceSheet: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle("Body Fat Reference")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

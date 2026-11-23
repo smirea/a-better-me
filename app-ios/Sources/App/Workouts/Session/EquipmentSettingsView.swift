@@ -78,7 +78,7 @@ struct EquipmentSettingsView: View {
                 .accessibilityLabel("Equipment Weights")
             }
         }
-        .themedList()
+        .flatList()
         .font(AppFont.rowTitle)
         .detailTitle("Equipment Settings")
         .onAppear { offsetText = Self.text(of: overrides.plateOffset, unit: unit) }

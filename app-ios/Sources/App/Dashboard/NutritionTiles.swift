@@ -168,7 +168,7 @@ private struct AboutNutrientGoalsSheet: View {
                     LabeledContent("Ceiling", value: "The tolerable upper intake level. Going over regularly may cause harm.")
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle("About Nutrient Goals")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

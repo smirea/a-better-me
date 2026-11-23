@@ -1,9 +1,11 @@
 import Feedback
 import SwiftUI
 
-/// A list section on the card surface with the app's section title. Lists use it instead of `Section` so every row
-/// draws on `Theme.surface`.
+/// A list section with the app's section title. Lists use it instead of `Section`. In a grouped Settings list its rows
+/// draw on the `Theme.surface` card; under `flatList()` (content and editors) they draw flat on `Theme.background`
+/// with a `FlatSection`-style header.
 struct ThemedSection<Content: View, Actions: View>: View {
+    @Environment(\.flatSections) private var flat
     var title: String?
     var subtitle: String?
     @ViewBuilder let content: Content
@@ -40,7 +42,21 @@ struct ThemedSection<Content: View, Actions: View>: View {
             }
         }
         // The background fills the whole cell, unlike the row's content, so a tap on a row's padding selects the row.
-        .listRowBackground(Theme.surface.feedback(title.map { "\($0) Row" } ?? "Row"))
+        .listRowBackground((flat ? Theme.background : Theme.surface).feedback(title.map { "\($0) Row" } ?? "Row"))
+    }
+}
+
+extension EnvironmentValues {
+    @Entry var flatSections = false
+}
+
+extension View {
+    /// A content list or editor (a `Form` or `List`) drawn flat: full-width rows on `Theme.background` with hairline
+    /// separators, every `ThemedSection` without its card. Grouped Settings keep `themedList()`'s cards.
+    func flatList() -> some View {
+        listStyle(.grouped)
+            .themedList()
+            .environment(\.flatSections, true)
     }
 }
 

@@ -468,7 +468,7 @@ private struct ExperienceSheet: View {
                     }
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle("Lifting Experience")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

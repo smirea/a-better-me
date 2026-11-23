@@ -45,7 +45,7 @@ struct NutrientGoalsView: View {
             ThemedSection {
             }
         }
-        .themedList()
+        .flatList()
         .detailTitle("\(info?.name ?? nutrient.rawValue) Goals")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -109,7 +109,7 @@ private struct NutrientGoalEditor: View {
                     ThemedSection { Text(problem).foregroundStyle(Theme.destructive) }
                 }
             }
-            .themedList()
+            .flatList()
             .detailTitle(original == nil ? "New \(name) Goal" : "Edit \(name) Goal")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -174,7 +174,7 @@ struct NutrientGoalsListView: View {
                 }
             }
         }
-        .themedList()
+        .flatList()
         .detailTitle("Nutrient Goals")
         .feedback(self)
     }

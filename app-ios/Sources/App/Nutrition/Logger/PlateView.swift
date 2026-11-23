@@ -80,7 +80,7 @@ struct PlateView: View {
                 }
             }
         }
-        .themedList()
+        .flatList()
         .overlay {
             if session.plate.isEmpty {
                 ContentUnavailableView("Your plate is empty", systemImage: "fork.knife", description: Text("Add foods from Search, Scan, Quick Add, or Library."))

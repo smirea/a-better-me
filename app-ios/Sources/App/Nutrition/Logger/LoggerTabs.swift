@@ -34,7 +34,7 @@ struct SearchTab: View {
         .listSectionSpacing(0)
         .environment(\.defaultMinListRowHeight, 0)
         .scrollDismissesKeyboard(.immediately)
-        .themedList()
+        .flatList()
         .overlay {
             if session.results.isEmpty, !session.isSearchingBranded {
                 if session.query.isEmpty {
@@ -202,7 +202,7 @@ struct QuickAddTab: View {
                     .submitLabel(.done)
             }
         }
-        .themedList()
+        .flatList()
         .scrollDismissesKeyboard(.interactively)
         .focusToolbar(QuickAddDraft.focusOrder, focus: $focus) {
             Button("Quick Add", action: quickAdd)

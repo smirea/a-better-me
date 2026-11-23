@@ -34,7 +34,7 @@ struct LevelsView<Route: Hashable>: View {
             LevelsSection(title: "Upper Body Levels", muscles: Muscle.upperBody, weekly: weekly, route: route)
             LevelsSection(title: "Lower Body Levels", muscles: Muscle.lowerBody, weekly: weekly, route: route)
         }
-        .themedList()
+        .flatList()
         .detailTitle("Levels")
         .feedback(self)
     }

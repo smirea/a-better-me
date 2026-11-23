@@ -45,7 +45,7 @@ struct SupplementsView: View {
             section("Taking", sections.taking)
             section("Not Taking", sections.stopped)
         }
-        .themedList()
+        .flatList()
         .overlay {
             if supplements.isEmpty {
                 ContentUnavailableView {
