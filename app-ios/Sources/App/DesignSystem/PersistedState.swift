@@ -49,36 +49,39 @@ enum DraftStore {
         UserDefaults.standard.set(data, forKey: prefix + key)
     }
 
-    static func clear(_ key: String) {
+    static func clear(_ key: String?) {
+        guard let key else { return }
         UserDefaults.standard.removeObject(forKey: prefix + key)
     }
 }
 
 extension View {
-    /// Restores a saved draft on appear (when present) and saves changes as the user edits. Pass `enabled: false` when
-    /// editing an existing record that shouldn't restore an older draft, or key by record id.
-    func persistDraft<Value: Codable & Equatable>(_ draft: Binding<Value>, key: String, enabled: Bool = true) -> some View {
-        modifier(PersistDraftModifier(draft: draft, key: key, enabled: enabled))
+    /// Restores the draft saved under `key` on appear and saves every change, so a form survives the app being killed
+    /// and SwiftUI rebuilding the sheet. A nil key persists nothing: a form opened prefilled from something else (a
+    /// duplicate, a scan, a selection) must not be replaced by an older draft. `restored` runs after a saved draft
+    /// replaces the opened one.
+    func persistDraft<Value: Codable & Equatable>(_ draft: Binding<Value>, key: String?, restored: (() -> Void)? = nil) -> some View {
+        modifier(PersistDraftModifier(draft: draft, key: key, restored: restored))
     }
 }
 
 private struct PersistDraftModifier<Value: Codable & Equatable>: ViewModifier {
     @Binding var draft: Value
-    let key: String
-    let enabled: Bool
+    let key: String?
+    let restored: (() -> Void)?
     @State private var loaded = false
 
     func body(content: Content) -> some View {
         content
             .onAppear {
-                guard enabled, !loaded else { return }
+                guard let key, !loaded else { return }
                 loaded = true
-                if let saved = DraftStore.load(Value.self, key: key) {
-                    draft = saved
-                }
+                guard let saved = DraftStore.load(Value.self, key: key) else { return }
+                draft = saved
+                restored?()
             }
             .onChange(of: draft) { _, newValue in
-                guard enabled, loaded else { return }
+                guard let key, loaded else { return }
                 DraftStore.save(newValue, key: key)
             }
     }
