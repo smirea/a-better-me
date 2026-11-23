@@ -1,0 +1,4 @@
+{
+	"title": "Flatten history lists and add FlatSection subtitle",
+	"description": "History lists in metrics and pings now render flat on the main background."
+}

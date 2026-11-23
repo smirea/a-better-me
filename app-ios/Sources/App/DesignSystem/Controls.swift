@@ -36,9 +36,11 @@ struct ThemedSection<Content: View>: View {
 }
 
 /// A flat content section for `ScrollView` / `LazyVStack` screens: an optional top hairline divider, an optional
-/// `SectionHeader`, and content directly on `Theme.background` without a `Theme.surface` card wrapper.
+/// `SectionHeader` (with optional muted subtitle), and content directly on `Theme.background` without a `Theme.surface`
+/// card wrapper.
 struct FlatSection<HeaderAction: View, Content: View>: View {
     var title: String?
+    var subtitle: String?
     var divider = true
     var spacing: CGFloat = 10
     @ViewBuilder let headerAction: HeaderAction
@@ -46,12 +48,14 @@ struct FlatSection<HeaderAction: View, Content: View>: View {
 
     init(
         _ title: String? = nil,
+        subtitle: String? = nil,
         divider: Bool = true,
         spacing: CGFloat = 10,
         @ViewBuilder headerAction: () -> HeaderAction,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
+        self.subtitle = subtitle
         self.divider = divider
         self.spacing = spacing
         self.headerAction = headerAction()
@@ -63,8 +67,15 @@ struct FlatSection<HeaderAction: View, Content: View>: View {
             if divider {
                 Divider().overlay(Theme.separator)
             }
-            if let title {
-                SectionHeader(title) { headerAction }
+            if title != nil || subtitle != nil {
+                VStack(alignment: .leading, spacing: 4) {
+                    if let title {
+                        SectionHeader(title) { headerAction }
+                    }
+                    if let subtitle {
+                        Text(subtitle).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
+                    }
+                }
             }
             content
         }
@@ -73,8 +84,14 @@ struct FlatSection<HeaderAction: View, Content: View>: View {
 }
 
 extension FlatSection where HeaderAction == EmptyView {
-    init(_ title: String? = nil, divider: Bool = true, spacing: CGFloat = 10, @ViewBuilder content: () -> Content) {
-        self.init(title, divider: divider, spacing: spacing, headerAction: { EmptyView() }, content: content)
+    init(
+        _ title: String? = nil,
+        subtitle: String? = nil,
+        divider: Bool = true,
+        spacing: CGFloat = 10,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.init(title, subtitle: subtitle, divider: divider, spacing: spacing, headerAction: { EmptyView() }, content: content)
     }
 }
 
