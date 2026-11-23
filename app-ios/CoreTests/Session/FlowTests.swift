@@ -22,6 +22,13 @@ struct LiveRestTests {
         #expect(LiveRest.afterLogging(90, at: Self.at(150), now: Self.at(150), replacing: running) == LiveRest(endsAt: Self.at(240), duration: 90))
     }
 
+    @Test func aRestClearedAtItsEndRanOutButOneClearedEarlierWasSkipped() {
+        let rest = LiveRest.starting(120, at: Self.at(100), now: Self.at(100))!
+        #expect(rest.ranOut(by: Self.at(219.5)))
+        #expect(rest.ranOut(by: Self.at(221)))
+        #expect(!rest.ranOut(by: Self.at(200)))
+    }
+
     @Test func aLaterSetWhoseRestIsOverEndsTheRunningOne() {
         let running = LiveRest.starting(300, at: Self.at(100), now: Self.at(100))
         #expect(LiveRest.afterLogging(10, at: Self.at(110), now: Self.at(200), replacing: running) == nil)

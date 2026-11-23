@@ -1,6 +1,7 @@
 import Foundation
 import HealthKit
 import Observation
+import os
 import WatchConnectivity
 import WatchKit
 
@@ -24,6 +25,7 @@ final class WatchModel: NSObject {
     private(set) var actedRows: [UUID] = []
 
     @ObservationIgnored let healthStore = HKHealthStore()
+    nonisolated static let restLog = Logger(subsystem: "com.stefan.a-better-me", category: "Rest")
     @ObservationIgnored private var lastStatsSent = Date.distantPast
     /// The rest the wrist is tapped at the end of, whoever started it.
     @ObservationIgnored private var restEnd: (rest: LiveRest, task: Task<Void, Never>)?
@@ -84,6 +86,10 @@ final class WatchModel: NSObject {
         guard workout != nil, let event = replica.record(kind, at: .now) else { return }
         switch kind {
         case .log(let rowID, _), .skip(let rowID): actedRows.append(rowID)
+        case .skipRest:
+            // A skip in the rest's last seconds would otherwise pass for the rest running out.
+            restEnd?.task.cancel()
+            restEnd = nil
         default: break
         }
         deliver(event)
@@ -152,14 +158,18 @@ final class WatchModel: NSObject {
     /// Taps the wrist when the rest on screen ends, from the model rather than the view, so it fires with the wrist down
     /// while the workout session keeps the app running.
     private func followRest() {
-        let rest = workout.flatMap { $0.isFinished || $0.pausedAt != nil ? nil : $0.rest }
+        let running = workout.flatMap { $0.isFinished || $0.pausedAt != nil ? nil : $0 }
+        let rest = running?.rest
         guard rest != restEnd?.rest else { return }
+        if running != nil, rest == nil, let ending = restEnd?.rest, ending.ranOut(by: .now) { return }
         restEnd?.task.cancel()
         guard let rest, rest.endsAt > .now else { return restEnd = nil }
         restEnd = (rest, Task { [weak self] in
             try? await Task.sleep(for: .seconds(rest.endsAt.timeIntervalSinceNow))
             guard !Task.isCancelled, let self, let workout = self.workout else { return }
-            guard RestEndHaptic.device(vibrate: workout.rules.rest.vibrate, watchRecords: self.recording != nil) == .watch else { return }
+            let haptic = RestEndHaptic.device(vibrate: workout.rules.rest.vibrate, watchRecords: self.recording != nil)
+            Self.restLog.info("Rest ended, haptic on \(String(describing: haptic), privacy: .public), app \(WKApplication.shared().applicationState.rawValue)")
+            guard haptic == .watch else { return }
             WKInterfaceDevice.current().play(.notification)
         })
     }
@@ -202,7 +212,7 @@ final class WatchModel: NSObject {
                 // A finished workout still saves the recovered session.
                 guard !isGone(finishedCounts: false) else { return recovered.discard() }
                 adopt(recovered)
-                try? await recovered.session.startMirroringToCompanionDevice()
+                recovered.startMirroring()
                 return
             }
             if askingForAccess {
