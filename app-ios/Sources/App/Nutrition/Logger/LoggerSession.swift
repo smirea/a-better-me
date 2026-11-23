@@ -37,8 +37,6 @@ final class LoggerSession {
     /// Lives here, not in the tab, so switching tabs mid-ramble keeps its rows.
     let ramble: RambleCapture
     var tab: LoggerTab
-    /// The Library tab's opening section; the library keeps its own after that.
-    let library: FoodLibraryView.Tab
     /// The time chip's choice, or the hour the logger was opened at. Nil follows the clock, so a plate logged after
     /// the hour turns lands in the new hour instead of before the foods logged since.
     private var chosenTime: LogTime?
@@ -99,7 +97,6 @@ final class LoggerSession {
         self.recognizer = recognizer
         ramble = RambleCapture(store: store, index: { search.index }, listener: listener)
         tab = start.tab
-        library = start.library
         chosenTime = start.time
         results = (try? search.local("")) ?? []
         ramble.chosenTime = { [weak self] in self?.chosenTime }

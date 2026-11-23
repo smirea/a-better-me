@@ -34,6 +34,7 @@ struct LoggerSheet: View {
         .interactiveDismissDisabled(session?.hasUnlogged == true)
         .task {
             guard session == nil else { return }
+            if let library = start.library { UserDefaults.standard.set(library.rawValue, forKey: FoodLibraryTab.storageKey) }
             do {
                 session = LoggerSession(store: store, search: try await FoodSearch.load(store: store), start: start)
             } catch {
@@ -130,15 +131,7 @@ private struct LoggerContent: View {
         case .search: SearchTab(session: session, open: open).toolbar(.hidden, for: .navigationBar)
         case .quickAdd: QuickAddTab(session: session).toolbar(.hidden, for: .navigationBar)
         case .library:
-            FoodLibraryView(tab: session.library, onOpen: { open($0.pick) }, onAdd: { session.add($0) })
-                .safeAreaInset(edge: .bottom) {
-                    HStack {
-                        Spacer()
-                        LogFoodsButton(session: session).controlSize(.large)
-                    }
-                    .padding(.horizontal, Theme.margin)
-                    .padding(.bottom, 8)
-                }
+            FoodLibraryView(session: session, onOpen: { open($0.pick) })
         }
     }
 

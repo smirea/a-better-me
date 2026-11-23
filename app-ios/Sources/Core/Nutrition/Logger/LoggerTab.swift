@@ -33,7 +33,8 @@ enum LoggerTab: String, CaseIterable, Hashable, Sendable {
 /// time.
 struct LoggerStart: Hashable, Identifiable, Sendable {
     var tab = LoggerTab.search
-    var library = FoodLibraryTab.foods
+    /// The Library segment a quick action names; otherwise the Library opens on the one last chosen.
+    var library: FoodLibraryTab?
     var time: LogTime?
 
     var id: Self { self }
