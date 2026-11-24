@@ -168,12 +168,17 @@ function setView(view: (typeof VIEWS)[number]) {
   select("views", view);
 }
 
-/** The sphere around the lifter and the equipment at the start position, measured once per rep. */
+/** The sphere the camera frames, measured once per rep at the start position. */
 const fit = new Sphere();
 
+// Framed on the lifter, not the machine: a Smith machine is twice the lifter's width and would shrink the figure to
+// a third of the stage. The frame grows only far enough to keep a hint of the equipment around it.
 function measureFit() {
   figure.pose(kin.frames[0]);
-  figure.bounds().union(new Box3().setFromObject(equipment)).getBoundingSphere(fit);
+  const lifter = figure.bounds().getBoundingSphere(new Sphere());
+  const everything = figure.bounds().union(new Box3().setFromObject(equipment)).getBoundingSphere(new Sphere());
+  fit.center.copy(lifter.center).lerp(everything.center, 0.25);
+  fit.radius = Math.max(lifter.radius * 1.12, everything.radius * 0.62);
 }
 
 // A stage narrower than it is tall has to back off until the scene fits its width.
