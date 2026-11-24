@@ -125,6 +125,39 @@ struct PingTimeline: Equatable, Sendable {
         return rows
     }
 
+    /// Where a row dropped at `index` of `rows`, the day's rows without it, moves to: a minute after the row above it, as
+    /// the owner asked (2026-11-24), so a ping dragged under Breakfast at 9:00 reads 9:01. When the row below comes sooner,
+    /// it lands halfway between the two, and dropped at the top it lands a minute before the first row. A group above counts
+    /// from its last log. It never leaves its day. Nil when there is no other row to drop beside.
+    static func dropTime(at index: Int, in rows: [PingTimelineRow], on day: CalendarDay, calendar: Calendar = .current) -> Date? {
+        let previous = rows.indices.contains(index - 1) ? rows[index - 1].entries.map(\.log.loggedAt).max() ?? rows[index - 1].at : nil
+        let next = rows.indices.contains(index) ? rows[index].at : nil
+        let time: Date
+        if let previous {
+            let after = previous.addingTimeInterval(60)
+            time = next.map { after < $0 ? after : previous.addingTimeInterval($0.timeIntervalSince(previous) / 2) } ?? after
+        } else if let next {
+            time = next.addingTimeInterval(-60)
+        } else {
+            return nil
+        }
+        let start = day.date(in: calendar)
+        let end = day.adding(days: 1).date(in: calendar).addingTimeInterval(-1)
+        return min(max(time, start), end)
+    }
+
+    /// The logs of `row` moved to where it was dropped among `rows`, the day's rows without it (`dropTime`). A group's
+    /// logs all land there, a second apart in their order: kept apart as they were, a group dropped just above a marker
+    /// split around it.
+    static func drop(_ row: PingTimelineRow, at index: Int, in rows: [PingTimelineRow], on day: CalendarDay, calendar: Calendar = .current) -> [PingLog] {
+        guard let time = dropTime(at: index, in: rows, on: day, calendar: calendar) else { return [] }
+        return row.entries.enumerated().map { offset, entry in
+            var log = entry.log
+            log.loggedAt = time.addingTimeInterval(TimeInterval(offset))
+            return log
+        }
+    }
+
     static func on(_ day: CalendarDay, calendar: Calendar = .current) -> DatabaseQuery<PingTimeline> {
         DatabaseQuery(PingTimeline()) { db in
             let pings = Dictionary(try Ping.fetchAll(db).map { ($0.id, $0) }, uniquingKeysWith: { $1 })

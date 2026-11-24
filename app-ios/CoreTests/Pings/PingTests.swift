@@ -77,6 +77,32 @@ struct PingTests {
         #expect(rows.map(\.at) == [at(9), at(9 + 11 / 60), at(14), at(14 + 1 / 60), at(14 + 2 / 60), at(15), at(15 + 1 / 60)])
     }
 
+    @Test func aDroppedRowLandsAMinuteAfterTheRowAboveItHalfwayWhenTheRowBelowIsSoonerAndNeverOffItsDay() {
+        let today = calendarDay("2026-11-19")
+        let breakfast = TimelineMarker(id: "meal/breakfast", kind: .meal, at: at(9), title: "Breakfast")
+        let late = TimelineMarker(id: "asleep", kind: .asleep, at: at(23 + 59.5 / 60), title: "Fell Asleep")
+        let rows = PingTimeline(entries: [entry(mood, 9 + 0.5 / 60, value: 3)], markers: [breakfast]).rows()
+        #expect(PingTimeline.dropTime(at: 1, in: rows, on: today, calendar: utc) == at(9) + 15)
+        #expect(PingTimeline.dropTime(at: 2, in: rows, on: today, calendar: utc) == at(9 + 1.5 / 60))
+        #expect(PingTimeline.dropTime(at: 0, in: rows, on: today, calendar: utc) == at(9 - 1.0 / 60))
+        let water = PingTimeline(entries: [entry(water, 10), entry(water, 10 + 5 / 60)]).rows()
+        #expect(PingTimeline.dropTime(at: 1, in: water, on: today, calendar: utc) == at(10 + 6 / 60))
+        let edges = PingTimeline(markers: [TimelineMarker(id: "wake", kind: .wake, at: at(0), title: "Woke Up"), late]).rows()
+        #expect(PingTimeline.dropTime(at: 0, in: edges, on: today, calendar: utc) == at(0))
+        #expect(PingTimeline.dropTime(at: 2, in: edges, on: today, calendar: utc) == at(24) - 1)
+    }
+
+    @Test func aDroppedGroupLandsAtTheDropTimeAsOneRow() {
+        let today = calendarDay("2026-11-19")
+        let weighIn = TimelineMarker(id: "weigh-in", kind: .weighIn, at: at(7.5), title: "Weigh-In")
+        let timeline = PingTimeline(entries: [entry(water, 11 + 50 / 60), entry(water, 11 + 58 / 60)], markers: [weighIn])
+        let group = timeline.rows()[1]
+        let moved = PingTimeline.drop(group, at: 0, in: [.marker(weighIn)], on: today, calendar: utc)
+        let entries = zip(group.entries, moved).map { PingEntry(log: $1, ping: $0.ping) }
+        #expect(PingTimeline(entries: entries, markers: [weighIn]).rows().map(\.entries.count) == [2, 0])
+        #expect(moved.first?.loggedAt == at(7.5 - 1.0 / 60))
+    }
+
     private func at(_ hour: Double) -> Date { day("2026-11-19", 0).addingTimeInterval(hour * 3600) }
 
     private func entry(_ ping: Ping, _ hour: Double, value: Int = 1) -> PingEntry {
