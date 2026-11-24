@@ -24,7 +24,7 @@ import { createBody, fk, newFrame, type Body } from '../src/body';
 import { propParts, type Material, type Part } from '../src/equipment';
 import { kinematics, type CheckResult, type Kinematics, type Sequence } from '../src/exercise';
 import { MUSCLE_NAMES, MUSCLES, TENDON_STRAIN_AT_PEAK, TENDONS, type Muscle } from '../src/muscles';
-import { validateLoad, type Issue } from '../src/validate';
+import { validateLoad, validateMotion, type Issue } from '../src/validate';
 import { Figure } from './figure';
 
 interface FaultData {
@@ -35,13 +35,11 @@ interface FaultData {
 	caught: string[];
 	raised: string[];
 	sequence: Sequence;
-	issues: Issue[];
 	checks: CheckResult[];
 }
 
 interface ExerciseData {
 	sequence: Sequence;
-	issues: Issue[];
 	checks: CheckResult[];
 	catalog: { primary: Muscle[]; secondary: Muscle[]; stretched: Muscle[] };
 	agreement: {
@@ -86,7 +84,7 @@ let body: Body;
 let sequence: Sequence;
 let kin: Kinematics;
 let analysis: Analysis;
-let loadIssues: Issue[] = [];
+let issues: Issue[] = [];
 let figure: Figure;
 
 const canvas = $<HTMLCanvasElement>('canvas');
@@ -168,7 +166,9 @@ function setView(view: (typeof VIEWS)[number]) {
 
 function reanalyze() {
 	analysis = analyze(body, sequence, kin, state.loadKg);
-	loadIssues = validateLoad({ ...sequence, loadKg: state.loadKg }, analysis);
+	// The weight changes the plates and dumbbell heads, so what clips is checked again at the weight on screen.
+	const loaded = { ...sequence, loadKg: state.loadKg };
+	issues = [...validateMotion(body, loaded, kin), ...validateLoad(loaded, analysis)];
 }
 
 function current() {
@@ -177,7 +177,7 @@ function current() {
 	return {
 		exercise,
 		fault,
-		issues: [...(fault?.issues ?? exercise.issues), ...loadIssues],
+		issues,
 		checks: fault?.checks ?? exercise.checks,
 	};
 }

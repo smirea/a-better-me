@@ -156,6 +156,19 @@ export const FAULTS: Fault[] = [
 		},
 	},
 	{
+		id: 'bench-jitter',
+		exercise: 'barbell-bench-press',
+		label: 'Elbows jitter',
+		what: 'Both elbows shake 3° back and forth on alternate frames, too little to count as a pop.',
+		expect: ['jerky'],
+		apply: (sequence, body) => {
+			sequence.poses.forEach((pose, f) => {
+				pose[dof(body, 'elbow_L')] += rad(f % 2 ? 1.5 : -1.5);
+				pose[dof(body, 'elbow_R')] += rad(f % 2 ? 1.5 : -1.5);
+			});
+		},
+	},
+	{
 		id: 'bench-too-heavy',
 		exercise: 'barbell-bench-press',
 		label: '200 kg on the bar',

@@ -3,7 +3,7 @@ import { anchorPoint, selfCollisionPairs, SIDES, type Body } from './body';
 import type { Analysis } from './biomech';
 import { compileParts, propParts, signedDistance, type Shape } from './equipment';
 import type { Built, CheckResult, Kinematics, Sequence } from './exercise';
-import { deg, quatFromRotVec } from './math';
+import { deg, quatFromRotVec, rotVecFromQuat } from './math';
 import { MUSCLE_NAMES, MUSCLES, TENDONS } from './muscles';
 import { capsulePenetration, capsulesInWorld, limitViolations, newCapsules, obstaclePenetration } from './solver';
 
@@ -208,20 +208,22 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
 	const dt = 1 / sequence.fps;
 	const qa = quatFromRotVec(0, 0, 0);
 	const qb = quatFromRotVec(0, 0, 0);
-	const step = (joint: (typeof body.joints)[number], a: number[], b: number[]) => {
+	/** One frame's signed rotation of a joint, in degrees per axis, so a reversal shows as a change of sign. */
+	const step = (joint: (typeof body.joints)[number], a: number[], b: number[]): number[] => {
 		const i = joint.kind === 'root' ? 3 : joint.dofStart;
-		if (joint.kind === 'hinge' || joint.kind === 'universal')
-			return deg(Math.max(...joint.dofs.map((_, n) => Math.abs(b[i + n] - a[i + n]))));
+		if (joint.kind === 'hinge' || joint.kind === 'universal') return joint.dofs.map((_, n) => deg(b[i + n] - a[i + n]));
 		quatFromRotVec(a[i], a[i + 1], a[i + 2], qa);
 		quatFromRotVec(b[i], b[i + 1], b[i + 2], qb);
-		return deg(qa.angleTo(qb));
+		return rotVecFromQuat(qa.invert().multiply(qb)).map(deg);
 	};
 	for (const joint of body.joints) {
 		for (let f = 0; f < count; f++) {
 			const previous = sequence.poses[(f - 1 + count) % count];
 			const current = sequence.poses[f];
 			const next = sequence.poses[(f + 1) % count];
-			const moved = step(joint, previous, current);
+			const before = step(joint, previous, current);
+			const after = step(joint, current, next);
+			const moved = Math.hypot(...before);
 			const speed = moved / dt;
 			const name = pretty(joint.name);
 			if (moved > LIMITS.jump) {
@@ -239,7 +241,7 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
 					detail: `${worst.toFixed(0)}°/s`,
 				}));
 			}
-			const acceleration = Math.abs(step(joint, current, next) - moved) / (dt * dt);
+			const acceleration = Math.hypot(...after.map((value, n) => value - before[n])) / (dt * dt);
 			if (acceleration > LIMITS.acceleration && moved <= LIMITS.jump) {
 				collector.add(`jerk:${joint.name}`, f, acceleration, worst => ({
 					code: 'jerky',

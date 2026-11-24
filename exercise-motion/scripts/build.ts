@@ -77,7 +77,6 @@ for (const spec of EXERCISES) {
 			caught,
 			raised,
 			sequence: broken,
-			issues: validateMotion(body, broken, brokenKin),
 			checks: brokenChecks,
 		};
 	});
@@ -90,7 +89,6 @@ for (const spec of EXERCISES) {
 	);
 	exercises.push({
 		sequence,
-		issues,
 		checks,
 		catalog: { primary: entry.primaryMuscles, secondary: entry.secondaryMuscles, stretched },
 		agreement,

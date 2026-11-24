@@ -28,11 +28,11 @@ The catalog's exercises come with instructions and two or three still frames, an
 - **Motion flags** (`validateMotion`): a joint past its range, the body through itself, the body through equipment beyond what a contact allows, anything under the floor, a required contact lost or sliding, a joint moving faster than a controlled rep, a pop between frames, a left and right side that differ, and a loop that doesn't close.
 - **Load flags** (`validateLoad`): the centre of pressure outside the feet, a joint asked for more torque than its muscles have, a muscle past its end range, a tendon loaded past peak muscle force.
 - **Form checks** come from the exercise's own instructions, each quoting the sentence it measures.
-- **The detectors are tested by breaking reps on purpose** (`faults.ts`): a rounded back, a bar pushed through the chest, missing frames, hyperextended knees, too much weight. The build fails when one goes uncaught, since a clean rep only means something if a broken one fails.
+- **The detectors are tested by breaking reps on purpose** (`faults.ts`): a rounded back, a bar pushed through the chest, missing frames, a jitter too small to count as a pop, hyperextended knees, too much weight. The build fails when one goes uncaught, since a clean rep only means something if a broken one fails.
 
 ## Evaluation (2026-11-24)
 
-All three reps generate in under 0.2 s each with no flags, and pass every instruction check (11, 12, and 13). All 10 fault tests are caught. Against the catalog: the squat's four listed muscles and the bench press's three are exactly the model's most engaged; the deadlift has four of six. Of the muscles the catalog marks as stretched, the model stretches eight of nine past 40% of their range.
+All three reps generate in under 0.2 s each with no flags, and pass every instruction check (11, 12, and 13). All 11 fault tests are caught. Against the catalog: the squat's four listed muscles and the bench press's three are exactly the model's most engaged; the deadlift has four of six. Of the muscles the catalog marks as stretched, the model stretches eight of nine past 40% of their range.
 
 ## What it defers
 
