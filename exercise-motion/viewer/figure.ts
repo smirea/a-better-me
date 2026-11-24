@@ -1,217 +1,227 @@
 import {
   Box3,
+  BufferAttribute,
+  BufferGeometry,
   Color,
   Group,
   Mesh,
   MeshStandardMaterial,
+  NearestFilter,
   Quaternion,
+  Texture,
   Vector3,
   Vector4,
 } from "three";
-import { SIDES, type Body, type Frame } from "../src/body";
+import type { Body, Frame } from "../src/body";
 import { MUSCLES } from "../src/muscles";
-import { createAnatomyAtlas } from "./anatomy";
-import { createFigureGeometry } from "./figure-mesh";
+import { decodeLifter, type LifterAsset } from "./lifter-asset";
 
 const BODY = new Color("#2e2e2e");
 const PLATE = new Color("#4a4a4a");
 
+/**
+ * How far each finger bone bends past its rest curl to wrap a bar, in degrees, by segment from the palm out. A press
+ * grip carries the bar in the heel of the hand, so the fingers close a little less.
+ */
+const CURL = {
+  hang: { thumb: [20, 35, 30], finger: [75, 80, 50] },
+  press: { thumb: [25, 40, 35], finger: [85, 85, 50] },
+};
+
+function readAsset(): LifterAsset {
+  const element = document.getElementById("lifter");
+  if (!element?.textContent) throw new Error("The page has no lifter mesh");
+  const bytes = Uint8Array.from(atob(element.textContent.trim()), (c) => c.charCodeAt(0));
+  return decodeLifter(bytes.buffer);
+}
+
+interface Rest {
+  position: Vector3;
+  rotation: Quaternion;
+}
+
 export class Figure {
   readonly group = new Group();
-  private readonly mesh;
-  private readonly bind: Vector3[];
-  private readonly shoulders: { joint: number; clavicle: number }[];
-  private readonly rotations: Quaternion[];
-  private readonly relativeRotation = new Quaternion();
-  private readonly twist = new Quaternion();
-  private readonly translation = new Vector3();
-  private readonly dual: Vector4[];
-  private readonly grip = { value: 0 };
-  private readonly colors = [
-    BODY,
-    ...Array.from({ length: MUSCLES.length * 2 }, () => PLATE.clone()),
-  ];
+  private readonly asset: LifterAsset;
+  private readonly mesh: Mesh;
+  private readonly bind: Rest[];
+  private readonly fingerRest: Rest[];
+  /** Each finger bone's parent: a rig joint index, or a finger bone's own index past the rig joints. */
+  private readonly fingerParent: number[];
+  private readonly posed: Rest[];
+  /** Each joint's skin transform, posed times rest inverse: a rotation and the translation after it. */
+  private readonly rotation: Vector4[];
+  private readonly translation: Vector3[];
+  private grip: keyof typeof CURL = "hang";
+  private readonly colors = [BODY, ...Array.from({ length: MUSCLES.length * 2 }, () => PLATE.clone())];
+  private readonly q = new Quaternion();
+  private readonly t = new Vector3();
+  private readonly curl = new Quaternion();
+  private readonly axis = new Vector3(1, 0, 0);
 
-  constructor(body: Body) {
-    this.bind = [];
-    for (const joint of body.joints) {
-      this.bind.push(
-        joint.parent < 0 ? new Vector3() : this.bind[joint.parent].clone().add(joint.offset),
-      );
-    }
-    this.shoulders = SIDES.map((side) => ({
-      joint: body.index[`shoulder_${side}`],
-      clavicle: body.index[`clavicle_${side}`],
-    }));
-    const jointCount = body.joints.length + this.shoulders.length;
-    this.rotations = Array.from({ length: jointCount }, () => new Quaternion());
-    this.dual = Array.from({ length: jointCount }, () => new Vector4(0, 0, 0, 0));
-    const atlas = createAnatomyAtlas();
-    const material = new MeshStandardMaterial({
-      bumpMap: atlas,
-      bumpScale: 0.008,
-      roughness: 0.77,
+  constructor(private readonly body: Body) {
+    this.asset = readAsset();
+    const jointCount = body.joints.length + this.asset.fingers.length;
+    const rest = (position: number[], rotation: number[]) => ({
+      position: new Vector3(...position),
+      rotation: new Quaternion(...rotation),
     });
+    this.bind = this.asset.bind.map((frame) => rest(frame.position, frame.rotation));
+    this.fingerRest = this.asset.fingers.map((bone) => rest(bone.position, bone.rotation));
+    this.fingerParent = this.asset.fingers.map((bone) => {
+      const rig = body.index[bone.parent];
+      return rig ?? body.joints.length + this.asset.fingers.findIndex((other) => other.name === bone.parent);
+    });
+    this.posed = Array.from({ length: jointCount }, () => ({ position: new Vector3(), rotation: new Quaternion() }));
+    this.rotation = Array.from({ length: jointCount }, () => new Vector4(0, 0, 0, 1));
+    this.translation = Array.from({ length: jointCount }, () => new Vector3());
 
-    // Blending rigid transforms as dual quaternions retains joint volume at deep flexion and forearm twist.
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new BufferAttribute(this.asset.positions, 3));
+    geometry.setAttribute("normal", new BufferAttribute(this.asset.normals, 3));
+    geometry.setAttribute("uv", new BufferAttribute(this.asset.uvs, 2));
+    geometry.setAttribute("rotationCenter", new BufferAttribute(this.asset.centers, 3));
+    geometry.setAttribute("jointIndex", new BufferAttribute(this.asset.skinIndex, 4));
+    geometry.setAttribute("jointWeight", new BufferAttribute(this.asset.skinWeight, 4, true));
+    geometry.setIndex(new BufferAttribute(this.asset.indices, 1));
+
+    // Red is each texel's relief, which also lights the grooves as bump; green names its plate, read exactly.
+    const map = new Texture();
+    map.flipY = true;
+    map.generateMipmaps = false;
+    map.magFilter = NearestFilter;
+    const relief = new Texture();
+    relief.flipY = true;
+    const image = new Image();
+    image.onload = () => {
+      map.image = image;
+      relief.image = image;
+      map.needsUpdate = true;
+      relief.needsUpdate = true;
+    };
+    image.src = `data:image/png;base64,${document.getElementById("muscle-map")?.textContent?.trim()}`;
+    const material = new MeshStandardMaterial({ bumpMap: relief, bumpScale: 1.6, roughness: 0.66, metalness: 0.02 });
+    // Each vertex turns by the blend of its joints' rotations about its own centre of rotation, which the joints carry
+    // as linear blending would. That keeps volume at a deep bend without the bulge dual quaternions leave.
     material.onBeforeCompile = (shader) => {
-      shader.uniforms.jointRotation = { value: this.rotations };
-      shader.uniforms.jointDual = { value: this.dual };
-      shader.uniforms.pressGrip = this.grip;
+      shader.uniforms.jointRotation = { value: this.rotation };
+      shader.uniforms.jointTranslation = { value: this.translation };
+      shader.uniforms.muscleMap = { value: map };
       shader.uniforms.musclePalette = { value: this.colors };
-      shader.vertexShader = shader.vertexShader
-        .replace(
-          "#include <common>",
-          `#include <common>
-					attribute vec3 jointIndices;
-					attribute vec2 jointWeights;
-					attribute float gripShift;
-					uniform vec4 jointRotation[${jointCount}];
-					uniform vec4 jointDual[${jointCount}];
-					uniform float pressGrip;
-					vec3 rotateSkin(vec4 q, vec3 v) {
-						return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
-					}
-				`,
-        )
-        .replace(
-          "#include <beginnormal_vertex>",
-          `
-					int primaryJoint = int(jointIndices.x);
-					int secondaryJoint = int(jointIndices.y);
-					vec4 a = jointRotation[primaryJoint];
-					vec4 b = jointRotation[secondaryJoint];
-					float hemisphere = dot(a, b) < 0.0 ? -1.0 : 1.0;
-					vec4 real = mix(a, hemisphere * b, jointWeights.x);
-					vec4 dual = mix(jointDual[primaryJoint], hemisphere * jointDual[secondaryJoint], jointWeights.x);
-					if (jointWeights.y > 0.0) {
-						int shoulderJoint = int(jointIndices.z);
-						vec4 shoulder = jointRotation[shoulderJoint];
-						float shoulderHemisphere = dot(real, shoulder) < 0.0 ? -1.0 : 1.0;
-						real = mix(real, shoulderHemisphere * shoulder, jointWeights.y);
-						dual = mix(dual, shoulderHemisphere * jointDual[shoulderJoint], jointWeights.y);
-					}
-					float invLen = inversesqrt(dot(real, real));
-					vec4 rotation = real * invLen;
-					dual *= invLen;
-					vec3 translation = 2.0 * (rotation.w * dual.xyz - dual.w * rotation.xyz + cross(rotation.xyz, dual.xyz));
-					vec3 objectNormal = rotateSkin(rotation, normal);
-				`,
-        )
-        .replace(
-          "#include <begin_vertex>",
-          `
-					vec3 localPosition = position + vec3(0.0, pressGrip * gripShift, 0.0);
-					vec3 transformed = rotateSkin(rotation, localPosition) + translation;
-				`,
-        );
       shader.fragmentShader = shader.fragmentShader
         .replace(
           "#include <common>",
           `#include <common>
-					uniform vec3 musclePalette[${this.colors.length}];
-				`,
+          uniform sampler2D muscleMap;
+          uniform vec3 musclePalette[${this.colors.length}];`,
         )
         .replace(
           "#include <color_fragment>",
-          `
-					ivec2 pixel = ivec2(vBumpMapUv * vec2(textureSize(bumpMap, 0)));
-					int plate = int(round(texelFetch(bumpMap, pixel, 0).b * 255.0));
-					float coverage = texture2D(bumpMap, vBumpMapUv).g;
-					diffuseColor.rgb *= mix(musclePalette[0], musclePalette[plate], coverage);
-				`,
+          `ivec2 texel = ivec2(vBumpMapUv * vec2(textureSize(muscleMap, 0)));
+          int plate = int(round(texelFetch(muscleMap, texel, 0).g * 255.0));
+          float rise = smoothstep(0.12, 0.55, texture2D(bumpMap, vBumpMapUv).r);
+          diffuseColor.rgb = mix(musclePalette[0], musclePalette[plate], plate > 0 ? rise : 0.0);`,
         );
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          "#include <common>",
+          `#include <common>
+          attribute vec4 jointIndex;
+          attribute vec4 jointWeight;
+          attribute vec3 rotationCenter;
+          uniform vec4 jointRotation[${jointCount}];
+          uniform vec3 jointTranslation[${jointCount}];
+          vec3 rotateSkin(vec4 q, vec3 v) {
+            return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
+          }`,
+        )
+        .replace(
+          "#include <beginnormal_vertex>",
+          `vec4 pivot = jointRotation[int(jointIndex.x)];
+          vec4 blended = vec4(0.0);
+          vec3 carried = vec3(0.0);
+          for (int k = 0; k < 4; k++) {
+            float w = jointWeight[k];
+            if (w == 0.0) continue;
+            int j = int(jointIndex[k]);
+            vec4 r = jointRotation[j];
+            blended += (dot(pivot, r) < 0.0 ? -w : w) * r;
+            carried += w * (rotateSkin(r, rotationCenter) + jointTranslation[j]);
+          }
+          vec4 rotation = normalize(blended);
+          vec3 translation = carried - rotateSkin(rotation, rotationCenter);
+          vec3 objectNormal = rotateSkin(rotation, normal);`,
+        )
+        .replace("#include <begin_vertex>", "vec3 transformed = rotateSkin(rotation, position) + translation;");
     };
 
-    this.mesh = new Mesh(createFigureGeometry(body), material);
+    this.mesh = new Mesh(geometry, material);
     this.mesh.frustumCulled = false;
     this.group.add(this.mesh);
   }
 
   setPressGrip(enabled: boolean) {
-    this.grip.value = Number(enabled);
+    this.grip = enabled ? "press" : "hang";
   }
 
   pose(frame: Frame) {
-    for (let i = 0; i < this.bind.length; i++) {
-      const q = this.rotations[i].copy(frame.rot[i]);
-      this.setDual(i, frame.pos[i], this.bind[i], q);
+    const rig = this.body.joints.length;
+    for (let j = 0; j < rig; j++) {
+      this.posed[j].position.copy(frame.pos[j]);
+      this.posed[j].rotation.copy(frame.rot[j]);
+      this.setSkin(j, this.bind[j]);
     }
-    // The deltoid follows the arm's swing. Axial twist blends in below the cap to keep the armpit from winding up.
-    this.shoulders.forEach(({ joint, clavicle }, side) => {
-      const index = this.bind.length + side;
-      const local = this.relativeRotation
-        .copy(frame.rot[clavicle])
-        .invert()
-        .multiply(frame.rot[joint]);
-      const inverseTwist = this.twist.set(0, -local.y, 0, local.w).normalize();
-      const q = this.rotations[index].copy(frame.rot[joint]).multiply(inverseTwist);
-      this.setDual(index, frame.pos[joint], this.bind[joint], q);
+    const curls = CURL[this.grip];
+    this.asset.fingers.forEach((bone, f) => {
+      const parent = this.fingerParent[f];
+      const parentRest = parent < rig ? this.bind[parent] : this.fingerRest[parent - rig];
+      const parentPosed = this.posed[parent];
+      const rest = this.fingerRest[f];
+      const posed = this.posed[rig + f];
+      const local = this.q.copy(parentRest.rotation).invert();
+      this.t.copy(rest.position).sub(parentRest.position).applyQuaternion(local);
+      posed.position.copy(this.t).applyQuaternion(parentPosed.rotation).add(parentPosed.position);
+      const angle = (bone.finger === 1 ? curls.thumb : curls.finger)[bone.segment - 1];
+      this.curl.setFromAxisAngle(this.axis, (angle * Math.PI) / 180);
+      posed.rotation.copy(parentPosed.rotation).multiply(local.multiply(rest.rotation)).multiply(this.curl);
+      this.setSkin(rig + f, rest);
     });
   }
 
-  private setDual(index: number, position: Vector3, bind: Vector3, q: Quaternion) {
-    const t = this.translation.copy(bind).applyQuaternion(q).negate().add(position);
-    this.dual[index].set(
-      (t.x * q.w + t.y * q.z - t.z * q.y) * 0.5,
-      (t.y * q.w + t.z * q.x - t.x * q.z) * 0.5,
-      (t.z * q.w + t.x * q.y - t.y * q.x) * 0.5,
-      -(t.x * q.x + t.y * q.y + t.z * q.z) * 0.5,
-    );
+  /** The skin transform posed * rest⁻¹. */
+  private setSkin(index: number, rest: Rest) {
+    const posed = this.posed[index];
+    const q = this.q.copy(rest.rotation).invert().premultiply(posed.rotation);
+    this.rotation[index].set(q.x, q.y, q.z, q.w);
+    this.translation[index].copy(rest.position).applyQuaternion(q).negate().add(posed.position);
   }
 
   bounds() {
     const box = new Box3();
-    const { position, jointIndices, jointWeights, gripShift } = this.mesh.geometry.attributes;
-    const p = new Vector3();
-    const translation = new Vector3();
-    const imaginary = new Vector3();
-    const dualVector = new Vector3();
-    const dual = new Vector4();
+    const { positions, centers, skinIndex, skinWeight } = this.asset;
+    const blended = new Vector4();
+    const carried = new Vector3();
+    const center = new Vector3();
+    const joint = new Quaternion();
     const q = new Quaternion();
-    for (let i = 0; i < position.count; i++) {
-      const a = jointIndices.getX(i);
-      const b = jointIndices.getY(i);
-      const t = jointWeights.getX(i);
-      const first = this.rotations[a];
-      const second = this.rotations[b];
-      const mix = first.dot(second) < 0 ? -t : t;
-      q.set(
-        first.x * (1 - t) + second.x * mix,
-        first.y * (1 - t) + second.y * mix,
-        first.z * (1 - t) + second.z * mix,
-        first.w * (1 - t) + second.w * mix,
-      );
-      dual
-        .copy(this.dual[a])
-        .multiplyScalar(1 - t)
-        .addScaledVector(this.dual[b], mix);
-      const shoulderWeight = jointWeights.getY(i);
-      if (shoulderWeight > 0) {
-        const joint = jointIndices.getZ(i);
-        const shoulder = this.rotations[joint];
-        const weight = q.dot(shoulder) < 0 ? -shoulderWeight : shoulderWeight;
-        const base = 1 - shoulderWeight;
-        q.set(
-          base * q.x + weight * shoulder.x,
-          base * q.y + weight * shoulder.y,
-          base * q.z + weight * shoulder.z,
-          base * q.w + weight * shoulder.w,
-        );
-        dual.multiplyScalar(base).addScaledVector(this.dual[joint], weight);
+    const p = new Vector3();
+    const term = new Vector3();
+    for (let i = 0; i < positions.length / 3; i++) {
+      const pivot = this.rotation[skinIndex[i * 4]];
+      blended.set(0, 0, 0, 0);
+      carried.set(0, 0, 0);
+      center.fromArray(centers, i * 3);
+      for (let k = 0; k < 4; k++) {
+        const w = skinWeight[i * 4 + k] / 255;
+        if (w === 0) continue;
+        const r = this.rotation[skinIndex[i * 4 + k]];
+        blended.addScaledVector(r, pivot.dot(r) < 0 ? -w : w);
+        joint.set(r.x, r.y, r.z, r.w);
+        carried.addScaledVector(term.copy(center).applyQuaternion(joint).add(this.translation[skinIndex[i * 4 + k]]), w);
       }
-      const invLength = 1 / q.length();
-      q.normalize();
-      dual.multiplyScalar(invLength);
-      imaginary.set(q.x, q.y, q.z);
-      dualVector.set(dual.x, dual.y, dual.z);
-      translation
-        .crossVectors(imaginary, dualVector)
-        .addScaledVector(dualVector, q.w)
-        .addScaledVector(imaginary, -dual.w);
-      p.fromBufferAttribute(position, i);
-      p.y += this.grip.value * gripShift.getX(i);
-      box.expandByPoint(p.applyQuaternion(q).addScaledVector(translation, 2));
+      q.set(blended.x, blended.y, blended.z, blended.w).normalize();
+      p.fromArray(positions, i * 3).sub(center).applyQuaternion(q).add(carried);
+      box.expandByPoint(p);
     }
     return box;
   }
