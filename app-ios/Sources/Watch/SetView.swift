@@ -61,7 +61,11 @@ struct SetView: View {
         .onChange(of: row.id) { load() }
         .onChange(of: focus) { syncCrown() }
         .onChange(of: values.weightKg) { updatePlan() }
-        .onChange(of: plates) { updatePlan() }
+        .onChange(of: plates) {
+            updatePlan()
+            // The bar button changes the loadable weights under the crown, which would otherwise jump from its old index.
+            syncCrown()
+        }
         .onChange(of: crown) { _, crown in
             let index = min(max(Int(crown.rounded()), 0), scale.count - 1)
             guard index != crownIndex, scale.indices.contains(index) else { return }

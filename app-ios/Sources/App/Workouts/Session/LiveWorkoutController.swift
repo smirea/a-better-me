@@ -245,25 +245,36 @@ final class LiveWorkoutController {
     }
 
     /// The watch's bar button, which writes the choice the phone's calculator makes by tapping the bar, for the gym the
-    /// event's session resolves to. The live session is acknowledged once its rebuilt copy shows the change.
+    /// event's session resolves to. The gym is read in the write queue, behind the insert of a session the watch started
+    /// offline, and a session that isn't stored yet waits like any other event for it. The live session is acknowledged
+    /// once its rebuilt copy shows the change.
     private func count(base baseID: EquipmentID, _ counts: Bool, for event: WatchEvent, in store: LocalStore) {
-        let isLive = inputs.session?.id == event.sessionID
         inFlightWatchEvents.insert(event.id)
+        let write = store.write { db -> GymLookup in
+            guard let session = try WorkoutSession.fetchOne(db, key: WorkoutSession.key(event.sessionID)) else { return .missing }
+            return .found(GymProfile.resolve(session.gymID, in: try GymProfile.all.fetch(db)))
+        }
         Task {
-            let gym = isLive ? inputs.gym : try? await store.read { db in
-                GymProfile.resolve(try WorkoutSession.fetchOne(db, key: WorkoutSession.key(event.sessionID))?.gymID, in: try GymProfile.all.fetch(db))
-            }
-            if let gym {
-                store.updateSettings { $0.workout.plateCalculator[gym.id.uuidString, default: PlateCalculatorOptions()].includeBase[baseID] = counts }
-            }
+            let lookup = (try? await write.value) ?? .missing
             inFlightWatchEvents.remove(event.id)
-            if isLive, gym != nil {
+            guard case .found(let gym) = lookup else {
+                if !deferredWatchEvents.contains(where: { $0.id == event.id }) { deferredWatchEvents.append(event) }
+                return
+            }
+            guard let gym else { return remember(event.id) }
+            store.updateSettings { $0.workout.plateCalculator[gym.id.uuidString, default: PlateCalculatorOptions()].includeBase[baseID] = counts }
+            if inputs.session?.id == event.sessionID {
                 unreflectedWatchEvents.append((event, .now))
                 scheduleAcknowledgmentRetry()
             } else {
                 remember(event.id)
             }
         }
+    }
+
+    private enum GymLookup: Sendable {
+        case missing
+        case found(GymProfile?)
     }
 
     private enum StoredOutcome: Sendable {
