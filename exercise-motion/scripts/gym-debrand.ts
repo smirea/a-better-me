@@ -218,10 +218,10 @@ async function buildCleanTextureCache(): Promise<Map<string, CleanTextureResult>
               // Curved brand wordmarks run vertically along outer left (0..31%) and outer right (69..100%)
               // while grip cutouts are top/bottom and "20" sits inside. Paint curved side wedges matching
               // the plate's metallic grey rim (#7c7e80).
-              const rOuter = Math.round(w * 0.44);
-              const rInner = Math.round(w * 0.33);
+              const rOuter = Math.round(w * 0.45);
+              const rInner = Math.round(w * 0.31);
               const rMid = Math.round((rOuter + rInner) / 2);
-              const strokeW = Math.max(8, Math.round(w * 0.13));
+              const strokeW = Math.max(10, Math.round(w * 0.15));
               const x0 = cx - rMid;
               const y0 = cy - rMid;
               const x1 = cx + rMid;
@@ -235,7 +235,7 @@ async function buildCleanTextureCache(): Promise<Map<string, CleanTextureResult>
                 "-strokewidth",
                 String(strokeW),
                 "-draw",
-                `arc ${x0},${y0} ${x1},${y1} -58,58 arc ${x0},${y0} ${x1},${y1} 122,238`,
+                `arc ${x0},${y0} ${x1},${y1} -68,68 arc ${x0},${y0} ${x1},${y1} 112,248`,
                 "-resize",
                 "512x512>",
                 ...(isPng ? [] : ["-quality", "84"]),
@@ -755,12 +755,26 @@ async function processModel(
     }
   }
 
-  // 2. Delete primitives assigned to transparent logo decal materials.
+  // 2. Delete primitives assigned to transparent logo decal materials (and extruded 3D text on mats).
   for (const mesh of doc.getRoot().listMeshes()) {
     const toRemove: Primitive[] = [];
     for (const prim of mesh.listPrimitives()) {
       const mat = prim.getMaterial();
-      if (mat && hideMaterials.has(mat)) toRemove.push(prim);
+      if (mat && hideMaterials.has(mat)) {
+        toRemove.push(prim);
+        continue;
+      }
+      if (item.id === "stretchingmat" && !mat?.getBaseColorTexture()) {
+        const pos = prim.getAttribute("POSITION");
+        if (pos) {
+          const min = pos.getMin([0, 0, 0]);
+          const max = pos.getMax([0, 0, 0]);
+          const tris = (prim.getIndices()?.getCount() ?? pos.getCount()) / 3;
+          const thin = Math.min(max[0] - min[0], max[1] - min[1], max[2] - min[2]);
+          const wide = Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2]);
+          if (tris > 200 && tris < 5000 && thin < 0.008 && wide > 0.15) toRemove.push(prim);
+        }
+      }
     }
     for (const prim of toRemove) prim.dispose();
   }

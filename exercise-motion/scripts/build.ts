@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { analyze } from "../src/biomech";
 import { groupsOf } from "../src/catalog";
@@ -13,9 +14,34 @@ import { loadAppCatalog, MOTION_ROOT, REPO_ROOT } from "./catalog-io";
 const dist = join(MOTION_ROOT, "dist");
 const libraryDir = join(dist, "library");
 const seqDir = join(libraryDir, "sequences");
+const cacheDir = join(MOTION_ROOT, ".cache", "motion-build");
 mkdirSync(seqDir, { recursive: true });
+mkdirSync(cacheDir, { recursive: true });
+
+// Compute one fingerprint over core engine sources so any engine edit invalidates cached sequences.
+const engineFiles = [
+  "body.ts",
+  "solver.ts",
+  "biomech.ts",
+  "muscles.ts",
+  "equipment.ts",
+  "equipment-library.ts",
+  "postures.ts",
+  "exercise.ts",
+  "validate.ts",
+  "checks.ts",
+  "catalog.ts",
+  "faults.ts",
+];
+const engineHash = createHash("sha256");
+for (const f of engineFiles) {
+  const p = join(MOTION_ROOT, "src", f);
+  if (existsSync(p)) engineHash.update(readFileSync(p));
+}
+const ENGINE_SIG = engineHash.digest("hex").slice(0, 12);
 
 const args = process.argv.slice(2);
+const noCache = args.includes("--no-cache");
 const singleIdx = args.indexOf("--single");
 const singleId = singleIdx >= 0 ? args[singleIdx + 1] : null;
 const onlyIds = singleId ? new Set([singleId]) : null;
@@ -86,8 +112,41 @@ let totalMotionIssues = 0;
 let totalLoadIssues = 0;
 let totalChecks = 0;
 let passedChecks = 0;
+let cacheHits = 0;
 
 for (const spec of specsToBuild) {
+  const entry = byCatalogId.get(spec.catalogId);
+  if (!entry)
+    throw new Error(`${spec.name}: catalog id ${spec.catalogId} is not in exercises.json`);
+
+  const srcPath = join(MOTION_ROOT, "src", "exercises", `${spec.id}.ts`);
+  const specSig = existsSync(srcPath)
+    ? createHash("sha256")
+        .update(ENGINE_SIG)
+        .update(readFileSync(srcPath))
+        .digest("hex")
+        .slice(0, 16)
+    : null;
+  const cachePath = specSig ? join(cacheDir, `${spec.id}.${specSig}.json`) : null;
+
+  if (!noCache && cachePath && existsSync(cachePath)) {
+    const cached = JSON.parse(readFileSync(cachePath, "utf8")) as {
+      data: BuiltItem["data"];
+      summary: BuiltItem["summary"];
+      motionIssues: number;
+      loadIssues: number;
+    };
+    cacheHits++;
+    totalMotionIssues += cached.motionIssues;
+    totalLoadIssues += cached.loadIssues;
+    totalChecks += cached.summary.checksTotal;
+    passedChecks += cached.summary.checksPass;
+    writeFileSync(join(seqDir, `${spec.id}.json`), JSON.stringify(cached.data));
+    writeFileSync(join(dist, `${spec.id}.json`), JSON.stringify(cached.data.sequence));
+    builtItems.push({ spec, data: cached.data, summary: cached.summary });
+    continue;
+  }
+
   const started = performance.now();
   const { body, built, sequence } = generate(spec);
   const seconds = (performance.now() - started) / 1000;
@@ -96,9 +155,6 @@ for (const spec of specsToBuild) {
   const issues = validateMotion(body, sequence, kin);
   const loadIssues = validateLoad(sequence, analysis);
   const checks = runChecks(body, built, sequence, kin);
-  const entry = byCatalogId.get(spec.catalogId);
-  if (!entry)
-    throw new Error(`${spec.name}: catalog id ${spec.catalogId} is not in exercises.json`);
   const stretched = groupsOf(entry.selection?.stretchedMuscles ?? []);
 
   totalMotionIssues += issues.length;
@@ -172,24 +228,34 @@ for (const spec of specsToBuild) {
   writeFileSync(join(seqDir, `${sequence.id}.json`), JSON.stringify(itemData));
   writeFileSync(join(dist, `${sequence.id}.json`), JSON.stringify(sequence));
 
-  builtItems.push({
-    spec,
-    data: itemData,
-    summary: {
-      id: sequence.id,
-      catalogId: sequence.catalogId,
-      name: sequence.name,
-      alternativeNames: entry.alternativeNames,
-      category: entry.category,
-      movementPattern: entry.movementPatterns[0] ?? "Other",
-      primaryMuscles: entry.primaryMuscles,
-      secondaryMuscles: entry.secondaryMuscles,
-      equipmentLabel: entry.resistanceEquipment[0] ?? "Bodyweight",
-      issueCount: issues.length + loadIssues.length,
-      checksPass: checks.filter((c) => c.pass).length,
-      checksTotal: checks.length,
-    },
-  });
+  const summary = {
+    id: sequence.id,
+    catalogId: sequence.catalogId,
+    name: sequence.name,
+    alternativeNames: entry.alternativeNames,
+    category: entry.category,
+    movementPattern: entry.movementPatterns[0] ?? "Other",
+    primaryMuscles: entry.primaryMuscles,
+    secondaryMuscles: entry.secondaryMuscles,
+    equipmentLabel: entry.resistanceEquipment[0] ?? "Bodyweight",
+    issueCount: issues.length + loadIssues.length,
+    checksPass: checks.filter((c) => c.pass).length,
+    checksTotal: checks.length,
+  };
+
+  if (cachePath) {
+    writeFileSync(
+      cachePath,
+      JSON.stringify({
+        data: itemData,
+        summary,
+        motionIssues: issues.length,
+        loadIssues: loadIssues.length,
+      }),
+    );
+  }
+
+  builtItems.push({ spec, data: itemData, summary });
 
   if (specsToBuild.length <= 25 || issues.length > 0 || loadIssues.length > 0 || checks.some((c) => !c.pass)) {
     const pct = (value: number) => `${(value * 100).toFixed(0)}%`;
@@ -308,7 +374,7 @@ if (missed.length)
   throw new Error(`Fault tests went uncaught, so a detector is broken: ${missed.join("; ")}`);
 
 console.log(
-  `Built ${builtItems.length} exercises | motion issues: ${totalMotionIssues} | load issues: ${totalLoadIssues} | checks: ${passedChecks}/${totalChecks}`,
+  `Built ${builtItems.length} exercises (${cacheHits} cached) | motion issues: ${totalMotionIssues} | load issues: ${totalLoadIssues} | checks: ${passedChecks}/${totalChecks}`,
 );
 console.log(`Library:     ${join(libraryDir, "index.html")} (${builtItems.length} lazy-loaded exercises)`);
 console.log(`Single-file: ${join(dist, "exercise-motion.html")} (${(html.length / 1e6).toFixed(2)} MB)`);

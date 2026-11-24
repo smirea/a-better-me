@@ -573,7 +573,19 @@ h3 + .stat {
   }
   .bar {
     padding: 10px 12px;
-    gap: 10px;
+    gap: 8px;
+  }
+  .library-picker {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .picker-trigger {
+    width: 100%;
+    max-width: 100%;
+    justify-content: space-between;
+  }
+  .setting-select {
+    flex: 0 0 auto;
   }
   .bar .segmented {
     width: 100%;
@@ -585,11 +597,21 @@ h3 + .stat {
   }
   .load {
     margin-left: 0;
-    width: 100%;
+    flex: 1 1 180px;
+    min-width: 0;
   }
   .load input {
     flex: 1;
+    min-width: 60px;
     width: auto;
+  }
+  .transport {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .transport .segmented.small button {
+    padding: 4px 7px;
+    font-size: 12px;
   }
   .top-left {
     left: 12px;

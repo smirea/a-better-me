@@ -29,14 +29,15 @@ Every exercise file `exercise-motion/src/exercises/<slug>.ts` exports `export co
 - Arms (`_L` / `_R`): `grip_L/R` (middle of closed fist, best for hanging/pulling/dumbbells/cables), `press_L/R` (heel of palm, best for pressing bars/handles), `palmFlat_L/R` (flat palm on floor/bench), `elbowTip_L/R`, `forearmMid_L/R`, `upperArmBack_L/R`
 - Legs (`_L` / `_R`): `thighBack_L/R`, `thighFront_L/R`, `thighOuter_L/R`, `thighInner_L/R`, `kneeFront_L/R`, `kneeBack_L/R`, `shinFront_L/R`, `shinBack_L/R`, `ankleCuff_L/R`, `heel_L/R`, `ballIn_L/R`, `ballOut_L/R`, `toe_L/R`, `secondToe_L/R`
 
-## Equipment & props (`src/equipment.ts` & `src/equipment-library.ts`)
+## Equipment, postures & check helpers (`src/equipment.ts`, `src/equipment-library.ts`, `src/postures.ts`)
 
 Always match the exercise's primary resistance and support equipment accurately:
-- **Benches & Pads:** `flatBench`, `adjustableBench({ backAngleDeg, seatY, seatTiltDeg, ankleRollers })` (returns `{ parts, seat, back }` + use `pointOnPad(surface, along, sink)`!), `preacherBench`, `romanChair`, `platformBox`, `exerciseMat`, `stabilityBall`.
-- **Racks & Bodyweight Stations:** `powerRack`, `benchRack`, `smithMachine`, `pullUpStation`, `dipStation`.
+- **Benches & Pads:** `flatBench`, `adjustableBench({ backAngleDeg, seatY, seatTiltDeg, ankleRollers })` (returns `{ parts, seat, back }` + use `pointOnPad(surface, along, sink)`!), `preacherBench`, `romanChair`, `ghdBench`, `splitSquatStand`, `platformBox`, `exerciseMat`, `stabilityBall`.
+- **Racks & Bodyweight Stations:** `powerRack`, `benchRack`, `smithMachine`, `pullUpStation`, `dipStation`, `landmineBase`, `gymRingProp`, `abWheelProp`, `prowlerSledProp`.
 - **Cables & Bands:** `cableColumn`, `cableCrossover`, `latPulldownMachine`, `seatedRowMachine`, `cableAttachmentProp(id, style)` + `tethers` & `tetherState` to draw live taut cables or elastic bands every frame!
-- **Strength Machines:** `seatedMachineFrame`, `legPressFrame`, `machineHandleProp`, `rollerPadProp`, `legPressSledProp`, or custom `PropDef` `{ id, kind: "parts", parts: [...] }` so every moving lever arm, sled, or roller tracks the lifter smoothly every frame!
+- **Strength & Cardio Machines:** `seatedMachineFrame`, `legPressFrame`, `legExtensionMachine`, `lyingLegCurlMachine`, `hackSquatMachine`, `calfRaiseStation`, `machineHandleProp`, `rollerPadProp`, `legPressSledProp`, `cardioMachine`, or custom `PropDef` `{ id, kind: "parts", parts: [...] }` so every moving lever arm, sled, or roller tracks the lifter smoothly every frame!
 - **Free weights & Bars:** `olympicBar`, `ezBar`, `trapBar`, `safetySquatBar`, `axleBar`, `{ id, kind: "dumbbell" }`, `{ id, kind: "kettlebell" }`, `{ id, kind: "plate" }`, `{ id, kind: "medball" }`.
+- **Posture & check helpers (`src/postures.ts`):** `PAD_RESTING`, `plantBothFeet`, `plantBothToes`, `sitOnSeat`, `restBackOnPad`, `alignBarWrists`, `checkFlatBack`, `checkNeutralNeck`, `checkJointRange`, `checkJointWithinAt`, `checkAnchorTravel`, `checkFeetPlanted`.
 
 ## Biomechanics: `support` & `loads`
 

@@ -638,3 +638,261 @@ export const axleBar = (id = "bar"): PropDef => ({
   radius: 0.025,
   style: "axle",
 });
+
+/** Seated leg extension / seated leg curl machine frame (pivoting roller pad is a moving PropDef). */
+export function legExtensionMachine(options: {
+  seatY?: number;
+  backAngleDeg?: number;
+  thighRollerY?: number;
+} = {}): { parts: Part[]; seatY: number; back: PadSurface; pivot: Vec3 } {
+  const { seatY = 0.56, backAngleDeg = 78, thighRollerY } = options;
+  const seatZ = 0;
+  const backZ = -0.22;
+  const a = rad(backAngleDeg);
+  const up: Vec3 = [0, Math.sin(a), -Math.cos(a)];
+  const normal: Vec3 = [0, Math.cos(a), Math.sin(a)];
+  const backLen = 0.66;
+  const padT = 0.07;
+  const backCenter: Vec3 = [
+    0,
+    seatY + 0.04 + (backLen / 2) * up[1] - (padT / 2) * normal[1],
+    backZ + (backLen / 2) * up[2] - (padT / 2) * normal[2],
+  ];
+  const pivot: Vec3 = [0, seatY - 0.04, 0.24];
+  const parts: Part[] = [
+    box("legext.seat", [0, seatY - 0.035, seatZ], [0.42, 0.07, 0.48], "pad"),
+    box("legext.backPad", backCenter, [0.36, padT, backLen], "pad", true, quatOf([1, 0, 0], a)),
+    box("legext.base", [0, 0.035, -0.15], [0.78, 0.07, 1.35], "steel"),
+    box("legext.seatPost", [0, (seatY - 0.07) / 2, seatZ], [0.08, seatY - 0.07, 0.08], "steel"),
+    box("legext.tower", [0.55, 0.85, -0.35], [0.38, 1.65, 0.3], "steel", false),
+    box("legext.stack", [0.55, 0.78, -0.35], [0.32, 1.35, 0.24], "plate", false),
+    cylinder("legext.handleL", [0.27, seatY - 0.02, 0.08], 0.016, 0.26, "chrome", ALONG_Z),
+    cylinder("legext.handleR", [-0.27, seatY - 0.02, 0.08], 0.016, 0.26, "chrome", ALONG_Z),
+    cylinder("legext.pivotHub", [0.24, pivot[1], pivot[2]], 0.055, 0.08, "chrome", IDENTITY, false),
+  ];
+  if (thighRollerY !== undefined) {
+    parts.push(capsule("legext.thighRoller", [0, thighRollerY, 0.14], 0.055, 0.44, "pad"));
+  }
+  return {
+    parts,
+    seatY,
+    back: { origin: [0, seatY + 0.04, backZ], normal, up },
+    pivot,
+  };
+}
+
+/** Lying (prone) hamstring curl bench (gentle V-angle pad + front handles + weight stack). */
+export function lyingLegCurlMachine(options: { hipY?: number } = {}): {
+  parts: Part[];
+  hipY: number;
+  pivot: Vec3;
+} {
+  const hipY = options.hipY ?? 0.66;
+  const parts: Part[] = [
+    box("legcurl.chestPad", [0, hipY - 0.07, 0.36], [0.38, 0.07, 0.72], "pad", true, quatOf([1, 0, 0], rad(10))),
+    box("legcurl.thighPad", [0, hipY - 0.05, -0.22], [0.38, 0.07, 0.5], "pad", true, quatOf([1, 0, 0], rad(-8))),
+    box("legcurl.base", [0, 0.035, 0.0], [0.76, 0.07, 1.7], "steel"),
+    box("legcurl.postFront", [0, (hipY - 0.1) / 2, 0.52], [0.08, hipY - 0.1, 0.08], "steel"),
+    box("legcurl.postBack", [0, (hipY - 0.1) / 2, -0.32], [0.08, hipY - 0.1, 0.08], "steel"),
+    cylinder("legcurl.handleL", [0.24, hipY - 0.16, 0.72], 0.016, 0.22, "chrome", ALONG_Y),
+    cylinder("legcurl.handleR", [-0.24, hipY - 0.16, 0.72], 0.016, 0.22, "chrome", ALONG_Y),
+    box("legcurl.tower", [0.56, 0.82, -0.42], [0.36, 1.55, 0.3], "steel", false),
+    box("legcurl.stack", [0.56, 0.76, -0.42], [0.3, 1.3, 0.24], "plate", false),
+  ];
+  return { parts, hipY, pivot: [0, hipY - 0.08, -0.48] };
+}
+
+/** 45° Hack squat / V-squat frame (angled back carriage + footplate; carriage moves as a PropDef or rails). */
+export function hackSquatMachine(options: { angleDeg?: number } = {}): {
+  parts: Part[];
+  railDir: Vec3;
+  footOrigin: Vec3;
+} {
+  const angle = rad(options.angleDeg ?? 45);
+  const railDir: Vec3 = [0, Math.sin(angle), -Math.cos(angle)];
+  const footOrigin: Vec3 = [0, 0.18, 0.56];
+  const parts: Part[] = [
+    box("hack.base", [0, 0.04, 0.0], [0.95, 0.08, 1.95], "steel"),
+    box("hack.footPlate", footOrigin, [0.68, 0.05, 0.56], "steel", true, quatOf([1, 0, 0], rad(22))),
+    box("hack.railL", [0.38, 0.96, -0.15], [0.06, 0.06, 1.95], "chrome", false, quatOf([1, 0, 0], angle)),
+    box("hack.railR", [-0.38, 0.96, -0.15], [0.06, 0.06, 1.95], "chrome", false, quatOf([1, 0, 0], angle)),
+    box("hack.backPostL", [0.38, 0.85, -0.82], [0.08, 1.7, 0.08], "steel", false),
+    box("hack.backPostR", [-0.38, 0.85, -0.82], [0.08, 1.7, 0.08], "steel", false),
+  ];
+  return { parts, railDir, footOrigin };
+}
+
+/** Glute Ham Developer (GHD): dual rounded hip/thigh pads + rear footplate + twin ankle rollers. */
+export function ghdBench(options: { padY?: number } = {}): {
+  parts: Part[];
+  padY: number;
+  footZ: number;
+} {
+  const padY = options.padY ?? 0.96;
+  const footZ = -0.82;
+  const parts: Part[] = [
+    box("ghd.base", [0, 0.035, -0.32], [0.76, 0.07, 1.65], "steel"),
+    box("ghd.postFront", [0, padY / 2, 0.12], [0.08, padY - 0.1, 0.08], "steel"),
+    box("ghd.postBack", [0, 0.42, footZ], [0.08, 0.84, 0.08], "steel"),
+    capsule("ghd.padL", [0.14, padY - 0.11, 0.12], 0.11, 0.2, "pad", ALONG_Z),
+    capsule("ghd.padR", [-0.14, padY - 0.11, 0.12], 0.11, 0.2, "pad", ALONG_Z),
+    box("ghd.footPlate", [0, 0.66, footZ], [0.56, 0.42, 0.04], "steel"),
+    capsule("ghd.rollerTop", [0, 0.78, footZ + 0.16], 0.055, 0.46, "pad"),
+    capsule("ghd.rollerBot", [0, 0.56, footZ + 0.16], 0.055, 0.46, "pad"),
+  ];
+  return { parts, padY, footZ };
+}
+
+/** Bulgarian split squat rear-foot roller stand. */
+export function splitSquatStand(rollerY = 0.44, rollerZ = -0.68): { parts: Part[]; rollerY: number } {
+  return {
+    parts: [
+      capsule("splitstand.roller", [0, rollerY, rollerZ], 0.055, 0.44, "pad"),
+      box("splitstand.postL", [0.26, rollerY / 2, rollerZ], [0.05, rollerY + 0.08, 0.05], "steel"),
+      box("splitstand.postR", [-0.26, rollerY / 2, rollerZ], [0.05, rollerY + 0.08, 0.05], "steel"),
+      box("splitstand.baseL", [0.26, 0.025, rollerZ], [0.06, 0.05, 0.52], "steel"),
+      box("splitstand.baseR", [-0.26, 0.025, rollerZ], [0.06, 0.05, 0.52], "steel"),
+    ],
+    rollerY,
+  };
+}
+
+/** Standing or seated calf raise station. */
+export function calfRaiseStation(options: { mode: "standing" | "seated"; blockY?: number; seatY?: number }): {
+  parts: Part[];
+  blockY: number;
+} {
+  const blockY = options.blockY ?? 0.14;
+  const parts: Part[] = [
+    box("calf.block", [0, blockY / 2, 0.14], [0.52, blockY, 0.16], "steel"),
+    box("calf.base", [0, 0.03, -0.15], [0.68, 0.06, 1.15], "steel"),
+  ];
+  if (options.mode === "seated") {
+    const sy = options.seatY ?? 0.48;
+    parts.push(
+      box("calf.seat", [0, sy - 0.035, -0.34], [0.34, 0.07, 0.36], "pad"),
+      box("calf.seatPost", [0, (sy - 0.07) / 2, -0.34], [0.07, sy - 0.07, 0.07], "steel"),
+    );
+  } else {
+    parts.push(
+      box("calf.tower", [0, 0.96, -0.45], [0.56, 1.92, 0.34], "steel", false),
+      box("calf.stack", [0, 0.85, -0.45], [0.36, 1.45, 0.24], "plate", false),
+    );
+  }
+  return { parts, blockY };
+}
+
+/** Landmine pivot sleeve resting on the floor at `(0, 0.05, pivotZ)`. */
+export function landmineBase(pivotZ = 1.65): { parts: Part[]; pivot: Vec3 } {
+  return {
+    parts: [
+      box("landmine.plate", [0, 0.025, pivotZ], [0.46, 0.05, 0.46], "plate"),
+      cylinder("landmine.sleeve", [0, 0.08, pivotZ], 0.032, 0.24, "steel", ALONG_Z, false),
+    ],
+    pivot: [0, 0.06, pivotZ],
+  };
+}
+
+/** Ab wheel prop (center handle at origin along local X + center wheel). */
+export function abWheelProp(id = "abwheel"): PropDef {
+  return {
+    id,
+    kind: "parts",
+    parts: [
+      cylinder(`${id}.handle`, [0, 0, 0], 0.016, 0.34, "rubber"),
+      cylinder(`${id}.wheel`, [0, 0, 0], 0.095, 0.05, "plate"),
+    ],
+  };
+}
+
+/** Gymnastics ring prop (grip centered at origin along local X). */
+export function gymRingProp(id: string): PropDef {
+  return {
+    id,
+    kind: "parts",
+    parts: [
+      cylinder(`${id}.grip`, [0, 0, 0], 0.016, 0.14, "wood"),
+      cylinder(`${id}.top`, [0, 0.18, 0], 0.014, 0.12, "wood", IDENTITY, false),
+      cylinder(`${id}.sideL`, [0.08, 0.09, 0], 0.014, 0.16, "wood", ALONG_Y, false),
+      cylinder(`${id}.sideR`, [-0.08, 0.09, 0], 0.014, 0.16, "wood", ALONG_Y, false),
+    ],
+  };
+}
+
+/** Push/pull prowler sled prop (push poles along +Y, base resting at local y = 0). */
+export function prowlerSledProp(id = "sled"): PropDef {
+  return {
+    id,
+    kind: "parts",
+    parts: [
+      box(`${id}.skiL`, [0.34, 0.03, 0], [0.1, 0.06, 1.05], "steel"),
+      box(`${id}.skiR`, [-0.34, 0.03, 0], [0.1, 0.06, 1.05], "steel"),
+      box(`${id}.deck`, [0, 0.09, 0], [0.76, 0.06, 0.72], "steel"),
+      cylinder(`${id}.poleL`, [0.3, 0.56, -0.32], 0.024, 1.02, "chrome", ALONG_Y),
+      cylinder(`${id}.poleR`, [-0.3, 0.56, -0.32], 0.024, 1.02, "chrome", ALONG_Y),
+      cylinder(`${id}.post`, [0, 0.32, 0.04], 0.025, 0.45, "chrome", ALONG_Y, false),
+      cylinder(`${id}.plates`, [0, 0.22, 0.04], 0.225, 0.16, "plate", ALONG_Y, false),
+    ],
+  };
+}
+
+/** Cardio frames (treadmill, bike, rower, elliptical, stair climber). */
+export function cardioMachine(
+  kind: "treadmill" | "bike" | "rower" | "elliptical" | "stair-climber" | "skierg",
+): Part[] {
+  if (kind === "treadmill") {
+    return [
+      box("treadmill.deck", [0, 0.08, 0], [0.78, 0.16, 1.95], "rubber"),
+      box("treadmill.belt", [0, 0.165, -0.05], [0.56, 0.01, 1.6], "plate", false),
+      box("treadmill.postL", [0.4, 0.68, 0.85], [0.07, 1.25, 0.08], "steel"),
+      box("treadmill.postR", [-0.4, 0.68, 0.85], [0.07, 1.25, 0.08], "steel"),
+      box("treadmill.console", [0, 1.28, 0.82], [0.76, 0.26, 0.24], "steel", false, quatOf([1, 0, 0], rad(-30))),
+    ];
+  }
+  if (kind === "bike") {
+    return [
+      box("bike.base", [0, 0.035, 0], [0.54, 0.07, 1.22], "steel"),
+      cylinder("bike.flywheel", [0, 0.42, 0.36], 0.24, 0.08, "plate", IDENTITY, false),
+      box("bike.seatPost", [0, 0.48, -0.26], [0.05, 0.82, 0.05], "steel"),
+      box("bike.seat", [0, 0.9, -0.26], [0.18, 0.07, 0.26], "pad"),
+      box("bike.stem", [0, 0.62, 0.42], [0.05, 1.05, 0.05], "steel"),
+      cylinder("bike.handlebar", [0, 1.12, 0.38], 0.018, 0.54, "rubber"),
+    ];
+  }
+  if (kind === "rower") {
+    return [
+      box("rower.rail", [0, 0.28, -0.2], [0.12, 0.08, 1.55], "chrome"),
+      box("rower.seat", [0, 0.35, -0.15], [0.3, 0.06, 0.24], "pad"),
+      box("rower.footRest", [0, 0.28, 0.56], [0.34, 0.28, 0.06], "steel", true, quatOf([1, 0, 0], rad(-35))),
+      cylinder("rower.flywheel", [0, 0.54, 0.95], 0.24, 0.14, "plate", IDENTITY, false),
+      box("rower.legFront", [0, 0.15, 0.85], [0.58, 0.3, 0.06], "steel"),
+      box("rower.legBack", [0, 0.14, -0.92], [0.46, 0.28, 0.06], "steel"),
+    ];
+  }
+  if (kind === "stair-climber") {
+    return [
+      box("stairs.body", [0, 0.72, 0.12], [0.86, 1.44, 1.35], "steel", false),
+      box("stairs.step1", [0, 0.38, -0.22], [0.56, 0.18, 0.26], "rubber"),
+      box("stairs.step2", [0, 0.58, 0.02], [0.56, 0.18, 0.26], "rubber"),
+      box("stairs.step3", [0, 0.78, 0.26], [0.56, 0.18, 0.26], "rubber"),
+      cylinder("stairs.railL", [0.4, 1.24, 0.1], 0.02, 0.95, "chrome", ALONG_Z),
+      cylinder("stairs.railR", [-0.4, 1.24, 0.1], 0.02, 0.95, "chrome", ALONG_Z),
+    ];
+  }
+  if (kind === "skierg") {
+    return [
+      box("skierg.deck", [0, 0.025, 0], [0.64, 0.05, 1.25], "rubber"),
+      box("skierg.column", [0, 1.08, 0.56], [0.42, 2.12, 0.16], "steel"),
+      cylinder("skierg.flywheel", [0, 0.44, 0.64], 0.24, 0.14, "plate", IDENTITY, false),
+      box("skierg.topArm", [0, 2.12, 0.44], [0.44, 0.08, 0.36], "steel", false),
+    ];
+  }
+  // elliptical
+  return [
+    box("ellip.base", [0, 0.04, 0], [0.64, 0.08, 1.65], "steel"),
+    cylinder("ellip.flywheel", [0, 0.44, 0.62], 0.24, 0.12, "plate", IDENTITY, false),
+    box("ellip.post", [0, 0.72, 0.62], [0.1, 1.35, 0.1], "steel"),
+    box("ellip.console", [0, 1.38, 0.56], [0.54, 0.22, 0.18], "steel", false, quatOf([1, 0, 0], rad(-25))),
+  ];
+}
+
