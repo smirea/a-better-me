@@ -175,3 +175,24 @@ test("a task keeps the title from the brief's markdown line; a bare id or link h
     { id: "2ca9f3dd-67c0-4ffc-8670-266407c5df7b" },
   ]);
 });
+
+test("an internal entry satisfies check for refactor or formatting PRs and is omitted from the app bundle", () => {
+  const base = git("rev-parse", "HEAD");
+  write("server/src/index.ts", "export const x = 1;\n");
+  commit("reformat");
+  expect(check(root, base)).toEqual({ ok: false, shipped: ["server/src/index.ts"] });
+
+  const path = add(root, {
+    title: "Reformat repository with default oxfmt rules",
+    tasks: [],
+    internal: true,
+    date: "2026-11-24",
+  });
+  expect(JSON.parse(readFileSync(join(root, path), "utf8"))).toEqual({
+    title: "Reformat repository with default oxfmt rules",
+    internal: true,
+  });
+  commit("internal entry");
+  expect(check(root, base)).toEqual({ ok: true, added: [path] });
+  expect(bundle(root, "dev").entries).toEqual([]);
+});

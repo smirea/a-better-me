@@ -1,4 +1,5 @@
 {
-	"title": "No visible change. This update only tidies the code.",
-	"description": "Lint rules and source formatting. The app behaves the same."
+  "title": "No visible change. This update only tidies the code.",
+  "description": "Lint rules and source formatting. The app behaves the same.",
+  "internal": true
 }

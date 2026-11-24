@@ -3,7 +3,7 @@
  * The in-app changelog: one JSON file per entry under `changelog/`, named `<YYYY-MM-DD>-<slug>.json` after the day it
  * merged, so parallel PRs never edit the same file.
  *
- *   bun scripts/changelog.ts add "<one-line title>" --task "<[title](link) from the brief, or an id>" [--task …] [--desc "…"]
+ *   bun scripts/changelog.ts add "<one-line title>" [--task "<[title](link) from the brief, or an id>"] [--desc "…"] [--internal]
  *   bun scripts/changelog.ts check [--base <ref>]        fails when shipped code changed without a new entry
  *   bun scripts/changelog.ts bundle --build <n> --out <file>   the JSON the iPhone app bundles
  *
@@ -29,9 +29,11 @@ export type Entry = {
   tasks: Task[];
   /** Set only on entries backfilled from before builds were tagged. */
   build?: string;
+  /** True for formatting or internal refactor PRs that satisfy `check` without appearing in the app. */
+  internal?: boolean;
 };
 
-export type BundledEntry = Omit<Entry, "build"> & { build: string };
+export type BundledEntry = Omit<Entry, "build" | "internal"> & { build: string };
 export type Bundle = { build: string; entries: BundledEntry[] };
 
 const fileName = /^(\d{4}-\d{2}-\d{2})-[a-z0-9]+(?:-[a-z0-9]+)*\.json$/;
@@ -79,10 +81,12 @@ function parseEntry(name: string, text: string): Entry {
   }
   if (typeof raw !== "object" || raw === null || Array.isArray(raw))
     return fail("must hold a JSON object");
-  const { title, description, tasks = [], build, ...rest } = raw as Record<string, unknown>;
+  const { title, description, tasks = [], build, internal, ...rest } = raw as Record<string, unknown>;
   const unknownKeys = Object.keys(rest);
   if (unknownKeys.length)
-    fail(`unknown keys ${unknownKeys.join(", ")}; allowed: title, description, tasks, build`);
+    fail(
+      `unknown keys ${unknownKeys.join(", ")}; allowed: title, description, tasks, build, internal`,
+    );
   const line = (value: unknown, key: string, limit: number): string => {
     if (typeof value !== "string" || !value.trim())
       return fail(`${key} must be a non-empty string`);
@@ -106,6 +110,7 @@ function parseEntry(name: string, text: string): Entry {
   );
   if (build !== undefined && (typeof build !== "string" || !buildNumber.test(build)))
     fail("build must be a TestFlight build number such as 2026.1112.183941");
+  if (internal !== undefined && typeof internal !== "boolean") fail("internal must be a boolean");
   return {
     id: name.slice(0, -".json".length),
     date,
@@ -115,6 +120,7 @@ function parseEntry(name: string, text: string): Entry {
       : { description: line(description, "description", descriptionLimit) }),
     tasks: taskList,
     ...(build === undefined ? {} : { build: build as string }),
+    ...(internal ? { internal: true } : {}),
   };
 }
 
@@ -202,6 +208,7 @@ export function bundle(root: string, currentBuild: string): Bundle {
   return {
     build: currentBuild,
     entries: entries
+      .filter((entry) => !entry.internal)
       .map((entry) => {
         const index = added.get(entry.id);
         return {
@@ -252,6 +259,7 @@ export function missingEntryMessage(shipped: string[]): string {
     "",
     '  bun scripts/changelog.ts add "<one-line title of what changed for the user>" --task "<[task title](task link) line from your brief>" [--desc "<one short sentence>"]',
     "",
+    'For a pure formatting or internal refactor with no user-visible change, pass --internal (for example: `bun scripts/changelog.ts add "<short reason>" --internal`) so the entry satisfies this check without appearing in the app.',
     `Leave out --task only when no task exists. Changes outside ${shippedPrefixes.join(", ")} (tests, docs, tooling) need none.`,
   ].join("\n");
 }
@@ -294,13 +302,15 @@ export function add(
     title,
     tasks,
     description,
+    internal = false,
     date = localDate(),
-  }: { title: string; tasks: string[]; description?: string; date?: string },
+  }: { title: string; tasks: string[]; description?: string; internal?: boolean; date?: string },
 ): string {
   const body = {
     title,
     ...(description ? { description } : {}),
     ...(tasks.length ? { tasks: tasks.map(parseTaskArgument) } : {}),
+    ...(internal ? { internal: true } : {}),
   };
   let name = `${date}-${slugify(title)}.json`;
   for (let n = 2; existsSync(join(root, changelogDir, name)); n++)
@@ -316,11 +326,16 @@ function main(argv: string[]): number {
   const root = git(process.cwd(), ["rev-parse", "--show-toplevel"]).trim();
   const [command, ...rest] = argv;
   const flags = new Map<string, string[]>();
+  const boolFlags = new Set<string>();
   const positional: string[] = [];
   for (let i = 0; i < rest.length; i++) {
     const arg = rest[i]!;
     if (!arg.startsWith("--")) {
       positional.push(arg);
+      continue;
+    }
+    if (arg === "--internal") {
+      boolFlags.add("internal");
       continue;
     }
     const value = rest[++i];
@@ -334,9 +349,16 @@ function main(argv: string[]): number {
       const title = positional.join(" ").trim();
       if (!title)
         throw new Error(
-          'usage: bun scripts/changelog.ts add "<title>" [--task "[<task title>](<link>)"] [--desc "<text>"]',
+          'usage: bun scripts/changelog.ts add "<title>" [--task "[<task title>](<link>)"] [--desc "<text>"] [--internal]',
         );
-      console.log(add(root, { title, tasks: flags.get("task") ?? [], description: flag("desc") }));
+      console.log(
+        add(root, {
+          title,
+          tasks: flags.get("task") ?? [],
+          description: flag("desc"),
+          internal: boolFlags.has("internal"),
+        }),
+      );
       return 0;
     }
     case "check": {
