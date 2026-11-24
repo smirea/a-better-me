@@ -60,10 +60,10 @@ const data: { exercises: ExerciseData[] } = JSON.parse(document.getElementById('
 const params = new URLSearchParams(location.hash.slice(1));
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-const ENGAGE = new Color('#2f7bff');
+const ENGAGE = new Color('#276ef1');
 const STRETCH = new Color('#f0883a');
 const TABS = ['Muscles', 'Tendons', 'Review'] as const;
-const VIEWS = ['Front', 'Side', 'Angle', 'Top'] as const;
+const VIEWS = ['Front', 'Back', 'Side', 'Angle', 'Top'] as const;
 const MODES = ['Engagement', 'Stretch'] as const;
 const SPEEDS = [0.25, 0.5, 1];
 const PHASE_NAMES = { lower: 'Lower', bottom: 'Bottom', raise: 'Lift', top: 'Top' };
@@ -95,7 +95,6 @@ scene.background = new Color('#151414');
 const camera = new PerspectiveCamera(32, 1, 0.1, 50);
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-controls.maxPolarAngle = Math.PI / 2 - 0.02;
 controls.minDistance = 1.2;
 controls.maxDistance = 9;
 scene.add(new HemisphereLight('#ffffff', '#2a2622', 1.6), new AmbientLight('#ffffff', 0.35));
@@ -103,7 +102,9 @@ const key = new DirectionalLight('#ffffff', 2.2);
 key.position.set(-2.5, 4, 3.5);
 const rim = new DirectionalLight('#9db8ff', 1.2);
 rim.position.set(3, 2.5, -3.5);
-scene.add(key, rim);
+const undersideLight = new DirectionalLight('#ffffff', 1.5);
+undersideLight.position.set(-2, -4, 1.5);
+scene.add(key, rim, undersideLight);
 const floor = new Mesh(new CircleGeometry(3.2, 64), new MeshStandardMaterial({ color: '#1c1b1b', roughness: 1 }));
 floor.rotation.x = -Math.PI / 2;
 floor.position.y = -0.002;
@@ -145,8 +146,13 @@ function buildProps() {
 function setView(view: (typeof VIEWS)[number]) {
 	state.view = view;
 	const lying = sequence.support.kind === 'lying';
+	const underside = lying && view === 'Back';
+	controls.maxPolarAngle = underside ? Math.PI - 0.02 : Math.PI / 2 - 0.02;
+	floor.visible = grid.visible = equipment.visible = !underside;
+	undersideLight.visible = underside;
 	const offset = {
-		Front: lying ? new Vector3(0, 0.3, 1) : new Vector3(0, 0.06, 1),
+		Front: lying ? new Vector3(0, 0.3, 1) : new Vector3(0, 0, 1),
+		Back: lying ? new Vector3(0, -1, -0.02) : new Vector3(0, 0, -1),
 		Side: new Vector3(-1, 0.06, 0),
 		Angle: lying ? new Vector3(-0.7, 0.45, 0.62) : new Vector3(-0.66, 0.2, 0.72),
 		Top: new Vector3(0, 1, 0.02),
@@ -162,12 +168,12 @@ const fit = new Sphere();
 
 function measureFit() {
 	figure.pose(kin.frames[0]);
-	new Box3().setFromObject(figure.group).union(new Box3().setFromObject(equipment)).getBoundingSphere(fit);
+	figure.bounds().union(new Box3().setFromObject(equipment)).getBoundingSphere(fit);
 }
 
 // A stage narrower than it is tall has to back off until the scene fits its width.
 const fitDistance = () =>
-	((fit.radius / Math.sin((camera.fov * Math.PI) / 360)) * 0.92) / Math.min(1, camera.aspect * 1.15);
+	((fit.radius / Math.sin((camera.fov * Math.PI) / 360)) * 1.04) / Math.min(1, camera.aspect * 1.15);
 
 function reanalyze() {
 	analysis = analyze(body, sequence, kin, state.loadKg);
@@ -196,6 +202,7 @@ function load(resetLoad: boolean) {
 		figureSlot.clear();
 		figureSlot.add(figure.group);
 	}
+	figure.setPressGrip(sequence.props.some(prop => prop.kind !== 'dumbbell'));
 	kin = kinematics(body, sequence);
 	if (resetLoad) state.loadKg = Number(params.get('load') ?? sequence.loadKg);
 	state.frame = Math.min(state.frame, sequence.poses.length - 1);
@@ -423,7 +430,7 @@ function renderPanel() {
 		.join('');
 	$('legend').innerHTML =
 		state.mode === 'Engagement'
-			? `<span>At rest</span><i style="background:linear-gradient(90deg,#5b5b60,#2f7bff)"></i><span>All it has</span>`
+			? `<span>At rest</span><i style="background:linear-gradient(90deg,#5b5b60,#276ef1)"></i><span>All it has</span>`
 			: `<span>Slack</span><i style="background:linear-gradient(90deg,#5b5b60,#f0883a)"></i><span>End of range</span>`;
 	lastShown = -1;
 }
