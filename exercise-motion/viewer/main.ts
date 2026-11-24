@@ -145,24 +145,29 @@ function buildProps() {
 function setView(view: (typeof VIEWS)[number]) {
 	state.view = view;
 	const lying = sequence.support.kind === 'lying';
-	figure.pose(kin.frames[0]);
-	const bounds = new Box3().setFromObject(figure.group).union(new Box3().setFromObject(equipment));
-	const sphere = bounds.getBoundingSphere(new Sphere());
-	const target = sphere.center.clone();
-	// A stage narrower than it is tall has to back off until the scene fits its width.
-	const distance =
-		((sphere.radius / Math.sin((camera.fov * Math.PI) / 360)) * 0.92) / Math.min(1, camera.aspect * 1.15);
 	const offset = {
 		Front: lying ? new Vector3(0, 0.3, 1) : new Vector3(0, 0.06, 1),
 		Side: new Vector3(-1, 0.06, 0),
 		Angle: lying ? new Vector3(-0.7, 0.45, 0.62) : new Vector3(-0.66, 0.2, 0.72),
 		Top: new Vector3(0, 1, 0.02),
 	}[view];
-	controls.target.copy(target);
-	camera.position.copy(target).addScaledVector(offset.normalize(), distance);
+	controls.target.copy(fit.center);
+	camera.position.copy(fit.center).addScaledVector(offset.normalize(), fitDistance());
 	controls.update();
 	select('views', view);
 }
+
+/** The sphere around the lifter and the equipment at the start position, measured once per rep. */
+const fit = new Sphere();
+
+function measureFit() {
+	figure.pose(kin.frames[0]);
+	new Box3().setFromObject(figure.group).union(new Box3().setFromObject(equipment)).getBoundingSphere(fit);
+}
+
+// A stage narrower than it is tall has to back off until the scene fits its width.
+const fitDistance = () =>
+	((fit.radius / Math.sin((camera.fov * Math.PI) / 360)) * 0.92) / Math.min(1, camera.aspect * 1.15);
 
 function reanalyze() {
 	analysis = analyze(body, sequence, kin, state.loadKg);
@@ -214,6 +219,7 @@ function load(resetLoad: boolean) {
 	const note = $('variant-note');
 	note.hidden = !fault;
 	if (fault) note.innerHTML = `<strong>Detector test: ${fault.label}.</strong> ${fault.what}`;
+	measureFit();
 	setView(state.view);
 	renderLoad();
 	renderPanel();
@@ -432,6 +438,7 @@ const pose = { value: new Float64Array(0) };
 const qa = new Quaternion();
 const qb = new Quaternion();
 let lastShown = -1;
+const stage = { width: 0, height: 0 };
 let lastTime = performance.now();
 
 function draw(now: number) {
@@ -469,15 +476,20 @@ function draw(now: number) {
 		refresh(shown);
 	}
 	const { clientWidth, clientHeight } = canvas.parentElement!;
-	if (
-		canvas.width !== Math.round(clientWidth * renderer.getPixelRatio()) ||
-		canvas.height !== Math.round(clientHeight * renderer.getPixelRatio())
-	) {
+	// Compared against the stage's own size, not the canvas's pixel size: at a fractional pixel ratio the two never
+	// agree after rounding, and a resize that fires every frame would reset the camera each time.
+	if (clientWidth !== stage.width || clientHeight !== stage.height) {
+		const distance = camera.position.distanceTo(controls.target) / fitDistance();
+		stage.width = clientWidth;
+		stage.height = clientHeight;
 		renderer.setSize(clientWidth, clientHeight, false);
 		camera.aspect = clientWidth / clientHeight;
-		// A narrow stage keeps the whole figure in frame by widening the lens instead of cropping the sides.
 		camera.updateProjectionMatrix();
-		setView(state.view);
+		// Keeps the angle the viewer chose and only backs off or closes in for the new shape.
+		camera.position
+			.sub(controls.target)
+			.setLength(distance * fitDistance())
+			.add(controls.target);
 	}
 	controls.update();
 	renderer.render(scene, camera);
