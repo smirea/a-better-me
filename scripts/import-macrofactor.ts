@@ -657,7 +657,11 @@ export async function importMacroFactor(options: {
 		(_key: string, row: Row): [string, string, Row] => ['POST', path, row];
 	const patch =
 		(path: string) =>
-		(key: string, { id: _, ...row }: Row): [string, string, Row] => ['PATCH', `${path}/${key}`, row];
+		(key: string, row: Row): [string, string, Row] => {
+			const body = { ...row };
+			delete body.id;
+			return ['PATCH', `${path}/${key}`, body];
+		};
 	const put =
 		(path: string) =>
 		(key: string, row: Row): [string, string, Row] => ['PUT', `${path}/${key}`, row];

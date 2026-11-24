@@ -13,10 +13,16 @@ type ProgramRow = RowOf<'programs'>;
 type ProgramDay = z.output<typeof M.ProgramDay>;
 type Config = z.output<typeof M.ProgramConfig>;
 
+function omit<T extends object, K extends keyof T>(value: T, key: K): Omit<T, K> {
+	const copy = { ...value };
+	delete copy[key];
+	return copy;
+}
+
 /** `DeloadRule.apply`: one set fewer, 80% of the reps, three more RIR. */
 function deload(sets: z.output<typeof M.WorkoutSet>[]) {
-	return (sets.length > 1 ? sets.slice(0, -1) : sets).map(({ log: _, ...set }) => ({
-		...set,
+	return (sets.length > 1 ? sets.slice(0, -1) : sets).map(set => ({
+		...omit(set, 'log'),
 		...(set.target && {
 			target: {
 				...set.target,
@@ -48,7 +54,7 @@ export function blocksForCycle(row: ReturnType<typeof program>, blocks: M.Blocks
 }
 /** `copyingCycleTargets`: a copy gets its own block, exercise, and set ids, and plans carry no logs. */
 function freshBlocks(blocks: M.Blocks): M.Blocks {
-	const fresh = <T extends { id: string; log?: unknown }>({ log: _, ...item }: T) => ({ ...item, id: M.newId() });
+	const fresh = <T extends { id: string; log?: unknown }>(item: T) => ({ ...omit(item, 'log'), id: M.newId() });
 	const sets = (list: z.output<typeof M.WorkoutSet>[]) =>
 		list.map(set => ({ ...fresh(set), subSets: set.subSets.map(fresh) }));
 	return blocks.map(block => ({
@@ -137,7 +143,7 @@ function activation(db: Db, row: ProgramRow, now: string) {
 			archived: false,
 			currentCycle: 1,
 			config: { ...(row.config as Config), runStartedAt: now },
-			days: (row.days as ProgramDay[]).map(({ restDoneInCycle: _, ...day }) => day),
+			days: (row.days as ProgramDay[]).map(day => omit(day, 'restDoneInCycle')),
 			updatedAt: now,
 		}),
 		...others.map(other => db.patch('programs', other.id, { active: false, updatedAt: now })),
@@ -246,7 +252,7 @@ export const programRoutes: Route[] = [
 				db.patch('programs', row.id, {
 					active: false,
 					currentCycle: 1,
-					days: (row.days as ProgramDay[]).map(({ restDoneInCycle: _, ...day }) => day),
+					days: (row.days as ProgramDay[]).map(day => omit(day, 'restDoneInCycle')),
 					updatedAt: now,
 				}),
 			);

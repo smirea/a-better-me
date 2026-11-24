@@ -10,11 +10,9 @@ pre-commit:
     - group:
         parallel: true
         jobs:
-          # One command: both fixers rewrite the same staged files, and in parallel one would overwrite the other's edit.
           - name: fix
-            run: >-
-              bunx oxlint --fix --no-error-on-unmatched-pattern {staged_files}
-              && bunx oxfmt --no-error-on-unmatched-pattern {staged_files}
+            glob: "*.{js,mjs,mts,ts,tsx,jsx,svelte}"
+            run: bunx oxlint --fix --no-error-on-unmatched-pattern {staged_files}
             stage_fixed: true
           - name: typecheck
             glob: '*.{js,mjs,mts,ts,tsx,json,jsonc}'

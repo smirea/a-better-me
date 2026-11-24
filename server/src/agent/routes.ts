@@ -24,6 +24,12 @@ export const agentRoutes = (keys: { geminiApiKey: string | null }): Route[] => [
 	...foodRoutes(keys),
 ];
 
+function omit<T extends object, K extends keyof T>(value: T, key: K): Omit<T, K> {
+	const copy = { ...value };
+	delete copy[key];
+	return copy;
+}
+
 /** What the authenticated root returns besides the docs: enough state that an agent knows where things stand. */
 export function snapshot(db: Db, timeZone: string, now: string) {
 	const active = db.all('programs', 'active = 1 ORDER BY updated_at DESC')[0];
@@ -31,9 +37,10 @@ export function snapshot(db: Db, timeZone: string, now: string) {
 	const inProgress = db.all('workout_sessions', 'ended_at IS NULL')[0];
 	const last = db.all('workout_sessions', 'ended_at IS NOT NULL ORDER BY started_at DESC LIMIT 1')[0];
 	const count = (table: Parameters<Db['count']>[0]) => db.count(table);
+	const activeProgram = active ? omit(programDetail(db, active), 'templates') : null;
 	return {
 		weightUnit: settings(db).weightUnit,
-		activeProgram: active ? (({ templates: _, ...detail }) => detail)(programDetail(db, active)) : null,
+		activeProgram,
 		defaultGym: defaultGym ? { id: defaultGym.id, name: defaultGym.name } : null,
 		inProgressSession: inProgress
 			? { id: inProgress.id, name: inProgress.name, startedAt: inProgress.startedAt }
