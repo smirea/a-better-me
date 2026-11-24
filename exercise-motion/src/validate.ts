@@ -76,7 +76,10 @@ class Collector {
 	}
 
 	issues(): Issue[] {
-		return [...this.worst.values()].map(entry => ({ ...entry.make(entry.value), frames: ranges(entry.flags) }));
+		return [...this.worst.values()].map(entry => {
+			const issue = entry.make(entry.value);
+			return { ...issue, title: issue.title[0].toUpperCase() + issue.title.slice(1), frames: ranges(entry.flags) };
+		});
 	}
 }
 
@@ -143,7 +146,7 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
 				collector.add(`clip:${id}:${shape.part.id}`, f, depth, worst => ({
 					code: 'equipment-clip',
 					severity: worst > 0.02 ? 'error' : 'warning',
-					title: `${pretty(id)} clips through ${shape.part.id.replace('.', ' ')}`,
+					title: `${pretty(id)} clips through ${shape.part.id.split('.').map(pretty).join(' ')}`,
 					detail: `${cm(worst)} inside it`,
 				}));
 			}
