@@ -2,82 +2,91 @@
  * What the repository scripts share: a process runner, the dotenv and env-manager readers, and the path to the shared
  * agent commands. No npm imports.
  */
-import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 export type Values = Record<string, string>;
 
 type RunOptions = {
-	/** Answer the output, or an empty string, instead of throwing when the command fails. */
-	allowFail?: boolean;
-	/** `pipe` captures both streams; `inherit-stderr` shows progress while capturing stdout; `inherit` shows both. */
-	stdio?: 'pipe' | 'inherit-stderr' | 'inherit';
-	env?: Values;
-	cwd?: string;
+  /** Answer the output, or an empty string, instead of throwing when the command fails. */
+  allowFail?: boolean;
+  /** `pipe` captures both streams; `inherit-stderr` shows progress while capturing stdout; `inherit` shows both. */
+  stdio?: "pipe" | "inherit-stderr" | "inherit";
+  env?: Values;
+  cwd?: string;
 };
 
-export function run(cmd: string[], { allowFail = false, stdio = 'pipe', env, cwd }: RunOptions = {}): string {
-	const result = spawnSync(cmd[0]!, cmd.slice(1), {
-		encoding: 'utf8',
-		cwd,
-		env: env ? { ...process.env, ...env } : process.env,
-		stdio: stdio === 'pipe' ? 'pipe' : stdio === 'inherit' ? 'inherit' : ['ignore', 'pipe', 'inherit'],
-	});
-	if (result.status !== 0) {
-		if (allowFail) return '';
-		throw new Error(`\`${cmd.join(' ')}\` failed\n${result.stderr ?? ''}${result.stdout ?? ''}`);
-	}
-	return (result.stdout ?? '').trim();
+export function run(
+  cmd: string[],
+  { allowFail = false, stdio = "pipe", env, cwd }: RunOptions = {},
+): string {
+  const result = spawnSync(cmd[0]!, cmd.slice(1), {
+    encoding: "utf8",
+    cwd,
+    env: env ? { ...process.env, ...env } : process.env,
+    stdio:
+      stdio === "pipe" ? "pipe" : stdio === "inherit" ? "inherit" : ["ignore", "pipe", "inherit"],
+  });
+  if (result.status !== 0) {
+    if (allowFail) return "";
+    throw new Error(`\`${cmd.join(" ")}\` failed\n${result.stderr ?? ""}${result.stdout ?? ""}`);
+  }
+  return (result.stdout ?? "").trim();
 }
 
 /** A UUID (version 8, RFC 9562) hashed from a source row's key, so importing the row again lands on the same id. */
 export function hashedId(...parts: (string | number)[]): string {
-	const hex = new Bun.CryptoHasher('sha256').update(JSON.stringify(parts)).digest('hex');
-	const variant = ((Number.parseInt(hex[16]!, 16) & 3) | 8).toString(16);
-	return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-8${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+  const hex = new Bun.CryptoHasher("sha256").update(JSON.stringify(parts)).digest("hex");
+  const variant = ((Number.parseInt(hex[16]!, 16) & 3) | 8).toString(16);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-8${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
 
 /** Empty values count as unset and are left out. */
 export function parseDotenv(text: string): Values {
-	const values: Values = {};
-	for (const raw of text.split('\n')) {
-		const line = raw.trim();
-		if (!line || line.startsWith('#')) continue;
-		const match = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
-		if (!match) continue;
-		const [, key, rest] = match as unknown as [string, string, string];
-		let value: string;
-		const quote = rest[0];
-		if ((quote === '"' || quote === "'") && rest.indexOf(quote, 1) > 0) {
-			value = rest.slice(1, rest.indexOf(quote, 1));
-		} else {
-			value = rest.replace(/(^|\s+)#.*$/, '').trim();
-		}
-		if (value) values[key] = value;
-	}
-	return values;
+  const values: Values = {};
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    const match = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
+    if (!match) continue;
+    const [, key, rest] = match as unknown as [string, string, string];
+    let value: string;
+    const quote = rest[0];
+    if ((quote === '"' || quote === "'") && rest.indexOf(quote, 1) > 0) {
+      value = rest.slice(1, rest.indexOf(quote, 1));
+    } else {
+      value = rest.replace(/(^|\s+)#.*$/, "").trim();
+    }
+    if (value) values[key] = value;
+  }
+  return values;
 }
 
 /** One environment's values, from the `.env.local` section of `env-manager print`. */
 export function readEnv(env: string): Values {
-	const result = spawnSync('env-manager', ['print', 'a-better-me', '-e', env], { encoding: 'utf8' });
-	const section = /^\.env\.local$([\s\S]*?)(?:^files$|(?![\s\S]))/m.exec(result.stdout ?? '')?.[1];
-	if (result.status !== 0 || section === undefined) {
-		throw new Error(`env-manager print a-better-me -e ${env} failed. It needs this Mac's AWS credentials.`);
-	}
-	return parseDotenv(section);
+  const result = spawnSync("env-manager", ["print", "a-better-me", "-e", env], {
+    encoding: "utf8",
+  });
+  const section = /^\.env\.local$([\s\S]*?)(?:^files$|(?![\s\S]))/m.exec(result.stdout ?? "")?.[1];
+  if (result.status !== 0 || section === undefined) {
+    throw new Error(
+      `env-manager print a-better-me -e ${env} failed. It needs this Mac's AWS credentials.`,
+    );
+  }
+  return parseDotenv(section);
 }
 
 /** A worktree's `.env.override`, which `agent-t3-worktree setup` writes with its ports, or null without one. */
 export function readOverride(worktree: string): Values | null {
-	const file = join(worktree, '.env.override');
-	return existsSync(file) ? parseDotenv(readFileSync(file, 'utf8')) : null;
+  const file = join(worktree, ".env.override");
+  return existsSync(file) ? parseDotenv(readFileSync(file, "utf8")) : null;
 }
 
 /** `~/bin/<name>`, one of the agent worktree and simulator commands that `~/code/scripts` installs for every repo. */
-export function agentCommand(name: 'agent-t3-worktree' | 'agent-simulator'): string {
-	const path = join(process.env.HOME ?? '', 'bin', name);
-	if (!existsSync(path)) throw new Error(`${path} is missing. Install it: bun ~/code/scripts/src/setup.ts`);
-	return path;
+export function agentCommand(name: "agent-t3-worktree" | "agent-simulator"): string {
+  const path = join(process.env.HOME ?? "", "bin", name);
+  if (!existsSync(path))
+    throw new Error(`${path} is missing. Install it: bun ~/code/scripts/src/setup.ts`);
+  return path;
 }

@@ -1,24 +1,24 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "a-better-me",
-	"main": "server/src/worker.ts",
-	"compatibility_date": "2026-10-01",
-	// `@sentry/cloudflare` keeps each request's scope in AsyncLocalStorage.
-	"compatibility_flags": ["nodejs_als"],
-	"routes": [{ "pattern": "a-better-me.stf.lol", "custom_domain": true }],
-	"workers_dev": false,
-	"preview_urls": false,
-	// `server/src/backup.ts` (`0 9 * * *`) and `server/src/garmin/sync.ts` (`0 * * * *`, hourly).
-	"triggers": { "crons": ["0 9 * * *", "0 * * * *"] },
-	// Secrets are config.ts's REQUIRED_IN_PRODUCTION, pushed with `bun run secrets:push`.
-	"vars": { "APP_ENV": "production" },
-	// The owner's one space: a SQLite-backed Durable Object holding every synced table.
-	"durable_objects": { "bindings": [{ "name": "SPACE", "class_name": "Space" }] },
-	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["Space"] }],
-	"r2_buckets": [
-		{ "binding": "BACKUPS", "bucket_name": "a-better-me-backups" },
-		// Picture bytes, reached only through `/api/images` (`server/src/images.ts`). No public address, no S3 key.
-		{ "binding": "IMAGES", "bucket_name": "a-better-me-images" },
-	],
-	"observability": { "enabled": true },
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "a-better-me",
+  "main": "server/src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  // `@sentry/cloudflare` keeps each request's scope in AsyncLocalStorage.
+  "compatibility_flags": ["nodejs_als"],
+  "routes": [{ "pattern": "a-better-me.stf.lol", "custom_domain": true }],
+  "workers_dev": false,
+  "preview_urls": false,
+  // `server/src/backup.ts` (`0 9 * * *`) and `server/src/garmin/sync.ts` (`0 * * * *`, hourly).
+  "triggers": { "crons": ["0 9 * * *", "0 * * * *"] },
+  // Secrets are config.ts's REQUIRED_IN_PRODUCTION, pushed with `bun run secrets:push`.
+  "vars": { "APP_ENV": "production" },
+  // The owner's one space: a SQLite-backed Durable Object holding every synced table.
+  "durable_objects": { "bindings": [{ "name": "SPACE", "class_name": "Space" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Space"] }],
+  "r2_buckets": [
+    { "binding": "BACKUPS", "bucket_name": "a-better-me-backups" },
+    // Picture bytes, reached only through `/api/images` (`server/src/images.ts`). No public address, no S3 key.
+    { "binding": "IMAGES", "bucket_name": "a-better-me-images" },
+  ],
+  "observability": { "enabled": true },
 }

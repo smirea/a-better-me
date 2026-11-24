@@ -1,21 +1,22 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 :root {
-	font-family:
-		'Google Sans Flex', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-	font-optical-sizing: auto;
+  font-family:
+    "Google Sans Flex", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  font-optical-sizing: auto;
 }
 
 * {
-	box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 html,
 body,
 #root {
-	margin: 0;
-	width: 100%;
-	min-height: 100%;
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
 }
 
 body,
@@ -23,5 +24,5 @@ button,
 input,
 select,
 textarea {
-	font: inherit;
+  font: inherit;
 }

@@ -1,25 +1,25 @@
-import { z } from 'zod';
-import { isTimeZone } from './engine';
+import { z } from "zod";
+import { isTimeZone } from "./engine";
 import {
-	BODY_METRIC_KINDS,
-	BODY_SOURCES,
-	CALORIE_FLOORS,
-	DAY_STATUSES,
-	DIET_STYLES,
-	FOOD_ROW_SOURCES,
-	GOAL_KINDS,
-	NUTRIENT_GOAL_MODES,
-	PLAN_KINDS,
-	PROGRAM_STYLES,
-	PROTEIN_LEVELS,
-	TRAINING_TYPES,
-	WEIGHT_UNITS,
-	foodNutrition,
-	foodSnapshot,
-	nutrientAmounts,
-	nutrientID,
-	serving,
-} from '../../../shared/db/schema';
+  BODY_METRIC_KINDS,
+  BODY_SOURCES,
+  CALORIE_FLOORS,
+  DAY_STATUSES,
+  DIET_STYLES,
+  FOOD_ROW_SOURCES,
+  GOAL_KINDS,
+  NUTRIENT_GOAL_MODES,
+  PLAN_KINDS,
+  PROGRAM_STYLES,
+  PROTEIN_LEVELS,
+  TRAINING_TYPES,
+  WEIGHT_UNITS,
+  foodNutrition,
+  foodSnapshot,
+  nutrientAmounts,
+  nutrientID,
+  serving,
+} from "../../../shared/db/schema";
 
 /**
  * The agent API's request and response shapes. The JSON trees mirror the Swift `Codable` models in
@@ -30,1343 +30,1573 @@ import {
 /** Lowercase, like the app's row ids. Swift parses a tree's UUIDs in either case, though it writes them uppercase. */
 export const newId = () => crypto.randomUUID();
 
-const id = z.guid().meta({ description: 'UUID. Generated when omitted.' });
+const id = z.guid().meta({ description: "UUID. Generated when omitted." });
 /** A row id or a reference to one: lowercase, like every row id the app writes, so ids compare with `===`. */
-export const ref = z.guid().overwrite(value => value.toLowerCase());
-const createdId = ref.meta({ description: 'UUID. Generated when omitted.' });
+export const ref = z.guid().overwrite((value) => value.toLowerCase());
+const createdId = ref.meta({ description: "UUID. Generated when omitted." });
 /** A food id (a UUID, `usda-<fdcId>`, or `off-<barcode>`), lowercase like `ref`. */
-export const foodRef = z.string().overwrite(value => value.toLowerCase());
+export const foodRef = z.string().overwrite((value) => value.toLowerCase());
 export const instant = z.iso
-	.datetime({ offset: true })
-	.overwrite(text => new Date(text).toISOString())
-	.meta({ description: 'ISO 8601 instant, stored in UTC with milliseconds.' });
+  .datetime({ offset: true })
+  .overwrite((text) => new Date(text).toISOString())
+  .meta({ description: "ISO 8601 instant, stored in UTC with milliseconds." });
 const count = z.int().min(0);
 const kg = z.number().min(0);
 
-const SET_TYPES = ['standard', 'warmUp', 'drop', 'myo', 'failure'] as const;
+const SET_TYPES = ["standard", "warmUp", "drop", "myo", "failure"] as const;
 export const MUSCLES = [
-	'chest',
-	'front_delts',
-	'side_delts',
-	'rear_delts',
-	'lats',
-	'upper_back',
-	'upper_traps',
-	'lower_back',
-	'neck',
-	'biceps',
-	'triceps',
-	'forearms',
-	'abs',
-	'obliques',
-	'serratus',
-	'glutes',
-	'quads',
-	'hamstrings',
-	'adductors',
-	'abductors',
-	'hip_flexors',
-	'calves',
-	'tibs',
+  "chest",
+  "front_delts",
+  "side_delts",
+  "rear_delts",
+  "lats",
+  "upper_back",
+  "upper_traps",
+  "lower_back",
+  "neck",
+  "biceps",
+  "triceps",
+  "forearms",
+  "abs",
+  "obliques",
+  "serratus",
+  "glutes",
+  "quads",
+  "hamstrings",
+  "adductors",
+  "abductors",
+  "hip_flexors",
+  "calves",
+  "tibs",
 ] as const;
 const METRICS = [
-	'weight',
-	'assistanceWeight',
-	'weightPerSide',
-	'weightPerSidePersistent',
-	'reps',
-	'repsPerSide',
-	'duration',
-	'durationPerSide',
-	'distanceShort',
-	'distanceShortPerSide',
-	'distanceLong',
+  "weight",
+  "assistanceWeight",
+  "weightPerSide",
+  "weightPerSidePersistent",
+  "reps",
+  "repsPerSide",
+  "duration",
+  "durationPerSide",
+  "distanceShort",
+  "distanceShortPerSide",
+  "distanceLong",
 ] as const;
-export const EXERCISE_TYPES = ['compound', 'isolation', 'core', 'other'] as const;
-export const EXERCISE_CATEGORIES = ['freeWeights', 'machines', 'bodyweight', 'cardio', 'other'] as const;
-const REGIONS = ['upper', 'lower', 'core', 'fullBody'] as const;
-const LATERALITIES = ['bilateral', 'unilateral', 'asymmetrical'] as const;
-const PROGRAM_COLORS = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple'] as const;
-const REST_CATEGORIES = ['compoundUpper', 'compoundLower', 'upperIsolation', 'lowerIsolation', 'core'] as const;
+export const EXERCISE_TYPES = ["compound", "isolation", "core", "other"] as const;
+export const EXERCISE_CATEGORIES = [
+  "freeWeights",
+  "machines",
+  "bodyweight",
+  "cardio",
+  "other",
+] as const;
+const REGIONS = ["upper", "lower", "core", "fullBody"] as const;
+const LATERALITIES = ["bilateral", "unilateral", "asymmetrical"] as const;
+const PROGRAM_COLORS = ["red", "orange", "yellow", "green", "teal", "blue", "purple"] as const;
+const REST_CATEGORIES = [
+  "compoundUpper",
+  "compoundLower",
+  "upperIsolation",
+  "lowerIsolation",
+  "core",
+] as const;
 
 const SetTarget = z
-	.object({
-		repsMin: count.optional(),
-		repsMax: count.optional(),
-		rir: z.int().min(0).max(6).optional().meta({ description: 'Reps in reserve. 6 means "6+".' }),
-		weightKg: kg.optional(),
-		durationSeconds: count.optional(),
-	})
-	.meta({ id: 'SetTarget', description: 'What a set aims for. Every field is optional.' });
+  .object({
+    repsMin: count.optional(),
+    repsMax: count.optional(),
+    rir: z.int().min(0).max(6).optional().meta({ description: 'Reps in reserve. 6 means "6+".' }),
+    weightKg: kg.optional(),
+    durationSeconds: count.optional(),
+  })
+  .meta({ id: "SetTarget", description: "What a set aims for. Every field is optional." });
 
 export const SetLog = z
-	.object({
-		weightKg: kg.optional(),
-		reps: count.optional(),
-		partialReps: count.optional(),
-		rir: z.int().min(0).max(6).optional(),
-		durationSeconds: count.optional(),
-		distanceMeters: z.number().min(0).optional(),
-		completedAt: instant.optional().meta({ description: "Defaults to the session's end, or its start." }),
-	})
-	.meta({
-		id: 'SetLog',
-		description: 'What was actually done. A set with a log is completed. Never set in templates.',
-	});
+  .object({
+    weightKg: kg.optional(),
+    reps: count.optional(),
+    partialReps: count.optional(),
+    rir: z.int().min(0).max(6).optional(),
+    durationSeconds: count.optional(),
+    distanceMeters: z.number().min(0).optional(),
+    completedAt: instant
+      .optional()
+      .meta({ description: "Defaults to the session's end, or its start." }),
+  })
+  .meta({
+    id: "SetLog",
+    description: "What was actually done. A set with a log is completed. Never set in templates.",
+  });
 
 const SubSet = z
-	.object({ id: id.default(newId), target: SetTarget.optional(), log: SetLog.optional() })
-	.meta({ id: 'SubSet', description: 'One drop of a drop set, or one mini-set of a myo set.' });
+  .object({ id: id.default(newId), target: SetTarget.optional(), log: SetLog.optional() })
+  .meta({ id: "SubSet", description: "One drop of a drop set, or one mini-set of a myo set." });
 
 export const WorkoutSet = z
-	.object({
-		id: id.default(newId),
-		type: z.enum(SET_TYPES).default('standard'),
-		target: SetTarget.optional(),
-		restSeconds: count.optional().meta({ description: "Overrides the exercise's rest after this set." }),
-		log: SetLog.optional(),
-		skipped: z.literal(true).optional().meta({
-			description:
-				'Passed over in a live workout: counted as done for what comes next, but never logged. Absent unless set.',
-		}),
-		subSets: z.array(SubSet).default([]).meta({ description: 'Only for `drop` and `myo` sets.' }),
-	})
-	.meta({ id: 'WorkoutSet' });
+  .object({
+    id: id.default(newId),
+    type: z.enum(SET_TYPES).default("standard"),
+    target: SetTarget.optional(),
+    restSeconds: count
+      .optional()
+      .meta({ description: "Overrides the exercise's rest after this set." }),
+    log: SetLog.optional(),
+    skipped: z.literal(true).optional().meta({
+      description:
+        "Passed over in a live workout: counted as done for what comes next, but never logged. Absent unless set.",
+    }),
+    subSets: z.array(SubSet).default([]).meta({ description: "Only for `drop` and `myo` sets." }),
+  })
+  .meta({ id: "WorkoutSet" });
 
 const CycleTargets = z
-	.object({ sets: z.array(WorkoutSet), skip: z.boolean().default(false) })
-	.meta({ id: 'CycleTargets', description: 'The sets for one program cycle. `skip` drops the exercise that cycle.' });
+  .object({ sets: z.array(WorkoutSet), skip: z.boolean().default(false) })
+  .meta({
+    id: "CycleTargets",
+    description: "The sets for one program cycle. `skip` drops the exercise that cycle.",
+  });
 
 const BlockExercise = z
-	.object({
-		id: id.default(newId),
-		exerciseID: z.string().meta({ description: 'A catalog exercise id or a `custom-` id, from GET /exercises.' }),
-		sets: z.array(WorkoutSet),
-		restSeconds: count
-			.optional()
-			.meta({ description: "Rest after each set. Falls back to the exercise's settings, then the settings default." }),
-		note: z.string().optional(),
-		cycleTargets: z.array(CycleTargets).optional().meta({
-			description:
-				'Program templates only: the sets of each training week, index 0 for week 1. A week past the end uses `sets`. The deload cycle is never stored; it is derived from the week beside it. Sessions started from the template copy the targets of their cycle.',
-		}),
-		equipment: z.array(z.string()).optional().meta({ description: 'Equipment ids of the chosen resistance option.' }),
-		support: z.array(z.string()).optional().meta({ description: 'Equipment ids of the chosen support option.' }),
-	})
-	.meta({ id: 'BlockExercise' });
+  .object({
+    id: id.default(newId),
+    exerciseID: z
+      .string()
+      .meta({ description: "A catalog exercise id or a `custom-` id, from GET /exercises." }),
+    sets: z.array(WorkoutSet),
+    restSeconds: count
+      .optional()
+      .meta({
+        description:
+          "Rest after each set. Falls back to the exercise's settings, then the settings default.",
+      }),
+    note: z.string().optional(),
+    cycleTargets: z.array(CycleTargets).optional().meta({
+      description:
+        "Program templates only: the sets of each training week, index 0 for week 1. A week past the end uses `sets`. The deload cycle is never stored; it is derived from the week beside it. Sessions started from the template copy the targets of their cycle.",
+    }),
+    equipment: z
+      .array(z.string())
+      .optional()
+      .meta({ description: "Equipment ids of the chosen resistance option." }),
+    support: z
+      .array(z.string())
+      .optional()
+      .meta({ description: "Equipment ids of the chosen support option." }),
+  })
+  .meta({ id: "BlockExercise" });
 
 export const WorkoutBlock = z
-	.object({ id: id.default(newId), exercises: z.array(BlockExercise).min(1) })
-	.meta({ id: 'WorkoutBlock', description: 'One exercise, or a superset when it holds several.' });
+  .object({ id: id.default(newId), exercises: z.array(BlockExercise).min(1) })
+  .meta({ id: "WorkoutBlock", description: "One exercise, or a superset when it holds several." });
 
 export const Blocks = z.array(WorkoutBlock);
 export type Blocks = z.output<typeof Blocks>;
 
 export const Template = z
-	.object({
-		id: z.string(),
-		name: z.string(),
-		notes: z.string(),
-		blocks: Blocks,
-		createdAt: z.string(),
-		updatedAt: z.string(),
-		programId: z.string().nullable().meta({ description: 'Set when the template is a day of a program.' }),
-		gymId: z.string().nullable(),
-		archived: z.boolean(),
-	})
-	.meta({ id: 'Template', description: 'A reusable workout in the library, or a day of a program.' });
+  .object({
+    id: z.string(),
+    name: z.string(),
+    notes: z.string(),
+    blocks: Blocks,
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    programId: z
+      .string()
+      .nullable()
+      .meta({ description: "Set when the template is a day of a program." }),
+    gymId: z.string().nullable(),
+    archived: z.boolean(),
+  })
+  .meta({
+    id: "Template",
+    description: "A reusable workout in the library, or a day of a program.",
+  });
 
 const templateFields = {
-	name: z.string().trim().min(1),
-	notes: z.string(),
-	blocks: Blocks,
-	gymId: ref.nullable(),
-	archived: z.boolean(),
+  name: z.string().trim().min(1),
+  notes: z.string(),
+  blocks: Blocks,
+  gymId: ref.nullable(),
+  archived: z.boolean(),
 };
 export const TemplateCreate = z
-	.object({
-		...templateFields,
-		notes: templateFields.notes.default(''),
-		blocks: Blocks.default([]),
-		gymId: templateFields.gymId.default(null),
-		archived: templateFields.archived.default(false),
-	})
-	.meta({ id: 'TemplateCreate' });
-export const TemplatePatch = z.object(templateFields).partial().meta({ id: 'TemplatePatch' });
+  .object({
+    ...templateFields,
+    notes: templateFields.notes.default(""),
+    blocks: Blocks.default([]),
+    gymId: templateFields.gymId.default(null),
+    archived: templateFields.archived.default(false),
+  })
+  .meta({ id: "TemplateCreate" });
+export const TemplatePatch = z.object(templateFields).partial().meta({ id: "TemplatePatch" });
 
 const ProgramPosition = z
-	.object({ programId: ref, dayId: ref, cycle: z.int().min(1) })
-	.meta({ id: 'ProgramPosition', description: 'The program day and cycle a session trains.' });
+  .object({ programId: ref, dayId: ref, cycle: z.int().min(1) })
+  .meta({ id: "ProgramPosition", description: "The program day and cycle a session trains." });
 
 const ExerciseStats = z
-	.object({
-		exerciseID: z.string(),
-		name: z.string(),
-		loggedSets: z.int().meta({ description: 'Done sets, warm-ups included.' }),
-		workingSets: z.int().meta({ description: 'Done sets that are not warm-ups.' }),
-		volumeKg: z.number().meta({ description: 'Weight times reps, warm-ups included, doubled for per-side metrics.' }),
-		bestReps: z.int().nullable(),
-		bestEstimatedOneRepMaxKg: z
-			.number()
-			.nullable()
-			.meta({ description: "Epley on reps plus RIR over the working sets, the app's estimate." }),
-	})
-	.meta({ id: 'ExerciseStats' });
+  .object({
+    exerciseID: z.string(),
+    name: z.string(),
+    loggedSets: z.int().meta({ description: "Done sets, warm-ups included." }),
+    workingSets: z.int().meta({ description: "Done sets that are not warm-ups." }),
+    volumeKg: z
+      .number()
+      .meta({ description: "Weight times reps, warm-ups included, doubled for per-side metrics." }),
+    bestReps: z.int().nullable(),
+    bestEstimatedOneRepMaxKg: z
+      .number()
+      .nullable()
+      .meta({ description: "Epley on reps plus RIR over the working sets, the app's estimate." }),
+  })
+  .meta({ id: "ExerciseStats" });
 const MuscleSets = z
-	.record(z.string(), z.number())
-	.meta({ description: 'Working sets per muscle: 1 for a primary muscle, 0.5 for a secondary.' });
+  .record(z.string(), z.number())
+  .meta({ description: "Working sets per muscle: 1 for a primary muscle, 0.5 for a secondary." });
 const SessionStats = z
-	.object({
-		durationSeconds: z.int().nullable().meta({ description: 'Ended minus started minus paused. Null in progress.' }),
-		workingSets: z.int(),
-		volumeKg: z.number(),
-		muscleSets: MuscleSets,
-		exercises: z.array(ExerciseStats),
-	})
-	.meta({ id: 'SessionStats', description: 'Derived from the logged sets as the app derives them. Read-only.' });
+  .object({
+    durationSeconds: z
+      .int()
+      .nullable()
+      .meta({ description: "Ended minus started minus paused. Null in progress." }),
+    workingSets: z.int(),
+    volumeKg: z.number(),
+    muscleSets: MuscleSets,
+    exercises: z.array(ExerciseStats),
+  })
+  .meta({
+    id: "SessionStats",
+    description: "Derived from the logged sets as the app derives them. Read-only.",
+  });
 
 export const Session = z
-	.object({
-		id: z.string(),
-		name: z.string(),
-		templateId: z.string().nullable(),
-		startedAt: z.string(),
-		endedAt: z.string().nullable().meta({ description: 'Null while the workout is in progress.' }),
-		notes: z.string(),
-		blocks: Blocks,
-		programId: z.string().nullable(),
-		programDayId: z.string().nullable(),
-		cycle: z.int().nullable(),
-		gymId: z.string().nullable(),
-		pausedSeconds: z.int(),
-		health: z
-			.record(z.string(), z.unknown())
-			.nullable()
-			.meta({ description: 'What the phone saved to Apple Health for this workout. Read-only.' }),
-		stats: SessionStats,
-	})
-	.meta({ id: 'Session', description: 'A logged workout. Its sets carry `log` once done.' });
+  .object({
+    id: z.string(),
+    name: z.string(),
+    templateId: z.string().nullable(),
+    startedAt: z.string(),
+    endedAt: z.string().nullable().meta({ description: "Null while the workout is in progress." }),
+    notes: z.string(),
+    blocks: Blocks,
+    programId: z.string().nullable(),
+    programDayId: z.string().nullable(),
+    cycle: z.int().nullable(),
+    gymId: z.string().nullable(),
+    pausedSeconds: z.int(),
+    health: z
+      .record(z.string(), z.unknown())
+      .nullable()
+      .meta({ description: "What the phone saved to Apple Health for this workout. Read-only." }),
+    stats: SessionStats,
+  })
+  .meta({ id: "Session", description: "A logged workout. Its sets carry `log` once done." });
 
 const sessionFields = {
-	name: z.string().trim().min(1),
-	templateId: ref.nullable(),
-	startedAt: instant,
-	endedAt: instant.nullable(),
-	notes: z.string(),
-	blocks: Blocks,
-	program: ProgramPosition.nullable(),
-	gymId: ref.nullable(),
-	pausedSeconds: count,
+  name: z.string().trim().min(1),
+  templateId: ref.nullable(),
+  startedAt: instant,
+  endedAt: instant.nullable(),
+  notes: z.string(),
+  blocks: Blocks,
+  program: ProgramPosition.nullable(),
+  gymId: ref.nullable(),
+  pausedSeconds: count,
 };
 export const SessionCreate = z
-	.object({
-		id: ref.optional().meta({
-			description:
-				'Generated when omitted. An importer derives it from its source, so a rerun answers 409 instead of duplicating.',
-		}),
-		...sessionFields,
-		name: sessionFields.name.optional().meta({ description: "Defaults to the template's name." }),
-		templateId: sessionFields.templateId.default(null),
-		endedAt: sessionFields.endedAt.default(null).meta({
-			description:
-				'Null starts a live workout on the phone; at most one can be in progress. Give it to log a finished one.',
-		}),
-		notes: sessionFields.notes.default(''),
-		blocks: Blocks.optional().meta({
-			description: "Defaults to the template's blocks, with the program cycle's targets applied when `program` is set.",
-		}),
-		program: sessionFields.program.default(null),
-		gymId: sessionFields.gymId.optional(),
-		pausedSeconds: sessionFields.pausedSeconds.default(0),
-	})
-	.meta({ id: 'SessionCreate' });
-export const SessionPatch = z.object(sessionFields).partial().meta({ id: 'SessionPatch' });
+  .object({
+    id: ref.optional().meta({
+      description:
+        "Generated when omitted. An importer derives it from its source, so a rerun answers 409 instead of duplicating.",
+    }),
+    ...sessionFields,
+    name: sessionFields.name.optional().meta({ description: "Defaults to the template's name." }),
+    templateId: sessionFields.templateId.default(null),
+    endedAt: sessionFields.endedAt.default(null).meta({
+      description:
+        "Null starts a live workout on the phone; at most one can be in progress. Give it to log a finished one.",
+    }),
+    notes: sessionFields.notes.default(""),
+    blocks: Blocks.optional().meta({
+      description:
+        "Defaults to the template's blocks, with the program cycle's targets applied when `program` is set.",
+    }),
+    program: sessionFields.program.default(null),
+    gymId: sessionFields.gymId.optional(),
+    pausedSeconds: sessionFields.pausedSeconds.default(0),
+  })
+  .meta({ id: "SessionCreate" });
+export const SessionPatch = z.object(sessionFields).partial().meta({ id: "SessionPatch" });
 
 export const ProgramDay = z
-	.object({
-		id: z.string(),
-		templateID: z.string().optional().meta({ description: "The day's template. Absent on a rest day." }),
-		restDoneInCycle: z.int().optional(),
-	})
-	.meta({ id: 'ProgramDay' });
+  .object({
+    id: z.string(),
+    templateID: z
+      .string()
+      .optional()
+      .meta({ description: "The day's template. Absent on a rest day." }),
+    restDoneInCycle: z.int().optional(),
+  })
+  .meta({ id: "ProgramDay" });
 
 export const ProgramConfig = z
-	.looseObject({
-		dayOrder: z
-			.enum(['rolling', 'weekly'])
-			.meta({ description: '`rolling` numbers days Day 1 to N. `weekly` is seven days from Monday.' }),
-		deload: z.enum(['none', 'firstCycle', 'lastCycle']).meta({ description: 'A deload adds one cycle.' }),
-		periodization: z.boolean().meta({ description: 'Whether exercises carry per-cycle `cycleTargets`.' }),
-		runStartedAt: z.string().optional(),
-		generator: z.record(z.string(), z.unknown()).optional(),
-	})
-	.meta({ id: 'ProgramConfig' });
+  .looseObject({
+    dayOrder: z
+      .enum(["rolling", "weekly"])
+      .meta({
+        description: "`rolling` numbers days Day 1 to N. `weekly` is seven days from Monday.",
+      }),
+    deload: z
+      .enum(["none", "firstCycle", "lastCycle"])
+      .meta({ description: "A deload adds one cycle." }),
+    periodization: z
+      .boolean()
+      .meta({ description: "Whether exercises carry per-cycle `cycleTargets`." }),
+    runStartedAt: z.string().optional(),
+    generator: z.record(z.string(), z.unknown()).optional(),
+  })
+  .meta({ id: "ProgramConfig" });
 
 export const Program = z
-	.object({
-		id: z.string(),
-		name: z.string(),
-		color: z.enum(PROGRAM_COLORS),
-		icon: z.string().meta({ description: 'An SF Symbol name.' }),
-		cycles: z.int(),
-		currentCycle: z.int(),
-		active: z.boolean(),
-		archived: z.boolean(),
-		config: ProgramConfig,
-		days: z.array(ProgramDay),
-		createdAt: z.string(),
-		updatedAt: z.string(),
-	})
-	.meta({ id: 'Program', description: 'A cycle of days, each a template or a rest day, repeated `cycles` times.' });
+  .object({
+    id: z.string(),
+    name: z.string(),
+    color: z.enum(PROGRAM_COLORS),
+    icon: z.string().meta({ description: "An SF Symbol name." }),
+    cycles: z.int(),
+    currentCycle: z.int(),
+    active: z.boolean(),
+    archived: z.boolean(),
+    config: ProgramConfig,
+    days: z.array(ProgramDay),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .meta({
+    id: "Program",
+    description: "A cycle of days, each a template or a rest day, repeated `cycles` times.",
+  });
 
 export const ProgramDetail = Program.extend({
-	templates: z.array(Template).meta({ description: "The days' templates." }),
-	upNext: z
-		.object({
-			dayId: z.string(),
-			templateId: z.string().nullable().meta({ description: 'Null for a rest day.' }),
-			cycle: z.int(),
-		})
-		.nullable()
-		.meta({
-			description:
-				'The first day of the current cycle not done yet: a workout day without a finished session in this run, or an unticked rest day.',
-		}),
-}).meta({ id: 'ProgramDetail' });
+  templates: z.array(Template).meta({ description: "The days' templates." }),
+  upNext: z
+    .object({
+      dayId: z.string(),
+      templateId: z.string().nullable().meta({ description: "Null for a rest day." }),
+      cycle: z.int(),
+    })
+    .nullable()
+    .meta({
+      description:
+        "The first day of the current cycle not done yet: a workout day without a finished session in this run, or an unticked rest day.",
+    }),
+}).meta({ id: "ProgramDetail" });
 
 const DayInput = z
-	.object({
-		id: ref.optional().meta({ description: 'Keep an existing day by its id. Generated when omitted.' }),
-		templateId: ref.optional().meta({ description: 'An existing template to train that day.' }),
-		template: TemplateCreate.optional().meta({ description: "A new template, created as this program's day." }),
-	})
-	.refine(day => !(day.templateId && day.template), 'Give templateId or template, not both')
-	.meta({ id: 'ProgramDayInput', description: 'A workout day (`templateId` or `template`), or a rest day (neither).' });
+  .object({
+    id: ref
+      .optional()
+      .meta({ description: "Keep an existing day by its id. Generated when omitted." }),
+    templateId: ref.optional().meta({ description: "An existing template to train that day." }),
+    template: TemplateCreate.optional().meta({
+      description: "A new template, created as this program's day.",
+    }),
+  })
+  .refine((day) => !(day.templateId && day.template), "Give templateId or template, not both")
+  .meta({
+    id: "ProgramDayInput",
+    description: "A workout day (`templateId` or `template`), or a rest day (neither).",
+  });
 
 const ConfigInput = z
-	.object({
-		dayOrder: z.enum(['rolling', 'weekly']),
-		deload: z.enum(['none', 'firstCycle', 'lastCycle']),
-		periodization: z.boolean(),
-	})
-	.partial()
-	.meta({ id: 'ProgramConfigInput' });
+  .object({
+    dayOrder: z.enum(["rolling", "weekly"]),
+    deload: z.enum(["none", "firstCycle", "lastCycle"]),
+    periodization: z.boolean(),
+  })
+  .partial()
+  .meta({ id: "ProgramConfigInput" });
 
 const programFields = {
-	name: z.string().trim().min(1),
-	color: z.enum(PROGRAM_COLORS),
-	icon: z.string().min(1),
-	cycles: z.int().min(1),
-	config: ConfigInput,
-	days: z.array(DayInput).min(1),
+  name: z.string().trim().min(1),
+  color: z.enum(PROGRAM_COLORS),
+  icon: z.string().min(1),
+  cycles: z.int().min(1),
+  config: ConfigInput,
+  days: z.array(DayInput).min(1),
 };
 export const ProgramCreate = z
-	.object({
-		...programFields,
-		color: programFields.color.default('blue'),
-		icon: programFields.icon.default('dumbbell.fill'),
-		config: ConfigInput.default({}),
-		activate: z.boolean().default(false).meta({ description: 'Make it the one active program.' }),
-	})
-	.meta({ id: 'ProgramCreate' });
+  .object({
+    ...programFields,
+    color: programFields.color.default("blue"),
+    icon: programFields.icon.default("dumbbell.fill"),
+    config: ConfigInput.default({}),
+    activate: z.boolean().default(false).meta({ description: "Make it the one active program." }),
+  })
+  .meta({ id: "ProgramCreate" });
 export const ProgramPatch = z
-	.object({
-		...programFields,
-		currentCycle: z.int().min(1),
-		archived: z.boolean().meta({ description: 'Archiving also deactivates.' }),
-		days: programFields.days.meta({
-			description:
-				'Replaces the days. Days not listed are dropped; their templates stay, use DELETE /templates to remove them.',
-		}),
-	})
-	.partial()
-	.meta({ id: 'ProgramPatch' });
+  .object({
+    ...programFields,
+    currentCycle: z.int().min(1),
+    archived: z.boolean().meta({ description: "Archiving also deactivates." }),
+    days: programFields.days.meta({
+      description:
+        "Replaces the days. Days not listed are dropped; their templates stay, use DELETE /templates to remove them.",
+    }),
+  })
+  .partial()
+  .meta({ id: "ProgramPatch" });
 
 const WeightOption = z.object({
-	kg,
-	count: count.optional().meta({ description: 'Omit for unlimited.' }),
-	unit: z.enum(WEIGHT_UNITS).optional(),
+  kg,
+  count: count.optional().meta({ description: "Omit for unlimited." }),
+  unit: z.enum(WEIGHT_UNITS).optional(),
 });
 export const EquipmentLoad = z
-	.union([
-		z.strictObject({ weights: z.strictObject({ options: z.array(WeightOption) }) }),
-		z.strictObject({
-			ranges: z.strictObject({
-				options: z.array(z.object({ minKg: kg, maxKg: kg, incrementKg: z.number().positive() })),
-				micro: z.object({ kind: z.enum(['dial', 'pin', 'plates']), weightsKg: z.array(kg) }).optional(),
-			}),
-		}),
-		z.strictObject({ base: z.strictObject({ kg }) }),
-		z.strictObject({
-			bands: z.strictObject({ options: z.array(z.object({ color: z.string(), count: count.optional() })) }),
-		}),
-	])
-	.meta({
-		id: 'EquipmentLoad',
-		description:
-			"Exactly one key: `weights` (dumbbells, plates, bars), `ranges` (pin-stack machines), `base` (a loadable machine's own weight), or `bands`.",
-	});
+  .union([
+    z.strictObject({ weights: z.strictObject({ options: z.array(WeightOption) }) }),
+    z.strictObject({
+      ranges: z.strictObject({
+        options: z.array(z.object({ minKg: kg, maxKg: kg, incrementKg: z.number().positive() })),
+        micro: z
+          .object({ kind: z.enum(["dial", "pin", "plates"]), weightsKg: z.array(kg) })
+          .optional(),
+      }),
+    }),
+    z.strictObject({ base: z.strictObject({ kg }) }),
+    z.strictObject({
+      bands: z.strictObject({
+        options: z.array(z.object({ color: z.string(), count: count.optional() })),
+      }),
+    }),
+  ])
+  .meta({
+    id: "EquipmentLoad",
+    description:
+      "Exactly one key: `weights` (dumbbells, plates, bars), `ranges` (pin-stack machines), `base` (a loadable machine's own weight), or `bands`.",
+  });
 const GymEquipment = z
-	.object({
-		load: EquipmentLoad.optional().meta({
-			description:
-				"Omit to use the standard weights of the owner's display unit (kg plates and bars in kg, MF's lb defaults in lb). Set it only for equipment that differs.",
-		}),
-	})
-	.meta({ id: 'GymEquipment' });
+  .object({
+    load: EquipmentLoad.optional().meta({
+      description:
+        "Omit to use the standard weights of the owner's display unit (kg plates and bars in kg, MF's lb defaults in lb). Set it only for equipment that differs.",
+    }),
+  })
+  .meta({ id: "GymEquipment" });
 const EquipmentMap = z
-	.record(z.string(), GymEquipment)
-	.meta({ description: 'Keyed by equipment id from GET /equipment. A key present means the gym has it.' });
+  .record(z.string(), GymEquipment)
+  .meta({
+    description: "Keyed by equipment id from GET /equipment. A key present means the gym has it.",
+  });
 
 export const Gym = z
-	.object({
-		id: z.string(),
-		name: z.string(),
-		icon: z.string(),
-		isDefault: z.boolean(),
-		equipment: EquipmentMap,
-		createdAt: z.string(),
-		updatedAt: z.string(),
-	})
-	.meta({ id: 'Gym', description: 'A place to train and the equipment it has.' });
+  .object({
+    id: z.string(),
+    name: z.string(),
+    icon: z.string(),
+    isDefault: z.boolean(),
+    equipment: EquipmentMap,
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .meta({ id: "Gym", description: "A place to train and the equipment it has." });
 
-const gymFields = { name: z.string().trim().min(1), icon: z.string().min(1), equipment: EquipmentMap };
+const gymFields = {
+  name: z.string().trim().min(1),
+  icon: z.string().min(1),
+  equipment: EquipmentMap,
+};
 export const GymCreate = z
-	.object({
-		...gymFields,
-		icon: gymFields.icon.default('building.2'),
-		equipment: EquipmentMap.default({}),
-		isDefault: z.boolean().default(false),
-	})
-	.meta({ id: 'GymCreate' });
-export const GymPatch = z.object(gymFields).partial().meta({ id: 'GymPatch' });
+  .object({
+    ...gymFields,
+    icon: gymFields.icon.default("building.2"),
+    equipment: EquipmentMap.default({}),
+    isDefault: z.boolean().default(false),
+  })
+  .meta({ id: "GymCreate" });
+export const GymPatch = z.object(gymFields).partial().meta({ id: "GymPatch" });
 
 export const Equipment = z
-	.looseObject({ id: z.string(), name: z.string(), category: z.string(), weightOptionsKg: z.array(z.number()) })
-	.meta({ id: 'Equipment' });
+  .looseObject({
+    id: z.string(),
+    name: z.string(),
+    category: z.string(),
+    weightOptionsKg: z.array(z.number()),
+  })
+  .meta({ id: "Equipment" });
 
 const exerciseShape = {
-	id: z.string(),
-	name: z.string(),
-	alternativeNames: z.array(z.string()),
-	type: z.enum(EXERCISE_TYPES),
-	category: z.enum(EXERCISE_CATEGORIES),
-	region: z.enum(REGIONS).nullable().optional(),
-	laterality: z.enum(LATERALITIES),
-	primaryMuscles: z.array(z.enum(MUSCLES)),
-	secondaryMuscles: z.array(z.enum(MUSCLES)),
-	movementPatterns: z.array(z.string()),
-	metrics: z.array(z.enum(METRICS)).meta({ description: 'What each set records, in display order.' }),
-	resistanceEquipment: z.array(z.string()).meta({ description: 'Alternative ways to load it.' }),
-	resistanceEquipmentIDs: z.array(z.array(z.string())),
-	supportEquipment: z.array(z.string()),
-	supportEquipmentIDs: z.array(z.array(z.string())),
+  id: z.string(),
+  name: z.string(),
+  alternativeNames: z.array(z.string()),
+  type: z.enum(EXERCISE_TYPES),
+  category: z.enum(EXERCISE_CATEGORIES),
+  region: z.enum(REGIONS).nullable().optional(),
+  laterality: z.enum(LATERALITIES),
+  primaryMuscles: z.array(z.enum(MUSCLES)),
+  secondaryMuscles: z.array(z.enum(MUSCLES)),
+  movementPatterns: z.array(z.string()),
+  metrics: z
+    .array(z.enum(METRICS))
+    .meta({ description: "What each set records, in display order." }),
+  resistanceEquipment: z.array(z.string()).meta({ description: "Alternative ways to load it." }),
+  resistanceEquipmentIDs: z.array(z.array(z.string())),
+  supportEquipment: z.array(z.string()),
+  supportEquipmentIDs: z.array(z.array(z.string())),
 };
 /** The stored `Exercise`, a catalog entry or a custom row's `exercise` column, with every key the app writes. */
 export const StoredExercise = z.looseObject(exerciseShape);
 export const Exercise = z
-	.looseObject({ ...exerciseShape, custom: z.boolean(), archived: z.boolean() })
-	.meta({ id: 'Exercise', description: "A catalog exercise, or one of the owner's `custom-` exercises." });
+  .looseObject({ ...exerciseShape, custom: z.boolean(), archived: z.boolean() })
+  .meta({
+    id: "Exercise",
+    description: "A catalog exercise, or one of the owner's `custom-` exercises.",
+  });
 
-const WARM_UP_AUTOMATION = ['none', 'smart', 'scheme'] as const;
+const WARM_UP_AUTOMATION = ["none", "smart", "scheme"] as const;
 const WarmUpStep = z.object({ percent: z.int().min(1).max(100), reps: z.int().min(1) });
 
 export const ExerciseSettings = z
-	.object({
-		pinnedNote: z.string().meta({ description: 'Shown on the exercise in every workout.' }),
-		restSeconds: count.nullable().meta({ description: 'Rest override. Null uses the settings default.' }),
-		doNotRecommend: z.boolean(),
-		overrides: z
-			.record(z.string(), z.unknown())
-			.meta({ description: "Exercise Overrides as stored. A key left out uses the app's default." }),
-	})
-	.meta({ id: 'ExerciseSettings' });
+  .object({
+    pinnedNote: z.string().meta({ description: "Shown on the exercise in every workout." }),
+    restSeconds: count
+      .nullable()
+      .meta({ description: "Rest override. Null uses the settings default." }),
+    doNotRecommend: z.boolean(),
+    overrides: z
+      .record(z.string(), z.unknown())
+      .meta({
+        description: "Exercise Overrides as stored. A key left out uses the app's default.",
+      }),
+  })
+  .meta({ id: "ExerciseSettings" });
 /** The scalar `ExerciseOverrides` keys. Equipment loads and the plate offset stay app-only: their trees are app-shaped. */
 const OverridesPatch = z
-	.object({
-		restBetweenSides: z.boolean().nullable(),
-		expandRepRange: z.boolean().nullable(),
-		weightMatch: z.boolean().nullable(),
-		warmUpAutomation: z.enum(WARM_UP_AUTOMATION).nullable(),
-		warmUpScheme: z.array(WarmUpStep).nullable(),
-		barWeightKg: z
-			.record(z.string(), kg)
-			.nullable()
-			.meta({ description: 'The bar weight the plate calculator loads, per bar equipment id.' }),
-	})
-	.partial()
-	.meta({ description: 'Merges key by key. Null puts a key back to Default.' });
+  .object({
+    restBetweenSides: z.boolean().nullable(),
+    expandRepRange: z.boolean().nullable(),
+    weightMatch: z.boolean().nullable(),
+    warmUpAutomation: z.enum(WARM_UP_AUTOMATION).nullable(),
+    warmUpScheme: z.array(WarmUpStep).nullable(),
+    barWeightKg: z
+      .record(z.string(), kg)
+      .nullable()
+      .meta({ description: "The bar weight the plate calculator loads, per bar equipment id." }),
+  })
+  .partial()
+  .meta({ description: "Merges key by key. Null puts a key back to Default." });
 
-export const ExerciseDetail = Exercise.extend({ settings: ExerciseSettings }).meta({ id: 'ExerciseDetail' });
+export const ExerciseDetail = Exercise.extend({ settings: ExerciseSettings }).meta({
+  id: "ExerciseDetail",
+});
 
 const exerciseFields = {
-	name: z.string().trim().min(1),
-	type: z.enum(EXERCISE_TYPES),
-	category: z.enum(EXERCISE_CATEGORIES),
-	region: z.enum(REGIONS),
-	laterality: z.enum(LATERALITIES),
-	primaryMuscles: z.array(z.enum(MUSCLES)).min(1),
-	secondaryMuscles: z.array(z.enum(MUSCLES)),
-	metrics: z.array(z.enum(METRICS)).min(1).max(2),
-	alternativeNames: z.array(z.string()),
-	resistanceEquipmentIDs: z
-		.array(z.array(z.string()).min(1))
-		.meta({ description: 'Alternative loading options, each a list of equipment ids used together.' }),
-	supportEquipmentIDs: z.array(z.array(z.string()).min(1)),
-	bodyweightFraction: z.number().min(0).max(1).meta({ description: 'Share of body weight moved.' }),
-	about: z.string().meta({ description: 'Description, as Markdown.' }),
+  name: z.string().trim().min(1),
+  type: z.enum(EXERCISE_TYPES),
+  category: z.enum(EXERCISE_CATEGORIES),
+  region: z.enum(REGIONS),
+  laterality: z.enum(LATERALITIES),
+  primaryMuscles: z.array(z.enum(MUSCLES)).min(1),
+  secondaryMuscles: z.array(z.enum(MUSCLES)),
+  metrics: z.array(z.enum(METRICS)).min(1).max(2),
+  alternativeNames: z.array(z.string()),
+  resistanceEquipmentIDs: z
+    .array(z.array(z.string()).min(1))
+    .meta({
+      description: "Alternative loading options, each a list of equipment ids used together.",
+    }),
+  supportEquipmentIDs: z.array(z.array(z.string()).min(1)),
+  bodyweightFraction: z.number().min(0).max(1).meta({ description: "Share of body weight moved." }),
+  about: z.string().meta({ description: "Description, as Markdown." }),
 };
 export const ExerciseCreate = z
-	.object({
-		...exerciseFields,
-		category: exerciseFields.category.default('other'),
-		region: exerciseFields.region.optional(),
-		laterality: exerciseFields.laterality.default('bilateral'),
-		secondaryMuscles: exerciseFields.secondaryMuscles.default([]),
-		alternativeNames: exerciseFields.alternativeNames.default([]),
-		resistanceEquipmentIDs: exerciseFields.resistanceEquipmentIDs.default([]),
-		supportEquipmentIDs: exerciseFields.supportEquipmentIDs.default([]),
-		bodyweightFraction: exerciseFields.bodyweightFraction.default(0),
-		about: exerciseFields.about.optional(),
-	})
-	.meta({ id: 'ExerciseCreate' });
+  .object({
+    ...exerciseFields,
+    category: exerciseFields.category.default("other"),
+    region: exerciseFields.region.optional(),
+    laterality: exerciseFields.laterality.default("bilateral"),
+    secondaryMuscles: exerciseFields.secondaryMuscles.default([]),
+    alternativeNames: exerciseFields.alternativeNames.default([]),
+    resistanceEquipmentIDs: exerciseFields.resistanceEquipmentIDs.default([]),
+    supportEquipmentIDs: exerciseFields.supportEquipmentIDs.default([]),
+    bodyweightFraction: exerciseFields.bodyweightFraction.default(0),
+    about: exerciseFields.about.optional(),
+  })
+  .meta({ id: "ExerciseCreate" });
 export const ExercisePatch = z
-	.object({ ...exerciseFields, archived: z.boolean().meta({ description: 'Hides it from the picker.' }) })
-	.partial()
-	.meta({ id: 'ExercisePatch' });
+  .object({
+    ...exerciseFields,
+    archived: z.boolean().meta({ description: "Hides it from the picker." }),
+  })
+  .partial()
+  .meta({ id: "ExercisePatch" });
 export const ExerciseSettingsPatch = ExerciseSettings.omit({ overrides: true })
-	.extend({ overrides: OverridesPatch })
-	.partial()
-	.meta({ id: 'ExerciseSettingsPatch' });
+  .extend({ overrides: OverridesPatch })
+  .partial()
+  .meta({ id: "ExerciseSettingsPatch" });
 
 export const ExerciseHistoryEntry = z
-	.object({
-		sessionId: z.string(),
-		sessionName: z.string(),
-		startedAt: z.string(),
-		note: z.string().nullable(),
-		sets: z.array(WorkoutSet),
-		stats: ExerciseStats.nullable().meta({ description: 'Null when no set of it was logged.' }),
-	})
-	.meta({ id: 'ExerciseHistoryEntry', description: 'One finished session that trained the exercise.' });
+  .object({
+    sessionId: z.string(),
+    sessionName: z.string(),
+    startedAt: z.string(),
+    note: z.string().nullable(),
+    sets: z.array(WorkoutSet),
+    stats: ExerciseStats.nullable().meta({ description: "Null when no set of it was logged." }),
+  })
+  .meta({
+    id: "ExerciseHistoryEntry",
+    description: "One finished session that trained the exercise.",
+  });
 
 export const day = z.iso
-	.date()
-	.meta({ description: 'A calendar day, `YYYY-MM-DD`. It never moves through a time zone.' });
-const minute = z.int().min(0).max(1439).meta({ description: 'Minutes since midnight, 0 through 1439.' });
+  .date()
+  .meta({ description: "A calendar day, `YYYY-MM-DD`. It never moves through a time zone." });
+const minute = z
+  .int()
+  .min(0)
+  .max(1439)
+  .meta({ description: "Minutes since midnight, 0 through 1439." });
 const nonnegative = z.number().min(0);
 
 export const NutrientAmounts = nutrientAmounts.meta({
-	id: 'NutrientAmounts',
-	description:
-		'Sparse amounts keyed by nutrient id: `k` (kcal), `p`, `f`, `c`, and `nc` (net carbs) in grams, and USDA nutrient numbers such as `291` (fiber) in the registry unit. A missing id means not reported.',
+  id: "NutrientAmounts",
+  description:
+    "Sparse amounts keyed by nutrient id: `k` (kcal), `p`, `f`, `c`, and `nc` (net carbs) in grams, and USDA nutrient numbers such as `291` (fiber) in the registry unit. A missing id means not reported.",
 });
 export const Serving = serving.meta({
-	id: 'Serving',
-	description:
-		'How much: `quantity` of `measure`. `measure.quantity` of the measure is `measure.servings` base servings, so the amounts are the nutrients times `measure.servings * quantity / measure.quantity`.',
+  id: "Serving",
+  description:
+    "How much: `quantity` of `measure`. `measure.quantity` of the measure is `measure.servings` base servings, so the amounts are the nutrients times `measure.servings * quantity / measure.quantity`.",
 });
 export const FoodNutrition = foodNutrition.meta({
-	id: 'FoodNutrition',
-	description:
-		'Nutrients per base serving, the grams or milliliters in one when known (which unlocks g, oz, lb, mL, fl oz, and cup), and the named measures, the first the default.',
+  id: "FoodNutrition",
+  description:
+    "Nutrients per base serving, the grams or milliliters in one when known (which unlocks g, oz, lb, mL, fl oz, and cup), and the named measures, the first the default.",
 });
 export const FoodSnapshot = foodSnapshot.meta({
-	id: 'FoodSnapshot',
-	description: 'A food as logged. Editing or deleting the food later never changes it. `foodID` is provenance only.',
+  id: "FoodSnapshot",
+  description:
+    "A food as logged. Editing or deleting the food later never changes it. `foodID` is provenance only.",
 });
 
 export const Food = z
-	.object({
-		id: z.string(),
-		source: z.enum(FOOD_ROW_SOURCES),
-		name: z.string(),
-		brand: z.string().nullable(),
-		barcode: z.string().nullable(),
-		store: z.string().nullable(),
-		replaces: z.string().nullable(),
-		icon: z.string().nullable(),
-		nutrition: FoodNutrition,
-		archived: z.boolean(),
-		createdAt: z.string(),
-		updatedAt: z.string(),
-	})
-	.meta({
-		id: 'Food',
-		description:
-			'A food the owner made (`custom`, a UUID id) or a cached `usda` (`usda-<fdcId>`) or `open_food_facts` (`off-<barcode>`) food.',
-	});
+  .object({
+    id: z.string(),
+    source: z.enum(FOOD_ROW_SOURCES),
+    name: z.string(),
+    brand: z.string().nullable(),
+    barcode: z.string().nullable(),
+    store: z.string().nullable(),
+    replaces: z.string().nullable(),
+    icon: z.string().nullable(),
+    nutrition: FoodNutrition,
+    archived: z.boolean(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .meta({
+    id: "Food",
+    description:
+      "A food the owner made (`custom`, a UUID id) or a cached `usda` (`usda-<fdcId>`) or `open_food_facts` (`off-<barcode>`) food.",
+  });
 const foodFields = {
-	name: z.string().trim().min(1),
-	brand: z.string().nullable(),
-	barcode: z.string().nullable(),
-	store: z
-		.string()
-		.nullable()
-		.meta({ description: "The store a store-packed food is from; its barcode is that store's item code." }),
-	replaces: z.string().nullable().meta({
-		description:
-			"On a custom food that corrects a USDA or Open Food Facts food, the corrected food's id (or `<name>|<brand>` for a snapshot without one). The app shows this food wherever that one would appear.",
-	}),
-	icon: z.string().nullable().meta({ description: 'A food icon name; null for the default.' }),
-	nutrition: FoodNutrition,
-	archived: z.boolean(),
+  name: z.string().trim().min(1),
+  brand: z.string().nullable(),
+  barcode: z.string().nullable(),
+  store: z
+    .string()
+    .nullable()
+    .meta({
+      description: "The store a store-packed food is from; its barcode is that store's item code.",
+    }),
+  replaces: z.string().nullable().meta({
+    description:
+      "On a custom food that corrects a USDA or Open Food Facts food, the corrected food's id (or `<name>|<brand>` for a snapshot without one). The app shows this food wherever that one would appear.",
+  }),
+  icon: z.string().nullable().meta({ description: "A food icon name; null for the default." }),
+  nutrition: FoodNutrition,
+  archived: z.boolean(),
 };
 export const FoodCreate = z
-	.object({
-		id: foodRef.optional().meta({
-			description: 'A custom food: a UUID, generated when omitted. A cached food: `usda-<fdcId>` or `off-<barcode>`.',
-		}),
-		source: z.enum(FOOD_ROW_SOURCES).default('custom'),
-		...foodFields,
-		brand: foodFields.brand.default(null),
-		barcode: foodFields.barcode.default(null),
-		store: foodFields.store.default(null),
-		replaces: foodFields.replaces.default(null),
-		icon: foodFields.icon.default(null),
-		archived: foodFields.archived.default(false),
-	})
-	.meta({ id: 'FoodCreate' });
-export const FoodPatch = z.object(foodFields).partial().meta({ id: 'FoodPatch' });
+  .object({
+    id: foodRef.optional().meta({
+      description:
+        "A custom food: a UUID, generated when omitted. A cached food: `usda-<fdcId>` or `off-<barcode>`.",
+    }),
+    source: z.enum(FOOD_ROW_SOURCES).default("custom"),
+    ...foodFields,
+    brand: foodFields.brand.default(null),
+    barcode: foodFields.barcode.default(null),
+    store: foodFields.store.default(null),
+    replaces: foodFields.replaces.default(null),
+    icon: foodFields.icon.default(null),
+    archived: foodFields.archived.default(false),
+  })
+  .meta({ id: "FoodCreate" });
+export const FoodPatch = z.object(foodFields).partial().meta({ id: "FoodPatch" });
 
 const portionFields = {
-	food: FoodSnapshot.optional().meta({ description: 'The food as eaten. Or give `foodId` or `recipeId` instead.' }),
-	foodId: foodRef.optional().meta({ description: 'Snapshot a stored food.' }),
-	recipeId: ref
-		.optional()
-		.meta({ description: 'Snapshot a stored recipe, one serving of its yield per base serving.' }),
-	serving: Serving.optional().meta({ description: "Defaults to the quantity of the food's first measure." }),
+  food: FoodSnapshot.optional().meta({
+    description: "The food as eaten. Or give `foodId` or `recipeId` instead.",
+  }),
+  foodId: foodRef.optional().meta({ description: "Snapshot a stored food." }),
+  recipeId: ref
+    .optional()
+    .meta({ description: "Snapshot a stored recipe, one serving of its yield per base serving." }),
+  serving: Serving.optional().meta({
+    description: "Defaults to the quantity of the food's first measure.",
+  }),
 };
 const onePortion = [
-	(value: { food?: unknown; foodId?: unknown; recipeId?: unknown }) =>
-		[value.food, value.foodId, value.recipeId].filter(part => part !== undefined).length === 1,
-	'Give exactly one of food, foodId, and recipeId',
+  (value: { food?: unknown; foodId?: unknown; recipeId?: unknown }) =>
+    [value.food, value.foodId, value.recipeId].filter((part) => part !== undefined).length === 1,
+  "Give exactly one of food, foodId, and recipeId",
 ] as const;
 
 export const RecipeIngredient = z
-	.object({ id: z.string(), food: FoodSnapshot, serving: Serving })
-	.meta({ id: 'RecipeIngredient' });
+  .object({ id: z.string(), food: FoodSnapshot, serving: Serving })
+  .meta({ id: "RecipeIngredient" });
 export const IngredientAlteration = z
-	.object({ id: z.string(), food: FoodSnapshot, original: Serving.optional(), serving: Serving.optional() })
-	.meta({
-		id: 'IngredientAlteration',
-		description:
-			"One ingredient of an altered recipe at one serving of it: `original` is the recipe's amount and `serving` what was eaten. Without `original` it was added, without `serving` removed.",
-	});
+  .object({
+    id: z.string(),
+    food: FoodSnapshot,
+    original: Serving.optional(),
+    serving: Serving.optional(),
+  })
+  .meta({
+    id: "IngredientAlteration",
+    description:
+      "One ingredient of an altered recipe at one serving of it: `original` is the recipe's amount and `serving` what was eaten. Without `original` it was added, without `serving` removed.",
+  });
 export const Recipe = z
-	.object({
-		id: z.string(),
-		name: z.string(),
-		icon: z.string().nullable(),
-		ingredients: z.array(RecipeIngredient),
-		servings: z.number().meta({ description: 'How many servings the whole recipe makes.' }),
-		cookedGrams: z.number().nullable().meta({ description: 'What everything it makes weighs once cooked.' }),
-		steps: z.array(z.string()),
-		prepMinutes: z.int().nullable(),
-		cookMinutes: z.int().nullable(),
-		link: z.string().nullable(),
-		notes: z.string(),
-		archived: z.boolean(),
-		createdAt: z.string(),
-		updatedAt: z.string(),
-		nutrition: FoodNutrition.meta({
-			description: 'Derived from the ingredients, per serving of the yield. Never stored, so it cannot drift.',
-		}),
-	})
-	.meta({ id: 'Recipe' });
+  .object({
+    id: z.string(),
+    name: z.string(),
+    icon: z.string().nullable(),
+    ingredients: z.array(RecipeIngredient),
+    servings: z.number().meta({ description: "How many servings the whole recipe makes." }),
+    cookedGrams: z
+      .number()
+      .nullable()
+      .meta({ description: "What everything it makes weighs once cooked." }),
+    steps: z.array(z.string()),
+    prepMinutes: z.int().nullable(),
+    cookMinutes: z.int().nullable(),
+    link: z.string().nullable(),
+    notes: z.string(),
+    archived: z.boolean(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    nutrition: FoodNutrition.meta({
+      description:
+        "Derived from the ingredients, per serving of the yield. Never stored, so it cannot drift.",
+    }),
+  })
+  .meta({ id: "Recipe" });
 const IngredientInput = z
-	.object({ id: id.default(newId), ...portionFields })
-	.refine(...onePortion)
-	.meta({ id: 'RecipeIngredientInput' });
+  .object({ id: id.default(newId), ...portionFields })
+  .refine(...onePortion)
+  .meta({ id: "RecipeIngredientInput" });
 const recipeFields = {
-	name: z.string().trim().min(1),
-	icon: z.string().nullable(),
-	ingredients: z.array(IngredientInput),
-	servings: z.number().positive(),
-	cookedGrams: z.number().positive().nullable(),
-	steps: z.array(z.string()),
-	prepMinutes: count.nullable(),
-	cookMinutes: count.nullable(),
-	link: z.string().nullable(),
-	notes: z.string(),
-	archived: z.boolean(),
+  name: z.string().trim().min(1),
+  icon: z.string().nullable(),
+  ingredients: z.array(IngredientInput),
+  servings: z.number().positive(),
+  cookedGrams: z.number().positive().nullable(),
+  steps: z.array(z.string()),
+  prepMinutes: count.nullable(),
+  cookMinutes: count.nullable(),
+  link: z.string().nullable(),
+  notes: z.string(),
+  archived: z.boolean(),
 };
 export const RecipeCreate = z
-	.object({
-		id: createdId.optional(),
-		...recipeFields,
-		icon: recipeFields.icon.default(null),
-		ingredients: recipeFields.ingredients.default([]),
-		servings: recipeFields.servings.default(1),
-		cookedGrams: recipeFields.cookedGrams.default(null),
-		steps: recipeFields.steps.default([]),
-		prepMinutes: recipeFields.prepMinutes.default(null),
-		cookMinutes: recipeFields.cookMinutes.default(null),
-		link: recipeFields.link.default(null),
-		notes: recipeFields.notes.default(''),
-		archived: recipeFields.archived.default(false),
-	})
-	.meta({ id: 'RecipeCreate' });
+  .object({
+    id: createdId.optional(),
+    ...recipeFields,
+    icon: recipeFields.icon.default(null),
+    ingredients: recipeFields.ingredients.default([]),
+    servings: recipeFields.servings.default(1),
+    cookedGrams: recipeFields.cookedGrams.default(null),
+    steps: recipeFields.steps.default([]),
+    prepMinutes: recipeFields.prepMinutes.default(null),
+    cookMinutes: recipeFields.cookMinutes.default(null),
+    link: recipeFields.link.default(null),
+    notes: recipeFields.notes.default(""),
+    archived: recipeFields.archived.default(false),
+  })
+  .meta({ id: "RecipeCreate" });
 export const RecipePatch = z
-	.object(recipeFields)
-	.partial()
-	.meta({ id: 'RecipePatch', description: '`ingredients` and `steps` replace the whole list.' });
+  .object(recipeFields)
+  .partial()
+  .meta({ id: "RecipePatch", description: "`ingredients` and `steps` replace the whole list." });
 
 const entrySection = z.string().min(1).optional().meta({
-	description:
-		'A meal section id from `settings.nutrition.mealSections`. Omitted, the section `minute` falls in, as the app logs.',
+  description:
+    "A meal section id from `settings.nutrition.mealSections`. Omitted, the section `minute` falls in, as the app logs.",
 });
 export const FoodEntry = z
-	.object({
-		id: z.string(),
-		day,
-		minute,
-		food: FoodSnapshot,
-		serving: Serving,
-		section: z.string().nullable().meta({
-			description:
-				'The id of the meal section (`settings.nutrition.mealSections`) it was logged into, kept when the sections change. Null for entries logged before sections existed, which the app places by `minute`.',
-		}),
-		alterations: z.array(IngredientAlteration).nullable().meta({
-			description:
-				"A logged recipe eaten with changes: its ingredients at one serving with what changed, was removed, or was added. `food` keeps the recipe's name and id with the altered nutrition. Null when eaten as the recipe made it. Swapping `food` clears it.",
-		}),
-		amounts: NutrientAmounts.meta({ description: "What was eaten: the snapshot's nutrients scaled by the serving." }),
-		createdAt: z.string(),
-		updatedAt: z.string(),
-	})
-	.meta({ id: 'FoodEntry', description: 'One logged food at a minute of a day, in a meal section.' });
+  .object({
+    id: z.string(),
+    day,
+    minute,
+    food: FoodSnapshot,
+    serving: Serving,
+    section: z.string().nullable().meta({
+      description:
+        "The id of the meal section (`settings.nutrition.mealSections`) it was logged into, kept when the sections change. Null for entries logged before sections existed, which the app places by `minute`.",
+    }),
+    alterations: z.array(IngredientAlteration).nullable().meta({
+      description:
+        "A logged recipe eaten with changes: its ingredients at one serving with what changed, was removed, or was added. `food` keeps the recipe's name and id with the altered nutrition. Null when eaten as the recipe made it. Swapping `food` clears it.",
+    }),
+    amounts: NutrientAmounts.meta({
+      description: "What was eaten: the snapshot's nutrients scaled by the serving.",
+    }),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .meta({
+    id: "FoodEntry",
+    description: "One logged food at a minute of a day, in a meal section.",
+  });
 export const FoodEntryCreate = z
-	.object({ id: createdId.optional(), day, minute: minute.default(720), section: entrySection, ...portionFields })
-	.refine(...onePortion)
-	.meta({ id: 'FoodEntryCreate' });
+  .object({
+    id: createdId.optional(),
+    day,
+    minute: minute.default(720),
+    section: entrySection,
+    ...portionFields,
+  })
+  .refine(...onePortion)
+  .meta({ id: "FoodEntryCreate" });
 export const FoodEntryPatch = z
-	.object({ day, minute, food: FoodSnapshot, serving: Serving, section: entrySection })
-	.partial()
-	.meta({
-		id: 'FoodEntryPatch',
-		description: 'A new `minute` without a `section` moves the entry to the section that minute falls in.',
-	});
+  .object({ day, minute, food: FoodSnapshot, serving: Serving, section: entrySection })
+  .partial()
+  .meta({
+    id: "FoodEntryPatch",
+    description:
+      "A new `minute` without a `section` moves the entry to the section that minute falls in.",
+  });
 
 export const FoodFavorite = z
-	.object({
-		id: z.string(),
-		food: FoodSnapshot,
-		serving: Serving,
-		alterations: z.array(IngredientAlteration).nullable().meta({
-			description:
-				'Saved from an altered recipe entry: its `alterations`, which logging the favorite in the app carries over. Null otherwise.',
-		}),
-		createdAt: z.string(),
-	})
-	.meta({ id: 'FoodFavorite', description: 'A food saved at a chosen serving. Several may come from one food.' });
+  .object({
+    id: z.string(),
+    food: FoodSnapshot,
+    serving: Serving,
+    alterations: z.array(IngredientAlteration).nullable().meta({
+      description:
+        "Saved from an altered recipe entry: its `alterations`, which logging the favorite in the app carries over. Null otherwise.",
+    }),
+    createdAt: z.string(),
+  })
+  .meta({
+    id: "FoodFavorite",
+    description: "A food saved at a chosen serving. Several may come from one food.",
+  });
 export const FoodFavoriteCreate = z
-	.object({ id: createdId.optional(), ...portionFields })
-	.refine(...onePortion)
-	.meta({ id: 'FoodFavoriteCreate' });
+  .object({ id: createdId.optional(), ...portionFields })
+  .refine(...onePortion)
+  .meta({ id: "FoodFavoriteCreate" });
 
 export const NutritionDay = z
-	.object({
-		id: day,
-		status: z.enum(DAY_STATUSES).meta({
-			description:
-				'`none`: unmarked, skipped when the incomplete-day screen finds it almost certainly partial. `complete`: always counted. `partial`: incomplete, skipped by the expenditure algorithm. `fasted`: counts as zero when empty.',
-		}),
-		override: NutrientAmounts.nullable().meta({ description: "Replaces the log's totals for the day." }),
-	})
-	.meta({ id: 'NutritionDay', description: 'What the owner said about a day. The id is the day.' });
+  .object({
+    id: day,
+    status: z.enum(DAY_STATUSES).meta({
+      description:
+        "`none`: unmarked, skipped when the incomplete-day screen finds it almost certainly partial. `complete`: always counted. `partial`: incomplete, skipped by the expenditure algorithm. `fasted`: counts as zero when empty.",
+    }),
+    override: NutrientAmounts.nullable().meta({
+      description: "Replaces the log's totals for the day.",
+    }),
+  })
+  .meta({ id: "NutritionDay", description: "What the owner said about a day. The id is the day." });
 export const NutritionDayPut = z
-	.object({ status: z.enum(DAY_STATUSES).default('none'), override: NutrientAmounts.nullable().default(null) })
-	.meta({ id: 'NutritionDayPut' });
+  .object({
+    status: z.enum(DAY_STATUSES).default("none"),
+    override: NutrientAmounts.nullable().default(null),
+  })
+  .meta({ id: "NutritionDayPut" });
 
 export const DayTarget = z
-	.object({ energy: nonnegative, protein: nonnegative, fat: nonnegative, carbs: nonnegative })
-	.meta({ id: 'DayTarget', description: 'kcal and grams.' });
+  .object({ energy: nonnegative, protein: nonnegative, fat: nonnegative, carbs: nonnegative })
+  .meta({ id: "DayTarget", description: "kcal and grams." });
 const daySummary = {
-	consumed: NutrientAmounts.meta({ description: 'What the day counts as eaten: `override` when set, else `totals`.' }),
-	countedKcal: z.number().nullable().meta({
-		description:
-			'What the expenditure algorithm counts: null for a partial day or an empty day not marked fasted, 0 for an empty fasted day.',
-	}),
-	planId: day.nullable().meta({ description: 'The nutrition plan in force on the day.' }),
-	target: DayTarget.nullable().meta({ description: "That plan's target for the day's weekday." }),
+  consumed: NutrientAmounts.meta({
+    description: "What the day counts as eaten: `override` when set, else `totals`.",
+  }),
+  countedKcal: z.number().nullable().meta({
+    description:
+      "What the expenditure algorithm counts: null for a partial day or an empty day not marked fasted, 0 for an empty fasted day.",
+  }),
+  planId: day.nullable().meta({ description: "The nutrition plan in force on the day." }),
+  target: DayTarget.nullable().meta({ description: "That plan's target for the day's weekday." }),
 };
 export const FoodLogDay = z
-	.object({
-		day,
-		status: z.enum(DAY_STATUSES),
-		override: NutrientAmounts.nullable(),
-		totals: NutrientAmounts.meta({ description: "The entries' amounts summed. `override` replaces them when set." }),
-		...daySummary,
-		entries: z.array(FoodEntry),
-	})
-	.meta({ id: 'FoodLogDay' });
+  .object({
+    day,
+    status: z.enum(DAY_STATUSES),
+    override: NutrientAmounts.nullable(),
+    totals: NutrientAmounts.meta({
+      description: "The entries' amounts summed. `override` replaces them when set.",
+    }),
+    ...daySummary,
+    entries: z.array(FoodEntry),
+  })
+  .meta({ id: "FoodLogDay" });
 export const FoodLogSummary = z
-	.object({
-		day,
-		status: z.enum(DAY_STATUSES),
-		override: NutrientAmounts.nullable(),
-		entryCount: z.int(),
-		totals: NutrientAmounts,
-		...daySummary,
-	})
-	.meta({ id: 'FoodLogSummary', description: 'A day of the food log without its entries.' });
+  .object({
+    day,
+    status: z.enum(DAY_STATUSES),
+    override: NutrientAmounts.nullable(),
+    entryCount: z.int(),
+    totals: NutrientAmounts,
+    ...daySummary,
+  })
+  .meta({ id: "FoodLogSummary", description: "A day of the food log without its entries." });
 
 const healthSource =
-	"`healthkit` rows are the phone's copies of Apple Health and are read-only here: editing or deleting one answers 409, because only Health can change its own readings. `manual` rows were logged in the app, imported, or written here.";
+  "`healthkit` rows are the phone's copies of Apple Health and are read-only here: editing or deleting one answers 409, because only Health can change its own readings. `manual` rows were logged in the app, imported, or written here.";
 
 export const BodyMetric = z
-	.object({
-		id: z.string(),
-		day,
-		kind: z.enum(BODY_METRIC_KINDS),
-		value: z.number(),
-		source: z.enum(BODY_SOURCES).meta({ description: healthSource }),
-		updatedAt: z.string(),
-	})
-	.meta({
-		id: 'BodyMetric',
-		description:
-			'One value per day and kind, id `<day>/<kind>`: a percent for `visual_body_fat`, a count for `steps` and `flights_climbed`, meters for `walking_distance`, centimeters for the rest.',
-	});
+  .object({
+    id: z.string(),
+    day,
+    kind: z.enum(BODY_METRIC_KINDS),
+    value: z.number(),
+    source: z.enum(BODY_SOURCES).meta({ description: healthSource }),
+    updatedAt: z.string(),
+  })
+  .meta({
+    id: "BodyMetric",
+    description:
+      "One value per day and kind, id `<day>/<kind>`: a percent for `visual_body_fat`, a count for `steps` and `flights_climbed`, meters for `walking_distance`, centimeters for the rest.",
+  });
 const healthCopy =
-	"Copied by the phone from Apple Health, where other apps (Garmin Connect, WHOOP, the Watch) write it; read-only. When several apps recorded the same session, one row stands for it: the best-ranked app's (Garmin Connect, then the Watch and iPhone, then WHOOP, then any other), and `sources` lists every app that recorded it, the kept one first.";
+  "Copied by the phone from Apple Health, where other apps (Garmin Connect, WHOOP, the Watch) write it; read-only. When several apps recorded the same session, one row stands for it: the best-ranked app's (Garmin Connect, then the Watch and iPhone, then WHOOP, then any other), and `sources` lists every app that recorded it, the kept one first.";
 const healthSources = z
-	.array(z.string())
-	.meta({ description: 'Every app that recorded it, as Health names them, the kept one first.' });
+  .array(z.string())
+  .meta({ description: "Every app that recorded it, as Health names them, the kept one first." });
 
 export const HealthActivity = z
-	.object({
-		id: z.string().meta({ description: "The kept workout's Health UUID." }),
-		activityType: z.string().meta({
-			description: "Health's activity type in snake case: `walking`, `running`, `traditional_strength_training`.",
-		}),
-		startedAt: z.string(),
-		endedAt: z.string(),
-		activeKcal: z.number().nullable(),
-		distanceMeters: z.number().nullable(),
-		averageHeartRate: z.number().nullable().meta({ description: 'Beats per minute.' }),
-		maxHeartRate: z.number().nullable().meta({ description: 'Beats per minute.' }),
-		source: z.string().meta({ description: 'The app whose workout is kept, as Health names it.' }),
-		sourceBundle: z.string(),
-		sources: healthSources,
-	})
-	.meta({
-		id: 'HealthActivity',
-		description: `A workout another app recorded. The app's own workouts are sessions, never these. ${healthCopy}`,
-	});
+  .object({
+    id: z.string().meta({ description: "The kept workout's Health UUID." }),
+    activityType: z.string().meta({
+      description:
+        "Health's activity type in snake case: `walking`, `running`, `traditional_strength_training`.",
+    }),
+    startedAt: z.string(),
+    endedAt: z.string(),
+    activeKcal: z.number().nullable(),
+    distanceMeters: z.number().nullable(),
+    averageHeartRate: z.number().nullable().meta({ description: "Beats per minute." }),
+    maxHeartRate: z.number().nullable().meta({ description: "Beats per minute." }),
+    source: z.string().meta({ description: "The app whose workout is kept, as Health names it." }),
+    sourceBundle: z.string(),
+    sources: healthSources,
+  })
+  .meta({
+    id: "HealthActivity",
+    description: `A workout another app recorded. The app's own workouts are sessions, never these. ${healthCopy}`,
+  });
 
 export const HealthSleep = z
-	.object({
-		id: z.string().meta({ description: 'The Health UUID of its first asleep sample.' }),
-		startedAt: z.string().meta({ description: 'Falling asleep: the first asleep sample.' }),
-		endedAt: z.string().meta({ description: 'Waking up: the end of the last asleep sample.' }),
-		asleepSeconds: z.number(),
-		awakeSeconds: z.number(),
-		deepSeconds: z.number(),
-		coreSeconds: z.number(),
-		remSeconds: z.number(),
-		source: z.string(),
-		sourceBundle: z.string(),
-		sources: healthSources,
-	})
-	.meta({
-		id: 'HealthSleep',
-		description: `A night or a nap, from one app's samples less than an hour apart. Another app's sleep within three hours of a better-ranked app's is the same night. ${healthCopy}`,
-	});
+  .object({
+    id: z.string().meta({ description: "The Health UUID of its first asleep sample." }),
+    startedAt: z.string().meta({ description: "Falling asleep: the first asleep sample." }),
+    endedAt: z.string().meta({ description: "Waking up: the end of the last asleep sample." }),
+    asleepSeconds: z.number(),
+    awakeSeconds: z.number(),
+    deepSeconds: z.number(),
+    coreSeconds: z.number(),
+    remSeconds: z.number(),
+    source: z.string(),
+    sourceBundle: z.string(),
+    sources: healthSources,
+  })
+  .meta({
+    id: "HealthSleep",
+    description: `A night or a nap, from one app's samples less than an hour apart. Another app's sleep within three hours of a better-ranked app's is the same night. ${healthCopy}`,
+  });
 
-export const BodyMetricPut = z.object({ value: nonnegative }).meta({ id: 'BodyMetricPut' });
+export const BodyMetricPut = z.object({ value: nonnegative }).meta({ id: "BodyMetricPut" });
 
 export const NutritionGoal = z
-	.object({
-		kind: z.enum(GOAL_KINDS),
-		targetWeightKg: z.number().positive().optional(),
-		ratePercentPerWeek: z.number().meta({ description: 'Percent of body weight per week, negative while losing.' }),
-		startedOn: day,
-	})
-	.meta({ id: 'NutritionGoal' });
+  .object({
+    kind: z.enum(GOAL_KINDS),
+    targetWeightKg: z.number().positive().optional(),
+    ratePercentPerWeek: z
+      .number()
+      .meta({ description: "Percent of body weight per week, negative while losing." }),
+    startedOn: day,
+  })
+  .meta({ id: "NutritionGoal" });
 export const CoachingProgram = z
-	.object({
-		style: z.enum(PROGRAM_STYLES).default('coached'),
-		diet: z.enum(DIET_STYLES).default('balanced'),
-		protein: z.enum(PROTEIN_LEVELS).default('moderate'),
-		floor: z.enum(CALORIE_FLOORS).default('standard'),
-		training: z.enum(TRAINING_TYPES).default('lifting'),
-		highDays: z
-			.array(z.int().min(1).max(7))
-			.default([])
-			.meta({ description: 'ISO weekdays, Monday 1, that get more calories. Empty spreads them evenly.' }),
-	})
-	.meta({ id: 'CoachingProgram' });
+  .object({
+    style: z.enum(PROGRAM_STYLES).default("coached"),
+    diet: z.enum(DIET_STYLES).default("balanced"),
+    protein: z.enum(PROTEIN_LEVELS).default("moderate"),
+    floor: z.enum(CALORIE_FLOORS).default("standard"),
+    training: z.enum(TRAINING_TYPES).default("lifting"),
+    highDays: z
+      .array(z.int().min(1).max(7))
+      .default([])
+      .meta({
+        description: "ISO weekdays, Monday 1, that get more calories. Empty spreads them evenly.",
+      }),
+  })
+  .meta({ id: "CoachingProgram" });
 export const NutritionPlan = z
-	.object({
-		id: day,
-		kind: z.enum(PLAN_KINDS),
-		goal: NutritionGoal,
-		coaching: CoachingProgram,
-		targets: z.array(DayTarget).length(7).meta({ description: 'Seven, Monday first.' }),
-		expenditureKcal: z.number().nullable().meta({ description: 'What a check-in computed and used.' }),
-		trendWeightKg: z.number().nullable(),
-		createdAt: z.string(),
-	})
-	.meta({
-		id: 'NutritionPlan',
-		description:
-			'The strategy from its day (the id) until the next plan. The plan for a day is the latest on or before it.',
-	});
+  .object({
+    id: day,
+    kind: z.enum(PLAN_KINDS),
+    goal: NutritionGoal,
+    coaching: CoachingProgram,
+    targets: z.array(DayTarget).length(7).meta({ description: "Seven, Monday first." }),
+    expenditureKcal: z
+      .number()
+      .nullable()
+      .meta({ description: "What a check-in computed and used." }),
+    trendWeightKg: z.number().nullable(),
+    createdAt: z.string(),
+  })
+  .meta({
+    id: "NutritionPlan",
+    description:
+      "The strategy from its day (the id) until the next plan. The plan for a day is the latest on or before it.",
+  });
 export const NutritionPlanPut = z
-	.object({
-		kind: z.enum(PLAN_KINDS).default('edit'),
-		goal: NutritionGoal,
-		coaching: CoachingProgram.default(CoachingProgram.parse({})),
-		targets: z.array(DayTarget).length(7),
-		expenditureKcal: z.number().positive().nullable().default(null),
-		trendWeightKg: z.number().positive().nullable().default(null),
-	})
-	.meta({ id: 'NutritionPlanPut' });
+  .object({
+    kind: z.enum(PLAN_KINDS).default("edit"),
+    goal: NutritionGoal,
+    coaching: CoachingProgram.default(CoachingProgram.parse({})),
+    targets: z.array(DayTarget).length(7),
+    expenditureKcal: z.number().positive().nullable().default(null),
+    trendWeightKg: z.number().positive().nullable().default(null),
+  })
+  .meta({ id: "NutritionPlanPut" });
 
 export const NutrientGoal = z
-	.object({
-		id: z.string(),
-		nutrient: z.string(),
-		startsOn: day,
-		mode: z.enum(NUTRIENT_GOAL_MODES),
-		floor: z.number().nullable(),
-		target: z.number().nullable(),
-		ceiling: z.number().nullable(),
-	})
-	.meta({
-		id: 'NutrientGoal',
-		description:
-			"A nutrient's bounds from a day on, id `<day>/<nutrient>`. `auto` uses the app's defaults, `none` shows no bounds, and a null bound under `custom` is hidden.",
-	});
+  .object({
+    id: z.string(),
+    nutrient: z.string(),
+    startsOn: day,
+    mode: z.enum(NUTRIENT_GOAL_MODES),
+    floor: z.number().nullable(),
+    target: z.number().nullable(),
+    ceiling: z.number().nullable(),
+  })
+  .meta({
+    id: "NutrientGoal",
+    description:
+      "A nutrient's bounds from a day on, id `<day>/<nutrient>`. `auto` uses the app's defaults, `none` shows no bounds, and a null bound under `custom` is hidden.",
+  });
 export const NutrientGoalPut = z
-	.object({
-		mode: z.enum(NUTRIENT_GOAL_MODES),
-		floor: nonnegative.nullable().default(null),
-		target: nonnegative.nullable().default(null),
-		ceiling: nonnegative.nullable().default(null),
-	})
-	.meta({ id: 'NutrientGoalPut', description: 'The bounds apply only under `custom`.' });
+  .object({
+    mode: z.enum(NUTRIENT_GOAL_MODES),
+    floor: nonnegative.nullable().default(null),
+    target: nonnegative.nullable().default(null),
+    ceiling: nonnegative.nullable().default(null),
+  })
+  .meta({ id: "NutrientGoalPut", description: "The bounds apply only under `custom`." });
 
 const hour = z.int().min(0).max(23);
 /** Mirrors `MealSection.defaults`. */
 export const DEFAULT_MEAL_SECTIONS = [
-	{ id: 'breakfast', name: 'Breakfast', start: 0 },
-	{ id: 'am-snack', name: 'AM Snack', start: 600 },
-	{ id: 'lunch', name: 'Lunch', start: 720 },
-	{ id: 'pm-snack', name: 'PM Snack', start: 900 },
-	{ id: 'dinner', name: 'Dinner', start: 1020 },
+  { id: "breakfast", name: "Breakfast", start: 0 },
+  { id: "am-snack", name: "AM Snack", start: 600 },
+  { id: "lunch", name: "Lunch", start: 720 },
+  { id: "pm-snack", name: "PM Snack", start: 900 },
+  { id: "dinner", name: "Dinner", start: 1020 },
 ];
 export const MealSections = z
-	.array(z.object({ id: z.string().min(1), name: z.string().min(1), start: minute }))
-	.min(1)
-	.refine(sections => sections[0]?.start === 0, { message: 'The first section starts at midnight (0).' })
-	.refine(sections => sections.every((section, index) => index === 0 || section.start > sections[index - 1]!.start), {
-		message: 'Each section starts after the one before.',
-	})
-	.refine(sections => new Set(sections.map(section => section.id)).size === sections.length, {
-		message: 'Section ids are unique.',
-	})
-	.meta({
-		description:
-			"The meal sections in time order, each from its `start` (minutes since midnight) to the next one's; the first starts at 0. Ids stay when a section is renamed, since entries store them.",
-	});
+  .array(z.object({ id: z.string().min(1), name: z.string().min(1), start: minute }))
+  .min(1)
+  .refine((sections) => sections[0]?.start === 0, {
+    message: "The first section starts at midnight (0).",
+  })
+  .refine(
+    (sections) =>
+      sections.every((section, index) => index === 0 || section.start > sections[index - 1]!.start),
+    {
+      message: "Each section starts after the one before.",
+    },
+  )
+  .refine((sections) => new Set(sections.map((section) => section.id)).size === sections.length, {
+    message: "Section ids are unique.",
+  })
+  .meta({
+    description:
+      "The meal sections in time order, each from its `start` (minutes since midnight) to the next one's; the first starts at 0. Ids stay when a section is renamed, since entries store them.",
+  });
 /** Mirrors `NutritionSettings` in the iOS app; a key the app does not know is ignored there. */
 const NutritionSettingsPatch = z
-	.object({
-		energyUnit: z.enum(['kcal', 'kj']).meta({ description: 'Display only. The API always speaks kcal.' }),
-		heightUnit: z
-			.enum(['feetAndInches', 'centimeters'])
-			.meta({ description: 'Display only. The API always speaks centimeters.' }),
-		checkInWeekday: z.int().min(1).max(7),
-		fastCheckIn: z.boolean(),
-		coachingModules: z
-			.object({ partialLogging: z.boolean(), weighIn: z.boolean(), fasting: z.boolean(), loggingBreak: z.boolean() })
-			.partial(),
-		standardFloorKcal: z.int().min(0).meta({ description: "The coached program's standard calorie floor." }),
-		showOverages: z.boolean(),
-		summaryNutrients: z
-			.array(z.enum(['k', 'p', 'f', 'c', '291', 'nc']))
-			.length(4)
-			.refine(ids => new Set(ids).size === ids.length, { message: 'Each column shows a different nutrient.' })
-			.meta({
-				description:
-					"The Food Log summary's four columns in order (`291` is fiber, `nc` net carbs). The logger's banner draws them too, and a new widget's empty slots take them.",
-			}),
-		hideAdditionalNutrients: z.boolean(),
-		searchBranded: z.boolean().meta({ description: 'Include Open Food Facts branded foods in search.' }),
-		favoriteMeasures: z.array(z.string()),
-		timeline: z
-			.object({
-				display: z
-					.enum(['time', 'sections'])
-					.meta({ description: 'The Food Log groups foods by hour, or by `mealSections`.' }),
-				firstHour: hour,
-				lastHour: hour,
-				hideEmptyHours: z.boolean(),
-				hideFoodDetails: z.boolean(),
-				hourlyTotals: z.boolean(),
-				foodTimestamps: z.boolean(),
-				addFoodsToHour: z.enum(['plusIcon', 'longPress']),
-				calendarWeekBanner: z.enum(['show', 'showAndPin', 'hide']),
-				premove: z.boolean(),
-			})
-			.partial(),
-		logger: z
-			.object({
-				nutritionDisplay: z.enum(['plateOnly', 'dayAndPlate', 'remainingAfterPlate']),
-				timeSelection: z.enum(['datePicker', 'timePad']),
-				optimization: z.enum(['speed', 'context']),
-			})
-			.partial(),
-		expenditure: z
-			.object({
-				staticKcal: z.number().positive().nullable(),
-				initialKcal: z.number().positive().nullable(),
-				calculationStart: day.nullable(),
-				bmrEquation: z.enum(['macroFactor', 'cunningham']),
-				activity: z.enum(['mostlySedentary', 'moderatelyActive', 'veryActive']).nullable(),
-				exercise: z.enum(['zero', 'oneToThree', 'fourToSix', 'sevenPlus']).nullable(),
-				athleticPursuits: z.enum(['exerciseRegularly', 'athlete', 'professionalAthlete', 'noneOfTheAbove']).nullable(),
-				priorWeight: z.enum(['yes', 'no', 'notSure']).nullable(),
-				priorProgress: z.enum(['gaining', 'losing', 'stable', 'notSure']).nullable(),
-				algorithm: z.enum(['v1', 'v2', 'v3']),
-				stepInformedUpdates: z.boolean(),
-				predictiveGoalAdjustment: z.boolean(),
-			})
-			.partial(),
-		mealSections: MealSections,
-		mealRating: z
-			.object({
-				enabled: z.boolean(),
-				formula: z.enum(['caloriesPerProtein']).meta({ description: 'Calories divided by grams of protein.' }),
-			})
-			.partial()
-			.meta({
-				description: "The Food Log's tag beside each meal's +, grading its foods by `formula`. Off by default.",
-			}),
-		hiddenNutrients: z.array(nutrientID),
-		visibleBodyMetrics: z.array(z.enum(BODY_METRIC_KINDS)),
-	})
-	.partial()
-	.meta({
-		id: 'NutritionSettingsPatch',
-		description:
-			'Merges into the stored Nutrition settings, and `coachingModules`, `timeline`, `logger`, `expenditure`, and `mealRating` key by key.',
-	});
+  .object({
+    energyUnit: z
+      .enum(["kcal", "kj"])
+      .meta({ description: "Display only. The API always speaks kcal." }),
+    heightUnit: z
+      .enum(["feetAndInches", "centimeters"])
+      .meta({ description: "Display only. The API always speaks centimeters." }),
+    checkInWeekday: z.int().min(1).max(7),
+    fastCheckIn: z.boolean(),
+    coachingModules: z
+      .object({
+        partialLogging: z.boolean(),
+        weighIn: z.boolean(),
+        fasting: z.boolean(),
+        loggingBreak: z.boolean(),
+      })
+      .partial(),
+    standardFloorKcal: z
+      .int()
+      .min(0)
+      .meta({ description: "The coached program's standard calorie floor." }),
+    showOverages: z.boolean(),
+    summaryNutrients: z
+      .array(z.enum(["k", "p", "f", "c", "291", "nc"]))
+      .length(4)
+      .refine((ids) => new Set(ids).size === ids.length, {
+        message: "Each column shows a different nutrient.",
+      })
+      .meta({
+        description:
+          "The Food Log summary's four columns in order (`291` is fiber, `nc` net carbs). The logger's banner draws them too, and a new widget's empty slots take them.",
+      }),
+    hideAdditionalNutrients: z.boolean(),
+    searchBranded: z
+      .boolean()
+      .meta({ description: "Include Open Food Facts branded foods in search." }),
+    favoriteMeasures: z.array(z.string()),
+    timeline: z
+      .object({
+        display: z
+          .enum(["time", "sections"])
+          .meta({ description: "The Food Log groups foods by hour, or by `mealSections`." }),
+        firstHour: hour,
+        lastHour: hour,
+        hideEmptyHours: z.boolean(),
+        hideFoodDetails: z.boolean(),
+        hourlyTotals: z.boolean(),
+        foodTimestamps: z.boolean(),
+        addFoodsToHour: z.enum(["plusIcon", "longPress"]),
+        calendarWeekBanner: z.enum(["show", "showAndPin", "hide"]),
+        premove: z.boolean(),
+      })
+      .partial(),
+    logger: z
+      .object({
+        nutritionDisplay: z.enum(["plateOnly", "dayAndPlate", "remainingAfterPlate"]),
+        timeSelection: z.enum(["datePicker", "timePad"]),
+        optimization: z.enum(["speed", "context"]),
+      })
+      .partial(),
+    expenditure: z
+      .object({
+        staticKcal: z.number().positive().nullable(),
+        initialKcal: z.number().positive().nullable(),
+        calculationStart: day.nullable(),
+        bmrEquation: z.enum(["macroFactor", "cunningham"]),
+        activity: z.enum(["mostlySedentary", "moderatelyActive", "veryActive"]).nullable(),
+        exercise: z.enum(["zero", "oneToThree", "fourToSix", "sevenPlus"]).nullable(),
+        athleticPursuits: z
+          .enum(["exerciseRegularly", "athlete", "professionalAthlete", "noneOfTheAbove"])
+          .nullable(),
+        priorWeight: z.enum(["yes", "no", "notSure"]).nullable(),
+        priorProgress: z.enum(["gaining", "losing", "stable", "notSure"]).nullable(),
+        algorithm: z.enum(["v1", "v2", "v3"]),
+        stepInformedUpdates: z.boolean(),
+        predictiveGoalAdjustment: z.boolean(),
+      })
+      .partial(),
+    mealSections: MealSections,
+    mealRating: z
+      .object({
+        enabled: z.boolean(),
+        formula: z
+          .enum(["caloriesPerProtein"])
+          .meta({ description: "Calories divided by grams of protein." }),
+      })
+      .partial()
+      .meta({
+        description:
+          "The Food Log's tag beside each meal's +, grading its foods by `formula`. Off by default.",
+      }),
+    hiddenNutrients: z.array(nutrientID),
+    visibleBodyMetrics: z.array(z.enum(BODY_METRIC_KINDS)),
+  })
+  .partial()
+  .meta({
+    id: "NutritionSettingsPatch",
+    description:
+      "Merges into the stored Nutrition settings, and `coachingModules`, `timeline`, `logger`, `expenditure`, and `mealRating` key by key.",
+  });
 
 const percent = z.int().min(0).max(1000);
 /** Mirrors `WorkoutSettings`. The app reads the stored tree deep-merged over its defaults, so a partial tree is safe. */
 const WorkoutSettingsPatch = z
-	.object({
-		rest: z
-			.object({
-				enabled: z.boolean(),
-				playSound: z.boolean(),
-				vibrate: z.boolean(),
-				afterLastWarmUp: z.boolean(),
-				betweenExercises: z.boolean(),
-				betweenSides: z.boolean(),
-				scaling: z
-					.object({ afterLastWarmUp: percent, betweenExercises: percent, betweenSides: percent })
-					.partial()
-					.meta({ description: 'Percent of the resolved rest.' }),
-			})
-			.partial()
-			.meta({ description: 'The rest timer. Rest seconds per category are `rest` at the top level.' }),
-		progression: z
-			.object({
-				initialFill: z.enum(['smartProgression', 'previousValues']),
-				applyInSession: z.boolean(),
-				expandRepRange: z.boolean(),
-				weightMatch: z.boolean(),
-			})
-			.partial(),
-		warmUp: z
-			.object({
-				automation: z.enum(WARM_UP_AUTOMATION),
-				schemes: z.partialRecord(z.enum(REST_CATEGORIES), z.array(WarmUpStep)),
-				hideCompletedSets: z.boolean(),
-				simplifyPlates: z.boolean(),
-			})
-			.partial(),
-		previousReference: z.enum(['anyWorkout', 'withinProgram']),
-		propagateChanges: z.boolean(),
-		rirTracking: z.boolean(),
-		supersetAutoScroll: z.boolean(),
-		exerciseAutoNext: z.boolean(),
-		display: z
-			.object({
-				keepAlive: z.boolean(),
-				workoutTimer: z.boolean(),
-				calendarScrolling: z.enum(['daily', 'weekly']),
-			})
-			.partial(),
-		plateCalculator: z
-			.record(
-				z.guid(),
-				z
-					.object({
-						includeBumperPlates: z.boolean(),
-						allowMixedUnits: z.boolean(),
-						offsetWeight: z.boolean(),
-						includeBase: z.record(z.string(), z.boolean()).meta({
-							description:
-								'Whether the calculator counts the bar or machine, per base equipment id. One left out follows `plateCalculatorIncludesBase`.',
-						}),
-					})
-					.partial(),
-			)
-			.meta({ description: 'Per gym id.' }),
-		plateCalculatorIncludesBase: z
-			.boolean()
-			.meta({ description: "Whether the plate calculator counts a bar's or machine's own weight by default." }),
-	})
-	.partial()
-	.meta({ id: 'WorkoutSettingsPatch', description: 'Merges into the stored Workout settings, object by object.' });
+  .object({
+    rest: z
+      .object({
+        enabled: z.boolean(),
+        playSound: z.boolean(),
+        vibrate: z.boolean(),
+        afterLastWarmUp: z.boolean(),
+        betweenExercises: z.boolean(),
+        betweenSides: z.boolean(),
+        scaling: z
+          .object({ afterLastWarmUp: percent, betweenExercises: percent, betweenSides: percent })
+          .partial()
+          .meta({ description: "Percent of the resolved rest." }),
+      })
+      .partial()
+      .meta({
+        description: "The rest timer. Rest seconds per category are `rest` at the top level.",
+      }),
+    progression: z
+      .object({
+        initialFill: z.enum(["smartProgression", "previousValues"]),
+        applyInSession: z.boolean(),
+        expandRepRange: z.boolean(),
+        weightMatch: z.boolean(),
+      })
+      .partial(),
+    warmUp: z
+      .object({
+        automation: z.enum(WARM_UP_AUTOMATION),
+        schemes: z.partialRecord(z.enum(REST_CATEGORIES), z.array(WarmUpStep)),
+        hideCompletedSets: z.boolean(),
+        simplifyPlates: z.boolean(),
+      })
+      .partial(),
+    previousReference: z.enum(["anyWorkout", "withinProgram"]),
+    propagateChanges: z.boolean(),
+    rirTracking: z.boolean(),
+    supersetAutoScroll: z.boolean(),
+    exerciseAutoNext: z.boolean(),
+    display: z
+      .object({
+        keepAlive: z.boolean(),
+        workoutTimer: z.boolean(),
+        calendarScrolling: z.enum(["daily", "weekly"]),
+      })
+      .partial(),
+    plateCalculator: z
+      .record(
+        z.guid(),
+        z
+          .object({
+            includeBumperPlates: z.boolean(),
+            allowMixedUnits: z.boolean(),
+            offsetWeight: z.boolean(),
+            includeBase: z.record(z.string(), z.boolean()).meta({
+              description:
+                "Whether the calculator counts the bar or machine, per base equipment id. One left out follows `plateCalculatorIncludesBase`.",
+            }),
+          })
+          .partial(),
+      )
+      .meta({ description: "Per gym id." }),
+    plateCalculatorIncludesBase: z
+      .boolean()
+      .meta({
+        description:
+          "Whether the plate calculator counts a bar's or machine's own weight by default.",
+      }),
+  })
+  .partial()
+  .meta({
+    id: "WorkoutSettingsPatch",
+    description: "Merges into the stored Workout settings, object by object.",
+  });
 
 const Rest = z.object(
-	Object.fromEntries(REST_CATEGORIES.map(key => [key, count])) as Record<
-		(typeof REST_CATEGORIES)[number],
-		typeof count
-	>,
+  Object.fromEntries(REST_CATEGORIES.map((key) => [key, count])) as Record<
+    (typeof REST_CATEGORIES)[number],
+    typeof count
+  >,
 );
 export const Settings = z
-	.object({
-		weightUnit: z.enum(WEIGHT_UNITS).meta({ description: 'The display unit. The API always speaks kilograms.' }),
-		rest: Rest.meta({ description: 'Default rest seconds per exercise category.' }),
-		workout: z.record(z.string(), z.unknown()),
-		profile: z.record(z.string(), z.unknown()),
-		dashboard: z.record(z.string(), z.unknown()),
-		shortcuts: z.record(z.string(), z.unknown()),
-		nutrition: z
-			.record(z.string(), z.unknown())
-			.meta({ description: 'The Nutrition settings as stored. A key left out takes the app default.' }),
-	})
-	.meta({ id: 'Settings' });
+  .object({
+    weightUnit: z
+      .enum(WEIGHT_UNITS)
+      .meta({ description: "The display unit. The API always speaks kilograms." }),
+    rest: Rest.meta({ description: "Default rest seconds per exercise category." }),
+    workout: z.record(z.string(), z.unknown()),
+    profile: z.record(z.string(), z.unknown()),
+    dashboard: z.record(z.string(), z.unknown()),
+    shortcuts: z.record(z.string(), z.unknown()),
+    nutrition: z
+      .record(z.string(), z.unknown())
+      .meta({
+        description: "The Nutrition settings as stored. A key left out takes the app default.",
+      }),
+  })
+  .meta({ id: "Settings" });
 export const SettingsPatch = z
-	.object({
-		weightUnit: z.enum(WEIGHT_UNITS),
-		rest: Rest.partial(),
-		profile: z
-			.object({
-				sex: z.enum(['male', 'female']),
-				liftingExperience: z.enum(['beginner', 'intermediate', 'advanced']),
-				bodyWeightKg: z.number().positive(),
-				heightCm: z.number().positive().meta({ description: 'Read by the BMR and the nutrient defaults.' }),
-				birthDate: day,
-			})
-			.partial(),
-		nutrition: NutritionSettingsPatch,
-		workout: WorkoutSettingsPatch,
-	})
-	.partial()
-	.meta({ id: 'SettingsPatch' });
+  .object({
+    weightUnit: z.enum(WEIGHT_UNITS),
+    rest: Rest.partial(),
+    profile: z
+      .object({
+        sex: z.enum(["male", "female"]),
+        liftingExperience: z.enum(["beginner", "intermediate", "advanced"]),
+        bodyWeightKg: z.number().positive(),
+        heightCm: z
+          .number()
+          .positive()
+          .meta({ description: "Read by the BMR and the nutrient defaults." }),
+        birthDate: day,
+      })
+      .partial(),
+    nutrition: NutritionSettingsPatch,
+    workout: WorkoutSettingsPatch,
+  })
+  .partial()
+  .meta({ id: "SettingsPatch" });
 
 export const BodyWeight = z
-	.object({
-		id: z.string(),
-		measuredAt: z.string(),
-		weightKg: z.number(),
-		source: z.enum(BODY_SOURCES).meta({ description: healthSource }),
-		bodyFatPercent: z.number().nullable().meta({ description: "The scale's body fat, entered with the weight." }),
-	})
-	.meta({ id: 'BodyWeight' });
+  .object({
+    id: z.string(),
+    measuredAt: z.string(),
+    weightKg: z.number(),
+    source: z.enum(BODY_SOURCES).meta({ description: healthSource }),
+    bodyFatPercent: z
+      .number()
+      .nullable()
+      .meta({ description: "The scale's body fat, entered with the weight." }),
+  })
+  .meta({ id: "BodyWeight" });
 const bodyWeightFields = {
-	weightKg: z.number().positive(),
-	measuredAt: instant,
-	bodyFatPercent: z.number().min(0).max(100).nullable(),
+  weightKg: z.number().positive(),
+  measuredAt: instant,
+  bodyFatPercent: z.number().min(0).max(100).nullable(),
 };
 export const BodyWeightCreate = z
-	.object({
-		id: createdId.optional(),
-		...bodyWeightFields,
-		measuredAt: instant.default(() => new Date().toISOString()).meta({ description: 'Defaults to now.' }),
-		bodyFatPercent: bodyWeightFields.bodyFatPercent.default(null),
-	})
-	.meta({ id: 'BodyWeightCreate' });
-export const BodyWeightPatch = z.object(bodyWeightFields).partial().meta({ id: 'BodyWeightPatch' });
+  .object({
+    id: createdId.optional(),
+    ...bodyWeightFields,
+    measuredAt: instant
+      .default(() => new Date().toISOString())
+      .meta({ description: "Defaults to now." }),
+    bodyFatPercent: bodyWeightFields.bodyFatPercent.default(null),
+  })
+  .meta({ id: "BodyWeightCreate" });
+export const BodyWeightPatch = z.object(bodyWeightFields).partial().meta({ id: "BodyWeightPatch" });
 
-export const Deleted = z.object({ deleted: z.string() }).meta({ id: 'Deleted' });
+export const Deleted = z.object({ deleted: z.string() }).meta({ id: "Deleted" });
 
-export const timeZone = z.string().refine(isTimeZone, 'Not an IANA time zone').default('UTC').meta({
-	description:
-		"The owner's IANA time zone, such as `America/New_York`. It decides the day a weigh-in falls on and which day is today, as the phone's calendar does. Defaults to UTC.",
+export const timeZone = z.string().refine(isTimeZone, "Not an IANA time zone").default("UTC").meta({
+  description:
+    "The owner's IANA time zone, such as `America/New_York`. It decides the day a weigh-in falls on and which day is today, as the phone's calendar does. Defaults to UTC.",
 });
 
 export const WeightTrend = z
-	.object({
-		today: day,
-		current: z
-			.object({
-				trendKg: z.number(),
-				weeklyChangeKg: z.number().nullable().meta({ description: 'Over the last three weeks of trend.' }),
-				energyBalanceKcal: z.number().nullable().meta({ description: 'Per day, negative in a deficit.' }),
-				projectedKgIn30Days: z.number().nullable(),
-			})
-			.nullable()
-			.meta({ description: 'Null without weigh-ins.' }),
-		days: z.array(
-			z.object({
-				day,
-				scaleKg: z.number().meta({ description: "The day's mean weigh-in, or interpolated between weigh-ins." }),
-				trendKg: z.number(),
-				weighedIn: z.boolean(),
-			}),
-		),
-	})
-	.meta({
-		id: 'WeightTrend',
-		description: "MacroFactor's Weight Trend V1 over the app's weigh-ins.",
-	});
+  .object({
+    today: day,
+    current: z
+      .object({
+        trendKg: z.number(),
+        weeklyChangeKg: z
+          .number()
+          .nullable()
+          .meta({ description: "Over the last three weeks of trend." }),
+        energyBalanceKcal: z
+          .number()
+          .nullable()
+          .meta({ description: "Per day, negative in a deficit." }),
+        projectedKgIn30Days: z.number().nullable(),
+      })
+      .nullable()
+      .meta({ description: "Null without weigh-ins." }),
+    days: z.array(
+      z.object({
+        day,
+        scaleKg: z
+          .number()
+          .meta({ description: "The day's mean weigh-in, or interpolated between weigh-ins." }),
+        trendKg: z.number(),
+        weighedIn: z.boolean(),
+      }),
+    ),
+  })
+  .meta({
+    id: "WeightTrend",
+    description: "MacroFactor's Weight Trend V1 over the app's weigh-ins.",
+  });
 
 export const ExpenditureSeries = z
-	.object({
-		today: day,
-		strategy: z
-			.enum(['updating', 'holding', 'fixed'])
-			.nullable()
-			.meta({ description: '`fixed` is a static expenditure from the settings. Null when it cannot run.' }),
-		missing: z.string().nullable().meta({ description: 'What it needs before it can run.' }),
-		start: day.nullable(),
-		initialKcal: z.number().nullable(),
-		currentKcal: z.number().nullable(),
-		days: z.array(z.object({ day, kcal: z.number(), holding: z.boolean() })),
-	})
-	.meta({
-		id: 'Expenditure',
-		description:
-			'Daily energy expenditure (TDEE) as the Dashboard and the check-in compute it. A holding day kept the estimate because the week before had too little data.',
-	});
+  .object({
+    today: day,
+    strategy: z
+      .enum(["updating", "holding", "fixed"])
+      .nullable()
+      .meta({
+        description: "`fixed` is a static expenditure from the settings. Null when it cannot run.",
+      }),
+    missing: z.string().nullable().meta({ description: "What it needs before it can run." }),
+    start: day.nullable(),
+    initialKcal: z.number().nullable(),
+    currentKcal: z.number().nullable(),
+    days: z.array(z.object({ day, kcal: z.number(), holding: z.boolean() })),
+  })
+  .meta({
+    id: "Expenditure",
+    description:
+      "Daily energy expenditure (TDEE) as the Dashboard and the check-in compute it. A holding day kept the estimate because the week before had too little data.",
+  });
 
 export const MaintenanceEstimate = z
-	.object({
-		today: day,
-		estimate: z
-			.object({
-				kcal: z.number().meta({ description: "Today's maintenance at the trend weight." }),
-				sdKcal: z.number().meta({ description: 'One standard deviation of the pooled estimate.' }),
-				weightKg: z.number(),
-				periods: z.array(
-					z.object({
-						start: day,
-						end: day,
-						days: z.int(),
-						loggedDays: z.int(),
-						weighIns: z.int().meta({ description: 'Weigh-in days the weight line was fitted to, outliers left out.' }),
-						intakeKcal: z.number(),
-						weightChangeKg: z.number(),
-						meanWeightKg: z.number(),
-						measuredKcal: z.number().meta({ description: 'Average intake less the energy of the weight change.' }),
-						adjustments: z.array(
-							z.object({
-								kind: z.enum(['weight', 'steps', 'workouts']),
-								before: z
-									.number()
-									.meta({ description: 'Kilograms, steps a day, or workout minutes a week in the period.' }),
-								now: z.number().meta({ description: 'The same over the last four weeks, or the trend weight today.' }),
-								kcal: z.number(),
-							}),
-						),
-						kcal: z.number().meta({ description: 'The measured maintenance moved to today.' }),
-						sdKcal: z.number(),
-						share: z.number().meta({ description: 'Its weight in the pooled estimate, 0 to 1.' }),
-					}),
-				),
-				prior: z
-					.object({ kcal: z.number(), source: z.enum(['initial', 'bmr']), share: z.number() })
-					.nullable()
-					.meta({ description: 'The initial expenditure setting, else BMR times activity. Null without either.' }),
-				incomplete: z.array(
-					z.object({
-						day,
-						kcal: z.number(),
-						typicalKcal: z.number(),
-						reason: z.enum(['farBelowTypical', 'fewEntries', 'lowProtein']),
-					}),
-				),
-			})
-			.nullable()
-			.meta({ description: 'Null without a measurable period and without a prior, or without a weigh-in.' }),
-	})
-	.meta({
-		id: 'MaintenanceEstimate',
-		description: 'The maintenance Strategy plans from, and each input that shaped it.',
-	});
+  .object({
+    today: day,
+    estimate: z
+      .object({
+        kcal: z.number().meta({ description: "Today's maintenance at the trend weight." }),
+        sdKcal: z.number().meta({ description: "One standard deviation of the pooled estimate." }),
+        weightKg: z.number(),
+        periods: z.array(
+          z.object({
+            start: day,
+            end: day,
+            days: z.int(),
+            loggedDays: z.int(),
+            weighIns: z
+              .int()
+              .meta({
+                description: "Weigh-in days the weight line was fitted to, outliers left out.",
+              }),
+            intakeKcal: z.number(),
+            weightChangeKg: z.number(),
+            meanWeightKg: z.number(),
+            measuredKcal: z
+              .number()
+              .meta({ description: "Average intake less the energy of the weight change." }),
+            adjustments: z.array(
+              z.object({
+                kind: z.enum(["weight", "steps", "workouts"]),
+                before: z
+                  .number()
+                  .meta({
+                    description: "Kilograms, steps a day, or workout minutes a week in the period.",
+                  }),
+                now: z
+                  .number()
+                  .meta({
+                    description: "The same over the last four weeks, or the trend weight today.",
+                  }),
+                kcal: z.number(),
+              }),
+            ),
+            kcal: z.number().meta({ description: "The measured maintenance moved to today." }),
+            sdKcal: z.number(),
+            share: z.number().meta({ description: "Its weight in the pooled estimate, 0 to 1." }),
+          }),
+        ),
+        prior: z
+          .object({ kcal: z.number(), source: z.enum(["initial", "bmr"]), share: z.number() })
+          .nullable()
+          .meta({
+            description:
+              "The initial expenditure setting, else BMR times activity. Null without either.",
+          }),
+        incomplete: z.array(
+          z.object({
+            day,
+            kcal: z.number(),
+            typicalKcal: z.number(),
+            reason: z.enum(["farBelowTypical", "fewEntries", "lowProtein"]),
+          }),
+        ),
+      })
+      .nullable()
+      .meta({
+        description: "Null without a measurable period and without a prior, or without a weigh-in.",
+      }),
+  })
+  .meta({
+    id: "MaintenanceEstimate",
+    description: "The maintenance Strategy plans from, and each input that shaped it.",
+  });
 
 export const TrainingSummary = z
-	.object({
-		sessions: z.int(),
-		durationSeconds: z.int(),
-		workingSets: z.int(),
-		volumeKg: z.number(),
-		muscleSets: MuscleSets,
-		exercises: z.array(ExerciseStats.extend({ sessions: z.int() })),
-	})
-	.meta({ id: 'TrainingSummary', description: 'Finished sessions in the range, added up. Bests are over the range.' });
+  .object({
+    sessions: z.int(),
+    durationSeconds: z.int(),
+    workingSets: z.int(),
+    volumeKg: z.number(),
+    muscleSets: MuscleSets,
+    exercises: z.array(ExerciseStats.extend({ sessions: z.int() })),
+  })
+  .meta({
+    id: "TrainingSummary",
+    description: "Finished sessions in the range, added up. Bests are over the range.",
+  });
 
 const SeriesPoint = z.tuple([z.number(), z.number()]);
 
 export const GarminDay = z
-	.object({
-		id: day,
-		restingHeartRate: z.int().nullable(),
-		hrvLastNight: z.number().nullable(),
-		hrvWeeklyAvg: z.number().nullable(),
-		hrvStatus: z.string().nullable(),
-		bodyBatteryWake: z.int().nullable(),
-		bodyBatteryHigh: z.int().nullable(),
-		bodyBatteryLow: z.int().nullable(),
-		bodyBatteryCharged: z.int().nullable(),
-		bodyBatteryDrained: z.int().nullable(),
-		stressAvg: z.int().nullable(),
-		stressMax: z.int().nullable(),
-		sleepScore: z.int().nullable(),
-		sleepStartAt: z.string().nullable(),
-		sleepEndAt: z.string().nullable(),
-		sleepSeconds: z.int().nullable(),
-		deepSeconds: z.int().nullable(),
-		lightSeconds: z.int().nullable(),
-		remSeconds: z.int().nullable(),
-		awakeSeconds: z.int().nullable(),
-		respirationAvg: z.number().nullable(),
-		spo2Avg: z.number().nullable(),
-		skinTempNightlyC: z.number().nullable(),
-		skinTempDeviationC: z.number().nullable(),
-		readinessScore: z.int().nullable(),
-		readinessLevel: z.string().nullable(),
-		acuteLoad: z.number().nullable(),
-		vo2Max: z.number().nullable(),
-		steps: z.int().nullable(),
-		activeKcal: z.number().nullable(),
-		totalKcal: z.number().nullable(),
-		strain: z.number().nullable(),
-		syncedAt: z.string(),
-		stressSeries: z.array(SeriesPoint),
-		heartRateSeries: z.array(SeriesPoint),
-		rawStressSeries: z.array(SeriesPoint),
-		bodyBatterySeries: z.array(SeriesPoint),
-		motionSpans: z.array(z.object({ start: z.number(), end: z.number() })),
-	})
-	.meta({
-		id: 'GarminDay',
-		description: 'One calendar day of Garmin CIRQA telemetry and calibrated WHOOP-style stress & strain.',
-	});
+  .object({
+    id: day,
+    restingHeartRate: z.int().nullable(),
+    hrvLastNight: z.number().nullable(),
+    hrvWeeklyAvg: z.number().nullable(),
+    hrvStatus: z.string().nullable(),
+    bodyBatteryWake: z.int().nullable(),
+    bodyBatteryHigh: z.int().nullable(),
+    bodyBatteryLow: z.int().nullable(),
+    bodyBatteryCharged: z.int().nullable(),
+    bodyBatteryDrained: z.int().nullable(),
+    stressAvg: z.int().nullable(),
+    stressMax: z.int().nullable(),
+    sleepScore: z.int().nullable(),
+    sleepStartAt: z.string().nullable(),
+    sleepEndAt: z.string().nullable(),
+    sleepSeconds: z.int().nullable(),
+    deepSeconds: z.int().nullable(),
+    lightSeconds: z.int().nullable(),
+    remSeconds: z.int().nullable(),
+    awakeSeconds: z.int().nullable(),
+    respirationAvg: z.number().nullable(),
+    spo2Avg: z.number().nullable(),
+    skinTempNightlyC: z.number().nullable(),
+    skinTempDeviationC: z.number().nullable(),
+    readinessScore: z.int().nullable(),
+    readinessLevel: z.string().nullable(),
+    acuteLoad: z.number().nullable(),
+    vo2Max: z.number().nullable(),
+    steps: z.int().nullable(),
+    activeKcal: z.number().nullable(),
+    totalKcal: z.number().nullable(),
+    strain: z.number().nullable(),
+    syncedAt: z.string(),
+    stressSeries: z.array(SeriesPoint),
+    heartRateSeries: z.array(SeriesPoint),
+    rawStressSeries: z.array(SeriesPoint),
+    bodyBatterySeries: z.array(SeriesPoint),
+    motionSpans: z.array(z.object({ start: z.number(), end: z.number() })),
+  })
+  .meta({
+    id: "GarminDay",
+    description:
+      "One calendar day of Garmin CIRQA telemetry and calibrated WHOOP-style stress & strain.",
+  });
 
 export const GarminActivity = z
-	.object({
-		id: z.string(),
-		name: z.string(),
-		activityType: z.string(),
-		startedAt: z.string(),
-		endedAt: z.string(),
-		durationSeconds: z.number(),
-		calories: z.number().nullable(),
-		distanceMeters: z.number().nullable(),
-		averageHeartRate: z.number().nullable(),
-		maxHeartRate: z.number().nullable(),
-		strain: z.number().nullable(),
-		heartRateSeries: z.array(SeriesPoint),
-	})
-	.meta({ id: 'GarminActivity', description: 'One recorded Garmin activity with its 1-second heart rate stream.' });
+  .object({
+    id: z.string(),
+    name: z.string(),
+    activityType: z.string(),
+    startedAt: z.string(),
+    endedAt: z.string(),
+    durationSeconds: z.number(),
+    calories: z.number().nullable(),
+    distanceMeters: z.number().nullable(),
+    averageHeartRate: z.number().nullable(),
+    maxHeartRate: z.number().nullable(),
+    strain: z.number().nullable(),
+    heartRateSeries: z.array(SeriesPoint),
+  })
+  .meta({
+    id: "GarminActivity",
+    description: "One recorded Garmin activity with its 1-second heart rate stream.",
+  });

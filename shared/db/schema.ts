@@ -1,6 +1,6 @@
-import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { defineSchema } from 'sync-engine/core';
-import { z } from 'zod';
+import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { defineSchema } from "sync-engine/core";
+import { z } from "zod";
 
 /**
  * The synced tables, one SQLite schema that the server's space and every device run as the same DDL. Each table
@@ -10,171 +10,171 @@ import { z } from 'zod';
  * later needs a default or must be nullable.
  */
 
-const json = (name: string) => text(name, { mode: 'json' });
-const bool = (name: string) => integer(name, { mode: 'boolean' });
+const json = (name: string) => text(name, { mode: "json" });
+const bool = (name: string) => integer(name, { mode: "boolean" });
 
-export const SETTINGS_ID = 'settings';
-export const WEIGHT_UNITS = ['kg', 'lb'] as const;
+export const SETTINGS_ID = "settings";
+export const WEIGHT_UNITS = ["kg", "lb"] as const;
 /** `healthkit` rows mirror Apple Health: the phone copies them in, rewrites them when Health changes, and deletes them when Health drops them. */
-export const BODY_SOURCES = ['manual', 'healthkit'] as const;
+export const BODY_SOURCES = ["manual", "healthkit"] as const;
 /** Where a food snapshot came from. Only the first three are rows of `foods`; recipes and quick adds are snapshots. */
-const FOOD_SOURCES = ['custom', 'usda', 'open_food_facts', 'recipe', 'quick_add'] as const;
-export const FOOD_ROW_SOURCES = ['custom', 'usda', 'open_food_facts'] as const;
-export const DAY_STATUSES = ['none', 'complete', 'partial', 'fasted'] as const;
-export const SUPPLEMENT_TIMINGS = ['morning', 'afternoon', 'evening'] as const;
-export const NOTE_COLORS = ['red', 'blue', 'green', 'yellow', 'purple'] as const;
+const FOOD_SOURCES = ["custom", "usda", "open_food_facts", "recipe", "quick_add"] as const;
+export const FOOD_ROW_SOURCES = ["custom", "usda", "open_food_facts"] as const;
+export const DAY_STATUSES = ["none", "complete", "partial", "fasted"] as const;
+export const SUPPLEMENT_TIMINGS = ["morning", "afternoon", "evening"] as const;
+export const NOTE_COLORS = ["red", "blue", "green", "yellow", "purple"] as const;
 export const BODY_METRIC_KINDS = [
-	'visual_body_fat',
-	'steps',
-	'flights_climbed',
-	'walking_distance',
-	'neck',
-	'shoulders',
-	'bust',
-	'chest',
-	'waist',
-	'hips',
-	'left_bicep',
-	'right_bicep',
-	'left_forearm',
-	'right_forearm',
-	'left_wrist',
-	'right_wrist',
-	'left_thigh',
-	'right_thigh',
-	'left_calf',
-	'right_calf',
-	'left_ankle',
-	'right_ankle',
+  "visual_body_fat",
+  "steps",
+  "flights_climbed",
+  "walking_distance",
+  "neck",
+  "shoulders",
+  "bust",
+  "chest",
+  "waist",
+  "hips",
+  "left_bicep",
+  "right_bicep",
+  "left_forearm",
+  "right_forearm",
+  "left_wrist",
+  "right_wrist",
+  "left_thigh",
+  "right_thigh",
+  "left_calf",
+  "right_calf",
+  "left_ankle",
+  "right_ankle",
 ] as const;
-export const TRAINING_TYPES = ['none', 'lifting', 'cardio', 'cardio_lifting'] as const;
-export const PLAN_KINDS = ['setup', 'check_in', 'edit'] as const;
-export const GOAL_KINDS = ['lose', 'maintain', 'gain'] as const;
-export const PROGRAM_STYLES = ['coached', 'collaborative', 'manual'] as const;
-export const DIET_STYLES = ['balanced', 'low_fat', 'low_carb', 'keto'] as const;
-export const PROTEIN_LEVELS = ['low', 'moderate', 'high', 'extra_high'] as const;
-export const CALORIE_FLOORS = ['standard', 'low', 'ignored'] as const;
-export const NUTRIENT_GOAL_MODES = ['auto', 'custom', 'none'] as const;
+export const TRAINING_TYPES = ["none", "lifting", "cardio", "cardio_lifting"] as const;
+export const PLAN_KINDS = ["setup", "check_in", "edit"] as const;
+export const GOAL_KINDS = ["lose", "maintain", "gain"] as const;
+export const PROGRAM_STYLES = ["coached", "collaborative", "manual"] as const;
+export const DIET_STYLES = ["balanced", "low_fat", "low_carb", "keto"] as const;
+export const PROTEIN_LEVELS = ["low", "moderate", "high", "extra_high"] as const;
+export const CALORIE_FLOORS = ["standard", "low", "ignored"] as const;
+export const NUTRIENT_GOAL_MODES = ["auto", "custom", "none"] as const;
 
-const workoutTemplates = sqliteTable('workout_templates', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	notes: text('notes').notNull().default(''),
-	/** `[WorkoutBlock]`, the ordered block tree a session copies when it starts from this template. */
-	blocks: json('blocks').notNull().default([]),
-	createdAt: text('created_at').notNull(),
-	updatedAt: text('updated_at').notNull(),
-	/** The program this template is a day of. Not a foreign key, like `template_id`. */
-	programId: text('program_id'),
-	gymId: text('gym_id'),
-	archived: bool('archived').notNull().default(false),
+const workoutTemplates = sqliteTable("workout_templates", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  notes: text("notes").notNull().default(""),
+  /** `[WorkoutBlock]`, the ordered block tree a session copies when it starts from this template. */
+  blocks: json("blocks").notNull().default([]),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+  /** The program this template is a day of. Not a foreign key, like `template_id`. */
+  programId: text("program_id"),
+  gymId: text("gym_id"),
+  archived: bool("archived").notNull().default(false),
 });
 
-const workoutSessions = sqliteTable('workout_sessions', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	/** The template it started from. Not a foreign key: deleting a template keeps its history. */
-	templateId: text('template_id'),
-	startedAt: text('started_at').notNull(),
-	/** Null while the workout is in progress. */
-	endedAt: text('ended_at'),
-	notes: text('notes').notNull().default(''),
-	blocks: json('blocks').notNull().default([]),
-	programId: text('program_id'),
-	/** `ProgramDay.id` inside the program's `days`. */
-	programDayId: text('program_day_id'),
-	cycle: integer('cycle'),
-	gymId: text('gym_id'),
-	pausedSeconds: integer('paused_seconds').notNull().default(0),
-	/** What the workout recorded in Apple Health (`WorkoutHealthSummary`), null until it is saved there. */
-	health: json('health'),
+const workoutSessions = sqliteTable("workout_sessions", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  /** The template it started from. Not a foreign key: deleting a template keeps its history. */
+  templateId: text("template_id"),
+  startedAt: text("started_at").notNull(),
+  /** Null while the workout is in progress. */
+  endedAt: text("ended_at"),
+  notes: text("notes").notNull().default(""),
+  blocks: json("blocks").notNull().default([]),
+  programId: text("program_id"),
+  /** `ProgramDay.id` inside the program's `days`. */
+  programDayId: text("program_day_id"),
+  cycle: integer("cycle"),
+  gymId: text("gym_id"),
+  pausedSeconds: integer("paused_seconds").notNull().default(0),
+  /** What the workout recorded in Apple Health (`WorkoutHealthSummary`), null until it is saved there. */
+  health: json("health"),
 });
 
-export const customExercises = sqliteTable('custom_exercises', {
-	id: text('id').primaryKey(),
-	/** The whole `Exercise`, as the app encodes it. */
-	exercise: json('exercise').notNull(),
-	isArchived: bool('is_archived').notNull().default(false),
+export const customExercises = sqliteTable("custom_exercises", {
+  id: text("id").primaryKey(),
+  /** The whole `Exercise`, as the app encodes it. */
+  exercise: json("exercise").notNull(),
+  isArchived: bool("is_archived").notNull().default(false),
 });
 
 /** Keyed by the exercise's ID, so two devices editing one exercise's settings offline converge on one row. */
-export const exerciseSettings = sqliteTable('exercise_settings', {
-	id: text('id').primaryKey(),
-	pinnedNote: text('pinned_note').notNull().default(''),
-	restSeconds: integer('rest_seconds'),
-	doNotRecommend: bool('do_not_recommend').notNull().default(false),
-	/** `ExerciseOverrides`: every key optional, `{}` is all defaults. */
-	overrides: json('overrides').notNull().default({}),
+export const exerciseSettings = sqliteTable("exercise_settings", {
+  id: text("id").primaryKey(),
+  pinnedNote: text("pinned_note").notNull().default(""),
+  restSeconds: integer("rest_seconds"),
+  doNotRecommend: bool("do_not_recommend").notNull().default(false),
+  /** `ExerciseOverrides`: every key optional, `{}` is all defaults. */
+  overrides: json("overrides").notNull().default({}),
 });
 
 /** One row with the id `settings`. The rest defaults are `RestCategory.defaultSeconds`. */
-export const settings = sqliteTable('settings', {
-	id: text('id').primaryKey(),
-	weightUnit: text('weight_unit', { enum: WEIGHT_UNITS }).notNull().default('kg'),
-	restCompoundUpper: integer('rest_compound_upper').notNull().default(120),
-	restCompoundLower: integer('rest_compound_lower').notNull().default(180),
-	restUpperIsolation: integer('rest_upper_isolation').notNull().default(90),
-	restLowerIsolation: integer('rest_lower_isolation').notNull().default(90),
-	restCore: integer('rest_core').notNull().default(60),
-	/** `WorkoutSettings`, `ProfileSettings`, `DashboardLayout`, `ShortcutsLayout`: each rewritten whole by the app. */
-	workout: json('workout').notNull().default({}),
-	profile: json('profile').notNull().default({}),
-	dashboard: json('dashboard').notNull().default({}),
-	shortcuts: json('shortcuts').notNull().default({}),
-	/** `NutritionSettings`, rewritten whole by the app like the four above. */
-	nutrition: json('nutrition').notNull().default({}),
+export const settings = sqliteTable("settings", {
+  id: text("id").primaryKey(),
+  weightUnit: text("weight_unit", { enum: WEIGHT_UNITS }).notNull().default("kg"),
+  restCompoundUpper: integer("rest_compound_upper").notNull().default(120),
+  restCompoundLower: integer("rest_compound_lower").notNull().default(180),
+  restUpperIsolation: integer("rest_upper_isolation").notNull().default(90),
+  restLowerIsolation: integer("rest_lower_isolation").notNull().default(90),
+  restCore: integer("rest_core").notNull().default(60),
+  /** `WorkoutSettings`, `ProfileSettings`, `DashboardLayout`, `ShortcutsLayout`: each rewritten whole by the app. */
+  workout: json("workout").notNull().default({}),
+  profile: json("profile").notNull().default({}),
+  dashboard: json("dashboard").notNull().default({}),
+  shortcuts: json("shortcuts").notNull().default({}),
+  /** `NutritionSettings`, rewritten whole by the app like the four above. */
+  nutrition: json("nutrition").notNull().default({}),
 });
 
-export const programs = sqliteTable('programs', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	color: text('color').notNull(),
-	icon: text('icon').notNull(),
-	cycles: integer('cycles').notNull(),
-	currentCycle: integer('current_cycle').notNull().default(1),
-	/** At most one program is meant to be active. The app keeps it so (`LocalStore.activate`); no index enforces it. */
-	active: bool('active').notNull().default(false),
-	archived: bool('archived').notNull().default(false),
-	config: json('config').notNull().default({}),
-	/** `[ProgramDay]`, in cycle order: `{ id, templateID? }`, a rest day without `templateID`. */
-	days: json('days').notNull().default([]),
-	createdAt: text('created_at').notNull(),
-	updatedAt: text('updated_at').notNull(),
+export const programs = sqliteTable("programs", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  color: text("color").notNull(),
+  icon: text("icon").notNull(),
+  cycles: integer("cycles").notNull(),
+  currentCycle: integer("current_cycle").notNull().default(1),
+  /** At most one program is meant to be active. The app keeps it so (`LocalStore.activate`); no index enforces it. */
+  active: bool("active").notNull().default(false),
+  archived: bool("archived").notNull().default(false),
+  config: json("config").notNull().default({}),
+  /** `[ProgramDay]`, in cycle order: `{ id, templateID? }`, a rest day without `templateID`. */
+  days: json("days").notNull().default([]),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
-const gymProfiles = sqliteTable('gym_profiles', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	icon: text('icon').notNull(),
-	isDefault: bool('is_default').notNull().default(false),
-	/** `{ [equipmentId]: GymEquipment }`, the selected items and their weight overrides. */
-	equipment: json('equipment').notNull().default({}),
-	createdAt: text('created_at').notNull(),
-	updatedAt: text('updated_at').notNull(),
+const gymProfiles = sqliteTable("gym_profiles", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  icon: text("icon").notNull(),
+  isDefault: bool("is_default").notNull().default(false),
+  /** `{ [equipmentId]: GymEquipment }`, the selected items and their weight overrides. */
+  equipment: json("equipment").notNull().default({}),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
 /** A weigh-in. A `healthkit` row's id is its Health sample's UUID, so copying a sample again changes nothing. */
-export const bodyWeights = sqliteTable('body_weights', {
-	id: text('id').primaryKey(),
-	measuredAt: text('measured_at').notNull(),
-	weightKg: real('weight_kg').notNull(),
-	source: text('source', { enum: BODY_SOURCES }).notNull().default('manual'),
-	/** The scale's body fat percent, entered with the weight. */
-	bodyFatPercent: real('body_fat_percent'),
+export const bodyWeights = sqliteTable("body_weights", {
+  id: text("id").primaryKey(),
+  measuredAt: text("measured_at").notNull(),
+  weightKg: real("weight_kg").notNull(),
+  source: text("source", { enum: BODY_SOURCES }).notNull().default("manual"),
+  /** The scale's body fat percent, entered with the weight. */
+  bodyFatPercent: real("body_fat_percent"),
 });
 
 /**
  * A bot token for the agent API (`/api`), made and revoked on a device. Only the SHA-256 of the token syncs, so the
  * server and the backups never hold a usable token. Revoking deletes the row.
  */
-const apiTokens = sqliteTable('api_tokens', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	/** Lowercase hex SHA-256 of the whole token, `abm_` prefix included. */
-	tokenHash: text('token_hash').notNull(),
-	/** The token's first characters, so the owner can tell tokens apart. */
-	hint: text('hint').notNull().default(''),
-	createdAt: text('created_at').notNull(),
+const apiTokens = sqliteTable("api_tokens", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  /** Lowercase hex SHA-256 of the whole token, `abm_` prefix included. */
+  tokenHash: text("token_hash").notNull(),
+  /** The token's first characters, so the owner can tell tokens apart. */
+  hint: text("hint").notNull().default(""),
+  createdAt: text("created_at").notNull(),
 });
 
 /**
@@ -182,49 +182,49 @@ const apiTokens = sqliteTable('api_tokens', {
  * UUID for a custom food and `usda-<fdcId>` or `off-<barcode>` for a cached one, so two devices caching one food
  * converge on one row. Nothing references a food by id for its values: entries, favorites, and recipes hold snapshots.
  */
-export const foods = sqliteTable('foods', {
-	id: text('id').primaryKey(),
-	source: text('source', { enum: FOOD_ROW_SOURCES }).notNull().default('custom'),
-	name: text('name').notNull(),
-	brand: text('brand'),
-	barcode: text('barcode'),
-	/** The food icon's name, or null for the default. */
-	icon: text('icon'),
-	/** `FoodNutrition`: sparse nutrients per base serving and the measures it can be logged in. */
-	nutrition: json('nutrition').notNull().default({}),
-	archived: bool('archived').notNull().default(false),
-	createdAt: text('created_at').notNull(),
-	updatedAt: text('updated_at').notNull(),
-	/** The store a store-packed food was bought at; its barcode is the store's item code, which another store may reuse. */
-	store: text('store'),
-	/**
-	 * On the owner's correction of a USDA or Open Food Facts food, the search key of the food it stands in for: that
-	 * food's id, or `<name>|<brand>` for a logged snapshot without one. Search, scans, and the history show this food
-	 * wherever the replaced one would appear.
-	 */
-	replaces: text('replaces'),
+export const foods = sqliteTable("foods", {
+  id: text("id").primaryKey(),
+  source: text("source", { enum: FOOD_ROW_SOURCES }).notNull().default("custom"),
+  name: text("name").notNull(),
+  brand: text("brand"),
+  barcode: text("barcode"),
+  /** The food icon's name, or null for the default. */
+  icon: text("icon"),
+  /** `FoodNutrition`: sparse nutrients per base serving and the measures it can be logged in. */
+  nutrition: json("nutrition").notNull().default({}),
+  archived: bool("archived").notNull().default(false),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+  /** The store a store-packed food was bought at; its barcode is the store's item code, which another store may reuse. */
+  store: text("store"),
+  /**
+   * On the owner's correction of a USDA or Open Food Facts food, the search key of the food it stands in for: that
+   * food's id, or `<name>|<brand>` for a logged snapshot without one. Search, scans, and the history show this food
+   * wherever the replaced one would appear.
+   */
+  replaces: text("replaces"),
 });
 
-export const recipes = sqliteTable('recipes', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	icon: text('icon'),
-	/** `[RecipeIngredient]`, in order: `{ id, food: FoodSnapshot, serving: Serving }`. */
-	ingredients: json('ingredients').notNull().default([]),
-	/** How many servings the whole recipe makes. */
-	servings: real('servings').notNull().default(1),
-	/** The weight of everything the recipe makes, once cooked, which unlocks logging it by weight. */
-	cookedGrams: real('cooked_grams'),
-	/** `[String]`, the preparation steps. */
-	steps: json('steps').notNull().default([]),
-	prepMinutes: integer('prep_minutes'),
-	cookMinutes: integer('cook_minutes'),
-	/** The page it was imported from. */
-	link: text('link'),
-	notes: text('notes').notNull().default(''),
-	archived: bool('archived').notNull().default(false),
-	createdAt: text('created_at').notNull(),
-	updatedAt: text('updated_at').notNull(),
+export const recipes = sqliteTable("recipes", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  icon: text("icon"),
+  /** `[RecipeIngredient]`, in order: `{ id, food: FoodSnapshot, serving: Serving }`. */
+  ingredients: json("ingredients").notNull().default([]),
+  /** How many servings the whole recipe makes. */
+  servings: real("servings").notNull().default(1),
+  /** The weight of everything the recipe makes, once cooked, which unlocks logging it by weight. */
+  cookedGrams: real("cooked_grams"),
+  /** `[String]`, the preparation steps. */
+  steps: json("steps").notNull().default([]),
+  prepMinutes: integer("prep_minutes"),
+  cookMinutes: integer("cook_minutes"),
+  /** The page it was imported from. */
+  link: text("link"),
+  notes: text("notes").notNull().default(""),
+  archived: bool("archived").notNull().default(false),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
 /**
@@ -233,66 +233,66 @@ export const recipes = sqliteTable('recipes', {
  * serving change, and a food swap are separate edits; the measure and its quantity share `serving` so a merge never
  * pairs one device's unit with another's amount.
  */
-export const foodEntries = sqliteTable('food_entries', {
-	id: text('id').primaryKey(),
-	day: text('day').notNull(),
-	/** Minutes since midnight, 0 through 1439. */
-	minute: integer('minute').notNull().default(720),
-	/** `FoodSnapshot`. */
-	food: json('food').notNull().default({}),
-	/** `Serving`: `{ measure, quantity }`. */
-	serving: json('serving').notNull().default({}),
-	/** The `MealSection` id the entry was logged into, kept when the sections change. Null before sections existed. */
-	section: text('section'),
-	/**
-	 * `[IngredientAlteration]`: a logged recipe's ingredients at one serving with what was changed, removed, or added,
-	 * or null when it was eaten as the recipe made it. `food` then holds the altered nutrition.
-	 */
-	alterations: json('alterations'),
-	createdAt: text('created_at').notNull(),
-	updatedAt: text('updated_at').notNull(),
+export const foodEntries = sqliteTable("food_entries", {
+  id: text("id").primaryKey(),
+  day: text("day").notNull(),
+  /** Minutes since midnight, 0 through 1439. */
+  minute: integer("minute").notNull().default(720),
+  /** `FoodSnapshot`. */
+  food: json("food").notNull().default({}),
+  /** `Serving`: `{ measure, quantity }`. */
+  serving: json("serving").notNull().default({}),
+  /** The `MealSection` id the entry was logged into, kept when the sections change. Null before sections existed. */
+  section: text("section"),
+  /**
+   * `[IngredientAlteration]`: a logged recipe's ingredients at one serving with what was changed, removed, or added,
+   * or null when it was eaten as the recipe made it. `food` then holds the altered nutrition.
+   */
+  alterations: json("alterations"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
 /** A saved snapshot of a food at a chosen serving. Several may come from one food. */
-const foodFavorites = sqliteTable('food_favorites', {
-	id: text('id').primaryKey(),
-	food: json('food').notNull().default({}),
-	serving: json('serving').notNull().default({}),
-	/** `[IngredientAlteration]` of the altered recipe entry it was saved from, as `food_entries.alterations`; else null. */
-	alterations: json('alterations'),
-	createdAt: text('created_at').notNull(),
+const foodFavorites = sqliteTable("food_favorites", {
+  id: text("id").primaryKey(),
+  food: json("food").notNull().default({}),
+  serving: json("serving").notNull().default({}),
+  /** `[IngredientAlteration]` of the altered recipe entry it was saved from, as `food_entries.alterations`; else null. */
+  alterations: json("alterations"),
+  createdAt: text("created_at").notNull(),
 });
 
 /** What the owner said about a day. The id is the day; a day without a row is a plain logged day. */
-const nutritionDays = sqliteTable('nutrition_days', {
-	id: text('id').primaryKey(),
-	status: text('status', { enum: DAY_STATUSES }).notNull().default('none'),
-	/** Sparse nutrients that replace the log's totals for this day, or null to use the log. */
-	override: json('override'),
+const nutritionDays = sqliteTable("nutrition_days", {
+  id: text("id").primaryKey(),
+  status: text("status", { enum: DAY_STATUSES }).notNull().default("none"),
+  /** Sparse nutrients that replace the log's totals for this day, or null to use the log. */
+  override: json("override"),
 });
 
 /** Retired: the app and the agent API dropped food log notes. Kept because the schema is additive; nothing reads it. */
-const foodLogNotes = sqliteTable('food_log_notes', {
-	id: text('id').primaryKey(),
-	day: text('day').notNull(),
-	minute: integer('minute').notNull().default(720),
-	title: text('title').notNull(),
-	body: text('body').notNull().default(''),
-	color: text('color', { enum: NOTE_COLORS }).notNull().default('blue'),
+const foodLogNotes = sqliteTable("food_log_notes", {
+  id: text("id").primaryKey(),
+  day: text("day").notNull(),
+  minute: integer("minute").notNull().default(720),
+  title: text("title").notNull(),
+  body: text("body").notNull().default(""),
+  color: text("color", { enum: NOTE_COLORS }).notNull().default("blue"),
 });
 
 /**
  * A visual body fat, tape measurement, or activity total (steps, flights climbed, walking distance) for a day. The id
  * is `<day>/<kind>`, so one value per day, and Apple Health's total replaces a manual one for its day.
  */
-const bodyMetrics = sqliteTable('body_metrics', {
-	id: text('id').primaryKey(),
-	day: text('day').notNull(),
-	kind: text('kind', { enum: BODY_METRIC_KINDS }).notNull(),
-	/** Percent for `visual_body_fat`, a count for `steps` and `flights_climbed`, meters for `walking_distance`, centimeters for the rest. */
-	value: real('value').notNull(),
-	source: text('source', { enum: BODY_SOURCES }).notNull().default('manual'),
-	updatedAt: text('updated_at').notNull(),
+const bodyMetrics = sqliteTable("body_metrics", {
+  id: text("id").primaryKey(),
+  day: text("day").notNull(),
+  kind: text("kind", { enum: BODY_METRIC_KINDS }).notNull(),
+  /** Percent for `visual_body_fat`, a count for `steps` and `flights_climbed`, meters for `walking_distance`, centimeters for the rest. */
+  value: real("value").notNull(),
+  source: text("source", { enum: BODY_SOURCES }).notNull().default("manual"),
+  updatedAt: text("updated_at").notNull(),
 });
 
 /**
@@ -300,18 +300,18 @@ const bodyMetrics = sqliteTable('body_metrics', {
  * the next plan's day. The id is that first day, so a second plan on one day replaces the first. A check-in freezes
  * the expenditure and trend weight it used here; every other series is recomputed from the log and the weigh-ins.
  */
-export const nutritionPlans = sqliteTable('nutrition_plans', {
-	id: text('id').primaryKey(),
-	kind: text('kind', { enum: PLAN_KINDS }).notNull().default('edit'),
-	/** `NutritionGoal`. */
-	goal: json('goal').notNull().default({}),
-	/** `CoachingProgram`. */
-	coaching: json('coaching').notNull().default({}),
-	/** `[DayTarget]`, seven, Monday first. */
-	targets: json('targets').notNull().default([]),
-	expenditureKcal: real('expenditure_kcal'),
-	trendWeightKg: real('trend_weight_kg'),
-	createdAt: text('created_at').notNull(),
+export const nutritionPlans = sqliteTable("nutrition_plans", {
+  id: text("id").primaryKey(),
+  kind: text("kind", { enum: PLAN_KINDS }).notNull().default("edit"),
+  /** `NutritionGoal`. */
+  goal: json("goal").notNull().default({}),
+  /** `CoachingProgram`. */
+  coaching: json("coaching").notNull().default({}),
+  /** `[DayTarget]`, seven, Monday first. */
+  targets: json("targets").notNull().default([]),
+  expenditureKcal: real("expenditure_kcal"),
+  trendWeightKg: real("trend_weight_kg"),
+  createdAt: text("created_at").notNull(),
 });
 
 /**
@@ -319,14 +319,14 @@ export const nutritionPlans = sqliteTable('nutrition_plans', {
  * registry's defaults and ignores the three bounds, `none` shows no bounds, and a null bound under `custom` hides that
  * bound.
  */
-const nutrientGoals = sqliteTable('nutrient_goals', {
-	id: text('id').primaryKey(),
-	nutrient: text('nutrient').notNull(),
-	startsOn: text('starts_on').notNull(),
-	mode: text('mode', { enum: NUTRIENT_GOAL_MODES }).notNull().default('auto'),
-	floor: real('floor'),
-	target: real('target'),
-	ceiling: real('ceiling'),
+const nutrientGoals = sqliteTable("nutrient_goals", {
+  id: text("id").primaryKey(),
+  nutrient: text("nutrient").notNull(),
+  startsOn: text("starts_on").notNull(),
+  mode: text("mode", { enum: NUTRIENT_GOAL_MODES }).notNull().default("auto"),
+  floor: real("floor"),
+  target: real("target"),
+  ceiling: real("ceiling"),
 });
 
 /**
@@ -334,11 +334,11 @@ const nutrientGoals = sqliteTable('nutrient_goals', {
  * not their servings), stored when first suggested so the meal keeps that name on every device, created or not.
  * `version` is the instructions that named it (`MealName.version`); a device asks again for a name an older one wrote.
  */
-const mealNames = sqliteTable('meal_names', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	createdAt: text('created_at').notNull(),
-	version: integer('version').notNull().default(1),
+const mealNames = sqliteTable("meal_names", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  createdAt: text("created_at").notNull(),
+  version: integer("version").notNull().default(1),
 });
 
 /**
@@ -346,10 +346,10 @@ const mealNames = sqliteTable('meal_names', {
  * brand (`FoodShortName.rowID`), so every snapshot of a food with that name shares it, whatever its id. A logged
  * recipe's tile shows it on each ingredient line.
  */
-const foodShortNames = sqliteTable('food_short_names', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	createdAt: text('created_at').notNull(),
+const foodShortNames = sqliteTable("food_short_names", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  createdAt: text("created_at").notNull(),
 });
 
 /**
@@ -359,50 +359,50 @@ const foodShortNames = sqliteTable('food_short_names', {
  * pictures bucket (`shared/images.ts`), never in a row.
  * `tags` is ids in `tags`, and `url` is where it is bought.
  */
-const supplements = sqliteTable('supplements', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	brand: text('brand'),
-	url: text('url'),
-	serving: json('serving').notNull().default({}),
-	components: json('components').notNull().default([]),
-	regimens: json('regimens').notNull().default([]),
-	note: text('note').notNull().default(''),
-	images: json('images').notNull().default([]),
-	tags: json('tags').notNull().default([]),
-	createdAt: text('created_at').notNull(),
-	updatedAt: text('updated_at').notNull(),
+const supplements = sqliteTable("supplements", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  brand: text("brand"),
+  url: text("url"),
+  serving: json("serving").notNull().default({}),
+  components: json("components").notNull().default([]),
+  regimens: json("regimens").notNull().default([]),
+  note: text("note").notNull().default(""),
+  images: json("images").notNull().default([]),
+  tags: json("tags").notNull().default([]),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
 /**
  * A label the owner groups supplements and their regimens under, such as a protocol they belong to: a name, a
  * `#rrggbb` color, and a note on what it is for.
  */
-const tags = sqliteTable('tags', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	color: text('color').notNull(),
-	note: text('note').notNull().default(''),
-	createdAt: text('created_at').notNull(),
-	updatedAt: text('updated_at').notNull(),
+const tags = sqliteTable("tags", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  color: text("color").notNull(),
+  note: text("note").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
-export const PING_KINDS = ['boolean', 'range'] as const;
+export const PING_KINDS = ["boolean", "range"] as const;
 export const PING_MAX_STEPS = 10;
 /** The swatches a ping's editor offers, by id. The app holds each one's color. */
 export const PING_COLORS = [
-	'red',
-	'orange',
-	'yellow',
-	'lime',
-	'green',
-	'teal',
-	'sky',
-	'blue',
-	'violet',
-	'purple',
-	'pink',
-	'tan',
+  "red",
+  "orange",
+  "yellow",
+  "lime",
+  "green",
+  "teal",
+  "sky",
+  "blue",
+  "violet",
+  "purple",
+  "pink",
+  "tan",
 ] as const;
 
 /**
@@ -411,29 +411,29 @@ export const PING_COLORS = [
  * its length is the number of steps; a boolean ping has none. `position` orders the pings everywhere they list.
  * `color` is one of `PING_COLORS`, null for a ping made before pings had colors, which draws in the default tint.
  */
-const pings = sqliteTable('pings', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	/** An SF Symbol name. */
-	icon: text('icon').notNull().default('circle'),
-	color: text('color', { enum: PING_COLORS }),
-	kind: text('kind', { enum: PING_KINDS }).notNull().default('boolean'),
-	steps: json('steps').notNull().default([]),
-	position: integer('position').notNull().default(0),
-	createdAt: text('created_at').notNull(),
-	updatedAt: text('updated_at').notNull(),
+const pings = sqliteTable("pings", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  /** An SF Symbol name. */
+  icon: text("icon").notNull().default("circle"),
+  color: text("color", { enum: PING_COLORS }),
+  kind: text("kind", { enum: PING_KINDS }).notNull().default("boolean"),
+  steps: json("steps").notNull().default([]),
+  position: integer("position").notNull().default(0),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
 /**
  * One time a ping was logged. `value` is the step of a range ping, from 1, and 1 for a boolean ping, so a day's
  * count is its rows. Deleting a ping deletes its logs on the device that deletes it.
  */
-const pingLogs = sqliteTable('ping_logs', {
-	id: text('id').primaryKey(),
-	pingId: text('ping_id').notNull(),
-	loggedAt: text('logged_at').notNull(),
-	value: integer('value').notNull().default(1),
-	note: text('note').notNull().default(''),
+const pingLogs = sqliteTable("ping_logs", {
+  id: text("id").primaryKey(),
+  pingId: text("ping_id").notNull(),
+  loggedAt: text("logged_at").notNull(),
+  value: integer("value").notNull().default(1),
+  note: text("note").notNull().default(""),
 });
 
 /**
@@ -442,21 +442,21 @@ const pingLogs = sqliteTable('ping_logs', {
  * for it: the best-ranked source's, with every app that wrote it in `sources` (docs/decisions/health.md). The id is
  * that workout's Health UUID.
  */
-const healthActivities = sqliteTable('health_activities', {
-	id: text('id').primaryKey(),
-	/** Health's activity type in snake case (`walking`, `running`, `traditional_strength_training`). */
-	activityType: text('activity_type').notNull(),
-	startedAt: text('started_at').notNull(),
-	endedAt: text('ended_at').notNull(),
-	activeKcal: real('active_kcal'),
-	distanceMeters: real('distance_meters'),
-	averageHeartRate: real('average_heart_rate'),
-	maxHeartRate: real('max_heart_rate'),
-	/** The app that wrote the kept workout, as Health names it (`Connect`, `WHOOP`). */
-	source: text('source').notNull(),
-	sourceBundle: text('source_bundle').notNull(),
-	/** Every app that wrote this session, kept source first. */
-	sources: json('sources').notNull().default([]),
+const healthActivities = sqliteTable("health_activities", {
+  id: text("id").primaryKey(),
+  /** Health's activity type in snake case (`walking`, `running`, `traditional_strength_training`). */
+  activityType: text("activity_type").notNull(),
+  startedAt: text("started_at").notNull(),
+  endedAt: text("ended_at").notNull(),
+  activeKcal: real("active_kcal"),
+  distanceMeters: real("distance_meters"),
+  averageHeartRate: real("average_heart_rate"),
+  maxHeartRate: real("max_heart_rate"),
+  /** The app that wrote the kept workout, as Health names it (`Connect`, `WHOOP`). */
+  source: text("source").notNull(),
+  sourceBundle: text("source_bundle").notNull(),
+  /** Every app that wrote this session, kept source first. */
+  sources: json("sources").notNull().default([]),
 });
 
 /**
@@ -465,121 +465,121 @@ const healthActivities = sqliteTable('health_activities', {
  * Health UUID of its first asleep sample. Durations are seconds inside the sleep: `asleep` is every asleep stage
  * together, so it is at least `deep + core + rem` (an app that does not stage writes only unspecified sleep).
  */
-const healthSleeps = sqliteTable('health_sleeps', {
-	id: text('id').primaryKey(),
-	startedAt: text('started_at').notNull(),
-	endedAt: text('ended_at').notNull(),
-	asleepSeconds: real('asleep_seconds').notNull().default(0),
-	awakeSeconds: real('awake_seconds').notNull().default(0),
-	deepSeconds: real('deep_seconds').notNull().default(0),
-	coreSeconds: real('core_seconds').notNull().default(0),
-	remSeconds: real('rem_seconds').notNull().default(0),
-	source: text('source').notNull(),
-	sourceBundle: text('source_bundle').notNull(),
-	/** Every app that tracked this sleep, kept source first. */
-	sources: json('sources').notNull().default([]),
+const healthSleeps = sqliteTable("health_sleeps", {
+  id: text("id").primaryKey(),
+  startedAt: text("started_at").notNull(),
+  endedAt: text("ended_at").notNull(),
+  asleepSeconds: real("asleep_seconds").notNull().default(0),
+  awakeSeconds: real("awake_seconds").notNull().default(0),
+  deepSeconds: real("deep_seconds").notNull().default(0),
+  coreSeconds: real("core_seconds").notNull().default(0),
+  remSeconds: real("rem_seconds").notNull().default(0),
+  source: text("source").notNull(),
+  sourceBundle: text("source_bundle").notNull(),
+  /** Every app that tracked this sleep, kept source first. */
+  sources: json("sources").notNull().default([]),
 });
 
 /**
  * One calendar day (`YYYY-MM-DD`) of Garmin CIRQA / Connect telemetry, pulled by the Worker cron and foreground sync.
  * Intraday series are compact `[epochSec, value]` pairs so a full day stays ~10–15 KB and syncs offline to iOS.
  */
-const garminDays = sqliteTable('garmin_days', {
-	id: text('id').primaryKey(),
-	restingHeartRate: integer('resting_heart_rate'),
-	hrvLastNight: real('hrv_last_night'),
-	hrvWeeklyAvg: real('hrv_weekly_avg'),
-	hrvStatus: text('hrv_status'),
-	bodyBatteryWake: integer('body_battery_wake'),
-	bodyBatteryHigh: integer('body_battery_high'),
-	bodyBatteryLow: integer('body_battery_low'),
-	bodyBatteryCharged: integer('body_battery_charged'),
-	bodyBatteryDrained: integer('body_battery_drained'),
-	stressAvg: integer('stress_avg'),
-	stressMax: integer('stress_max'),
-	sleepScore: integer('sleep_score'),
-	sleepStartAt: text('sleep_start_at'),
-	sleepEndAt: text('sleep_end_at'),
-	sleepSeconds: integer('sleep_seconds'),
-	deepSeconds: integer('deep_seconds'),
-	lightSeconds: integer('light_seconds'),
-	remSeconds: integer('rem_seconds'),
-	awakeSeconds: integer('awake_seconds'),
-	respirationAvg: real('respiration_avg'),
-	spo2Avg: real('spo2_avg'),
-	skinTempNightlyC: real('skin_temp_nightly_c'),
-	skinTempDeviationC: real('skin_temp_deviation_c'),
-	readinessScore: integer('readiness_score'),
-	readinessLevel: text('readiness_level'),
-	acuteLoad: real('acute_load'),
-	vo2Max: real('vo2_max'),
-	steps: integer('steps'),
-	activeKcal: real('active_kcal'),
-	totalKcal: real('total_kcal'),
-	/** WHOOP-style 0–21 strain computed from all-day HR + 1-second activity HR. */
-	strain: real('strain'),
-	syncedAt: text('synced_at').notNull(),
-	/** Calibrated WHOOP-style 0.0–3.0 stress monitor points as `[epochSec, value]`. */
-	stressSeries: json('stress_series').notNull().default([]),
-	/** All-day 1-minute (wellness FIT) or 2-minute (Personal API) heart rate as `[epochSec, bpm]`. */
-	heartRateSeries: json('heart_rate_series').notNull().default([]),
-	/** Raw 1-minute Garmin stress (0–100) as `[epochSec, value]`. */
-	rawStressSeries: json('raw_stress_series').notNull().default([]),
-	/** Intraday Body Battery (0–100) as `[epochSec, value]`. */
-	bodyBatterySeries: json('body_battery_series').notNull().default([]),
-	/** Contiguous motion/walk windows detected from Garmin stress `-2` flags: `[{ start, end }]` (epochSec). */
-	motionSpans: json('motion_spans').notNull().default([]),
+const garminDays = sqliteTable("garmin_days", {
+  id: text("id").primaryKey(),
+  restingHeartRate: integer("resting_heart_rate"),
+  hrvLastNight: real("hrv_last_night"),
+  hrvWeeklyAvg: real("hrv_weekly_avg"),
+  hrvStatus: text("hrv_status"),
+  bodyBatteryWake: integer("body_battery_wake"),
+  bodyBatteryHigh: integer("body_battery_high"),
+  bodyBatteryLow: integer("body_battery_low"),
+  bodyBatteryCharged: integer("body_battery_charged"),
+  bodyBatteryDrained: integer("body_battery_drained"),
+  stressAvg: integer("stress_avg"),
+  stressMax: integer("stress_max"),
+  sleepScore: integer("sleep_score"),
+  sleepStartAt: text("sleep_start_at"),
+  sleepEndAt: text("sleep_end_at"),
+  sleepSeconds: integer("sleep_seconds"),
+  deepSeconds: integer("deep_seconds"),
+  lightSeconds: integer("light_seconds"),
+  remSeconds: integer("rem_seconds"),
+  awakeSeconds: integer("awake_seconds"),
+  respirationAvg: real("respiration_avg"),
+  spo2Avg: real("spo2_avg"),
+  skinTempNightlyC: real("skin_temp_nightly_c"),
+  skinTempDeviationC: real("skin_temp_deviation_c"),
+  readinessScore: integer("readiness_score"),
+  readinessLevel: text("readiness_level"),
+  acuteLoad: real("acute_load"),
+  vo2Max: real("vo2_max"),
+  steps: integer("steps"),
+  activeKcal: real("active_kcal"),
+  totalKcal: real("total_kcal"),
+  /** WHOOP-style 0–21 strain computed from all-day HR + 1-second activity HR. */
+  strain: real("strain"),
+  syncedAt: text("synced_at").notNull(),
+  /** Calibrated WHOOP-style 0.0–3.0 stress monitor points as `[epochSec, value]`. */
+  stressSeries: json("stress_series").notNull().default([]),
+  /** All-day 1-minute (wellness FIT) or 2-minute (Personal API) heart rate as `[epochSec, bpm]`. */
+  heartRateSeries: json("heart_rate_series").notNull().default([]),
+  /** Raw 1-minute Garmin stress (0–100) as `[epochSec, value]`. */
+  rawStressSeries: json("raw_stress_series").notNull().default([]),
+  /** Intraday Body Battery (0–100) as `[epochSec, value]`. */
+  bodyBatterySeries: json("body_battery_series").notNull().default([]),
+  /** Contiguous motion/walk windows detected from Garmin stress `-2` flags: `[{ start, end }]` (epochSec). */
+  motionSpans: json("motion_spans").notNull().default([]),
 });
 
 /**
  * One recorded Garmin activity (keyed by Garmin `activityId`), including its 1-second heart rate stream.
  */
-const garminActivities = sqliteTable('garmin_activities', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	activityType: text('activity_type').notNull(),
-	startedAt: text('started_at').notNull(),
-	endedAt: text('ended_at').notNull(),
-	durationSeconds: real('duration_seconds').notNull().default(0),
-	calories: real('calories'),
-	distanceMeters: real('distance_meters'),
-	averageHeartRate: real('average_heart_rate'),
-	maxHeartRate: real('max_heart_rate'),
-	strain: real('strain'),
-	/** 1-second heart rate stream as `[epochSec, bpm]`. */
-	heartRateSeries: json('heart_rate_series').notNull().default([]),
+const garminActivities = sqliteTable("garmin_activities", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  activityType: text("activity_type").notNull(),
+  startedAt: text("started_at").notNull(),
+  endedAt: text("ended_at").notNull(),
+  durationSeconds: real("duration_seconds").notNull().default(0),
+  calories: real("calories"),
+  distanceMeters: real("distance_meters"),
+  averageHeartRate: real("average_heart_rate"),
+  maxHeartRate: real("max_heart_rate"),
+  strain: real("strain"),
+  /** 1-second heart rate stream as `[epochSec, bpm]`. */
+  heartRateSeries: json("heart_rate_series").notNull().default([]),
 });
 
 /** The order here is the order of the generated Swift schema and of a snapshot pull. */
 export const SYNCED_TABLES = {
-	workout_templates: workoutTemplates,
-	workout_sessions: workoutSessions,
-	custom_exercises: customExercises,
-	exercise_settings: exerciseSettings,
-	settings,
-	programs,
-	gym_profiles: gymProfiles,
-	body_weights: bodyWeights,
-	api_tokens: apiTokens,
-	foods,
-	recipes,
-	food_entries: foodEntries,
-	food_favorites: foodFavorites,
-	nutrition_days: nutritionDays,
-	food_log_notes: foodLogNotes,
-	body_metrics: bodyMetrics,
-	nutrition_plans: nutritionPlans,
-	nutrient_goals: nutrientGoals,
-	meal_names: mealNames,
-	food_short_names: foodShortNames,
-	supplements,
-	tags,
-	pings,
-	ping_logs: pingLogs,
-	health_activities: healthActivities,
-	health_sleeps: healthSleeps,
-	garmin_days: garminDays,
-	garmin_activities: garminActivities,
+  workout_templates: workoutTemplates,
+  workout_sessions: workoutSessions,
+  custom_exercises: customExercises,
+  exercise_settings: exerciseSettings,
+  settings,
+  programs,
+  gym_profiles: gymProfiles,
+  body_weights: bodyWeights,
+  api_tokens: apiTokens,
+  foods,
+  recipes,
+  food_entries: foodEntries,
+  food_favorites: foodFavorites,
+  nutrition_days: nutritionDays,
+  food_log_notes: foodLogNotes,
+  body_metrics: bodyMetrics,
+  nutrition_plans: nutritionPlans,
+  nutrient_goals: nutrientGoals,
+  meal_names: mealNames,
+  food_short_names: foodShortNames,
+  supplements,
+  tags,
+  pings,
+  ping_logs: pingLogs,
+  health_activities: healthActivities,
+  health_sleeps: healthSleeps,
+  garmin_days: garminDays,
+  garmin_activities: garminActivities,
 } as const;
 
 export type SyncedTable = keyof typeof SYNCED_TABLES;
@@ -605,31 +605,36 @@ export const nutrientAmounts = z.record(nutrientID, amount);
 const measure = z.object({ name: z.string().min(1), quantity: positive, servings: positive });
 export const serving = z.object({ measure, quantity: positive });
 export const foodNutrition = z.object({
-	nutrients: nutrientAmounts,
-	baseGrams: positive.optional(),
-	baseMilliliters: positive.optional(),
-	measures: z.array(measure).min(1),
+  nutrients: nutrientAmounts,
+  baseGrams: positive.optional(),
+  baseMilliliters: positive.optional(),
+  measures: z.array(measure).min(1),
 });
 export const foodSnapshot = z.object({
-	foodID: z.string().optional(),
-	source: z.enum(FOOD_SOURCES),
-	name: z.string().min(1),
-	brand: z.string().optional(),
-	icon: z.string().optional(),
-	nutrition: foodNutrition,
+  foodID: z.string().optional(),
+  source: z.enum(FOOD_SOURCES),
+  name: z.string().min(1),
+  brand: z.string().optional(),
+  icon: z.string().optional(),
+  nutrition: foodNutrition,
 });
 const minute = z.int().min(0).max(1439);
 const recipeIngredient = z.object({ id: z.string(), food: foodSnapshot, serving });
 /** No `original` is an added food, no `serving` a removed one. */
 export const ingredientAlteration = z
-	.object({ id: z.string(), food: foodSnapshot, original: serving.optional(), serving: serving.optional() })
-	.refine(line => line.original || line.serving, 'An alteration keeps an original or a serving');
+  .object({
+    id: z.string(),
+    food: foodSnapshot,
+    original: serving.optional(),
+    serving: serving.optional(),
+  })
+  .refine((line) => line.original || line.serving, "An alteration keeps an original or a serving");
 const supplementServing = z.object({ quantity: positive, unit: z.string().min(1) });
 /** A label row. A proprietary blend's ingredient has no amount. */
 const supplementComponent = z.object({
-	name: z.string().min(1),
-	amount: amount.optional(),
-	unit: z.string().optional(),
+  name: z.string().min(1),
+  amount: amount.optional(),
+  unit: z.string().optional(),
 });
 const ids = z.array(z.string().min(1));
 /**
@@ -638,29 +643,29 @@ const ids = z.array(z.string().min(1));
  * `end`, open without one.
  */
 export const supplementRegimen = z.object({
-	start: day,
-	end: day.optional(),
-	count: positive,
-	timing: z.enum(SUPPLEMENT_TIMINGS).optional(),
-	weekdays: z.array(z.int().min(1).max(7)),
-	tags: ids.optional(),
-	pauses: z.array(z.object({ start: day, end: day.optional() })).optional(),
+  start: day,
+  end: day.optional(),
+  count: positive,
+  timing: z.enum(SUPPLEMENT_TIMINGS).optional(),
+  weekdays: z.array(z.int().min(1).max(7)),
+  tags: ids.optional(),
+  pauses: z.array(z.object({ start: day, end: day.optional() })).optional(),
 });
 const dayTarget = z.object({ energy: amount, protein: amount, fat: amount, carbs: amount });
 const nutritionGoal = z.object({
-	kind: z.enum(GOAL_KINDS),
-	targetWeightKg: positive.optional(),
-	ratePercentPerWeek: z.number(),
-	startedOn: day,
+  kind: z.enum(GOAL_KINDS),
+  targetWeightKg: positive.optional(),
+  ratePercentPerWeek: z.number(),
+  startedOn: day,
 });
 const coachingProgram = z.object({
-	style: z.enum(PROGRAM_STYLES),
-	diet: z.enum(DIET_STYLES),
-	protein: z.enum(PROTEIN_LEVELS),
-	floor: z.enum(CALORIE_FLOORS),
-	training: z.enum(TRAINING_TYPES),
-	/** ISO weekdays, Monday 1, that get more calories. Empty spreads them evenly. */
-	highDays: z.array(z.int().min(1).max(7)),
+  style: z.enum(PROGRAM_STYLES),
+  diet: z.enum(DIET_STYLES),
+  protein: z.enum(PROTEIN_LEVELS),
+  floor: z.enum(CALORIE_FLOORS),
+  training: z.enum(TRAINING_TYPES),
+  /** ISO weekdays, Monday 1, that get more calories. Empty spreads them evenly. */
+  highDays: z.array(z.int().min(1).max(7)),
 });
 
 /**
@@ -668,154 +673,163 @@ const coachingProgram = z.object({
  * the reader tolerates a half-set trio, as it already does for `cycles` and `current_cycle`.
  */
 export const schema = defineSchema({
-	tables: SYNCED_TABLES,
-	values: {
-		workout_templates: { blocks: array },
-		workout_sessions: { blocks: array, cycle: atLeastOne, pausedSeconds: count },
-		custom_exercises: { id: z.string().startsWith('custom-'), exercise: object },
-		exercise_settings: { restSeconds: count, overrides: object },
-		settings: {
-			id: z.literal('settings'),
-			weightUnit: z.enum(WEIGHT_UNITS),
-			restCompoundUpper: count,
-			restCompoundLower: count,
-			restUpperIsolation: count,
-			restLowerIsolation: count,
-			restCore: count,
-			workout: object,
-			profile: object,
-			dashboard: object,
-			shortcuts: object,
-			nutrition: object,
-		},
-		programs: { cycles: atLeastOne, currentCycle: atLeastOne, config: object, days: array },
-		gym_profiles: { equipment: object },
-		body_weights: {
-			weightKg: z.number().positive(),
-			source: z.enum(BODY_SOURCES),
-			bodyFatPercent: z.number().min(0).max(100),
-		},
-		api_tokens: { tokenHash: z.string().regex(/^[0-9a-f]{64}$/) },
-		foods: { source: z.enum(FOOD_ROW_SOURCES), name: z.string().min(1), nutrition: foodNutrition },
-		recipes: {
-			name: z.string().min(1),
-			ingredients: z.array(recipeIngredient),
-			servings: positive,
-			cookedGrams: positive,
-			steps: z.array(z.string()),
-			prepMinutes: count,
-			cookMinutes: count,
-		},
-		food_entries: {
-			day,
-			minute,
-			food: foodSnapshot,
-			serving,
-			section: z.string().min(1),
-			alterations: z.array(ingredientAlteration).min(1),
-		},
-		food_favorites: { food: foodSnapshot, serving, alterations: z.array(ingredientAlteration).min(1) },
-		nutrition_days: { status: z.enum(DAY_STATUSES), override: nutrientAmounts },
-		food_log_notes: { day, minute, title: z.string().min(1), color: z.enum(NOTE_COLORS) },
-		body_metrics: { day, kind: z.enum(BODY_METRIC_KINDS), value: amount, source: z.enum(BODY_SOURCES) },
-		nutrition_plans: {
-			kind: z.enum(PLAN_KINDS),
-			goal: nutritionGoal,
-			coaching: coachingProgram,
-			targets: z.array(dayTarget).length(7),
-			expenditureKcal: positive,
-			trendWeightKg: positive,
-		},
-		nutrient_goals: {
-			nutrient: nutrientID,
-			startsOn: day,
-			mode: z.enum(NUTRIENT_GOAL_MODES),
-			floor: amount,
-			target: amount,
-			ceiling: amount,
-		},
-		meal_names: { name: z.string().min(1), version: atLeastOne },
-		food_short_names: { name: z.string().min(1) },
-		supplements: {
-			name: z.string().min(1),
-			serving: supplementServing,
-			components: z.array(supplementComponent),
-			regimens: z.array(supplementRegimen),
-			images: ids,
-			tags: ids,
-		},
-		tags: { name: z.string().min(1), color: z.string().regex(/^#[0-9a-f]{6}$/i) },
-		pings: {
-			name: z.string().min(1),
-			icon: z.string().min(1),
-			color: z.enum(PING_COLORS),
-			kind: z.enum(PING_KINDS),
-			steps: z.array(z.string()).max(PING_MAX_STEPS),
-			position: count,
-		},
-		ping_logs: { value: z.number().int().min(1).max(PING_MAX_STEPS) },
-		health_activities: {
-			activityType: z.string().min(1),
-			activeKcal: amount,
-			distanceMeters: amount,
-			averageHeartRate: amount,
-			maxHeartRate: amount,
-			source: z.string().min(1),
-			sourceBundle: z.string().min(1),
-			sources: z.array(z.string().min(1)),
-		},
-		health_sleeps: {
-			asleepSeconds: amount,
-			awakeSeconds: amount,
-			deepSeconds: amount,
-			coreSeconds: amount,
-			remSeconds: amount,
-			source: z.string().min(1),
-			sourceBundle: z.string().min(1),
-			sources: z.array(z.string().min(1)),
-		},
-		garmin_days: {
-			restingHeartRate: count,
-			hrvLastNight: amount,
-			hrvWeeklyAvg: amount,
-			bodyBatteryWake: count,
-			bodyBatteryHigh: count,
-			bodyBatteryLow: count,
-			bodyBatteryCharged: count,
-			bodyBatteryDrained: count,
-			stressAvg: count,
-			stressMax: count,
-			sleepScore: count,
-			sleepSeconds: count,
-			deepSeconds: count,
-			lightSeconds: count,
-			remSeconds: count,
-			awakeSeconds: count,
-			respirationAvg: amount,
-			spo2Avg: amount,
-			readinessScore: count,
-			acuteLoad: amount,
-			vo2Max: amount,
-			steps: count,
-			activeKcal: amount,
-			totalKcal: amount,
-			strain: amount,
-			stressSeries: array,
-			heartRateSeries: array,
-			rawStressSeries: array,
-			bodyBatterySeries: array,
-			motionSpans: array,
-		},
-		garmin_activities: {
-			name: z.string().min(1),
-			activityType: z.string().min(1),
-			durationSeconds: amount,
-			calories: amount,
-			distanceMeters: amount,
-			averageHeartRate: amount,
-			maxHeartRate: amount,
-			strain: amount,
-			heartRateSeries: array,
-		},
-	},
+  tables: SYNCED_TABLES,
+  values: {
+    workout_templates: { blocks: array },
+    workout_sessions: { blocks: array, cycle: atLeastOne, pausedSeconds: count },
+    custom_exercises: { id: z.string().startsWith("custom-"), exercise: object },
+    exercise_settings: { restSeconds: count, overrides: object },
+    settings: {
+      id: z.literal("settings"),
+      weightUnit: z.enum(WEIGHT_UNITS),
+      restCompoundUpper: count,
+      restCompoundLower: count,
+      restUpperIsolation: count,
+      restLowerIsolation: count,
+      restCore: count,
+      workout: object,
+      profile: object,
+      dashboard: object,
+      shortcuts: object,
+      nutrition: object,
+    },
+    programs: { cycles: atLeastOne, currentCycle: atLeastOne, config: object, days: array },
+    gym_profiles: { equipment: object },
+    body_weights: {
+      weightKg: z.number().positive(),
+      source: z.enum(BODY_SOURCES),
+      bodyFatPercent: z.number().min(0).max(100),
+    },
+    api_tokens: { tokenHash: z.string().regex(/^[0-9a-f]{64}$/) },
+    foods: { source: z.enum(FOOD_ROW_SOURCES), name: z.string().min(1), nutrition: foodNutrition },
+    recipes: {
+      name: z.string().min(1),
+      ingredients: z.array(recipeIngredient),
+      servings: positive,
+      cookedGrams: positive,
+      steps: z.array(z.string()),
+      prepMinutes: count,
+      cookMinutes: count,
+    },
+    food_entries: {
+      day,
+      minute,
+      food: foodSnapshot,
+      serving,
+      section: z.string().min(1),
+      alterations: z.array(ingredientAlteration).min(1),
+    },
+    food_favorites: {
+      food: foodSnapshot,
+      serving,
+      alterations: z.array(ingredientAlteration).min(1),
+    },
+    nutrition_days: { status: z.enum(DAY_STATUSES), override: nutrientAmounts },
+    food_log_notes: { day, minute, title: z.string().min(1), color: z.enum(NOTE_COLORS) },
+    body_metrics: {
+      day,
+      kind: z.enum(BODY_METRIC_KINDS),
+      value: amount,
+      source: z.enum(BODY_SOURCES),
+    },
+    nutrition_plans: {
+      kind: z.enum(PLAN_KINDS),
+      goal: nutritionGoal,
+      coaching: coachingProgram,
+      targets: z.array(dayTarget).length(7),
+      expenditureKcal: positive,
+      trendWeightKg: positive,
+    },
+    nutrient_goals: {
+      nutrient: nutrientID,
+      startsOn: day,
+      mode: z.enum(NUTRIENT_GOAL_MODES),
+      floor: amount,
+      target: amount,
+      ceiling: amount,
+    },
+    meal_names: { name: z.string().min(1), version: atLeastOne },
+    food_short_names: { name: z.string().min(1) },
+    supplements: {
+      name: z.string().min(1),
+      serving: supplementServing,
+      components: z.array(supplementComponent),
+      regimens: z.array(supplementRegimen),
+      images: ids,
+      tags: ids,
+    },
+    tags: { name: z.string().min(1), color: z.string().regex(/^#[0-9a-f]{6}$/i) },
+    pings: {
+      name: z.string().min(1),
+      icon: z.string().min(1),
+      color: z.enum(PING_COLORS),
+      kind: z.enum(PING_KINDS),
+      steps: z.array(z.string()).max(PING_MAX_STEPS),
+      position: count,
+    },
+    ping_logs: { value: z.number().int().min(1).max(PING_MAX_STEPS) },
+    health_activities: {
+      activityType: z.string().min(1),
+      activeKcal: amount,
+      distanceMeters: amount,
+      averageHeartRate: amount,
+      maxHeartRate: amount,
+      source: z.string().min(1),
+      sourceBundle: z.string().min(1),
+      sources: z.array(z.string().min(1)),
+    },
+    health_sleeps: {
+      asleepSeconds: amount,
+      awakeSeconds: amount,
+      deepSeconds: amount,
+      coreSeconds: amount,
+      remSeconds: amount,
+      source: z.string().min(1),
+      sourceBundle: z.string().min(1),
+      sources: z.array(z.string().min(1)),
+    },
+    garmin_days: {
+      restingHeartRate: count,
+      hrvLastNight: amount,
+      hrvWeeklyAvg: amount,
+      bodyBatteryWake: count,
+      bodyBatteryHigh: count,
+      bodyBatteryLow: count,
+      bodyBatteryCharged: count,
+      bodyBatteryDrained: count,
+      stressAvg: count,
+      stressMax: count,
+      sleepScore: count,
+      sleepSeconds: count,
+      deepSeconds: count,
+      lightSeconds: count,
+      remSeconds: count,
+      awakeSeconds: count,
+      respirationAvg: amount,
+      spo2Avg: amount,
+      readinessScore: count,
+      acuteLoad: amount,
+      vo2Max: amount,
+      steps: count,
+      activeKcal: amount,
+      totalKcal: amount,
+      strain: amount,
+      stressSeries: array,
+      heartRateSeries: array,
+      rawStressSeries: array,
+      bodyBatterySeries: array,
+      motionSpans: array,
+    },
+    garmin_activities: {
+      name: z.string().min(1),
+      activityType: z.string().min(1),
+      durationSeconds: amount,
+      calories: amount,
+      distanceMeters: amount,
+      averageHeartRate: amount,
+      maxHeartRate: amount,
+      strain: amount,
+      heartRateSeries: array,
+    },
+  },
 });

@@ -1,55 +1,55 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-		<title>Exercise motion</title>
-		<style>
-			/*STYLE*/
-		</style>
-	</head>
-	<body>
-		<div id="app">
-			<section class="stage">
-				<header class="bar">
-					<div class="segmented" id="exercises" role="tablist" aria-label="Exercise"></div>
-					<label class="load">
-						<span id="load-label">Weight</span>
-						<input id="load" type="range" min="0" max="200" step="2.5" />
-						<output id="load-value"></output>
-					</label>
-				</header>
-				<div class="canvas-wrap">
-					<canvas id="canvas"></canvas>
-					<div class="overlay top-left">
-						<div class="segmented small" id="views" aria-label="Camera"></div>
-					</div>
-					<div class="overlay top-right">
-						<div class="segmented small" id="modes" aria-label="Figure colour"></div>
-						<div class="legend" id="legend"></div>
-					</div>
-					<div class="overlay bottom-left" id="variant-note" hidden></div>
-				</div>
-				<footer class="transport">
-					<button id="play" aria-label="Pause"></button>
-					<div class="timeline">
-						<div class="phases" id="phases"></div>
-						<div class="flags" id="flags"></div>
-						<input id="scrub" type="range" min="0" step="1" aria-label="Frame" />
-					</div>
-					<div class="segmented small" id="speeds" aria-label="Speed"></div>
-				</footer>
-			</section>
-			<aside class="panel">
-				<div class="segmented" id="tabs" role="tablist"></div>
-				<div class="panel-body" id="panel"></div>
-			</aside>
-		</div>
-		<script id="data" type="application/json">
-			__DATA__
-		</script>
-		<script type="module">
-			/*SCRIPT*/
-		</script>
-	</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Exercise motion</title>
+    <style>
+      /*STYLE*/
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <section class="stage">
+        <header class="bar">
+          <div class="segmented" id="exercises" role="tablist" aria-label="Exercise"></div>
+          <label class="load">
+            <span id="load-label">Weight</span>
+            <input id="load" type="range" min="0" max="200" step="2.5" />
+            <output id="load-value"></output>
+          </label>
+        </header>
+        <div class="canvas-wrap">
+          <canvas id="canvas"></canvas>
+          <div class="overlay top-left">
+            <div class="segmented small" id="views" aria-label="Camera"></div>
+          </div>
+          <div class="overlay top-right">
+            <div class="segmented small" id="modes" aria-label="Figure colour"></div>
+            <div class="legend" id="legend"></div>
+          </div>
+          <div class="overlay bottom-left" id="variant-note" hidden></div>
+        </div>
+        <footer class="transport">
+          <button id="play" aria-label="Pause"></button>
+          <div class="timeline">
+            <div class="phases" id="phases"></div>
+            <div class="flags" id="flags"></div>
+            <input id="scrub" type="range" min="0" step="1" aria-label="Frame" />
+          </div>
+          <div class="segmented small" id="speeds" aria-label="Speed"></div>
+        </footer>
+      </section>
+      <aside class="panel">
+        <div class="segmented" id="tabs" role="tablist"></div>
+        <div class="panel-body" id="panel"></div>
+      </aside>
+    </div>
+    <script id="data" type="application/json">
+      __DATA__
+    </script>
+    <script type="module">
+      /*SCRIPT*/
+    </script>
+  </body>
 </html>

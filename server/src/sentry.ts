@@ -5,4 +5,4 @@
  */
 export const SENTRY_DEFAULTS = { attachStacktrace: false } as const;
 export const withoutDedupe = <Integration extends { name: string }>(defaults: Integration[]) =>
-	defaults.filter(integration => integration.name !== 'Dedupe');
+  defaults.filter((integration) => integration.name !== "Dedupe");
