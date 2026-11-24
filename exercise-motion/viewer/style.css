@@ -504,3 +504,19 @@ h3 + .stat {
     scroll-behavior: auto;
   }
 }
+
+.clean body {
+  background: #fff;
+}
+.clean #app {
+  grid-template-columns: minmax(0, 1fr);
+}
+.clean .stage {
+  grid-template-rows: minmax(0, 1fr);
+}
+.clean .bar,
+.clean .overlay,
+.clean .transport,
+.clean .panel {
+  display: none;
+}

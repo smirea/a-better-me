@@ -1,127 +1,225 @@
 import {
+  Box3,
   Color,
   Group,
-  LatheGeometry,
   Mesh,
   MeshStandardMaterial,
   Quaternion,
-  SphereGeometry,
-  Vector2,
   Vector3,
+  Vector4,
 } from "three";
-import { SIDES, sideSign, type Body, type Frame } from "../src/body";
-import { MUSCLES, type Muscle } from "../src/muscles";
+import { SIDES, type Body, type Frame } from "../src/body";
+import { MUSCLES } from "../src/muscles";
+import { createAnatomyAtlas } from "./anatomy";
+import { createFigureGeometry } from "./figure-mesh";
 
-const BODY = new Color("#333336");
-const PLATE = new Color("#5b5b60");
-
-/** A muscle plate: an ellipsoid on a segment, given for the left side as centre and radii in the joint's frame. */
-type Pad = [joint: string, center: [number, number, number], radii: [number, number, number]];
-
-/**
- * Where each of the app's muscle groups sits on the figure. The plates follow the app's flat body map: dark
- * silhouette, grey plates, and a plate fills with colour as its muscle works.
- */
-const PADS: Record<Muscle, Pad[]> = {
-  chest: [["thoracic", [0.075, 0.2, 0.118], [0.07, 0.055, 0.03]]],
-  upper_traps: [["thoracic", [0.06, 0.318, -0.015], [0.055, 0.03, 0.045]]],
-  upper_back: [["thoracic", [0.06, 0.2, -0.07], [0.055, 0.07, 0.028]]],
-  lats: [["thoracic", [0.118, 0.09, -0.05], [0.045, 0.1, 0.04]]],
-  serratus: [["thoracic", [0.148, 0.11, 0.045], [0.022, 0.05, 0.045]]],
-  neck: [["neck", [0.03, 0.045, 0.012], [0.024, 0.045, 0.032]]],
-  abs: [["lumbar", [0.04, 0.085, 0.108], [0.038, 0.1, 0.022]]],
-  obliques: [["lumbar", [0.128, 0.07, 0.05], [0.035, 0.08, 0.06]]],
-  lower_back: [["lumbar", [0.045, 0.07, -0.072], [0.036, 0.1, 0.028]]],
-  glutes: [["pelvis", [0.085, 0, -0.088], [0.075, 0.08, 0.05]]],
-  hip_flexors: [["pelvis", [0.085, 0.005, 0.088], [0.036, 0.05, 0.022]]],
-  abductors: [["pelvis", [0.168, 0.03, -0.01], [0.026, 0.06, 0.06]]],
-  quads: [["hip", [0, -0.22, 0.042], [0.058, 0.17, 0.042]]],
-  hamstrings: [["hip", [0, -0.23, -0.042], [0.052, 0.16, 0.038]]],
-  adductors: [["hip", [-0.046, -0.15, 0], [0.03, 0.12, 0.046]]],
-  calves: [["knee", [0, -0.14, -0.028], [0.045, 0.11, 0.036]]],
-  tibs: [["knee", [0.012, -0.18, 0.03], [0.022, 0.13, 0.02]]],
-  front_delts: [["shoulder", [0, -0.03, 0.04], [0.035, 0.06, 0.03]]],
-  side_delts: [["shoulder", [0.04, -0.035, 0], [0.03, 0.065, 0.04]]],
-  rear_delts: [["shoulder", [0, -0.03, -0.04], [0.035, 0.06, 0.03]]],
-  biceps: [["shoulder", [0, -0.2, 0.03], [0.032, 0.09, 0.028]]],
-  triceps: [["shoulder", [0, -0.19, -0.03], [0.036, 0.11, 0.028]]],
-  forearms: [["elbow", [0, -0.1, 0], [0.043, 0.1, 0.041]]],
-};
-
-function capsule(length: number, ra: number, rb: number) {
-  const profile: Vector2[] = [];
-  const steps = 10;
-  for (let i = 0; i <= steps; i++) {
-    const angle = -Math.PI / 2 + (Math.PI / 2) * (i / steps);
-    profile.push(new Vector2(ra * Math.cos(angle), ra * Math.sin(angle)));
-  }
-  for (let i = 0; i <= steps; i++) {
-    const angle = (Math.PI / 2) * (i / steps);
-    profile.push(new Vector2(rb * Math.cos(angle), length + rb * Math.sin(angle)));
-  }
-  return new LatheGeometry(profile, 28);
-}
-
-const UP = new Vector3(0, 1, 0);
+const BODY = new Color("#2e2e2e");
+const PLATE = new Color("#4a4a4a");
 
 export class Figure {
   readonly group = new Group();
-  private joints: Group[];
-  private plates: MeshStandardMaterial[][] = MUSCLES.map(() => []);
+  private readonly mesh;
+  private readonly bind: Vector3[];
+  private readonly shoulders: { joint: number; clavicle: number }[];
+  private readonly rotations: Quaternion[];
+  private readonly relativeRotation = new Quaternion();
+  private readonly twist = new Quaternion();
+  private readonly translation = new Vector3();
+  private readonly dual: Vector4[];
+  private readonly grip = { value: 0 };
+  private readonly colors = [
+    BODY,
+    ...Array.from({ length: MUSCLES.length * 2 }, () => PLATE.clone()),
+  ];
 
-  constructor(private body: Body) {
-    this.joints = body.joints.map(() => {
-      const group = new Group();
-      this.group.add(group);
-      return group;
-    });
-    const skin = new MeshStandardMaterial({ color: BODY, roughness: 0.82, metalness: 0.02 });
-    const k = body.height / 1.78;
-    for (const collider of body.colliders) {
-      if (!collider.visible) continue;
-      const axis = collider.b.clone().sub(collider.a);
-      const mesh = new Mesh(capsule(axis.length(), collider.ra, collider.rb), skin);
-      mesh.position.copy(collider.a);
-      mesh.quaternion.copy(new Quaternion().setFromUnitVectors(UP, axis.normalize()));
-      if (collider.id === "head") mesh.scale.set(0.84, 1, 1);
-      this.joints[collider.joint].add(mesh);
+  constructor(body: Body) {
+    this.bind = [];
+    for (const joint of body.joints) {
+      this.bind.push(
+        joint.parent < 0 ? new Vector3() : this.bind[joint.parent].clone().add(joint.offset),
+      );
     }
-    const ball = new SphereGeometry(1, 28, 20);
-    MUSCLES.forEach((muscle, m) => {
-      SIDES.forEach((side, n) => {
-        const material = new MeshStandardMaterial({
-          color: PLATE,
-          roughness: 0.7,
-          metalness: 0.02,
-        });
-        this.plates[m][n] = material;
-        for (const [joint, center, radii] of PADS[muscle]) {
-          const index = body.index[joint] ?? body.index[`${joint}_${side}`];
-          const mesh = new Mesh(ball, material);
-          mesh.position.set(center[0] * sideSign(side) * k, center[1] * k, center[2] * k);
-          mesh.scale.set(radii[0] * k, radii[1] * k, radii[2] * k);
-          this.joints[index].add(mesh);
-        }
-      });
+    this.shoulders = SIDES.map((side) => ({
+      joint: body.index[`shoulder_${side}`],
+      clavicle: body.index[`clavicle_${side}`],
+    }));
+    const jointCount = body.joints.length + this.shoulders.length;
+    this.rotations = Array.from({ length: jointCount }, () => new Quaternion());
+    this.dual = Array.from({ length: jointCount }, () => new Vector4(0, 0, 0, 0));
+    const atlas = createAnatomyAtlas();
+    const material = new MeshStandardMaterial({
+      bumpMap: atlas,
+      bumpScale: 0.008,
+      roughness: 0.77,
     });
+
+    // Blending rigid transforms as dual quaternions retains joint volume at deep flexion and forearm twist.
+    material.onBeforeCompile = (shader) => {
+      shader.uniforms.jointRotation = { value: this.rotations };
+      shader.uniforms.jointDual = { value: this.dual };
+      shader.uniforms.pressGrip = this.grip;
+      shader.uniforms.musclePalette = { value: this.colors };
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          "#include <common>",
+          `#include <common>
+					attribute vec3 jointIndices;
+					attribute vec2 jointWeights;
+					attribute float gripShift;
+					uniform vec4 jointRotation[${jointCount}];
+					uniform vec4 jointDual[${jointCount}];
+					uniform float pressGrip;
+					vec3 rotateSkin(vec4 q, vec3 v) {
+						return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
+					}
+				`,
+        )
+        .replace(
+          "#include <beginnormal_vertex>",
+          `
+					int primaryJoint = int(jointIndices.x);
+					int secondaryJoint = int(jointIndices.y);
+					vec4 a = jointRotation[primaryJoint];
+					vec4 b = jointRotation[secondaryJoint];
+					float hemisphere = dot(a, b) < 0.0 ? -1.0 : 1.0;
+					vec4 real = mix(a, hemisphere * b, jointWeights.x);
+					vec4 dual = mix(jointDual[primaryJoint], hemisphere * jointDual[secondaryJoint], jointWeights.x);
+					if (jointWeights.y > 0.0) {
+						int shoulderJoint = int(jointIndices.z);
+						vec4 shoulder = jointRotation[shoulderJoint];
+						float shoulderHemisphere = dot(real, shoulder) < 0.0 ? -1.0 : 1.0;
+						real = mix(real, shoulderHemisphere * shoulder, jointWeights.y);
+						dual = mix(dual, shoulderHemisphere * jointDual[shoulderJoint], jointWeights.y);
+					}
+					float invLen = inversesqrt(dot(real, real));
+					vec4 rotation = real * invLen;
+					dual *= invLen;
+					vec3 translation = 2.0 * (rotation.w * dual.xyz - dual.w * rotation.xyz + cross(rotation.xyz, dual.xyz));
+					vec3 objectNormal = rotateSkin(rotation, normal);
+				`,
+        )
+        .replace(
+          "#include <begin_vertex>",
+          `
+					vec3 localPosition = position + vec3(0.0, pressGrip * gripShift, 0.0);
+					vec3 transformed = rotateSkin(rotation, localPosition) + translation;
+				`,
+        );
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          "#include <common>",
+          `#include <common>
+					uniform vec3 musclePalette[${this.colors.length}];
+				`,
+        )
+        .replace(
+          "#include <color_fragment>",
+          `
+					ivec2 pixel = ivec2(vBumpMapUv * vec2(textureSize(bumpMap, 0)));
+					int plate = int(round(texelFetch(bumpMap, pixel, 0).b * 255.0));
+					float coverage = texture2D(bumpMap, vBumpMapUv).g;
+					diffuseColor.rgb *= mix(musclePalette[0], musclePalette[plate], coverage);
+				`,
+        );
+    };
+
+    this.mesh = new Mesh(createFigureGeometry(body), material);
+    this.mesh.frustumCulled = false;
+    this.group.add(this.mesh);
+  }
+
+  setPressGrip(enabled: boolean) {
+    this.grip.value = Number(enabled);
   }
 
   pose(frame: Frame) {
-    this.joints.forEach((group, i) => {
-      group.position.copy(frame.pos[i]);
-      group.quaternion.copy(frame.rot[i]);
+    for (let i = 0; i < this.bind.length; i++) {
+      const q = this.rotations[i].copy(frame.rot[i]);
+      this.setDual(i, frame.pos[i], this.bind[i], q);
+    }
+    // The deltoid follows the arm's swing. Axial twist blends in below the cap to keep the armpit from winding up.
+    this.shoulders.forEach(({ joint, clavicle }, side) => {
+      const index = this.bind.length + side;
+      const local = this.relativeRotation
+        .copy(frame.rot[clavicle])
+        .invert()
+        .multiply(frame.rot[joint]);
+      const inverseTwist = this.twist.set(0, -local.y, 0, local.w).normalize();
+      const q = this.rotations[index].copy(frame.rot[joint]).multiply(inverseTwist);
+      this.setDual(index, frame.pos[joint], this.bind[joint], q);
     });
   }
 
-  /** `values` holds one number in [0, 1] per muscle and side, in `MUSCLES` order, left then right. */
-  tint(values: ArrayLike<number>, color: Color) {
-    MUSCLES.forEach((_, m) => {
-      for (let n = 0; n < 2; n++) {
-        const value = Math.min(1, values[m * 2 + n]);
-        // Any work at all shows as a visible tint, as on the app's body map.
-        this.plates[m][n].color.copy(PLATE).lerp(color, value < 0.03 ? 0 : 0.18 + 0.82 * value);
-        this.plates[m][n].emissive.copy(color).multiplyScalar(value < 0.03 ? 0 : 0.25 * value);
+  private setDual(index: number, position: Vector3, bind: Vector3, q: Quaternion) {
+    const t = this.translation.copy(bind).applyQuaternion(q).negate().add(position);
+    this.dual[index].set(
+      (t.x * q.w + t.y * q.z - t.z * q.y) * 0.5,
+      (t.y * q.w + t.z * q.x - t.x * q.z) * 0.5,
+      (t.z * q.w + t.x * q.y - t.y * q.x) * 0.5,
+      -(t.x * q.x + t.y * q.y + t.z * q.z) * 0.5,
+    );
+  }
+
+  bounds() {
+    const box = new Box3();
+    const { position, jointIndices, jointWeights, gripShift } = this.mesh.geometry.attributes;
+    const p = new Vector3();
+    const translation = new Vector3();
+    const imaginary = new Vector3();
+    const dualVector = new Vector3();
+    const dual = new Vector4();
+    const q = new Quaternion();
+    for (let i = 0; i < position.count; i++) {
+      const a = jointIndices.getX(i);
+      const b = jointIndices.getY(i);
+      const t = jointWeights.getX(i);
+      const first = this.rotations[a];
+      const second = this.rotations[b];
+      const mix = first.dot(second) < 0 ? -t : t;
+      q.set(
+        first.x * (1 - t) + second.x * mix,
+        first.y * (1 - t) + second.y * mix,
+        first.z * (1 - t) + second.z * mix,
+        first.w * (1 - t) + second.w * mix,
+      );
+      dual
+        .copy(this.dual[a])
+        .multiplyScalar(1 - t)
+        .addScaledVector(this.dual[b], mix);
+      const shoulderWeight = jointWeights.getY(i);
+      if (shoulderWeight > 0) {
+        const joint = jointIndices.getZ(i);
+        const shoulder = this.rotations[joint];
+        const weight = q.dot(shoulder) < 0 ? -shoulderWeight : shoulderWeight;
+        const base = 1 - shoulderWeight;
+        q.set(
+          base * q.x + weight * shoulder.x,
+          base * q.y + weight * shoulder.y,
+          base * q.z + weight * shoulder.z,
+          base * q.w + weight * shoulder.w,
+        );
+        dual.multiplyScalar(base).addScaledVector(this.dual[joint], weight);
       }
-    });
+      const invLength = 1 / q.length();
+      q.normalize();
+      dual.multiplyScalar(invLength);
+      imaginary.set(q.x, q.y, q.z);
+      dualVector.set(dual.x, dual.y, dual.z);
+      translation
+        .crossVectors(imaginary, dualVector)
+        .addScaledVector(dualVector, q.w)
+        .addScaledVector(imaginary, -dual.w);
+      p.fromBufferAttribute(position, i);
+      p.y += this.grip.value * gripShift.getX(i);
+      box.expandByPoint(p.applyQuaternion(q).addScaledVector(translation, 2));
+    }
+    return box;
+  }
+
+  tint(values: ArrayLike<number>, color: Color) {
+    for (let i = 0; i < this.colors.length - 1; i++) {
+      const value = Math.min(1, values[i]);
+      this.colors[i + 1].copy(PLATE).lerp(color, value < 0.03 ? 0 : 0.2 + 0.8 * value);
+    }
   }
 }
