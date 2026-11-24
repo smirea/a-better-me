@@ -37,34 +37,22 @@ struct PlateCalculatorView: View {
 
     /// One entry per plate as on the sleeve, then the base, wrapping to more rows when a heavy load doesn't fit.
     private var legend: some View {
-        let miss = plan.miss(unit: unit.rawValue)
-        let heaviest = plan.perSide.max() ?? 1
-        return FlowLayout(spacing: isExpanded ? 8 : 6) {
-            ForEach(Array(plan.loaded.enumerated()), id: \.offset) { _, plate in
-                HStack(spacing: isExpanded ? 5 : 4) {
-                    marker(plate, heaviest: heaviest)
-                    Text(NumberText.plain(plate.weight))
-                }
+        FlowLayout(spacing: isExpanded ? 8 : 6) {
+            PlateLegendItems(plan: plan, unit: unit, markerHeight: markerHeight * (isExpanded ? 15 : 13) / 13, spacing: isExpanded ? 5 : 4) { label, isIgnored in
+                baseButton(label, isIgnored: isIgnored)
             }
-            if let base = plan.baseLabel ?? plan.ignoredBaseLabel {
-                if !plan.loaded.isEmpty { Text("+").foregroundStyle(Theme.textSecondary) }
-                baseButton(base, isIgnored: plan.baseLabel == nil)
-            } else if plan.loaded.isEmpty {
-                Text("No plates").foregroundStyle(Theme.textSecondary)
-            }
-            if let miss { Text(miss).foregroundStyle(Theme.amber) }
         }
         .font(AppFont.medium(isExpanded ? 15 : 13))
         .monospacedDigit()
         .layoutPriority(1)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Plate calculator")
-        .accessibilityValue([plan.legend.isEmpty ? "No plates" : plan.legend, miss].compactMap(\.self).joined(separator: ", "))
+        .accessibilityValue([plan.text.isEmpty ? "No plates" : plan.text, plan.miss(unit: unit.rawValue)].compactMap(\.self).joined(separator: ", "))
     }
 
     @ViewBuilder
     private func baseButton(_ label: String, isIgnored: Bool) -> some View {
-        let text = Text(label).strikethrough(isIgnored).foregroundStyle(isIgnored ? Theme.textTertiary : Theme.textPrimary)
+        let text = PlateBaseLabel(label: label, isIgnored: isIgnored)
         if let onBase {
             Button(action: onBase) { text.contentShape(.rect) }
                 .buttonStyle(.plain)
@@ -99,21 +87,6 @@ struct PlateCalculatorView: View {
         .accessibilityLabel("Bar weight, \(NumberText.plain(plan.loading.ownBaseWeight)) \(unit.rawValue)")
     }
 
-    /// A plate as the sleeve draws it, scaled to the legend's text: as tall relative to the heaviest plate, and a bumper
-    /// full height, wider, and rimmed.
-    private func marker(_ plate: PlateLoading.Plate, heaviest: Double) -> some View {
-        let height = markerHeight * (isExpanded ? 15 : 13) / 13
-        let width = (isExpanded ? 5 : 4) * markerHeight / 13
-        let shape = RoundedRectangle(cornerRadius: 1.5)
-        return shape.fill(Self.color(plate.weight, unit: unit))
-            .overlay { if plate.isBumper { shape.strokeBorder(.black.opacity(0.5), lineWidth: 1) } }
-            .frame(
-                width: plate.isBumper ? width * 1.6 : width,
-                height: plate.isBumper ? height : height * (0.45 + 0.55 * plate.weight / heaviest)
-            )
-            .frame(height: height)
-    }
-
     private var sleeve: some View {
         let height: CGFloat = isExpanded ? 120 : 40
         let thickness: CGFloat = isExpanded ? 18 : 5
@@ -123,7 +96,7 @@ struct PlateCalculatorView: View {
             RoundedRectangle(cornerRadius: 1).fill(Theme.textTertiary).frame(width: isExpanded ? 6 : 3, height: height * 0.3)
             ForEach(Array(plan.loaded.enumerated()), id: \.offset) { _, plate in
                 RoundedRectangle(cornerRadius: isExpanded ? 3 : 1)
-                    .fill(Self.color(plate.weight, unit: unit))
+                    .fill(Theme.plate(plate.weight, unit: unit))
                     .frame(
                         width: plate.isBumper ? thickness * 1.6 : thickness,
                         height: plate.isBumper ? height : height * (0.35 + 0.65 * plate.weight / heaviest)
@@ -144,22 +117,5 @@ struct PlateCalculatorView: View {
             Rectangle().fill(Theme.textTertiary).frame(width: isExpanded ? 36 : 20, height: isExpanded ? 6 : 3)
         }
         .frame(height: height)
-    }
-
-    /// MF's default plate colors (`live-31`) by lb weight, and the competition colors for kg plates. Any other plate is
-    /// gray.
-    static func color(_ weight: Double, unit: WeightUnit) -> Color {
-        let pounds = WeightUnit.lb.fromKg(unit.toKg(weight))
-        let kilograms = unit.toKg(weight)
-        let byPound: [(Double, Color)] = [
-            (55, .red), (45, Theme.muscle), (35, .yellow), (25, Theme.green), (10, Color(white: 0.75)),
-            (5, Theme.muscle), (2.5, Theme.green), (1.25, Color(white: 0.75)), (0.5, Color(white: 0.4)),
-        ]
-        let byKilogram: [(Double, Color)] = [
-            (25, .red), (20, Theme.muscle), (15, .yellow), (10, Theme.green), (5, .white), (2.5, .red), (1.25, Color(white: 0.75)),
-        ]
-        if let match = byPound.first(where: { abs($0.0 - pounds) < 0.05 }) { return match.1 }
-        if let match = byKilogram.first(where: { abs($0.0 - kilograms) < 0.05 }) { return match.1 }
-        return Color(white: 0.55)
     }
 }

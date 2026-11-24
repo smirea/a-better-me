@@ -250,3 +250,30 @@ struct WatchReplicaTests {
         #expect(replica.closed == [Fixture.id(9)])
     }
 }
+
+extension WatchWorkoutTests {
+    @Test func theWatchsBarButtonCountsTheBarOnEveryExerciseOnThatMachineAndMovesTheCrownSteps() {
+        let lb = WeightUnit.lb
+        var smith = PlateLoading(base: .bar, baseWeight: 0, plates: [45.0, 25, 10, 5, 2.5].map { .init(weight: $0, perSide: nil) }, sides: 2, baseID: "smith", ignoredBaseWeight: 13)
+        let leftOut = LivePlates(smith, offset: nil, togglesBase: true)
+        smith.baseID = "rack"
+        let otherBar = LivePlates(smith, offset: nil, togglesBase: true)
+        var workout = Self.workout()
+        workout.unit = lb
+        workout.exercises["bench"]?.plates = leftOut
+        workout.exercises["bench"]?.loadableWeightsKg = Loading.plates(leftOut.loading).loadableKg(unit: lb)
+        workout.exercises["row"]?.plates = otherBar
+        #expect(workout.exercises["bench"]?.loadableWeightsKg.contains(lb.toKg(120)) == true)
+
+        workout.apply(Self.event(.countBase(baseID: "smith", counts: true), after: 5))
+
+        let bench = workout.exercises["bench"]
+        #expect(bench?.plates?.countsBase == true)
+        #expect(bench?.loadableWeightsKg.contains(lb.toKg(133)) == true)
+        #expect(bench?.loadableWeightsKg.contains(lb.toKg(120)) == false)
+        #expect(workout.exercises["row"]?.plates == otherBar)
+        var set = workout.set(at: RowPath(block: 0, exercise: 0, set: 0))
+        set.values.weightKg = lb.toKg(133)
+        #expect(set.platePlan(unit: lb)?.legend == "45 10 5 + 13 bar")
+    }
+}

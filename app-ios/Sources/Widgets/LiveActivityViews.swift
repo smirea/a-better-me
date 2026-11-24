@@ -12,11 +12,16 @@ struct LockScreenBanner: View {
                 RestHeader(rest: rest)
                 Controls(phase: phase)
                 if let next = phase.shownSet {
-                    Text("Up next · \(next.exerciseName) · \(next.position)")
-                        .font(AppFont.caption(12))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity)
+                    // The banner is at its 160 pt cap, so the plates share the line and take the set's position's place.
+                    let plan = next.platePlan(unit: phase.status.unit)
+                    HStack(spacing: 8) {
+                        Text(plan == nil ? "Up next · \(next.exerciseName) · \(next.position)" : "Up next · \(next.exerciseName)")
+                            .font(AppFont.caption(12))
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
+                        if let plan { PlateLine(plan: plan, unit: phase.status.unit, size: 12).layoutPriority(1) }
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             case .finished(let status, let endedAt):
                 FinishedSummary(status: status, endedAt: endedAt)
@@ -42,6 +47,7 @@ struct Heading: View {
     let phase: Phase
 
     var body: some View {
+        let plan = phase.shownSet?.platePlan(unit: phase.status.unit)
         VStack(alignment: .leading, spacing: 2) {
             Text(phase.caption)
                 .font(AppFont.caption(13))
@@ -50,8 +56,10 @@ struct Heading: View {
             Text(phase.title)
                 .font(AppFont.headline(16))
                 .foregroundStyle(Theme.textPrimary)
-                .lineLimit(2)
+                .lineLimit(plan == nil ? 2 : 1)
+                .minimumScaleFactor(plan == nil ? 1 : 0.85)
                 .fixedSize(horizontal: false, vertical: true)
+            if let plan { PlateLine(plan: plan, unit: phase.status.unit, size: 13) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
