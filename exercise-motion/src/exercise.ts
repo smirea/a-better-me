@@ -31,6 +31,8 @@ export interface Support {
   rail?: boolean;
   /** Joints the bench or floor carries, so their muscles hold no load. */
   passive?: string[];
+  /** The instructions have the lifter brace the core, so the abdominals work through the whole rep. */
+  brace?: boolean;
 }
 
 export interface RequiredContact {

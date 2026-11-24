@@ -142,6 +142,7 @@ export const barbellBenchPress: ExerciseSpec = {
       loads: SIDES.map((side) => ({ anchor: `press_${side}`, share: 0.5, grip: "press" as const })),
       // The bench carries the trunk and pins the shoulder blades, and the feet only brace.
       support: {
+        brace: true,
         kind: "lying",
         passive: ["lumbar", "thoracic", "neck", "hip", "knee", "ankle", "clavicle"],
       },

@@ -156,7 +156,7 @@ export const dumbbellRomanianDeadlift: ExerciseSpec = {
         }),
       equipment: () => [],
       loads: SIDES.map((side) => ({ anchor: `grip_${side}`, share: 1, grip: "hang" as const })),
-      support: { kind: "standing" },
+      support: { kind: "standing", brace: true },
       tempo: { lower: 2.2, bottom: 0.25, raise: 1.5, top: 0.8 },
       contacts: { dumbbell_L: { hand_L: 0.08 }, dumbbell_R: { hand_R: 0.08 } },
       required: [
