@@ -10,31 +10,29 @@ pre-commit:
     - group:
         parallel: true
         jobs:
-          # One command: both fixers rewrite the same staged files, and in parallel one would overwrite the other's edit.
           - name: fix
-            run: >-
-              bunx oxlint --fix --no-error-on-unmatched-pattern {staged_files}
-              && bunx oxfmt --no-error-on-unmatched-pattern {staged_files}
+            glob: "*.{js,mjs,mts,ts,tsx,jsx,svelte}"
+            run: bunx oxlint --fix --no-error-on-unmatched-pattern {staged_files}
             stage_fixed: true
           - name: typecheck
-            glob: '*.{js,mjs,mts,ts,tsx,json,jsonc}'
+            glob: "*.{js,mjs,mts,ts,tsx,json,jsonc}"
             run: bun check
           # The whole suite: it runs in under a second, and selecting tests by diff could miss one whose input is not an
           # import. Git exports GIT_DIR and GIT_INDEX_FILE to hooks, so a test that runs git in a temp directory would
           # act on this repository unless they are unset first.
           - name: test
-            glob: '*.{js,mjs,mts,ts,tsx,json}'
+            glob: "*.{js,mjs,mts,ts,tsx,json}"
             run: unset $(git rev-parse --local-env-vars); bun run test
           - name: generated
             run: bun scripts/check-generated.ts
           - name: swift-lint
-            glob: '*.swift'
+            glob: "*.swift"
             run: bun app-ios/scripts/lint-swift.ts {staged_files}
           # Core's tests run on the Mac with no simulator (app-ios/Package.swift). The first run in a new worktree also
           # resolves and compiles the packages.
           - name: swift-test
             root: app-ios/
-            glob: '*.swift'
+            glob: "*.swift"
             run: unset $(git rev-parse --local-env-vars); swift test --quiet
 
 pre-push:

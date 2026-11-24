@@ -46,19 +46,19 @@ Example shape (made-up values, inferred field set):
 
 ```json
 {
-	"foodId": "f_123",
-	"foodName": "Greek yogurt, plain",
-	"brandName": "Example Dairy",
-	"barcode": "0000000000000",
-	"source": "BRANDED",
-	"servingName": "container",
-	"servingQty": 1,
-	"servingWeightGrams": 170,
-	"altMeasures": [
-		{ "name": "g", "qty": 100, "weightGrams": 100 },
-		{ "name": "cup", "qty": 1, "weightGrams": 245 }
-	],
-	"nutrients": { "k": 100, "p": 17, "f": 0.7, "c": 6, "269": 6, "307": 60, "301": 190 }
+  "foodId": "f_123",
+  "foodName": "Greek yogurt, plain",
+  "brandName": "Example Dairy",
+  "barcode": "0000000000000",
+  "source": "BRANDED",
+  "servingName": "container",
+  "servingQty": 1,
+  "servingWeightGrams": 170,
+  "altMeasures": [
+    { "name": "g", "qty": 100, "weightGrams": 100 },
+    { "name": "cup", "qty": 1, "weightGrams": 245 }
+  ],
+  "nutrients": { "k": 100, "p": 17, "f": 0.7, "c": 6, "269": 6, "307": 60, "301": 190 }
 }
 ```
 

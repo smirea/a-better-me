@@ -8,5 +8,5 @@
  * `env: process.env`, and through them all of their children.
  */
 export function dropGitEnv() {
-	for (const key of Object.keys(process.env)) if (key.startsWith('GIT_')) delete process.env[key];
+  for (const key of Object.keys(process.env)) if (key.startsWith("GIT_")) delete process.env[key];
 }

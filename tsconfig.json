@@ -1,35 +1,35 @@
 {
-	// pulled from bun init
-	"compilerOptions": {
-		"lib": ["ESNext", "DOM"],
-		"types": ["bun"],
-		"target": "ESNext",
-		"module": "Preserve",
-		"moduleDetection": "force",
-		"jsx": "react-jsx",
-		"allowJs": true,
+  // pulled from bun init
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"],
+    "types": ["bun"],
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "allowJs": true,
 
-		"moduleResolution": "bundler",
-		"allowImportingTsExtensions": true,
-		"verbatimModuleSyntax": true,
-		"noEmit": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
 
-		"strict": true,
-		"skipLibCheck": true,
-		"noFallthroughCasesInSwitch": true,
-		// "noUncheckedIndexedAccess": true, // annoying
-		"noImplicitOverride": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+    // "noUncheckedIndexedAccess": true, // annoying
+    "noImplicitOverride": true,
 
-		"noUnusedLocals": false,
-		"noUnusedParameters": false,
-		"noPropertyAccessFromIndexSignature": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noPropertyAccessFromIndexSignature": false,
 
-		"paths": {
-			"shared/*": ["./shared/*"]
-		}
-	},
-	// TypeScript's wildcards skip dot folders, so the CI and hook scripts are listed by name. All of `.claude` would pull in the agent worktrees under it.
-	"include": ["**/*", ".github/scripts", ".claude/hooks"],
-	// The iOS build checks out its Swift packages under DerivedData, which ship JavaScript that allowJs would otherwise check.
-	"exclude": ["node_modules", "app-ios/DerivedData", "app-ios/.build"]
+    "paths": {
+      "shared/*": ["./shared/*"]
+    }
+  },
+  // TypeScript's wildcards skip dot folders, so the CI and hook scripts are listed by name. All of `.claude` would pull in the agent worktrees under it.
+  "include": ["**/*", ".github/scripts", ".claude/hooks"],
+  // The iOS build checks out its Swift packages under DerivedData, which ship JavaScript that allowJs would otherwise check.
+  "exclude": ["node_modules", "app-ios/DerivedData", "app-ios/.build"]
 }

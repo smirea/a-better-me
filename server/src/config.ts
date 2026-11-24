@@ -1,4 +1,4 @@
-import type { SpaceOptions } from 'sync-engine/core';
+import type { SpaceOptions } from "sync-engine/core";
 
 /**
  * Settings parsed once at the boundary. The Bun server reads them from the generated `env.ts`, the Worker from its
@@ -6,33 +6,37 @@ import type { SpaceOptions } from 'sync-engine/core';
  * offline and in CI; production refuses to start without them instead of failing on the first request that reads one.
  */
 export const REQUIRED_IN_PRODUCTION = [
-	'OWNER_TOKEN',
-	'SENTRY_DSN',
-	'GEMINI_API_KEY',
-	'XAI_API_KEY',
-	'GITHUB_TOKEN',
+  "OWNER_TOKEN",
+  "SENTRY_DSN",
+  "GEMINI_API_KEY",
+  "XAI_API_KEY",
+  "GITHUB_TOKEN",
 ] as const;
 
 /** The owner bearer of every local server and the tests. Never valid in production. */
-export const DEV_OWNER_TOKEN = 'insecure-local-dev-owner-token';
+export const DEV_OWNER_TOKEN = "insecure-local-dev-owner-token";
 
 /** Development-only knobs to see paging and compaction locally; production keeps the engine defaults. */
 const SPACE_SETTINGS = {
-	SYNC_PAGE_SIZE: 'pageSize',
-	SYNC_RETENTION_MS: 'retention',
-	SYNC_COMPACT_EVERY_MS: 'compactEvery',
+  SYNC_PAGE_SIZE: "pageSize",
+  SYNC_RETENTION_MS: "retention",
+  SYNC_COMPACT_EVERY_MS: "compactEvery",
 } as const satisfies Record<string, keyof SpaceOptions>;
 
-type Environment = 'development' | 'production';
+type Environment = "development" | "production";
 
 type SpaceSetting = keyof typeof SPACE_SETTINGS;
-type OptionalServerSecret = 'GARMIN_PERSONAL_API_KEY' | 'GARMIN_CONNECT_TOKENS';
-type TextSetting = 'APP_ENV' | 'RAMBLE_SCRIPT' | OptionalServerSecret | (typeof REQUIRED_IN_PRODUCTION)[number];
+type OptionalServerSecret = "GARMIN_PERSONAL_API_KEY" | "GARMIN_CONNECT_TOKENS";
+type TextSetting =
+  | "APP_ENV"
+  | "RAMBLE_SCRIPT"
+  | OptionalServerSecret
+  | (typeof REQUIRED_IN_PRODUCTION)[number];
 
 /** Optional Worker secrets pushed alongside `REQUIRED_IN_PRODUCTION` when set in env-manager. */
 export const OPTIONAL_WORKER_SECRETS: readonly OptionalServerSecret[] = [
-	'GARMIN_PERSONAL_API_KEY',
-	'GARMIN_CONNECT_TOKENS',
+  "GARMIN_PERSONAL_API_KEY",
+  "GARMIN_CONNECT_TOKENS",
 ];
 
 /** The generated `env.ts` parses the space settings to numbers; Worker bindings arrive as strings. */
@@ -42,61 +46,66 @@ export type Settings = Partial<Record<TextSetting, string> & Record<SpaceSetting
 type SentryTarget = { dsn: string; environment: Environment };
 
 export type Config = {
-	environment: Environment;
-	ownerToken: string;
-	sentry: SentryTarget | null;
-	space: SpaceOptions;
-	/** Photo logging's and Ramble's Gemini key. Null in development without one, where the photo route answers 503. */
-	geminiApiKey: string | null;
-	/** Ramble's speech-to-text. Null in development without one, where live Ramble answers 503. */
-	xaiApiKey: string | null;
-	/** What live Ramble hears instead of the microphone on a development server (`scriptedTranscriber`). */
-	rambleScript: string | null;
-	/** Files the Feedback editor's posts as issues (`feedback.ts`). Null in development without one, where it answers 503. */
-	githubToken: string | null;
-	/** Garmin Personal API key (`garmin/sync.ts`). Null disables Personal API pulls. */
-	garminPersonalApiKey: string | null;
-	/** Initial Garmin Connect OAuth JSON (`garmin/sync.ts`). Rotated tokens persist in DO storage. */
-	garminConnectTokens: string | null;
+  environment: Environment;
+  ownerToken: string;
+  sentry: SentryTarget | null;
+  space: SpaceOptions;
+  /** Photo logging's and Ramble's Gemini key. Null in development without one, where the photo route answers 503. */
+  geminiApiKey: string | null;
+  /** Ramble's speech-to-text. Null in development without one, where live Ramble answers 503. */
+  xaiApiKey: string | null;
+  /** What live Ramble hears instead of the microphone on a development server (`scriptedTranscriber`). */
+  rambleScript: string | null;
+  /** Files the Feedback editor's posts as issues (`feedback.ts`). Null in development without one, where it answers 503. */
+  githubToken: string | null;
+  /** Garmin Personal API key (`garmin/sync.ts`). Null disables Personal API pulls. */
+  garminPersonalApiKey: string | null;
+  /** Initial Garmin Connect OAuth JSON (`garmin/sync.ts`). Rotated tokens persist in DO storage. */
+  garminConnectTokens: string | null;
 };
 
 const DSN = /^https:\/\/[0-9a-f]+@[^/@\s]+\/\d+$/;
 
 export function parseConfig(settings: Settings): Config {
-	const read = (key: TextSetting) => settings[key]?.trim() || undefined;
-	const environment = read('APP_ENV') ?? 'development';
-	if (environment !== 'development' && environment !== 'production') {
-		throw new Error(`APP_ENV must be development or production, not "${environment}"`);
-	}
-	if (environment === 'production') {
-		const missing = REQUIRED_IN_PRODUCTION.filter(key => !read(key));
-		if (missing.length) throw new Error(`Missing production settings: ${missing.join(', ')}`);
-		if (read('OWNER_TOKEN') === DEV_OWNER_TOKEN) throw new Error('OWNER_TOKEN is the local development token');
-	}
-	const dsn = read('SENTRY_DSN');
-	if (environment === 'production' && dsn && !DSN.test(dsn))
-		throw new Error('SENTRY_DSN is not a Sentry DSN (https://<key>@<host>/<project>)');
-	const set = (Object.keys(SPACE_SETTINGS) as SpaceSetting[]).filter(name => String(settings[name] ?? '').trim());
-	if (environment === 'production' && set.length) {
-		throw new Error(`Space settings are development only: ${set.join(', ')}`);
-	}
-	if (environment === 'production' && read('RAMBLE_SCRIPT')) throw new Error('RAMBLE_SCRIPT is development only');
-	const space: SpaceOptions = {};
-	for (const name of set) {
-		const value = Number(settings[name]);
-		if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${name} must be a non-negative integer`);
-		space[SPACE_SETTINGS[name]] = value;
-	}
-	return {
-		environment,
-		ownerToken: read('OWNER_TOKEN') ?? DEV_OWNER_TOKEN,
-		sentry: environment === 'production' && dsn ? { dsn, environment } : null,
-		space,
-		geminiApiKey: read('GEMINI_API_KEY') ?? null,
-		xaiApiKey: read('XAI_API_KEY') ?? null,
-		rambleScript: read('RAMBLE_SCRIPT') ?? null,
-		githubToken: read('GITHUB_TOKEN') ?? null,
-		garminPersonalApiKey: read('GARMIN_PERSONAL_API_KEY') ?? null,
-		garminConnectTokens: read('GARMIN_CONNECT_TOKENS') ?? null,
-	};
+  const read = (key: TextSetting) => settings[key]?.trim() || undefined;
+  const environment = read("APP_ENV") ?? "development";
+  if (environment !== "development" && environment !== "production") {
+    throw new Error(`APP_ENV must be development or production, not "${environment}"`);
+  }
+  if (environment === "production") {
+    const missing = REQUIRED_IN_PRODUCTION.filter((key) => !read(key));
+    if (missing.length) throw new Error(`Missing production settings: ${missing.join(", ")}`);
+    if (read("OWNER_TOKEN") === DEV_OWNER_TOKEN)
+      throw new Error("OWNER_TOKEN is the local development token");
+  }
+  const dsn = read("SENTRY_DSN");
+  if (environment === "production" && dsn && !DSN.test(dsn))
+    throw new Error("SENTRY_DSN is not a Sentry DSN (https://<key>@<host>/<project>)");
+  const set = (Object.keys(SPACE_SETTINGS) as SpaceSetting[]).filter((name) =>
+    String(settings[name] ?? "").trim(),
+  );
+  if (environment === "production" && set.length) {
+    throw new Error(`Space settings are development only: ${set.join(", ")}`);
+  }
+  if (environment === "production" && read("RAMBLE_SCRIPT"))
+    throw new Error("RAMBLE_SCRIPT is development only");
+  const space: SpaceOptions = {};
+  for (const name of set) {
+    const value = Number(settings[name]);
+    if (!Number.isSafeInteger(value) || value < 0)
+      throw new Error(`${name} must be a non-negative integer`);
+    space[SPACE_SETTINGS[name]] = value;
+  }
+  return {
+    environment,
+    ownerToken: read("OWNER_TOKEN") ?? DEV_OWNER_TOKEN,
+    sentry: environment === "production" && dsn ? { dsn, environment } : null,
+    space,
+    geminiApiKey: read("GEMINI_API_KEY") ?? null,
+    xaiApiKey: read("XAI_API_KEY") ?? null,
+    rambleScript: read("RAMBLE_SCRIPT") ?? null,
+    githubToken: read("GITHUB_TOKEN") ?? null,
+    garminPersonalApiKey: read("GARMIN_PERSONAL_API_KEY") ?? null,
+    garminConnectTokens: read("GARMIN_CONNECT_TOKENS") ?? null,
+  };
 }

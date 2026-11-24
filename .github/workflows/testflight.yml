@@ -95,7 +95,7 @@ jobs:
     permissions:
       contents: write
     env:
-      LEFTHOOK: '0'
+      LEFTHOOK: "0"
     steps:
       # The changelog build phase reads the full history and the earlier builds' tags.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
