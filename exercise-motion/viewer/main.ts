@@ -93,7 +93,10 @@ const canvas = $<HTMLCanvasElement>("canvas");
 const renderer = new WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const scene = new Scene();
-scene.background = new Color("#151414");
+// A clean stage is the lifter and the equipment on white with no controls, for recording a rep as video.
+const clean = params.get("clean") === "1";
+document.documentElement.classList.toggle("clean", clean);
+scene.background = new Color(clean ? "#ffffff" : "#151414");
 const camera = new PerspectiveCamera(32, 1, 0.1, 50);
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
@@ -114,7 +117,7 @@ const floor = new Mesh(
 floor.rotation.x = -Math.PI / 2;
 floor.position.y = -0.002;
 const grid = new GridHelper(6, 12, "#2b2929", "#242222");
-scene.add(floor, grid);
+if (!clean) scene.add(floor, grid);
 
 const MATERIALS: Record<Material, MeshStandardMaterial> = {
   steel: new MeshStandardMaterial({ color: "#444850", roughness: 0.55, metalness: 0.5 }),
