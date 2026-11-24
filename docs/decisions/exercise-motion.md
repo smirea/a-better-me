@@ -5,7 +5,7 @@ The catalog's exercises come with instructions and two or three still frames, an
 ## Scope
 
 - **Three exercises are the test bed** (owner's ask, 2026-11-24): Smith Machine Back Squat (a machine), Dumbbell Romanian Deadlift (free weights, balance), and Barbell Bench Press (lying, a bench and rack). The system is built to cover the catalog's other exercises one spec at a time; none are written yet.
-- **The figure follows the app's body map.** A procedural anatomical mesh follows the solver rig with dual-quaternion skinning at its joints. Its surface uses the collision capsules as a guide and its hands curl around the grip or press anchor. The offline muscle atlas keeps the same 23 groups per side as `Muscle`, with dark gaps between relieved grey plates. Plates fill with `Theme.muscle` blue as the muscle works, or orange as it lengthens.
+- **The figure follows the app's body map.** A procedural mesh uses the collision capsules as a guide for an athletic build, with a broad rib cage, rounded shoulders, and shaped feet. Dual-quaternion skinning blends the chest, collarbone, and upper arm at each shoulder. The muscle atlas spans the pelvis-to-thigh join so each glute plate stays continuous as the hip bends. Rounded plate relief and recessed gaps make the same 23 groups per side as `Muscle` visible at rest. Plates fill with `Theme.muscle` blue as the muscle works, or orange as it lengthens. The hands curl around the grip or press anchor.
 
 ## How a rep is made
 

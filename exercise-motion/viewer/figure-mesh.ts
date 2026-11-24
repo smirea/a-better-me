@@ -1,16 +1,18 @@
 import { BufferGeometry, Float32BufferAttribute, Uint16BufferAttribute, Vector3 } from 'three';
 import type { Body } from '../src/body';
-import { atlasUv, bareUv } from './anatomy';
+import { atlasUv, bareUv, PELVIS_RIM, TORSO_ATLAS_TOP } from './anatomy';
 
 type Point = [number, number, number];
 type Uv = [number, number];
 type Profile = [height: number, width: number, front: number, back: number][];
 type Weights = [joint: number, next: number, blend: number];
+type ShoulderWeight = [joint: number, blend: number];
 
 interface Vertex {
 	point: Vector3;
 	normal: Vector3;
 	weights: Weights;
+	shoulder?: ShoulderWeight;
 	gripShift: number;
 }
 
@@ -21,6 +23,7 @@ interface Corner {
 
 const RADIAL = 80;
 const radians = Math.PI / 180;
+const tangentStep = 0.001;
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(v, max));
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
 const smooth = (start: number, end: number, value: number) => {
@@ -31,21 +34,21 @@ const bell = (value: number, center: number, width: number) => Math.exp(-(((valu
 
 // Metres in the rig's neutral pose, relative to the pelvis and scaled to the lifter's height.
 const torso: Profile = [
-	[-0.025, 0.155, 0.093, 0.109],
-	[0.025, 0.168, 0.102, 0.123],
-	[0.085, 0.156, 0.104, 0.116],
-	[0.155, 0.126, 0.1, 0.091],
-	[0.228, 0.131, 0.113, 0.081],
-	[0.29, 0.149, 0.129, 0.087],
-	[0.356, 0.178, 0.137, 0.097],
-	[0.41, 0.184, 0.137, 0.097],
-	[0.465, 0.174, 0.112, 0.088],
-	[0.502, 0.164, 0.082, 0.073],
-	[0.527, 0.133, 0.062, 0.062],
-	[0.551, 0.082, 0.046, 0.051],
-	[0.575, 0.051, 0.044, 0.051],
-	[0.608, 0.049, 0.048, 0.047],
-	[0.633, 0.054, 0.072, 0.049],
+	[PELVIS_RIM, 0.148, 0.093, 0.107],
+	[0.025, 0.146, 0.102, 0.113],
+	[0.085, 0.138, 0.104, 0.108],
+	[0.155, 0.131, 0.101, 0.094],
+	[0.228, 0.142, 0.113, 0.086],
+	[0.29, 0.168, 0.125, 0.092],
+	[0.356, 0.188, 0.136, 0.101],
+	[0.41, 0.187, 0.138, 0.104],
+	[0.465, 0.174, 0.116, 0.094],
+	[0.505, 0.157, 0.086, 0.081],
+	[0.529, 0.129, 0.071, 0.072],
+	[0.552, 0.102, 0.056, 0.064],
+	[0.577, 0.073, 0.048, 0.058],
+	[0.606, 0.058, 0.05, 0.053],
+	[0.629, 0.057, 0.075, 0.051],
 	[0.655, 0.064, 0.09, 0.055],
 	[0.679, 0.066, 0.101, 0.064],
 	[0.719, 0.076, 0.098, 0.069],
@@ -57,12 +60,10 @@ const torso: Profile = [
 ];
 
 const arm: Profile = [
-	[0, 0.054, 0.052, 0.053],
-	[0.057, 0.053, 0.054, 0.054],
-	[0.1, 0.049, 0.054, 0.054],
-	[0.165, 0.046, 0.054, 0.051],
-	[0.23, 0.043, 0.047, 0.047],
-	[0.29, 0.038, 0.038, 0.041],
+	[0.145, 0.056, 0.061, 0.06],
+	[0.193, 0.055, 0.062, 0.058],
+	[0.245, 0.048, 0.052, 0.052],
+	[0.29, 0.04, 0.042, 0.044],
 	[0.331, 0.036, 0.034, 0.039],
 	[0.366, 0.039, 0.037, 0.041],
 	[0.413, 0.044, 0.041, 0.043],
@@ -78,29 +79,34 @@ const arm: Profile = [
 ];
 
 const leg: Profile = [
-	[0.02, 0.089, 0.089, 0.097],
-	[0.105, 0.087, 0.095, 0.094],
-	[0.165, 0.084, 0.088, 0.082],
-	[0.23, 0.079, 0.084, 0.077],
-	[0.29, 0.07, 0.076, 0.066],
+	[0.02, 0.073, 0.087, 0.096],
+	[0.105, 0.079, 0.095, 0.094],
+	[0.165, 0.082, 0.093, 0.087],
+	[0.23, 0.078, 0.089, 0.077],
+	[0.29, 0.071, 0.078, 0.066],
 	[0.355, 0.06, 0.063, 0.055],
 	[0.402, 0.054, 0.052, 0.048],
 	[0.436, 0.053, 0.052, 0.046],
 	[0.47, 0.049, 0.049, 0.049],
-	[0.518, 0.055, 0.045, 0.062],
-	[0.563, 0.057, 0.047, 0.063],
-	[0.619, 0.054, 0.045, 0.06],
+	[0.518, 0.057, 0.045, 0.061],
+	[0.563, 0.061, 0.047, 0.067],
+	[0.619, 0.053, 0.045, 0.062],
 	[0.68, 0.044, 0.039, 0.048],
 	[0.75, 0.036, 0.034, 0.038],
 	[0.823, 0.031, 0.03, 0.034],
 	[0.874, 0.032, 0.041, 0.038],
-	[0.894, 0.036, 0.081, 0.048],
-	[0.911, 0.047, 0.149, 0.05],
-	[0.926, 0.052, 0.191, 0.05],
-	[0.934, 0.052, 0.201, 0.05],
-	[0.941, 0.048, 0.197, 0.048],
-	[0.943, 0.047, 0.195, 0.05],
+	[0.89, 0.037, 0.074, 0.045],
+	[0.906, 0.044, 0.135, 0.051],
+	[0.92, 0.048, 0.195, 0.052],
+	[0.932, 0.049, 0.202, 0.052],
+	[0.94, 0.047, 0.2, 0.05],
+	[0.943, 0.044, 0.195, 0.048],
 ];
+
+const bezier = (a: number, b: number, c: number, d: number, t: number) => {
+	const s = 1 - t;
+	return s ** 3 * a + 3 * s * s * t * b + 3 * s * t * t * c + t ** 3 * d;
+};
 
 function profile(points: Profile, value: number): Point {
 	const index = points.findIndex(([t]) => t > value);
@@ -135,8 +141,14 @@ export function createFigureGeometry(body: Body) {
 	const scale = body.height / 1.78;
 	const vertices: Vertex[] = [];
 	const corners: Corner[] = [];
-	const vertex = (point: Point, weights: Weights, gripShift = 0) => {
-		const result = { point: new Vector3(...point).multiplyScalar(scale), normal: new Vector3(), weights, gripShift };
+	const vertex = (point: Point, weights: Weights, gripShift = 0, shoulder?: ShoulderWeight): Vertex => {
+		const result = {
+			point: new Vector3(...point).multiplyScalar(scale),
+			normal: new Vector3(),
+			weights,
+			gripShift,
+			shoulder,
+		};
 		vertices.push(result);
 		return result;
 	};
@@ -162,9 +174,9 @@ export function createFigureGeometry(body: Body) {
 		for (let i = 0; i < bareRim.length - 1; i++) face(bareRim[i], bareRim[i + 1], tip, reverse);
 	};
 	const blend = (a: string, b: string, t = 0): Weights => [joints[a], joints[b], t];
-	const shoulderArc = { near: 13, far: 27, bottom: 0.365, top: 0.507 };
+	const shoulderArc = { near: 13, far: 27, bottom: 0.391, top: 0.513 };
 	const heights = rings([
-		-0.025,
+		PELVIS_RIM,
 		0.085,
 		0.228,
 		shoulderArc.bottom,
@@ -187,7 +199,7 @@ export function createFigureGeometry(body: Body) {
 			const cos = Math.cos(angle);
 			const phi = Math.acos(cos) / radians;
 			const [width, front, back] = profile(torso, y);
-			const pec = 0.019 * bell(y, 0.422, 0.053) * bell(phi, 31, 25);
+			const pec = 0.025 * bell(y, 0.405, 0.047) * bell(phi, 30, 24);
 			const abs =
 				(0.005 * bell(y, 0.303, 0.023) +
 					0.006 * bell(y, 0.236, 0.025) +
@@ -195,16 +207,16 @@ export function createFigureGeometry(body: Body) {
 					0.006 * bell(y, 0.096, 0.053)) *
 				bell(phi, 18, 17);
 			const scapula = 0.008 * bell(y, 0.422, 0.062) * bell(phi, 153, 19);
-			const glute = 0.019 * bell(y, -0.029, 0.081) * bell(phi, 147, 23);
-			const lat = 0.009 * bell(y, 0.338, 0.093) * bell(phi, 120, 28);
+			const glute = 0.022 * bell(y, -0.027, 0.064) * bell(phi, 147, 23);
+			const lat = 0.018 * bell(y, 0.322, 0.085) * bell(phi, 113, 25);
 			const z = cos * (cos > 0 ? front : back) + pec + abs - scapula - glute - lat - 0.02 * smooth(0.055, 0.355, y);
 			const crotch = 0.036 * (1 - smooth(0, 0.117, y + 0.025)) * cos ** 4;
 			const side = sin >= 0 ? 'L' : 'R';
 			const clavicle =
-				smooth(28, 92, phi) * (1 - smooth(97, 151, phi)) * smooth(0.304, 0.472, y) * (1 - smooth(0.507, 0.577, y));
-			const hip = smooth(4, 38, phi) * (1 - smooth(150, 180, phi)) * (1 - smooth(-0.025, 0.125, y)) * 0.35;
+				smooth(28, 88, phi) * (1 - smooth(94, 152, phi)) * smooth(0.327, 0.476, y) * (1 - smooth(0.513, 0.577, y));
+			const hip = smooth(0, 85, phi) * (1 - smooth(100, 180, phi)) * (1 - smooth(PELVIS_RIM, 0.086, y)) * 0.24;
 			const weights =
-				y > 0.385
+				y > 0.327
 					? clavicle > 0.05
 						? blend('thoracic', `clavicle_${side}`, clavicle * 0.92)
 						: blend('thoracic', 'neck', smooth(0.496, 0.626, y))
@@ -221,7 +233,7 @@ export function createFigureGeometry(body: Body) {
 		const sign = side === 0 ? 1 : -1;
 		return corner(
 			torsoRings[row][(RADIAL + sign * i) % RADIAL],
-			atlasUv('torso', side, 180 + phi, clamp((0.64 - heights[row]) * 100, 0, 70)),
+			atlasUv('torso', side, 180 + phi, clamp((TORSO_ATLAS_TOP - heights[row]) * 100, 0, 70)),
 		);
 	};
 	for (const side of [0, 1]) {
@@ -250,57 +262,70 @@ export function createFigureGeometry(body: Body) {
 		const sign = side === 0 ? 1 : -1;
 		const suffix = side === 0 ? 'L' : 'R';
 		const j = (joint: string) => `${joint}_${suffix}`;
+		const shoulderSwing = body.joints.length + side;
 		const grip = body.anchors[j('grip')].local.clone().divideScalar(scale);
 		const gripTravel = body.anchors[j('press')].local.y / scale - grip.y;
 		const attachment: [Vertex, number][] = [];
 		const attach = (row: number, col: number, angle: number) =>
 			attachment.push([torsoCorner(row, col, side).vertex, angle]);
 		const { near, far } = shoulderArc;
-		for (let row = bottom; row < top; row++) attach(row, near, mix(-45, 42, (row - bottom) / (top - bottom)));
-		for (let col = near; col < far; col++) attach(top, col, mix(42, 138, (col - near) / (far - near)));
-		for (let row = top; row > bottom; row--) attach(row, far, mix(138, 222, (top - row) / (top - bottom)));
-		for (let col = far; col > near; col--) attach(bottom, col, mix(222, 315, (far - col) / (far - near)));
+		for (let row = bottom; row < top; row++) attach(row, near, mix(-45, 45, (row - bottom) / (top - bottom)));
+		for (let col = near; col < far; col++) attach(top, col, mix(45, 135, (col - near) / (far - near)));
+		for (let row = top; row > bottom; row--) attach(row, far, mix(135, 225, (top - row) / (top - bottom)));
+		for (let col = far; col > near; col--) attach(bottom, col, mix(225, 315, (far - col) / (far - near)));
 		attachment.push([attachment[0][0], 315]);
 
 		const armPosition = (t: number, angle: number): Point => {
 			const [width, front, back] = profile(arm, t);
 			const sin = Math.sin(angle * radians);
 			const cos = Math.cos(angle * radians);
-			const capY = 0.444 + 0.081 * sin - 0.03 * Math.max(0, -sin);
-			const shoulderEnd = 0.235;
 			const y = 0.515 - t;
-			const shoulderWeight = 1 - smooth(0.027, shoulderEnd, t);
-			const shoulderY = mix(y, capY - Math.max(0, t - 0.027) * 0.25, shoulderWeight);
-			const belly = 0.007 * bell(t, 0.16, 0.085) * bell(angle, 12, 49);
+			const belly = 0.006 * bell(t, 0.198, 0.076) * cos * Math.abs(cos);
 			const palmTurn = smooth(0.568, 0.63, t);
 			const palmX = sin * width + cos * (cos > 0 ? front : back) * 0.13;
 			const palmZ = -sin * width * 1.12 + cos * (cos > 0 ? front : back);
 			return [
 				sign * (0.19 + sin * width + palmTurn * (palmX - sin * width)),
-				shoulderY,
+				y,
 				mix(cos * (cos > 0 ? front : back) + belly, palmZ, palmTurn * 0.35) - 0.01,
 			];
 		};
+		const shoulderEnd = 0.18;
+		const shoulderPosition = (base: Vector3, t: number, angle: number): Point => {
+			const [x, y, z] = armPosition(shoulderEnd, angle);
+			const [nextX, , nextZ] = armPosition(shoulderEnd + tangentStep, angle);
+			const sin = Math.sin(angle * radians);
+			const cos = Math.cos(angle * radians);
+			const u = t / shoulderEnd;
+			const startX = base.x / scale;
+			const startY = base.y / scale;
+			const startZ = base.z / scale;
+			const crown = Math.max(0, sin);
+			const tangent = shoulderEnd / (3 * tangentStep);
+			return [
+				bezier(startX, startX + sign * (0.011 + crown * 0.122), x - (nextX - x) * tangent, x, u),
+				bezier(startY, startY - 0.022 * crown - 0.015 * Math.max(0, -sin), y + shoulderEnd / 3, y, u),
+				bezier(startZ, startZ + 0.031 * cos, z - (nextZ - z) * tangent, z, u),
+			];
+		};
 		let previousArm = attachment.map(([v, angle]) => corner(v, atlasUv('arm', side, angle + 45, 0)));
-		for (const t of rings([0.027, 0.057, 0.22, 0.331, 0.428, 0.591, 0.696])) {
+		for (const t of rings([0, 0.058, shoulderEnd, 0.331, 0.428, 0.591, 0.696]).slice(1)) {
 			const row = attachment.slice(0, -1).map(([base, angle]) => {
-				const p = armPosition(t, angle);
-				const blendFromTorso = (1 - smooth(0, 0.1, t)) * 0.72;
 				const weights =
-					t < 0.16
-						? blend(j('clavicle'), j('shoulder'), smooth(0, 0.14, t))
+					t < shoulderEnd
+						? base.weights
 						: t < 0.348
 							? blend(j('shoulder'), j('elbow'), smooth(0.25, 0.365, t))
 							: t < 0.51
 								? blend(j('elbow'), j('forearm'), smooth(0.348, 0.516, t))
 								: blend(j('forearm'), j('wrist'), smooth(0.532, 0.615, t));
-				const pos: Point = [
-					mix(p[0], base.point.x / scale, blendFromTorso),
-					mix(p[1], base.point.y / scale, blendFromTorso),
-					mix(p[2], base.point.z / scale, blendFromTorso),
+				const pos = t < shoulderEnd ? shoulderPosition(base.point, t, angle) : armPosition(t, angle);
+				const shoulder: ShoulderWeight = [
+					shoulderSwing,
+					t < shoulderEnd ? smooth(0, shoulderEnd, t) : 1 - smooth(shoulderEnd, 0.27, t),
 				];
 				return corner(
-					vertex(pos, weights, 0.7 * gripTravel * smooth(0.61, 0.686, t)),
+					vertex(pos, weights, 0.7 * gripTravel * smooth(0.61, 0.686, t), shoulder),
 					atlasUv('arm', side, angle + 45, Math.min(59, t * 100)),
 				);
 			});
@@ -357,55 +382,70 @@ export function createFigureGeometry(body: Body) {
 		for (let i = 0; i < 4; i++) finger(-0.025 + i * 0.0175, i === 3 ? 0.0078 : 0.009, i === 3 ? 0.023 : 0.025);
 		finger(0.035, 0.012, 0.024, true);
 
-		const saddle = Array.from(
-			{ length: RADIAL / 2 + 1 },
-			(_, i) => [torsoCorner(0, i, side).vertex, mix(-45, 225, i / (RADIAL / 2))] satisfies [Vertex, number],
-		);
-		for (let i = 1; i < hipBridge.length; i++) saddle.push([hipBridge[i], mix(225, 315, i / 12)]);
-		let previousLeg = saddle.map(([v, angle]) => corner(v, atlasUv('leg', side, angle + 45, 0)));
-		for (const t of rings([
-			0.048, 0.105, 0.165, 0.436, 0.563, 0.823, 0.874, 0.894, 0.911, 0.926, 0.934, 0.941, 0.943,
-		])) {
-			const row = saddle.slice(0, -1).map(([base, angle]) => {
-				const [width, front, back] = profile(leg, t);
-				const sin = Math.sin(angle * radians);
-				const cos = Math.cos(angle * radians);
-				const phi = Math.abs(angle);
-				const aroundHip = 1 - smooth(0, 0.18, t);
-				const aroundFoot = smooth(0.86, 0.931, t);
-				const outerThigh = 0.009 * bell(t, 0.21, 0.14) * bell(phi, 51, 29);
-				const quad = 0.005 * bell(t, 0.2, 0.13) * bell(phi, 5, 24);
-				const calf = 0.004 * bell(t, 0.556, 0.073) * bell(phi, 185, 34);
-				const baseWeight = (1 - smooth(0.03, 0.143, t)) * 0.81;
-				const innerLift = Math.max(0, -sin) * aroundHip * -0.05;
-				const arch = 0.012 * aroundFoot * Math.max(0, -sin) * bell(cos, 0.41, 0.35);
-				const toe = Math.max(0, cos);
-				const footWidth = width * (cos < 0 ? 0.82 : 1 + 0.47 * toe);
-				const x =
-					sign *
-					(0.088 +
-						0.008 * bell(t, 0.16, 0.18) +
-						sin * mix(width, footWidth, aroundFoot) -
-						0.013 * aroundFoot * toe +
-						sin * outerThigh);
-				const gluteBelly = 0.016 * bell(t, 0.067, 0.063) * bell(phi, 175, 35);
-				const z =
-					cos * (cos > 0 ? front : back) + quad - calf - gluteBelly - 0.013 * aroundFoot * toe * Math.max(0, sin);
+		const saddle = Array.from({ length: RADIAL / 2 + hipBridge.length }, (_, i) => {
+			const outer = i <= RADIAL / 2;
+			const base = outer ? torsoCorner(0, i, side).vertex : hipBridge[i - RADIAL / 2];
+			const angle = outer ? mix(-45, 225, i / (RADIAL / 2)) : mix(225, 315, (i - RADIAL / 2) / 12);
+			const tangent = new Vector3(sign * 0.03, -0.014, 0);
+			if (outer) {
+				const above = torsoCorner(1, i, side).vertex;
+				const outward = base.point.clone().sub(above.point).normalize().multiplyScalar(0.039);
+				const alongRim = smooth(0, 5, Math.min(i, RADIAL / 2 - i));
+				tangent.lerp(outward, alongRim);
+			}
+			return { base, angle, tangent };
+		});
+		const legPosition = (t: number, angle: number): Point => {
+			const [width, front, back] = profile(leg, t);
+			const sin = Math.sin(angle * radians);
+			const cos = Math.cos(angle * radians);
+			const phi = Math.acos(cos) / radians;
+			const aroundFoot = smooth(0.874, 0.92, t);
+			const outerThigh = 0.009 * bell(t, 0.195, 0.1) * bell(angle, 63, 32);
+			const quad = 0.009 * bell(t, 0.193, 0.099) * bell(phi, 21, 26);
+			const calf = 0.009 * bell(t, sin > 0 ? 0.583 : 0.55, 0.07) * bell(phi, 156, 24);
+			const gluteBelly = 0.018 * bell(t, 0.057, 0.065) * bell(phi, 167, 25);
+			const toe = Math.max(0, cos);
+			const z =
+				mix(cos, Math.sign(cos) * Math.abs(cos) ** 0.62, aroundFoot) * (cos > 0 ? front : back) +
+				quad -
+				calf -
+				gluteBelly -
+				0.027 * aroundFoot * toe * Math.max(0, sin);
+			const footWidth = 0.72 + 0.26 * smooth(0, 0.145, z) + 0.16 * bell(z, 0.13, 0.071);
+			const x =
+				sign * (0.088 + sin * (mix(width, width * footWidth, aroundFoot) + outerThigh) - 0.012 * aroundFoot * toe);
+			const arch = 0.017 * aroundFoot * Math.max(0, -sin) * bell(z, 0.048, 0.055);
+			const toeSpring = 0.006 * aroundFoot * smooth(0.14, 0.201, z);
+			return [x, -t + arch + toeSpring, z];
+		};
+		const hipEnd = 0.132;
+		const hipPosition = ({ base, tangent, angle }: (typeof saddle)[number], t: number): Point => {
+			const end = legPosition(hipEnd, angle);
+			const next = legPosition(hipEnd + tangentStep, angle);
+			const p = (axis: 0 | 1 | 2) => {
+				const start = base.point.getComponent(axis) / scale;
+				const control = end[axis] - ((next[axis] - end[axis]) * hipEnd) / (3 * tangentStep);
+				return bezier(start, start + tangent.getComponent(axis), control, end[axis], t / hipEnd);
+			};
+			return [p(0), p(1), p(2)];
+		};
+		let previousLeg = saddle.map(({ base, angle }) => corner(base, atlasUv('leg', side, angle + 45, 0)));
+		for (const t of rings([0, hipEnd, 0.165, 0.436, 0.563, 0.823, 0.874, 0.89, 0.906, 0.92, 0.932, 0.94, 0.943]).slice(
+			1,
+		)) {
+			const row = saddle.slice(0, -1).map(section => {
+				const { base, angle } = section;
+				const hip = base.weights[1] === joints[j('hip')] ? base.weights[2] : 0;
+				const groin = Math.max(0, Math.cos(angle * radians + Math.PI / 5));
 				const weights =
 					t < 0.23
-						? blend('pelvis', j('hip'), smooth(-0.025, 0.167, t))
+						? blend('pelvis', j('hip'), mix(hip, 1, smooth(0, mix(0.171, 0.23, groin), t)))
 						: t < 0.54
 							? blend(j('hip'), j('knee'), smooth(0.366, 0.511, t))
 							: blend(j('knee'), j('ankle'), smooth(0.8, 0.906, t));
 				return corner(
-					vertex(
-						[
-							mix(x, base.point.x / scale, baseWeight),
-							mix(-t + innerLift + arch, base.point.y / scale, baseWeight),
-							mix(z, base.point.z / scale, baseWeight),
-						],
-						weights,
-					),
+					vertex(t < hipEnd ? hipPosition(section, t) : legPosition(t, angle), weights),
 					atlasUv('leg', side, angle + 45, t * 100),
 				);
 			});
@@ -435,8 +475,8 @@ export function createFigureGeometry(body: Body) {
 			positions.push(v.point.x, v.point.y, v.point.z);
 			normals.push(v.normal.x, v.normal.y, v.normal.z);
 			uvs.push(...c.uv);
-			indices.push(v.weights[0], v.weights[1]);
-			weightData.push(v.weights[2]);
+			indices.push(v.weights[0], v.weights[1], v.shoulder?.[0] ?? v.weights[0]);
+			weightData.push(v.weights[2], v.shoulder?.[1] ?? 0);
 			gripData.push(v.gripShift * scale);
 			return index;
 		}),
@@ -444,8 +484,8 @@ export function createFigureGeometry(body: Body) {
 	geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
 	geometry.setAttribute('normal', new Float32BufferAttribute(normals, 3));
 	geometry.setAttribute('uv', new Float32BufferAttribute(uvs, 2));
-	geometry.setAttribute('jointPair', new Uint16BufferAttribute(indices, 2));
-	geometry.setAttribute('jointBlend', new Float32BufferAttribute(weightData, 1));
+	geometry.setAttribute('jointIndices', new Uint16BufferAttribute(indices, 3));
+	geometry.setAttribute('jointWeights', new Float32BufferAttribute(weightData, 2));
 	geometry.setAttribute('gripShift', new Float32BufferAttribute(gripData, 1));
 	return geometry;
 }

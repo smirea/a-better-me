@@ -45,23 +45,25 @@ const torso: Plate[] = [
 		'M264 53 Q273 51 280 49 Q291 53 300 56 Q303 57 294 59 L268 62 Q265 64 259 64 Q248 61 244 60 Q256 57 264 53 Z',
 	],
 	['hip_flexors', 'M225 61 Q234 61 241 60 Q248 60 250 63 Q251 65 242 67 L221 68 Q215 68 216 66 Z'],
-	['glutes', 'M352 60 Q357 60 357 62 L356 69 L311 69 Q297 68 292 64 Q289 61 298 58 Q310 55 323 57 Z'],
 ];
 
 const arm: Plate[] = [
-	['front_delts', 'M9 2 Q26 0.8 57 1.5 Q67 3 68 5 Q62 9 54 10 Q45 10 38 9 Q22 7 9 5 Q5 4 9 2 Z'],
+	['front_delts', 'M10 2.4 Q32 0.6 60 1.4 C73 2 78 4.8 73 7.7 Q68 10.5 58 11.3 Q52 11.7 47 9 Q32 6 12 6 Q5 5 10 2.4 Z'],
 	[
 		'side_delts',
-		'M65 1 Q102 0 151 0.8 Q161 1.5 165 4 Q164 7 152 9 L120 12 Q113 12.2 105 11 L70 8 Q62 7 70 5 Q76 3 65 1 Z',
+		'M70 0.5 Q110 -1 153 1 C169 1 176 4 170 7 C164 10.5 146 13 132 15 Q125 16 120 14.8 C108 11.4 94 9.9 78 8.8 Q73 8.1 77 6.8 Q91 3 70 0.5 Z',
 	],
-	['rear_delts', 'M164 1.7 Q198 1 224 2.3 Q247 3.2 238 5 Q229 7 206 7.8 L160 10 Q155 10 158 9 Q175 6 171 4 Z'],
+	[
+		'rear_delts',
+		'M165 0.8 Q209 0 239 3.3 Q251 4.7 238 6.4 C222 8 211 9.9 187 11.5 Q170 13 155 13 Q157 11.8 167 9 Q186 4.9 165 0.8 Z',
+	],
 	[
 		'biceps',
-		'M8 7 Q25 8 41 10 Q59 11 64 14 C69 21 58 26 42 29 L26 30 Q8 29 5 25 Q0 17 8 7 Z M66 11 Q91 12 96 15 Q103 22 73 28 Q58 30 52 29 Q68 25 72 21 Q77 16 66 11 Z',
+		'M9 8 Q30 7.7 42 11 Q59 12.4 64 15 C69 21 58 26 42 29 L26 30 Q8 29 5 25 Q0 17 9 8 Z M73 11 Q91 12 99 15.5 Q107 22 73 28 Q58 30 52 29 Q68 25 72 21 Q78 16 73 11 Z',
 	],
 	[
 		'triceps',
-		'M127 13 Q153 11 174 11 Q182 14 172 22 Q161 27 151 29 Q143 30 139 28 Q147 22 133 18 Q125 16 127 13 Z M180 10 Q206 8.6 225 8.5 Q247 8.5 246 13 Q248 20 225 26 Q205 29 178 29.5 Q170 30 171 28 Q190 23 185 17 Q180 14 180 10 Z M254 13 Q271 12 285 14 Q306 20 275 27 Q244 29 226 29 Q245 26 255 23 Q271 18 254 13 Z',
+		'M137 16 Q151 15 171 13.9 Q182 15 172 22 Q161 27 151 29 Q143 30 139 28 Q147 22 133 18 Q130 16.7 137 16 Z M180 13.5 Q206 12 225 9.1 Q247 8.5 246 13 Q248 20 225 26 Q205 29 178 29.5 Q170 30 171 28 Q190 23 185 17 Q181 15 180 13.5 Z M254 13 Q271 12 285 14 Q306 20 275 27 Q244 29 226 29 Q245 26 255 23 Q271 18 254 13 Z',
 	],
 	[
 		'forearms',
@@ -80,7 +82,10 @@ const leg: Plate[] = [
 		'adductors',
 		'M9 8 Q17 6 25 8 Q31 10 25 14 Q18 18 13 22 Q7 26 2 25 L0 25 L0 12 Z M319 9 Q336 7 356 9 Q360 12 359 16 L359 25 Q345 29 333 34 Q322 37 314 35 Q316 28 318 23 Q329 16 319 9 Z M291 10 Q307 8 315 12 Q320 16 304 23 Q294 29 290 29 Q281 29 280 26 Q285 18 291 10 Z',
 	],
-	['glutes', 'M184 -1 L264 -1 Q263 3 259 6 Q250 11 223 13 Q200 14 177 10 Q159 8 158 5 Q166 1 184 -1 Z'],
+	[
+		'glutes',
+		'M181 -8 C198 -12 218 -11 235 -8 Q251 -6 263 -5 L264 0 Q264 6 252 10 C237 15 209 12 190 9 Q172 7 167 4 C162 1 168 -4 181 -8 Z',
+	],
 	[
 		'hamstrings',
 		'M152 11 Q169 12 177 14 Q180 17 168 23 Q152 28 156 35 Q160 39 151 40 Q130 38 129 33 Q125 26 136 21 Q148 15 152 11 Z M181 13 Q195 12.5 212 13 Q221 15 214 21 Q201 29 210 35 Q220 39 212 40 Q198 41 185 39 Q164 35 170 29 Q176 23 182 20 Q188 16 181 13 Z M226 15 Q247 13 260 11 Q276 11 275 15 Q273 20 261 25 Q259 30 271 34 Q274 38 268 40 Q257 42 240 40 Q219 35 226 30 Q236 24 230 20 Q225 17 226 13 Z',
@@ -97,14 +102,20 @@ const leg: Plate[] = [
 
 const WIDTH = 1152;
 const HEIGHT = 1472;
+const HIP_ATLAS_ROW = 420;
+export const PELVIS_RIM = -0.025;
+export const TORSO_ATLAS_TOP = 0.64;
+const PELVIS_LENGTH = (TORSO_ATLAS_TOP - PELVIS_RIM) * 100;
 const tiles = {
-	torso: { offset: 0, plates: torso },
-	arm: { offset: 440, plates: arm },
-	leg: { offset: 814, plates: leg },
+	torso: { x: -180, y: HIP_ATLAS_ROW - 6.2 * PELVIS_LENGTH, angleScale: 1.54, plates: torso },
+	arm: { x: 0, y: 1022, angleScale: 1.54, plates: arm },
+	leg: { x: 0, y: HIP_ATLAS_ROW, angleScale: 1.54 / 1.5, plates: leg },
 };
 
+// Torso and thigh UVs meet at the hip ring so the glute plates and their relief can cross it.
 export function atlasUv(chart: Chart, side: number, angle: number, length: number): [number, number] {
-	return [(side * 576 + 8 + angle * 1.54) / WIDTH, (tiles[chart].offset + 8 + length * 6.2) / HEIGHT];
+	const { x, y, angleScale } = tiles[chart];
+	return [(side * 576 + 8 + (angle + x) * angleScale) / WIDTH, (y + 8 + length * 6.2) / HEIGHT];
 }
 
 export const bareUv: [number, number] = [0.5 / WIDTH, 0.5 / HEIGHT];
@@ -119,7 +130,7 @@ export function createAnatomyAtlas() {
 	for (const chart of charts) {
 		for (const side of [0, 1]) {
 			const [u, v] = atlasUv(chart, side, 0, 0);
-			context.setTransform(1.54, 0, 0, 6.2, u * WIDTH, v * HEIGHT);
+			context.setTransform(tiles[chart].angleScale, 0, 0, 6.2, u * WIDTH, v * HEIGHT);
 			for (const [muscle, path] of tiles[chart].plates) {
 				const id = MUSCLES.indexOf(muscle) * 2 + side + 1;
 				context.fillStyle = `rgb(${(id % 4) * 85}, ${(Math.floor(id / 4) % 4) * 85}, ${Math.floor(id / 16) * 85})`;
@@ -136,7 +147,7 @@ export function createAnatomyAtlas() {
 		const id = Math.round(pixels[p] / 85) + 4 * Math.round(pixels[p + 1] / 85) + 16 * Math.round(pixels[p + 2] / 85);
 		atlas[p + 1] = pixels[p + 3];
 		atlas[p + 2] = Math.min(MUSCLES.length * 2, id);
-		distances[i] = (pixels[p + 3] / 255) * 12;
+		distances[i] = (pixels[p + 3] / 255) * 36;
 	}
 
 	for (let y = 1; y < HEIGHT - 1; y++) {
@@ -165,8 +176,8 @@ export function createAnatomyAtlas() {
 	}
 	const edgeNeighbors = [-WIDTH, -1, 1, WIDTH];
 	for (let i = 0; i < distances.length; i++) {
-		const t = Math.min(1, distances[i] / 11);
-		atlas[i * 4] = Math.round(255 * t * t * (3 - 2 * t));
+		const t = Math.min(1, distances[i] / 34);
+		atlas[i * 4] = Math.round(255 * Math.sin((Math.PI / 2) * t) ** 1.5);
 		if (!pixels[i * 4 + 3]) {
 			// Bilinear coverage can reach a texel just outside the path.
 			for (const offset of edgeNeighbors) {
