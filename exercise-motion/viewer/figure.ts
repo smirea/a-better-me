@@ -26,13 +26,36 @@ const PLATE = new Color("#4a4a4a");
 const CURL = {
   hang: { thumb: [20, 35, 30], finger: [75, 80, 50] },
   press: { thumb: [25, 40, 35], finger: [85, 85, 50] },
+  open: { thumb: [5, 8, 6], finger: [6, 8, 6] },
 };
 
+let preloadedAsset: LifterAsset | null = null;
+let preloadedMuscleMapUrl: string | null = null;
+
+export async function preloadFigureAssets(basePath = "."): Promise<void> {
+  const inline = document.getElementById("lifter")?.textContent?.trim();
+  if (inline && inline !== "__LIFTER__") {
+    const bytes = Uint8Array.from(atob(inline), (c) => c.charCodeAt(0));
+    preloadedAsset = decodeLifter(bytes.buffer);
+    const mapText = document.getElementById("muscle-map")?.textContent?.trim();
+    if (mapText && mapText !== "__MUSCLE_MAP__") {
+      preloadedMuscleMapUrl = `data:image/png;base64,${mapText}`;
+    }
+    return;
+  }
+  const resp = await fetch(`${basePath}/lifter.bin`);
+  if (!resp.ok) throw new Error(`Failed to fetch ${basePath}/lifter.bin (${resp.status})`);
+  preloadedAsset = decodeLifter(await resp.arrayBuffer());
+  preloadedMuscleMapUrl = `${basePath}/muscle-map.png`;
+}
+
 function readAsset(): LifterAsset {
+  if (preloadedAsset) return preloadedAsset;
   const element = document.getElementById("lifter");
   if (!element?.textContent) throw new Error("The page has no lifter mesh");
   const bytes = Uint8Array.from(atob(element.textContent.trim()), (c) => c.charCodeAt(0));
-  return decodeLifter(bytes.buffer);
+  preloadedAsset = decodeLifter(bytes.buffer);
+  return preloadedAsset;
 }
 
 interface Rest {
@@ -99,7 +122,9 @@ export class Figure {
       map.needsUpdate = true;
       relief.needsUpdate = true;
     };
-    image.src = `data:image/png;base64,${document.getElementById("muscle-map")?.textContent?.trim()}`;
+    image.src =
+      preloadedMuscleMapUrl ??
+      `data:image/png;base64,${document.getElementById("muscle-map")?.textContent?.trim()}`;
     const material = new MeshStandardMaterial({ bumpMap: relief, bumpScale: 1.6, roughness: 0.66, metalness: 0.02 });
     // Each vertex turns by the blend of its joints' rotations about its own centre of rotation, which the joints carry
     // as linear blending would. That keeps volume at a deep bend without the bulge dual quaternions leave.
@@ -156,8 +181,14 @@ export class Figure {
     };
 
     this.mesh = new Mesh(geometry, material);
+    this.mesh.castShadow = true;
+    this.mesh.receiveShadow = true;
     this.mesh.frustumCulled = false;
     this.group.add(this.mesh);
+  }
+
+  setGrip(grip: keyof typeof CURL) {
+    this.grip = grip;
   }
 
   setPressGrip(enabled: boolean) {

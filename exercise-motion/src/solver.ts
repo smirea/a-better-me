@@ -292,7 +292,7 @@ export function aim(
   };
 }
 
-/** Plants a foot: heel and both sides of the ball of the foot held at fixed spots on the floor. */
+/** Plants a foot: heel and both sides of the ball of the foot held at fixed spots on a horizontal surface (default y = 0). */
 export function plantFoot(
   body: Body,
   side: "L" | "R",
@@ -306,10 +306,84 @@ export function plantFoot(
     const local = body.anchors[anchor].local.clone().sub(body.anchors[`heel_${side}`].local);
     const x = local.x * Math.cos(yaw) + local.z * Math.sin(yaw);
     const z = -local.x * Math.sin(yaw) + local.z * Math.cos(yaw);
-    const world = new Vector3(heel.x + x, 0, heel.z + z);
+    const world = new Vector3(heel.x + x, heel.y, heel.z + z);
     return pin(body, anchor, () => world, weight);
   };
   return [spot(`heel_${side}`), spot(`ballIn_${side}`), spot(`ballOut_${side}`)];
+}
+
+/** Plants only the forefoot (ball of foot & toes), letting the heel lift (lunges, push-ups, planks, calf raises). */
+export function plantToe(
+  body: Body,
+  side: "L" | "R",
+  ballCenter: Vector3,
+  toeOut = 0,
+  weight = 40,
+): Goal[] {
+  const s = side === "L" ? 1 : -1;
+  const yaw = s * toeOut;
+  const midBall = body.anchors[`ballIn_${side}`].local
+    .clone()
+    .add(body.anchors[`ballOut_${side}`].local)
+    .multiplyScalar(0.5);
+  const spot = (anchor: string) => {
+    const local = body.anchors[anchor].local.clone().sub(midBall);
+    const x = local.x * Math.cos(yaw) + local.z * Math.sin(yaw);
+    const z = -local.x * Math.sin(yaw) + local.z * Math.cos(yaw);
+    const world = new Vector3(ballCenter.x + x, ballCenter.y, ballCenter.z + z);
+    return pin(body, anchor, () => world, weight);
+  };
+  return [spot(`ballIn_${side}`), spot(`ballOut_${side}`)];
+}
+
+/** Holds an anchor on a tilted pad/plane defined by a surface point `origin` and outward unit `normal`. */
+export function restOnPlane(
+  body: Body,
+  anchor: string,
+  origin: Vector3,
+  normal: Vector3,
+  weight = 35,
+  sink = 0.008,
+): Goal {
+  const { joint, local } = body.anchors[anchor] ?? {
+    joint: body.index[anchor],
+    local: new Vector3(),
+  };
+  if (joint === undefined) throw new Error(`Unknown anchor or joint ${anchor}`);
+  const n = normal.clone().normalize();
+  const p = new Vector3();
+  return ({ frame, push }) => {
+    worldPoint(frame, joint, local, p);
+    const dist = p.sub(origin).dot(n) + sink;
+    push(weight * dist);
+  };
+}
+
+/** Keeps a body anchor at or above a minimum height `minY` (inequality constraint). */
+export function keepAbove(body: Body, anchor: string, minY: number, weight = 35): Goal {
+  const { joint, local } = body.anchors[anchor] ?? {
+    joint: body.index[anchor],
+    local: new Vector3(),
+  };
+  if (joint === undefined) throw new Error(`Unknown anchor or joint ${anchor}`);
+  const p = new Vector3();
+  return ({ frame, push }) => {
+    worldPoint(frame, joint, local, p);
+    push(weight * Math.min(0, p.y - minY));
+  };
+}
+
+/** Holds a named anatomical angle (`hip_L.flex`, `elbow_R.flex`, etc.) at `targetDeg` degrees. */
+export function lockAngle(body: Body, angleKey: string, targetDeg: number, weight = 15): Goal {
+  const targetRad = rad(targetDeg);
+  // Fail fast if the joint portion of angleKey does not exist on the body.
+  const jointName = angleKey.split(".")[0];
+  if (body.index[jointName] === undefined) throw new Error(`Unknown joint in lockAngle: ${angleKey}`);
+  return ({ angles: a, push }) => {
+    const val = a[angleKey];
+    if (val === undefined) throw new Error(`Unknown angle key in lockAngle: ${angleKey}`);
+    push(weight * (val - targetRad));
+  };
 }
 
 const bend = new Vector3();

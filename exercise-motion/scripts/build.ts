@@ -1,28 +1,93 @@
 #!/usr/bin/env bun
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { analyze } from "../src/biomech";
 import { groupsOf } from "../src/catalog";
-import { generate, kinematics } from "../src/exercise";
+import { generate, kinematics, type ExerciseSpec } from "../src/exercise";
 import { EXERCISES } from "../src/exercises";
 import { FAULTS } from "../src/faults";
 import { MUSCLES, type Muscle } from "../src/muscles";
 import { runChecks, validateLoad, validateMotion } from "../src/validate";
+import { loadAppCatalog, MOTION_ROOT, REPO_ROOT } from "./catalog-io";
 
-const root = join(import.meta.dir, "..");
-const repo = join(root, "..");
-const dist = join(root, "dist");
-const catalog: {
-  id: string;
-  name: string;
-  primaryMuscles: Muscle[];
-  secondaryMuscles: Muscle[];
-  images: string[];
-  selection?: { stretchedMuscles: string[] };
-}[] = await Bun.file(join(repo, "app-ios/Sources/CoreResources/Catalog/exercises.json")).json();
+const dist = join(MOTION_ROOT, "dist");
+const libraryDir = join(dist, "library");
+const seqDir = join(libraryDir, "sequences");
+mkdirSync(seqDir, { recursive: true });
 
-const exercises = [];
-const report: string[] = ["# Exercise motion evaluation", ""];
-for (const spec of EXERCISES) {
+const args = process.argv.slice(2);
+const singleIdx = args.indexOf("--single");
+const singleId = singleIdx >= 0 ? args[singleIdx + 1] : null;
+const onlyIds = singleId ? new Set([singleId]) : null;
+
+const catalog = loadAppCatalog();
+const byCatalogId = new Map(catalog.map((e) => [e.id, e]));
+
+const specsToBuild: ExerciseSpec[] = onlyIds
+  ? EXERCISES.filter((s) => onlyIds.has(s.id))
+  : EXERCISES;
+if (specsToBuild.length === 0) {
+  throw new Error(singleId ? `Exercise "${singleId}" not found in EXERCISES.` : "EXERCISES is empty.");
+}
+
+interface BuiltItem {
+  spec: ExerciseSpec;
+  data: {
+    sequence: ReturnType<typeof generate>["sequence"];
+    checks: ReturnType<typeof runChecks>;
+    catalog: { primary: Muscle[]; secondary: Muscle[]; stretched: Muscle[] };
+    agreement: {
+      listedInTop: number;
+      listed: number;
+      primaryMean: number;
+      secondaryMean: number;
+      otherMean: number;
+      unexpected: Muscle[];
+      stretchedFound: number;
+      stretched: number;
+    };
+    faults: {
+      id: string;
+      label: string;
+      what: string;
+      expect: string[];
+      caught: string[];
+      raised: string[];
+      sequence: ReturnType<typeof generate>["sequence"];
+      checks: ReturnType<typeof runChecks>;
+    }[];
+    images: string[];
+  };
+  summary: {
+    id: string;
+    catalogId: string;
+    name: string;
+    alternativeNames: string[];
+    category: string;
+    movementPattern: string;
+    primaryMuscles: Muscle[];
+    secondaryMuscles: Muscle[];
+    equipmentLabel: string;
+    issueCount: number;
+    checksPass: number;
+    checksTotal: number;
+  };
+}
+
+const builtItems: BuiltItem[] = [];
+const report: string[] = [
+  "# Exercise motion evaluation",
+  "",
+  `Built ${specsToBuild.length} of ${catalog.length} app exercises.`,
+  "",
+];
+
+let totalMotionIssues = 0;
+let totalLoadIssues = 0;
+let totalChecks = 0;
+let passedChecks = 0;
+
+for (const spec of specsToBuild) {
   const started = performance.now();
   const { body, built, sequence } = generate(spec);
   const seconds = (performance.now() - started) / 1000;
@@ -31,10 +96,15 @@ for (const spec of EXERCISES) {
   const issues = validateMotion(body, sequence, kin);
   const loadIssues = validateLoad(sequence, analysis);
   const checks = runChecks(body, built, sequence, kin);
-  const entry = catalog.find((exercise) => exercise.id === spec.catalogId);
+  const entry = byCatalogId.get(spec.catalogId);
   if (!entry)
     throw new Error(`${spec.name}: catalog id ${spec.catalogId} is not in exercises.json`);
   const stretched = groupsOf(entry.selection?.stretchedMuscles ?? []);
+
+  totalMotionIssues += issues.length;
+  totalLoadIssues += loadIssues.length;
+  totalChecks += checks.length;
+  passedChecks += checks.filter((c) => c.pass).length;
 
   const ranked = [...MUSCLES].toSorted(
     (a, b) => analysis.peak[b].activation - analysis.peak[a].activation,
@@ -86,81 +156,131 @@ for (const spec of EXERCISES) {
     };
   });
 
-  const images = await Promise.all(
-    entry.images.map(
-      async (name) =>
-        `data:image/webp;base64,${Buffer.from(await Bun.file(join(repo, `app-ios/Assets/ExerciseImages/${name}.webp`)).arrayBuffer()).toString("base64")}`,
-    ),
-  );
-  exercises.push({
+  const libraryImages = entry.images
+    .filter((name) => existsSync(join(REPO_ROOT, `app-ios/Assets/ExerciseImages/${name}.webp`)))
+    .map((name) => `/exercise-images/${name}.webp`);
+
+  const itemData = {
     sequence,
     checks,
     catalog: { primary: entry.primaryMuscles, secondary: entry.secondaryMuscles, stretched },
     agreement,
     faults,
-    images,
+    images: libraryImages,
+  };
+
+  writeFileSync(join(seqDir, `${sequence.id}.json`), JSON.stringify(itemData));
+  writeFileSync(join(dist, `${sequence.id}.json`), JSON.stringify(sequence));
+
+  builtItems.push({
+    spec,
+    data: itemData,
+    summary: {
+      id: sequence.id,
+      catalogId: sequence.catalogId,
+      name: sequence.name,
+      alternativeNames: entry.alternativeNames,
+      category: entry.category,
+      movementPattern: entry.movementPatterns[0] ?? "Other",
+      primaryMuscles: entry.primaryMuscles,
+      secondaryMuscles: entry.secondaryMuscles,
+      equipmentLabel: entry.resistanceEquipment[0] ?? "Bodyweight",
+      issueCount: issues.length + loadIssues.length,
+      checksPass: checks.filter((c) => c.pass).length,
+      checksTotal: checks.length,
+    },
   });
 
-  const pct = (value: number) => `${(value * 100).toFixed(0)}%`;
-  report.push(`## ${spec.name}`, "");
-  report.push(`- Generated ${sequence.poses.length} frames in ${seconds.toFixed(2)} s.`);
-  report.push(
-    `- Motion issues flagged: ${issues.length}. Load issues at ${sequence.loadKg} kg: ${loadIssues.length}.`,
-  );
-  report.push(
-    `- Instruction checks: ${checks.filter((check) => check.pass).length} of ${checks.length} pass.`,
-  );
-  for (const check of checks.filter((item) => !item.pass))
-    report.push(`  - FAIL ${check.label}: ${check.measured}`);
-  report.push(
-    `- Muscles the app lists (${listed.join(", ")}): ${agreement.listedInTop} of ${agreement.listed} are among the model's ${listed.length} most engaged.`,
-  );
-  report.push(
-    `  - Mean peak engagement: primary ${pct(agreement.primaryMean)}, secondary ${pct(agreement.secondaryMean)}, unlisted ${pct(agreement.otherMean)}.`,
-  );
-  report.push(
-    `  - Model's ranking: ${ranked
-      .slice(0, 8)
-      .map((muscle) => `${muscle} ${pct(analysis.peak[muscle].activation)}`)
-      .join(", ")}.`,
-  );
-  if (agreement.unexpected.length)
+  if (specsToBuild.length <= 25 || issues.length > 0 || loadIssues.length > 0 || checks.some((c) => !c.pass)) {
+    const pct = (value: number) => `${(value * 100).toFixed(0)}%`;
+    report.push(`## ${spec.name}`, "");
+    report.push(`- Generated ${sequence.poses.length} frames in ${seconds.toFixed(2)} s.`);
     report.push(
-      `  - In the model's top ${listed.length} but not listed by the app: ${agreement.unexpected.join(", ")}.`,
+      `- Motion issues flagged: ${issues.length}. Load issues at ${sequence.loadKg} kg: ${loadIssues.length}.`,
     );
-  report.push(
-    `- Muscles the app marks as stretched (${stretched.join(", ") || "none"}): ${agreement.stretchedFound} of ${agreement.stretched} reach 40% of their range in the model.`,
-  );
-  report.push(
-    `  - ${stretched.map((muscle) => `${muscle} ${pct(analysis.peak[muscle].stretch)}`).join(", ")}.`,
-  );
-  report.push(
-    `- Injected faults caught: ${faults.filter((fault) => fault.caught.length).length} of ${faults.length}.`,
-  );
-  for (const fault of faults)
+    for (const issue of [...issues, ...loadIssues]) {
+      report.push(`  - ${issue.severity.toUpperCase()} [${issue.code}] ${issue.title}: ${issue.detail}`);
+    }
     report.push(
-      `  - ${fault.caught.length ? "caught" : "MISSED"} ${fault.label}: raised ${fault.raised.join(", ") || "nothing"}`,
+      `- Instruction checks: ${checks.filter((check) => check.pass).length} of ${checks.length} pass.`,
     );
-  report.push("");
+    for (const check of checks.filter((item) => !item.pass))
+      report.push(`  - FAIL ${check.label}: ${check.measured}`);
+    report.push(
+      `- Muscles the app lists (${listed.join(", ")}): ${agreement.listedInTop} of ${agreement.listed} in top ${listed.length} (primary ${pct(agreement.primaryMean)}, secondary ${pct(agreement.secondaryMean)}, unlisted ${pct(agreement.otherMean)}).`,
+    );
+    if (faults.length) {
+      report.push(
+        `- Injected faults caught: ${faults.filter((fault) => fault.caught.length).length} of ${faults.length}.`,
+      );
+    }
+    report.push("");
+  }
 }
 
-const data = { muscles: MUSCLES, exercises };
 const bundle = await Bun.build({
-  entrypoints: [join(root, "viewer/main.ts")],
+  entrypoints: [join(MOTION_ROOT, "viewer/main.ts")],
   minify: true,
   target: "browser",
 });
 if (!bundle.success) throw new AggregateError(bundle.logs, "Viewer bundle failed");
 const script = (await bundle.outputs[0].text()).replaceAll("</script", "<\\/script");
-const css = (name: string) => Bun.file(join(root, `viewer/${name}.css`)).text();
-const template = await Bun.file(join(root, "viewer/index.html")).text();
+const css = (name: string) => Bun.file(join(MOTION_ROOT, `viewer/${name}.css`)).text();
+const template = await Bun.file(join(MOTION_ROOT, "viewer/index.html")).text();
 const fill = (page: string, slot: string, value: string) => {
   if (!page.includes(slot)) throw new Error(`viewer/index.html has no ${slot} slot`);
   return page.replace(slot, () => value);
 };
-const json = JSON.stringify(data).replaceAll("</", "<\\/");
+
+// 1. Write scalable library app under dist/library/ (loads catalog.json + lazy-loads sequences/<id>.json)
+writeFileSync(
+  join(libraryDir, "catalog.json"),
+  JSON.stringify(builtItems.map((b) => b.summary)),
+);
+copyFileSync(join(MOTION_ROOT, "viewer/assets/lifter.bin"), join(libraryDir, "lifter.bin"));
+copyFileSync(join(MOTION_ROOT, "viewer/assets/muscle-map.png"), join(libraryDir, "muscle-map.png"));
+
+const libHtml = fill(
+  fill(
+    fill(
+      fill(
+        fill(template, "/*STYLE*/", (await css("style")) + (await css("page"))),
+        "__DATA__",
+        JSON.stringify({ mode: "library" }),
+      ),
+      "__LIFTER__",
+      "",
+    ),
+    "__MUSCLE_MAP__",
+    "",
+  ),
+  "/*SCRIPT*/",
+  script,
+);
+writeFileSync(join(libraryDir, "index.html"), libHtml);
+
+// 2. Also write self-contained single-file viewer (dist/exercise-motion.html) for up to 12 featured exercises (or --single)
+const embeddedSlice = builtItems.slice(0, 12);
+const embeddedExercises = await Promise.all(
+  embeddedSlice.map(async (item) => {
+    const entry = byCatalogId.get(item.spec.catalogId)!;
+    const inlineImages = await Promise.all(
+      entry.images
+        .filter((name) => existsSync(join(REPO_ROOT, `app-ios/Assets/ExerciseImages/${name}.webp`)))
+        .map(
+          async (name) =>
+            `data:image/webp;base64,${Buffer.from(await Bun.file(join(REPO_ROOT, `app-ios/Assets/ExerciseImages/${name}.webp`)).arrayBuffer()).toString("base64")}`,
+        ),
+    );
+    return { ...item.data, images: inlineImages };
+  }),
+);
+const json = JSON.stringify({ mode: "embedded", muscles: MUSCLES, exercises: embeddedExercises }).replaceAll(
+  "</",
+  "<\\/",
+);
 const asset = async (name: string) =>
-  Buffer.from(await Bun.file(join(root, "viewer/assets", name)).arrayBuffer()).toString("base64");
+  Buffer.from(await Bun.file(join(MOTION_ROOT, "viewer/assets", name)).arrayBuffer()).toString("base64");
 const lifter = await asset("lifter.bin");
 const muscleMap = await asset("muscle-map.png");
 const slots: [string, string][] = [
@@ -178,14 +298,17 @@ const html = await page("page");
 await Bun.write(join(dist, "exercise-motion-embed.html"), await page("embed"));
 await Bun.write(join(dist, "exercise-motion.html"), html);
 await Bun.write(join(dist, "evaluation.md"), report.join("\n"));
-for (const item of exercises)
-  await Bun.write(join(dist, `${item.sequence.id}.json`), JSON.stringify(item.sequence));
-console.log(report.join("\n"));
-const missed = exercises.flatMap((item) =>
-  item.faults
+
+const missed = builtItems.flatMap((item) =>
+  item.data.faults
     .filter((fault) => !fault.caught.length)
-    .map((fault) => `${item.sequence.name}: ${fault.label}`),
+    .map((fault) => `${item.spec.name}: ${fault.label}`),
 );
 if (missed.length)
   throw new Error(`Fault tests went uncaught, so a detector is broken: ${missed.join("; ")}`);
-console.log(`\nWrote ${join(dist, "exercise-motion.html")} (${(html.length / 1e6).toFixed(2)} MB)`);
+
+console.log(
+  `Built ${builtItems.length} exercises | motion issues: ${totalMotionIssues} | load issues: ${totalLoadIssues} | checks: ${passedChecks}/${totalChecks}`,
+);
+console.log(`Library:     ${join(libraryDir, "index.html")} (${builtItems.length} lazy-loaded exercises)`);
+console.log(`Single-file: ${join(dist, "exercise-motion.html")} (${(html.length / 1e6).toFixed(2)} MB)`);

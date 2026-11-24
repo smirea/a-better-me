@@ -108,6 +108,7 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
   const pairs = selfCollisionPairs(body);
   const capsules = newCapsules(body);
   const fixed = compileParts(sequence.equipment.filter((part) => part.collide));
+  const allEquipmentById = new Map(compileParts(sequence.equipment).map((s) => [s.part.id, s]));
   const allowance = (partId: string, colliderId: string) => {
     for (const [prefix, allowed] of Object.entries(sequence.contacts)) {
       if (partId.startsWith(prefix) && allowed[colliderId] !== undefined)
@@ -183,12 +184,29 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
       let gap = 0;
       if (contact.surfaceY !== undefined) {
         gap = Math.abs(point.y - contact.surfaceY);
-        const seen = slides.get(contact.label) ?? { min: point.clone(), max: point.clone() };
-        seen.min.min(point);
-        seen.max.max(point);
-        slides.set(contact.label, seen);
+        if (!contact.allowSlide) {
+          const seen = slides.get(contact.label) ?? { min: point.clone(), max: point.clone() };
+          seen.min.min(point);
+          seen.max.max(point);
+          slides.set(contact.label, seen);
+        }
+      } else if (contact.part !== undefined) {
+        const partShape = allEquipmentById.get(contact.part);
+        if (!partShape) {
+          throw new Error(`Required contact "${contact.label}" references missing part "${contact.part}"`);
+        }
+        gap = Math.max(0, signedDistance(partShape, point));
+        if (!contact.allowSlide) {
+          const seen = slides.get(contact.label) ?? { min: point.clone(), max: point.clone() };
+          seen.min.min(point);
+          seen.max.max(point);
+          slides.set(contact.label, seen);
+        }
       } else {
         const p = sequence.props.findIndex((prop) => prop.id === contact.prop);
+        if (p < 0) {
+          throw new Error(`Required contact "${contact.label}" references missing prop "${contact.prop}"`);
+        }
         const handle = compileParts(
           propParts(sequence.props[p], sequence.loadKg).slice(0, 1),
           sequence.propStates[f][p],
@@ -267,24 +285,26 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
     }
   }
 
-  for (let f = 0; f < count; f++) {
-    const a = kin.angles[f];
-    for (const key of Object.keys(a)) {
-      if (!key.includes("_L.")) continue;
-      const difference = Math.abs(deg(a[key] - a[key.replace("_L.", "_R.")]));
-      // Arm direction is ill-defined while the arm hangs, so it isn't compared there.
-      if (
-        key.endsWith(".plane") ||
-        (key.endsWith(".twist") && a[key.replace(".twist", ".elev")] < 0.3)
-      )
-        continue;
-      if (difference > LIMITS.asymmetry) {
-        collector.add(`asym:${key}`, f, difference, (worst) => ({
-          code: "asymmetric",
-          severity: "warning",
-          title: `Left and right ${pretty(key.split(".")[0].replace("_L", ""))} differ`,
-          detail: `${key.split(".")[1]} is ${worst.toFixed(0)}° apart in a two-sided lift`,
-        }));
+  if ((sequence.laterality ?? "bilateral") === "bilateral") {
+    for (let f = 0; f < count; f++) {
+      const a = kin.angles[f];
+      for (const key of Object.keys(a)) {
+        if (!key.includes("_L.")) continue;
+        const difference = Math.abs(deg(a[key] - a[key.replace("_L.", "_R.")]));
+        // Arm direction is ill-defined while the arm hangs, so it isn't compared there.
+        if (
+          key.endsWith(".plane") ||
+          (key.endsWith(".twist") && a[key.replace(".twist", ".elev")] < 0.3)
+        )
+          continue;
+        if (difference > LIMITS.asymmetry) {
+          collector.add(`asym:${key}`, f, difference, (worst) => ({
+            code: "asymmetric",
+            severity: "warning",
+            title: `Left and right ${pretty(key.split(".")[0].replace("_L", ""))} differ`,
+            detail: `${key.split(".")[1]} is ${worst.toFixed(0)}° apart in a two-sided lift`,
+          }));
+        }
       }
     }
   }

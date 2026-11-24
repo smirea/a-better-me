@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Exercise motion</title>
+    <title>Exercise Motion Library</title>
     <style>
       /*STYLE*/
     </style>
@@ -13,6 +13,16 @@
       <section class="stage">
         <header class="bar">
           <div class="segmented" id="exercises" role="tablist" aria-label="Exercise"></div>
+          <div class="library-picker" id="library-picker" hidden>
+            <button type="button" class="picker-trigger" id="picker-trigger" aria-expanded="false">
+              <span class="picker-name" id="picker-name">Loading…</span>
+              <span class="picker-count" id="picker-count"></span>
+            </button>
+          </div>
+          <label class="setting-select" aria-label="Setting">
+            <span>Setting</span>
+            <select id="setting"></select>
+          </label>
           <label class="load">
             <span id="load-label">Weight</span>
             <input id="load" type="range" min="0" max="200" step="2.5" />
@@ -21,6 +31,17 @@
         </header>
         <div class="canvas-wrap">
           <canvas id="canvas"></canvas>
+          <div class="library-drawer" id="library-drawer" hidden>
+            <div class="drawer-head">
+              <input id="library-search" type="search" placeholder="Search exercises, muscles, equipment…" autocomplete="off" />
+              <div class="drawer-filters">
+                <select id="filter-category" aria-label="Category"></select>
+                <select id="filter-muscle" aria-label="Muscle"></select>
+              </div>
+              <div class="drawer-meta" id="drawer-meta"></div>
+            </div>
+            <div class="drawer-list" id="drawer-list" role="listbox"></div>
+          </div>
           <div class="overlay top-left">
             <div class="segmented small" id="views" aria-label="Camera"></div>
           </div>

@@ -1,12 +1,27 @@
-import { Quaternion, Vector3 } from "three";
+import { Euler, Quaternion, Vector3 } from "three";
 import type { Vec3 } from "./math";
 
-export type Material = "steel" | "chrome" | "pad" | "plate" | "rubber";
+export type Material =
+  | "steel"
+  | "chrome"
+  | "pad"
+  | "plate"
+  | "rubber"
+  | "cable"
+  | "band"
+  | "wood"
+  | "accent";
 
-/** A box (`size` is its full extents) or a cylinder (`size` is `[radius, length, 0]`, the axis along local X). */
+/**
+ * Equipment primitive:
+ * - `box`: `size` is full extents `[width, height, depth]`
+ * - `cylinder`: `size` is `[radius, length, 0]`, axis along local X
+ * - `capsule`: `size` is `[radius, shaftLength, 0]`, axis along local X
+ * - `sphere`: `size` is `[radius, 0, 0]`
+ */
 export interface Part {
   id: string;
-  shape: "box" | "cylinder";
+  shape: "box" | "cylinder" | "capsule" | "sphere";
   size: Vec3;
   pos: Vec3;
   quat: [number, number, number, number];
@@ -15,42 +30,107 @@ export interface Part {
   collide: boolean;
 }
 
+export type BarbellStyle = "straight" | "ez" | "trap" | "ssb" | "axle" | "cambered";
+
 export type PropDef =
-  | { id: string; kind: "barbell"; barKg: number; collarX: number; length: number }
-  | { id: string; kind: "dumbbell" };
+  | {
+      id: string;
+      kind: "barbell";
+      barKg: number;
+      collarX: number;
+      length: number;
+      radius?: number;
+      style?: BarbellStyle;
+    }
+  | { id: string; kind: "dumbbell"; fatGrip?: boolean }
+  | { id: string; kind: "kettlebell" }
+  | { id: string; kind: "plate" }
+  | { id: string; kind: "medball" }
+  | { id: string; kind: "parts"; parts: Part[] };
 
 export interface PropState {
   pos: Vec3;
   quat: [number, number, number, number];
 }
 
-const IDENTITY: [number, number, number, number] = [0, 0, 0, 1];
-const quatOf = (axis: Vec3, angle: number): [number, number, number, number] => {
-  const q = new Quaternion().setFromAxisAngle(new Vector3(...axis), angle);
+export interface TetherDef {
+  id: string;
+  kind: "cable" | "band";
+  radius?: number;
+}
+
+export interface TetherState {
+  /** World-space polyline of 2 or more points (e.g. pulley -> handle). */
+  points: Vec3[];
+}
+
+export interface GlbRef {
+  /** Debranded model id from `exercise-motion/dist/gym/models/<id>.glb`. */
+  id: string;
+  pos: Vec3;
+  quat?: [number, number, number, number];
+  scale?: number;
+}
+
+export const IDENTITY: [number, number, number, number] = [0, 0, 0, 1];
+
+export const quatOf = (axis: Vec3, angle: number): [number, number, number, number] => {
+  const q = new Quaternion().setFromAxisAngle(new Vector3(...axis).normalize(), angle);
   return [q.x, q.y, q.z, q.w];
 };
-const ALONG_Y = quatOf([0, 0, 1], Math.PI / 2);
-const ALONG_Z = quatOf([0, 1, 0], Math.PI / 2);
 
-const box = (id: string, pos: Vec3, size: Vec3, material: Material, collide = true): Part => ({
+export const quatEuler = (x: number, y: number, z: number): [number, number, number, number] => {
+  const q = new Quaternion().setFromEuler(new Euler(x, y, z, "YXZ"));
+  return [q.x, q.y, q.z, q.w];
+};
+
+export const ALONG_Y = quatOf([0, 0, 1], Math.PI / 2);
+export const ALONG_Z = quatOf([0, 1, 0], Math.PI / 2);
+
+export const box = (
+  id: string,
+  pos: Vec3,
+  size: Vec3,
+  material: Material,
+  collide = true,
+  quat: [number, number, number, number] = IDENTITY,
+): Part => ({
   id,
   shape: "box",
   size,
   pos,
-  quat: IDENTITY,
+  quat,
   material,
   collide,
 });
 
-const cylinder = (
+export const cylinder = (
   id: string,
   pos: Vec3,
   radius: number,
   length: number,
   material: Material,
-  quat = IDENTITY,
+  quat: [number, number, number, number] = IDENTITY,
   collide = true,
 ): Part => ({ id, shape: "cylinder", size: [radius, length, 0], pos, quat, material, collide });
+
+export const capsule = (
+  id: string,
+  pos: Vec3,
+  radius: number,
+  length: number,
+  material: Material,
+  quat: [number, number, number, number] = IDENTITY,
+  collide = true,
+): Part => ({ id, shape: "capsule", size: [radius, length, 0], pos, quat, material, collide });
+
+export const sphere = (
+  id: string,
+  pos: Vec3,
+  radius: number,
+  material: Material,
+  collide = true,
+): Part => ({ id, shape: "sphere", size: [radius, 0, 0], pos, quat: IDENTITY, material, collide });
 
 export const BAR_RADIUS = 0.0145;
 const PLATES: [kg: number, radius: number, thickness: number][] = [
@@ -81,25 +161,84 @@ export const dumbbellHead = (kg: number) => ({
 });
 const DUMBBELL_HANDLE = 0.13;
 
+export const kettlebellSize = (kg: number) => {
+  const radius = Math.min(0.12, Math.max(0.055, 0.055 + 0.0022 * kg));
+  return { radius, handleY: radius + 0.055, handleWidth: radius * 1.4 };
+};
+
 /** A prop's parts in its own frame, the bar or handle along local X, for the weight it carries. */
 export function propParts(prop: PropDef, loadKg: number): Part[] {
+  if (prop.kind === "parts") return prop.parts;
+
   if (prop.kind === "dumbbell") {
     const head = dumbbellHead(loadKg);
     const offset = DUMBBELL_HANDLE / 2 + head.thickness / 2;
+    const handleR = prop.fatGrip ? 0.026 : 0.016;
     return [
-      cylinder(`${prop.id}.handle`, [0, 0, 0], 0.016, DUMBBELL_HANDLE, "chrome"),
+      cylinder(`${prop.id}.handle`, [0, 0, 0], handleR, DUMBBELL_HANDLE, prop.fatGrip ? "accent" : "chrome"),
       cylinder(`${prop.id}.head1`, [offset, 0, 0], head.radius, head.thickness, "plate"),
       cylinder(`${prop.id}.head2`, [-offset, 0, 0], head.radius, head.thickness, "plate"),
     ];
   }
-  const sleeve = prop.length / 2 - prop.collarX;
-  const parts = [
-    cylinder(`${prop.id}.shaft`, [0, 0, 0], BAR_RADIUS, prop.collarX * 2, "chrome"),
+
+  if (prop.kind === "kettlebell") {
+    // Handle centered at origin along local X; bell hangs below (-Y) so grip anchor sits directly on the handle.
+    const kb = kettlebellSize(loadKg);
+    const r = kb.radius;
+    const postH = 0.075;
+    const halfW = kb.handleWidth / 2;
+    return [
+      cylinder(`${prop.id}.handle`, [0, 0, 0], 0.016, kb.handleWidth, "steel"),
+      cylinder(`${prop.id}.postL`, [halfW, -postH / 2, 0], 0.014, postH, "steel", ALONG_Y),
+      cylinder(`${prop.id}.postR`, [-halfW, -postH / 2, 0], 0.014, postH, "steel", ALONG_Y),
+      sphere(`${prop.id}.bell`, [0, -postH - r * 0.72, 0], r, "plate"),
+    ];
+  }
+
+  if (prop.kind === "plate") {
+    const radius = Math.min(0.225, Math.max(0.11, 0.1 + 0.006 * loadKg));
+    const thickness = Math.min(0.05, Math.max(0.02, 0.018 + 0.0012 * loadKg));
+    return [cylinder(`${prop.id}.disc`, [0, 0, 0], radius, thickness, "plate", ALONG_Z)];
+  }
+
+  if (prop.kind === "medball") {
+    const radius = Math.min(0.18, Math.max(0.11, 0.11 + 0.005 * loadKg));
+    return [sphere(`${prop.id}.ball`, [0, 0, 0], radius, "rubber")];
+  }
+
+  const barRadius = prop.radius ?? (prop.style === "axle" ? 0.025 : BAR_RADIUS);
+  const sleeve = Math.max(0.1, prop.length / 2 - prop.collarX);
+  const parts: Part[] = [];
+  if (prop.style === "trap") {
+    // Hex frame around the lifter; handles sit at ±0.31 m along local X running along Z.
+    const hw = 0.31;
+    const hd = 0.32;
+    parts.push(
+      cylinder(`${prop.id}.handleL`, [hw, 0, 0], 0.016, 0.24, "chrome", ALONG_Z),
+      cylinder(`${prop.id}.handleR`, [-hw, 0, 0], 0.016, 0.24, "chrome", ALONG_Z),
+      box(`${prop.id}.front`, [0, 0, hd], [hw * 2, 0.036, 0.036], "steel"),
+      box(`${prop.id}.back`, [0, 0, -hd], [hw * 2, 0.036, 0.036], "steel"),
+      box(`${prop.id}.sideL`, [hw + 0.08, 0, 0], [0.036, 0.036, hd * 2], "steel"),
+      box(`${prop.id}.sideR`, [-hw - 0.08, 0, 0], [0.036, 0.036, hd * 2], "steel"),
+    );
+  } else if (prop.style === "ssb") {
+    parts.push(
+      cylinder(`${prop.id}.shaft`, [0, 0, 0], 0.016, prop.collarX * 2, "chrome"),
+      capsule(`${prop.id}.yokePad`, [0, 0, 0], 0.048, 0.34, "pad"),
+      cylinder(`${prop.id}.armL`, [0.16, -0.1, 0.16], 0.022, 0.32, "pad", ALONG_Z),
+      cylinder(`${prop.id}.armR`, [-0.16, -0.1, 0.16], 0.022, 0.32, "pad", ALONG_Z),
+    );
+  } else {
+    parts.push(
+      cylinder(`${prop.id}.shaft`, [0, 0, 0], barRadius, prop.collarX * 2, "chrome"),
+    );
+  }
+  parts.push(
     cylinder(`${prop.id}.sleeve1`, [prop.collarX + sleeve / 2, 0, 0], 0.025, sleeve, "chrome"),
     cylinder(`${prop.id}.sleeve2`, [-prop.collarX - sleeve / 2, 0, 0], 0.025, sleeve, "chrome"),
     cylinder(`${prop.id}.collar1`, [prop.collarX + 0.01, 0, 0], 0.04, 0.02, "steel"),
     cylinder(`${prop.id}.collar2`, [-prop.collarX - 0.01, 0, 0], 0.04, 0.02, "steel"),
-  ];
+  );
   let x = prop.collarX + 0.02;
   platesFor(Math.max(0, (loadKg - prop.barKg) / 2)).forEach(([, radius, thickness], n) => {
     parts.push(
@@ -282,7 +421,11 @@ export const compileParts = (parts: Part[], state?: PropState): Shape[] =>
     const bound =
       part.shape === "box"
         ? Math.hypot(...part.size) / 2
-        : Math.hypot(part.size[0], part.size[1] / 2);
+        : part.shape === "sphere"
+          ? part.size[0]
+          : part.shape === "capsule"
+            ? part.size[1] / 2 + part.size[0]
+            : Math.hypot(part.size[0], part.size[1] / 2);
     return { part, pos, inverse: quat.invert(), bound };
   });
 
@@ -301,9 +444,16 @@ export function signedDistance(shape: Shape, point: Vector3) {
       Math.min(Math.max(dx, dy, dz), 0)
     );
   }
+  if (shape.part.shape === "sphere") {
+    return p.length() - size[0];
+  }
+  if (shape.part.shape === "capsule") {
+    const clampedX = Math.max(-size[1] / 2, Math.min(size[1] / 2, p.x));
+    return Math.hypot(p.x - clampedX, p.y, p.z) - size[0];
+  }
   const radial = Math.hypot(p.y, p.z) - size[0];
   const axial = Math.abs(p.x) - size[1] / 2;
   return Math.hypot(Math.max(radial, 0), Math.max(axial, 0)) + Math.min(Math.max(radial, axial), 0);
 }
 
-export { ALONG_Y, ALONG_Z };
+export * from "./equipment-library";

@@ -19,6 +19,8 @@
     "env:generate": "env-manager gen --local",
     "generate": "bun scripts/generate.ts",
     "motion": "bun exercise-motion/scripts/build.ts",
+    "motion:serve": "bun exercise-motion/scripts/serve.ts",
+    "motion:sync": "bun exercise-motion/scripts/sync-exercises.ts",
     "gym": "bun exercise-motion/scripts/gym-build.ts",
     "gym:fetch": "bun exercise-motion/scripts/gym-fetch.ts",
     "gym:debrand": "bun exercise-motion/scripts/gym-debrand.ts",

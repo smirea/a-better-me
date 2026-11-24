@@ -255,14 +255,36 @@ export function createBody(height = 1.78, mass = 80): Body {
   anchor("traps", "thoracic", [0, 0.3, -0.068]);
   anchor("upperBack", "thoracic", [0, 0.21, -0.085]);
   anchor("sternum", "thoracic", [0, 0.12, 0.143]);
+  anchor("chestFront", "thoracic", [0, 0.16, 0.145]);
+  anchor("belly", "lumbar", [0, 0.07, 0.12]);
   anchor("sacrum", "pelvis", [0, 0.02, -0.115]);
+  anchor("pelvisBottom", "pelvis", [0, -0.085, -0.01]);
+  anchor("pelvisFront", "pelvis", [0, 0.02, 0.11]);
   anchor("occiput", "neck", [0, 0.165, -0.075]);
   anchor("mouth", "neck", [0, 0.115, 0.105]);
+  anchor("forehead", "neck", [0, 0.18, 0.11]);
+  anchor("headTop", "neck", [0, 0.27, 0.02]);
   for (const side of SIDES) {
     const s = sideSign(side);
+    anchor(`headSide_${side}`, "neck", [s * 0.095, 0.165, 0.02]);
+    anchor(`frontRack_${side}`, "thoracic", [s * 0.155, 0.265, 0.095]);
+    anchor(`shoulderTop_${side}`, "thoracic", [s * 0.17, 0.31, 0.01]);
     // The palm faces the thigh in the neutral pose, so its normal points toward the midline.
     anchor(`grip_${side}`, `wrist_${side}`, [-s * 0.022, -0.085, 0]);
     anchor(`press_${side}`, `wrist_${side}`, [-s * 0.022, -0.045, 0]);
+    anchor(`palmFlat_${side}`, `wrist_${side}`, [-s * 0.02, -0.075, 0.015]);
+    anchor(`elbowTip_${side}`, `elbow_${side}`, [0, 0, -0.044]);
+    anchor(`forearmMid_${side}`, `elbow_${side}`, [0, -0.135, -0.036]);
+    anchor(`upperArmBack_${side}`, `shoulder_${side}`, [0, -0.2, -0.048]);
+    anchor(`thighBack_${side}`, `hip_${side}`, [0, -0.22, -0.08]);
+    anchor(`thighFront_${side}`, `hip_${side}`, [0, -0.22, 0.08]);
+    anchor(`thighOuter_${side}`, `hip_${side}`, [s * 0.082, -0.24, 0]);
+    anchor(`thighInner_${side}`, `hip_${side}`, [-s * 0.075, -0.24, 0]);
+    anchor(`kneeFront_${side}`, `knee_${side}`, [0, -0.01, 0.06]);
+    anchor(`kneeBack_${side}`, `knee_${side}`, [0, -0.01, -0.056]);
+    anchor(`shinFront_${side}`, `knee_${side}`, [0, -0.34, 0.046]);
+    anchor(`shinBack_${side}`, `knee_${side}`, [0, -0.34, -0.046]);
+    anchor(`ankleCuff_${side}`, `ankle_${side}`, [0, 0.04, 0]);
     anchor(`heel_${side}`, `ankle_${side}`, [0, -0.069, -0.05]);
     anchor(`ballIn_${side}`, `ankle_${side}`, [-s * 0.04, -0.069, 0.13]);
     anchor(`ballOut_${side}`, `ankle_${side}`, [s * 0.045, -0.069, 0.12]);
@@ -427,7 +449,18 @@ export function makePose(body: Body, hints: PoseHints = {}): Float64Array {
       q[0] = hints["root.x"] ?? 0;
       q[1] = hints["root.y"] ?? body.lengths.hipHeight;
       q[2] = hints["root.z"] ?? 0;
-      q[3] = rad(hints["root.pitch"] ?? 0);
+      const pitch = rad(hints["root.pitch"] ?? 0);
+      const yaw = rad(hints["root.yaw"] ?? 0);
+      const roll = rad(hints["root.roll"] ?? 0);
+      if (yaw === 0 && roll === 0) {
+        q[3] = pitch;
+      } else {
+        euler.set(pitch, yaw, roll, "YXZ");
+        const v = rotVecFromQuat(qa.setFromEuler(euler));
+        q[3] = v[0];
+        q[4] = v[1];
+        q[5] = v[2];
+      }
       continue;
     }
     if (joint.kind === "hinge" || joint.kind === "universal") {
