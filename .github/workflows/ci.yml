@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: ['master']
+    branches: ["master"]
   workflow_dispatch:
 
 permissions:
@@ -75,10 +75,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        task: ['lint:ci', typecheck, test, build]
+        task: ["lint:ci", typecheck, test, build]
     env:
-      CI: 'true'
-      LEFTHOOK: '0'
+      CI: "true"
+      LEFTHOOK: "0"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -113,8 +113,8 @@ jobs:
         task: [package, app]
     env:
       SWIFT_DIRECTORY: app-ios
-      CI: 'true'
-      LEFTHOOK: '0'
+      CI: "true"
+      LEFTHOOK: "0"
     steps:
       - name: Verify change detection
         env:
@@ -178,7 +178,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      LEFTHOOK: '0'
+      LEFTHOOK: "0"
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
@@ -206,7 +206,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      LEFTHOOK: '0'
+      LEFTHOOK: "0"
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:

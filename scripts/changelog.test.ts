@@ -1,147 +1,177 @@
-import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { add, bundle, check, parseTaskArgument } from './changelog';
+import { afterEach, beforeEach, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { add, bundle, check, parseTaskArgument } from "./changelog";
 
 let root: string;
 
 function git(...args: string[]) {
-	const result = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
-	if (result.status !== 0) throw new Error(result.stderr);
-	return result.stdout.trim();
+  const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(result.stderr);
+  return result.stdout.trim();
 }
 
 function write(path: string, text: string) {
-	mkdirSync(join(root, path, '..'), { recursive: true });
-	writeFileSync(join(root, path), text);
+  mkdirSync(join(root, path, ".."), { recursive: true });
+  writeFileSync(join(root, path), text);
 }
 
 function commit(message: string) {
-	git('add', '-A');
-	git('commit', '-q', '-m', message);
-	return git('rev-parse', 'HEAD');
+  git("add", "-A");
+  git("commit", "-q", "-m", message);
+  return git("rev-parse", "HEAD");
 }
 
 beforeEach(() => {
-	root = mkdtempSync(join(tmpdir(), 'changelog-'));
-	git('init', '-q', '-b', 'master');
-	git('config', 'user.email', 'test@example.com');
-	git('config', 'user.name', 'test');
-	git('config', 'commit.gpgsign', 'false');
-	write('README.md', 'repo\n');
-	commit('init');
+  root = mkdtempSync(join(tmpdir(), "changelog-"));
+  git("init", "-q", "-b", "master");
+  git("config", "user.email", "test@example.com");
+  git("config", "user.name", "test");
+  git("config", "commit.gpgsign", "false");
+  write("README.md", "repo\n");
+  commit("init");
 });
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
-test('each entry ships in the first tagged build holding it; untagged ones ship in the build being made', () => {
-	write('changelog/2026-11-10-old.json', '{"title":"Old","build":"2026.1101.100000"}\n');
-	write('changelog/2026-11-11-first.json', '{"title":"First","tasks":["2ca9f3dd-67c0-4ffc-8670-266407c5df7b"]}\n');
-	commit('first');
-	write('changelog/2026-11-11-second.json', '{"title":"Second","description":"More detail."}\n');
-	git('tag', 'testflight/2026.1111.120000', commit('second'));
-	write('changelog/2026-11-12-third.json', '{"title":"Third"}\n');
-	git('tag', 'testflight/2026.1112.090000', commit('third'));
-	write('changelog/2026-11-12-fourth.json', '{"title":"Fourth"}\n');
-	commit('fourth');
-	write('changelog/2026-11-12-uncommitted.json', '{"title":"Uncommitted"}\n');
+test("each entry ships in the first tagged build holding it; untagged ones ship in the build being made", () => {
+  write("changelog/2026-11-10-old.json", '{"title":"Old","build":"2026.1101.100000"}\n');
+  write(
+    "changelog/2026-11-11-first.json",
+    '{"title":"First","tasks":["2ca9f3dd-67c0-4ffc-8670-266407c5df7b"]}\n',
+  );
+  commit("first");
+  write("changelog/2026-11-11-second.json", '{"title":"Second","description":"More detail."}\n');
+  git("tag", "testflight/2026.1111.120000", commit("second"));
+  write("changelog/2026-11-12-third.json", '{"title":"Third"}\n');
+  git("tag", "testflight/2026.1112.090000", commit("third"));
+  write("changelog/2026-11-12-fourth.json", '{"title":"Fourth"}\n');
+  commit("fourth");
+  write("changelog/2026-11-12-uncommitted.json", '{"title":"Uncommitted"}\n');
 
-	expect(bundle(root, 'dev')).toEqual({
-		build: 'dev',
-		entries: [
-			{ id: '2026-11-12-uncommitted', date: '2026-11-12', title: 'Uncommitted', tasks: [], build: 'dev' },
-			{ id: '2026-11-12-fourth', date: '2026-11-12', title: 'Fourth', tasks: [], build: 'dev' },
-			{ id: '2026-11-12-third', date: '2026-11-12', title: 'Third', tasks: [], build: '2026.1112.090000' },
-			{
-				id: '2026-11-11-second',
-				date: '2026-11-11',
-				title: 'Second',
-				description: 'More detail.',
-				tasks: [],
-				build: '2026.1111.120000',
-			},
-			{
-				id: '2026-11-11-first',
-				date: '2026-11-11',
-				title: 'First',
-				tasks: [{ id: '2ca9f3dd-67c0-4ffc-8670-266407c5df7b' }],
-				build: '2026.1111.120000',
-			},
-			{ id: '2026-11-10-old', date: '2026-11-10', title: 'Old', tasks: [], build: '2026.1101.100000' },
-		],
-	});
+  expect(bundle(root, "dev")).toEqual({
+    build: "dev",
+    entries: [
+      {
+        id: "2026-11-12-uncommitted",
+        date: "2026-11-12",
+        title: "Uncommitted",
+        tasks: [],
+        build: "dev",
+      },
+      { id: "2026-11-12-fourth", date: "2026-11-12", title: "Fourth", tasks: [], build: "dev" },
+      {
+        id: "2026-11-12-third",
+        date: "2026-11-12",
+        title: "Third",
+        tasks: [],
+        build: "2026.1112.090000",
+      },
+      {
+        id: "2026-11-11-second",
+        date: "2026-11-11",
+        title: "Second",
+        description: "More detail.",
+        tasks: [],
+        build: "2026.1111.120000",
+      },
+      {
+        id: "2026-11-11-first",
+        date: "2026-11-11",
+        title: "First",
+        tasks: [{ id: "2ca9f3dd-67c0-4ffc-8670-266407c5df7b" }],
+        build: "2026.1111.120000",
+      },
+      {
+        id: "2026-11-10-old",
+        date: "2026-11-10",
+        title: "Old",
+        tasks: [],
+        build: "2026.1101.100000",
+      },
+    ],
+  });
 });
 
-test('a change to shipped code fails the check until an entry is added', () => {
-	const base = git('rev-parse', 'HEAD');
-	write('app-ios/Sources/App/View.swift', 'struct V {}\n');
-	write('docs/notes.md', 'notes\n');
-	commit('feature');
-	expect(check(root, base)).toEqual({ ok: false, shipped: ['app-ios/Sources/App/View.swift'] });
+test("a change to shipped code fails the check until an entry is added", () => {
+  const base = git("rev-parse", "HEAD");
+  write("app-ios/Sources/App/View.swift", "struct V {}\n");
+  write("docs/notes.md", "notes\n");
+  commit("feature");
+  expect(check(root, base)).toEqual({ ok: false, shipped: ["app-ios/Sources/App/View.swift"] });
 
-	const path = add(root, {
-		title: 'A new view',
-		tasks: ['https://procrastimate.stf.lol/inbox?task=2CA9F3DD-67C0-4FFC-8670-266407C5DF7B'],
-		date: '2026-11-12',
-	});
-	expect(path).toBe('changelog/2026-11-12-a-new-view.json');
-	expect(JSON.parse(readFileSync(join(root, path), 'utf8'))).toEqual({
-		title: 'A new view',
-		tasks: ['2ca9f3dd-67c0-4ffc-8670-266407c5df7b'],
-	});
-	commit('entry');
-	expect(check(root, base)).toEqual({ ok: true, added: ['changelog/2026-11-12-a-new-view.json'] });
+  const path = add(root, {
+    title: "A new view",
+    tasks: ["https://procrastimate.stf.lol/inbox?task=2CA9F3DD-67C0-4FFC-8670-266407C5DF7B"],
+    date: "2026-11-12",
+  });
+  expect(path).toBe("changelog/2026-11-12-a-new-view.json");
+  expect(JSON.parse(readFileSync(join(root, path), "utf8"))).toEqual({
+    title: "A new view",
+    tasks: ["2ca9f3dd-67c0-4ffc-8670-266407c5df7b"],
+  });
+  commit("entry");
+  expect(check(root, base)).toEqual({ ok: true, added: ["changelog/2026-11-12-a-new-view.json"] });
 });
 
-test('tests, docs, and tooling need no entry', () => {
-	const base = git('rev-parse', 'HEAD');
-	write('app-ios/Tests/Nutrition/RuleTests.swift', 'import Testing\n');
-	write('server/src/sync.test.ts', 'test\n');
-	write('server/src/env.ts', 'export default {};\n');
-	write('app-web/src/env.ts', 'export default {};\n');
-	write('app-ios/Config/check-env.sh', '#!/bin/sh\n');
-	write('scripts/tool.ts', 'tool\n');
-	write('AGENTS.md', 'rules\n');
-	commit('tooling');
-	expect(check(root, base)).toEqual({ ok: true, exempt: true });
+test("tests, docs, and tooling need no entry", () => {
+  const base = git("rev-parse", "HEAD");
+  write("app-ios/Tests/Nutrition/RuleTests.swift", "import Testing\n");
+  write("server/src/sync.test.ts", "test\n");
+  write("server/src/env.ts", "export default {};\n");
+  write("app-web/src/env.ts", "export default {};\n");
+  write("app-ios/Config/check-env.sh", "#!/bin/sh\n");
+  write("scripts/tool.ts", "tool\n");
+  write("AGENTS.md", "rules\n");
+  commit("tooling");
+  expect(check(root, base)).toEqual({ ok: true, exempt: true });
 });
 
-test('a commit archived twice keeps the first build that held it', () => {
-	write('changelog/2026-11-12-a.json', '{"title":"A"}\n');
-	const sha = commit('a');
-	git('tag', 'testflight/2026.1112.100000', sha);
-	git('tag', 'testflight/2026.1112.90000', sha);
-	expect(bundle(root, 'dev').entries.map(entry => entry.build)).toEqual(['2026.1112.90000']);
+test("a commit archived twice keeps the first build that held it", () => {
+  write("changelog/2026-11-12-a.json", '{"title":"A"}\n');
+  const sha = commit("a");
+  git("tag", "testflight/2026.1112.100000", sha);
+  git("tag", "testflight/2026.1112.90000", sha);
+  expect(bundle(root, "dev").entries.map((entry) => entry.build)).toEqual(["2026.1112.90000"]);
 });
 
 test("a task keeps the title from the brief's markdown line; a bare id or link has none", () => {
-	const id = 'd6c161bd-1f76-4dfb-aee8-8ec0e3a5bc85';
-	expect(
-		parseTaskArgument(
-			`- [1 Changelog Feedback: Add text per task line](https://procrastimate.stf.lol/inbox?task=${id})`,
-		),
-	).toEqual({ id, title: '1 Changelog Feedback: Add text per task line' });
-	expect(parseTaskArgument(`[Brackets [x] (and parens)](https://procrastimate.stf.lol/inbox?task=${id})`)).toEqual({
-		id,
-		title: 'Brackets [x] (and parens)',
-	});
-	expect(parseTaskArgument(id.toUpperCase())).toBe(id);
-	expect(() => parseTaskArgument('[No id](https://example.com)')).toThrow('holds no ProcrastiMate task id');
+  const id = "d6c161bd-1f76-4dfb-aee8-8ec0e3a5bc85";
+  expect(
+    parseTaskArgument(
+      `- [1 Changelog Feedback: Add text per task line](https://procrastimate.stf.lol/inbox?task=${id})`,
+    ),
+  ).toEqual({ id, title: "1 Changelog Feedback: Add text per task line" });
+  expect(
+    parseTaskArgument(
+      `[Brackets [x] (and parens)](https://procrastimate.stf.lol/inbox?task=${id})`,
+    ),
+  ).toEqual({
+    id,
+    title: "Brackets [x] (and parens)",
+  });
+  expect(parseTaskArgument(id.toUpperCase())).toBe(id);
+  expect(() => parseTaskArgument("[No id](https://example.com)")).toThrow(
+    "holds no ProcrastiMate task id",
+  );
 
-	const path = add(root, {
-		title: 'Titles',
-		tasks: [`[Today Feedback](https://procrastimate.stf.lol/inbox?task=${id})`, '2ca9f3dd-67c0-4ffc-8670-266407c5df7b'],
-		date: '2026-11-13',
-	});
-	expect(JSON.parse(readFileSync(join(root, path), 'utf8')).tasks).toEqual([
-		{ id, title: 'Today Feedback' },
-		'2ca9f3dd-67c0-4ffc-8670-266407c5df7b',
-	]);
-	commit('titles');
-	expect(bundle(root, 'dev').entries[0]!.tasks).toEqual([
-		{ id, title: 'Today Feedback' },
-		{ id: '2ca9f3dd-67c0-4ffc-8670-266407c5df7b' },
-	]);
+  const path = add(root, {
+    title: "Titles",
+    tasks: [
+      `[Today Feedback](https://procrastimate.stf.lol/inbox?task=${id})`,
+      "2ca9f3dd-67c0-4ffc-8670-266407c5df7b",
+    ],
+    date: "2026-11-13",
+  });
+  expect(JSON.parse(readFileSync(join(root, path), "utf8")).tasks).toEqual([
+    { id, title: "Today Feedback" },
+    "2ca9f3dd-67c0-4ffc-8670-266407c5df7b",
+  ]);
+  commit("titles");
+  expect(bundle(root, "dev").entries[0]!.tasks).toEqual([
+    { id, title: "Today Feedback" },
+    { id: "2ca9f3dd-67c0-4ffc-8670-266407c5df7b" },
+  ]);
 });

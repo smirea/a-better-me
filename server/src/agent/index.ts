@@ -1,47 +1,47 @@
-import { bearerToken, type Space, type SqlDriver } from 'sync-engine/core';
-import { z } from 'zod';
-import { isOwner, sha256Hex } from '../auth';
-import { ApiError, drain, errorResponse as error } from '../http';
-import { openDb, type Db } from './db';
-import * as M from './models';
-import { openApi } from './openapi';
-import type { Method, Route } from './route';
-import { agentRoutes, snapshot } from './routes';
+import { bearerToken, type Space, type SqlDriver } from "sync-engine/core";
+import { z } from "zod";
+import { isOwner, sha256Hex } from "../auth";
+import { ApiError, drain, errorResponse as error } from "../http";
+import { openDb, type Db } from "./db";
+import * as M from "./models";
+import { openApi } from "./openapi";
+import type { Method, Route } from "./route";
+import { agentRoutes, snapshot } from "./routes";
 
 /**
  * What runs the agent API: the space's own host, since bot tokens and every row live in it. `publish` tells every
  * device to pull after a request that advanced the space's head.
  */
 type AgentHost = {
-	space: Space;
-	driver: SqlDriver;
-	ownerToken: string;
-	geminiApiKey: string | null;
-	publish(head: number): void;
-	/** What the routes read as now; tests pass a clock they control. */
-	clock?: () => Date;
+  space: Space;
+  driver: SqlDriver;
+  ownerToken: string;
+  geminiApiKey: string | null;
+  publish(head: number): void;
+  /** What the routes read as now; tests pass a clock they control. */
+  clock?: () => Date;
 };
 
-const TOKEN_PREFIX = 'abm_';
+const TOKEN_PREFIX = "abm_";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type Actor = { kind: 'owner' } | { kind: 'bot'; id: string; name: string };
+type Actor = { kind: "owner" } | { kind: "bot"; id: string; name: string };
 
 async function authenticate(request: Request, db: Db, ownerToken: string): Promise<Actor | null> {
-	const token = bearerToken(request);
-	if (!token) return null;
-	if (await isOwner(request, ownerToken)) return { kind: 'owner' };
-	if (!token.startsWith(TOKEN_PREFIX)) return null;
-	const row = db.all('api_tokens', 'token_hash = ?', [await sha256Hex(token)])[0];
-	return row ? { kind: 'bot', id: row.id, name: row.name } : null;
+  const token = bearerToken(request);
+  if (!token) return null;
+  if (await isOwner(request, ownerToken)) return { kind: "owner" };
+  if (!token.startsWith(TOKEN_PREFIX)) return null;
+  const row = db.all("api_tokens", "token_hash = ?", [await sha256Hex(token)])[0];
+  return row ? { kind: "bot", id: row.id, name: row.name } : null;
 }
 
 const howToAuthenticate = (base: string) =>
-	[
-		'A Better Me is a personal workout and nutrition tracker. This API reads and manages its workouts, programs, exercises, gyms, food log, foods, recipes, nutrition strategy, settings, and body metrics.',
-		'Every route but this one needs a bot token. The owner creates one in the iOS app under Settings > API Tokens; it starts with `abm_` and is shown once.',
-		`Send it on every request as the header \`Authorization: Bearer abm_...\`, then GET ${base} again: the answer holds the full guide, the current state, and the OpenAPI document.`,
-	].join('\n\n');
+  [
+    "A Better Me is a personal workout and nutrition tracker. This API reads and manages its workouts, programs, exercises, gyms, food log, foods, recipes, nutrition strategy, settings, and body metrics.",
+    "Every route but this one needs a bot token. The owner creates one in the iOS app under Settings > API Tokens; it starts with `abm_` and is shown once.",
+    `Send it on every request as the header \`Authorization: Bearer abm_...\`, then GET ${base} again: the answer holds the full guide, the current state, and the OpenAPI document.`,
+  ].join("\n\n");
 
 const guide = (base: string) => `# A Better Me agent API
 
@@ -85,25 +85,25 @@ The owner's workout and nutrition data, as the iOS app holds it. Every write her
 Base URL: ${base}. The OpenAPI 3.1 document below lists every operation and schema.`;
 
 function match(routes: Route[], method: string, path: string) {
-	for (const route of routes) {
-		if (route.method !== (method as Method)) continue;
-		const names: string[] = [];
-		const pattern = new RegExp(
-			`^${route.path.replaceAll(/\{(\w+)\}/g, (_, name: string) => (names.push(name), '([^/]+)'))}$`,
-		);
-		const found = pattern.exec(path);
-		if (found)
-			return {
-				route,
-				params: Object.fromEntries(
-					names.map((name, index) => {
-						const value = decodeURIComponent(found[index + 1]!);
-						return [name, UUID.test(value) ? value.toLowerCase() : value];
-					}),
-				),
-			};
-	}
-	return undefined;
+  for (const route of routes) {
+    if (route.method !== (method as Method)) continue;
+    const names: string[] = [];
+    const pattern = new RegExp(
+      `^${route.path.replaceAll(/\{(\w+)\}/g, (_, name: string) => (names.push(name), "([^/]+)"))}$`,
+    );
+    const found = pattern.exec(path);
+    if (found)
+      return {
+        route,
+        params: Object.fromEntries(
+          names.map((name, index) => {
+            const value = decodeURIComponent(found[index + 1]!);
+            return [name, UUID.test(value) ? value.toLowerCase() : value];
+          }),
+        ),
+      };
+  }
+  return undefined;
 }
 
 /**
@@ -112,77 +112,85 @@ function match(routes: Route[], method: string, path: string) {
  * `/openapi.json` included, answers a bare 401 without a token.
  */
 export function agentApi(host: AgentHost): (request: Request) => Promise<Response> {
-	const routes = agentRoutes({ geminiApiKey: host.geminiApiKey });
-	return async request => {
-		const before = host.space.head();
-		const response = await answer(request, host, routes);
-		const head = host.space.head();
-		if (head > before) host.publish(head);
-		return response;
-	};
+  const routes = agentRoutes({ geminiApiKey: host.geminiApiKey });
+  return async (request) => {
+    const before = host.space.head();
+    const response = await answer(request, host, routes);
+    const head = host.space.head();
+    if (head > before) host.publish(head);
+    return response;
+  };
 }
 
 async function answer(request: Request, host: AgentHost, routes: Route[]): Promise<Response> {
-	const url = new URL(request.url);
-	const base = `${url.origin}/api`;
-	const path = url.pathname.replace(/^\/api/, '').replace(/\/+$/, '');
-	const db = openDb(host.space, host.driver);
+  const url = new URL(request.url);
+  const base = `${url.origin}/api`;
+  const path = url.pathname.replace(/^\/api/, "").replace(/\/+$/, "");
+  const db = openDb(host.space, host.driver);
 
-	const actor = await authenticate(request, db, host.ownerToken);
-	if (!actor && request.method === 'GET' && path === '') {
-		return Response.json({ name: 'A Better Me', authenticated: false, instructions: howToAuthenticate(base) });
-	}
-	if (!actor) {
-		await drain(request);
-		return Response.json(
-			{ ok: false, error: 'Missing, wrong, or revoked token' },
-			{ status: 401, headers: { 'WWW-Authenticate': 'Bearer' } },
-		);
-	}
-	if (request.method === 'GET' && path === '/openapi.json') return Response.json(openApi(routes, base, guide(base)));
-	if (request.method === 'GET' && path === '') {
-		const tz = M.timeZone.safeParse(url.searchParams.get('tz') ?? undefined);
-		if (!tz.success) return error(400, 'tz must be an IANA time zone, such as America/New_York');
-		return Response.json({
-			name: 'A Better Me',
-			authenticated: true,
-			actor,
-			baseUrl: base,
-			guide: guide(base),
-			state: snapshot(db, tz.data, (host.clock?.() ?? new Date()).toISOString()),
-			openapi: openApi(routes, base, guide(base)),
-		});
-	}
-	const found = match(routes, request.method, path);
-	if (!found) {
-		await drain(request);
-		return error(404, `No route ${request.method} /api${path}. GET ${base} lists every route.`);
-	}
-	const { route, params } = found;
-	try {
-		let raw: unknown;
-		if (route.body) {
-			try {
-				const text = await request.text();
-				raw = text.trim() ? JSON.parse(text) : {};
-			} catch {
-				return error(400, 'The body must be JSON');
-			}
-		}
-		const result = await route.run({
-			db,
-			params,
-			query: (route.query ?? z.object({})).parse(Object.fromEntries(url.searchParams)),
-			body: route.body?.parse(raw),
-			now: (host.clock?.() ?? new Date()).toISOString(),
-		});
-		return Response.json(result);
-	} catch (caught) {
-		if (caught instanceof ApiError) return error(caught.status, caught.message);
-		if (caught instanceof z.ZodError) {
-			const issues = caught.issues.map(issue => ({ path: issue.path.join('.'), message: issue.message }));
-			return error(400, 'Invalid request', issues);
-		}
-		throw caught;
-	}
+  const actor = await authenticate(request, db, host.ownerToken);
+  if (!actor && request.method === "GET" && path === "") {
+    return Response.json({
+      name: "A Better Me",
+      authenticated: false,
+      instructions: howToAuthenticate(base),
+    });
+  }
+  if (!actor) {
+    await drain(request);
+    return Response.json(
+      { ok: false, error: "Missing, wrong, or revoked token" },
+      { status: 401, headers: { "WWW-Authenticate": "Bearer" } },
+    );
+  }
+  if (request.method === "GET" && path === "/openapi.json")
+    return Response.json(openApi(routes, base, guide(base)));
+  if (request.method === "GET" && path === "") {
+    const tz = M.timeZone.safeParse(url.searchParams.get("tz") ?? undefined);
+    if (!tz.success) return error(400, "tz must be an IANA time zone, such as America/New_York");
+    return Response.json({
+      name: "A Better Me",
+      authenticated: true,
+      actor,
+      baseUrl: base,
+      guide: guide(base),
+      state: snapshot(db, tz.data, (host.clock?.() ?? new Date()).toISOString()),
+      openapi: openApi(routes, base, guide(base)),
+    });
+  }
+  const found = match(routes, request.method, path);
+  if (!found) {
+    await drain(request);
+    return error(404, `No route ${request.method} /api${path}. GET ${base} lists every route.`);
+  }
+  const { route, params } = found;
+  try {
+    let raw: unknown;
+    if (route.body) {
+      try {
+        const text = await request.text();
+        raw = text.trim() ? JSON.parse(text) : {};
+      } catch {
+        return error(400, "The body must be JSON");
+      }
+    }
+    const result = await route.run({
+      db,
+      params,
+      query: (route.query ?? z.object({})).parse(Object.fromEntries(url.searchParams)),
+      body: route.body?.parse(raw),
+      now: (host.clock?.() ?? new Date()).toISOString(),
+    });
+    return Response.json(result);
+  } catch (caught) {
+    if (caught instanceof ApiError) return error(caught.status, caught.message);
+    if (caught instanceof z.ZodError) {
+      const issues = caught.issues.map((issue) => ({
+        path: issue.path.join("."),
+        message: issue.message,
+      }));
+      return error(400, "Invalid request", issues);
+    }
+    throw caught;
+  }
 }

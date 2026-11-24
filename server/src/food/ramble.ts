@@ -1,49 +1,49 @@
-import { z } from 'zod';
-import { generateJson } from './gemini';
+import { z } from "zod";
+import { generateJson } from "./gemini";
 
-export type RambleModel = { model: string; thinking?: 'minimal' | 'low' | 'medium' | 'high' };
+export type RambleModel = { model: string; thinking?: "minimal" | "low" | "medium" | "high" };
 
 /**
  * Picked by `scripts/ramble-lab/replay.ts` (docs/decisions/nutrition.md, Ramble logging): the fastest model that kept
  * the labelled rambles near 100% when read live, with no final read.
  */
-const RAMBLE_MODEL: RambleModel = { model: 'gemini-3.5-flash', thinking: 'minimal' };
+const RAMBLE_MODEL: RambleModel = { model: "gemini-3.5-flash", thinking: "minimal" };
 const TIMEOUT_MS = 15_000;
 
-export const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+export const MEALS = ["breakfast", "lunch", "dinner", "snack"] as const;
 const day = z.iso.date();
 
 const RambleLogged = z
-	.object({
-		id: z.string().min(1).max(80),
-		name: z.string().trim().min(1).max(200),
-		serving: z.string().trim().max(80),
-	})
-	.meta({ id: 'RambleLogged' });
+  .object({
+    id: z.string().min(1).max(80),
+    name: z.string().trim().min(1).max(200),
+    serving: z.string().trim().max(80),
+  })
+  .meta({ id: "RambleLogged" });
 
 const RambleMeal = z
-	.object({
-		id: z.string().min(1).max(80),
-		day,
-		meal: z.enum(MEALS),
-		entries: z.array(RambleLogged).min(1).max(30),
-	})
-	.meta({ id: 'RambleMeal' });
+  .object({
+    id: z.string().min(1).max(80),
+    day,
+    meal: z.enum(MEALS),
+    entries: z.array(RambleLogged).min(1).max(30),
+  })
+  .meta({ id: "RambleMeal" });
 
 /**
  * The phone sends what the speaker can point back at: recent meals to copy, the foods they log most ("my usual
  * pancake"), and the options it is showing for each item, so a pick ("the pepperoni") names one of them.
  */
 export const RambleRequest = z.object({
-	transcript: z.string().max(12_000),
-	today: day,
-	time: z.string().regex(/^\d{2}:\d{2}$/),
-	meals: z.array(RambleMeal).max(40).default([]),
-	usual: z.array(RambleLogged).max(60).default([]),
-	shown: z
-		.array(z.object({ item: z.int().min(0), options: z.array(z.string().max(200)).max(10) }))
-		.max(40)
-		.default([]),
+  transcript: z.string().max(12_000),
+  today: day,
+  time: z.string().regex(/^\d{2}:\d{2}$/),
+  meals: z.array(RambleMeal).max(40).default([]),
+  usual: z.array(RambleLogged).max(60).default([]),
+  shown: z
+    .array(z.object({ item: z.int().min(0), options: z.array(z.string().max(200)).max(10) }))
+    .max(40)
+    .default([]),
 });
 export type RambleRequest = z.input<typeof RambleRequest>;
 
@@ -57,34 +57,34 @@ export type RambleRequest = z.input<typeof RambleRequest>;
  * words the item came from, which the phone highlights and flies into the row; it may be empty or misquoted.
  */
 export const RambleItem = z
-	.object({
-		kind: z.enum(['food', 'copy']),
-		name: z.string(),
-		amount: z.number().min(0),
-		unit: z.string(),
-		ref: z.string().nullable(),
-		scale: z.number().positive(),
-		copy: z.string().nullable(),
-		except: z.array(z.string()),
-		day: z.int().min(-30).max(0).nullable(),
-		meal: z.enum(['', ...MEALS]),
-		time: z.string().regex(/^(\d{2}:\d{2})?$/),
-		options: z.boolean(),
-		said: z.string(),
-	})
-	.meta({ id: 'RambleItem' });
+  .object({
+    kind: z.enum(["food", "copy"]),
+    name: z.string(),
+    amount: z.number().min(0),
+    unit: z.string(),
+    ref: z.string().nullable(),
+    scale: z.number().positive(),
+    copy: z.string().nullable(),
+    except: z.array(z.string()),
+    day: z.int().min(-30).max(0).nullable(),
+    meal: z.enum(["", ...MEALS]),
+    time: z.string().regex(/^(\d{2}:\d{2})?$/),
+    options: z.boolean(),
+    said: z.string(),
+  })
+  .meta({ id: "RambleItem" });
 export type RambleItem = z.output<typeof RambleItem>;
-export const RambleOutline = z.object({ items: z.array(RambleItem) }).meta({ id: 'RambleOutline' });
+export const RambleOutline = z.object({ items: z.array(RambleItem) }).meta({ id: "RambleOutline" });
 export type RambleOutline = z.output<typeof RambleOutline>;
 
-const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const weekday = (iso: string) => WEEKDAYS[new Date(`${iso}T12:00:00Z`).getUTCDay()]!;
 const dayOffset = (iso: string, today: string) =>
-	Math.round((Date.parse(`${iso}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86_400_000);
+  Math.round((Date.parse(`${iso}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86_400_000);
 const dayLabel = (iso: string, today: string) => {
-	const offset = dayOffset(iso, today);
-	const relative = offset === 0 ? 'today' : offset === -1 ? 'yesterday' : `${-offset} days ago`;
-	return `${relative}, ${weekday(iso)} ${iso}`;
+  const offset = dayOffset(iso, today);
+  const relative = offset === 0 ? "today" : offset === -1 ? "yesterday" : `${-offset} days ago`;
+  return `${relative}, ${weekday(iso)} ${iso}`;
 };
 
 /**
@@ -94,34 +94,35 @@ const dayLabel = (iso: string, today: string) => {
 type Aliases = { meals: Map<string, string>; entries: Map<string, string> };
 
 export function aliases(input: z.output<typeof RambleRequest>): Aliases {
-	const meals = new Map<string, string>();
-	const entries = new Map<string, string>();
-	input.meals.forEach((meal, i) => {
-		meals.set(`m${i + 1}`, meal.id);
-		for (const entry of meal.entries) entries.set(`e${entries.size + 1}`, entry.id);
-	});
-	input.usual.forEach((entry, i) => entries.set(`u${i + 1}`, entry.id));
-	return { meals, entries };
+  const meals = new Map<string, string>();
+  const entries = new Map<string, string>();
+  input.meals.forEach((meal, i) => {
+    meals.set(`m${i + 1}`, meal.id);
+    for (const entry of meal.entries) entries.set(`e${entries.size + 1}`, entry.id);
+  });
+  input.usual.forEach((entry, i) => entries.set(`u${i + 1}`, entry.id));
+  return { meals, entries };
 }
 
 const logged = (entry: z.output<typeof RambleLogged>) =>
-	entry.serving ? `${entry.name} (${entry.serving})` : entry.name;
+  entry.serving ? `${entry.name} (${entry.serving})` : entry.name;
 
 const TRANSCRIPT = `The transcript is live speech-to-text: it has filler, false starts, missing punctuation, and misheard words, and it may stop mid-sentence. List what is clear so far: an item appears once its food is named, so a trailing "two slices of", "200 grams of", or "I drank" is not an item yet, and a copy appears once the meal it repeats is clear ("for lunch the steak" may still become "the steak dinner from last night"). The logged and usual foods below are the speaker's own, so a word that sounds like one of them is probably it.`;
 const OMIT_EMPTY = `Leave out every field that is empty, 0, or false, except day 0 for a said "today": a food item with only a name is { "kind": "food", "name": "pizza" }. Leaving them out keeps the answer short, and the list updates live while the speaker talks.`;
 const SAID = `Each item also has "said": the words of the transcript it came from, copied exactly as written there (same spelling, digits, and punctuation), shortest span that holds its food and amount, e.g. "2 tablespoons of chia seeds". For an item changed by a correction, quote the correcting words ("actually make that 250"). The app highlights these words, so never paraphrase.`;
 
 function rambleInstructions(input: z.output<typeof RambleRequest>): string {
-	let e = 0;
-	const meals = input.meals.map((meal, i) => {
-		const entries = meal.entries.map(entry => `e${++e} ${logged(entry)}`).join('; ');
-		return `- m${i + 1}: ${meal.meal}, ${dayLabel(meal.day, input.today)}: ${entries}`;
-	});
-	const usual = input.usual.map((entry, i) => `- u${i + 1} ${logged(entry)}`);
-	const shown = input.shown.map(
-		({ item, options }) => `- item ${item + 1}: ${options.map(option => JSON.stringify(option)).join(', ')}`,
-	);
-	return `You turn a spoken ramble into food log entries for a calorie tracker, the way Todoist Ramble turns speech into tasks.
+  let e = 0;
+  const meals = input.meals.map((meal, i) => {
+    const entries = meal.entries.map((entry) => `e${++e} ${logged(entry)}`).join("; ");
+    return `- m${i + 1}: ${meal.meal}, ${dayLabel(meal.day, input.today)}: ${entries}`;
+  });
+  const usual = input.usual.map((entry, i) => `- u${i + 1} ${logged(entry)}`);
+  const shown = input.shown.map(
+    ({ item, options }) =>
+      `- item ${item + 1}: ${options.map((option) => JSON.stringify(option)).join(", ")}`,
+  );
+  return `You turn a spoken ramble into food log entries for a calorie tracker, the way Todoist Ramble turns speech into tasks.
 Today is ${weekday(input.today)} ${input.today}, and the time is ${input.time}.
 
 ${TRANSCRIPT}
@@ -149,13 +150,13 @@ ${SAID}
 Ignore chatter that is not about food, and "that's it" or "done" at the end.
 
 Logged meals:
-${meals.length ? meals.join('\n') : 'none'}
+${meals.length ? meals.join("\n") : "none"}
 
 Usual foods:
-${usual.length ? usual.join('\n') : 'none'}
+${usual.length ? usual.join("\n") : "none"}
 
 Options shown on screen, by item number:
-${shown.length ? shown.join('\n') : 'none'}`;
+${shown.length ? shown.join("\n") : "none"}`;
 }
 
 /**
@@ -163,89 +164,92 @@ ${shown.length ? shown.join('\n') : 'none'}`;
  * fields omitted, the model sometimes answered `{ "kind": "copy", "name": "breakfast" }`.
  */
 function responseSchema(names: Aliases) {
-	const entries = [...names.entries.keys()];
-	const when = {
-		meal: { type: 'string', enum: ['', ...MEALS] },
-		time: { type: 'string' },
-		day: { type: 'integer' },
-	};
-	const food = {
-		type: 'object',
-		properties: {
-			kind: { type: 'string', enum: ['food'] },
-			name: { type: 'string' },
-			amount: { type: 'number' },
-			unit: { type: 'string' },
-			ref: { type: 'string', enum: ['', ...entries] },
-			scale: { type: 'number' },
-			...when,
-			options: { type: 'boolean' },
-			said: { type: 'string' },
-		},
-		required: ['kind', 'name', 'said'],
-	};
-	const copy = {
-		type: 'object',
-		properties: {
-			kind: { type: 'string', enum: ['copy'] },
-			copy: { type: 'string', enum: names.meals.size ? [...names.meals.keys()] : [''] },
-			except: { type: 'array', items: { type: 'string', enum: entries.length ? entries : [''] } },
-			...when,
-			said: { type: 'string' },
-		},
-		required: ['kind', 'copy', 'said'],
-	};
-	return {
-		type: 'object',
-		properties: { items: { type: 'array', items: names.meals.size ? { anyOf: [food, copy] } : food } },
-		required: ['items'],
-	};
+  const entries = [...names.entries.keys()];
+  const when = {
+    meal: { type: "string", enum: ["", ...MEALS] },
+    time: { type: "string" },
+    day: { type: "integer" },
+  };
+  const food = {
+    type: "object",
+    properties: {
+      kind: { type: "string", enum: ["food"] },
+      name: { type: "string" },
+      amount: { type: "number" },
+      unit: { type: "string" },
+      ref: { type: "string", enum: ["", ...entries] },
+      scale: { type: "number" },
+      ...when,
+      options: { type: "boolean" },
+      said: { type: "string" },
+    },
+    required: ["kind", "name", "said"],
+  };
+  const copy = {
+    type: "object",
+    properties: {
+      kind: { type: "string", enum: ["copy"] },
+      copy: { type: "string", enum: names.meals.size ? [...names.meals.keys()] : [""] },
+      except: { type: "array", items: { type: "string", enum: entries.length ? entries : [""] } },
+      ...when,
+      said: { type: "string" },
+    },
+    required: ["kind", "copy", "said"],
+  };
+  return {
+    type: "object",
+    properties: {
+      items: { type: "array", items: names.meals.size ? { anyOf: [food, copy] } : food },
+    },
+    required: ["items"],
+  };
 }
 
 const ModelItem = z.object({
-	kind: z.enum(['food', 'copy']),
-	name: z.string().default(''),
-	amount: z.number().min(0).default(0),
-	unit: z.string().default(''),
-	ref: z.string().default(''),
-	scale: z.number().default(0),
-	copy: z.string().default(''),
-	except: z.array(z.string()).default([]),
-	meal: z.enum(['', ...MEALS]).default(''),
-	time: z.string().default(''),
-	day: z.int().optional(),
-	options: z.boolean().default(false),
-	said: z.string().default(''),
+  kind: z.enum(["food", "copy"]),
+  name: z.string().default(""),
+  amount: z.number().min(0).default(0),
+  unit: z.string().default(""),
+  ref: z.string().default(""),
+  scale: z.number().default(0),
+  copy: z.string().default(""),
+  except: z.array(z.string()).default([]),
+  meal: z.enum(["", ...MEALS]).default(""),
+  time: z.string().default(""),
+  day: z.int().optional(),
+  options: z.boolean().default(false),
+  said: z.string().default(""),
 });
 const ModelOutline = z.object({ items: z.array(ModelItem) });
 
 const clock = (time: string) => {
-	const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
-	if (!match || Number(match[1]) > 23 || Number(match[2]) > 59) return '';
-	return `${match[1]!.padStart(2, '0')}:${match[2]}`;
+  const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+  if (!match || Number(match[1]) > 23 || Number(match[2]) > 59) return "";
+  return `${match[1]!.padStart(2, "0")}:${match[2]}`;
 };
 
 /** "potatoes" is "potato" and "berries" is "berry", where dropping the "s" alone made "potatoe". */
 const singular = (word: string) => {
-	if (word.length <= 3 || !word.endsWith('s') || word.endsWith('ss')) return word;
-	if (word.endsWith('ies')) return `${word.slice(0, -3)}y`;
-	if (word.endsWith('oes')) return word.slice(0, -2);
-	return word.slice(0, -1);
+  if (word.length <= 3 || !word.endsWith("s") || word.endsWith("ss")) return word;
+  if (word.endsWith("ies")) return `${word.slice(0, -3)}y`;
+  if (word.endsWith("oes")) return word.slice(0, -2);
+  return word.slice(0, -1);
 };
 const nameWords = (name: string) =>
-	new Set(
-		name
-			.toLowerCase()
-			.split(/[^\p{L}\p{N}]+/u)
-			.filter(word => word.length > 2)
-			.map(singular),
-	);
+  new Set(
+    name
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((word) => word.length > 2)
+      .map(singular),
+  );
 /** A trailing "snack was one" read once as a food named "one": a name of only numbers is no food yet. */
 const NUMBERS =
-	/^(?:\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten|half|a half|dozen)(?:\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|half|dozen))*$/i;
+  /^(?:\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten|half|a half|dozen)(?:\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|half|dozen))*$/i;
 
 /** Options a model marks unasked open their lists over the transcript mid-ramble. */
-const ASKS_FOR_OPTIONS = /\b(options?|choices?|alternatives?|wrong|not right|show me|other ones?)\b/i;
+const ASKS_FOR_OPTIONS =
+  /\b(options?|choices?|alternatives?|wrong|not right|show me|other ones?)\b/i;
 
 /**
  * A ref names a food the speaker logged, so the logged name holds every word of the item's ("pancake" in "Protein
@@ -253,9 +257,9 @@ const ASKS_FOR_OPTIONS = /\b(options?|choices?|alternatives?|wrong|not right|sho
  * Nonfat Milk By 365"), which the phone searches for.
  */
 const sameFood = (name: string, logged: string) => {
-	const words = nameWords(logged);
-	const said = [...nameWords(name)];
-	return said.length > 0 && said.every(word => words.has(word));
+  const words = nameWords(logged);
+  const said = [...nameWords(name)];
+  return said.length > 0 && said.every((word) => words.has(word));
 };
 
 /**
@@ -265,96 +269,111 @@ const sameFood = (name: string, logged: string) => {
  * model often leaves out once it omits empty fields.
  */
 function resolveAliases(
-	outline: z.output<typeof ModelOutline>,
-	input: z.output<typeof RambleRequest>,
-	names: Aliases,
+  outline: z.output<typeof ModelOutline>,
+  input: z.output<typeof RambleRequest>,
+  names: Aliases,
 ): RambleOutline {
-	const items: RambleItem[] = [];
-	const logged = new Map(
-		[...input.meals.flatMap(meal => meal.entries), ...input.usual].map(entry => [entry.id, entry.name]),
-	);
-	for (const item of outline.items) {
-		const meal = item.kind === 'copy' ? input.meals[[...names.meals.keys()].indexOf(item.copy)] : undefined;
-		if (item.kind === 'copy' && !meal) continue;
-		if (item.kind === 'food' && (!item.name.trim() || NUMBERS.test(item.name.trim()))) continue;
-		const inMeal = new Set(meal?.entries.map(entry => entry.id));
-		const previous = items.at(-1);
-		const said = item.day === undefined ? null : Math.min(0, Math.max(-30, item.day));
-		const day = said ?? previous?.day ?? null;
-		const follows = item.kind === 'food' && previous !== undefined && day === previous.day;
-		const carried = follows && !item.meal && !item.time ? previous!.meal : '';
-		const sameMeal = follows && (!item.meal || item.meal === previous!.meal);
-		const ref = (item.kind === 'food' && refTo(names.entries.get(item.ref), item.name)) || null;
-		const amount = item.kind === 'food' ? item.amount || (item.unit.trim() ? 1 : 0) : 0;
-		// A scale of 1 changes nothing, so it never stands in for an amount the speaker did not say.
-		const scaled = item.kind === 'food' && !amount && item.scale > 0 && item.scale !== 1 ? Math.min(item.scale, 10) : 0;
-		items.push({
-			kind: item.kind,
-			name: item.kind === 'food' ? item.name.trim() : '',
-			// A scale without its ref ("half the potatoes" naming no logged food) is a count of the food.
-			amount: amount || (ref ? 0 : scaled),
-			unit: item.kind === 'food' ? item.unit.trim().toLowerCase() : '',
-			ref,
-			scale: (ref && scaled) || 1,
-			copy: meal?.id ?? null,
-			except: item.except.map(alias => names.entries.get(alias)!).filter(id => id && inMeal.has(id)),
-			day,
-			meal: item.meal || (item.kind === 'copy' ? meal!.meal : carried),
-			time: clock(item.time) || (sameMeal ? previous!.time : ''),
-			options: item.kind === 'food' && item.options && ASKS_FOR_OPTIONS.test(input.transcript),
-			said: item.said.trim(),
-		});
-	}
-	// The instructions say a food said again updates the first, but mid-correction ("tofu 150 grams instead") the model
-	// sometimes lists it twice for a read; the same food at the same meal, day, and time is one item, with the newer
-	// details in the first one's place.
-	const merged: RambleItem[] = [];
-	for (const item of items) {
-		const key = (other: RambleItem) =>
-			[other.kind, other.name.toLowerCase(), other.day, other.meal, other.time, other.ref].join('|');
-		const same = item.kind === 'food' ? merged.findIndex(other => key(other) === key(item)) : -1;
-		if (same >= 0) merged[same] = item;
-		else merged.push(item);
-	}
-	// A food at a copied meal's day, meal, and time that refs one of its entries ("only half the potatoes") stands in for
-	// it, so the copy leaves it out even when the model forgot to, and the entry is never logged twice.
-	const entriesOf = new Map(input.meals.map(meal => [meal.id, new Set(meal.entries.map(entry => entry.id))]));
-	merged.forEach((item, i) => {
-		if (!item.ref) return;
-		const copy = merged.slice(0, i).findLast(other => other.kind === 'copy');
-		if (!copy || !entriesOf.get(copy.copy!)?.has(item.ref) || copy.except.includes(item.ref)) return;
-		if (item.day === copy.day && item.meal === copy.meal && item.time === copy.time) copy.except.push(item.ref);
-	});
-	return { items: merged };
+  const items: RambleItem[] = [];
+  const logged = new Map(
+    [...input.meals.flatMap((meal) => meal.entries), ...input.usual].map((entry) => [
+      entry.id,
+      entry.name,
+    ]),
+  );
+  for (const item of outline.items) {
+    const meal =
+      item.kind === "copy" ? input.meals[[...names.meals.keys()].indexOf(item.copy)] : undefined;
+    if (item.kind === "copy" && !meal) continue;
+    if (item.kind === "food" && (!item.name.trim() || NUMBERS.test(item.name.trim()))) continue;
+    const inMeal = new Set(meal?.entries.map((entry) => entry.id));
+    const previous = items.at(-1);
+    const said = item.day === undefined ? null : Math.min(0, Math.max(-30, item.day));
+    const day = said ?? previous?.day ?? null;
+    const follows = item.kind === "food" && previous !== undefined && day === previous.day;
+    const carried = follows && !item.meal && !item.time ? previous!.meal : "";
+    const sameMeal = follows && (!item.meal || item.meal === previous!.meal);
+    const ref = (item.kind === "food" && refTo(names.entries.get(item.ref), item.name)) || null;
+    const amount = item.kind === "food" ? item.amount || (item.unit.trim() ? 1 : 0) : 0;
+    // A scale of 1 changes nothing, so it never stands in for an amount the speaker did not say.
+    const scaled =
+      item.kind === "food" && !amount && item.scale > 0 && item.scale !== 1
+        ? Math.min(item.scale, 10)
+        : 0;
+    items.push({
+      kind: item.kind,
+      name: item.kind === "food" ? item.name.trim() : "",
+      // A scale without its ref ("half the potatoes" naming no logged food) is a count of the food.
+      amount: amount || (ref ? 0 : scaled),
+      unit: item.kind === "food" ? item.unit.trim().toLowerCase() : "",
+      ref,
+      scale: (ref && scaled) || 1,
+      copy: meal?.id ?? null,
+      except: item.except
+        .map((alias) => names.entries.get(alias)!)
+        .filter((id) => id && inMeal.has(id)),
+      day,
+      meal: item.meal || (item.kind === "copy" ? meal!.meal : carried),
+      time: clock(item.time) || (sameMeal ? previous!.time : ""),
+      options: item.kind === "food" && item.options && ASKS_FOR_OPTIONS.test(input.transcript),
+      said: item.said.trim(),
+    });
+  }
+  // The instructions say a food said again updates the first, but mid-correction ("tofu 150 grams instead") the model
+  // sometimes lists it twice for a read; the same food at the same meal, day, and time is one item, with the newer
+  // details in the first one's place.
+  const merged: RambleItem[] = [];
+  for (const item of items) {
+    const key = (other: RambleItem) =>
+      [other.kind, other.name.toLowerCase(), other.day, other.meal, other.time, other.ref].join(
+        "|",
+      );
+    const same = item.kind === "food" ? merged.findIndex((other) => key(other) === key(item)) : -1;
+    if (same >= 0) merged[same] = item;
+    else merged.push(item);
+  }
+  // A food at a copied meal's day, meal, and time that refs one of its entries ("only half the potatoes") stands in for
+  // it, so the copy leaves it out even when the model forgot to, and the entry is never logged twice.
+  const entriesOf = new Map(
+    input.meals.map((meal) => [meal.id, new Set(meal.entries.map((entry) => entry.id))]),
+  );
+  merged.forEach((item, i) => {
+    if (!item.ref) return;
+    const copy = merged.slice(0, i).findLast((other) => other.kind === "copy");
+    if (!copy || !entriesOf.get(copy.copy!)?.has(item.ref) || copy.except.includes(item.ref))
+      return;
+    if (item.day === copy.day && item.meal === copy.meal && item.time === copy.time)
+      copy.except.push(item.ref);
+  });
+  return { items: merged };
 
-	function refTo(id: string | undefined, name: string) {
-		return id && sameFood(name, logged.get(id) ?? '') ? id : null;
-	}
+  function refTo(id: string | undefined, name: string) {
+    return id && sameFood(name, logged.get(id) ?? "") ? id : null;
+  }
 }
 
 export async function outlineRamble(
-	request: RambleRequest,
-	apiKey: string,
-	{ model = RAMBLE_MODEL, signal }: { model?: RambleModel; signal?: AbortSignal } = {},
+  request: RambleRequest,
+  apiKey: string,
+  { model = RAMBLE_MODEL, signal }: { model?: RambleModel; signal?: AbortSignal } = {},
 ): Promise<RambleOutline> {
-	const input = RambleRequest.parse(request);
-	if (!input.transcript.trim()) return { items: [] };
-	const names = aliases(input);
-	const timeout = AbortSignal.timeout(TIMEOUT_MS);
-	const outline = await generateJson(
-		model.model,
-		{
-			systemInstruction: { parts: [{ text: rambleInstructions(input) }] },
-			contents: [{ role: 'user', parts: [{ text: `Ramble: ${input.transcript}` }] }],
-			generationConfig: {
-				temperature: 0,
-				responseMimeType: 'application/json',
-				responseJsonSchema: responseSchema(names),
-				...(model.thinking ? { thinkingConfig: { thinkingLevel: model.thinking } } : {}),
-			},
-		},
-		ModelOutline,
-		{ apiKey, signal: signal ? AbortSignal.any([signal, timeout]) : timeout },
-	);
-	return resolveAliases(outline, input, names);
+  const input = RambleRequest.parse(request);
+  if (!input.transcript.trim()) return { items: [] };
+  const names = aliases(input);
+  const timeout = AbortSignal.timeout(TIMEOUT_MS);
+  const outline = await generateJson(
+    model.model,
+    {
+      systemInstruction: { parts: [{ text: rambleInstructions(input) }] },
+      contents: [{ role: "user", parts: [{ text: `Ramble: ${input.transcript}` }] }],
+      generationConfig: {
+        temperature: 0,
+        responseMimeType: "application/json",
+        responseJsonSchema: responseSchema(names),
+        ...(model.thinking ? { thinkingConfig: { thinkingLevel: model.thinking } } : {}),
+      },
+    },
+    ModelOutline,
+    { apiKey, signal: signal ? AbortSignal.any([signal, timeout]) : timeout },
+  );
+  return resolveAliases(outline, input, names);
 }
