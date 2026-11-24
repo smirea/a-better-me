@@ -265,8 +265,11 @@ private struct TimelineDrag {
     let id: String
     /// Where it was in the drawn rows when lifted.
     let from: Int
-    /// Every drawn row's height when it was lifted, in order.
-    let heights: [CGFloat]
+    let height: CGFloat
+    /// The other rows' tops and middles, with the lifted row taken out and pushing each down by half its height: the
+    /// lifted row passes a row when its middle passes that one's. Measured once, when it lifts.
+    private let tops: [CGFloat]
+    private let middles: [CGFloat]
     var translation: CGFloat = 0
     var target: Int
     /// Where the drop would put it, shown in its time column while it moves.
@@ -274,26 +277,31 @@ private struct TimelineDrag {
     /// Dropped and written; it stays drawn at `target` until the rows come back from the database.
     var landed = false
 
+    /// `heights` holds every drawn row's height, in order.
     init(id: String, from: Int, heights: [CGFloat]) {
         self.id = id
         self.from = from
-        self.heights = heights
+        height = heights[from]
         target = from
+        var others = heights
+        others.remove(at: from)
+        var tops: [CGFloat] = [0]
+        var middles: [CGFloat] = []
+        for other in others {
+            middles.append(tops[tops.count - 1] + (other + heights[from]) / 2)
+            tops.append(tops[tops.count - 1] + other)
+        }
+        self.tops = tops
+        self.middles = middles
     }
 
-    private var height: CGFloat { heights[from] }
-    private var others: [CGFloat] { heights.enumerated().filter { $0.offset != from }.map(\.element) }
-
-    /// The top of slot `index` with the lifted row taken out.
-    private func top(_ index: Int) -> CGFloat { others.prefix(index).reduce(0, +) }
-
-    /// The slot whose rows above all have their middles above the lifted row's middle, with it pushing them down.
+    /// The slot whose rows above all have their middles above the lifted row's middle.
     func target(for translation: CGFloat) -> Int {
-        let middle = top(from) + height / 2 + translation
-        return others.indices.filter { top($0) + (others[$0] + height) / 2 < middle }.count
+        let middle = tops[from] + height / 2 + translation
+        return middles.firstIndex { $0 >= middle } ?? middles.count
     }
 
-    var offset: CGFloat { landed ? 0 : top(from) + translation - top(target) }
+    var offset: CGFloat { landed ? 0 : tops[from] + translation - tops[target] }
 
     func preview(_ rows: [PingTimelineRow]) -> [PingTimelineRow] {
         guard let index = rows.firstIndex(where: { $0.id == id }) else { return rows }

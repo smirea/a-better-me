@@ -147,13 +147,16 @@ struct PingTimeline: Equatable, Sendable {
     }
 
     /// The logs of `row` moved to where it was dropped among `rows`, the day's rows without it (`dropTime`). A group's
-    /// logs all land there, a second apart in their order: kept apart as they were, a group dropped just above a marker
-    /// split around it.
+    /// logs all land there, a second apart in their order, or closer when the row below or the day's end leaves less
+    /// room: kept apart as they were, a group dropped just above a marker split around it.
     static func drop(_ row: PingTimelineRow, at index: Int, in rows: [PingTimelineRow], on day: CalendarDay, calendar: Calendar = .current) -> [PingLog] {
         guard let time = dropTime(at: index, in: rows, on: day, calendar: calendar) else { return [] }
+        let dayEnd = day.adding(days: 1).date(in: calendar)
+        let limit = rows.indices.contains(index) ? min(rows[index].at, dayEnd) : dayEnd
+        let spacing = min(1, max(0, limit.timeIntervalSince(time)) / TimeInterval(row.entries.count))
         return row.entries.enumerated().map { offset, entry in
             var log = entry.log
-            log.loggedAt = time.addingTimeInterval(TimeInterval(offset))
+            log.loggedAt = time.addingTimeInterval(TimeInterval(offset) * spacing)
             return log
         }
     }

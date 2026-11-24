@@ -101,6 +101,9 @@ struct PingTests {
         let entries = zip(group.entries, moved).map { PingEntry(log: $1, ping: $0.ping) }
         #expect(PingTimeline(entries: entries, markers: [weighIn]).rows().map(\.entries.count) == [2, 0])
         #expect(moved.first?.loggedAt == at(7.5 - 1.0 / 60))
+        let late = TimelineMarker(id: "asleep", kind: .asleep, at: at(23 + 59.5 / 60), title: "Fell Asleep")
+        let atNight = PingTimeline.drop(group, at: 1, in: [.marker(late)], on: today, calendar: utc)
+        #expect(atNight.allSatisfy { $0.loggedAt < at(24) })
     }
 
     private func at(_ hour: Double) -> Date { day("2026-11-19", 0).addingTimeInterval(hour * 3600) }
