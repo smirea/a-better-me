@@ -136,17 +136,21 @@ const data = { muscles: MUSCLES, exercises };
 const bundle = await Bun.build({ entrypoints: [join(root, 'viewer/main.ts')], minify: true, target: 'browser' });
 if (!bundle.success) throw new AggregateError(bundle.logs, 'Viewer bundle failed');
 const script = (await bundle.outputs[0].text()).replaceAll('</script', '<\\/script');
-const css = await Bun.file(join(root, 'viewer/style.css')).text();
+const css = (name: string) => Bun.file(join(root, `viewer/${name}.css`)).text();
 const template = await Bun.file(join(root, 'viewer/index.html')).text();
 const fill = (page: string, slot: string, value: string) => {
 	if (!page.includes(slot)) throw new Error(`viewer/index.html has no ${slot} slot`);
 	return page.replace(slot, () => value);
 };
-const html = fill(
-	fill(fill(template, '/*STYLE*/', css), '__DATA__', JSON.stringify(data).replaceAll('</', '<\\/')),
-	'/*SCRIPT*/',
-	script,
-);
+const json = JSON.stringify(data).replaceAll('</', '<\\/');
+const page = async (layout: string) =>
+	fill(
+		fill(fill(template, '/*STYLE*/', (await css('style')) + (await css(layout))), '__DATA__', json),
+		'/*SCRIPT*/',
+		script,
+	);
+const html = await page('page');
+await Bun.write(join(dist, 'exercise-motion-embed.html'), await page('embed'));
 await Bun.write(join(dist, 'exercise-motion.html'), html);
 await Bun.write(join(dist, 'evaluation.md'), report.join('\n'));
 for (const item of exercises) await Bun.write(join(dist, `${item.sequence.id}.json`), JSON.stringify(item.sequence));

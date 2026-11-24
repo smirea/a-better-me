@@ -1,0 +1,27 @@
+/* For hosts that size the frame to the page, such as an inline preview: every height is fixed, none follows the viewport. */
+html,
+body {
+	background: transparent;
+}
+#app {
+	border-radius: 12px;
+	overflow: hidden;
+	background: var(--bg);
+}
+.stage {
+	grid-template-rows: auto 520px auto;
+}
+.panel-body {
+	overflow: visible;
+}
+@media (min-width: 861px) {
+	.stage {
+		grid-template-rows: auto 620px auto;
+	}
+	.panel {
+		height: 760px;
+	}
+	.panel-body {
+		overflow-y: auto;
+	}
+}

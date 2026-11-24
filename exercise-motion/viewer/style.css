@@ -25,7 +25,6 @@
 }
 html,
 body {
-	height: 100%;
 	margin: 0;
 	background: var(--bg);
 	color: var(--ink);
@@ -39,7 +38,6 @@ input {
 #app {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) 400px;
-	height: 100dvh;
 }
 .stage {
 	display: grid;
@@ -454,17 +452,6 @@ h3 + .stat {
 	#app {
 		grid-template-columns: minmax(0, 1fr);
 		grid-template-rows: auto auto;
-		height: auto;
-	}
-	.stage {
-		grid-template-rows: auto 58vh auto;
-		position: sticky;
-		top: 0;
-		z-index: 2;
-		background: var(--bg);
-	}
-	.panel {
-		min-height: 60vh;
 	}
 	.panel-body {
 		overflow: visible;

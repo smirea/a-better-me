@@ -435,7 +435,8 @@ let lastShown = -1;
 let lastTime = performance.now();
 
 function draw(now: number) {
-	const dt = Math.min(0.1, (now - lastTime) / 1000);
+	// The first callback can carry a timestamp from before this script ran.
+	const dt = Math.min(0.1, Math.max(0, (now - lastTime) / 1000));
 	lastTime = now;
 	const count = sequence.poses.length;
 	if (state.playing) state.frame = (state.frame + dt * sequence.fps * state.speed) % count;
