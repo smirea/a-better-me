@@ -7,6 +7,7 @@ Generates a replayable 3D rep for an exercise from its instructions, with the mu
 - `bun run motion` (`scripts/build.ts`) generates every exercise, runs the validators, the instruction checks, and the fault tests, prints the evaluation, and writes `dist/exercise-motion.html` (the viewer, one self-contained file), `dist/<id>.json` (each baked rep), and `dist/evaluation.md`. It fails when a fault test goes uncaught.
 - `scripts/review.ts [id]` prints only the flags and checks, in under a second. Use it while tuning a pose.
 - `scripts/sheet.ts <id> out.png [side,front,top]` writes a grid of stills without a browser (needs `rsvg-convert`). Look at it after every change to a spec; numbers alone miss a pose that is valid and wrong.
+- `scripts/figure-asset.ts` rebuilds the lifter mesh and its muscle map into `viewer/assets/` from MakeHuman's CC0 assets (downloaded once into `.cache/makehuman`) and the app's body map. It takes about 20 s. Run it after changing the rig's joints or the body map, and commit what it writes.
 - `scripts/record.ts out.mp4 "ex=0&view=Angle"` records one rep as video on a clean white stage (lifter and equipment, no controls); needs `ffmpeg`. The `clean=1` hash gives the same stage in the browser.
 - `scripts/shot.ts out.png "ex=0&frame=60&view=Side&tab=Review&play=0"` screenshots the viewer in headless Chrome. The hash also takes `mode`, `fault`, `load`, and `speed`.
 

@@ -159,7 +159,8 @@ export function createBody(height = 1.78, mass = 80): Body {
       { name: "prot", axis: Y, sign: -s, limit: limit(-28, 25) },
       { name: "elev", axis: Z, sign: s, limit: limit(-10, 35) },
     ]);
-    add(`shoulder_${side}`, `clavicle_${side}`, [s * 0.165, 0, -0.03], "ball");
+    // The glenohumeral joint sits below the sternoclavicular joint, so a hanging arm doesn't read as a shrug.
+    add(`shoulder_${side}`, `clavicle_${side}`, [s * 0.165, -0.026, -0.03], "ball");
     add(`elbow_${side}`, `shoulder_${side}`, [0, -0.331, 0], "hinge", [
       { name: "flex", axis: X, sign: -1, limit: limit(0, 150) },
     ]);

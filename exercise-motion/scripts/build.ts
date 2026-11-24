@@ -159,11 +159,20 @@ const fill = (page: string, slot: string, value: string) => {
   return page.replace(slot, () => value);
 };
 const json = JSON.stringify(data).replaceAll("</", "<\\/");
+const asset = async (name: string) =>
+  Buffer.from(await Bun.file(join(root, "viewer/assets", name)).arrayBuffer()).toString("base64");
+const lifter = await asset("lifter.bin");
+const muscleMap = await asset("muscle-map.png");
+const slots: [string, string][] = [
+  ["__DATA__", json],
+  ["__LIFTER__", lifter],
+  ["__MUSCLE_MAP__", muscleMap],
+  ["/*SCRIPT*/", script],
+];
 const page = async (layout: string) =>
-  fill(
-    fill(fill(template, "/*STYLE*/", (await css("style")) + (await css(layout))), "__DATA__", json),
-    "/*SCRIPT*/",
-    script,
+  slots.reduce(
+    (html, [slot, value]) => fill(html, slot, value),
+    fill(template, "/*STYLE*/", (await css("style")) + (await css(layout))),
   );
 const html = await page("page");
 await Bun.write(join(dist, "exercise-motion-embed.html"), await page("embed"));
