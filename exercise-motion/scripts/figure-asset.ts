@@ -33,7 +33,6 @@ const SHAPE: [string, number][] = [
   ["measure/measure-waist-circ-decr", 0.4],
   ["measure/measure-neck-circ-incr", 0.6],
   ["stomach/stomach-tone-incr", 1],
-  ["buttocks/buttocks-volume-incr", 0.3],
   // MakeHuman's upper arm is short for its height. Lengthening it here keeps the fit to the rig from stretching it.
   ["measure/measure-upperarm-length-incr", 1],
 ];

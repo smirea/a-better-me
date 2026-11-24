@@ -21,6 +21,19 @@ const REGULARIZATION = 0.01;
  */
 const SECONDARY_MOTION = /\.(rot|twist|dev|pron)$/;
 const SECONDARY_WEIGHT = 0.15;
+/**
+ * Muscles don't switch off when their joint's net torque points the other way: the antagonists co-contract to
+ * stiffen the joint, at about this share of the agonists' activation (in squats the hamstrings run at roughly a
+ * fifth of the quadriceps). The agonists then work harder to overcome them.
+ */
+const COACTIVATION = 0.15;
+/**
+ * A braced core: the abdominals hold intra-abdominal pressure that rises with what the back extensors carry. Squats
+ * and deadlifts put rectus abdominis around a tenth and the obliques around a fifth to a third of their maximum.
+ */
+const BRACE = { abs: { floor: 0.06, perBack: 0.25 }, obliques: { floor: 0.1, perBack: 0.4 } };
+/** Muscle activation rises over about 40 ms and decays over about 80 ms (Zajac, 1989). */
+const ACTIVATION_TIME = { rise: 0.04, fall: 0.08 };
 
 interface Force {
   joint: number;
@@ -141,6 +154,7 @@ export function analyze(
   const unmet: { dof: string; fraction: number }[][] = [];
   const demandsOut: Record<string, number>[] = [];
   const levels = new Float64Array(ACTUATORS.length);
+  const floor = new Float64Array(ACTUATORS.length);
   const torque = body.joints.map(() => new Vector3());
   const arm = new Vector3();
   const moment = new Vector3();
@@ -217,7 +231,10 @@ export function analyze(
       set(`grip_${side}`, load.grip === "hang" ? pull : 0.2 * pull);
     });
 
-    solveActivations(columns, a, demand, dofWeight, levels);
+    floor.fill(0);
+    solveActivations(columns, a, demand, dofWeight, levels, floor);
+    coactivate(columns, demand, levels, floor, sequence.support.brace ?? false);
+    solveActivations(columns, a, demand, dofWeight, levels, floor);
 
     const residual = Float64Array.from(demand, (value) => -value);
     columns.forEach((column, i) => {
@@ -251,6 +268,11 @@ export function analyze(
     tendon.push(ten);
   }
 
+  smoothActivation(activation, sequence.fps);
+  activation.forEach((act, f) => {
+    for (let k = 0; k < act.length; k++) tendon[f][k] = act[k] + passiveForce(stretch[f][k]);
+  });
+
   const peak = {} as Analysis["peak"];
   MUSCLES.forEach((muscle, m) => {
     const top = (rows: Float32Array[]) =>
@@ -277,6 +299,7 @@ function solveActivations(
   demand: Float64Array,
   weight: number[],
   levels: Float64Array,
+  floor: Float64Array,
 ) {
   const capacity = columns.map((column) =>
     column.map(({ entry }) => entry.capacity * (entry.scale?.(angles) ?? 1)),
@@ -295,7 +318,7 @@ function solveActivations(
       columns[i].forEach(
         ({ index }, k) => (gradient += weight[index] * capacity[i][k] * residual[index]),
       );
-      const next = clamp(levels[i] - gradient / curvature[i], 0, 1);
+      const next = clamp(levels[i] - gradient / curvature[i], floor[i], 1);
       const delta = next - levels[i];
       if (delta === 0) continue;
       levels[i] = next;
@@ -303,6 +326,56 @@ function solveActivations(
       moved = Math.max(moved, Math.abs(delta));
     }
     if (moved < 1e-6) break;
+  }
+}
+
+/** Sets each actuator's lowest activation from its antagonists' and, when the lifter braces, the back's. */
+function coactivate(
+  columns: Column[],
+  demand: Float64Array,
+  levels: Float64Array,
+  floor: Float64Array,
+  brace: boolean,
+) {
+  const agonist = new Float64Array(demand.length);
+  columns.forEach((column, i) => {
+    for (const { index, entry } of column) {
+      if (entry.capacity * demand[index] > 0) agonist[index] = Math.max(agonist[index], levels[i]);
+    }
+  });
+  let back = 0;
+  columns.forEach((column, i) => {
+    for (const { index, entry } of column) {
+      if (entry.capacity * demand[index] < 0)
+        floor[i] = Math.max(floor[i], COACTIVATION * agonist[index]);
+    }
+    if (ACTUATORS[i].muscle === "lower_back") back = Math.max(back, levels[i]);
+  });
+  if (!brace) return;
+  ACTUATORS.forEach((actuator, i) => {
+    const rule =
+      actuator.muscle === "abs"
+        ? BRACE.abs
+        : actuator.muscle === "obliques"
+          ? BRACE.obliques
+          : null;
+    if (rule) floor[i] = Math.max(floor[i], Math.min(1, rule.floor + rule.perBack * back));
+  });
+}
+
+/** First-order activation dynamics over the looping rep, so effort ramps the way a muscle can, not frame to frame. */
+function smoothActivation(rows: Float32Array[], fps: number) {
+  const dt = 1 / fps;
+  const state = Float32Array.from(rows[rows.length - 1]);
+  // Two laps settle the loop, so the first frame follows on from the last.
+  for (let lap = 0; lap < 2; lap++) {
+    for (const row of rows) {
+      for (let k = 0; k < row.length; k++) {
+        const tau = row[k] > state[k] ? ACTIVATION_TIME.rise : ACTIVATION_TIME.fall;
+        state[k] += (row[k] - state[k]) * (1 - Math.exp(-dt / tau));
+        if (lap === 1) row[k] = state[k];
+      }
+    }
   }
 }
 

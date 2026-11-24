@@ -86,6 +86,9 @@ let body: Body;
 let sequence: Sequence;
 let kin: Kinematics;
 let analysis: Analysis;
+/** The figure's colour is effort relative to the rep's hardest-working muscle, so a light weight still reads. */
+let engagement = new Float32Array(0);
+let hardest = 1;
 let issues: Issue[] = [];
 let figure: Figure;
 
@@ -191,6 +194,9 @@ const fitDistance = () =>
 
 function reanalyze() {
   analysis = analyze(body, sequence, kin, state.loadKg);
+  // A floor keeps an easy rep from painting a trivial effort at full colour.
+  hardest = Math.max(0.3, ...Object.values(analysis.peak).map((peak) => peak.activation));
+  engagement = new Float32Array(analysis.activation[0].length);
   // The weight changes the plates and dumbbell heads, so what clips is checked again at the weight on screen.
   const loaded = { ...sequence, loadKg: state.loadKg };
   issues = [...validateMotion(body, loaded, kin), ...validateLoad(loaded, analysis)];
@@ -450,7 +456,7 @@ function renderPanel() {
     .join("");
   $("legend").innerHTML =
     state.mode === "Engagement"
-      ? `<span>At rest</span><i style="background:linear-gradient(90deg,#5b5b60,#276ef1)"></i><span>All it has</span>`
+      ? `<span>At rest</span><i style="background:linear-gradient(90deg,#5b5b60,#276ef1)"></i><span>Hardest this rep</span>`
       : `<span>Slack</span><i style="background:linear-gradient(90deg,#5b5b60,#f0883a)"></i><span>End of range</span>`;
   lastShown = -1;
 }
@@ -483,10 +489,15 @@ function draw(now: number) {
   frameA.value ??= newFrame(body);
   figure.pose(fk(body, pose.value, frameA.value));
   const shown = Math.round(state.frame) % count;
-  figure.tint(
-    state.mode === "Engagement" ? analysis.activation[shown] : analysis.stretch[shown],
-    state.mode === "Engagement" ? ENGAGE : STRETCH,
-  );
+  if (state.mode === "Engagement") {
+    for (let k = 0; k < engagement.length; k++) {
+      const a = analysis.activation[i][k];
+      engagement[k] = (a + (analysis.activation[j][k] - a) * t) / hardest;
+    }
+    figure.tint(engagement, ENGAGE);
+  } else {
+    figure.tint(analysis.stretch[shown], STRETCH);
+  }
   props.children.forEach((group, p) => {
     const a = sequence.propStates[i][p];
     const b = sequence.propStates[j][p];

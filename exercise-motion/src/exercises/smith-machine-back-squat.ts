@@ -102,7 +102,12 @@ export const smithMachineBackSquat: ExerciseSpec = {
       equipment: ({ end }) => smithMachine({ stopY: end[barHeight] - 0.05 }),
       loads: [{ anchor: "traps", share: 1, grip: "rest" }],
       // The hands only steady the bar, which carries the arms' weight.
-      support: { kind: "standing", rail: true, passive: ["shoulder", "elbow", "forearm", "wrist"] },
+      support: {
+        kind: "standing",
+        rail: true,
+        passive: ["shoulder", "elbow", "forearm", "wrist"],
+        brace: true,
+      },
       tempo: { lower: 2, bottom: 0.3, raise: 1.5, top: 0.8 },
       contacts: {
         // The bar beds into the traps and the rear delts.
