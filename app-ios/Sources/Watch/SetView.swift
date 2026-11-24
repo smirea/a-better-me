@@ -41,8 +41,15 @@ struct SetView: View {
                     $crown, from: 0, through: Double(max(scale.count - 1, 0)), by: 1,
                     sensitivity: .medium, isContinuous: false, isHapticFeedbackEnabled: true
                 )
-                if let plan {
-                    PlateLine(plan: plan, unit: workout.unit)
+                if let plan, let plates {
+                    HStack(spacing: 6) {
+                        if plates.togglesBase, let baseID = plates.baseID {
+                            BarToggle(counts: plates.countsBase, isBar: plates.isBar) {
+                                WatchModel.shared.act(.countBase(baseID: baseID, counts: !plates.countsBase))
+                            }
+                        }
+                        PlateLine(plan: plan, unit: workout.unit, size: SetMetrics.isCompact ? 13 : 14)
+                    }
                 }
             }
             Spacer(minLength: 4)
@@ -54,7 +61,11 @@ struct SetView: View {
         .onChange(of: row.id) { load() }
         .onChange(of: focus) { syncCrown() }
         .onChange(of: values.weightKg) { updatePlan() }
-        .onChange(of: plates) { updatePlan() }
+        .onChange(of: plates) {
+            updatePlan()
+            // The bar button changes the loadable weights under the crown, which would otherwise jump from its old index.
+            syncCrown()
+        }
         .onChange(of: crown) { _, crown in
             let index = min(max(Int(crown.rounded()), 0), scale.count - 1)
             guard index != crownIndex, scale.indices.contains(index) else { return }
@@ -118,9 +129,7 @@ struct SetView: View {
         syncCrown()
     }
 
-    private var plates: WatchPlates? {
-        fields.contains(.weight) ? workout.exercise(item.exerciseID).plates : nil
-    }
+    private var plates: LivePlates? { row.plates }
 
     private func updatePlan() {
         let next = plates?.plan(weightKg: values.weightKg, unit: workout.unit)
@@ -178,26 +187,6 @@ enum SetMetrics {
     /// How far the page runs into the bottom safe area. From 45 mm up it reserves about 35 pt for the page dots, twice
     /// what they need; on smaller screens it is already tight.
     static let bottomOverhang: CGFloat = isCompact ? 0 : 14
-}
-
-/// The plates for the shown weight, as the phone's calculator reads them: "45 10 5 + 13 bar", then how far off the
-/// plates fall when they can't load it exactly.
-struct PlateLine: View {
-    let plan: PlatePlan
-    let unit: WeightUnit
-
-    var body: some View {
-        let miss = plan.miss(unit: unit.rawValue)
-        HStack(spacing: 4) {
-            Text(plan.legend).foregroundStyle(Theme.textPrimary)
-            if let miss { Text(miss).foregroundStyle(Theme.amber) }
-        }
-        .font(AppFont.number(SetMetrics.isCompact ? 13 : 14))
-        .lineLimit(1)
-        .minimumScaleFactor(0.6)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Plates \(plan.legend)\(miss.map { ", \($0)" } ?? "")")
-    }
 }
 
 /// A superset or circuit member's letter, A for the first.
@@ -338,5 +327,38 @@ extension SetType {
         case .failure: Theme.destructive
         default: Theme.accent
         }
+    }
+}
+
+/// Whether the plate math counts the bar (or a machine's base), the watch's tap on the phone calculator's struck-through
+/// bar. It writes the same setting for that machine in the session's gym, so both devices follow it. A barbell drawn
+/// like the calculator's sleeve, lit while the bar counts.
+struct BarToggle: View {
+    let counts: Bool
+    let isBar: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 1.5) {
+                plate(9)
+                plate(13)
+                Rectangle().frame(width: 9, height: 2)
+                plate(13)
+                plate(9)
+            }
+            .foregroundStyle(counts ? Theme.textPrimary : Theme.textTertiary)
+            .frame(width: 40, height: SetMetrics.isCompact ? 20 : 24)
+            .background(counts ? Theme.accent.opacity(0.32) : Theme.surfaceRaised, in: .capsule)
+            .contentShape(.capsule)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isBar ? "Bar" : "Base")
+        .accessibilityValue(counts ? "Counted" : "Left out")
+        .accessibilityHint(counts ? "Leaves it out so the plates make the weight" : "Counts it again")
+    }
+
+    private func plate(_ height: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: 1).frame(width: 2.5, height: height)
     }
 }

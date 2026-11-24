@@ -31,6 +31,11 @@ enum Loading: Hashable, Sendable {
             return totals
         }
     }
+
+    /// The watch's Digital Crown steps: every total up to a ceiling no lift reaches, in kilograms.
+    func loadableKg(unit: WeightUnit) -> [Double] {
+        totals(upTo: unit == .kg ? 500 : 1100, limit: 400).map(unit.toKg)
+    }
 }
 
 struct PlateLoading: Hashable, Sendable {
@@ -183,6 +188,12 @@ struct PlatePlan: Equatable, Sendable {
     }
 
     var plateLabels: [String] { perSide.map(NumberText.plain) }
+
+    /// The legend where it can't be struck through, as in a notification or for VoiceOver: "45 5, 13 bar left out".
+    var text: String {
+        let legend = legend.isEmpty ? nil : legend
+        return [legend, ignoredBaseLabel.map { "\($0) left out" }].compactMap(\.self).joined(separator: ", ")
+    }
 
     /// "5 lb short" when the plates can't reach the target, "45 lb over" when the bar alone is past it, nil when they
     /// load it exactly.

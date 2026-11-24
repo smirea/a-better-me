@@ -97,6 +97,7 @@ final class WatchModel: NSObject {
         case .log: WKInterfaceDevice.current().play(.success)
         case .skip: WKInterfaceDevice.current().play(.directionUp)
         case .finish: WKInterfaceDevice.current().play(.stop)
+        case .countBase: WKInterfaceDevice.current().play(.click)
         case .discard:
             recording?.discard()
             recording = nil

@@ -320,7 +320,7 @@ extension WatchEvent.Kind {
     /// The command a watch event asks the phone for; nil for a start or a discard, which act on the session itself.
     var command: LiveWorkoutCommand? {
         switch self {
-        case .start, .discard: nil
+        case .start, .discard, .countBase: nil
         case .log(let rowID, let values): .log(rowID: rowID, values: values)
         case .unlog(let rowID): .unlog(rowID: rowID)
         case .skip(let rowID): .skip(rowID: rowID)

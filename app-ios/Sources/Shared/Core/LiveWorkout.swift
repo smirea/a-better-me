@@ -87,6 +87,21 @@ struct LiveSet: Codable, Hashable, Sendable, Identifiable {
     var target: String?
     /// Last time's log of this row, "135 lb · 8".
     var previous: String?
+    /// Set for plate-loaded equipment, so every surface lists the plates for `values` as the phone's calculator does.
+    var plates: LivePlates? = nil
+}
+
+extension LiveSet {
+    func platePlan(unit: WeightUnit) -> PlatePlan? {
+        plates?.plan(weightKg: values.weightKg, unit: unit)
+    }
+
+    /// What the rest notification says comes next: "Smith Machine Back Squat · 100 lb · 8", then its plates.
+    func restNotificationBody(unit: WeightUnit) -> String {
+        let values = values.summary(unit: unit)
+        let set = values.isEmpty ? exerciseName : "\(exerciseName) · \(values)"
+        return [set, platePlan(unit: unit)?.text].compactMap(\.self).joined(separator: "\n")
+    }
 }
 
 struct LiveValues: Codable, Hashable, Sendable {

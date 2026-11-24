@@ -12,7 +12,7 @@ struct WatchWorkout: Codable, Hashable, Sendable {
         /// unit's plate increment.
         var loadableWeightsKg: [Double] = []
         /// Set for plate-loaded equipment (bars, the Smith machine, plate machines), so the set screen lists the plates.
-        var plates: WatchPlates?
+        var plates: LivePlates?
     }
 
     var sessionID: UUID
@@ -60,6 +60,9 @@ struct WatchEvent: Codable, Hashable, Sendable, Identifiable {
         case resume
         case finish
         case discard
+        /// The plate calculator counts the bar or machine `baseID` in the session's gym, or leaves it out, as tapping the
+        /// bar on the phone's calculator does.
+        case countBase(baseID: EquipmentID, counts: Bool)
     }
 
     var id = UUID()
@@ -104,13 +107,15 @@ extension WatchWorkout {
             id: rowID, catalogID: item.exerciseID, exerciseName: info.name,
             position: SessionFlow.subtitle(for: (path.block, path.exercise), set: path.set, in: blocks),
             setType: set.type, isSubRow: path.sub != nil, fields: info.fields, values: values,
-            target: blocks.target(at: path).flatMap { $0.summary(unit: unit) }, previous: previous[rowID].map { $0.summary(unit: unit) }
+            target: blocks.target(at: path).flatMap { $0.summary(unit: unit) }, previous: previous[rowID].map { $0.summary(unit: unit) },
+            plates: info.fields.contains(.weight) ? info.plates : nil
         )
     }
 
     /// Applies one event. A row that is gone, or already in the state the event asks for, is left alone.
     mutating func apply(_ event: WatchEvent) {
         let at = event.at
+        if case .countBase(let baseID, let counts) = event.kind { return count(base: baseID, counts) }
         guard let command = event.kind.command else { return }
         switch command {
         case .log, .unlog, .skip, .addSet:
@@ -152,6 +157,16 @@ extension WatchWorkout {
             if pausedAt != nil { apply(WatchEvent(sessionID: sessionID, at: at, kind: .resume)) }
             endedAt = at
             rest = nil
+        }
+    }
+
+    /// Every exercise on that bar or machine loads with it counted or left out, and its crown steps through the totals
+    /// that loads, as the phone rebuilds them from the changed setting.
+    private mutating func count(base baseID: EquipmentID, _ counts: Bool) {
+        for (id, exercise) in exercises where exercise.plates?.baseID == baseID {
+            guard let plates = exercise.plates?.counting(base: counts), plates != exercise.plates else { continue }
+            exercises[id]?.plates = plates
+            exercises[id]?.loadableWeightsKg = Loading.plates(plates.loading).loadableKg(unit: unit)
         }
     }
 

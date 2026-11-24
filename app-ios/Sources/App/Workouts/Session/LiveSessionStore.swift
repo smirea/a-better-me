@@ -52,6 +52,11 @@ final class LiveSessionStore {
     private var alerts = RestSettings()
 
     private static let notificationID = "rest-timer"
+    /// The set the rest leads to and its plates, which the rest notification names. `LiveWorkoutController` keeps it
+    /// current, and a change while a rest runs replaces the pending notification.
+    @ObservationIgnored var restNotificationBody: String? {
+        didSet { if restNotificationBody != oldValue, let rest { scheduleNotification(at: rest.endsAt) } }
+    }
 
     func startRest(seconds: Int, alerts: RestSettings, from start: Date = .now) {
         let next = LiveRest.afterLogging(TimeInterval(seconds), at: start, now: .now, replacing: rest)
@@ -142,7 +147,7 @@ final class LiveSessionStore {
             guard (try? await center.requestAuthorization(options: [.alert, .sound])) == true, rest?.endsAt == date else { return }
             let content = UNMutableNotificationContent()
             content.title = "Rest is over"
-            content.body = "Time for your next set."
+            content.body = restNotificationBody ?? "Time for your next set."
             content.sound = alerts.playSound ? .default : nil
             let interval = max(1, date.timeIntervalSinceNow)
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)

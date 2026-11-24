@@ -94,6 +94,7 @@ final class LiveWorkoutController {
             Task { @MainActor in self?.track() }
         }
         if next != status { status = next }
+        live.restNotificationBody = next.flatMap { status in status.current?.restNotificationBody(unit: status.unit) }
     }
 
     private func trackWatch() {
@@ -148,7 +149,7 @@ final class LiveWorkoutController {
                     exercises[item.exerciseID] = WatchWorkout.Exercise(
                         name: exercise?.name ?? "Exercise", fields: SetField.fields(for: exercise).map(\.live),
                         loadableWeightsKg: loading.map { loadableWeights(of: $0, unit: unit) } ?? [],
-                        plates: loading?.plates.map { WatchPlates($0, offset: plateOffset(of: item.exerciseID, gym: gym)) }
+                        plates: livePlates(loading, of: item.exerciseID, gym: gym)
                     )
                 }
                 for set in item.sets {
@@ -181,6 +182,7 @@ final class LiveWorkoutController {
         guard let store, !acknowledgedWatchEvents.contains(event.id), !inFlightWatchEvents.contains(event.id),
               !unreflectedWatchEvents.contains(where: { $0.event.id == event.id }) else { return }
         if case .start(let plan) = event.kind { return startFromWatch(plan, event: event, in: store) }
+        if case .countBase(let baseID, let counts) = event.kind { return count(base: baseID, counts, for: event, in: store) }
         guard let session = inputs.session, session.id == event.sessionID else { return applyToStored(event, in: store) }
         if let command = event.kind.command {
             // The draft goes in before the write, so the copy that shows an unlogged row open already shows its values.
@@ -222,7 +224,7 @@ final class LiveWorkoutController {
             case .discard:
                 _ = try WorkoutSession.deleteOne(db, key: WorkoutSession.key(session.id))
                 return .applied
-            case .start, .select, .adjustRest, .skipRest:
+            case .start, .select, .adjustRest, .skipRest, .countBase:
                 break
             }
             if session != existing { try session.updateChanges(db, from: existing) }
@@ -240,6 +242,39 @@ final class LiveWorkoutController {
             }
             remember(event.id)
         }
+    }
+
+    /// The watch's bar button, which writes the choice the phone's calculator makes by tapping the bar, for the gym the
+    /// event's session resolves to. The gym is read in the write queue, behind the insert of a session the watch started
+    /// offline, and a session that isn't stored yet waits like any other event for it. The live session is acknowledged
+    /// once its rebuilt copy shows the change.
+    private func count(base baseID: EquipmentID, _ counts: Bool, for event: WatchEvent, in store: LocalStore) {
+        inFlightWatchEvents.insert(event.id)
+        let write = store.write { db -> GymLookup in
+            guard let session = try WorkoutSession.fetchOne(db, key: WorkoutSession.key(event.sessionID)) else { return .missing }
+            return .found(GymProfile.resolve(session.gymID, in: try GymProfile.all.fetch(db)))
+        }
+        Task {
+            let lookup = (try? await write.value) ?? .missing
+            inFlightWatchEvents.remove(event.id)
+            guard case .found(let gym) = lookup else {
+                if !deferredWatchEvents.contains(where: { $0.id == event.id }) { deferredWatchEvents.append(event) }
+                return
+            }
+            guard let gym else { return remember(event.id) }
+            store.updateSettings { $0.workout.plateCalculator[gym.id.uuidString, default: PlateCalculatorOptions()].includeBase[baseID] = counts }
+            if inputs.session?.id == event.sessionID {
+                unreflectedWatchEvents.append((event, .now))
+                scheduleAcknowledgmentRetry()
+            } else {
+                remember(event.id)
+            }
+        }
+    }
+
+    private enum GymLookup: Sendable {
+        case missing
+        case found(GymProfile?)
     }
 
     private enum StoredOutcome: Sendable {
@@ -320,9 +355,15 @@ final class LiveWorkoutController {
     private func loadableWeights(of loading: Loading, unit: WeightUnit) -> [Double] {
         let key = LoadableKey(loading: loading, unit: unit)
         if let cached = loadableKg[key] { return cached }
-        let kg = loading.totals(upTo: unit == .kg ? 500 : 1100, limit: 400).map(unit.toKg)
+        let kg = loading.loadableKg(unit: unit)
         loadableKg[key] = kg
         return kg
+    }
+
+    /// What every surface off the phone's screen runs the calculator on. The base toggles only with a gym to keep the
+    /// choice in, as on the phone.
+    private func livePlates(_ loading: Loading?, of exerciseID: ExerciseID, gym: GymProfile?) -> LivePlates? {
+        loading?.plates.map { LivePlates($0, offset: plateOffset(of: exerciseID, gym: gym), togglesBase: (gym ?? inputs.gym) != nil) }
     }
 
     /// The editor's calculator offset for the exercise, where the session's gym turns Offset Weight on.
@@ -340,6 +381,7 @@ final class LiveWorkoutController {
         let item = blocks[path.block].exercises[path.exercise]
         let set = item.sets[path.set]
         let exercise = catalog.exercise(item.exerciseID)
+        let fields = SetField.fields(for: exercise).map(\.live)
         let previous = previousSets[item.exerciseID] ?? []
         return LiveSet(
             id: blocks.rowID(at: path),
@@ -348,10 +390,11 @@ final class LiveWorkoutController {
             position: SessionFlow.subtitle(for: (path.block, path.exercise), set: path.set, in: blocks),
             setType: set.type,
             isSubRow: path.sub != nil,
-            fields: SetField.fields(for: exercise).map(\.live),
+            fields: fields,
             values: LiveValues(entry(path, in: blocks, previous: previous)),
             target: blocks.target(at: path).flatMap { $0.summary(unit: unit) },
-            previous: SessionFlow.previousLog(for: path, in: blocks, previous: previous).map { SessionEditor.summary(of: $0, unit: unit) }
+            previous: SessionFlow.previousLog(for: path, in: blocks, previous: previous).map { SessionEditor.summary(of: $0, unit: unit) },
+            plates: fields.contains(.weight) ? livePlates(loading(for: item, catalog: catalog, gym: nil), of: item.exerciseID, gym: nil) : nil
         )
     }
 
@@ -512,6 +555,8 @@ extension WatchEvent {
         case .pause: return workout.pausedAt != nil
         case .resume: return workout.pausedAt == nil
         case .adjustRest, .skipRest: return true
+        case .countBase(let baseID, let counts):
+            return workout.exercises.values.allSatisfy { $0.plates?.baseID != baseID || $0.plates?.countsBase == counts }
         case .finish, .discard: return workout.endedAt != nil
         }
     }
