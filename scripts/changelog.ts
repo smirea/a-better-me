@@ -51,8 +51,11 @@ const shippedPrefixes = [
 	'shared/',
 ];
 
+/** Generated env-manager tooling that happens to sit inside shipped folders. */
+const nonShippedPatterns = [/\.test\.tsx?$/, /(?:^|\/)env\.ts$/, /^app-ios\/Config\/check-env\.sh$/];
+
 export function isShipped(path: string): boolean {
-	return shippedPrefixes.some(prefix => path.startsWith(prefix)) && !/\.test\.tsx?$/.test(path);
+	return shippedPrefixes.some(prefix => path.startsWith(prefix)) && !nonShippedPatterns.some(re => re.test(path));
 }
 
 function parseEntry(name: string, text: string): Entry {

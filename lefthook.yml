@@ -29,7 +29,7 @@ pre-commit:
             run: bun scripts/check-generated.ts
           - name: swift-lint
             glob: '*.swift'
-            run: bun app-ios/scripts/lint-swift.ts
+            run: bun app-ios/scripts/lint-swift.ts {staged_files}
           # Core's tests run on the Mac with no simulator (app-ios/Package.swift). The first run in a new worktree also
           # resolves and compiles the packages.
           - name: swift-test

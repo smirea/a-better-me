@@ -99,6 +99,9 @@ test('tests, docs, and tooling need no entry', () => {
 	const base = git('rev-parse', 'HEAD');
 	write('app-ios/Tests/Nutrition/RuleTests.swift', 'import Testing\n');
 	write('server/src/sync.test.ts', 'test\n');
+	write('server/src/env.ts', 'export default {};\n');
+	write('app-web/src/env.ts', 'export default {};\n');
+	write('app-ios/Config/check-env.sh', '#!/bin/sh\n');
 	write('scripts/tool.ts', 'tool\n');
 	write('AGENTS.md', 'rules\n');
 	commit('tooling');
