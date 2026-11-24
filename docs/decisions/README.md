@@ -7,6 +7,7 @@ A Better Me's concepts, goals, paradigms, and high-level system decisions, one f
 - [Environment](environment.md): env-manager, the `dev` and `prod` environments, worktree overrides, and failing early on missing settings.
 - [Workflow](workflow.md): threads, PRs, worktrees, git hooks, and which tests run where.
 - [Workouts](workouts.md): milestone scope, the exercise catalog source, the workout domain model, and feature ownership.
+- [Exercise motion](exercise-motion.md): the generator for 3D exercise animations, how a rep is solved from an exercise's instructions, the muscle and tendon model and its limits, the flags and the fault tests behind them, and what it defers.
 - [iOS](ios.md): platform targets, SwiftData persistence, the design system, code layout, and verification.
 - [Design language](design.md): priority order and high-level UI principles (comprehension and primary-task speed over minimalism, signal-to-noise copy with progressive disclosure, flat grouping with sibling-only separators, direct manipulation, purposeful color, tabular alignment, state persistence) and this app's patterns (surfaces, titles, toolbars, actions, stats, charts, bottom bars, and proportional verification).
 - [Nutrition](nutrition.md): the MacroFactor half, its navigation shell, food data sources and photo logging, the domain model and the log's snapshot rule, nutrient ids and the registry, the one settings tree and writing food to Apple Health, what is computed instead of stored, the MacroFactor import, supplements, and what it defers.
