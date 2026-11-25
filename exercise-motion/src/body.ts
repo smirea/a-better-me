@@ -1,5 +1,5 @@
 import { Euler, Quaternion, Vector3 } from "three";
-import { clamp, quatFromRotVec, rad, rotVecFromQuat, type Vec3 } from "./math";
+import { clamp, deg, quatFromRotVec, rad, rotVecFromQuat, type Vec3 } from "./math";
 
 export type Side = "L" | "R";
 export const SIDES: Side[] = ["L", "R"];
@@ -44,6 +44,8 @@ export interface Collider {
   rb: number;
   /** False for a collision-only stand-in, such as the part of the thigh that can reach the belly. */
   visible: boolean;
+  /** Another collider whose equipment contact allowances this one shares: the toes press into a footplate as the foot does. */
+  contactAs?: string;
 }
 
 export interface Anchor {
@@ -122,6 +124,19 @@ export function shoulderElevationLimit(planeDegrees: number) {
   return 30;
 }
 
+/** How far the sole sits under the ankle joint, measured on MakeHuman's foot. */
+const SOLE = 0.0735;
+/** Toe anchors in the ankle's frame on the left foot, on the sole: the toe pads, the big toe's tip, the second toe. */
+const TOE_ANCHORS: Record<string, Vec3> = {
+  toe: [-0.012, -0.071, 0.185],
+  toeTip: [-0.02, -0.068, 0.212],
+  secondToe: [-0.018, -0.071, 0.195],
+};
+/** The palm's contact plane, out from the wrist joint along the palm normal, measured on MakeHuman's hand. */
+export const PALM_PLANE = 0.029;
+/** The bar radius the grip anchors are placed for: a 29 mm bar. */
+export const GRIP_RADIUS = 0.0145;
+
 export function createBody(height = 1.78, mass = 80): Body {
   const k = height / 1.78;
   const joints: Joint[] = [];
@@ -168,7 +183,7 @@ export function createBody(height = 1.78, mass = 80): Body {
       { name: "pron", axis: Y, sign: -s, limit: limit(-85, 85) },
     ]);
     add(`wrist_${side}`, `forearm_${side}`, [0, -0.26, 0], "universal", [
-      { name: "flex", axis: Z, sign: -s, limit: limit(-70, 80) },
+      { name: "flex", axis: Z, sign: -s, limit: limit(-85, 80) },
       { name: "dev", axis: X, sign: -1, limit: limit(-30, 20) },
     ]);
   }
@@ -181,6 +196,16 @@ export function createBody(height = 1.78, mass = 80): Body {
     add(`ankle_${side}`, `knee_${side}`, [0, -0.438, 0], "universal", [
       { name: "dorsi", axis: X, sign: -1, limit: limit(-45, 35) },
       { name: "inv", axis: Z, sign: -s, limit: limit(-20, 30) },
+    ]);
+  }
+  // The toes come after every other joint so adding them left the earlier joints' degrees of freedom where they were.
+  for (const side of SIDES) {
+    const s = sideSign(side);
+    // The metatarsophalangeal break, at the midpoint of MakeHuman's first and fifth toe heads. Its axis runs through
+    // both heads, medial to lateral: the fifth sits 5 mm further back and 10 mm lower, so a heel rise rolls the foot
+    // slightly outward as it does on a real forefoot. Positive extension lifts the heel off toes that stay flat.
+    add(`toes_${side}`, `ankle_${side}`, [-s * 0.0055, -0.0438, 0.1393], "hinge", [
+      { name: "ext", axis: [s * 0.9883, -0.1303, -0.0703], sign: -s, limit: limit(-35, 75) },
     ]);
   }
 
@@ -203,7 +228,8 @@ export function createBody(height = 1.78, mass = 80): Body {
     seg(`hand_${side}`, `wrist_${side}`, [0, -0.07, 0], 0.006);
     seg(`thigh_${side}`, `hip_${side}`, [0, -0.436 * 0.433, 0], 0.1);
     seg(`shank_${side}`, `knee_${side}`, [0, -0.438 * 0.433, 0], 0.0465);
-    seg(`foot_${side}`, `ankle_${side}`, [0, -0.04, 0.06], 0.0145);
+    seg(`foot_${side}`, `ankle_${side}`, [0, -0.038, 0.05], 0.0125);
+    seg(`toes_${side}`, `toes_${side}`, [-sideSign(side) * 0.01, -0.012, 0.035], 0.002);
   }
 
   const colliders: Collider[] = [];
@@ -238,11 +264,16 @@ export function createBody(height = 1.78, mass = 80): Body {
     const s = sideSign(side);
     cap(`upperarm_${side}`, `shoulder_${side}`, [0, 0, 0], [0, -0.331, 0], 0.052, 0.04);
     cap(`forearm_${side}`, `elbow_${side}`, [0, 0, 0], [0, -0.26, 0], 0.042, 0.028);
-    cap(`hand_${side}`, `wrist_${side}`, [-s * 0.012, -0.03, 0], [-s * 0.012, -0.09, 0], 0.036);
+    // The palm, flush with its contact plane, so a hand flat on the floor or a bench sits on it rather than in it.
+    cap(`hand_${side}`, `wrist_${side}`, [-s * (PALM_PLANE - 0.023), -0.03, 0], [-s * (PALM_PLANE - 0.023), -0.095, 0], 0.023);
     cap(`thigh_${side}`, `hip_${side}`, [0, 0, 0], [0, -0.436, 0], 0.085, 0.058);
     cap(`thighShaft_${side}`, `hip_${side}`, [0, -0.16, 0], [0, -0.436, 0], 0.075, 0.058, false);
     cap(`shank_${side}`, `knee_${side}`, [0, 0, 0], [0, -0.438, 0], 0.056, 0.038);
-    cap(`foot_${side}`, `ankle_${side}`, [0, -0.034, -0.02], [0, -0.042, 0.17], 0.035, 0.027);
+    // The sole sits 73 mm under the ankle on MakeHuman's foot. The hindfoot capsule ends under the metatarsal heads
+    // and the forefoot rides the toes, a millimetre above the sole so flat toes never read as sunk into the floor.
+    cap(`foot_${side}`, `ankle_${side}`, [0, -0.037, -0.025], [-s * 0.004, -0.046, 0.125], 0.036, 0.027);
+    cap(`toes_${side}`, `toes_${side}`, [-s * 0.006, -0.01, 0.008], [-s * 0.014, -0.008, 0.064], 0.017, 0.013);
+    colliders[colliderIndex[`toes_${side}`]].contactAs = `foot_${side}`;
   }
 
   const anchors: Record<string, Anchor> = {};
@@ -269,10 +300,20 @@ export function createBody(height = 1.78, mass = 80): Body {
     anchor(`headSide_${side}`, "neck", [s * 0.095, 0.165, 0.02]);
     anchor(`frontRack_${side}`, "thoracic", [s * 0.155, 0.265, 0.095]);
     anchor(`shoulderTop_${side}`, "thoracic", [s * 0.17, 0.31, 0.01]);
-    // The palm faces the thigh in the neutral pose, so its normal points toward the midline.
-    anchor(`grip_${side}`, `wrist_${side}`, [-s * 0.022, -0.085, 0]);
-    anchor(`press_${side}`, `wrist_${side}`, [-s * 0.022, -0.045, 0]);
-    anchor(`palmFlat_${side}`, `wrist_${side}`, [-s * 0.02, -0.075, 0.015]);
+    // Measured on MakeHuman's hand: the palm faces the thigh in the neutral pose (local -sX), the fingers run down
+    // (-Y), and a bar held across the palm runs along Z, thumb side first. The palm's contact plane, which the heel
+    // of the hand and the pads under the knuckles both touch, sits `PALM_PLANE` out from the wrist joint.
+    // grip: the middle of a 29 mm bar closed in the fingers across the distal palm, pressing 2 mm into the skin.
+    anchor(`grip_${side}`, `wrist_${side}`, [-s * (PALM_PLANE + GRIP_RADIUS - 0.002), -0.092, 0]);
+    // press: the same bar seated low in the heel of the hand, as a bench press holds it: as near the wrist as the
+    // fingers still close around it, since MakeHuman's palm is rigid where a real one cups.
+    anchor(`press_${side}`, `wrist_${side}`, [-s * (PALM_PLANE + GRIP_RADIUS - 0.003), -0.066, 0]);
+    // palm: the centre of the flat palm's contact patch. knuckles: the pads under the knuckles. fingertips: the
+    // middle finger's pad when the fingers lie flat on the palm plane.
+    anchor(`palm_${side}`, `wrist_${side}`, [-s * PALM_PLANE, -0.07, 0]);
+    anchor(`knuckles_${side}`, `wrist_${side}`, [-s * PALM_PLANE, -0.108, 0]);
+    anchor(`fingertips_${side}`, `wrist_${side}`, [-s * PALM_PLANE, -0.2, 0.005]);
+    anchor(`palmFlat_${side}`, `wrist_${side}`, [-s * PALM_PLANE, -0.07, 0]);
     anchor(`elbowTip_${side}`, `elbow_${side}`, [0, 0, -0.044]);
     anchor(`forearmMid_${side}`, `elbow_${side}`, [0, -0.135, -0.036]);
     anchor(`upperArmBack_${side}`, `shoulder_${side}`, [0, -0.2, -0.048]);
@@ -285,11 +326,17 @@ export function createBody(height = 1.78, mass = 80): Body {
     anchor(`shinFront_${side}`, `knee_${side}`, [0, -0.34, 0.046]);
     anchor(`shinBack_${side}`, `knee_${side}`, [0, -0.34, -0.046]);
     anchor(`ankleCuff_${side}`, `ankle_${side}`, [0, 0.04, 0]);
-    anchor(`heel_${side}`, `ankle_${side}`, [0, -0.069, -0.05]);
-    anchor(`ballIn_${side}`, `ankle_${side}`, [-s * 0.04, -0.069, 0.13]);
-    anchor(`ballOut_${side}`, `ankle_${side}`, [s * 0.045, -0.069, 0.12]);
-    anchor(`toe_${side}`, `ankle_${side}`, [0, -0.069, 0.2]);
-    anchor(`secondToe_${side}`, `ankle_${side}`, [-s * 0.012, -0.069, 0.2]);
+    // The sole, from MakeHuman's foot: the heel pad and the skin under the first and fifth metatarsal heads ride the
+    // hindfoot; the toe pads and the tip of the second toe ride the toes.
+    anchor(`heel_${side}`, `ankle_${side}`, [0, -SOLE, -0.05]);
+    anchor(`ballIn_${side}`, `ankle_${side}`, [-s * 0.04, -SOLE, 0.14]);
+    anchor(`ballOut_${side}`, `ankle_${side}`, [s * 0.034, -SOLE, 0.134]);
+    const toes = joints[index[`toes_${side}`]].offset;
+    // forefoot: the sole straight under the toe joint, which is where the forefoot meets the floor whatever the toe break,
+    // as the metatarsal heads roll on it.
+    anchor(`forefoot_${side}`, `toes_${side}`, [0, -SOLE - toes.y / k, 0]);
+    for (const [name, [x, y, z]] of Object.entries(TOE_ANCHORS))
+      anchor(`${name}_${side}`, `toes_${side}`, [s * x - toes.x / k, y - toes.y / k, z - toes.z / k]);
   }
 
   return {
@@ -307,8 +354,8 @@ export function createBody(height = 1.78, mass = 80): Body {
       shank: 0.438 * k,
       upperArm: 0.331 * k,
       forearm: 0.26 * k,
-      ankleHeight: 0.069 * k,
-      hipHeight: 0.943 * k,
+      ankleHeight: SOLE * k,
+      hipHeight: (0.436 + 0.438 + SOLE) * k,
     },
   };
 }
@@ -436,9 +483,21 @@ const hint = (hints: PoseHints, joint: Joint, motion: string) => {
   return rad(hints[`${base}.${motion}`] ?? 0);
 };
 
+const hinted = (hints: PoseHints, joint: Joint, motion: string) =>
+  hints[`${joint.name}.${motion}`] !== undefined ||
+  (joint.side !== null && hints[`${joint.name.slice(0, -2)}.${motion}`] !== undefined);
+
+/**
+ * The collarbone's share of an arm lifted overhead, in degrees, by scapulohumeral rhythm: the shoulder girdle starts
+ * to rise past about 30° of arm elevation and has risen about 30° by the time the arm is overhead. Without it an arm
+ * at 170° turns entirely at the glenohumeral joint, which no shoulder can do, and the armpit's skin crumples.
+ */
+export const clavicleRhythm = (armElevation: number) => clamp(0.22 * (armElevation - 30), 0, 30);
+
 /**
  * A full pose from anatomical angles in degrees. A key without a side (`hip.flex`) applies to both sides. The root
- * takes `root.x`, `root.y`, `root.z` in metres and `root.pitch` in degrees, positive leaning forward.
+ * takes `root.x`, `root.y`, `root.z` in metres and `root.pitch` in degrees, positive leaning forward. A collarbone
+ * left unhinted follows its arm by `clavicleRhythm`.
  */
 export function makePose(body: Body, hints: PoseHints = {}): Float64Array {
   const q = new Float64Array(body.dofCount);
@@ -465,6 +524,10 @@ export function makePose(body: Body, hints: PoseHints = {}): Float64Array {
     }
     if (joint.kind === "hinge" || joint.kind === "universal") {
       joint.dofs.forEach((dof, n) => (q[i + n] = hint(hints, joint, dof.name)));
+      if (joint.name.startsWith("clavicle") && !hinted(hints, joint, "elev")) {
+        const arm = body.joints[body.index[`shoulder_${joint.side}`]];
+        q[i + joint.dofs.findIndex((dof) => dof.name === "elev")] = rad(clavicleRhythm(deg(hint(hints, arm, "elev"))));
+      }
       if (joint.name.startsWith("clavicle"))
         clavicle[joint.side!] = localRotation(joint, q, new Quaternion());
       continue;
@@ -557,8 +620,7 @@ export function selfCollisionPairs(body: Body): [number, number, number][] {
         pair(`hand_${side}`, `${leg}_${legSide}`);
       }
     }
-    pair(`hand_${side}`, `foot_L`);
-    pair(`hand_${side}`, `foot_R`);
+    for (const foot of ["foot", "toes"]) for (const footSide of SIDES) pair(`hand_${side}`, `${foot}_${footSide}`);
     pair(`hand_${side}`, `forearm_${other}`);
     pair(`hand_${side}`, `upperarm_${other}`);
     pair(`forearm_${side}`, `upperarm_${other}`);
@@ -566,11 +628,14 @@ export function selfCollisionPairs(body: Body): [number, number, number][] {
     pair(`thighShaft_${side}`, "abdomen", 0.04);
     pair(`thighShaft_${side}`, "chest", 0.02);
     pair(`shank_${side}`, `foot_${other}`);
+    pair(`shank_${side}`, `toes_${other}`);
+    pair(`foot_${side}`, `toes_${other}`, 0.005);
   }
   pair("hand_L", "hand_R");
   pair("forearm_L", "forearm_R");
   pair("thigh_L", "thigh_R", 0.03);
   pair("shank_L", "shank_R");
   pair("foot_L", "foot_R", 0.005);
+  pair("toes_L", "toes_R", 0.005);
   return pairs;
 }

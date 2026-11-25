@@ -80,12 +80,59 @@ const Y = new Vector3(0, 1, 0);
 const Z = new Vector3(0, 0, 1);
 const DOWN = new Vector3(0, -1, 0);
 
+/** Each vertex's strongest MakeHuman bone and that bone's share of it. */
+const dominant: { bone: string; weight: number }[] = Array.from({ length: positions.length / 3 }, () => ({ bone: "", weight: 0 }));
+{
+  const total = new Float64Array(positions.length / 3);
+  for (const list of Object.values(skeleton.weights)) for (const [v, w] of list) total[v] += w;
+  for (const [bone, list] of Object.entries(skeleton.weights)) {
+    for (const [v, w] of list) if (w / total[v] > dominant[v].weight) dominant[v] = { bone, weight: w / total[v] };
+  }
+}
+const vertex = (v: number) => new Vector3(positions[v * 3], positions[v * 3 + 1], positions[v * 3 + 2]);
+/** The body's vertices, not MakeHuman's joint helpers, that a bone matching `bones` carries at least `share` of. */
+const verticesOf = (bones: RegExp, share = 0.7) =>
+  used.flatMap((v) => (bones.test(dominant[v].bone) && dominant[v].weight >= share ? [vertex(v)] : []));
+
+/**
+ * The palm's contact plane: the plane, out of those near the palm's nominal facing, that the most of the palm's
+ * volar skin lies on, as the heel of the hand and the pads under the knuckles do when the hand lies flat. MakeHuman's
+ * rest thumb is held out in front of the palm, so the thumb's direction alone would turn the palm 26° too far forward.
+ */
+function palmPlane(side: Side, wrist: Vector3, hand: Vector3, thumb: Vector3) {
+  const e1 = hand.clone().normalize();
+  const e2 = thumb.clone().addScaledVector(e1, -thumb.dot(e1)).normalize();
+  const nominal = e1.clone().cross(e2).multiplyScalar(sideSign(side));
+  const palm = verticesOf(new RegExp(`^(wrist|metacarpal\\d)\\.${side}$`), 0.8)
+    .map((p) => p.sub(wrist))
+    .filter((p) => {
+      const along = p.dot(e1);
+      const across = p.dot(e2);
+      return along > 0.035 && along < 0.112 && across > -0.05 && across < 0.035;
+    });
+  if (palm.length < 40) throw new Error(`Only ${palm.length} palm vertices on the ${side} hand`);
+  const nearest = Math.floor(palm.length * 0.3);
+  let best = { gap: Infinity, normal: nominal, offset: 0 };
+  for (let a = -45; a <= 45; a++) {
+    for (let b = -30; b <= 30; b++) {
+      const normal = nominal.clone().applyAxisAngle(e2, (b * Math.PI) / 180).applyAxisAngle(e1, (a * Math.PI) / 180);
+      const offset = Math.max(...palm.map((p) => p.dot(normal)));
+      const gaps = palm.map((p) => offset - p.dot(normal)).sort((x, y) => x - y);
+      const gap = gaps.slice(0, nearest).reduce((sum, g) => sum + g, 0) / nearest;
+      if (gap < best.gap) best = { gap, normal, offset };
+    }
+  }
+  return best;
+}
+
 function arm(side: Side) {
   const shoulder = head(`upperarm01.${side}`);
   const elbow = head(`lowerarm01.${side}`);
   const wrist = head(`wrist.${side}`);
   const upper = elbow.clone().sub(shoulder);
   const fore = wrist.clone().sub(elbow);
+  const hand = tail(`metacarpal2.${side}`).sub(wrist);
+  const palm = palmPlane(side, wrist, hand, head(`finger1-2.${side}`).sub(wrist));
   return {
     shoulder,
     elbow,
@@ -93,10 +140,13 @@ function arm(side: Side) {
     upper,
     fore,
     hinge: fore.clone().normalize().cross(upper.clone().normalize()).normalize(),
-    hand: tail(`metacarpal2.${side}`).sub(wrist),
-    thumb: head(`finger1-2.${side}`).sub(wrist),
+    hand,
+    palm,
+    /** The axis a bar held across the palm runs along, thumb side first, as the rig's wrist and forearm Z. */
+    grip: palm.normal.clone().cross(hand).normalize().multiplyScalar(sideSign(side)),
   };
 }
+const arms = { L: arm("L"), R: arm("R") };
 
 interface Segment {
   /** Where the segment's joint sits on the MakeHuman body. */
@@ -112,7 +162,7 @@ const segments: Segment[] = [];
 const bind: Vector3[] = [];
 for (const joint of body.joints) {
   const s = joint.side ?? "L";
-  const limb = arm(s);
+  const limb = arms[s];
   const length = (child: string) => body.joints[body.index[child]].offset.length();
   let origin: Vector3;
   let rotation = new Quaternion();
@@ -137,11 +187,11 @@ for (const joint of body.joints) {
     stretch = length(`elbow_${s}`) / limb.upper.length();
   } else if (base === "elbow" || base === "forearm") {
     origin = limb.elbow;
-    rotation = base === "elbow" ? alignFrames(DOWN, X, limb.fore, limb.hinge) : alignFrames(DOWN, Z, limb.fore, limb.thumb);
+    rotation = base === "elbow" ? alignFrames(DOWN, X, limb.fore, limb.hinge) : alignFrames(DOWN, Z, limb.fore, limb.grip);
     stretch = length(`wrist_${s}`) / limb.fore.length();
   } else if (base === "wrist") {
     origin = limb.wrist;
-    rotation = alignFrames(DOWN, Z, limb.hand, limb.thumb);
+    rotation = alignFrames(DOWN, Z, limb.hand, limb.grip);
   } else if (base === "hip") {
     origin = head(`upperleg01.${s}`);
     const thigh = head(`lowerleg01.${s}`).sub(origin);
@@ -155,6 +205,12 @@ for (const joint of body.joints) {
   } else if (base === "ankle") {
     origin = head(`foot.${s}`);
     rotation = alignFrames(Z, Y, head(`toe3-1.${s}`).sub(origin).setY(0), Y);
+    axis = Z.clone();
+  } else if (base === "toes") {
+    // The toes turn about the rig's own toe joint, wherever that sits on the foot, so the forefoot never tears from it.
+    const ankle = segments[joint.parent];
+    rotation = ankle.rotation.clone();
+    origin = joint.offset.clone().applyQuaternion(rotation).add(ankle.origin);
     axis = Z.clone();
   } else {
     throw new Error(`No MakeHuman landmark for joint ${joint.name}`);
@@ -183,6 +239,10 @@ for (const side of SIDES) {
         side,
         position: [0, 0, 0],
         rotation: [0, 0, 0, 1],
+        length: 0,
+        tip: 0,
+        pad: 0,
+        back: 0,
       });
     }
   }
@@ -201,7 +261,8 @@ const JOINT_OF_BONE: [RegExp, string][] = [
   [/^(wrist|metacarpal\d)\.([LR])$/, "wrist_$2"],
   [/^(upperleg01|upperleg02)\.([LR])$/, "hip_$2"],
   [/^(lowerleg01|lowerleg02)\.([LR])$/, "knee_$2"],
-  [/^(foot|toe\d-\d)\.([LR])$/, "ankle_$2"],
+  [/^foot\.([LR])$/, "ankle_$1"],
+  [/^toe\d-\d\.([LR])$/, "toes_$1"],
 ];
 const jointOfBone = (bone: string) => {
   if (fingerJoint[bone] !== undefined) return fingerJoint[bone];
@@ -261,16 +322,59 @@ function retarget(point: Vector3, weights: Map<number, number>) {
   return out.divideScalar(total);
 }
 
+/**
+ * The way a thumb bone's pad faces: the thin axis of its cross-section, since the nail flattens it, turned toward the
+ * palm. MakeHuman's rest thumb is pronated about 45° from the fingers, so its pad faces the index finger as much as it
+ * faces out of the palm, and it flexes across the palm rather than into it.
+ */
+function thumbPad(side: Side, bone: string, palmPoint: Vector3) {
+  const start = head(bone);
+  const along = tail(bone).sub(start).normalize();
+  const section = verticesOf(new RegExp(`^${bone.replace(".", "\\.")}$`)).map((p) => {
+    const d = p.sub(start);
+    return d.addScaledVector(along, -d.dot(along));
+  });
+  const mean = section.reduce((sum, d) => sum.add(d), new Vector3()).divideScalar(section.length);
+  let wide = new Vector3(1, 0, 0).addScaledVector(along, -along.x).normalize();
+  for (let i = 0; i < 100; i++) {
+    const next = new Vector3();
+    for (const d of section) {
+      const c = d.clone().sub(mean);
+      next.addScaledVector(c, c.dot(wide));
+    }
+    wide = next.addScaledVector(along, -next.dot(along)).normalize();
+  }
+  const pad = along.clone().cross(wide).normalize();
+  return pad.dot(palmPoint.clone().sub(start)) < 0 ? pad.negate() : pad;
+}
+
 for (const bone of fingers) {
   const j = body.index[`wrist_${bone.side}`];
   const toRig = (p: Vector3) => p.sub(segments[j].origin).add(bind[j]);
   const start = toRig(head(bone.name));
   const along = toRig(tail(bone.name)).sub(start);
-  const limb = arm(bone.side);
-  const palm = limb.hand.clone().normalize().cross(limb.thumb.clone().normalize()).multiplyScalar(sideSign(bone.side));
-  const rotation = alignFrames(Y, X, along, along.clone().normalize().cross(palm));
+  const limb = arms[bone.side];
+  const palmPoint = limb.wrist.clone().addScaledVector(limb.hand.clone().normalize(), 0.08).addScaledVector(limb.palm.normal, 0.03);
+  const pad =
+    bone.finger === 1
+      ? thumbPad(bone.side, bone.segment === 1 ? `finger1-2.${bone.side}` : bone.name, palmPoint)
+      : limb.palm.normal.clone();
+  const y = along.clone().normalize();
+  // Local +X is the flexion axis, so flexing turns the bone toward its pad, local +Z.
+  const rotation = alignFrames(Y, X, along, y.clone().cross(pad));
   bone.position = start.toArray() as [number, number, number];
   bone.rotation = rotation.toArray() as [number, number, number, number];
+  bone.length = along.length();
+  // How far the pad and the back of the bone sit from its centre line, which is what wraps around a bar.
+  const own = verticesOf(new RegExp(`^${bone.name.replace(".", "\\.")}$`)).map((p) => p.sub(head(bone.name)));
+  const padDir = pad.clone().addScaledVector(y, -pad.dot(y)).normalize();
+  const reach = (dir: Vector3) => {
+    const spans = own.filter((p) => p.dot(y) > 0.2 * bone.length && p.dot(y) < 0.8 * bone.length).map((p) => p.dot(dir));
+    return spans.length > 4 ? Math.max(...spans) : 0.012;
+  };
+  bone.pad = reach(padDir);
+  bone.back = reach(padDir.clone().negate());
+  bone.tip = own.length ? Math.max(bone.length, ...own.map((p) => p.dot(y))) : bone.length;
 }
 
 // The body as a welded quad mesh on the rig, subdivided once for a smooth silhouette at close range.
@@ -323,9 +427,11 @@ const LANDMARKS: Record<string, [number, number]> = {
   knee: [115, 1350],
   ankle: [138, 1785],
 };
+// The drawing's palms face forward and a little out: 106° of supination from the forearm's neutral, where the palm
+// faces the thigh. Past the forearm's range, but this pose only places the muscle map.
 const labelPose = fk(
   body,
-  makePose(body, { "shoulder.elev": 11, "shoulder.plane": 0, "forearm.pron": -80, "elbow.flex": 2, "hip.abd": 2 }),
+  makePose(body, { "shoulder.elev": 11, "shoulder.plane": 0, "forearm.pron": -106, "elbow.flex": 2, "hip.abd": 2 }),
   newFrame(body),
 );
 const drawn = (joint: string): [number, number] => {
@@ -378,7 +484,7 @@ for (const joint of body.joints) {
         ? limb("elbow", "wrist")
         : base === "hip"
           ? limb("hip", "knee")
-          : base === "knee" || base === "ankle"
+          : base === "knee" || base === "ankle" || base === "toes"
             ? limb("knee", "ankle")
             : torso;
 }
@@ -570,4 +676,19 @@ await Bun.write(OUT, encodeLifter(asset));
 console.log(`${OUT}: ${count} vertices, ${indices.length / 3} triangles`);
 for (const name of ["shoulder", "elbow", "hip", "knee"]) {
   console.log(`${name} segment stretch ${segments[body.index[`${name}_L`]].stretch.toFixed(2)}`);
+}
+const mm = (metres: number) => `${(metres * 1000).toFixed(1)} mm`;
+for (const side of SIDES) {
+  const ankle = segments[body.index[`ankle_${side}`]];
+  const toAnkle = (p: Vector3) => p.clone().sub(ankle.origin).applyQuaternion(ankle.rotation.clone().invert());
+  const sole = Math.min(...verticesOf(new RegExp(`^(foot|toe\\d-\\d)\\.${side}$`), 0.5).map((p) => toAnkle(p).y));
+  const ball = toAnkle(head(`toe1-1.${side}`).add(head(`toe5-1.${side}`)).multiplyScalar(0.5));
+  const rigBall = body.joints[body.index[`toes_${side}`]].offset;
+  const limb = arms[side];
+  const wrist = segments[body.index[`wrist_${side}`]];
+  const normal = limb.palm.normal.clone().applyQuaternion(wrist.rotation.clone().invert());
+  console.log(
+    `${side}: standing sole ${mm(body.lengths.ankleHeight + sole)} off the floor; toe joint ${mm(ball.distanceTo(rigBall))} from MakeHuman's metatarsal heads; ` +
+      `palm plane ${mm(limb.palm.offset)} out along [${normal.toArray().map((c) => c.toFixed(3))}], ${mm(limb.palm.gap)} mean gap`,
+  );
 }

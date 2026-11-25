@@ -12,6 +12,8 @@ import {
 } from "./muscles";
 
 const G = 9.81;
+/** How far a heel can sit above the forefoot, in metres, before the foot counts as up on its toes. */
+const HEEL_RAISED = 0.02;
 /** Ligaments and the ribcage carry part of a hanging arm's weight before the upper traps have to. */
 const PASSIVE_SHOULDER_SUSPENSION = 0.4;
 const REGULARIZATION = 0.01;
@@ -429,18 +431,16 @@ function standOn(
     momentSum.add(m.crossVectors(point, force));
   }
   const activeFeet = sequence.support.feet?.length ? sequence.support.feet : SIDES;
+  const at = (name: string) => worldPoint(frame, body.anchors[name].joint, body.anchors[name].local);
   const feet = activeFeet.map((side) => {
-    const heel = worldPoint(
-      frame,
-      body.anchors[`heel_${side}`].joint,
-      body.anchors[`heel_${side}`].local,
-    );
-    const toe = worldPoint(
-      frame,
-      body.anchors[`toe_${side}`].joint,
-      body.anchors[`toe_${side}`].local,
-    );
-    return { side, heel, toe, x: (heel.x + toe.x) / 2 };
+    const toe = at(`toe_${side}`);
+    const forefoot = at(`forefoot_${side}`);
+    // A heel off the floor leaves the foot standing on its toe break, so the floor pushes on the forefoot, which the
+    // toes carry, and the support runs from there to the toe pads.
+    const raised = at(`heel_${side}`).y > forefoot.y + HEEL_RAISED;
+    const heel = raised ? forefoot : at(`heel_${side}`);
+    const joint = body.index[raised ? `toes_${side}` : `ankle_${side}`];
+    return { side, heel, toe, joint, x: (heel.x + toe.x) / 2 };
   });
   const zBack = Math.min(...feet.map((foot) => Math.min(foot.heel.z, foot.toe.z))) - 0.02;
   const zFront = Math.max(...feet.map((foot) => Math.max(foot.heel.z, foot.toe.z)));
@@ -466,7 +466,7 @@ function standOn(
   if (feet.length === 1) {
     const foot = feet[0];
     forces.push({
-      joint: body.index[`ankle_${foot.side}`],
+      joint: foot.joint,
       point: new Vector3(foot.x, 0, clamp(z, Math.min(foot.heel.z, foot.toe.z), Math.max(foot.heel.z, foot.toe.z))),
       force: total.clone().negate(),
       moment: new Vector3(),
@@ -475,7 +475,7 @@ function standOn(
   }
   const leftShare = clamp((copX - feet[1].x) / (feet[0].x - feet[1].x || 1e-6), 0, 1);
   const pushes = feet.map((foot, i) => ({
-    joint: body.index[`ankle_${foot.side}`],
+    joint: foot.joint,
     point: new Vector3(
       foot.x,
       0,

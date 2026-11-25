@@ -8,9 +8,19 @@ export interface FingerBone {
   finger: number;
   segment: number;
   side: Side;
-  /** Rest frame in the bind pose: the bone along local +Y, local +X the axis that curls it toward the palm. */
+  /**
+   * Rest frame in the bind pose: the bone along local +Y, local +X its flexion axis, local +Z the way its pad faces.
+   * The fingers' pads face out of the palm; the thumb's face across it, toward the index finger.
+   */
   position: [number, number, number];
   rotation: [number, number, number, number];
+  /** Metres from this bone's joint to the next one, or to the end of the bone for the last segment. */
+  length: number;
+  /** Metres from this bone's joint to the farthest skin along it: the fingertip, on the last segment. */
+  tip: number;
+  /** How far the skin of the pad, and of the back, sits from the bone's centre line, in metres. */
+  pad: number;
+  back: number;
 }
 
 /** The lifter's mesh in its bind pose, skinned to the rig's joints followed by the finger bones. */

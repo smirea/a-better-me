@@ -5,16 +5,26 @@ import type { PadSurface } from "./equipment-library";
 import { pointOnPad } from "./equipment-library";
 import type { FormCheck } from "./exercise";
 import { deg } from "./math";
-import { aim, pin, plantFoot, plantToe, restOnPlane, type Goal } from "./solver";
+import {
+  aim,
+  braceHandOnSurface,
+  gripBar,
+  pin,
+  plantFoot,
+  plantFootFlat,
+  plantToe,
+  restOnPlane,
+  type Goal,
+} from "./solver";
 import type { PoseHints } from "./body";
 
 /**
- * FK-verified starting hint poses for the 1.78 m body (`shank=0.438, ankleH=0.069 => knee-to-sole=0.507 m`,
+ * FK-verified starting hint poses for the 1.78 m body (`shank=0.438, ankleH=0.0735 => knee-to-sole=0.512 m`,
  * `pelvisBottom` sits ~0.085 m below hip joint so horizontal-thigh seated height with flat feet is `seatY ≈ 0.42–0.44 m`).
  */
 export const POSTURE_HINTS: Record<string, PoseHints> = {
   standing: {
-    "root.y": 0.943,
+    "root.y": 0.947,
     "root.z": 0,
     "root.pitch": 0,
     "hip.flex": 2,
@@ -93,6 +103,7 @@ export const POSTURE_HINTS: Record<string, PoseHints> = {
     "hip.abd": 5,
     "knee.flex": 4,
     "ankle.dorsi": 15,
+    "toes.ext": 60,
   },
   kneeling: {
     "root.y": 0.5,
@@ -208,6 +219,53 @@ export function sitOnSeat(
 /** Keeps both hands aimed horizontally along a bar (local +Z pointing inward along -s*X). */
 export function alignBarWrists(body: Body, weight = 3, sides: Side[] = SIDES): Goal[] {
   return sides.map((side) => aim(body, `wrist_${side}`, new Vector3(0, 0, 1), new Vector3(-sideSign(side), 0, 0), weight));
+}
+
+/**
+ * Plants both feet flat on a tilted footplate (leg press, hack squat), heels `along` metres up the plate from its
+ * origin and `stanceX` either side of the midline, toes turned out by `toeOutRad`.
+ */
+export function plantBothFeetOnPlate(
+  body: Body,
+  plate: PadSurface,
+  stanceX: number,
+  along: number,
+  toeOutRad = 0.2,
+  weight = 40,
+): Goal[] {
+  return SIDES.flatMap((side) =>
+    plantFootFlat(body, side, plate, pointOnPad(plate, along, 0, sideSign(side) * stanceX), toeOutRad, weight),
+  );
+}
+
+/** Both hands on one bar `halfWidth` either side of `center`, along `axis`, in the same grip. */
+export function gripBarBothHands(
+  body: Body,
+  center: Vector3,
+  axis: Vector3,
+  halfWidth: number,
+  style: "overhand" | "underhand" | "neutral",
+  weight = 40,
+): Goal[] {
+  const a = axis.clone().normalize();
+  if (a.x < 0) a.negate();
+  return SIDES.flatMap((side) =>
+    gripBar(body, side, center.clone().addScaledVector(a, sideSign(side) * halfWidth), a, style, weight),
+  );
+}
+
+/** Both hands braced flat `halfWidth` either side of `center` on a floor or pad, fingers along `fingers`. */
+export function braceBothHands(
+  body: Body,
+  surface: PadSurface | number,
+  center: Vector3,
+  halfWidth: number,
+  fingers: Vector3,
+  weight = 40,
+): Goal[] {
+  return SIDES.flatMap((side) =>
+    braceHandOnSurface(body, side, surface, center.clone().add(new Vector3(sideSign(side) * halfWidth, 0, 0)), fingers, weight),
+  );
 }
 
 /** Plants both forefeet (toes/balls) with heels raised (for push-ups, planks, mountain climbers). */
