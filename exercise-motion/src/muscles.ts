@@ -281,8 +281,12 @@ const STRETCH: Record<Muscle, StretchModel> = {
       0.022 * a[`elbow_${side}.flex`] + 0.012 * Math.max(0, a[`shoulder_${side}.flex`]),
     full: 0.022 * rad(150) + 0.012 * rad(170),
   },
+  // Extension stretches the flexors up to the wrist's 85° limit (a hand flat under a push-up); flexion ends at 70°.
   forearms: {
-    length: (a, side) => 0.015 * Math.abs(a[`wrist_${side}.flex`]),
+    length: (a, side) => {
+      const flex = a[`wrist_${side}.flex`];
+      return 0.015 * (flex >= 0 ? flex : (-flex * 70) / 85);
+    },
     full: 0.015 * rad(70),
   },
   neck: { length: (a) => 0.02 * Math.abs(a["neck.flex"]), full: 0.02 * rad(50) },
