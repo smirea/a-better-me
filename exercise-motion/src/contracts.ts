@@ -150,6 +150,11 @@ export interface CanonicalMachineInstance {
   pivots?: Record<string, PivotSpec>;
   hooks?: { pos: Vec3; safetyY?: number }[];
   glbState?: (frame: Frame, extras: number[], propStates: PropState[]) => GlbNodePose[][];
+  /**
+   * How far the drive pushed each numeric setting past the machine's limits this frame (0 inside them), always the same
+   * length. The machine clamps the motion itself, which leaves a solver no gradient back from a stop; this restores it.
+   */
+  driveExcess?: (frame: Frame, extras: number[], propStates: PropState[]) => number[];
   propState?: (frame: Frame, extras: number[], propStates?: PropState[]) => PropState[];
   cameraHint?: { view?: "Front" | "Back" | "Side" | "Angle" | "Top"; target?: Vec3 };
 }

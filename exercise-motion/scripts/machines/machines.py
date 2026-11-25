@@ -521,10 +521,12 @@ def leg_press_45():
     nrm = -d
     p0 = Vector((0, 0.86, -0.12))
     seat_j = Vector((0, 0.42, -0.42))
-    st = math.radians(18)
+    st = math.radians(24)
     seat_up = Vector((0, math.sin(st), math.cos(st)))
     seat_n = Vector((0, math.cos(st), -math.sin(st)))
-    ba = math.radians(42)
+    # Reclined well past 45°: with the 45° rail, a 30° back leaves the hips room to bend past 120° while the knees reach
+    # 90°; at 42° the canonical lifter's hips hit their end range with the knees near 78°.
+    ba = math.radians(30)
     back_up = Vector((0, math.sin(ba), -math.cos(ba)))
     back_n = Vector((0, math.cos(ba), math.sin(ba)))
     pad_t = 0.075
@@ -539,13 +541,17 @@ def leg_press_45():
         m.beam((sx * 0.16, 0.07, -0.30), seat_j + Vector((sx * 0.16, -pad_t - 0.03, 0.10)), 0.06, 0.06, up=(1, 0, 0))
         m.beam((sx * 0.16, 0.07, -1.05), seat_j + back_up * 0.62 + Vector((sx * 0.16, 0, 0)) - back_n * (pad_t + 0.03), 0.06, 0.06, up=(1, 0, 0))
         m.beam(seat_j + Vector((sx * 0.16, -pad_t - 0.03, 0.10)), seat_j + back_up * 0.62 + Vector((sx * 0.16, 0, 0)) - back_n * (pad_t + 0.03), 0.05, 0.05, up=(1, 0, 0))
-    # Side handles beside the seat.
+    # Side handles beside the hips, nearly upright: the forearm of a reclined lifter reaching down and forward meets them
+    # square with the thumb up the handle. Fore-aft handles forced ~30° of wrist deviation and flared elbows.
+    ha = math.radians(75)
+    axis = Vector((0, math.sin(ha), math.cos(ha)))
     for sx, tag in ((1, "L"), (-1, "R")):
-        hy, z0, z1 = 0.47, -0.48, -0.18
-        m.beam((sx * 0.30, 0.07, -0.28), (sx * 0.30, hy - 0.02, -0.28), 0.045, 0.045, up=(0, 0, 1))
-        m.tube((sx * 0.30, hy, z0 - 0.02), (sx * 0.30, hy, z1 + 0.02), 0.012, "mat_chrome", None, 14)
-        m.tube((sx * 0.30, hy, z0), (sx * 0.30, hy, z0 + 0.20), 0.016, "mat_grip", None, 18, chamfer=0.003)
-        m.handle(f"handle_{tag}", (sx * 0.30, hy, z0 + 0.10), (0, 0, 1), (-sx, 0, 0), 0.016, 0.20, "neutral")
+        c = Vector((sx * 0.30, 0.50, -0.36))
+        lo, hi = c - axis * 0.11, c + axis * 0.11
+        m.beam((sx * 0.30, 0.07, lo.z), lo - axis * 0.03, 0.045, 0.045, up=(0, 0, 1))
+        m.tube(lo - axis * 0.03, hi + axis * 0.02, 0.012, "mat_chrome", None, 14)
+        m.tube(lo, hi, 0.016, "mat_grip", None, 18, chamfer=0.003)
+        m.handle(f"handle_{tag}", c, axis, (-sx, 0, 0), 0.016, 0.22, "neutral")
 
     # Base.
     for sx in (1, -1):

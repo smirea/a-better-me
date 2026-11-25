@@ -20,7 +20,7 @@ const KG = 100;
 const STANCE_X = 0.22;
 const TOE_OUT = 0.45;
 /** Heels this far up the footplate from its lower edge: the feet sit in the middle of the platform. */
-const HEEL_ALONG = 0.15;
+const HEEL_ALONG = 0.24;
 /** The sled's travel up its rail is solved with the pose, as the one extra unknown. */
 const SLED_TOP = 0.51;
 /** Along the rail, only the sled's weight component pushes back on the feet. */
@@ -31,12 +31,12 @@ const machine = legPress45Machine({ drive: (_frame, extras) => ({ sledTravel: ex
 const checks = (body: Body): FormCheck[] => [
   checkJointWithinAt(
     "depth",
-    "Lowers to the hips’ end range",
-    "If you reached the end range to which your hips can bend, lowering the sled any further would cause your lower back to start rounding. This would be demonstrated by your buttocks starting to curl up off the seat.",
-    "hip_L.flex",
+    "Knees bend to at least 90°",
+    "People can commonly lower the sled until their knees are bent by at least 90 degrees.",
+    "knee_L.flex",
     "peak",
-    118,
-    126,
+    88,
+    115,
   ),
   checkJointWithinAt(
     "soft-lockout",
@@ -75,7 +75,6 @@ export const spec = composeExercise({
     const seat = machine.surfaces!.seat;
     const back = machine.surfaces!.back;
     const plate = machine.footplates!.sled.surface;
-    const rail = machine.rails!.sled;
     const grasps = [machine.grasp("L", "handle_L"), machine.grasp("R", "handle_R")];
     const s = POSTURE_HINTS.incline45;
     const seatedAt = { "root.y": 0.52, "root.z": -0.4 };
@@ -88,17 +87,11 @@ export const spec = composeExercise({
       extras: 1,
       extraStart: [SLED_TOP],
       goals: [
-        ...restBackOnPad(body, back),
+        // The sacrum settles wherever the seat lets it; pinning it in the corner lifts the pelvis off the seat.
+        ...restBackOnPad(body, back, { sacrumAlong: null }),
         restOnPlane(body, "pelvisBottom", new Vector3(...seat.origin), new Vector3(...seat.normal), 30, 0.01),
         ...plantBothFeetOnPlate(body, plate, STANCE_X, HEEL_ALONG, TOE_OUT, 40, carried(machine.carrier("sled")!, ctx.live)),
-        // The fixed handles run fore and aft beside the hips, so a straight-on wrap would need the forearm square to them;
-        // a softer alignment lets the wrist deviate and the hand sit toward the handle’s rear end, as a seated lifter holds them.
-        ...grasps.flatMap((g) => holdGrasp(body, g, ctx.live, { style: "neutral", align: 3, at: -0.07 })),
-        // The machine clamps the sled to its rail, which leaves the solver no gradient past the stops; keep it on the rail.
-        ({ q, push }) => {
-          const t = q[body.dofCount];
-          push(40 * (Math.max(0, t - rail.maxTravel) + Math.min(0, t - rail.minTravel)));
-        },
+        ...grasps.flatMap((g) => holdGrasp(body, g, ctx.live, { style: "neutral" })),
         mirrored(body, 6),
       ],
       keyGoals: {
@@ -107,9 +100,7 @@ export const spec = composeExercise({
           // Seed the top of the rep near where slightly bent knees put the sled; the solve settles it from there.
           ({ q, push }) => push(q[body.dofCount] - SLED_TOP),
         ],
-        // The backrest is fixed at 42°, so the hips start near 90° of flexion and reach their end range (125°) with the
-        // knees near 80°; going deeper would curl the buttocks off the seat, which the cues rule out.
-        end: [lockAngle(body, "knee_L.flex", 80, 10)],
+        end: [lockAngle(body, "knee_L.flex", 92, 10)],
       },
       stiffness: { default: 1, lumbar: 10, thoracic: 10, neck: 4, clavicle: 12 },
       progress: (frame) => anchorPoint(body, frame, "heel_L").y,

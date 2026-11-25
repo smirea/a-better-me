@@ -168,6 +168,7 @@ export function defineMachine<S extends object>(def: MachineDefinition<S>) {
       const merged = { ...def.defaults, ...partial } as S;
       return def.normalize ? def.normalize(merged, spec) : merged;
     };
+    const numericKeys = Object.keys(def.defaults).filter((k) => typeof (def.defaults as Record<string, unknown>)[k] === "number");
     const placement = new Matrix4()
       .makeTranslation(new Vector3(...pos))
       .multiply(new Matrix4().makeRotationY((yawDeg * Math.PI) / 180));
@@ -339,6 +340,15 @@ export function defineMachine<S extends object>(def: MachineDefinition<S>) {
         rails,
         pivots,
         hooks,
+        ...(drive
+          ? {
+              driveExcess: (frame: Frame, extras: number[], propStates: PropState[]) => {
+                const raw = { ...state, ...drive(frame, extras, propStates) } as Record<string, unknown>;
+                const kept = resolve(raw as Partial<S>) as Record<string, unknown>;
+                return numericKeys.map((k) => (typeof raw[k] === "number" ? (raw[k] as number) - (kept[k] as number) : 0));
+              },
+            }
+          : {}),
         glbState: drive
           ? (frame, extras, propStates) => [poses(def.nodes(resolve({ ...state, ...drive(frame, extras, propStates) }), spec))]
           : () => [staticPoses],

@@ -206,6 +206,15 @@ export function composeExercise(config: ComposeExerciseConfig): ExerciseSpec {
 
       const machineIds = machines.map((m) => m.id);
 
+      // A driven sled or lever stops at its limits; past them, pull the solve back instead of leaving it stranded.
+      const stops: Goal[] = machines
+        .filter((m) => m.driveExcess)
+        .map((m) => ({ frame, q, push }) => {
+          for (const excess of m.driveExcess!(frame, [...q.subarray(body.dofCount)], propState(frame, [...q.subarray(body.dofCount)]))) {
+            push(40 * excess);
+          }
+        });
+
       return {
         hints: plan.hints,
         waypoints: plan.waypoints,
@@ -214,7 +223,7 @@ export function composeExercise(config: ComposeExerciseConfig): ExerciseSpec {
         phaseLabels: plan.phaseLabels,
         extras: plan.extras ?? 0,
         extraStart: plan.extraStart ?? [],
-        goals: plan.goals,
+        goals: [...plan.goals, ...stops],
         keyGoals: plan.keyGoals,
         stiffness: plan.stiffness,
         obstacles,
