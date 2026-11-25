@@ -14,7 +14,6 @@ import {
   PMREMGenerator,
   RepeatWrapping,
   Scene,
-  ShadowMaterial,
   SRGBColorSpace,
   WebGLRenderer,
 } from "three";
@@ -166,16 +165,6 @@ export class StageEnvironment {
       this.lights.add(new HemisphereLight(hemiSky, hemiGnd, hemiInt), new AmbientLight("#ffffff", 0.25));
       const key = new DirectionalLight("#ffffff", keyInt);
       key.position.set(-2.6, 4.4, 3.6);
-      key.castShadow = true;
-      key.shadow.mapSize.set(2048, 2048);
-      key.shadow.camera.near = 0.5;
-      key.shadow.camera.far = 14;
-      const d = 2.6;
-      key.shadow.camera.left = -d;
-      key.shadow.camera.right = d;
-      key.shadow.camera.top = d;
-      key.shadow.camera.bottom = -d;
-      key.shadow.bias = -0.0005;
       const rim = new DirectionalLight(rimColor, rimInt);
       rim.position.set(3, 2.6, -3.5);
       this.lights.add(key, rim);
@@ -191,7 +180,6 @@ export class StageEnvironment {
       );
       floor.rotation.x = -Math.PI / 2;
       floor.position.y = -0.002;
-      floor.receiveShadow = true;
       const grid = new GridHelper(6, 12, "#2b2929", "#242222");
       grid.position.y = -0.001;
       this.group.add(floor, grid);
@@ -202,14 +190,6 @@ export class StageEnvironment {
       const fill = new DirectionalLight("#f8fafc", 0.55);
       fill.position.set(2.8, 1.8, 3.0);
       this.lights.add(fill);
-      const shadowPlane = new Mesh(
-        new PlaneGeometry(36, 36),
-        new ShadowMaterial({ opacity: 0.14 }),
-      );
-      shadowPlane.rotation.x = -Math.PI / 2;
-      shadowPlane.position.y = -0.002;
-      shadowPlane.receiveShadow = true;
-      this.group.add(shadowPlane);
     } else if (id === "gym-floor") {
       this.scene.background = new Color("#1c2028");
       this.scene.fog = new Fog("#1c2028", 9, 24);
@@ -221,7 +201,6 @@ export class StageEnvironment {
       );
       floor.rotation.x = -Math.PI / 2;
       floor.position.y = -0.002;
-      floor.receiveShadow = true;
       const backWall = new Mesh(
         new PlaneGeometry(26, 7),
         new MeshStandardMaterial({ color: "#252a34", roughness: 0.9, metalness: 0.05 }),
@@ -250,7 +229,6 @@ export class StageEnvironment {
       );
       floor.rotation.x = -Math.PI / 2;
       floor.position.y = -0.002;
-      floor.receiveShadow = true;
       this.group.add(floor);
     } else if (id === "warm-loft") {
       this.scene.background = new Color("#ebe5dc");
@@ -263,7 +241,6 @@ export class StageEnvironment {
       );
       floor.rotation.x = -Math.PI / 2;
       floor.position.y = -0.002;
-      floor.receiveShadow = true;
       const wall = new Mesh(
         new PlaneGeometry(26, 7),
         new MeshStandardMaterial({ color: "#e3dcd2", roughness: 0.94 }),
@@ -274,14 +251,6 @@ export class StageEnvironment {
       this.scene.background = null;
       this.scene.environmentIntensity = 0.5;
       addLight("#ffffff", "#30343c", 1.45, 2.0, "#9db8ff", 1.1);
-      const shadowPlane = new Mesh(
-        new PlaneGeometry(10, 10),
-        new ShadowMaterial({ opacity: 0.28 }),
-      );
-      shadowPlane.rotation.x = -Math.PI / 2;
-      shadowPlane.position.y = -0.002;
-      shadowPlane.receiveShadow = true;
-      this.group.add(shadowPlane);
     }
 
     this.group.visible = !this.hiddenForUnderside;
