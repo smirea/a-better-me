@@ -172,11 +172,12 @@ struct MacroHeader: View {
     }
 }
 
-/// "Impact on Targets": a ring per summary column, against the same targets as the Food Log's summary, with the rest
-/// of the day dimmed and this food lit after it, and in the middle the share of the target the food takes. A column
-/// with no target measures the day with the food instead, and when no column has one the section says what the food
-/// adds to the day. `day` is the rest of the day the food lands on: its entries without the one being edited, plus
-/// `adding` (the logger's plate). It reads the day once, so a caller whose day can change gives it `.id(day)`.
+/// "Impact on Targets": one bar per summary column, against the same targets as the Food Log's summary. The number is
+/// this food against the day's target ("49 g / 187 g"); the bar's bright length is that share, and the rest of the day
+/// follows it dimmed, clipped at the target. A column with no target shows the amount alone and, when the day has
+/// food, this food's share of the day. When no column has a target the section says what the food adds to the day.
+/// `day` is where the food lands: its entries without the one being edited, plus `adding` (the logger's plate). It
+/// reads the day once, so a caller whose day can change gives it `.id(day)`.
 struct ImpactGauges: View {
     let amounts: NutrientAmounts
     let day: CalendarDay
@@ -203,46 +204,63 @@ struct ImpactGauges: View {
             targeted ? "Impact on Targets" : "Share of the Day",
             subtitle: targeted ? nil : "No targets for this day"
         ) {
-            HStack {
+            VStack(alignment: .leading, spacing: 14) {
                 ForEach(lines) { line in
-                    VStack(spacing: 6) {
-                        ImpactRing(fill: line.fill(.eaten) ?? MacroLine.Fill(eaten: 0, plate: 0), color: line.nutrient.color) {
-                            Text(line.plateShare.map { "\(line.target == nil ? "" : "+")\(($0 * 100).wholeText)%" } ?? "–")
-                                .font(AppFont.rowDetail)
-                                .monospacedDigit()
-                        }
-                        Text(line.nutrient.title)
-                            .font(AppFont.rowDetail)
-                            .foregroundStyle(Theme.textSecondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(line.spoken)
+                    ContributionRow(line: line)
                 }
             }
             .padding(.vertical, 4)
+            .animation(.snappy, value: lines)
             .feedback(self)
         }
     }
 }
 
-private struct ImpactRing<Label: View>: View {
-    let fill: MacroLine.Fill
-    let color: Color
-    @ViewBuilder let label: Label
+/// One tracked nutrient: its name, this food against the day's target, and the bar whose bright length is that share.
+private struct ContributionRow: View {
+    let line: MacroLine
 
     var body: some View {
-        ZStack {
-            Circle().stroke(Theme.surfaceRaised, lineWidth: 5)
-            Circle().trim(from: 0, to: fill.eaten).stroke(color.opacity(0.45), style: StrokeStyle(lineWidth: 5))
-            Circle().trim(from: fill.eaten, to: fill.eaten + fill.plate).stroke(color, style: StrokeStyle(lineWidth: 5))
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(line.nutrient.title)
+                    .font(AppFont.rowTitle)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                Text(line.contributionLabel)
+                    .font(AppFont.caption(14))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .contentTransition(.numericText())
+            }
+            if let bar = line.contribution {
+                ContributionBar(entry: bar.entry, rest: bar.rest, color: line.nutrient.color)
+            }
         }
-        .rotationEffect(.degrees(-90))
-        .overlay { label }
-        .frame(width: 52, height: 52)
-        .animation(.snappy, value: fill)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(line.contributionSpoken)
+    }
+}
+
+/// The food's share of the track in full color, then the rest of the day dimmed. The track is the day's target, or
+/// the day itself when it has none.
+private struct ContributionBar: View {
+    let entry: Double
+    let rest: Double
+    let color: Color
+
+    var body: some View {
+        GeometryReader { proxy in
+            HStack(spacing: 0) {
+                Rectangle().fill(color).frame(width: proxy.size.width * entry)
+                Rectangle().fill(color.opacity(0.45)).frame(width: proxy.size.width * rest)
+            }
+        }
+        .background(Theme.surfaceRaised)
+        .clipShape(Capsule())
+        .frame(height: 6)
+        .accessibilityHidden(true)
     }
 }
 

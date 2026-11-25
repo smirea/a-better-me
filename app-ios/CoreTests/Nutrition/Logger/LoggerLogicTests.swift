@@ -127,6 +127,59 @@ struct PlateTests {
         #expect(over.fill(.remaining) == MacroLine.Fill(eaten: 0, plate: 0.25))
         #expect(FoodLog.summary([.energy: 750], plate: [.energy: 500], targets: small.amounts, showOverages: false)[0].text(.remaining) == "0 left")
     }
+
+    @Test func anEntryReadsAgainstTheDaysTarget() {
+        // What the API logs: a snapshot and a serving, and nothing else. Two servings scale the snapshot.
+        let torta = FoodSnapshot(
+            source: .custom, name: "Chicken torta",
+            nutrition: FoodNutrition(
+                nutrients: [.energy: 580, .protein: 49, .fat: 15, .carbs: 59],
+                measures: [Measure(name: "serving", quantity: 1, servings: 1)]
+            )
+        )
+        let eaten = FoodPortion(torta).amounts
+        let lines = FoodLog.summary(
+            [.energy: 900, .protein: 80, .fat: 20, .carbs: 40, .fiber: 12],
+            plate: eaten, nutrients: [.energy, .protein, .fat, .carbs, .fiber, .netCarbs],
+            targets: [.energy: 2400, .protein: 187, .fat: 70, .carbs: 210, .fiber: 38, .netCarbs: 172],
+            showOverages: false
+        )
+        #expect(lines.map(\.contributionLabel) == [
+            "580 cal / 2,400 cal", "49 g / 187 g", "15 g / 70 g", "59 g / 210 g", "0 g / 38 g", "59 g / 172 g",
+        ])
+        #expect(lines[1].contribution == MacroLine.Contribution(entry: 49.0 / 187, rest: 80.0 / 187))
+        #expect(lines[1].contributionSpoken == "Protein, 49 of 187 grams, 80 grams besides this")
+        #expect(lines[4].contribution == MacroLine.Contribution(entry: 0, rest: 12.0 / 38))
+        #expect(lines[4].contributionSpoken == "Fiber, 0 of 38 grams, 12 grams besides this")
+        // Net carbs are derived from carbs when the snapshot never reports them.
+        #expect(lines[5].plate == 59.0)
+        #expect(lines[0].contributionSpoken == "Calories, 580 of 2,400 calories, 900 calories besides this")
+
+        let half = torta.amounts(Serving(measure: torta.nutrition.measures[0], quantity: 2))
+        let doubled = FoodLog.summary([:], plate: half, nutrients: [.protein], targets: [.protein: 187], showOverages: false)[0]
+        #expect(doubled.contributionLabel == "98 g / 187 g")
+        #expect(doubled.contributionSpoken == "Protein, 98 of 187 grams")
+
+        let over = FoodLog.summary([.protein: 50], plate: [.protein: 220], nutrients: [.protein], targets: [.protein: 187], showOverages: true)[0]
+        #expect(over.contributionLabel == "220 g / 187 g")
+        #expect(over.contribution == MacroLine.Contribution(entry: 1, rest: 0))
+
+        let clipped = FoodLog.summary([.protein: 160], plate: [.protein: 50], nutrients: [.protein], targets: [.protein: 200], showOverages: true)[0]
+        #expect(clipped.contribution == MacroLine.Contribution(entry: 0.25, rest: 0.75))
+
+        let trace = FoodLog.summary([:], plate: [.protein: 6.66], nutrients: [.protein], targets: [.protein: 150], showOverages: false)[0]
+        #expect(trace.contributionLabel == "6.7 g / 150 g")
+
+        let untargeted = FoodLog.summary([.protein: 100], plate: [.protein: 49], nutrients: [.protein], targets: [:], showOverages: false)[0]
+        #expect(untargeted.contributionLabel == "49 g")
+        #expect(untargeted.contribution == MacroLine.Contribution(entry: 49.0 / 149, rest: 100.0 / 149))
+        #expect(untargeted.contributionSpoken == "Protein, 49 grams, 100 grams besides this")
+
+        let empty = FoodLog.summary([:], plate: [:], nutrients: [.protein], targets: [:], showOverages: false)[0]
+        #expect(empty.contributionLabel == "0 g")
+        #expect(empty.contribution == nil)
+        #expect(empty.contributionSpoken == "Protein, 0 grams")
+    }
 }
 
 struct LogTimeTests {

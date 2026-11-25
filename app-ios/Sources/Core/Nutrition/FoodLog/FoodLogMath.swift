@@ -158,6 +158,49 @@ struct MacroLine: Hashable, Identifiable {
         guard total > 0 else { return Fill(eaten: 0, plate: 0) }
         return Fill(eaten: max(0, consumed) / total, plate: plate / total)
     }
+
+    /// This food's share of the track, drawn first, then the rest of the day drawn after it. The two are clipped so
+    /// they never run past the end of the track. `entry` is this food, so a day that is already full cannot hide it.
+    struct Contribution: Hashable {
+        var entry: Double
+        var rest: Double
+    }
+
+    /// The food being weighed (`plate`) against the day's target, which is the total an entry is compared with:
+    /// "49 g / 187 g", and "580 cal / 2,400 cal" for energy. Without a target the amount stands alone, so the row
+    /// never invents a denominator. A food that does not report the nutrient reads as zero.
+    var contributionLabel: String {
+        let shown = NutritionFormat.amount(plate ?? 0, contributionUnit)
+        guard let target, target > 0 else { return shown }
+        return "\(shown) / \(NutritionFormat.amount(target, contributionUnit))"
+    }
+
+    /// The bar under `contributionLabel`. With a target the track is that target. Without one the track is the day
+    /// including this food, and the bar is absent when that day is empty: an empty track reads as broken.
+    var contribution: Contribution? {
+        let entry = max(0, plate ?? 0)
+        let rest = max(0, consumed)
+        if let target, target > 0 {
+            let entryShare = min(1, entry / target)
+            return Contribution(entry: entryShare, rest: min(max(0, 1 - entryShare), rest / target))
+        }
+        let total = entry + rest
+        guard total > 0 else { return nil }
+        return Contribution(entry: entry / total, rest: rest / total)
+    }
+
+    /// What VoiceOver reads for the contribution row: the food against its target, then what the day holds besides it.
+    var contributionSpoken: String {
+        let unit = nutrient == .energy ? "calories" : "grams"
+        let value = (plate ?? 0).wholeText
+        let besides = consumed.rounded() >= 1 ? ", \(consumed.wholeText) \(unit) besides this" : ""
+        guard let target, target > 0 else { return "\(nutrient.title), \(value) \(unit)\(besides)" }
+        return "\(nutrient.title), \(value) of \(target.wholeText) \(unit)\(besides)"
+    }
+
+    private var contributionUnit: NutrientUnit {
+        NutrientRegistry.nutrient(nutrient)?.unit ?? (nutrient == .energy ? .kcal : .g)
+    }
 }
 
 /// Where a copy or move lands. `today` and `tomorrow` keep each entry's own time and section; the rest set one time

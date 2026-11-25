@@ -1,0 +1,4 @@
+{
+	"title": "Food entries show each tracked nutrient against the day's target",
+	"description": "Opening a logged food shows a bar for each nutrient you track, with its amount next to the day's target."
+}

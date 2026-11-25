@@ -157,7 +157,7 @@ struct FoodDetailView: View {
         Task { await session.setIcon(icon, of: food, uncached: pick.uncached) }
     }
 
-    /// The plate without the item being edited, which the gauges count as the food itself.
+    /// The plate without the item being edited, which the bars count as the food itself.
     private var restOfPlate: NutrientAmounts {
         var plate = session.plate
         if let editing { plate.remove(editing) }
@@ -189,7 +189,7 @@ struct FoodDetailView: View {
 struct RambleEdit {
     /// False when the row's food changed since the detail opened, so the edit was dropped.
     let update: (Serving) -> Bool
-    /// The row's day, and what the ramble's other rows log there, for the impact gauges.
+    /// The row's day, and what the ramble's other rows log there, for the impact bars.
     let day: CalendarDay
     let others: NutrientAmounts
 }
