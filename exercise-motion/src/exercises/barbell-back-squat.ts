@@ -123,6 +123,8 @@ const checks: FormCheck[] = [
   },
 ];
 
+/** How far in front of the joint at the base of the ribcage the bar stays, in metres: over it, and no further back. */
+const BAR_AHEAD_OF_SPINE = 0;
 /** How far the pelvis tips forward at the top, in degrees, with the spine held 8° extended above it. */
 const TOP_PITCH = 16;
 
@@ -170,7 +172,7 @@ export const spec = composeExercise({
       },
       goals: [
         ...plantBothFeet(body, STANCE_X, HEEL_Z, 0.52, 0, 140),
-        balance(body, [{ anchor: "traps", kg: LOAD_KG }], 0.06, 30),
+        balance(body, [{ anchor: "traps", kg: LOAD_KG }], 0.06, 120),
         mirrored(body, 8),
         ...SIDES.flatMap((side) => [
           ...holdGrasp(body, grasps[side === "L" ? 0 : 1], ctx.live, {
@@ -193,6 +195,12 @@ export const spec = composeExercise({
         ]),
         lockAngle(body, "lumbar.flex", -4, 16),
         lockAngle(body, "thoracic.flex", -4, 14),
+        // The bar never sits behind the spine it rests on. Standing tall it would, by the depth of the traps, and
+        // the abdominals would switch on at lockout to stop the trunk folding backward under it.
+        ({ frame, push }) => {
+          const bar = anchorPoint(body, frame, "traps");
+          push(120 * Math.min(0, bar.z - frame.pos[body.index.thoracic].z - BAR_AHEAD_OF_SPINE));
+        },
         lockAngle(body, "neck.flex", 0, 8),
       ],
       keyGoals: {

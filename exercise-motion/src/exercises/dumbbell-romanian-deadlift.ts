@@ -16,6 +16,9 @@ const HEEL_Z = -0.08;
 /** How far in front of the leg's face the handle sits when the dumbbell is held close. */
 const AHEAD_OF_THIGH = 0.035;
 
+/** How far off the thigh's axis the handle sits with the dumbbell's inner head against the thigh. */
+const AGAINST_THIGH = 0.18;
+
 const stand = POSTURE_HINTS.standing;
 
 function sideSign(side: Side): number {
@@ -332,7 +335,11 @@ export const spec = composeExercise({
         { anchor: "grip_L", share: 1, grip: "hang" },
         { anchor: "grip_R", share: 1, grip: "hang" },
       ],
-      support: { kind: "standing" },
+      // At the top the dumbbells rest against the front of the thighs, which is what holds them out there.
+      support: {
+        kind: "standing",
+        leans: SIDES.map((side) => ({ anchor: `grip_${side}`, on: `hip_${side}`, within: AGAINST_THIGH })),
+      },
       required: SIDES.flatMap((side) =>
         (["heel", "ballIn", "ballOut", "toe"] as const).map((part) => ({
           label: `${side === "L" ? "Left" : "Right"} ${part}`,

@@ -46,6 +46,14 @@ const LEVER = 0.3;
 const CONTACT_RIDGE = 1e-4;
 /** Activation rises over about 15 ms and decays over about 60 ms (Thelen, 2003; De Groote et al., 2016). */
 const ACTIVATION_TIME = { rise: 0.015, fall: 0.06 };
+/**
+ * A straight elbow or knee rests on its stop: bone and ligament carry a load that would bend it backward, so a
+ * locked-out arm or leg needs no muscle to stay straight. The stop takes everything within `LOCKED` of straight and
+ * nothing beyond `UNLOCKED`, in radians, up to `STOP_TORQUE` N·m.
+ */
+const LOCKED = (3 * Math.PI) / 180;
+const UNLOCKED = (12 * Math.PI) / 180;
+const STOP_TORQUE = 150;
 /** A fixed handle takes a fifth of a push through the palm to keep hold of, and all of a pull along the fingers. */
 const PRESS_GRIP = 0.2;
 
@@ -96,6 +104,8 @@ interface Push {
   /** The other end of a bar, which is pushed the opposite way: together along the bar, or apart when `apart`. */
   counter?: Anchor;
   apart: boolean;
+  /** The limb a held weight rests against, which is pushed back as hard as it pushes: its joint, length and reach. */
+  limb?: { joint: number; length: number; within: number };
   column: number;
   /** Direction in the world for a surface, or in the hand's own frame for a handle. */
   direction: Vector3;
@@ -318,7 +328,7 @@ export function analyze(
       turns: [],
       width: 0,
       world: new Vector3(),
-    });
+    }) - 1;
   const normals = contacts.map(
     (contact) => new Vector3(...(contact.normal ?? [0, 1, 0])).normalize(),
   );
@@ -352,12 +362,29 @@ export function analyze(
   });
   if (free && sequence.support.rail && sequence.loads.length > 0)
     for (const sign of [1, -1]) addPush(sequence.loads[0].anchor, new Vector3(0, 0, sign), -1, 0);
+  for (const lean of sequence.support.leans ?? []) {
+    const joint = body.index[lean.on];
+    const below = body.joints.find((other) => other.parent === joint);
+    pushes[addPush(lean.anchor, new Vector3(), -1, 0)].limb = {
+      joint,
+      length: below ? below.offset.length() : 0.3,
+      within: lean.within,
+    };
+  }
   for (const [a, b] of sequence.support.bars ?? []) {
     addPush(a, new Vector3(), -1, 0, false, 0, b);
     addPush(a, new Vector3(), -1, 0, false, 0, b, true);
   }
 
-  const n = ACTUATORS.length + pushes.length;
+  const stops = SIDES.flatMap((side) =>
+    ["elbow", "knee"].flatMap((joint) => {
+      const angle = `${joint}_${side}.flex`;
+      const row = rowIndex.get(angle)!;
+      return held[row] ? [{ angle, row }] : [];
+    }),
+  );
+  const firstStop = ACTUATORS.length + pushes.length;
+  const n = firstStop + stops.length;
   const columns: SparseColumn[] = [];
   for (const actuator of ACTUATORS) {
     const rows = Int32Array.from(actuator.entries, (entry) => rowIndex.get(entry.dof)!);
@@ -368,9 +395,12 @@ export function analyze(
   );
   for (const push of pushes) {
     const rows: number[] = [];
-    for (const end of push.counter ? [push.point, push.counter] : [push.point])
+    const ends = [push.point.joint];
+    if (push.counter) ends.push(push.counter.joint);
+    if (push.limb) ends.push(push.limb.joint);
+    for (const end of ends)
       push.turns.push(
-        ancestors[end.joint].flatMap((j) =>
+        ancestors[end].flatMap((j) =>
           motions[j].map((motion) => {
             let at = rows.indexOf(motion.row);
             if (at < 0) at = rows.push(motion.row) - 1;
@@ -379,8 +409,8 @@ export function analyze(
         ),
       );
     push.width = rows.length;
-    // Equal and opposite pushes along the line between two points add up to nothing on the body as a whole.
-    if (free && !push.counter) for (let i = 0; i < 6; i++) rows.push(balanceRow + i);
+    // Equal and opposite pushes between two parts of the body add up to nothing on the body as a whole.
+    if (free && ends.length === 1) for (let i = 0; i < 6; i++) rows.push(balanceRow + i);
     if (push.contact >= 0 && pressRow[push.contact] >= 0) rows.push(pressRow[push.contact]);
     if (push.grip > 0) {
       const side = push.anchor.endsWith("_L") ? "L" : push.anchor.endsWith("_R") ? "R" : null;
@@ -388,6 +418,8 @@ export function analyze(
     }
     columns.push({ rows: Int32Array.from(rows), values: new Float64Array(rows.length) });
   }
+  for (const stop of stops)
+    columns.push({ rows: Int32Array.of(stop.row), values: Float64Array.of(STOP_TORQUE) });
   const opposers: { actuator: number; entry: number }[][] = rowNames.map(() => []);
   ACTUATORS.forEach((actuator, i) =>
     actuator.entries.forEach((entry, e) => opposers[rowIndex.get(entry.dof)!].push({ actuator: i, entry: e })),
@@ -426,7 +458,8 @@ export function analyze(
   const point = new Vector3();
   const far = new Vector3();
   const direction = new Vector3();
-  // What each hand on a bar carries, in bodyweights: the most its grip can add along the bar is a share of that.
+  // What each hand carries, in bodyweights: the most its grip can add along a bar, or a limb can push back on a
+  // weight resting against it, is a share of that.
   const barLoad = (sequence.loads.reduce((sum, load) => sum + load.share, 0) * loadKg * G) / weight / 2;
   const heights = contacts.map((contact) => new Float64Array(contact.anchors.length));
   const anchorPoints = contacts.map((contact) => contact.anchors.map(() => new Vector3()));
@@ -496,9 +529,22 @@ export function analyze(
     for (const push of pushes) {
       const { rows, values } = columns[push.column];
       worldPoint(frame, push.point.joint, push.point.local, point);
+      let touching = 1;
       if (push.counter) {
         worldPoint(frame, push.counter.joint, push.counter.local, direction).sub(point).normalize();
         if (push.apart) direction.negate();
+      } else if (push.limb) {
+        // Square to the limb, from its axis out to the hand, and only while the hand is alongside it and close.
+        const { joint, length, within } = push.limb;
+        far.set(0, -1, 0).applyQuaternion(frame.rot[joint]);
+        direction.subVectors(point, frame.pos[joint]);
+        const along = direction.dot(far);
+        direction.addScaledVector(far, -along);
+        const off = direction.length();
+        direction.normalize();
+        touching =
+          clamp((within + LIFTED - off) / (LIFTED - TOUCHING), 0, 1) *
+          clamp(1 + Math.min(along, length - along) / LIFTED, 0, 1);
       } else {
         direction.copy(push.direction);
         if (push.local) direction.applyQuaternion(frame.rot[push.point.joint]);
@@ -506,7 +552,8 @@ export function analyze(
       push.world.copy(direction.multiplyScalar(weight));
       values.fill(0);
       push.turns.forEach((turns, end) => {
-        const at = end === 0 ? point : worldPoint(frame, push.counter!.joint, push.counter!.local, far);
+        const at =
+          end === 0 || !push.counter ? point : worldPoint(frame, push.counter.joint, push.counter.local, far);
         for (const { motion, at: slot } of turns) {
           moment.crossVectors(arm.subVectors(at, frame.pos[motion.joint]), direction);
           values[slot] += (end === 0 ? 1 : -1) * motion.gain * moment.dot(axes[motion.row]);
@@ -515,6 +562,11 @@ export function analyze(
       let e = push.width;
       if (push.counter) {
         hi[push.column] = FRICTION * barLoad;
+        continue;
+      }
+      if (push.limb) {
+        // A hanging weight pressed against a limb is a pendulum held off plumb, which takes a fraction of its weight.
+        hi[push.column] = 0.5 * barLoad * touching;
         continue;
       }
       if (free) {
@@ -540,6 +592,10 @@ export function analyze(
           : REACH * clamp((LIFTED - heights[push.contact][push.slot]) / (LIFTED - TOUCHING), 0, 1);
     }
 
+    stops.forEach((stop, s) => {
+      hi[firstStop + s] = clamp((UNLOCKED - angles[stop.angle]) / (UNLOCKED - LOCKED), 0, 1);
+    });
+
     target.set(known);
     if (free) {
       target[balanceRow] = -net.x / weight;
@@ -560,6 +616,7 @@ export function analyze(
         for (let e = 0; e < rows.length; e++)
           if (rows[e] < torqueRows) demand[rows[e]] -= values[e] * x[push.column];
       }
+      stops.forEach((stop, s) => (demand[stop.row] -= STOP_TORQUE * x[firstStop + s]));
     };
     lo.fill(0, 0, ACTUATORS.length);
     solveBounded(problem, x, state);
@@ -594,13 +651,13 @@ export function analyze(
     let rail = 0;
     for (const push of pushes) {
       if (x[push.column] === 0) continue;
-      if (push.contact < 0 && !push.counter) rail += push.world.z * x[push.column];
+      if (push.contact < 0 && !push.counter && !push.limb) rail += push.world.z * x[push.column];
       else
         pushed.set(
           push.anchor,
           (pushed.get(push.anchor) ?? new Vector3()).addScaledVector(push.world, x[push.column]),
         );
-      if (push.counter)
+      if (push.counter || push.limb)
         pushed.set(
           `${push.anchor} across`,
           (pushed.get(`${push.anchor} across`) ?? new Vector3()).addScaledVector(push.world, -x[push.column]),
