@@ -56,6 +56,34 @@ Y = Vector((0, 1, 0))
 Z = Vector((0, 0, 1))
 
 
+# Faces of different materials closer than this along a shared normal z-fight at viewing distance.
+COPLANAR = 0.0011
+# How far an overlay is lifted off the surface it sits on, so depth precision always separates them.
+OVERLAY_LIFT = 0.0015
+# Which of two coplanar materials is the overlay: it moves out, the higher rank wins.
+OVERLAY_RANK = {"mat_grip": 6, "mat_tread": 6, "mat_accent": 5, "mat_rubber": 4, "mat_pad": 3, "mat_cable": 3, "mat_chrome": 2, "mat_stack": 1, "mat_plate": 1, "mat_frame": 0, "mat_wood": 0}
+
+
+def _overlap(t1, t2):
+    n = t1[3]
+    u = n.orthogonal().normalized()
+    w = n.cross(u)
+    polys = [[(p.dot(u), p.dot(w)) for p in t[:3]] for t in (t1, t2)]
+    for poly in polys:
+        for i in range(3):
+            (x1, y1), (x2, y2) = poly[i], poly[(i + 1) % 3]
+            ax, ay = -(y2 - y1), x2 - x1
+            length = (ax * ax + ay * ay) ** 0.5
+            if length < 1e-9:
+                continue
+            ax, ay = ax / length, ay / length
+            p0 = [x * ax + y * ay for x, y in polys[0]]
+            p1 = [x * ax + y * ay for x, y in polys[1]]
+            if max(p0) < min(p1) + 0.0008 or max(p1) < min(p0) + 0.0008:
+                return False
+    return True
+
+
 # Materials a body rests on; a surface snaps to these before bare frame.
 CONTACT = {"mat_pad", "mat_rubber", "mat_wood", "mat_grip", "mat_tread"}
 
@@ -554,6 +582,63 @@ class Machine:
                 lo = Vector(map(min, lo, co))
                 hi = Vector(map(max, hi, co))
         return lo, hi
+
+    def coplanar_overlaps(self):
+        """Pairs of same-facing faces of different materials within COPLANAR of one plane and overlapping: they z-fight."""
+        tris = []
+        for key, (verts, faces) in self.geo.items():
+            for fi, f in enumerate(faces):
+                for k in range(1, len(f) - 1):
+                    a, b, c = verts[f[0]], verts[f[k]], verts[f[k + 1]]
+                    n = (b - a).cross(c - a)
+                    if n.length < 2e-7:
+                        continue
+                    n.normalize()
+                    tris.append((a, b, c, n, n.dot(a), key, fi))
+        buckets = {}
+        for t in tris:
+            n = t[3]
+            buckets.setdefault((round(n.x * 50), round(n.y * 50), round(n.z * 50), round(t[4] / COPLANAR)), []).append(t)
+        out = []
+        for key, group in buckets.items():
+            near = [t for dd in (-1, 0, 1) for t in buckets.get(key[:3] + (key[3] + dd,), [])]
+            for t1 in group:
+                for t2 in near:
+                    if t1[5][1] == t2[5][1] or abs(t1[4] - t2[4]) > COPLANAR or t1[3].dot(t2[3]) < 0.999:
+                        continue
+                    if _overlap(t1, t2):
+                        out.append((t1, t2))
+        return out
+
+    def separate_overlays(self):
+        """Lifts every overlay face that shares a plane with a different material OVERLAY_LIFT proud of it, so a grip
+        sleeve, tread skin, rubber cap or collar draws on top instead of flickering against the steel under it."""
+        for _ in range(4):
+            pairs = self.coplanar_overlaps()
+            if not pairs:
+                return
+            self._lift(pairs)
+        left = self.coplanar_overlaps()
+        if left:
+            t1, t2 = left[0]
+            raise ValueError(f"{self.id}: {len(left)} coplanar faces still overlap, e.g. {t1[5]} vs {t2[5]} near {tuple(round(x, 3) for x in t1[0])}")
+
+    def _lift(self, pairs):
+        lift = {}
+        for t1, t2 in pairs:
+            top, base = (t1, t2) if OVERLAY_RANK.get(t1[5][1], 0) >= OVERLAY_RANK.get(t2[5][1], 0) else (t2, t1)
+            # A face on the floor can't drop below it: sink the base into the part instead.
+            on_floor = top[3].y < -0.5 and min(p.y for p in top[:3]) < 0.002
+            face, sign = (base, -1) if on_floor else (top, 1)
+            verts, faces = self.geo[face[5]]
+            for vi in faces[face[6]]:
+                lift.setdefault((face[5], vi), set()).add(tuple(round(sign * x, 4) for x in face[3]))
+        for (key, vi), normals in lift.items():
+            d = Vector((0, 0, 0))
+            for n in normals:
+                d += Vector(n)
+            if d.length > 1e-9:
+                self.geo[key][0][vi] = self.geo[key][0][vi] + d.normalized() * OVERLAY_LIFT
 
     def snap_surfaces(self):
         """Moves every surface origin onto the mesh along its normal, so a body resting on it touches what renders.

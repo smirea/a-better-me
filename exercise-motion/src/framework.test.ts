@@ -251,7 +251,7 @@ describe("exercise-motion framework invariants", () => {
     const customMesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial({ name: "custom_logo", color: "#ff00ff" }));
     group.add(frameMesh, customMesh);
 
-    const skin = getSkin("obsidian-crimson");
+    const skin = getSkin("forest-green");
     const result = applySkinToObject3D(group, skin);
     expect(result.matched).toBe(1);
     expect(result.unmatched).toEqual(["custom_logo"]);
