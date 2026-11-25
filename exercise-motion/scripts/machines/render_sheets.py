@@ -255,9 +255,9 @@ def main():
         overview.append(os.path.join(RAW, f"{e['id']}-angle.png"))
         overview_labels.append(e["name"])
         clear(objs)
-    if machines:
+    if machines and not ONLY:
         montage(overview, overview_labels, os.path.join(OUT, "machines-overview.png"), 4)
-    if rig_tiles:
+    if rig_tiles and not ONLY:
         montage(rig_tiles, rig_labels, os.path.join(OUT, "machines-rig.png"), 4)
     prop_tiles = []
     for e in props:
@@ -272,7 +272,7 @@ def main():
         render(path)
         prop_tiles.append(path)
         clear(objs)
-    if prop_tiles:
+    if prop_tiles and not ONLY:
         montage(prop_tiles, [e["name"] for e in props], os.path.join(OUT, "machines-props.png"), 5)
     if not ONLY:
         skin_tiles, skin_labels = [], []
