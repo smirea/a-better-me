@@ -978,6 +978,20 @@ async function init() {
         try {
           // A rebuilt viewer (new skins, rendering, materials) needs a reload, not just new exercise data.
           if (loadedApp && (await appVersion()) !== loadedApp) {
+            // The page reads its state from the hash, so put the current one there to come back to the same spot.
+            const keep = new URLSearchParams({
+              id: state.exerciseId,
+              view: state.view,
+              skin: state.skin,
+              setting: state.setting,
+              mode: state.mode,
+              tab: state.tab,
+              speed: String(state.speed),
+              frame: String(Math.round(state.frame)),
+              play: state.playing ? "1" : "0",
+              load: String(state.loadKg),
+            });
+            location.hash = keep.toString();
             location.reload();
             return;
           }
