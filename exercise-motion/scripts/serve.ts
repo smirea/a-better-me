@@ -4,6 +4,7 @@ import { extname, join, normalize } from "node:path";
 import { EXERCISE_IMAGES_DIR, MOTION_ROOT } from "./catalog-io";
 
 const LIBRARY_DIR = join(MOTION_ROOT, "dist", "library");
+const CUSTOM_MODELS_DIR = join(MOTION_ROOT, "models");
 const GYM_MODELS_DIR = join(MOTION_ROOT, "dist", "gym", "models");
 const PORT = Number(process.env.MOTION_PORT ?? process.argv[2] ?? 6162);
 
@@ -33,8 +34,9 @@ const server = Bun.serve({
       baseDir = EXERCISE_IMAGES_DIR;
       rel = pathname.slice("/exercise-images/".length);
     } else if (pathname.startsWith("/gym-models/")) {
-      baseDir = GYM_MODELS_DIR;
       rel = pathname.slice("/gym-models/".length);
+      const safeModel = normalize(rel).replace(/^(\.\.[/\\])+/, "").replace(/^\/+/, "");
+      baseDir = existsSync(join(CUSTOM_MODELS_DIR, safeModel)) ? CUSTOM_MODELS_DIR : GYM_MODELS_DIR;
     }
     const safeRel = normalize(rel).replace(/^(\.\.[/\\])+/, "").replace(/^\/+/, "");
     const filePath = join(baseDir, safeRel);

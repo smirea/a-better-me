@@ -41,11 +41,12 @@ for (let i = 0; i < files.length; i++) {
   if (seenIds.has(specObj.id)) {
     throw new Error(`Duplicate exercise id "${specObj.id}" in ${file}.`);
   }
-  if (seenCatalogIds.has(specObj.catalogId)) {
+  const isModelVariant = /-(grok|terra|opus|neon)$/.test(stem);
+  if (!isModelVariant && seenCatalogIds.has(specObj.catalogId)) {
     throw new Error(`Duplicate catalogId "${specObj.catalogId}" in ${file}.`);
   }
   seenIds.add(specObj.id);
-  seenCatalogIds.add(specObj.catalogId);
+  if (!isModelVariant) seenCatalogIds.add(specObj.catalogId);
   const alias = `ex${i}`;
   imports.push(`import { ${exportName} as ${alias} } from "./${stem}";`);
   names.push(alias);

@@ -22,7 +22,7 @@ const SEATED = {
 export const spec = buildExerciseSpec({
   id: "45-deg-glute-biased-leg-press",
   catalogId: "2aa5c6f170d880c08fcbf27e03a0e2dc",
-  name: "45° Glute-Biased Leg Press",
+  name: "45° Glute-Biased Leg Press (old)",
   defaultLoadKg: 22,
   loadUnit: "total",
   laterality: "bilateral",

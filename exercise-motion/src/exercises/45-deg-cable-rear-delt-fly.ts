@@ -37,7 +37,7 @@ const LOW = {
 export const spec = buildExerciseSpec({
   id: "45-deg-cable-rear-delt-fly",
   catalogId: "2a15c6f170d88066b38fd65f8757716f",
-  name: "45° Cable Rear Delt Fly",
+  name: "45° Cable Rear Delt Fly (old)",
   defaultLoadKg: 4,
   loadUnit: "perSide",
   laterality: "bilateral",

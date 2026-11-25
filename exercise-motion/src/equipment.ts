@@ -46,7 +46,18 @@ export type PropDef =
   | { id: string; kind: "kettlebell" }
   | { id: string; kind: "plate" }
   | { id: string; kind: "medball" }
-  | { id: string; kind: "parts"; parts: Part[] };
+  | { id: string; kind: "parts"; parts: Part[] }
+  | {
+      id: string;
+      kind: "glb";
+      /** Debranded or rigged model id from `exercise-motion/dist/gym/models/<glbId>.glb`. */
+      glbId: string;
+      scale?: number;
+      offset?: Vec3;
+      quat?: [number, number, number, number];
+      /** Parametric collision/contact shapes in prop local space (invisible when GLB loads). */
+      colliders?: Part[];
+    };
 
 export interface PropState {
   pos: Vec3;
@@ -65,11 +76,28 @@ export interface TetherState {
 }
 
 export interface GlbRef {
-  /** Debranded model id from `exercise-motion/dist/gym/models/<id>.glb`. */
+  /** Model id from `exercise-motion/dist/gym/models/<id>.glb`. */
   id: string;
   pos: Vec3;
   quat?: [number, number, number, number];
   scale?: number;
+  /** Hide static parametric `equipment` meshes in the 3D viewer once this GLB loads (physics colliders stay active). */
+  hideEquipment?: boolean;
+  /** Hide only parametric `equipment` parts whose id starts with one of these prefixes. */
+  hideEquipmentIds?: string[];
+}
+
+export interface GlbNodePose {
+  /** Named node inside the loaded GLB (`gltf.scene.getObjectByName(node)`). */
+  node: string;
+  /** Local position offset added to the node's bind-pose position. */
+  posOffset?: Vec3;
+  /** Absolute local position override. */
+  pos?: Vec3;
+  /** Euler rotation offset `[rx, ry, rz]` (radians, XYZ) applied on top of bind-pose quaternion. */
+  rotOffset?: Vec3;
+  /** Absolute local quaternion override `[x, y, z, w]`. */
+  quat?: [number, number, number, number];
 }
 
 export const IDENTITY: [number, number, number, number] = [0, 0, 0, 1];
@@ -169,6 +197,7 @@ export const kettlebellSize = (kg: number) => {
 /** A prop's parts in its own frame, the bar or handle along local X, for the weight it carries. */
 export function propParts(prop: PropDef, loadKg: number): Part[] {
   if (prop.kind === "parts") return prop.parts;
+  if (prop.kind === "glb") return prop.colliders ?? [];
 
   if (prop.kind === "dumbbell") {
     const head = dumbbellHead(loadKg);

@@ -1,0 +1,201 @@
+#!/usr/bin/env bun
+import { $ } from "bun";
+import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { extname, join, normalize, resolve } from "node:path";
+import { analyze } from "../src/biomech";
+import { groupsOf } from "../src/catalog";
+import { generate, kinematics, type ExerciseSpec } from "../src/exercise";
+import type { Muscle } from "../src/muscles";
+import { runChecks } from "../src/validate";
+import { loadAppCatalog, MOTION_ROOT } from "./catalog-io";
+
+const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const SHARED_GYM_MODELS =
+  process.env.GYM_MODELS_DIR ??
+  "/Users/stefan/.t3/worktrees/a-better-me/t3-ba440276-aa0fa4a108ee647c/exercise-motion/dist/gym/models";
+
+const MIME: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".bin": "application/octet-stream",
+  ".png": "image/png",
+  ".glb": "model/gltf-binary",
+};
+
+async function loadSpec(slug: string): Promise<ExerciseSpec> {
+  const filePath = join(MOTION_ROOT, "src", "exercises", `${slug}.ts`);
+  if (!existsSync(filePath)) throw new Error(`Missing exercise file: ${filePath}`);
+  const mod = (await import(resolve(filePath))) as Record<string, unknown>;
+  const spec = (mod.spec ??
+    Object.values(mod).find(
+      (v): v is ExerciseSpec =>
+        typeof v === "object" && v !== null && "id" in v && "catalogId" in v && "build" in v,
+    )) as ExerciseSpec | undefined;
+  if (!spec) throw new Error(`${filePath}: no ExerciseSpec export found`);
+  return spec;
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const flagValue = (name: string) => {
+    const i = args.indexOf(name);
+    return i >= 0 ? args[i + 1] : undefined;
+  };
+  const slug = args.find(
+    (a, i) => !a.startsWith("--") && !(i > 0 && args[i - 1]?.startsWith("--")),
+  );
+  if (!slug) {
+    throw new Error(
+      "Usage: render-3d.ts <slug> [--out /tmp/render-3d.png] [--views Side,Angle,Front] [--setting studio-light]",
+    );
+  }
+  const outPng = flagValue("--out") ?? `/tmp/motion-inspect/3d-${slug}.png`;
+  const views = (flagValue("--views") ?? "Side,Angle,Front").split(",");
+  const setting = flagValue("--setting") ?? "studio-light";
+
+  const spec = await loadSpec(slug);
+  const catalog = loadAppCatalog();
+  const entry = catalog.find((e) => e.id === spec.catalogId);
+  if (!entry) throw new Error(`Unknown catalogId ${spec.catalogId}`);
+
+  const { body, built, sequence } = generate(spec);
+  const kin = kinematics(body, sequence);
+  const analysis = analyze(body, sequence, kin);
+  const checks = runChecks(body, built, sequence, kin);
+  const stretched = groupsOf(entry.selection?.stretchedMuscles ?? []);
+  const mean = (muscles: Muscle[]) =>
+    muscles.length
+      ? muscles.reduce((sum, m) => sum + analysis.peak[m].activation, 0) / muscles.length
+      : 0;
+  const itemData = {
+    sequence,
+    checks,
+    catalog: { primary: entry.primaryMuscles, secondary: entry.secondaryMuscles, stretched },
+    agreement: {
+      listedInTop: 0,
+      listed: entry.primaryMuscles.length + entry.secondaryMuscles.length,
+      primaryMean: mean(entry.primaryMuscles),
+      secondaryMean: mean(entry.secondaryMuscles),
+      otherMean: 0,
+      unexpected: [] as Muscle[],
+      stretchedFound: 0,
+      stretched: stretched.length,
+    },
+    faults: [],
+    images: [],
+  };
+
+  const bundle = await Bun.build({
+    entrypoints: [join(MOTION_ROOT, "viewer/main.ts")],
+    minify: true,
+    target: "browser",
+  });
+  if (!bundle.success) throw new AggregateError(bundle.logs, "Viewer bundle failed");
+  const script = (await bundle.outputs[0].text()).replaceAll("</script", "<\\/script");
+  const style =
+    (await Bun.file(join(MOTION_ROOT, "viewer/style.css")).text()) +
+    (await Bun.file(join(MOTION_ROOT, "viewer/page.css")).text());
+  const html = (await Bun.file(join(MOTION_ROOT, "viewer/index.html")).text())
+    .replace("/*STYLE*/", () => style)
+    .replace("__DATA__", () => JSON.stringify({ mode: "library" }))
+    .replace("__LIFTER__", () => "")
+    .replace("__MUSCLE_MAP__", () => "")
+    .replace("/*SCRIPT*/", () => script);
+
+  const summary = [
+    {
+      id: sequence.id,
+      catalogId: sequence.catalogId,
+      name: sequence.name,
+      alternativeNames: entry.alternativeNames,
+      category: entry.category,
+      movementPattern: entry.movementPatterns[0] ?? "Other",
+      primaryMuscles: entry.primaryMuscles,
+      secondaryMuscles: entry.secondaryMuscles,
+      equipmentLabel: entry.resistanceEquipment[0] ?? "Bodyweight",
+      issueCount: 0,
+      checksPass: checks.filter((c) => c.pass).length,
+      checksTotal: checks.length,
+    },
+  ];
+
+  const customModelsDir = join(MOTION_ROOT, "models");
+  const localGymModelsDir = join(MOTION_ROOT, "dist", "gym", "models");
+  const assetsDir = join(MOTION_ROOT, "viewer", "assets");
+
+  const server = Bun.serve({
+    port: 0,
+    fetch(req) {
+      const pathname = decodeURIComponent(new URL(req.url).pathname);
+      if (pathname === "/" || pathname === "/index.html") {
+        return new Response(html, { headers: { "content-type": MIME[".html"] } });
+      }
+      if (pathname === "/catalog.json") {
+        return new Response(JSON.stringify(summary), { headers: { "content-type": MIME[".json"] } });
+      }
+      if (pathname === `/sequences/${sequence.id}.json`) {
+        return new Response(JSON.stringify(itemData), { headers: { "content-type": MIME[".json"] } });
+      }
+      if (pathname === "/lifter.bin" || pathname === "/muscle-map.png") {
+        const p = join(assetsDir, pathname.slice(1));
+        return new Response(Bun.file(p), { headers: { "content-type": MIME[extname(p)] } });
+      }
+      if (pathname.startsWith("/gym-models/")) {
+        const safe = normalize(pathname.slice("/gym-models/".length))
+          .replace(/^(\.\.[/\\])+/, "")
+          .replace(/^\/+/, "");
+        for (const dir of [customModelsDir, localGymModelsDir, SHARED_GYM_MODELS]) {
+          const candidate = join(dir, safe);
+          if (existsSync(candidate)) {
+            return new Response(Bun.file(candidate), { headers: { "content-type": MIME[".glb"] } });
+          }
+        }
+      }
+      return new Response("Not found", { status: 404 });
+    },
+  });
+
+  const tmpDir = `/tmp/motion-inspect/_render3d_${process.pid}_${Date.now()}`;
+  mkdirSync(tmpDir, { recursive: true });
+  mkdirSync(join(outPng, ".."), { recursive: true });
+
+  const total = sequence.poses.length;
+  const peak = sequence.phases[1]?.from ?? Math.floor(total / 2);
+  const mid = Math.floor(peak / 2);
+  const frames: [label: string, idx: number][] = [
+    ["start", 0],
+    ["mid", mid],
+    ["peak", peak],
+  ];
+
+  try {
+    const rowPngs: string[] = [];
+    for (const view of views) {
+      const tiles: string[] = [];
+      for (const [label, frameIdx] of frames) {
+        const raw = join(tmpDir, `${view}-${label}.png`);
+        const url = `http://127.0.0.1:${server.port}/#id=${encodeURIComponent(sequence.id)}&clean=1&setting=${setting}&play=0&view=${view}&frame=${frameIdx}`;
+        await $`${CHROME} --headless=new --hide-scrollbars --enable-unsafe-swiftshader --use-angle=swiftshader --window-size=640,480 --virtual-time-budget=3500 --screenshot=${raw} ${url}`.quiet();
+        const labeled = join(tmpDir, `${view}-${label}-lbl.png`);
+        const font = "/System/Library/Fonts/Helvetica.ttc";
+        if (existsSync(font)) {
+          await $`magick ${raw} -gravity NorthWest -fill "#000000aa" -draw "rectangle 0,0,220,26" -font ${font} -fill white -pointsize 16 -annotate +8+5 "${view} · ${label} (f${frameIdx})" ${labeled}`.quiet();
+          tiles.push(labeled);
+        } else {
+          tiles.push(raw);
+        }
+      }
+      const row = join(tmpDir, `row-${view}.png`);
+      await $`magick ${tiles} +append ${row}`.quiet();
+      rowPngs.push(row);
+    }
+    await $`magick ${rowPngs} -append ${outPng}`.quiet();
+    console.log(outPng);
+  } finally {
+    server.stop(true);
+    rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
+
+await main();

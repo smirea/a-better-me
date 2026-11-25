@@ -53,6 +53,8 @@ import {
   axleBar,
   abWheelProp,
   type BarbellStyle,
+  type GlbNodePose,
+  type GlbRef,
   type Part,
   type PropDef,
   type PropState,
@@ -593,6 +595,10 @@ export interface ExerciseBuilderConfig {
   extraKeyGoals?: (body: Body) => { start?: Goal[]; end?: Goal[] };
   /** Additional static equipment parts. */
   extraEquipment?: Part[];
+  /** Optional 3D GLB machine model(s) from `exercise-motion/dist/gym/models/<id>.glb`. */
+  glb?: GlbRef[];
+  /** Optional per-frame animation for named nodes inside `glb`. */
+  glbState?: (body: Body, frame: Frame, extras: number[], propStates: PropState[]) => GlbNodePose[][];
   /** Additional contact allowances merged into `contacts` and `obstacles`. */
   extraContacts?: Record<string, Record<string, number>>;
   /** Additional required contacts. */
@@ -1901,6 +1907,13 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
         propState: propStateFn,
         ...(tethers.length ? { tethers, tetherState: tetherStateFn } : {}),
         equipment: dynamicEquipmentFn ?? (() => staticParts),
+        ...(config.glb?.length ? { glb: config.glb } : {}),
+        ...(config.glbState
+          ? {
+              glbState: (frame: Frame, ex: number[], ps: PropState[]) =>
+                config.glbState!(body, frame, ex, ps),
+            }
+          : {}),
         loads,
         support,
         grip: config.grip,

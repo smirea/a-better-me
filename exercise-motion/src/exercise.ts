@@ -14,7 +14,15 @@ import {
   type PoseHints,
   type Side,
 } from "./body";
-import type { GlbRef, Part, PropDef, PropState, TetherDef, TetherState } from "./equipment";
+import type {
+  GlbNodePose,
+  GlbRef,
+  Part,
+  PropDef,
+  PropState,
+  TetherDef,
+  TetherState,
+} from "./equipment";
 import { lerp, minJerk, type Vec3 } from "./math";
 import { solve, type Goal, type Obstacle } from "./solver";
 
@@ -154,6 +162,7 @@ export interface Built {
     endFrame: Frame;
   }) => Part[];
   glb?: GlbRef[];
+  glbState?: (frame: Frame, extras: number[], propStates: PropState[]) => GlbNodePose[][];
   loads: LoadAttachment[];
   support: Support;
   tempo: Tempo;
@@ -206,6 +215,7 @@ export interface Sequence {
   tetherStates?: TetherState[][];
   equipment: Part[];
   glb?: GlbRef[];
+  glbStates?: GlbNodePose[][][];
   loads: LoadAttachment[];
   support: Support;
   contacts: Record<string, Record<string, number>>;
@@ -613,6 +623,22 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
   }
 
   const round = (value: number) => Math.round(value * 1e5) / 1e5;
+  const glbStates =
+    built.glb?.length && built.glbState
+      ? poses.map((pose, f) =>
+          built.glbState!(fk(body, pose, frame), [...pose.subarray(n)], propStates[f]).map((arr) =>
+            arr.map((np) => ({
+              node: np.node,
+              ...(np.posOffset ? { posOffset: np.posOffset.map(round) as Vec3 } : {}),
+              ...(np.pos ? { pos: np.pos.map(round) as Vec3 } : {}),
+              ...(np.rotOffset ? { rotOffset: np.rotOffset.map(round) as Vec3 } : {}),
+              ...(np.quat
+                ? { quat: np.quat.map(round) as [number, number, number, number] }
+                : {}),
+            })),
+          ),
+        )
+      : undefined;
   const sequence: Sequence = {
     id: spec.id,
     catalogId: spec.catalogId,
@@ -646,6 +672,7 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
       : {}),
     equipment,
     ...(built.glb?.length ? { glb: built.glb } : {}),
+    ...(glbStates ? { glbStates } : {}),
     loads: built.loads,
     support: built.support,
     contacts: built.contacts,

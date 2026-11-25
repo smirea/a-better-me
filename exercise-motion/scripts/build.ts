@@ -46,6 +46,7 @@ const ENGINE_SIG = engineHash.digest("hex").slice(0, 12);
 const args = process.argv.slice(2);
 const noCache = args.includes("--no-cache");
 const cacheOnly = args.includes("--cache-only");
+const libraryOnly = args.includes("--library-only");
 const singleIdx = args.indexOf("--single");
 const singleId = singleIdx >= 0 ? args[singleIdx + 1] : null;
 const onlyIds = cacheOnly
@@ -367,6 +368,14 @@ const libHtml = fill(
   script,
 );
 writeFileSync(join(libraryDir, "index.html"), libHtml);
+
+if (libraryOnly) {
+  console.log(
+    `Built ${builtItems.length} exercises (${cacheHits} cached) | motion issues: ${totalMotionIssues} | load issues: ${totalLoadIssues} | checks: ${passedChecks}/${totalChecks}`,
+  );
+  console.log(`Library:     ${join(libraryDir, "index.html")} (${builtItems.length} lazy-loaded exercises)`);
+  process.exit(0);
+}
 
 // 2. Also write self-contained single-file viewer (dist/exercise-motion.html & dist/exercise-motion-embed.html)
 // containing ALL built exercises gzip-compressed for instant offline / inline T3 playback.

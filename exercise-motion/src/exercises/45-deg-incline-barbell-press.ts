@@ -34,7 +34,7 @@ const ARMS_BOTTOM = {
 export const spec = buildExerciseSpec({
   id: "45-deg-incline-barbell-press",
   catalogId: "1a05c6f170d880198e1aceac084f30eb",
-  name: "45° Incline Barbell Press",
+  name: "45° Incline Barbell Press (old)",
   defaultLoadKg: 40,
   loadUnit: "total",
   laterality: "bilateral",

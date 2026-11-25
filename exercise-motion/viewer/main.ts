@@ -4,9 +4,11 @@ import {
   CapsuleGeometry,
   Color,
   CylinderGeometry,
+  Euler,
   Group,
   Mesh,
   MeshStandardMaterial,
+  type Object3D,
   PerspectiveCamera,
   Quaternion,
   Scene,
@@ -182,14 +184,44 @@ function partMesh(part: Part) {
   mesh.quaternion.set(...part.quat);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
+  mesh.userData.partId = part.id;
   return mesh;
 }
 
+let propLoadGen = 0;
+
 function buildProps() {
+  const gen = ++propLoadGen;
   props.clear();
   for (const prop of sequence.props) {
     const group = new Group();
-    for (const part of propParts(prop, state.loadKg)) group.add(partMesh(part));
+    if (prop.kind === "glb") {
+      const fallback = new Group();
+      for (const part of propParts(prop, state.loadKg)) fallback.add(partMesh(part));
+      group.add(fallback);
+      void glbLoader
+        .loadAsync(`/gym-models/${prop.glbId}.glb`)
+        .then((gltf) => {
+          if (gen !== propLoadGen) return;
+          const obj = gltf.scene;
+          if (prop.offset) obj.position.set(...prop.offset);
+          if (prop.quat) obj.quaternion.set(...prop.quat);
+          if (prop.scale) obj.scale.setScalar(prop.scale);
+          obj.traverse((child) => {
+            if ((child as Mesh).isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
+          fallback.visible = false;
+          group.add(obj);
+        })
+        .catch(() => {
+          // Offline / missing GLB: parametric collider parts remain visible.
+        });
+    } else {
+      for (const part of propParts(prop, state.loadKg)) group.add(partMesh(part));
+    }
     props.add(group);
   }
 }
@@ -261,19 +293,114 @@ function updateTethers(i: number, j: number, frac: number) {
   });
 }
 
+interface GlbNodeBind {
+  obj: Object3D;
+  bindPos: Vector3;
+  bindQuat: Quaternion;
+}
+
+let glbLoadGen = 0;
+let glbNodeMaps: Map<string, GlbNodeBind>[] = [];
+const glbEulerA = new Euler(0, 0, 0, "XYZ");
+const glbEulerB = new Euler(0, 0, 0, "XYZ");
+const glbQa = new Quaternion();
+const glbQb = new Quaternion();
+
+function applyEquipmentVisibilityForGlb(loadedRefs: NonNullable<Sequence["glb"]>) {
+  const hideAll = loadedRefs.some((r) => r.hideEquipment);
+  const prefixes = loadedRefs.flatMap((r) => r.hideEquipmentIds ?? []);
+  for (const child of equipment.children) {
+    const id = String(child.userData.partId ?? "");
+    if (hideAll || prefixes.some((p) => id === p || id.startsWith(p))) {
+      child.visible = false;
+    }
+  }
+}
+
 async function loadGlbAttachments() {
+  const gen = ++glbLoadGen;
   glbSlot.clear();
+  glbNodeMaps = [];
+  for (const child of equipment.children) child.visible = true;
   if (!sequence.glb?.length) return;
-  for (const ref of sequence.glb) {
-    try {
-      const gltf = await glbLoader.loadAsync(`/gym-models/${ref.id}.glb`);
-      const obj = gltf.scene;
-      obj.position.set(...ref.pos);
-      if (ref.quat) obj.quaternion.set(...ref.quat);
-      if (ref.scale) obj.scale.setScalar(ref.scale);
-      glbSlot.add(obj);
-    } catch {
-      // Optional GLB enhancement; parametric parts remain rendered.
+  const loadedRefs: NonNullable<Sequence["glb"]> = [];
+  const maps: Map<string, GlbNodeBind>[] = sequence.glb.map(() => new Map());
+  await Promise.all(
+    sequence.glb.map(async (ref, idx) => {
+      try {
+        const gltf = await glbLoader.loadAsync(`/gym-models/${ref.id}.glb`);
+        if (gen !== glbLoadGen) return;
+        const obj = gltf.scene;
+        obj.position.set(...ref.pos);
+        if (ref.quat) obj.quaternion.set(...ref.quat);
+        if (ref.scale) obj.scale.setScalar(ref.scale);
+        const nodeMap = maps[idx];
+        obj.traverse((child) => {
+          if ((child as Mesh).isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+          if (child.name) {
+            nodeMap.set(child.name, {
+              obj: child,
+              bindPos: child.position.clone(),
+              bindQuat: child.quaternion.clone(),
+            });
+          }
+        });
+        glbSlot.add(obj);
+        loadedRefs.push(ref);
+      } catch {
+        // Optional GLB enhancement; parametric parts remain rendered.
+      }
+    }),
+  );
+  if (gen !== glbLoadGen) return;
+  glbNodeMaps = maps;
+  if (loadedRefs.length) applyEquipmentVisibilityForGlb(loadedRefs);
+}
+
+function updateGlbNodes(i: number, j: number, frac: number) {
+  if (!sequence.glbStates?.length || !glbNodeMaps.length) return;
+  const rowA = sequence.glbStates[i];
+  const rowB = sequence.glbStates[j];
+  if (!rowA || !rowB) return;
+  for (let g = 0; g < glbNodeMaps.length; g++) {
+    const nodeMap = glbNodeMaps[g];
+    const listA = rowA[g];
+    const listB = rowB[g];
+    if (!nodeMap || !listA) continue;
+    for (let k = 0; k < listA.length; k++) {
+      const a = listA[k];
+      const b = listB?.[k] ?? a;
+      const bind = nodeMap.get(a.node);
+      if (!bind) continue;
+      if (a.pos) {
+        const bp = b.pos ?? a.pos;
+        bind.obj.position.set(
+          a.pos[0] + (bp[0] - a.pos[0]) * frac,
+          a.pos[1] + (bp[1] - a.pos[1]) * frac,
+          a.pos[2] + (bp[2] - a.pos[2]) * frac,
+        );
+      } else if (a.posOffset) {
+        const bo = b.posOffset ?? a.posOffset;
+        bind.obj.position.set(
+          bind.bindPos.x + a.posOffset[0] + (bo[0] - a.posOffset[0]) * frac,
+          bind.bindPos.y + a.posOffset[1] + (bo[1] - a.posOffset[1]) * frac,
+          bind.bindPos.z + a.posOffset[2] + (bo[2] - a.posOffset[2]) * frac,
+        );
+      }
+      if (a.quat) {
+        const bq = b.quat ?? a.quat;
+        bind.obj.quaternion.copy(glbQa.set(...a.quat)).slerp(glbQb.set(...bq), frac);
+      } else if (a.rotOffset) {
+        const br = b.rotOffset ?? a.rotOffset;
+        glbQa.copy(bind.bindQuat).multiply(glbQb.setFromEuler(glbEulerA.set(...a.rotOffset)));
+        glbQb
+          .copy(bind.bindQuat)
+          .multiply(new Quaternion().setFromEuler(glbEulerB.set(...br)));
+        bind.obj.quaternion.copy(glbQa).slerp(glbQb, frac);
+      }
     }
   }
 }
@@ -723,6 +850,7 @@ function draw(now: number) {
     group.quaternion.copy(qa.set(...a.quat)).slerp(qb.set(...b.quat), t);
   });
   updateTethers(i, j, t);
+  updateGlbNodes(i, j, t);
   if (shown !== lastShown) {
     lastShown = shown;
     $<HTMLInputElement>("scrub").value = String(shown);
@@ -775,11 +903,43 @@ async function init() {
       for (const item of list) loadedCache.set(item.sequence.id, item);
       libraryIndex = [...embedded.catalog].toSorted((a, b) => a.name.localeCompare(b.name));
     } else {
-      const resp = await fetch("./catalog.json");
+      const resp = await fetch("./catalog.json", { cache: "no-store" });
       if (!resp.ok) throw new Error(`Failed to fetch catalog.json (${resp.status})`);
       libraryIndex = ((await resp.json()) as CatalogSummary[]).toSorted((a, b) =>
         a.name.localeCompare(b.name),
       );
+      const sigOf = (list: CatalogSummary[]) =>
+        list.map((e) => `${e.id}:${e.name}:${e.checksPass ?? 0}/${e.checksTotal ?? 0}:${e.issueCount ?? 0}`).join("|");
+      let lastSig = sigOf(libraryIndex);
+      setInterval(async () => {
+        try {
+          const r = await fetch("./catalog.json", { cache: "no-store" });
+          if (!r.ok) return;
+          const next = ((await r.json()) as CatalogSummary[]).toSorted((a, b) =>
+            a.name.localeCompare(b.name),
+          );
+          const nextSig = sigOf(next);
+          if (nextSig === lastSig) return;
+          const prevMap = new Map(libraryIndex.map((e) => [e.id, `${e.name}:${e.checksPass}:${e.issueCount}`]));
+          lastSig = nextSig;
+          libraryIndex = next;
+          const listEl = $("drawer-list");
+          const prevScroll = listEl.scrollTop;
+          for (const item of next) {
+            if (prevMap.get(item.id) !== `${item.name}:${item.checksPass}:${item.issueCount}`) {
+              loadedCache.delete(item.id);
+            }
+          }
+          renderDrawerList(false);
+          listEl.scrollTop = prevScroll;
+          const activeMeta = libraryIndex.find((e) => e.id === state.exerciseId);
+          if (activeMeta && prevMap.get(activeMeta.id) !== `${activeMeta.name}:${activeMeta.checksPass}:${activeMeta.issueCount}`) {
+            void selectExerciseById(activeMeta.id, true, true);
+          }
+        } catch {
+          // Ignore transient poll failure while build writes catalog.json.
+        }
+      }, 3000);
     }
 
     const categories = [...new Set(libraryIndex.map((e) => e.category))].sort();
