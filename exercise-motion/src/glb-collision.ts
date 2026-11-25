@@ -53,6 +53,9 @@ const DEFAULT_MODEL_DIRS = [
   join(MOTION_ROOT, "dist", "gym", "models"),
 ];
 
+/** A required contact may sit this far from the real mesh: soft tissue plus the gap between a collider and its mesh. */
+const GLB_CONTACT_GAP = 0.03;
+
 let ioPromise: Promise<NodeIO> | null = null;
 const glbCache = new Map<string, ParsedGlb>();
 
@@ -828,7 +831,7 @@ export async function validateGlbMotion(
           const d = worldPointDistToPlaced(placed, pt, Math.min(nearest, 0.25));
           if (d < nearest) nearest = d;
         }
-        if (nearest > 0.065) {
+        if (nearest > GLB_CONTACT_GAP) {
           const cur = contactMismatchWorst.get(req.label);
           if (!cur) contactMismatchWorst.set(req.label, { gap: nearest, frames: [f], label: req.label });
           else {
