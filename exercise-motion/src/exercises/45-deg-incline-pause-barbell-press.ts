@@ -1,0 +1,91 @@
+import { buildExerciseSpec, POSTURE_HINTS } from "../builders";
+import { checkAnchorTravel, checkFeetPlanted, checkJointWithinAt } from "../postures";
+
+const TRUNK = {
+  ...POSTURE_HINTS.incline45,
+  "root.y": 0.62,
+  "root.z": -0.18,
+  "lumbar.flex": -8,
+  "thoracic.flex": -4,
+  "neck.flex": 10,
+  "clavicle.prot": -16,
+  "clavicle.elev": 2,
+};
+
+export const spec = buildExerciseSpec({
+  id: "45-deg-incline-pause-barbell-press",
+  catalogId: "1a05c6f170d8807590e2d79fc558e368",
+  name: "45° Incline Pause Barbell Press",
+  defaultLoadKg: 36,
+  loadUnit: "total",
+  laterality: "bilateral",
+  grip: "press",
+  phaseLabels: ["Press", "Lockout", "Lower", "Pause"],
+  tempo: { lower: 2, bottom: 2, raise: 1.2, top: 0.45 },
+  station: {
+    kind: "lying",
+    surface: "adjustable-bench",
+    face: "up",
+    backAngleDeg: 45,
+    stanceX: 0.2,
+    heelZ: 0.48,
+    feetOnFloor: true,
+    rack: {},
+  },
+  apparatus: {
+    kind: "barbell",
+    gripX: 0.34,
+    anchor: "press",
+    path: { startY: 1.4, startZ: -0.3, endY: 0.94, endZ: -0.1, arcBulgeZ: 0.03 },
+  },
+  hints: {
+    start: {
+      ...TRUNK,
+      "shoulder.elev": 116,
+      "shoulder.plane": 72,
+      "shoulder.twist": 22,
+      "elbow.flex": 8,
+      "forearm.pron": 30,
+      "wrist.flex": -6,
+    },
+    end: {
+      ...TRUNK,
+      "shoulder.elev": 64,
+      "shoulder.plane": 8,
+      "shoulder.twist": 12,
+      "elbow.flex": 112,
+      "forearm.pron": 36,
+      "wrist.flex": -8,
+    },
+  },
+  stiffness: { shoulder: 0.7, elbow: 4, lumbar: 5, thoracic: 5, clavicle: 3.5 },
+  checks: () => [
+    checkFeetPlanted("Keep both feet flat on the floor while you press."),
+    checkJointWithinAt(
+      "elbows-locked",
+      "Elbows locked out",
+      "Finish with the elbows straightened and the bar over the shoulders.",
+      "elbow_L.flex",
+      "start",
+      0,
+      22,
+    ),
+    checkJointWithinAt(
+      "bottom",
+      "Paused on the upper chest",
+      "Pause one to two seconds with the bar on the upper chest.",
+      "elbow_L.flex",
+      "peak",
+      85,
+      130,
+    ),
+    checkAnchorTravel(
+      "bar-rises",
+      "Bar travels up",
+      "Press the bar up from the bottom of the rep.",
+      "press_L",
+      "y",
+      0.2,
+    ),
+  ],
+});

@@ -1,0 +1,92 @@
+import { buildExerciseSpec, POSTURE_HINTS } from "../builders";
+import { checkAnchorTravel, checkFeetPlanted, checkJointWithinAt } from "../postures";
+
+const TRUNK = {
+  ...POSTURE_HINTS.incline30,
+  "root.y": 0.58,
+  "root.z": -0.1,
+  "root.pitch": -68,
+  "lumbar.flex": -8,
+  "thoracic.flex": -4,
+  "neck.flex": 8,
+  "clavicle.prot": -16,
+  "clavicle.elev": 0,
+};
+
+export const spec = buildExerciseSpec({
+  id: "low-incline-barbell-press",
+  catalogId: "1a05c6f170d88055b31ddbc6338d7074",
+  name: "Low Incline Barbell Press",
+  defaultLoadKg: 40,
+  loadUnit: "total",
+  laterality: "bilateral",
+  grip: "press",
+  phaseLabels: ["Press", "Lockout", "Lower", "Mid chest"],
+  tempo: { lower: 2, bottom: 0.25, raise: 1.2, top: 0.5 },
+  station: {
+    kind: "lying",
+    surface: "adjustable-bench",
+    face: "up",
+    backAngleDeg: 22,
+    stanceX: 0.2,
+    heelZ: 0.46,
+    feetOnFloor: true,
+    rack: {},
+  },
+  apparatus: {
+    kind: "barbell",
+    gripX: 0.34,
+    anchor: "press",
+    path: { startY: 1.22, startZ: -0.4, endY: 0.82, endZ: -0.2, arcBulgeZ: 0.04 },
+  },
+  hints: {
+    start: {
+      ...TRUNK,
+      "shoulder.elev": 100,
+      "shoulder.plane": 70,
+      "shoulder.twist": 30,
+      "elbow.flex": 8,
+      "forearm.pron": 28,
+      "wrist.flex": -6,
+    },
+    end: {
+      ...TRUNK,
+      "shoulder.elev": 58,
+      "shoulder.plane": 4,
+      "shoulder.twist": 12,
+      "elbow.flex": 110,
+      "forearm.pron": 36,
+      "wrist.flex": -8,
+    },
+  },
+  stiffness: { shoulder: 0.7, elbow: 4, lumbar: 5, thoracic: 5, clavicle: 3.5 },
+  checks: () => [
+    checkFeetPlanted("Keep both feet flat on the floor while you press."),
+    checkJointWithinAt(
+      "elbows-locked",
+      "Elbows locked out",
+      "Finish with the elbows straightened and the bar over the shoulders.",
+      "elbow_L.flex",
+      "start",
+      0,
+      22,
+    ),
+    checkJointWithinAt(
+      "bottom",
+      "Bar meets the middle chest",
+      "A low incline, up to about 30 degrees, touches the middle chest.",
+      "elbow_L.flex",
+      "peak",
+      85,
+      130,
+    ),
+    checkAnchorTravel(
+      "bar-rises",
+      "Bar travels up",
+      "Press the bar up from the bottom of the rep.",
+      "press_L",
+      "y",
+      0.2,
+    ),
+  ],
+});

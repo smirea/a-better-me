@@ -1,0 +1,91 @@
+import { buildExerciseSpec, POSTURE_HINTS } from "../builders";
+import { checkAnchorTravel, checkFeetPlanted, checkJointWithinAt } from "../postures";
+
+const TRUNK = {
+  ...POSTURE_HINTS.incline45,
+  "root.y": 0.62,
+  "root.z": -0.18,
+  "lumbar.flex": -8,
+  "thoracic.flex": -4,
+  "neck.flex": 10,
+  "clavicle.prot": -16,
+  "clavicle.elev": 2,
+};
+
+export const spec = buildExerciseSpec({
+  id: "45-deg-incline-close-grip-press",
+  catalogId: "1a05c6f170d8809da1e7fbc50ae7575b",
+  name: "45° Incline Close Grip Press",
+  defaultLoadKg: 32,
+  loadUnit: "total",
+  laterality: "bilateral",
+  grip: "press",
+  phaseLabels: ["Press", "Lockout", "Lower", "Upper chest"],
+  tempo: { lower: 2, bottom: 0.25, raise: 1.2, top: 0.5 },
+  station: {
+    kind: "lying",
+    surface: "adjustable-bench",
+    face: "up",
+    backAngleDeg: 45,
+    stanceX: 0.2,
+    heelZ: 0.48,
+    feetOnFloor: true,
+    rack: {},
+  },
+  apparatus: {
+    kind: "barbell",
+    gripX: 0.22,
+    anchor: "press",
+    path: { startY: 1.32, startZ: -0.26, endY: 0.94, endZ: -0.1, arcBulgeZ: 0.03 },
+  },
+  hints: {
+    start: {
+      ...TRUNK,
+      "shoulder.elev": 116,
+      "shoulder.plane": 58,
+      "shoulder.twist": 22,
+      "elbow.flex": 8,
+      "forearm.pron": 30,
+      "wrist.flex": -6,
+    },
+    end: {
+      ...TRUNK,
+      "shoulder.elev": 64,
+      "shoulder.plane": 30,
+      "shoulder.twist": 12,
+      "elbow.flex": 112,
+      "forearm.pron": 36,
+      "wrist.flex": -8,
+    },
+  },
+  stiffness: { shoulder: 0.7, elbow: 4, lumbar: 5, thoracic: 5, clavicle: 3.5 },
+  checks: () => [
+    checkFeetPlanted("Keep both feet flat on the floor while you press."),
+    checkJointWithinAt(
+      "elbows-locked",
+      "Elbows locked out",
+      "Finish with the elbows straightened and the bar over the shoulders.",
+      "elbow_L.flex",
+      "start",
+      0,
+      22,
+    ),
+    checkJointWithinAt(
+      "bottom",
+      "Close grip on the upper chest",
+      "Tuck the elbows more than a standard incline grip and tap the upper chest.",
+      "elbow_L.flex",
+      "peak",
+      85,
+      130,
+    ),
+    checkAnchorTravel(
+      "bar-rises",
+      "Bar travels up",
+      "Press the bar up from the bottom of the rep.",
+      "press_L",
+      "y",
+      0.2,
+    ),
+  ],
+});
