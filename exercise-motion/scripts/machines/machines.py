@@ -104,7 +104,7 @@ def power_rack():
     ux, uz, h = 0.60, 0.45, 2.30
     t = A.TUBE
     hook_y, safety_y = 1.30, 0.70
-    m.params.update({"uprightX": ux, "depthZ": uz, "height": h, "hookY": hook_y, "safetyY": safety_y})
+    m.params.update({"uprightX": ux, "depthZ": uz, "height": h, "hookY": hook_y, "safetyY": safety_y, "hookLip": 0.052})
     for sx, tag in ((1, "L"), (-1, "R")):
         for sz, fb in ((1, "front"), (-1, "back")):
             A.post(m, sx * ux, sz * uz, 0.072, h - t, part=f"upright_{fb}_{tag}")
@@ -139,6 +139,8 @@ def power_rack():
         m.box((sx * ux, hook_y - 0.012, face_z - 0.05), (0.06, 0.016, 0.09), "mat_frame", node=n, bevel=0.004)
         m.box((sx * ux, hook_y - 0.002, face_z - 0.05), (0.056, 0.004, 0.082), "mat_rubber", node=n, bevel=0.001)
         m.box((sx * ux, hook_y + 0.022, face_z - 0.098), (0.06, 0.06, 0.012), "mat_frame", node=n, bevel=0.004)
+        # The lip a walked-out bar must clear: it stands hookLip above the cradle.
+        m.collider(f"jhook_lip_{tag}", "box", (0.06, 0.06, 0.012), (sx * ux, hook_y + 0.022, face_z - 0.098), node=n)
         A.pop_pin(m, (sx * (ux + t / 2), hook_y + 0.05, face_z + t / 2), (sx, 0, 0), node=n, knob=0.012)
         m.collider(f"jhook_{tag}", "box", (0.06, 0.03, 0.10), (sx * ux, hook_y - 0.015, face_z - 0.05), node=n)
         m.hook(f"jhook_{tag}", cradle, node=n)

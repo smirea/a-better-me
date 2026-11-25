@@ -70,12 +70,40 @@ export const spec = composeExercise({
 
 ## Moving machine parts
 
-Pass `drive` to the machine so its sled, lever, stack or swivel moves each frame. Cables come from `cableTether(id, machine, pulleyKey, attachmentProp, props)` (outlet to attachment eye, checked every frame). Read anchors from the static instance and let them ride: `plantBothFeetOnPlate(body, m.footplates!.sled.surface, stanceX, along, toeOut, weight, carried(m.carrier("sled")!, ctx.live))`. Use `m.atFrame(frame, extras, propStates)` for anything else that moves, such as a swivelled pulley outlet in `tetherState`.
+Pass `drive` to the machine so its sled, lever, stack or swivel moves each frame. Cables come from `cableTether(id, machine, pulleyKey, attachmentProp, props)` (outlet to attachment eye, checked every frame). Read anchors from the static instance and let them ride: `plantBothFeetOnPlate(body, m.footplates!.sled.surface, stanceX, along, toeOut, weight, carried(m.carrier("sled")!, ctx.live))`, and the same `carry` option on `plantFootOnToeBreak`. Use `m.atFrame(frame, extras, propStates)` for anything else that moves.
 
-### Form checks (`src/postures.ts`)
+A sled or carriage whose travel the lifter decides (leg press, hack squat, Smith machine) is an extra unknown the solver finds with the pose. The machine stops it at its limits, and `composeExercise` already penalizes travel past them, so don't add your own rail penalty:
+
+```ts
+const machine = legPress45Machine({ drive: (_frame, extras) => ({ sledTravel: extras[0] }) });
+// in setup: extras: 1, extraStart: [0.5], and seed each key pose's travel with a weak key goal if it helps:
+keyGoals: { start: [({ q, push }) => push(q[body.dofCount] - 0.5)], end: [lockAngle(body, "knee_L.flex", 92, 10)] },
+```
+
+Cable stacks rest on their pins at the rep's slackest frame automatically; `restCable` only needs to be roughly right.
+
+## Sitting on a machine
+
+`POSTURE_HINTS` are built for equipment at the origin. On a machine, take the root position from its seat anchor so the solve starts in the right place: `"root.y": seat.origin[1] + 0.09, "root.z": seat.origin[2]`, and pitch the trunk to the backrest. Hints pick the solver's basin for every goal, not just the posture: when a spec that passed starts failing after a hint change, the hint moved the basin.
+
+## Racks
+
+Set J-hooks and safeties from the bar's solved height, not from the cradle: `rackHeightsFor(standingUnderside, bottomUnderside)` (`src/machines/power-rack.ts`) puts the hooks where the standing bar clears their lips and the safeties just under the bottom of the rep. A bar resting on the traps is placed from body anchors in `propState`, and the hands `holdGrasp` it through `ctx.live` with `{ at: ±halfWidth, style: "overhand" }`; keep the grip close enough that the shoulders aren't held at their rotation limit (QA warns when a joint sits at its limit for most of the rep).
+
+## Loads
+
+`bodyweightShare` without a `direction` hangs from the anchor like a dumbbell. A hand or foot pushing on the floor needs `direction: [0, 1, 0]` (push-ups, planks). A cable pulls each hand parallel to the cable, so on a wide bar give each hand its own `pulley` point offset by its grip width, not the pulley's centre. An "overload" error is often a load pointing the wrong way before it is too heavy.
+
+## Form checks
+
+Each check tests the cue it quotes, exactly as written, on both sides when the cue applies to both, and over every frame when the cue is about the whole rep ("keep", "throughout"). Never widen a range, swap a check for an easier one, or drop a check to get green. If the body or the machine can't meet a cue, leave the check failing and say why in your report: that is how a machine or rig problem gets fixed. Contact checks ("chest touches the floor", "bar to upper chest") measure the gap from the body surface the cue names, not from a nearby anchor with a generous distance.
+
 - `checkJointWithinAt(id, label, cue, angleKey, "start" | "peak", loDeg, hiDeg)` — `"start"` evaluates frame 0, `"peak"` evaluates the end of phase 1 (the lockout or the stretch, whichever the rep moves to first).
 - `checkFlatBack`, `checkNeutralNeck`, `checkJointRange`, `checkAnchorTravel`, `checkFeetPlanted`.
 
+## When the solve fights you
+
+Run `bun exercise-motion/scripts/batch-qa.ts <slug> --explain`. For the start and peak poses it prints the key joint angles, every joint within 3° of a limit, each required contact's signed gap and each grasp's offset, plus every check's measured value. A joint pinned at its limit is usually the reason a contact won't close or a depth target won't reach: fix the placement (foot height on a plate, grip width, seat position) rather than the weights.
 ## Coordinate system & body conventions (`src/body.ts`)
 
 - **World axes:** Y up (`y = 0` is floor), figure faces `+Z`, figure's left is `+X`, figure's right is `-X`.
@@ -98,7 +126,7 @@ Pass `drive` to the machine so its sled, lever, stack or swivel moves each frame
 
 1. Read the exercise's brief (`bun exercise-motion/scripts/exercise-brief.ts "<name>"`) and look at its reference images. If the instructions or images are unclear, check standard form online.
 2. Write `exercise-motion/src/exercises/<slug>.ts` (don't edit `src/exercises/index.ts`; `scripts/sync-exercises.ts` regenerates it).
-3. Run `bun exercise-motion/scripts/batch-qa.ts <slug>`. It must report `0` errors and pass every form check.
+3. Run `bun exercise-motion/scripts/batch-qa.ts <slug>`. It must report `0` errors and pass every form check; treat each warning as a defect unless you can say why it is right. Add `--explain` when something fights you.
 4. Run `bun exercise-motion/scripts/render-3d.ts <slug> --closeups` and look at the PNG: full views, hand close-ups and foot close-ups. Compare with the reference images. Check that the equipment is right and set up correctly, that nothing floats, sinks or clips, that the fingers wrap what they hold and the soles sit flat, and that the motion matches the instructions.
 5. Fix every error, failed check and visual defect at its cause (pose, placement, equipment state), never by widening a contact allowance or loosening a check, until both are clean.
 6. Run `bun check` and `bunx oxlint exercise-motion/src/exercises/<slug>.ts`, and leave no untracked temp files.

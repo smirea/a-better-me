@@ -13,7 +13,7 @@ import { legExtensionMachine } from "./leg-extension";
 import { legPress45Machine } from "./leg-press-45";
 import { olympicInclineBenchMachine } from "./olympic-incline-bench";
 import { plyoBoxMachine } from "./plyo-box";
-import { powerRackMachine } from "./power-rack";
+import { powerRackMachine, rackHeightsFor } from "./power-rack";
 import { preacherBenchMachine } from "./preacher-bench";
 import { seatedCableRowMachine } from "./seated-cable-row";
 import { seatedLegCurlMachine } from "./seated-leg-curl";
@@ -40,6 +40,7 @@ export {
   olympicInclineBenchMachine,
   plyoBoxMachine,
   powerRackMachine,
+  rackHeightsFor,
   preacherBenchMachine,
   seatedCableRowMachine,
   seatedLegCurlMachine,

@@ -1,5 +1,5 @@
 import { clamp } from "../math";
-import { defineMachine, HANDS, slideY, specParam } from "./core";
+import { defineMachine, HANDS, machineSpec, slideY, specParam } from "./core";
 
 export interface PowerRackState {
   /** Height of the J-hook cradle, where the racked bar's underside rests. */
@@ -19,3 +19,16 @@ export const powerRackMachine = defineMachine<PowerRackState>({
   },
   contacts: (p) => ({ [`${p}.grip_`]: HANDS }),
 });
+
+/**
+ * Rack settings for a squat or press whose bar shaft's underside is at `standingY` when the lifter stands tall and at
+ * `bottomY` at the bottom of the rep: the J-hooks one hole below where the bar can still walk out over their lips, and
+ * the safeties just under the lowest point so a failed rep lands on them.
+ */
+export function rackHeightsFor(standingY: number, bottomY: number, clearance = 0.03): { hookY: number; safetyY: number } {
+  const spec = machineSpec("power-rack");
+  return {
+    hookY: standingY - specParam(spec, "hookLip") - clearance,
+    safetyY: bottomY - clearance,
+  };
+}
