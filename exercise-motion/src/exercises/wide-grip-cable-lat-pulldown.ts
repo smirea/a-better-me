@@ -12,6 +12,7 @@ import {
   propHandles,
 } from "../machines";
 import { plantBothFeet, sitOnSeat } from "../postures";
+import { lockTorsoPitch } from "../authoring";
 import { composeExercise } from "../scene";
 import { lockAngle, mirrored, restOnPlane, type Goal } from "../solver";
 
@@ -112,9 +113,11 @@ const checks: FormCheck[] = [
     label: "Slight backward lean, held",
     cue: "In the seated position, slightly lean your torso backward at your hips. Maintain this slight backward lean throughout your set, rather than leaning further backward.",
     evaluate: (context) =>
-      everyFrame(context, (_frame, _angles, index) => {
-        const pitch = deg(context.sequence.poses[index][3]);
-        return Math.max(0, pitch - -6, -18 - pitch);
+      everyFrame(context, (frame) => {
+        // The torso's lean, not the pelvis's: the upper back is what a coach sees rock back.
+        const up = new Vector3(0, 1, 0).applyQuaternion(frame.rot[context.body.index.thoracic]);
+        const lean = deg(Math.atan2(-up.z, up.y));
+        return Math.max(0, 6 - lean, lean - 18);
       }, 0, "° outside a slight backward lean"),
   },
   {
@@ -262,6 +265,7 @@ export const spec = composeExercise({
         restOnPlane(body, "thighFront_L", new Vector3(...padL.origin), new Vector3(...padL.normal), 50, 0.004),
         restOnPlane(body, "thighFront_R", new Vector3(...padR.origin), new Vector3(...padR.normal), 50, 0.004),
         pitchGoal(-14, 90),
+        lockTorsoPitch(body, -13, 60),
         lockAngle(body, "hip_L.flex", 92, 12),
         lockAngle(body, "hip_R.flex", 92, 12),
         lockAngle(body, "knee_L.flex", 78, 10),

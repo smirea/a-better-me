@@ -22,31 +22,33 @@ const TOE_OUT = 0.45;
 /** Heels this far up the footplate from its lower edge: the feet sit in the middle of the platform. */
 const HEEL_ALONG = 0.24;
 /** The sled's travel up its rail is solved with the pose, as the one extra unknown. */
-const SLED_TOP = 0.51;
+const SLED_TOP = 0.6;
 /** Along the rail, only the sled's weight component pushes back on the feet. */
 const ALONG_RAIL = Math.SQRT1_2;
 
 const machine = legPress45Machine({ drive: (_frame, extras) => ({ sledTravel: extras[0] }) });
 
 const checks = (body: Body): FormCheck[] => [
-  checkJointWithinAt(
-    "depth",
-    "Knees bend to at least 90°",
-    "People can commonly lower the sled until their knees are bent by at least 90 degrees.",
-    "knee_L.flex",
-    "peak",
-    88,
-    115,
-  ),
-  checkJointWithinAt(
-    "soft-lockout",
-    "Knees straight or just bent at the top",
-    "Based on your preference, you can finish with your knees fully straightened or ever so slightly bent.",
-    "knee_L.flex",
-    "start",
-    0,
-    25,
-  ),
+  ...(["L", "R"] as const).flatMap((side) => [
+    checkJointWithinAt(
+      `depth-${side}`,
+      `${side === "L" ? "Left" : "Right"} knee bends to at least 90°`,
+      "People can commonly lower the sled until their knees are bent by at least 90 degrees.",
+      `knee_${side}.flex`,
+      "peak",
+      88,
+      115,
+    ),
+    checkJointWithinAt(
+      `soft-lockout-${side}`,
+      `${side === "L" ? "Left" : "Right"} knee straight or just bent at the top`,
+      "Based on your preference, you can finish with your knees fully straightened or ever so slightly bent.",
+      `knee_${side}.flex`,
+      "start",
+      0,
+      15,
+    ),
+  ]),
   {
     id: "knees-track-toes",
     label: "Knees track over the toes",
@@ -96,7 +98,7 @@ export const spec = composeExercise({
       ],
       keyGoals: {
         start: [
-          lockAngle(body, "knee_L.flex", 15, 10),
+          lockAngle(body, "knee_L.flex", 6, 60),
           // Seed the top of the rep near where slightly bent knees put the sled; the solve settles it from there.
           ({ q, push }) => push(q[body.dofCount] - SLED_TOP),
         ],

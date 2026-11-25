@@ -1161,7 +1161,7 @@ async function init() {
           Angle:
             opts.focus === "feet"
               ? new Vector3(-0.78, 0.34, 0.52).normalize()
-              : new Vector3(opts.focus === "handL" ? 0.62 : -0.62, 0.36, 0.69).normalize(),
+              : new Vector3(opts.focus === "handL" ? 0.3 : -0.3, 0.4, 0.87).normalize(),
         };
         let dir = dirByView[opts.view ?? state.view] ?? dirByView.Angle;
         if (opts.focus === "feet") {
