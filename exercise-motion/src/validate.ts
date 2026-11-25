@@ -5,11 +5,12 @@ import { compileParts, propParts, signedDistance, surfaceSamples, type Shape } f
 import type { Built, CheckResult, Kinematics, Sequence } from "./exercise";
 import { CYLINDER_GRIPS, graspHandleAt, gripCenter, propEye, propPointWorld } from "./grasp";
 import { machineSpec } from "./machines/core";
-import { closestSegments, deg, quatFromRotVec, rotVecFromQuat } from "./math";
+import { closestSegments, deg, quatFromRotVec, rad, rotVecFromQuat } from "./math";
 import { MUSCLE_NAMES, MUSCLES, TENDONS } from "./muscles";
 import {
   capsulePenetration,
   capsulesInWorld,
+  jointRanges,
   limitViolations,
   newCapsules,
   obstaclePenetration,
@@ -43,6 +44,10 @@ export interface Issue {
 /** Thresholds, each chosen as the point past which a person couldn't or wouldn't do what the frames show. */
 const LIMITS = {
   jointExcess: 1.5,
+  /** A joint this close to a limit, in degrees, is pinned there: a pose the solver forced, not one a lifter chooses. */
+  pinnedMargin: 1.5,
+  /** Share of the rep a joint may sit pinned before it reads as a forced pose. */
+  pinnedShare: 0.4,
   clip: 0.004,
   contactGap: 0.012,
   /** How far a handle's axis may sit off the centre of the closed fingers before the hand visibly misses it. */
@@ -143,9 +148,13 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
     .map((collider, i) => (collider.visible ? i : -1))
     .filter((i) => i >= 0);
   const slides = new Map<string, { min: Vector3; max: Vector3 }>();
+  const pinned = new Map<string, number>();
 
   for (let f = 0; f < count; f++) {
     const frame = kin.frames[f];
+    jointRanges(body, sequence.poses[f], kin.angles[f], (key, value, lo, hi) => {
+      if (Math.min(value - lo, hi - value) < rad(LIMITS.pinnedMargin)) pinned.set(key, (pinned.get(key) ?? 0) + 1);
+    });
     limitViolations(body, sequence.poses[f], kin.angles[f], (key, excess) => {
       const degrees = Math.abs(deg(excess));
       if (degrees <= LIMITS.jointExcess) return;
@@ -419,6 +428,15 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
     }
   }
 
+  for (const [key, frames] of pinned) {
+    if (frames / count < LIMITS.pinnedShare) continue;
+    collector.add(`pinned:${key}`, 0, frames / count, (share) => ({
+      code: "joint-limit",
+      severity: "warning",
+      title: `${pretty(key.split(".")[0])} held at the end of its range`,
+      detail: `${key.split(".")[1]} sits within ${LIMITS.pinnedMargin}° of its limit for ${Math.round(100 * share)}% of the rep; something in the setup is forcing it`,
+    }));
+  }
   for (const [label, seen] of slides) {
     const slide = Math.hypot(seen.max.x - seen.min.x, seen.max.z - seen.min.z);
     if (slide > LIMITS.slide) {

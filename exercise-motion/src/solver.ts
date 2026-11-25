@@ -65,10 +65,20 @@ export function limitViolations(
   a: Angles,
   visit: (key: string, excess: number) => void,
 ) {
+  jointRanges(body, q, a, (key, value, lo, hi) => visit(key, over(value, lo, hi)));
+}
+
+/** Every limited motion with its current value and range, in radians: the joint limits as the solver enforces them. */
+export function jointRanges(
+  body: Body,
+  q: ArrayLike<number>,
+  a: Angles,
+  visit: (key: string, value: number, lo: number, hi: number) => void,
+) {
   for (const joint of body.joints) {
     if (joint.kind === "hinge" || joint.kind === "universal") {
       joint.dofs.forEach((dof, n) =>
-        visit(`${joint.name}.${dof.name}`, over(q[joint.dofStart + n], dof.limit[0], dof.limit[1])),
+        visit(`${joint.name}.${dof.name}`, q[joint.dofStart + n], dof.limit[0], dof.limit[1]),
       );
       continue;
     }
@@ -80,17 +90,14 @@ export function limitViolations(
         ? ["twist"]
         : ["flex", "bend", "twist"]) {
       const range = BALL_LIMITS[`${base}.${motion}`];
-      visit(
-        `${joint.name}.${motion}`,
-        over(a[`${joint.name}.${motion}`], rad(range[0]), rad(range[1])),
-      );
+      visit(`${joint.name}.${motion}`, a[`${joint.name}.${motion}`], rad(range[0]), rad(range[1]));
     }
     if (base === "shoulder") {
       const elevation = a[`${joint.name}.elev`];
       // The plane is undefined for a hanging arm, so the limit only applies once the arm has lifted.
       const max =
         elevation < rad(20) ? Math.PI : rad(shoulderElevationLimit(deg(a[`${joint.name}.plane`])));
-      visit(`${joint.name}.elev`, Math.max(0, elevation - max));
+      visit(`${joint.name}.elev`, elevation, -Math.PI, max);
     }
   }
 }

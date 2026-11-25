@@ -1163,7 +1163,13 @@ async function init() {
               ? new Vector3(-0.78, 0.34, 0.52).normalize()
               : new Vector3(opts.focus === "handL" ? 0.62 : -0.62, 0.36, 0.69).normalize(),
         };
-        const dir = dirByView[opts.view ?? state.view] ?? dirByView.Angle;
+        let dir = dirByView[opts.view ?? state.view] ?? dirByView.Angle;
+        if (opts.focus === "feet") {
+          // Look at the feet from their instep side, so a footplate or step never stands between the camera and the soles.
+          const instep = new Vector3();
+          for (const side of ["L", "R"] as const) instep.add(new Vector3(0, 1, 0.35).applyQuaternion(fr.rot[body.index[`ankle_${side}`]]));
+          dir = instep.normalize().multiplyScalar(0.75).add(new Vector3(-0.6, 0.1, 0.25)).normalize();
+        }
         controls.target.copy(center);
         camera.position.copy(center).addScaledVector(dir, dist);
         controls.update();

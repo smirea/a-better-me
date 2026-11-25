@@ -67,9 +67,8 @@ async function main() {
     const i = args.indexOf(name);
     return i >= 0 ? args[i + 1] : undefined;
   };
-  const slug = args.find(
-    (a, i) => !a.startsWith("--") && !(i > 0 && args[i - 1]?.startsWith("--")),
-  );
+  const VALUE_FLAGS = new Set(["--out", "--views", "--setting", "--skin"]);
+  const slug = args.find((a, i) => !a.startsWith("--") && !VALUE_FLAGS.has(args[i - 1] ?? ""));
   if (!slug) {
     throw new Error(
       "Usage: render-3d.ts <slug> [--out /tmp/render-3d.png] [--views Side,Angle,Front] [--setting studio-light] [--skin studio-graphite] [--closeups]",

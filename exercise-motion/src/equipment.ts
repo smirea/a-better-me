@@ -504,7 +504,9 @@ export function surfaceSamples(shape: Shape): Vector3[] {
       local.push(new Vector3(s * a * 0.7, a * 0.7 * Math.cos(t), a * 0.7 * Math.sin(t)));
     }
   } else {
-    for (const x of [-b / 2, -b / 4, 0, b / 4, b / 2]) ring(x, a);
+    // Rings every 4 cm, so a long shaft can't pass a thin arm or hook between two of them.
+    const rings = Math.max(5, Math.ceil(b / 0.04) + 1);
+    for (let k = 0; k < rings; k++) ring(-b / 2 + (b * k) / (rings - 1), a);
     if (shape.part.shape === "capsule") local.push(new Vector3(b / 2 + a, 0, 0), new Vector3(-b / 2 - a, 0, 0));
   }
   const turn = shape.inverse.clone().invert();
