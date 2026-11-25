@@ -118,22 +118,22 @@ export const POSTURE_HINTS: Record<string, PoseHints> = {
 
 /** Common resting collider penetration allowances for benches, seats, and pads. */
 export const PAD_RESTING: Record<string, number> = {
-  pelvis: 0.025,
-  abdomen: 0.02,
-  chest: 0.03,
-  girdle: 0.03,
-  neck: 0.015,
-  head: 0.02,
-  thigh_L: 0.028,
-  thigh_R: 0.028,
-  thighShaft_L: 0.028,
-  thighShaft_R: 0.028,
-  upperarm_L: 0.018,
-  upperarm_R: 0.018,
-  forearm_L: 0.018,
-  forearm_R: 0.018,
-  shank_L: 0.024,
-  shank_R: 0.024,
+  pelvis: 0.042,
+  abdomen: 0.03,
+  chest: 0.04,
+  girdle: 0.04,
+  neck: 0.02,
+  head: 0.025,
+  thigh_L: 0.045,
+  thigh_R: 0.045,
+  thighShaft_L: 0.045,
+  thighShaft_R: 0.045,
+  upperarm_L: 0.025,
+  upperarm_R: 0.025,
+  forearm_L: 0.025,
+  forearm_R: 0.025,
+  shank_L: 0.032,
+  shank_R: 0.032,
 };
 
 /** Bilateral planted feet at `±stanceX` and `heelZ` on a horizontal surface `y` with `toeOutRad` outward angle. */

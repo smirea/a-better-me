@@ -163,10 +163,13 @@ async function main() {
     const unmetSummary = [...new Set(analysis.unmet.flat().map((u) => `${u.dof}(${Math.round(u.fraction * 100)}%)`))];
     if (unmetSummary.length) console.log(`  Unmet torques: ${unmetSummary.slice(0, 6).join(", ")}`);
 
-    // Render orthographic contact sheet (side, front, angle across 5 phases of phase 1)
+    // Render orthographic contact sheet (side, front, angle across 5 phases; full cycle for multi-waypoint lifts)
     const lower = sequence.phases[0];
-    const sampleFrames = [0, 0.25, 0.5, 0.75, 1].map((u) =>
-      Math.min(sequence.poses.length - 1, Math.round(lower.from + (lower.to + 1 - lower.from) * u)),
+    const isMulti = sequence.phases.length > 4;
+    const sampleFrames = (isMulti ? [0, 0.22, 0.48, 0.72, 0.94] : [0, 0.25, 0.5, 0.75, 1]).map((u) =>
+      isMulti
+        ? Math.min(sequence.poses.length - 1, Math.round((sequence.poses.length - 1) * u))
+        : Math.min(sequence.poses.length - 1, Math.round(lower.from + (lower.to + 1 - lower.from) * u)),
     );
     const svg = contactSheet(sequence, sampleFrames, ["side", "front", "angle"], body);
     const svgPath = join(outDir, `${spec.id}-sheet.svg`);

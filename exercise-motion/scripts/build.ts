@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpus } from "node:os";
 import { join } from "node:path";
 import { analyze } from "../src/biomech";
 import { groupsOf } from "../src/catalog";
@@ -43,9 +44,14 @@ const ENGINE_SIG = engineHash.digest("hex").slice(0, 12);
 
 const args = process.argv.slice(2);
 const noCache = args.includes("--no-cache");
+const cacheOnly = args.includes("--cache-only");
 const singleIdx = args.indexOf("--single");
 const singleId = singleIdx >= 0 ? args[singleIdx + 1] : null;
-const onlyIds = singleId ? new Set([singleId]) : null;
+const onlyIds = cacheOnly
+  ? new Set(args.filter((a) => !a.startsWith("--")))
+  : singleId
+    ? new Set([singleId])
+    : null;
 
 const catalog = loadAppCatalog();
 const byCatalogId = new Map(catalog.map((e) => [e.id, e]));
@@ -55,6 +61,43 @@ const specsToBuild: ExerciseSpec[] = onlyIds
   : EXERCISES;
 if (specsToBuild.length === 0) {
   throw new Error(singleId ? `Exercise "${singleId}" not found in EXERCISES.` : "EXERCISES is empty.");
+}
+
+const cachePathFor = (spec: ExerciseSpec): string | null => {
+  const srcPath = join(MOTION_ROOT, "src", "exercises", `${spec.id}.ts`);
+  if (!existsSync(srcPath)) return null;
+  const specSig = createHash("sha256")
+    .update(ENGINE_SIG)
+    .update(readFileSync(srcPath))
+    .digest("hex")
+    .slice(0, 16);
+  return join(cacheDir, `${spec.id}.${specSig}.json`);
+};
+
+// When building many uncached exercises, fan out across CPU cores to populate the SHA-256 cache in parallel.
+if (!cacheOnly && !singleId) {
+  const uncached = specsToBuild.filter((spec) => {
+    const cp = cachePathFor(spec);
+    return noCache || !cp || !existsSync(cp);
+  });
+  const workers = Math.min(8, Math.max(1, cpus().length - 1));
+  if (uncached.length > 16 && workers > 1) {
+    const chunkSize = Math.ceil(uncached.length / workers);
+    const procs: ReturnType<typeof Bun.spawn>[] = [];
+    for (let i = 0; i < uncached.length; i += chunkSize) {
+      const slice = uncached.slice(i, i + chunkSize).map((s) => s.id);
+      const flags = noCache ? ["--cache-only", "--no-cache", ...slice] : ["--cache-only", ...slice];
+      procs.push(
+        Bun.spawn(["bun", join(MOTION_ROOT, "scripts", "build.ts"), ...flags], {
+          stdout: "inherit",
+          stderr: "inherit",
+        }),
+      );
+    }
+    const codes = await Promise.all(procs.map((p) => p.exited));
+    const bad = codes.find((c) => c !== 0);
+    if (bad) throw new Error(`Parallel build worker failed with exit code ${bad}`);
+  }
 }
 
 interface BuiltItem {
@@ -120,17 +163,9 @@ for (const spec of specsToBuild) {
   if (!entry)
     throw new Error(`${spec.name}: catalog id ${spec.catalogId} is not in exercises.json`);
 
-  const srcPath = join(MOTION_ROOT, "src", "exercises", `${spec.id}.ts`);
-  const specSig = existsSync(srcPath)
-    ? createHash("sha256")
-        .update(ENGINE_SIG)
-        .update(readFileSync(srcPath))
-        .digest("hex")
-        .slice(0, 16)
-    : null;
-  const cachePath = specSig ? join(cacheDir, `${spec.id}.${specSig}.json`) : null;
+  const cachePath = cachePathFor(spec);
 
-  if (!noCache && cachePath && existsSync(cachePath)) {
+  if ((!noCache || (!cacheOnly && specsToBuild.length > 16)) && cachePath && existsSync(cachePath)) {
     const cached = JSON.parse(readFileSync(cachePath, "utf8")) as {
       data: BuiltItem["data"];
       summary: BuiltItem["summary"];
@@ -258,6 +293,8 @@ for (const spec of specsToBuild) {
 
   builtItems.push({ spec, data: itemData, summary });
 
+  if (cacheOnly) continue;
+
   if (specsToBuild.length <= 25 || issues.length > 0 || loadIssues.length > 0 || checks.some((c) => !c.pass)) {
     const pct = (value: number) => `${(value * 100).toFixed(0)}%`;
     report.push(`## ${spec.name}`, "");
@@ -283,6 +320,10 @@ for (const spec of specsToBuild) {
     }
     report.push("");
   }
+}
+
+if (cacheOnly) {
+  process.exit(0);
 }
 
 const bundle = await Bun.build({
