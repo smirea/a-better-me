@@ -42,7 +42,7 @@ export const spec = buildExerciseSpec({
 
 ### Supported `station` kinds (`src/builders.ts`)
 - `"standing"` — `stanceX`, `heelZ`, `toeOutDeg`, `surfaceY`, `split` (lunge/split squat/Bulgarian with `"flat" | "toe" | "elevated-stand" | "elevated-bench"`), `singleFoot`, `box`, `rack`, `smith`, `trackKnees`, `balanceZ`, `torsoLeanDeg`
-- `"seated"` — `seatY` (default `0.43` for flat feet on floor!), `seatZ`, `leanDeg`, `frame`: `"flat-bench"` | `"adjustable-bench"` (`backAngleDeg`) | `"machine"` (`backAngleDeg` or `chestPadZ`) | `"lat-pulldown"` | `"seated-row"` | `"preacher"` | `"leg-extension"` | `"box"`, `feetMode` (`"floor" | "footplate" | "hanging"`)
+- `"seated"` — `seatY` (default `0.43` for flat feet on floor!), `seatZ`, `leanDeg`, `lockHipFlexDeg` (e.g. `62..68` with `hip.abd: 10..12` on leg extension/curl machines to keep thighs level on the seat), `frame`: `"flat-bench"` | `"adjustable-bench"` (`backAngleDeg`) | `"machine"` (`backAngleDeg` or `chestPadZ`) | `"lat-pulldown"` | `"seated-row"` | `"preacher"` | `"leg-extension"` (auto-pins hands on side handles and defaults `hip`/`ankle` passive!) | `"box"`, `feetMode` (`"floor" | "footplate" | "hanging"`)
 - `"lying"` — `surface`: `"flat-bench" | "adjustable-bench" | "floor" | "stability-ball" | "lying-leg-curl"`, `face`: `"up" | "down" | "side"`, `backAngleDeg`, `rack`, `smith`, `ankleRollers`, `feetOnFloor`
 - `"kneeling"` — `halfKneelingSide?`, `leanDeg?`
 - `"hanging"` (pull-up bar) | `"dip"` (parallel bars) | `"pushup"` (floor/incline/decline/knees/forearms plank)
@@ -56,8 +56,12 @@ export const spec = buildExerciseSpec({
 - `"cable-dual"` — cable crossover (`pulleyY`, `halfWidth`, `z`, `attachment`, `anchor`)
 - `"band"` — elastic band tether from `anchors: Vec3[]` to `targetAnchors`
 - `"machine-handles"` — moving machine handles (`orientation: "horizontal" | "neutral"`, `forceDir: Vec3`, optional `handPath`)
-- `"roller-pad"` — moving machine roller tracking `trackAnchors` (`["shinFront_L", "shinFront_R"]`, `["shinBack_L", "shinBack_R"]`, `["thighOuter_L", "thighOuter_R"]`, etc.) with `pulley` or `forceDir`!
+- `"roller-pad"` — moving machine roller tracking `trackAnchors` (`["shinFront_L", "shinFront_R"]`, `["shinBack_L", "shinBack_R"]`, `["thighOuter_L", "thighOuter_R"]`, etc.) with `localOffset` (in the anchor's joint frame, e.g. `[0, 0, 0.055]` stays on front of shin through the entire knee arc!) or world `offset`, plus `pulley` or `forceDir`!
 - `"landmine"` | `"ab-wheel"` | `"rings"` | `"prowler-sled"` | `"leg-press-sled"`
+
+### Form checks (`src/postures.ts`)
+- `checkJointWithinAt(id, label, cue, angleKey, "start" | "peak", loDeg, hiDeg)` — `"start"` evaluates frame 0, `"peak"` evaluates end of phase 1 (`"top"`/`"bottom"` aliases also work).
+- `checkFlatBack`, `checkNeutralNeck`, `checkJointRange`, `checkAnchorTravel`, `checkFeetPlanted`.
 
 ### Unilateral & Alternating helpers
 - `sidedHints("L", activeArmHints, restArmHints, sharedTrunkHints)` — sets working side `_L` and resting side `_R` cleanly.

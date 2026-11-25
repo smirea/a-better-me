@@ -158,7 +158,7 @@ export function restBackOnPad(
   body: Body,
   back: PadSurface,
   options: {
-    sacrumAlong?: number;
+    sacrumAlong?: number | null;
     upperBackAlong?: number;
     occiputAlong?: number | null;
     sink?: number;
@@ -174,12 +174,16 @@ export function restBackOnPad(
   } = options;
   const origin = new Vector3(...back.origin);
   const normal = new Vector3(...back.normal);
-  const sacrumPt = pointOnPad(back, sacrumAlong, sink);
   const goals: Goal[] = [
-    pin(body, "sacrum", () => sacrumPt, weight),
     restOnPlane(body, "upperBack", origin, normal, weight, sink),
     pin(body, "upperBack", () => pointOnPad(back, upperBackAlong, sink), weight * 0.4, "x"),
   ];
+  if (sacrumAlong === null) {
+    goals.push(restOnPlane(body, "sacrum", origin, normal, weight * 0.75, sink));
+  } else {
+    const sacrumPt = pointOnPad(back, sacrumAlong, sink);
+    goals.push(pin(body, "sacrum", () => sacrumPt, weight));
+  }
   if (occiputAlong !== null) {
     goals.push(
       restOnPlane(body, "occiput", origin, normal, weight * 0.6, sink),
@@ -285,16 +289,17 @@ export function checkJointWithinAt(
   label: string,
   cue: string,
   angleKey: string,
-  phase: "top" | "bottom",
+  phase: "start" | "peak" | "top" | "bottom",
   loDeg: number,
   hiDeg: number,
 ): FormCheck {
+  const isStart = phase === "start" || phase === "top";
   return {
     id,
     label,
     cue,
     evaluate: ({ angles, top, bottom }) => {
-      const val = deg(angles[phase === "top" ? top : bottom][angleKey]);
+      const val = deg(angles[isStart ? top : bottom][angleKey]);
       return {
         pass: within(val, loDeg, hiDeg),
         measured: `${angleKey} is ${val.toFixed(0)}° at ${phase} (target ${loDeg}°–${hiDeg}°)`,

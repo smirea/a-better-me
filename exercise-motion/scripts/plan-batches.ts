@@ -88,9 +88,12 @@ export function planBatches(maxBatchSize = 15): ExerciseBatch[] {
   const batches: ExerciseBatch[] = [];
   let seq = 1;
   for (const g of rawBatches) {
-    for (let i = 0; i < g.items.length; i += maxBatchSize) {
-      const slice = g.items.slice(i, i + maxBatchSize);
-      const partSuffix = g.items.length > maxBatchSize ? ` #${Math.floor(i / maxBatchSize) + 1}` : "";
+    const chunks = Math.max(1, Math.ceil(g.items.length / maxBatchSize));
+    const perChunk = Math.ceil(g.items.length / chunks);
+    for (let c = 0; c < chunks; c++) {
+      const slice = g.items.slice(c * perChunk, (c + 1) * perChunk);
+      if (slice.length === 0) continue;
+      const partSuffix = chunks > 1 ? ` #${c + 1}/${chunks}` : "";
       batches.push({
         id: `batch-${String(seq++).padStart(3, "0")}`,
         label: `${g.pattern} (${g.bucket}${partSuffix})`,

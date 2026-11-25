@@ -2,12 +2,16 @@
 import type { ExerciseSpec } from "../exercise";
 import { barbellBenchPress as ex0 } from "./barbell-bench-press";
 import { dumbbellRomanianDeadlift as ex1 } from "./dumbbell-romanian-deadlift";
-import { spec as ex2 } from "./overhand-grip-cable-lat-pulldown";
-import { smithMachineBackSquat as ex3 } from "./smith-machine-back-squat";
+import { spec as ex2 } from "./leg-extension";
+import { spec as ex3 } from "./overhand-grip-cable-lat-pulldown";
+import { smithMachineBackSquat as ex4 } from "./smith-machine-back-squat";
+import { spec as ex5 } from "./standing-dumbbell-biceps-curl";
 
 export const EXERCISES: ExerciseSpec[] = [
   ex0,
   ex1,
   ex2,
   ex3,
+  ex4,
+  ex5,
 ];

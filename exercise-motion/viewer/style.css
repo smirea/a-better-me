@@ -605,11 +605,13 @@ h3 + .stat {
   }
   .bar .segmented {
     width: 100%;
+    max-width: 100%;
     overflow-x: auto;
   }
   .bar .segmented button {
-    flex: 1;
+    flex: 1 0 auto;
     padding: 7px 8px;
+    font-size: 13px;
   }
   .load {
     margin-left: 0;
@@ -628,6 +630,10 @@ h3 + .stat {
     padding: 8px 12px;
     gap: 6px;
     flex-wrap: wrap;
+    max-width: 100%;
+  }
+  .transport .timeline {
+    min-width: 120px;
   }
   .transport .segmented.small button {
     padding: 4px 6px;
@@ -635,6 +641,11 @@ h3 + .stat {
   }
   .top-left {
     left: 12px;
+    right: 12px;
+  }
+  .top-left .segmented {
+    max-width: 100%;
+    overflow-x: auto;
   }
   .top-right {
     top: 40px;
@@ -642,17 +653,12 @@ h3 + .stat {
     right: auto;
     align-items: flex-start;
   }
-  .bar .segmented button {
-    font-size: 13px;
-  }
-  .transport {
-    padding: 8px 12px;
-  }
   .cols {
-    grid-template-columns: minmax(0, 1fr) 80px 40px 40px;
+    grid-template-columns: minmax(0, 1fr) 72px 36px 36px;
+    column-gap: 6px;
   }
   .spark {
-    width: 80px;
+    width: 72px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

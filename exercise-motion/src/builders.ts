@@ -86,6 +86,7 @@ import {
   balance,
   keepAbove,
   kneeOverToes,
+  lockAngle,
   mirrored,
   pin,
   plantFoot,
@@ -158,9 +159,18 @@ export function rollerOnAnchors(
   frame: Frame,
   anchors: string[],
   offset: Vec3 = [0, 0, 0],
+  localOffset?: Vec3,
 ): PropState {
   const sum = new Vector3();
-  for (const a of anchors) sum.add(anchorPoint(body, frame, a));
+  const localVec = localOffset ? new Vector3(...localOffset) : null;
+  const worldOff = new Vector3();
+  for (const a of anchors) {
+    sum.add(anchorPoint(body, frame, a));
+    if (localVec) {
+      const joint = body.anchors[a].joint;
+      sum.add(worldOff.copy(localVec).applyQuaternion(frame.rot[joint]));
+    }
+  }
   sum.divideScalar(Math.max(1, anchors.length));
   return {
     pos: [sum.x + offset[0], sum.y + offset[1], sum.z + offset[2]],
@@ -314,6 +324,9 @@ export type StationConfig =
       feetMode?: "floor" | "footplate" | "hanging";
       pinBack?: boolean;
       pinHead?: boolean;
+      pinHandles?: boolean;
+      /** Locks hip flexion on both legs (useful on leg extension / curl machines so thighs stay level on the seat). */
+      lockHipFlexDeg?: number;
       passiveJoints?: string[];
     }
   | {
@@ -500,6 +513,8 @@ export type ApparatusConfig =
       radius?: number;
       trackAnchors: string[];
       offset?: Vec3;
+      /** Offset in the tracked anchor's local joint frame (e.g. `[0, 0, 0.055]` stays on the front of the shin through the full knee arc). */
+      localOffset?: Vec3;
       /** Pulley point or fixed direction defining resistance on `trackAnchors`. */
       pulley?: Vec3;
       forceDir?: Vec3;
@@ -635,7 +650,7 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
       let tetherStateFn: Built["tetherState"] | undefined;
 
       const addContacts = (prefix: string, map: Record<string, number>) => {
-        contacts[prefix] = { ...contacts[prefix], ...map };
+        contacts[prefix] = { ...map, ...contacts[prefix] };
       };
       const addPartObstacles = (parts: Part[], padIds: string[] = []) => {
         const shapes = compileParts(parts.filter((p) => p.collide));
@@ -764,10 +779,11 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
           });
           staticParts.push(...ab.parts);
           addPartObstacles(ab.parts, ["bench.seatPad", "bench.backPad"]);
-          goals.push(...sitOnSeat(body, seatY, seatZ, 0.01, 45));
+          goals.push(...sitOnSeat(body, seatY, seatZ, 0.01, 55));
           if (st.pinBack !== false) {
             goals.push(
               ...restBackOnPad(body, ab.back, {
+                sacrumAlong: null,
                 occiputAlong: st.pinHead === false ? null : 0.72,
               }),
             );
@@ -784,9 +800,9 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
           });
           staticParts.push(...m.parts);
           addPartObstacles(m.parts, ["machine.seat", "machine.backPad", "machine.chestPad"]);
-          goals.push(...sitOnSeat(body, seatY, seatZ, 0.01, 48));
+          goals.push(...sitOnSeat(body, seatY, seatZ, 0.01, 55));
           if (m.back && st.pinBack !== false) {
-            goals.push(...restBackOnPad(body, m.back, { occiputAlong: null, upperBackAlong: 0.42 }));
+            goals.push(...restBackOnPad(body, m.back, { sacrumAlong: null, occiputAlong: null, upperBackAlong: 0.42 }));
             passive = st.passiveJoints ?? ["lumbar", "thoracic", "neck", "hip", "knee", "ankle"];
           }
           if (frame.chestPadZ !== undefined) {
@@ -804,7 +820,7 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
           stationPulley = m.pulley;
           staticParts.push(...m.parts);
           addPartObstacles(m.parts, ["lat.seatPad", "lat.thighPad"]);
-          goals.push(...sitOnSeat(body, seatY, seatZ, 0.01, 50));
+          goals.push(...sitOnSeat(body, seatY, seatZ, 0.01, 55));
           required.push({ label: "Seated on pad", anchor: "pelvisBottom", surfaceY: seatY - 0.01 });
         } else if (frame.type === "seated-row") {
           const m = seatedRowMachine({
@@ -815,13 +831,13 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
           stationPulley = m.pulley;
           staticParts.push(...m.parts);
           addPartObstacles(m.parts, ["row.seatPad", "row.footPlate"]);
-          goals.push(...sitOnSeat(body, seatY, seatZ, 0.01, 48));
+          goals.push(...sitOnSeat(body, seatY, seatZ, 0.01, 55));
           required.push({ label: "Seated on bench", anchor: "pelvisBottom", surfaceY: seatY - 0.01 });
         } else if (frame.type === "preacher") {
           const m = preacherBench({ seatY, padTopY: frame.padTopY, padTopZ: frame.padTopZ });
           staticParts.push(...m.parts);
           addPartObstacles(m.parts, ["preacher.seat", "preacher.armPad"]);
-          goals.push(...sitOnSeat(body, seatY, -0.05, 0.01, 48));
+          goals.push(...sitOnSeat(body, seatY, -0.05, 0.01, 55));
           const pSpot = pointOnPad(m.armPad, -0.22, 0.008);
           for (const side of SIDES) {
             const s = sideSign(side);
@@ -831,24 +847,57 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
           passive = st.passiveJoints ?? ["hip", "knee", "ankle", "lumbar", "thoracic"];
         } else if (frame.type === "leg-extension") {
           const legSeatY = st.seatY ?? 0.56;
+          const legSeatZ = st.seatZ ?? -0.04;
           const m = legExtensionMachine({
             seatY: legSeatY,
             backAngleDeg: frame.backAngleDeg ?? 78,
             thighRollerY: frame.thighRollerY,
           });
           staticParts.push(...m.parts);
+          addContacts("legext.handleL", { hand_L: 0.06, forearm_L: 0.035 });
+          addContacts("legext.handleR", { hand_R: 0.06, forearm_R: 0.035 });
           addPartObstacles(m.parts, ["legext.seat", "legext.backPad", "legext.thighRoller"]);
-          goals.push(...sitOnSeat(body, legSeatY, 0, 0.01, 48));
-          goals.push(...restBackOnPad(body, m.back, { occiputAlong: null, upperBackAlong: 0.42 }));
+          goals.push(...sitOnSeat(body, legSeatY, legSeatZ, 0.01, 65));
+          if (st.pinBack !== false) {
+            goals.push(...restBackOnPad(body, m.back, { sacrumAlong: null, occiputAlong: null, upperBackAlong: 0.42 }));
+          }
+          if (st.pinHandles !== false) {
+            const hL = new Vector3(...m.handleL);
+            const hR = new Vector3(...m.handleR);
+            goals.push(
+              pin(body, "grip_L", () => hL, 32),
+              pin(body, "grip_R", () => hR, 32),
+              aim(body, "wrist_L", Z_AXIS, Z_AXIS, 4),
+              aim(body, "wrist_R", Z_AXIS, Z_AXIS, 4),
+            );
+          }
           required.push({ label: "Seated on machine", anchor: "pelvisBottom", surfaceY: legSeatY - 0.01 });
-          passive = st.passiveJoints ?? ["lumbar", "thoracic", "neck", "clavicle", "shoulder", "elbow", "forearm", "wrist"];
+          passive = st.passiveJoints ?? [
+            "lumbar",
+            "thoracic",
+            "neck",
+            "clavicle",
+            "shoulder",
+            "elbow",
+            "forearm",
+            "wrist",
+            "hip",
+            "ankle",
+          ];
         } else {
           const h = frame.height ?? seatY;
           const bp = platformBox("seat.box", [0, 0, seatZ], 0.48, h, 0.48, "wood");
           staticParts.push(...bp);
           addPartObstacles(bp, ["seat.box"]);
-          goals.push(...sitOnSeat(body, h, seatZ, 0.01, 48));
+          goals.push(...sitOnSeat(body, h, seatZ, 0.01, 55));
           required.push({ label: "Seated on box", anchor: "pelvisBottom", surfaceY: h - 0.01 });
+        }
+
+        if (st.lockHipFlexDeg !== undefined) {
+          goals.push(
+            lockAngle(body, "hip_L.flex", st.lockHipFlexDeg, 32),
+            lockAngle(body, "hip_R.flex", st.lockHipFlexDeg, 32),
+          );
         }
 
         if (st.leanDeg !== undefined) {
@@ -944,6 +993,7 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
         } else if (st.surface === "lying-leg-curl") {
           const m = lyingLegCurlMachine();
           staticParts.push(...m.parts);
+          addContacts("legcurl.handle", HAND_ALLOW);
           addPartObstacles(m.parts, ["legcurl.chestPad", "legcurl.thighPad"]);
           goals.push(
             pin(body, "pelvisFront", () => new Vector3(0, m.hipY - 0.01, -0.02), 40),
@@ -1084,6 +1134,7 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
         const frame = legPressFrame({ angleDeg: st.angleDeg ?? 45 });
         legPressRailDir = frame.railDir;
         staticParts.push(...frame.parts);
+        addContacts("legpress.handle", HAND_ALLOW);
         addPartObstacles(frame.parts, ["legpress.seatPad", "legpress.backPad"]);
         goals.push(...restBackOnPad(body, frame.back, { occiputAlong: 0.72, sacrumAlong: 0.06 }));
         goals.push(pin(body, "grip_L", () => new Vector3(0.32, 0.44, 0.04), 22));
@@ -1614,7 +1665,9 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
           });
           required.push({ label: "Roller pad contact", anchor: a, prop: "roller" });
         }
-        propStateFn = (frame) => [rollerOnAnchors(body, frame, app.trackAnchors, app.offset ?? [0, 0, 0])];
+        propStateFn = (frame) => [
+          rollerOnAnchors(body, frame, app.trackAnchors, app.offset ?? [0, 0, 0], app.localOffset),
+        ];
       } else if (app.kind === "landmine") {
         const lm = landmineBase(app.pivotZ ?? 1.65);
         staticParts.push(...lm.parts);

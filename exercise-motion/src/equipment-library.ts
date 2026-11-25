@@ -647,7 +647,14 @@ export function legExtensionMachine(options: {
   seatY?: number;
   backAngleDeg?: number;
   thighRollerY?: number;
-} = {}): { parts: Part[]; seatY: number; back: PadSurface; pivot: Vec3 } {
+} = {}): {
+  parts: Part[];
+  seatY: number;
+  back: PadSurface;
+  pivot: Vec3;
+  handleL: Vec3;
+  handleR: Vec3;
+} {
   const { seatY = 0.56, backAngleDeg = 78, thighRollerY } = options;
   const seatZ = 0;
   const backZ = -0.22;
@@ -662,6 +669,8 @@ export function legExtensionMachine(options: {
     backZ + (backLen / 2) * up[2] - (padT / 2) * normal[2],
   ];
   const pivot: Vec3 = [0, seatY - 0.04, 0.24];
+  const handleL: Vec3 = [0.27, seatY - 0.02, 0.08];
+  const handleR: Vec3 = [-0.27, seatY - 0.02, 0.08];
   const parts: Part[] = [
     box("legext.seat", [0, seatY - 0.035, seatZ], [0.42, 0.07, 0.48], "pad"),
     box("legext.backPad", backCenter, [0.36, padT, backLen], "pad", true, quatOf([1, 0, 0], a)),
@@ -669,8 +678,8 @@ export function legExtensionMachine(options: {
     box("legext.seatPost", [0, (seatY - 0.07) / 2, seatZ], [0.08, seatY - 0.07, 0.08], "steel"),
     box("legext.tower", [0.55, 0.85, -0.35], [0.38, 1.65, 0.3], "steel", false),
     box("legext.stack", [0.55, 0.78, -0.35], [0.32, 1.35, 0.24], "plate", false),
-    cylinder("legext.handleL", [0.27, seatY - 0.02, 0.08], 0.016, 0.26, "chrome", ALONG_Z),
-    cylinder("legext.handleR", [-0.27, seatY - 0.02, 0.08], 0.016, 0.26, "chrome", ALONG_Z),
+    cylinder("legext.handleL", handleL, 0.016, 0.26, "chrome", ALONG_Z),
+    cylinder("legext.handleR", handleR, 0.016, 0.26, "chrome", ALONG_Z),
     cylinder("legext.pivotHub", [0.24, pivot[1], pivot[2]], 0.055, 0.08, "chrome", IDENTITY, false),
   ];
   if (thighRollerY !== undefined) {
@@ -681,6 +690,8 @@ export function legExtensionMachine(options: {
     seatY,
     back: { origin: [0, seatY + 0.04, backZ], normal, up },
     pivot,
+    handleL,
+    handleR,
   };
 }
 

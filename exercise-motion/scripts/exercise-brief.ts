@@ -31,8 +31,23 @@ function implementedSlugs(): Set<string> {
   return out;
 }
 
-async function formatBrief(ex: AppCatalogExercise, slug: string, imgDir: string): Promise<string> {
-  const md = readInstructionMarkdown(ex.id);
+function trimDescription(md: string): string {
+  const idx = md.indexOf("\n## Description");
+  if (idx < 0) return md;
+  const before = md.slice(0, idx).trimEnd();
+  const after = md.slice(idx + "\n## Description".length).trim();
+  const firstPara = after.split(/\n\s*\n/)[0]?.trim() ?? "";
+  return firstPara ? `${before}\n\n## Description\n${firstPara}` : before;
+}
+
+async function formatBrief(
+  ex: AppCatalogExercise,
+  slug: string,
+  imgDir: string,
+  concise: boolean,
+): Promise<string> {
+  const rawMd = readInstructionMarkdown(ex.id);
+  const md = rawMd && concise ? trimDescription(rawMd) : rawMd;
   const webps = exerciseImageFiles(ex);
   const pngs = await Promise.all(webps.map((p) => toPng(p, imgDir)));
   const lines: string[] = [
@@ -127,12 +142,13 @@ async function main() {
     return;
   }
 
+  const concise = args.includes("--concise");
   const outIdx = args.indexOf("--out-img-dir");
   const imgDir = outIdx >= 0 ? args[outIdx + 1] : "/tmp/motion-briefs";
   const queries = args.filter((a, i) => !a.startsWith("--") && !(outIdx >= 0 && i === outIdx + 1));
   if (queries.length === 0) {
     throw new Error(
-      "Usage: exercise-brief.ts <slug|catalogId|name>... [--out-img-dir /tmp/motion-briefs] | --stats | --list-missing [N]",
+      "Usage: exercise-brief.ts <slug|catalogId|name>... [--concise] [--out-img-dir /tmp/motion-briefs] | --stats | --list-missing [N]",
     );
   }
 
@@ -145,7 +161,7 @@ async function main() {
     if (!ex) {
       throw new Error(`Could not find exercise "${q}" in exercises.json`);
     }
-    sections.push(await formatBrief(ex, slugMap.get(ex.id)!, imgDir));
+    sections.push(await formatBrief(ex, slugMap.get(ex.id)!, imgDir, concise));
   }
   console.log(sections.join("\n---\n\n"));
 }

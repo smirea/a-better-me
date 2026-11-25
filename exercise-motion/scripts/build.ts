@@ -27,6 +27,7 @@ const engineFiles = [
   "equipment.ts",
   "equipment-library.ts",
   "postures.ts",
+  "builders.ts",
   "exercise.ts",
   "validate.ts",
   "checks.ts",
