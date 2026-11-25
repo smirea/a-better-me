@@ -317,6 +317,16 @@ describe("exercise-motion framework invariants", () => {
     expect(() => generate(spec)).toThrow(/around nothing/);
   });
 
+  test("a hand that grasps something must close around it", () => {
+    const handle = propHandles("prop-dumbbell").grip;
+    const spec: ExerciseSpec = {
+      ...syntheticSquat,
+      id: "open-grasp",
+      build: (body) => ({ ...syntheticSquat.build(body), grasps: [graspWorld("L", handle, "open")] }),
+    };
+    expect(() => generate(spec)).toThrow(/doesn't close/);
+  });
+
   test("QA flags a grasped handle that sits off the closed fingers", () => {
     const handle = { ...propHandles("prop-dumbbell").grip, pos: [0.4, 1, 0.3] as [number, number, number] };
     const sequence = { ...sharedSquat, grasps: [graspWorld("L", handle)] };
