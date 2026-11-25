@@ -112,7 +112,9 @@ export function analyze(
   const anchors = sequence.loads.map((load) => body.anchors[load.anchor]);
   const masses = [
     ...body.segments.map((segment) => segment.mass),
-    ...sequence.loads.map((load) => load.share * loadKg),
+    ...sequence.loads.map((load) =>
+      Math.max(0, (load.bodyweightShare ?? 0) * body.mass + load.share * loadKg),
+    ),
   ];
   const points = kin.frames.map((frame) => [
     ...body.segments.map((segment) => worldPoint(frame, segment.joint, segment.com)),

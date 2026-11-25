@@ -32,8 +32,10 @@ export type GripStyle = "hang" | "press" | "open";
  */
 export interface LoadAttachment {
   anchor: string;
-  /** Fraction of the logged weight this point carries (use 0 for purely bodyweight loads). */
+  /** Fraction of the logged weight this point carries (use 0 for purely bodyweight loads; negative reduces bodyweightShare on assisted machines). */
   share: number;
+  /** Optional fraction of the lifter's body mass carried at this contact (e.g. 0.5 per hand on pull-ups/dips, 0.32 per hand on push-ups). */
+  bodyweightShare?: number;
   grip: "hang" | "press" | "rest";
   /** World-space cable pulley or band anchor point that pulls on this body anchor. */
   pulley?: Vec3;
@@ -276,8 +278,11 @@ function assertSpecInputs(spec: ExerciseSpec, built: Built, body: Body) {
     if (!body.anchors[load.anchor]) {
       throw new Error(`${spec.id}: unknown load anchor "${load.anchor}".`);
     }
-    if (!Number.isFinite(load.share) || load.share < 0) {
+    if (!Number.isFinite(load.share) || (load.share < 0 && !(load.bodyweightShare && load.bodyweightShare > 0))) {
       throw new Error(`${spec.id}: invalid load share ${load.share} on ${load.anchor}.`);
+    }
+    if (load.bodyweightShare !== undefined && (!Number.isFinite(load.bodyweightShare) || load.bodyweightShare < 0)) {
+      throw new Error(`${spec.id}: invalid bodyweightShare ${load.bodyweightShare} on ${load.anchor}.`);
     }
   }
   const propIds = new Set(built.props.map((p) => p.id));

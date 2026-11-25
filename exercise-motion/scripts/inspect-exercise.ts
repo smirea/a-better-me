@@ -6,6 +6,7 @@ import { analyze } from "../src/biomech";
 import { anchorPoint } from "../src/body";
 import { groupsOf } from "../src/catalog";
 import { generate, kinematics, type ExerciseSpec } from "../src/exercise";
+import { deg } from "../src/math";
 import { MUSCLES } from "../src/muscles";
 import { contactSheet } from "../src/sheet";
 import { runChecks, validateLoad, validateMotion } from "../src/validate";
@@ -139,19 +140,28 @@ async function main() {
       `  Catalog: primary=[${entry.primaryMuscles.join(", ")}] secondary=[${entry.secondaryMuscles.join(", ")}] stretched=[${stretched.join(", ")}]`,
     );
 
-    // Key anchor diagnostics at start and peak frames so pose adjustments are fast.
+    // Key anchor & joint angle diagnostics at start and peak frames so pose adjustments need no extra probe scripts.
     const topIdx = 0;
     const midIdx = sequence.phases[1]?.from ?? Math.floor(sequence.poses.length / 2);
     const fmt = (idx: number, name: string) => {
       const p = anchorPoint(body, kin.frames[idx], name);
       return `${name}=(${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)})`;
     };
+    const fmtAng = (idx: number) => {
+      const a = kin.angles[idx];
+      const keys = ["shoulder_L.elev", "elbow_L.flex", "clavicle_L.elev", "hip_L.flex", "knee_L.flex", "lumbar.flex"];
+      return keys.map((k) => `${k.replace("_L", "")}=${deg(a[k] ?? 0).toFixed(0)}°`).join(" ");
+    };
     console.log(
-      `  Anchors start: ${["sacrum", "sternum", "grip_L", "heel_L"].map((a) => fmt(topIdx, a)).join("  ")}`,
+      `  Anchors start: ${["pelvisBottom", "sternum", "grip_L", "heel_L"].map((a) => fmt(topIdx, a)).join("  ")}`,
     );
     console.log(
-      `  Anchors peak:  ${["sacrum", "sternum", "grip_L", "heel_L"].map((a) => fmt(midIdx, a)).join("  ")}`,
+      `  Anchors peak:  ${["pelvisBottom", "sternum", "grip_L", "heel_L"].map((a) => fmt(midIdx, a)).join("  ")}`,
     );
+    console.log(`  Angles  start: ${fmtAng(topIdx)}`);
+    console.log(`  Angles  peak:  ${fmtAng(midIdx)}`);
+    const unmetSummary = [...new Set(analysis.unmet.flat().map((u) => `${u.dof}(${Math.round(u.fraction * 100)}%)`))];
+    if (unmetSummary.length) console.log(`  Unmet torques: ${unmetSummary.slice(0, 6).join(", ")}`);
 
     // Render orthographic contact sheet (side, front, angle across 5 phases of phase 1)
     const lower = sequence.phases[0];

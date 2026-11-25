@@ -6,6 +6,115 @@ import { pointOnPad } from "./equipment-library";
 import type { FormCheck } from "./exercise";
 import { deg } from "./math";
 import { aim, pin, plantFoot, plantToe, restOnPlane, type Goal } from "./solver";
+import type { PoseHints } from "./body";
+
+/**
+ * FK-verified starting hint poses for the 1.78 m body (`shank=0.438, ankleH=0.069 => knee-to-sole=0.507 m`,
+ * `pelvisBottom` sits ~0.085 m below hip joint so horizontal-thigh seated height with flat feet is `seatY ≈ 0.42–0.44 m`).
+ */
+export const POSTURE_HINTS: Record<string, PoseHints> = {
+  standing: {
+    "root.y": 0.943,
+    "root.z": 0,
+    "root.pitch": 0,
+    "hip.flex": 2,
+    "hip.abd": 4,
+    "hip.rot": 6,
+    "knee.flex": 3,
+    "ankle.dorsi": 1,
+  },
+  seated: {
+    "root.y": 0.505,
+    "root.z": 0,
+    "root.pitch": 0,
+    "hip.flex": 88,
+    "hip.abd": 10,
+    "hip.rot": 6,
+    "knee.flex": 88,
+    "ankle.dorsi": 0,
+  },
+  seatedLeanBack: {
+    "root.y": 0.5,
+    "root.z": -0.02,
+    "root.pitch": -12,
+    "hip.flex": 76,
+    "hip.abd": 10,
+    "hip.rot": 6,
+    "knee.flex": 88,
+    "ankle.dorsi": 0,
+  },
+  incline45: {
+    "root.y": 0.51,
+    "root.z": -0.02,
+    "root.pitch": -45,
+    "hip.flex": 52,
+    "hip.abd": 14,
+    "hip.rot": 6,
+    "knee.flex": 92,
+    "ankle.dorsi": 2,
+  },
+  incline30: {
+    "root.y": 0.51,
+    "root.z": -0.02,
+    "root.pitch": -60,
+    "hip.flex": 36,
+    "hip.abd": 14,
+    "hip.rot": 6,
+    "knee.flex": 92,
+    "ankle.dorsi": 2,
+  },
+  supineFlat: {
+    "root.y": 0.545,
+    "root.z": 0,
+    "root.pitch": -80,
+    "lumbar.flex": -10,
+    "thoracic.flex": -6,
+    "neck.flex": 8,
+    "hip.flex": -4,
+    "hip.abd": 16,
+    "hip.rot": 6,
+    "knee.flex": 88,
+    "ankle.dorsi": 2,
+  },
+  supineFloor: {
+    "root.y": 0.115,
+    "root.z": 0,
+    "root.pitch": -88,
+    "hip.flex": 55,
+    "hip.abd": 10,
+    "knee.flex": 95,
+    "ankle.dorsi": 10,
+  },
+  pronePlank: {
+    "root.y": 0.36,
+    "root.z": 0,
+    "root.pitch": 82,
+    "hip.flex": 4,
+    "hip.abd": 5,
+    "knee.flex": 4,
+    "ankle.dorsi": 15,
+  },
+  kneeling: {
+    "root.y": 0.5,
+    "root.z": 0,
+    "root.pitch": 0,
+    "hip.flex": 2,
+    "hip.abd": 6,
+    "knee.flex": 92,
+    "ankle.dorsi": -35,
+  },
+  hanging: {
+    "root.y": 1.22,
+    "root.z": 0,
+    "root.pitch": 0,
+    "hip.flex": 6,
+    "hip.abd": 4,
+    "knee.flex": 25,
+    "shoulder.elev": 172,
+    "shoulder.plane": 20,
+    "elbow.flex": 4,
+  },
+};
 
 /** Common resting collider penetration allowances for benches, seats, and pads. */
 export const PAD_RESTING: Record<string, number> = {

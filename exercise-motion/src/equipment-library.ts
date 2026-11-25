@@ -274,25 +274,28 @@ export function cableCrossover(options: {
   };
 }
 
-/** Lat pulldown station: seat at `seatY`, thigh roller pad, overhead pulley at `(0, 2.2, pulleyZ)`. */
+/** Lat pulldown station: seat at `seatY`, thigh roller pad, overhead boom pulley at `(0, 2.18, pulleyZ)`. */
 export function latPulldownMachine(options: {
   seatY?: number;
   thighPadY?: number;
   pulleyZ?: number;
+  columnZ?: number;
 } = {}): { parts: Part[]; pulley: Vec3; seatY: number; thighPadY: number } {
-  const { seatY = 0.48, thighPadY = 0.66, pulleyZ = 0.25 } = options;
-  const col = cableColumn({ x: 0, z: pulleyZ + 0.48, pulleyY: 2.15, facingDir: -1, idPrefix: "lat" });
+  const { seatY = 0.43, thighPadY = 0.61, pulleyZ = 0.14, columnZ = 1.05 } = options;
+  const col = cableColumn({ x: 0, z: columnZ, pulleyY: 2.16, facingDir: -1, idPrefix: "lat" });
+  const boomLen = columnZ - pulleyZ + 0.14;
   const parts: Part[] = [
     ...col.parts,
-    box("lat.beamTop", [0, 2.22, pulleyZ + 0.24], [0.09, 0.09, 0.58], "steel", false),
-    cylinder("lat.topPulley", [0, 2.17, pulleyZ], 0.05, 0.03, "chrome"),
-    box("lat.seatPad", [0, seatY - 0.035, 0], [0.34, 0.07, 0.42], "pad"),
-    box("lat.seatPost", [0, (seatY - 0.07) / 2, 0], [0.07, seatY - 0.07, 0.07], "steel"),
-    box("lat.spine", [0, 0.035, (pulleyZ + 0.48) / 2], [0.1, 0.07, pulleyZ + 0.9], "steel"),
-    box("lat.thighPost", [0, thighPadY / 2, 0.34], [0.06, thighPadY, 0.06], "steel"),
-    capsule("lat.thighPad", [0, thighPadY, 0.28], 0.055, 0.44, "pad"),
+    box("lat.beamTop", [0, 2.24, (pulleyZ + columnZ) / 2], [0.09, 0.09, boomLen], "steel", false),
+    cylinder("lat.topPulley", [0, 2.18, pulleyZ], 0.05, 0.03, "chrome"),
+    box("lat.seatPad", [0, seatY - 0.035, -0.02], [0.34, 0.07, 0.42], "pad"),
+    box("lat.seatPost", [0, (seatY - 0.07) / 2, -0.02], [0.07, seatY - 0.07, 0.07], "steel"),
+    box("lat.spine", [0, 0.03, columnZ / 2], [0.08, 0.06, columnZ + 0.3], "steel", false),
+    box("lat.thighPost", [0, thighPadY / 2, 0.62], [0.06, thighPadY, 0.06], "steel", false),
+    box("lat.thighArm", [0, thighPadY, 0.44], [0.05, 0.05, 0.36], "steel", false),
+    capsule("lat.thighPad", [0, thighPadY, 0.24], 0.055, 0.44, "pad"),
   ];
-  return { parts, pulley: [0, 2.17, pulleyZ], seatY, thighPadY };
+  return { parts, pulley: [0, 2.18, pulleyZ], seatY, thighPadY };
 }
 
 /** Seated cable row station: long bench + angled footplates + low pulley at `(0, pulleyY, pulleyZ)`. */
@@ -301,7 +304,7 @@ export function seatedRowMachine(options: {
   pulleyY?: number;
   pulleyZ?: number;
 } = {}): { parts: Part[]; pulley: Vec3; seatY: number; footZ: number } {
-  const { seatY = 0.44, pulleyY = 0.56, pulleyZ = 1.22 } = options;
+  const { seatY = 0.43, pulleyY = 0.56, pulleyZ = 1.25 } = options;
   const col = cableColumn({ x: 0, z: pulleyZ + 0.14, pulleyY, facingDir: -1, idPrefix: "row" });
   const footZ = pulleyZ - 0.18;
   const parts: Part[] = [
@@ -322,7 +325,7 @@ export function preacherBench(options: {
   padTopY?: number;
   padTopZ?: number;
 } = {}): { parts: Part[]; seatY: number; armPad: PadSurface } {
-  const { seatY = 0.48, padTopY = 0.96, padTopZ = 0.24 } = options;
+  const { seatY = 0.44, padTopY = 0.92, padTopZ = 0.24 } = options;
   const angle = rad(45);
   const padLen = 0.42;
   // Pad slopes down and forward (+Z) away from the lifter's armpits.
@@ -361,7 +364,7 @@ export function seatedMachineFrame(options: {
   idPrefix?: string;
 } = {}): { parts: Part[]; seatY: number; back?: PadSurface } {
   const {
-    seatY = 0.48,
+    seatY = 0.43,
     backAngleDeg = 85,
     backZ = -0.18,
     chestPadZ,

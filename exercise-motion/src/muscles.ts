@@ -119,7 +119,7 @@ export function createActuators(): Actuator[] {
     // The hamstrings lose leverage at the hip as it flexes deeply, while adductor magnus gains it.
     add("hamstrings", [
       [j("hip", "flex"), -100, (a) => clamp(1.28 - hipFlexion(a) / rad(160), 0.55, 1)],
-      [j("knee", "flex"), 100],
+      [j("knee", "flex"), 120],
     ]);
     add("glutes", [[j("hip", "flex"), -220]]);
     add("glutes", [[j("hip", "rot"), 45]]);
@@ -129,7 +129,7 @@ export function createActuators(): Actuator[] {
     add("abductors", [[j("hip", "rot"), -25]]);
     add("hip_flexors", [[j("hip", "flex"), 110]]);
     add("calves", [
-      [j("ankle", "dorsi"), -170],
+      [j("ankle", "dorsi"), -200],
       [j("knee", "flex"), 25],
     ]);
     add("tibs", [[j("ankle", "dorsi"), 45]]);
@@ -179,6 +179,7 @@ export function createActuators(): Actuator[] {
     ]);
     add("serratus", [[j("clavicle", "prot"), 70]]);
     add("upper_back", [[j("clavicle", "prot"), -90]]);
+    add("upper_back", [[j("clavicle", "elev"), -60]]);
     add("upper_back", [[j("shoulder", "hadd"), -30]]);
     add("chest", [[j("shoulder", "hadd"), 90]]);
     // With the upper arm out to the side, turning it about the chest's side-to-side axis is mostly rolling the
@@ -193,25 +194,26 @@ export function createActuators(): Actuator[] {
       ],
     ]);
     add("chest", [[j("shoulder", "abd"), -35]]);
-    add("lats", [[j("shoulder", "flex"), -75]]);
-    add("lats", [[j("shoulder", "abd"), -65]]);
-    add("lats", [[j("clavicle", "elev"), -40]]);
-    add("front_delts", [[j("shoulder", "flex"), 60]]);
+    add("lats", [[j("shoulder", "flex"), -90]]);
+    add("lats", [[j("shoulder", "abd"), -85]]);
+    add("lats", [[j("clavicle", "elev"), -65]]);
+    add("front_delts", [[j("shoulder", "flex"), 65]]);
     add("front_delts", [[j("shoulder", "hadd"), 30]]);
-    add("side_delts", [[j("shoulder", "abd"), 55]]);
-    add("rear_delts", [[j("shoulder", "hadd"), -40]]);
-    add("rear_delts", [[j("shoulder", "flex"), -25]]);
+    add("front_delts", [[j("shoulder", "abd"), 25]]);
+    add("side_delts", [[j("shoulder", "abd"), 65]]);
+    add("rear_delts", [[j("shoulder", "hadd"), -45]]);
+    add("rear_delts", [[j("shoulder", "flex"), -30]]);
     add("biceps", [
-      [j("elbow", "flex"), 65],
+      [j("elbow", "flex"), 70],
       [j("shoulder", "flex"), 12],
     ]);
     add("triceps", [
-      [j("elbow", "flex"), -75],
+      [j("elbow", "flex"), -85],
       [j("shoulder", "flex"), -12],
     ]);
     add("forearms", [[j("elbow", "flex"), 18]]);
-    add("forearms", [[j("wrist", "flex"), 18]]);
-    add("forearms", [[j("wrist", "flex"), -12]]);
+    add("forearms", [[j("wrist", "flex"), 24]]);
+    add("forearms", [[j("wrist", "flex"), -18]]);
     add("forearms", [[j("wrist", "dev"), 14]]);
     add("forearms", [[j("wrist", "dev"), -14]]);
     add("forearms", [[j("forearm", "pron"), 9]]);

@@ -68,11 +68,12 @@ function drawPart(
     quat.premultiply(propQuat);
   }
   const fill = MATERIAL[part.material] ?? "#5d626b";
+  const opacity = part.collide ? "" : ' fill-opacity="0.32" stroke-opacity="0.45"';
   if (part.shape === "sphere") {
     const c = project(view, pos);
     return {
       depth: c[2],
-      svg: `<circle cx="${at(c[0], c[1]).replace(",", '" cy="')}" r="${(part.size[0] * scale).toFixed(1)}" fill="${fill}" stroke="#0c0c0d" stroke-width="1"/>`,
+      svg: `<circle cx="${at(c[0], c[1]).replace(",", '" cy="')}" r="${(part.size[0] * scale).toFixed(1)}" fill="${fill}"${opacity} stroke="#0c0c0d" stroke-width="1"/>`,
     };
   }
   if (part.shape === "capsule") {
@@ -101,13 +102,13 @@ function drawPart(
     const c = project(view, pos);
     return {
       depth,
-      svg: `<circle cx="${at(c[0], c[1]).replace(",", '" cy="')}" r="${(part.size[0] * scale).toFixed(1)}" fill="${fill}" stroke="#0c0c0d" stroke-width="1"/>`,
+      svg: `<circle cx="${at(c[0], c[1]).replace(",", '" cy="')}" r="${(part.size[0] * scale).toFixed(1)}" fill="${fill}"${opacity} stroke="#0c0c0d" stroke-width="1"/>`,
     };
   }
   const outline = hull(projected.map((point) => [point[0], point[1]] as [number, number]));
   return {
     depth,
-    svg: `<polygon points="${outline.map((point) => at(point[0], point[1])).join(" ")}" fill="${fill}" stroke="#0c0c0d" stroke-width="1"/>`,
+    svg: `<polygon points="${outline.map((point) => at(point[0], point[1])).join(" ")}" fill="${fill}"${opacity} stroke="#0c0c0d" stroke-width="1"/>`,
   };
 }
 

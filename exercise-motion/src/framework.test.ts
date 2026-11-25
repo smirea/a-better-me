@@ -110,4 +110,38 @@ describe("exercise-motion framework invariants", () => {
     expect(signedDistance(roll, new Vector3(0.2, 0.5, 0))).toBeCloseTo(-0.05, 4);
     expect(signedDistance(roll, new Vector3(0.3, 0.5, 0))).toBeCloseTo(0.05, 4);
   });
+
+  test("bodyweightShare loads closed-chain bodyweight exercises and assistance reduces effective load", () => {
+    const body = sharedBody;
+    const base = {
+      ...sharedSquat,
+      poses: sharedSquat.poses.slice(0, 4),
+      s: sharedSquat.s.slice(0, 4),
+      propStates: sharedSquat.propStates.slice(0, 4),
+      support: { kind: "hanging" as const, passive: ["hip", "knee", "ankle"] },
+      loadKg: 0,
+    };
+    const kin = kinematics(body, base);
+    const bwOnly = analyze(
+      body,
+      {
+        ...base,
+        loads: [{ anchor: "grip_L", share: 0.5, bodyweightShare: 0.5, grip: "hang", direction: [0, 1, 0] }],
+      },
+      kin,
+      0,
+    );
+    const assisted = analyze(
+      body,
+      {
+        ...base,
+        loads: [{ anchor: "grip_L", share: -0.5, bodyweightShare: 0.5, grip: "hang", direction: [0, 1, 0] }],
+      },
+      kin,
+      30,
+    );
+    expect(Math.abs(bwOnly.demands[0]["shoulder_L.abd"])).toBeGreaterThan(
+      Math.abs(assisted.demands[0]["shoulder_L.abd"]),
+    );
+  });
 });
