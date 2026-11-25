@@ -483,6 +483,8 @@ export type ApparatusConfig =
       attachmentWidth?: number;
       sides?: Side[];
       gripX?: number;
+      /** Set true to let hands flare apart naturally (e.g. rope pushdown/face pull) instead of locking gripX. */
+      freeGripWidth?: boolean;
       /** Attach cable to a specific non-hand anchor (e.g. `"ankleCuff_L"`, `"forehead"`). */
       anchor?: string;
       twoHandsOnOne?: boolean;
@@ -1535,7 +1537,7 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
           propStateFn = (_frame, ex) => [{ pos: [0, ex[0], ex[1]], quat: IDENTITY }];
         } else if (sides.length === 2) {
           const gx = app.gripX ?? (app.twoHandsOnOne ? 0.05 : app.attachment === "lat-bar" ? 0.34 : 0.16);
-          if (!app.twoHandsOnOne && app.attachment !== "rope") {
+          if (!app.twoHandsOnOne && !app.freeGripWidth) {
             goals.push(keepHandsOnBar(body, gx, "grip", 24));
           } else if (app.twoHandsOnOne) {
             const pL = new Vector3();
