@@ -493,7 +493,7 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
     const progressAt = (u: number) => built.progress(fk(body, blendAt(u, blend), scratch));
     const from = progressAt(0);
     const to = progressAt(1);
-    const hasProgressSpan = !built.isometric && Math.abs(to - from) > 1e-4;
+    const hasProgressSpan = !built.isometric && Math.abs(to - from) > 0.015;
 
     const samples: Float64Array[] = [];
     for (let i = 0; i <= SAMPLES; i++) {

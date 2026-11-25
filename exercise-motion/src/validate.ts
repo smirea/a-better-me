@@ -207,11 +207,11 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
         if (p < 0) {
           throw new Error(`Required contact "${contact.label}" references missing prop "${contact.prop}"`);
         }
-        const handle = compileParts(
-          propParts(sequence.props[p], sequence.loadKg).slice(0, 1),
+        const handles = compileParts(
+          propParts(sequence.props[p], sequence.loadKg),
           sequence.propStates[f][p],
-        )[0];
-        gap = Math.max(0, signedDistance(handle, point));
+        );
+        gap = Math.max(0, Math.min(...handles.map((h) => signedDistance(h, point))));
       }
       if (gap > LIMITS.contactGap) {
         collector.add(`contact:${contact.label}`, f, gap, (worst) => ({

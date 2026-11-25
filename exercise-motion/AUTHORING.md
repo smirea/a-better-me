@@ -43,14 +43,14 @@ export const spec = buildExerciseSpec({
 ### Supported `station` kinds (`src/builders.ts`)
 - `"standing"` — `stanceX`, `heelZ`, `toeOutDeg`, `surfaceY`, `split` (lunge/split squat/Bulgarian with `"flat" | "toe" | "elevated-stand" | "elevated-bench"`), `singleFoot`, `box`, `rack`, `smith`, `trackKnees`, `balanceZ`, `torsoLeanDeg`
 - `"seated"` — `seatY` (default `0.43` for flat feet on floor!), `seatZ`, `leanDeg`, `lockHipFlexDeg` (e.g. `62..68` with `hip.abd: 10..12` on leg extension/curl machines to keep thighs level on the seat), `frame`: `"flat-bench"` | `"adjustable-bench"` (`backAngleDeg`) | `"machine"` (`backAngleDeg` or `chestPadZ`) | `"lat-pulldown"` | `"seated-row"` | `"preacher"` | `"leg-extension"` (auto-pins hands on side handles and defaults `hip`/`ankle` passive!) | `"box"`, `feetMode` (`"floor" | "footplate" | "hanging"`)
-- `"lying"` — `surface`: `"flat-bench" | "adjustable-bench" | "floor" | "stability-ball" | "lying-leg-curl"`, `face`: `"up" | "down" | "side"`, `backAngleDeg`, `rack`, `smith`, `ankleRollers`, `feetOnFloor`
+- `"lying"` — `surface`: `"flat-bench" | "adjustable-bench" | "floor" | "stability-ball" | "lying-leg-curl"`, `face`: `"up" | "down" | "side"`, `backAngleDeg`, `rack`, `smith`, `ankleRollers`, `feetOnFloor`, `pinSacrum` (set `false` for reverse crunches/V-ups)
 - `"kneeling"` — `halfKneelingSide?`, `leanDeg?`
-- `"hanging"` (pull-up bar) | `"dip"` (parallel bars) | `"pushup"` (floor/incline/decline/knees/forearms plank)
+- `"hanging"` (pull-up bar) | `"dip"` (parallel bars) | `"pushup"` (floor/incline/decline/knees/forearms plank; defaults `handElevationY=0.04`, `feetElevationY=0.03` to avoid floor-sink; set `plantFeet: false` for mountain climbers)
 - `"leg-press"` | `"hack-squat"` | `"roman-chair"` | `"ghd"` | `"hip-thrust"` | `"calf-station"` | `"cardio"`
 
 ### Supported `apparatus` kinds (`src/builders.ts`)
 - `"none"` — bodyweight; pass `bodyweightLoads: [{ anchor: "grip_L", bodyweightShare: 0.5, share: 0.5, grip: "hang", direction: [0, 1, 0] }, ...]` on closed-chain upper-body lifts (pull-ups, dips, push-ups, planks) so bodyweight loads the arms/trunk accurately! (Use negative `share: -0.5` on assisted pull-up/dip machines!)
-- `"barbell"` — `style`: `"straight" | "ez" | "trap" | "ssb" | "axle" | "cambered"`, `gripX`, `anchor` (`"grip" | "press"`), optional `restAnchor` (`"traps"`, `"pelvisFront"`), optional `path: { startY, startZ, endY, endZ, arcBulgeZ? }`
+- `"barbell"` — `style`: `"straight" | "ez" | "trap" | "ssb" | "axle" | "cambered"`, `gripX`, `anchor` (`"grip" | "press"`), optional `restAnchor` (`"traps"`, `"frontRack"` centered midpoint, `"pelvisFront"`), optional `skipHandRequired: true` (for zombie/Zercher/hands-free squats), optional `path: { startY, startZ, endY, endZ, arcBulgeZ? }`
 - `"dumbbells"` | `"kettlebells"` | `"plate"` | `"medball"` — supports `sides`, `twoHandsOnOne`, `fatGrip`, optional `handPath`
 - `"cable-single"` — `pulley: [x, y, z]`, `attachment`: `"d-handle" | "straight-bar" | "lat-bar" | "v-bar" | "rope" | "ankle-cuff"`, `twoHandsOnOne`, `skipColumn` (when using `lat-pulldown` / `seated-row` station), optional `handPath` or `anchor` (e.g. `"ankleCuff_L"`)
 - `"cable-dual"` — cable crossover (`pulleyY`, `halfWidth`, `z`, `attachment`, `anchor`)

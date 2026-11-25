@@ -177,7 +177,7 @@ export function createActuators(): Actuator[] {
       ["neck.flex", -10],
       ["neck.bend", s * 10],
     ]);
-    add("serratus", [[j("clavicle", "prot"), 70]]);
+    add("serratus", [[j("clavicle", "prot"), 125]]);
     add("upper_back", [[j("clavicle", "prot"), -90]]);
     add("upper_back", [[j("clavicle", "elev"), -60]]);
     add("upper_back", [[j("shoulder", "hadd"), -30]]);
@@ -268,7 +268,7 @@ const STRETCH: Record<Muscle, StretchModel> = {
     length: (a, side) => -0.03 * a[`clavicle_${side}.elev`] + 0.02 * a["neck.flex"],
     full: 0.03 * rad(10) + 0.02 * rad(40),
   },
-  serratus: { length: (a, side) => -0.03 * a[`clavicle_${side}.prot`], full: 0.03 * rad(28) },
+  serratus: { length: (a, side) => -0.03 * a[`clavicle_${side}.prot`], full: 0.03 * rad(36) },
   biceps: {
     length: (a, side) =>
       -0.04 * a[`elbow_${side}.flex`] +

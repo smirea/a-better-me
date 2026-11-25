@@ -341,6 +341,8 @@ export type StationConfig =
       stanceX?: number;
       heelZ?: number;
       feetOnFloor?: boolean;
+      /** Set false on floor reverse crunches / V-ups so the pelvis can curl off the mat. */
+      pinSacrum?: boolean;
       passiveJoints?: string[];
     }
   | {
@@ -372,6 +374,8 @@ export type StationConfig =
       feetElevationY?: number;
       kneesOnFloor?: boolean;
       forearmsOnFloor?: boolean;
+      /** Set false on mountain climbers so feet can drive forward off the floor. */
+      plantFeet?: boolean;
       footZ?: number;
       footX?: number;
     }
@@ -430,8 +434,10 @@ export type ApparatusConfig =
       style?: BarbellStyle;
       gripX: number;
       anchor?: "grip" | "press";
-      /** Optional extra rest anchor (e.g. `"traps"`, `"frontRack_L"`, `"pelvisFront"`) carrying the weight. */
+      /** Optional extra rest anchor (e.g. `"traps"`, `"frontRack"` midpoint, `"pelvisFront"`) carrying the weight. */
       restAnchor?: string;
+      /** Skip required hand-on-bar contacts (e.g. zombie front squat, Zercher squat, hands-free SSB). */
+      skipHandRequired?: boolean;
       /** Keep bar constrained to a straight world path between `startPos` and `endPos` via extras. */
       path?: {
         startY: number;
@@ -1012,12 +1018,13 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
           // floor
           staticParts.push(...exerciseMat());
           if (st.face === "up") {
-            goals.push(pin(body, "sacrum", () => new Vector3(0, 0.025, 0), 40, "xy"));
-            goals.push(keepAbove(body, "upperBack", 0.02, 35));
-            goals.push(keepAbove(body, "occiput", 0.02, 30));
+            if (st.pinSacrum !== false) goals.push(pin(body, "sacrum", () => new Vector3(0, 0.035, 0), 40, "xy"));
+            else goals.push(keepAbove(body, "sacrum", 0.025, 35));
+            goals.push(keepAbove(body, "upperBack", 0.025, 35));
+            goals.push(keepAbove(body, "occiput", 0.025, 30));
           } else if (st.face === "down") {
-            goals.push(pin(body, "pelvisFront", () => new Vector3(0, 0.03, 0), 36, "xy"));
-            goals.push(keepAbove(body, "chestFront", 0.02, 30));
+            goals.push(pin(body, "pelvisFront", () => new Vector3(0, 0.035, 0), 36, "xy"));
+            goals.push(keepAbove(body, "chestFront", 0.025, 30));
           } else {
             goals.push(pin(body, "pelvisBottom", () => new Vector3(0, 0.1, 0), 30, "y"));
           }
@@ -1089,17 +1096,17 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
       } else if (st.kind === "pushup") {
         const handX = st.handX ?? 0.28;
         const handZ = st.handZ ?? 0.42;
-        const handY = st.handElevationY ?? 0.016;
-        const footY = st.feetElevationY ?? 0;
+        const handY = st.handElevationY ?? 0.04;
+        const footY = st.feetElevationY ?? 0.03;
         const footZ = st.footZ ?? -0.88;
         const footX = st.footX ?? 0.11;
         staticParts.push(...exerciseMat(0.8, 1.9, -0.2));
-        if (st.handElevationY && st.handElevationY > 0.05) {
+        if (st.handElevationY && st.handElevationY > 0.06) {
           const bp = platformBox("pushup.handBox", [0, 0, handZ], 0.8, st.handElevationY, 0.36, "pad");
           staticParts.push(...bp);
           addContacts("pushup.handBox", HAND_ALLOW);
         }
-        if (st.feetElevationY && st.feetElevationY > 0.05) {
+        if (st.feetElevationY && st.feetElevationY > 0.06) {
           const bp = platformBox("pushup.footBox", [0, 0, footZ], 0.6, st.feetElevationY, 0.36, "pad");
           staticParts.push(...bp);
           addContacts("pushup.footBox", { foot_L: 0.04, foot_R: 0.04 });
@@ -1118,16 +1125,18 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
         if (st.kneesOnFloor) {
           for (const side of SIDES) {
             const s = sideSign(side);
-            goals.push(pin(body, `kneeFront_${side}`, () => new Vector3(s * 0.14, 0.04, -0.42), 40));
+            goals.push(pin(body, `kneeFront_${side}`, () => new Vector3(s * 0.14, 0.045, -0.42), 40));
           }
           ground = config.ground ?? "kneeFront_L";
-        } else {
+        } else if (st.plantFeet !== false) {
           goals.push(...plantBothToes(body, footX, footZ, footY, 44));
           required.push(
             { label: "Left forefoot grounded", anchor: "ballIn_L", surfaceY: footY, allowSlide: true },
             { label: "Right forefoot grounded", anchor: "ballIn_R", surfaceY: footY, allowSlide: true },
           );
           ground = config.ground ?? "ballIn_L";
+        } else {
+          ground = config.ground ?? `${handAnchor}_L`;
         }
         support = { kind: "supported", passive: ["knee", "ankle"], brace: config.brace ?? true };
       } else if (st.kind === "leg-press") {
@@ -1161,8 +1170,12 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
       } else if (st.kind === "roman-chair" || st.kind === "ghd") {
         const m = st.kind === "roman-chair" ? romanChair({ padY: st.padY }) : ghdBench({ padY: st.padY });
         staticParts.push(...m.parts);
+        addContacts("roman.footPlate", { foot_L: 0.06, foot_R: 0.06, shank_L: 0.04, shank_R: 0.04 });
+        addContacts("roman.ankleRoller", { foot_L: 0.06, foot_R: 0.06, shank_L: 0.05, shank_R: 0.05 });
+        addContacts("ghd.footPlate", { foot_L: 0.06, foot_R: 0.06 });
+        addContacts("ghd.roller", { foot_L: 0.06, foot_R: 0.06, shank_L: 0.05, shank_R: 0.05 });
         addPartObstacles(m.parts, ["roman.hipPad", "roman.ankleRoller", "ghd.pad", "ghd.roller"]);
-        goals.push(pin(body, "pelvisFront", () => new Vector3(0, m.padY, 0.04), 40));
+        goals.push(pin(body, "pelvisFront", () => new Vector3(0, m.padY, 0.02), 34, "xy"));
         for (const side of SIDES) {
           const s = sideSign(side);
           goals.push(
@@ -1170,7 +1183,7 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
               body,
               `heel_${side}`,
               () => new Vector3(s * 0.12, st.kind === "roman-chair" ? 0.24 : 0.66, m.footZ + 0.06),
-              36,
+              34,
             ),
           );
         }
@@ -1296,23 +1309,31 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
         } else {
           if (app.restAnchor) {
             if (app.restAnchor === "traps") {
-              for (const side of SIDES) {
-                const s = sideSign(side);
-                const trap = new Vector3();
-                goals.push(({ frame, push }) => {
-                  anchorPoint(body, frame, "traps", trap);
-                  const h = anchorPoint(body, frame, `${handPrefix}_${side}`);
-                  push(28 * (h.x - s * app.gripX));
-                  push(28 * (h.y - trap.y));
-                  push(28 * (h.z - trap.z));
-                });
+              if (!app.skipHandRequired) {
+                for (const side of SIDES) {
+                  const s = sideSign(side);
+                  const trap = new Vector3();
+                  goals.push(({ frame, push }) => {
+                    anchorPoint(body, frame, "traps", trap);
+                    const h = anchorPoint(body, frame, `${handPrefix}_${side}`);
+                    push(28 * (h.x - s * app.gripX));
+                    push(28 * (h.y - trap.y));
+                    push(28 * (h.z - trap.z));
+                  });
+                }
               }
               propStateFn = (frame) => {
                 const p = anchorPoint(body, frame, "traps");
                 return [{ pos: [p.x, p.y, p.z], quat: IDENTITY }];
               };
+            } else if (app.restAnchor === "frontRack") {
+              propStateFn = (frame) => {
+                const pL = anchorPoint(body, frame, "frontRack_L");
+                const pR = anchorPoint(body, frame, "frontRack_R");
+                return [{ pos: [0, (pL.y + pR.y) / 2, (pL.z + pR.z) / 2], quat: IDENTITY }];
+              };
             } else {
-              goals.push(keepHandsOnBar(body, app.gripX, handPrefix, 24));
+              if (!app.skipHandRequired) goals.push(keepHandsOnBar(body, app.gripX, handPrefix, 24));
               propStateFn = (frame) => {
                 const p = anchorPoint(body, frame, app.restAnchor!);
                 return [{ pos: [p.x, p.y, p.z], quat: IDENTITY }];
@@ -1326,7 +1347,13 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
             ];
           }
         }
-        if (app.restAnchor) {
+        if (app.restAnchor === "frontRack") {
+          loads.push(
+            { anchor: "frontRack_L", share: 0.5, grip: "rest" },
+            { anchor: "frontRack_R", share: 0.5, grip: "rest" },
+          );
+          required.push({ label: "Bar on front delts", anchor: "frontRack_L", prop: "bar" });
+        } else if (app.restAnchor) {
           loads.push({ anchor: app.restAnchor, share: 1, grip: "rest" });
           required.push({ label: "Bar seated on body", anchor: app.restAnchor, prop: "bar" });
         } else {
@@ -1338,12 +1365,14 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
             });
           }
         }
-        for (const side of SIDES) {
-          required.push({
-            label: `${side === "L" ? "Left" : "Right"} hand on bar`,
-            anchor: `${handPrefix}_${side}`,
-            prop: "bar",
-          });
+        if (!app.skipHandRequired) {
+          for (const side of SIDES) {
+            required.push({
+              label: `${side === "L" ? "Left" : "Right"} hand on bar`,
+              anchor: `${handPrefix}_${side}`,
+              prop: "bar",
+            });
+          }
         }
       } else if (app.kind === "dumbbells") {
         const sides = app.sides ?? defaultSides;
@@ -1506,9 +1535,9 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
           propStateFn = (_frame, ex) => [{ pos: [0, ex[0], ex[1]], quat: IDENTITY }];
         } else if (sides.length === 2) {
           const gx = app.gripX ?? (app.twoHandsOnOne ? 0.05 : app.attachment === "lat-bar" ? 0.34 : 0.16);
-          if (!app.twoHandsOnOne) {
+          if (!app.twoHandsOnOne && app.attachment !== "rope") {
             goals.push(keepHandsOnBar(body, gx, "grip", 24));
-          } else {
+          } else if (app.twoHandsOnOne) {
             const pL = new Vector3();
             const pR = new Vector3();
             const aL = body.anchors.grip_L;
@@ -1798,13 +1827,21 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
         loopMode = "cycle";
       }
 
-      // 7. Default progress scalar
+      // 7. Default progress scalar (closed-chain stations move the trunk/pelvis, not stationary hands!)
       const progressAnchor =
         app.kind === "roller-pad"
           ? app.trackAnchors[0]
           : app.kind === "leg-press-sled"
             ? "ballIn_L"
-            : `grip_${activeSide}`;
+            : st.kind === "pushup" ||
+                st.kind === "dip" ||
+                st.kind === "hanging" ||
+                st.kind === "roman-chair" ||
+                st.kind === "ghd"
+              ? "sternum"
+              : st.kind === "hip-thrust"
+                ? "pelvisFront"
+                : `grip_${activeSide}`;
       const progressFn =
         config.progress !== undefined
           ? (frame: Frame) => config.progress!(body, frame)
