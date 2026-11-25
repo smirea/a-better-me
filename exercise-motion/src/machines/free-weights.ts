@@ -89,12 +89,13 @@ export function loadedBar(id: string, glb: BarGlb, loadKg: number): LoadedBar {
 export const loadedBarbell = (id: string, loadKg: number) => loadedBar(id, "prop-barbell", loadKg);
 export const loadedEzBar = (id: string, loadKg: number) => loadedBar(id, "prop-ez-bar", loadKg);
 
-export function dumbbellProp(id: string, kg: number): PropDef {
-  return { id, kind: "glb", glbId: "machines/prop-dumbbell", colliders: propParts({ id, kind: "dumbbell" }, kg) };
+/** The canonical dumbbell; its colliders are the GLB's own measured parts, whatever load the exercise sets. */
+export function dumbbellProp(id: string): PropDef {
+  return { id, kind: "glb", glbId: "machines/prop-dumbbell", colliders: specColliders("prop-dumbbell", id) };
 }
 
-export function kettlebellProp(id: string, kg: number): PropDef {
-  return { id, kind: "glb", glbId: "machines/prop-kettlebell", colliders: propParts({ id, kind: "kettlebell" }, kg) };
+export function kettlebellProp(id: string): PropDef {
+  return { id, kind: "glb", glbId: "machines/prop-kettlebell", colliders: specColliders("prop-kettlebell", id) };
 }
 
 export const CABLE_ATTACHMENTS = ["prop-d-handle", "prop-lat-bar", "prop-v-bar", "prop-rope"] as const;

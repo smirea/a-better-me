@@ -223,7 +223,7 @@ function props() {
   if (bar.props.length !== 1 + 2 * 2) fail(`loadedBarbell 100 kg: ${bar.props.length} props`);
   const ez = loadedEzBar("ez", 30);
   const specialty = (["prop-trap-bar", "prop-safety-squat-bar", "prop-axle-bar"] as const).flatMap((g) => loadedBar(g, g, 80).props);
-  for (const p of [...bar.props, ...ez.props, ...specialty, stabilityBallProp("ball"), abWheelProp("wheel"), dumbbellProp("db", 20), kettlebellProp("kb", 16), medicineBallProp("mb"), ...CABLE_ATTACHMENTS.map((k) => cableAttachment(k, k))]) {
+  for (const p of [...bar.props, ...ez.props, ...specialty, stabilityBallProp("ball"), abWheelProp("wheel"), dumbbellProp("db"), kettlebellProp("kb"), medicineBallProp("mb"), ...CABLE_ATTACHMENTS.map((k) => cableAttachment(k, k))]) {
     if (p.kind !== "glb") fail(`${p.id}: not a glb prop`);
     else if (!existsSync(join(MOTION_ROOT, "models", `${p.glbId}.glb`))) fail(`${p.id}: ${p.glbId}.glb missing`);
   }

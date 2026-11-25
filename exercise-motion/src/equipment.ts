@@ -197,7 +197,24 @@ export const kettlebellSize = (kg: number) => {
 /** A prop's parts in its own frame, the bar or handle along local X, for the weight it carries. */
 export function propParts(prop: PropDef, loadKg: number): Part[] {
   if (prop.kind === "parts") return prop.parts;
-  if (prop.kind === "glb") return prop.colliders ?? [];
+  if (prop.kind === "glb") {
+    // The renderer offsets, turns and scales the GLB inside the prop's frame; the colliders follow so QA measures what shows.
+    const parts = prop.colliders ?? [];
+    if (!prop.offset && !prop.quat && !prop.scale) return parts;
+    const inner = new Quaternion(...(prop.quat ?? IDENTITY));
+    const k = prop.scale ?? 1;
+    const shift = new Vector3(...(prop.offset ?? [0, 0, 0]));
+    return parts.map((part) => {
+      const pos = new Vector3(...part.pos).multiplyScalar(k).applyQuaternion(inner).add(shift);
+      const quat = inner.clone().multiply(new Quaternion(...part.quat));
+      return {
+        ...part,
+        size: part.size.map((v) => v * k) as Vec3,
+        pos: [pos.x, pos.y, pos.z],
+        quat: [quat.x, quat.y, quat.z, quat.w],
+      };
+    });
+  }
 
   if (prop.kind === "dumbbell") {
     const head = dumbbellHead(loadKg);
@@ -485,4 +502,20 @@ export function signedDistance(shape: Shape, point: Vector3) {
   return Math.hypot(Math.max(radial, 0), Math.max(axial, 0)) + Math.min(Math.max(radial, axial), 0);
 }
 
-export * from "./equipment-library";
+export interface PadSurface {
+  /** A point on the pad's contact face (where the lifter's body rests). */
+  origin: Vec3;
+  /** Outward unit normal pointing away from the pad toward the lifter. */
+  normal: Vec3;
+  /** Unit vector pointing up along the pad length. */
+  up: Vec3;
+}
+
+/** Evaluates a point offset `along` meters up the pad and `sink` meters into the surface. */
+export function pointOnPad(surface: PadSurface, along: number, sink = 0.008, lateralX = 0): Vector3 {
+  return new Vector3(
+    surface.origin[0] + lateralX + surface.up[0] * along - surface.normal[0] * sink,
+    surface.origin[1] + surface.up[1] * along - surface.normal[1] * sink,
+    surface.origin[2] + surface.up[2] * along - surface.normal[2] * sink,
+  );
+}

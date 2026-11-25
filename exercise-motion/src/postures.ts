@@ -1,14 +1,12 @@
-import { Vector3 } from "three";
+import { Vector3, type Matrix4 } from "three";
 import { anchorPoint, SIDES, sideSign, type Body, type Frame, type Side } from "./body";
 import { everyFrame, within } from "./checks";
-import type { PadSurface } from "./equipment-library";
-import { pointOnPad } from "./equipment-library";
+import type { PadSurface } from "./equipment";
+import { pointOnPad } from "./equipment";
 import type { FormCheck } from "./exercise";
 import { deg } from "./math";
 import {
-  aim,
   braceHandOnSurface,
-  gripBar,
   pin,
   plantFoot,
   plantFootFlat,
@@ -216,10 +214,6 @@ export function sitOnSeat(
   return [pin(body, "pelvisBottom", () => target, weight)];
 }
 
-/** Keeps both hands aimed horizontally along a bar (local +Z pointing inward along -s*X). */
-export function alignBarWrists(body: Body, weight = 3, sides: Side[] = SIDES): Goal[] {
-  return sides.map((side) => aim(body, `wrist_${side}`, new Vector3(0, 0, 1), new Vector3(-sideSign(side), 0, 0), weight));
-}
 
 /**
  * Plants both feet flat on a tilted footplate (leg press, hack squat), heels `along` metres up the plate from its
@@ -232,26 +226,10 @@ export function plantBothFeetOnPlate(
   along: number,
   toeOutRad = 0.2,
   weight = 40,
-  offset?: (q: Float64Array) => Vector3,
+  carry?: (frame: Frame, q: Float64Array) => Matrix4,
 ): Goal[] {
   return SIDES.flatMap((side) =>
-    plantFootFlat(body, side, plate, pointOnPad(plate, along, 0, sideSign(side) * stanceX), toeOutRad, weight, 0, offset),
-  );
-}
-
-/** Both hands on one bar `halfWidth` either side of `center`, along `axis`, in the same grip. */
-export function gripBarBothHands(
-  body: Body,
-  center: Vector3,
-  axis: Vector3,
-  halfWidth: number,
-  style: "overhand" | "underhand" | "neutral",
-  weight = 40,
-): Goal[] {
-  const a = axis.clone().normalize();
-  if (a.x < 0) a.negate();
-  return SIDES.flatMap((side) =>
-    gripBar(body, side, center.clone().addScaledVector(a, sideSign(side) * halfWidth), a, style, weight),
+    plantFootFlat(body, side, plate, pointOnPad(plate, along, 0, sideSign(side) * stanceX), toeOutRad, weight, 0, carry),
   );
 }
 

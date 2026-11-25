@@ -22,35 +22,11 @@ mkdirSync(seqDir, { recursive: true });
 mkdirSync(cacheDir, { recursive: true });
 
 // Compute one fingerprint over core engine sources so any engine edit invalidates cached sequences.
-const engineFiles = [
-  "body.ts",
-  "contracts.ts",
-  "skin.ts",
-  "scene.ts",
-  "glb-collision.ts",
-  "solver.ts",
-  "biomech.ts",
-  "muscles.ts",
-  "equipment.ts",
-  "equipment-library.ts",
-  "postures.ts",
-  "builders.ts",
-  "exercise.ts",
-  "validate.ts",
-  "checks.ts",
-  "catalog.ts",
-  "faults.ts",
-];
 const engineHash = createHash("sha256");
-for (const f of engineFiles) {
-  const p = join(MOTION_ROOT, "src", f);
-  if (existsSync(p)) engineHash.update(readFileSync(p));
-}
-const machinesDir = join(MOTION_ROOT, "src", "machines");
-if (existsSync(machinesDir)) {
-  for (const f of readdirSync(machinesDir).sort()) {
-    if (f.endsWith(".ts") || f.endsWith(".json")) {
-      engineHash.update(readFileSync(join(machinesDir, f)));
+for (const dir of ["src", "src/machines"]) {
+  for (const f of readdirSync(join(MOTION_ROOT, dir)).sort()) {
+    if ((f.endsWith(".ts") && !f.endsWith(".test.ts")) || f.endsWith(".json")) {
+      engineHash.update(readFileSync(join(MOTION_ROOT, dir, f)));
     }
   }
 }

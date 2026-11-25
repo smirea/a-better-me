@@ -14,21 +14,23 @@ import {
   type PoseHints,
   type Side,
 } from "./body";
-import type { HandGripConfig } from "./contracts";
-import type {
-  GlbNodePose,
-  GlbRef,
-  Part,
-  PropDef,
-  PropState,
-  TetherDef,
-  TetherState,
+import type { HandGripConfig, PerHandGrip } from "./contracts";
+import {
+  compileParts,
+  propParts,
+  type GlbNodePose,
+  type GlbRef,
+  type Part,
+  type PropDef,
+  type PropState,
+  type TetherDef,
+  type TetherState,
 } from "./equipment";
+import { resolveGrips, type Grasp } from "./grasp";
 import { lerp, minJerk, type Vec3 } from "./math";
 import { solve, type Goal, type Obstacle } from "./solver";
 
 export type Laterality = "bilateral" | "unilateral" | "alternating" | "asymmetrical";
-export type GripStyle = "hang" | "press" | "open";
 
 /**
  * Where external weight bears on the body.
@@ -173,7 +175,9 @@ export interface Built {
   required: RequiredContact[];
   checks: FormCheck[];
   laterality?: Laterality;
-  grip?: GripStyle;
+  /** What each hand holds; the grasped handle sets that hand's finger pose and is what QA measures the hand against. */
+  grasps?: Grasp[];
+  /** Finger pose for hands that hold nothing (`open`, `flat-floor`, `relaxed`, `fist`). */
   grips?: HandGripConfig;
   cameraHint?: CameraHint;
 }
@@ -205,8 +209,8 @@ export interface Sequence {
   loadKg: number;
   loadUnit: "total" | "perSide";
   laterality?: Laterality;
-  grip?: GripStyle;
-  grips?: HandGripConfig;
+  grips: PerHandGrip;
+  grasps?: Grasp[];
   machineIds?: string[];
   cameraHint?: CameraHint;
   /** One pose per frame: the body's degrees of freedom, as `createBody` lays them out. */
@@ -350,9 +354,29 @@ function assertFiniteArray(label: string, values: ArrayLike<number>) {
 export function generate(spec: ExerciseSpec, body = createBody()): Generated {
   const built = spec.build(body);
   assertSpecInputs(spec, built, body);
+  const grips = resolveGrips(spec.id, built.grasps ?? [], built.grips);
 
   const n = body.dofCount;
   const selfPairs = selfCollisionPairs(body);
+  const allowFor = (partId: string) => {
+    const merged: Record<string, number> = {};
+    for (const [prefix, map] of Object.entries(built.contacts)) if (partId.startsWith(prefix)) Object.assign(merged, map);
+    return merged;
+  };
+  // Props are placed from the pose, so the solver sees them where they'll be drawn and keeps limbs out of them.
+  const propColliders = built.props.map((prop) =>
+    propParts(prop, spec.defaultLoadKg)
+      .filter((part) => part.collide)
+      .map((part) => ({ part, allow: allowFor(part.id) })),
+  );
+  const movingObstacles = propColliders.some((parts) => parts.length)
+    ? (frame: Frame, q: Float64Array): Obstacle[] => {
+        const states = built.propState(frame, [...q.subarray(n)]);
+        return propColliders.flatMap((parts, i) =>
+          parts.length ? compileParts(parts.map((p) => p.part), states[i]).map((shape, k) => ({ shape, allow: parts[k].allow })) : [],
+        );
+      }
+    : undefined;
   const withExtras = (pose: Float64Array, extras: number[]) => {
     const q = new Float64Array(n + built.extras);
     q.set(pose);
@@ -369,6 +393,7 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
       priorWeights: free,
       selfPairs,
       obstacles: built.obstacles,
+      movingObstacles,
       iterations: 150,
     });
     assertFiniteArray(`${spec.id} ${label} pose`, res.q);
@@ -443,6 +468,7 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
             priorWeights: driven,
             selfPairs,
             obstacles: built.obstacles,
+            movingObstacles,
           }).q,
         );
       }
@@ -533,6 +559,7 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
         priorWeights: driven,
         selfPairs,
         obstacles: built.obstacles,
+        movingObstacles,
       }).q;
       assertFiniteArray(`${spec.id} sample[${i}]`, solved);
       samples.push(solved);
@@ -657,8 +684,8 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
     loadKg: spec.defaultLoadKg,
     loadUnit: spec.loadUnit,
     laterality: built.laterality ?? spec.laterality ?? "bilateral",
-    grip: built.grip,
-    ...(built.grips ? { grips: built.grips } : {}),
+    grips,
+    ...(built.grasps?.length ? { grasps: built.grasps } : {}),
     ...(built.machineIds?.length ? { machineIds: built.machineIds } : {}),
     cameraHint: built.cameraHint,
     poses: poses.map((pose) => [...pose.subarray(0, n)].map(round)),

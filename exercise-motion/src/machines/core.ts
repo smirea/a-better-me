@@ -1,5 +1,5 @@
 import { Euler, Matrix4, Quaternion, Vector3 } from "three";
-import type { Frame } from "../body";
+import type { Frame, Side } from "../body";
 import type {
   CanonicalMachineInstance,
   FootplateSpec,
@@ -10,7 +10,8 @@ import type {
   RailSpec,
 } from "../contracts";
 import type { GlbNodePose, Material, Part, PropState } from "../equipment";
-import type { PadSurface } from "../equipment-library";
+import type { PadSurface } from "../equipment";
+import type { Carrier, Grasp } from "../grasp";
 import { clamp, type Vec3 } from "../math";
 import anchorsJson from "./anchors.json";
 
@@ -101,6 +102,18 @@ export interface MachineInstance<S> extends CanonicalMachineInstance {
   at(state: Partial<S>): MachineInstance<S>;
   /** World transform of a point given in bind-pose machine coordinates and attached to `node`. */
   pointAt(p: Vec3, node?: string): Vec3;
+  /**
+   * A hand holding handle `key`. A handle on a node that `drive` moves becomes a grasp on that node's live prop, so the
+   * hand follows it every frame; hold it with `holdGrasp(body, grasp, ctx.live)`.
+   */
+  grasp(side: Side, key: string, grip?: HandGrip): Grasp;
+  /** The machine as `drive` sets it for one frame, for anchors that move: a swivelled pulley's outlet, a lever's handle. */
+  atFrame(frame: Frame, extras: number[], propStates: PropState[]): MachineInstance<S>;
+  /**
+   * The moving node that carries surface, footplate or handle `key` when `drive` animates it, or null when it stays
+   * put. Pass it to `plantFootFlat` / `plantBothFeetOnPlate` so contacts on it ride along with the solve.
+   */
+  carrier(key: string): Carrier | null;
 }
 
 export interface MachineDefinition<S> {
@@ -326,6 +339,42 @@ export function defineMachine<S extends object>(def: MachineDefinition<S>) {
           : () => [staticPoses],
         ...(def.cameraHint ? { cameraHint: def.cameraHint } : {}),
         at: (next) => make(resolve({ ...state, ...next })),
+        atFrame: (frame, extras, propStates) => (drive ? make(resolve({ ...state, ...drive(frame, extras, propStates) })) : instance),
+        carrier: (key) => {
+          const node =
+            a.surfaces?.[key]?.node ??
+            (a.footplates?.[key] ? a.surfaces?.[a.footplates[key].surface]?.node : undefined) ??
+            a.handles?.[key]?.node;
+          if (!a.surfaces?.[key] && !a.footplates?.[key] && !a.handles?.[key]) {
+            throw new Error(`${spec.id}: no surface, footplate or handle "${key}"`);
+          }
+          const moving = isAnimatedNode(node);
+          if (!moving) return null;
+          const m = full(moving);
+          const pivot = new Vector3(...v3(spec.nodes[moving].pivot)).applyMatrix4(m);
+          const q = new Quaternion().setFromRotationMatrix(m);
+          return { prop: `${idPrefix}.${moving}`, bind: { pos: tuple(pivot), quat: [q.x, q.y, q.z, q.w] } };
+        },
+        grasp: (side, key, grip) => {
+          const raw = a.handles?.[key];
+          const handle = handles[key];
+          if (!raw || !handle) throw new Error(`${spec.id}: no handle "${key}" (has ${Object.keys(handles).join(", ")})`);
+          const moving = isAnimatedNode(raw.node);
+          if (!moving) return { side, handle, grip: grip ?? handle.grip, orient: true };
+          const pivot = spec.nodes[moving].pivot;
+          return {
+            side,
+            prop: `${idPrefix}.${moving}`,
+            handle: {
+              ...handle,
+              pos: [raw.pos[0] - pivot[0], raw.pos[1] - pivot[1], raw.pos[2] - pivot[2]],
+              axis: v3(raw.axis),
+              palmNormal: v3(raw.palmNormal),
+            },
+            grip: grip ?? handle.grip,
+            orient: true,
+          };
+        },
         pointAt: (p, node) => point(p, node),
       };
       def.finish?.(instance, state);
@@ -351,12 +400,19 @@ export function stackLift(pulley: PulleySpec, handle: Vec3, restLength: number, 
   return clamp((len - restLength) * (pulley.travelRatio ?? 1), 0, maxTravel);
 }
 
-/** Yaw (radians about +Y) that turns a swivel pulley housing from facing `facing` toward `handle`. */
-export function swivelYaw(pulley: PulleySpec, handle: Vec3, facing: Vec3): number {
-  const dx = handle[0] - pulley.pos[0];
-  const dz = handle[2] - pulley.pos[2];
+/**
+ * Yaw (radians about +Y) that turns a swivel pulley housing so its outlet faces `handle`. Measured in the world about
+ * the swivel's own pivot, so it holds for any placement yaw; the outlet sits off the pivot and swings with it.
+ */
+export function swivelYaw(machine: MachineInstance<object>, pulleyKey: string, handle: Vec3): number {
+  const pulley = machine.pulleys?.[pulleyKey];
+  if (!pulley?.nodeName) throw new Error(`${machine.id}: pulley "${pulleyKey}" has no swivel node`);
+  const pivot = machine.pointAt(machineSpec(machine.id).nodes[pulley.nodeName].pivot as Vec3, pulley.nodeName);
+  const out = Math.atan2(pulley.pos[0] - pivot[0], pulley.pos[2] - pivot[2]);
+  const dx = handle[0] - pivot[0];
+  const dz = handle[2] - pivot[2];
   if (Math.hypot(dx, dz) < 1e-6) return 0;
-  return Math.atan2(dx, dz) - Math.atan2(facing[0], facing[2]);
+  return Math.atan2(dx, dz) - out;
 }
 
 export const BACK_PAD = { pelvis: 0.03, abdomen: 0.03, chest: 0.03, girdle: 0.03, neck: 0.02, head: 0.025 };

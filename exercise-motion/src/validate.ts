@@ -3,6 +3,7 @@ import { anchorPoint, selfCollisionPairs, SIDES, type Body } from "./body";
 import type { Analysis } from "./biomech";
 import { compileParts, propParts, signedDistance, type Shape } from "./equipment";
 import type { Built, CheckResult, Kinematics, Sequence } from "./exercise";
+import { CYLINDER_GRIPS, graspHandleAt, gripCenter } from "./grasp";
 import { closestSegments, deg, quatFromRotVec, rotVecFromQuat } from "./math";
 import { MUSCLE_NAMES, MUSCLES, TENDONS } from "./muscles";
 import {
@@ -22,6 +23,7 @@ export interface Issue {
     | "cable-clip"
     | "floor"
     | "contact-lost"
+    | "grip"
     | "contact-slides"
     | "too-fast"
     | "jerky"
@@ -42,6 +44,14 @@ const LIMITS = {
   jointExcess: 1.5,
   clip: 0.004,
   contactGap: 0.012,
+  /** How far a handle's axis may sit off the centre of the closed fingers before the hand visibly misses it. */
+  gripOffAxis: 0.008,
+  /** How far the shaft may turn out of the line the fingers wrap along, in degrees. */
+  gripTwist: 20,
+  /** How far past a handle's end the hand's centre may sit. */
+  gripOverhang: 0.01,
+  /** For grips that don't wrap a cylinder (a ball stop, a plate pinch): grip anchor to handle centre. */
+  gripReach: 0.04,
   slide: 0.012,
   /** Controlled lifting stays well under the 400°/s a joint reaches in a throw or a sprint. */
   speed: 260,
@@ -212,6 +222,53 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
             }
           }
         }
+      }
+    }
+
+    for (const grasp of sequence.grasps ?? []) {
+      const handle = graspHandleAt(grasp, sequence.props, sequence.propStates[f]);
+      const hand = grasp.side === "L" ? "Left hand" : "Right hand";
+      const centre = gripCenter(body, frame, grasp.side, grasp.grip, grasp.handle.radius).sub(handle.pos);
+      if (!CYLINDER_GRIPS.has(grasp.grip)) {
+        const reach = centre.length();
+        if (reach > LIMITS.gripReach) {
+          collector.add(`grip-reach:${grasp.side}`, f, reach, (worst) => ({
+            code: "grip",
+            severity: "error",
+            title: `${hand} misses its ${grasp.grip} grip`,
+            detail: `grip anchor sits ${cm(worst)} from the handle`,
+          }));
+        }
+        continue;
+      }
+      const along = centre.dot(handle.axis);
+      const off = centre.addScaledVector(handle.axis, -along).length();
+      if (off > LIMITS.gripOffAxis) {
+        collector.add(`grip-off:${grasp.side}`, f, off, (worst) => ({
+          code: "grip",
+          severity: "error",
+          title: `${hand} is off its handle`,
+          detail: `the handle's axis passes ${cm(worst)} from the centre of the closed fingers`,
+        }));
+      }
+      const overhang = Math.abs(along) - grasp.handle.length / 2;
+      if (overhang > LIMITS.gripOverhang) {
+        collector.add(`grip-end:${grasp.side}`, f, overhang, (worst) => ({
+          code: "grip",
+          severity: "error",
+          title: `${hand} slides off the end of its handle`,
+          detail: `the hand's centre sits ${cm(worst)} past the end of the gripping surface`,
+        }));
+      }
+      const shaft = new Vector3(0, 0, 1).applyQuaternion(frame.rot[body.index[`wrist_${grasp.side}`]]);
+      const twist = deg(Math.acos(Math.min(1, Math.abs(shaft.dot(handle.axis)))));
+      if (twist > LIMITS.gripTwist) {
+        collector.add(`grip-twist:${grasp.side}`, f, twist, (worst) => ({
+          code: "grip",
+          severity: "error",
+          title: `${hand} is twisted across its handle`,
+          detail: `the handle runs ${worst.toFixed(0)}° out of line with the closed fingers`,
+        }));
       }
     }
 

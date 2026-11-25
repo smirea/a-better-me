@@ -502,16 +502,7 @@ function applyLoadedExercise(resetLoad: boolean) {
     figureSlot.clear();
     figureSlot.add(figure.group);
   }
-  const visibleProps = sequence.props.filter((prop) => !(prop.kind === "parts" && prop.hidden));
-  const grip =
-    sequence.grips ??
-    sequence.grip ??
-    (visibleProps.length === 0
-      ? "relaxed"
-      : visibleProps.some((prop) => prop.kind !== "dumbbell")
-        ? "press"
-        : "hang");
-  (figure.setGrip as (g: unknown) => void)(grip);
+  figure.setGrip(sequence.grips);
   kin = kinematics(body, sequence);
   if (resetLoad) state.loadKg = Number(params.get("load") ?? sequence.loadKg);
   state.frame = Math.min(state.frame, sequence.poses.length - 1);

@@ -24,11 +24,12 @@ const build = defineMachine<DualAdjustablePulleyState>({
     const rail = spec.anchors.rails!.carriage_L;
     const bind = specParam(spec, "bindExitY");
     const y = (v: number) => clamp(v, bind + rail.minTravel, bind + rail.maxTravel);
+    // Side heights stay unset unless given, so `.at({ pulleyY })` still moves both columns.
     return {
       ...s,
       pulleyY: y(s.pulleyY),
-      pulleyYL: y(s.pulleyYL ?? s.pulleyY),
-      pulleyYR: y(s.pulleyYR ?? s.pulleyY),
+      ...(s.pulleyYL === undefined ? {} : { pulleyYL: y(s.pulleyYL) }),
+      ...(s.pulleyYR === undefined ? {} : { pulleyYR: y(s.pulleyYR) }),
       stackL: clamp(s.stackL, 0, travel),
       stackR: clamp(s.stackR, 0, travel),
     };
@@ -67,10 +68,11 @@ export function dualAdjustablePulleyMachine(
       const out: Partial<DualAdjustablePulleyState> = {};
       for (const side of ["L", "R"] as const) {
         const hand = h[side];
-        const pulley = probe.pulleys![`pulley_${side}`];
         if (!hand) continue;
-        out[`stack${side}`] = stackLift(pulley, hand, restCable, travel);
-        out[`swivel${side}`] = swivelYaw(pulley, hand, [0, 0, 1]);
+        const swivel = swivelYaw(probe, `pulley_${side}`, hand);
+        const outlet = probe.at({ [`swivel${side}`]: swivel }).pulleys![`pulley_${side}`];
+        out[`swivel${side}`] = swivel;
+        out[`stack${side}`] = stackLift(outlet, hand, restCable, travel);
       }
       return out;
     },

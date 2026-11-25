@@ -1,9 +1,8 @@
-import { Vector3 } from "three";
+import { Vector3, type Matrix4 } from "three";
 import {
   angles,
   BALL_LIMITS,
   fk,
-  GRIP_RADIUS,
   newFrame,
   shoulderElevationLimit,
   sideSign,
@@ -13,10 +12,9 @@ import {
   type Frame,
   type Side,
 } from "./body";
-import type { HandleSpec } from "./contracts";
 import { signedDistance, type Shape } from "./equipment";
-import type { PadSurface } from "./equipment-library";
-import { closestSegments, deg, rad, solveCholesky, type Vec3 } from "./math";
+import type { PadSurface } from "./equipment";
+import { closestSegments, deg, rad, solveCholesky } from "./math";
 
 export interface GoalContext {
   body: Body;
@@ -42,6 +40,8 @@ export interface SolveOptions {
   priorWeights: ArrayLike<number>;
   selfPairs: [number, number, number][];
   obstacles?: Obstacle[];
+  /** Equipment that moves with the pose (carried weights, a driven sled or lever), placed for each candidate pose. */
+  movingObstacles?: (frame: Frame, q: Float64Array) => Obstacle[];
   iterations?: number;
 }
 
@@ -177,7 +177,8 @@ export function solve(body: Body, start: ArrayLike<number>, options: SolveOption
       const depth = capsulePenetration(body, capsules, i, j) - tolerance + COLLISION_MARGIN;
       residuals.push(COLLISION_WEIGHT * Math.max(0, depth));
     }
-    for (const obstacle of options.obstacles ?? []) {
+    const moving = options.movingObstacles?.(frame, at) ?? [];
+    for (const obstacle of moving.length ? [...(options.obstacles ?? []), ...moving] : (options.obstacles ?? [])) {
       for (let i = 0; i < body.colliders.length; i++) {
         const collider = body.colliders[i];
         const allowed = obstacle.allow[collider.id] ?? (collider.contactAs ? obstacle.allow[collider.contactAs] : undefined) ?? 0;
@@ -261,7 +262,7 @@ const point = new Vector3();
 export function pin(
   body: Body,
   anchor: string,
-  target: (q: Float64Array) => Vector3,
+  target: (q: Float64Array, frame: Frame) => Vector3,
   weight: number,
   axes = "xyz",
 ): Goal {
@@ -272,7 +273,7 @@ export function pin(
   if (joint === undefined) throw new Error(`Unknown anchor or joint ${anchor}`);
   return ({ frame, q, push }) => {
     worldPoint(frame, joint, local, point);
-    const t = target(q);
+    const t = target(q, frame);
     if (axes.includes("x")) push(weight * (point.x - t.x));
     if (axes.includes("y")) push(weight * (point.y - t.y));
     if (axes.includes("z")) push(weight * (point.z - t.z));
@@ -370,17 +371,18 @@ export function plantFootFlat(
   yaw = 0,
   weight = 40,
   sink = 0,
-  offset?: (q: Float64Array) => Vector3,
+  /** Moves the planted targets with a moving footplate: `carried(machine.carrier("sled")!, ctx.live)`. */
+  carry?: (frame: Frame, q: Float64Array) => Matrix4,
 ): Goal[] {
   const frame = surfaceFrame(surface);
   const target = footLayout(body, side, frame, heel, ankleLocal(body, `heel_${side}`), yaw, sink);
-  const shifted = new Vector3();
+  const moved = new Vector3();
   return ["heel", "ballIn", "ballOut", "toe"].map((name) => {
     const world = target(`${name}_${side}`);
     return pin(
       body,
       `${name}_${side}`,
-      offset ? (q) => shifted.copy(world).add(offset(q)) : () => world,
+      carry ? (q, pose) => moved.copy(world).applyMatrix4(carry(pose, q)) : () => world,
       weight,
     );
   });
@@ -463,105 +465,6 @@ export function plantFoot(body: Body, side: Side, heel: Vector3, toeOut: number,
 /** Plants only the forefoot on a horizontal surface, letting the heel lift. Kept for callers that predate `plantFootOnToeBreak`. */
 export function plantToe(body: Body, side: Side, ballCenter: Vector3, toeOut = 0, weight = 40): Goal[] {
   return plantFootOnToeBreak(body, side, ballCenter.y, ballCenter, toeOut, { weight });
-}
-
-/** A handle to hold: where the grip's centre goes, the shaft's axis, and optionally the way the palm should face it. */
-export interface HandleTarget {
-  pos: Vector3 | Vec3;
-  axis: Vector3 | Vec3;
-  palmNormal?: Vector3 | Vec3;
-  /** The handle's radius; a thicker handle sits further out of the palm than the 29 mm bar `grip_` is placed for. */
-  radius?: number;
-}
-
-const vec = (v: Vector3 | Vec3) => (v instanceof Vector3 ? v.clone() : new Vector3(...v));
-
-/**
- * Holds a handle in a closed grip: the bar's centre at `grip_` (or `press_`, seated in the heel of the hand), the
- * hand's grip axis, local Z from little finger to thumb, along the shaft, the palm toward `palmNormal` when given,
- * and the wrist eased toward neutral. With `thumb` the axis is signed, thumb first; otherwise the hand may hold the
- * shaft either way round. A cylinder leaves the hand free to roll around it, so `palmNormal` only prefers a facing.
- */
-export function holdHandle(
-  body: Body,
-  side: Side,
-  handle: HandleSpec | HandleTarget,
-  options: { weight?: number; align?: number; wrist?: number; anchor?: "grip" | "press"; thumb?: boolean } = {},
-): Goal[] {
-  const { weight = 40, align = 6, wrist = 0.6, anchor = "grip", thumb = false } = options;
-  const s = sideSign(side);
-  const axis = vec(handle.axis).normalize();
-  const radius = handle.radius ?? GRIP_RADIUS;
-  const palm = handle.palmNormal ? vec(handle.palmNormal).normalize() : null;
-  const j = body.index[`wrist_${side}`];
-  const grip = body.anchors[`${anchor}_${side}`];
-  const handNormal = new Vector3(-s, 0, 0);
-  const shaft = new Vector3();
-  const facing = new Vector3();
-  const point = new Vector3();
-  const centre = vec(handle.pos);
-  const goals: Goal[] = [
-    ({ frame, push }) => {
-      worldPoint(frame, grip.joint, grip.local, point);
-      // A thicker bar's centre sits further out along the palm's normal than the anchor's.
-      facing.copy(handNormal).applyQuaternion(frame.rot[j]);
-      point.addScaledVector(facing, radius - GRIP_RADIUS).sub(centre);
-      push(weight * point.x);
-      push(weight * point.y);
-      push(weight * point.z);
-    },
-    ({ frame, push }) => {
-      shaft.set(0, 0, 1).applyQuaternion(frame.rot[j]);
-      if (thumb) {
-        push(align * (shaft.x - axis.x));
-        push(align * (shaft.y - axis.y));
-        push(align * (shaft.z - axis.z));
-      } else {
-        const c = shaft.cross(axis);
-        push(align * c.x);
-        push(align * c.y);
-        push(align * c.z);
-      }
-    },
-    ({ angles: a, push }) => {
-      push(wrist * a[`wrist_${side}.flex`]);
-      push(wrist * a[`wrist_${side}.dev`]);
-    },
-  ];
-  if (palm) {
-    goals.push(({ frame, push }) => {
-      facing.copy(handNormal).applyQuaternion(frame.rot[j]);
-      push(align * 0.5 * (facing.x - palm.x));
-      push(align * 0.5 * (facing.y - palm.y));
-      push(align * 0.5 * (facing.z - palm.z));
-    });
-  }
-  return goals;
-}
-
-/**
- * Grips a barbell, EZ bar, pull-up or lat bar at `pos` along a bar running `axis`. Overhand turns the thumbs in
- * toward each other along the bar, underhand turns them out, and neutral, for parallel handles, points them along
- * the handle's forward or upward end.
- */
-export function gripBar(
-  body: Body,
-  side: Side,
-  pos: Vector3,
-  axis: Vector3,
-  style: "overhand" | "underhand" | "neutral",
-  weight = 40,
-  radius = GRIP_RADIUS,
-): Goal[] {
-  const s = sideSign(side);
-  const a = axis.clone().normalize();
-  let thumb: Vector3;
-  if (style === "neutral") thumb = a.dot(new Vector3(0, 0.6, 1)) < 0 ? a.negate() : a;
-  else {
-    const toLeft = a.x < 0 ? a.negate() : a;
-    thumb = toLeft.multiplyScalar(style === "overhand" ? -s : s);
-  }
-  return holdHandle(body, side, { pos, axis: thumb, radius }, { weight, thumb: true });
 }
 
 /**

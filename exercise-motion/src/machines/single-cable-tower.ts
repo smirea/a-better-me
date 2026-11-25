@@ -45,8 +45,8 @@ export function singleCableTowerMachine(
     drive: (frame, extras, props) => {
       const hand = handle(frame, extras, props);
       if (!hand) return {};
-      const pulley = probe.pulleys!.pulley;
-      return { stack: stackLift(pulley, hand, restCable, travel), swivel: swivelYaw(pulley, hand, [0, 0, -1]) };
+      const swivel = swivelYaw(probe, "pulley", hand);
+      return { swivel, stack: stackLift(probe.at({ swivel }).pulleys!.pulley, hand, restCable, travel) };
     },
   });
 }

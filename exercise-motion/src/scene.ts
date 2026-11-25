@@ -15,7 +15,6 @@ import type {
   CameraHint,
   ExerciseSpec,
   FormCheck,
-  GripStyle,
   Laterality,
   LoadAttachment,
   RequiredContact,
@@ -23,6 +22,7 @@ import type {
   Tempo,
   WaypointSpec,
 } from "./exercise";
+import type { Grasp, LiveProps } from "./grasp";
 import type { Goal, Obstacle } from "./solver";
 
 export interface SceneContext {
@@ -34,6 +34,11 @@ export interface SceneContext {
   equipment: Part[];
   /** Merged contact penetration allowances from all canonical machines. */
   contacts: Record<string, Record<string, number>>;
+  /**
+   * Every prop's state for a candidate pose, for goals that follow moving equipment (`holdGrasp` on a lever handle, feet on a
+   * sled). Only callable from inside a goal, once the scene is assembled.
+   */
+  live: LiveProps;
 }
 
 export interface SceneBodyPlan {
@@ -66,7 +71,9 @@ export interface SceneBodyPlan {
   tempo?: Tempo;
   required: RequiredContact[];
   checks: FormCheck[];
-  grip?: GripStyle;
+  /** What each hand holds (`machine.grasp(side, key)`, `graspProp`); sets the fingers and is checked every frame. */
+  grasps?: Grasp[];
+  /** Finger pose for free hands: `open`, `flat-floor` (palm on a surface), `relaxed` (default), `fist`. */
   grips?: HandGripConfig;
   cameraHint?: CameraHint;
 }
@@ -129,11 +136,16 @@ export function composeExercise(config: ComposeExerciseConfig): ExerciseSpec {
 
       const baseEquipment = machines.flatMap((m) => m.equipment);
       const baseContacts = mergeContacts(machines.map((m) => m.contacts));
+      let assembled: LiveProps | null = null;
       const plan = config.setup(body, {
         machines,
         machine: machines[0] ?? null,
         equipment: baseEquipment,
         contacts: baseContacts,
+        live: (frame, q) => {
+          if (!assembled) throw new Error(`${config.id}: ctx.live is only callable from inside a goal`);
+          return assembled(frame, q);
+        },
       });
 
       const allEquipment: Part[] = [...baseEquipment, ...(plan.extraEquipment ?? [])];
@@ -166,6 +178,8 @@ export function composeExercise(config: ComposeExerciseConfig): ExerciseSpec {
         );
         return [...userStates, ...machineStates];
       };
+
+      assembled = (frame, q) => ({ props, states: propState(frame, [...q.subarray(body.dofCount)]) });
 
       const hasMachineGlbState = machines.some((m) => Boolean(m.glbState));
       const glbState =
@@ -222,7 +236,7 @@ export function composeExercise(config: ComposeExerciseConfig): ExerciseSpec {
         required: plan.required,
         checks: plan.checks,
         laterality: config.laterality ?? "bilateral",
-        grip: plan.grip,
+        grasps: plan.grasps,
         grips: plan.grips,
         cameraHint: plan.cameraHint ?? machines[0]?.cameraHint,
       };

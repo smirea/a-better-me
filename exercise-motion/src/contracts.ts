@@ -1,6 +1,6 @@
 import type { Frame } from "./body";
 import type { GlbNodePose, GlbRef, Part, PropDef, PropState } from "./equipment";
-import type { PadSurface } from "./equipment-library";
+import type { PadSurface } from "./equipment";
 import type { Vec3 } from "./math";
 
 /**

@@ -59,7 +59,7 @@ async function main() {
       tilePngs.push(pngPath);
     } catch (error) {
       failed++;
-      console.log(`CRASH ${slug}: ${error instanceof Error ? error.message : String(error)}`);
+      console.log(`CRASH ${slug}: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`);
     }
   }
 
