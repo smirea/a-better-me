@@ -1,0 +1,91 @@
+import { buildExerciseSpec, POSTURE_HINTS } from "../builders";
+import { checkJointRange, checkJointWithinAt } from "../postures";
+
+/** Seated on a 4-way neck, pad behind the occiput. Hands rest on the frame. */
+const SIT = {
+  ...POSTURE_HINTS.seated,
+  "root.y": 0.52,
+  "root.pitch": -4,
+  "hip.flex": 86,
+  "hip.abd": 12,
+  "knee.flex": 88,
+  "lumbar.flex": 6,
+  "thoracic.flex": 4,
+  "shoulder.elev": 24,
+  "shoulder.plane": 28,
+  "elbow.flex": 78,
+  "forearm.pron": 24,
+  "wrist.flex": 6,
+  "clavicle.elev": 2,
+};
+
+export const spec = buildExerciseSpec({
+  id: "pin-loaded-machine-neck-extension",
+  catalogId: "3015c6f170d880b0a405e6e840fc77ca",
+  name: "Pin-Loaded Machine Neck Extension",
+  defaultLoadKg: 10,
+  loadUnit: "total",
+  laterality: "bilateral",
+  grip: "open",
+  phaseLabels: ["Extend", "Back", "Return", "Tuck"],
+  tempo: { lower: 2.0, bottom: 0.3, raise: 1.8, top: 0.3 },
+  station: {
+    kind: "seated",
+    seatY: 0.48,
+    seatZ: 0,
+    stanceX: 0.18,
+    heelZ: 0.4,
+    frame: { type: "machine", backAngleDeg: 78, stackZ: -0.9 },
+    pinBack: false,
+    passiveJoints: ["hip", "knee", "ankle", "shoulder", "elbow"],
+  },
+  apparatus: {
+    kind: "roller-pad",
+    trackAnchors: ["occiput"],
+    offset: [0, 0.02, -0.02],
+    forceDir: [0, 0.1, 1],
+    width: 0.26,
+    radius: 0.055,
+  },
+  stiffness: { neck: 0.55, lumbar: 8, thoracic: 8 },
+  hints: {
+    start: { ...SIT, "neck.flex": 36 },
+    end: { ...SIT, "neck.flex": -22 },
+  },
+  checks: () => [
+    checkJointWithinAt(
+      "tucked",
+      "Chin starts tucked",
+      "Sit tall on the 4-way neck with the pad on the back of the head and the chin tucked.",
+      "neck.flex",
+      "start",
+      18,
+      50,
+    ),
+    checkJointWithinAt(
+      "extended",
+      "Neck extends into the pad",
+      "Press the pad backward by extending the neck. Keep the torso still.",
+      "neck.flex",
+      "peak",
+      -40,
+      -6,
+    ),
+    checkJointRange(
+      "neck-extension",
+      "Neck extends against the stack",
+      "Extend the neck backward through a comfortable range, then return the chin toward the chest.",
+      "neck.flex",
+      30,
+    ),
+    checkJointWithinAt(
+      "torso-still",
+      "Torso stays upright",
+      "The motion is at the neck. Do not lean the chest back to move the pad.",
+      "thoracic.flex",
+      "peak",
+      -8,
+      16,
+    ),
+  ],
+});
