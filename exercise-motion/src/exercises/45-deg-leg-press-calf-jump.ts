@@ -1,0 +1,78 @@
+import { buildExerciseSpec } from "../builders";
+import { checkFlatBack, checkJointRange, checkJointWithinAt, checkNeutralNeck } from "../postures";
+
+const TRUNK = {
+  "root.y": 0.52,
+  "root.z": -0.16,
+  "root.pitch": -48,
+  "lumbar.flex": 2,
+  "thoracic.flex": 0,
+  "neck.flex": 4,
+  "hip.abd": 10,
+  "hip.rot": 4,
+  "clavicle.elev": 2,
+  "shoulder.elev": 18,
+  "shoulder.plane": 10,
+  "shoulder.twist": 8,
+  "elbow.flex": 30,
+  "forearm.pron": 30,
+  "wrist.flex": 6,
+};
+
+export const spec = buildExerciseSpec({
+  id: "45-deg-leg-press-calf-jump",
+  catalogId: "2ab5c6f170d88083b07ce7a4c4efcc7d",
+  name: "45° Leg Press Calf Jump",
+  defaultLoadKg: 10,
+  loadUnit: "total",
+  laterality: "bilateral",
+  grip: "hang",
+  cameraHint: { view: "Side" },
+  phaseLabels: ["Jump", "Point", "Lower", "Stretch"],
+  tempo: { lower: 1.5, bottom: 0.15, raise: 0.7, top: 0.12 },
+  station: { kind: "leg-press", angleDeg: 45, stanceX: 0.14 },
+  apparatus: { kind: "leg-press-sled", angleDeg: 45, anchor: "ball" },
+  hints: {
+    start: { ...TRUNK, "hip.flex": 52, "knee.flex": 16, "ankle.dorsi": 20 },
+    end: { ...TRUNK, "hip.flex": 46, "knee.flex": 8, "ankle.dorsi": -30 },
+  },
+  stiffness: { knee: 4, hip: 2.4, ankle: 2.2 },
+  checks: () => [
+    checkFlatBack("Sit with the whole back flat on the backrest, hips back rather than slumped forward."),
+    checkNeutralNeck("Keep the neck near neutral against the pad."),
+    checkJointWithinAt(
+      "knees-soft",
+      "Knees are only mildly bent at the bottom",
+      "Lower with a mild knee bend. Do not drop into a deep leg press.",
+      "knee_L.flex",
+      "start",
+      6,
+      28,
+    ),
+    checkJointWithinAt(
+      "knees-straight",
+      "Knees straighten as the feet point",
+      "Straighten the knees as you push through the balls of the feet. Do not slam them into hyperextension.",
+      "knee_L.flex",
+      "peak",
+      0,
+      16,
+    ),
+    checkJointRange(
+      "ankle-rom",
+      "Ankles point through a full calf jump",
+      "Point the feet away like a jump-rope motion without the balls of the feet leaving the plate, then return them toward the shins.",
+      "ankle_L.dorsi",
+      40,
+    ),
+    checkJointWithinAt(
+      "stretch",
+      "Balls of the feet come back toward the shins",
+      "Bring the feet back until the calves stretch. Do not bounce out of the bottom.",
+      "ankle_L.dorsi",
+      "start",
+      8,
+      32,
+    ),
+  ],
+});

@@ -582,7 +582,7 @@ export function machineHandleProp(id: string, orientation: "horizontal" | "neutr
 
 /** Moving sled / footplate PropDef (for 45° / horizontal leg press, hack squat). */
 export function legPressSledProp(id = "sled", angleDeg = 45): PropDef {
-  const q = quatOf([1, 0, 0], rad(angleDeg - 90));
+  const q = quatOf([1, 0, 0], rad(-angleDeg));
   return {
     id,
     kind: "parts",

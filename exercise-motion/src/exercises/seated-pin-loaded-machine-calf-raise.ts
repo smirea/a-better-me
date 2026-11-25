@@ -1,0 +1,85 @@
+import { anchorPoint } from "../body";
+import { buildExerciseSpec } from "../builders";
+import { checkJointRange, checkJointWithinAt, checkNeutralNeck } from "../postures";
+
+const SEATED = {
+  "root.y": 0.56,
+  "root.z": -0.32,
+  "root.pitch": -4,
+  "lumbar.flex": 6,
+  "thoracic.flex": 4,
+  "neck.flex": 10,
+  "hip.flex": 84,
+  "hip.abd": 8,
+  "hip.rot": 4,
+  "clavicle.elev": 4,
+  "shoulder.elev": 26,
+  "shoulder.plane": 58,
+  "shoulder.twist": 6,
+  "elbow.flex": 86,
+  "forearm.pron": 18,
+  "wrist.flex": 8,
+};
+
+export const spec = buildExerciseSpec({
+  id: "seated-pin-loaded-machine-calf-raise",
+  catalogId: "25d5c6f170d880c887a2fa457044342e",
+  name: "Seated Pin-Loaded Machine Calf Raise",
+  defaultLoadKg: 40,
+  loadUnit: "total",
+  laterality: "bilateral",
+  grip: "hang",
+  cameraHint: { view: "Angle" },
+  phaseLabels: ["Raise", "Top", "Lower", "Stretch"],
+  tempo: { lower: 2.0, bottom: 0.35, raise: 1.5, top: 0.35 },
+  station: { kind: "calf-station", mode: "seated", seatY: 0.48, stanceX: 0.12 },
+  apparatus: {
+    kind: "roller-pad",
+    trackAnchors: ["kneeFront_L", "kneeFront_R"],
+    offset: [0, 0.05, 0],
+    forceDir: [0, -1, 0],
+  },
+  hints: {
+    start: { ...SEATED, "knee.flex": 104, "ankle.dorsi": 22 },
+    end: { ...SEATED, "knee.flex": 78, "ankle.dorsi": -34 },
+  },
+  progress: (body, frame) => anchorPoint(body, frame, "heel_L").y,
+  stiffness: { knee: 1.2, hip: 2.2, ankle: 6 },
+  checks: () => [
+    checkNeutralNeck("Sit tall enough that the neck stays comfortable while the thighs are under the pad."),
+    checkJointWithinAt(
+      "knees-bent",
+      "Knees stay bent under the thigh pad",
+      "Scoot the lower thighs under the pad and leave the knees bent. The ankles do the work.",
+      "knee_L.flex",
+      "peak",
+      70,
+      115,
+    ),
+    checkJointRange(
+      "ankle-rom",
+      "Heels travel from below the forefeet to above them",
+      "Lower the heels below the balls of the feet, then push them up higher than the forefeet.",
+      "ankle_L.dorsi",
+      32,
+    ),
+    checkJointWithinAt(
+      "stretch",
+      "Heels drop into a soleus stretch",
+      "Let the heels descend as far as mobility allows before you press back up.",
+      "ankle_L.dorsi",
+      "start",
+      6,
+      34,
+    ),
+    checkJointWithinAt(
+      "top",
+      "Heels finish above the balls of the feet",
+      "At the top the heels are higher than the balls of the feet.",
+      "ankle_L.dorsi",
+      "peak",
+      -42,
+      -16,
+    ),
+  ],
+});

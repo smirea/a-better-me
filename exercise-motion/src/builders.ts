@@ -549,6 +549,8 @@ export type ApparatusConfig =
   | {
       kind: "leg-press-sled";
       angleDeg?: number;
+      /** Track `"midfoot"` (default, for leg press) or `"ball"` (balls of feet on lower edge, heels free for calf raises). */
+      anchor?: "midfoot" | "ball";
     };
 
 export interface ExerciseBuilderConfig {
@@ -1774,8 +1776,24 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
           loads.push({ anchor: `ballIn_${side}`, share: 1 / sides.length, grip: "rest", direction: forceDir });
           required.push({ label: `${side === "L" ? "Left" : "Right"} foot on sled`, anchor: `ballIn_${side}`, prop: "sled" });
         }
+        const anchorMode = app.anchor ?? "midfoot";
+        const plateUp: Vec3 = [0, Math.cos(rad(angle)), -Math.sin(rad(angle))];
         propStateFn = (frame) => {
           const sum = new Vector3();
+          if (anchorMode === "ball") {
+            for (const side of sides) sum.add(anchorPoint(body, frame, `ballIn_${side}`));
+            sum.divideScalar(sides.length);
+            return [
+              {
+                pos: [
+                  0,
+                  sum.y + rail[1] * 0.026 + plateUp[1] * 0.13,
+                  sum.z + rail[2] * 0.026 + plateUp[2] * 0.13,
+                ],
+                quat: IDENTITY,
+              },
+            ];
+          }
           for (const side of sides) {
             sum.add(anchorPoint(body, frame, `heel_${side}`));
             sum.add(anchorPoint(body, frame, `ballIn_${side}`));
