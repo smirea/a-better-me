@@ -68,6 +68,11 @@ export interface TetherDef {
   id: string;
   kind: "cable" | "band";
   radius?: number;
+  /**
+   * What the tether's last point is clipped to, which QA holds it to every frame: a cable attachment prop's eye or a
+   * body anchor (an ankle cuff, a band around the thighs). Cables must say.
+   */
+  attach?: { prop: string } | { anchor: string };
 }
 
 export interface TetherState {
@@ -478,6 +483,32 @@ export const compileParts = (parts: Part[], state?: PropState): Shape[] =>
 const p = new Vector3();
 
 /** Signed distance from a world point to a part's surface, negative inside. */
+/** Points spread over a shape's surface in world space, for testing it against another shape. */
+export function surfaceSamples(shape: Shape): Vector3[] {
+  const [a, b, c] = shape.part.size;
+  const local: Vector3[] = [];
+  const ring = (x: number, r: number) => {
+    for (let k = 0; k < 8; k++) local.push(new Vector3(x, r * Math.cos((k * Math.PI) / 4), r * Math.sin((k * Math.PI) / 4)));
+  };
+  if (shape.part.shape === "box") {
+    for (const x of [-0.5, 0, 0.5]) for (const y of [-0.5, 0, 0.5]) for (const z of [-0.5, 0, 0.5]) {
+      if (x || y || z) local.push(new Vector3(x * a, y * b, z * c));
+    }
+  } else if (shape.part.shape === "sphere") {
+    ring(0, a);
+    local.push(new Vector3(a, 0, 0), new Vector3(-a, 0, 0));
+    for (const s of [-1, 1]) for (const k of [0, 1, 2, 3]) {
+      const t = (k * Math.PI) / 2;
+      local.push(new Vector3(s * a * 0.7, a * 0.7 * Math.cos(t), a * 0.7 * Math.sin(t)));
+    }
+  } else {
+    for (const x of [-b / 2, -b / 4, 0, b / 4, b / 2]) ring(x, a);
+    if (shape.part.shape === "capsule") local.push(new Vector3(b / 2 + a, 0, 0), new Vector3(-b / 2 - a, 0, 0));
+  }
+  const turn = shape.inverse.clone().invert();
+  return local.map((v) => v.applyQuaternion(turn).add(shape.pos));
+}
+
 export function signedDistance(shape: Shape, point: Vector3) {
   p.copy(point).sub(shape.pos).applyQuaternion(shape.inverse);
   const size = shape.part.size;

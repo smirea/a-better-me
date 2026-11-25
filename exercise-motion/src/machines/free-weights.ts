@@ -1,6 +1,7 @@
-import { Quaternion, Vector3 } from "three";
+import type { Frame } from "../body";
 import type { HandleSpec } from "../contracts";
-import { platesFor, propParts, type BarbellStyle, type Part, type PropDef, type PropState } from "../equipment";
+import { platesFor, propParts, type BarbellStyle, type Part, type PropDef, type PropState, type TetherDef, type TetherState } from "../equipment";
+import { propPointWorld } from "../grasp";
 import type { Vec3 } from "../math";
 import { machineSpec } from "./core";
 
@@ -112,10 +113,36 @@ export function cableEye(kind: CableAttachment): Vec3 {
   return eye.pos as Vec3;
 }
 
-/** World position of an attachment's cable eye for a prop state. */
-export function cableEyeAt(kind: CableAttachment, state: PropState): Vec3 {
-  const p = new Vector3(...cableEye(kind)).applyQuaternion(new Quaternion(...state.quat)).add(new Vector3(...state.pos));
+/** World position of a cable attachment prop's eye for its state. */
+export function cableEyeAt(prop: PropDef, state: PropState): Vec3 {
+  if (prop.kind !== "glb") throw new Error(`${prop.id}: not a cable attachment`);
+  const kind = prop.glbId.replace(/^machines\//, "") as CableAttachment;
+  if (!CABLE_ATTACHMENTS.includes(kind)) throw new Error(`${prop.id}: ${prop.glbId} is not a cable attachment`);
+  const p = propPointWorld(prop, state, cableEye(kind));
   return [p.x, p.y, p.z];
+}
+
+/**
+ * A cable from a machine pulley's live outlet (after the swivel turns) to an attachment's eye, as the tether to list
+ * and the `tetherState` row to return for it. `props` is the scene's prop order (user props, then machine props).
+ */
+export function cableTether(
+  id: string,
+  machine: { atFrame(frame: Frame, extras: number[], propStates: PropState[]): { pulleys?: Record<string, { pos: Vec3 }> } },
+  pulley: string,
+  attachment: PropDef,
+  props: PropDef[],
+): { def: TetherDef; state: (frame: Frame, extras: number[], propStates: PropState[]) => TetherState } {
+  const index = props.indexOf(attachment);
+  if (index < 0) throw new Error(`cableTether ${id}: ${attachment.id} is not in props`);
+  return {
+    def: { id, kind: "cable", attach: { prop: attachment.id } },
+    state: (frame, extras, propStates) => {
+      const outlet = machine.atFrame(frame, extras, propStates).pulleys?.[pulley]?.pos;
+      if (!outlet) throw new Error(`cableTether ${id}: no pulley "${pulley}"`);
+      return { points: [outlet, cableEyeAt(attachment, propStates[index])] };
+    },
+  };
 }
 
 export function medicineBallProp(id: string): PropDef {

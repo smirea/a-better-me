@@ -1157,10 +1157,11 @@ async function init() {
           Front: new Vector3(0, 0.22, 1).normalize(),
           Back: new Vector3(0, 0.22, -1).normalize(),
           Top: new Vector3(0, 1, 0.05).normalize(),
+          // A hand is shot from its own side so the body doesn't hide it.
           Angle:
             opts.focus === "feet"
               ? new Vector3(-0.78, 0.34, 0.52).normalize()
-              : new Vector3(-0.62, 0.36, 0.69).normalize(),
+              : new Vector3(opts.focus === "handL" ? 0.62 : -0.62, 0.36, 0.69).normalize(),
         };
         const dir = dirByView[opts.view ?? state.view] ?? dirByView.Angle;
         controls.target.copy(center);

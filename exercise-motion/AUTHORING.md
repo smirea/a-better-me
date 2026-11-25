@@ -70,10 +70,10 @@ export const spec = composeExercise({
 
 ## Moving machine parts
 
-Pass `drive` to the machine so its sled, lever, stack or swivel moves each frame. Read anchors from the static instance and let them ride: `plantBothFeetOnPlate(body, m.footplates!.sled.surface, stanceX, along, toeOut, weight, carried(m.carrier("sled")!, ctx.live))`. Use `m.atFrame(frame, extras, propStates)` for anything else that moves, such as a swivelled pulley outlet in `tetherState`.
+Pass `drive` to the machine so its sled, lever, stack or swivel moves each frame. Cables come from `cableTether(id, machine, pulleyKey, attachmentProp, props)` (outlet to attachment eye, checked every frame). Read anchors from the static instance and let them ride: `plantBothFeetOnPlate(body, m.footplates!.sled.surface, stanceX, along, toeOut, weight, carried(m.carrier("sled")!, ctx.live))`. Use `m.atFrame(frame, extras, propStates)` for anything else that moves, such as a swivelled pulley outlet in `tetherState`.
 
 ### Form checks (`src/postures.ts`)
-- `checkJointWithinAt(id, label, cue, angleKey, "start" | "peak", loDeg, hiDeg)` — `"start"` evaluates frame 0, `"peak"` evaluates end of phase 1 (`"top"`/`"bottom"` aliases also work).
+- `checkJointWithinAt(id, label, cue, angleKey, "start" | "peak", loDeg, hiDeg)` — `"start"` evaluates frame 0, `"peak"` evaluates the end of phase 1 (the lockout or the stretch, whichever the rep moves to first).
 - `checkFlatBack`, `checkNeutralNeck`, `checkJointRange`, `checkAnchorTravel`, `checkFeetPlanted`.
 
 ## Coordinate system & body conventions (`src/body.ts`)

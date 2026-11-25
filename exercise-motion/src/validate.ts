@@ -1,9 +1,10 @@
 import { Vector3 } from "three";
 import { anchorPoint, selfCollisionPairs, SIDES, type Body } from "./body";
 import type { Analysis } from "./biomech";
-import { compileParts, propParts, signedDistance, type Shape } from "./equipment";
+import { compileParts, propParts, signedDistance, surfaceSamples, type Shape } from "./equipment";
 import type { Built, CheckResult, Kinematics, Sequence } from "./exercise";
-import { CYLINDER_GRIPS, graspHandleAt, gripCenter } from "./grasp";
+import { CYLINDER_GRIPS, graspHandleAt, gripCenter, propPointWorld } from "./grasp";
+import { machineSpec } from "./machines/core";
 import { closestSegments, deg, quatFromRotVec, rotVecFromQuat } from "./math";
 import { MUSCLE_NAMES, MUSCLES, TENDONS } from "./muscles";
 import {
@@ -52,6 +53,10 @@ const LIMITS = {
   gripOverhang: 0.01,
   /** For grips that don't wrap a cylinder (a ball stop, a plate pinch): grip anchor to handle centre. */
   gripReach: 0.04,
+  /** How far a tether's end may sit from the eye or anchor it's clipped to. */
+  tetherEnd: 0.01,
+  /** How deep one piece of equipment may sit in another: a bar seated in a J-hook cradle, not through an upright. */
+  propClip: 0.01,
   slide: 0.012,
   /** Controlled lifting stays well under the 400°/s a joint reaches in a throw or a sprint. */
   speed: 260,
@@ -182,6 +187,49 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
       }
     }
 
+    // Equipment against equipment: two dumbbells at the top of a curl, a bar swung through a rack upright.
+    const propShapes = sequence.props.map((prop, p) =>
+      compileParts(propParts(prop, sequence.loadKg).filter((part) => part.collide), sequence.propStates[f][p]),
+    );
+    const machineOf = (id: string) => id.split(".")[0];
+    for (let a = 0; a < propShapes.length; a++) {
+      const others: { id: string; shapes: Shape[] }[] = [{ id: "equipment", shapes: fixed }];
+      for (let b = a + 1; b < propShapes.length; b++) {
+        const hiddenPair = [a, b].every((k) => {
+          const prop = sequence.props[k];
+          return prop.kind === "parts" && prop.hidden;
+        });
+        if (hiddenPair && machineOf(sequence.props[a].id) === machineOf(sequence.props[b].id)) continue;
+        others.push({ id: sequence.props[b].id, shapes: propShapes[b] });
+      }
+      for (const other of others) {
+        let depth = 0;
+        let hitPart = "";
+        for (const shape of propShapes[a]) {
+          for (const target of other.shapes) {
+            if (machineOf(target.part.id) === machineOf(sequence.props[a].id)) continue;
+            if (shape.pos.distanceTo(target.pos) > shape.bound + target.bound) continue;
+            for (const point of surfaceSamples(shape)) {
+              const d = -signedDistance(target, point);
+              if (d > depth) {
+                depth = d;
+                hitPart = target.part.id;
+              }
+            }
+          }
+        }
+        if (depth > LIMITS.propClip) {
+          const name = sequence.props[a].id;
+          collector.add(`prop-clip:${name}:${other.id}`, f, depth, (worst) => ({
+            code: "equipment-clip",
+            severity: "error",
+            title: `${name.split(".").map(pretty).join(" ")} passes through ${hitPart.split(".").map(pretty).join(" ")}`,
+            detail: `${cm(worst)} deep; equipment can't overlap equipment`,
+          }));
+        }
+      }
+    }
+
     for (const i of visible) {
       const collider = body.colliders[i];
       const low = Math.min(capsules.a[i].y - collider.ra, capsules.b[i].y - collider.rb);
@@ -202,13 +250,41 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
       for (let tIdx = 0; tIdx < frameTethers.length; tIdx++) {
         const pts = frameTethers[tIdx].points;
         const tetherId = sequence.tethers?.[tIdx]?.id ?? `cable_${tIdx}`;
-        const tetherR = sequence.tethers?.[tIdx]?.radius ?? 0.004;
+        const def = sequence.tethers?.[tIdx];
+        const tetherR = def?.radius ?? 0.004;
+        if (def?.kind === "cable" && !def.attach) {
+          throw new Error(`Cable "${tetherId}" doesn't say what it's clipped to; set attach (cableTether does)`);
+        }
+        if (def?.attach) {
+          const end = new Vector3(...pts[pts.length - 1]);
+          let target: Vector3;
+          if ("prop" in def.attach) {
+            const p = sequence.props.findIndex((prop) => prop.id === (def.attach as { prop: string }).prop);
+            const prop = sequence.props[p];
+            if (!prop || prop.kind !== "glb") throw new Error(`Cable "${tetherId}" attaches to unknown prop`);
+            const eye = machineSpec(prop.glbId.replace(/^machines\//, "")).anchors.points?.eye;
+            if (!eye) throw new Error(`Cable "${tetherId}": ${prop.glbId} has no cable eye`);
+            target = propPointWorld(prop, sequence.propStates[f][p], eye.pos);
+          } else {
+            target = anchorPoint(body, frame, def.attach.anchor);
+          }
+          const off = end.distanceTo(target);
+          if (off > LIMITS.tetherEnd) {
+            collector.add(`tether-end:${tetherId}`, f, off, (worst) => ({
+              code: "cable-clip",
+              severity: "error",
+              title: `${pretty(tetherId)} isn't clipped to what it pulls`,
+              detail: `its end sits ${cm(worst)} from the attachment's eye`,
+            }));
+          }
+        }
         for (let seg = 0; seg + 1 < pts.length; seg++) {
           p0.set(...pts[seg]);
           p1.set(...pts[seg + 1]);
           for (const i of visible) {
             const col = body.colliders[i];
-            if (col.id.startsWith("hand_") || col.id.startsWith("forearm_")) continue;
+            // The cable leaves the attachment right behind the hand, so only the hand itself may touch it.
+            if (col.id.startsWith("hand_")) continue;
             const hit = closestSegments(p0, p1, capsules.a[i], capsules.b[i]);
             const colR = col.ra + (col.rb - col.ra) * hit.t;
             const pen = colR + tetherR - hit.distance;

@@ -326,11 +326,12 @@ export function checkJointWithinAt(
   label: string,
   cue: string,
   angleKey: string,
-  phase: "start" | "peak" | "top" | "bottom",
+  /** `start` is frame 0; `peak` is the end of the first movement phase, whichever of lockout or stretch that is. */
+  phase: "start" | "peak",
   loDeg: number,
   hiDeg: number,
 ): FormCheck {
-  const isStart = phase === "start" || phase === "top";
+  const isStart = phase === "start";
   return {
     id,
     label,

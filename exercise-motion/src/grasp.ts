@@ -59,17 +59,29 @@ export interface WorldHandle {
   palmNormal: Vector3;
 }
 
+const innerOf = (prop: PropDef) => ({
+  quat: prop.kind === "glb" && prop.quat ? new Quaternion(...prop.quat) : new Quaternion(),
+  scale: prop.kind === "glb" ? (prop.scale ?? 1) : 1,
+  offset: prop.kind === "glb" && prop.offset ? new Vector3(...prop.offset) : new Vector3(),
+});
+
+/** A point given in a prop's GLB frame (a cable eye), in world space, the way the renderer places the GLB. */
+export function propPointWorld(prop: PropDef, state: PropState, point: readonly number[]): Vector3 {
+  const inner = innerOf(prop);
+  return new Vector3(point[0], point[1], point[2])
+    .multiplyScalar(inner.scale)
+    .applyQuaternion(inner.quat)
+    .add(inner.offset)
+    .applyQuaternion(new Quaternion(...state.quat))
+    .add(new Vector3(...state.pos));
+}
+
 /** A prop handle in world space, through the same offset/rotation/scale the renderer applies to the prop's GLB. */
 export function propHandleWorld(prop: PropDef, state: PropState, handle: HandleSpec): WorldHandle {
-  const rot = new Quaternion(...state.quat);
-  const inner = prop.kind === "glb" && prop.quat ? new Quaternion(...prop.quat) : new Quaternion();
-  const scale = prop.kind === "glb" ? (prop.scale ?? 1) : 1;
-  const offset = prop.kind === "glb" && prop.offset ? new Vector3(...prop.offset) : new Vector3();
   const local = (v: readonly number[]) => new Vector3(v[0], v[1], v[2]);
-  const pos = local(handle.pos).multiplyScalar(scale).applyQuaternion(inner).add(offset).applyQuaternion(rot).add(new Vector3(...state.pos));
-  const turn = inner.clone().premultiply(rot);
+  const turn = innerOf(prop).quat.premultiply(new Quaternion(...state.quat));
   return {
-    pos,
+    pos: propPointWorld(prop, state, handle.pos),
     axis: local(handle.axis).applyQuaternion(turn).normalize(),
     palmNormal: local(handle.palmNormal).applyQuaternion(turn).normalize(),
   };

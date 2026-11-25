@@ -215,11 +215,34 @@ describe("exercise-motion framework invariants", () => {
       poses: sharedSquat.poses.slice(0, 4),
       s: sharedSquat.s.slice(0, 4),
       propStates: sharedSquat.propStates.slice(0, 4),
-      tethers: [{ id: "cable_L", kind: "cable" as const }],
-      tetherStates: Array.from({ length: 4 }, () => [{ points: [[-0.6, 1.25, 0.02] as [number, number, number], [0.6, 1.25, 0.02] as [number, number, number]] }]),
+      tethers: [{ id: "cable_L", kind: "cable" as const, attach: { anchor: "grip_L" } }],
     };
-    const issues = validateMotion(body, base, kinematics(body, base));
-    expect(issues.some((i) => i.code === "cable-clip" && i.severity === "error")).toBe(true);
+    const kin = kinematics(body, base);
+    // Clipped to the left hand, the cable runs from a pulley off to the right straight across the chest first.
+    const through = {
+      ...base,
+      tetherStates: kin.frames.map((frame) => {
+        const hand = anchorPoint(body, frame, "grip_L");
+        return [{ points: [[-0.6, 1.25, 0.02], [0.6, 1.25, 0.02], [hand.x, hand.y, hand.z]] as [number, number, number][] }];
+      }),
+    };
+    const issues = validateMotion(body, through, kin);
+    expect(issues.some((i) => i.code === "cable-clip" && i.severity === "error" && i.title.includes("cuts through"))).toBe(true);
+  });
+
+  test("a cable must end where it is clipped", () => {
+    const base = {
+      ...sharedSquat,
+      poses: sharedSquat.poses.slice(0, 4),
+      s: sharedSquat.s.slice(0, 4),
+      propStates: sharedSquat.propStates.slice(0, 4),
+      tethers: [{ id: "cable_L", kind: "cable" as const }],
+      tetherStates: Array.from({ length: 4 }, () => [{ points: [[1.5, 2, 0] as [number, number, number], [1.4, 2, 0] as [number, number, number]] }]),
+    };
+    expect(() => validateMotion(sharedBody, base, kinematics(sharedBody, base))).toThrow(/clipped to/);
+    const loose = { ...base, tethers: [{ ...base.tethers[0], attach: { anchor: "grip_L" } }] };
+    const issues = validateMotion(sharedBody, loose, kinematics(sharedBody, loose));
+    expect(issues.some((i) => i.code === "cable-clip" && i.title.includes("isn't clipped"))).toBe(true);
   });
 
   test("applySkinToObject3D swaps canonical semantic materials without touching non-semantic materials", () => {

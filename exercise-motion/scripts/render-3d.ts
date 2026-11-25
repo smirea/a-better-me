@@ -299,26 +299,17 @@ async function main() {
     }
 
     if (closeups) {
-      const cuTiles: string[] = [
-        await captureTile(
-          { view: "Angle", frame: 0, focus: "hands" },
-          "closeup-hands-start",
-          `Hands - start (f0)`,
-        ),
-        await captureTile(
-          { view: "Angle", frame: peak, focus: "hands" },
-          "closeup-hands-peak",
-          `Hands - peak (f${peak})`,
-        ),
-        await captureTile(
-          { view: "Side", frame: peak, focus: "feet" },
-          "closeup-feet-peak",
-          `Feet - peak (f${peak})`,
-        ),
-      ];
-      const cuRow = join(tmpDir, "row-closeups.png");
-      await $`magick ${cuTiles} +append ${cuRow}`.quiet();
-      rowPngs.push(cuRow);
+      // Each hand gets its own tile at a fixed close distance, so finger wrap reads even when the hands are far apart.
+      for (const [label, frameIdx] of [["start", 0], ["peak", peak]] as const) {
+        const cuTiles = [
+          await captureTile({ view: "Angle", frame: frameIdx, focus: "handL" }, `closeup-handL-${label}`, `Left hand - ${label} (f${frameIdx})`),
+          await captureTile({ view: "Angle", frame: frameIdx, focus: "handR" }, `closeup-handR-${label}`, `Right hand - ${label} (f${frameIdx})`),
+          await captureTile({ view: "Side", frame: frameIdx, focus: "feet" }, `closeup-feet-${label}`, `Feet - ${label} (f${frameIdx})`),
+        ];
+        const cuRow = join(tmpDir, `row-closeups-${label}.png`);
+        await $`magick ${cuTiles} +append ${cuRow}`.quiet();
+        rowPngs.push(cuRow);
+      }
     }
 
     await $`magick ${rowPngs} -append ${outPng}`.quiet();
