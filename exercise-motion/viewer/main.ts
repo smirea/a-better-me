@@ -154,7 +154,6 @@ let figure: Figure;
 const canvas = $<HTMLCanvasElement>("canvas");
 const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
 const scene = new Scene();
 document.documentElement.classList.toggle("clean", clean);
 
@@ -209,8 +208,6 @@ function partMesh(part: Part) {
   const mesh = new Mesh(geometry, MATERIALS[part.material] ?? MATERIALS.steel);
   mesh.position.set(...part.pos);
   mesh.quaternion.set(...part.quat);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
   mesh.userData.partId = part.id;
   return mesh;
 }
@@ -250,12 +247,6 @@ function buildProps(): Promise<void> {
             if (prop.offset) obj.position.set(...prop.offset);
             if (prop.quat) obj.quaternion.set(...prop.quat);
             if (prop.scale) obj.scale.setScalar(prop.scale);
-            obj.traverse((child) => {
-              if ((child as Mesh).isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-              }
-            });
             applySkinToObject3D(obj, getSkin(state.skin));
             fallback.visible = false;
             group.add(obj);
@@ -289,7 +280,6 @@ function buildTethers() {
     const meshes: Mesh[] = [];
     for (let s = 0; s < maxSegs[tIdx]; s++) {
       const m = new Mesh(UNIT_CYL, mat);
-      m.castShadow = true;
       tethersGroup.add(m);
       meshes.push(m);
     }
@@ -382,10 +372,6 @@ async function loadGlbAttachments() {
         if (ref.scale) obj.scale.setScalar(ref.scale);
         const nodeMap = maps[idx];
         obj.traverse((child) => {
-          if ((child as Mesh).isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-          }
           if (child.name) {
             nodeMap.set(child.name, {
               obj: child,

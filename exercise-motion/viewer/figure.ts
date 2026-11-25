@@ -700,8 +700,6 @@ export class Figure {
     };
 
     this.mesh = new Mesh(geometry, material);
-    this.mesh.castShadow = true;
-    this.mesh.receiveShadow = true;
     this.mesh.frustumCulled = false;
     this.group.add(this.mesh);
   }
