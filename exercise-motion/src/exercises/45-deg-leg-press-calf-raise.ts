@@ -1,0 +1,81 @@
+import { buildExerciseSpec } from "../builders";
+import { checkAnchorTravel, checkJointRange, checkJointWithinAt } from "../postures";
+
+const SEATED = {
+  "root.y": 0.5,
+  "root.z": -0.02,
+  "root.pitch": -46,
+  "hip.flex": 68,
+  "hip.abd": 12,
+  "knee.flex": 12,
+  "lumbar.flex": 4,
+  "thoracic.flex": 2,
+  "neck.flex": 10,
+  "shoulder.elev": 18,
+  "shoulder.plane": -8,
+  "elbow.flex": 78,
+  "forearm.pron": 20,
+};
+
+export const spec = buildExerciseSpec({
+  id: "45-deg-leg-press-calf-raise",
+  catalogId: "1a15c6f170d88074b3d4e1548e32c508",
+  name: "45° Leg Press Calf Raise",
+  defaultLoadKg: 22,
+  loadUnit: "total",
+  laterality: "bilateral",
+  grip: "hang",
+  phaseLabels: ["Press", "Point", "Lower", "Stretch"],
+  tempo: { lower: 1.3, bottom: 0.3, raise: 1.7, top: 0.35 },
+  station: { kind: "leg-press", angleDeg: 45, stanceX: 0.14 },
+  apparatus: { kind: "leg-press-sled", angleDeg: 45 },
+  stiffness: { ankle: 8, knee: 6, hip: 3 },
+  hints: {
+    start: { ...SEATED, "ankle.dorsi": 8 },
+    end: { ...SEATED, "ankle.dorsi": -12 },
+  },
+  checks: () => [
+    checkJointRange(
+      "ankle-rom",
+      "Ankles press the sled",
+      "Press the platform away from you by pointing the balls of your feet away from you through the available range of motion of your ankles.",
+      "ankle_L.dorsi",
+      16,
+    ),
+    checkJointWithinAt(
+      "knees-quiet-bottom",
+      "Knees stay nearly straight",
+      "You should maintain this knee position (rather than bending and extending your knees) while performing this exercise.",
+      "knee_L.flex",
+      "start",
+      6,
+      18,
+    ),
+    checkJointWithinAt(
+      "knees-quiet-top",
+      "Knees stay nearly straight at the top",
+      "Motion should occur exclusively at your ankles, while knees and hips do not move.",
+      "knee_L.flex",
+      "peak",
+      6,
+      18,
+    ),
+    checkJointWithinAt(
+      "calf-stretch",
+      "Heels drop into a stretch",
+      "Strive to lower your heels as far as you can, and you will likely feel a stretching sensation in your calf at the bottom position.",
+      "ankle_L.dorsi",
+      "start",
+      2,
+      16,
+    ),
+    checkAnchorTravel(
+      "sled-travel",
+      "Sled travels with the ankles",
+      "Press the platform away from you by pointing the balls of your feet away from you.",
+      "ballIn_L",
+      "z",
+      0.025,
+    ),
+  ],
+});
