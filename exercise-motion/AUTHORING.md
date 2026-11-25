@@ -1,71 +1,80 @@
 # Exercise Authoring Guide
 
-Read this before writing or editing any file in `exercise-motion/src/exercises/`.
+Read this and `exercise-motion/AGENTS.md` before writing or editing any file in `exercise-motion/src/exercises/`.
 
 ## Goal
 
-Every exercise file `exercise-motion/src/exercises/<slug>.ts` exports `export const spec: ExerciseSpec = ...` so the solver produces a natural, biomechanically accurate, collision-free looping 3D rep on the right equipment, passing **every** validator (`0` errors) and **every** catalog-quoted form check.
+Every exercise file `exercise-motion/src/exercises/<slug>.ts` exports `export const spec = composeExercise({...})` (`src/scene.ts`). The solver turns it into a natural, collision-free looping 3D rep on the canonical equipment that passes **every** validator with `0` errors and **every** catalog-quoted form check. There is no other authoring path: never write procedural stand-in equipment, copy a GLB, or hand-place a prop away from the hand or body part that carries it.
 
-## Fast Path: `buildExerciseSpec` (`src/builders.ts`)
-
-Use `buildExerciseSpec(config)` from `../builders` for almost all exercises (you may also write a raw `ExerciseSpec` if an exercise needs bespoke solver mechanics). `buildExerciseSpec` handles feet planting, benches/seats/backrests, obstacles/contacts, props, live cables/bands, standing balance, bilateral mirroring, unilateral/alternating loops, and smooth non-jerky arcs — so each exercise file stays concise (~50–110 lines) while being **100% tailored** to that exercise's exact equipment, grip, stance, angles, load, and catalog-quoted form checks.
+## Example: standing dumbbell curl
 
 ```ts
-import { buildExerciseSpec, POSTURE_HINTS, holdElbowNearShoulder } from "../builders";
-import { checkFlatBack, checkJointRange } from "../postures";
+import { anchorPoint } from "../body";
+import { carryProp, graspProp } from "../grasp";
+import { dumbbellProp, propHandles } from "../machines";
+import { checkJointRange, plantBothFeet, POSTURE_HINTS } from "../postures";
+import { composeExercise } from "../scene";
+import { balance, mirrored } from "../solver";
 
-export const spec = buildExerciseSpec({
+export const spec = composeExercise({
   id: "standing-dumbbell-biceps-curl",
   catalogId: "...",
   name: "Standing Dumbbell Biceps Curl",
-  defaultLoadKg: 14,
+  defaultLoadKg: 12,
   loadUnit: "perSide",
-  laterality: "bilateral", // or "unilateral" (with activeSide: "L"), "alternating", "asymmetrical"
-  grip: "hang",            // "hang" | "press" | "open"
-  phaseLabels: ["Curl", "Peak", "Lower", "Rest"],
-  station: { kind: "standing", stanceX: 0.14 },
-  apparatus: { kind: "dumbbells" },
-  hints: {
-    start: { ...POSTURE_HINTS.standing, "shoulder.elev": 8, "elbow.flex": 8, "forearm.pron": -75 },
-    end:   { ...POSTURE_HINTS.standing, "shoulder.elev": 14, "shoulder.plane": 75, "elbow.flex": 134, "forearm.pron": -82 },
+  setup(body) {
+    const handle = propHandles("prop-dumbbell").grip;
+    const props = [dumbbellProp("dbL"), dumbbellProp("dbR")];
+    // What each hand holds: sets the finger wrap and is what QA measures the hand against every frame.
+    const grasps = [graspProp("L", "dbL", handle), graspProp("R", "dbR", handle)];
+    const s = POSTURE_HINTS.standing;
+    return {
+      hints: {
+        start: { ...s, "shoulder.elev": 8, "elbow.flex": 10, "forearm.pron": -80 },
+        end: { ...s, "shoulder.elev": 14, "shoulder.plane": 80, "elbow.flex": 130, "forearm.pron": -80 },
+      },
+      goals: [
+        ...plantBothFeet(body, 0.12, -0.02),
+        balance(body, [{ anchor: "grip_L", kg: 12 }, { anchor: "grip_R", kg: 12 }], 0.07, 20),
+        mirrored(body, 6),
+      ],
+      keyGoals: { start: [], end: [] },
+      stiffness: { default: 1, lumbar: 8, thoracic: 8 },
+      progress: (frame) => anchorPoint(body, frame, "grip_L").y,
+      ground: "heel_L",
+      props,
+      // Hand-carried props sit exactly in the closed hands; the solver keeps limbs out of them.
+      propState: (frame) => props.map((p) => carryProp(body, frame, p, grasps)),
+      grasps,
+      loads: [
+        { anchor: "grip_L", share: 1, grip: "hang" },
+        { anchor: "grip_R", share: 1, grip: "hang" },
+      ],
+      support: { kind: "standing" },
+      required: [
+        { label: "Left heel", anchor: "heel_L", surfaceY: 0 },
+        { label: "Right heel", anchor: "heel_R", surfaceY: 0 },
+      ],
+      checks: [checkJointRange("elbow", "Full curl", "Curl the weights up toward your shoulders.", "elbow_L.flex", 95)],
+    };
   },
-  extraGoals: (body) => [
-    holdElbowNearShoulder(body, "L", [0.03, -0.29, 0.02], 14, "xz"),
-    holdElbowNearShoulder(body, "R", [0.03, -0.29, 0.02], 14, "xz"),
-  ],
-  checks: (body) => [
-    checkFlatBack("Keep your torso upright without swinging your lower back."),
-    checkJointRange("elbow-rom", "Full elbow flexion curl", "Curl the dumbbells up toward your shoulders.", "elbow_L.flex", 95),
-  ],
 });
 ```
 
-### Supported `station` kinds (`src/builders.ts`)
-- `"standing"` — `stanceX`, `heelZ`, `toeOutDeg`, `surfaceY`, `split` (lunge/split squat/Bulgarian with `"flat" | "toe" | "elevated-stand" | "elevated-bench"`), `singleFoot`, `box`, `rack`, `smith`, `trackKnees`, `balanceZ`, `torsoLeanDeg`
-- `"seated"` — `seatY` (default `0.43` for flat feet on floor!), `seatZ`, `leanDeg`, `lockHipFlexDeg` (e.g. `62..68` with `hip.abd: 10..12` on leg extension/curl machines to keep thighs level on the seat), `frame`: `"flat-bench"` | `"adjustable-bench"` (`backAngleDeg`) | `"machine"` (`backAngleDeg` or `chestPadZ`) | `"lat-pulldown"` | `"seated-row"` | `"preacher"` | `"leg-extension"` (auto-pins hands on side handles and defaults `hip`/`ankle` passive!) | `"box"`, `feetMode` (`"floor" | "footplate" | "hanging"`)
-- `"lying"` — `surface`: `"flat-bench" | "adjustable-bench" | "floor" | "stability-ball" | "lying-leg-curl"`, `face`: `"up" | "down" | "side"`, `backAngleDeg`, `rack`, `smith`, `ankleRollers`, `feetOnFloor`, `pinSacrum` (set `false` for reverse crunches/V-ups)
-- `"kneeling"` — `halfKneelingSide?`, `leanDeg?`
-- `"hanging"` (pull-up bar) | `"dip"` (parallel bars) | `"pushup"` (floor/incline/decline/knees/forearms plank; defaults `handElevationY=0.04`, `feetElevationY=0.03` to avoid floor-sink; set `plantFeet: false` for mountain climbers)
-- `"leg-press"` | `"hack-squat"` | `"roman-chair"` | `"ghd"` | `"hip-thrust"` | `"calf-station"` | `"cardio"`
+## Holding things
 
-### Supported `apparatus` kinds (`src/builders.ts`)
-- `"none"` — bodyweight; pass `bodyweightLoads: [{ anchor: "grip_L", bodyweightShare: 0.5, share: 0.5, grip: "hang", direction: [0, 1, 0] }, ...]` on closed-chain upper-body lifts (pull-ups, dips, push-ups, planks) so bodyweight loads the arms/trunk accurately! (Use negative `share: -0.5` on assisted pull-up/dip machines!)
-- `"barbell"` — `style`: `"straight" | "ez" | "trap" | "ssb" | "axle" | "cambered"`, `gripX`, `anchor` (`"grip" | "press"`), optional `restAnchor` (`"traps"`, `"frontRack"` centered midpoint, `"pelvisFront"`), optional `skipHandRequired: true` (for zombie/Zercher/hands-free squats), optional `path: { startY, startZ, endY, endZ, arcBulgeZ? }`
-- `"dumbbells"` | `"kettlebells"` | `"plate"` | `"medball"` — supports `sides`, `twoHandsOnOne`, `fatGrip`, optional `handPath`
-- `"cable-single"` — `pulley: [x, y, z]`, `attachment`: `"d-handle" | "straight-bar" | "lat-bar" | "v-bar" | "rope" | "ankle-cuff"`, `twoHandsOnOne`, `skipColumn` (when using `lat-pulldown` / `seated-row` station), optional `handPath` or `anchor` (e.g. `"ankleCuff_L"`)
-- `"cable-dual"` — cable crossover (`pulleyY`, `halfWidth`, `z`, `attachment`, `anchor`)
-- `"band"` — elastic band tether from `anchors: Vec3[]` to `targetAnchors`
-- `"machine-handles"` — moving machine handles (`orientation: "horizontal" | "neutral"`, `forceDir: Vec3`, optional `handPath`)
-- `"roller-pad"` — moving machine roller tracking `trackAnchors` (`["shinFront_L", "shinFront_R"]`, `["shinBack_L", "shinBack_R"]`, `["thighOuter_L", "thighOuter_R"]`, etc.) with `localOffset` (in the anchor's joint frame, e.g. `[0, 0, 0.055]` stays on front of shin through the entire knee arc!) or world `offset`, plus `pulley` or `forceDir`!
-- `"landmine"` | `"ab-wheel"` | `"rings"` | `"prowler-sled"` | `"leg-press-sled"`
+- **Machine handles:** `machine.grasp(side, "handle_L")`, held with `...holdGrasp(body, grasp, ctx.live, { style: "overhand" | "underhand" | "neutral" })`. A handle on a driven node (a lever, a sled) is tracked live.
+- **Hand-carried props** (dumbbells, kettlebells, a deadlifted bar, a cable attachment): `graspProp` each hand on the prop's handle (`propHandles("prop-barbell").grip`, `propHandles("prop-lat-bar").grip_L`), place the prop with `carryProp(body, frame, prop, grasps)`, and pose the hands with goals. Two hands on two handles of one prop also need `keepGraspSpan(body, gL, gR, prop)`.
+- **Body-carried props** (a squat bar on the traps, a front rack): place the prop from body anchors in `propState`, and hold it with `holdGrasp(body, grasp, ctx.live, { at: ±halfWidth, style })`.
+- **Free hands:** `palmOnFloor` / `braceHandOnSurface` / `braceBothHands` with `grips: "flat-floor"`; otherwise `grips` defaults to `"relaxed"`. A closed grip (`bar`, `press`, `neutral`, `hook`, …) without a grasp throws.
+
+## Moving machine parts
+
+Pass `drive` to the machine so its sled, lever, stack or swivel moves each frame. Read anchors from the static instance and let them ride: `plantBothFeetOnPlate(body, m.footplates!.sled.surface, stanceX, along, toeOut, weight, carried(m.carrier("sled")!, ctx.live))`. Use `m.atFrame(frame, extras, propStates)` for anything else that moves, such as a swivelled pulley outlet in `tetherState`.
 
 ### Form checks (`src/postures.ts`)
 - `checkJointWithinAt(id, label, cue, angleKey, "start" | "peak", loDeg, hiDeg)` — `"start"` evaluates frame 0, `"peak"` evaluates end of phase 1 (`"top"`/`"bottom"` aliases also work).
 - `checkFlatBack`, `checkNeutralNeck`, `checkJointRange`, `checkAnchorTravel`, `checkFeetPlanted`.
-
-### Unilateral & Alternating helpers
-- `sidedHints("L", activeArmHints, restArmHints, sharedTrunkHints)` — sets working side `_L` and resting side `_R` cleanly.
-- Set `laterality: "alternating"` and write `hints.end` for the LEFT peak — `buildExerciseSpec` automatically mirrors it into a smooth 4-waypoint `start -> leftPeak -> start -> rightPeak` cycle!
 
 ## Coordinate system & body conventions (`src/body.ts`)
 
@@ -87,17 +96,9 @@ export const spec = buildExerciseSpec({
 
 ## Mandatory verification loop
 
-1. Read each exercise's brief and inspect its reference PNG images (if provided). If instructions or images are missing or unclear, verify standard form online.
-2. Create `exercise-motion/src/exercises/<slug>.ts` exporting `export const spec: ExerciseSpec = ...` (do NOT edit `src/exercises/index.ts`).
-3. Run:
-   ```bash
-   bun exercise-motion/scripts/inspect-exercise.ts <slug1> [slug2 ...]
-   ```
-   (For a batch of multiple exercises, you can also run `bun exercise-motion/scripts/batch-qa.ts <slug1> <slug2> ...` to get a quick tiled mosaic!)
-4. **Visually inspect** the generated PNG contact sheet(s) (`/tmp/motion-inspect/<slug>-compare.png` or `-sheet.png`, or batch QA mosaic) using your image reader tool! Check:
-   - Right equipment & scale?
-   - Character properly set up on the equipment (no floating, no sinking, no clipping, natural posture)?
-   - Smooth, realistic motion matching the instructions and reference images?
-   - Top muscles match the catalog's primary/secondary muscles?
-5. Fix EVERY error flag, EVERY failed check, and EVERY visual defect until `inspect-exercise.ts` exits `0` AND the renders look natural.
-6. Run `bun check && bunx oxlint exercise-motion/src/exercises/<slug>.ts ...`, leave no untracked temp files in the repo, and commit cleanly on your worktree branch.
+1. Read the exercise's brief (`bun exercise-motion/scripts/exercise-brief.ts "<name>"`) and look at its reference images. If the instructions or images are unclear, check standard form online.
+2. Write `exercise-motion/src/exercises/<slug>.ts` (don't edit `src/exercises/index.ts`; `scripts/sync-exercises.ts` regenerates it).
+3. Run `bun exercise-motion/scripts/batch-qa.ts <slug>`. It must report `0` errors and pass every form check.
+4. Run `bun exercise-motion/scripts/render-3d.ts <slug> --closeups` and look at the PNG: full views, hand close-ups and foot close-ups. Compare with the reference images. Check that the equipment is right and set up correctly, that nothing floats, sinks or clips, that the fingers wrap what they hold and the soles sit flat, and that the motion matches the instructions.
+5. Fix every error, failed check and visual defect at its cause (pose, placement, equipment state), never by widening a contact allowance or loosening a check, until both are clean.
+6. Run `bun check` and `bunx oxlint exercise-motion/src/exercises/<slug>.ts`, and leave no untracked temp files.
