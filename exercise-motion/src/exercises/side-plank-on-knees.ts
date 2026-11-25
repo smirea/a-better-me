@@ -1,0 +1,92 @@
+import { buildExerciseSpec } from "../builders";
+import { exerciseMat } from "../equipment-library";
+import { checkJointWithinAt } from "../postures";
+
+/** Knees bent about 90°, thighs in line with the torso, bottom knee and forearm on the mat. */
+const HOLD = {
+  "root.x": -0.05,
+  "root.y": 0.58,
+  "root.z": 0.02,
+  "root.roll": 90,
+  "root.pitch": 0,
+  "lumbar.flex": 4,
+  "thoracic.flex": 2,
+  "neck.flex": 2,
+  "hip.flex": 6,
+  "knee.flex": 92,
+  "ankle.dorsi": 8,
+  "hip_R.abd": 20,
+  "hip_L.abd": 6,
+  "shoulder_R.elev": 90,
+  "shoulder_R.plane": 0,
+  "shoulder_R.twist": 80,
+  "elbow_R.flex": 90,
+  "forearm_R.pron": 40,
+  "wrist_R.flex": -12,
+  "shoulder_L.elev": 14,
+  "shoulder_L.plane": 30,
+  "elbow_L.flex": 40,
+  "forearm_L.pron": 16,
+};
+
+export const spec = buildExerciseSpec({
+  id: "side-plank-on-knees",
+  catalogId: "1a45c6f170d8804eab30fb5da8fdb98c",
+  name: "Side Plank On Knees",
+  defaultLoadKg: 0,
+  loadUnit: "total",
+  laterality: "asymmetrical",
+  grip: "open",
+  isometric: true,
+  brace: true,
+  phaseLabels: ["Set", "Brace", "Hold", "Hold"],
+  station: { kind: "cardio", machine: "none" },
+  extraEquipment: exerciseMat(0.8, 1.8, 0.05),
+  apparatus: {
+    kind: "none",
+    bodyweightLoads: [
+      { anchor: "forearmMid_R", bodyweightShare: 0.32, grip: "press", direction: [0, 1, 0] },
+      { anchor: "kneeFront_R", bodyweightShare: 0.22, grip: "press", direction: [0, 1, 0] },
+    ],
+  },
+  stiffness: { hip: 8, lumbar: 12, thoracic: 10, shoulder: 10, elbow: 8, knee: 6 },
+  hints: { start: HOLD, end: HOLD },
+  checks: () => [
+    checkJointWithinAt(
+      "knees-bent",
+      "Knees stay bent near 90°",
+      "Keep both knees bent to about 90° with the thighs in line with the torso.",
+      "knee_R.flex",
+      "start",
+      70,
+      115,
+    ),
+    checkJointWithinAt(
+      "elbow-under-shoulder",
+      "Bottom elbow stays bent",
+      "Stack the bottom elbow under the shoulder and push the hip up off the mat.",
+      "elbow_R.flex",
+      "start",
+      70,
+      110,
+    ),
+    checkJointWithinAt(
+      "hips-extended",
+      "Hips stay in line",
+      "Do not let the buttocks drift back. A line from the knee through the hip meets the shoulder.",
+      "hip_R.flex",
+      "start",
+      -10,
+      20,
+    ),
+    checkJointWithinAt(
+      "hips-up",
+      "Bottom hip stays lifted",
+      "Push through the bottom knee and forearm so the lower hip does not sag.",
+      "hip_R.abd",
+      "start",
+      10,
+      36,
+    ),
+  ],
+});

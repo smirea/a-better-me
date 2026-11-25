@@ -1,0 +1,91 @@
+import { buildExerciseSpec, sidedHints } from "../builders";
+import { exerciseMat } from "../equipment-library";
+import { checkJointRange, checkJointWithinAt } from "../postures";
+
+const PLANK = {
+  "root.x": -0.22,
+  "root.y": 0.6,
+  "root.z": 0.02,
+  "root.roll": 90,
+  "root.pitch": 0,
+  "lumbar.flex": 4,
+  "thoracic.flex": 2,
+  "neck.flex": 2,
+  "hip.flex": 4,
+  "knee.flex": 4,
+  "ankle.dorsi": 10,
+  "hip_R.abd": 24,
+  "shoulder_R.elev": 90,
+  "shoulder_R.plane": 0,
+  "shoulder_R.twist": 80,
+  "elbow_R.flex": 90,
+  "forearm_R.pron": 40,
+  "wrist_R.flex": -12,
+  "shoulder_L.elev": 16,
+  "shoulder_L.plane": 36,
+  "elbow_L.flex": 48,
+  "forearm_L.pron": 16,
+};
+
+export const spec = buildExerciseSpec({
+  id: "side-plank-with-dynamic-leg-lift",
+  catalogId: "2465c6f170d88096a94ddcb5ba527193",
+  name: "Side Plank With Dynamic Leg Lift",
+  defaultLoadKg: 0,
+  loadUnit: "total",
+  laterality: "asymmetrical",
+  grip: "open",
+  brace: true,
+  phaseLabels: ["Lift", "Up", "Lower", "Stacked"],
+  tempo: { lower: 1.1, bottom: 0.25, raise: 1.1, top: 0.3 },
+  station: { kind: "cardio", machine: "none" },
+  extraEquipment: exerciseMat(0.8, 2.2, 0.1),
+  apparatus: {
+    kind: "none",
+    bodyweightLoads: [
+      { anchor: "forearmMid_R", bodyweightShare: 0.32, grip: "press", direction: [0, 1, 0] },
+      { anchor: "ballOut_R", bodyweightShare: 0.2, grip: "press", direction: [0, 1, 0] },
+    ],
+  },
+  stiffness: { hip: 6, lumbar: 12, thoracic: 10, shoulder: 10, elbow: 8, knee: 8 },
+  hints: {
+    start: sidedHints("L", { "hip.abd": 8 }, {}, PLANK),
+    end: sidedHints("L", { "hip.abd": 38 }, {}, PLANK),
+  },
+  checks: () => [
+    checkJointWithinAt(
+      "plank-holds",
+      "Bottom hip stays lifted",
+      "Hold the side plank while the top leg moves. Do not let the lower hip sag.",
+      "hip_R.abd",
+      "peak",
+      14,
+      40,
+    ),
+    checkJointWithinAt(
+      "knee-straight",
+      "Top knee stays straight",
+      "Lift the top leg with the kneecap and toes pointing forward, not rolled up.",
+      "knee_L.flex",
+      "peak",
+      0,
+      16,
+    ),
+    checkJointWithinAt(
+      "no-hip-flex",
+      "Top leg does not drift forward",
+      "Lift the leg straight up. Do not bend the hip and let it drift toward the chest.",
+      "hip_L.flex",
+      "peak",
+      -8,
+      16,
+    ),
+    checkJointRange(
+      "leg-lift",
+      "Top leg lifts and lowers",
+      "Raise the top leg through the hip’s range, then lower it until the feet meet.",
+      "hip_L.abd",
+      16,
+    ),
+  ],
+});
