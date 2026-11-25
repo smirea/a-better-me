@@ -87,6 +87,10 @@ const LIMITS = {
   unlistedShare: 2 / 3,
   /** A listed prime mover working under this share of the hardest-working muscle is one the pose leaves out. */
   primaryShare: 0.25,
+  /** How much harder a muscle may work while the lifter waits at the top than it averages through the moving rep. */
+  restShare: 2,
+  /** The top of a rep is a rest when the prime movers there are under this share of their peak. */
+  restLevel: 0.3,
 };
 
 function ranges(flags: boolean[]) {
@@ -607,6 +611,39 @@ export function validateLoad(sequence: Sequence, analysis: Analysis, listed?: Li
       }));
     }
   });
+  // A lockout between reps should be the easiest part. A muscle that switches on there, as the prime movers switch
+  // off, is the pose resting off balance: a bar behind the spine, a weight held out from the body. A top that keeps
+  // the prime movers loaded (a pulldown's stretch under the cable) is not a rest and is left alone.
+  const resting = sequence.phases.filter((phase) => phase.name === "top");
+  const working = sequence.phases.filter((phase) => phase.name === "lower" || phase.name === "raise");
+  const mean = (phases: typeof resting, slot: number) => {
+    let sum = 0;
+    let frames = 0;
+    for (const phase of phases)
+      for (let f = phase.from; f <= phase.to; f++) {
+        sum += Math.max(analysis.activation[f][slot], analysis.activation[f][slot + 1]);
+        frames++;
+      }
+    return frames ? sum / frames : 0;
+  };
+  const atRest =
+    listed !== undefined &&
+    listed.primary.every(
+      (muscle) =>
+        mean(resting, MUSCLES.indexOf(muscle) * 2) < LIMITS.restLevel * analysis.peak[muscle].activation,
+    );
+  if (atRest && resting.length > 0 && working.length > 0)
+    MUSCLES.forEach((muscle, m) => {
+      const rest = mean(resting, m * 2);
+      const work = mean(working, m * 2);
+      if (rest < LIMITS.burstFloor || rest < LIMITS.restShare * work) return;
+      collector.add(`rest:${muscle}`, resting[0].from, rest, (worst) => ({
+        code: "muscle-mismatch",
+        severity: "warning",
+        title: `${MUSCLE_NAMES[muscle]} work hardest while the lifter rests at the top`,
+        detail: `${(worst * 100).toFixed(0)}% waiting at the top against ${(work * 100).toFixed(0)}% on average through the rep; the resting posture holds a load off balance`,
+      }));
+    });
   if (listed && listed.primary.length > 0) {
     const named = new Set([...listed.primary, ...listed.secondary]);
     const hardest = Math.max(...peaks);

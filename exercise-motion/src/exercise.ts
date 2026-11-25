@@ -104,6 +104,13 @@ export interface Support {
    * how a bench press spreads the bar.
    */
   bars?: [string, string][];
+  /**
+   * A held weight resting against a limb, which pushes it away square to the limb: dumbbells or a bar against the
+   * thighs at the top of a deadlift, where the arms would otherwise have to hold the weight out in front. `on` is
+   * the joint the limb hangs from (`hip_L` for the left thigh) and `within` how far off the limb's axis the
+   * anchor sits when the two touch.
+   */
+  leans?: { anchor: string; on: string; within: number }[];
   /** The bar or sled rides rails, which take the horizontal force a free load would need balance for. */
   rail?: boolean;
   /** Which feet carry standing balance (`["L", "R"]` default; `["L"]` for single-leg standing). */
@@ -360,6 +367,10 @@ function assertSpecInputs(spec: ExerciseSpec, built: Built, body: Body) {
   }
   for (const anchor of (built.support.bars ?? []).flat()) {
     if (!body.anchors[anchor]) throw new Error(`${spec.id}: unknown bar anchor "${anchor}".`);
+  }
+  for (const lean of built.support.leans ?? []) {
+    if (!body.anchors[lean.anchor]) throw new Error(`${spec.id}: unknown lean anchor "${lean.anchor}".`);
+    if (body.index[lean.on] === undefined) throw new Error(`${spec.id}: unknown lean limb "${lean.on}".`);
   }
   const propIds = new Set(built.props.map((p) => p.id));
   for (const contact of built.required) {

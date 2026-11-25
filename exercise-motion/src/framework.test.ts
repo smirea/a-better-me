@@ -204,6 +204,31 @@ describe("exercise-motion framework invariants", () => {
     expect(validateLoad(sharedSquat, flickering).some((issue) => issue.code === "muscle-flicker")).toBe(true);
   });
 
+  test("a muscle that works hardest while the lifter rests at lockout is flagged", () => {
+    const body = sharedBody;
+    const kin = kinematics(body, sharedSquat);
+    const steady = analyze(body, sharedSquat, kin, 40);
+    const listed = { primary: ["quads" as const], secondary: [] };
+    const flagged = (analysis: typeof steady) =>
+      validateLoad(sharedSquat, analysis, listed).some((issue) => /rests at the top/.test(issue.title));
+    expect(flagged(steady)).toBe(false);
+
+    const abs = MUSCLES.indexOf("abs") * 2;
+    const quads = MUSCLES.indexOf("quads") * 2;
+    const top = sharedSquat.phases.find((phase) => phase.name === "top")!;
+    const popping = {
+      ...steady,
+      activation: steady.activation.map((row, f) => {
+        const resting = f >= top.from && f <= top.to;
+        const copy = Float32Array.from(row);
+        copy[abs] = resting ? 0.3 : 0.02;
+        if (resting) copy[quads] = copy[quads + 1] = 0;
+        return copy;
+      }),
+    };
+    expect(flagged(popping)).toBe(true);
+  });
+
   test("bounded least squares shares a target between variables without leaving their bounds", () => {
     const columns = [
       { rows: Int32Array.of(0), values: Float64Array.of(1) },
