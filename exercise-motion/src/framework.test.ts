@@ -9,6 +9,9 @@ import { anchorPoint, createBody, type Body } from "./body";
 import { compileParts, signedDistance, sphere, capsule } from "./equipment";
 import { generate, kinematics, type ExerciseSpec } from "./exercise";
 import { validateGlbMotion } from "./glb-collision";
+import { carryProp, graspHandleAt, graspProp, graspWorld, gripCenter } from "./grasp";
+import { dualAdjustablePulleyMachine, dumbbellProp, loadedBarbell, propHandles } from "./machines";
+import { machineSpec, swivelYaw } from "./machines/core";
 import { plantBothFeet, POSTURE_HINTS } from "./postures";
 import { applySkinToObject3D, getSkin } from "./skin";
 import { balance, mirrored, pin } from "./solver";
@@ -279,6 +282,53 @@ describe("exercise-motion framework invariants", () => {
       expect(issues.some((i) => i.code === "contact-lost" && i.severity === "error")).toBe(true);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test("a closed hand that holds nothing fails to build", () => {
+    const spec: ExerciseSpec = {
+      ...syntheticSquat,
+      id: "empty-fist",
+      build: (body) => ({ ...syntheticSquat.build(body), grips: "bar" }),
+    };
+    expect(() => generate(spec)).toThrow(/around nothing/);
+  });
+
+  test("QA flags a grasped handle that sits off the closed fingers", () => {
+    const handle = { ...propHandles("prop-dumbbell").grip, pos: [0.4, 1, 0.3] as [number, number, number] };
+    const sequence = { ...sharedSquat, grasps: [graspWorld("L", handle)] };
+    const issues = validateMotion(sharedBody, sequence, kinematics(sharedBody, sequence));
+    expect(issues.some((issue) => issue.code === "grip" && issue.severity === "error")).toBe(true);
+  });
+
+  test("carryProp seats every grasped handle on the axis of its closed hand", () => {
+    const kin = kinematics(sharedBody, sharedSquat);
+    const dumbbell = dumbbellProp("db");
+    const bar = loadedBarbell("bar", 60).props[0];
+    const one = [graspProp("L", "db", propHandles("prop-dumbbell").grip)];
+    const two = (["L", "R"] as const).map((side) => graspProp(side, "bar", propHandles("prop-barbell").grip));
+    for (const frame of [kin.frames[0], kin.frames[Math.floor(kin.frames.length / 2)]]) {
+      for (const [prop, grasps] of [[dumbbell, one], [bar, two]] as const) {
+        const state = carryProp(sharedBody, frame, prop, [...grasps]);
+        for (const grasp of grasps) {
+          const handle = graspHandleAt(grasp, [prop], [state]);
+          const offset = gripCenter(sharedBody, frame, grasp.side, grasp.grip, grasp.handle.radius).sub(handle.pos);
+          offset.addScaledVector(handle.axis, -offset.dot(handle.axis));
+          expect(offset.length()).toBeLessThan(1e-6);
+        }
+      }
+    }
+  });
+
+  test("a swivel pulley turns its outlet toward the hand at any placement yaw", () => {
+    for (const yawDeg of [0, 90, -35]) {
+      const machine = dualAdjustablePulleyMachine({ yawDeg, pos: [0.3, 0, 0.5] });
+      const hand: [number, number, number] = [0.1, 1.0, 1.2];
+      const swivel = swivelYaw(machine, "pulley_L", hand);
+      const outlet = machine.at({ swivelL: swivel }).pulleys!.pulley_L.pos;
+      const pivot = machine.at({ swivelL: swivel }).pointAt(machineSpec("dual-adjustable-pulley").nodes.pulley_L.pivot as [number, number, number], "pulley_L");
+      const bearing = (p: number[]) => Math.atan2(p[0] - pivot[0], p[2] - pivot[2]);
+      expect(Math.abs(bearing(outlet) - bearing(hand))).toBeLessThan(1e-6);
     }
   });
 });
