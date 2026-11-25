@@ -582,14 +582,21 @@ private struct TimelineTimeLabel: View {
     }
 }
 
-/// A log's note, typed in its row. It writes when the field loses focus or the row closes, not on every key.
+/// A log's note, typed in its row. It writes when the field loses focus or the row closes, not on every key, and keeps
+/// what is typed until then as a draft, so a killed app gives it back when the row opens again.
 private struct PingNoteField: View {
     let log: PingLog
     let name: String
 
     @Environment(LocalStore.self) private var store
-    @State private var note = ""
+    @State private var note: String
     @FocusState private var focused: Bool
+
+    init(log: PingLog, name: String) {
+        self.log = log
+        self.name = name
+        _note = State(initialValue: log.note)
+    }
 
     var body: some View {
         TextField("Note", text: $note, axis: .vertical)
@@ -597,7 +604,6 @@ private struct PingNoteField: View {
             .lineLimit(1...4)
             .focused($focused)
             .accessibilityLabel("\(name) note")
-            .onAppear { note = log.note }
             .onChange(of: log.note) { _, stored in
                 if !focused { note = stored }
             }
@@ -605,9 +611,13 @@ private struct PingNoteField: View {
                 if !focused { save() }
             }
             .onDisappear(perform: save)
+            .persistDraft($note, key: draftKey)
     }
 
+    private var draftKey: String { "pings.log-note.\(log.key)" }
+
     private func save() {
+        DraftStore.clear(draftKey)
         let note = note.trimmingCharacters(in: .whitespacesAndNewlines)
         guard note != log.note else { return }
         store.modify(PingLog.self, id: log.id) { $0.note = note }
@@ -657,13 +667,19 @@ private struct TimelineNoteRow: View {
     }
 }
 
-/// An open note's text, focused as it opens. It writes when the field loses focus or the row closes, not on every key.
+/// An open note's text, focused as it opens. It writes when the field loses focus or the row closes, not on every key,
+/// and keeps what is typed until then as a draft, so a killed app gives it back when the note opens again.
 private struct TimelineNoteField: View {
     let note: TimelineNote
 
     @Environment(LocalStore.self) private var store
-    @State private var text = ""
+    @State private var text: String
     @FocusState private var focused: Bool
+
+    init(note: TimelineNote) {
+        self.note = note
+        _text = State(initialValue: note.text)
+    }
 
     var body: some View {
         TextField("Note", text: $text, axis: .vertical)
@@ -671,10 +687,7 @@ private struct TimelineNoteField: View {
             .lineLimit(1...8)
             .focused($focused)
             .accessibilityLabel("Note")
-            .onAppear {
-                text = note.text
-                focused = true
-            }
+            .onAppear { focused = true }
             .onChange(of: note.text) { _, stored in
                 if !focused { text = stored }
             }
@@ -682,9 +695,13 @@ private struct TimelineNoteField: View {
                 if !focused { save() }
             }
             .onDisappear(perform: save)
+            .persistDraft($text, key: draftKey)
     }
 
+    private var draftKey: String { "pings.note.\(note.key)" }
+
     private func save() {
+        DraftStore.clear(draftKey)
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard text != note.text else { return }
         if text.isEmpty {
