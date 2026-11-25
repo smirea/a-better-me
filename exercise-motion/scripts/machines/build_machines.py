@@ -53,6 +53,7 @@ def main():
         if only and m.id not in only:
             continue
         check(m)
+        m.snap_surfaces()
         _, tris = m.realise(mats)
         path = os.path.join(OUT_DIR, f"{m.id}.glb")
         lib.export_glb(path)

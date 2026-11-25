@@ -13,6 +13,7 @@ import os
 import bmesh
 import bpy
 from mathutils import Matrix, Quaternion, Vector
+from mathutils.geometry import intersect_ray_tri
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MOTION_ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
@@ -51,6 +52,10 @@ TO_BLENDER = Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
 X = Vector((1, 0, 0))
 Y = Vector((0, 1, 0))
 Z = Vector((0, 0, 1))
+
+
+# Materials a body rests on; a surface snaps to these before bare frame.
+CONTACT = {"mat_pad", "mat_rubber", "mat_wood", "mat_grip"}
 
 
 def v(p):
@@ -547,6 +552,41 @@ class Machine:
                 lo = Vector(map(min, lo, co))
                 hi = Vector(map(max, hi, co))
         return lo, hi
+
+    def snap_surfaces(self):
+        """Moves every surface origin onto the mesh along its normal, so a body resting on it touches what renders.
+
+        Authors place a surface roughly; the ray from just outside it decides where the upholstery or tread really is.
+        A surface whose ray misses the mesh is a modelling error, and the build stops on it.
+        """
+        tris = []
+        for (_, mat), (verts, faces) in self.geo.items():
+            if mat == "mat_cable":
+                continue
+            for f in faces:
+                for k in range(1, len(f) - 1):
+                    tris.append((verts[f[0]], verts[f[k]], verts[f[k + 1]], mat in CONTACT))
+        for name, s in self.anchors["surfaces"].items():
+            n = Vector(s["normal"])
+            up = Vector(s["up"])
+            origin = Vector(s["origin"])
+            # The origin may sit on the pad's edge (a backrest's hinge), so probe a little way up the surface too and
+            # move the origin only along its normal: its place on the surface stays where the author put it.
+            # The contact face is the outermost upholstery or tread a few probes up the surface find: past a pad's
+            # rounded edge, at a roller's tangent line, and never a steel lip or a support beam running in front of it.
+            found = {True: None, False: None}
+            for along in (0.0, 0.03, 0.06, 0.1):
+                start = origin + up * along + n * 0.12
+                for a, b, c, soft in tris:
+                    hit = intersect_ray_tri(a, b, c, -n, start, True)
+                    if hit is not None:
+                        d = (hit - start).length - 0.12
+                        if abs(d) <= 0.05 and (found[soft] is None or d < found[soft]):
+                            found[soft] = d
+            gap = found[True] if found[True] is not None else found[False]
+            if gap is None:
+                raise ValueError(f"{self.id}: surface {name} at {s['origin']} has no mesh within 5 cm along its normal")
+            s["origin"] = vec_list(origin - n * gap)
 
     def summary(self, tris, file_bytes):
         lo, hi = self.bounds()

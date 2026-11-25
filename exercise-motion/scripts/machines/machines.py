@@ -279,6 +279,7 @@ def _cable_column(m, x, z, f, tag, height=2.24, bind_exit_y=1.20, stack_side=1):
     m.point(f"exit{sfx}", exit_pt, node=pn)
     return {
         "exit": exit_pt,
+        "exit_dir": (exit_pt + Vector((0, -0.02, 0)) - (sc + Vector((0, 0.0, f * 0.042)))).normalized(),
         "carriage": car,
         "travel": travel,
         "min_exit": 0.28,
@@ -311,7 +312,7 @@ def dual_adjustable_pulley():
     m.handle("pullup", (0, h - 0.12, 0.17), (1, 0, 0), (0, 0, 1), 0.016, 1.0, "hang")
     for tag, sx in (("L", 1), ("R", -1)):
         c = cols[tag]
-        m.pulley(f"pulley_{tag}", c["exit"], (-sx * 0.35, 0, 0.94), node=f"pulley_{tag}", stack=f"stack_{tag}", ratio=0.5, stack_travel=c["travel"])
+        m.pulley(f"pulley_{tag}", c["exit"], c["exit_dir"], node=f"pulley_{tag}", stack=f"stack_{tag}", ratio=0.5, stack_travel=c["travel"])
         m.rail(f"carriage_{tag}", c["exit"], (0, 1, 0), c["min_exit"] - c["exit"].y, c["max_exit"] - c["exit"].y, node=f"carriage_{tag}")
     m.params.update({"halfWidth": hx, "bindExitY": cols["L"]["exit"].y, "stackTravel": cols["L"]["travel"]})
     return m
@@ -331,7 +332,7 @@ def single_cable_tower():
     for sx in (1, -1):
         A.floor_foot(m, sx * 0.30, 0.30)
         A.floor_foot(m, sx * 0.30, -0.36)
-    m.pulley("pulley", c["exit"], (0, 0, -1), node="pulley", stack="stack", ratio=0.5, stack_travel=c["travel"])
+    m.pulley("pulley", c["exit"], c["exit_dir"], node="pulley", stack="stack", ratio=0.5, stack_travel=c["travel"])
     m.rail("carriage", c["exit"], (0, 1, 0), c["min_exit"] - c["exit"].y, c["max_exit"] - c["exit"].y, node="carriage")
     m.params.update({"bindExitY": c["exit"].y, "stackTravel": c["travel"]})
     return m
@@ -383,7 +384,9 @@ def lat_pulldown():
         m.revolve((s * 0.035, roll_y, roll_z), (s, 0, 0), [(0, 0), (0.052, 0.0), (0.058, 0.01), (0.058, 0.17), (0.05, 0.19), (0, 0.19)], "mat_pad", "thigh_pad", 28)
     m.tube((-0.04, roll_y, roll_z), (0.04, roll_y, roll_z), 0.02, "mat_chrome", "thigh_pad", 14)
     m.collider("thigh_pad", "capsule", (0.058, 0.32, 0), (0, roll_y, roll_z), node="thigh_pad")
-    m.surface("thigh_pad", (0, roll_y - 0.058, roll_z), (0, -1, 0), (0, 0, 1), node="thigh_pad")
+    # One contact per roller, under the middle of each thigh; the rollers leave a gap on the centreline.
+    for s, tag in ((1, "L"), (-1, "R")):
+        m.surface(f"thigh_pad_{tag}", (s * 0.12, roll_y - 0.058, roll_z), (0, -1, 0), (0, 0, 1), node="thigh_pad")
     m.rail("thigh_pad", (0, roll_y, roll_z), (0, 1, 0), -0.10, 0.12, node="thigh_pad")
     m.params["stackTravel"] = travel
     return m
@@ -569,7 +572,7 @@ def leg_press_45():
     m.node("sled", p0)
     plate_c = p0 + d * 0.012
     q = frame_quat(u, nrm)
-    m.box(plate_c, (0.76, 0.024, 0.62), "mat_frame", node="sled", rot=q, bevel=0.008, part="footplate")
+    m.box(plate_c, (0.76, 0.024, 0.62), "mat_rubber", node="sled", rot=q, bevel=0.008, part="footplate")
     m.box(p0 - d * 0.0015, (0.72, 0.004, 0.58), "mat_rubber", node="sled", rot=q, bevel=0.002)
     for k in range(9):
         m.box(p0 - d * 0.004 + u * (-0.26 + k * 0.065), (0.70, 0.003, 0.012), "mat_rubber", node="sled", rot=q, bevel=0.001)
@@ -905,7 +908,8 @@ def back_extension_bench():
         m.revolve((s * 0.02, roller.y, roller.z), (s, 0, 0), [(0, 0), (0.05, 0.0), (0.056, 0.01), (0.056, 0.17), (0.05, 0.18), (0, 0.18)], "mat_pad", None, 24)
     m.tube((-0.05, roller.y, roller.z), (0.05, roller.y, roller.z), 0.016, "mat_chrome", None, 12)
     m.collider("ankle_roller", "capsule", (0.056, 0.30, 0), roller, mat="mat_pad")
-    m.surface("ankle_roller", roller - dorsal * 0.056, -dorsal, b)
+    for s, tag in ((1, "L"), (-1, "R")):
+        m.surface(f"ankle_roller_{tag}", roller + Vector((s * 0.1, 0, 0)) - dorsal * 0.056, -dorsal, b)
     # Main beam on the ventral side, base, and pad support.
     beam0 = Vector((0, 0.07, -0.74))
     beam1 = foot + b * 0.62 + ventral * 0.22
@@ -933,7 +937,8 @@ def back_extension_bench():
     m.beam(hip_c - dorsal * 0.05, beam1, 0.06, 0.06, node="hip_pad", up=(1, 0, 0))
     A.pop_pin(m, beam1 + Vector((0.05, 0, 0)), (1, 0, 0), node="hip_pad")
     m.collider("hip_pad", "box", (0.40, 0.075, 0.30), hip_c, quat=q2, mat="mat_pad", node="hip_pad")
-    m.surface("hip_pad", hip_c + dorsal * 0.0375, dorsal, b, node="hip_pad")
+    for s, tag in ((1, "L"), (-1, "R")):
+        m.surface(f"hip_pad_{tag}", hip_c + Vector((s * 0.105, 0, 0)) + dorsal * 0.0375, dorsal, b, node="hip_pad")
     m.rail("hip_pad", hip_c, b, -0.10, 0.12, node="hip_pad")
     # Grab handles beside the pads.
     for sx, tag in ((1, "L"), (-1, "R")):

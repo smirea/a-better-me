@@ -157,12 +157,13 @@ def prop_lat_bar():
         b = Vector((s * 0.598, -0.084, 0))
         m.tube(a, b, 0.0158, "mat_grip", None, 18, chamfer=0.003)
         m.disc(b + Vector((s * 0.005, -0.002, 0)), (s * d.x, d.y, 0), 0.02, 0.012, "mat_rubber", None, 18)
-        m.handle(f"grip_{tag}", (a + b) / 2, (s * d.x, d.y, 0), (0, -1, 0), 0.0158, (b - a).length, "bar")
+        # A pulldown hangs from the bar: the palm sits under it facing up, the cable eye on the far side.
+        m.handle(f"grip_{tag}", (a + b) / 2, (s * d.x, d.y, 0), (s * -d.y, d.x, 0), 0.0158, (b - a).length, "bar")
         m.tube((s * 0.12, 0, 0), (s * 0.36, 0, 0), 0.0152, "mat_grip", None, 18)
     m.box((0, 0.025, 0), (0.05, 0.03, 0.012), "mat_frame", bevel=0.004)
     m.torus((0, 0.055, 0), (0, 0, 1), 0.016, 0.005, "mat_chrome", None, 24, 10)
     m.point("eye", (0, 0.07, 0))
-    m.handle("grip", (0, 0, 0), (1, 0, 0), (0, -1, 0), 0.0152, 0.72, "bar")
+    m.handle("grip", (0, 0, 0), (1, 0, 0), (0, 1, 0), 0.0152, 0.72, "bar")
     m.collider("bar", "cylinder", (0.0145, 1.0, 0), (0, -0.02, 0), mat="mat_chrome")
     return m
 
