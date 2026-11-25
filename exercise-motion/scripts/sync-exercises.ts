@@ -41,7 +41,7 @@ for (let i = 0; i < files.length; i++) {
   if (seenIds.has(specObj.id)) {
     throw new Error(`Duplicate exercise id "${specObj.id}" in ${file}.`);
   }
-  const isModelVariant = /-(grok|terra|opus|neon|composer)$/.test(stem);
+  const isModelVariant = /-(grok|terra|opus|neon|composer|sol)$/.test(stem);
   if (!isModelVariant && seenCatalogIds.has(specObj.catalogId)) {
     throw new Error(`Duplicate catalogId "${specObj.catalogId}" in ${file}.`);
   }
