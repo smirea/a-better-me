@@ -1,16 +1,19 @@
-import { Vector3 } from "three";
+import { Matrix4, Vector3 } from "three";
 import {
   angles,
   BALL_LIMITS,
   fk,
   newFrame,
   shoulderElevationLimit,
+  sideSign,
   worldPoint,
   type Angles,
   type Body,
   type Frame,
+  type Side,
 } from "./body";
 import { signedDistance, type Shape } from "./equipment";
+import type { PadSurface } from "./equipment";
 import { closestSegments, deg, rad, solveCholesky } from "./math";
 
 export interface GoalContext {
@@ -37,6 +40,8 @@ export interface SolveOptions {
   priorWeights: ArrayLike<number>;
   selfPairs: [number, number, number][];
   obstacles?: Obstacle[];
+  /** Equipment that moves with the pose (carried weights, a driven sled or lever), placed for each candidate pose. */
+  movingObstacles?: (frame: Frame, q: Float64Array) => Obstacle[];
   iterations?: number;
 }
 
@@ -60,10 +65,20 @@ export function limitViolations(
   a: Angles,
   visit: (key: string, excess: number) => void,
 ) {
+  jointRanges(body, q, a, (key, value, lo, hi) => visit(key, over(value, lo, hi)));
+}
+
+/** Every limited motion with its current value and range, in radians: the joint limits as the solver enforces them. */
+export function jointRanges(
+  body: Body,
+  q: ArrayLike<number>,
+  a: Angles,
+  visit: (key: string, value: number, lo: number, hi: number) => void,
+) {
   for (const joint of body.joints) {
     if (joint.kind === "hinge" || joint.kind === "universal") {
       joint.dofs.forEach((dof, n) =>
-        visit(`${joint.name}.${dof.name}`, over(q[joint.dofStart + n], dof.limit[0], dof.limit[1])),
+        visit(`${joint.name}.${dof.name}`, q[joint.dofStart + n], dof.limit[0], dof.limit[1]),
       );
       continue;
     }
@@ -75,17 +90,14 @@ export function limitViolations(
         ? ["twist"]
         : ["flex", "bend", "twist"]) {
       const range = BALL_LIMITS[`${base}.${motion}`];
-      visit(
-        `${joint.name}.${motion}`,
-        over(a[`${joint.name}.${motion}`], rad(range[0]), rad(range[1])),
-      );
+      visit(`${joint.name}.${motion}`, a[`${joint.name}.${motion}`], rad(range[0]), rad(range[1]));
     }
     if (base === "shoulder") {
       const elevation = a[`${joint.name}.elev`];
       // The plane is undefined for a hanging arm, so the limit only applies once the arm has lifted.
       const max =
         elevation < rad(20) ? Math.PI : rad(shoulderElevationLimit(deg(a[`${joint.name}.plane`])));
-      visit(`${joint.name}.elev`, Math.max(0, elevation - max));
+      visit(`${joint.name}.elev`, elevation, -Math.PI, max);
     }
   }
 }
@@ -172,9 +184,11 @@ export function solve(body: Body, start: ArrayLike<number>, options: SolveOption
       const depth = capsulePenetration(body, capsules, i, j) - tolerance + COLLISION_MARGIN;
       residuals.push(COLLISION_WEIGHT * Math.max(0, depth));
     }
-    for (const obstacle of options.obstacles ?? []) {
+    const moving = options.movingObstacles?.(frame, at) ?? [];
+    for (const obstacle of moving.length ? [...(options.obstacles ?? []), ...moving] : (options.obstacles ?? [])) {
       for (let i = 0; i < body.colliders.length; i++) {
-        const allowed = obstacle.allow[body.colliders[i].id] ?? 0;
+        const collider = body.colliders[i];
+        const allowed = obstacle.allow[collider.id] ?? (collider.contactAs ? obstacle.allow[collider.contactAs] : undefined) ?? 0;
         const depth =
           obstaclePenetration(body, capsules, i, obstacle.shape) - allowed + COLLISION_MARGIN;
         residuals.push(COLLISION_WEIGHT * Math.max(0, depth));
@@ -255,7 +269,7 @@ const point = new Vector3();
 export function pin(
   body: Body,
   anchor: string,
-  target: (q: Float64Array) => Vector3,
+  target: (q: Float64Array, frame: Frame) => Vector3,
   weight: number,
   axes = "xyz",
 ): Goal {
@@ -266,7 +280,7 @@ export function pin(
   if (joint === undefined) throw new Error(`Unknown anchor or joint ${anchor}`);
   return ({ frame, q, push }) => {
     worldPoint(frame, joint, local, point);
-    const t = target(q);
+    const t = target(q, frame);
     if (axes.includes("x")) push(weight * (point.x - t.x));
     if (axes.includes("y")) push(weight * (point.y - t.y));
     if (axes.includes("z")) push(weight * (point.z - t.z));
@@ -292,24 +306,276 @@ export function aim(
   };
 }
 
-/** Plants a foot: heel and both sides of the ball of the foot held at fixed spots on the floor. */
-export function plantFoot(
-  body: Body,
-  side: "L" | "R",
-  heel: Vector3,
-  toeOut: number,
-  weight = 40,
-): Goal[] {
-  const s = side === "L" ? 1 : -1;
-  const yaw = s * toeOut;
-  const spot = (anchor: string) => {
-    const local = body.anchors[anchor].local.clone().sub(body.anchors[`heel_${side}`].local);
-    const x = local.x * Math.cos(yaw) + local.z * Math.sin(yaw);
-    const z = -local.x * Math.sin(yaw) + local.z * Math.cos(yaw);
-    const world = new Vector3(heel.x + x, 0, heel.z + z);
-    return pin(body, anchor, () => world, weight);
+/** A horizontal surface at a height, or a tilted pad such as a leg press footplate. */
+export type Surface = PadSurface | number;
+
+interface SurfaceFrame {
+  origin: Vector3;
+  /** Out of the surface, toward the body resting on it. */
+  normal: Vector3;
+  /** The way a foot or hand points at zero yaw: +Z on a floor, up the pad on a footplate. */
+  forward: Vector3;
+}
+
+function surfaceFrame(surface: Surface): SurfaceFrame {
+  if (typeof surface === "number")
+    return { origin: new Vector3(0, surface, 0), normal: new Vector3(0, 1, 0), forward: new Vector3(0, 0, 1) };
+  const normal = new Vector3(...surface.normal).normalize();
+  const forward = new Vector3(...surface.up);
+  forward.addScaledVector(normal, -forward.dot(normal)).normalize();
+  return { origin: new Vector3(...surface.origin), normal, forward };
+}
+
+const onSurface = (frame: SurfaceFrame, p: Vector3) =>
+  p.clone().addScaledVector(frame.normal, -p.clone().sub(frame.origin).dot(frame.normal));
+
+/** Where an anchor sits in its foot's ankle frame at rest, even one carried by the toes. */
+function ankleLocal(body: Body, anchor: string) {
+  const { joint, local } = body.anchors[anchor];
+  const p = local.clone();
+  for (let j = joint; body.joints[j].name.startsWith("toes"); j = body.joints[j].parent) p.add(body.joints[j].offset);
+  return p;
+}
+
+/**
+ * Targets on a surface for foot anchors at their rest layout around a reference anchor, the foot turned out by `yaw`
+ * (positive toward the foot's own side on both feet) and pressed `sink` into the surface.
+ */
+function footLayout(body: Body, side: Side, frame: SurfaceFrame, at: Vector3, reference: Vector3, yaw: number, sink: number) {
+  const s = sideSign(side);
+  const forward = frame.forward.clone().applyAxisAngle(frame.normal, s * yaw);
+  const lateral = frame.normal.clone().cross(forward);
+  const base = onSurface(frame, at);
+  return (anchor: string) => {
+    const rel = ankleLocal(body, anchor).sub(reference);
+    return base
+      .clone()
+      .addScaledVector(lateral, rel.x)
+      .addScaledVector(frame.normal, rel.y - sink)
+      .addScaledVector(forward, rel.z);
   };
-  return [spot(`heel_${side}`), spot(`ballIn_${side}`), spot(`ballOut_${side}`)];
+}
+
+/** Keeps an anchor at or above a surface, as a one-sided constraint. */
+function aboveSurface(
+  body: Body,
+  anchor: string,
+  frame: SurfaceFrame,
+  weight: number,
+  carry?: (frame: Frame, q: Float64Array) => Matrix4,
+): Goal {
+  const { joint, local } = body.anchors[anchor];
+  const p = new Vector3();
+  const back = new Matrix4();
+  return ({ frame: pose, q, push }) => {
+    worldPoint(pose, joint, local, p);
+    if (carry) p.applyMatrix4(back.copy(carry(pose, q)).invert());
+    push(weight * Math.min(0, p.sub(frame.origin).dot(frame.normal)));
+  };
+}
+
+/**
+ * Plants a foot flat on a floor or a tilted footplate: heel, both sides of the ball, and the toe pads at their rest
+ * layout, so the toes stay at neutral. `heel` is where the heel lands; `yaw` turns the toes out.
+ */
+export function plantFootFlat(
+  body: Body,
+  side: Side,
+  surface: Surface,
+  heel: Vector3,
+  yaw = 0,
+  weight = 40,
+  sink = 0,
+  /** Moves the planted targets with a moving footplate: `carried(machine.carrier("sled")!, ctx.live)`. */
+  carry?: (frame: Frame, q: Float64Array) => Matrix4,
+): Goal[] {
+  const frame = surfaceFrame(surface);
+  const target = footLayout(body, side, frame, heel, ankleLocal(body, `heel_${side}`), yaw, sink);
+  const moved = new Vector3();
+  return ["heel", "ballIn", "ballOut", "toe"].map((name) => {
+    const world = target(`${name}_${side}`);
+    return pin(
+      body,
+      `${name}_${side}`,
+      carry ? (q, pose) => moved.copy(world).applyMatrix4(carry(pose, q)) : () => world,
+      weight,
+    );
+  });
+}
+
+/**
+ * Stands a foot on its toe break, for push-ups, planks, lunges, split squats and calf raises: the toes lie flat with
+ * the forefoot at `ball`, and the heel is free to rise as the toes extend at the metatarsal heads. The toe joint
+ * holds its rest height over the surface, since the metatarsal heads roll rather than pivot on one patch of sole, and
+ * the hindfoot's ball and heel only have to stay out of the surface.
+ */
+export function plantFootOnToeBreak(
+  body: Body,
+  side: Side,
+  surface: Surface,
+  ball: Vector3,
+  yaw = 0,
+  options: { weight?: number; sink?: number; carry?: (frame: Frame, q: Float64Array) => Matrix4 } = {},
+): Goal[] {
+  const { weight = 40, sink = 0, carry } = options;
+  const frame = surfaceFrame(surface);
+  const forefoot = ankleLocal(body, `forefoot_${side}`);
+  const target = footLayout(body, side, frame, ball, forefoot, yaw, sink);
+  const moved = new Vector3();
+  const goals = ["forefoot", "toe", "toeTip"].map((name) => {
+    const world = target(`${name}_${side}`);
+    return pin(body, `${name}_${side}`, carry ? (q, pose) => moved.copy(world).applyMatrix4(carry(pose, q)) : () => world, weight);
+  });
+  for (const name of ["heel", "ballIn", "ballOut"]) goals.push(aboveSurface(body, `${name}_${side}`, frame, weight, carry));
+  return goals;
+}
+
+/**
+ * Stands the ball of a foot on a step's edge for calf raises: the sole under the metatarsal heads on the edge line,
+ * level across, with the toes flat on the step top and the heel free to drop below the edge. `edge` is a point on
+ * the edge where the ball goes, `normal` the step top's upward normal, `inward` the way from the edge onto the step.
+ */
+export function plantFootOnEdge(
+  body: Body,
+  side: Side,
+  edge: Vector3,
+  normal: Vector3,
+  inward: Vector3,
+  yaw = 0,
+  options: { weight?: number } = {},
+): Goal[] {
+  const { weight = 40 } = options;
+  const n = normal.clone().normalize();
+  const along = inward.clone().addScaledVector(n, -inward.dot(n)).normalize();
+  const frame: SurfaceFrame = { origin: edge.clone(), normal: n, forward: along };
+  const ballIn = body.anchors[`ballIn_${side}`];
+  const ballOut = body.anchors[`ballOut_${side}`];
+  const a = new Vector3();
+  const b = new Vector3();
+  const mid = new Vector3();
+  const lateral = n.clone().cross(along.clone().applyAxisAngle(n, sideSign(side) * yaw));
+  const ballEdge: Goal = ({ frame: pose, push }) => {
+    worldPoint(pose, ballIn.joint, ballIn.local, a);
+    worldPoint(pose, ballOut.joint, ballOut.local, b);
+    mid.addVectors(a, b).multiplyScalar(0.5).sub(edge);
+    push(weight * mid.dot(n));
+    push(weight * mid.dot(along));
+    push(weight * mid.dot(lateral));
+    push(weight * 0.5 * a.sub(b).dot(n));
+  };
+  const reference = ankleLocal(body, `ballIn_${side}`).add(ankleLocal(body, `ballOut_${side}`)).multiplyScalar(0.5);
+  const target = footLayout(body, side, frame, edge, reference, yaw, 0);
+  const goals: Goal[] = [ballEdge];
+  for (const name of ["toe", "toeTip"]) {
+    const world = target(`${name}_${side}`);
+    goals.push(pin(body, `${name}_${side}`, () => world, weight * 0.6));
+  }
+  return goals;
+}
+
+/** Plants a foot on a horizontal surface by its heel, with the toes neutral. Kept for callers that predate `plantFootFlat`. */
+export function plantFoot(body: Body, side: Side, heel: Vector3, toeOut: number, weight = 40): Goal[] {
+  return plantFootFlat(body, side, heel.y, heel, toeOut, weight);
+}
+
+/** Plants only the forefoot on a horizontal surface, letting the heel lift. Kept for callers that predate `plantFootOnToeBreak`. */
+export function plantToe(body: Body, side: Side, ballCenter: Vector3, toeOut = 0, weight = 40): Goal[] {
+  return plantFootOnToeBreak(body, side, ballCenter.y, ballCenter, toeOut, { weight });
+}
+
+/**
+ * Braces a hand flat on a floor, bench or pad, as in a push-up, plank or bench support: the palm's centre at `pos`
+ * pressed `sink` into the surface, the pads under the knuckles on it too, the palm facing into it, and the fingers
+ * pointing along `fingers`. The wrist extends as far as the forearm's angle asks, about 80° under a push-up.
+ */
+export function braceHandOnSurface(
+  body: Body,
+  side: Side,
+  surface: Surface,
+  pos: Vector3,
+  fingers: Vector3,
+  weight = 40,
+  sink = 0.002,
+): Goal[] {
+  const s = sideSign(side);
+  const frame = surfaceFrame(surface);
+  const at = onSurface(frame, pos).addScaledVector(frame.normal, -sink);
+  const ahead = fingers.clone().addScaledVector(frame.normal, -fingers.dot(frame.normal)).normalize();
+  const j = body.index[`wrist_${side}`];
+  const knuckles = body.anchors[`knuckles_${side}`];
+  const p = new Vector3();
+  const facing = new Vector3();
+  const along = new Vector3();
+  return [
+    pin(body, `palm_${side}`, () => at, weight),
+    ({ frame: pose, push }) => {
+      worldPoint(pose, knuckles.joint, knuckles.local, p);
+      push(weight * (p.sub(frame.origin).dot(frame.normal) + sink));
+    },
+    ({ frame: pose, push }) => {
+      facing.set(-s, 0, 0).applyQuaternion(pose.rot[j]);
+      push(weight * 0.25 * (facing.dot(frame.normal) + 1));
+      along.set(0, -1, 0).applyQuaternion(pose.rot[j]);
+      along.addScaledVector(frame.normal, -along.dot(frame.normal));
+      push(weight * 0.15 * along.cross(ahead).dot(frame.normal));
+      // The cross term is blind to fingers pointing straight back; this one isn't.
+      push(weight * 0.15 * (1 - along.normalize().dot(ahead)));
+    },
+  ];
+}
+
+/** `braceHandOnSurface` on a horizontal floor at the height of `pos`. */
+export const palmOnFloor = (body: Body, side: Side, pos: Vector3, fingers: Vector3, weight = 40) =>
+  braceHandOnSurface(body, side, pos.y, pos, fingers, weight);
+
+/** Holds an anchor on a tilted pad/plane defined by a surface point `origin` and outward unit `normal`. */
+export function restOnPlane(
+  body: Body,
+  anchor: string,
+  origin: Vector3,
+  normal: Vector3,
+  weight = 35,
+  sink = 0.008,
+): Goal {
+  const { joint, local } = body.anchors[anchor] ?? {
+    joint: body.index[anchor],
+    local: new Vector3(),
+  };
+  if (joint === undefined) throw new Error(`Unknown anchor or joint ${anchor}`);
+  const n = normal.clone().normalize();
+  const p = new Vector3();
+  return ({ frame, push }) => {
+    worldPoint(frame, joint, local, p);
+    const dist = p.sub(origin).dot(n) + sink;
+    push(weight * dist);
+  };
+}
+
+/** Keeps a body anchor at or above a minimum height `minY` (inequality constraint). */
+export function keepAbove(body: Body, anchor: string, minY: number, weight = 35): Goal {
+  const { joint, local } = body.anchors[anchor] ?? {
+    joint: body.index[anchor],
+    local: new Vector3(),
+  };
+  if (joint === undefined) throw new Error(`Unknown anchor or joint ${anchor}`);
+  const p = new Vector3();
+  return ({ frame, push }) => {
+    worldPoint(frame, joint, local, p);
+    push(weight * Math.min(0, p.y - minY));
+  };
+}
+
+/** Holds a named anatomical angle (`hip_L.flex`, `elbow_R.flex`, etc.) at `targetDeg` degrees. */
+export function lockAngle(body: Body, angleKey: string, targetDeg: number, weight = 15): Goal {
+  const targetRad = rad(targetDeg);
+  // Fail fast if the joint portion of angleKey does not exist on the body.
+  const jointName = angleKey.split(".")[0];
+  if (body.index[jointName] === undefined) throw new Error(`Unknown joint in lockAngle: ${angleKey}`);
+  return ({ angles: a, push }) => {
+    const val = a[angleKey];
+    if (val === undefined) throw new Error(`Unknown angle key in lockAngle: ${angleKey}`);
+    push(weight * (val - targetRad));
+  };
 }
 
 const bend = new Vector3();

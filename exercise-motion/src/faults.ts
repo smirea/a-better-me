@@ -43,8 +43,11 @@ function refreshProps(sequence: Sequence, body: Body, built: Built) {
       sequence.propStates[f].map((state) => state.pos[1]),
     );
     // A bar keeps the path it was given, so a hand that wanders leaves it. Dumbbells go wherever the hands go.
+    // Canonical dumbbells are GLBs (`dumbbellProp`); the parametric kind is the older shape.
     return sequence.props.map((prop, p) =>
-      prop.kind === "dumbbell" ? followed[p] : sequence.propStates[f][p],
+      prop.kind === "dumbbell" || (prop.kind === "glb" && prop.glbId === "machines/prop-dumbbell")
+        ? followed[p]
+        : sequence.propStates[f][p],
     );
   });
 }

@@ -1,349 +1,347 @@
-import { Quaternion, Vector3 } from "three";
-import {
-  anchorPoint,
-  SIDES,
-  sideSign,
-  worldPoint,
-  type Body,
-  type Frame,
-  type Side,
-} from "../body";
-import { everyFrame, within } from "../checks";
-import { dumbbellHead, type PropDef } from "../equipment";
-import type { ExerciseSpec } from "../exercise";
+import { Vector3 } from "three";
+import { anchorPoint, SIDES, type Body, type Frame, type Side } from "../body";
+import { everyFrame } from "../checks";
+import type { FormCheck } from "../exercise";
+import { carryProp, graspProp } from "../grasp";
 import { deg, rad } from "../math";
-import { stretchOf } from "../muscles";
-import { balance, type Goal, mirrored, plantFoot } from "../solver";
+import { dumbbellProp, propHandles } from "../machines";
+import { checkFlatBack, checkNeutralNeck, plantBothFeet, POSTURE_HINTS } from "../postures";
+import { composeExercise } from "../scene";
+import { balance, lockAngle, mirrored, type Goal } from "../solver";
 
-const STANCE = 0.1;
-const TOE_OUT = rad(6);
-const LOAD_KG = 30;
-/** Palms face halfway between backward and inward, which the instructions call a semi-overhand grip. */
-const PRONATION = 45;
-const CLEARANCE = 0.015;
-const AZIMUTH = rad(35);
-/** How much of their end range the hamstrings reach at the bottom, where the instructions stop the descent. */
-const END_STRETCH = 0.85;
-
+const LOAD_KG = 12;
+/** Heels this far either side of the midline: about hip width for this body. */
+const STANCE_X = 0.13;
+const HEEL_Z = -0.08;
 /**
- * Where a hand holding a dumbbell rides beside the leg at a given height: against the outer front of the thigh or
- * shin, a head's radius and a little clearance off the skin. The spot is 35° forward of straight out to the side,
- * which lets the arms hang close to plumb at the top.
+ * The hex head is 8.1 cm around the handle, and the thigh face sits 8 cm off the bone.
+ * The handle has to live about a head-radius in front of that face or the plate is inside the thigh.
  */
-function besideLeg(body: Body, frame: Frame, side: Side, y: number, out: Vector3) {
-  const hip = frame.pos[body.index[`hip_${side}`]];
-  const knee = frame.pos[body.index[`knee_${side}`]];
-  const ankle = frame.pos[body.index[`ankle_${side}`]];
-  const thigh = body.colliders[body.colliderIndex[`thigh_${side}`]];
-  const shank = body.colliders[body.colliderIndex[`shank_${side}`]];
-  const [top, bottom, part] = y >= knee.y ? [hip, knee, thigh] : [knee, ankle, shank];
-  const t = Math.min(1, Math.max(0, (top.y - y) / Math.max(top.y - bottom.y, 1e-6)));
-  const reach = part.ra + (part.rb - part.ra) * t + dumbbellHead(LOAD_KG).radius + CLEARANCE;
-  const s = sideSign(side);
-  return out.set(
-    top.x + (bottom.x - top.x) * t + s * reach * Math.cos(AZIMUTH),
-    y,
-    top.z + (bottom.z - top.z) * t + reach * Math.sin(AZIMUTH),
-  );
+const AHEAD_OF_THIGH = 0.09;
+
+const stand = POSTURE_HINTS.standing;
+
+function sideSign(side: Side): number {
+  return side === "L" ? 1 : -1;
 }
 
-const DUMBBELLS: PropDef[] = [
-  { id: "dumbbell_L", kind: "dumbbell" },
-  { id: "dumbbell_R", kind: "dumbbell" },
-];
-/** The handle runs along the hand's thumb-to-little-finger axis, which is local Z. */
-const HANDLE = new Quaternion().setFromUnitVectors(new Vector3(1, 0, 0), new Vector3(0, 0, 1));
+/** Knee joint over the ankle in the side view, so the shin stays vertical. */
+function verticalShin(body: Body, side: Side, weight: number): Goal {
+  return ({ frame, push }) => {
+    const knee = frame.pos[body.index[`knee_${side}`]];
+    const ankle = frame.pos[body.index[`ankle_${side}`]];
+    push(weight * (knee.z - ankle.z));
+  };
+}
 
-export const dumbbellRomanianDeadlift: ExerciseSpec = {
+/**
+ * Hangs the dumbbell on the outer front of the thigh. World +Z is "in front of the leg" in the
+ * side view the cue is about; the plate radius is why the handle sits ahead of the thigh face.
+ */
+function hangByThigh(body: Body, side: Side, weight: number): Goal {
+  const s = sideSign(side);
+  const grip = new Vector3();
+  const thigh = new Vector3();
+  return ({ frame, push }) => {
+    anchorPoint(body, frame, `grip_${side}`, grip);
+    anchorPoint(body, frame, `thighFront_${side}`, thigh);
+    push(weight * (grip.z - (thigh.z + AHEAD_OF_THIGH)));
+    // Outside the thigh face, not on its centre: the inner heads meet if the hands sit any closer.
+    push(weight * 0.7 * (grip.x - (thigh.x + s * 0.11)));
+  };
+}
+
+/** How far the grip sits in front of the shin, in metres. Positive is drifting away from the leg. */
+function leadOfLeg(body: Body, frame: Frame, side: Side): number {
+  const grip = anchorPoint(body, frame, `grip_${side}`);
+  const shin = anchorPoint(body, frame, `shinFront_${side}`);
+  const thigh = anchorPoint(body, frame, `thighFront_${side}`);
+  return grip.z - Math.max(shin.z, thigh.z);
+}
+
+/** Hip's miss of the shoulder-to-midfoot line, and how far the shoulders sit behind the hips (cm). */
+function stack(body: Body, frame: Frame): { hipCm: number; behindCm: number } {
+  const shoulder = new Vector3()
+    .add(frame.pos[body.index.shoulder_L])
+    .add(frame.pos[body.index.shoulder_R])
+    .multiplyScalar(0.5);
+  const hip = new Vector3().add(frame.pos[body.index.hip_L]).add(frame.pos[body.index.hip_R]).multiplyScalar(0.5);
+  let midZ = 0;
+  let midY = 0;
+  for (const name of ["heel_L", "heel_R", "secondToe_L", "secondToe_R"]) {
+    const p = anchorPoint(body, frame, name);
+    midZ += p.z;
+    midY += p.y;
+  }
+  midZ /= 4;
+  midY /= 4;
+  const t = (hip.y - shoulder.y) / (midY - shoulder.y);
+  const lineZ = shoulder.z + t * (midZ - shoulder.z);
+  return { hipCm: Math.abs(hip.z - lineZ) * 100, behindCm: (hip.z - shoulder.z) * 100 };
+}
+
+const checks: FormCheck[] = [
+  {
+    id: "elbows-straight",
+    label: "Elbows stay straight",
+    cue: "Continue keeping your elbows straight with the dumbbells just in front of your legs.",
+    evaluate: (context) =>
+      everyFrame(
+        context,
+        (_, angles) => Math.max(deg(angles["elbow_L.flex"]), deg(angles["elbow_R.flex"])),
+        12,
+        "° of elbow bend",
+      ),
+  },
+  {
+    id: "close-to-legs",
+    label: "Dumbbells stay against the legs",
+    cue: "Keep the dumbbells just in front of your legs. Avoid letting the dumbbells drift forward away from you.",
+    evaluate: (context) =>
+      everyFrame(
+        context,
+        (frame) => Math.max(...SIDES.map((side) => leadOfLeg(context.body, frame, side))) * 100,
+        16,
+        " cm in front of the leg",
+      ),
+  },
+  {
+    id: "shins-vertical",
+    label: "Shins stay vertical",
+    cue: "Your shins should remain in a vertical position throughout your set.",
+    evaluate: (context) =>
+      everyFrame(context, (frame) => {
+        let worst = 0;
+        for (const side of SIDES) {
+          const knee = frame.pos[context.body.index[`knee_${side}`]];
+          const ankle = frame.pos[context.body.index[`ankle_${side}`]];
+          worst = Math.max(worst, Math.abs(knee.z - ankle.z));
+        }
+        return worst * 100;
+      }, 5, " cm of shin lean"),
+  },
+  {
+    id: "soft-knees",
+    label: "Knees stay softly bent",
+    cue: "While allowing your knees to bend mildly, you should not keep your knees fully straightened.",
+    evaluate: (context) => {
+      let worst = 0;
+      for (const angles of context.angles) {
+        for (const side of SIDES) {
+          const bend = deg(angles[`knee_${side}.flex`]);
+          worst = Math.max(worst, Math.max(0, 8 - bend), Math.max(0, bend - 32));
+        }
+      }
+      return {
+        pass: worst <= 0,
+        measured: worst <= 0 ? "both knees stay mildly bent" : `knee bend misses the mild range by ${worst.toFixed(1)}°`,
+      };
+    },
+  },
+  {
+    id: "below-knees",
+    label: "Dumbbells pass below the knees",
+    cue: "Lifters with normal flexibility can typically lower the dumbbells at least below their knees.",
+    evaluate: ({ body, frames, bottom }) => {
+      const frame = frames[bottom];
+      const gaps = SIDES.map((side) => {
+        const grip = anchorPoint(body, frame, `grip_${side}`);
+        const knee = frame.pos[body.index[`knee_${side}`]];
+        return (knee.y - grip.y) * 100;
+      });
+      const worst = Math.min(...gaps);
+      return {
+        pass: worst >= 0,
+        measured: `handles finish ${worst.toFixed(1)} cm below the knee`,
+      };
+    },
+  },
+  {
+    id: "soles-planted",
+    label: "Soles stay planted",
+    cue: "Keep the soles of your feet fully planted on the ground.",
+    evaluate: (context) =>
+      everyFrame(context, (frame) => {
+        let worst = 0;
+        for (const side of SIDES) {
+          for (const part of ["heel", "ballIn", "ballOut", "toe"]) {
+            worst = Math.max(worst, Math.abs(anchorPoint(context.body, frame, `${part}_${side}`).y));
+          }
+        }
+        return worst * 1000;
+      }, 12, " mm off the floor"),
+  },
+  {
+    id: "stacked-top",
+    label: "Stands stacked at the top",
+    cue: "Draw a straight line from your shoulders through your hips to the middle of your feet. Avoid leaning back at the top.",
+    evaluate: ({ body, frames, top }) => {
+      const { hipCm, behindCm } = stack(body, frames[top]);
+      const pass = hipCm <= 5 && behindCm <= 1;
+      return {
+        pass,
+        measured: `hip is ${hipCm.toFixed(1)} cm off the shoulder-to-midfoot line, shoulders ${behindCm.toFixed(1)} cm behind the hips`,
+      };
+    },
+  },
+  {
+    id: "hip-hinge",
+    label: "The hips do the moving",
+    cue: "Most of the motion should come from your hips.",
+    evaluate: ({ angles }) => {
+      const span = (key: string) => {
+        let lo = Infinity;
+        let hi = -Infinity;
+        for (const a of angles) {
+          const d = deg(a[key]);
+          if (d < lo) lo = d;
+          if (d > hi) hi = d;
+        }
+        return hi - lo;
+      };
+      const hip = Math.min(span("hip_L.flex"), span("hip_R.flex"));
+      const knee = Math.max(span("knee_L.flex"), span("knee_R.flex"));
+      return {
+        pass: hip >= 45 && hip > knee * 2,
+        measured: `hips move ${hip.toFixed(0)}°, knees move ${knee.toFixed(0)}°`,
+      };
+    },
+  },
+  {
+    id: "semi-overhand",
+    label: "Palms stay semi-overhand",
+    cue: "Situate your palms so they face at an angle between backward and in toward each other, and keep your palms facing this way throughout your set.",
+    evaluate: (context) =>
+      everyFrame(context, (_, angles) => {
+        let worst = 0;
+        for (const side of SIDES) {
+          const pron = deg(angles[`forearm_${side}.pron`]);
+          worst = Math.max(worst, Math.max(0, 20 - pron), Math.max(0, pron - 70));
+        }
+        return worst;
+      }, 0, "° outside a semi-overhand grip"),
+  },
+];
+
+export const spec = composeExercise({
   id: "dumbbell-romanian-deadlift",
   catalogId: "1a35c6f170d880489b7be1d31faff56b",
   name: "Dumbbell Romanian Deadlift",
   defaultLoadKg: LOAD_KG,
   loadUnit: "perSide",
-  build(body: Body) {
-    const handHeight = body.dofCount;
-    const target = new Vector3();
-    const point = new Vector3();
-    const midfoot = 0.05 + 0.04;
-    const goals: Goal[] = [
-      balance(
-        body,
-        SIDES.map((side) => ({ anchor: `grip_${side}`, kg: LOAD_KG })),
-        midfoot,
-        14,
-      ),
-    ];
-    for (const side of SIDES) {
-      const s = sideSign(side);
-      goals.push(...plantFoot(body, side, new Vector3(s * STANCE, 0, 0), TOE_OUT));
-      const grip = body.anchors[`grip_${side}`];
-      goals.push(({ frame, q, push }) => {
-        besideLeg(body, frame, side, q[handHeight], target);
-        worldPoint(frame, grip.joint, grip.local, point);
-        push(30 * (point.x - target.x));
-        push(40 * (point.y - target.y));
-        push(30 * (point.z - target.z));
-      });
-      // Shins stay vertical: the knee holds its place over the ankle while the hips travel back.
-      const knee = body.index[`knee_${side}`];
-      const ankle = body.index[`ankle_${side}`];
-      goals.push(({ frame, push }) => push(6 * (frame.pos[knee].z - frame.pos[ankle].z)));
-    }
-    const hamstrings: Goal = ({ angles, push }) => {
-      for (const side of SIDES) push(6 * (stretchOf("hamstrings", angles, side) - END_STRETCH));
+  setup(body) {
+    const handle = propHandles("prop-dumbbell").grip;
+    const props = [dumbbellProp("dbL"), dumbbellProp("dbR")];
+    const grasps = [graspProp("L", "dbL", handle), graspProp("R", "dbR", handle)];
+    const tall = {
+      ...stand,
+      "root.pitch": 5,
+      "hip.flex": 12,
+      "hip.abd": 8,
+      "knee.flex": 12,
+      "clavicle.prot": 4,
+      "clavicle.elev": 2,
+      "elbow.flex": 6,
+      "forearm.pron": 42,
+      "shoulder.elev": 18,
+      "shoulder.plane": 62,
+      "wrist.flex": 0,
+      "wrist.dev": 0,
+      "lumbar.flex": -2,
+      "thoracic.flex": -2,
+      "neck.flex": 0,
     };
-    const arms = {
-      "shoulder.elev": 9,
-      "shoulder.plane": 35,
-      "elbow.flex": 4,
-      "forearm.pron": PRONATION,
-      "clavicle.prot": -4,
-    };
-
     return {
       hints: {
-        start: {
-          "root.z": 0.06,
-          "hip.flex": 2,
-          "hip.abd": 1,
-          "hip.rot": 5,
-          "knee.flex": 4,
-          "ankle.dorsi": 1,
-          ...arms,
-        },
+        start: tall,
         end: {
-          "root.z": -0.14,
-          "root.y": 0.9,
-          "root.pitch": 62,
-          "hip.flex": 80,
-          "hip.abd": 1,
-          "hip.rot": 5,
-          "knee.flex": 18,
-          "ankle.dorsi": -1,
-          ...arms,
-          "shoulder.elev": 62,
-          "shoulder.plane": 80,
-          "neck.flex": -8,
+          ...tall,
+          "root.z": -0.2,
+          "root.pitch": 76,
+          "hip.flex": 98,
+          "knee.flex": 16,
+          "shoulder.elev": 16,
+          "shoulder.plane": 70,
+          "neck.flex": 4,
         },
       },
-      extras: 1,
-      extraStart: [0.8],
-      goals: [...goals, mirrored(body, 4)],
-      keyGoals: { start: [], end: [hamstrings] },
+      goals: [
+        ...plantBothFeet(body, STANCE_X, HEEL_Z, 0.1),
+        balance(body, [
+          { anchor: "grip_L", kg: LOAD_KG },
+          { anchor: "grip_R", kg: LOAD_KG },
+        ], 0.04, 28),
+        mirrored(body, 8),
+        ...SIDES.flatMap((side) => [
+          lockAngle(body, `elbow_${side}.flex`, 6, 18),
+          lockAngle(body, `knee_${side}.flex`, 14, 16),
+          lockAngle(body, `forearm_${side}.pron`, 42, 12),
+          lockAngle(body, `wrist_${side}.flex`, 0, 8),
+          lockAngle(body, `wrist_${side}.dev`, 0, 6),
+          lockAngle(body, `clavicle_${side}.prot`, 4, 14),
+          lockAngle(body, `clavicle_${side}.elev`, 2, 8),
+          verticalShin(body, side, 30),
+          hangByThigh(body, side, 22),
+        ]),
+        lockAngle(body, "lumbar.flex", -2, 22),
+        lockAngle(body, "thoracic.flex", -2, 20),
+        lockAngle(body, "neck.flex", 2, 8),
+      ],
+      keyGoals: {
+        start: [
+          lockAngle(body, "hip_L.flex", 12, 18),
+          lockAngle(body, "hip_R.flex", 12, 18),
+          ({ q, push }) => push(18 * (q[3] - rad(5))),
+        ],
+        end: [
+          lockAngle(body, "hip_L.flex", 100, 24),
+          lockAngle(body, "hip_R.flex", 100, 24),
+          ({ q, push }) => push(24 * (q[3] - rad(76))),
+        ],
+      },
       stiffness: {
-        default: 0.5,
-        lumbar: 5,
-        thoracic: 5,
-        neck: 1.5,
-        knee: 1.2,
-        ankle: 0.4,
-        hip: 0.3,
-        shoulder: 0.15,
-        elbow: 3,
-        forearm: 2,
-        wrist: 1.5,
-        clavicle: 1.5,
+        default: 1,
+        root: 8,
+        hip: 14,
+        knee: 10,
+        ankle: 4,
+        elbow: 16,
+        forearm: 10,
+        wrist: 8,
+        shoulder: 6,
+        clavicle: 12,
+        lumbar: 12,
+        thoracic: 10,
+        neck: 6,
       },
-      obstacles: [],
-      progress: (frame) => anchorPoint(body, frame, "grip_L").y,
+      progress: (frame) => -anchorPoint(body, frame, "grip_L").y,
       ground: "heel_L",
-      props: DUMBBELLS,
-      propState: (frame) =>
-        SIDES.map((side) => {
-          const grip = anchorPoint(body, frame, `grip_${side}`);
-          const quat = frame.rot[body.index[`wrist_${side}`]].clone().multiply(HANDLE);
-          return { pos: [grip.x, grip.y, grip.z], quat: [quat.x, quat.y, quat.z, quat.w] };
-        }),
-      equipment: () => [],
-      loads: SIDES.map((side) => ({ anchor: `grip_${side}`, share: 1, grip: "hang" as const })),
-      support: { kind: "standing", brace: true },
-      tempo: { lower: 2.2, bottom: 0.25, raise: 1.5, top: 0.8 },
-      contacts: { dumbbell_L: { hand_L: 0.08 }, dumbbell_R: { hand_R: 0.08 } },
-      required: [
-        { label: "Left hand on its dumbbell", anchor: "grip_L", prop: "dumbbell_L" },
-        { label: "Right hand on its dumbbell", anchor: "grip_R", prop: "dumbbell_R" },
-        { label: "Left heel on the floor", anchor: "heel_L", surfaceY: 0 },
-        { label: "Right heel on the floor", anchor: "heel_R", surfaceY: 0 },
-        { label: "Left forefoot on the floor", anchor: "ballIn_L", surfaceY: 0 },
-        { label: "Right forefoot on the floor", anchor: "ballIn_R", surfaceY: 0 },
+      props,
+      propState: (frame) => props.map((prop) => carryProp(body, frame, prop, grasps)),
+      grasps,
+      loads: [
+        { anchor: "grip_L", share: 1, grip: "hang" },
+        { anchor: "grip_R", share: 1, grip: "hang" },
       ],
+      support: { kind: "standing" },
+      required: SIDES.flatMap((side) =>
+        (["heel", "ballIn", "ballOut", "toe"] as const).map((part) => ({
+          label: `${side === "L" ? "Left" : "Right"} ${part}`,
+          anchor: `${part}_${side}`,
+          surfaceY: 0,
+        })),
+      ),
       checks: [
-        {
-          id: "stance",
-          label: "Hip-width stance",
-          cue: "Stand upright with approximately a hip-width stance while holding the dumbbells by your thighs with straight elbows.",
-          evaluate: ({ frames, top }) => {
-            const feet =
-              anchorPoint(body, frames[top], "heel_L").x -
-              anchorPoint(body, frames[top], "heel_R").x;
-            const hips = frames[top].pos[body.index.hip_L].x - frames[top].pos[body.index.hip_R].x;
-            return {
-              pass: within(feet / hips, 0.8, 1.5),
-              measured: `heels ${(feet * 100).toFixed(0)} cm apart, hip joints ${(hips * 100).toFixed(0)} cm`,
-            };
-          },
-        },
-        {
-          id: "straight-elbows",
-          label: "Elbows stay straight",
-          cue: "Continue keeping your elbows straight with the dumbbells just in front of your legs.",
-          evaluate: (context) =>
-            everyFrame(
-              context,
-              (_, a) => deg(Math.max(a["elbow_L.flex"], a["elbow_R.flex"])),
-              10,
-              "° of elbow bend",
-            ),
-        },
-        {
-          id: "semi-overhand",
-          label: "Semi-overhand grip held throughout",
-          cue: "Your palms face at an angle between backward and in toward each other. Keep your palms facing this way throughout your set.",
-          evaluate: (context) =>
-            everyFrame(
-              context,
-              (frame) => {
-                const palm = new Vector3(-1, 0, 0).applyQuaternion(frame.rot[body.index.wrist_L]);
-                const back = new Vector3(0, 0, -1)
-                  .applyQuaternion(frame.rot[body.index.pelvis])
-                  .setY(0)
-                  .normalize();
-                const inward = new Vector3(-1, 0, 0);
-                const angle = deg(Math.atan2(palm.dot(back), palm.dot(inward)));
-                return Math.abs(angle - 45);
-              },
-              25,
-              "° away from halfway between backward and inward",
-            ),
-        },
-        {
-          id: "close-to-legs",
-          label: "Dumbbells stay just in front of the legs",
-          cue: "Avoid letting the dumbbells drift forward away from you.",
-          evaluate: (context) =>
-            everyFrame(
-              context,
-              (frame) => {
-                const grip = anchorPoint(body, frame, "grip_L");
-                return (
-                  (grip.distanceTo(besideLeg(body, frame, "L", grip.y, new Vector3())) +
-                    CLEARANCE) *
-                  100
-                );
-              },
-              4,
-              " cm off the leg",
-            ),
-        },
-        {
-          id: "vertical-shins",
-          label: "Shins stay vertical",
-          cue: "Most of the motion should come from your hips, and your shins should remain in a vertical position throughout your set.",
-          evaluate: (context) =>
-            everyFrame(
-              context,
-              (frame) => {
-                const shin = frame.pos[body.index.knee_L]
-                  .clone()
-                  .sub(frame.pos[body.index.ankle_L]);
-                return Math.abs(deg(Math.atan2(shin.z, shin.y)));
-              },
-              7,
-              "° off vertical",
-            ),
-        },
-        {
-          id: "soft-knees",
-          label: "Knees bend mildly, never locked",
-          cue: "You should not keep your knees fully straightened. The appropriately mild degree of knee bend can naturally occur when you sit your buttocks backward.",
-          evaluate: ({ angles, bottom }) => {
-            const knee = deg(angles[bottom]["knee_L.flex"]);
-            return {
-              pass: within(knee, 8, 30),
-              measured: `${knee.toFixed(0)}° of knee bend at the bottom`,
-            };
-          },
-        },
-        {
-          id: "hinge",
-          label: "Motion comes from the hips",
-          cue: "Most of the motion should come from your hips.",
-          evaluate: ({ angles, top, bottom }) => {
-            const hip = deg(angles[bottom]["hip_L.flex"] - angles[top]["hip_L.flex"]);
-            const knee = deg(angles[bottom]["knee_L.flex"] - angles[top]["knee_L.flex"]);
-            return {
-              pass: hip > 3 * knee,
-              measured: `hips move ${hip.toFixed(0)}°, knees ${knee.toFixed(0)}°`,
-            };
-          },
-        },
-        {
-          id: "flat-back",
-          label: "Lower back stays flat",
-          cue: "Hinge at your hips in a controlled manner as you keep your lower back flat, chest up, and core braced.",
-          evaluate: (context) =>
-            everyFrame(
-              context,
-              (_, a) =>
-                deg(
-                  Math.abs(a["lumbar.flex"] - context.angles[context.top]["lumbar.flex"]) +
-                    Math.abs(a["thoracic.flex"] - context.angles[context.top]["thoracic.flex"]),
-                ),
-              8,
-              "° of spinal flexion change",
-            ),
-        },
-        {
-          id: "below-knees",
-          label: "Dumbbells reach below the knees",
-          cue: "Lifters with normal flexibility can typically lower the dumbbells at least below their knees.",
-          evaluate: ({ frames, bottom }) => {
-            const below =
-              frames[bottom].pos[body.index.knee_L].y -
-              anchorPoint(body, frames[bottom], "grip_L").y;
-            return {
-              pass: below > 0,
-              measured: `handles ${(Math.abs(below) * 100).toFixed(0)} cm ${below > 0 ? "below" : "above"} the knee joint`,
-            };
-          },
-        },
-        {
-          id: "hamstring-end-range",
-          label: "Descent stops at the hamstrings’ end range",
-          cue: "Once you have achieved what feels like the end range to which your hamstrings can safely stretch and can no longer sit back any farther, you have reached your personal end range.",
-          evaluate: ({ angles, bottom }) => {
-            const stretch = stretchOf("hamstrings", angles[bottom], "L");
-            return {
-              pass: within(stretch, 0.7, 1),
-              measured: `hamstrings at ${(stretch * 100).toFixed(0)}% of their end range`,
-            };
-          },
-        },
-        {
-          id: "neck-neutral",
-          label: "Neck stays near neutral",
-          cue: "Keep the soles of your feet fully planted on the ground and your neck near a neutral position.",
-          evaluate: (context) =>
-            everyFrame(context, (_, a) => Math.abs(deg(a["neck.flex"])), 15, "° from neutral"),
-        },
-        {
-          id: "stacked-at-top",
-          label: "Shoulders, hips and mid-foot in line at the top",
-          cue: "When you have finished lifting the dumbbells, you should be able to draw a straight line from your shoulders through your hips to the middle of your feet when viewed from the side.",
-          evaluate: ({ frames, top }) => {
-            const frame = frames[top];
-            const shoulder = frame.pos[body.index.shoulder_L];
-            const hip = frame.pos[body.index.hip_L];
-            const foot = anchorPoint(body, frame, "heel_L").z + 0.05 + 0.04;
-            const t = hip.y / shoulder.y;
-            const off = hip.z - (foot + (shoulder.z - foot) * t);
-            return {
-              pass: Math.abs(off) < 0.04 && shoulder.z > hip.z - 0.03,
-              measured: `hips ${(Math.abs(off) * 100).toFixed(1)} cm off the shoulder to mid-foot line`,
-            };
-          },
-        },
+        ...checks,
+        checkNeutralNeck(
+          "Keep your neck near a neutral position, like when you are normally standing upright and looking straight ahead.",
+        ),
+        checkFlatBack(
+          "Hinge at your hips as you keep your lower back flat, chest up, and core braced.",
+          8,
+        ),
       ],
+      cameraHint: { view: "Side" },
     };
   },
-};
+});

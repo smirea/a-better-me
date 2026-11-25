@@ -12,6 +12,8 @@ import {
 } from "./muscles";
 
 const G = 9.81;
+/** How far a heel can sit above the forefoot, in metres, before the foot counts as up on its toes. */
+const HEEL_RAISED = 0.02;
 /** Ligaments and the ribcage carry part of a hanging arm's weight before the upper traps have to. */
 const PASSIVE_SHOULDER_SUSPENSION = 0.4;
 const REGULARIZATION = 0.01;
@@ -112,7 +114,9 @@ export function analyze(
   const anchors = sequence.loads.map((load) => body.anchors[load.anchor]);
   const masses = [
     ...body.segments.map((segment) => segment.mass),
-    ...sequence.loads.map((load) => load.share * loadKg),
+    ...sequence.loads.map((load) =>
+      Math.max(0, (load.bodyweightShare ?? 0) * body.mass + load.share * loadKg),
+    ),
   ];
   const points = kin.frames.map((frame) => [
     ...body.segments.map((segment) => worldPoint(frame, segment.joint, segment.com)),
@@ -165,14 +169,43 @@ export function analyze(
   for (let f = 0; f < frames; f++) {
     const frame = kin.frames[f];
     const a = kin.angles[f];
-    const forces: Force[] = masses.map((mass, i) => ({
-      joint: joints[i],
-      point: points[f][i],
-      force: new Vector3(-accel[f][i].x, -G - accel[f][i].y, -accel[f][i].z).multiplyScalar(mass),
-    }));
+    const forces: Force[] = masses.map((mass, i) => {
+      const loadIdx = i - body.segments.length;
+      if (loadIdx >= 0) {
+        const load = sequence.loads[loadIdx];
+        if (load.pulley) {
+          const dir = new Vector3(load.pulley[0], load.pulley[1], load.pulley[2])
+            .sub(points[f][i]);
+          if (dir.lengthSq() > 1e-8) dir.normalize();
+          else dir.set(0, -1, 0);
+          return {
+            joint: joints[i],
+            point: points[f][i],
+            force: dir.multiplyScalar(mass * G),
+          };
+        }
+        if (load.direction) {
+          const dir = new Vector3(load.direction[0], load.direction[1], load.direction[2]);
+          if (dir.lengthSq() > 1e-8) dir.normalize();
+          else dir.set(0, -1, 0);
+          return {
+            joint: joints[i],
+            point: points[f][i],
+            force: dir.multiplyScalar(mass * G),
+          };
+        }
+      }
+      return {
+        joint: joints[i],
+        point: points[f][i],
+        force: new Vector3(-accel[f][i].x, -G - accel[f][i].y, -accel[f][i].z).multiplyScalar(mass),
+      };
+    });
 
     if (sequence.support.kind === "standing") {
-      support.push(standOn(body, frame, forces, sequence, points[f][body.segments.length]));
+      const railPoint =
+        sequence.loads.length > 0 ? points[f][body.segments.length] : new Vector3(0, 1.2, 0);
+      support.push(standOn(body, frame, forces, sequence, railPoint));
     } else {
       support.push(null);
     }
@@ -397,33 +430,32 @@ function standOn(
     total.add(force);
     momentSum.add(m.crossVectors(point, force));
   }
-  const feet = SIDES.map((side) => {
-    const heel = worldPoint(
-      frame,
-      body.anchors[`heel_${side}`].joint,
-      body.anchors[`heel_${side}`].local,
-    );
-    const toe = worldPoint(
-      frame,
-      body.anchors[`toe_${side}`].joint,
-      body.anchors[`toe_${side}`].local,
-    );
-    return { side, heel, toe, x: (heel.x + toe.x) / 2 };
+  const activeFeet = sequence.support.feet?.length ? sequence.support.feet : SIDES;
+  const at = (name: string) => worldPoint(frame, body.anchors[name].joint, body.anchors[name].local);
+  const feet = activeFeet.map((side) => {
+    const toe = at(`toe_${side}`);
+    const forefoot = at(`forefoot_${side}`);
+    // A heel off the floor leaves the foot standing on its toe break, so the floor pushes on the forefoot, which the
+    // toes carry, and the support runs from there to the toe pads.
+    const raised = at(`heel_${side}`).y > forefoot.y + HEEL_RAISED;
+    const heel = raised ? forefoot : at(`heel_${side}`);
+    const joint = body.index[raised ? `toes_${side}` : `ankle_${side}`];
+    return { side, heel, toe, joint, x: (heel.x + toe.x) / 2 };
   });
-  const zBack = Math.min(...feet.map((foot) => foot.heel.z)) - 0.02;
-  const zFront = Math.max(...feet.map((foot) => foot.toe.z));
-  const xLeft = feet[0].x + 0.05;
-  const xRight = feet[1].x - 0.05;
-  const up = -total.y;
+  const zBack = Math.min(...feet.map((foot) => Math.min(foot.heel.z, foot.toe.z))) - 0.02;
+  const zFront = Math.max(...feet.map((foot) => Math.max(foot.heel.z, foot.toe.z)));
+  const xLeft = Math.max(...feet.map((foot) => foot.x)) + 0.05;
+  const xRight = Math.min(...feet.map((foot) => foot.x)) - 0.05;
+  const up = Math.max(1, -total.y);
   let rail = 0;
   let copZ = momentSum.x / up;
   const copX = -momentSum.z / up;
-  if (sequence.support.rail) {
+  if (sequence.support.rail && sequence.loads.length > 0) {
     // The lifter keeps the pressure under the middle of the feet and the rails take whatever balance is left
     // over, so this solves the fore-aft moment balance for the rail's force instead of the centre of pressure.
     const length = zFront - zBack;
     const midfoot = clamp(copZ, zBack + 0.35 * length, zBack + 0.65 * length);
-    rail = (up * (midfoot - copZ)) / barPoint.y;
+    rail = (up * (midfoot - copZ)) / Math.max(0.2, barPoint.y);
     const anchor = body.anchors[sequence.loads[0].anchor];
     forces.push({ joint: anchor.joint, point: barPoint.clone(), force: new Vector3(0, 0, rail) });
     total.z += rail;
@@ -431,10 +463,24 @@ function standOn(
   }
   const margin = Math.min(copZ - zBack, zFront - copZ, xLeft - copX, copX - xRight);
   const z = clamp(copZ, zBack, zFront);
-  const leftShare = clamp((copX - feet[1].x) / (feet[0].x - feet[1].x), 0, 1);
+  if (feet.length === 1) {
+    const foot = feet[0];
+    forces.push({
+      joint: foot.joint,
+      point: new Vector3(foot.x, 0, clamp(z, Math.min(foot.heel.z, foot.toe.z), Math.max(foot.heel.z, foot.toe.z))),
+      force: total.clone().negate(),
+      moment: new Vector3(),
+    });
+    return { cop: [copX, copZ], margin, rail };
+  }
+  const leftShare = clamp((copX - feet[1].x) / (feet[0].x - feet[1].x || 1e-6), 0, 1);
   const pushes = feet.map((foot, i) => ({
-    joint: body.index[`ankle_${foot.side}`],
-    point: new Vector3(foot.x, 0, clamp(z, foot.heel.z, foot.toe.z)),
+    joint: foot.joint,
+    point: new Vector3(
+      foot.x,
+      0,
+      clamp(z, Math.min(foot.heel.z, foot.toe.z), Math.max(foot.heel.z, foot.toe.z)),
+    ),
     force: total.clone().multiplyScalar(-(i === 0 ? leftShare : 1 - leftShare)),
     moment: new Vector3(),
   }));

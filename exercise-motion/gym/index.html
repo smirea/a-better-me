@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>3D Commercial Gym</title>
+    <style>
+      /*STYLE*/
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="canvas"></canvas>
+
+      <header class="topbar">
+        <div class="brand-chip">
+          <span class="dot"></span>
+          <strong id="gym-title">3D Gym</strong>
+          <span class="meta" id="gym-stats"></span>
+        </div>
+        <nav class="zones" id="zone-bar" aria-label="Gym zones"></nav>
+        <div class="actions">
+          <button id="mode-btn" class="btn" title="Toggle Walk mode (WASD)">Walk</button>
+          <button id="dir-btn" class="btn" aria-expanded="true">Equipment</button>
+        </div>
+      </header>
+
+      <div class="progress-pill" id="progress-pill">
+        <span class="spinner"></span>
+        <span id="progress-text">Loading 3D gym...</span>
+      </div>
+
+      <div class="walk-hint" id="walk-hint" hidden>
+        WASD / Arrows to walk &middot; Drag to look &middot; Esc for Orbit
+      </div>
+
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-head">
+          <input
+            id="search"
+            type="search"
+            placeholder="Search equipment (squat, bench, cable...)"
+            autocomplete="off"
+          />
+          <div class="filter-pills" id="filter-pills"></div>
+        </div>
+        <div class="equip-list" id="equip-list"></div>
+      </aside>
+
+      <section class="card" id="selection-card" hidden>
+        <div class="card-main">
+          <div class="card-zone" id="sel-zone"></div>
+          <h2 id="sel-name"></h2>
+          <div class="card-dims" id="sel-dims"></div>
+        </div>
+        <div class="card-actions">
+          <button id="inspect-btn" class="btn primary">Inspect 360°</button>
+          <button id="close-sel-btn" class="btn icon-btn" aria-label="Close">&times;</button>
+        </div>
+      </section>
+
+      <div class="inspect-bar" id="inspect-bar" hidden>
+        <button id="back-gym-btn" class="btn primary">&larr; Back to Gym</button>
+        <div class="inspect-info">
+          <strong id="inspect-name"></strong>
+          <span id="inspect-dims"></span>
+        </div>
+        <button id="spin-btn" class="btn">Auto-spin</button>
+      </div>
+    </div>
+
+    <script id="gym-plan" type="application/json">
+      __PLAN__
+    </script>
+    <script type="module">
+      /*SCRIPT*/
+    </script>
+  </body>
+</html>
