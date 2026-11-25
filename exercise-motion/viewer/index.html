@@ -10,6 +10,17 @@
   </head>
   <body>
     <div id="app">
+      <aside class="library-sidebar" id="library-drawer" hidden>
+        <div class="drawer-head">
+          <input id="library-search" type="search" placeholder="Search exercises, muscles, equipment…" autocomplete="off" />
+          <div class="drawer-filters">
+            <select id="filter-category" aria-label="Category"></select>
+            <select id="filter-muscle" aria-label="Muscle"></select>
+          </div>
+          <div class="drawer-meta" id="drawer-meta"></div>
+        </div>
+        <div class="drawer-list" id="drawer-list" role="listbox" aria-label="Exercises"></div>
+      </aside>
       <section class="stage">
         <header class="bar">
           <div class="segmented" id="exercises" role="tablist" aria-label="Exercise"></div>
@@ -19,6 +30,7 @@
               <span class="picker-count" id="picker-count"></span>
             </button>
           </div>
+          <div class="stage-title" id="stage-title" hidden></div>
           <label class="setting-select" aria-label="Setting">
             <span>Setting</span>
             <select id="setting"></select>
@@ -31,17 +43,6 @@
         </header>
         <div class="canvas-wrap">
           <canvas id="canvas"></canvas>
-          <div class="library-drawer" id="library-drawer" hidden>
-            <div class="drawer-head">
-              <input id="library-search" type="search" placeholder="Search exercises, muscles, equipment…" autocomplete="off" />
-              <div class="drawer-filters">
-                <select id="filter-category" aria-label="Category"></select>
-                <select id="filter-muscle" aria-label="Muscle"></select>
-              </div>
-              <div class="drawer-meta" id="drawer-meta"></div>
-            </div>
-            <div class="drawer-list" id="drawer-list" role="listbox"></div>
-          </div>
           <div class="overlay top-left">
             <div class="segmented small" id="views" aria-label="Camera"></div>
           </div>

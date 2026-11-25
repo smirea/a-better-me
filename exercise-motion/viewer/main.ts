@@ -374,6 +374,7 @@ function applyLoadedExercise(resetLoad: boolean) {
   if (isLibraryMode) {
     $("picker-name").textContent = sequence.name;
     $("picker-count").textContent = `${libraryIndex.length} exercises`;
+    $("stage-title").textContent = sequence.name;
   }
   measureFit();
   setView(params.get("view") ? state.view : (sequence.cameraHint?.view ?? state.view));
@@ -630,12 +631,14 @@ function renderPlay() {
   $("play").setAttribute("aria-label", state.playing ? "Pause" : "Play");
 }
 
-function renderDrawerList() {
+let filteredLibrary: CatalogSummary[] = [];
+
+function renderDrawerList(scrollActive = false) {
   if (!isLibraryMode) return;
   const q = $<HTMLInputElement>("library-search").value.trim().toLowerCase();
   const cat = $<HTMLSelectElement>("filter-category").value;
   const mus = $<HTMLSelectElement>("filter-muscle").value;
-  const filtered = libraryIndex.filter((item) => {
+  filteredLibrary = libraryIndex.filter((item) => {
     if (cat && item.category !== cat) return false;
     if (mus && !item.primaryMuscles.includes(mus as Muscle) && !item.secondaryMuscles.includes(mus as Muscle)) {
       return false;
@@ -648,10 +651,9 @@ function renderDrawerList() {
       (item.alternativeNames?.some((n) => n.toLowerCase().includes(q)) ?? false)
     );
   });
-  $("drawer-meta").textContent = `${filtered.length} of ${libraryIndex.length} exercises`;
+  $("drawer-meta").textContent = `${filteredLibrary.length} of ${libraryIndex.length} exercises`;
   const list = $("drawer-list");
-  const slice = filtered.slice(0, 200);
-  list.innerHTML = slice
+  list.innerHTML = filteredLibrary
     .map(
       (item) =>
         `<button type="button" class="drawer-item" data-id="${item.id}" aria-selected="${item.id === state.exerciseId}">
@@ -662,10 +664,13 @@ function renderDrawerList() {
     .join("");
   for (const btn of list.querySelectorAll<HTMLButtonElement>(".drawer-item")) {
     btn.addEventListener("click", () => {
-      $("library-drawer").hidden = true;
+      $("library-drawer").classList.remove("open");
       $("picker-trigger").setAttribute("aria-expanded", "false");
       void selectExerciseById(btn.dataset.id!, true);
     });
+  }
+  if (scrollActive) {
+    list.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
   }
 }
 
@@ -752,11 +757,16 @@ async function init() {
   });
 
   if (isLibraryMode) {
+    document.documentElement.classList.add("library-mode");
     $("exercises").hidden = true;
     $("library-picker").hidden = false;
+    $("stage-title").hidden = false;
+    $("library-drawer").hidden = false;
     const resp = await fetch("./catalog.json");
     if (!resp.ok) throw new Error(`Failed to fetch catalog.json (${resp.status})`);
-    libraryIndex = (await resp.json()) as CatalogSummary[];
+    libraryIndex = ((await resp.json()) as CatalogSummary[]).toSorted((a, b) =>
+      a.name.localeCompare(b.name),
+    );
 
     const categories = [...new Set(libraryIndex.map((e) => e.category))].sort();
     $<HTMLSelectElement>("filter-category").innerHTML =
@@ -768,13 +778,13 @@ async function init() {
 
     $("picker-trigger").addEventListener("click", () => {
       const drawer = $("library-drawer");
-      drawer.hidden = !drawer.hidden;
-      $("picker-trigger").setAttribute("aria-expanded", String(!drawer.hidden));
-      if (!drawer.hidden) $<HTMLInputElement>("library-search").focus();
+      const open = drawer.classList.toggle("open");
+      $("picker-trigger").setAttribute("aria-expanded", String(open));
+      if (open) $<HTMLInputElement>("library-search").focus();
     });
-    $("library-search").addEventListener("input", renderDrawerList);
-    $("filter-category").addEventListener("change", renderDrawerList);
-    $("filter-muscle").addEventListener("change", renderDrawerList);
+    $("library-search").addEventListener("input", () => renderDrawerList());
+    $("filter-category").addEventListener("change", () => renderDrawerList());
+    $("filter-muscle").addEventListener("change", () => renderDrawerList());
 
     const startItem =
       libraryIndex.find((e) => e.id === state.exerciseId) ??
@@ -782,6 +792,7 @@ async function init() {
       libraryIndex[0];
     if (!startItem) throw new Error("Library catalog is empty");
     await selectExerciseById(startItem.id, true, true);
+    renderDrawerList(true);
   } else {
     const list = embedded.exercises!;
     const startEx =
@@ -838,6 +849,16 @@ async function init() {
     if (event.key === " ") {
       event.preventDefault();
       $("play").click();
+    } else if (isLibraryMode && (event.key === "ArrowDown" || event.key === "ArrowUp") && filteredLibrary.length) {
+      event.preventDefault();
+      const idx = filteredLibrary.findIndex((e) => e.id === state.exerciseId);
+      const next =
+        event.key === "ArrowDown"
+          ? filteredLibrary[(idx + 1) % filteredLibrary.length]
+          : filteredLibrary[(idx - 1 + filteredLibrary.length) % filteredLibrary.length];
+      if (next) {
+        void selectExerciseById(next.id, true).then(() => renderDrawerList(true));
+      }
     }
   });
 
