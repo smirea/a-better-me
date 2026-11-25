@@ -1,0 +1,312 @@
+import { Euler, Matrix4, Quaternion, Vector3 } from "three";
+import type { Frame } from "../body";
+import type {
+  CanonicalMachineInstance,
+  FootplateSpec,
+  HandGrip,
+  HandleSpec,
+  PivotSpec,
+  PulleySpec,
+  RailSpec,
+} from "../contracts";
+import type { GlbNodePose, Material, Part, PropState } from "../equipment";
+import type { PadSurface } from "../equipment-library";
+import { clamp, type Vec3 } from "../math";
+import anchorsJson from "./anchors.json";
+
+type Quat = [number, number, number, number];
+
+interface SpecPart {
+  id: string;
+  shape: Part["shape"];
+  size: number[];
+  pos: number[];
+  quat: number[];
+  material: string;
+  collide: boolean;
+  node?: string;
+}
+
+interface Located {
+  node?: string;
+}
+
+/** One entry of `anchors.json`, written by `scripts/machines/build_machines.py` from the same geometry it exports. */
+export interface MachineSpec {
+  id: string;
+  name: string;
+  kind: "machine" | "prop";
+  file: string;
+  facing: string;
+  notes: string;
+  bounds: { min: number[]; max: number[] };
+  tris: number;
+  bytes: number;
+  materials: string[];
+  params: Record<string, unknown>;
+  nodes: Record<string, { pivot: number[]; parent: string | null }>;
+  parts: SpecPart[];
+  anchors: {
+    handles?: Record<string, Located & { pos: number[]; axis: number[]; palmNormal: number[]; radius: number; length: number; grip: string }>;
+    surfaces?: Record<string, Located & { origin: number[]; normal: number[]; up: number[] }>;
+    footplates?: Record<string, { surface: string; width: number; minAlong: number; maxAlong: number }>;
+    pulleys?: Record<string, { pos: number[]; exitDir: number[]; nodeName?: string; stackNode?: string; travelRatio: number; stackTravel: number }>;
+    rails?: Record<string, { origin: number[]; dir: number[]; minTravel: number; maxTravel: number; nodeName?: string }>;
+    pivots?: Record<string, { origin: number[]; axis: number[]; minAngleRad: number; maxAngleRad: number; nodeName?: string }>;
+    hooks?: Record<string, Located & { pos: number[] }>;
+    points?: Record<string, Located & { pos: number[] }>;
+  };
+}
+
+export const SPECS: Record<string, MachineSpec> = Object.fromEntries(
+  (anchorsJson as unknown as MachineSpec[]).map((s) => [s.id, s]),
+);
+
+export function machineSpec(id: string): MachineSpec {
+  const spec = SPECS[id];
+  if (!spec) throw new Error(`Unknown canonical machine "${id}" (anchors.json is stale? rerun build_machines.py)`);
+  return spec;
+}
+
+export const specParam = (spec: MachineSpec, key: string): number => {
+  const value = spec.params[key];
+  if (typeof value !== "number") throw new Error(`${spec.id}: missing numeric param "${key}"`);
+  return value;
+};
+
+/** Local pose of one articulated node, relative to its bind pose, in its parent's frame. */
+export interface NodeState {
+  posOffset?: Vec3;
+  /** Euler XYZ radians about the node's pivot (bind rotation is identity for every canonical node). */
+  rotOffset?: Vec3;
+}
+
+export type NodeStates = Record<string, NodeState>;
+
+export interface Placement {
+  /** World position of the machine's origin. */
+  pos?: Vec3;
+  /** Turn about world Y in degrees (0 keeps the lifter facing +Z). */
+  yawDeg?: number;
+  /** Prefix for equipment part ids and contact keys. Defaults to the machine id. */
+  idPrefix?: string;
+}
+
+export type Drive<S> = (frame: Frame, extras: number[], propStates: PropState[]) => Partial<S>;
+
+export interface MachineInstance<S> extends CanonicalMachineInstance {
+  state: S;
+  nodeStates: NodeStates;
+  /** The same machine at another state (e.g. the start and end of a rep), same placement. */
+  at(state: Partial<S>): MachineInstance<S>;
+  /** World transform of a point given in bind-pose machine coordinates and attached to `node`. */
+  pointAt(p: Vec3, node?: string): Vec3;
+}
+
+export interface MachineDefinition<S> {
+  id: string;
+  defaults: S;
+  normalize?(state: S, spec: MachineSpec): S;
+  nodes(state: S, spec: MachineSpec): NodeStates;
+  /** Rigid transform applied before placement (e.g. which face a plyo box rests on). */
+  base?(state: S, spec: MachineSpec): Matrix4;
+  contacts(prefix: string): Record<string, Record<string, number>>;
+  cameraHint?: CanonicalMachineInstance["cameraHint"];
+  /** Last adjustments that depend on the state, e.g. which of several landing faces is on top. */
+  finish?(instance: MachineInstance<S>, state: S): void;
+}
+
+const MATERIALS = new Set<Material>(["steel", "chrome", "pad", "plate", "rubber", "cable", "band", "wood", "accent"]);
+const GRIPS = new Set<HandGrip>(["bar", "press", "neutral", "hook", "open", "flat-floor", "ball-stop", "pinch", "fist", "relaxed", "hang"]);
+
+const v3 = (a: number[]): Vec3 => [a[0], a[1], a[2]];
+const tuple = (v: Vector3): Vec3 => [v.x, v.y, v.z];
+
+function nodeMatrix(spec: MachineSpec, states: NodeStates, node: string | undefined, cache: Map<string, Matrix4>): Matrix4 {
+  if (!node) return new Matrix4();
+  const hit = cache.get(node);
+  if (hit) return hit;
+  const info = spec.nodes[node];
+  if (!info) throw new Error(`${spec.id}: unknown node "${node}"`);
+  const parent = nodeMatrix(spec, states, info.parent ?? undefined, cache);
+  const pivot = new Vector3(...v3(info.pivot));
+  const s = states[node] ?? {};
+  const offset = new Vector3(...(s.posOffset ?? [0, 0, 0]));
+  const rot = new Matrix4().makeRotationFromEuler(new Euler(...(s.rotOffset ?? [0, 0, 0]), "XYZ"));
+  const m = parent
+    .clone()
+    .multiply(new Matrix4().makeTranslation(pivot.clone().add(offset)))
+    .multiply(rot)
+    .multiply(new Matrix4().makeTranslation(pivot.clone().negate()));
+  cache.set(node, m);
+  return m;
+}
+
+export function defineMachine<S extends object>(def: MachineDefinition<S>) {
+  const spec = machineSpec(def.id);
+  for (const node of Object.keys(def.nodes(def.defaults, spec))) {
+    if (!spec.nodes[node]) throw new Error(`${def.id}: definition drives unknown node "${node}"`);
+  }
+
+  return function build(options: Partial<S> & Placement & { drive?: Drive<S> } = {}): MachineInstance<S> {
+    const { pos = [0, 0, 0], yawDeg = 0, idPrefix = def.id, drive, ...rest } = options as Partial<S> &
+      Placement & { drive?: Drive<S> };
+    const resolve = (partial: Partial<S>): S => {
+      const merged = { ...def.defaults, ...partial } as S;
+      return def.normalize ? def.normalize(merged, spec) : merged;
+    };
+    const placement = new Matrix4()
+      .makeTranslation(new Vector3(...pos))
+      .multiply(new Matrix4().makeRotationY((yawDeg * Math.PI) / 180));
+
+    const make = (state: S): MachineInstance<S> => {
+      const nodeStates = def.nodes(state, spec);
+      const world = placement.clone().multiply(def.base ? def.base(state, spec) : new Matrix4());
+      const cache = new Map<string, Matrix4>();
+      const full = (node?: string) => world.clone().multiply(nodeMatrix(spec, nodeStates, node, cache));
+      const rotOf = (node?: string) => new Quaternion().setFromRotationMatrix(full(node));
+      const point = (p: number[], node?: string): Vec3 => tuple(new Vector3(...v3(p)).applyMatrix4(full(node)));
+      const dir = (d: number[], node?: string): Vec3 => tuple(new Vector3(...v3(d)).applyQuaternion(rotOf(node)).normalize());
+
+      const equipment: Part[] = spec.parts.map((p) => {
+        if (!MATERIALS.has(p.material as Material)) throw new Error(`${spec.id}: bad part material ${p.material}`);
+        const q = rotOf(p.node).multiply(new Quaternion(...(p.quat as Quat)));
+        return {
+          id: `${idPrefix}.${p.id}`,
+          shape: p.shape,
+          size: v3(p.size),
+          pos: point(p.pos, p.node),
+          quat: [q.x, q.y, q.z, q.w],
+          material: p.material as Material,
+          collide: p.collide,
+        };
+      });
+
+      const a = spec.anchors;
+      const surfaces: Record<string, PadSurface> = {};
+      for (const [k, s] of Object.entries(a.surfaces ?? {})) {
+        surfaces[k] = { origin: point(s.origin, s.node), normal: dir(s.normal, s.node), up: dir(s.up, s.node) };
+      }
+      const footplates: Record<string, FootplateSpec> = {};
+      for (const [k, f] of Object.entries(a.footplates ?? {})) {
+        footplates[k] = { surface: surfaces[f.surface], width: f.width, minAlong: f.minAlong, maxAlong: f.maxAlong };
+      }
+      const handles: Record<string, HandleSpec> = {};
+      for (const [k, h] of Object.entries(a.handles ?? {})) {
+        if (!GRIPS.has(h.grip as HandGrip)) throw new Error(`${spec.id}: bad grip ${h.grip}`);
+        handles[k] = {
+          pos: point(h.pos, h.node),
+          axis: dir(h.axis, h.node),
+          palmNormal: dir(h.palmNormal, h.node),
+          radius: h.radius,
+          length: h.length,
+          grip: h.grip as HandGrip,
+        };
+      }
+      const pulleys: Record<string, PulleySpec> = {};
+      for (const [k, p] of Object.entries(a.pulleys ?? {})) {
+        const node = p.nodeName;
+        pulleys[k] = {
+          pos: point(p.pos, node),
+          exitDir: dir(p.exitDir, node),
+          ...(node ? { nodeName: node } : {}),
+          ...(p.stackNode ? { stackNode: p.stackNode } : {}),
+          travelRatio: p.travelRatio,
+        };
+      }
+      const rails: Record<string, RailSpec> = {};
+      for (const [k, r] of Object.entries(a.rails ?? {})) {
+        // A rail's origin is its node's current position; travel limits stay relative to bind.
+        const node = r.nodeName;
+        const parent = node ? (spec.nodes[node]?.parent ?? undefined) : undefined;
+        rails[k] = {
+          origin: point(r.origin, parent),
+          dir: dir(r.dir, parent),
+          minTravel: r.minTravel,
+          maxTravel: r.maxTravel,
+          ...(node ? { nodeName: node } : {}),
+        };
+      }
+      const pivots: Record<string, PivotSpec> = {};
+      for (const [k, p] of Object.entries(a.pivots ?? {})) {
+        const parent = p.nodeName ? (spec.nodes[p.nodeName]?.parent ?? undefined) : undefined;
+        pivots[k] = {
+          origin: point(p.origin, parent),
+          axis: dir(p.axis, parent),
+          minAngleRad: p.minAngleRad,
+          maxAngleRad: p.maxAngleRad,
+          ...(p.nodeName ? { nodeName: p.nodeName } : {}),
+        };
+      }
+      const hooks = Object.values(a.hooks ?? {}).map((h) => ({ pos: point(h.pos, h.node) }));
+
+      const quat = new Quaternion().setFromRotationMatrix(world);
+      const origin = new Vector3().setFromMatrixPosition(world);
+      const poses = (ns: NodeStates): GlbNodePose[] =>
+        Object.entries(ns).map(([node, s]) => ({
+          node,
+          posOffset: s.posOffset ?? [0, 0, 0],
+          rotOffset: s.rotOffset ?? [0, 0, 0],
+        }));
+      const staticPoses = poses(nodeStates);
+
+      const instance: MachineInstance<S> = {
+        id: spec.id,
+        name: spec.name,
+        state,
+        nodeStates,
+        glb: [{ id: spec.file, pos: tuple(origin), quat: [quat.x, quat.y, quat.z, quat.w], hideEquipment: true }],
+        equipment,
+        contacts: def.contacts(idPrefix),
+        surfaces,
+        footplates,
+        handles,
+        pulleys,
+        rails,
+        pivots,
+        hooks,
+        glbState: drive
+          ? (frame, extras, propStates) => [poses(def.nodes(resolve({ ...state, ...drive(frame, extras, propStates) }), spec))]
+          : () => [staticPoses],
+        ...(def.cameraHint ? { cameraHint: def.cameraHint } : {}),
+        at: (next) => make(resolve({ ...state, ...next })),
+        pointAt: (p, node) => point(p, node),
+      };
+      def.finish?.(instance, state);
+      return instance;
+    };
+
+    return make(resolve(rest as Partial<S>));
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Shared kinematics helpers
+// ---------------------------------------------------------------------------
+
+export const rotX = (rad: number): NodeState => ({ rotOffset: [rad, 0, 0] });
+export const rotY = (rad: number): NodeState => ({ rotOffset: [0, rad, 0] });
+export const slideY = (dy: number): NodeState => ({ posOffset: [0, dy, 0] });
+export const slideAlong = (dir: number[], t: number): NodeState => ({ posOffset: [dir[0] * t, dir[1] * t, dir[2] * t] });
+
+/** Weight-stack lift for a cable paid out from `pulley` to `handle`, beyond `restLength`. */
+export function stackLift(pulley: PulleySpec, handle: Vec3, restLength: number, maxTravel: number): number {
+  const len = Math.hypot(handle[0] - pulley.pos[0], handle[1] - pulley.pos[1], handle[2] - pulley.pos[2]);
+  return clamp((len - restLength) * (pulley.travelRatio ?? 1), 0, maxTravel);
+}
+
+/** Yaw (radians about +Y) that turns a swivel pulley housing from facing `facing` toward `handle`. */
+export function swivelYaw(pulley: PulleySpec, handle: Vec3, facing: Vec3): number {
+  const dx = handle[0] - pulley.pos[0];
+  const dz = handle[2] - pulley.pos[2];
+  if (Math.hypot(dx, dz) < 1e-6) return 0;
+  return Math.atan2(dx, dz) - Math.atan2(facing[0], facing[2]);
+}
+
+export const BACK_PAD = { pelvis: 0.03, abdomen: 0.03, chest: 0.03, girdle: 0.03, neck: 0.02, head: 0.025 };
+export const SEAT_PAD = { pelvis: 0.03, thigh_L: 0.03, thigh_R: 0.03, thighShaft_L: 0.03, thighShaft_R: 0.03 };
+export const HANDS = { hand_L: 0.02, hand_R: 0.02, forearm_L: 0.01, forearm_R: 0.01 };
+export const FEET = { foot_L: 0.02, foot_R: 0.02 };
+export const SHINS = { shank_L: 0.03, shank_R: 0.03 };
+export const THIGHS = { thigh_L: 0.03, thigh_R: 0.03, thighShaft_L: 0.03, thighShaft_R: 0.03 };
+export const ARMS = { upperarm_L: 0.03, upperarm_R: 0.03, forearm_L: 0.02, forearm_R: 0.02 };

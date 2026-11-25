@@ -1,0 +1,50 @@
+[
+  {
+    "id": "studio",
+    "label": "Studio charcoal",
+    "materials": {
+      "mat_frame": { "color": "#2c2f34", "roughness": 0.48, "metalness": 0.35 },
+      "mat_pad": { "color": "#3b424b", "roughness": 0.78, "metalness": 0.0 },
+      "mat_chrome": { "color": "#d4d7dc", "roughness": 0.16, "metalness": 1.0 },
+      "mat_grip": { "color": "#1d1e21", "roughness": 0.92, "metalness": 0.05 },
+      "mat_plate": { "color": "#2a2b2e", "roughness": 0.62, "metalness": 0.45 },
+      "mat_stack": { "color": "#4a4e55", "roughness": 0.38, "metalness": 0.8 },
+      "mat_accent": { "color": "#c0582f", "roughness": 0.42, "metalness": 0.2 },
+      "mat_cable": { "color": "#17181b", "roughness": 0.5, "metalness": 0.3 },
+      "mat_rubber": { "color": "#121315", "roughness": 0.95, "metalness": 0.0 },
+      "mat_wood": { "color": "#b98d5c", "roughness": 0.72, "metalness": 0.0 }
+    }
+  },
+  {
+    "id": "arctic",
+    "label": "Arctic white",
+    "materials": {
+      "mat_frame": { "color": "#cfd4da", "roughness": 0.45, "metalness": 0.25 },
+      "mat_pad": { "color": "#2f5d8a", "roughness": 0.75, "metalness": 0.0 },
+      "mat_chrome": { "color": "#cfd3d8", "roughness": 0.14, "metalness": 1.0 },
+      "mat_grip": { "color": "#2a2c30", "roughness": 0.9, "metalness": 0.05 },
+      "mat_plate": { "color": "#3a3d42", "roughness": 0.55, "metalness": 0.4 },
+      "mat_stack": { "color": "#9aa1aa", "roughness": 0.35, "metalness": 0.85 },
+      "mat_accent": { "color": "#2aa3d8", "roughness": 0.4, "metalness": 0.1 },
+      "mat_cable": { "color": "#22252a", "roughness": 0.5, "metalness": 0.3 },
+      "mat_rubber": { "color": "#1a1b1e", "roughness": 0.95, "metalness": 0.0 },
+      "mat_wood": { "color": "#d8b68a", "roughness": 0.7, "metalness": 0.0 }
+    }
+  },
+  {
+    "id": "heritage",
+    "label": "Heritage red",
+    "materials": {
+      "mat_frame": { "color": "#8e1f1f", "roughness": 0.42, "metalness": 0.3 },
+      "mat_pad": { "color": "#1b1b1d", "roughness": 0.7, "metalness": 0.0 },
+      "mat_chrome": { "color": "#e2c58b", "roughness": 0.2, "metalness": 1.0 },
+      "mat_grip": { "color": "#3a2a1f", "roughness": 0.88, "metalness": 0.05 },
+      "mat_plate": { "color": "#1f1f21", "roughness": 0.6, "metalness": 0.5 },
+      "mat_stack": { "color": "#6b6e73", "roughness": 0.4, "metalness": 0.8 },
+      "mat_accent": { "color": "#f2c230", "roughness": 0.35, "metalness": 0.2 },
+      "mat_cable": { "color": "#1a1a1a", "roughness": 0.5, "metalness": 0.3 },
+      "mat_rubber": { "color": "#141414", "roughness": 0.95, "metalness": 0.0 },
+      "mat_wood": { "color": "#7a4f2c", "roughness": 0.65, "metalness": 0.0 }
+    }
+  }
+]

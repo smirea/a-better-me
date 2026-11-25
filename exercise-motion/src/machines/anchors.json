@@ -1,0 +1,8531 @@
+[
+ {
+  "id": "adjustable-bench",
+  "name": "Adjustable Bench",
+  "kind": "machine",
+  "file": "machines/adjustable-bench",
+  "facing": "Lies or sits along Z: seat toward +Z, backrest toward -Z (head end).",
+  "notes": "Flat 0\u00b0, incline 15\u201360\u00b0, upright 75\u201385\u00b0; seat tilts 0\u201320\u00b0. Covers flat, incline, seated, and bench-supported rows.",
+  "bounds": {
+   "min": [
+    -0.295,
+    -0.0,
+    -0.875
+   ],
+   "max": [
+    0.295,
+    0.445,
+    0.5
+   ]
+  },
+  "tris": 4236,
+  "bytes": 116780,
+  "materials": [
+   "mat_accent",
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip",
+   "mat_pad",
+   "mat_rubber"
+  ],
+  "params": {
+   "seatTopY": 0.445,
+   "hinge": [
+    0.0,
+    0.375,
+    0.0
+   ],
+   "padThickness": 0.07,
+   "strutLength": 0.4,
+   "ladderY": 0.31
+  },
+  "nodes": {
+   "backrest": {
+    "pivot": [
+     0.0,
+     0.375,
+     0.0
+    ],
+    "parent": null
+   },
+   "back_strut": {
+    "pivot": [
+     0.0,
+     0.33,
+     -0.25
+    ],
+    "parent": "backrest"
+   },
+   "seat": {
+    "pivot": [
+     0.0,
+     0.375,
+     0.025
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "spine",
+    "shape": "box",
+    "size": [
+     0.08,
+     0.05,
+     1.26
+    ],
+    "pos": [
+     0.0,
+     0.26,
+     -0.13
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "leg_rear",
+    "shape": "box",
+    "size": [
+     0.06,
+     0.06,
+     0.193
+    ],
+    "pos": [
+     0.0,
+     0.1385,
+     -0.7
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.707107,
+     0.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "leg_front",
+    "shape": "box",
+    "size": [
+     0.06,
+     0.06,
+     0.193
+    ],
+    "pos": [
+     0.0,
+     0.1385,
+     0.45
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.707107,
+     0.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "foot_rear",
+    "shape": "box",
+    "size": [
+     0.07,
+     0.06,
+     0.52
+    ],
+    "pos": [
+     0.0,
+     0.042,
+     -0.7
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "foot_front",
+    "shape": "box",
+    "size": [
+     0.07,
+     0.06,
+     0.4
+    ],
+    "pos": [
+     0.0,
+     0.042,
+     0.45
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "back_pad",
+    "shape": "box",
+    "size": [
+     0.29,
+     0.07,
+     0.86
+    ],
+    "pos": [
+     0.0,
+     0.41,
+     -0.445
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true,
+    "node": "backrest"
+   },
+   {
+    "id": "seat_pad",
+    "shape": "box",
+    "size": [
+     0.3,
+     0.07,
+     0.36
+    ],
+    "pos": [
+     0.0,
+     0.41,
+     0.205
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true,
+    "node": "seat"
+   }
+  ],
+  "anchors": {
+   "surfaces": {
+    "back": {
+     "origin": [
+      0.0,
+      0.445,
+      -0.015
+     ],
+     "normal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      -1.0
+     ],
+     "node": "backrest"
+    },
+    "seat": {
+     "origin": [
+      0.0,
+      0.445,
+      0.025
+     ],
+     "normal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "node": "seat"
+    }
+   },
+   "pivots": {
+    "backrest": {
+     "origin": [
+      0.0,
+      0.375,
+      0.0
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "minAngleRad": 0.0,
+     "maxAngleRad": 1.48353,
+     "nodeName": "backrest"
+    },
+    "seat": {
+     "origin": [
+      0.0,
+      0.375,
+      0.025
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "minAngleRad": -0.349066,
+     "maxAngleRad": 0.0,
+     "nodeName": "seat"
+    }
+   },
+   "points": {
+    "strut_foot": {
+     "pos": [
+      0.0,
+      0.33,
+      -0.65
+     ],
+     "node": "back_strut"
+    }
+   }
+  }
+ },
+ {
+  "id": "aerobic-step",
+  "name": "Aerobic Step",
+  "kind": "machine",
+  "file": "machines/aerobic-step",
+  "facing": "Long axis along X; step up toward +Z or -Z.",
+  "notes": "Fixed 0.15 m deck.",
+  "bounds": {
+   "min": [
+    -0.46,
+    0.0,
+    -0.19
+   ],
+   "max": [
+    0.46,
+    0.15,
+    0.19
+   ]
+  },
+  "tris": 888,
+  "bytes": 21156,
+  "materials": [
+   "mat_frame",
+   "mat_rubber"
+  ],
+  "params": {
+   "topY": 0.15
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "deck",
+    "shape": "box",
+    "size": [
+     0.92,
+     0.05,
+     0.36
+    ],
+    "pos": [
+     0.0,
+     0.115,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "surfaces": {
+    "top": {
+     "origin": [
+      0.0,
+      0.15,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    }
+   }
+  }
+ },
+ {
+  "id": "back-extension-bench",
+  "name": "45\u00b0 Back Extension",
+  "kind": "machine",
+  "file": "machines/back-extension-bench",
+  "facing": "Lifter faces down the slope toward +Z: feet on the rear footplate, thighs on the hip pads.",
+  "notes": "`hip_pad` slides along the 45\u00b0 body line (`rails.hip_pad`).",
+  "bounds": {
+   "min": [
+    -0.375,
+    0.0,
+    -0.845
+   ],
+   "max": [
+    0.375,
+    0.74442,
+    0.795
+   ]
+  },
+  "tris": 3840,
+  "bytes": 106580,
+  "materials": [
+   "mat_accent",
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip",
+   "mat_pad",
+   "mat_rubber"
+  ],
+  "params": {},
+  "nodes": {
+   "hip_pad": {
+    "pivot": [
+     0.0,
+     0.624264,
+     0.090538
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "footplate",
+    "shape": "box",
+    "size": [
+     0.5,
+     0.03,
+     0.3
+    ],
+    "pos": [
+     0.0,
+     0.189393,
+     -0.570607
+    ],
+    "quat": [
+     0.0,
+     0.92388,
+     0.382683,
+     0.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "ankle_roller",
+    "shape": "capsule",
+    "size": [
+     0.056,
+     0.3,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.344957,
+     -0.577678
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "main_beam",
+    "shape": "box",
+    "size": [
+     0.08,
+     0.08,
+     0.877193
+    ],
+    "pos": [
+     0.0,
+     0.276421,
+     -0.353015
+    ],
+    "quat": [
+     -0.171519,
+     -0.171519,
+     -0.685989,
+     0.685989
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "hip_pad",
+    "shape": "box",
+    "size": [
+     0.4,
+     0.075,
+     0.3
+    ],
+    "pos": [
+     0.0,
+     0.624264,
+     0.090538
+    ],
+    "quat": [
+     -0.382683,
+     0.0,
+     -0.0,
+     0.92388
+    ],
+    "material": "pad",
+    "collide": true,
+    "node": "hip_pad"
+   },
+   {
+    "id": "grip_handle_L",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.18,
+     0.0
+    ],
+    "pos": [
+     0.3,
+     0.588909,
+     0.111751
+    ],
+    "quat": [
+     0.0,
+     -0.5,
+     0.5,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_handle_R",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.18,
+     0.0
+    ],
+    "pos": [
+     -0.3,
+     0.588909,
+     0.111751
+    ],
+    "quat": [
+     0.0,
+     -0.5,
+     0.5,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "handle_L": {
+     "pos": [
+      0.3,
+      0.588909,
+      0.111751
+     ],
+     "axis": [
+      0.0,
+      0.707107,
+      0.707107
+     ],
+     "palmNormal": [
+      0.0,
+      0.707107,
+      -0.707107
+     ],
+     "radius": 0.016,
+     "length": 0.18,
+     "grip": "neutral"
+    },
+    "handle_R": {
+     "pos": [
+      -0.3,
+      0.588909,
+      0.111751
+     ],
+     "axis": [
+      0.0,
+      0.707107,
+      0.707107
+     ],
+     "palmNormal": [
+      0.0,
+      0.707107,
+      -0.707107
+     ],
+     "radius": 0.016,
+     "length": 0.18,
+     "grip": "neutral"
+    }
+   },
+   "surfaces": {
+    "feet": {
+     "origin": [
+      0.0,
+      0.115147,
+      -0.475147
+     ],
+     "normal": [
+      0.0,
+      0.707107,
+      0.707107
+     ],
+     "up": [
+      0.0,
+      0.707107,
+      -0.707107
+     ]
+    },
+    "ankle_roller": {
+     "origin": [
+      0.0,
+      0.305359,
+      -0.53808
+     ],
+     "normal": [
+      -0.0,
+      -0.707107,
+      0.707107
+     ],
+     "up": [
+      0.0,
+      0.707107,
+      0.707107
+     ]
+    },
+    "hip_pad": {
+     "origin": [
+      0.0,
+      0.650781,
+      0.064022
+     ],
+     "normal": [
+      0.0,
+      0.707107,
+      -0.707107
+     ],
+     "up": [
+      0.0,
+      0.707107,
+      0.707107
+     ],
+     "node": "hip_pad"
+    }
+   },
+   "footplates": {
+    "feet": {
+     "surface": "feet",
+     "width": 0.46,
+     "minAlong": 0.0,
+     "maxAlong": 0.24
+    }
+   },
+   "rails": {
+    "hip_pad": {
+     "origin": [
+      0.0,
+      0.624264,
+      0.090538
+     ],
+     "dir": [
+      0.0,
+      0.707107,
+      0.707107
+     ],
+     "minTravel": -0.1,
+     "maxTravel": 0.12,
+     "nodeName": "hip_pad"
+    }
+   }
+  }
+ },
+ {
+  "id": "chest-press-machine",
+  "name": "Chest Press Machine",
+  "kind": "machine",
+  "file": "machines/chest-press-machine",
+  "facing": "Lifter sits facing +Z against the upright back pad; arms swing forward from overhead pivots.",
+  "notes": "Each arm rotates about world X at its overhead pivot; negative X rotation presses forward.",
+  "bounds": {
+   "min": [
+    -0.385821,
+    0.0,
+    -0.845
+   ],
+   "max": [
+    0.385821,
+    1.96,
+    0.565
+   ]
+  },
+  "tris": 8632,
+  "bytes": 249436,
+  "materials": [
+   "mat_accent",
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip",
+   "mat_pad",
+   "mat_rubber",
+   "mat_stack"
+  ],
+  "params": {
+   "seatTopY": 0.46,
+   "stackTravel": 0.9399999999999998
+  },
+  "nodes": {
+   "stack": {
+    "pivot": [
+     0.0,
+     0.76,
+     -0.55
+    ],
+    "parent": null
+   },
+   "arm_L": {
+    "pivot": [
+     0.33,
+     1.86,
+     0.4
+    ],
+    "parent": null
+   },
+   "arm_R": {
+    "pivot": [
+     -0.33,
+     1.86,
+     0.4
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "seat_pad",
+    "shape": "box",
+    "size": [
+     0.4,
+     0.07,
+     0.38
+    ],
+    "pos": [
+     0.0,
+     0.425,
+     0.18
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "back_pad",
+    "shape": "box",
+    "size": [
+     0.4,
+     0.08,
+     0.72
+    ],
+    "pos": [
+     0.0,
+     0.860832,
+     -0.121105
+    ],
+    "quat": [
+     0.0,
+     0.75471,
+     0.656059,
+     0.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "seat_post",
+    "shape": "box",
+    "size": [
+     0.08,
+     0.08,
+     0.305
+    ],
+    "pos": [
+     0.0,
+     0.2225,
+     0.18
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.707107,
+     0.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "back_post",
+    "shape": "box",
+    "size": [
+     0.08,
+     0.08,
+     1.23
+    ],
+    "pos": [
+     0.0,
+     0.685,
+     -0.2
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.707107,
+     0.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "stack_tower",
+    "shape": "box",
+    "size": [
+     0.44,
+     1.9,
+     0.3
+    ],
+    "pos": [
+     0.0,
+     0.95,
+     -0.55
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "grip_handle_L",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.14,
+     0.0
+    ],
+    "pos": [
+     0.26,
+     1.0,
+     0.2
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true,
+    "node": "arm_L"
+   },
+   {
+    "id": "grip_neutral_L",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.15,
+     0.0
+    ],
+    "pos": [
+     0.33,
+     0.98,
+     0.13
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.707107,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true,
+    "node": "arm_L"
+   },
+   {
+    "id": "grip_handle_R",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.14,
+     0.0
+    ],
+    "pos": [
+     -0.26,
+     1.0,
+     0.2
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true,
+    "node": "arm_R"
+   },
+   {
+    "id": "grip_neutral_R",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.15,
+     0.0
+    ],
+    "pos": [
+     -0.33,
+     0.98,
+     0.13
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.707107,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true,
+    "node": "arm_R"
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "handle_L": {
+     "pos": [
+      0.26,
+      1.0,
+      0.2
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "radius": 0.016,
+     "length": 0.14,
+     "grip": "press",
+     "node": "arm_L"
+    },
+    "neutral_L": {
+     "pos": [
+      0.33,
+      0.98,
+      0.13
+     ],
+     "axis": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "palmNormal": [
+      -1.0,
+      0.0,
+      0.0
+     ],
+     "radius": 0.016,
+     "length": 0.15,
+     "grip": "neutral",
+     "node": "arm_L"
+    },
+    "handle_R": {
+     "pos": [
+      -0.26,
+      1.0,
+      0.2
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "radius": 0.016,
+     "length": 0.14,
+     "grip": "press",
+     "node": "arm_R"
+    },
+    "neutral_R": {
+     "pos": [
+      -0.33,
+      0.98,
+      0.13
+     ],
+     "axis": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "palmNormal": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "radius": 0.016,
+     "length": 0.15,
+     "grip": "neutral",
+     "node": "arm_R"
+    }
+   },
+   "surfaces": {
+    "seat": {
+     "origin": [
+      0.0,
+      0.46,
+      -0.01
+     ],
+     "normal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "back": {
+     "origin": [
+      0.0,
+      0.5,
+      -0.03
+     ],
+     "normal": [
+      0.0,
+      0.139173,
+      0.990268
+     ],
+     "up": [
+      0.0,
+      0.990268,
+      -0.139173
+     ]
+    }
+   },
+   "pivots": {
+    "arm_L": {
+     "origin": [
+      0.33,
+      1.86,
+      0.4
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "minAngleRad": -0.698132,
+     "maxAngleRad": 0.174533,
+     "nodeName": "arm_L"
+    },
+    "arm_R": {
+     "origin": [
+      -0.33,
+      1.86,
+      0.4
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "minAngleRad": -0.698132,
+     "maxAngleRad": 0.174533,
+     "nodeName": "arm_R"
+    }
+   }
+  }
+ },
+ {
+  "id": "decline-bench",
+  "name": "Decline Bench Press Station",
+  "kind": "machine",
+  "file": "machines/decline-bench",
+  "facing": "Lifter lies head-down toward -Z at 20\u00b0, knees hooked over the rollers at +Z; bar racks above the chest.",
+  "notes": "Also the plain decline bench for sit-ups and dumbbell work.",
+  "bounds": {
+   "min": [
+    -0.605,
+    0.0,
+    -0.995
+   ],
+   "max": [
+    0.605,
+    1.266,
+    0.618179
+   ]
+  },
+  "tris": 4824,
+  "bytes": 127572,
+  "materials": [
+   "mat_frame",
+   "mat_pad",
+   "mat_rubber"
+  ],
+  "params": {},
+  "nodes": {
+   "jhook_L": {
+    "pivot": [
+     0.56,
+     1.12,
+     -0.665
+    ],
+    "parent": null
+   },
+   "jhook_R": {
+    "pivot": [
+     -0.56,
+     1.12,
+     -0.665
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "back_pad",
+    "shape": "box",
+    "size": [
+     0.3,
+     0.07,
+     0.94
+    ],
+    "pos": [
+     0.0,
+     0.366361,
+     -0.429685
+    ],
+    "quat": [
+     0.0,
+     0.984808,
+     -0.173648,
+     0.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "seat_pad",
+    "shape": "box",
+    "size": [
+     0.3,
+     0.07,
+     0.34
+    ],
+    "pos": [
+     0.0,
+     0.608907,
+     0.186533
+    ],
+    "quat": [
+     -0.241922,
+     0.0,
+     -0.0,
+     0.970296
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "roller_0",
+    "shape": "capsule",
+    "size": [
+     0.056,
+     0.3,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.807789,
+     0.423179
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "roller_1",
+    "shape": "capsule",
+    "size": [
+     0.056,
+     0.3,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.627789,
+     0.523179
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "seat_post",
+    "shape": "box",
+    "size": [
+     0.07,
+     0.07,
+     0.396346
+    ],
+    "pos": [
+     0.0,
+     0.268015,
+     0.042101
+    ],
+    "quat": [
+     0.0,
+     0.721061,
+     0.692871,
+     0.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "base_rear",
+    "shape": "box",
+    "size": [
+     0.075,
+     0.06,
+     1.12
+    ],
+    "pos": [
+     0.0,
+     0.042,
+     -0.95
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "upright_L",
+    "shape": "box",
+    "size": [
+     0.075,
+     1.188,
+     0.075
+    ],
+    "pos": [
+     0.56,
+     0.666,
+     -0.74
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "upright_R",
+    "shape": "box",
+    "size": [
+     0.075,
+     1.188,
+     0.075
+    ],
+    "pos": [
+     -0.56,
+     0.666,
+     -0.74
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "surfaces": {
+    "back": {
+     "origin": [
+      0.0,
+      0.56,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      0.939693,
+      -0.34202
+     ],
+     "up": [
+      0.0,
+      -0.34202,
+      -0.939693
+     ]
+    },
+    "seat": {
+     "origin": [
+      0.0,
+      0.56,
+      0.02
+     ],
+     "normal": [
+      0.0,
+      0.882948,
+      -0.469472
+     ],
+     "up": [
+      0.0,
+      0.469472,
+      0.882948
+     ]
+    }
+   },
+   "hooks": {
+    "jhook_L": {
+     "pos": [
+      0.56,
+      1.12,
+      -0.665
+     ],
+     "node": "jhook_L"
+    },
+    "jhook_R": {
+     "pos": [
+      -0.56,
+      1.12,
+      -0.665
+     ],
+     "node": "jhook_R"
+    }
+   }
+  }
+ },
+ {
+  "id": "dip-pullup-station",
+  "name": "Dip & Pull-up Station",
+  "kind": "machine",
+  "file": "machines/dip-pullup-station",
+  "facing": "Lifter faces +Z between the dip handles (back to the tower) or hangs from the pull-up bar.",
+  "notes": "Also covers captain's-chair leg raises via the back pad and dip handles.",
+  "bounds": {
+   "min": [
+    -0.62,
+    0.0,
+    -0.745
+   ],
+   "max": [
+    0.62,
+    2.29,
+    0.665
+   ]
+  },
+  "tris": 4940,
+  "bytes": 142704,
+  "materials": [
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip",
+   "mat_pad",
+   "mat_rubber"
+  ],
+  "params": {
+   "dipY": 1.22,
+   "dipHalfWidth": 0.275,
+   "pullupY": 2.26
+  },
+  "nodes": {
+   "pullup_bar": {
+    "pivot": [
+     0.0,
+     2.26,
+     0.29
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "post_L",
+    "shape": "box",
+    "size": [
+     0.075,
+     2.188,
+     0.075
+    ],
+    "pos": [
+     0.4,
+     1.166,
+     -0.32
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "post_R",
+    "shape": "box",
+    "size": [
+     0.075,
+     2.188,
+     0.075
+    ],
+    "pos": [
+     -0.4,
+     1.166,
+     -0.32
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "back_pad",
+    "shape": "box",
+    "size": [
+     0.3,
+     0.5,
+     0.07
+    ],
+    "pos": [
+     0.0,
+     1.15,
+     -0.25
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "dip_L",
+    "shape": "cylinder",
+    "size": [
+     0.019,
+     0.63,
+     0.0
+    ],
+    "pos": [
+     0.275,
+     1.22,
+     0.015
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "grip_dip_L",
+    "shape": "cylinder",
+    "size": [
+     0.0198,
+     0.29,
+     0.0
+    ],
+    "pos": [
+     0.275,
+     1.22,
+     0.165
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "dip_R",
+    "shape": "cylinder",
+    "size": [
+     0.019,
+     0.63,
+     0.0
+    ],
+    "pos": [
+     -0.275,
+     1.22,
+     0.015
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "grip_dip_R",
+    "shape": "cylinder",
+    "size": [
+     0.0198,
+     0.29,
+     0.0
+    ],
+    "pos": [
+     -0.275,
+     1.22,
+     0.165
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_neutral_L",
+    "shape": "cylinder",
+    "size": [
+     0.0168,
+     0.25,
+     0.0
+    ],
+    "pos": [
+     0.4,
+     2.195,
+     -0.015
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_neutral_R",
+    "shape": "cylinder",
+    "size": [
+     0.0168,
+     0.25,
+     0.0
+    ],
+    "pos": [
+     -0.4,
+     2.195,
+     -0.015
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "pullup_bar",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     1.24,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     2.26,
+     0.29
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true,
+    "node": "pullup_bar"
+   },
+   {
+    "id": "grip_pullup",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     1.2,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     2.26,
+     0.29
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "dip_L": {
+     "pos": [
+      0.275,
+      1.22,
+      0.165
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "palmNormal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "radius": 0.0198,
+     "length": 0.29,
+     "grip": "neutral"
+    },
+    "dip_R": {
+     "pos": [
+      -0.275,
+      1.22,
+      0.165
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "palmNormal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "radius": 0.0198,
+     "length": 0.29,
+     "grip": "neutral"
+    },
+    "neutral_L": {
+     "pos": [
+      0.4,
+      2.195,
+      -0.015
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "palmNormal": [
+      -1.0,
+      0.0,
+      0.0
+     ],
+     "radius": 0.0168,
+     "length": 0.25,
+     "grip": "hang"
+    },
+    "neutral_R": {
+     "pos": [
+      -0.4,
+      2.195,
+      -0.015
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "palmNormal": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "radius": 0.0168,
+     "length": 0.25,
+     "grip": "hang"
+    },
+    "pullup": {
+     "pos": [
+      0.0,
+      2.26,
+      0.29
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "radius": 0.016,
+     "length": 1.2,
+     "grip": "hang"
+    }
+   },
+   "surfaces": {
+    "back": {
+     "origin": [
+      0.0,
+      0.9,
+      -0.215
+     ],
+     "normal": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "up": [
+      0.0,
+      1.0,
+      0.0
+     ]
+    }
+   }
+  }
+ },
+ {
+  "id": "dual-adjustable-pulley",
+  "name": "Dual Adjustable Pulley",
+  "kind": "machine",
+  "file": "machines/dual-adjustable-pulley",
+  "facing": "Lifter stands between the columns facing +Z; pulleys face +Z and swivel toward the handle.",
+  "notes": "One rig for crossovers, functional trainers, dual cable towers, and motorized dual cables.",
+  "bounds": {
+   "min": [
+    -1.0,
+    0.0,
+    -0.525
+   ],
+   "max": [
+    1.0,
+    2.285,
+    0.345
+   ]
+  },
+  "tris": 13752,
+  "bytes": 411776,
+  "materials": [
+   "mat_accent",
+   "mat_cable",
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip",
+   "mat_plate",
+   "mat_rubber",
+   "mat_stack"
+  ],
+  "params": {
+   "halfWidth": 0.8,
+   "bindExitY": 1.147999882698059,
+   "stackTravel": 1.0579999999999998
+  },
+  "nodes": {
+   "stack_L": {
+    "pivot": [
+     0.8,
+     0.802,
+     -0.3
+    ],
+    "parent": null
+   },
+   "carriage_L": {
+    "pivot": [
+     0.8,
+     1.29,
+     0.08
+    ],
+    "parent": null
+   },
+   "pulley_L": {
+    "pivot": [
+     0.8,
+     1.22,
+     0.125
+    ],
+    "parent": "carriage_L"
+   },
+   "stack_R": {
+    "pivot": [
+     -0.8,
+     0.802,
+     -0.3
+    ],
+    "parent": null
+   },
+   "carriage_R": {
+    "pivot": [
+     -0.8,
+     1.29,
+     0.08
+    ],
+    "parent": null
+   },
+   "pulley_R": {
+    "pivot": [
+     -0.8,
+     1.22,
+     0.125
+    ],
+    "parent": "carriage_R"
+   },
+   "pullup_bar": {
+    "pivot": [
+     0.0,
+     2.12,
+     0.17
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "column_L",
+    "shape": "box",
+    "size": [
+     0.09,
+     2.168,
+     0.09
+    ],
+    "pos": [
+     0.8,
+     1.156,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "stack_guard_L",
+    "shape": "box",
+    "size": [
+     0.4,
+     2.24,
+     0.18
+    ],
+    "pos": [
+     0.8,
+     1.12,
+     -0.3
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "column_R",
+    "shape": "box",
+    "size": [
+     0.09,
+     2.168,
+     0.09
+    ],
+    "pos": [
+     -0.8,
+     1.156,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "stack_guard_R",
+    "shape": "box",
+    "size": [
+     0.4,
+     2.24,
+     0.18
+    ],
+    "pos": [
+     -0.8,
+     1.12,
+     -0.3
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "top_beam",
+    "shape": "box",
+    "size": [
+     0.08,
+     0.08,
+     1.6
+    ],
+    "pos": [
+     0.0,
+     2.21,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "base_rear",
+    "shape": "box",
+    "size": [
+     0.08,
+     0.06,
+     1.6
+    ],
+    "pos": [
+     0.0,
+     0.042,
+     -0.48
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "pullup_bar",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     1.24,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     2.12,
+     0.17
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true,
+    "node": "pullup_bar"
+   },
+   {
+    "id": "grip_pullup",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     1.0,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     2.12,
+     0.17
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "pullup": {
+     "pos": [
+      0.0,
+      2.12,
+      0.17
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "radius": 0.016,
+     "length": 1.0,
+     "grip": "hang"
+    }
+   },
+   "pulleys": {
+    "pulley_L": {
+     "pos": [
+      0.8,
+      1.148,
+      0.21
+     ],
+     "exitDir": [
+      -0.348937,
+      0.0,
+      0.937146
+     ],
+     "nodeName": "pulley_L",
+     "stackNode": "stack_L",
+     "travelRatio": 0.5,
+     "stackTravel": 1.058
+    },
+    "pulley_R": {
+     "pos": [
+      -0.8,
+      1.148,
+      0.21
+     ],
+     "exitDir": [
+      0.348937,
+      0.0,
+      0.937146
+     ],
+     "nodeName": "pulley_R",
+     "stackNode": "stack_R",
+     "travelRatio": 0.5,
+     "stackTravel": 1.058
+    }
+   },
+   "rails": {
+    "carriage_L": {
+     "origin": [
+      0.8,
+      1.148,
+      0.21
+     ],
+     "dir": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "minTravel": -0.868,
+     "maxTravel": 0.792,
+     "nodeName": "carriage_L"
+    },
+    "carriage_R": {
+     "origin": [
+      -0.8,
+      1.148,
+      0.21
+     ],
+     "dir": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "minTravel": -0.868,
+     "maxTravel": 0.792,
+     "nodeName": "carriage_R"
+    }
+   },
+   "points": {
+    "exit_L": {
+     "pos": [
+      0.8,
+      1.148,
+      0.21
+     ],
+     "node": "pulley_L"
+    },
+    "exit_R": {
+     "pos": [
+      -0.8,
+      1.148,
+      0.21
+     ],
+     "node": "pulley_R"
+    }
+   }
+  }
+ },
+ {
+  "id": "ghd",
+  "name": "Glute-Ham Developer",
+  "kind": "machine",
+  "file": "machines/ghd",
+  "facing": "Lifter lies prone along Z, head toward +Z, thighs on the round hip pad, feet against the rear footplate.",
+  "notes": "`foot_carriage` slides along Z to fit the lifter's thigh length (`rails.foot_carriage`).",
+  "bounds": {
+   "min": [
+    -0.355,
+    0.0,
+    -1.095
+   ],
+   "max": [
+    0.355,
+    1.29,
+    0.695
+   ]
+  },
+  "tris": 3992,
+  "bytes": 116648,
+  "materials": [
+   "mat_accent",
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip",
+   "mat_pad",
+   "mat_rubber"
+  ],
+  "params": {},
+  "nodes": {
+   "foot_carriage": {
+    "pivot": [
+     0.0,
+     0.66,
+     -0.62
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "hip_pad",
+    "shape": "cylinder",
+    "size": [
+     0.13,
+     0.4,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     1.02,
+     0.05
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "pad_post",
+    "shape": "box",
+    "size": [
+     0.08,
+     0.08,
+     0.81
+    ],
+    "pos": [
+     0.0,
+     0.475,
+     0.05
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.707107,
+     0.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "rail_beam",
+    "shape": "box",
+    "size": [
+     0.08,
+     0.08,
+     0.95
+    ],
+    "pos": [
+     0.0,
+     0.62,
+     -0.475
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "footplate",
+    "shape": "box",
+    "size": [
+     0.44,
+     0.3,
+     0.025
+    ],
+    "pos": [
+     0.0,
+     1.14,
+     -0.76
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true,
+    "node": "foot_carriage"
+   },
+   {
+    "id": "ankle_roller_0",
+    "shape": "capsule",
+    "size": [
+     0.05,
+     0.26,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     1.0,
+     -0.67
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true,
+    "node": "foot_carriage"
+   },
+   {
+    "id": "ankle_roller_1",
+    "shape": "capsule",
+    "size": [
+     0.05,
+     0.26,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     1.18,
+     -0.67
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true,
+    "node": "foot_carriage"
+   },
+   {
+    "id": "grip_handle_L",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.16,
+     0.0
+    ],
+    "pos": [
+     0.28,
+     0.97,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_handle_R",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.16,
+     0.0
+    ],
+    "pos": [
+     -0.28,
+     0.97,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "handle_L": {
+     "pos": [
+      0.28,
+      0.97,
+      0.0
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "palmNormal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "radius": 0.016,
+     "length": 0.16,
+     "grip": "neutral"
+    },
+    "handle_R": {
+     "pos": [
+      -0.28,
+      0.97,
+      0.0
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "palmNormal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "radius": 0.016,
+     "length": 0.16,
+     "grip": "neutral"
+    }
+   },
+   "surfaces": {
+    "hip_pad": {
+     "origin": [
+      0.0,
+      1.15,
+      0.05
+     ],
+     "normal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "feet": {
+     "origin": [
+      0.0,
+      1.01,
+      -0.7455
+     ],
+     "normal": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "up": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "node": "foot_carriage"
+    }
+   },
+   "footplates": {
+    "feet": {
+     "surface": "feet",
+     "width": 0.4,
+     "minAlong": 0.0,
+     "maxAlong": 0.26
+    }
+   },
+   "rails": {
+    "foot_carriage": {
+     "origin": [
+      0.0,
+      0.66,
+      -0.62
+     ],
+     "dir": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "minTravel": -0.15,
+     "maxTravel": 0.2,
+     "nodeName": "foot_carriage"
+    }
+   }
+  }
+ },
+ {
+  "id": "landmine",
+  "name": "Landmine",
+  "kind": "machine",
+  "file": "machines/landmine",
+  "facing": "Pivot at the origin; the sleeve points toward -Z where the lifter stands facing +Z.",
+  "notes": "`yaw` turns about +Y, its child `sleeve` pitches about X (+ raises the bar end). A barbell prop slides into the sleeve.",
+  "bounds": {
+   "min": [
+    -0.28,
+    0.0,
+    -0.306
+   ],
+   "max": [
+    0.28,
+    0.148,
+    0.28
+   ]
+  },
+  "tris": 1108,
+  "bytes": 36212,
+  "materials": [
+   "mat_chrome",
+   "mat_frame",
+   "mat_rubber"
+  ],
+  "params": {},
+  "nodes": {
+   "yaw": {
+    "pivot": [
+     0.0,
+     0.11,
+     0.0
+    ],
+    "parent": null
+   },
+   "sleeve": {
+    "pivot": [
+     0.0,
+     0.11,
+     0.0
+    ],
+    "parent": "yaw"
+   }
+  },
+  "parts": [
+   {
+    "id": "base",
+    "shape": "box",
+    "size": [
+     0.56,
+     0.012,
+     0.56
+    ],
+    "pos": [
+     0.0,
+     0.006,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "sleeve",
+    "shape": "cylinder",
+    "size": [
+     0.034,
+     0.28,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.11,
+     -0.16
+    ],
+    "quat": [
+     -0.0,
+     0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "steel",
+    "collide": true,
+    "node": "sleeve"
+   }
+  ],
+  "anchors": {
+   "pivots": {
+    "yaw": {
+     "origin": [
+      0.0,
+      0.11,
+      0.0
+     ],
+     "axis": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "minAngleRad": -1.570796,
+     "maxAngleRad": 1.570796,
+     "nodeName": "yaw"
+    },
+    "sleeve": {
+     "origin": [
+      0.0,
+      0.11,
+      0.0
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "minAngleRad": -0.034907,
+     "maxAngleRad": 1.22173,
+     "nodeName": "sleeve"
+    }
+   },
+   "points": {
+    "sleeve_mouth": {
+     "pos": [
+      0.0,
+      0.11,
+      -0.3
+     ],
+     "node": "sleeve"
+    }
+   }
+  }
+ },
+ {
+  "id": "lat-pulldown",
+  "name": "Lat Pulldown",
+  "kind": "machine",
+  "file": "machines/lat-pulldown",
+  "facing": "Lifter sits facing +Z toward the column, knees under the thigh rollers; cable drops from the boom above the head.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.295,
+    0.0,
+    -0.665
+   ],
+   "max": [
+    0.295,
+    2.215,
+    0.675
+   ]
+  },
+  "tris": 8128,
+  "bytes": 236924,
+  "materials": [
+   "mat_accent",
+   "mat_cable",
+   "mat_chrome",
+   "mat_frame",
+   "mat_pad",
+   "mat_plate",
+   "mat_rubber",
+   "mat_stack"
+  ],
+  "params": {
+   "seatTopY": 0.47,
+   "stackTravel": 1.1400000000000001
+  },
+  "nodes": {
+   "stack": {
+    "pivot": [
+     0.0,
+     0.76,
+     0.5
+    ],
+    "parent": null
+   },
+   "thigh_pad": {
+    "pivot": [
+     0.0,
+     0.69,
+     -0.12
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "seat_pad",
+    "shape": "box",
+    "size": [
+     0.38,
+     0.07,
+     0.36
+    ],
+    "pos": [
+     0.0,
+     0.435,
+     -0.34
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "seat_post",
+    "shape": "box",
+    "size": [
+     0.07,
+     0.07,
+     0.32
+    ],
+    "pos": [
+     0.0,
+     0.23,
+     -0.34
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.707107,
+     0.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "column",
+    "shape": "box",
+    "size": [
+     0.44,
+     2.1,
+     0.3
+    ],
+    "pos": [
+     0.0,
+     1.05,
+     0.5
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "boom",
+    "shape": "box",
+    "size": [
+     0.09,
+     0.09,
+     0.92
+    ],
+    "pos": [
+     0.0,
+     2.17,
+     0.16
+    ],
+    "quat": [
+     0.0,
+     1.0,
+     0.0,
+     0.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "thigh_pad",
+    "shape": "capsule",
+    "size": [
+     0.058,
+     0.32,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.69,
+     -0.12
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true,
+    "node": "thigh_pad"
+   }
+  ],
+  "anchors": {
+   "surfaces": {
+    "seat": {
+     "origin": [
+      0.0,
+      0.47,
+      -0.52
+     ],
+     "normal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "thigh_pad": {
+     "origin": [
+      0.0,
+      0.632,
+      -0.12
+     ],
+     "normal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "node": "thigh_pad"
+    }
+   },
+   "pulleys": {
+    "pulley": {
+     "pos": [
+      0.0,
+      2.04,
+      -0.26
+     ],
+     "exitDir": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "stackNode": "stack",
+     "travelRatio": 1.0,
+     "stackTravel": 1.14
+    }
+   },
+   "rails": {
+    "thigh_pad": {
+     "origin": [
+      0.0,
+      0.69,
+      -0.12
+     ],
+     "dir": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "minTravel": -0.1,
+     "maxTravel": 0.12,
+     "nodeName": "thigh_pad"
+    }
+   }
+  }
+ },
+ {
+  "id": "leg-extension",
+  "name": "Leg Extension",
+  "kind": "machine",
+  "file": "machines/leg-extension",
+  "facing": "Lifter sits facing +Z; knee axis aligns with the lever pivot at the seat's front edge.",
+  "notes": "`lever_arm` rotates about world X at the knee axis; negative X rotation extends the knee.",
+  "bounds": {
+   "min": [
+    -0.36,
+    0.0,
+    -0.835
+   ],
+   "max": [
+    0.315,
+    1.56,
+    0.645
+   ]
+  },
+  "tris": 8588,
+  "bytes": 249908,
+  "materials": [
+   "mat_accent",
+   "mat_cable",
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip",
+   "mat_pad",
+   "mat_rubber",
+   "mat_stack"
+  ],
+  "params": {
+   "seatTopY": 0.5,
+   "asymmetric": "Lever and cam sit on the lifter's right; x = 0 is the lifter's midline.",
+   "stackTravel": 0.5819999999999999
+  },
+  "nodes": {
+   "stack": {
+    "pivot": [
+     0.0,
+     0.718,
+     -0.66
+    ],
+    "parent": null
+   },
+   "lever_arm": {
+    "pivot": [
+     0.0,
+     0.57,
+     0.34
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "seat_pad",
+    "shape": "box",
+    "size": [
+     0.38,
+     0.07,
+     0.42
+    ],
+    "pos": [
+     0.0,
+     0.465,
+     0.09
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "back_pad",
+    "shape": "box",
+    "size": [
+     0.36,
+     0.07,
+     0.62
+    ],
+    "pos": [
+     0.0,
+     0.851216,
+     -0.118901
+    ],
+    "quat": [
+     0.0,
+     0.642788,
+     0.766044,
+     0.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "seat_post",
+    "shape": "box",
+    "size": [
+     0.08,
+     0.08,
+     0.345
+    ],
+    "pos": [
+     0.0,
+     0.2425,
+     0.09
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.707107,
+     0.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "grip_handle_L",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.18,
+     0.0
+    ],
+    "pos": [
+     0.27,
+     0.45,
+     0.03
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_handle_R",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.18,
+     0.0
+    ],
+    "pos": [
+     -0.27,
+     0.45,
+     0.03
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "stack_tower",
+    "shape": "box",
+    "size": [
+     0.44,
+     1.5,
+     0.3
+    ],
+    "pos": [
+     0.0,
+     0.75,
+     -0.66
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "thigh_pad",
+    "shape": "capsule",
+    "size": [
+     0.05,
+     0.27,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.74,
+     0.18
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "ankle_pad",
+    "shape": "capsule",
+    "size": [
+     0.058,
+     0.3,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.17,
+     0.43
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true,
+    "node": "lever_arm"
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "handle_L": {
+     "pos": [
+      0.27,
+      0.45,
+      0.03
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "palmNormal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "radius": 0.016,
+     "length": 0.18,
+     "grip": "neutral"
+    },
+    "handle_R": {
+     "pos": [
+      -0.27,
+      0.45,
+      0.03
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "palmNormal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "radius": 0.016,
+     "length": 0.18,
+     "grip": "neutral"
+    }
+   },
+   "surfaces": {
+    "seat": {
+     "origin": [
+      0.0,
+      0.5,
+      -0.12
+     ],
+     "normal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "back": {
+     "origin": [
+      0.0,
+      0.53,
+      -0.14
+     ],
+     "normal": [
+      0.0,
+      -0.173648,
+      0.984808
+     ],
+     "up": [
+      0.0,
+      0.984808,
+      0.173648
+     ]
+    },
+    "thigh_pad": {
+     "origin": [
+      0.0,
+      0.69,
+      0.18
+     ],
+     "normal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "ankle_pad": {
+     "origin": [
+      0.0,
+      0.17,
+      0.372
+     ],
+     "normal": [
+      0.0,
+      0.0,
+      -1.0
+     ],
+     "up": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "node": "lever_arm"
+    }
+   },
+   "pivots": {
+    "lever_arm": {
+     "origin": [
+      0.0,
+      0.57,
+      0.34
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "minAngleRad": -1.658063,
+     "maxAngleRad": 0.087266,
+     "nodeName": "lever_arm"
+    }
+   }
+  }
+ },
+ {
+  "id": "leg-press-45",
+  "name": "45\u00b0 Leg Press",
+  "kind": "machine",
+  "file": "machines/leg-press-45",
+  "facing": "Lifter reclines facing +Z, feet on the sled's footplate; the sled rides two rails up and away at 45\u00b0.",
+  "notes": "Sled bind is the bottom stop; travel is along `rails.sled` (0 to 0.62 m).",
+  "bounds": {
+   "min": [
+    -0.61,
+    0.0,
+    -1.145
+   ],
+   "max": [
+    0.61,
+    1.308306,
+    0.995
+   ]
+  },
+  "tris": 6512,
+  "bytes": 184216,
+  "materials": [
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip",
+   "mat_pad",
+   "mat_rubber"
+  ],
+  "params": {
+   "railDir": [
+    0.0,
+    0.7071067690849304,
+    0.7071067690849304
+   ],
+   "footplateCenter": [
+    0.0,
+    0.8600000143051147,
+    -0.11999999731779099
+   ]
+  },
+  "nodes": {
+   "sled": {
+    "pivot": [
+     0.0,
+     0.86,
+     -0.12
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "seat_pad",
+    "shape": "box",
+    "size": [
+     0.42,
+     0.075,
+     0.34
+    ],
+    "pos": [
+     0.0,
+     0.436868,
+     -0.226732
+    ],
+    "quat": [
+     -0.156434,
+     0.0,
+     -0.0,
+     0.987688
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "back_pad",
+    "shape": "box",
+    "size": [
+     0.42,
+     0.075,
+     0.82
+    ],
+    "pos": [
+     0.0,
+     0.673167,
+     -0.757213
+    ],
+    "quat": [
+     0.0,
+     0.93358,
+     0.358368,
+     0.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "grip_handle_L",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.2,
+     0.0
+    ],
+    "pos": [
+     0.3,
+     0.47,
+     -0.38
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_handle_R",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.2,
+     0.0
+    ],
+    "pos": [
+     -0.3,
+     0.47,
+     -0.38
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "rail_L",
+    "shape": "cylinder",
+    "size": [
+     0.024,
+     0.94,
+     0.0
+    ],
+    "pos": [
+     0.32,
+     0.958995,
+     0.417401
+    ],
+    "quat": [
+     0.0,
+     -0.5,
+     0.5,
+     0.707107
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "rail_R",
+    "shape": "cylinder",
+    "size": [
+     0.024,
+     0.94,
+     0.0
+    ],
+    "pos": [
+     -0.32,
+     0.958995,
+     0.417401
+    ],
+    "quat": [
+     0.0,
+     -0.5,
+     0.5,
+     0.707107
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "footplate",
+    "shape": "box",
+    "size": [
+     0.76,
+     0.024,
+     0.62
+    ],
+    "pos": [
+     0.0,
+     0.868485,
+     -0.111515
+    ],
+    "quat": [
+     -0.92388,
+     -0.0,
+     -0.0,
+     0.382683
+    ],
+    "material": "steel",
+    "collide": true,
+    "node": "sled"
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "handle_L": {
+     "pos": [
+      0.3,
+      0.47,
+      -0.38
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "palmNormal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "radius": 0.016,
+     "length": 0.2,
+     "grip": "neutral"
+    },
+    "handle_R": {
+     "pos": [
+      -0.3,
+      0.47,
+      -0.38
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "palmNormal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "radius": 0.016,
+     "length": 0.2,
+     "grip": "neutral"
+    }
+   },
+   "surfaces": {
+    "seat": {
+     "origin": [
+      0.0,
+      0.42,
+      -0.4
+     ],
+     "normal": [
+      0.0,
+      0.951057,
+      -0.309017
+     ],
+     "up": [
+      0.0,
+      0.309017,
+      0.951057
+     ]
+    },
+    "back": {
+     "origin": [
+      0.0,
+      0.42,
+      -0.42
+     ],
+     "normal": [
+      0.0,
+      0.743145,
+      0.669131
+     ],
+     "up": [
+      0.0,
+      0.669131,
+      -0.743145
+     ]
+    },
+    "sled": {
+     "origin": [
+      0.0,
+      0.640797,
+      0.099203
+     ],
+     "normal": [
+      -0.0,
+      -0.707107,
+      -0.707107
+     ],
+     "up": [
+      0.0,
+      0.707107,
+      -0.707107
+     ],
+     "node": "sled"
+    }
+   },
+   "footplates": {
+    "sled": {
+     "surface": "sled",
+     "width": 0.72,
+     "minAlong": 0.0,
+     "maxAlong": 0.62
+    }
+   },
+   "rails": {
+    "sled": {
+     "origin": [
+      0.0,
+      0.86,
+      -0.12
+     ],
+     "dir": [
+      0.0,
+      0.707107,
+      0.707107
+     ],
+     "minTravel": 0.0,
+     "maxTravel": 0.62,
+     "nodeName": "sled"
+    }
+   }
+  }
+ },
+ {
+  "id": "olympic-incline-bench",
+  "name": "Olympic Incline Bench",
+  "kind": "machine",
+  "file": "machines/olympic-incline-bench",
+  "facing": "Lifter sits facing +Z, back on the 45\u00b0 pad rising toward -Z; bar racks behind the head.",
+  "notes": "Fixed 45\u00b0 press station with head-height backrest, open floor for the feet, and two J-cradle heights.",
+  "bounds": {
+   "min": [
+    -0.625,
+    0.0,
+    -0.845
+   ],
+   "max": [
+    0.625,
+    1.526,
+    0.38
+   ]
+  },
+  "tris": 4812,
+  "bytes": 129576,
+  "materials": [
+   "mat_frame",
+   "mat_pad",
+   "mat_rubber"
+  ],
+  "params": {
+   "seatTopY": 0.5,
+   "backAngleDeg": 45
+  },
+  "nodes": {
+   "jhook_L": {
+    "pivot": [
+     0.58,
+     1.36,
+     -0.095
+    ],
+    "parent": null
+   },
+   "jhook_R": {
+    "pivot": [
+     -0.58,
+     1.36,
+     -0.095
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "seat_pad",
+    "shape": "box",
+    "size": [
+     0.32,
+     0.07,
+     0.34
+    ],
+    "pos": [
+     0.0,
+     0.495052,
+     0.173495
+    ],
+    "quat": [
+     -0.087156,
+     0.0,
+     -0.0,
+     0.996195
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "back_pad",
+    "shape": "box",
+    "size": [
+     0.3,
+     0.07,
+     0.84
+    ],
+    "pos": [
+     0.0,
+     0.779307,
+     -0.348805
+    ],
+    "quat": [
+     0.0,
+     0.92388,
+     0.382683,
+     0.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "spine",
+    "shape": "box",
+    "size": [
+     0.08,
+     0.06,
+     1.14
+    ],
+    "pos": [
+     0.0,
+     0.042,
+     -0.23
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "seat_post",
+    "shape": "box",
+    "size": [
+     0.07,
+     0.07,
+     0.341321
+    ],
+    "pos": [
+     0.0,
+     0.24,
+     0.165
+    ],
+    "quat": [
+     0.0,
+     0.737528,
+     0.675317,
+     0.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "base_rear",
+    "shape": "box",
+    "size": [
+     0.075,
+     0.06,
+     1.16
+    ],
+    "pos": [
+     0.0,
+     0.042,
+     -0.8
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "upright_L",
+    "shape": "box",
+    "size": [
+     0.075,
+     1.448,
+     0.075
+    ],
+    "pos": [
+     0.58,
+     0.796,
+     -0.17
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "upright_R",
+    "shape": "box",
+    "size": [
+     0.075,
+     1.448,
+     0.075
+    ],
+    "pos": [
+     -0.58,
+     0.796,
+     -0.17
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "catch_L",
+    "shape": "box",
+    "size": [
+     0.05,
+     0.05,
+     0.28
+    ],
+    "pos": [
+     0.58,
+     0.97,
+     -0.01
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "catch_R",
+    "shape": "box",
+    "size": [
+     0.05,
+     0.05,
+     0.28
+    ],
+    "pos": [
+     -0.58,
+     0.97,
+     -0.01
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "surfaces": {
+    "seat": {
+     "origin": [
+      0.0,
+      0.5,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      0.984808,
+      -0.173648
+     ],
+     "up": [
+      0.0,
+      0.173648,
+      0.984808
+     ]
+    },
+    "back": {
+     "origin": [
+      0.0,
+      0.507071,
+      -0.027071
+     ],
+     "normal": [
+      0.0,
+      0.707107,
+      0.707107
+     ],
+     "up": [
+      0.0,
+      0.707107,
+      -0.707107
+     ]
+    }
+   },
+   "hooks": {
+    "lowhook_L": {
+     "pos": [
+      0.58,
+      1.18,
+      -0.095
+     ]
+    },
+    "jhook_L": {
+     "pos": [
+      0.58,
+      1.36,
+      -0.095
+     ],
+     "node": "jhook_L"
+    },
+    "lowhook_R": {
+     "pos": [
+      -0.58,
+      1.18,
+      -0.095
+     ]
+    },
+    "jhook_R": {
+     "pos": [
+      -0.58,
+      1.36,
+      -0.095
+     ],
+     "node": "jhook_R"
+    }
+   }
+  }
+ },
+ {
+  "id": "plyo-box",
+  "name": "Plyo Box",
+  "kind": "machine",
+  "file": "machines/plyo-box",
+  "facing": "Square to +Z. Rests on any face: 0.51, 0.61, or 0.76 m tall (rotate the GlbRef).",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.382,
+    0.0,
+    -0.306
+   ],
+   "max": [
+    0.382,
+    0.51,
+    0.306
+   ]
+  },
+  "tris": 996,
+  "bytes": 24100,
+  "materials": [
+   "mat_rubber",
+   "mat_wood"
+  ],
+  "params": {
+   "heights": [
+    0.51,
+    0.61,
+    0.76
+   ],
+   "size": [
+    0.76,
+    0.51,
+    0.61
+   ]
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "box",
+    "shape": "box",
+    "size": [
+     0.76,
+     0.51,
+     0.61
+    ],
+    "pos": [
+     0.0,
+     0.255,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "wood",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "surfaces": {
+    "face_0.51": {
+     "origin": [
+      0.0,
+      0.51,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "face_0.61": {
+     "origin": [
+      0.0,
+      0.255,
+      -0.305
+     ],
+     "normal": [
+      0.0,
+      0.0,
+      -1.0
+     ],
+     "up": [
+      0.0,
+      1.0,
+      0.0
+     ]
+    },
+    "face_0.76": {
+     "origin": [
+      0.38,
+      0.255,
+      0.0
+     ],
+     "normal": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    }
+   }
+  }
+ },
+ {
+  "id": "power-rack",
+  "name": "Power Rack",
+  "kind": "machine",
+  "file": "machines/power-rack",
+  "facing": "Lifter stands inside facing +Z; J-hooks on the front uprights' inner face, safeties run front to back.",
+  "notes": "Also stands in for half racks and squat stands.",
+  "bounds": {
+   "min": [
+    -0.6935,
+    0.0,
+    -0.705
+   ],
+   "max": [
+    0.6935,
+    2.3,
+    0.705
+   ]
+  },
+  "tris": 7164,
+  "bytes": 282636,
+  "materials": [
+   "mat_accent",
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip",
+   "mat_rubber"
+  ],
+  "params": {
+   "uprightX": 0.6,
+   "depthZ": 0.45,
+   "height": 2.3,
+   "hookY": 1.3,
+   "safetyY": 0.7
+  },
+  "nodes": {
+   "pullup_bar": {
+    "pivot": [
+     0.0,
+     2.21,
+     0.59
+    ],
+    "parent": null
+   },
+   "jhook_L": {
+    "pivot": [
+     0.6,
+     1.3,
+     0.3525
+    ],
+    "parent": null
+   },
+   "jhook_R": {
+    "pivot": [
+     -0.6,
+     1.3,
+     0.3525
+    ],
+    "parent": null
+   },
+   "safety_L": {
+    "pivot": [
+     0.5345,
+     0.7,
+     0.0
+    ],
+    "parent": null
+   },
+   "safety_R": {
+    "pivot": [
+     -0.5345,
+     0.7,
+     0.0
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "upright_front_L",
+    "shape": "box",
+    "size": [
+     0.075,
+     2.153,
+     0.075
+    ],
+    "pos": [
+     0.6,
+     1.1485,
+     0.45
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "upright_back_L",
+    "shape": "box",
+    "size": [
+     0.075,
+     2.153,
+     0.075
+    ],
+    "pos": [
+     0.6,
+     1.1485,
+     -0.45
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "top_side_L",
+    "shape": "box",
+    "size": [
+     0.075,
+     0.075,
+     0.975
+    ],
+    "pos": [
+     0.6,
+     2.2625,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "upright_front_R",
+    "shape": "box",
+    "size": [
+     0.075,
+     2.153,
+     0.075
+    ],
+    "pos": [
+     -0.6,
+     1.1485,
+     0.45
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "upright_back_R",
+    "shape": "box",
+    "size": [
+     0.075,
+     2.153,
+     0.075
+    ],
+    "pos": [
+     -0.6,
+     1.1485,
+     -0.45
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "top_side_R",
+    "shape": "box",
+    "size": [
+     0.075,
+     0.075,
+     0.975
+    ],
+    "pos": [
+     -0.6,
+     2.2625,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "base_back",
+    "shape": "box",
+    "size": [
+     0.075,
+     0.06,
+     1.2
+    ],
+    "pos": [
+     0.0,
+     0.042,
+     -0.45
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "top_back",
+    "shape": "box",
+    "size": [
+     0.075,
+     0.075,
+     1.275
+    ],
+    "pos": [
+     0.0,
+     2.2625,
+     -0.45
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "top_front",
+    "shape": "box",
+    "size": [
+     0.075,
+     0.075,
+     1.275
+    ],
+    "pos": [
+     0.0,
+     2.2625,
+     0.45
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "pullup_bar",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     1.28,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     2.21,
+     0.59
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true,
+    "node": "pullup_bar"
+   },
+   {
+    "id": "grip_pullup",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     1.04,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     2.21,
+     0.59
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "jhook_L",
+    "shape": "box",
+    "size": [
+     0.06,
+     0.03,
+     0.1
+    ],
+    "pos": [
+     0.6,
+     1.285,
+     0.3625
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true,
+    "node": "jhook_L"
+   },
+   {
+    "id": "jhook_R",
+    "shape": "box",
+    "size": [
+     0.06,
+     0.03,
+     0.1
+    ],
+    "pos": [
+     -0.6,
+     1.285,
+     0.3625
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true,
+    "node": "jhook_R"
+   },
+   {
+    "id": "safety_L",
+    "shape": "box",
+    "size": [
+     0.05,
+     0.05,
+     0.82
+    ],
+    "pos": [
+     0.5345,
+     0.675,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true,
+    "node": "safety_L"
+   },
+   {
+    "id": "safety_R",
+    "shape": "box",
+    "size": [
+     0.05,
+     0.05,
+     0.82
+    ],
+    "pos": [
+     -0.5345,
+     0.675,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true,
+    "node": "safety_R"
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "pullup": {
+     "pos": [
+      0.0,
+      2.21,
+      0.59
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "radius": 0.016,
+     "length": 1.04,
+     "grip": "hang"
+    }
+   },
+   "rails": {
+    "jhook_L": {
+     "origin": [
+      0.6,
+      1.3,
+      0.3525
+     ],
+     "dir": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "minTravel": -0.95,
+     "maxTravel": 0.55,
+     "nodeName": "jhook_L"
+    },
+    "jhook_R": {
+     "origin": [
+      -0.6,
+      1.3,
+      0.3525
+     ],
+     "dir": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "minTravel": -0.95,
+     "maxTravel": 0.55,
+     "nodeName": "jhook_R"
+    },
+    "safety_L": {
+     "origin": [
+      0.5345,
+      0.7,
+      0.0
+     ],
+     "dir": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "minTravel": -0.5,
+     "maxTravel": 0.8,
+     "nodeName": "safety_L"
+    },
+    "safety_R": {
+     "origin": [
+      -0.5345,
+      0.7,
+      0.0
+     ],
+     "dir": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "minTravel": -0.5,
+     "maxTravel": 0.8,
+     "nodeName": "safety_R"
+    }
+   },
+   "hooks": {
+    "jhook_L": {
+     "pos": [
+      0.6,
+      1.3,
+      0.3525
+     ],
+     "node": "jhook_L"
+    },
+    "jhook_R": {
+     "pos": [
+      -0.6,
+      1.3,
+      0.3525
+     ],
+     "node": "jhook_R"
+    },
+    "safety_L": {
+     "pos": [
+      0.5345,
+      0.7,
+      0.0
+     ],
+     "node": "safety_L"
+    },
+    "safety_R": {
+     "pos": [
+      -0.5345,
+      0.7,
+      0.0
+     ],
+     "node": "safety_R"
+    }
+   }
+  }
+ },
+ {
+  "id": "preacher-bench",
+  "name": "Preacher Curl Bench",
+  "kind": "machine",
+  "file": "machines/preacher-bench",
+  "facing": "Lifter sits facing +Z with the backs of the upper arms on the 45\u00b0 pad; bar rests sit in front of the pad.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.355,
+    0.0,
+    -0.545
+   ],
+   "max": [
+    0.355,
+    0.948402,
+    0.595
+   ]
+  },
+  "tris": 3192,
+  "bytes": 84632,
+  "materials": [
+   "mat_frame",
+   "mat_pad",
+   "mat_rubber"
+  ],
+  "params": {
+   "seatTopY": 0.52
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "seat_pad",
+    "shape": "box",
+    "size": [
+     0.34,
+     0.07,
+     0.3
+    ],
+    "pos": [
+     0.0,
+     0.485,
+     -0.26
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "arm_pad",
+    "shape": "box",
+    "size": [
+     0.6,
+     0.07,
+     0.4
+    ],
+    "pos": [
+     0.0,
+     0.79383,
+     0.116673
+    ],
+    "quat": [
+     0.0,
+     0.92388,
+     0.382683,
+     0.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "pad_post",
+    "shape": "box",
+    "size": [
+     0.07,
+     0.07,
+     0.672106
+    ],
+    "pos": [
+     0.0,
+     0.405398,
+     0.070962
+    ],
+    "quat": [
+     0.0,
+     0.684698,
+     0.728827,
+     0.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "seat_post",
+    "shape": "box",
+    "size": [
+     0.07,
+     0.07,
+     0.365
+    ],
+    "pos": [
+     0.0,
+     0.2525,
+     -0.26
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.707107,
+     0.0
+    ],
+    "material": "steel",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "surfaces": {
+    "seat": {
+     "origin": [
+      0.0,
+      0.52,
+      -0.41
+     ],
+     "normal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "arm_pad": {
+     "origin": [
+      0.0,
+      0.96,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      0.707107,
+      0.707107
+     ],
+     "up": [
+      -0.0,
+      -0.707107,
+      0.707107
+     ]
+    }
+   },
+   "hooks": {
+    "rest_L": {
+     "pos": [
+      0.32,
+      0.704,
+      0.39
+     ]
+    },
+    "rest_R": {
+     "pos": [
+      -0.32,
+      0.704,
+      0.39
+     ]
+    }
+   }
+  }
+ },
+ {
+  "id": "seated-cable-row",
+  "name": "Seated Cable Row",
+  "kind": "machine",
+  "file": "machines/seated-cable-row",
+  "facing": "Lifter sits facing +Z with feet on the footplates; low pulley exits toward -Z between the plates.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.315,
+    0.0,
+    -0.995
+   ],
+   "max": [
+    0.315,
+    1.66,
+    0.895
+   ]
+  },
+  "tris": 7496,
+  "bytes": 217176,
+  "materials": [
+   "mat_accent",
+   "mat_chrome",
+   "mat_frame",
+   "mat_pad",
+   "mat_plate",
+   "mat_rubber",
+   "mat_stack"
+  ],
+  "params": {
+   "seatTopY": 0.44,
+   "stackTravel": 0.64
+  },
+  "nodes": {
+   "stack": {
+    "pivot": [
+     0.0,
+     0.76,
+     0.7
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "seat_pad",
+    "shape": "box",
+    "size": [
+     0.32,
+     0.07,
+     0.8
+    ],
+    "pos": [
+     0.0,
+     0.405,
+     -0.5
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "footplate_L",
+    "shape": "box",
+    "size": [
+     0.17,
+     0.3,
+     0.02
+    ],
+    "pos": [
+     0.15,
+     0.3,
+     0.3
+    ],
+    "quat": [
+     0.173648,
+     -0.0,
+     -0.0,
+     0.984808
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "footplate_R",
+    "shape": "box",
+    "size": [
+     0.17,
+     0.3,
+     0.02
+    ],
+    "pos": [
+     -0.15,
+     0.3,
+     0.3
+    ],
+    "quat": [
+     0.173648,
+     -0.0,
+     -0.0,
+     0.984808
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "column",
+    "shape": "box",
+    "size": [
+     0.44,
+     1.6,
+     0.3
+    ],
+    "pos": [
+     0.0,
+     0.8,
+     0.7
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "surfaces": {
+    "seat": {
+     "origin": [
+      0.0,
+      0.44,
+      -0.8
+     ],
+     "normal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "foot_L": {
+     "origin": [
+      0.15,
+      0.16315,
+      0.237421
+     ],
+     "normal": [
+      0.0,
+      0.34202,
+      -0.939693
+     ],
+     "up": [
+      0.0,
+      0.939693,
+      0.34202
+     ]
+    },
+    "foot_R": {
+     "origin": [
+      -0.15,
+      0.16315,
+      0.237421
+     ],
+     "normal": [
+      0.0,
+      0.34202,
+      -0.939693
+     ],
+     "up": [
+      0.0,
+      0.939693,
+      0.34202
+     ]
+    }
+   },
+   "footplates": {
+    "foot_L": {
+     "surface": "foot_L",
+     "width": 0.15,
+     "minAlong": 0.0,
+     "maxAlong": 0.3
+    },
+    "foot_R": {
+     "surface": "foot_R",
+     "width": 0.15,
+     "minAlong": 0.0,
+     "maxAlong": 0.3
+    }
+   },
+   "pulleys": {
+    "pulley": {
+     "pos": [
+      0.0,
+      0.6,
+      0.5
+     ],
+     "exitDir": [
+      0.0,
+      0.0,
+      -1.0
+     ],
+     "stackNode": "stack",
+     "travelRatio": 1.0,
+     "stackTravel": 0.64
+    }
+   }
+  }
+ },
+ {
+  "id": "seated-leg-curl",
+  "name": "Seated Leg Curl",
+  "kind": "machine",
+  "file": "machines/seated-leg-curl",
+  "facing": "Lifter sits facing +Z with legs out on the calf pad; the thigh pad locks the thighs down.",
+  "notes": "`lever_arm` rotates about world X at the knee axis; positive X rotation curls the pad down and back.",
+  "bounds": {
+   "min": [
+    -0.36,
+    0.0,
+    -0.835
+   ],
+   "max": [
+    0.315,
+    1.56,
+    0.754606
+   ]
+  },
+  "tris": 8632,
+  "bytes": 248072,
+  "materials": [
+   "mat_accent",
+   "mat_cable",
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip",
+   "mat_pad",
+   "mat_rubber",
+   "mat_stack"
+  ],
+  "params": {
+   "seatTopY": 0.5,
+   "asymmetric": "Lever and cam sit on the lifter's right; x = 0 is the lifter's midline.",
+   "stackTravel": 0.5819999999999999
+  },
+  "nodes": {
+   "stack": {
+    "pivot": [
+     0.0,
+     0.718,
+     -0.66
+    ],
+    "parent": null
+   },
+   "lever_arm": {
+    "pivot": [
+     0.0,
+     0.57,
+     0.34
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "seat_pad",
+    "shape": "box",
+    "size": [
+     0.38,
+     0.07,
+     0.42
+    ],
+    "pos": [
+     0.0,
+     0.465,
+     0.09
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "back_pad",
+    "shape": "box",
+    "size": [
+     0.36,
+     0.07,
+     0.62
+    ],
+    "pos": [
+     0.0,
+     0.850284,
+     -0.107703
+    ],
+    "quat": [
+     0.0,
+     0.62932,
+     0.777146,
+     0.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "seat_post",
+    "shape": "box",
+    "size": [
+     0.08,
+     0.08,
+     0.345
+    ],
+    "pos": [
+     0.0,
+     0.2425,
+     0.09
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.707107,
+     0.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "grip_handle_L",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.18,
+     0.0
+    ],
+    "pos": [
+     0.27,
+     0.45,
+     0.03
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_handle_R",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.18,
+     0.0
+    ],
+    "pos": [
+     -0.27,
+     0.45,
+     0.03
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "stack_tower",
+    "shape": "box",
+    "size": [
+     0.44,
+     1.5,
+     0.3
+    ],
+    "pos": [
+     0.0,
+     0.75,
+     -0.66
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "thigh_pad",
+    "shape": "box",
+    "size": [
+     0.4,
+     0.08,
+     0.16
+    ],
+    "pos": [
+     0.0,
+     0.735,
+     0.2
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "calf_pad",
+    "shape": "capsule",
+    "size": [
+     0.058,
+     0.3,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.355391,
+     0.696606
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true,
+    "node": "lever_arm"
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "handle_L": {
+     "pos": [
+      0.27,
+      0.45,
+      0.03
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "palmNormal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "radius": 0.016,
+     "length": 0.18,
+     "grip": "neutral"
+    },
+    "handle_R": {
+     "pos": [
+      -0.27,
+      0.45,
+      0.03
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "palmNormal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "radius": 0.016,
+     "length": 0.18,
+     "grip": "neutral"
+    }
+   },
+   "surfaces": {
+    "seat": {
+     "origin": [
+      0.0,
+      0.5,
+      -0.12
+     ],
+     "normal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "back": {
+     "origin": [
+      0.0,
+      0.53,
+      -0.14
+     ],
+     "normal": [
+      0.0,
+      -0.207912,
+      0.978148
+     ],
+     "up": [
+      0.0,
+      0.978148,
+      0.207912
+     ]
+    },
+    "thigh_pad": {
+     "origin": [
+      0.0,
+      0.695,
+      0.2
+     ],
+     "normal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "calf_pad": {
+     "origin": [
+      0.0,
+      0.413391,
+      0.696606
+     ],
+     "normal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "node": "lever_arm"
+    }
+   },
+   "pivots": {
+    "lever_arm": {
+     "origin": [
+      0.0,
+      0.57,
+      0.34
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "minAngleRad": -0.087266,
+     "maxAngleRad": 1.919862,
+     "nodeName": "lever_arm"
+    }
+   }
+  }
+ },
+ {
+  "id": "single-cable-tower",
+  "name": "Single Cable Tower",
+  "kind": "machine",
+  "file": "machines/single-cable-tower",
+  "facing": "Lifter stands at -Z facing the tower (+Z); the pulley faces -Z toward them.",
+  "notes": "Single column with a height-adjustable swivel pulley; covers single cable machines and high/low pulleys.",
+  "bounds": {
+   "min": [
+    -0.345,
+    0.0,
+    -0.445
+   ],
+   "max": [
+    0.345,
+    2.285,
+    0.425
+   ]
+  },
+  "tris": 7188,
+  "bytes": 226832,
+  "materials": [
+   "mat_accent",
+   "mat_cable",
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip",
+   "mat_plate",
+   "mat_rubber",
+   "mat_stack"
+  ],
+  "params": {
+   "bindExitY": 1.147999882698059,
+   "stackTravel": 1.0579999999999998
+  },
+  "nodes": {
+   "stack": {
+    "pivot": [
+     0.0,
+     0.802,
+     0.2
+    ],
+    "parent": null
+   },
+   "carriage": {
+    "pivot": [
+     0.0,
+     1.29,
+     -0.18
+    ],
+    "parent": null
+   },
+   "pulley": {
+    "pivot": [
+     0.0,
+     1.22,
+     -0.225
+    ],
+    "parent": "carriage"
+   }
+  },
+  "parts": [
+   {
+    "id": "column",
+    "shape": "box",
+    "size": [
+     0.09,
+     2.168,
+     0.09
+    ],
+    "pos": [
+     0.0,
+     1.156,
+     -0.1
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "stack_guard",
+    "shape": "box",
+    "size": [
+     0.4,
+     2.24,
+     0.18
+    ],
+    "pos": [
+     0.0,
+     1.12,
+     0.2
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "base_rear",
+    "shape": "box",
+    "size": [
+     0.08,
+     0.06,
+     0.6
+    ],
+    "pos": [
+     0.0,
+     0.042,
+     0.3
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "base_front",
+    "shape": "box",
+    "size": [
+     0.08,
+     0.06,
+     0.6
+    ],
+    "pos": [
+     0.0,
+     0.042,
+     -0.36
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "steel",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "pulleys": {
+    "pulley": {
+     "pos": [
+      0.0,
+      1.148,
+      -0.31
+     ],
+     "exitDir": [
+      0.0,
+      0.0,
+      -1.0
+     ],
+     "nodeName": "pulley",
+     "stackNode": "stack",
+     "travelRatio": 0.5,
+     "stackTravel": 1.058
+    }
+   },
+   "rails": {
+    "carriage": {
+     "origin": [
+      0.0,
+      1.148,
+      -0.31
+     ],
+     "dir": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "minTravel": -0.868,
+     "maxTravel": 0.792,
+     "nodeName": "carriage"
+    }
+   },
+   "points": {
+    "exit": {
+     "pos": [
+      0.0,
+      1.148,
+      -0.31
+     ],
+     "node": "pulley"
+    }
+   }
+  }
+ },
+ {
+  "id": "slant-board",
+  "name": "Slant Board",
+  "kind": "machine",
+  "file": "machines/slant-board",
+  "facing": "Long side across X; the deck rises toward -Z, so a lifter facing +Z stands heels-up.",
+  "notes": "25\u00b0 incline; turn it 180\u00b0 (yawDeg) for toes-up calf stretches.",
+  "bounds": {
+   "min": [
+    -0.23,
+    0.0,
+    -0.25
+   ],
+   "max": [
+    0.23,
+    0.233154,
+    0.25
+   ]
+  },
+  "tris": 656,
+  "bytes": 20156,
+  "materials": [
+   "mat_rubber",
+   "mat_wood"
+  ],
+  "params": {
+   "angleDeg": 25,
+   "highY": 0.23315382907749932
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "deck",
+    "shape": "box",
+    "size": [
+     0.46,
+     0.02,
+     0.551689
+    ],
+    "pos": [
+     0.0,
+     0.107514,
+     -0.004226
+    ],
+    "quat": [
+     0.0,
+     0.976296,
+     0.21644,
+     0.0
+    ],
+    "material": "wood",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "surfaces": {
+    "deck": {
+     "origin": [
+      0.0,
+      0.116577,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      0.906308,
+      0.422618
+     ],
+     "up": [
+      0.0,
+      0.422618,
+      -0.906308
+     ]
+    }
+   }
+  }
+ },
+ {
+  "id": "smith-machine",
+  "name": "Smith Machine",
+  "kind": "machine",
+  "file": "machines/smith-machine",
+  "facing": "Lifter stands under the bar facing +Z; the bar rides vertical rails in the plane z = 0.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -1.0,
+    0.0,
+    -0.665
+   ],
+   "max": [
+    1.0,
+    2.25,
+    0.665
+   ]
+  },
+  "tris": 9052,
+  "bytes": 258176,
+  "materials": [
+   "mat_accent",
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip",
+   "mat_rubber"
+  ],
+  "params": {
+   "railX": 0.62,
+   "barY": 1.3,
+   "safetyY": 0.6
+  },
+  "nodes": {
+   "carriage": {
+    "pivot": [
+     0.0,
+     1.3,
+     0.0
+    ],
+    "parent": null
+   },
+   "safety_L": {
+    "pivot": [
+     0.62,
+     0.6,
+     0.0
+    ],
+    "parent": null
+   },
+   "safety_R": {
+    "pivot": [
+     -0.62,
+     0.6,
+     0.0
+    ],
+    "parent": null
+   }
+  },
+  "parts": [
+   {
+    "id": "post_Lf",
+    "shape": "box",
+    "size": [
+     0.075,
+     2.103,
+     0.075
+    ],
+    "pos": [
+     0.8,
+     1.1235,
+     0.36
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "post_Lb",
+    "shape": "box",
+    "size": [
+     0.075,
+     2.103,
+     0.075
+    ],
+    "pos": [
+     0.8,
+     1.1235,
+     -0.36
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "rail_L",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     2.1,
+     0.0
+    ],
+    "pos": [
+     0.62,
+     1.11,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.707107,
+     0.707107
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "post_Rf",
+    "shape": "box",
+    "size": [
+     0.075,
+     2.103,
+     0.075
+    ],
+    "pos": [
+     -0.8,
+     1.1235,
+     0.36
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "post_Rb",
+    "shape": "box",
+    "size": [
+     0.075,
+     2.103,
+     0.075
+    ],
+    "pos": [
+     -0.8,
+     1.1235,
+     -0.36
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "rail_R",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     2.1,
+     0.0
+    ],
+    "pos": [
+     -0.62,
+     1.11,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.707107,
+     0.707107
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "top_front",
+    "shape": "box",
+    "size": [
+     0.075,
+     0.075,
+     1.6
+    ],
+    "pos": [
+     0.0,
+     2.2125,
+     0.36
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "top_back",
+    "shape": "box",
+    "size": [
+     0.075,
+     0.075,
+     1.6
+    ],
+    "pos": [
+     0.0,
+     2.2125,
+     -0.36
+    ],
+    "quat": [
+     0.0,
+     0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "steel",
+    "collide": true
+   },
+   {
+    "id": "bar",
+    "shape": "cylinder",
+    "size": [
+     0.0145,
+     1.15,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     1.3,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true,
+    "node": "carriage"
+   },
+   {
+    "id": "grip_bar",
+    "shape": "cylinder",
+    "size": [
+     0.0145,
+     1.15,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     1.3,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true,
+    "node": "carriage"
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "bar": {
+     "pos": [
+      0.0,
+      1.3,
+      0.0
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.0145,
+     "length": 1.15,
+     "grip": "bar",
+     "node": "carriage"
+    }
+   },
+   "rails": {
+    "carriage": {
+     "origin": [
+      0.0,
+      1.3,
+      0.0
+     ],
+     "dir": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "minTravel": -1.05,
+     "maxTravel": 0.72,
+     "nodeName": "carriage"
+    },
+    "safety_L": {
+     "origin": [
+      0.62,
+      0.6,
+      0.0
+     ],
+     "dir": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "minTravel": -0.4,
+     "maxTravel": 0.8,
+     "nodeName": "safety_L"
+    },
+    "safety_R": {
+     "origin": [
+      -0.62,
+      0.6,
+      0.0
+     ],
+     "dir": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "minTravel": -0.4,
+     "maxTravel": 0.8,
+     "nodeName": "safety_R"
+    }
+   },
+   "hooks": {
+    "safety_L": {
+     "pos": [
+      0.62,
+      0.6,
+      0.0
+     ],
+     "node": "safety_L"
+    },
+    "safety_R": {
+     "pos": [
+      -0.62,
+      0.6,
+      0.0
+     ],
+     "node": "safety_R"
+    }
+   }
+  }
+ },
+ {
+  "id": "prop-ab-wheel",
+  "name": "Ab Wheel",
+  "kind": "prop",
+  "file": "machines/prop-ab-wheel",
+  "facing": "Handles along X through the axle at the origin.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.18,
+    -0.09,
+    -0.09
+   ],
+   "max": [
+    0.18,
+    0.09,
+    0.09
+   ]
+  },
+  "tris": 980,
+  "bytes": 31548,
+  "materials": [
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip",
+   "mat_rubber"
+  ],
+  "params": {},
+  "nodes": {},
+  "parts": [
+   {
+    "id": "handle_L",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.12,
+     0.0
+    ],
+    "pos": [
+     0.11,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_grip_L",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.12,
+     0.0
+    ],
+    "pos": [
+     0.11,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "handle_R",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.12,
+     0.0
+    ],
+    "pos": [
+     -0.11,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     -0.707107,
+     0.0
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_grip_R",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.12,
+     0.0
+    ],
+    "pos": [
+     -0.11,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "wheel",
+    "shape": "cylinder",
+    "size": [
+     0.09,
+     0.06,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "grip_L": {
+     "pos": [
+      0.11,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.016,
+     "length": 0.12,
+     "grip": "bar"
+    },
+    "grip_R": {
+     "pos": [
+      -0.11,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.016,
+     "length": 0.12,
+     "grip": "bar"
+    }
+   }
+  }
+ },
+ {
+  "id": "prop-axle-bar",
+  "name": "Axle Bar",
+  "kind": "prop",
+  "file": "machines/prop-axle-bar",
+  "facing": "Thick un-knurled shaft along X through the origin.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -1.075,
+    -0.045,
+    -0.045
+   ],
+   "max": [
+    1.075,
+    0.045,
+    0.045
+   ]
+  },
+  "tris": 1328,
+  "bytes": 42200,
+  "materials": [
+   "mat_accent",
+   "mat_chrome"
+  ],
+  "params": {
+   "barKg": 15,
+   "collarX": 0.655,
+   "length": 2.15,
+   "radius": 0.025
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "shaft",
+    "shape": "cylinder",
+    "size": [
+     0.025,
+     1.31,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "sleeve_L",
+    "shape": "cylinder",
+    "size": [
+     0.025,
+     0.4,
+     0.0
+    ],
+    "pos": [
+     0.875,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "sleeve_R",
+    "shape": "cylinder",
+    "size": [
+     0.025,
+     0.4,
+     0.0
+    ],
+    "pos": [
+     -0.875,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     -0.707107,
+     0.0
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "grip_grip",
+    "shape": "cylinder",
+    "size": [
+     0.025,
+     1.31,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "grip": {
+     "pos": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.025,
+     "length": 1.31,
+     "grip": "bar"
+    }
+   }
+  }
+ },
+ {
+  "id": "prop-barbell",
+  "name": "Olympic Barbell (20 kg)",
+  "kind": "prop",
+  "file": "machines/prop-barbell",
+  "facing": "Shaft along X through the origin.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -1.1,
+    -0.04,
+    -0.04
+   ],
+   "max": [
+    1.1,
+    0.04,
+    0.04
+   ]
+  },
+  "tris": 1848,
+  "bytes": 58880,
+  "materials": [
+   "mat_accent",
+   "mat_chrome",
+   "mat_grip"
+  ],
+  "params": {
+   "barKg": 20,
+   "collarX": 0.655,
+   "length": 2.2,
+   "radius": 0.0145
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "shaft",
+    "shape": "cylinder",
+    "size": [
+     0.0145,
+     1.31,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "collar_L",
+    "shape": "cylinder",
+    "size": [
+     0.04,
+     0.02,
+     0.0
+    ],
+    "pos": [
+     0.665,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "sleeve_L",
+    "shape": "cylinder",
+    "size": [
+     0.025,
+     0.425,
+     0.0
+    ],
+    "pos": [
+     0.8875,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "collar_R",
+    "shape": "cylinder",
+    "size": [
+     0.04,
+     0.02,
+     0.0
+    ],
+    "pos": [
+     -0.665,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "sleeve_R",
+    "shape": "cylinder",
+    "size": [
+     0.025,
+     0.425,
+     0.0
+    ],
+    "pos": [
+     -0.8875,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     -0.707107,
+     0.0
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "grip_grip",
+    "shape": "cylinder",
+    "size": [
+     0.0145,
+     1.31,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "grip": {
+     "pos": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.0145,
+     "length": 1.31,
+     "grip": "bar"
+    }
+   }
+  }
+ },
+ {
+  "id": "prop-d-handle",
+  "name": "Cable D-Handle",
+  "kind": "prop",
+  "file": "machines/prop-d-handle",
+  "facing": "Grip along X at the origin; cable eye above (+Y).",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.078995,
+    -0.0155,
+    -0.015342
+   ],
+   "max": [
+    0.078995,
+    0.169,
+    0.015342
+   ]
+  },
+  "tris": 1260,
+  "bytes": 30516,
+  "materials": [
+   "mat_chrome",
+   "mat_grip"
+  ],
+  "params": {},
+  "nodes": {},
+  "parts": [
+   {
+    "id": "grip",
+    "shape": "cylinder",
+    "size": [
+     0.0155,
+     0.116,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_grip",
+    "shape": "cylinder",
+    "size": [
+     0.0155,
+     0.116,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "grip": {
+     "pos": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.0155,
+     "length": 0.116,
+     "grip": "bar"
+    }
+   },
+   "points": {
+    "eye": {
+     "pos": [
+      0.0,
+      0.16,
+      0.0
+     ]
+    }
+   }
+  }
+ },
+ {
+  "id": "prop-dumbbell",
+  "name": "Hex Dumbbell",
+  "kind": "prop",
+  "file": "machines/prop-dumbbell",
+  "facing": "Handle along X through the origin; hex heads rest flat.",
+  "notes": "Modeled at 22.5 kg.",
+  "bounds": {
+   "min": [
+    -0.16525,
+    -0.093531,
+    -0.081
+   ],
+   "max": [
+    0.16525,
+    0.093531,
+    0.081
+   ]
+  },
+  "tris": 640,
+  "bytes": 24204,
+  "materials": [
+   "mat_chrome",
+   "mat_grip",
+   "mat_rubber"
+  ],
+  "params": {
+   "kg": 22.5,
+   "handleLength": 0.13,
+   "headRadius": 0.081,
+   "headThickness": 0.09625
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "handle",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.13,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "head_L",
+    "shape": "cylinder",
+    "size": [
+     0.081,
+     0.09625,
+     0.0
+    ],
+    "pos": [
+     0.113125,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "plate",
+    "collide": true
+   },
+   {
+    "id": "head_R",
+    "shape": "cylinder",
+    "size": [
+     0.081,
+     0.09625,
+     0.0
+    ],
+    "pos": [
+     -0.113125,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "plate",
+    "collide": true
+   },
+   {
+    "id": "grip_grip",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.13,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "grip": {
+     "pos": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.016,
+     "length": 0.13,
+     "grip": "bar"
+    }
+   }
+  }
+ },
+ {
+  "id": "prop-ez-bar",
+  "name": "EZ Curl Bar",
+  "kind": "prop",
+  "file": "machines/prop-ez-bar",
+  "facing": "Shaft along X; cambers bend toward +Z.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.625,
+    -0.038,
+    -0.038
+   ],
+   "max": [
+    0.625,
+    0.038,
+    0.0532
+   ]
+  },
+  "tris": 4060,
+  "bytes": 88016,
+  "materials": [
+   "mat_chrome",
+   "mat_grip"
+  ],
+  "params": {
+   "barKg": 10,
+   "collarX": 0.42,
+   "length": 1.25
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "sleeve_L",
+    "shape": "cylinder",
+    "size": [
+     0.025,
+     0.185,
+     0.0
+    ],
+    "pos": [
+     0.5325,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "grip_outer_L",
+    "shape": "cylinder",
+    "size": [
+     0.0152,
+     0.07,
+     0.0
+    ],
+    "pos": [
+     0.235,
+     0.0,
+     0.038
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_inner_L",
+    "shape": "cylinder",
+    "size": [
+     0.0145,
+     0.06,
+     0.0
+    ],
+    "pos": [
+     0.155,
+     0.0,
+     0.019
+    ],
+    "quat": [
+     -0.0,
+     0.96924,
+     0.0,
+     0.246116
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "sleeve_R",
+    "shape": "cylinder",
+    "size": [
+     0.025,
+     0.185,
+     0.0
+    ],
+    "pos": [
+     -0.5325,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     -0.707107,
+     0.0
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "grip_outer_R",
+    "shape": "cylinder",
+    "size": [
+     0.0152,
+     0.07,
+     0.0
+    ],
+    "pos": [
+     -0.235,
+     0.0,
+     0.038
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_inner_R",
+    "shape": "cylinder",
+    "size": [
+     0.0145,
+     0.06,
+     0.0
+    ],
+    "pos": [
+     -0.155,
+     0.0,
+     0.019
+    ],
+    "quat": [
+     -0.0,
+     0.246116,
+     0.0,
+     0.96924
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "shaft",
+    "shape": "cylinder",
+    "size": [
+     0.0145,
+     0.84,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.02
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "outer_L": {
+     "pos": [
+      0.235,
+      0.0,
+      0.038
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.0152,
+     "length": 0.07,
+     "grip": "bar"
+    },
+    "inner_L": {
+     "pos": [
+      0.155,
+      0.0,
+      0.019
+     ],
+     "axis": [
+      -0.878853,
+      0.0,
+      -0.477092
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.0145,
+     "length": 0.06,
+     "grip": "bar"
+    },
+    "outer_R": {
+     "pos": [
+      -0.235,
+      0.0,
+      0.038
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.0152,
+     "length": 0.07,
+     "grip": "bar"
+    },
+    "inner_R": {
+     "pos": [
+      -0.155,
+      0.0,
+      0.019
+     ],
+     "axis": [
+      0.878853,
+      0.0,
+      -0.477092
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.0145,
+     "length": 0.06,
+     "grip": "bar"
+    }
+   }
+  }
+ },
+ {
+  "id": "prop-kettlebell",
+  "name": "Kettlebell",
+  "kind": "prop",
+  "file": "machines/prop-kettlebell",
+  "facing": "Handle along X at the origin; bell hangs below (-Y).",
+  "notes": "Modeled at 16 kg.",
+  "bounds": {
+   "min": [
+    -0.0902,
+    -0.21932,
+    -0.0902
+   ],
+   "max": [
+    0.0902,
+    0.015753,
+    0.0902
+   ]
+  },
+  "tris": 2156,
+  "bytes": 42508,
+  "materials": [
+   "mat_grip",
+   "mat_plate"
+  ],
+  "params": {
+   "kg": 16,
+   "bellRadius": 0.0902,
+   "bellCenterY": -0.139944,
+   "handleWidth": 0.12628
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "bell",
+    "shape": "sphere",
+    "size": [
+     0.0902,
+     0.0,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     -0.139944,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "plate",
+    "collide": true
+   },
+   {
+    "id": "handle",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.12628,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_grip",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     0.12628,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "grip": {
+     "pos": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.016,
+     "length": 0.12628,
+     "grip": "hook"
+    }
+   }
+  }
+ },
+ {
+  "id": "prop-lat-bar",
+  "name": "Lat Pulldown Bar",
+  "kind": "prop",
+  "file": "machines/prop-lat-bar",
+  "facing": "Bar along X at the origin; ends bend down; cable eye above.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.616345,
+    -0.106753,
+    -0.019696
+   ],
+   "max": [
+    0.616345,
+    0.076,
+    0.019696
+   ]
+  },
+  "tris": 1736,
+  "bytes": 46460,
+  "materials": [
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip",
+   "mat_rubber"
+  ],
+  "params": {},
+  "nodes": {},
+  "parts": [
+   {
+    "id": "grip_grip_L",
+    "shape": "cylinder",
+    "size": [
+     0.0158,
+     0.172409,
+     0.0
+    ],
+    "pos": [
+     0.519,
+     -0.0495,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     -0.199586,
+     0.97988
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_grip_R",
+    "shape": "cylinder",
+    "size": [
+     0.0158,
+     0.172409,
+     0.0
+    ],
+    "pos": [
+     -0.519,
+     -0.0495,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     -0.0,
+     -0.97988,
+     0.199586
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_grip",
+    "shape": "cylinder",
+    "size": [
+     0.0152,
+     0.72,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "bar",
+    "shape": "cylinder",
+    "size": [
+     0.0145,
+     1.0,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     -0.02,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "grip_L": {
+     "pos": [
+      0.519,
+      -0.0495,
+      0.0
+     ],
+     "axis": [
+      0.920331,
+      -0.391141,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.0158,
+     "length": 0.172409,
+     "grip": "bar"
+    },
+    "grip_R": {
+     "pos": [
+      -0.519,
+      -0.0495,
+      0.0
+     ],
+     "axis": [
+      -0.920331,
+      -0.391141,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.0158,
+     "length": 0.172409,
+     "grip": "bar"
+    },
+    "grip": {
+     "pos": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "palmNormal": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "radius": 0.0152,
+     "length": 0.72,
+     "grip": "bar"
+    }
+   },
+   "points": {
+    "eye": {
+     "pos": [
+      0.0,
+      0.07,
+      0.0
+     ]
+    }
+   }
+  }
+ },
+ {
+  "id": "prop-medicine-ball",
+  "name": "Medicine Ball",
+  "kind": "prop",
+  "file": "machines/prop-medicine-ball",
+  "facing": "Centered at the origin.",
+  "notes": "0.14 m radius (about 6 kg).",
+  "bounds": {
+   "min": [
+    -0.144,
+    -0.144,
+    -0.144
+   ],
+   "max": [
+    0.144,
+    0.144,
+    0.144
+   ]
+  },
+  "tris": 3056,
+  "bytes": 75548,
+  "materials": [
+   "mat_accent",
+   "mat_rubber"
+  ],
+  "params": {},
+  "nodes": {},
+  "parts": [
+   {
+    "id": "ball",
+    "shape": "sphere",
+    "size": [
+     0.14,
+     0.0,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "rubber",
+    "collide": true
+   }
+  ],
+  "anchors": {}
+ },
+ {
+  "id": "prop-plate-10",
+  "name": "Weight Plate 10 kg",
+  "kind": "prop",
+  "file": "machines/prop-plate-10",
+  "facing": "Disc axis along X so it slides onto a bar sleeve.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.015,
+    -0.16,
+    -0.16
+   ],
+   "max": [
+    0.015,
+    0.16,
+    0.16
+   ]
+  },
+  "tris": 1536,
+  "bytes": 44956,
+  "materials": [
+   "mat_plate"
+  ],
+  "params": {
+   "kg": 10,
+   "radius": 0.16,
+   "thickness": 0.03
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "disc",
+    "shape": "cylinder",
+    "size": [
+     0.16,
+     0.03,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "plate",
+    "collide": true
+   }
+  ],
+  "anchors": {}
+ },
+ {
+  "id": "prop-plate-15",
+  "name": "Weight Plate 15 kg",
+  "kind": "prop",
+  "file": "machines/prop-plate-15",
+  "facing": "Disc axis along X so it slides onto a bar sleeve.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.017,
+    -0.2,
+    -0.2
+   ],
+   "max": [
+    0.017,
+    0.2,
+    0.2
+   ]
+  },
+  "tris": 1536,
+  "bytes": 44960,
+  "materials": [
+   "mat_plate"
+  ],
+  "params": {
+   "kg": 15,
+   "radius": 0.2,
+   "thickness": 0.034
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "disc",
+    "shape": "cylinder",
+    "size": [
+     0.2,
+     0.034,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "plate",
+    "collide": true
+   }
+  ],
+  "anchors": {}
+ },
+ {
+  "id": "prop-plate-1_25",
+  "name": "Weight Plate 1.25 kg",
+  "kind": "prop",
+  "file": "machines/prop-plate-1_25",
+  "facing": "Disc axis along X so it slides onto a bar sleeve.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.007,
+    -0.08,
+    -0.08
+   ],
+   "max": [
+    0.007,
+    0.08,
+    0.08
+   ]
+  },
+  "tris": 1536,
+  "bytes": 47264,
+  "materials": [
+   "mat_plate"
+  ],
+  "params": {
+   "kg": 1.25,
+   "radius": 0.08,
+   "thickness": 0.014
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "disc",
+    "shape": "cylinder",
+    "size": [
+     0.08,
+     0.014,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "plate",
+    "collide": true
+   }
+  ],
+  "anchors": {}
+ },
+ {
+  "id": "prop-plate-20",
+  "name": "Weight Plate 20 kg",
+  "kind": "prop",
+  "file": "machines/prop-plate-20",
+  "facing": "Disc axis along X so it slides onto a bar sleeve.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.019,
+    -0.225,
+    -0.225
+   ],
+   "max": [
+    0.019,
+    0.225,
+    0.225
+   ]
+  },
+  "tris": 1536,
+  "bytes": 44960,
+  "materials": [
+   "mat_plate"
+  ],
+  "params": {
+   "kg": 20,
+   "radius": 0.225,
+   "thickness": 0.038
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "disc",
+    "shape": "cylinder",
+    "size": [
+     0.225,
+     0.038,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "plate",
+    "collide": true
+   }
+  ],
+  "anchors": {}
+ },
+ {
+  "id": "prop-plate-25",
+  "name": "Weight Plate 25 kg",
+  "kind": "prop",
+  "file": "machines/prop-plate-25",
+  "facing": "Disc axis along X so it slides onto a bar sleeve.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.0225,
+    -0.225,
+    -0.225
+   ],
+   "max": [
+    0.0225,
+    0.225,
+    0.225
+   ]
+  },
+  "tris": 1536,
+  "bytes": 44956,
+  "materials": [
+   "mat_plate"
+  ],
+  "params": {
+   "kg": 25,
+   "radius": 0.225,
+   "thickness": 0.045
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "disc",
+    "shape": "cylinder",
+    "size": [
+     0.225,
+     0.045,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "plate",
+    "collide": true
+   }
+  ],
+  "anchors": {}
+ },
+ {
+  "id": "prop-plate-2_5",
+  "name": "Weight Plate 2.5 kg",
+  "kind": "prop",
+  "file": "machines/prop-plate-2_5",
+  "facing": "Disc axis along X so it slides onto a bar sleeve.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.009,
+    -0.095,
+    -0.095
+   ],
+   "max": [
+    0.009,
+    0.095,
+    0.095
+   ]
+  },
+  "tris": 1536,
+  "bytes": 47260,
+  "materials": [
+   "mat_plate"
+  ],
+  "params": {
+   "kg": 2.5,
+   "radius": 0.095,
+   "thickness": 0.018
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "disc",
+    "shape": "cylinder",
+    "size": [
+     0.095,
+     0.018,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "plate",
+    "collide": true
+   }
+  ],
+  "anchors": {}
+ },
+ {
+  "id": "prop-plate-5",
+  "name": "Weight Plate 5 kg",
+  "kind": "prop",
+  "file": "machines/prop-plate-5",
+  "facing": "Disc axis along X so it slides onto a bar sleeve.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.012,
+    -0.115,
+    -0.115
+   ],
+   "max": [
+    0.012,
+    0.115,
+    0.115
+   ]
+  },
+  "tris": 1536,
+  "bytes": 47260,
+  "materials": [
+   "mat_plate"
+  ],
+  "params": {
+   "kg": 5,
+   "radius": 0.115,
+   "thickness": 0.024
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "disc",
+    "shape": "cylinder",
+    "size": [
+     0.115,
+     0.024,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "plate",
+    "collide": true
+   }
+  ],
+  "anchors": {}
+ },
+ {
+  "id": "prop-rope",
+  "name": "Triceps Rope",
+  "kind": "prop",
+  "file": "machines/prop-rope",
+  "facing": "Hands at x = \u00b10.065 on the grip line y = 0; cable eye above (+Y).",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.1,
+    -0.092,
+    -0.03
+   ],
+   "max": [
+    0.1,
+    0.255,
+    0.03
+   ]
+  },
+  "tris": 1844,
+  "bytes": 42944,
+  "materials": [
+   "mat_cable",
+   "mat_chrome",
+   "mat_rubber"
+  ],
+  "params": {},
+  "nodes": {},
+  "parts": [
+   {
+    "id": "grip_grip_L",
+    "shape": "cylinder",
+    "size": [
+     0.0135,
+     0.09,
+     0.0
+    ],
+    "pos": [
+     0.066,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     -0.689043,
+     0.724721
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_grip_R",
+    "shape": "cylinder",
+    "size": [
+     0.0135,
+     0.09,
+     0.0
+    ],
+    "pos": [
+     -0.066,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     -0.0,
+     -0.724721,
+     0.689043
+    ],
+    "material": "rubber",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "grip_L": {
+     "pos": [
+      0.066,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      0.050441,
+      -0.998727,
+      0.0
+     ],
+     "palmNormal": [
+      -1.0,
+      0.0,
+      0.0
+     ],
+     "radius": 0.0135,
+     "length": 0.09,
+     "grip": "neutral"
+    },
+    "grip_R": {
+     "pos": [
+      -0.066,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      -0.050441,
+      -0.998727,
+      0.0
+     ],
+     "palmNormal": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "radius": 0.0135,
+     "length": 0.09,
+     "grip": "neutral"
+    }
+   },
+   "points": {
+    "eye": {
+     "pos": [
+      0.0,
+      0.25,
+      0.0
+     ]
+    }
+   }
+  }
+ },
+ {
+  "id": "prop-safety-squat-bar",
+  "name": "Safety Squat Bar",
+  "kind": "prop",
+  "file": "machines/prop-safety-squat-bar",
+  "facing": "Shaft along X through the yoke at the origin; handles reach forward (+Z) and down.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -1.125,
+    -0.124263,
+    -0.06
+   ],
+   "max": [
+    1.125,
+    0.05,
+    0.35489
+   ]
+  },
+  "tris": 2160,
+  "bytes": 62264,
+  "materials": [
+   "mat_accent",
+   "mat_chrome",
+   "mat_pad"
+  ],
+  "params": {
+   "barKg": 25,
+   "collarX": 0.68,
+   "length": 2.25
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "shaft",
+    "shape": "cylinder",
+    "size": [
+     0.016,
+     1.36,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "grip_grip_L",
+    "shape": "cylinder",
+    "size": [
+     0.022,
+     0.08,
+     0.0
+    ],
+    "pos": [
+     0.16,
+     -0.095,
+     0.31
+    ],
+    "quat": [
+     0.0,
+     -0.693375,
+     -0.138675,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_grip_R",
+    "shape": "cylinder",
+    "size": [
+     0.022,
+     0.08,
+     0.0
+    ],
+    "pos": [
+     -0.16,
+     -0.095,
+     0.31
+    ],
+    "quat": [
+     0.0,
+     -0.693375,
+     -0.138675,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "yoke",
+    "shape": "capsule",
+    "size": [
+     0.05,
+     0.34,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     -0.01
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true
+   },
+   {
+    "id": "sleeve_L",
+    "shape": "cylinder",
+    "size": [
+     0.025,
+     0.425,
+     0.0
+    ],
+    "pos": [
+     0.9125,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "sleeve_R",
+    "shape": "cylinder",
+    "size": [
+     0.025,
+     0.425,
+     0.0
+    ],
+    "pos": [
+     -0.9125,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     -0.707107,
+     0.0
+    ],
+    "material": "chrome",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "grip_L": {
+     "pos": [
+      0.16,
+      -0.095,
+      0.31
+     ],
+     "axis": [
+      0.0,
+      -0.196116,
+      0.980581
+     ],
+     "palmNormal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "radius": 0.022,
+     "length": 0.08,
+     "grip": "bar"
+    },
+    "grip_R": {
+     "pos": [
+      -0.16,
+      -0.095,
+      0.31
+     ],
+     "axis": [
+      0.0,
+      -0.196116,
+      0.980581
+     ],
+     "palmNormal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "radius": 0.022,
+     "length": 0.08,
+     "grip": "bar"
+    }
+   }
+  }
+ },
+ {
+  "id": "prop-stability-ball",
+  "name": "Stability Ball",
+  "kind": "prop",
+  "file": "machines/prop-stability-ball",
+  "facing": "Centered at the origin.",
+  "notes": "65 cm.",
+  "bounds": {
+   "min": [
+    -0.325,
+    -0.325,
+    -0.325
+   ],
+   "max": [
+    0.325,
+    0.325,
+    0.325
+   ]
+  },
+  "tris": 2592,
+  "bytes": 47864,
+  "materials": [
+   "mat_pad"
+  ],
+  "params": {
+   "radius": 0.325
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "ball",
+    "shape": "sphere",
+    "size": [
+     0.325,
+     0.0,
+     0.0
+    ],
+    "pos": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "pad",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "surfaces": {
+    "top": {
+     "origin": [
+      0.0,
+      0.325,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "up": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    }
+   }
+  }
+ },
+ {
+  "id": "prop-trap-bar",
+  "name": "Trap Bar",
+  "kind": "prop",
+  "file": "machines/prop-trap-bar",
+  "facing": "Lifter stands inside the hex; handles at x = \u00b10.31 run along Z through y = 0.",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.925,
+    -0.04,
+    -0.336988
+   ],
+   "max": [
+    0.925,
+    0.04,
+    0.336988
+   ]
+  },
+  "tris": 2892,
+  "bytes": 77120,
+  "materials": [
+   "mat_accent",
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip"
+  ],
+  "params": {
+   "barKg": 25,
+   "collarX": 0.46,
+   "length": 1.85
+  },
+  "nodes": {},
+  "parts": [
+   {
+    "id": "grip_grip_L",
+    "shape": "cylinder",
+    "size": [
+     0.0155,
+     0.14,
+     0.0
+    ],
+    "pos": [
+     0.31,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_grip_R",
+    "shape": "cylinder",
+    "size": [
+     0.0155,
+     0.14,
+     0.0
+    ],
+    "pos": [
+     -0.31,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     0.0,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "sleeve_L",
+    "shape": "cylinder",
+    "size": [
+     0.025,
+     0.445,
+     0.0
+    ],
+    "pos": [
+     0.7025,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "material": "chrome",
+    "collide": true
+   },
+   {
+    "id": "sleeve_R",
+    "shape": "cylinder",
+    "size": [
+     0.025,
+     0.445,
+     0.0
+    ],
+    "pos": [
+     -0.7025,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     -0.707107,
+     -0.707107,
+     0.0
+    ],
+    "material": "chrome",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "grip_L": {
+     "pos": [
+      0.31,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "palmNormal": [
+      -1.0,
+      0.0,
+      0.0
+     ],
+     "radius": 0.0155,
+     "length": 0.14,
+     "grip": "neutral"
+    },
+    "grip_R": {
+     "pos": [
+      -0.31,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "palmNormal": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "radius": 0.0155,
+     "length": 0.14,
+     "grip": "neutral"
+    }
+   }
+  }
+ },
+ {
+  "id": "prop-v-bar",
+  "name": "Close-Grip V-Handle",
+  "kind": "prop",
+  "file": "machines/prop-v-bar",
+  "facing": "Twin neutral grips along Y at x = \u00b10.055; cable eye ahead (+Z).",
+  "notes": "",
+  "bounds": {
+   "min": [
+    -0.0705,
+    -0.09054,
+    -0.0155
+   ],
+   "max": [
+    0.0705,
+    0.09054,
+    0.246
+   ]
+  },
+  "tris": 1852,
+  "bytes": 47236,
+  "materials": [
+   "mat_chrome",
+   "mat_frame",
+   "mat_grip"
+  ],
+  "params": {},
+  "nodes": {},
+  "parts": [
+   {
+    "id": "grip_L",
+    "shape": "cylinder",
+    "size": [
+     0.0155,
+     0.13,
+     0.0
+    ],
+    "pos": [
+     0.055,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.707107,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_grip_L",
+    "shape": "cylinder",
+    "size": [
+     0.0155,
+     0.13,
+     0.0
+    ],
+    "pos": [
+     0.055,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.707107,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_R",
+    "shape": "cylinder",
+    "size": [
+     0.0155,
+     0.13,
+     0.0
+    ],
+    "pos": [
+     -0.055,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.707107,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   },
+   {
+    "id": "grip_grip_R",
+    "shape": "cylinder",
+    "size": [
+     0.0155,
+     0.13,
+     0.0
+    ],
+    "pos": [
+     -0.055,
+     0.0,
+     0.0
+    ],
+    "quat": [
+     0.0,
+     0.0,
+     0.707107,
+     0.707107
+    ],
+    "material": "rubber",
+    "collide": true
+   }
+  ],
+  "anchors": {
+   "handles": {
+    "grip_L": {
+     "pos": [
+      0.055,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "palmNormal": [
+      -1.0,
+      0.0,
+      0.0
+     ],
+     "radius": 0.0155,
+     "length": 0.13,
+     "grip": "neutral"
+    },
+    "grip_R": {
+     "pos": [
+      -0.055,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "palmNormal": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "radius": 0.0155,
+     "length": 0.13,
+     "grip": "neutral"
+    }
+   },
+   "points": {
+    "eye": {
+     "pos": [
+      0.0,
+      0.0,
+      0.24
+     ]
+    }
+   }
+  }
+ }
+]
