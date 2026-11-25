@@ -232,9 +232,10 @@ export function plantBothFeetOnPlate(
   along: number,
   toeOutRad = 0.2,
   weight = 40,
+  offset?: (q: Float64Array) => Vector3,
 ): Goal[] {
   return SIDES.flatMap((side) =>
-    plantFootFlat(body, side, plate, pointOnPad(plate, along, 0, sideSign(side) * stanceX), toeOutRad, weight),
+    plantFootFlat(body, side, plate, pointOnPad(plate, along, 0, sideSign(side) * stanceX), toeOutRad, weight, 0, offset),
   );
 }
 

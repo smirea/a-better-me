@@ -202,6 +202,10 @@ function applyActiveSkin() {
   const skin = getSkin(state.skin);
   applySkinToObject3D(glbSlot, skin);
   applySkinToObject3D(props, skin);
+  const cable = skin.materials.mat_cable;
+  MATERIALS.cable.color.set(cable.color);
+  MATERIALS.cable.roughness = cable.roughness;
+  MATERIALS.cable.metalness = cable.metalness;
 }
 
 let propLoadGen = 0;
@@ -212,6 +216,10 @@ function buildProps(): Promise<void> {
   const pending: Promise<void>[] = [];
   for (const prop of sequence.props) {
     const group = new Group();
+    if (prop.kind === "parts" && prop.hidden) {
+      props.add(group);
+      continue;
+    }
     if (prop.kind === "glb") {
       const fallback = new Group();
       for (const part of propParts(prop, state.loadKg)) fallback.add(partMesh(part));
@@ -494,10 +502,15 @@ function applyLoadedExercise(resetLoad: boolean) {
     figureSlot.clear();
     figureSlot.add(figure.group);
   }
+  const visibleProps = sequence.props.filter((prop) => !(prop.kind === "parts" && prop.hidden));
   const grip =
     sequence.grips ??
     sequence.grip ??
-    (sequence.props.some((prop) => prop.kind !== "dumbbell") ? "press" : "hang");
+    (visibleProps.length === 0
+      ? "relaxed"
+      : visibleProps.some((prop) => prop.kind !== "dumbbell")
+        ? "press"
+        : "hang");
   (figure.setGrip as (g: unknown) => void)(grip);
   kin = kinematics(body, sequence);
   if (resetLoad) state.loadKg = Number(params.get("load") ?? sequence.loadKg);
@@ -1148,10 +1161,17 @@ async function init() {
         const size = box.getSize(new Vector3());
         const radius = Math.max(0.22, size.length() * 0.65);
         const dist = (radius / Math.sin((camera.fov * Math.PI) / 360)) * 1.15;
-        const dir =
-          opts.focus === "feet"
-            ? new Vector3(-0.78, 0.34, 0.52).normalize()
-            : new Vector3(-0.62, 0.36, 0.69).normalize();
+        const dirByView: Record<(typeof VIEWS)[number], Vector3> = {
+          Side: new Vector3(-1, 0.14, 0.06).normalize(),
+          Front: new Vector3(0, 0.22, 1).normalize(),
+          Back: new Vector3(0, 0.22, -1).normalize(),
+          Top: new Vector3(0, 1, 0.05).normalize(),
+          Angle:
+            opts.focus === "feet"
+              ? new Vector3(-0.78, 0.34, 0.52).normalize()
+              : new Vector3(-0.62, 0.36, 0.69).normalize(),
+        };
+        const dir = dirByView[opts.view ?? state.view] ?? dirByView.Angle;
         controls.target.copy(center);
         camera.position.copy(center).addScaledVector(dir, dist);
         controls.update();

@@ -546,16 +546,21 @@ function worldPointDistToPlaced(placed: PlacedPrimitive, p: Vector3, cutoff: num
 function defaultGlbAllowance(
   semantic: string | null,
   colliderId: string,
+  contactAs: string | undefined,
   sequence: Sequence,
   ownerId: string,
 ): number {
+  const ownerBase = ownerId.replace(/^machines\//, "");
   let maxContact = 0;
   for (const [prefix, allowed] of Object.entries(sequence.contacts)) {
-    const val = allowed[colliderId];
+    const val = allowed[colliderId] ?? (contactAs ? allowed[contactAs] : undefined);
     if (val === undefined) continue;
     if (
       ownerId === prefix ||
       ownerId.startsWith(prefix) ||
+      prefix === ownerBase ||
+      prefix.startsWith(`${ownerBase}.`) ||
+      ownerBase.startsWith(prefix) ||
       semantic === "mat_pad" ||
       semantic === "mat_grip"
     ) {
@@ -569,6 +574,9 @@ function defaultGlbAllowance(
     if (colliderId.startsWith("hand_")) return Math.max(maxContact, 0.055);
     if (colliderId.startsWith("forearm_")) return Math.max(maxContact, 0.025);
     if (colliderId.startsWith("foot_") || colliderId.startsWith("toes_")) return Math.max(maxContact, 0.045);
+  }
+  if ((semantic === "mat_rubber" || semantic === "mat_wood") && (colliderId.startsWith("foot_") || colliderId.startsWith("toes_"))) {
+    return Math.max(maxContact, 0.03);
   }
   if (semantic === "mat_chrome" && colliderId.startsWith("hand_")) {
     return Math.max(maxContact, 0.045);
@@ -735,7 +743,7 @@ export async function validateGlbMotion(
         samplePt.lerpVectors(a, b, t);
         const radius = col.ra + (col.rb - col.ra) * t;
         for (const placed of allPlaced) {
-          const allow = defaultGlbAllowance(placed.prim.semantic, col.id, sequence, placed.ownerId);
+          const allow = defaultGlbAllowance(placed.prim.semantic, col.id, col.contactAs, sequence, placed.ownerId);
           // Skip pads where resting is expected unless deep penetration occurs.
           const cutoff = radius - allow;
           if (cutoff <= 0.015) continue;
@@ -801,8 +809,16 @@ export async function validateGlbMotion(
           candidates = frameStaticPlaced;
         } else if (req.prop) {
           const matchingProp = framePropPlaced.filter((p) => p.ownerId === req.prop);
-          if (matchingProp.length === 0) continue;
-          candidates = matchingProp;
+          if (matchingProp.length > 0) {
+            candidates = matchingProp;
+          } else if (
+            hideStaticEquipment &&
+            sequence.props.some((p) => p.id === req.prop && p.kind === "parts" && p.hidden)
+          ) {
+            candidates = frameStaticPlaced;
+          } else {
+            continue;
+          }
         }
         if (candidates.length === 0) continue;
 

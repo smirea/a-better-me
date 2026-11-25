@@ -1,18 +1,17 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { extname, join, normalize, resolve } from "node:path";
+import { extname, join, normalize } from "node:path";
 import { analyze } from "../src/biomech";
 import { groupsOf } from "../src/catalog";
-import { generate, kinematics, type ExerciseSpec } from "../src/exercise";
+import { generate, kinematics } from "../src/exercise";
 import type { Muscle } from "../src/muscles";
+import { DEFAULT_SKIN_ID } from "../src/skin";
 import { runChecks } from "../src/validate";
-import { loadAppCatalog, MOTION_ROOT } from "./catalog-io";
+import { loadAppCatalog, loadSpec, MOTION_ROOT } from "./catalog-io";
 
 const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const SHARED_GYM_MODELS =
-  process.env.GYM_MODELS_DIR ??
-  "/Users/stefan/.t3/worktrees/a-better-me/t3-ba440276-aa0fa4a108ee647c/exercise-motion/dist/gym/models";
+const EXTRA_GYM_MODELS = process.env.GYM_MODELS_DIR ?? "";
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -62,19 +61,6 @@ class CdpClient {
   }
 }
 
-async function loadSpec(slug: string): Promise<ExerciseSpec> {
-  const filePath = join(MOTION_ROOT, "src", "exercises", `${slug}.ts`);
-  if (!existsSync(filePath)) throw new Error(`Missing exercise file: ${filePath}`);
-  const mod = (await import(resolve(filePath))) as Record<string, unknown>;
-  const spec = (mod.spec ??
-    Object.values(mod).find(
-      (v): v is ExerciseSpec =>
-        typeof v === "object" && v !== null && "id" in v && "catalogId" in v && "build" in v,
-    )) as ExerciseSpec | undefined;
-  if (!spec) throw new Error(`${filePath}: no ExerciseSpec export found`);
-  return spec;
-}
-
 async function main() {
   const args = process.argv.slice(2);
   const flagValue = (name: string) => {
@@ -92,7 +78,7 @@ async function main() {
   const outPng = flagValue("--out") ?? `/tmp/motion-inspect/3d-${slug}.png`;
   const views = (flagValue("--views") ?? "Side,Angle,Front").split(",");
   const setting = flagValue("--setting") ?? "studio-light";
-  const skin = flagValue("--skin") ?? "studio-graphite";
+  const skin = flagValue("--skin") ?? DEFAULT_SKIN_ID;
   const closeups = args.includes("--closeups");
 
   const spec = await loadSpec(slug);
@@ -186,7 +172,8 @@ async function main() {
         const safe = normalize(pathname.slice("/gym-models/".length))
           .replace(/^(\.\.[/\\])+/, "")
           .replace(/^\/+/, "");
-        for (const dir of [customModelsDir, localGymModelsDir, SHARED_GYM_MODELS]) {
+        const dirs = [customModelsDir, localGymModelsDir, ...(EXTRA_GYM_MODELS ? [EXTRA_GYM_MODELS] : [])];
+        for (const dir of dirs) {
           const candidate = join(dir, safe);
           if (existsSync(candidate)) {
             return new Response(Bun.file(candidate), { headers: { "content-type": MIME[".glb"] } });

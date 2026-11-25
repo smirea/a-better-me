@@ -102,9 +102,11 @@ def frame_quat(along, up_hint=(0, 1, 0)):
     return m.to_quaternion()
 
 
-def load_skin(skin_id="studio"):
+def load_skin(skin_id=None):
     with open(SKINS_PATH) as f:
         skins = json.load(f)
+    if skin_id is None:
+        return skins[0]
     for skin in skins:
         if skin["id"] == skin_id:
             return skin
@@ -125,7 +127,7 @@ def reset_scene():
             block.remove(item)
 
 
-def ensure_materials(skin_id="studio"):
+def ensure_materials(skin_id=None):
     skin = load_skin(skin_id)
     mats = {}
     for name in SEMANTIC:

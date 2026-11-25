@@ -370,12 +370,19 @@ export function plantFootFlat(
   yaw = 0,
   weight = 40,
   sink = 0,
+  offset?: (q: Float64Array) => Vector3,
 ): Goal[] {
   const frame = surfaceFrame(surface);
   const target = footLayout(body, side, frame, heel, ankleLocal(body, `heel_${side}`), yaw, sink);
+  const shifted = new Vector3();
   return ["heel", "ballIn", "ballOut", "toe"].map((name) => {
     const world = target(`${name}_${side}`);
-    return pin(body, `${name}_${side}`, () => world, weight);
+    return pin(
+      body,
+      `${name}_${side}`,
+      offset ? (q) => shifted.copy(world).add(offset(q)) : () => world,
+      weight,
+    );
   });
 }
 

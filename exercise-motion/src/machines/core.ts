@@ -114,6 +114,8 @@ export interface MachineDefinition<S> {
   cameraHint?: CanonicalMachineInstance["cameraHint"];
   /** Last adjustments that depend on the state, e.g. which of several landing faces is on top. */
   finish?(instance: MachineInstance<S>, state: S): void;
+  /** Nodes that move during a rep when `drive` is supplied; their collider parts become moving hidden props instead of frozen static obstacles. */
+  animatedNodes?: string[];
 }
 
 const MATERIALS = new Set<Material>(["steel", "chrome", "pad", "plate", "rubber", "cable", "band", "wood", "accent"]);
@@ -168,10 +170,40 @@ export function defineMachine<S extends object>(def: MachineDefinition<S>) {
       const point = (p: number[], node?: string): Vec3 => tuple(new Vector3(...v3(p)).applyMatrix4(full(node)));
       const dir = (d: number[], node?: string): Vec3 => tuple(new Vector3(...v3(d)).applyQuaternion(rotOf(node)).normalize());
 
-      const equipment: Part[] = spec.parts.map((p) => {
+      const animatedSet = drive && def.animatedNodes?.length ? new Set(def.animatedNodes) : null;
+      const isAnimatedNode = (node?: string): string | null => {
+        if (!animatedSet || !node) return null;
+        let cur: string | null | undefined = node;
+        while (cur) {
+          if (animatedSet.has(cur)) return node;
+          cur = spec.nodes[cur]?.parent;
+        }
+        return null;
+      };
+
+      const equipment: Part[] = [];
+      const animatedByNode = new Map<string, Part[]>();
+      for (const p of spec.parts) {
         if (!MATERIALS.has(p.material as Material)) throw new Error(`${spec.id}: bad part material ${p.material}`);
+        const animNode = isAnimatedNode(p.node);
+        if (animNode) {
+          const pivot = spec.nodes[animNode].pivot;
+          const localPart: Part = {
+            id: `${idPrefix}.${p.id}`,
+            shape: p.shape,
+            size: v3(p.size),
+            pos: [p.pos[0] - pivot[0], p.pos[1] - pivot[1], p.pos[2] - pivot[2]],
+            quat: [...(p.quat as Quat)],
+            material: p.material as Material,
+            collide: p.collide,
+          };
+          const list = animatedByNode.get(animNode);
+          if (list) list.push(localPart);
+          else animatedByNode.set(animNode, [localPart]);
+          continue;
+        }
         const q = rotOf(p.node).multiply(new Quaternion(...(p.quat as Quat)));
-        return {
+        equipment.push({
           id: `${idPrefix}.${p.id}`,
           shape: p.shape,
           size: v3(p.size),
@@ -179,8 +211,31 @@ export function defineMachine<S extends object>(def: MachineDefinition<S>) {
           quat: [q.x, q.y, q.z, q.w],
           material: p.material as Material,
           collide: p.collide,
-        };
-      });
+        });
+      }
+
+      const animatedNodeOrder = [...animatedByNode.keys()];
+      const dynamicProps = animatedNodeOrder.map((node) => ({
+        id: `${idPrefix}.${node}`,
+        kind: "parts" as const,
+        parts: animatedByNode.get(node)!,
+        hidden: true,
+      }));
+      const dynamicPropState =
+        drive && dynamicProps.length > 0
+          ? (frame: Frame, extras: number[], propStates: PropState[] = []): PropState[] => {
+              const nextState = resolve({ ...state, ...drive(frame, extras, propStates) });
+              const ns = def.nodes(nextState, spec);
+              const nextWorld = placement.clone().multiply(def.base ? def.base(nextState, spec) : new Matrix4());
+              const nextCache = new Map<string, Matrix4>();
+              return animatedNodeOrder.map((node) => {
+                const m = nextWorld.clone().multiply(nodeMatrix(spec, ns, node, nextCache));
+                const pivot = new Vector3(...v3(spec.nodes[node].pivot)).applyMatrix4(m);
+                const q = new Quaternion().setFromRotationMatrix(m);
+                return { pos: tuple(pivot), quat: [q.x, q.y, q.z, q.w] };
+              });
+            }
+          : undefined;
 
       const a = spec.anchors;
       const surfaces: Record<string, PadSurface> = {};
@@ -257,6 +312,7 @@ export function defineMachine<S extends object>(def: MachineDefinition<S>) {
         nodeStates,
         glb: [{ id: spec.file, pos: tuple(origin), quat: [quat.x, quat.y, quat.z, quat.w], hideEquipment: true }],
         equipment,
+        ...(dynamicProps.length ? { props: dynamicProps, propState: dynamicPropState } : {}),
         contacts: def.contacts(idPrefix),
         surfaces,
         footplates,

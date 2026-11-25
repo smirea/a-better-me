@@ -238,7 +238,7 @@ def prop_safety_squat_bar():
     for s, tag in ((1, "L"), (-1, "R")):
         m.sweep([(s * 0.13, 0.0, 0.02), (s * 0.15, -0.05, 0.16), (s * 0.16, -0.10, 0.34)], 0.016, "mat_chrome", None, 14, fillet=0.06)
         m.tube((s * 0.158, -0.085, 0.27), (s * 0.161, -0.103, 0.35), 0.022, "mat_pad", None, 18)
-        m.handle(f"grip_{tag}", (s * 0.16, -0.095, 0.31), (0, -0.2, 1), (0, 1, 0), 0.022, 0.08, "bar")
+        m.handle(f"grip_{tag}", (s * 0.16, -0.095, 0.31), (0, -0.2, 1), (-s, 0, 0), 0.022, 0.08, "neutral")
     m.collider("yoke", "capsule", (0.05, 0.34, 0), (0, 0, -0.01), mat="mat_pad")
     _sleeves(m, collar_x, half_len)
     return m

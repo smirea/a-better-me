@@ -1,26 +1,41 @@
 # Exercise motion
 
-Generates a replayable 3D rep for an exercise from its instructions, with the muscles and tendons it loads and the flags a person watching would raise. Decisions and the model's limits are in [`docs/decisions/exercise-motion.md`](../docs/decisions/exercise-motion.md); read it first.
+Generates a replayable 3D rep for an exercise from its instructions, with the muscles and tendons it loads, canonical single-instance GLB equipment, anatomical hand grips and toe-break feet, and automated parametric + 3D GLB mesh validation. Architectural decisions are in [`docs/decisions/exercise-motion.md`](../docs/decisions/exercise-motion.md) and the catalog clustering map is in [`docs/machine-catalog.md`](docs/machine-catalog.md).
 
 ## Commands
 
-- `bun run motion` (`scripts/build.ts`) generates every exercise, runs the validators, the instruction checks, and the fault tests, prints the evaluation, and writes `dist/exercise-motion.html` (the viewer, one self-contained file), `dist/<id>.json` (each baked rep), and `dist/evaluation.md`. It fails when a fault test goes uncaught.
-- `scripts/review.ts [id]` prints only the flags and checks, in under a second. Use it while tuning a pose.
-- `scripts/sheet.ts <id> out.png [side,front,top]` writes a grid of stills without a browser (needs `rsvg-convert`). Look at it after every change to a spec; numbers alone miss a pose that is valid and wrong.
-- `scripts/figure-asset.ts` rebuilds the lifter mesh and its muscle map into `viewer/assets/` from MakeHuman's CC0 assets (downloaded once into `.cache/makehuman`) and the app's body map. It takes about 20 s. Run it after changing the rig's joints or the body map, and commit what it writes.
-- `scripts/record.ts out.mp4 "ex=0&view=Angle"` records one rep as video on a clean white stage (lifter and equipment, no controls); needs `ffmpeg`. The `clean=1` hash gives the same stage in the browser.
-- `scripts/shot.ts out.png "ex=0&frame=60&view=Side&tab=Review&play=0"` screenshots the viewer in headless Chrome. The hash also takes `mode`, `fault`, `load`, and `speed`.
+- `bun run motion` (`scripts/build.ts`) builds the lazy-loaded library (`dist/library/`) and single-file viewers (`dist/exercise-motion.html`), running parametric, load, and 3D GLB BVH validators plus form checks. Pass `--library-only` for fast incremental viewer rebuilds.
+- `bun run motion:serve` (`scripts/serve.ts`) serves the live library viewer at `http://localhost:6162/` on a pure white stage (`studio-light`) with live skin swapping and 3s auto-reload.
+- `bun exercise-motion/scripts/batch-qa.ts <slug>... [--out /tmp/motion-inspect/qa.png]` validates specs (motion + load + real 3D GLB BVH collision + form checks) and writes a fast 2D QA mosaic.
+- `bun exercise-motion/scripts/render-3d.ts <slug> --closeups [--out /tmp/motion-inspect/3d-<slug>.png] [--skin studio-graphite]` renders real Three.js WebGL multi-view stills plus hand-grip and foot-contact close-ups on a pure `#ffffff` white stage. **Always inspect the 3D render + close-ups visually.**
+- `bun exercise-motion/scripts/verify-machines.ts` validates all 42 canonical GLBs (`models/machines/*.glb`), semantic materials, bounds, anchors, and all 21 machine factories + props.
+- `blender -b --factory-startup -P exercise-motion/scripts/machines/build_machines.py` deterministically rebuilds all 42 canonical GLBs and `src/machines/anchors.json` in ~1 s.
+- `scripts/figure-asset.ts` rebuilds `viewer/assets/lifter.bin` and `muscle-map.png` offline from MakeHuman's CC0 assets (~20 s). Run after changing body joints or the body map.
 
-## Adding an exercise
+## Authoring an exercise (Canonical Scene Composition)
 
-1. Read its instructions (`Instructions/<id>` in the catalog's Markdown pack) and its start and end frames in `app-ios/Assets/ExerciseImages/`.
-2. Write `src/exercises/<name>.ts` and list it in `src/exercises/index.ts`. A spec gives: the contacts that hold all rep (planted feet, hands on the bar, back on the bench) as solver goals, the two key poses as rough joint-angle hints plus the condition that defines each (thighs parallel, bar on the chest), where the weight bears, what carries the body, and one form check per instruction that can be measured, quoting the instruction.
-3. Hints only need to land in the right basin; the solver does the rest. A hint pose that starts inside the equipment or far from its contacts solves to nonsense, so print the hint pose's anchors when a key pose comes out wrong.
-4. Add fault tests to `src/faults.ts` for the mistakes the instructions warn about.
-5. Run the build, look at the sheet and the viewer, and fix every flag and failed check, or state in the reply why one stands.
+**Never duplicate or hand-edit GLB files per exercise.** Every exercise selects shared canonical machine(s) and prop(s) from `src/machines/` and wires them via `composeExercise()` (`src/scene.ts`):
+
+1. **Read the exercise brief & reference frames** (`app-ios/Assets/ExerciseImages/`). Confirm exact start/peak posture, grip style, foot contact, range of motion, and every form cue.
+2. **Pick canonical equipment from `src/machines/`:**
+   - Machines (`src/machines/index.ts`): e.g. `adjustableBenchMachine({ backAngleDeg: 45 })`, `powerRackMachine({ hookY, safetyY })`, `latPulldownMachine({ bar: ... })`, `dualAdjustablePulleyMachine({ pulleyY, handles: ... })`, `legPress45Machine({ sledTravel, drive: ... })`. Pass `pos` / `yawDeg` to place them; pass `drive` when a sled, carriage, lever arm, pulley swivel, or weight stack animates during the rep.
+   - Props (`src/machines/free-weights.ts`): `loadedBarbell("bar", kg)`, `loadedEzBar("bar", kg)`, `dumbbellProp("db", kg)`, `kettlebellProp("kb", kg)`, `cableAttachment("bar", "prop-lat-bar" | "prop-d-handle" | "prop-v-bar" | "prop-rope")`, `medicineBallProp`, `stabilityBallProp`, `abWheelProp`. Use `cableEyeAt(kind, propState)` for exact cable attachment points.
+   - Use the machine's exported anchors (`machine.surfaces`, `machine.footplates`, `machine.handles`, `machine.pulleys`, `machine.rails`, `machine.pivots`, `machine.hooks`) instead of hardcoding magic coordinates!
+3. **Wire the body with anatomical foot & hand primitives (`src/solver.ts`, `src/postures.ts`):**
+   - **Feet:** `plantFootFlat` / `plantBothFeet` / `plantBothFeetOnPlate` (flat sole on floor or tilted footplate), `plantFootOnToeBreak` / `plantBothToes` (metatarsal toe-break with raised heel — push-ups, planks, lunges, split squats), `plantFootOnEdge` (calf raises on a step edge). For toe-break contacts in `required`, check `forefoot_L/R` (or `toe_L/R`), not `ballIn_L/R`.
+   - **Hands:** `holdHandle(body, side, handleSpec, opts)` (follows a canonical handle's shaft axis & palm normal), `gripBar` / `gripBarBothHands` (overhand/underhand/neutral), `braceHandOnSurface` / `braceBothHands`, `palmOnFloor`.
+   - **Finger wrap (`grips`):** Set `grips` on the returned `SceneBodyPlan` — either a single `HandGrip` (`"bar"`, `"press"`, `"neutral"`, `"hook"`, `"open"`, `"flat-floor"`, `"ball-stop"`, `"pinch"`, `"fist"`, `"relaxed"`) or per-hand `{ L, R, radiusL?, radiusR? }` for asymmetric exercises (e.g. `{ L: "open", R: "neutral" }` on a bench-supported dumbbell row).
+4. **Hints, key goals, loads, contacts & checks:**
+   - Start from `POSTURE_HINTS` (`src/postures.ts`) so hints land in the right solver basin (note: `standing` has `root.y = 0.947`, `pronePlank` sets `toes.ext = 60`).
+   - Add `required` contacts for every grounded foot, pad contact, or gripped handle/prop. For animated machine nodes (like `leg-press-45.footplate` or `leg-press-45.sled`), both `part: "leg-press-45.footplate"` and `prop: "leg-press-45.sled"` track the live moving node across every frame.
+   - Add one `FormCheck` per measurable instruction cue, quoting the catalog instruction.
+5. **Verify numerically AND visually:**
+   - Run `bun exercise-motion/scripts/batch-qa.ts <slug>` — must pass with **0 errors**, **0 GLB/cable clips**, and **100% form checks passing**.
+   - Run `bun exercise-motion/scripts/render-3d.ts <slug> --closeups` and inspect BOTH full views and hand/foot close-ups against the reference frames. Fix any floating/clipping hands, unnatural thumb/wrist twist, heel lift, or misaligned equipment before finishing.
 
 ## Conventions
 
-- The figure stands on the floor (Y up) facing +Z, so its left is +X. Joint angles are anatomical and positive in the named direction on both sides (`body.ts`).
-- A baked `Sequence` is plain JSON and needs no solver to replay or analyse. The viewer imports only the body, the muscle model, and the equipment shapes.
-- Equipment the solver must avoid goes in `obstacles`; everything a person can touch goes in `contacts` with how deep it may press, or the clipping check flags it.
+- The figure stands on the floor (`y = 0`, Y up) facing `+Z`, so its left is `+X`. Joint angles are anatomical and positive in the named direction on both sides (`body.ts`).
+- Every canonical machine uses exclusively the 10 `SEMANTIC_MATERIALS` (`src/contracts.ts`) so runtime skinning (`src/skin.ts`) works without editing meshes.
+- `composeExercise()` automatically merges machine GLBs, articulated `glbState`, moving hidden collider props for animated nodes, static colliders, and default pad/grip/foot contact allowances.
+- Never silence a real collision by inflating contact allowances past soft-tissue compression (~3–4 cm for pads, ~2 cm for grips/feet) — fix the pose or placement instead.

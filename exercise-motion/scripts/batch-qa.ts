@@ -1,31 +1,18 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import { existsSync, mkdirSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { analyze } from "../src/biomech";
-import { generate, kinematics, type ExerciseSpec } from "../src/exercise";
+import { generate, kinematics } from "../src/exercise";
 import { validateGlbMotion } from "../src/glb-collision";
 import { contactSheet } from "../src/sheet";
 import { runChecks, validateLoad, validateMotion } from "../src/validate";
-import { MOTION_ROOT } from "./catalog-io";
+import { loadSpec } from "./catalog-io";
 
 /**
  * Validates a list of exercise slugs in one pass and composites a compact visual QA mosaic
  * (start + peak angle/side stills per exercise) so waves of 10-50 exercises can be audited quickly.
  */
-async function loadSpec(slug: string): Promise<ExerciseSpec> {
-  const filePath = join(MOTION_ROOT, "src", "exercises", `${slug}.ts`);
-  if (!existsSync(filePath)) throw new Error(`Missing exercise file: ${filePath}`);
-  const mod = (await import(resolve(filePath))) as Record<string, unknown>;
-  const spec = (mod.spec ??
-    Object.values(mod).find(
-      (v): v is ExerciseSpec =>
-        typeof v === "object" && v !== null && "id" in v && "catalogId" in v && "build" in v,
-    )) as ExerciseSpec | undefined;
-  if (!spec) throw new Error(`${filePath}: no ExerciseSpec export found`);
-  return spec;
-}
-
 async function main() {
   const args = process.argv.slice(2);
   const outIdx = args.indexOf("--out");

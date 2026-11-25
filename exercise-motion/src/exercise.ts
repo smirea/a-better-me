@@ -619,6 +619,10 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
     endFrame: fk(body, end, newFrame(body)),
   });
   const partIds = new Set(equipment.map((part) => part.id));
+  for (const prop of built.props) {
+    if (prop.kind === "parts") for (const part of prop.parts) partIds.add(part.id);
+    else if (prop.kind === "glb" && prop.colliders) for (const part of prop.colliders) partIds.add(part.id);
+  }
   for (const contact of built.required) {
     if (contact.part && !partIds.has(contact.part)) {
       throw new Error(

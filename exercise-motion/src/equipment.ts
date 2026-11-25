@@ -46,7 +46,7 @@ export type PropDef =
   | { id: string; kind: "kettlebell" }
   | { id: string; kind: "plate" }
   | { id: string; kind: "medball" }
-  | { id: string; kind: "parts"; parts: Part[] }
+  | { id: string; kind: "parts"; parts: Part[]; /** Collider-only moving prop rendered by an articulated GLB node. */ hidden?: boolean }
   | {
       id: string;
       kind: "glb";

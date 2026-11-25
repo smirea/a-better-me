@@ -14,6 +14,7 @@ export const legPress45Machine = defineMachine<LegPress45State>({
     return { sledTravel: clamp(s.sledTravel, r.minTravel, r.maxTravel) };
   },
   nodes: (s, spec) => ({ sled: slideAlong(spec.anchors.rails!.sled.dir, s.sledTravel) }),
+  animatedNodes: ["sled"],
   contacts: (p) => ({
     [`${p}.back_pad`]: BACK_PAD,
     [`${p}.seat_pad`]: SEAT_PAD,

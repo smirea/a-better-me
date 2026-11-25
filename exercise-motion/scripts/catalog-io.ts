@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import type { ExerciseSpec } from "../src/exercise";
 import type { Muscle } from "../src/muscles";
 
 export const MOTION_ROOT = join(import.meta.dir, "..");
@@ -115,4 +116,19 @@ export function exerciseImageFiles(ex: AppCatalogExercise): string[] {
   return ex.images
     .map((stem) => join(EXERCISE_IMAGES_DIR, `${stem}.webp`))
     .filter((file) => existsSync(file));
+}
+
+export async function loadSpec(slugOrPath: string): Promise<ExerciseSpec> {
+  const filePath = slugOrPath.endsWith(".ts")
+    ? resolve(slugOrPath)
+    : join(MOTION_ROOT, "src", "exercises", `${slugOrPath}.ts`);
+  if (!existsSync(filePath)) throw new Error(`Missing exercise file: ${filePath}`);
+  const mod = (await import(filePath)) as Record<string, unknown>;
+  const spec = (mod.spec ??
+    Object.values(mod).find(
+      (v): v is ExerciseSpec =>
+        typeof v === "object" && v !== null && "id" in v && "catalogId" in v && "build" in v,
+    )) as ExerciseSpec | undefined;
+  if (!spec) throw new Error(`${filePath}: no ExerciseSpec export found`);
+  return spec;
 }

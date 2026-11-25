@@ -111,12 +111,16 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
   const capsules = newCapsules(body);
   const fixed = compileParts(sequence.equipment.filter((part) => part.collide));
   const allEquipmentById = new Map(compileParts(sequence.equipment).map((s) => [s.part.id, s]));
-  const allowance = (partId: string, colliderId: string) => {
+  const allowance = (partId: string, collider: Body["colliders"][number]) => {
+    let best = 0;
     for (const [prefix, allowed] of Object.entries(sequence.contacts)) {
-      if (partId.startsWith(prefix) && allowed[colliderId] !== undefined)
-        return allowed[colliderId];
+      if (!partId.startsWith(prefix)) continue;
+      const direct = allowed[collider.id];
+      const alias = collider.contactAs ? allowed[collider.contactAs] : undefined;
+      if (direct !== undefined) best = Math.max(best, direct);
+      else if (alias !== undefined) best = Math.max(best, alias);
     }
-    return 0;
+    return best;
   };
   const visible = body.colliders
     .map((collider, i) => (collider.visible ? i : -1))
@@ -156,13 +160,13 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
     );
     for (const shape of shapes) {
       for (const i of visible) {
-        const id = body.colliders[i].id;
-        const depth = obstaclePenetration(body, capsules, i, shape) - allowance(shape.part.id, id);
+        const collider = body.colliders[i];
+        const depth = obstaclePenetration(body, capsules, i, shape) - allowance(shape.part.id, collider);
         if (depth <= LIMITS.clip) continue;
-        collector.add(`clip:${id}:${shape.part.id}`, f, depth, (worst) => ({
+        collector.add(`clip:${collider.id}:${shape.part.id}`, f, depth, (worst) => ({
           code: "equipment-clip",
           severity: worst > 0.02 ? "error" : "warning",
-          title: `${pretty(id)} clips through ${shape.part.id.split(".").map(pretty).join(" ")}`,
+          title: `${pretty(collider.id)} clips through ${shape.part.id.split(".").map(pretty).join(" ")}`,
           detail: `${cm(worst)} inside it`,
         }));
       }
@@ -223,12 +227,17 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
           slides.set(contact.label, seen);
         }
       } else if (contact.part !== undefined) {
-        const partShape = allEquipmentById.get(contact.part);
+        let partShape = allEquipmentById.get(contact.part);
+        let movingPart = false;
+        if (!partShape) {
+          partShape = shapes.find((s) => s.part.id === contact.part);
+          movingPart = Boolean(partShape);
+        }
         if (!partShape) {
           throw new Error(`Required contact "${contact.label}" references missing part "${contact.part}"`);
         }
         gap = Math.max(0, signedDistance(partShape, point));
-        if (!contact.allowSlide) {
+        if (!contact.allowSlide && !movingPart) {
           const seen = slides.get(contact.label) ?? { min: point.clone(), max: point.clone() };
           seen.min.min(point);
           seen.max.max(point);

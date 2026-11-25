@@ -148,6 +148,6 @@ export interface CanonicalMachineInstance {
   pivots?: Record<string, PivotSpec>;
   hooks?: { pos: Vec3; safetyY?: number }[];
   glbState?: (frame: Frame, extras: number[], propStates: PropState[]) => GlbNodePose[][];
-  propState?: (frame: Frame, extras: number[]) => PropState[];
+  propState?: (frame: Frame, extras: number[], propStates?: PropState[]) => PropState[];
   cameraHint?: { view?: "Front" | "Back" | "Side" | "Angle" | "Top"; target?: Vec3 };
 }

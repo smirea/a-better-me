@@ -17,6 +17,7 @@ export const legExtensionMachine = defineMachine<LegExtensionState>({
     lever_arm: rotX(-rad(s.extensionDeg)),
     stack: slideY(clamp(CAM * rad(Math.max(0, s.extensionDeg)), 0, specParam(spec, "stackTravel"))),
   }),
+  animatedNodes: ["lever_arm"],
   contacts: (p) => ({
     [`${p}.seat_pad`]: SEAT_PAD,
     [`${p}.back_pad`]: BACK_PAD,

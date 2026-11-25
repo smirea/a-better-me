@@ -542,7 +542,7 @@ def leg_press_45():
         m.beam((sx * 0.30, 0.07, -0.28), (sx * 0.30, hy - 0.02, -0.28), 0.045, 0.045, up=(0, 0, 1))
         m.tube((sx * 0.30, hy, z0 - 0.02), (sx * 0.30, hy, z1 + 0.02), 0.012, "mat_chrome", None, 14)
         m.tube((sx * 0.30, hy, z0), (sx * 0.30, hy, z0 + 0.20), 0.016, "mat_grip", None, 18, chamfer=0.003)
-        m.handle(f"handle_{tag}", (sx * 0.30, hy, z0 + 0.10), (0, 0, 1), (0, 1, 0), 0.016, 0.20, "neutral")
+        m.handle(f"handle_{tag}", (sx * 0.30, hy, z0 + 0.10), (0, 0, 1), (-sx, 0, 0), 0.016, 0.20, "neutral")
 
     # Base.
     for sx in (1, -1):
@@ -620,7 +620,7 @@ def _seated_frame(m, seat_top, seat_z0, seat_z1, back_bottom_z, back_angle_deg):
         z0, z1 = seat_z0 + 0.06, seat_z0 + 0.24
         m.beam((sx * 0.20, y, z0 - 0.02), (sx * 0.27, y, z0 - 0.02), 0.03, 0.03)
         m.tube((sx * 0.27, y, z0 - 0.05), (sx * 0.27, y, z1), 0.016, "mat_grip", None, 18, chamfer=0.003)
-        m.handle(f"handle_{tag}", (sx * 0.27, y, (z0 + z1) / 2), (0, 0, 1), (0, 1, 0), 0.016, z1 - z0, "neutral")
+        m.handle(f"handle_{tag}", (sx * 0.27, y, (z0 + z1) / 2), (0, 0, 1), (-sx, 0, 0), 0.016, z1 - z0, "neutral")
 
 
 def _lever_hub(m, node, hub, arm_to, cross_to, pad_c, pad_len=0.36, pad_r=0.055, pad_axis=(1, 0, 0)):
@@ -806,7 +806,7 @@ def dip_pullup_station():
         m.beam((sx * px, dy, pz + 0.04), (sx * dx, dy, pz + 0.04), 0.05, 0.05)
         m.tube((sx * dx, dy, pz + 0.02), (sx * dx, dy, 0.33), 0.019, "mat_chrome", None, 20, chamfer=0.003, part=f"dip_{tag}")
         m.tube((sx * dx, dy, 0.02), (sx * dx, dy, 0.31), 0.0198, "mat_grip", None, 20, chamfer=0.003)
-        m.handle(f"dip_{tag}", (sx * dx, dy, 0.165), (0, 0, 1), (0, 1, 0), 0.0198, 0.29, "neutral")
+        m.handle(f"dip_{tag}", (sx * dx, dy, 0.165), (0, 0, 1), (-sx, 0, 0), 0.0198, 0.29, "neutral")
         # Step for mounting.
         m.box((sx * px * 0.75, 0.40, pz + 0.12), (0.18, 0.02, 0.16), "mat_frame", bevel=0.004)
         m.box((sx * px * 0.75, 0.411, pz + 0.12), (0.16, 0.003, 0.14), "mat_rubber", bevel=0.001)
@@ -940,7 +940,7 @@ def back_extension_bench():
         g0 = hip_c + Vector((sx * 0.30, 0, 0)) - dorsal * 0.04 - b * 0.10
         m.beam(beam1, g0 - b * 0.02 + Vector((-sx * 0.02, 0, 0)), 0.03, 0.03, up=(1, 0, 0))
         m.tube(g0, g0 + b * 0.18, 0.016, "mat_grip", None, 18, chamfer=0.003)
-        m.handle(f"handle_{tag}", g0 + b * 0.09, b, dorsal, 0.016, 0.18, "neutral")
+        m.handle(f"handle_{tag}", g0 + b * 0.09, b, (-sx, 0, 0), 0.016, 0.18, "neutral")
     return m
 
 
@@ -1112,7 +1112,7 @@ def ghd():
         g = Vector((sx * 0.28, pad_y - 0.05, pad_z - 0.05))
         m.beam((0, pad_y - 0.12, pad_z), g - Vector((sx * 0.02, 0, 0)), 0.03, 0.03)
         m.tube(g + Vector((0, 0, -0.08)), g + Vector((0, 0, 0.08)), 0.016, "mat_grip", None, 18, chamfer=0.003)
-        m.handle(f"handle_{tag}", g, (0, 0, 1), (0, 1, 0), 0.016, 0.16, "neutral")
+        m.handle(f"handle_{tag}", g, (0, 0, 1), (-sx, 0, 0), 0.016, 0.16, "neutral")
     return m
 
 

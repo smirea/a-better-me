@@ -155,13 +155,17 @@ export function composeExercise(config: ComposeExerciseConfig): ExerciseSpec {
       );
 
       const glb: GlbRef[] = machines.flatMap((m) => m.glb);
+      const userProps: PropDef[] = plan.props ?? [];
       const machineProps: PropDef[] = machines.flatMap((m) => m.props ?? []);
-      const props: PropDef[] = [...machineProps, ...(plan.props ?? [])];
+      const props: PropDef[] = [...userProps, ...machineProps];
 
-      const propState = (frame: Frame, extras: number[]): PropState[] => [
-        ...machines.flatMap((m) => (m.propState ? m.propState(frame, extras) : [])),
-        ...(plan.propState ? plan.propState(frame, extras) : []),
-      ];
+      const propState = (frame: Frame, extras: number[]): PropState[] => {
+        const userStates = plan.propState ? plan.propState(frame, extras) : [];
+        const machineStates = machines.flatMap((m) =>
+          m.propState ? m.propState(frame, extras, userStates) : [],
+        );
+        return [...userStates, ...machineStates];
+      };
 
       const hasMachineGlbState = machines.some((m) => Boolean(m.glbState));
       const glbState =

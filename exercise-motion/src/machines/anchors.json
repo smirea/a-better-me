@@ -19,7 +19,7 @@
    ]
   },
   "tris": 4236,
-  "bytes": 116780,
+  "bytes": 116856,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -326,7 +326,7 @@
    ]
   },
   "tris": 888,
-  "bytes": 21156,
+  "bytes": 21176,
   "materials": [
    "mat_frame",
    "mat_rubber"
@@ -401,7 +401,7 @@
    ]
   },
   "tris": 3840,
-  "bytes": 106580,
+  "bytes": 106656,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -570,9 +570,9 @@
       0.707107
      ],
      "palmNormal": [
+      -1.0,
       0.0,
-      0.707107,
-      -0.707107
+      0.0
      ],
      "radius": 0.016,
      "length": 0.18,
@@ -590,9 +590,9 @@
       0.707107
      ],
      "palmNormal": [
+      1.0,
       0.0,
-      0.707107,
-      -0.707107
+      0.0
      ],
      "radius": 0.016,
      "length": 0.18,
@@ -700,7 +700,7 @@
    ]
   },
   "tris": 8632,
-  "bytes": 249436,
+  "bytes": 249516,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -1121,7 +1121,7 @@
    ]
   },
   "tris": 4824,
-  "bytes": 127572,
+  "bytes": 127612,
   "materials": [
    "mat_frame",
    "mat_pad",
@@ -1401,7 +1401,7 @@
    ]
   },
   "tris": 4940,
-  "bytes": 142704,
+  "bytes": 142784,
   "materials": [
    "mat_chrome",
    "mat_frame",
@@ -1683,8 +1683,8 @@
       1.0
      ],
      "palmNormal": [
+      -1.0,
       0.0,
-      1.0,
       0.0
      ],
      "radius": 0.0198,
@@ -1703,8 +1703,8 @@
       1.0
      ],
      "palmNormal": [
-      0.0,
       1.0,
+      0.0,
       0.0
      ],
      "radius": 0.0198,
@@ -1813,7 +1813,7 @@
    ]
   },
   "tris": 13752,
-  "bytes": 411776,
+  "bytes": 411840,
   "materials": [
    "mat_accent",
    "mat_cable",
@@ -2195,7 +2195,7 @@
    ]
   },
   "tris": 3992,
-  "bytes": 116648,
+  "bytes": 116724,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -2410,8 +2410,8 @@
       1.0
      ],
      "palmNormal": [
+      -1.0,
       0.0,
-      1.0,
       0.0
      ],
      "radius": 0.016,
@@ -2430,8 +2430,8 @@
       1.0
      ],
      "palmNormal": [
-      0.0,
       1.0,
+      0.0,
       0.0
      ],
      "radius": 0.016,
@@ -2523,7 +2523,7 @@
    ]
   },
   "tris": 1108,
-  "bytes": 36212,
+  "bytes": 36272,
   "materials": [
    "mat_chrome",
    "mat_frame",
@@ -2660,7 +2660,7 @@
    ]
   },
   "tris": 8128,
-  "bytes": 236924,
+  "bytes": 237012,
   "materials": [
    "mat_accent",
    "mat_cable",
@@ -2900,7 +2900,7 @@
    ]
   },
   "tris": 8588,
-  "bytes": 249908,
+  "bytes": 250000,
   "materials": [
    "mat_accent",
    "mat_cable",
@@ -3127,8 +3127,8 @@
       1.0
      ],
      "palmNormal": [
+      -1.0,
       0.0,
-      1.0,
       0.0
      ],
      "radius": 0.016,
@@ -3147,8 +3147,8 @@
       1.0
      ],
      "palmNormal": [
-      0.0,
       1.0,
+      0.0,
       0.0
      ],
      "radius": 0.016,
@@ -3266,7 +3266,7 @@
    ]
   },
   "tris": 6512,
-  "bytes": 184216,
+  "bytes": 184296,
   "materials": [
    "mat_chrome",
    "mat_frame",
@@ -3467,8 +3467,8 @@
       1.0
      ],
      "palmNormal": [
+      -1.0,
       0.0,
-      1.0,
       0.0
      ],
      "radius": 0.016,
@@ -3487,8 +3487,8 @@
       1.0
      ],
      "palmNormal": [
-      0.0,
       1.0,
+      0.0,
       0.0
      ],
      "radius": 0.016,
@@ -3597,7 +3597,7 @@
    ]
   },
   "tris": 4812,
-  "bytes": 129576,
+  "bytes": 129616,
   "materials": [
    "mat_frame",
    "mat_pad",
@@ -3916,7 +3916,7 @@
    ]
   },
   "tris": 996,
-  "bytes": 24100,
+  "bytes": 24136,
   "materials": [
    "mat_rubber",
    "mat_wood"
@@ -4034,7 +4034,7 @@
    ]
   },
   "tris": 7164,
-  "bytes": 282636,
+  "bytes": 282688,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -4569,7 +4569,7 @@
    ]
   },
   "tris": 3192,
-  "bytes": 84632,
+  "bytes": 84676,
   "materials": [
    "mat_frame",
    "mat_pad",
@@ -4744,7 +4744,7 @@
    ]
   },
   "tris": 7496,
-  "bytes": 217176,
+  "bytes": 217252,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -4965,7 +4965,7 @@
    ]
   },
   "tris": 8632,
-  "bytes": 248072,
+  "bytes": 248160,
   "materials": [
    "mat_accent",
    "mat_cable",
@@ -5192,8 +5192,8 @@
       1.0
      ],
      "palmNormal": [
+      -1.0,
       0.0,
-      1.0,
       0.0
      ],
      "radius": 0.016,
@@ -5212,8 +5212,8 @@
       1.0
      ],
      "palmNormal": [
-      0.0,
       1.0,
+      0.0,
       0.0
      ],
      "radius": 0.016,
@@ -5331,7 +5331,7 @@
    ]
   },
   "tris": 7188,
-  "bytes": 226832,
+  "bytes": 226900,
   "materials": [
    "mat_accent",
    "mat_cable",
@@ -5530,7 +5530,7 @@
    ]
   },
   "tris": 656,
-  "bytes": 20156,
+  "bytes": 20196,
   "materials": [
    "mat_rubber",
    "mat_wood"
@@ -5606,7 +5606,7 @@
    ]
   },
   "tris": 9052,
-  "bytes": 258176,
+  "bytes": 258232,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -5980,7 +5980,7 @@
    ]
   },
   "tris": 980,
-  "bytes": 31548,
+  "bytes": 31604,
   "materials": [
    "mat_chrome",
    "mat_frame",
@@ -6166,7 +6166,7 @@
    ]
   },
   "tris": 1328,
-  "bytes": 42200,
+  "bytes": 42236,
   "materials": [
    "mat_accent",
    "mat_chrome"
@@ -6313,7 +6313,7 @@
    ]
   },
   "tris": 1848,
-  "bytes": 58880,
+  "bytes": 58916,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -6505,7 +6505,7 @@
    ]
   },
   "tris": 1260,
-  "bytes": 30516,
+  "bytes": 30552,
   "materials": [
    "mat_chrome",
    "mat_grip"
@@ -6612,7 +6612,7 @@
    ]
   },
   "tris": 640,
-  "bytes": 24204,
+  "bytes": 24260,
   "materials": [
    "mat_chrome",
    "mat_grip",
@@ -6760,7 +6760,7 @@
    ]
   },
   "tris": 4060,
-  "bytes": 88016,
+  "bytes": 88052,
   "materials": [
    "mat_chrome",
    "mat_grip"
@@ -7032,7 +7032,7 @@
    ]
   },
   "tris": 2156,
-  "bytes": 42508,
+  "bytes": 42504,
   "materials": [
    "mat_grip",
    "mat_plate"
@@ -7157,7 +7157,7 @@
    ]
   },
   "tris": 1736,
-  "bytes": 46460,
+  "bytes": 46516,
   "materials": [
    "mat_chrome",
    "mat_frame",
@@ -7350,7 +7350,7 @@
    ]
   },
   "tris": 3056,
-  "bytes": 75548,
+  "bytes": 75568,
   "materials": [
    "mat_accent",
    "mat_rubber"
@@ -7403,7 +7403,7 @@
    ]
   },
   "tris": 1536,
-  "bytes": 44956,
+  "bytes": 44952,
   "materials": [
    "mat_plate"
   ],
@@ -7459,7 +7459,7 @@
    ]
   },
   "tris": 1536,
-  "bytes": 44960,
+  "bytes": 44956,
   "materials": [
    "mat_plate"
   ],
@@ -7515,7 +7515,7 @@
    ]
   },
   "tris": 1536,
-  "bytes": 47264,
+  "bytes": 47260,
   "materials": [
    "mat_plate"
   ],
@@ -7571,7 +7571,7 @@
    ]
   },
   "tris": 1536,
-  "bytes": 44960,
+  "bytes": 44956,
   "materials": [
    "mat_plate"
   ],
@@ -7627,7 +7627,7 @@
    ]
   },
   "tris": 1536,
-  "bytes": 44956,
+  "bytes": 44952,
   "materials": [
    "mat_plate"
   ],
@@ -7683,7 +7683,7 @@
    ]
   },
   "tris": 1536,
-  "bytes": 47260,
+  "bytes": 47256,
   "materials": [
    "mat_plate"
   ],
@@ -7795,7 +7795,7 @@
    ]
   },
   "tris": 1844,
-  "bytes": 42944,
+  "bytes": 43012,
   "materials": [
    "mat_cable",
    "mat_chrome",
@@ -7923,7 +7923,7 @@
    ]
   },
   "tris": 2160,
-  "bytes": 62264,
+  "bytes": 62320,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -8083,13 +8083,13 @@
       0.980581
      ],
      "palmNormal": [
+      -1.0,
       0.0,
-      1.0,
       0.0
      ],
      "radius": 0.022,
      "length": 0.08,
-     "grip": "bar"
+     "grip": "neutral"
     },
     "grip_R": {
      "pos": [
@@ -8103,13 +8103,13 @@
       0.980581
      ],
      "palmNormal": [
-      0.0,
       1.0,
+      0.0,
       0.0
      ],
      "radius": 0.022,
      "length": 0.08,
-     "grip": "bar"
+     "grip": "neutral"
     }
    }
   }
@@ -8134,7 +8134,7 @@
    ]
   },
   "tris": 2592,
-  "bytes": 47864,
+  "bytes": 47884,
   "materials": [
    "mat_pad"
   ],
@@ -8208,7 +8208,7 @@
    ]
   },
   "tris": 2892,
-  "bytes": 77120,
+  "bytes": 77156,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -8376,7 +8376,7 @@
    ]
   },
   "tris": 1852,
-  "bytes": 47236,
+  "bytes": 47272,
   "materials": [
    "mat_chrome",
    "mat_frame",
