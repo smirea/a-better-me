@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { cpus } from "node:os";
 import { join } from "node:path";
+import { gzipSync } from "node:zlib";
 import { analyze } from "../src/biomech";
 import { groupsOf } from "../src/catalog";
 import { generate, kinematics, type ExerciseSpec } from "../src/exercise";
@@ -367,26 +368,27 @@ const libHtml = fill(
 );
 writeFileSync(join(libraryDir, "index.html"), libHtml);
 
-// 2. Also write self-contained single-file viewer (dist/exercise-motion.html) for up to 12 featured exercises (or --single)
-const embeddedSlice = builtItems.slice(0, 12);
-const embeddedExercises = await Promise.all(
-  embeddedSlice.map(async (item) => {
-    const entry = byCatalogId.get(item.spec.catalogId)!;
-    const inlineImages = await Promise.all(
-      entry.images
-        .filter((name) => existsSync(join(REPO_ROOT, `app-ios/Assets/ExerciseImages/${name}.webp`)))
-        .map(
-          async (name) =>
-            `data:image/webp;base64,${Buffer.from(await Bun.file(join(REPO_ROOT, `app-ios/Assets/ExerciseImages/${name}.webp`)).arrayBuffer()).toString("base64")}`,
-        ),
-    );
-    return { ...item.data, images: inlineImages };
-  }),
-);
-const json = JSON.stringify({ mode: "embedded", muscles: MUSCLES, exercises: embeddedExercises }).replaceAll(
-  "</",
-  "<\\/",
-);
+// 2. Also write self-contained single-file viewer (dist/exercise-motion.html & dist/exercise-motion-embed.html)
+// containing ALL built exercises gzip-compressed for instant offline / inline T3 playback.
+const round3 = (v: unknown): unknown => {
+  if (typeof v === "number") return Number.isFinite(v) ? Math.round(v * 1000) / 1000 : 0;
+  if (Array.isArray(v)) return v.map(round3);
+  if (v && typeof v === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, val] of Object.entries(v)) out[k] = round3(val);
+    return out;
+  }
+  return v;
+};
+const compressedAll = gzipSync(
+  Buffer.from(JSON.stringify(round3(builtItems.map((item) => ({ ...item.data, images: [] }))))),
+  { level: 9 },
+).toString("base64");
+const json = JSON.stringify({
+  mode: "embedded-library",
+  catalog: builtItems.map((b) => b.summary),
+  exercisesGz: compressedAll,
+}).replaceAll("</", "<\\/");
 const asset = async (name: string) =>
   Buffer.from(await Bun.file(join(MOTION_ROOT, "viewer/assets", name)).arrayBuffer()).toString("base64");
 const lifter = await asset("lifter.bin");

@@ -43,6 +43,7 @@ const server = Bun.serve({
       headers: {
         "content-type": MIME[extname(filePath)] ?? "application/octet-stream",
         "cache-control": "no-cache",
+        "access-control-allow-origin": "*",
       },
     });
   },

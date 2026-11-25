@@ -74,14 +74,17 @@ interface CatalogSummary {
 }
 
 interface EmbeddedPayload {
-  mode?: "embedded" | "library";
+  mode?: "embedded" | "library" | "embedded-library";
   exercises?: ExerciseData[];
+  catalog?: CatalogSummary[];
+  exercisesGz?: string;
 }
 
 const rawDataText = document.getElementById("data")?.textContent?.trim() ?? "";
 const embedded: EmbeddedPayload =
   rawDataText && rawDataText !== "__DATA__" ? JSON.parse(rawDataText) : { mode: "library" };
-const isLibraryMode = embedded.mode === "library" || !embedded.exercises?.length;
+const isLibraryMode =
+  embedded.mode === "library" || embedded.mode === "embedded-library" || !embedded.exercises?.length;
 
 let libraryIndex: CatalogSummary[] = [];
 const loadedCache = new Map<string, ExerciseData>();
@@ -762,11 +765,22 @@ async function init() {
     $("library-picker").hidden = false;
     $("stage-title").hidden = false;
     $("library-drawer").hidden = false;
-    const resp = await fetch("./catalog.json");
-    if (!resp.ok) throw new Error(`Failed to fetch catalog.json (${resp.status})`);
-    libraryIndex = ((await resp.json()) as CatalogSummary[]).toSorted((a, b) =>
-      a.name.localeCompare(b.name),
-    );
+    if (embedded.mode === "embedded-library" && embedded.catalog && embedded.exercisesGz) {
+      const binStr = atob(embedded.exercisesGz);
+      const bytes = new Uint8Array(binStr.length);
+      for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+      const list = (await new Response(
+        new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip")),
+      ).json()) as ExerciseData[];
+      for (const item of list) loadedCache.set(item.sequence.id, item);
+      libraryIndex = [...embedded.catalog].toSorted((a, b) => a.name.localeCompare(b.name));
+    } else {
+      const resp = await fetch("./catalog.json");
+      if (!resp.ok) throw new Error(`Failed to fetch catalog.json (${resp.status})`);
+      libraryIndex = ((await resp.json()) as CatalogSummary[]).toSorted((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+    }
 
     const categories = [...new Set(libraryIndex.map((e) => e.category))].sort();
     $<HTMLSelectElement>("filter-category").innerHTML =
