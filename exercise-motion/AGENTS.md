@@ -4,6 +4,7 @@ Generates a replayable 3D rep for an exercise from its instructions, with the mu
 
 ## Commands
 
+- How the muscle numbers are computed, with sources: [`docs/biomechanics.md`](docs/biomechanics.md).
 - `bun run motion` (`scripts/build.ts`) builds the lazy-loaded library (`dist/library/`) and single-file viewers (`dist/exercise-motion.html`), running parametric, load, and 3D GLB BVH validators plus form checks. Pass `--library-only` for fast incremental viewer rebuilds.
 - `bun run motion:serve` (`scripts/serve.ts`) serves the live library viewer at `http://localhost:6162/` on a pure white stage (`studio-light`) with live skin swapping and 3s auto-reload.
 - `bun exercise-motion/scripts/batch-qa.ts <slug>... [--out /tmp/motion-inspect/qa.png] [--explain]` validates specs (motion + load + real 3D GLB BVH collision + form checks) and writes a fast 2D QA mosaic; `--explain` prints key angles, joints near their limits, contact gaps and grasp offsets at the start and peak poses.
@@ -27,10 +28,11 @@ Generates a replayable 3D rep for an exercise from its instructions, with the mu
    - **Moving footplates/pads:** pass `carried(machine.carrier("sled")!, ctx.live)` as the `carry` argument of `plantFootFlat` / `plantBothFeetOnPlate`; the targets come from the machine's static anchors and ride with the node. `machine.atFrame(frame, extras, props)` gives the driven machine for anything else that moves (pulley outlets for tethers).
 4. **Hints, key goals, loads, contacts & checks:**
    - Start from `POSTURE_HINTS` (`src/postures.ts`) so hints land in the right solver basin (note: `standing` has `root.y = 0.947`, `pronePlank` sets `toes.ext = 60`).
+   - Say what holds the lifter up in `support` and list only known forces in `loads`: contact forces are solved from balance, never asserted (`AUTHORING.md`, "Loads, contacts and muscles").
    - Add `required` contacts for every grounded foot and pad contact (hands are covered by their grasps). On a driven machine, name the part (`part: "leg-press-45.footplate"`): it tracks the moving node every frame, and sliding is measured across the part itself.
    - Add one `FormCheck` per measurable instruction cue, quoting the catalog instruction.
 5. **Verify numerically AND visually:**
-   - Run `bun exercise-motion/scripts/batch-qa.ts <slug>` — must pass with **0 errors**, **0 GLB/cable clips**, and **100% form checks passing**.
+   - Run `bun exercise-motion/scripts/batch-qa.ts <slug>` — must pass with **0 errors**, **0 GLB/cable clips**, and **100% form checks passing**. A `muscle-mismatch` warning means the pose loads a muscle the exercise isn't for: fix the pose.
    - Run `bun exercise-motion/scripts/render-3d.ts <slug> --closeups` and inspect BOTH full views and hand/foot close-ups against the reference frames. Fix any floating/clipping hands, unnatural thumb/wrist twist, heel lift, or misaligned equipment before finishing.
 
 ## Conventions

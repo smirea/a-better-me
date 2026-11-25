@@ -211,7 +211,12 @@ export function createActuators(): Actuator[] {
     add("upper_back", [[j("clavicle", "prot"), -90]]);
     add("upper_back", [[j("clavicle", "elev"), -40]]);
     add("upper_back", [[j("shoulder", "hadd"), -30]]);
-    add("chest", [[j("shoulder", "hadd"), 90]]);
+    // The pecs run from the breastbone straight to the upper arm, past the shoulder blade, so drawing the arm across
+    // the chest also draws the whole shoulder forward, and serratus doesn't hold a press's protraction alone.
+    add("chest", [
+      [j("shoulder", "hadd"), 90],
+      [j("clavicle", "prot"), 60],
+    ]);
     // With the upper arm out to the side, turning it about the chest's side-to-side axis is mostly rolling the
     // humerus inward, which the pecs do far more strongly than they flex a hanging arm.
     add("chest", [
@@ -251,23 +256,28 @@ export function createActuators(): Actuator[] {
     add("forearms", [[j("forearm", "pron"), 12]]);
     add("forearms", [[j("forearm", "pron"), -14]]);
     // What a trained hand holds on a bar, which is more than it squeezes on a dynamometer (about 540 N): men
-    // deadlift 160 kg without straps before the grip gives (Jukic et al., 2021).
+    // deadlift 160 kg without straps before the grip gives (Jukic et al., 2020).
     add("forearms", [[`grip_${side}`, 800]]);
   }
   return actuators;
 }
 
-/** The joint speed, in rad/s, at which a shortening muscle's torque reaches zero. */
+/**
+ * The joint speed, in rad/s, at which a shortening muscle's torque reaches zero. Twice what dynamometry on untrained
+ * people gives: a trained lifter moves two thirds of a maximum squat at joint speeds where that curve leaves under
+ * half the torque.
+ */
 const MAX_SPEED = 40;
 /** How much more than its isometric torque a muscle holds while it is being lengthened. */
 const LENGTHENING_GAIN = 0.2;
 
 /**
  * The fraction of its isometric torque a muscle has at a joint speed in rad/s, positive when it shortens. Hill's
- * hyperbola with the curvature that fits Anderson, Madigan & Nussbaum's (2007) hip, knee and ankle data (three
- * quarters of the torque at about 1.3 rad/s, half at about 3.3), and a lengthening side that levels off 20% above
- * isometric, which is what voluntary eccentric efforts reach. Lowering a weight therefore takes less of a muscle
- * than raising it, which is why measured activity in the lowering phase runs at half to three quarters of the lift.
+ * hyperbola with the curvature that fits Anderson, Madigan & Nussbaum's (2007) hip, knee and ankle data (half the
+ * torque at a speed about 2.6 times the one that leaves three quarters), and a lengthening side that levels off
+ * 20% above isometric, which is what voluntary eccentric efforts reach. Lowering a weight therefore takes less of
+ * a muscle than raising it, which is why measured activity in the lowering phase runs at half to three quarters of
+ * the lift.
  */
 export function speedFactor(speed: number) {
   const u = clamp(speed / MAX_SPEED, -0.6, 0.6);

@@ -672,7 +672,7 @@ function renderMuscles(panel: HTMLElement) {
         ? "secondary"
         : "";
   panel.innerHTML = `
-		<p class="note">Share of each muscle group's peak torque needed to hold and move ${state.loadKg} kg${sequence.loadUnit === "perSide" ? " in each hand" : ""}, frame by frame. Primary and secondary are the app's own labels for this exercise. Drag a trace to scrub.</p>
+		<p class="note">Share of each muscle group's strength it takes to hold and move ${state.loadKg > 0 ? `${state.loadKg} kg${sequence.loadUnit === "perSide" ? " in each hand" : ""}` : "the lifter's own weight"}, frame by frame, for a trained 80 kg lifter. Lifting reads higher than lowering because a shortening muscle has less to give. Primary and secondary are the app's own labels for this exercise. Drag a trace to scrub.</p>
 		<div class="cols head"><span>Muscle</span><span>Through the rep</span><span>Now</span><span>Peak</span></div>
 		${rows.map((row) => `<div class="row cols" data-m="${row.m}"><div class="name"><b>${MUSCLE_NAMES[row.muscle]}</b><small>${tag(row.muscle)}</small></div>${sparkline(row.series, "var(--engage)")}<span class="num now"></span><span class="num dim">${pct(row.peak)}%</span></div>`).join("")}
 		<p class="note">${MUSCLES.length - rows.length} other groups stay under 2%.</p>`;
