@@ -71,7 +71,7 @@ async function main() {
   const slug = args.find((a, i) => !a.startsWith("--") && !VALUE_FLAGS.has(args[i - 1] ?? ""));
   if (!slug) {
     throw new Error(
-      "Usage: render-3d.ts <slug> [--out /tmp/render-3d.png] [--views Side,Angle,Front] [--setting studio-light] [--skin studio-graphite] [--closeups]",
+      "Usage: render-3d.ts <slug> [--out /tmp/render-3d.png] [--views Side,Angle,Front] [--setting studio-light] [--skin graphite] [--closeups]",
     );
   }
   const outPng = flagValue("--out") ?? `/tmp/motion-inspect/3d-${slug}.png`;

@@ -971,8 +971,16 @@ async function init() {
       const sigOf = (list: CatalogSummary[]) =>
         list.map((e) => `${e.id}:${e.revision}`).join("|");
       let lastSig = sigOf(libraryIndex);
+      const appVersion = async () =>
+        ((await (await fetch("./version.json", { cache: "no-store" })).json()) as { app: string }).app;
+      const loadedApp = await appVersion().catch(() => null);
       setInterval(async () => {
         try {
+          // A rebuilt viewer (new skins, rendering, materials) needs a reload, not just new exercise data.
+          if (loadedApp && (await appVersion()) !== loadedApp) {
+            location.reload();
+            return;
+          }
           const r = await fetch("./catalog.json", { cache: "no-store" });
           if (!r.ok) return;
           const next = ((await r.json()) as CatalogSummary[]).toSorted((a, b) =>

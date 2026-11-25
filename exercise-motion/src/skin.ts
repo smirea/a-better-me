@@ -5,9 +5,14 @@ import skinsJson from "./machines/skins.json";
 /** Shared semantic palettes (`src/machines/skins.json`); Blender bakes the first entry into every GLB. */
 export const MACHINE_SKINS: readonly MachineSkin[] = skinsJson as MachineSkin[];
 
+// A theme is the paint on the steel: everything but the frame (chrome, pads, plates, the orange grips and treads) is
+// shared, so contact points read the same on every machine in every theme.
 for (const skin of MACHINE_SKINS) {
   for (const name of SEMANTIC_MATERIALS) {
     if (!skin.materials[name]) throw new Error(`Skin "${skin.id}" is missing ${name}`);
+    if (name !== "mat_frame" && JSON.stringify(skin.materials[name]) !== JSON.stringify(MACHINE_SKINS[0].materials[name])) {
+      throw new Error(`Skin "${skin.id}" changes ${name}; themes only repaint mat_frame`);
+    }
   }
 }
 

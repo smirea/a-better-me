@@ -365,6 +365,11 @@ const libHtml = fill(
   script,
 );
 writeFileSync(join(libraryDir, "index.html"), libHtml);
+// The open viewer polls this and reloads itself when the app (not just the exercise list) was rebuilt.
+writeFileSync(
+  join(libraryDir, "version.json"),
+  JSON.stringify({ app: createHash("sha256").update(libHtml).digest("hex").slice(0, 12) }),
+);
 
 if (libraryOnly) {
   console.log(
