@@ -41,12 +41,11 @@ export type Laterality = "bilateral" | "unilateral" | "alternating" | "asymmetri
  * Else if `direction` is given, force acts along that unit world direction (e.g. `[0, 1, 0]` for assistance).
  * Otherwise gravity acts downward `[0, -1, 0]`.
  */
+/** A known force on the body: a weight it carries, a cable that pulls it, or a pad that pushes it a fixed way. */
 export interface LoadAttachment {
   anchor: string;
-  /** Fraction of the logged weight this point carries (use 0 for purely bodyweight loads; negative reduces bodyweightShare on assisted machines). */
+  /** Fraction of the logged weight this point carries. */
   share: number;
-  /** Optional fraction of the lifter's body mass carried at this contact (e.g. 0.5 per hand on pull-ups/dips, 0.32 per hand on push-ups). */
-  bodyweightShare?: number;
   grip: "hang" | "press" | "rest";
   /** World-space cable pulley or band anchor point that pulls on this body anchor. */
   pulley?: Vec3;
@@ -54,16 +53,63 @@ export interface LoadAttachment {
   direction?: Vec3;
 }
 
+/**
+ * Something the body pushes against, which pushes back with whatever balance needs: never a number a spec asserts.
+ * Where balance leaves a choice, the lifter takes the push that costs the muscles least.
+ */
+export interface Contact {
+  /** `rest` presses on a surface and grips it by friction. `hold` is a fixed handle, which can pull as well. */
+  kind: "rest" | "hold";
+  /** Body anchors on the surface, which share its push. One that lifts off the others stops carrying. */
+  anchors: string[];
+  /** The way the surface pushes the body, straight up by default. */
+  normal?: Vec3;
+  /**
+   * Fraction of the logged weight the surface presses with along its normal, for a plate that rides rails (a leg
+   * press sled). A fixed surface leaves it unset.
+   */
+  share?: number;
+}
+
+const SOLE_ANCHORS = ["heel", "ballIn", "ballOut", "forefoot", "toe"];
+const PALM_ANCHORS = ["palmHeel", "knuckles", "fingertips"];
+
+/** A foot on a surface: the heel, both sides of the ball, the forefoot under the toe joint, and the toes. */
+export const footContact = (side: Side, on: Pick<Contact, "normal" | "share"> = {}): Contact => ({
+  kind: "rest",
+  anchors: SOLE_ANCHORS.map((point) => `${point}_${side}`),
+  ...on,
+});
+
+/** A flat hand on a surface: the heel of the hand, the knuckle pads and the fingertips. */
+export const palmContact = (side: Side, on: Pick<Contact, "normal" | "share"> = {}): Contact => ({
+  kind: "rest",
+  anchors: PALM_ANCHORS.map((point) => `${point}_${side}`),
+  ...on,
+});
+
 export interface Support {
-  kind: "standing" | "lying" | "seated" | "hanging" | "supported";
+  /**
+   * What carries the pelvis. `seated`, `lying` and `supported` rest it on a seat, bench or pad, which takes
+   * whatever the loads and contacts leave over. `standing`, `hanging` and `planted` leave the whole body to its
+   * contacts: the feet when standing, the hands when hanging, and the listed `contacts` when planted (hands and
+   * toes in a push-up, shoulders and feet in a hip thrust).
+   */
+  kind: "standing" | "lying" | "seated" | "hanging" | "supported" | "planted";
+  /** What the body pushes against. Standing and hanging have their own unless this replaces them. */
+  contacts?: Contact[];
+  /**
+   * Pairs of anchors that hold one rigid thing, such as two hands on a bar. They can push or pull each other along
+   * the line between them, as far as their grip on it holds, which is how a wide grip hangs from straight arms and
+   * how a bench press spreads the bar.
+   */
+  bars?: [string, string][];
   /** The bar or sled rides rails, which take the horizontal force a free load would need balance for. */
   rail?: boolean;
   /** Which feet carry standing balance (`["L", "R"]` default; `["L"]` for single-leg standing). */
   feet?: Side[];
   /** Joints carried by a bench, seat, pad, or floor, so their muscles hold no load. */
   passive?: string[];
-  /** The instructions have the lifter brace the core, so the abdominals work through the whole rep. */
-  brace?: boolean;
 }
 
 export interface RequiredContact {
@@ -297,12 +343,23 @@ function assertSpecInputs(spec: ExerciseSpec, built: Built, body: Body) {
     if (!body.anchors[load.anchor]) {
       throw new Error(`${spec.id}: unknown load anchor "${load.anchor}".`);
     }
-    if (!Number.isFinite(load.share) || (load.share < 0 && !(load.bodyweightShare && load.bodyweightShare > 0))) {
+    if (!Number.isFinite(load.share) || load.share < 0) {
       throw new Error(`${spec.id}: invalid load share ${load.share} on ${load.anchor}.`);
     }
-    if (load.bodyweightShare !== undefined && (!Number.isFinite(load.bodyweightShare) || load.bodyweightShare < 0)) {
-      throw new Error(`${spec.id}: invalid bodyweightShare ${load.bodyweightShare} on ${load.anchor}.`);
+  }
+  if (built.support.kind === "planted" && !built.support.contacts?.length) {
+    throw new Error(`${spec.id}: a planted lifter needs the contacts that hold it up.`);
+  }
+  for (const contact of built.support.contacts ?? []) {
+    for (const anchor of contact.anchors) {
+      if (!body.anchors[anchor]) throw new Error(`${spec.id}: unknown contact anchor "${anchor}".`);
     }
+    if (contact.share !== undefined && (!Number.isFinite(contact.share) || contact.share < 0)) {
+      throw new Error(`${spec.id}: invalid contact share ${contact.share}.`);
+    }
+  }
+  for (const anchor of (built.support.bars ?? []).flat()) {
+    if (!body.anchors[anchor]) throw new Error(`${spec.id}: unknown bar anchor "${anchor}".`);
   }
   const propIds = new Set(built.props.map((p) => p.id));
   for (const contact of built.required) {

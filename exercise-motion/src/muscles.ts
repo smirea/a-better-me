@@ -1,5 +1,5 @@
 import { SIDES, sideSign, type Angles, type Side } from "./body";
-import { clamp, rad } from "./math";
+import { clamp, deg, rad } from "./math";
 
 /** The app's 23 muscle groups, as `exercises.json` names them. */
 export const MUSCLES = [
@@ -85,15 +85,40 @@ export const TENDONS: Record<Muscle, string> = {
 export interface Actuator {
   muscle: Muscle;
   side: Side;
-  /** The torque in N·m this actuator adds to each demand at full activation; `grip` entries are in newtons. */
+  /**
+   * The torque in N·m this actuator adds to each joint motion at full activation, at the joint angle where it is
+   * strongest; `scale` is the fraction of that left at the current angle. `grip` entries are in newtons.
+   */
   entries: { dof: string; capacity: number; scale?: (angles: Angles) => number }[];
 }
 
+/** The fraction of peak torque left at each joint angle, in degrees, read off a measured strength curve. */
+const curve = (dof: string, points: [number, number][]) => (angles: Angles) => {
+  const x = deg(angles[dof]);
+  if (x <= points[0][0]) return points[0][1];
+  for (let i = 1; i < points.length; i++) {
+    const [x1, y1] = points[i];
+    if (x > x1) continue;
+    const [x0, y0] = points[i - 1];
+    return y0 + ((y1 - y0) * (x - x0)) / (x1 - x0);
+  }
+  return points[points.length - 1][1];
+};
+
 /**
- * Peak isometric torque each muscle group can add at each joint motion, for a trained 80 kg lifter. A group that
- * crosses two joints in the plane of the lift pulls on both at once.
- * These are first-order figures from strength norms, not a musculoskeletal model: moment arms don't change with
- * joint angle (except where `scale` says so) and nothing wraps around bone.
+ * Peak isometric torque each muscle group can add at each joint motion, for a trained 80 kg man. A group that
+ * crosses two joints pulls on both at once. These are torque generators, not a musculoskeletal model: nothing wraps
+ * around bone, and a moment arm changes with joint angle only where a strength curve says so.
+ *
+ * Totals per joint motion come from dynamometry: hip, knee and ankle and their strength curves from Anderson,
+ * Madigan & Nussbaum (2007) and Harbo et al. (2012), scaled by the 1.3 to 1.6 that resistance-trained men show over
+ * untrained ones (Maden-Wilkinson et al., 2020); hip extension against hip angle from Németh et al. (1983); the
+ * trunk from McNeill et al. (1980) and Graves et al. (1990); the neck from Vasavada et al. (2001); the shoulder
+ * girdle from Garner & Shim (2008); the arm from Holzbaur et al. (2007), Delp et al. (1996) and O'Sullivan &
+ * Gallwey (2002). The upper body is set above those untrained norms where they could not perform a trained lifter's
+ * bench press, pull-up or curl. Each total is shared among the groups by peak force times moment arm in Rajagopal
+ * et al. (2016) and Saul et al. (2015), with the hip extensors' moment arms against hip angle from Németh & Ohlsén
+ * (1985): gluteus maximus loses leverage as the hip flexes while adductor magnus gains it.
  */
 export function createActuators(): Actuator[] {
   const actuators: Actuator[] = [];
@@ -106,53 +131,58 @@ export function createActuators(): Actuator[] {
         entries: entries.map(([dof, capacity, scale]) => ({ dof, capacity, scale })),
       });
     const j = (joint: string, motion: string) => `${joint}_${side}.${motion}`;
-    const hipFlexion = (angles: Angles) => angles[j("hip", "flex")];
+    const kneeExtension = curve(j("knee", "flex"), [[0, 0.4], [30, 0.72], [65, 1], [90, 0.87], [120, 0.75], [150, 0.6]]);
+    const kneeFlexion = curve(j("knee", "flex"), [[0, 0.9], [30, 1], [90, 0.61], [150, 0.4]]);
+    const hipFlexion = curve(j("hip", "flex"), [[0, 1], [45, 0.8], [90, 0.55], [125, 0.4]]);
+    const plantarflexion = curve(j("ankle", "dorsi"), [[-45, 0.3], [-20, 0.6], [0, 0.85], [20, 1], [35, 0.95]]);
+    const elbowFlexion = curve(j("elbow", "flex"), [[0, 0.55], [40, 0.8], [90, 1], [130, 0.75], [150, 0.6]]);
+    const elbowExtension = curve(j("elbow", "flex"), [[0, 0.7], [40, 0.9], [80, 1], [120, 0.85], [150, 0.7]]);
 
-    // A group gets one actuator per motion it produces, and its activation is the highest of them. Only the
-    // two-joint couplings in the plane of the lift stay tied together, because those are what make a lift
-    // favour one muscle over another: hamstrings that extend the hip also flex the knee, which the quads
-    // then have to overcome.
+    // A group gets one actuator per head or per motion it produces, and its activation is the highest of them. The
+    // two-joint heads stay tied across their joints, because that is what makes a lift favour one muscle over
+    // another: hamstrings that extend the hip also flex the knee, which the quads then have to overcome.
+    add("quads", [[j("knee", "flex"), -275, kneeExtension]]);
     add("quads", [
-      [j("knee", "flex"), -300],
-      [j("hip", "flex"), 30],
+      [j("knee", "flex"), -65, kneeExtension],
+      [j("hip", "flex"), 50, hipFlexion],
     ]);
-    // The hamstrings lose leverage at the hip as it flexes deeply, while adductor magnus gains it.
     add("hamstrings", [
-      [j("hip", "flex"), -100, (a) => clamp(1.28 - hipFlexion(a) / rad(160), 0.55, 1)],
-      [j("knee", "flex"), 120],
+      [j("hip", "flex"), -125, curve(j("hip", "flex"), [[0, 0.6], [45, 1], [90, 0.96], [125, 0.84]])],
+      [j("knee", "flex"), 130, kneeFlexion],
     ]);
-    add("glutes", [[j("hip", "flex"), -220]]);
-    add("glutes", [[j("hip", "rot"), 45]]);
-    add("adductors", [[j("hip", "flex"), -120, (a) => clamp(hipFlexion(a) / rad(60), 0.15, 1)]]);
+    add("glutes", [[j("hip", "flex"), -100]]);
+    add("glutes", [[j("hip", "rot"), 50]]);
+    add("adductors", [[j("hip", "flex"), -100, curve(j("hip", "flex"), [[0, 0.13], [30, 0.5], [75, 1]])]]);
     add("adductors", [[j("hip", "abd"), -130]]);
-    add("abductors", [[j("hip", "abd"), 110]]);
-    add("abductors", [[j("hip", "rot"), -25]]);
-    add("hip_flexors", [[j("hip", "flex"), 110]]);
+    add("abductors", [[j("hip", "abd"), 120]]);
+    add("abductors", [[j("hip", "rot"), -50]]);
+    add("hip_flexors", [[j("hip", "flex"), 150, hipFlexion]]);
+    add("calves", [[j("ankle", "dorsi"), -138, plantarflexion]]);
     add("calves", [
-      [j("ankle", "dorsi"), -200],
-      [j("knee", "flex"), 25],
+      [j("ankle", "dorsi"), -92, plantarflexion],
+      [j("knee", "flex"), 28, kneeFlexion],
     ]);
-    add("tibs", [[j("ankle", "dorsi"), 45]]);
+    add("tibs", [[j("ankle", "dorsi"), 50, curve(j("ankle", "dorsi"), [[-45, 0.65], [-11, 1], [10, 0.86], [35, 0.4]])]]);
 
     // Each spinal level gets its own actuator: one spanning both would have to co-contract against the abs
     // whenever the two levels need torque in a different ratio than its fixed moment arms give.
     add("lower_back", [
       ["lumbar.flex", -220],
-      ["lumbar.bend", s * 45],
+      ["lumbar.bend", s * 60],
     ]);
     add("lower_back", [
       ["thoracic.flex", -160],
-      ["thoracic.bend", s * 35],
+      ["thoracic.bend", s * 45],
     ]);
-    add("abs", [["lumbar.flex", 80]]);
-    add("abs", [["thoracic.flex", 65]]);
+    add("abs", [["lumbar.flex", 65]]);
+    add("abs", [["thoracic.flex", 55]]);
     add("obliques", [
       ["lumbar.flex", 35],
-      ["lumbar.bend", s * 60],
+      ["lumbar.bend", s * 80],
     ]);
     add("obliques", [
       ["thoracic.flex", 25],
-      ["thoracic.bend", s * 45],
+      ["thoracic.bend", s * 55],
     ]);
     add("obliques", [
       ["lumbar.twist", 30],
@@ -164,13 +194,13 @@ export function createActuators(): Actuator[] {
     ]);
     add("neck", [
       ["neck.flex", 18],
-      ["neck.bend", s * 8],
+      ["neck.bend", s * 12],
     ]);
     add("neck", [
       ["neck.flex", -30],
-      ["neck.bend", s * 8],
+      ["neck.bend", s * 12],
     ]);
-    add("neck", [["neck.twist", s * 6]]);
+    add("neck", [["neck.twist", s * 15]]);
 
     add("upper_traps", [[j("clavicle", "elev"), 130]]);
     add("upper_traps", [
@@ -179,7 +209,7 @@ export function createActuators(): Actuator[] {
     ]);
     add("serratus", [[j("clavicle", "prot"), 125]]);
     add("upper_back", [[j("clavicle", "prot"), -90]]);
-    add("upper_back", [[j("clavicle", "elev"), -60]]);
+    add("upper_back", [[j("clavicle", "elev"), -40]]);
     add("upper_back", [[j("shoulder", "hadd"), -30]]);
     add("chest", [[j("shoulder", "hadd"), 90]]);
     // With the upper arm out to the side, turning it about the chest's side-to-side axis is mostly rolling the
@@ -187,40 +217,63 @@ export function createActuators(): Actuator[] {
     add("chest", [
       [
         j("shoulder", "flex"),
-        1,
-        (a) =>
-          25 +
-          55 * Math.sin(a[j("shoulder", "elev")]) * Math.abs(Math.cos(a[j("shoulder", "plane")])),
+        80,
+        (a) => {
+          const lifted = Math.sin(a[j("shoulder", "elev")]);
+          return 0.12 + 0.25 * lifted + 0.63 * lifted * Math.abs(Math.cos(a[j("shoulder", "plane")]));
+        },
       ],
     ]);
-    add("chest", [[j("shoulder", "abd"), -35]]);
-    add("lats", [[j("shoulder", "flex"), -90]]);
-    add("lats", [[j("shoulder", "abd"), -85]]);
-    add("lats", [[j("clavicle", "elev"), -65]]);
-    add("front_delts", [[j("shoulder", "flex"), 65]]);
+    add("chest", [[j("shoulder", "abd"), -65]]);
+    add("lats", [[j("shoulder", "flex"), -110]]);
+    add("lats", [[j("shoulder", "abd"), -110]]);
+    add("lats", [[j("clavicle", "elev"), -50]]);
+    add("front_delts", [[j("shoulder", "flex"), 55]]);
     add("front_delts", [[j("shoulder", "hadd"), 30]]);
     add("front_delts", [[j("shoulder", "abd"), 25]]);
     add("side_delts", [[j("shoulder", "abd"), 65]]);
     add("rear_delts", [[j("shoulder", "hadd"), -45]]);
     add("rear_delts", [[j("shoulder", "flex"), -30]]);
     add("biceps", [
-      [j("elbow", "flex"), 70],
-      [j("shoulder", "flex"), 12],
+      [j("elbow", "flex"), 70, elbowFlexion],
+      [j("shoulder", "flex"), 10],
     ]);
+    add("triceps", [[j("elbow", "flex"), -65, elbowExtension]]);
     add("triceps", [
-      [j("elbow", "flex"), -85],
-      [j("shoulder", "flex"), -12],
+      [j("elbow", "flex"), -20, elbowExtension],
+      [j("shoulder", "flex"), -15],
     ]);
-    add("forearms", [[j("elbow", "flex"), 18]]);
+    add("forearms", [[j("elbow", "flex"), 18, elbowFlexion]]);
     add("forearms", [[j("wrist", "flex"), 24]]);
-    add("forearms", [[j("wrist", "flex"), -18]]);
-    add("forearms", [[j("wrist", "dev"), 14]]);
-    add("forearms", [[j("wrist", "dev"), -14]]);
-    add("forearms", [[j("forearm", "pron"), 9]]);
-    add("forearms", [[j("forearm", "pron"), -6]]);
-    add("forearms", [[`grip_${side}`, 550]]);
+    add("forearms", [[j("wrist", "flex"), -14]]);
+    add("forearms", [[j("wrist", "dev"), 11]]);
+    add("forearms", [[j("wrist", "dev"), -11]]);
+    add("forearms", [[j("forearm", "pron"), 12]]);
+    add("forearms", [[j("forearm", "pron"), -14]]);
+    // What a trained hand holds on a bar, which is more than it squeezes on a dynamometer (about 540 N): men
+    // deadlift 160 kg without straps before the grip gives (Jukic et al., 2021).
+    add("forearms", [[`grip_${side}`, 800]]);
   }
   return actuators;
+}
+
+/** The joint speed, in rad/s, at which a shortening muscle's torque reaches zero. */
+const MAX_SPEED = 40;
+/** How much more than its isometric torque a muscle holds while it is being lengthened. */
+const LENGTHENING_GAIN = 0.2;
+
+/**
+ * The fraction of its isometric torque a muscle has at a joint speed in rad/s, positive when it shortens. Hill's
+ * hyperbola with the curvature that fits Anderson, Madigan & Nussbaum's (2007) hip, knee and ankle data (three
+ * quarters of the torque at about 1.3 rad/s, half at about 3.3), and a lengthening side that levels off 20% above
+ * isometric, which is what voluntary eccentric efforts reach. Lowering a weight therefore takes less of a muscle
+ * than raising it, which is why measured activity in the lowering phase runs at half to three quarters of the lift.
+ */
+export function speedFactor(speed: number) {
+  const u = clamp(speed / MAX_SPEED, -0.6, 0.6);
+  if (u >= 0) return (1 - u) / (1 + 4 * u);
+  const k = (5 / LENGTHENING_GAIN) * -u;
+  return 1 + (LENGTHENING_GAIN * k) / (1 + k);
 }
 
 /** How far behind the plane of the chest the upper arm points, in radians. */

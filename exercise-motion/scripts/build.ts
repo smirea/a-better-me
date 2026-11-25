@@ -188,7 +188,10 @@ for (const spec of specsToBuild) {
     ...validateMotion(body, sequence, kin),
     ...(await validateGlbMotion(body, sequence, kin)),
   ];
-  const loadIssues = validateLoad(sequence, analysis);
+  const loadIssues = validateLoad(sequence, analysis, {
+    primary: entry.primaryMuscles,
+    secondary: entry.secondaryMuscles,
+  });
   const checks = runChecks(body, built, sequence, kin);
   const stretched = groupsOf(entry.selection?.stretchedMuscles ?? []);
 

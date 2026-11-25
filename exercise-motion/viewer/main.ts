@@ -482,7 +482,10 @@ function reanalyze() {
   hardest = Math.max(0.3, ...Object.values(analysis.peak).map((peak) => peak.activation));
   engagement = new Float32Array(analysis.activation[0].length);
   const loaded = { ...sequence, loadKg: state.loadKg };
-  issues = [...validateMotion(body, loaded, kin), ...validateLoad(loaded, analysis)];
+  issues = [
+    ...validateMotion(body, loaded, kin),
+    ...validateLoad(loaded, analysis, activeExercise?.catalog),
+  ];
 }
 
 function current() {

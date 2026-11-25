@@ -565,6 +565,41 @@ export function keepAbove(body: Body, anchor: string, minY: number, weight = 35)
   };
 }
 
+const limb = new Vector3();
+const pull = new Vector3();
+const limbEnd = new Vector3();
+
+/**
+ * Lines a limb up with the force on its end, so the joint at its near end has nothing to hold: a forearm along
+ * its cable, an arm plumb under a dumbbell, a forearm upright over a hand on the floor. A limb held off that line
+ * is what makes the wrong muscles work. `from` is the joint the limb starts at and `to` the anchor the force acts
+ * on. `force` is the way the force points on that anchor, or a function of where the anchor is (toward a pulley).
+ * `slack` is a direction the limb may lean along for free, such as the bar two hands share.
+ */
+export function limbAlongForce(
+  body: Body,
+  from: string,
+  to: string,
+  force: Vector3 | ((at: Vector3) => Vector3),
+  weight = 20,
+  slack?: Vector3,
+): Goal {
+  const joint = body.index[from];
+  const anchor = body.anchors[to];
+  if (joint === undefined) throw new Error(`Unknown joint ${from}`);
+  if (!anchor) throw new Error(`Unknown anchor ${to}`);
+  const free = slack?.clone().normalize();
+  return ({ frame, push }) => {
+    worldPoint(frame, anchor.joint, anchor.local, limbEnd);
+    pull.copy(typeof force === "function" ? force(limbEnd) : force).normalize();
+    limb.subVectors(limbEnd, frame.pos[joint]).normalize().sub(pull);
+    if (free) limb.addScaledVector(free, -limb.dot(free));
+    push(weight * limb.x);
+    push(weight * limb.y);
+    push(weight * limb.z);
+  };
+}
+
 /** Holds a named anatomical angle (`hip_L.flex`, `elbow_R.flex`, etc.) at `targetDeg` degrees. */
 export function lockAngle(body: Body, angleKey: string, targetDeg: number, weight = 15): Goal {
   const targetRad = rad(targetDeg);

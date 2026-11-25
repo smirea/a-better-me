@@ -6,7 +6,7 @@ import type { Built, CheckResult, Kinematics, Sequence } from "./exercise";
 import { CYLINDER_GRIPS, graspHandleAt, gripCenter, propEye, propPointWorld } from "./grasp";
 import { machineSpec } from "./machines/core";
 import { closestSegments, deg, quatFromRotVec, rad, rotVecFromQuat } from "./math";
-import { MUSCLE_NAMES, MUSCLES, TENDONS } from "./muscles";
+import { MUSCLE_NAMES, MUSCLES, TENDONS, type Muscle } from "./muscles";
 import {
   capsulePenetration,
   capsulesInWorld,
@@ -31,6 +31,8 @@ export interface Issue {
     | "jerky"
     | "asymmetric"
     | "loop"
+    | "muscle-flicker"
+    | "muscle-mismatch"
     | "off-balance"
     | "overload"
     | "overstretch";
@@ -77,6 +79,14 @@ const LIMITS = {
   overload: 0.08,
   stretch: 1,
   tendonLoad: 1.15,
+  /** How far a muscle's effort must rise and fall again to count as one burst of work, as a share of its peak. */
+  burst: 0.3,
+  /** A muscle working under this never reads as flickering, whatever its shape. */
+  burstFloor: 0.12,
+  /** How hard a muscle the exercise doesn't list may work, against the hardest-working one it does list. */
+  unlistedShare: 2 / 3,
+  /** A listed prime mover working under this share of the hardest-working muscle is one the pose leaves out. */
+  primaryShare: 0.25,
 };
 
 function ranges(flags: boolean[]) {
@@ -539,9 +549,89 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
 }
 
 /** What a given weight makes of the motion: balance lost, a joint asked for more than its muscles have, a tendon overloaded. */
-export function validateLoad(sequence: Sequence, analysis: Analysis): Issue[] {
+export interface ListedMuscles {
+  primary: Muscle[];
+  secondary: Muscle[];
+}
+
+/**
+ * How many separate times a muscle's effort rises and falls through the looping rep. A controlled rep works a
+ * muscle in one swell on the way down and one on the way up, so more than that is a pose or a load popping.
+ */
+function bursts(series: number[], prominence: number) {
+  const count = series.length;
+  const start = series.indexOf(Math.min(...series));
+  let found = 0;
+  let low = series[start];
+  let high = low;
+  let rising = true;
+  for (let step = 1; step <= count; step++) {
+    const value = series[(start + step) % count];
+    if (rising) {
+      if (value > high) high = value;
+      else if (high - value >= prominence && high - low >= prominence) {
+        found++;
+        rising = false;
+        low = value;
+      }
+    } else if (value < low) low = value;
+    else if (value - low >= prominence) {
+      rising = true;
+      high = value;
+    }
+  }
+  return found;
+}
+
+/**
+ * Everything about a rep that depends on the weight: balance, strength, stretch, and whether the muscles it loads
+ * are the ones the exercise is for. `listed` is what the catalog says the exercise works.
+ */
+export function validateLoad(sequence: Sequence, analysis: Analysis, listed?: ListedMuscles): Issue[] {
   const count = sequence.poses.length;
   const collector = new Collector(count);
+  const moving = Math.max(2, sequence.phases.filter((phase) => phase.name === "lower" || phase.name === "raise").length);
+  const peaks = MUSCLES.map((_, m) => analysis.peak[MUSCLES[m]].activation);
+  MUSCLES.forEach((muscle, m) => {
+    if (peaks[m] < LIMITS.burstFloor) return;
+    for (const side of [0, 1]) {
+      const series = analysis.activation.map((row) => row[m * 2 + side]);
+      const found = bursts(series, Math.max(LIMITS.burstFloor / 2, LIMITS.burst * peaks[m]));
+      if (found <= moving) continue;
+      const top = series.indexOf(Math.max(...series));
+      collector.add(`flicker:${muscle}`, top, found, (worst) => ({
+        code: "muscle-flicker",
+        severity: "error",
+        title: `${MUSCLE_NAMES[muscle]} switch on and off ${worst} times in one rep`,
+        detail: `a controlled rep loads a muscle once on the way down and once on the way up; look for a joint that pops, a hand or foot that shifts, or a load that changes direction`,
+      }));
+    }
+  });
+  if (listed && listed.primary.length > 0) {
+    const named = new Set([...listed.primary, ...listed.secondary]);
+    const hardest = Math.max(...peaks);
+    const listedTop = Math.max(...[...named].map((muscle) => analysis.peak[muscle].activation));
+    MUSCLES.forEach((muscle, m) => {
+      const peak = peaks[m];
+      const top = analysis.activation.findIndex((row) => Math.max(row[m * 2], row[m * 2 + 1]) >= peak - 1e-6);
+      if (!named.has(muscle) && peak > LIMITS.burstFloor * 2 && peak > LIMITS.unlistedShare * listedTop) {
+        collector.add(`unlisted:${muscle}`, Math.max(0, top), peak, (worst) => ({
+          code: "muscle-mismatch",
+          severity: "warning",
+          title: `${MUSCLE_NAMES[muscle]} work harder than this exercise should ask`,
+          detail: `${(worst * 100).toFixed(0)}% at peak against ${(listedTop * 100).toFixed(0)}% for the hardest-working muscle the exercise lists; usually a limb held off the line of the load`,
+        }));
+      }
+      if (listed.primary.includes(muscle) && peak < LIMITS.primaryShare * hardest) {
+        collector.add(`idle:${muscle}`, Math.max(0, top), hardest - peak, () => ({
+          code: "muscle-mismatch",
+          severity: "warning",
+          title: `${MUSCLE_NAMES[muscle]} barely work in an exercise that lists them first`,
+          detail: `${(peak * 100).toFixed(0)}% at peak while the hardest-working muscle reaches ${(hardest * 100).toFixed(0)}%`,
+        }));
+      }
+    });
+  }
   for (let f = 0; f < count; f++) {
     const support = analysis.support[f];
     if (support && !sequence.support.rail && support.margin < LIMITS.balanceMargin) {

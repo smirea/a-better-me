@@ -311,6 +311,7 @@ export function createBody(height = 1.78, mass = 80): Body {
     // palm: the centre of the flat palm's contact patch. knuckles: the pads under the knuckles. fingertips: the
     // middle finger's pad when the fingers lie flat on the palm plane.
     anchor(`palm_${side}`, `wrist_${side}`, [-s * PALM_PLANE, -0.07, 0]);
+    anchor(`palmHeel_${side}`, `wrist_${side}`, [-s * PALM_PLANE, -0.025, 0]);
     anchor(`knuckles_${side}`, `wrist_${side}`, [-s * PALM_PLANE, -0.108, 0]);
     anchor(`fingertips_${side}`, `wrist_${side}`, [-s * PALM_PLANE, -0.2, 0.005]);
     anchor(`palmFlat_${side}`, `wrist_${side}`, [-s * PALM_PLANE, -0.07, 0]);
