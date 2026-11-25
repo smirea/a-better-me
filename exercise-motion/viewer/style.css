@@ -718,6 +718,7 @@ h3 + .stat {
 .clean #app,
 .clean.library-mode #app {
   grid-template-columns: minmax(0, 1fr);
+  height: 100dvh;
 }
 .clean .stage {
   grid-template-rows: minmax(0, 1fr);

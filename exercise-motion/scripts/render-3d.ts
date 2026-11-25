@@ -249,8 +249,8 @@ async function main() {
     await cdp.call("Page.enable");
     await cdp.call("Runtime.enable");
     await cdp.call("Emulation.setDeviceMetricsOverride", {
-      width: 640,
-      height: 480,
+      width: 900,
+      height: 600,
       deviceScaleFactor: 1,
       mobile: false,
     });
