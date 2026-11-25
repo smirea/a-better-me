@@ -35,8 +35,8 @@ export interface SettingMeta {
 }
 
 export const SETTINGS: readonly SettingMeta[] = [
+  { id: "studio-light", label: "Pure White", lightUi: true },
   { id: "studio-dark", label: "Studio Dark" },
-  { id: "studio-light", label: "Clean White", lightUi: true },
   { id: "gym-floor", label: "Gym Floor" },
   { id: "turf-arena", label: "Turf Arena" },
   { id: "warm-loft", label: "Warm Loft", lightUi: true },
@@ -120,7 +120,7 @@ export class StageEnvironment {
   readonly group = new Group();
   private readonly lights = new Group();
   readonly undersideLight: DirectionalLight;
-  private currentId: SettingId = "studio-dark";
+  private currentId: SettingId = "studio-light";
   private hiddenForUnderside = false;
   private envApplied = false;
 
@@ -133,7 +133,7 @@ export class StageEnvironment {
     this.undersideLight.visible = false;
     this.scene.add(this.group, this.lights, this.undersideLight);
     this.ensureEnvironment();
-    this.apply("studio-dark");
+    this.apply("studio-light");
   }
 
   private ensureEnvironment() {
@@ -167,7 +167,7 @@ export class StageEnvironment {
       const key = new DirectionalLight("#ffffff", keyInt);
       key.position.set(-2.6, 4.4, 3.6);
       key.castShadow = true;
-      key.shadow.mapSize.set(1024, 1024);
+      key.shadow.mapSize.set(2048, 2048);
       key.shadow.camera.near = 0.5;
       key.shadow.camera.far = 14;
       const d = 2.6;
@@ -196,18 +196,20 @@ export class StageEnvironment {
       grid.position.y = -0.001;
       this.group.add(floor, grid);
     } else if (id === "studio-light") {
-      this.scene.background = new Color("#f3f4f6");
-      this.scene.fog = new Fog("#f3f4f6", 8, 22);
-      this.scene.environmentIntensity = 0.55;
-      addLight("#ffffff", "#d8dce2", 1.5, 1.85, "#dbeafe", 0.9);
-      const floor = new Mesh(
+      this.scene.background = new Color("#ffffff");
+      this.scene.environmentIntensity = 0.62;
+      addLight("#ffffff", "#e5e7eb", 1.55, 1.95, "#dbeafe", 1.05);
+      const fill = new DirectionalLight("#f8fafc", 0.55);
+      fill.position.set(2.8, 1.8, 3.0);
+      this.lights.add(fill);
+      const shadowPlane = new Mesh(
         new PlaneGeometry(36, 36),
-        new MeshStandardMaterial({ color: "#eceef1", roughness: 0.92, metalness: 0.02 }),
+        new ShadowMaterial({ opacity: 0.14 }),
       );
-      floor.rotation.x = -Math.PI / 2;
-      floor.position.y = -0.002;
-      floor.receiveShadow = true;
-      this.group.add(floor);
+      shadowPlane.rotation.x = -Math.PI / 2;
+      shadowPlane.position.y = -0.002;
+      shadowPlane.receiveShadow = true;
+      this.group.add(shadowPlane);
     } else if (id === "gym-floor") {
       this.scene.background = new Color("#1c2028");
       this.scene.fog = new Fog("#1c2028", 9, 24);

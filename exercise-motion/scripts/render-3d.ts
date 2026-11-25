@@ -86,12 +86,14 @@ async function main() {
   );
   if (!slug) {
     throw new Error(
-      "Usage: render-3d.ts <slug> [--out /tmp/render-3d.png] [--views Side,Angle,Front] [--setting studio-light]",
+      "Usage: render-3d.ts <slug> [--out /tmp/render-3d.png] [--views Side,Angle,Front] [--setting studio-light] [--skin studio-graphite] [--closeups]",
     );
   }
   const outPng = flagValue("--out") ?? `/tmp/motion-inspect/3d-${slug}.png`;
   const views = (flagValue("--views") ?? "Side,Angle,Front").split(",");
   const setting = flagValue("--setting") ?? "studio-light";
+  const skin = flagValue("--skin") ?? "studio-graphite";
+  const closeups = args.includes("--closeups");
 
   const spec = await loadSpec(slug);
   const catalog = loadAppCatalog();
@@ -255,7 +257,7 @@ async function main() {
       mobile: false,
     });
 
-    const url = `http://127.0.0.1:${server.port}/#id=${encodeURIComponent(sequence.id)}&clean=1&setting=${setting}&play=0&view=${views[0]}&frame=0`;
+    const url = `http://127.0.0.1:${server.port}/#id=${encodeURIComponent(sequence.id)}&clean=1&setting=${encodeURIComponent(setting)}&skin=${encodeURIComponent(skin)}&play=0&view=${views[0]}&frame=0`;
     await cdp.call("Page.navigate", { url });
     for (let i = 0; i < 120; i++) {
       const res = await cdp.call("Runtime.evaluate", {
@@ -265,38 +267,73 @@ async function main() {
       if (res?.result?.value === true) break;
       await Bun.sleep(100);
     }
-    // Give async prop GLBs a moment to resolve as well.
-    await Bun.sleep(400);
 
     const font = "/System/Library/Fonts/Helvetica.ttc";
+    const captureTile = async (
+      setOpts: Record<string, unknown>,
+      tag: string,
+      caption: string,
+    ): Promise<string> => {
+      await cdp.call("Runtime.evaluate", {
+        expression: `window.__MOTION_SET__(${JSON.stringify(setOpts)})`,
+        awaitPromise: true,
+      });
+      await cdp.call("Runtime.evaluate", {
+        expression:
+          "new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r))))",
+        awaitPromise: true,
+      });
+      const shot = (await cdp.call("Page.captureScreenshot", { format: "png" })) as { data: string };
+      const raw = join(tmpDir, `${tag}.png`);
+      writeFileSync(raw, Buffer.from(shot.data, "base64"));
+      const labeled = join(tmpDir, `${tag}-lbl.png`);
+      if (existsSync(font)) {
+        await $`magick ${raw} -gravity NorthWest -fill "#000000aa" -draw "rectangle 0,0,260,26" -font ${font} -fill white -pointsize 15 -annotate +8+5 ${caption} ${labeled}`.quiet();
+        return labeled;
+      }
+      return raw;
+    };
+
     const rowPngs: string[] = [];
     for (const view of views) {
       const tiles: string[] = [];
       for (const [label, frameIdx] of frames) {
-        await cdp.call("Runtime.evaluate", {
-          expression: `window.__MOTION_SET__({ view: ${JSON.stringify(view)}, frame: ${frameIdx} })`,
-          awaitPromise: true,
-        });
-        await cdp.call("Runtime.evaluate", {
-          expression:
-            "new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r))))",
-          awaitPromise: true,
-        });
-        const shot = (await cdp.call("Page.captureScreenshot", { format: "png" })) as { data: string };
-        const raw = join(tmpDir, `${view}-${label}.png`);
-        writeFileSync(raw, Buffer.from(shot.data, "base64"));
-        const labeled = join(tmpDir, `${view}-${label}-lbl.png`);
-        if (existsSync(font)) {
-          await $`magick ${raw} -gravity NorthWest -fill "#000000aa" -draw "rectangle 0,0,220,26" -font ${font} -fill white -pointsize 15 -annotate +8+5 "${view} - ${label} (f${frameIdx})" ${labeled}`.quiet();
-          tiles.push(labeled);
-        } else {
-          tiles.push(raw);
-        }
+        tiles.push(
+          await captureTile(
+            { view, frame: frameIdx, focus: "full" },
+            `${view}-${label}`,
+            `${view} - ${label} (f${frameIdx})`,
+          ),
+        );
       }
       const row = join(tmpDir, `row-${view}.png`);
       await $`magick ${tiles} +append ${row}`.quiet();
       rowPngs.push(row);
     }
+
+    if (closeups) {
+      const cuTiles: string[] = [
+        await captureTile(
+          { view: "Angle", frame: 0, focus: "hands" },
+          "closeup-hands-start",
+          `Hands - start (f0)`,
+        ),
+        await captureTile(
+          { view: "Angle", frame: peak, focus: "hands" },
+          "closeup-hands-peak",
+          `Hands - peak (f${peak})`,
+        ),
+        await captureTile(
+          { view: "Side", frame: peak, focus: "feet" },
+          "closeup-feet-peak",
+          `Feet - peak (f${peak})`,
+        ),
+      ];
+      const cuRow = join(tmpDir, "row-closeups.png");
+      await $`magick ${cuTiles} +append ${cuRow}`.quiet();
+      rowPngs.push(cuRow);
+    }
+
     await $`magick ${rowPngs} -append ${outPng}`.quiet();
     cdp.close();
     console.log(outPng);

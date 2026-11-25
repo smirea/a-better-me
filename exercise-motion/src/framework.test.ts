@@ -1,10 +1,16 @@
 import { describe, expect, test } from "bun:test";
-import { Vector3 } from "three";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { Document, NodeIO } from "@gltf-transform/core";
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from "three";
 import { analyze } from "./biomech";
 import { anchorPoint, createBody, type Body } from "./body";
 import { compileParts, signedDistance, sphere, capsule } from "./equipment";
 import { generate, kinematics, type ExerciseSpec } from "./exercise";
+import { validateGlbMotion } from "./glb-collision";
 import { plantBothFeet, POSTURE_HINTS } from "./postures";
+import { applySkinToObject3D, getSkin } from "./skin";
 import { balance, mirrored, pin } from "./solver";
 import { validateMotion } from "./validate";
 import { catalogSlugMap, loadAppCatalog } from "../scripts/catalog-io";
@@ -197,5 +203,82 @@ describe("exercise-motion framework invariants", () => {
     expect(Math.abs(bwOnly.demands[0]["shoulder_L.abd"])).toBeGreaterThan(
       Math.abs(assisted.demands[0]["shoulder_L.abd"]),
     );
+  });
+
+  test("cable segments cutting through the torso trigger a cable-clip error", () => {
+    const body = sharedBody;
+    const base = {
+      ...sharedSquat,
+      poses: sharedSquat.poses.slice(0, 4),
+      s: sharedSquat.s.slice(0, 4),
+      propStates: sharedSquat.propStates.slice(0, 4),
+      tethers: [{ id: "cable_L", kind: "cable" as const }],
+      tetherStates: Array.from({ length: 4 }, () => [{ points: [[-0.6, 1.25, 0.02] as [number, number, number], [0.6, 1.25, 0.02] as [number, number, number]] }]),
+    };
+    const issues = validateMotion(body, base, kinematics(body, base));
+    expect(issues.some((i) => i.code === "cable-clip" && i.severity === "error")).toBe(true);
+  });
+
+  test("applySkinToObject3D swaps canonical semantic materials without touching non-semantic materials", () => {
+    const group = new Group();
+    const frameMesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial({ name: "mat_frame.001", color: "#000000" }));
+    const customMesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial({ name: "custom_logo", color: "#ff00ff" }));
+    group.add(frameMesh, customMesh);
+
+    const skin = getSkin("obsidian-crimson");
+    const result = applySkinToObject3D(group, skin);
+    expect(result.matched).toBe(1);
+    expect(result.unmatched).toEqual(["custom_logo"]);
+    expect(`#${(frameMesh.material as MeshStandardMaterial).color.getHexString()}`).toBe(skin.materials.mat_frame.color);
+    expect(`#${(customMesh.material as MeshStandardMaterial).color.getHexString()}`).toBe("#ff00ff");
+  });
+
+  test("validateGlbMotion catches a body clipping into a GLB mesh and a contact anchor far from the GLB", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "glb-col-test-"));
+    try {
+      const doc = new Document();
+      const buf = doc.createBuffer();
+      // 0.6 x 0.6 x 0.6 m cube centered at (0, 1.15, 0.02) — directly overlapping the standing torso.
+      const s = 0.3;
+      const verts = new Float32Array([
+        -s, -s, s, s, -s, s, s, s, s, -s, s, s,
+        -s, -s, -s, -s, s, -s, s, s, -s, s, -s, -s,
+        -s, s, -s, -s, s, s, s, s, s, s, s, -s,
+        -s, -s, -s, s, -s, -s, s, -s, s, -s, -s, s,
+        s, -s, -s, s, s, -s, s, s, s, s, -s, s,
+        -s, -s, -s, -s, -s, s, -s, s, s, -s, s, -s,
+      ]);
+      const idx = new Uint16Array([
+        0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11,
+        12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23,
+      ]);
+      const mat = doc.createMaterial("mat_frame");
+      const prim = doc
+        .createPrimitive()
+        .setAttribute("POSITION", doc.createAccessor().setType("VEC3").setArray(verts).setBuffer(buf))
+        .setIndices(doc.createAccessor().setType("SCALAR").setArray(idx).setBuffer(buf))
+        .setMaterial(mat);
+      const mesh = doc.createMesh("SteelBox").addPrimitive(prim);
+      const node = doc.createNode("BoxNode").setMesh(mesh).setTranslation([0, 1.15, 0.02]);
+      doc.createScene().addChild(node);
+      await new NodeIO().write(join(tmp, "test-box.glb"), doc);
+
+      const seq = {
+        ...sharedSquat,
+        poses: sharedSquat.poses.slice(0, 4),
+        s: sharedSquat.s.slice(0, 4),
+        propStates: sharedSquat.propStates.slice(0, 4),
+        glb: [{ id: "test-box", pos: [0, 0, 0] as [number, number, number], hideEquipment: true }],
+        required: [{ label: "Far heel on box", anchor: "heel_L", part: "fake.part" }],
+      };
+      const issues = await validateGlbMotion(sharedBody, seq, kinematics(sharedBody, seq), {
+        modelDirs: [tmp],
+        frameStride: 1,
+      });
+      expect(issues.some((i) => i.code === "glb-clip" && i.severity === "error")).toBe(true);
+      expect(issues.some((i) => i.code === "contact-lost" && i.severity === "error")).toBe(true);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
   });
 });

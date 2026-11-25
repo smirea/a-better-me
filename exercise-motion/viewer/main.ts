@@ -21,10 +21,11 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { analyze, type Analysis } from "../src/biomech";
-import { createBody, fk, newFrame, type Body } from "../src/body";
+import { anchorPoint, createBody, fk, newFrame, type Body } from "../src/body";
 import { propParts, type Material, type Part } from "../src/equipment";
 import { kinematics, type CheckResult, type Kinematics, type Sequence } from "../src/exercise";
 import { MUSCLE_NAMES, MUSCLES, TENDON_STRAIN_AT_PEAK, TENDONS, type Muscle } from "../src/muscles";
+import { applySkinToObject3D, DEFAULT_SKIN_ID, getSkin, MACHINE_SKINS } from "../src/skin";
 import { validateLoad, validateMotion, type Issue } from "../src/validate";
 import { Figure, preloadFigureAssets } from "./figure";
 import { SETTINGS, StageEnvironment, type SettingId } from "./settings";
@@ -105,7 +106,8 @@ const SPEEDS = [0.25, 0.5, 1];
 const PHASE_NAMES = { lower: "Lower", bottom: "Bottom", raise: "Lift", top: "Top" };
 
 const clean = params.get("clean") === "1";
-const initialSetting = (params.get("setting") as SettingId | null) ?? (clean ? "studio-light" : "studio-dark");
+const initialSetting = (params.get("setting") as SettingId | null) ?? "studio-light";
+const initialSkin = params.get("skin") ?? DEFAULT_SKIN_ID;
 
 const state = {
   exerciseId: params.get("id") ?? "",
@@ -117,7 +119,8 @@ const state = {
   mode: (params.get("mode") ?? "Engagement") as (typeof MODES)[number],
   tab: (params.get("tab") ?? "Muscles") as (typeof TABS)[number],
   view: (params.get("view") ?? "Angle") as (typeof VIEWS)[number],
-  setting: SETTINGS.some((s) => s.id === initialSetting) ? initialSetting : ("studio-dark" as SettingId),
+  setting: SETTINGS.some((s) => s.id === initialSetting) ? initialSetting : ("studio-light" as SettingId),
+  skin: MACHINE_SKINS.some((s) => s.id === initialSkin) ? initialSkin : DEFAULT_SKIN_ID,
   loadKg: 0,
 };
 
@@ -138,8 +141,15 @@ renderer.shadowMap.enabled = true;
 const scene = new Scene();
 document.documentElement.classList.toggle("clean", clean);
 
+function applyStageSetting(id: SettingId) {
+  state.setting = id;
+  stageEnv.apply(id);
+  const meta = SETTINGS.find((s) => s.id === id);
+  document.documentElement.classList.toggle("light-stage", Boolean(meta?.lightUi));
+}
+
 const stageEnv = new StageEnvironment(scene, renderer);
-stageEnv.apply(state.setting);
+applyStageSetting(state.setting);
 
 const camera = new PerspectiveCamera(32, 1, 0.1, 60);
 const controls = new OrbitControls(camera, canvas);
@@ -188,42 +198,53 @@ function partMesh(part: Part) {
   return mesh;
 }
 
+function applyActiveSkin() {
+  const skin = getSkin(state.skin);
+  applySkinToObject3D(glbSlot, skin);
+  applySkinToObject3D(props, skin);
+}
+
 let propLoadGen = 0;
 
-function buildProps() {
+function buildProps(): Promise<void> {
   const gen = ++propLoadGen;
   props.clear();
+  const pending: Promise<void>[] = [];
   for (const prop of sequence.props) {
     const group = new Group();
     if (prop.kind === "glb") {
       const fallback = new Group();
       for (const part of propParts(prop, state.loadKg)) fallback.add(partMesh(part));
       group.add(fallback);
-      void glbLoader
-        .loadAsync(`/gym-models/${prop.glbId}.glb`)
-        .then((gltf) => {
-          if (gen !== propLoadGen) return;
-          const obj = gltf.scene;
-          if (prop.offset) obj.position.set(...prop.offset);
-          if (prop.quat) obj.quaternion.set(...prop.quat);
-          if (prop.scale) obj.scale.setScalar(prop.scale);
-          obj.traverse((child) => {
-            if ((child as Mesh).isMesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
-            }
-          });
-          fallback.visible = false;
-          group.add(obj);
-        })
-        .catch(() => {
-          // Offline / missing GLB: parametric collider parts remain visible.
-        });
+      pending.push(
+        glbLoader
+          .loadAsync(`/gym-models/${prop.glbId}.glb`)
+          .then((gltf) => {
+            if (gen !== propLoadGen) return;
+            const obj = gltf.scene;
+            if (prop.offset) obj.position.set(...prop.offset);
+            if (prop.quat) obj.quaternion.set(...prop.quat);
+            if (prop.scale) obj.scale.setScalar(prop.scale);
+            obj.traverse((child) => {
+              if ((child as Mesh).isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+              }
+            });
+            applySkinToObject3D(obj, getSkin(state.skin));
+            fallback.visible = false;
+            group.add(obj);
+          })
+          .catch(() => {
+            // Offline / missing GLB: parametric collider parts remain visible.
+          }),
+      );
     } else {
       for (const part of propParts(prop, state.loadKg)) group.add(partMesh(part));
     }
     props.add(group);
   }
+  return Promise.all(pending).then(() => {});
 }
 
 interface TetherSegmentPool {
@@ -348,6 +369,7 @@ async function loadGlbAttachments() {
             });
           }
         });
+        applySkinToObject3D(obj, getSkin(state.skin));
         glbSlot.add(obj);
         loadedRefs.push(ref);
       } catch {
@@ -473,14 +495,17 @@ function applyLoadedExercise(resetLoad: boolean) {
     figureSlot.add(figure.group);
   }
   const grip =
-    sequence.grip ?? (sequence.props.some((prop) => prop.kind !== "dumbbell") ? "press" : "hang");
-  figure.setGrip(grip);
+    sequence.grips ??
+    sequence.grip ??
+    (sequence.props.some((prop) => prop.kind !== "dumbbell") ? "press" : "hang");
+  (figure.setGrip as (g: unknown) => void)(grip);
   kin = kinematics(body, sequence);
   if (resetLoad) state.loadKg = Number(params.get("load") ?? sequence.loadKg);
   state.frame = Math.min(state.frame, sequence.poses.length - 1);
   equipment.clear();
   for (const part of sequence.equipment) equipment.add(partMesh(part));
-  buildProps();
+  (window as unknown as Record<string, unknown>).__MOTION_READY__ = false;
+  const propsPromise = buildProps();
   buildTethers();
   const glbPromise = loadGlbAttachments();
   reanalyze();
@@ -510,7 +535,7 @@ function applyLoadedExercise(resetLoad: boolean) {
   setView(params.get("view") ? state.view : (sequence.cameraHint?.view ?? state.view));
   renderLoad();
   renderPanel();
-  void glbPromise.then(() => {
+  void Promise.all([propsPromise, glbPromise]).then(() => {
     (window as unknown as Record<string, unknown>).__MOTION_READY__ = true;
   });
 }
@@ -886,9 +911,20 @@ async function init() {
   ).join("");
   settingSelect.value = state.setting;
   settingSelect.addEventListener("change", () => {
-    state.setting = settingSelect.value as SettingId;
-    stageEnv.apply(state.setting);
+    applyStageSetting(settingSelect.value as SettingId);
   });
+
+  const skinSelect = document.getElementById("skin") as HTMLSelectElement | null;
+  if (skinSelect) {
+    skinSelect.innerHTML = MACHINE_SKINS.map(
+      (s) => `<option value="${s.id}">${s.label}</option>`,
+    ).join("");
+    skinSelect.value = state.skin;
+    skinSelect.addEventListener("change", () => {
+      state.skin = skinSelect.value;
+      applyActiveSkin();
+    });
+  }
 
   if (isLibraryMode) {
     document.documentElement.classList.add("library-mode");
@@ -1055,22 +1091,27 @@ async function init() {
     }
   });
 
-  // Programmatic hook for headless multi-view & multi-setting screenshot verification.
+  // Programmatic hook for headless multi-view, close-up & skin screenshot verification.
   (window as unknown as Record<string, unknown>).__MOTION_SET__ = async (opts: {
     id?: string;
     frame?: number;
     view?: (typeof VIEWS)[number];
     setting?: SettingId;
+    skin?: string;
     mode?: (typeof MODES)[number];
     tab?: (typeof TABS)[number];
+    focus?: "full" | "hands" | "handL" | "handR" | "feet";
   }) => {
     if (opts.id && opts.id !== state.exerciseId) await selectExerciseById(opts.id, true);
     if (opts.setting) {
-      state.setting = opts.setting;
       settingSelect.value = opts.setting;
-      stageEnv.apply(opts.setting);
+      applyStageSetting(opts.setting);
     }
-    if (opts.view) setView(opts.view);
+    if (opts.skin) {
+      state.skin = opts.skin;
+      if (skinSelect) skinSelect.value = opts.skin;
+      applyActiveSkin();
+    }
     if (opts.mode) {
       state.mode = opts.mode;
       select("modes", opts.mode);
@@ -1085,6 +1126,36 @@ async function init() {
       state.playing = false;
       state.frame = opts.frame;
       renderPlay();
+    }
+    if (opts.view) setView(opts.view);
+    if (opts.focus && opts.focus !== "full" && activeExercise) {
+      const fIdx = Math.min(sequence.poses.length - 1, Math.max(0, Math.round(state.frame)));
+      const fr = kin.frames[fIdx];
+      const names =
+        opts.focus === "hands"
+          ? ["grip_L", "grip_R"]
+          : opts.focus === "handL"
+            ? ["grip_L"]
+            : opts.focus === "handR"
+              ? ["grip_R"]
+              : ["heel_L", "heel_R", "ballIn_L", "ballIn_R", "toe_L", "toe_R"];
+      const box = new Box3();
+      for (const name of names) {
+        if (body.anchors[name]) box.expandByPoint(anchorPoint(body, fr, name));
+      }
+      if (!box.isEmpty()) {
+        const center = box.getCenter(new Vector3());
+        const size = box.getSize(new Vector3());
+        const radius = Math.max(0.22, size.length() * 0.65);
+        const dist = (radius / Math.sin((camera.fov * Math.PI) / 360)) * 1.15;
+        const dir =
+          opts.focus === "feet"
+            ? new Vector3(-0.78, 0.34, 0.52).normalize()
+            : new Vector3(-0.62, 0.36, 0.69).normalize();
+        controls.target.copy(center);
+        camera.position.copy(center).addScaledVector(dir, dist);
+        controls.update();
+      }
     }
     draw(performance.now());
   };

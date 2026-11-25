@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { cpus } from "node:os";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
@@ -9,6 +9,7 @@ import { groupsOf } from "../src/catalog";
 import { generate, kinematics, type ExerciseSpec } from "../src/exercise";
 import { EXERCISES } from "../src/exercises";
 import { FAULTS } from "../src/faults";
+import { validateGlbMotion } from "../src/glb-collision";
 import { MUSCLES, type Muscle } from "../src/muscles";
 import { runChecks, validateLoad, validateMotion } from "../src/validate";
 import { loadAppCatalog, MOTION_ROOT, REPO_ROOT } from "./catalog-io";
@@ -23,6 +24,10 @@ mkdirSync(cacheDir, { recursive: true });
 // Compute one fingerprint over core engine sources so any engine edit invalidates cached sequences.
 const engineFiles = [
   "body.ts",
+  "contracts.ts",
+  "skin.ts",
+  "scene.ts",
+  "glb-collision.ts",
   "solver.ts",
   "biomech.ts",
   "muscles.ts",
@@ -40,6 +45,14 @@ const engineHash = createHash("sha256");
 for (const f of engineFiles) {
   const p = join(MOTION_ROOT, "src", f);
   if (existsSync(p)) engineHash.update(readFileSync(p));
+}
+const machinesDir = join(MOTION_ROOT, "src", "machines");
+if (existsSync(machinesDir)) {
+  for (const f of readdirSync(machinesDir).sort()) {
+    if (f.endsWith(".ts") || f.endsWith(".json")) {
+      engineHash.update(readFileSync(join(machinesDir, f)));
+    }
+  }
 }
 const ENGINE_SIG = engineHash.digest("hex").slice(0, 12);
 
@@ -190,7 +203,10 @@ for (const spec of specsToBuild) {
   const seconds = (performance.now() - started) / 1000;
   const kin = kinematics(body, sequence);
   const analysis = analyze(body, sequence, kin);
-  const issues = validateMotion(body, sequence, kin);
+  const issues = [
+    ...validateMotion(body, sequence, kin),
+    ...(await validateGlbMotion(body, sequence, kin)),
+  ];
   const loadIssues = validateLoad(sequence, analysis);
   const checks = runChecks(body, built, sequence, kin);
   const stretched = groupsOf(entry.selection?.stretchedMuscles ?? []);

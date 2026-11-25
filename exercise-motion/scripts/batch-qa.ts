@@ -4,6 +4,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { analyze } from "../src/biomech";
 import { generate, kinematics, type ExerciseSpec } from "../src/exercise";
+import { validateGlbMotion } from "../src/glb-collision";
 import { contactSheet } from "../src/sheet";
 import { runChecks, validateLoad, validateMotion } from "../src/validate";
 import { MOTION_ROOT } from "./catalog-io";
@@ -43,16 +44,23 @@ async function main() {
       const { body, built, sequence } = generate(spec);
       const kin = kinematics(body, sequence);
       const analysis = analyze(body, sequence, kin);
-      const issues = [...validateMotion(body, sequence, kin), ...validateLoad(sequence, analysis)];
+      const glbIssues = await validateGlbMotion(body, sequence, kin);
+      const issues = [
+        ...validateMotion(body, sequence, kin),
+        ...glbIssues,
+        ...validateLoad(sequence, analysis),
+      ];
       const errors = issues.filter((i) => i.severity === "error");
       const checks = runChecks(body, built, sequence, kin);
       const failedChecks = checks.filter((c) => !c.pass);
       const ok = errors.length === 0 && failedChecks.length === 0 && checks.length >= 2;
       if (!ok) failed++;
       console.log(
-        `${ok ? "PASS" : "FAIL"}  ${slug.padEnd(46)} err=${errors.length} warn=${issues.length - errors.length} checks=${checks.length - failedChecks.length}/${checks.length}`,
+        `${ok ? "PASS" : "FAIL"}  ${slug.padEnd(46)} err=${errors.length} warn=${issues.length - errors.length} glb=${glbIssues.length} checks=${checks.length - failedChecks.length}/${checks.length}`,
       );
       for (const e of errors) console.log(`        ERR [${e.code}] ${e.title}: ${e.detail}`);
+      for (const w of issues.filter((i) => i.severity === "warning"))
+        console.log(`        WRN [${w.code}] ${w.title}: ${w.detail}`);
       for (const c of failedChecks) console.log(`        CHK FAIL ${c.label}: ${c.measured}`);
 
       const mid = sequence.phases[1]?.from ?? Math.floor(sequence.poses.length / 2);

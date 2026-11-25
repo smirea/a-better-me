@@ -14,6 +14,7 @@ import {
   type PoseHints,
   type Side,
 } from "./body";
+import type { HandGripConfig } from "./contracts";
 import type {
   GlbNodePose,
   GlbRef,
@@ -163,6 +164,7 @@ export interface Built {
   }) => Part[];
   glb?: GlbRef[];
   glbState?: (frame: Frame, extras: number[], propStates: PropState[]) => GlbNodePose[][];
+  machineIds?: string[];
   loads: LoadAttachment[];
   support: Support;
   tempo: Tempo;
@@ -172,6 +174,7 @@ export interface Built {
   checks: FormCheck[];
   laterality?: Laterality;
   grip?: GripStyle;
+  grips?: HandGripConfig;
   cameraHint?: CameraHint;
 }
 
@@ -203,6 +206,8 @@ export interface Sequence {
   loadUnit: "total" | "perSide";
   laterality?: Laterality;
   grip?: GripStyle;
+  grips?: HandGripConfig;
+  machineIds?: string[];
   cameraHint?: CameraHint;
   /** One pose per frame: the body's degrees of freedom, as `createBody` lays them out. */
   poses: number[][];
@@ -649,6 +654,8 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
     loadUnit: spec.loadUnit,
     laterality: built.laterality ?? spec.laterality ?? "bilateral",
     grip: built.grip,
+    ...(built.grips ? { grips: built.grips } : {}),
+    ...(built.machineIds?.length ? { machineIds: built.machineIds } : {}),
     cameraHint: built.cameraHint,
     poses: poses.map((pose) => [...pose.subarray(0, n)].map(round)),
     s: s.map(round),

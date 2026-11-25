@@ -3,7 +3,7 @@ import { anchorPoint, selfCollisionPairs, SIDES, type Body } from "./body";
 import type { Analysis } from "./biomech";
 import { compileParts, propParts, signedDistance, type Shape } from "./equipment";
 import type { Built, CheckResult, Kinematics, Sequence } from "./exercise";
-import { deg, quatFromRotVec, rotVecFromQuat } from "./math";
+import { closestSegments, deg, quatFromRotVec, rotVecFromQuat } from "./math";
 import { MUSCLE_NAMES, MUSCLES, TENDONS } from "./muscles";
 import {
   capsulePenetration,
@@ -18,6 +18,8 @@ export interface Issue {
     | "joint-limit"
     | "self-collision"
     | "equipment-clip"
+    | "glb-clip"
+    | "cable-clip"
     | "floor"
     | "contact-lost"
     | "contact-slides"
@@ -176,6 +178,36 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
           title: `${pretty(collider.id)} sinks into the floor`,
           detail: `${cm(worst)} below it`,
         }));
+      }
+    }
+
+    const frameTethers = sequence.tetherStates?.[f];
+    if (frameTethers?.length) {
+      const p0 = new Vector3();
+      const p1 = new Vector3();
+      for (let tIdx = 0; tIdx < frameTethers.length; tIdx++) {
+        const pts = frameTethers[tIdx].points;
+        const tetherId = sequence.tethers?.[tIdx]?.id ?? `cable_${tIdx}`;
+        const tetherR = sequence.tethers?.[tIdx]?.radius ?? 0.004;
+        for (let seg = 0; seg + 1 < pts.length; seg++) {
+          p0.set(...pts[seg]);
+          p1.set(...pts[seg + 1]);
+          for (const i of visible) {
+            const col = body.colliders[i];
+            if (col.id.startsWith("hand_") || col.id.startsWith("forearm_")) continue;
+            const hit = closestSegments(p0, p1, capsules.a[i], capsules.b[i]);
+            const colR = col.ra + (col.rb - col.ra) * hit.t;
+            const pen = colR + tetherR - hit.distance;
+            if (pen > 0.015) {
+              collector.add(`cable:${tetherId}:${col.id}`, f, pen, (worst) => ({
+                code: "cable-clip",
+                severity: worst > 0.025 ? "error" : "warning",
+                title: `${pretty(tetherId)} cuts through ${pretty(col.id)}`,
+                detail: `${cm(worst)} inside the body`,
+              }));
+            }
+          }
+        }
       }
     }
 
