@@ -686,6 +686,19 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
           ),
         )
       : undefined;
+  // A weight stack rests on its pins when the cable is slackest, wherever the author measured the cable's rest length.
+  if (glbStates) {
+    for (let g = 0; g < glbStates[0].length; g++) {
+      for (const node of new Set(glbStates[0][g].filter((p) => p.node.startsWith("stack")).map((p) => p.node))) {
+        const lift = (f: number) => glbStates[f][g].find((p) => p.node === node)?.posOffset?.[1] ?? 0;
+        const rest = Math.min(...glbStates.map((_, f) => lift(f)));
+        for (const row of glbStates) {
+          const pose = row[g].find((p) => p.node === node);
+          if (pose?.posOffset) pose.posOffset = [pose.posOffset[0], round(pose.posOffset[1] - rest), pose.posOffset[2]];
+        }
+      }
+    }
+  }
   const sequence: Sequence = {
     id: spec.id,
     catalogId: spec.catalogId,

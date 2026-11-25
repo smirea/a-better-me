@@ -39,6 +39,9 @@ export function graspWorld(side: Side, handle: HandleSpec, grip: HandGrip = hand
 export function thumbAlong(axis: Vector3, style: "overhand" | "underhand" | "neutral", side: Side, out = new Vector3()) {
   out.copy(axis).normalize();
   if (style === "neutral") return out.dot(new Vector3(0, 0.6, 1)) < 0 ? out.negate() : out;
+  if (Math.abs(out.x) < 0.5) {
+    throw new Error(`${style} grip needs a bar running side to side; this handle runs (${out.toArray().map((v) => v.toFixed(2)).join(", ")}), so use "neutral"`);
+  }
   if (out.x < 0) out.negate();
   return out.multiplyScalar(style === "overhand" ? -sideSign(side) : sideSign(side));
 }
@@ -175,6 +178,15 @@ export function carryProp(
       worldUp = thumbs[0].clone().add(thumbs[1]);
       localUp = local[0].axis.clone().add(local[1].axis);
     }
+  }
+  const kind = prop.kind === "glb" ? prop.glbId.replace(/^machines\//, "") : "";
+  if (!options.toward && propEye(prop)) {
+    throw new Error(`carryProp ${prop.id}: a cable attachment hangs from its cable; pass toward (the pulley outlet)`);
+  }
+  if (kind === "prop-kettlebell") {
+    // The bell hangs under the handle, whatever the palm does.
+    worldUp = new Vector3(0, 1, 0);
+    localUp = local[0].palmNormal.clone().negate();
   }
   if (options.toward) {
     const eye = propEye(prop);

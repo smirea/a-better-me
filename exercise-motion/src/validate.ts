@@ -54,6 +54,8 @@ const LIMITS = {
   gripOffAxis: 0.008,
   /** How far the shaft may turn out of the line the fingers wrap along, in degrees. */
   gripTwist: 20,
+  /** How far the palm may roll around a machine handle from the way it's meant to be held, in degrees. */
+  palmRoll: 60,
   /** How far past a handle's end the hand's centre may sit. */
   gripOverhang: 0.01,
   /** For grips that don't wrap a cylinder (a ball stop, a plate pinch): grip anchor to handle centre. */
@@ -367,6 +369,18 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
           title: `${hand} slides off the end of its handle`,
           detail: `the hand's centre sits ${cm(worst)} past the end of the gripping surface`,
         }));
+      }
+      if (grasp.orient) {
+        const palm = new Vector3(-(grasp.side === "L" ? 1 : -1), 0, 0).applyQuaternion(frame.rot[body.index[`wrist_${grasp.side}`]]);
+        const roll = deg(Math.acos(Math.max(-1, Math.min(1, palm.dot(handle.palmNormal)))));
+        if (roll > LIMITS.palmRoll) {
+          collector.add(`grip-roll:${grasp.side}`, f, roll, (worst) => ({
+            code: "grip",
+            severity: "error",
+            title: `${hand} is rolled around its handle`,
+            detail: `the palm faces ${worst.toFixed(0)}° away from the way this handle is held`,
+          }));
+        }
       }
       const shaft = new Vector3(0, 0, 1).applyQuaternion(frame.rot[body.index[`wrist_${grasp.side}`]]);
       const twist = deg(Math.acos(Math.min(1, Math.abs(shaft.dot(handle.axis)))));

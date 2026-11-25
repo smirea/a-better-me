@@ -1,6 +1,5 @@
-import { Quaternion, Vector3 } from "three";
+import { Vector3 } from "three";
 import { anchorPoint, type Body, type Frame } from "../body";
-import type { PropState } from "../equipment";
 import type { FormCheck } from "../exercise";
 import { carryProp, graspProp, gripCenter, holdGrasp } from "../grasp";
 import { cableAttachment, cableEyeAt, cableTether, latPulldownMachine, propHandles } from "../machines";
@@ -24,23 +23,6 @@ const handle = propHandles("prop-lat-bar").grip;
 
 const machine = latPulldownMachine({ thighPadOffset: PAD_OFFSET, restCable: REST_CABLE, bar: (_f, _e, states) => cableEyeAt(bar, states[0]) });
 const pulley = new Vector3(...machine.pulleys!.pulley.pos);
-
-/**
- * The bar rolls freely in closed hands, so the cable, not the palms, sets which way its eye points: turn it about its
- * own handle axis (which leaves both grips exactly where `carryProp` put them) until the eye faces the pulley.
- */
-function rollEyeToPulley(state: PropState): PropState {
-  const q = new Quaternion(...state.quat);
-  const pos = new Vector3(...state.pos);
-  const axis = new Vector3(1, 0, 0).applyQuaternion(q);
-  const eye = new Vector3(0, 1, 0).applyQuaternion(q);
-  const want = pulley.clone().sub(pos);
-  want.addScaledVector(axis, -want.dot(axis)).normalize();
-  const angle = Math.atan2(axis.clone().cross(eye).dot(want), eye.dot(want));
-  const roll = new Quaternion().setFromAxisAngle(axis, angle);
-  const out = roll.multiply(q);
-  return { pos: state.pos, quat: [out.x, out.y, out.z, out.w] };
-}
 
 const barMid = (body: Body, frame: Frame, out = new Vector3()) =>
   gripCenter(body, frame, "L", "bar", handle.radius, out).add(gripCenter(body, frame, "R", "bar", handle.radius)).multiplyScalar(0.5);
@@ -186,7 +168,8 @@ export const spec = composeExercise({
       progress: (frame) => barMid(body, frame).y,
       ground: "pelvisBottom",
       props,
-      propState: (frame) => [rollEyeToPulley(carryProp(body, frame, bar, grasps))],
+      // The bar rolls in the hands so its eye faces the cable.
+      propState: (frame) => [carryProp(body, frame, bar, grasps, { toward: pulley })],
       grasps,
       tethers: [cable.def],
       tetherState: (frame, extras, states) => [cable.state(frame, extras, states)],

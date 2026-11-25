@@ -1,4 +1,5 @@
-import type { Frame } from "./body";
+import type { Frame, Side } from "./body";
+import type { Carrier, Grasp } from "./grasp";
 import type { GlbNodePose, GlbRef, Part, PropDef, PropState } from "./equipment";
 import type { PadSurface } from "./equipment";
 import type { Vec3 } from "./math";
@@ -157,4 +158,8 @@ export interface CanonicalMachineInstance {
   driveExcess?: (frame: Frame, extras: number[], propStates: PropState[]) => number[];
   propState?: (frame: Frame, extras: number[], propStates?: PropState[]) => PropState[];
   cameraHint?: { view?: "Front" | "Back" | "Side" | "Angle" | "Top"; target?: Vec3 };
+  /** A hand on handle `key`; live on a driven node. */
+  grasp(side: Side, key: string, grip?: HandGrip): Grasp;
+  /** The driven node carrying surface, footplate or handle `key`, or null when it stays put. */
+  carrier(key: string): Carrier | null;
 }

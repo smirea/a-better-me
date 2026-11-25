@@ -1,4 +1,4 @@
-import { Vector3, type Matrix4 } from "three";
+import { Matrix4, Vector3 } from "three";
 import {
   angles,
   BALL_LIMITS,
@@ -357,11 +357,19 @@ function footLayout(body: Body, side: Side, frame: SurfaceFrame, at: Vector3, re
 }
 
 /** Keeps an anchor at or above a surface, as a one-sided constraint. */
-function aboveSurface(body: Body, anchor: string, frame: SurfaceFrame, weight: number): Goal {
+function aboveSurface(
+  body: Body,
+  anchor: string,
+  frame: SurfaceFrame,
+  weight: number,
+  carry?: (frame: Frame, q: Float64Array) => Matrix4,
+): Goal {
   const { joint, local } = body.anchors[anchor];
   const p = new Vector3();
-  return ({ frame: pose, push }) => {
+  const back = new Matrix4();
+  return ({ frame: pose, q, push }) => {
     worldPoint(pose, joint, local, p);
+    if (carry) p.applyMatrix4(back.copy(carry(pose, q)).invert());
     push(weight * Math.min(0, p.sub(frame.origin).dot(frame.normal)));
   };
 }
@@ -407,17 +415,18 @@ export function plantFootOnToeBreak(
   surface: Surface,
   ball: Vector3,
   yaw = 0,
-  options: { weight?: number; sink?: number } = {},
+  options: { weight?: number; sink?: number; carry?: (frame: Frame, q: Float64Array) => Matrix4 } = {},
 ): Goal[] {
-  const { weight = 40, sink = 0 } = options;
+  const { weight = 40, sink = 0, carry } = options;
   const frame = surfaceFrame(surface);
   const forefoot = ankleLocal(body, `forefoot_${side}`);
   const target = footLayout(body, side, frame, ball, forefoot, yaw, sink);
+  const moved = new Vector3();
   const goals = ["forefoot", "toe", "toeTip"].map((name) => {
     const world = target(`${name}_${side}`);
-    return pin(body, `${name}_${side}`, () => world, weight);
+    return pin(body, `${name}_${side}`, carry ? (q, pose) => moved.copy(world).applyMatrix4(carry(pose, q)) : () => world, weight);
   });
-  for (const name of ["heel", "ballIn", "ballOut"]) goals.push(aboveSurface(body, `${name}_${side}`, frame, weight));
+  for (const name of ["heel", "ballIn", "ballOut"]) goals.push(aboveSurface(body, `${name}_${side}`, frame, weight, carry));
   return goals;
 }
 
