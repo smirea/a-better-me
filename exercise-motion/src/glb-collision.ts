@@ -546,6 +546,11 @@ function worldPointDistToPlaced(placed: PlacedPrimitive, p: Vector3, cutoff: num
   return Math.sqrt(localDistSq) * placed.minScale;
 }
 
+/**
+ * How far a body capsule may press into a GLB mesh before it reads as a clip: an allowance the exercise declared for
+ * that machine, or else skin and upholstery compression for the surfaces a body rests on. Never more than a capsule's
+ * own radius, so every pair is still tested.
+ */
 function defaultGlbAllowance(
   semantic: string | null,
   colliderId: string,
@@ -554,37 +559,28 @@ function defaultGlbAllowance(
   ownerId: string,
 ): number {
   const ownerBase = ownerId.replace(/^machines\//, "");
-  let maxContact = 0;
+  let declared = 0;
   for (const [prefix, allowed] of Object.entries(sequence.contacts)) {
     const val = allowed[colliderId] ?? (contactAs ? allowed[contactAs] : undefined);
     if (val === undefined) continue;
-    if (
-      ownerId === prefix ||
-      ownerId.startsWith(prefix) ||
-      prefix === ownerBase ||
-      prefix.startsWith(`${ownerBase}.`) ||
-      ownerBase.startsWith(prefix) ||
-      semantic === "mat_pad" ||
-      semantic === "mat_grip"
-    ) {
-      maxContact = Math.max(maxContact, val);
+    if (ownerId === prefix || ownerId.startsWith(prefix) || prefix === ownerBase || prefix.startsWith(`${ownerBase}.`) || ownerBase.startsWith(prefix)) {
+      declared = Math.max(declared, val);
     }
   }
-  if (semantic === "mat_pad") {
-    return Math.max(maxContact, 0.048);
-  }
-  if (semantic === "mat_grip") {
-    if (colliderId.startsWith("hand_")) return Math.max(maxContact, 0.055);
-    if (colliderId.startsWith("forearm_")) return Math.max(maxContact, 0.025);
-    if (colliderId.startsWith("foot_") || colliderId.startsWith("toes_")) return Math.max(maxContact, 0.045);
-  }
-  if ((semantic === "mat_rubber" || semantic === "mat_wood") && (colliderId.startsWith("foot_") || colliderId.startsWith("toes_"))) {
-    return Math.max(maxContact, 0.03);
-  }
-  if (semantic === "mat_chrome" && colliderId.startsWith("hand_")) {
-    return Math.max(maxContact, 0.045);
-  }
-  return maxContact;
+  const limb = (p: string) => colliderId.startsWith(p);
+  const feet = limb("foot_") || limb("toes_");
+  // A padded surface gives about 3.5 cm; a handle or tread only skin-deep.
+  const soft =
+    semantic === "mat_pad"
+      ? 0.035
+      : (semantic === "mat_grip" || semantic === "mat_chrome") && limb("hand_")
+        ? 0.008
+        : (semantic === "mat_grip" || semantic === "mat_chrome") && limb("forearm_")
+          ? 0.006
+          : (semantic === "mat_tread" || semantic === "mat_rubber" || semantic === "mat_wood" || semantic === "mat_grip") && feet
+            ? 0.008
+            : 0;
+  return Math.max(declared, soft);
 }
 
 export interface GlbValidationOptions {
@@ -749,7 +745,7 @@ export async function validateGlbMotion(
           const allow = defaultGlbAllowance(placed.prim.semantic, col.id, col.contactAs, sequence, placed.ownerId);
           // Skip pads where resting is expected unless deep penetration occurs.
           const cutoff = radius - allow;
-          if (cutoff <= 0.015) continue;
+          if (cutoff <= 0.003) continue;
           const dist = worldPointDistToPlaced(placed, samplePt, cutoff);
           if (!Number.isFinite(dist)) continue;
           const depth = cutoff - dist;

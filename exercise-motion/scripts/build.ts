@@ -9,7 +9,7 @@ import { groupsOf } from "../src/catalog";
 import { generate, kinematics, type ExerciseSpec } from "../src/exercise";
 import { EXERCISES } from "../src/exercises";
 import { FAULTS } from "../src/faults";
-import { validateGlbMotion } from "../src/glb-collision";
+import { resolveGlbPath, validateGlbMotion } from "../src/glb-collision";
 import { MUSCLES, type Muscle } from "../src/muscles";
 import { runChecks, validateLoad, validateMotion } from "../src/validate";
 import { loadAppCatalog, MOTION_ROOT, REPO_ROOT } from "./catalog-io";
@@ -136,6 +136,11 @@ interface BuiltItem {
 }
 
 const builtItems: BuiltItem[] = [];
+/** A hash of everything the viewer shows for an exercise, so it reloads on any edit, not only when QA totals move. */
+const withRevision = (b: BuiltItem) => ({
+  ...b.summary,
+  revision: createHash("sha256").update(JSON.stringify(b.data)).digest("hex").slice(0, 12),
+});
 const report: string[] = [
   "# Exercise motion evaluation",
   "",
@@ -337,7 +342,7 @@ const fill = (page: string, slot: string, value: string) => {
 // 1. Write scalable library app under dist/library/ (loads catalog.json + lazy-loads sequences/<id>.json)
 writeFileSync(
   join(libraryDir, "catalog.json"),
-  JSON.stringify(builtItems.map((b) => b.summary)),
+  JSON.stringify(builtItems.map(withRevision)),
 );
 copyFileSync(join(MOTION_ROOT, "viewer/assets/lifter.bin"), join(libraryDir, "lifter.bin"));
 copyFileSync(join(MOTION_ROOT, "viewer/assets/muscle-map.png"), join(libraryDir, "muscle-map.png"));
@@ -385,10 +390,23 @@ const compressedAll = gzipSync(
   Buffer.from(JSON.stringify(round3(builtItems.map((item) => ({ ...item.data, images: [] }))))),
   { level: 9 },
 ).toString("base64");
+// The single-file viewers carry every GLB their exercises reference, so they show the equipment with no server.
+const modelIds = new Set<string>();
+for (const item of builtItems) {
+  for (const ref of item.data.sequence.glb ?? []) modelIds.add(ref.id);
+  for (const prop of item.data.sequence.props) if (prop.kind === "glb") modelIds.add(prop.glbId);
+}
+const models: Record<string, string> = {};
+for (const id of modelIds) {
+  const path = resolveGlbPath(id);
+  if (!path) throw new Error(`Missing GLB ${id} for the single-file viewer`);
+  models[id] = Buffer.from(await Bun.file(path).arrayBuffer()).toString("base64");
+}
 const json = JSON.stringify({
   mode: "embedded-library",
-  catalog: builtItems.map((b) => b.summary),
+  catalog: builtItems.map(withRevision),
   exercisesGz: compressedAll,
+  models,
 }).replaceAll("</", "<\\/");
 const asset = async (name: string) =>
   Buffer.from(await Bun.file(join(MOTION_ROOT, "viewer/assets", name)).arrayBuffer()).toString("base64");

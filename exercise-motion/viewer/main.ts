@@ -74,6 +74,8 @@ interface CatalogSummary {
   issueCount?: number;
   checksPass?: number;
   checksTotal?: number;
+  /** Changes whenever the exercise's built data does. */
+  revision?: string;
 }
 
 interface EmbeddedPayload {
@@ -81,11 +83,26 @@ interface EmbeddedPayload {
   exercises?: ExerciseData[];
   catalog?: CatalogSummary[];
   exercisesGz?: string;
+  /** GLB bytes (base64) by model id, for single-file viewers opened without the motion server. */
+  models?: Record<string, string>;
 }
 
 const rawDataText = document.getElementById("data")?.textContent?.trim() ?? "";
 const embedded: EmbeddedPayload =
   rawDataText && rawDataText !== "__DATA__" ? JSON.parse(rawDataText) : { mode: "library" };
+const modelUrls = new Map<string, string>();
+/** Where to load a model from: its embedded bytes in a single-file viewer, otherwise the motion server. */
+function modelUrl(id: string): string {
+  const b64 = embedded.models?.[id];
+  if (!b64) return `/gym-models/${id}.glb`;
+  let url = modelUrls.get(id);
+  if (!url) {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    url = URL.createObjectURL(new Blob([bytes], { type: "model/gltf-binary" }));
+    modelUrls.set(id, url);
+  }
+  return url;
+}
 const isLibraryMode =
   embedded.mode === "library" || embedded.mode === "embedded-library" || !embedded.exercises?.length;
 
@@ -226,7 +243,7 @@ function buildProps(): Promise<void> {
       group.add(fallback);
       pending.push(
         glbLoader
-          .loadAsync(`/gym-models/${prop.glbId}.glb`)
+          .loadAsync(modelUrl(prop.glbId))
           .then((gltf) => {
             if (gen !== propLoadGen) return;
             const obj = gltf.scene;
@@ -357,7 +374,7 @@ async function loadGlbAttachments() {
   await Promise.all(
     sequence.glb.map(async (ref, idx) => {
       try {
-        const gltf = await glbLoader.loadAsync(`/gym-models/${ref.id}.glb`);
+        const gltf = await glbLoader.loadAsync(modelUrl(ref.id));
         if (gen !== glbLoadGen) return;
         const obj = gltf.scene;
         obj.position.set(...ref.pos);
@@ -952,7 +969,7 @@ async function init() {
         a.name.localeCompare(b.name),
       );
       const sigOf = (list: CatalogSummary[]) =>
-        list.map((e) => `${e.id}:${e.name}:${e.checksPass ?? 0}/${e.checksTotal ?? 0}:${e.issueCount ?? 0}`).join("|");
+        list.map((e) => `${e.id}:${e.revision}`).join("|");
       let lastSig = sigOf(libraryIndex);
       setInterval(async () => {
         try {
@@ -963,13 +980,13 @@ async function init() {
           );
           const nextSig = sigOf(next);
           if (nextSig === lastSig) return;
-          const prevMap = new Map(libraryIndex.map((e) => [e.id, `${e.name}:${e.checksPass}:${e.issueCount}`]));
+          const prevMap = new Map(libraryIndex.map((e) => [e.id, e.revision]));
           lastSig = nextSig;
           libraryIndex = next;
           const listEl = $("drawer-list");
           const prevScroll = listEl.scrollTop;
           for (const item of next) {
-            if (prevMap.get(item.id) !== `${item.name}:${item.checksPass}:${item.issueCount}`) {
+            if (prevMap.get(item.id) !== item.revision) {
               loadedCache.delete(item.id);
             }
           }
@@ -978,7 +995,7 @@ async function init() {
           const activeMeta = libraryIndex.find((e) => e.id === state.exerciseId);
           if (!activeExercise && libraryIndex.length > 0) {
             void selectExerciseById(libraryIndex[0].id, true, false);
-          } else if (activeMeta && prevMap.get(activeMeta.id) !== `${activeMeta.name}:${activeMeta.checksPass}:${activeMeta.issueCount}`) {
+          } else if (activeMeta && prevMap.get(activeMeta.id) !== activeMeta.revision) {
             void selectExerciseById(activeMeta.id, true, true);
           } else if (activeExercise && !activeMeta) {
             activeExercise = null;
