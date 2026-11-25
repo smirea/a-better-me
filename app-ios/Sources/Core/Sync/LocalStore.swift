@@ -39,6 +39,7 @@ final class LocalStore {
             try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_body_metrics_kind_day ON body_metrics(kind, day)")
             try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_ping_logs_logged_at ON ping_logs(logged_at)")
             try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_ping_logs_ping_id ON ping_logs(ping_id)")
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_timeline_notes_noted_at ON timeline_notes(noted_at)")
             try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_workout_sessions_ended_at ON workout_sessions(ended_at)")
         }
     }

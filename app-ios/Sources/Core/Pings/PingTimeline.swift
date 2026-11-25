@@ -70,6 +70,7 @@ enum PingTimelineRow: Identifiable, Hashable, Sendable {
     case entry(PingEntry)
     case group(PingGroup)
     case marker(TimelineMarker)
+    case note(TimelineNote)
 
     /// A group takes its first log's id, so a row that a second log joins stays the same row.
     var id: String {
@@ -77,6 +78,7 @@ enum PingTimelineRow: Identifiable, Hashable, Sendable {
         case let .entry(entry): entry.log.key
         case let .group(group): group.entries[0].log.key
         case let .marker(marker): marker.id
+        case let .note(note): note.key
         }
     }
 
@@ -85,6 +87,7 @@ enum PingTimelineRow: Identifiable, Hashable, Sendable {
         case let .entry(entry): entry.log.loggedAt
         case let .group(group): group.entries[0].log.loggedAt
         case let .marker(marker): marker.at
+        case let .note(note): note.notedAt
         }
     }
 
@@ -92,19 +95,20 @@ enum PingTimelineRow: Identifiable, Hashable, Sendable {
         switch self {
         case let .entry(entry): [entry]
         case let .group(group): group.entries
-        case .marker: []
+        case .marker, .note: []
         }
     }
 }
 
-/// One day of the Pings tab: its logs, and the markers the database holds for it.
+/// One day of the Pings tab: its logs, the markers the database holds for it, and the notes typed on it.
 struct PingTimeline: Equatable, Sendable {
     var entries: [PingEntry] = []
     var markers: [TimelineMarker] = []
+    var notes: [TimelineNote] = []
 
     /// The day oldest first, so waking up heads the timeline and the latest log ends it, beside the drawer.
     func rows() -> [PingTimelineRow] {
-        let sorted = (entries.map(PingTimelineRow.entry) + markers.map(PingTimelineRow.marker))
+        let sorted = (entries.map(PingTimelineRow.entry) + markers.map(PingTimelineRow.marker) + notes.map(PingTimelineRow.note))
             .sorted { ($0.at, $0.id) < ($1.at, $1.id) }
         var rows: [PingTimelineRow] = []
         var run: [PingEntry] = []
@@ -173,7 +177,7 @@ struct PingTimeline: Equatable, Sendable {
                 + weighIns(on: day, unit: settings.weightUnit, in: db, calendar: calendar)
                 + activities(on: day, in: db, calendar: calendar)
                 + sleeps(on: day, in: db, calendar: calendar)
-            return PingTimeline(entries: entries, markers: markers)
+            return PingTimeline(entries: entries, markers: markers, notes: try TimelineNote.on(day, in: db, calendar: calendar))
         }
     }
 

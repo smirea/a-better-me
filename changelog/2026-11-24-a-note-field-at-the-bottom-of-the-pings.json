@@ -1,0 +1,10 @@
+{
+	"title": "A note field at the bottom of the Pings tab puts free-text notes on the day's timeline",
+	"description": "It grows a line at a time as you type; notes move, edit, and delete like ping rows.",
+	"tasks": [
+		{
+			"id": "388f4e92-113d-459d-a6df-4e3d5e8479b5",
+			"title": "1 Pings Feedback: auto growing notes input on ping timeline page"
+		}
+	]
+}

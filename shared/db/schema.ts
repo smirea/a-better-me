@@ -437,6 +437,16 @@ const pingLogs = sqliteTable("ping_logs", {
 });
 
 /**
+ * A free-text note on the Pings timeline at a moment of a day, typed in the composer at the bottom of the Pings tab. It
+ * belongs to no ping, so it stays out of the pings' counts, cards, and history.
+ */
+const timelineNotes = sqliteTable("timeline_notes", {
+  id: text("id").primaryKey(),
+  notedAt: text("noted_at").notNull(),
+  text: text("text").notNull().default(""),
+});
+
+/**
  * A workout another app wrote to Apple Health (Garmin Connect, WHOOP, the Watch's Workout app), copied by the phone. The
  * app's own workouts are `workout_sessions`, never these. When several apps wrote the same session, one row stands
  * for it: the best-ranked source's, with every app that wrote it in `sources` (docs/decisions/health.md). The id is
@@ -576,6 +586,7 @@ export const SYNCED_TABLES = {
   tags,
   pings,
   ping_logs: pingLogs,
+  timeline_notes: timelineNotes,
   health_activities: healthActivities,
   health_sleeps: healthSleeps,
   garmin_days: garminDays,
@@ -768,6 +779,7 @@ export const schema = defineSchema({
       position: count,
     },
     ping_logs: { value: z.number().int().min(1).max(PING_MAX_STEPS) },
+    timeline_notes: { text: z.string().min(1) },
     health_activities: {
       activityType: z.string().min(1),
       activeKcal: amount,

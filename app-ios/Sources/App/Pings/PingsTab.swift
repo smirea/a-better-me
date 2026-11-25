@@ -16,8 +16,8 @@ enum PingRoute: Hashable {
 }
 
 /// The Pings tab: the Food Log's header row over a day's timeline, oldest first. "+" turns the tab bar into a drawer of
-/// the pings, where a tap logs one onto the day shown and its row lands closed on the timeline. Swiping
-/// pages between days.
+/// the pings, where a tap logs one onto the day shown and its row lands closed on the timeline. A note composer sits
+/// over the tab bar. Swiping pages between days.
 struct PingsTab: View {
     /// The app's shown day, which the Food Log and the Workout tab share.
     @Binding var day: CalendarDay
@@ -31,18 +31,27 @@ struct PingsTab: View {
     @State private var editing: Set<UUID> = []
     @State private var added: UUID?
     @State private var drawerCover: CGFloat = 0
+    @State private var composing = false
 
     var body: some View {
         NavigationStack(path: $path) {
             DayPager(day: $day) { shown in
                 PingTimelinePage(
-                    day: shown, editing: $editing, added: added, covered: adding ? drawerCover : 0,
+                    day: shown, editing: $editing, added: added, covered: adding ? drawerCover : 0, composing: composing,
                     pingCount: pingCount, history: { push(.history($0.id)) }, create: { creating = true }
                 )
             }
             .background(Theme.background)
             .safeAreaInset(edge: .top, spacing: 0) {
                 PingsHeader(day: $day, pingCount: pingCount, create: { creating = true }, manage: { push(.manage) })
+            }
+            // One bar at a time: the drawer grows over where the composer sits, so it hides while the drawer is open. It
+            // keeps its place, since a safe area that changed as the drawer closed sent the timeline back to its top.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                PingNoteComposer(day: day, composing: $composing) { added = $0.id }
+                    .opacity(adding ? 0 : 1)
+                    .allowsHitTesting(!adding)
+                    .accessibilityHidden(adding)
             }
             .overlay {
                 PingDrawer(isOpen: $adding, covers: { drawerCover = $0 }) {
