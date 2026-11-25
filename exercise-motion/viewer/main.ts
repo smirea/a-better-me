@@ -936,8 +936,17 @@ async function init() {
           renderDrawerList(false);
           listEl.scrollTop = prevScroll;
           const activeMeta = libraryIndex.find((e) => e.id === state.exerciseId);
-          if (activeMeta && prevMap.get(activeMeta.id) !== `${activeMeta.name}:${activeMeta.checksPass}:${activeMeta.issueCount}`) {
+          if (!activeExercise && libraryIndex.length > 0) {
+            void selectExerciseById(libraryIndex[0].id, true, false);
+          } else if (activeMeta && prevMap.get(activeMeta.id) !== `${activeMeta.name}:${activeMeta.checksPass}:${activeMeta.issueCount}`) {
             void selectExerciseById(activeMeta.id, true, true);
+          } else if (activeExercise && !activeMeta) {
+            activeExercise = null;
+            state.exerciseId = "";
+            $("picker-name").textContent = "No exercises yet";
+            $("picker-count").textContent = "0 exercises";
+            $("stage-title").textContent = "No exercises built yet";
+            $("panel").innerHTML = `<p class="note">No exercises are built yet. New exercises will load automatically as they are added.</p>`;
           }
         } catch {
           // Ignore transient poll failure while build writes catalog.json.
@@ -967,9 +976,16 @@ async function init() {
       libraryIndex.find((e) => e.id === state.exerciseId) ??
       libraryIndex[state.exerciseIndex] ??
       libraryIndex[0];
-    if (!startItem) throw new Error("Library catalog is empty");
-    await selectExerciseById(startItem.id, true, true);
-    renderDrawerList(true);
+    if (startItem) {
+      await selectExerciseById(startItem.id, true, true);
+      renderDrawerList(true);
+    } else {
+      $("picker-name").textContent = "No exercises yet";
+      $("picker-count").textContent = "0 exercises";
+      $("stage-title").textContent = "No exercises built yet";
+      $("panel").innerHTML = `<p class="note">No exercises are built yet. New exercises will load automatically as they are added.</p>`;
+      renderDrawerList(false);
+    }
   } else {
     const list = embedded.exercises!;
     const startEx =

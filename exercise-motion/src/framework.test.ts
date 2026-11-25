@@ -1,16 +1,71 @@
 import { describe, expect, test } from "bun:test";
+import { Vector3 } from "three";
 import { analyze } from "./biomech";
-import { createBody } from "./body";
+import { anchorPoint, createBody, type Body } from "./body";
 import { compileParts, signedDistance, sphere, capsule } from "./equipment";
 import { generate, kinematics, type ExerciseSpec } from "./exercise";
-import { smithMachineBackSquat } from "./exercises/smith-machine-back-squat";
+import { plantBothFeet, POSTURE_HINTS } from "./postures";
+import { balance, mirrored, pin } from "./solver";
 import { validateMotion } from "./validate";
 import { catalogSlugMap, loadAppCatalog } from "../scripts/catalog-io";
-import { Vector3 } from "three";
+
+/** Minimal self-contained synthetic spec used to verify engine invariants without relying on catalog exercises. */
+const syntheticSquat: ExerciseSpec = {
+  id: "synthetic-squat",
+  catalogId: "synthetic-squat",
+  name: "Synthetic Squat",
+  defaultLoadKg: 40,
+  loadUnit: "total",
+  laterality: "bilateral",
+  build(body: Body) {
+    const startH = { ...POSTURE_HINTS.standing, "shoulder.elev": 10, "elbow.flex": 15 };
+    const endH = {
+      ...POSTURE_HINTS.standing,
+      "root.y": 0.68,
+      "root.pitch": 18,
+      "hip.flex": 78,
+      "knee.flex": 85,
+      "ankle.dorsi": 18,
+      "shoulder.elev": 10,
+      "elbow.flex": 15,
+    };
+    return {
+      hints: { start: startH, end: endH },
+      extras: 0,
+      extraStart: [],
+      goals: [
+        ...plantBothFeet(body, 0.16, 0, 0.14, 0, 42),
+        balance(body, [], 0.04, 14),
+        mirrored(body, 6),
+      ],
+      keyGoals: {
+        start: [pin(body, "pelvisBottom", () => new Vector3(0, 0.86, 0), 12, "y")],
+        end: [pin(body, "pelvisBottom", () => new Vector3(0, 0.62, -0.06), 12, "y")],
+      },
+      stiffness: { default: 0.6, root: 0.4, lumbar: 8, thoracic: 8 },
+      obstacles: [],
+      progress: (frame) => anchorPoint(body, frame, "pelvisBottom").y,
+      ground: "heel_L",
+      props: [],
+      propState: () => [],
+      equipment: () => [],
+      loads: [{ anchor: "upperBack", share: 1, grip: "rest" }],
+      support: { kind: "standing", brace: true },
+      tempo: { lower: 1.5, bottom: 0.2, raise: 1.2, top: 0.2 },
+      contacts: {},
+      required: [
+        { label: "Left heel planted", anchor: "heel_L", surfaceY: 0 },
+        { label: "Right heel planted", anchor: "heel_R", surfaceY: 0 },
+      ],
+      checks: [],
+      laterality: "bilateral",
+    };
+  },
+};
 
 describe("exercise-motion framework invariants", () => {
   const sharedBody = createBody();
-  const sharedSquat = generate(smithMachineBackSquat, sharedBody).sequence;
+  const sharedSquat = generate(syntheticSquat, sharedBody).sequence;
 
   test("every catalog exercise maps to a unique kebab-case slug", () => {
     const catalog = loadAppCatalog();
@@ -25,20 +80,20 @@ describe("exercise-motion framework invariants", () => {
 
   test("generate throws before solving when a spec references an unknown anchor, prop, or collider", () => {
     const badAnchorSpec: ExerciseSpec = {
-      ...smithMachineBackSquat,
+      ...syntheticSquat,
       id: "bad-anchor-spec",
       build(body) {
-        const b = smithMachineBackSquat.build(body);
+        const b = syntheticSquat.build(body);
         return { ...b, ground: "does_not_exist" };
       },
     };
     expect(() => generate(badAnchorSpec)).toThrow(/unknown ground anchor/i);
 
     const badPropSpec: ExerciseSpec = {
-      ...smithMachineBackSquat,
+      ...syntheticSquat,
       id: "bad-prop-spec",
       build(body) {
-        const b = smithMachineBackSquat.build(body);
+        const b = syntheticSquat.build(body);
         return {
           ...b,
           required: [{ label: "Missing prop", anchor: "grip_L", prop: "ghost_bar" }],
@@ -48,10 +103,10 @@ describe("exercise-motion framework invariants", () => {
     expect(() => generate(badPropSpec)).toThrow(/unknown prop/i);
 
     const badColliderSpec: ExerciseSpec = {
-      ...smithMachineBackSquat,
+      ...syntheticSquat,
       id: "bad-collider-spec",
       build(body) {
-        const b = smithMachineBackSquat.build(body);
+        const b = syntheticSquat.build(body);
         return {
           ...b,
           contacts: { bar: { nonexistent_limb: 0.05 } },
@@ -96,7 +151,6 @@ describe("exercise-motion framework invariants", () => {
     const kin = kinematics(body, base);
     const downDemands = analyze(body, downward, kin, 40).demands[0];
     const upDemands = analyze(body, overheadPulley, kin, 40).demands[0];
-    // Pulling upward overhead reverses the shoulder/elbow torque sign compared to downward gravity.
     expect(Math.sign(upDemands["shoulder_L.abd"])).not.toBe(Math.sign(downDemands["shoulder_L.abd"]));
   });
 

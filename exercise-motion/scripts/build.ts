@@ -61,8 +61,8 @@ const byCatalogId = new Map(catalog.map((e) => [e.id, e]));
 const specsToBuild: ExerciseSpec[] = onlyIds
   ? EXERCISES.filter((s) => onlyIds.has(s.id))
   : EXERCISES;
-if (specsToBuild.length === 0) {
-  throw new Error(singleId ? `Exercise "${singleId}" not found in EXERCISES.` : "EXERCISES is empty.");
+if (singleId && specsToBuild.length === 0) {
+  throw new Error(`Exercise "${singleId}" not found in EXERCISES.`);
 }
 
 const cachePathFor = (spec: ExerciseSpec): string | null => {
