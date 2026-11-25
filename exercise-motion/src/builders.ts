@@ -358,6 +358,7 @@ export type StationConfig =
       barZ?: number;
       width?: number;
       assisted?: boolean;
+      passiveJoints?: string[];
     }
   | {
       kind: "dip";
@@ -365,12 +366,15 @@ export type StationConfig =
       spacing?: number;
       z?: number;
       assisted?: boolean;
+      passiveJoints?: string[];
     }
   | {
       kind: "pushup";
       handX?: number;
       handZ?: number;
       handElevationY?: number;
+      /** Omit the auto-generated `pushup.handBox` when `extraEquipment` provides a ball/bench (`"none"`). */
+      handSupport?: "box" | "none";
       feetElevationY?: number;
       kneesOnFloor?: boolean;
       forearmsOnFloor?: boolean;
@@ -789,6 +793,10 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
           });
           staticParts.push(...ab.parts);
           addPartObstacles(ab.parts, ["bench.seatPad", "bench.backPad"]);
+          if (frame.ankleRollers || frame.backAngleDeg < 0) {
+            addContacts("bench.rollerTop", { shank_L: 0.04, shank_R: 0.04, foot_L: 0.04, foot_R: 0.04 });
+            addContacts("bench.rollerLow", { shank_L: 0.04, shank_R: 0.04, foot_L: 0.04, foot_R: 0.04 });
+          }
           goals.push(...sitOnSeat(body, seatY, seatZ, 0.01, 55));
           if (st.pinBack !== false) {
             goals.push(
@@ -980,6 +988,10 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
           });
           staticParts.push(...ab.parts);
           addPartObstacles(ab.parts, ["bench.seatPad", "bench.backPad"]);
+          if (st.ankleRollers || (st.backAngleDeg ?? 30) < 0) {
+            addContacts("bench.rollerTop", { shank_L: 0.04, shank_R: 0.04, foot_L: 0.04, foot_R: 0.04 });
+            addContacts("bench.rollerLow", { shank_L: 0.04, shank_R: 0.04, foot_L: 0.04, foot_R: 0.04 });
+          }
           if (st.face === "up") {
             goals.push(...restBackOnPad(body, ab.back, { occiputAlong: 0.72 }));
             required.push({ label: "Back on bench pad", anchor: "upperBack", part: "bench.backPad", allowSlide: true });
@@ -1078,7 +1090,7 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
           { label: "Left hand on bar", anchor: "grip_L", part: "pullup.bar", allowSlide: true },
           { label: "Right hand on bar", anchor: "grip_R", part: "pullup.bar", allowSlide: true },
         );
-        support = { kind: "hanging", passive: ["hip", "knee", "ankle"], brace: config.brace ?? true };
+        support = { kind: "hanging", passive: st.passiveJoints ?? ["hip", "knee", "ankle"], brace: config.brace ?? true };
         ground = config.ground ?? "grip_L";
       } else if (st.kind === "dip") {
         const barY = st.barY ?? 1.28;
@@ -1095,7 +1107,7 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
             allowSlide: true,
           });
         }
-        support = { kind: "supported", passive: ["hip", "knee", "ankle"], brace: config.brace ?? true };
+        support = { kind: "supported", passive: st.passiveJoints ?? ["hip", "knee", "ankle"], brace: config.brace ?? true };
         ground = config.ground ?? "press_L";
       } else if (st.kind === "pushup") {
         const handX = st.handX ?? 0.28;
@@ -1105,7 +1117,7 @@ export function buildExerciseSpec(config: ExerciseBuilderConfig): ExerciseSpec {
         const footZ = st.footZ ?? -0.88;
         const footX = st.footX ?? 0.11;
         staticParts.push(...exerciseMat(0.8, 1.9, -0.2));
-        if (st.handElevationY && st.handElevationY > 0.06) {
+        if (st.handElevationY && st.handElevationY > 0.06 && st.handSupport !== "none") {
           const bp = platformBox("pushup.handBox", [0, 0, handZ], 0.8, st.handElevationY, 0.36, "pad");
           staticParts.push(...bp);
           addContacts("pushup.handBox", HAND_ALLOW);

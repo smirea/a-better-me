@@ -92,11 +92,11 @@ export function adjustableBench({
   const seatQuat = quatOf([1, 0, 0], -seatA);
 
   const spineZ = hingeZ - 0.12;
-  const spineY = Math.max(0.22, seatY - 0.14);
+  const spineY = backAngleDeg < 0 ? 0.14 : Math.max(0.22, seatY - 0.14);
   const parts: Part[] = [
     box("bench.backPad", backCenter, [width, padT, backLen], "pad", true, backQuat),
     box("bench.seatPad", seatCenter, [width, padT, seatLen], "pad", true, seatQuat),
-    box("bench.spine", [0, spineY, spineZ], [0.07, 0.06, 0.96], "steel"),
+    box("bench.spine", [0, spineY, spineZ], [0.07, 0.06, 0.96], "steel", backAngleDeg >= 0),
     box("bench.legBack", [0, spineY / 2, spineZ - 0.4], [0.06, spineY, 0.06], "steel"),
     box("bench.legFront", [0, spineY / 2, spineZ + 0.42], [0.06, spineY, 0.06], "steel"),
     box("bench.footBack", [0, 0.025, spineZ - 0.4], [0.52, 0.05, 0.07], "steel"),
