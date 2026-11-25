@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { extname, join, normalize, resolve } from "node:path";
 import { analyze } from "../src/biomech";
 import { groupsOf } from "../src/catalog";
@@ -22,6 +22,45 @@ const MIME: Record<string, string> = {
   ".png": "image/png",
   ".glb": "model/gltf-binary",
 };
+
+class CdpClient {
+  private ws: WebSocket;
+  private nextId = 1;
+  private pending = new Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }>();
+
+  constructor(wsUrl: string) {
+    this.ws = new WebSocket(wsUrl);
+    this.ws.addEventListener("message", (ev) => {
+      const msg = JSON.parse(String(ev.data)) as { id?: number; result?: any; error?: any };
+      if (msg.id == null) return;
+      const entry = this.pending.get(msg.id);
+      if (!entry) return;
+      this.pending.delete(msg.id);
+      if (msg.error) entry.reject(new Error(JSON.stringify(msg.error)));
+      else entry.resolve(msg.result);
+    });
+  }
+
+  async open(): Promise<void> {
+    if (this.ws.readyState === WebSocket.OPEN) return;
+    await new Promise<void>((res, rej) => {
+      this.ws.addEventListener("open", () => res(), { once: true });
+      this.ws.addEventListener("error", () => rej(new Error("CDP WebSocket error")), { once: true });
+    });
+  }
+
+  call(method: string, params: Record<string, unknown> = {}): Promise<any> {
+    const id = this.nextId++;
+    return new Promise((res, rej) => {
+      this.pending.set(id, { resolve: res, reject: rej });
+      this.ws.send(JSON.stringify({ id, method, params }));
+    });
+  }
+
+  close() {
+    this.ws.close();
+  }
+}
 
 async function loadSpec(slug: string): Promise<ExerciseSpec> {
   const filePath = join(MOTION_ROOT, "src", "exercises", `${slug}.ts`);
@@ -157,8 +196,26 @@ async function main() {
   });
 
   const tmpDir = `/tmp/motion-inspect/_render3d_${process.pid}_${Date.now()}`;
-  mkdirSync(tmpDir, { recursive: true });
+  const userDataDir = join(tmpDir, "chrome");
+  mkdirSync(userDataDir, { recursive: true });
   mkdirSync(join(outPng, ".."), { recursive: true });
+
+  const debugPort = 24222 + Math.floor(Math.random() * 5000);
+  const chrome = Bun.spawn(
+    [
+      CHROME,
+      "--headless=new",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--hide-scrollbars",
+      "--enable-unsafe-swiftshader",
+      "--use-angle=swiftshader",
+      `--remote-debugging-port=${debugPort}`,
+      `--user-data-dir=${userDataDir}`,
+      "about:blank",
+    ],
+    { stdout: "ignore", stderr: "ignore" },
+  );
 
   const total = sequence.poses.length;
   const peak = sequence.phases[1]?.from ?? Math.floor(total / 2);
@@ -170,17 +227,67 @@ async function main() {
   ];
 
   try {
+    let pageWs = "";
+    for (let i = 0; i < 60; i++) {
+      try {
+        const list = (await (await fetch(`http://127.0.0.1:${debugPort}/json/list`)).json()) as {
+          type: string;
+          webSocketDebuggerUrl?: string;
+        }[];
+        const page = list.find((t) => t.type === "page" && t.webSocketDebuggerUrl);
+        if (page?.webSocketDebuggerUrl) {
+          pageWs = page.webSocketDebuggerUrl;
+          break;
+        }
+      } catch {}
+      await Bun.sleep(100);
+    }
+    if (!pageWs) throw new Error("Timed out waiting for headless Chrome CDP");
+
+    const cdp = new CdpClient(pageWs);
+    await cdp.open();
+    await cdp.call("Page.enable");
+    await cdp.call("Runtime.enable");
+    await cdp.call("Emulation.setDeviceMetricsOverride", {
+      width: 640,
+      height: 480,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+
+    const url = `http://127.0.0.1:${server.port}/#id=${encodeURIComponent(sequence.id)}&clean=1&setting=${setting}&play=0&view=${views[0]}&frame=0`;
+    await cdp.call("Page.navigate", { url });
+    for (let i = 0; i < 120; i++) {
+      const res = await cdp.call("Runtime.evaluate", {
+        expression: "Boolean(window.__MOTION_READY__ && window.__MOTION_SET__)",
+        returnByValue: true,
+      });
+      if (res?.result?.value === true) break;
+      await Bun.sleep(100);
+    }
+    // Give async prop GLBs a moment to resolve as well.
+    await Bun.sleep(400);
+
+    const font = "/System/Library/Fonts/Helvetica.ttc";
     const rowPngs: string[] = [];
     for (const view of views) {
       const tiles: string[] = [];
       for (const [label, frameIdx] of frames) {
+        await cdp.call("Runtime.evaluate", {
+          expression: `window.__MOTION_SET__({ view: ${JSON.stringify(view)}, frame: ${frameIdx} })`,
+          awaitPromise: true,
+        });
+        await cdp.call("Runtime.evaluate", {
+          expression:
+            "new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r))))",
+          awaitPromise: true,
+        });
+        const shot = (await cdp.call("Page.captureScreenshot", { format: "png" })) as { data: string };
         const raw = join(tmpDir, `${view}-${label}.png`);
-        const url = `http://127.0.0.1:${server.port}/#id=${encodeURIComponent(sequence.id)}&clean=1&setting=${setting}&play=0&view=${view}&frame=${frameIdx}`;
-        await $`${CHROME} --headless=new --hide-scrollbars --enable-unsafe-swiftshader --use-angle=swiftshader --window-size=640,480 --virtual-time-budget=3500 --screenshot=${raw} ${url}`.quiet();
+        writeFileSync(raw, Buffer.from(shot.data, "base64"));
         const labeled = join(tmpDir, `${view}-${label}-lbl.png`);
-        const font = "/System/Library/Fonts/Helvetica.ttc";
         if (existsSync(font)) {
-          await $`magick ${raw} -gravity NorthWest -fill "#000000aa" -draw "rectangle 0,0,220,26" -font ${font} -fill white -pointsize 16 -annotate +8+5 "${view} · ${label} (f${frameIdx})" ${labeled}`.quiet();
+          await $`magick ${raw} -gravity NorthWest -fill "#000000aa" -draw "rectangle 0,0,220,26" -font ${font} -fill white -pointsize 15 -annotate +8+5 "${view} - ${label} (f${frameIdx})" ${labeled}`.quiet();
           tiles.push(labeled);
         } else {
           tiles.push(raw);
@@ -191,8 +298,10 @@ async function main() {
       rowPngs.push(row);
     }
     await $`magick ${rowPngs} -append ${outPng}`.quiet();
+    cdp.close();
     console.log(outPng);
   } finally {
+    chrome.kill();
     server.stop(true);
     rmSync(tmpDir, { recursive: true, force: true });
   }

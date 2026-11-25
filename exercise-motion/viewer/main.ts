@@ -482,7 +482,7 @@ function applyLoadedExercise(resetLoad: boolean) {
   for (const part of sequence.equipment) equipment.add(partMesh(part));
   buildProps();
   buildTethers();
-  void loadGlbAttachments();
+  const glbPromise = loadGlbAttachments();
   reanalyze();
 
   const slider = $<HTMLInputElement>("load");
@@ -510,6 +510,9 @@ function applyLoadedExercise(resetLoad: boolean) {
   setView(params.get("view") ? state.view : (sequence.cameraHint?.view ?? state.view));
   renderLoad();
   renderPanel();
+  void glbPromise.then(() => {
+    (window as unknown as Record<string, unknown>).__MOTION_READY__ = true;
+  });
 }
 
 async function fetchExercise(id: string): Promise<ExerciseData> {
