@@ -1,0 +1,100 @@
+import { buildExerciseSpec, POSTURE_HINTS } from "../builders";
+import { checkFeetPlanted, checkJointRange, checkJointWithinAt } from "../postures";
+
+/** Seated Smith press on a near-upright bench. The bar stays on the vertical rails. */
+const BOTTOM = {
+  ...POSTURE_HINTS.seated,
+  "root.y": 0.5,
+  "root.pitch": -6,
+  "hip.flex": 84,
+  "hip.abd": 12,
+  "knee.flex": 90,
+  "ankle.dorsi": 2,
+  "lumbar.flex": -6,
+  "thoracic.flex": -3,
+  "neck.flex": 10,
+  "clavicle.prot": -8,
+  "clavicle.elev": 4,
+  "shoulder.elev": 64,
+  "shoulder.plane": 46,
+  "shoulder.twist": 16,
+  "elbow.flex": 94,
+  "forearm.pron": 70,
+  "wrist.flex": 4,
+};
+
+const LOCKOUT = {
+  ...BOTTOM,
+  "shoulder.elev": 162,
+  "shoulder.plane": 22,
+  "shoulder.twist": 6,
+  "elbow.flex": 8,
+  "clavicle.elev": 16,
+  "neck.flex": 2,
+};
+
+export const spec = buildExerciseSpec({
+  id: "smith-machine-overhead-press",
+  catalogId: "24f5c6f170d88077beffc838033a5eea",
+  name: "Smith Machine Overhead Press",
+  defaultLoadKg: 25,
+  loadUnit: "total",
+  laterality: "bilateral",
+  grip: "press",
+  phaseLabels: ["Press", "Lockout", "Lower", "Chest"],
+  station: {
+    kind: "lying",
+    surface: "adjustable-bench",
+    face: "up",
+    backAngleDeg: 82,
+    feetOnFloor: true,
+    smith: { stopY: 0.85 },
+  },
+  extraContacts: { "bench.backPad": { head: 0.09, neck: 0.07, girdle: 0.04 } },
+  apparatus: {
+    kind: "barbell",
+    style: "straight",
+    gripX: 0.3,
+    anchor: "press",
+    path: { startY: 1.18, startZ: 0.12, endY: 1.72, endZ: 0.12 },
+  },
+  hints: { start: BOTTOM, end: LOCKOUT },
+  stiffness: { elbow: 3.2, shoulder: 1.6, lumbar: 6 },
+  checks: () => [
+    checkFeetPlanted("Keep the feet flat and the hips back on the seat. Do not scoot the hips forward."),
+    checkJointRange(
+      "elbow-rom",
+      "Press the Smith bar overhead",
+      "Lower the bar toward the upper chest, then press it up the rails until the elbows are straight.",
+      "elbow_L.flex",
+      60,
+    ),
+    checkJointWithinAt(
+      "bottom-elbow",
+      "Bar starts near the upper chest",
+      "Lower until the bar taps near the upper chest, or as far as the shoulders comfortably allow.",
+      "elbow_L.flex",
+      "start",
+      70,
+      120,
+    ),
+    checkJointWithinAt(
+      "lockout-elbow",
+      "Elbows locked out",
+      "Press until the elbows are fully straightened and the bar is overhead on the rails.",
+      "elbow_L.flex",
+      "peak",
+      0,
+      22,
+    ),
+    checkJointWithinAt(
+      "lockout-shoulder",
+      "Shoulders flexed at lockout",
+      "Finish with the shoulders flexed and the elbows stacked under the bar.",
+      "shoulder_L.elev",
+      "peak",
+      130,
+      175,
+    ),
+  ],
+});

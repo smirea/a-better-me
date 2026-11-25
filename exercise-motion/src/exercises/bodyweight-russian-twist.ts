@@ -1,0 +1,95 @@
+import { buildExerciseSpec } from "../builders";
+import { checkJointRange, checkJointWithinAt } from "../postures";
+import { keepAbove, lockAngle } from "../solver";
+
+/** Reclined V-sit, feet off the floor, hands at the chest. Twist side to side. */
+const SIT = {
+  "root.y": 0.42,
+  "root.z": 0.02,
+  "root.pitch": -8,
+  "hip.flex": 62,
+  "hip.abd": 8,
+  "hip.rot": 0,
+  "knee.flex": 95,
+  "ankle.dorsi": 0,
+  "lumbar.flex": 12,
+  "thoracic.flex": 14,
+  "neck.flex": 6,
+  "lumbar.bend": 0,
+  "thoracic.bend": 0,
+  "shoulder.elev": 40,
+  "shoulder.plane": 68,
+  "shoulder.twist": 8,
+  "elbow.flex": 100,
+  "forearm.pron": 30,
+  "wrist.flex": 4,
+};
+
+export const spec = buildExerciseSpec({
+  id: "bodyweight-russian-twist",
+  catalogId: "1a45c6f170d880039ab5db29125324be",
+  name: "Bodyweight Russian Twist",
+  defaultLoadKg: 0,
+  loadUnit: "total",
+  laterality: "asymmetrical",
+  grip: "open",
+  phaseLabels: ["Twist", "Side", "Cross", "Other side"],
+  tempo: { lower: 1.1, bottom: 0.1, raise: 1.1, top: 0.1 },
+  station: {
+    kind: "seated",
+    seatY: 0.16,
+    seatZ: 0,
+    feetMode: "hanging",
+    pinBack: false,
+    passiveJoints: ["knee", "ankle", "elbow", "wrist"],
+    frame: { type: "box", height: 0.16 },
+  },
+  apparatus: { kind: "none" },
+  extraGoals: (body) => [
+    keepAbove(body, "heel_L", 0.08, 28),
+    keepAbove(body, "heel_R", 0.08, 28),
+    lockAngle(body, "ankle_L.dorsi", 12, 18),
+    lockAngle(body, "ankle_R.dorsi", 12, 18),
+  ],
+  stiffness: { hip: 8, knee: 8, lumbar: 5, thoracic: 4 },
+  hints: {
+    start: { ...SIT, "lumbar.twist": -8, "thoracic.twist": -26 },
+    end: { ...SIT, "lumbar.twist": 8, "thoracic.twist": 26 },
+  },
+  checks: () => [
+    checkJointRange(
+      "trunk-rotation",
+      "Chest rotates side to side",
+      "Rotate the chest from one side to the other. The obliques turn the trunk, not just the arms.",
+      "thoracic.twist",
+      28,
+    ),
+    checkJointWithinAt(
+      "feet-up",
+      "Hips stay flexed with the feet up",
+      "Keep the torso reclined and the feet off the ground the whole set.",
+      "hip_L.flex",
+      "peak",
+      30,
+      80,
+    ),
+    checkJointWithinAt(
+      "knees-bent",
+      "Knees stay bent",
+      "Keep the knees bent about 90 degrees and the legs from swinging side to side.",
+      "knee_L.flex",
+      "peak",
+      55,
+      110,
+    ),
+    checkJointWithinAt(
+      "hands-at-chest",
+      "Hands stay at the chest",
+      "Keep the hands together in front of the chest so the rotation comes from the trunk.",
+      "elbow_L.flex",
+      "peak",
+      70,
+      130,
+    ),
+  ],
+});
