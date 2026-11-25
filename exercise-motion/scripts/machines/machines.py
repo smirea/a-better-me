@@ -423,7 +423,7 @@ def seated_cable_row():
     for sx, tag in ((1, "L"), (-1, "R")):
         c = Vector((sx * 0.15, 0.30, 0.30))
         m.box(c, (0.17, 0.30, 0.02), "mat_frame", rot=frame_quat(-fn, fu), bevel=0.005, part=f"footplate_{tag}")
-        m.box(c + fn * 0.012, (0.15, 0.28, 0.004), "mat_rubber", rot=frame_quat(-fn, fu), bevel=0.001)
+        m.box(c + fn * 0.012, (0.15, 0.28, 0.004), "mat_tread", rot=frame_quat(-fn, fu), bevel=0.001)
         m.box(c - fu * 0.15 + fn * 0.03, (0.17, 0.02, 0.06), "mat_frame", rot=frame_quat(-fn, fu), bevel=0.004)
         bottom = c - fu * 0.15 + fn * 0.012
         m.footplate(f"foot_{tag}", bottom, fn, fu, 0.15, 0.0, 0.30)
@@ -572,10 +572,10 @@ def leg_press_45():
     m.node("sled", p0)
     plate_c = p0 + d * 0.012
     q = frame_quat(u, nrm)
-    m.box(plate_c, (0.76, 0.024, 0.62), "mat_rubber", node="sled", rot=q, bevel=0.008, part="footplate")
-    m.box(p0 - d * 0.0015, (0.72, 0.004, 0.58), "mat_rubber", node="sled", rot=q, bevel=0.002)
+    m.box(plate_c, (0.76, 0.024, 0.62), "mat_frame", node="sled", rot=q, bevel=0.008, part="footplate")
+    m.box(p0 - d * 0.0015, (0.72, 0.004, 0.58), "mat_tread", node="sled", rot=q, bevel=0.002)
     for k in range(9):
-        m.box(p0 - d * 0.004 + u * (-0.26 + k * 0.065), (0.70, 0.003, 0.012), "mat_rubber", node="sled", rot=q, bevel=0.001)
+        m.box(p0 - d * 0.004 + u * (-0.26 + k * 0.065), (0.70, 0.003, 0.012), "mat_tread", node="sled", rot=q, bevel=0.001)
     body_c = p0 + d * 0.11 - u * 0.10
     m.box(body_c, (0.70, 0.16, 0.36), "mat_frame", node="sled", rot=q, bevel=0.012)
     for sx in (1, -1):
@@ -812,7 +812,7 @@ def dip_pullup_station():
         m.handle(f"dip_{tag}", (sx * dx, dy, 0.165), (0, 0, 1), (-sx, 0, 0), 0.0198, 0.29, "neutral")
         # Step for mounting.
         m.box((sx * px * 0.75, 0.40, pz + 0.12), (0.18, 0.02, 0.16), "mat_frame", bevel=0.004)
-        m.box((sx * px * 0.75, 0.411, pz + 0.12), (0.16, 0.003, 0.14), "mat_rubber", bevel=0.001)
+        m.box((sx * px * 0.75, 0.411, pz + 0.12), (0.16, 0.003, 0.14), "mat_tread", bevel=0.001)
         m.beam((sx * px, 0.38, pz + 0.04), (sx * px * 0.75, 0.38, pz + 0.12), 0.03, 0.03)
     # Pull-up bar on forward cantilever arms (the arms double as wide neutral grips).
     by, bz = h - 0.04, 0.20
@@ -900,7 +900,7 @@ def back_extension_bench():
     # Footplate perpendicular to the body line.
     q = frame_quat(dorsal, b)
     m.box(foot - b * 0.015, (0.50, 0.03, 0.30), "mat_frame", rot=q, bevel=0.006, part="footplate")
-    m.box(foot - b * 0.0005, (0.46, 0.003, 0.26), "mat_rubber", rot=q, bevel=0.001)
+    m.box(foot - b * 0.0005, (0.46, 0.003, 0.26), "mat_tread", rot=q, bevel=0.001)
     m.footplate("feet", foot - dorsal * 0.12, b, dorsal, 0.46, 0.0, 0.24)
     ankle = foot + b * 0.09
     roller = ankle + dorsal * 0.115
@@ -982,7 +982,7 @@ def aerobic_step():
     top = 0.15
     m.params["topY"] = top
     m.box((0, top - 0.035, 0), (0.92, 0.05, 0.36), "mat_frame", bevel=0.02, segments=3, part="deck")
-    m.box((0, top - 0.004, 0), (0.86, 0.008, 0.31), "mat_rubber", bevel=0.004)
+    m.box((0, top - 0.004, 0), (0.86, 0.008, 0.31), "mat_tread", bevel=0.004)
     for sx in (1, -1):
         m.box((sx * 0.36, (top - 0.06) / 2, 0), (0.16, top - 0.06, 0.38), "mat_frame", bevel=0.012, segments=3)
         m.box((sx * 0.36, 0.004, 0), (0.15, 0.008, 0.36), "mat_rubber", bevel=0.003)
@@ -1104,7 +1104,7 @@ def ghd():
     m.box(car + Vector((0, 0.50, -0.115)), (0.08, 0.08, 0.075), "mat_frame", node="foot_carriage", bevel=0.006)
     m.box(plate_c + Vector((0, -0.05, 0.05)), (0.03, 0.24, 0.09), "mat_frame", node="foot_carriage", bevel=0.004)
     m.box(plate_c, (0.44, 0.30, 0.025), "mat_frame", node="foot_carriage", bevel=0.006, part="footplate")
-    m.box(plate_c + Vector((0, 0, 0.014)), (0.40, 0.26, 0.004), "mat_rubber", node="foot_carriage", bevel=0.001)
+    m.box(plate_c + Vector((0, 0, 0.014)), (0.40, 0.26, 0.004), "mat_tread", node="foot_carriage", bevel=0.001)
     m.footplate("feet", plate_c + Vector((0, -0.13, 0.0145)), (0, 0, 1), (0, 1, 0), 0.40, 0.0, 0.26, node="foot_carriage")
     for k, off in enumerate((Vector((0, 0.22, -0.02)), Vector((0, 0.40, -0.02)))):
         c = plate_c + Vector((0, -0.36, 0.11)) + off
@@ -1141,7 +1141,7 @@ def slant_board():
     nrm = Vector((0, math.cos(a), math.sin(a)))
     mid = Vector((0, hi / 2, 0))
     for k in range(6):
-        m.box(mid + up * (-0.20 + k * 0.08) + nrm * 0.002, (w - 0.06, 0.004, 0.035), "mat_rubber", rot=frame_quat(up, nrm), bevel=0.001)
+        m.box(mid + up * (-0.20 + k * 0.08) + nrm * 0.002, (w - 0.06, 0.004, 0.035), "mat_tread", rot=frame_quat(up, nrm), bevel=0.001)
     m.collider("deck", "box", (w, 0.02, d / math.cos(a)), mid - nrm * 0.01, quat=frame_quat(up, nrm), mat="mat_wood")
     m.surface("deck", mid, nrm, up)
     return m

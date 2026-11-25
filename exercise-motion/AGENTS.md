@@ -36,6 +36,6 @@ Generates a replayable 3D rep for an exercise from its instructions, with the mu
 ## Conventions
 
 - The figure stands on the floor (`y = 0`, Y up) facing `+Z`, so its left is `+X`. Joint angles are anatomical and positive in the named direction on both sides (`body.ts`).
-- Every canonical machine uses exclusively the 10 `SEMANTIC_MATERIALS` (`src/contracts.ts`) so runtime skinning (`src/skin.ts`) works without editing meshes.
+- Every canonical machine uses exclusively the 11 `SEMANTIC_MATERIALS` (`src/contracts.ts`) so runtime skinning (`src/skin.ts`) works without editing meshes.
 - `composeExercise()` automatically merges machine GLBs, articulated `glbState`, moving hidden collider props for animated nodes, static colliders, and default pad/grip/foot contact allowances.
 - Never silence a real collision by inflating contact allowances past soft-tissue compression (~3–4 cm for pads, ~2 cm for grips/feet) — fix the pose or placement instead.

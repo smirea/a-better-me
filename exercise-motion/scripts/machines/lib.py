@@ -30,6 +30,7 @@ SEMANTIC = [
     "mat_cable",
     "mat_rubber",
     "mat_wood",
+    "mat_tread",
 ]
 
 # Collision material tags understood by `src/equipment.ts` (`Material`).
@@ -44,6 +45,7 @@ PART_MATERIAL = {
     "mat_cable": "cable",
     "mat_rubber": "rubber",
     "mat_wood": "wood",
+    "mat_tread": "rubber",
 }
 
 # glTF (x, y, z) -> Blender (x, -z, y), the inverse of the exporter's +Y-up conversion.
@@ -55,7 +57,7 @@ Z = Vector((0, 0, 1))
 
 
 # Materials a body rests on; a surface snaps to these before bare frame.
-CONTACT = {"mat_pad", "mat_rubber", "mat_wood", "mat_grip"}
+CONTACT = {"mat_pad", "mat_rubber", "mat_wood", "mat_grip", "mat_tread"}
 
 
 def v(p):

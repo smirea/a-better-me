@@ -19,6 +19,8 @@ export const SEMANTIC_MATERIALS = [
   "mat_cable",
   "mat_rubber",
   "mat_wood",
+  /** Where feet go on a machine (footplates, steps, decks); themed with the grips as the lifter's contact colour. */
+  "mat_tread",
 ] as const;
 
 export type SemanticMaterial = (typeof SEMANTIC_MATERIALS)[number];

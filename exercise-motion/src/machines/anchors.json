@@ -19,7 +19,7 @@
    ]
   },
   "tris": 4236,
-  "bytes": 116856,
+  "bytes": 116832,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -326,10 +326,11 @@
    ]
   },
   "tris": 888,
-  "bytes": 21176,
+  "bytes": 22048,
   "materials": [
    "mat_frame",
-   "mat_rubber"
+   "mat_rubber",
+   "mat_tread"
   ],
   "params": {
    "topY": 0.15
@@ -401,14 +402,15 @@
    ]
   },
   "tris": 3840,
-  "bytes": 106656,
+  "bytes": 107520,
   "materials": [
    "mat_accent",
    "mat_chrome",
    "mat_frame",
    "mat_grip",
    "mat_pad",
-   "mat_rubber"
+   "mat_rubber",
+   "mat_tread"
   ],
   "params": {},
   "nodes": {
@@ -735,7 +737,7 @@
    ]
   },
   "tris": 8632,
-  "bytes": 249516,
+  "bytes": 249472,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -1156,7 +1158,7 @@
    ]
   },
   "tris": 4824,
-  "bytes": 127612,
+  "bytes": 127600,
   "materials": [
    "mat_frame",
    "mat_pad",
@@ -1436,13 +1438,14 @@
    ]
   },
   "tris": 4940,
-  "bytes": 142784,
+  "bytes": 143664,
   "materials": [
    "mat_chrome",
    "mat_frame",
    "mat_grip",
    "mat_pad",
-   "mat_rubber"
+   "mat_rubber",
+   "mat_tread"
   ],
   "params": {
    "dipY": 1.22,
@@ -1848,7 +1851,7 @@
    ]
   },
   "tris": 13752,
-  "bytes": 411840,
+  "bytes": 411796,
   "materials": [
    "mat_accent",
    "mat_cable",
@@ -2230,14 +2233,15 @@
    ]
   },
   "tris": 3992,
-  "bytes": 116724,
+  "bytes": 116916,
   "materials": [
    "mat_accent",
    "mat_chrome",
    "mat_frame",
    "mat_grip",
    "mat_pad",
-   "mat_rubber"
+   "mat_rubber",
+   "mat_tread"
   ],
   "params": {},
   "nodes": {
@@ -2558,7 +2562,7 @@
    ]
   },
   "tris": 1108,
-  "bytes": 36272,
+  "bytes": 36264,
   "materials": [
    "mat_chrome",
    "mat_frame",
@@ -2695,7 +2699,7 @@
    ]
   },
   "tris": 8128,
-  "bytes": 237012,
+  "bytes": 236964,
   "materials": [
    "mat_accent",
    "mat_cable",
@@ -2953,7 +2957,7 @@
    ]
   },
   "tris": 8588,
-  "bytes": 250000,
+  "bytes": 249952,
   "materials": [
    "mat_accent",
    "mat_cable",
@@ -3319,13 +3323,14 @@
    ]
   },
   "tris": 6512,
-  "bytes": 184300,
+  "bytes": 184504,
   "materials": [
    "mat_chrome",
    "mat_frame",
    "mat_grip",
    "mat_pad",
-   "mat_rubber"
+   "mat_rubber",
+   "mat_tread"
   ],
   "params": {
    "railDir": [
@@ -3501,7 +3506,7 @@
      -0.0,
      0.382683
     ],
-    "material": "rubber",
+    "material": "steel",
     "collide": true,
     "node": "sled"
    }
@@ -3650,7 +3655,7 @@
    ]
   },
   "tris": 4812,
-  "bytes": 129616,
+  "bytes": 129604,
   "materials": [
    "mat_frame",
    "mat_pad",
@@ -3969,7 +3974,7 @@
    ]
   },
   "tris": 996,
-  "bytes": 24136,
+  "bytes": 24132,
   "materials": [
    "mat_rubber",
    "mat_wood"
@@ -4087,7 +4092,7 @@
    ]
   },
   "tris": 7164,
-  "bytes": 282688,
+  "bytes": 282668,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -4622,7 +4627,7 @@
    ]
   },
   "tris": 3192,
-  "bytes": 84676,
+  "bytes": 84664,
   "materials": [
    "mat_frame",
    "mat_pad",
@@ -4797,7 +4802,7 @@
    ]
   },
   "tris": 7496,
-  "bytes": 217252,
+  "bytes": 218100,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -4805,7 +4810,8 @@
    "mat_pad",
    "mat_plate",
    "mat_rubber",
-   "mat_stack"
+   "mat_stack",
+   "mat_tread"
   ],
   "params": {
    "seatTopY": 0.44,
@@ -5018,7 +5024,7 @@
    ]
   },
   "tris": 8632,
-  "bytes": 248160,
+  "bytes": 248116,
   "materials": [
    "mat_accent",
    "mat_cable",
@@ -5384,7 +5390,7 @@
    ]
   },
   "tris": 7188,
-  "bytes": 226900,
+  "bytes": 226856,
   "materials": [
    "mat_accent",
    "mat_cable",
@@ -5583,9 +5589,9 @@
    ]
   },
   "tris": 656,
-  "bytes": 20196,
+  "bytes": 20188,
   "materials": [
-   "mat_rubber",
+   "mat_tread",
    "mat_wood"
   ],
   "params": {
@@ -5659,7 +5665,7 @@
    ]
   },
   "tris": 9052,
-  "bytes": 258232,
+  "bytes": 258208,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -6033,7 +6039,7 @@
    ]
   },
   "tris": 980,
-  "bytes": 31604,
+  "bytes": 31596,
   "materials": [
    "mat_chrome",
    "mat_frame",
@@ -6219,7 +6225,7 @@
    ]
   },
   "tris": 1328,
-  "bytes": 42236,
+  "bytes": 42220,
   "materials": [
    "mat_accent",
    "mat_chrome"
@@ -6366,7 +6372,7 @@
    ]
   },
   "tris": 1848,
-  "bytes": 58916,
+  "bytes": 58900,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -6665,7 +6671,7 @@
    ]
   },
   "tris": 640,
-  "bytes": 24260,
+  "bytes": 24256,
   "materials": [
    "mat_chrome",
    "mat_grip",
@@ -7085,7 +7091,7 @@
    ]
   },
   "tris": 2156,
-  "bytes": 42504,
+  "bytes": 42500,
   "materials": [
    "mat_grip",
    "mat_plate"
@@ -7210,7 +7216,7 @@
    ]
   },
   "tris": 1736,
-  "bytes": 46516,
+  "bytes": 46508,
   "materials": [
    "mat_chrome",
    "mat_frame",
@@ -7403,7 +7409,7 @@
    ]
   },
   "tris": 3056,
-  "bytes": 75568,
+  "bytes": 75552,
   "materials": [
    "mat_accent",
    "mat_rubber"
@@ -7456,7 +7462,7 @@
    ]
   },
   "tris": 1536,
-  "bytes": 44952,
+  "bytes": 44948,
   "materials": [
    "mat_plate"
   ],
@@ -7512,7 +7518,7 @@
    ]
   },
   "tris": 1536,
-  "bytes": 44956,
+  "bytes": 44952,
   "materials": [
    "mat_plate"
   ],
@@ -7624,7 +7630,7 @@
    ]
   },
   "tris": 1536,
-  "bytes": 44956,
+  "bytes": 44952,
   "materials": [
    "mat_plate"
   ],
@@ -7792,7 +7798,7 @@
    ]
   },
   "tris": 1536,
-  "bytes": 47260,
+  "bytes": 47256,
   "materials": [
    "mat_plate"
   ],
@@ -7848,7 +7854,7 @@
    ]
   },
   "tris": 1844,
-  "bytes": 43012,
+  "bytes": 43008,
   "materials": [
    "mat_cable",
    "mat_chrome",
@@ -7976,7 +7982,7 @@
    ]
   },
   "tris": 2160,
-  "bytes": 62320,
+  "bytes": 62304,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -8187,7 +8193,7 @@
    ]
   },
   "tris": 2592,
-  "bytes": 47884,
+  "bytes": 47880,
   "materials": [
    "mat_pad"
   ],
@@ -8261,7 +8267,7 @@
    ]
   },
   "tris": 2892,
-  "bytes": 77156,
+  "bytes": 77136,
   "materials": [
    "mat_accent",
    "mat_chrome",
@@ -8429,7 +8435,7 @@
    ]
   },
   "tris": 1852,
-  "bytes": 47272,
+  "bytes": 47264,
   "materials": [
    "mat_chrome",
    "mat_frame",
