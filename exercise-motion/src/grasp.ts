@@ -2,6 +2,7 @@ import { Matrix4, Quaternion, Vector3 } from "three";
 import { anchorPoint, GRIP_RADIUS, sideSign, worldPoint, type Body, type Frame, type Side } from "./body";
 import type { HandGrip, HandGripConfig, HandleSpec, PerHandGrip } from "./contracts";
 import type { PropDef, PropState } from "./equipment";
+import { SPECS } from "./machines/core";
 import type { Goal } from "./solver";
 
 /**
@@ -114,23 +115,47 @@ const basis = (x: Vector3, up: Vector3) => {
   return new Matrix4().makeBasis(ax, ay, ax.clone().cross(ay));
 };
 
+/** Where a cable attachment's eye sits in its prop frame, or null for a prop with no eye. */
+export function propEye(prop: PropDef): Vector3 | null {
+  if (prop.kind !== "glb") return null;
+  const eye = SPECS[prop.glbId.replace(/^machines\//, "")]?.anchors.points?.eye;
+  return eye ? propPointWorld(prop, { pos: [0, 0, 0], quat: [0, 0, 0, 1] }, eye.pos) : null;
+}
+
 /**
  * Where a hand-carried prop sits for this frame so each grasped handle lies exactly in its closed hand: one hand sets the
- * prop's whole pose (a dumbbell), two hands set it from their grip centres and their mean palm direction (a barbell, a
- * lat bar's angled ends). Use it as the prop's `propState`; the prop then can't drift out of the fingers.
+ * prop's whole pose (a dumbbell), two hands set it from their grip centres (a barbell, a lat bar's angled ends). What's
+ * left free is the roll about the handle line, which a cable decides when there is one: pass `toward` (the pulley
+ * outlet) and the attachment's eye turns to face it. Otherwise the palms decide it, or for palms facing each other the
+ * thumbs. Use it as the prop's `propState`; the prop then can't drift out of the fingers.
  */
-export function carryProp(body: Body, frame: Frame, prop: PropDef, grasps: Grasp[]): PropState {
+export function carryProp(
+  body: Body,
+  frame: Frame,
+  prop: PropDef,
+  grasps: Grasp[],
+  options: { toward?: Vector3 | readonly [number, number, number] } = {},
+): PropState {
   const held = grasps.filter((g) => g.prop === prop.id);
   if (held.length === 0 || held.length > 2) throw new Error(`carryProp ${prop.id}: needs one or two grasps on it, got ${held.length}`);
+  const wrist = (g: Grasp) => frame.rot[body.index[`wrist_${g.side}`]];
   const centres = held.map((g) => gripCenter(body, frame, g.side, g.grip, g.handle.radius));
-  const palms = held.map((g) => new Vector3(-sideSign(g.side), 0, 0).applyQuaternion(frame.rot[body.index[`wrist_${g.side}`]]));
+  const palms = held.map((g) => new Vector3(-sideSign(g.side), 0, 0).applyQuaternion(wrist(g)));
+  const thumbs = held.map((g) => new Vector3(0, 0, 1).applyQuaternion(wrist(g)));
   const local = held.map((g) => handleInPropFrame(prop, g.handle));
-  let world: Matrix4;
-  let inner: Matrix4;
+  let worldX: Vector3;
+  let worldAt: Vector3;
+  let localX: Vector3;
+  let localAt: Vector3;
+  let worldUp: Vector3;
+  let localUp: Vector3;
   if (held.length === 1) {
-    const shaft = new Vector3(0, 0, 1).applyQuaternion(frame.rot[body.index[`wrist_${held[0].side}`]]);
-    world = basis(shaft, palms[0]).setPosition(centres[0]);
-    inner = basis(local[0].axis, local[0].palmNormal).setPosition(local[0].pos);
+    worldX = thumbs[0];
+    worldAt = centres[0];
+    localX = local[0].axis;
+    localAt = local[0].pos;
+    worldUp = palms[0];
+    localUp = local[0].palmNormal;
   } else {
     const [a, b] = held[0].side === "L" ? [0, 1] : [1, 0];
     const span = centres[a].distanceTo(centres[b]);
@@ -138,11 +163,28 @@ export function carryProp(body: Body, frame: Frame, prop: PropDef, grasps: Grasp
     const same = held[0].handle === held[1].handle || local[a].pos.distanceTo(local[b].pos) < 1e-6;
     const la = same ? local[a].pos.clone().addScaledVector(local[a].axis, span / 2) : local[a].pos;
     const lb = same ? local[b].pos.clone().addScaledVector(local[b].axis, -span / 2) : local[b].pos;
-    const palmWorld = palms[0].clone().add(palms[1]);
-    const palmLocal = local[0].palmNormal.clone().add(local[1].palmNormal);
-    world = basis(centres[a].clone().sub(centres[b]), palmWorld).setPosition(centres[a].clone().add(centres[b]).multiplyScalar(0.5));
-    inner = basis(la.clone().sub(lb), palmLocal).setPosition(la.clone().add(lb).multiplyScalar(0.5));
+    worldX = centres[a].clone().sub(centres[b]).normalize();
+    worldAt = centres[a].clone().add(centres[b]).multiplyScalar(0.5);
+    localX = la.clone().sub(lb).normalize();
+    localAt = la.clone().add(lb).multiplyScalar(0.5);
+    worldUp = palms[0].clone().add(palms[1]);
+    localUp = local[0].palmNormal.clone().add(local[1].palmNormal);
+    const across = (v: Vector3, x: Vector3) => v.clone().addScaledVector(x, -v.dot(x)).length();
+    if (across(worldUp, worldX) < 0.5 || across(localUp, localX) < 0.5) {
+      // Palms facing each other say nothing about roll; the thumbs, running along the handles, do.
+      worldUp = thumbs[0].clone().add(thumbs[1]);
+      localUp = local[0].axis.clone().add(local[1].axis);
+    }
   }
+  if (options.toward) {
+    const eye = propEye(prop);
+    if (!eye) throw new Error(`carryProp ${prop.id}: toward needs a prop with a cable eye`);
+    const target = options.toward instanceof Vector3 ? options.toward : new Vector3(...options.toward);
+    worldUp = target.clone().sub(worldAt);
+    localUp = eye.clone().sub(localAt);
+  }
+  const world = basis(worldX, worldUp).setPosition(worldAt);
+  const inner = basis(localX, localUp).setPosition(localAt);
   const m = world.multiply(inner.invert());
   const pos = new Vector3();
   const quat = new Quaternion();
@@ -279,6 +321,9 @@ export function resolveGrips(id: string, grasps: Grasp[], authored?: HandGripCon
     if (held.length > 1) throw new Error(`${id}: hand ${side} has ${held.length} grasps; one hand holds one handle`);
     const want = authoredFor(side);
     const grasp = held[0];
+    if (grasp && !CLOSING_GRIPS.has(grasp.grip)) {
+      throw new Error(`${id}: hand ${side} grasps a handle with "${grasp.grip}", which doesn't close; use ${[...CLOSING_GRIPS].join(", ")}`);
+    }
     if (grasp) {
       if (want && want !== grasp.grip) {
         throw new Error(`${id}: hand ${side} grips "${want}" but its grasp uses "${grasp.grip}"; set the grip on the grasp`);

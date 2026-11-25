@@ -29,6 +29,5 @@ export const chestPressMachine = defineMachine<ChestPressState>({
       stack: slideY(clamp(lift, 0, specParam(spec, "stackTravel"))),
     };
   },
-  animatedNodes: ["arm_L", "arm_R"],
   contacts: (p) => ({ [`${p}.back_pad`]: BACK_PAD, [`${p}.seat_pad`]: SEAT_PAD, [`${p}.grip_`]: HANDS }),
 });

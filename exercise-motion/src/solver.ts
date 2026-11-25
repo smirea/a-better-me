@@ -502,6 +502,8 @@ export function braceHandOnSurface(
       along.set(0, -1, 0).applyQuaternion(pose.rot[j]);
       along.addScaledVector(frame.normal, -along.dot(frame.normal));
       push(weight * 0.15 * along.cross(ahead).dot(frame.normal));
+      // The cross term is blind to fingers pointing straight back; this one isn't.
+      push(weight * 0.15 * (1 - along.normalize().dot(ahead)));
     },
   ];
 }

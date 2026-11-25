@@ -69,7 +69,7 @@ export function dualAdjustablePulleyMachine(
       for (const side of ["L", "R"] as const) {
         const hand = h[side];
         if (!hand) continue;
-        const swivel = swivelYaw(probe, `pulley_${side}`, hand);
+        const swivel = swivelYaw(probe.at({ [`swivel${side}`]: 0 }), `pulley_${side}`, hand);
         const outlet = probe.at({ [`swivel${side}`]: swivel }).pulleys![`pulley_${side}`];
         out[`swivel${side}`] = swivel;
         out[`stack${side}`] = stackLift(outlet, hand, restCable, travel);

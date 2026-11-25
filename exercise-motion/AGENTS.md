@@ -27,7 +27,7 @@ Generates a replayable 3D rep for an exercise from its instructions, with the mu
    - **Moving footplates/pads:** pass `carried(machine.carrier("sled")!, ctx.live)` as the `carry` argument of `plantFootFlat` / `plantBothFeetOnPlate`; the targets come from the machine's static anchors and ride with the node. `machine.atFrame(frame, extras, props)` gives the driven machine for anything else that moves (pulley outlets for tethers).
 4. **Hints, key goals, loads, contacts & checks:**
    - Start from `POSTURE_HINTS` (`src/postures.ts`) so hints land in the right solver basin (note: `standing` has `root.y = 0.947`, `pronePlank` sets `toes.ext = 60`).
-   - Add `required` contacts for every grounded foot and pad contact (hands are covered by their grasps). For animated machine nodes (like `leg-press-45.footplate` or `leg-press-45.sled`), both `part: "leg-press-45.footplate"` and `prop: "leg-press-45.sled"` track the live moving node across every frame.
+   - Add `required` contacts for every grounded foot and pad contact (hands are covered by their grasps). On a driven machine, name the part (`part: "leg-press-45.footplate"`): it tracks the moving node every frame, and sliding is measured across the part itself.
    - Add one `FormCheck` per measurable instruction cue, quoting the catalog instruction.
 5. **Verify numerically AND visually:**
    - Run `bun exercise-motion/scripts/batch-qa.ts <slug>` — must pass with **0 errors**, **0 GLB/cable clips**, and **100% form checks passing**.

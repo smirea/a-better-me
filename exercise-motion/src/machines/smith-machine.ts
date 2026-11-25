@@ -20,7 +20,6 @@ export const smithMachineMachine = defineMachine<SmithMachineState>({
     const ds = s.safetyY - specParam(spec, "safetyY");
     return { carriage: slideY(s.barY - specParam(spec, "barY")), safety_L: slideY(ds), safety_R: slideY(ds) };
   },
-  animatedNodes: ["carriage"],
   contacts: (p) => ({ [`${p}.bar`]: { ...HANDS, girdle: 0.03, neck: 0.01, chest: 0.02 },
     [`${p}.grip_`]: HANDS }),
 });

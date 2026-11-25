@@ -355,6 +355,17 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
   const built = spec.build(body);
   assertSpecInputs(spec, built, body);
   const grips = resolveGrips(spec.id, built.grasps ?? [], built.grips);
+  if (built.tethers?.length && !built.tetherState) {
+    throw new Error(`${spec.id}: tethers need a tetherState that places them every frame`);
+  }
+  for (const grasp of built.grasps ?? []) {
+    const prop = built.props.find((p) => p.id === grasp.prop);
+    if (grasp.prop && !prop) throw new Error(`${spec.id}: grasp ${grasp.side} holds unknown prop "${grasp.prop}"`);
+    // The fingers close on the handle's listed radius; a scaled GLB would thicken the handle under them.
+    if (prop?.kind === "glb" && prop.scale !== undefined && prop.scale !== 1) {
+      throw new Error(`${spec.id}: grasped prop "${prop.id}" is scaled; hands can only hold canonical-size props`);
+    }
+  }
 
   const n = body.dofCount;
   const selfPairs = selfCollisionPairs(body);

@@ -28,6 +28,8 @@ export interface Part {
   material: Material;
   /** False for parts the lifter can't reach, which the clipping check skips. */
   collide: boolean;
+  /** The machine instance this part belongs to; its own parts may overlap one another (a sled on its rails). */
+  owner?: string;
 }
 
 export type BarbellStyle = "straight" | "ez" | "trap" | "ssb" | "axle" | "cambered";
@@ -540,13 +542,16 @@ export interface PadSurface {
   normal: Vec3;
   /** Unit vector pointing up along the pad length. */
   up: Vec3;
+  /** The lifter's left across the pad (the machine's +X turned with it); world +X when omitted. */
+  left?: Vec3;
 }
 
 /** Evaluates a point offset `along` meters up the pad and `sink` meters into the surface. */
-export function pointOnPad(surface: PadSurface, along: number, sink = 0.008, lateralX = 0): Vector3 {
+export function pointOnPad(surface: PadSurface, along: number, sink = 0.008, lateral = 0): Vector3 {
+  const left = surface.left ?? [1, 0, 0];
   return new Vector3(
-    surface.origin[0] + lateralX + surface.up[0] * along - surface.normal[0] * sink,
-    surface.origin[1] + surface.up[1] * along - surface.normal[1] * sink,
-    surface.origin[2] + surface.up[2] * along - surface.normal[2] * sink,
+    surface.origin[0] + left[0] * lateral + surface.up[0] * along - surface.normal[0] * sink,
+    surface.origin[1] + left[1] * lateral + surface.up[1] * along - surface.normal[1] * sink,
+    surface.origin[2] + left[2] * lateral + surface.up[2] * along - surface.normal[2] * sink,
   );
 }

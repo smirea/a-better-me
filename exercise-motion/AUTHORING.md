@@ -64,7 +64,7 @@ export const spec = composeExercise({
 ## Holding things
 
 - **Machine handles:** `machine.grasp(side, "handle_L")`, held with `...holdGrasp(body, grasp, ctx.live, { style: "overhand" | "underhand" | "neutral" })`. A handle on a driven node (a lever, a sled) is tracked live.
-- **Hand-carried props** (dumbbells, kettlebells, a deadlifted bar, a cable attachment): `graspProp` each hand on the prop's handle (`propHandles("prop-barbell").grip`, `propHandles("prop-lat-bar").grip_L`), place the prop with `carryProp(body, frame, prop, grasps)`, and pose the hands with goals. Two hands on two handles of one prop also need `keepGraspSpan(body, gL, gR, prop)`.
+- **Hand-carried props** (dumbbells, kettlebells, a deadlifted bar, a cable attachment): `graspProp` each hand on the prop's handle (`propHandles("prop-barbell").grip`, `propHandles("prop-lat-bar").grip_L`), place the prop with `carryProp(body, frame, prop, grasps)`, and pose the hands with goals. Two hands on two handles of one prop also need `keepGraspSpan(body, gL, gR, prop)`. A cable attachment rolls in the hands to face its cable: pass `{ toward: machine.pulleys!.pulley.pos }` so its eye turns to the pulley.
 - **Body-carried props** (a squat bar on the traps, a front rack): place the prop from body anchors in `propState`, and hold it with `holdGrasp(body, grasp, ctx.live, { at: ±halfWidth, style })`.
 - **Free hands:** `palmOnFloor` / `braceHandOnSurface` / `braceBothHands` with `grips: "flat-floor"`; otherwise `grips` defaults to `"relaxed"`. A closed grip (`bar`, `press`, `neutral`, `hook`, …) without a grasp throws.
 

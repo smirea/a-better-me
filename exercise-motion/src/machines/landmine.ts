@@ -14,7 +14,6 @@ const build = defineMachine<LandmineState>({
   defaults: { yawDeg: 0, pitchDeg: 30 },
   normalize: (s) => ({ yawDeg: clamp(s.yawDeg, -90, 90), pitchDeg: clamp(s.pitchDeg, -2, 70) }),
   nodes: (s) => ({ yaw: rotY(rad(s.yawDeg)), sleeve: rotX(rad(s.pitchDeg)) }),
-  animatedNodes: ["sleeve"],
   contacts: (p) => ({ [`${p}.sleeve`]: HANDS }),
 });
 

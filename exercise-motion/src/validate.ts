@@ -3,7 +3,7 @@ import { anchorPoint, selfCollisionPairs, SIDES, type Body } from "./body";
 import type { Analysis } from "./biomech";
 import { compileParts, propParts, signedDistance, surfaceSamples, type Shape } from "./equipment";
 import type { Built, CheckResult, Kinematics, Sequence } from "./exercise";
-import { CYLINDER_GRIPS, graspHandleAt, gripCenter, propPointWorld } from "./grasp";
+import { CYLINDER_GRIPS, graspHandleAt, gripCenter, propEye, propPointWorld } from "./grasp";
 import { machineSpec } from "./machines/core";
 import { closestSegments, deg, quatFromRotVec, rotVecFromQuat } from "./math";
 import { MUSCLE_NAMES, MUSCLES, TENDONS } from "./muscles";
@@ -55,6 +55,8 @@ const LIMITS = {
   gripReach: 0.04,
   /** How far a tether's end may sit from the eye or anchor it's clipped to. */
   tetherEnd: 0.01,
+  /** How closely an attachment's eye must face along its cable (cosine): about 60° off before it reads as wrong. */
+  eyeFacing: 0.5,
   /** How deep one piece of equipment may sit in another: a bar seated in a J-hook cradle, not through an upright. */
   propClip: 0.01,
   slide: 0.012,
@@ -191,39 +193,40 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
     const propShapes = sequence.props.map((prop, p) =>
       compileParts(propParts(prop, sequence.loadKg).filter((part) => part.collide), sequence.propStates[f][p]),
     );
-    const machineOf = (id: string) => id.split(".")[0];
-    for (let a = 0; a < propShapes.length; a++) {
-      const others: { id: string; shapes: Shape[] }[] = [{ id: "equipment", shapes: fixed }];
-      for (let b = a + 1; b < propShapes.length; b++) {
-        const hiddenPair = [a, b].every((k) => {
-          const prop = sequence.props[k];
-          return prop.kind === "parts" && prop.hidden;
-        });
-        if (hiddenPair && machineOf(sequence.props[a].id) === machineOf(sequence.props[b].id)) continue;
-        others.push({ id: sequence.props[b].id, shapes: propShapes[b] });
-      }
-      for (const other of others) {
-        let depth = 0;
-        let hitPart = "";
-        for (const shape of propShapes[a]) {
-          for (const target of other.shapes) {
-            if (machineOf(target.part.id) === machineOf(sequence.props[a].id)) continue;
-            if (shape.pos.distanceTo(target.pos) > shape.bound + target.bound) continue;
-            for (const point of surfaceSamples(shape)) {
-              const d = -signedDistance(target, point);
-              if (d > depth) {
-                depth = d;
-                hitPart = target.part.id;
-              }
+    // Tested both ways, so a collider fully inside another is caught whichever comes first.
+    const sameOwner = (a: Shape, b: Shape) => a.part.owner !== undefined && a.part.owner === b.part.owner;
+    const deepest = (from: Shape[], into: Shape[]) => {
+      let depth = 0;
+      let part = "";
+      for (const shape of from) {
+        for (const target of into) {
+          if (sameOwner(shape, target)) continue;
+          if (shape.pos.distanceTo(target.pos) > shape.bound + target.bound) continue;
+          for (const point of surfaceSamples(shape)) {
+            const d = -signedDistance(target, point);
+            if (d > depth) {
+              depth = d;
+              part = target.part.id;
             }
           }
         }
-        if (depth > LIMITS.propClip) {
+      }
+      return { depth, part };
+    };
+    const staticColliders = fixed;
+    for (let a = 0; a < propShapes.length; a++) {
+      const others: { id: string; shapes: Shape[] }[] = [{ id: "equipment", shapes: staticColliders }];
+      for (let b = a + 1; b < propShapes.length; b++) others.push({ id: sequence.props[b].id, shapes: propShapes[b] });
+      for (const other of others) {
+        const there = deepest(propShapes[a], other.shapes);
+        const back = deepest(other.shapes, propShapes[a]);
+        const hit = there.depth >= back.depth ? there : { depth: back.depth, part: other.id };
+        if (hit.depth > LIMITS.propClip) {
           const name = sequence.props[a].id;
-          collector.add(`prop-clip:${name}:${other.id}`, f, depth, (worst) => ({
+          collector.add(`prop-clip:${name}:${other.id}`, f, hit.depth, (worst) => ({
             code: "equipment-clip",
             severity: "error",
-            title: `${name.split(".").map(pretty).join(" ")} passes through ${hitPart.split(".").map(pretty).join(" ")}`,
+            title: `${name.split(".").map(pretty).join(" ")} passes through ${hit.part.split(".").map(pretty).join(" ")}`,
             detail: `${cm(worst)} deep; equipment can't overlap equipment`,
           }));
         }
@@ -267,6 +270,26 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
             target = propPointWorld(prop, sequence.propStates[f][p], eye.pos);
           } else {
             target = anchorPoint(body, frame, def.attach.anchor);
+          }
+          if ("prop" in def.attach && pts.length >= 2) {
+            const p = sequence.props.findIndex((prop) => prop.id === (def.attach as { prop: string }).prop);
+            const prop = sequence.props[p];
+            const eyeLocal = propEye(prop);
+            if (eyeLocal) {
+              // A cable under tension swings its attachment so the eye faces it; pulling from behind the bar is wrong.
+              const centre = propPointWorld(prop, sequence.propStates[f][p], [0, 0, 0]);
+              const outward = target.clone().sub(centre).normalize();
+              const pull = new Vector3(...pts[pts.length - 2]).sub(end).normalize();
+              const facing = outward.dot(pull);
+              if (facing < LIMITS.eyeFacing) {
+                collector.add(`tether-side:${tetherId}`, f, 1 - facing, () => ({
+                  code: "cable-clip",
+                  severity: "error",
+                  title: `${pretty(tetherId)} pulls ${prop.id} from the wrong side`,
+                  detail: `the attachment's eye faces away from its cable; roll it toward the pulley (carryProp toward)`,
+                }));
+              }
+            }
           }
           const off = end.distanceTo(target);
           if (off > LIMITS.tetherEnd) {
@@ -361,19 +384,17 @@ export function validateMotion(body: Body, sequence: Sequence, kin: Kinematics):
         }
       } else if (contact.part !== undefined) {
         let partShape = allEquipmentById.get(contact.part);
-        let movingPart = false;
-        if (!partShape) {
-          partShape = shapes.find((s) => s.part.id === contact.part);
-          movingPart = Boolean(partShape);
-        }
+        if (!partShape) partShape = shapes.find((s) => s.part.id === contact.part);
         if (!partShape) {
           throw new Error(`Required contact "${contact.label}" references missing part "${contact.part}"`);
         }
         gap = Math.max(0, signedDistance(partShape, point));
-        if (!contact.allowSlide && !movingPart) {
-          const seen = slides.get(contact.label) ?? { min: point.clone(), max: point.clone() };
-          seen.min.min(point);
-          seen.max.max(point);
+        if (!contact.allowSlide) {
+          // Measured in the part's own frame, so riding a moving sled isn't sliding and sliding across it is.
+          const local = point.clone().sub(partShape.pos).applyQuaternion(partShape.inverse);
+          const seen = slides.get(contact.label) ?? { min: local.clone(), max: local.clone() };
+          seen.min.min(local);
+          seen.max.max(local);
           slides.set(contact.label, seen);
         }
       } else {

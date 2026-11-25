@@ -16,7 +16,6 @@ export const seatedLegCurlMachine = defineMachine<SeatedLegCurlState>({
     lever_arm: rotX(rad(s.curlDeg)),
     stack: slideY(clamp(CAM * rad(Math.max(0, s.curlDeg)), 0, specParam(spec, "stackTravel"))),
   }),
-  animatedNodes: ["lever_arm"],
   contacts: (p) => ({
     [`${p}.seat_pad`]: SEAT_PAD,
     [`${p}.back_pad`]: BACK_PAD,

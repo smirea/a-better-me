@@ -127,8 +127,6 @@ export interface MachineDefinition<S> {
   cameraHint?: CanonicalMachineInstance["cameraHint"];
   /** Last adjustments that depend on the state, e.g. which of several landing faces is on top. */
   finish?(instance: MachineInstance<S>, state: S): void;
-  /** Nodes that move during a rep when `drive` is supplied; their collider parts become moving hidden props instead of frozen static obstacles. */
-  animatedNodes?: string[];
 }
 
 const MATERIALS = new Set<Material>(["steel", "chrome", "pad", "plate", "rubber", "cable", "band", "wood", "accent"]);
@@ -183,7 +181,7 @@ export function defineMachine<S extends object>(def: MachineDefinition<S>) {
       const point = (p: number[], node?: string): Vec3 => tuple(new Vector3(...v3(p)).applyMatrix4(full(node)));
       const dir = (d: number[], node?: string): Vec3 => tuple(new Vector3(...v3(d)).applyQuaternion(rotOf(node)).normalize());
 
-      const animatedSet = drive && def.animatedNodes?.length ? new Set(def.animatedNodes) : null;
+      const animatedSet = drive ? new Set(Object.keys(nodeStates)) : null;
       const isAnimatedNode = (node?: string): string | null => {
         if (!animatedSet || !node) return null;
         let cur: string | null | undefined = node;
@@ -209,6 +207,7 @@ export function defineMachine<S extends object>(def: MachineDefinition<S>) {
             quat: [...(p.quat as Quat)],
             material: p.material as Material,
             collide: p.collide,
+            owner: idPrefix,
           };
           const list = animatedByNode.get(animNode);
           if (list) list.push(localPart);
@@ -224,6 +223,7 @@ export function defineMachine<S extends object>(def: MachineDefinition<S>) {
           quat: [q.x, q.y, q.z, q.w],
           material: p.material as Material,
           collide: p.collide,
+          owner: idPrefix,
         });
       }
 
@@ -253,7 +253,12 @@ export function defineMachine<S extends object>(def: MachineDefinition<S>) {
       const a = spec.anchors;
       const surfaces: Record<string, PadSurface> = {};
       for (const [k, s] of Object.entries(a.surfaces ?? {})) {
-        surfaces[k] = { origin: point(s.origin, s.node), normal: dir(s.normal, s.node), up: dir(s.up, s.node) };
+        surfaces[k] = {
+          origin: point(s.origin, s.node),
+          normal: dir(s.normal, s.node),
+          up: dir(s.up, s.node),
+          left: dir([1, 0, 0], s.node),
+        };
       }
       const footplates: Record<string, FootplateSpec> = {};
       for (const [k, f] of Object.entries(a.footplates ?? {})) {
@@ -401,7 +406,8 @@ export function stackLift(pulley: PulleySpec, handle: Vec3, restLength: number, 
 }
 
 /**
- * Yaw (radians about +Y) that turns a swivel pulley housing so its outlet faces `handle`. Measured in the world about
+ * Yaw (radians about +Y) that turns a swivel pulley housing so its outlet faces `handle`, as the node's absolute angle
+ * when `machine` is at swivel 0. Measured in the world about
  * the swivel's own pivot, so it holds for any placement yaw; the outlet sits off the pivot and swings with it.
  */
 export function swivelYaw(machine: MachineInstance<object>, pulleyKey: string, handle: Vec3): number {
