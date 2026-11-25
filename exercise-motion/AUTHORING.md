@@ -90,9 +90,17 @@ Cable stacks rest on their pins at the rep's slackest frame automatically; `rest
 
 Set J-hooks and safeties from the bar's solved height, not from the cradle: `rackHeightsFor(standingUnderside, bottomUnderside)` (`src/machines/power-rack.ts`) puts the hooks where the standing bar clears their lips and the safeties just under the bottom of the rep. A bar resting on the traps is placed from body anchors in `propState`, and the hands `holdGrasp` it through `ctx.live` with `{ at: ±halfWidth, style: "overhand" }`; keep the grip close enough that the shoulders aren't held at their rotation limit (QA warns when a joint sits at its limit for most of the rep).
 
-## Loads
+## Loads, contacts and muscles
 
-`bodyweightShare` without a `direction` hangs from the anchor like a dumbbell. A hand or foot pushing on the floor needs `direction: [0, 1, 0]` (push-ups, planks). A cable pulls each hand parallel to the cable, so on a wide bar give each hand its own `pulley` point offset by its grip width, not the pulley's centre. An "overload" error is often a load pointing the wrong way before it is too heavy.
+The muscle numbers come from the forces on the body, so say what those are and nothing else.
+
+- **`loads` are known forces:** a weight at an anchor (`share` of the logged weight), a cable (`pulley`, the point it pulls toward), or a push in a fixed `direction`. A cable pulls each hand parallel to the cable, so on a wide bar give each hand its own `pulley` point offset by its grip width, not the pulley's centre.
+- **`support` says what holds the lifter up.** `seated`, `lying` and `supported` rest the pelvis on a seat, bench or pad; list in `passive` the joints that pad carries. `standing` (the feet) and `hanging` (the hands) have their contacts built in. `planted` is everything else on the floor: list `contacts` with `footContact(side)` and `palmContact(side)` (push-ups, planks, hip thrusts). Never state how much a contact carries: balance works it out.
+- **A plate on rails** (a leg press sled) is a contact with a `normal` and a `share`: the fraction of the logged weight it presses with along that normal.
+- **Two hands on one bar** go in `support.bars: [["grip_L", "grip_R"]]`, so they can push or pull along it. Without it a wide grip loads the shoulders as if each hand hung from its own rope.
+- **Line limbs up with their loads.** A forearm held off the line of its cable, or an arm trailing behind a dumbbell, puts the work in the wrong muscle. `limbAlongForce(body, "elbow_L", "grip_L", force)` (`src/solver.ts`) holds a limb along the force on its end.
+
+QA holds the result against the catalog's muscles. `muscle-flicker` (error) is a muscle that switches on more than once each way: look for a joint that pops, a hand that shifts or a load that changes direction. `muscle-mismatch` (warning) is a muscle the exercise doesn't list out-working the ones it does, or a listed prime mover left idle: fix the pose or where the lifter sits on the machine, and never touch the muscle model to quiet it. An `overload` error is often a load pointing the wrong way before it is too heavy. How the numbers are computed is in [`docs/biomechanics.md`](docs/biomechanics.md).
 
 ## Form checks
 
@@ -125,8 +133,8 @@ Run `bun exercise-motion/scripts/batch-qa.ts <slug> --explain`. For the start an
 ## Available body anchors (`body.anchors`)
 
 - Trunk/Head: `traps`, `upperBack`, `sternum`, `chestFront`, `belly`, `sacrum`, `pelvisBottom`, `pelvisFront`, `occiput`, `mouth`, `forehead`, `headTop`, `headSide_L/R`, `frontRack_L/R`, `shoulderTop_L/R`
-- Arms (`_L`/`_R`): `grip_L/R`, `press_L/R`, `palmFlat_L/R`, `elbowTip_L/R`, `forearmMid_L/R`, `upperArmBack_L/R`
-- Legs (`_L`/`_R`): `thighBack/Front/Outer/Inner_L/R`, `kneeFront/Back_L/R`, `shinFront/Back_L/R`, `ankleCuff_L/R`, `heel_L/R`, `ballIn_L/R`, `ballOut_L/R`, `toe_L/R`, `secondToe_L/R`
+- Arms (`_L`/`_R`): `grip_L/R`, `press_L/R`, `palmFlat_L/R`, `palmHeel_L/R`, `knuckles_L/R`, `fingertips_L/R`, `elbowTip_L/R`, `forearmMid_L/R`, `upperArmBack_L/R`
+- Legs (`_L`/`_R`): `thighBack/Front/Outer/Inner_L/R`, `kneeFront/Back_L/R`, `shinFront/Back_L/R`, `ankleCuff_L/R`, `heel_L/R`, `ballIn_L/R`, `ballOut_L/R`, `forefoot_L/R`, `toe_L/R`, `secondToe_L/R`
 
 ## Mandatory verification loop
 

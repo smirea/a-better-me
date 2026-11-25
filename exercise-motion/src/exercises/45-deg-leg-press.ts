@@ -1,7 +1,7 @@
 import { Vector3 } from "three";
-import { anchorPoint, type Body } from "../body";
+import { anchorPoint, SIDES, type Body } from "../body";
 import { everyFrame } from "../checks";
-import type { FormCheck } from "../exercise";
+import { footContact, type FormCheck } from "../exercise";
 import { carried, holdGrasp } from "../grasp";
 import { legPress45Machine } from "../machines";
 import {
@@ -91,6 +91,7 @@ export const spec = composeExercise({
       goals: [
         // The sacrum settles wherever the seat lets it; pinning it in the corner lifts the pelvis off the seat.
         ...restBackOnPad(body, back, { sacrumAlong: null }),
+        restOnPlane(body, "occiput", new Vector3(...back.origin), new Vector3(...back.normal), 30, 0.004),
         restOnPlane(body, "pelvisBottom", new Vector3(...seat.origin), new Vector3(...seat.normal), 30, 0.01),
         ...plantBothFeetOnPlate(body, plate, STANCE_X, HEEL_ALONG, TOE_OUT, 40, carried(machine.carrier("sled")!, ctx.live)),
         ...grasps.flatMap((g) => holdGrasp(body, g, ctx.live, { style: "neutral" })),
@@ -108,18 +109,25 @@ export const spec = composeExercise({
       progress: (frame) => anchorPoint(body, frame, "heel_L").y,
       ground: "sacrum",
       grasps,
-      loads: (["L", "R"] as const).flatMap((side) =>
-        (["heel", "ballIn"] as const).map((point) => ({
-          anchor: `${point}_${side}`,
-          share: 0.25 * ALONG_RAIL,
-          grip: "rest" as const,
-          direction: [0, -Math.SQRT1_2, -Math.SQRT1_2] as [number, number, number],
-        })),
-      ),
-      support: { kind: "supported", rail: true, passive: ["lumbar", "thoracic"], brace: true },
+      loads: [],
+      support: {
+        kind: "supported",
+        rail: true,
+        passive: ["lumbar", "thoracic", "neck"],
+        // The sled presses both soles down its rails with the part of its weight the rails don't carry.
+        contacts: [
+          {
+            kind: "rest",
+            anchors: SIDES.flatMap((side) => footContact(side).anchors),
+            normal: [0, -Math.SQRT1_2, -Math.SQRT1_2],
+            share: ALONG_RAIL,
+          },
+        ],
+      },
       required: [
         { label: "Seat", anchor: "pelvisBottom", part: "leg-press-45.seat_pad" },
         { label: "Backrest", anchor: "upperBack", part: "leg-press-45.back_pad" },
+        { label: "Head", anchor: "occiput", part: "leg-press-45.back_pad" },
         { label: "Left heel", anchor: "heel_L", part: "leg-press-45.footplate" },
         { label: "Right heel", anchor: "heel_R", part: "leg-press-45.footplate" },
         { label: "Left forefoot", anchor: "ballIn_L", part: "leg-press-45.footplate" },

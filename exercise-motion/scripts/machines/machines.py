@@ -364,15 +364,18 @@ def lat_pulldown():
     # Column with the stack.
     col_z = 0.50
     travel, stack_top = A.stack_tower(m, 0, col_z, -1, "stack", height=2.10, plates=15, part="column")
-    m.beam((0, 2.17, col_z + 0.12), (0, 2.17, -0.30), 0.09, 0.09, part="boom")
+    # The cable drops over the thigh rollers, in front of the lifter. Leaning back to bring the bar to the chest then
+    # puts the cable's line through the hips, so the pull hangs the torso instead of prying it backward.
+    pulley_z = -0.12
+    m.beam((0, 2.17, col_z + 0.12), (0, 2.17, pulley_z - 0.04), 0.09, 0.09, part="boom")
     m.beam((0, 1.55, col_z - 0.13), (0, 2.12, col_z - 0.13), 0.06, 0.06)
     A.sheave(m, (0, 2.10, col_z), (1, 0, 0), 0.05)
-    A.sheave(m, (0, 2.10, -0.26), (1, 0, 0), 0.05)
+    A.sheave(m, (0, 2.10, pulley_z), (1, 0, 0), 0.05)
     for s in (1, -1):
-        m.box((s * 0.02, 2.10, -0.26), (0.008, 0.12, 0.12), "mat_frame", bevel=0.004)
-    exit_pt = Vector((0, 2.04, -0.26))
+        m.box((s * 0.02, 2.10, pulley_z), (0.008, 0.12, 0.12), "mat_frame", bevel=0.004)
+    exit_pt = Vector((0, 2.04, pulley_z))
     m.revolve(exit_pt + Vector((0, -0.01, 0)), (0, 1, 0), [(0, -0.02), (0.018, -0.016), (0.02, 0.0), (0.012, 0.01), (0, 0.01)], "mat_rubber", None, 16)
-    m.tube((0, 2.12, -0.26), (0, 2.12, col_z), 0.004, "mat_cable", None, 8)
+    m.tube((0, 2.12, pulley_z), (0, 2.12, col_z), 0.004, "mat_cable", None, 8)
     m.pulley("pulley", exit_pt, (0, -1, 0), stack="stack", ratio=1.0, stack_travel=travel)
 
     # Thigh rollers: height-adjustable post in front of the seat.
@@ -533,7 +536,8 @@ def leg_press_45():
     back_n = Vector((0, math.cos(ba), math.sin(ba)))
     pad_t = 0.075
     m.pad(seat_j + Vector((0, 0, 0.02)) + seat_up * 0.17 - seat_n * pad_t / 2, (0.42, pad_t, 0.34), rot=frame_quat(seat_up, seat_n), part="seat_pad")
-    m.pad(seat_j + back_up * 0.42 - back_n * pad_t / 2, (0.42, pad_t, 0.82), rot=frame_quat(back_up, back_n), part="back_pad")
+    # Long enough to carry the head: a lifter holding the head up off a short pad works the neck through every rep.
+    m.pad(seat_j + back_up * 0.48 - back_n * pad_t / 2, (0.42, pad_t, 0.94), rot=frame_quat(back_up, back_n), part="back_pad")
     m.box(seat_j + back_up * 0.42 - back_n * (pad_t + 0.008), (0.36, 0.014, 0.78), "mat_frame", rot=frame_quat(back_up, back_n), bevel=0.003)
     m.box(seat_j + Vector((0, 0, 0.02)) + seat_up * 0.17 - seat_n * (pad_t + 0.008), (0.36, 0.014, 0.30), "mat_frame", rot=frame_quat(seat_up, seat_n), bevel=0.003)
     m.surface("seat", seat_j + Vector((0, 0, 0.02)), seat_n, seat_up)

@@ -8,6 +8,8 @@ import { analyze } from "./biomech";
 import { anchorPoint, createBody, type Body } from "./body";
 import { compileParts, signedDistance, sphere, capsule } from "./equipment";
 import { generate, kinematics, type ExerciseSpec } from "./exercise";
+import { solveBounded } from "./least-squares";
+import { MUSCLES } from "./muscles";
 import { validateGlbMotion } from "./glb-collision";
 import { carryProp, graspHandleAt, graspProp, graspWorld, gripCenter } from "./grasp";
 import { dualAdjustablePulleyMachine, dumbbellProp, loadedBarbell, propHandles } from "./machines";
@@ -15,7 +17,7 @@ import { machineSpec, swivelYaw } from "./machines/core";
 import { plantBothFeet, POSTURE_HINTS } from "./postures";
 import { applySkinToObject3D, getSkin } from "./skin";
 import { balance, mirrored, pin } from "./solver";
-import { validateMotion } from "./validate";
+import { validateLoad, validateMotion } from "./validate";
 import { catalogSlugMap, loadAppCatalog } from "../scripts/catalog-io";
 
 /** Minimal self-contained synthetic spec used to verify engine invariants without relying on catalog exercises. */
@@ -59,7 +61,7 @@ const syntheticSquat: ExerciseSpec = {
       propState: () => [],
       equipment: () => [],
       loads: [{ anchor: "upperBack", share: 1, grip: "rest" }],
-      support: { kind: "standing", brace: true },
+      support: { kind: "standing" },
       tempo: { lower: 1.5, bottom: 0.2, raise: 1.2, top: 0.2 },
       contacts: {},
       required: [
@@ -174,38 +176,54 @@ describe("exercise-motion framework invariants", () => {
     expect(signedDistance(roll, new Vector3(0.3, 0.5, 0))).toBeCloseTo(0.05, 4);
   });
 
-  test("bodyweightShare loads closed-chain bodyweight exercises and assistance reduces effective load", () => {
+  test("the floor pushes a standing lifter with exactly the weight of the lifter and the bar", () => {
     const body = sharedBody;
-    const base = {
-      ...sharedSquat,
-      poses: sharedSquat.poses.slice(0, 4),
-      s: sharedSquat.s.slice(0, 4),
-      propStates: sharedSquat.propStates.slice(0, 4),
-      support: { kind: "hanging" as const, passive: ["hip", "knee", "ankle"] },
-      loadKg: 0,
+    const kin = kinematics(body, sharedSquat);
+    const analysis = analyze(body, sharedSquat, kin, 40);
+    const bottom = sharedSquat.phases[1].from;
+    const push = analysis.reactions[bottom].reduce((sum, reaction) => sum + reaction.force[1], 0);
+    expect(push).toBeGreaterThan((body.mass + 40) * 9.81 * 0.98);
+    expect(push).toBeLessThan((body.mass + 40) * 9.81 * 1.02);
+  });
+
+  test("a muscle that switches on more than once on the way down and once on the way up is an error", () => {
+    const body = sharedBody;
+    const kin = kinematics(body, sharedSquat);
+    const steady = analyze(body, sharedSquat, kin, 40);
+    expect(validateLoad(sharedSquat, steady).some((issue) => issue.code === "muscle-flicker")).toBe(false);
+
+    const quads = MUSCLES.indexOf("quads") * 2;
+    const flickering = {
+      ...steady,
+      activation: steady.activation.map((row, f) => {
+        const copy = Float32Array.from(row);
+        copy[quads] = f % 20 < 10 ? 0.8 : 0.1;
+        return copy;
+      }),
     };
-    const kin = kinematics(body, base);
-    const bwOnly = analyze(
-      body,
+    expect(validateLoad(sharedSquat, flickering).some((issue) => issue.code === "muscle-flicker")).toBe(true);
+  });
+
+  test("bounded least squares shares a target between variables without leaving their bounds", () => {
+    const columns = [
+      { rows: Int32Array.of(0), values: Float64Array.of(1) },
+      { rows: Int32Array.of(0), values: Float64Array.of(1) },
+    ];
+    const x = new Float64Array(2);
+    solveBounded(
       {
-        ...base,
-        loads: [{ anchor: "grip_L", share: 0.5, bodyweightShare: 0.5, grip: "hang", direction: [0, 1, 0] }],
+        columns,
+        target: Float64Array.of(1),
+        weight: Float64Array.of(1e6),
+        ridge: Float64Array.of(1, 1),
+        lo: Float64Array.of(0, 0),
+        hi: Float64Array.of(0.3, 1),
       },
-      kin,
-      0,
+      x,
+      new Int8Array(2).fill(-1),
     );
-    const assisted = analyze(
-      body,
-      {
-        ...base,
-        loads: [{ anchor: "grip_L", share: -0.5, bodyweightShare: 0.5, grip: "hang", direction: [0, 1, 0] }],
-      },
-      kin,
-      30,
-    );
-    expect(Math.abs(bwOnly.demands[0]["shoulder_L.abd"])).toBeGreaterThan(
-      Math.abs(assisted.demands[0]["shoulder_L.abd"]),
-    );
+    expect(x[0]).toBeCloseTo(0.3, 4);
+    expect(x[1]).toBeCloseTo(0.7, 4);
   });
 
   test("cable segments cutting through the torso trigger a cable-clip error", () => {

@@ -93,7 +93,10 @@ async function main() {
     const kin = kinematics(body, sequence);
     const analysis = analyze(body, sequence, kin);
     const motionIssues = validateMotion(body, sequence, kin);
-    const loadIssues = validateLoad(sequence, analysis);
+    const loadIssues = validateLoad(sequence, analysis, {
+      primary: entry.primaryMuscles,
+      secondary: entry.secondaryMuscles,
+    });
     const allIssues = [...motionIssues, ...loadIssues];
     const checks = runChecks(body, built, sequence, kin);
 

@@ -53,6 +53,13 @@ export function loadAppCatalog(): AppCatalogExercise[] {
   return cachedExercises;
 }
 
+/** What the catalog says an exercise works, which the load validator holds the computed engagement against. */
+export function listedMuscles(catalogId: string) {
+  const entry = loadAppCatalog().find((exercise) => exercise.id === catalogId);
+  if (!entry) throw new Error(`Catalog id ${catalogId} is not in exercises.json`);
+  return { primary: entry.primaryMuscles, secondary: entry.secondaryMuscles };
+}
+
 export function slugifyName(name: string): string {
   return name
     .toLowerCase()

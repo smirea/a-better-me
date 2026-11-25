@@ -12,7 +12,7 @@ import { jointRanges } from "../src/solver";
 import { validateGlbMotion } from "../src/glb-collision";
 import { contactSheet } from "../src/sheet";
 import { runChecks, validateLoad, validateMotion } from "../src/validate";
-import { loadSpec } from "./catalog-io";
+import { listedMuscles, loadSpec } from "./catalog-io";
 
 const MAJOR = ["hip_L.flex", "hip_R.flex", "knee_L.flex", "knee_R.flex", "ankle_L.dorsi", "ankle_R.dorsi", "lumbar.flex", "thoracic.flex", "neck.flex", "shoulder_L.elev", "shoulder_R.elev", "elbow_L.flex", "elbow_R.flex", "wrist_L.flex", "wrist_L.dev"];
 
@@ -82,7 +82,7 @@ async function main() {
       const issues = [
         ...validateMotion(body, sequence, kin),
         ...glbIssues,
-        ...validateLoad(sequence, analysis),
+        ...validateLoad(sequence, analysis, listedMuscles(spec.catalogId)),
       ];
       const errors = issues.filter((i) => i.severity === "error");
       const checks = runChecks(body, built, sequence, kin);

@@ -123,6 +123,9 @@ const checks: FormCheck[] = [
   },
 ];
 
+/** How far the pelvis tips forward at the top, in degrees, with the spine held 8° extended above it. */
+const TOP_PITCH = 16;
+
 export const spec = composeExercise({
   id: "barbell-back-squat",
   catalogId: "1a25c6f170d8803d8231d083fdd65458",
@@ -135,10 +138,12 @@ export const spec = composeExercise({
     const loaded = loadedBarbell("bar", LOAD_KG);
     const props = loaded.props;
     const grasps = [graspProp("L", "bar", handle), graspProp("R", "bar", handle)];
+    // Standing, the torso tips forward far enough to carry the bar over the base of the spine. Bolt upright, a bar
+    // on the traps sits behind the spine and the abdominals have to hold the lifter from folding backward.
     const tall = {
       ...stand,
-      "root.pitch": 6,
-      "hip.flex": 8,
+      "root.pitch": TOP_PITCH,
+      "hip.flex": TOP_PITCH - 1,
       "hip.abd": 16,
       "hip.rot": 8,
       "knee.flex": 6,
@@ -194,9 +199,9 @@ export const spec = composeExercise({
         start: [
           lockAngle(body, "knee_L.flex", 6, 16),
           lockAngle(body, "knee_R.flex", 6, 16),
-          lockAngle(body, "hip_L.flex", 8, 14),
-          lockAngle(body, "hip_R.flex", 8, 14),
-          ({ q, push }) => push(14 * (q[3] - rad(6))),
+          lockAngle(body, "hip_L.flex", TOP_PITCH - 1, 14),
+          lockAngle(body, "hip_R.flex", TOP_PITCH - 1, 14),
+          ({ q, push }) => push(14 * (q[3] - rad(TOP_PITCH))),
         ],
         end: [
           lockAngle(body, "knee_L.flex", 124, 22),

@@ -13,11 +13,8 @@ const LOAD_KG = 12;
 /** Heels this far either side of the midline: about hip width for this body. */
 const STANCE_X = 0.13;
 const HEEL_Z = -0.08;
-/**
- * The hex head is 8.1 cm around the handle, and the thigh face sits 8 cm off the bone.
- * The handle has to live about a head-radius in front of that face or the plate is inside the thigh.
- */
-const AHEAD_OF_THIGH = 0.09;
+/** How far in front of the leg's face the handle sits when the dumbbell is held close. */
+const AHEAD_OF_THIGH = 0.035;
 
 const stand = POSTURE_HINTS.standing;
 
@@ -35,17 +32,29 @@ function verticalShin(body: Body, side: Side, weight: number): Goal {
 }
 
 /**
- * Hangs the dumbbell on the outer front of the thigh. World +Z is "in front of the leg" in the
- * side view the cue is about; the plate radius is why the handle sits ahead of the thigh face.
+ * How far the dumbbell hangs out from the leg toward plumb under the shoulder. Tight against the shin, the arms
+ * trail well behind the shoulders at the bottom and the lats and triceps hold the weight back; plumb, it drifts
+ * away from the legs. Lifters settle between the two, the arms a little behind vertical.
+ */
+const HANG = 0.5;
+
+/**
+ * Hangs the dumbbell on the outer front of the leg. World +Z is "in front of the leg" in the side view the cue is
+ * about. The handle is held at an angle, so its inner head sits in front of the thigh and the handle itself close
+ * to the thigh's outer corner.
  */
 function hangByThigh(body: Body, side: Side, weight: number): Goal {
   const s = sideSign(side);
   const grip = new Vector3();
   const thigh = new Vector3();
+  const shin = new Vector3();
   return ({ frame, push }) => {
     anchorPoint(body, frame, `grip_${side}`, grip);
     anchorPoint(body, frame, `thighFront_${side}`, thigh);
-    push(weight * (grip.z - (thigh.z + AHEAD_OF_THIGH)));
+    anchorPoint(body, frame, `shinFront_${side}`, shin);
+    const close = Math.max(thigh.z, shin.z) + AHEAD_OF_THIGH;
+    const plumb = frame.pos[body.index[`shoulder_${side}`]].z;
+    push(weight * (grip.z - (close + HANG * Math.max(0, plumb - close))));
     // Outside the thigh face, not on its centre: the inner heads meet if the hands sit any closer.
     push(weight * 0.7 * (grip.x - (thigh.x + s * 0.11)));
   };
@@ -235,8 +244,8 @@ export const spec = composeExercise({
     const grasps = [graspProp("L", "dbL", handle), graspProp("R", "dbR", handle)];
     const tall = {
       ...stand,
-      "root.pitch": 5,
-      "hip.flex": 12,
+      "root.pitch": 3,
+      "hip.flex": 9,
       "hip.abd": 8,
       "knee.flex": 12,
       "clavicle.prot": 4,
@@ -270,7 +279,7 @@ export const spec = composeExercise({
         balance(body, [
           { anchor: "grip_L", kg: LOAD_KG },
           { anchor: "grip_R", kg: LOAD_KG },
-        ], 0.04, 28),
+        ], 0.04, 90),
         mirrored(body, 8),
         ...SIDES.flatMap((side) => [
           lockAngle(body, `elbow_${side}.flex`, 6, 18),
@@ -289,9 +298,9 @@ export const spec = composeExercise({
       ],
       keyGoals: {
         start: [
-          lockAngle(body, "hip_L.flex", 12, 18),
-          lockAngle(body, "hip_R.flex", 12, 18),
-          ({ q, push }) => push(18 * (q[3] - rad(5))),
+          lockAngle(body, "hip_L.flex", 9, 18),
+          lockAngle(body, "hip_R.flex", 9, 18),
+          ({ q, push }) => push(18 * (q[3] - rad(3))),
         ],
         end: [
           lockAngle(body, "hip_L.flex", 100, 24),

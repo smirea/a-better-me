@@ -1,14 +1,19 @@
 import { Vector3 } from "three";
 import { anchorPoint, SIDES, type Body, type Frame, type Side } from "../body";
 import { everyFrame } from "../checks";
-import type { FormCheck } from "../exercise";
+import { footContact, palmContact, type FormCheck } from "../exercise";
 import { deg } from "../math";
 import { checkFlatBack, checkNeutralNeck, plantBothToes, POSTURE_HINTS } from "../postures";
 import { composeExercise } from "../scene";
 import { keepAbove, lockAngle, mirrored, palmOnFloor, type Goal } from "../solver";
 
-const HAND_X = 0.262;
-const HAND_Z = 0.31;
+/**
+ * Hands "mildly outside shoulder width": a palm's breadth outside the shoulder joint, which is about level with the
+ * outside of the deltoid. Any narrower and the forearms lean far in under the chest at the bottom, where the
+ * triceps hold almost the whole lift.
+ */
+const HAND_X = 0.31;
+const HAND_Z = 0.25;
 const FOOT_X = 0.12;
 const FOOT_Z = -1.12;
 const FINGERS = new Vector3(0.18, 0, 0.984).normalize();
@@ -225,14 +230,15 @@ export const spec = composeExercise({
           lockAngle(body, "elbow_R.flex", 5, 24),
           lockAngle(body, "clavicle_L.prot", 0, 8),
           lockAngle(body, "clavicle_R.prot", 0, 8),
+          // Arms straight down at the top: each shoulder stacked over its wrist.
           ({ frame, push }) => {
-            const shoulder = frame.pos[body.index.shoulder_L];
-            push(12 * (shoulder.z - (HAND_Z - 0.06)));
+            for (const side of SIDES)
+              push(60 * (frame.pos[body.index[`shoulder_${side}`]].z - frame.pos[body.index[`wrist_${side}`]].z));
           },
         ],
         end: [
-          lockAngle(body, "elbow_L.flex", 145, 18),
-          lockAngle(body, "elbow_R.flex", 145, 18),
+          lockAngle(body, "elbow_L.flex", 138, 10),
+          lockAngle(body, "elbow_R.flex", 138, 10),
           lockAngle(body, "shoulder_L.elev", 45, 14),
           lockAngle(body, "shoulder_R.elev", 45, 14),
           lockAngle(body, "shoulder_L.plane", 10, 8),
@@ -265,11 +271,12 @@ export const spec = composeExercise({
       progress: (frame) => -anchorPoint(body, frame, "chestFront").y,
       ground: "forefoot_L",
       grips: "flat-floor",
-      loads: [
-        { anchor: "palm_L", share: 0, bodyweightShare: 0.32, grip: "press", direction: [0, 1, 0] },
-        { anchor: "palm_R", share: 0, bodyweightShare: 0.32, grip: "press", direction: [0, 1, 0] },
-      ],
-      support: { kind: "supported", brace: true },
+      // Added load is a plate across the upper back.
+      loads: [{ anchor: "upperBack", share: 1, grip: "rest" }],
+      support: {
+        kind: "planted",
+        contacts: SIDES.flatMap((side) => [palmContact(side), footContact(side)]),
+      },
       required: [
         { label: "Left palm", anchor: "palm_L", surfaceY: 0 },
         { label: "Right palm", anchor: "palm_R", surfaceY: 0 },
