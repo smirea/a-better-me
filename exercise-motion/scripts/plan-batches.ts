@@ -53,8 +53,8 @@ export function planBatches(maxBatchSize = 15): ExerciseBatch[] {
     grouped.set(key, entry);
   }
 
-  // Sort buckets by size descending, split large buckets (>maxBatchSize) into coherent chunks,
-  // and coalesce tiny singletons (<=4) sharing the same movement pattern.
+  // Coalesce smaller groups (<= 8) sharing the same movement pattern, then pack remaining tiny
+  // batches (<= 8) sharing the same equipment bucket up to maxBatchSize to cut worktree overhead.
   const byPatternSmall = new Map<string, { pattern: string; items: AppCatalogExercise[] }>();
   const rawBatches: { pattern: string; bucket: string; items: AppCatalogExercise[] }[] = [];
 
@@ -65,7 +65,7 @@ export function planBatches(maxBatchSize = 15): ExerciseBatch[] {
         (b.searchBoost ?? 0) - (a.searchBoost ?? 0) ||
         a.name.localeCompare(b.name),
     );
-    if (group.items.length <= 4) {
+    if (group.items.length <= 8) {
       const merged = byPatternSmall.get(group.pattern) ?? { pattern: group.pattern, items: [] };
       merged.items.push(...group.items);
       byPatternSmall.set(group.pattern, merged);
@@ -76,6 +76,23 @@ export function planBatches(maxBatchSize = 15): ExerciseBatch[] {
   for (const merged of byPatternSmall.values()) {
     rawBatches.push({ pattern: merged.pattern, bucket: "mixed", items: merged.items });
   }
+
+  // Pack remaining tiny groups (<= 8) together into combined batches up to maxBatchSize.
+  const largeBatches = rawBatches.filter((g) => g.items.length > 8);
+  const tinyBatches = rawBatches.filter((g) => g.items.length <= 8).sort((a, b) => b.items.length - a.items.length);
+  const packedTiny: { pattern: string; bucket: string; items: AppCatalogExercise[] }[] = [];
+  for (const tiny of tinyBatches) {
+    const slot = packedTiny.find((p) => p.items.length + tiny.items.length <= maxBatchSize);
+    if (slot) {
+      slot.items.push(...tiny.items);
+      if (!slot.pattern.includes(tiny.pattern)) slot.pattern = `${slot.pattern} + ${tiny.pattern}`;
+      if (slot.bucket !== tiny.bucket) slot.bucket = "mixed";
+    } else {
+      packedTiny.push({ pattern: tiny.pattern, bucket: tiny.bucket, items: [...tiny.items] });
+    }
+  }
+  rawBatches.length = 0;
+  rawBatches.push(...largeBatches, ...packedTiny);
 
   // Sort high-value popular patterns first
   rawBatches.sort(

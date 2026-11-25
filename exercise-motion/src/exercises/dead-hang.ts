@@ -1,0 +1,85 @@
+import { buildExerciseSpec, POSTURE_HINTS } from "../builders";
+import { checkJointWithinAt } from "../postures";
+
+/** Overhand dead hang: straight elbows, knees tucked so the feet clear the floor. */
+const HOLD = {
+  ...POSTURE_HINTS.hanging,
+  "root.y": 1.3,
+  "root.z": 0,
+  "root.pitch": 1,
+  "lumbar.flex": 4,
+  "thoracic.flex": 2,
+  "neck.flex": 6,
+  "hip.flex": 14,
+  "hip.abd": 6,
+  "knee.flex": 48,
+  "ankle.dorsi": 8,
+  "clavicle.elev": 2,
+  "shoulder.elev": 170,
+  "shoulder.plane": 14,
+  "shoulder.twist": -16,
+  "elbow.flex": 6,
+  "forearm.pron": 78,
+  "wrist.flex": 12,
+};
+
+export const spec = buildExerciseSpec({
+  id: "dead-hang",
+  catalogId: "1a15c6f170d880358201e8f16fbd355e",
+  name: "Dead Hang",
+  defaultLoadKg: 0,
+  loadUnit: "total",
+  laterality: "bilateral",
+  grip: "hang",
+  isometric: true,
+  brace: true,
+  phaseLabels: ["Set", "Hang", "Hold", "Hold"],
+  station: { kind: "hanging", barY: 2.28 },
+  apparatus: {
+    kind: "none",
+    bodyweightLoads: [
+      { anchor: "grip_L", bodyweightShare: 0.5, grip: "hang", direction: [0, 1, 0] },
+      { anchor: "grip_R", bodyweightShare: 0.5, grip: "hang", direction: [0, 1, 0] },
+    ],
+  },
+  stiffness: { shoulder: 8, elbow: 8, wrist: 6, lumbar: 6 },
+  hints: { start: HOLD, end: HOLD },
+  checks: () => [
+    checkJointWithinAt(
+      "elbows-straight",
+      "Elbows stay straight",
+      "With your elbows straight and your hands firmly grasping the bar, hang with your feet off the ground.",
+      "elbow_L.flex",
+      "start",
+      0,
+      20,
+    ),
+    checkJointWithinAt(
+      "overhand-grip",
+      "Overhand grip on the bar",
+      "Firmly grasp the bar with your palms facing forward, near shoulder width.",
+      "forearm_L.pron",
+      "start",
+      50,
+      90,
+    ),
+    checkJointWithinAt(
+      "arms-overhead",
+      "Arms stay overhead",
+      "Reach overhead and hang from the bar without pulling the shoulders down into a pull-up.",
+      "shoulder_L.elev",
+      "start",
+      150,
+      180,
+    ),
+    checkJointWithinAt(
+      "feet-tucked",
+      "Knees bend so the feet leave the floor",
+      "Lift your feet off the ground by bending your knees, then hold still for the duration.",
+      "knee_L.flex",
+      "start",
+      28,
+      80,
+    ),
+  ],
+});

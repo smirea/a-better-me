@@ -3,308 +3,385 @@ import type { ExerciseSpec } from "../exercise";
 import { spec as ex0 } from "./45-deg-glute-biased-leg-press";
 import { spec as ex1 } from "./45-deg-incline-barbell-press";
 import { spec as ex2 } from "./45-deg-incline-close-grip-press";
-import { spec as ex3 } from "./45-deg-incline-pause-barbell-press";
-import { spec as ex4 } from "./45-deg-leg-press-calf-jump";
-import { spec as ex5 } from "./45-deg-leg-press-calf-raise";
-import { spec as ex6 } from "./45-deg-leg-press";
-import { spec as ex7 } from "./45-deg-quad-biased-leg-press";
-import { spec as ex8 } from "./ab-wheel-plank-rollout";
-import { spec as ex9 } from "./ab-wheel-rollout";
-import { spec as ex10 } from "./above-the-knee-block-pull";
-import { spec as ex11 } from "./above-the-knee-rack-pull";
-import { spec as ex12 } from "./alternating-dumbbell-biceps-curl";
-import { spec as ex13 } from "./assisted-pistol-squat";
-import { spec as ex14 } from "./assisted-skater-squat";
-import { spec as ex15 } from "./axle-biceps-curl";
-import { spec as ex16 } from "./axle-strict-press";
-import { spec as ex17 } from "./b-stance-barbell-romanian-deadlift";
-import { spec as ex18 } from "./banded-barbell-back-squat";
-import { spec as ex19 } from "./barbell-back-squat-to-a-box";
-import { spec as ex20 } from "./barbell-back-squat";
-import { barbellBenchPress as ex21 } from "./barbell-bench-press";
-import { spec as ex22 } from "./barbell-biceps-curl";
-import { spec as ex23 } from "./barbell-box-squat";
-import { spec as ex24 } from "./barbell-cheat-curl";
-import { spec as ex25 } from "./barbell-cheat-row";
-import { spec as ex26 } from "./barbell-deficit-romanian-deadlift";
-import { spec as ex27 } from "./barbell-drag-curl";
-import { spec as ex28 } from "./barbell-floor-press";
-import { spec as ex29 } from "./barbell-good-morning";
-import { spec as ex30 } from "./barbell-hip-thrust";
-import { spec as ex31 } from "./barbell-overhead-press";
-import { spec as ex32 } from "./barbell-overhead-squat";
-import { spec as ex33 } from "./barbell-pin-squat";
-import { spec as ex34 } from "./barbell-plank-rollout";
-import { spec as ex35 } from "./barbell-push-press";
-import { spec as ex36 } from "./barbell-reverse-curl";
-import { spec as ex37 } from "./barbell-rollout";
-import { spec as ex38 } from "./barbell-romanian-deadlift";
-import { spec as ex39 } from "./barbell-seal-row";
-import { spec as ex40 } from "./barbell-straight-leg-deadlift";
-import { spec as ex41 } from "./barbell-z-press";
-import { spec as ex42 } from "./below-the-knee-rack-pull";
-import { spec as ex43 } from "./bent-knee-dragon-flag";
-import { spec as ex44 } from "./bent-leg-reverse-crunch";
-import { spec as ex45 } from "./bent-over-barbell-row";
-import { spec as ex46 } from "./bent-over-dual-cable-bar-row";
-import { spec as ex47 } from "./bent-over-underhand-grip-barbell-row";
-import { spec as ex48 } from "./bicycle-crunch";
-import { spec as ex49 } from "./bodyweight-bulgarian-split-squat";
-import { spec as ex50 } from "./bodyweight-chest-dip";
-import { spec as ex51 } from "./bodyweight-crunch-with-hands-on-shoulders";
-import { spec as ex52 } from "./bodyweight-front-foot-elevated-split-squat";
-import { spec as ex53 } from "./bodyweight-lateral-step-down";
-import { spec as ex54 } from "./bodyweight-reverse-lunge";
-import { spec as ex55 } from "./bodyweight-reverse-step-down";
-import { spec as ex56 } from "./bodyweight-single-leg-box-squat";
-import { spec as ex57 } from "./bodyweight-sit-up-with-hands-behind-head";
-import { spec as ex58 } from "./bodyweight-sit-up-with-hands-on-floor";
-import { spec as ex59 } from "./bodyweight-sit-up-with-hands-on-shoulders";
-import { spec as ex60 } from "./bodyweight-skater-squat";
-import { spec as ex61 } from "./bodyweight-squat";
-import { spec as ex62 } from "./bodyweight-step-up";
-import { spec as ex63 } from "./bottoms-up-landmine-goblet-squat";
-import { spec as ex64 } from "./bottoms-up-pin-squat";
-import { spec as ex65 } from "./bradford-press";
-import { spec as ex66 } from "./buffalo-bar-squat";
-import { spec as ex67 } from "./cable-rope-high-row";
-import { spec as ex68 } from "./cable-rope-overhead-triceps-extension";
-import { spec as ex69 } from "./cable-rope-triceps-pushdown";
-import { spec as ex70 } from "./cable-row-with-dynamic-back-extension";
-import { spec as ex71 } from "./cable-straight-bar-overhead-triceps-extension";
-import { spec as ex72 } from "./cable-straight-bar-triceps-pushdown";
-import { spec as ex73 } from "./cable-v-bar-overhead-triceps-extension";
-import { spec as ex74 } from "./cambered-bar-squat";
-import { spec as ex75 } from "./captains-chair-knee-raise";
-import { spec as ex76 } from "./captains-chair-straight-leg-raise";
-import { spec as ex77 } from "./close-grip-barbell-overhead-press";
-import { spec as ex78 } from "./close-grip-bench-press";
-import { spec as ex79 } from "./close-grip-ez-bar-biceps-curl";
-import { spec as ex80 } from "./close-grip-ez-bar-preacher-curl";
-import { spec as ex81 } from "./close-grip-medicine-ball-push-up";
-import { spec as ex82 } from "./close-grip-push-up";
-import { spec as ex83 } from "./conventional-below-the-knee-block-pull";
-import { spec as ex84 } from "./conventional-deadlift";
-import { spec as ex85 } from "./conventional-low-block-pull";
-import { spec as ex86 } from "./corpse-crunch";
-import { spec as ex87 } from "./cross-arm-grip-front-squat";
-import { spec as ex88 } from "./dead-bug";
-import { spec as ex89 } from "./decline-barbell-press";
-import { spec as ex90 } from "./decline-close-grip-press";
-import { spec as ex91 } from "./decline-crunch-with-hands-on-shoulders";
-import { spec as ex92 } from "./decline-pause-barbell-press";
-import { spec as ex93 } from "./decline-sit-up-with-hands-behind-head";
-import { spec as ex94 } from "./decline-sit-up-with-hands-on-shoulders";
-import { spec as ex95 } from "./deficit-conventional-deadlift";
-import { spec as ex96 } from "./deficit-pendlay-row";
-import { spec as ex97 } from "./diamond-push-up";
-import { spec as ex98 } from "./dip";
-import { spec as ex99 } from "./double-straight-leg-raise";
-import { spec as ex100 } from "./dragon-flag";
-import { dumbbellRomanianDeadlift as ex101 } from "./dumbbell-romanian-deadlift";
-import { spec as ex102 } from "./extended-hip-ab-wheel-rollout";
-import { spec as ex103 } from "./extended-hip-barbell-rollout";
-import { spec as ex104 } from "./ez-bar-biceps-curl";
-import { spec as ex105 } from "./ez-bar-cheat-curl";
-import { spec as ex106 } from "./ez-bar-preacher-curl";
-import { spec as ex107 } from "./ez-bar-preacher-reverse-curl";
-import { spec as ex108 } from "./ez-bar-reverse-curl";
-import { spec as ex109 } from "./feet-up-barbell-bench-press";
-import { spec as ex110 } from "./fingertip-clean-grip-front-squat";
-import { spec as ex111 } from "./flutter-kick-with-head-down";
-import { spec as ex112 } from "./flutter-kick-with-head-up";
-import { spec as ex113 } from "./forearm-plank-with-leg-lift";
-import { spec as ex114 } from "./forearm-plank";
-import { spec as ex115 } from "./front-squat";
-import { spec as ex116 } from "./full-hand-clean-grip-front-squat";
-import { spec as ex117 } from "./glute-ham-developer-crossfit-style-sit-up";
-import { spec as ex118 } from "./glute-ham-developer-sit-up-with-hands-behind-head";
-import { spec as ex119 } from "./glute-ham-developer-sit-up";
-import { spec as ex120 } from "./goblet-forward-lunge";
-import { spec as ex121 } from "./goblet-lateral-lunge";
-import { spec as ex122 } from "./goblet-reverse-lunge";
-import { spec as ex123 } from "./goblet-skater-squat";
-import { spec as ex124 } from "./goblet-split-squat";
-import { spec as ex125 } from "./goblet-walking-lunge";
-import { spec as ex126 } from "./hack-squat";
-import { spec as ex127 } from "./half-kneeling-single-arm-landmine-press";
-import { spec as ex128 } from "./hand-release-push-up";
-import { spec as ex129 } from "./hanging-knee-raise";
-import { spec as ex130 } from "./hanging-l-sit-hold";
-import { spec as ex131 } from "./hanging-straight-leg-raise";
-import { spec as ex132 } from "./hatfield-squat";
-import { spec as ex133 } from "./high-bar-back-squat";
-import { spec as ex134 } from "./high-bar-box-squat";
-import { spec as ex135 } from "./high-handle-trap-bar-deadlift";
-import { spec as ex136 } from "./high-incline-barbell-press";
-import { spec as ex137 } from "./high-pulley-cable-rope-overhead-triceps-extension";
-import { spec as ex138 } from "./high-pulley-cable-straight-bar-overhead-triceps-extension";
-import { spec as ex139 } from "./hollow-body-hold";
-import { spec as ex140 } from "./horizontal-hack-squat-calf-raise";
-import { spec as ex141 } from "./horizontal-hack-squat";
-import { spec as ex142 } from "./horizontal-machine-calf-extension";
-import { spec as ex143 } from "./horizontal-single-leg-machine-calf-extension";
-import { spec as ex144 } from "./incline-dumbbell-biceps-curl";
-import { spec as ex145 } from "./incline-plate-loaded-machine-calf-press";
-import { spec as ex146 } from "./incline-push-up";
-import { spec as ex147 } from "./kettlebell-bulgarian-split-squat";
-import { spec as ex148 } from "./kettlebell-forward-lunge";
-import { spec as ex149 } from "./kettlebell-reverse-lunge";
-import { spec as ex150 } from "./kettlebell-split-squat";
-import { spec as ex151 } from "./kettlebell-walking-lunge";
-import { spec as ex152 } from "./kneeling-close-grip-push-up";
-import { spec as ex153 } from "./kneeling-push-up";
-import { spec as ex154 } from "./kneeling-wide-grip-push-up";
-import { spec as ex155 } from "./knuckle-push-up";
-import { spec as ex156 } from "./landmine-chest-press";
-import { spec as ex157 } from "./landmine-goblet-squat";
-import { spec as ex158 } from "./landmine-hack-squat";
-import { spec as ex159 } from "./landmine-push-press";
-import { spec as ex160 } from "./landmine-viking-press";
-import { spec as ex161 } from "./leg-extension";
-import { spec as ex162 } from "./leverage-leg-press";
-import { spec as ex163 } from "./leverage-machine-squat";
-import { spec as ex164 } from "./lockout-pin-bench-press";
-import { spec as ex165 } from "./long-lever-plank";
-import { spec as ex166 } from "./low-bar-back-squat";
-import { spec as ex167 } from "./low-handle-trap-bar-deadlift";
-import { spec as ex168 } from "./low-incline-barbell-press";
-import { spec as ex169 } from "./machine-v-squat";
-import { spec as ex170 } from "./marching-dead-bug";
-import { spec as ex171 } from "./marching-mountain-climber";
-import { spec as ex172 } from "./marching-neutral-dead-bug";
-import { spec as ex173 } from "./marrs-bar-squat";
-import { spec as ex174 } from "./mid-shin-rack-pull";
-import { spec as ex175 } from "./modified-candlestick";
-import { spec as ex176 } from "./neutral-dead-bug";
-import { spec as ex177 } from "./neutral-grip-cable-row";
-import { spec as ex178 } from "./neutral-grip-cable-triceps-kickback";
-import { spec as ex179 } from "./neutral-wide-grip-cable-row";
-import { spec as ex180 } from "./offset-kettlebell-front-foot-elevated-split-squat";
-import { spec as ex181 } from "./one-board-press";
-import { spec as ex182 } from "./overhand-grip-cable-lat-pulldown";
-import { spec as ex183 } from "./overhand-grip-cable-row";
-import { spec as ex184 } from "./overhand-grip-yates-row";
-import { spec as ex185 } from "./overhead-lockout-pin-press";
-import { spec as ex186 } from "./overhead-low-pin-press";
-import { spec as ex187 } from "./overhead-midpoint-pin-press";
-import { spec as ex188 } from "./partial-range-of-motion-skater-squat";
-import { spec as ex189 } from "./pause-back-squat";
-import { spec as ex190 } from "./pause-barbell-bench-press";
-import { spec as ex191 } from "./pause-barbell-overhead-press";
-import { spec as ex192 } from "./pause-barbell-romanian-deadlift";
-import { spec as ex193 } from "./pause-chest-dip";
-import { spec as ex194 } from "./pause-close-grip-bench-press";
-import { spec as ex195 } from "./pause-conventional-deadlift";
-import { spec as ex196 } from "./pause-dip";
-import { spec as ex197 } from "./pause-front-squat";
-import { spec as ex198 } from "./pause-hack-squat";
-import { spec as ex199 } from "./pause-push-up";
-import { spec as ex200 } from "./pause-snatch-grip-deadlift";
-import { spec as ex201 } from "./pause-sumo-deadlift";
-import { spec as ex202 } from "./pause-triceps-dip";
-import { spec as ex203 } from "./pendlay-row";
-import { spec as ex204 } from "./pendulum-squat";
-import { spec as ex205 } from "./pin-loaded-glute-biased-leg-press";
-import { spec as ex206 } from "./pin-loaded-leg-press-calf-jump";
-import { spec as ex207 } from "./pin-loaded-leg-press-calf-raise";
-import { spec as ex208 } from "./pin-loaded-leg-press";
-import { spec as ex209 } from "./pin-loaded-machine-donkey-calf-raise";
-import { spec as ex210 } from "./pin-loaded-machine-squat";
-import { spec as ex211 } from "./pin-loaded-quad-biased-leg-press";
-import { spec as ex212 } from "./plate-loaded-horizontal-leg-press";
-import { spec as ex213 } from "./plate-loaded-machine-donkey-calf-raise";
-import { spec as ex214 } from "./plyometric-push-up";
-import { spec as ex215 } from "./power-runner-squat";
-import { spec as ex216 } from "./pro-power-squat";
-import { spec as ex217 } from "./push-up";
-import { spec as ex218 } from "./reset-conventional-deadlift";
-import { spec as ex219 } from "./reset-sumo-deadlift";
-import { spec as ex220 } from "./reverse-v-squat";
-import { spec as ex221 } from "./running-mountain-climber";
-import { spec as ex222 } from "./safety-squat-bar-box-squat";
-import { spec as ex223 } from "./safety-squat-bar-good-morning";
-import { spec as ex224 } from "./safety-squat-bar-squat";
-import { spec as ex225 } from "./seated-barbell-behind-the-neck-overhead-press";
-import { spec as ex226 } from "./seated-barbell-overhead-press";
-import { spec as ex227 } from "./seated-dual-handle-cable-row-elbows-in";
-import { spec as ex228 } from "./seated-dual-handle-cable-row-elbows-out";
-import { spec as ex229 } from "./seated-dumbbell-biceps-curl";
-import { spec as ex230 } from "./seated-hack-squat";
-import { spec as ex231 } from "./seated-pin-loaded-machine-calf-raise";
-import { spec as ex232 } from "./seated-plate-loaded-machine-calf-raise";
-import { spec as ex233 } from "./seated-single-arm-cable-row";
-import { spec as ex234 } from "./seated-single-leg-pin-loaded-machine-calf-raise";
-import { spec as ex235 } from "./seated-single-leg-plate-loaded-machine-calf-raise";
-import { spec as ex236 } from "./shrimp-squat";
-import { spec as ex237 } from "./shrug-machine-squat";
-import { spec as ex238 } from "./single-arm-cable-overhead-triceps-extension";
-import { spec as ex239 } from "./single-arm-dumbbell-biceps-curl";
-import { spec as ex240 } from "./single-arm-high-to-low-cable-row";
-import { spec as ex241 } from "./single-arm-landmine-press";
-import { spec as ex242 } from "./single-arm-neutral-grip-cable-triceps-pushdown";
-import { spec as ex243 } from "./single-arm-overhand-grip-cable-triceps-pushdown";
-import { spec as ex244 } from "./single-leg-45-deg-leg-press-calf-raise";
-import { spec as ex245 } from "./single-leg-leverage-leg-press";
-import { spec as ex246 } from "./single-leg-pin-loaded-leg-press-calf-raise";
-import { spec as ex247 } from "./single-leg-plate-loaded-horizontal-leg-press";
-import { spec as ex248 } from "./single-leg-vertical-leg-press";
-import { spec as ex249 } from "./six-inch-leg-raise-with-head-down";
-import { spec as ex250 } from "./six-inch-leg-raise-with-head-up";
-import { smithMachineBackSquat as ex251 } from "./smith-machine-back-squat";
-import { spec as ex252 } from "./snatch-grip-deadlift";
-import { spec as ex253 } from "./snatch-grip-romanian-deadlift";
-import { spec as ex254 } from "./stability-ball-crunch";
-import { spec as ex255 } from "./stability-ball-plank-rollout";
-import { spec as ex256 } from "./stability-ball-plank";
-import { spec as ex257 } from "./stability-ball-rollout";
-import { spec as ex258 } from "./standing-accentuated-eccentric-machine-calf-raise";
-import { spec as ex259 } from "./standing-accentuated-eccentric-plate-loaded-machine-calf-raise";
-import { spec as ex260 } from "./standing-barbell-behind-the-neck-overhead-press";
-import { spec as ex261 } from "./standing-dumbbell-biceps-curl";
-import { spec as ex262 } from "./standing-dumbbell-hammer-curl";
-import { spec as ex263 } from "./standing-machine-calf-raise";
-import { spec as ex264 } from "./standing-plate-loaded-machine-calf-raise";
-import { spec as ex265 } from "./standing-single-arm-cable-row";
-import { spec as ex266 } from "./standing-single-leg-machine-calf-raise";
-import { spec as ex267 } from "./standing-single-leg-plate-loaded-machine-calf-raise";
-import { spec as ex268 } from "./stiff-leg-deadlift-from-floor";
-import { spec as ex269 } from "./stir-the-pot";
-import { spec as ex270 } from "./straight-leg-reverse-crunch";
-import { spec as ex271 } from "./strap-front-squat";
-import { spec as ex272 } from "./sumo-deadlift";
-import { spec as ex273 } from "./sumo-low-block-pull";
-import { spec as ex274 } from "./sumo-romanian-deadlift";
-import { spec as ex275 } from "./tall-plank-bird-dog";
-import { spec as ex276 } from "./tall-plank-with-alternating-leg-lifts";
-import { spec as ex277 } from "./tall-plank-with-shoulder-taps";
-import { spec as ex278 } from "./tall-plank";
-import { spec as ex279 } from "./tempo-back-squat";
-import { spec as ex280 } from "./tempo-bench-press";
-import { spec as ex281 } from "./toes-to-bar";
-import { spec as ex282 } from "./touch-and-go-conventional-deadlift";
-import { spec as ex283 } from "./touch-and-go-sumo-deadlift";
-import { spec as ex284 } from "./trap-bar-block-pull";
-import { spec as ex285 } from "./trap-bar-romanian-deadlift";
-import { spec as ex286 } from "./two-arms-two-legs-dead-bug";
-import { spec as ex287 } from "./two-arms-two-legs-neutral-dead-bug";
-import { spec as ex288 } from "./underhand-grip-cable-row";
-import { spec as ex289 } from "./underhand-grip-yates-row";
-import { spec as ex290 } from "./v-sit-up";
-import { spec as ex291 } from "./vertical-leg-press";
-import { spec as ex292 } from "./weighted-roman-chair-hip-hinge";
-import { spec as ex293 } from "./wide-grip-barbell-behind-the-neck-overhead-press";
-import { spec as ex294 } from "./wide-grip-barbell-overhead-press";
-import { spec as ex295 } from "./wide-grip-bench-press";
-import { spec as ex296 } from "./wide-grip-cable-row";
-import { spec as ex297 } from "./wide-grip-ez-bar-biceps-curl";
-import { spec as ex298 } from "./wide-grip-ez-bar-preacher-curl";
-import { spec as ex299 } from "./wide-grip-push-up";
-import { spec as ex300 } from "./wide-stance-barbell-box-squat";
-import { spec as ex301 } from "./wide-stance-barbell-good-morning";
-import { spec as ex302 } from "./wide-stance-safety-squat-bar-good-morning";
-import { spec as ex303 } from "./zercher-squat";
-import { spec as ex304 } from "./zombie-front-squat";
+import { spec as ex3 } from "./45-deg-incline-dumbbell-press";
+import { spec as ex4 } from "./45-deg-incline-neutral-grip-dumbbell-press";
+import { spec as ex5 } from "./45-deg-incline-pause-barbell-press";
+import { spec as ex6 } from "./45-deg-incline-pause-dumbbell-press";
+import { spec as ex7 } from "./45-deg-incline-single-arm-dumbbell-press";
+import { spec as ex8 } from "./45-deg-leg-press-calf-jump";
+import { spec as ex9 } from "./45-deg-leg-press-calf-raise";
+import { spec as ex10 } from "./45-deg-leg-press";
+import { spec as ex11 } from "./45-deg-quad-biased-leg-press";
+import { spec as ex12 } from "./ab-wheel-plank-rollout";
+import { spec as ex13 } from "./ab-wheel-rollout";
+import { spec as ex14 } from "./above-the-knee-block-pull";
+import { spec as ex15 } from "./above-the-knee-rack-pull";
+import { spec as ex16 } from "./alternating-dumbbell-bench-press";
+import { spec as ex17 } from "./alternating-dumbbell-biceps-curl";
+import { spec as ex18 } from "./assisted-pistol-squat";
+import { spec as ex19 } from "./assisted-skater-squat";
+import { spec as ex20 } from "./axle-biceps-curl";
+import { spec as ex21 } from "./axle-strict-press";
+import { spec as ex22 } from "./b-stance-barbell-romanian-deadlift";
+import { spec as ex23 } from "./band-front-raise";
+import { spec as ex24 } from "./banded-barbell-back-squat";
+import { spec as ex25 } from "./barbell-back-squat-to-a-box";
+import { spec as ex26 } from "./barbell-back-squat";
+import { barbellBenchPress as ex27 } from "./barbell-bench-press";
+import { spec as ex28 } from "./barbell-biceps-curl";
+import { spec as ex29 } from "./barbell-box-squat";
+import { spec as ex30 } from "./barbell-cheat-curl";
+import { spec as ex31 } from "./barbell-cheat-row";
+import { spec as ex32 } from "./barbell-deficit-romanian-deadlift";
+import { spec as ex33 } from "./barbell-drag-curl";
+import { spec as ex34 } from "./barbell-floor-press";
+import { spec as ex35 } from "./barbell-front-raise";
+import { spec as ex36 } from "./barbell-good-morning";
+import { spec as ex37 } from "./barbell-hip-thrust";
+import { spec as ex38 } from "./barbell-overhead-press";
+import { spec as ex39 } from "./barbell-overhead-squat";
+import { spec as ex40 } from "./barbell-pin-squat";
+import { spec as ex41 } from "./barbell-plank-rollout";
+import { spec as ex42 } from "./barbell-push-press";
+import { spec as ex43 } from "./barbell-reverse-curl";
+import { spec as ex44 } from "./barbell-rollout";
+import { spec as ex45 } from "./barbell-romanian-deadlift";
+import { spec as ex46 } from "./barbell-seal-row";
+import { spec as ex47 } from "./barbell-straight-leg-deadlift";
+import { spec as ex48 } from "./barbell-z-press";
+import { spec as ex49 } from "./below-the-knee-rack-pull";
+import { spec as ex50 } from "./bent-knee-dragon-flag";
+import { spec as ex51 } from "./bent-leg-reverse-crunch";
+import { spec as ex52 } from "./bent-over-barbell-row";
+import { spec as ex53 } from "./bent-over-dual-cable-bar-row";
+import { spec as ex54 } from "./bent-over-underhand-grip-barbell-row";
+import { spec as ex55 } from "./bicycle-crunch";
+import { spec as ex56 } from "./bodyweight-bulgarian-split-squat";
+import { spec as ex57 } from "./bodyweight-chest-dip";
+import { spec as ex58 } from "./bodyweight-crunch-with-hands-on-shoulders";
+import { spec as ex59 } from "./bodyweight-front-foot-elevated-split-squat";
+import { spec as ex60 } from "./bodyweight-lateral-step-down";
+import { spec as ex61 } from "./bodyweight-reverse-lunge";
+import { spec as ex62 } from "./bodyweight-reverse-step-down";
+import { spec as ex63 } from "./bodyweight-single-leg-box-squat";
+import { spec as ex64 } from "./bodyweight-sit-up-with-hands-behind-head";
+import { spec as ex65 } from "./bodyweight-sit-up-with-hands-on-floor";
+import { spec as ex66 } from "./bodyweight-sit-up-with-hands-on-shoulders";
+import { spec as ex67 } from "./bodyweight-skater-squat";
+import { spec as ex68 } from "./bodyweight-squat";
+import { spec as ex69 } from "./bodyweight-step-up";
+import { spec as ex70 } from "./bottoms-up-landmine-goblet-squat";
+import { spec as ex71 } from "./bottoms-up-pin-squat";
+import { spec as ex72 } from "./bradford-press";
+import { spec as ex73 } from "./buffalo-bar-squat";
+import { spec as ex74 } from "./cable-front-raise";
+import { spec as ex75 } from "./cable-rope-high-row";
+import { spec as ex76 } from "./cable-rope-overhead-triceps-extension";
+import { spec as ex77 } from "./cable-rope-triceps-pushdown";
+import { spec as ex78 } from "./cable-row-with-dynamic-back-extension";
+import { spec as ex79 } from "./cable-straight-bar-overhead-triceps-extension";
+import { spec as ex80 } from "./cable-straight-bar-triceps-pushdown";
+import { spec as ex81 } from "./cable-v-bar-overhead-triceps-extension";
+import { spec as ex82 } from "./cambered-bar-squat";
+import { spec as ex83 } from "./captains-chair-knee-raise";
+import { spec as ex84 } from "./captains-chair-straight-leg-raise";
+import { spec as ex85 } from "./close-grip-barbell-overhead-press";
+import { spec as ex86 } from "./close-grip-bench-press";
+import { spec as ex87 } from "./close-grip-ez-bar-biceps-curl";
+import { spec as ex88 } from "./close-grip-ez-bar-preacher-curl";
+import { spec as ex89 } from "./close-grip-medicine-ball-push-up";
+import { spec as ex90 } from "./close-grip-push-up";
+import { spec as ex91 } from "./conventional-below-the-knee-block-pull";
+import { spec as ex92 } from "./conventional-deadlift";
+import { spec as ex93 } from "./conventional-low-block-pull";
+import { spec as ex94 } from "./corpse-crunch";
+import { spec as ex95 } from "./cross-arm-grip-front-squat";
+import { spec as ex96 } from "./cross-body-cable-lat-pull-around";
+import { spec as ex97 } from "./dead-bug";
+import { spec as ex98 } from "./dead-hang";
+import { spec as ex99 } from "./decline-barbell-press";
+import { spec as ex100 } from "./decline-close-grip-press";
+import { spec as ex101 } from "./decline-crunch-with-hands-on-shoulders";
+import { spec as ex102 } from "./decline-dumbbell-press";
+import { spec as ex103 } from "./decline-pause-barbell-press";
+import { spec as ex104 } from "./decline-pause-dumbbell-press";
+import { spec as ex105 } from "./decline-single-arm-dumbbell-press";
+import { spec as ex106 } from "./decline-sit-up-with-hands-behind-head";
+import { spec as ex107 } from "./decline-sit-up-with-hands-on-shoulders";
+import { spec as ex108 } from "./deficit-conventional-deadlift";
+import { spec as ex109 } from "./deficit-pendlay-row";
+import { spec as ex110 } from "./diamond-push-up";
+import { spec as ex111 } from "./dip";
+import { spec as ex112 } from "./double-straight-leg-raise";
+import { spec as ex113 } from "./dragon-flag";
+import { spec as ex114 } from "./dual-handle-cable-lat-pulldown-elbows-out";
+import { spec as ex115 } from "./dual-handle-cable-lat-pulldown";
+import { spec as ex116 } from "./dumbbell-bench-press";
+import { spec as ex117 } from "./dumbbell-floor-press";
+import { spec as ex118 } from "./dumbbell-push-press";
+import { dumbbellRomanianDeadlift as ex119 } from "./dumbbell-romanian-deadlift";
+import { spec as ex120 } from "./dumbbell-squeeze-press";
+import { spec as ex121 } from "./dumbbell-z-press";
+import { spec as ex122 } from "./extended-hip-ab-wheel-rollout";
+import { spec as ex123 } from "./extended-hip-barbell-rollout";
+import { spec as ex124 } from "./ez-bar-biceps-curl";
+import { spec as ex125 } from "./ez-bar-cheat-curl";
+import { spec as ex126 } from "./ez-bar-front-raise";
+import { spec as ex127 } from "./ez-bar-preacher-curl";
+import { spec as ex128 } from "./ez-bar-preacher-reverse-curl";
+import { spec as ex129 } from "./ez-bar-reverse-curl";
+import { spec as ex130 } from "./feet-up-barbell-bench-press";
+import { spec as ex131 } from "./feet-up-dumbbell-bench-press";
+import { spec as ex132 } from "./fingertip-clean-grip-front-squat";
+import { spec as ex133 } from "./flutter-kick-with-head-down";
+import { spec as ex134 } from "./flutter-kick-with-head-up";
+import { spec as ex135 } from "./forearm-plank-with-leg-lift";
+import { spec as ex136 } from "./forearm-plank";
+import { spec as ex137 } from "./front-squat";
+import { spec as ex138 } from "./full-hand-clean-grip-front-squat";
+import { spec as ex139 } from "./glute-ham-developer-crossfit-style-sit-up";
+import { spec as ex140 } from "./glute-ham-developer-sit-up-with-hands-behind-head";
+import { spec as ex141 } from "./glute-ham-developer-sit-up";
+import { spec as ex142 } from "./goblet-forward-lunge";
+import { spec as ex143 } from "./goblet-lateral-lunge";
+import { spec as ex144 } from "./goblet-reverse-lunge";
+import { spec as ex145 } from "./goblet-skater-squat";
+import { spec as ex146 } from "./goblet-split-squat";
+import { spec as ex147 } from "./goblet-walking-lunge";
+import { spec as ex148 } from "./hack-squat";
+import { spec as ex149 } from "./half-kneeling-single-arm-cable-lat-pulldown";
+import { spec as ex150 } from "./half-kneeling-single-arm-landmine-press";
+import { spec as ex151 } from "./hand-gripper-crushing";
+import { spec as ex152 } from "./hand-release-push-up";
+import { spec as ex153 } from "./hanging-knee-raise";
+import { spec as ex154 } from "./hanging-l-sit-hold";
+import { spec as ex155 } from "./hanging-straight-leg-raise";
+import { spec as ex156 } from "./hatfield-squat";
+import { spec as ex157 } from "./high-bar-back-squat";
+import { spec as ex158 } from "./high-bar-box-squat";
+import { spec as ex159 } from "./high-handle-trap-bar-deadlift";
+import { spec as ex160 } from "./high-incline-barbell-press";
+import { spec as ex161 } from "./high-incline-dumbbell-press";
+import { spec as ex162 } from "./high-pulley-cable-rope-overhead-triceps-extension";
+import { spec as ex163 } from "./high-pulley-cable-straight-bar-overhead-triceps-extension";
+import { spec as ex164 } from "./hollow-body-hold";
+import { spec as ex165 } from "./horizontal-hack-squat-calf-raise";
+import { spec as ex166 } from "./horizontal-hack-squat";
+import { spec as ex167 } from "./horizontal-machine-calf-extension";
+import { spec as ex168 } from "./horizontal-single-leg-machine-calf-extension";
+import { spec as ex169 } from "./incline-dumbbell-biceps-curl";
+import { spec as ex170 } from "./incline-dumbbell-front-raise";
+import { spec as ex171 } from "./incline-dumbbell-i-raise";
+import { spec as ex172 } from "./incline-dumbbell-squeeze-press";
+import { spec as ex173 } from "./incline-plate-loaded-machine-calf-press";
+import { spec as ex174 } from "./incline-push-up";
+import { spec as ex175 } from "./kettlebell-bulgarian-split-squat";
+import { spec as ex176 } from "./kettlebell-forward-lunge";
+import { spec as ex177 } from "./kettlebell-front-raise";
+import { spec as ex178 } from "./kettlebell-reverse-lunge";
+import { spec as ex179 } from "./kettlebell-split-squat";
+import { spec as ex180 } from "./kettlebell-walking-lunge";
+import { spec as ex181 } from "./kneeling-close-grip-push-up";
+import { spec as ex182 } from "./kneeling-push-up";
+import { spec as ex183 } from "./kneeling-wide-grip-push-up";
+import { spec as ex184 } from "./knuckle-push-up";
+import { spec as ex185 } from "./landmine-chest-press";
+import { spec as ex186 } from "./landmine-goblet-squat";
+import { spec as ex187 } from "./landmine-hack-squat";
+import { spec as ex188 } from "./landmine-push-press";
+import { spec as ex189 } from "./landmine-viking-press";
+import { spec as ex190 } from "./lateral-raise-machine-front-raise";
+import { spec as ex191 } from "./leg-extension";
+import { spec as ex192 } from "./leverage-leg-press";
+import { spec as ex193 } from "./leverage-machine-squat";
+import { spec as ex194 } from "./lockout-pin-bench-press";
+import { spec as ex195 } from "./long-lever-plank";
+import { spec as ex196 } from "./low-bar-back-squat";
+import { spec as ex197 } from "./low-handle-trap-bar-deadlift";
+import { spec as ex198 } from "./low-incline-barbell-press";
+import { spec as ex199 } from "./low-incline-dumbbell-press";
+import { spec as ex200 } from "./machine-v-squat";
+import { spec as ex201 } from "./marching-dead-bug";
+import { spec as ex202 } from "./marching-mountain-climber";
+import { spec as ex203 } from "./marching-neutral-dead-bug";
+import { spec as ex204 } from "./marrs-bar-squat";
+import { spec as ex205 } from "./mid-shin-rack-pull";
+import { spec as ex206 } from "./modified-candlestick";
+import { spec as ex207 } from "./moto-cable-row";
+import { spec as ex208 } from "./neutral-close-grip-cable-lat-pulldown";
+import { spec as ex209 } from "./neutral-dead-bug";
+import { spec as ex210 } from "./neutral-grip-cable-row";
+import { spec as ex211 } from "./neutral-grip-cable-triceps-kickback";
+import { spec as ex212 } from "./neutral-grip-dumbbell-bench-press";
+import { spec as ex213 } from "./neutral-grip-dumbbell-z-press";
+import { spec as ex214 } from "./neutral-shoulder-width-grip-cable-lat-pulldown";
+import { spec as ex215 } from "./neutral-wide-grip-cable-lat-pulldown";
+import { spec as ex216 } from "./neutral-wide-grip-cable-row";
+import { spec as ex217 } from "./offset-kettlebell-front-foot-elevated-split-squat";
+import { spec as ex218 } from "./one-board-press";
+import { spec as ex219 } from "./overhand-grip-cable-lat-pulldown";
+import { spec as ex220 } from "./overhand-grip-cable-row";
+import { spec as ex221 } from "./overhand-grip-yates-row";
+import { spec as ex222 } from "./overhead-lockout-pin-press";
+import { spec as ex223 } from "./overhead-low-pin-press";
+import { spec as ex224 } from "./overhead-midpoint-pin-press";
+import { spec as ex225 } from "./partial-range-of-motion-skater-squat";
+import { spec as ex226 } from "./pause-back-squat";
+import { spec as ex227 } from "./pause-barbell-bench-press";
+import { spec as ex228 } from "./pause-barbell-overhead-press";
+import { spec as ex229 } from "./pause-barbell-romanian-deadlift";
+import { spec as ex230 } from "./pause-chest-dip";
+import { spec as ex231 } from "./pause-close-grip-bench-press";
+import { spec as ex232 } from "./pause-conventional-deadlift";
+import { spec as ex233 } from "./pause-dip";
+import { spec as ex234 } from "./pause-dumbbell-bench-press";
+import { spec as ex235 } from "./pause-front-squat";
+import { spec as ex236 } from "./pause-hack-squat";
+import { spec as ex237 } from "./pause-push-up";
+import { spec as ex238 } from "./pause-snatch-grip-deadlift";
+import { spec as ex239 } from "./pause-sumo-deadlift";
+import { spec as ex240 } from "./pause-triceps-dip";
+import { spec as ex241 } from "./pendlay-row";
+import { spec as ex242 } from "./pendulum-squat";
+import { spec as ex243 } from "./pin-loaded-glute-biased-leg-press";
+import { spec as ex244 } from "./pin-loaded-leg-press-calf-jump";
+import { spec as ex245 } from "./pin-loaded-leg-press-calf-raise";
+import { spec as ex246 } from "./pin-loaded-leg-press";
+import { spec as ex247 } from "./pin-loaded-machine-donkey-calf-raise";
+import { spec as ex248 } from "./pin-loaded-machine-squat";
+import { spec as ex249 } from "./pin-loaded-quad-biased-leg-press";
+import { spec as ex250 } from "./plate-front-raise";
+import { spec as ex251 } from "./plate-loaded-horizontal-leg-press";
+import { spec as ex252 } from "./plate-loaded-machine-donkey-calf-raise";
+import { spec as ex253 } from "./plate-overhead-raise";
+import { spec as ex254 } from "./plyometric-push-up";
+import { spec as ex255 } from "./power-runner-squat";
+import { spec as ex256 } from "./pro-power-squat";
+import { spec as ex257 } from "./prone-i-raise";
+import { spec as ex258 } from "./push-up";
+import { spec as ex259 } from "./regressed-dead-hang-feet-on-floor";
+import { spec as ex260 } from "./reset-conventional-deadlift";
+import { spec as ex261 } from "./reset-sumo-deadlift";
+import { spec as ex262 } from "./reverse-v-squat";
+import { spec as ex263 } from "./running-mountain-climber";
+import { spec as ex264 } from "./safety-squat-bar-box-squat";
+import { spec as ex265 } from "./safety-squat-bar-good-morning";
+import { spec as ex266 } from "./safety-squat-bar-squat";
+import { spec as ex267 } from "./seated-arnold-press";
+import { spec as ex268 } from "./seated-barbell-behind-the-neck-overhead-press";
+import { spec as ex269 } from "./seated-barbell-overhead-press";
+import { spec as ex270 } from "./seated-cable-wrist-curl";
+import { spec as ex271 } from "./seated-dual-handle-cable-row-elbows-in";
+import { spec as ex272 } from "./seated-dual-handle-cable-row-elbows-out";
+import { spec as ex273 } from "./seated-dumbbell-biceps-curl";
+import { spec as ex274 } from "./seated-dumbbell-finger-flexion-wrist-curl";
+import { spec as ex275 } from "./seated-dumbbell-front-raise";
+import { spec as ex276 } from "./seated-dumbbell-overhead-press";
+import { spec as ex277 } from "./seated-dumbbell-wrist-curl";
+import { spec as ex278 } from "./seated-hack-squat";
+import { spec as ex279 } from "./seated-neutral-grip-dumbbell-overhead-press";
+import { spec as ex280 } from "./seated-pin-loaded-machine-calf-raise";
+import { spec as ex281 } from "./seated-plate-loaded-machine-calf-raise";
+import { spec as ex282 } from "./seated-single-arm-cable-row";
+import { spec as ex283 } from "./seated-single-arm-dumbbell-overhead-press";
+import { spec as ex284 } from "./seated-single-leg-pin-loaded-machine-calf-raise";
+import { spec as ex285 } from "./seated-single-leg-plate-loaded-machine-calf-raise";
+import { spec as ex286 } from "./shrimp-squat";
+import { spec as ex287 } from "./shrug-machine-squat";
+import { spec as ex288 } from "./single-arm-cable-front-raise";
+import { spec as ex289 } from "./single-arm-cable-lat-pull-in";
+import { spec as ex290 } from "./single-arm-cable-lat-pulldown";
+import { spec as ex291 } from "./single-arm-cable-overhead-triceps-extension";
+import { spec as ex292 } from "./single-arm-cable-wrist-curl";
+import { spec as ex293 } from "./single-arm-dead-hang";
+import { spec as ex294 } from "./single-arm-dumbbell-bench-press";
+import { spec as ex295 } from "./single-arm-dumbbell-biceps-curl";
+import { spec as ex296 } from "./single-arm-dumbbell-finger-flexion-wrist-curl";
+import { spec as ex297 } from "./single-arm-dumbbell-floor-press";
+import { spec as ex298 } from "./single-arm-dumbbell-push-press";
+import { spec as ex299 } from "./single-arm-dumbbell-wrist-curl";
+import { spec as ex300 } from "./single-arm-dumbbell-z-press";
+import { spec as ex301 } from "./single-arm-high-to-low-cable-row";
+import { spec as ex302 } from "./single-arm-landmine-press";
+import { spec as ex303 } from "./single-arm-neutral-grip-cable-triceps-pushdown";
+import { spec as ex304 } from "./single-arm-neutral-grip-dumbbell-floor-press";
+import { spec as ex305 } from "./single-arm-overhand-grip-cable-triceps-pushdown";
+import { spec as ex306 } from "./single-leg-45-deg-leg-press-calf-raise";
+import { spec as ex307 } from "./single-leg-leverage-leg-press";
+import { spec as ex308 } from "./single-leg-pin-loaded-leg-press-calf-raise";
+import { spec as ex309 } from "./single-leg-plate-loaded-horizontal-leg-press";
+import { spec as ex310 } from "./single-leg-vertical-leg-press";
+import { spec as ex311 } from "./six-inch-leg-raise-with-head-down";
+import { spec as ex312 } from "./six-inch-leg-raise-with-head-up";
+import { spec as ex313 } from "./slight-decline-dumbbell-bench-press";
+import { smithMachineBackSquat as ex314 } from "./smith-machine-back-squat";
+import { spec as ex315 } from "./snatch-grip-deadlift";
+import { spec as ex316 } from "./snatch-grip-romanian-deadlift";
+import { spec as ex317 } from "./stability-ball-crunch";
+import { spec as ex318 } from "./stability-ball-plank-rollout";
+import { spec as ex319 } from "./stability-ball-plank";
+import { spec as ex320 } from "./stability-ball-rollout";
+import { spec as ex321 } from "./standing-accentuated-eccentric-machine-calf-raise";
+import { spec as ex322 } from "./standing-accentuated-eccentric-plate-loaded-machine-calf-raise";
+import { spec as ex323 } from "./standing-arnold-press";
+import { spec as ex324 } from "./standing-barbell-behind-the-neck-overhead-press";
+import { spec as ex325 } from "./standing-cable-wrist-curl";
+import { spec as ex326 } from "./standing-dumbbell-biceps-curl";
+import { spec as ex327 } from "./standing-dumbbell-front-raise";
+import { spec as ex328 } from "./standing-dumbbell-hammer-curl";
+import { spec as ex329 } from "./standing-dumbbell-overhead-press";
+import { spec as ex330 } from "./standing-machine-calf-raise";
+import { spec as ex331 } from "./standing-neutral-grip-dumbbell-overhead-press";
+import { spec as ex332 } from "./standing-plate-loaded-machine-calf-raise";
+import { spec as ex333 } from "./standing-single-arm-cable-row";
+import { spec as ex334 } from "./standing-single-arm-dumbbell-overhead-press";
+import { spec as ex335 } from "./standing-single-leg-machine-calf-raise";
+import { spec as ex336 } from "./standing-single-leg-plate-loaded-machine-calf-raise";
+import { spec as ex337 } from "./stiff-leg-deadlift-from-floor";
+import { spec as ex338 } from "./stir-the-pot";
+import { spec as ex339 } from "./straight-leg-reverse-crunch";
+import { spec as ex340 } from "./strap-front-squat";
+import { spec as ex341 } from "./sumo-deadlift";
+import { spec as ex342 } from "./sumo-low-block-pull";
+import { spec as ex343 } from "./sumo-romanian-deadlift";
+import { spec as ex344 } from "./tall-plank-bird-dog";
+import { spec as ex345 } from "./tall-plank-with-alternating-leg-lifts";
+import { spec as ex346 } from "./tall-plank-with-shoulder-taps";
+import { spec as ex347 } from "./tall-plank";
+import { spec as ex348 } from "./tempo-back-squat";
+import { spec as ex349 } from "./tempo-bench-press";
+import { spec as ex350 } from "./toes-to-bar";
+import { spec as ex351 } from "./touch-and-go-conventional-deadlift";
+import { spec as ex352 } from "./touch-and-go-sumo-deadlift";
+import { spec as ex353 } from "./trap-bar-block-pull";
+import { spec as ex354 } from "./trap-bar-romanian-deadlift";
+import { spec as ex355 } from "./two-arms-two-legs-dead-bug";
+import { spec as ex356 } from "./two-arms-two-legs-neutral-dead-bug";
+import { spec as ex357 } from "./underhand-close-grip-cable-lat-pulldown";
+import { spec as ex358 } from "./underhand-grip-cable-lat-pulldown";
+import { spec as ex359 } from "./underhand-grip-cable-row";
+import { spec as ex360 } from "./underhand-grip-yates-row";
+import { spec as ex361 } from "./underhand-wide-grip-cable-lat-pulldown";
+import { spec as ex362 } from "./v-sit-up";
+import { spec as ex363 } from "./vertical-leg-press";
+import { spec as ex364 } from "./weighted-roman-chair-hip-hinge";
+import { spec as ex365 } from "./wide-grip-barbell-behind-the-neck-overhead-press";
+import { spec as ex366 } from "./wide-grip-barbell-overhead-press";
+import { spec as ex367 } from "./wide-grip-behind-the-neck-cable-lat-pulldown";
+import { spec as ex368 } from "./wide-grip-bench-press";
+import { spec as ex369 } from "./wide-grip-cable-lat-pulldown";
+import { spec as ex370 } from "./wide-grip-cable-row";
+import { spec as ex371 } from "./wide-grip-ez-bar-biceps-curl";
+import { spec as ex372 } from "./wide-grip-ez-bar-preacher-curl";
+import { spec as ex373 } from "./wide-grip-push-up";
+import { spec as ex374 } from "./wide-stance-barbell-box-squat";
+import { spec as ex375 } from "./wide-stance-barbell-good-morning";
+import { spec as ex376 } from "./wide-stance-safety-squat-bar-good-morning";
+import { spec as ex377 } from "./wrist-roller-wrist-curl-with-arms-directed-down";
+import { spec as ex378 } from "./wrist-roller-wrist-curl-with-arms-raised";
+import { spec as ex379 } from "./wrist-roller-wrist-curl-with-bent-elbows";
+import { spec as ex380 } from "./zercher-squat";
+import { spec as ex381 } from "./zombie-front-squat";
 
 export const EXERCISES: ExerciseSpec[] = [
   ex0,
@@ -612,4 +689,81 @@ export const EXERCISES: ExerciseSpec[] = [
   ex302,
   ex303,
   ex304,
+  ex305,
+  ex306,
+  ex307,
+  ex308,
+  ex309,
+  ex310,
+  ex311,
+  ex312,
+  ex313,
+  ex314,
+  ex315,
+  ex316,
+  ex317,
+  ex318,
+  ex319,
+  ex320,
+  ex321,
+  ex322,
+  ex323,
+  ex324,
+  ex325,
+  ex326,
+  ex327,
+  ex328,
+  ex329,
+  ex330,
+  ex331,
+  ex332,
+  ex333,
+  ex334,
+  ex335,
+  ex336,
+  ex337,
+  ex338,
+  ex339,
+  ex340,
+  ex341,
+  ex342,
+  ex343,
+  ex344,
+  ex345,
+  ex346,
+  ex347,
+  ex348,
+  ex349,
+  ex350,
+  ex351,
+  ex352,
+  ex353,
+  ex354,
+  ex355,
+  ex356,
+  ex357,
+  ex358,
+  ex359,
+  ex360,
+  ex361,
+  ex362,
+  ex363,
+  ex364,
+  ex365,
+  ex366,
+  ex367,
+  ex368,
+  ex369,
+  ex370,
+  ex371,
+  ex372,
+  ex373,
+  ex374,
+  ex375,
+  ex376,
+  ex377,
+  ex378,
+  ex379,
+  ex380,
+  ex381,
 ];
