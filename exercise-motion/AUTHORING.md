@@ -101,6 +101,12 @@ Each check tests the cue it quotes, exactly as written, on both sides when the c
 - `checkJointWithinAt(id, label, cue, angleKey, "start" | "peak", loDeg, hiDeg)` — `"start"` evaluates frame 0, `"peak"` evaluates the end of phase 1 (the lockout or the stretch, whichever the rep moves to first).
 - `checkFlatBack`, `checkNeutralNeck`, `checkJointRange`, `checkAnchorTravel`, `checkFeetPlanted`.
 
+## Goals, key goals and extras
+
+- `goals` apply to every solve: both key poses and every frame between them. `keyGoals.start` and `keyGoals.end` apply only to their key pose; the frames between are blended from the two keys and re-solved with `goals` alone.
+- So anything that must hold mid-rep (a contact, a bar path, a knee line) belongs in `goals`. A goal that switches on a joint it also moves (for example "pull the bar to the chest once the elbows pass 90°") is bistable and pops; drive such a thing with an extra unknown instead.
+- An extra (`extras: n`) is an unknown the solver finds with the pose, such as sled travel. `extraStart` seeds both key solves; seed the end key with a `keyGoals.end` residual on `q[body.dofCount + i]`. `path(s, start, end)` sets the extras between the keys (linear by default).
+
 ## When the solve fights you
 
 Run `bun exercise-motion/scripts/batch-qa.ts <slug> --explain`. For the start and peak poses it prints the key joint angles, every joint within 3° of a limit, each required contact's signed gap and each grasp's offset, plus every check's measured value. A joint pinned at its limit is usually the reason a contact won't close or a depth target won't reach: fix the placement (foot height on a plate, grip width, seat position) rather than the weights.

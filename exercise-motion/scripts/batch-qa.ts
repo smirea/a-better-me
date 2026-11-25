@@ -33,16 +33,14 @@ function explain(body: Body, sequence: Sequence, kin: Kinematics) {
       if (margin < 3) near.push(`${key} ${deg(value).toFixed(0)}° (${margin.toFixed(1)}° from ${value - lo < hi - value ? "min" : "max"})`);
     });
     console.log(`           near limits: ${near.length ? near.join(", ") : "none"}`);
-    const shapes = [
-      ...fixed,
-      ...sequence.props.flatMap((prop, p) => compileParts(propParts(prop, sequence.loadKg), sequence.propStates[f][p])),
-    ];
+    const propShapes = sequence.props.map((prop, p) => compileParts(propParts(prop, sequence.loadKg), sequence.propStates[f][p]));
+    const shapes = [...fixed, ...propShapes.flat()];
     const gaps = sequence.required.map((c) => {
       const point = anchorPoint(body, kin.frames[f], c.anchor);
       let gap: number;
       if (c.surfaceY !== undefined) gap = point.y - c.surfaceY;
       else if (c.part) gap = signedDistance(shapes.find((s) => s.part.id === c.part)!, point);
-      else gap = Math.min(...shapes.filter((s) => s.part.id.startsWith(`${c.prop}.`)).map((s) => signedDistance(s, point)));
+      else gap = Math.min(...propShapes[sequence.props.findIndex((p) => p.id === c.prop)].map((s) => signedDistance(s, point)));
       return `${c.label} ${(gap * 100).toFixed(1)}`;
     });
     console.log(`           contact gaps cm (+ off, - in): ${gaps.join(", ") || "none"}`);

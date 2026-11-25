@@ -162,4 +162,6 @@ export interface CanonicalMachineInstance {
   grasp(side: Side, key: string, grip?: HandGrip): Grasp;
   /** The driven node carrying surface, footplate or handle `key`, or null when it stays put. */
   carrier(key: string): Carrier | null;
+  /** The machine as its drive sets it for one frame. */
+  atFrame(frame: Frame, extras: number[], propStates: PropState[]): CanonicalMachineInstance;
 }
