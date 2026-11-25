@@ -248,7 +248,7 @@ const STRETCH: Record<Muscle, StretchModel> = {
     full: 0.07 * rad(55) + 0.02 * Math.cos(rad(40)) + 0.01 * rad(60),
   },
   front_delts: { length: (a, side) => 0.04 * armBehind(a, side), full: 0.04 * rad(65) },
-  side_delts: { length: (a, side) => -0.02 * a[`shoulder_${side}.abd`], full: 0.02 * rad(20) },
+  side_delts: { length: (a, side) => -0.02 * a[`shoulder_${side}.abd`], full: 0.02 * rad(35) },
   rear_delts: {
     length: (a, side) =>
       0.05 *
