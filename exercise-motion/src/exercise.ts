@@ -1,4 +1,4 @@
-import { cablesTaut, handsAlongLoads, leastEffort } from "./effort";
+import { cablesTaut, handsAlongLoads, leastEffort, overMidfoot } from "./effort";
 import { Vector3 } from "three";
 import {
   anchorPoint,
@@ -522,6 +522,7 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
         ...built.goals,
         ...cablesTaut(body, built.loads),
         ...handsAlongLoads(body, built.loads),
+        ...overMidfoot(body, built, spec.defaultLoadKg),
         leastEffort(body, built, spec.defaultLoadKg),
       ]
     : built.goals;

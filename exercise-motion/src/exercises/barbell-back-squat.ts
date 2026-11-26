@@ -3,17 +3,17 @@ import { anchorPoint, SIDES, type Body, type Frame, type Side } from "../body";
 import { everyFrame } from "../checks";
 import type { FormCheck, CheckContext } from "../exercise";
 import { graspProp, holdGrasp } from "../grasp";
-import { deg, rad } from "../math";
+import { deg } from "../math";
 import { loadedBarbell, powerRackMachine, propHandles, rackHeightsFor } from "../machines";
 import { checkFlatBack, checkNeutralNeck, plantBothFeet, POSTURE_HINTS } from "../postures";
 import { composeExercise } from "../scene";
-import { balance, kneeOffFootLine, lockAngle, mirrored, type Goal } from "../solver";
+import { kneeOffFootLine, lockAngle, mirrored, within } from "../solver";
 
 const LOAD_KG = 60;
 const BAR_R = 0.0145;
 /** Shaft centre sits this far off the traps, just clear of the skin. */
 const BAR_SEAT = BAR_R + 0.006;
-const STANCE_X = 0.28;
+const STANCE_X = 0.24;
 const HEEL_Z = -0.04;
 /** Just outside the shoulders. Closer than this, the forearm can't both reach the shaft and run across it. */
 const GRIP = 0.39;
@@ -123,9 +123,7 @@ const checks: FormCheck[] = [
   },
 ];
 
-/** How far in front of the joint at the base of the ribcage the bar stays, in metres: over it, and no further back. */
-const BAR_AHEAD_OF_SPINE = 0;
-/** How far the pelvis tips forward at the top, in degrees, with the spine held 8° extended above it. */
+/** Roughly how far the pelvis tips forward at the top, in degrees: only where the solve starts looking. */
 const TOP_PITCH = 16;
 
 export const spec = composeExercise({
@@ -172,8 +170,7 @@ export const spec = composeExercise({
       },
       goals: [
         ...plantBothFeet(body, STANCE_X, HEEL_Z, 0.52, 0, 140),
-        balance(body, [{ anchor: "traps", kg: LOAD_KG }], 0.06, 120),
-        mirrored(body, 8),
+        mirrored(body, 40),
         ...SIDES.flatMap((side) => [
           ...holdGrasp(body, grasps[side === "L" ? 0 : 1], ctx.live, {
             at: side === "L" ? GRIP : -GRIP,
@@ -182,58 +179,20 @@ export const spec = composeExercise({
             align: 3,
             wrist: 0,
           }),
-          lockAngle(body, `elbow_${side}.flex`, ARM["elbow.flex"], 24),
-          lockAngle(body, `shoulder_${side}.elev`, ARM["shoulder.elev"], 16),
-          lockAngle(body, `shoulder_${side}.plane`, ARM["shoulder.plane"], 14),
-          lockAngle(body, `shoulder_${side}.twist`, ARM["shoulder.twist"], 12),
-          lockAngle(body, `forearm_${side}.pron`, ARM["forearm.pron"], 10),
-          lockAngle(body, `wrist_${side}.flex`, ARM["wrist.flex"], 14),
-          lockAngle(body, `wrist_${side}.dev`, ARM["wrist.dev"], 10),
-          kneeOverToesGoal(body, side),
-          lockAngle(body, `clavicle_${side}.prot`, ARM["clavicle.prot"], 12),
-          lockAngle(body, `clavicle_${side}.elev`, ARM["clavicle.elev"], 8),
+          within(({ frame }) => kneeOffFootLine(body, frame, side), -0.025, 0.025, 300),
         ]),
         lockAngle(body, "lumbar.flex", -4, 16),
         lockAngle(body, "thoracic.flex", -4, 14),
-        // The bar never sits behind the spine it rests on. Standing tall it would, by the depth of the traps, and
-        // the abdominals would switch on at lockout to stop the trunk folding backward under it.
-        ({ frame, push }) => {
-          const bar = anchorPoint(body, frame, "traps");
-          push(120 * Math.min(0, bar.z - frame.pos[body.index.thoracic].z - BAR_AHEAD_OF_SPINE));
-        },
         lockAngle(body, "neck.flex", 0, 8),
       ],
+      effort: true,
       keyGoals: {
-        start: [
-          lockAngle(body, "knee_L.flex", 6, 16),
-          lockAngle(body, "knee_R.flex", 6, 16),
-          lockAngle(body, "hip_L.flex", TOP_PITCH - 1, 14),
-          lockAngle(body, "hip_R.flex", TOP_PITCH - 1, 14),
-          ({ q, push }) => push(14 * (q[3] - rad(TOP_PITCH))),
-        ],
-        end: [
-          lockAngle(body, "knee_L.flex", 124, 22),
-          lockAngle(body, "knee_R.flex", 124, 22),
-          lockAngle(body, "hip_L.flex", 124, 20),
-          lockAngle(body, "hip_R.flex", 124, 20),
-          ({ q, push }) => push(12 * (q[3] - rad(42))),
-        ],
+        start: [lockAngle(body, "knee_L.flex", 6, 60), lockAngle(body, "knee_R.flex", 6, 60)],
+        // The rep ends where the cue says it may: thighs "fairly close to parallel", the hip within a few
+        // centimetres above the knee or just below it.
+        end: SIDES.map((side) => within(({ frame }) => thighAboveParallel(body, frame, side), -0.02, 0.04, 300)),
       },
-      stiffness: {
-        default: 1,
-        root: 5,
-        hip: 12,
-        knee: 14,
-        ankle: 4,
-        lumbar: 12,
-        thoracic: 10,
-        neck: 6,
-        clavicle: 10,
-        shoulder: 12,
-        elbow: 16,
-        forearm: 8,
-        wrist: 10,
-      },
+      stiffness: { default: 0.3, root: 0.3 },
       progress: (frame) => -frame.pos[body.index.hip_L].y,
       ground: "heel_L",
       props,
@@ -262,7 +221,3 @@ export const spec = composeExercise({
     };
   },
 });
-
-function kneeOverToesGoal(body: Body, side: Side): Goal {
-  return ({ frame, push }) => push(14 * kneeOffFootLine(body, frame, side));
-}

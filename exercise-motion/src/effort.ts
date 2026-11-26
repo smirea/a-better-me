@@ -40,6 +40,59 @@ export function handsAlongLoads(body: Body, loads: LoadAttachment[]): Goal[] {
   });
 }
 
+/** How far from the middle of the feet a standing lifter's weight may sit, in metres, and what further costs. */
+const OVER_FEET = 0.005;
+const BALANCED = 300;
+const FOOT_POINTS = ["heel_L", "toe_L", "heel_R", "toe_R"];
+/** A foot's point counts as planted this close to the floor, in metres. */
+const PLANTED = 0.03;
+
+/**
+ * A standing lifter keeps his weight, and the weight he carries, over the middle of his feet: the bar over the
+ * midfoot of every coaching cue. Least effort alone would rock back over the ankles, where the calves rest, and
+ * take the whole lift on the knees; the middle of the base is where balance has the most room both ways.
+ */
+export function overMidfoot(body: Body, setup: Setup, loadKg: number): Goal[] {
+  if (setup.support.kind !== "standing") return [];
+  const carried = setup.loads.filter((load) => !load.pulley && !load.direction);
+  const part = new Vector3();
+  const centre = new Vector3();
+  const feet = new Vector3();
+  return [
+    ({ frame, push }) => {
+      centre.set(0, 0, 0);
+      let mass = 0;
+      for (const segment of body.segments) {
+        centre.addScaledVector(worldPoint(frame, segment.joint, segment.com, part), segment.mass);
+        mass += segment.mass;
+      }
+      for (const load of carried) {
+        const anchor = body.anchors[load.anchor];
+        centre.addScaledVector(worldPoint(frame, anchor.joint, anchor.local, part), load.share * loadKg);
+        mass += load.share * loadKg;
+      }
+      centre.multiplyScalar(1 / mass);
+      feet.set(0, 0, 0);
+      let planted = 0;
+      for (const name of FOOT_POINTS) {
+        const anchor = body.anchors[name];
+        worldPoint(frame, anchor.joint, anchor.local, part);
+        const down = Math.min(1, Math.max(0, (2 * PLANTED - part.y) / PLANTED));
+        feet.addScaledVector(part, down);
+        planted += down;
+      }
+      if (planted < 1e-6) {
+        push(0);
+        push(0);
+        return;
+      }
+      feet.multiplyScalar(1 / planted);
+      for (const off of [centre.x - feet.x, centre.z - feet.z])
+        push(BALANCED * (Math.max(0, off - OVER_FEET) + Math.min(0, off + OVER_FEET)));
+    },
+  ];
+}
+
 /** How far past its resting length a loaded cable is kept, in metres: the stack clear of its pin with room to spare. */
 const OFF_THE_PIN = 0.05;
 const TAUT = 300;

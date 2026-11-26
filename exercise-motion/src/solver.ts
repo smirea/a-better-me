@@ -613,6 +613,24 @@ export function lockAngle(body: Body, angleKey: string, targetDeg: number, weigh
   };
 }
 
+/**
+ * Holds a measured quantity inside a range and leaves it alone there. This is how a cue enters a rep posed by least
+ * effort: "about 45 to 75 degrees", "slightly", "no further than" say where the lifter may be, and the muscles say
+ * where in it he is.
+ */
+export function within(read: (context: GoalContext) => number, lo: number, hi: number, weight: number): Goal {
+  return (context) => {
+    const value = read(context);
+    context.push(weight * (Math.max(0, lo - value) + Math.max(0, value - hi)));
+  };
+}
+
+/** Holds a named anatomical angle inside a range of degrees. */
+export function angleWithin(body: Body, angleKey: string, loDeg: number, hiDeg: number, weight = 15): Goal {
+  if (body.index[angleKey.split(".")[0]] === undefined) throw new Error(`Unknown joint in angleWithin: ${angleKey}`);
+  return within(({ angles }) => angles[angleKey], rad(loDeg), rad(hiDeg), weight);
+}
+
 const bend = new Vector3();
 const leg = new Vector3();
 const foot = new Vector3();
