@@ -137,6 +137,20 @@ export function createActuators(): Actuator[] {
     const plantarflexion = curve(j("ankle", "dorsi"), [[-45, 0.3], [-20, 0.6], [0, 0.85], [20, 1], [35, 0.95]]);
     const elbowFlexion = curve(j("elbow", "flex"), [[0, 0.55], [40, 0.8], [90, 1], [130, 0.75], [150, 0.6]]);
     const elbowExtension = curve(j("elbow", "flex"), [[0, 0.7], [40, 0.9], [80, 1], [120, 0.85], [150, 0.7]]);
+    // Shoulder strength against how far the arm is raised from hanging, whichever way it is raised. Measured
+    // strength where there is any (Bober et al., 2002, for pulling a raised arm down and lifting it forward;
+    // Kuhlman et al., 1992, for lifting it sideways), and the shape of each muscle's moment arm otherwise (Ackland
+    // et al., 2008). Nothing is measured above 120°, so the curves keep falling there at the rate they arrive with.
+    const raised = (points: [number, number][]) => curve(j("shoulder", "elev"), points);
+    const pullDown = raised([[0, 0.6], [30, 0.85], [60, 1], [90, 1], [120, 0.9], [150, 0.65], [180, 0.5]]);
+    const pullIn = raised([[0, 0.4], [30, 0.7], [60, 0.95], [90, 1], [120, 0.6], [150, 0.45], [180, 0.3]]);
+    // Pulling the arm back past the body, the big extensors run out of leverage: a straight arm 45° behind the
+    // trunk has under half the extension strength it has at the side (Bober et al., 2002).
+    const behindBody = (a: Angles) => {
+      const behind = deg(armBehind(a, side));
+      return behind <= 0 ? 1 : Math.max(0.25, 1 - behind / 80);
+    };
+    const lats = (scale: (a: Angles) => number) => (a: Angles) => scale(a) * behindBody(a);
 
     // A group gets one actuator per head or per motion it produces, and its activation is the highest of them. The
     // two-joint heads stay tied across their joints, because that is what makes a lift favour one muscle over
@@ -231,24 +245,39 @@ export function createActuators(): Actuator[] {
         },
       ],
     ]);
-    add("chest", [[j("shoulder", "abd"), -65]]);
-    add("lats", [[j("shoulder", "flex"), -110]]);
-    add("lats", [[j("shoulder", "abd"), -110]]);
+    add("chest", [
+      [j("shoulder", "abd"), -65, raised([[0, 0.75], [30, 0.95], [60, 1], [90, 0.8], [120, 0.5], [150, 0.3], [180, 0.15]])],
+    ]);
+    add("lats", [[j("shoulder", "flex"), -110, lats(pullDown)]]);
+    add("lats", [[j("shoulder", "abd"), -110, lats(pullIn)]]);
     add("lats", [[j("clavicle", "elev"), -50]]);
-    add("front_delts", [[j("shoulder", "flex"), 55]]);
+    add("front_delts", [
+      [j("shoulder", "flex"), 55, raised([[0, 0.9], [30, 0.8], [60, 0.7], [90, 0.6], [120, 0.5], [150, 0.37], [180, 0.28]])],
+    ]);
     add("front_delts", [[j("shoulder", "hadd"), 30]]);
-    add("front_delts", [[j("shoulder", "abd"), 25]]);
-    add("side_delts", [[j("shoulder", "abd"), 65]]);
+    add("front_delts", [
+      [j("shoulder", "abd"), 25, raised([[0, 0.15], [30, 0.35], [60, 0.65], [90, 0.85], [120, 1], [150, 1], [180, 0.8]])],
+    ]);
+    // The side delts stand in for the whole abducting group here. The deltoid alone has little leverage on a
+    // hanging arm, where supraspinatus does most of the lifting, and the app has no group for the rotator cuff.
+    add("side_delts", [
+      [j("shoulder", "abd"), 65, raised([[0, 0.7], [30, 0.95], [60, 1], [90, 0.95], [120, 0.85], [150, 0.7], [180, 0.55]])],
+    ]);
     add("rear_delts", [[j("shoulder", "hadd"), -45]]);
-    add("rear_delts", [[j("shoulder", "flex"), -30]]);
+    add("rear_delts", [
+      [j("shoulder", "flex"), -30, raised([[0, 0.95], [30, 1], [60, 0.92], [90, 0.7], [120, 0.5], [150, 0.35], [180, 0.2]])],
+    ]);
+    // The long heads cross the shoulder with little leverage on a hanging arm: stimulated alone, the triceps'
+    // extends the shoulder a sixth as hard there as with the arm raised level, and the biceps' stops lifting the
+    // arm by 60° (Landin & Thompson, 2011; Landin et al., 2017).
     add("biceps", [
       [j("elbow", "flex"), 70, elbowFlexion],
-      [j("shoulder", "flex"), 10],
+      [j("shoulder", "flex"), 10, raised([[0, 1], [30, 0.35], [60, 0.05], [90, 0]])],
     ]);
     add("triceps", [[j("elbow", "flex"), -65, elbowExtension]]);
     add("triceps", [
       [j("elbow", "flex"), -20, elbowExtension],
-      [j("shoulder", "flex"), -15],
+      [j("shoulder", "flex"), -15, raised([[0, 0.16], [40, 0.53], [80, 0.83], [120, 0.98], [150, 0.8], [180, 0.7]])],
     ]);
     add("forearms", [[j("elbow", "flex"), 18, elbowFlexion]]);
     add("forearms", [[j("wrist", "flex"), 24]]);
@@ -270,21 +299,26 @@ export function createActuators(): Actuator[] {
  * half the torque.
  */
 const MAX_SPEED = 40;
-/** How much more than its isometric torque a muscle holds while it is being lengthened. */
-const LENGTHENING_GAIN = 0.2;
+/**
+ * How much more than its isometric force an active muscle carries while it is stretched, per unit of activation:
+ * the plateau of the lengthening side of the force-velocity curve in OpenSim's Thelen (2003) muscle. A maximal
+ * voluntary lowering reaches less than this because the nervous system holds back, but a submaximal one needs that
+ * much less activation, which is why measured activity while lowering runs at half to four fifths of the lift.
+ */
+const LENGTHENING_GAIN = 0.4;
+/** How many times faster force rises with lengthening speed than it falls with shortening speed (Katz, 1939). */
+const LENGTHENING_SLOPE = 6;
 
 /**
  * The fraction of its isometric torque a muscle has at a joint speed in rad/s, positive when it shortens. Hill's
  * hyperbola with the curvature that fits Anderson, Madigan & Nussbaum's (2007) hip, knee and ankle data (half the
- * torque at a speed about 2.6 times the one that leaves three quarters), and a lengthening side that levels off
- * 20% above isometric, which is what voluntary eccentric efforts reach. Lowering a weight therefore takes less of
- * a muscle than raising it, which is why measured activity in the lowering phase runs at half to three quarters of
- * the lift.
+ * torque at a speed about 2.6 times the one that leaves three quarters), and a lengthening side that rises steeply
+ * and levels off above isometric.
  */
 export function speedFactor(speed: number) {
   const u = clamp(speed / MAX_SPEED, -0.6, 0.6);
   if (u >= 0) return (1 - u) / (1 + 4 * u);
-  const k = (5 / LENGTHENING_GAIN) * -u;
+  const k = ((5 * LENGTHENING_SLOPE) / LENGTHENING_GAIN) * -u;
   return 1 + (LENGTHENING_GAIN * k) / (1 + k);
 }
 

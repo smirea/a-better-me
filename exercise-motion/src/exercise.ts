@@ -1,4 +1,4 @@
-import { handsAlongLoads, leastEffort } from "./effort";
+import { cablesTaut, handsAlongLoads, leastEffort } from "./effort";
 import { Vector3 } from "three";
 import {
   anchorPoint,
@@ -48,6 +48,20 @@ export interface LoadAttachment {
   /** Fraction of the logged weight this point carries. */
   share: number;
   grip: "hang" | "press" | "rest";
+  /**
+   * A second hand on the same rigid thing: a barbell, a cable bar. The load then acts on the bar, midway between
+   * the two anchors, and the hands share it however keeps the bar balanced. That lets them push or pull along the
+   * bar as far as their grip holds, which is how a wide grip hangs from straight arms and a bench press spreads
+   * the bar.
+   */
+  with?: string;
+  /** How far toward the pulley the cable's eye sits from the line between the two hands, in metres. */
+  eye?: number;
+  /**
+   * The cable's length from the pulley to its eye with the weight stack on its pin. Shorter than this the cable is
+   * slack and pulls nothing, whatever weight is selected.
+   */
+  rest?: number;
   /** World-space cable pulley or band anchor point that pulls on this body anchor. */
   pulley?: Vec3;
   /** Fixed world-space force direction (normalized internally). Overrides gravity when set. */
@@ -311,6 +325,9 @@ const KNOTS = 12;
 const RELAXATIONS = 10;
 /** What a radian away from the knot before costs while the path is first grown, which only keeps it in one piece. */
 const PATH_CONTINUITY = 0.3;
+/** How many scattered postures an effort-posed key is also solved from, and how far each joint is scattered, in radians. */
+const KEY_STARTS = 8;
+const KEY_SCATTER = 0.25;
 /** How many times an effort-posed solve starts again from where it stalled. */
 const RESTARTS = 4;
 /** What a radian of bend in the path at a knot costs, against the effort of a muscle working flat out. */
@@ -376,6 +393,9 @@ function assertSpecInputs(spec: ExerciseSpec, built: Built, body: Body) {
   for (const load of built.loads) {
     if (!body.anchors[load.anchor]) {
       throw new Error(`${spec.id}: unknown load anchor "${load.anchor}".`);
+    }
+    if (load.with !== undefined && !body.anchors[load.with]) {
+      throw new Error(`${spec.id}: unknown load anchor "${load.with}".`);
     }
     if (!Number.isFinite(load.share) || load.share < 0) {
       throw new Error(`${spec.id}: invalid load share ${load.share} on ${load.anchor}.`);
@@ -491,8 +511,14 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
   };
 
   const free = priorWeights(body, built.stiffness, built.extras, 0);
+  const seedOnly = new Float64Array(n + built.extras).fill(0.02);
   const everyPose = built.effort
-    ? [...built.goals, ...handsAlongLoads(body, built.loads), leastEffort(body, built, spec.defaultLoadKg)]
+    ? [
+        ...built.goals,
+        ...cablesTaut(body, built.loads),
+        ...handsAlongLoads(body, built.loads),
+        leastEffort(body, built, spec.defaultLoadKg),
+      ]
     : built.goals;
   // Muscle effort has creases where a muscle switches on or a contact lets go, and a solve can stall on one. Starting
   // again from where it stalled gets it across, so an effort-posed solve repeats until it stops finding anything.
@@ -512,7 +538,13 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
   const settle = (seed: Float64Array, options: Parameters<typeof solve>[2], others: Float64Array[] = []) => {
     let best = settleFrom(seed, options);
     for (const other of others) {
-      const tried = settleFrom(other, options);
+      // A start can be a posture some goal refuses outright, such as a bar turned end-on to an overhand grip.
+      let tried: ReturnType<typeof settleFrom>;
+      try {
+        tried = settleFrom(other, options);
+      } catch {
+        continue;
+      }
       if (tried.cost < best.cost * (1 - 1e-3)) best = tried;
     }
     return best.q;
@@ -525,15 +557,37 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
     seed?: Float64Array,
   ) => {
     const prior = withExtras(makePose(body, hints), extraSeed);
-    const solved = settle(seed ?? prior, {
-      goals: [...everyPose, ...goals],
-      prior,
-      priorWeights: free,
-      selfPairs,
-      obstacles: built.obstacles,
-      movingObstacles,
-      iterations: 150,
-    });
+    // An effort-posed key takes its hints as a place to start and nothing more, and starts from several postures
+    // scattered around them: the hinted one may sit in a costlier basin than its neighbour. The scatter is the
+    // same every run.
+    const scattered: Float64Array[] = [];
+    if (built.effort) {
+      let state = 0x9e3779b9;
+      const random = () => {
+        state = (state + 0x6d2b79f5) | 0;
+        let v = Math.imul(state ^ (state >>> 15), 1 | state);
+        v = (v + Math.imul(v ^ (v >>> 7), 61 | v)) ^ v;
+        return ((v ^ (v >>> 14)) >>> 0) / 4294967296;
+      };
+      for (let s = 0; s < KEY_STARTS; s++) {
+        const other = Float64Array.from(seed ?? prior);
+        for (let d = 3; d < n; d++) other[d] += (random() * 2 - 1) * (d < 6 ? KEY_SCATTER / 3 : KEY_SCATTER);
+        scattered.push(other);
+      }
+    }
+    const solved = settle(
+      seed ?? prior,
+      {
+        goals: [...everyPose, ...goals],
+        prior,
+        priorWeights: built.effort ? seedOnly : free,
+        selfPairs,
+        obstacles: built.obstacles,
+        movingObstacles,
+        iterations: 150,
+      },
+      scattered,
+    );
     assertFiniteArray(`${spec.id} ${label} pose`, solved);
     return solved;
   };

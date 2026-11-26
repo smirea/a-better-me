@@ -19,11 +19,11 @@ const LOAD_KG = 50;
 /** Thigh rollers lowered onto the seated thighs. */
 const THIGH_PAD = -0.05;
 /**
- * Cable length, pulley to the bar's eye, with the stack on its pin. It is shorter than the lifter's reach at the
- * top, so the stack hangs off its pin through the whole rep: a cable left slack at the top would carry nothing
- * there, whatever weight is selected.
+ * Cable length, pulley to the bar's eye, with the stack on its pin. The resting bar hangs above a seated lifter's
+ * reach: you stand to take it and sit down with the stack already lifted, so at the top of a rep the arms can be
+ * as straight and as upright as the lifter likes with the cable still loaded.
  */
-const REST_CABLE = 0.28;
+const REST_CABLE = 0.15;
 /**
  * Half the grip width: the hands sit on the straight part of the bar at one and a half times shoulder width, as in
  * the catalog's photos and the grip studies call wide (Andersen et al., 2014), not out on the cranked ends.
@@ -50,20 +50,6 @@ function handsAtChest(body: Body, weight: number): Goal {
       push(weight * (hand.y - chest.y));
       push(weight * (hand.z - (chest.z + 0.02)));
     }
-  };
-}
-
-/** The stack is off its pin at the top: the bar hangs more than the resting cable's length from the pulley. Start key only. */
-function cableTaut(body: Body, pulley: readonly number[], weight: number): Goal {
-  const left = new Vector3();
-  const right = new Vector3();
-  return ({ frame, push }) => {
-    anchorPoint(body, frame, "grip_L", left);
-    anchorPoint(body, frame, "grip_R", right);
-    // The bar is cranked: its eye sits above and just in front of the line between the hands.
-    const y = (left.y + right.y) / 2 + EYE_ABOVE_GRIPS - pulley[1];
-    const z = (left.z + right.z) / 2 - pulley[2];
-    push(weight * Math.min(0, Math.hypot(y, z) - REST_CABLE - 0.02));
   };
 }
 
@@ -310,7 +296,6 @@ export const spec = composeExercise({
       steady: [(frame) => torsoLean(body, frame)],
       keyGoals: {
         start: [
-          cableTaut(body, pulley, 300),
           // "Arms overhead and slightly forward".
           ({ frame, push }) => {
             for (const side of SIDES)
@@ -334,10 +319,17 @@ export const spec = composeExercise({
       tethers: [cable.def],
       tetherState: (frame, extras, propStates) => [cable.state(frame, extras, propStates)],
       loads: [
-        { anchor: "grip_L", share: 0.5, grip: "hang", pulley: [GRIP, pulley[1], pulley[2]] },
-        { anchor: "grip_R", share: 0.5, grip: "hang", pulley: [-GRIP, pulley[1], pulley[2]] },
+        {
+          anchor: "grip_L",
+          with: "grip_R",
+          share: 1,
+          grip: "hang",
+          pulley: [pulley[0], pulley[1], pulley[2]],
+          eye: EYE_ABOVE_GRIPS,
+          rest: REST_CABLE,
+        },
       ],
-      support: { kind: "seated", passive: ["hip", "knee", "ankle"], bars: [["grip_L", "grip_R"]] },
+      support: { kind: "seated", passive: ["hip", "knee", "ankle"] },
       required: [
         { label: "Seat", anchor: "pelvisBottom", part: "lat-pulldown.seat_pad" },
         { label: "Left thigh", anchor: "thighFront_L", prop: "lat-pulldown.thigh_pad" },

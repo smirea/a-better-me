@@ -1,5 +1,5 @@
 import { statics, type Setup } from "./biomech";
-import type { Body } from "./body";
+import { worldPoint, type Body } from "./body";
 import { Vector3 } from "three";
 import type { LoadAttachment } from "./exercise";
 import { jointRanges, limbAlongForce, type Goal } from "./solver";
@@ -26,20 +26,44 @@ const DOWN = new Vector3(0, -1, 0);
  */
 export function handsAlongLoads(body: Body, loads: LoadAttachment[]): Goal[] {
   return loads.flatMap((load) => {
-    const side = /^grip_([LR])$/.exec(load.anchor)?.[1];
-    if (!side || load.grip !== "hang") return [];
+    if (load.grip !== "hang") return [];
     const pulley = load.pulley && new Vector3(...load.pulley);
     const fixed = load.direction ? new Vector3(...load.direction) : DOWN;
     const pull = new Vector3();
-    return [
-      limbAlongForce(
-        body,
-        `wrist_${side}`,
-        load.anchor,
-        pulley ? (hand) => pull.subVectors(pulley, hand) : fixed,
-        HANG,
-      ),
-    ];
+    return [load.anchor, load.with].flatMap((anchor) => {
+      const side = anchor && /^grip_([LR])$/.exec(anchor)?.[1];
+      if (!anchor || !side) return [];
+      // Two hands on one bar each hang parallel to the cable, not toward the pulley from where they are.
+      const toward = (hand: Vector3) => pull.subVectors(pulley!, hand).setX(load.with ? 0 : pull.x);
+      return [limbAlongForce(body, `wrist_${side}`, anchor, pulley ? toward : fixed, HANG)];
+    });
+  });
+}
+
+/** How far past its resting length a loaded cable is kept, in metres: the stack clear of its pin with room to spare. */
+const OFF_THE_PIN = 0.05;
+const TAUT = 300;
+
+/**
+ * A rep keeps its weight stack off the pin. Least effort would otherwise find the one posture that costs nothing:
+ * the cable gone slack.
+ */
+export function cablesTaut(body: Body, loads: LoadAttachment[]): Goal[] {
+  return loads.flatMap((load) => {
+    if (!load.pulley || load.rest === undefined) return [];
+    const pulley = new Vector3(...load.pulley);
+    const first = body.anchors[load.anchor];
+    const second = load.with ? body.anchors[load.with] : null;
+    const eye = new Vector3();
+    const other = new Vector3();
+    const pull = new Vector3();
+    const goal: Goal = ({ frame, push }) => {
+      worldPoint(frame, first.joint, first.local, eye);
+      if (second) eye.add(worldPoint(frame, second.joint, second.local, other)).multiplyScalar(0.5);
+      if (load.eye) eye.addScaledVector(pull.subVectors(pulley, eye).normalize(), load.eye);
+      push(TAUT * Math.min(0, eye.distanceTo(pulley) - load.rest! - OFF_THE_PIN));
+    };
+    return [goal];
   });
 }
 

@@ -82,7 +82,7 @@ async function main() {
       const issues = [
         ...validateMotion(body, sequence, kin),
         ...glbIssues,
-        ...validateLoad(sequence, analysis, listedMuscles(spec.catalogId)),
+        ...validateLoad(sequence, analysis, listedMuscles(spec)),
       ];
       const errors = issues.filter((i) => i.severity === "error");
       const checks = runChecks(body, built, sequence, kin);
