@@ -3,18 +3,18 @@ import { anchorPoint, SIDES, type Body, type Frame, type Side } from "../body";
 import { everyFrame } from "../checks";
 import type { FormCheck } from "../exercise";
 import { carryProp, graspProp } from "../grasp";
-import { deg, rad } from "../math";
+import { deg } from "../math";
 import { dumbbellProp, propHandles } from "../machines";
 import { checkFlatBack, checkNeutralNeck, plantBothFeet, POSTURE_HINTS } from "../postures";
 import { composeExercise } from "../scene";
-import { balance, lockAngle, mirrored, type Goal } from "../solver";
+import { angleWithin, lockAngle, mirrored, within, type Goal } from "../solver";
 
 const LOAD_KG = 12;
 /** Heels this far either side of the midline: about hip width for this body. */
 const STANCE_X = 0.13;
 const HEEL_Z = -0.08;
-/** How far in front of the leg's face the handle sits when the dumbbell is held close. */
-const AHEAD_OF_THIGH = 0.035;
+/** The nearest the handle comes to the leg's face, in metres: the dumbbell's inner head just clear of it. */
+const CLEAR_OF_LEG = 0.035;
 
 /** How far off the thigh's axis the handle sits with the dumbbell's inner head against the thigh. */
 const AGAINST_THIGH = 0.18;
@@ -25,41 +25,15 @@ function sideSign(side: Side): number {
   return side === "L" ? 1 : -1;
 }
 
-/** Knee joint over the ankle in the side view, so the shin stays vertical. */
-function verticalShin(body: Body, side: Side, weight: number): Goal {
-  return ({ frame, push }) => {
-    const knee = frame.pos[body.index[`knee_${side}`]];
-    const ankle = frame.pos[body.index[`ankle_${side}`]];
-    push(weight * (knee.z - ankle.z));
-  };
-}
-
-/**
- * How far the dumbbell hangs out from the leg toward plumb under the shoulder. Tight against the shin, the arms
- * trail well behind the shoulders at the bottom and the lats and triceps hold the weight back; plumb, it drifts
- * away from the legs. Lifters settle between the two, the arms a little behind vertical.
- */
-const HANG = 0.5;
-
-/**
- * Hangs the dumbbell on the outer front of the leg. World +Z is "in front of the leg" in the side view the cue is
- * about. The handle is held at an angle, so its inner head sits in front of the thigh and the handle itself close
- * to the thigh's outer corner.
- */
-function hangByThigh(body: Body, side: Side, weight: number): Goal {
+/** Keeps the handle outside the thigh's face, not on its centre: the inner heads meet if the hands sit any closer. */
+function besideThigh(body: Body, side: Side, weight: number): Goal {
   const s = sideSign(side);
   const grip = new Vector3();
   const thigh = new Vector3();
-  const shin = new Vector3();
   return ({ frame, push }) => {
     anchorPoint(body, frame, `grip_${side}`, grip);
     anchorPoint(body, frame, `thighFront_${side}`, thigh);
-    anchorPoint(body, frame, `shinFront_${side}`, shin);
-    const close = Math.max(thigh.z, shin.z) + AHEAD_OF_THIGH;
-    const plumb = frame.pos[body.index[`shoulder_${side}`]].z;
-    push(weight * (grip.z - (close + HANG * Math.max(0, plumb - close))));
-    // Outside the thigh face, not on its centre: the inner heads meet if the hands sit any closer.
-    push(weight * 0.7 * (grip.x - (thigh.x + s * 0.11)));
+    push(weight * (grip.x - (thigh.x + s * 0.11)));
   };
 }
 
@@ -278,54 +252,33 @@ export const spec = composeExercise({
         },
       },
       goals: [
-        ...plantBothFeet(body, STANCE_X, HEEL_Z, 0.1),
-        balance(body, [
-          { anchor: "grip_L", kg: LOAD_KG },
-          { anchor: "grip_R", kg: LOAD_KG },
-        ], 0.04, 90),
-        mirrored(body, 8),
+        ...plantBothFeet(body, STANCE_X, HEEL_Z, 0.1, 0, 140),
+        mirrored(body, 40),
         ...SIDES.flatMap((side) => [
-          lockAngle(body, `elbow_${side}.flex`, 6, 18),
-          lockAngle(body, `knee_${side}.flex`, 14, 16),
-          lockAngle(body, `forearm_${side}.pron`, 42, 12),
-          lockAngle(body, `wrist_${side}.flex`, 0, 8),
-          lockAngle(body, `wrist_${side}.dev`, 0, 6),
-          lockAngle(body, `clavicle_${side}.prot`, 4, 14),
-          lockAngle(body, `clavicle_${side}.elev`, 2, 8),
-          verticalShin(body, side, 30),
-          hangByThigh(body, side, 22),
+          angleWithin(body, `elbow_${side}.flex`, 0, 8, 60),
+          angleWithin(body, `knee_${side}.flex`, 9, 20, 60),
+          within(({ frame }) => frame.pos[body.index[`knee_${side}`]].z - frame.pos[body.index[`ankle_${side}`]].z, -0.03, 0.03, 300),
+          within(({ frame }) => leadOfLeg(body, frame, side), CLEAR_OF_LEG, 0.14, 300),
+          besideThigh(body, side, 60),
+          angleWithin(body, `forearm_${side}.pron`, 25, 65, 60),
         ]),
         lockAngle(body, "lumbar.flex", -2, 22),
         lockAngle(body, "thoracic.flex", -2, 20),
         lockAngle(body, "neck.flex", 2, 8),
       ],
+      effort: true,
       keyGoals: {
         start: [
-          lockAngle(body, "hip_L.flex", 9, 18),
-          lockAngle(body, "hip_R.flex", 9, 18),
-          ({ q, push }) => push(18 * (q[3] - rad(3))),
+          ...SIDES.map((side) => angleWithin(body, `hip_${side}.flex`, 0, 12, 60)),
+          // Stacked at the top: hips on the line from the shoulders to the middle of the feet.
+          within(({ frame }) => stack(body, frame).hipCm, 0, 3, 3),
         ],
-        end: [
-          lockAngle(body, "hip_L.flex", 100, 24),
-          lockAngle(body, "hip_R.flex", 100, 24),
-          ({ q, push }) => push(24 * (q[3] - rad(76))),
-        ],
+        // The rep ends where the cue says it may: the handles below the knees.
+        end: SIDES.map((side) =>
+          within(({ frame }) => frame.pos[body.index[`knee_${side}`]].y - anchorPoint(body, frame, `grip_${side}`).y, 0.05, 0.2, 300),
+        ),
       },
-      stiffness: {
-        default: 1,
-        root: 8,
-        hip: 14,
-        knee: 10,
-        ankle: 4,
-        elbow: 16,
-        forearm: 10,
-        wrist: 8,
-        shoulder: 6,
-        clavicle: 12,
-        lumbar: 12,
-        thoracic: 10,
-        neck: 6,
-      },
+      stiffness: { default: 0.3, root: 0.3 },
       progress: (frame) => -anchorPoint(body, frame, "grip_L").y,
       ground: "heel_L",
       props,

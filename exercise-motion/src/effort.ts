@@ -41,7 +41,7 @@ export function handsAlongLoads(body: Body, loads: LoadAttachment[]): Goal[] {
 }
 
 /** How far from the middle of the feet a standing lifter's weight may sit, in metres, and what further costs. */
-const OVER_FEET = 0.005;
+const OVER_FEET = 0.02;
 const BALANCED = 300;
 const FOOT_POINTS = ["heel_L", "toe_L", "heel_R", "toe_R"];
 /** A foot's point counts as planted this close to the floor, in metres. */
