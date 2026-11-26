@@ -16,8 +16,8 @@ enum PingRoute: Hashable {
 }
 
 /// The Pings tab: the Food Log's header row over a day's timeline, oldest first. "+" turns the tab bar into a drawer of
-/// the pings, where a tap logs one onto the day shown and its row lands closed on the timeline. A note composer sits
-/// over the tab bar. Swiping pages between days.
+/// the pings, where a tap logs one onto the day shown and its row lands closed on the timeline, and Text starts a note
+/// typed in its row. Swiping pages between days.
 struct PingsTab: View {
     /// The app's shown day, which the Food Log and the Workout tab share.
     @Binding var day: CalendarDay
@@ -31,13 +31,13 @@ struct PingsTab: View {
     @State private var editing: Set<UUID> = []
     @State private var added: UUID?
     @State private var drawerCover: CGFloat = 0
-    @State private var composing = false
+    @State private var newNote = PendingNote.load()
 
     var body: some View {
         NavigationStack(path: $path) {
             DayPager(day: $day) { shown in
                 PingTimelinePage(
-                    day: shown, editing: $editing, added: added, covered: adding ? drawerCover : 0, composing: composing,
+                    day: shown, editing: $editing, newNote: $newNote, added: added, covered: adding ? drawerCover : 0,
                     pingCount: pingCount, history: { push(.history($0.id)) }, create: { creating = true }
                 )
             }
@@ -45,17 +45,9 @@ struct PingsTab: View {
             .safeAreaInset(edge: .top, spacing: 0) {
                 PingsHeader(day: $day, pingCount: pingCount, create: { creating = true }, manage: { push(.manage) })
             }
-            // One bar at a time: the drawer grows over where the composer sits, so it hides while the drawer is open. It
-            // keeps its place, since a safe area that changed as the drawer closed sent the timeline back to its top.
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                PingNoteComposer(day: day, composing: $composing) { added = $0.id }
-                    .opacity(adding ? 0 : 1)
-                    .allowsHitTesting(!adding)
-                    .accessibilityHidden(adding)
-            }
             .overlay {
                 PingDrawer(isOpen: $adding, covers: { drawerCover = $0 }) {
-                    PingControls(day: day, log: log).id(day)
+                    PingControls(day: day, log: log, write: writeNote, create: drawerCreate).id(day)
                 }
             }
             // One bar at a time: the drawer takes the tab bar's place.
@@ -68,17 +60,24 @@ struct PingsTab: View {
             .sheet(isPresented: $creating) { PingEditor() }
         }
         .sensoryFeedback(.success, trigger: added)
+        .onChange(of: newNote) { _, note in PendingNote.save(note) }
         .onChange(of: adding) { _, adding in
             guard adding else { return }
             // The drawer belongs to the timeline, so "+" on a pushed screen comes back to it.
             path = []
-            // With no pings there is nothing to pick, so "+" makes the first one.
-            if pingCount == 0 {
-                self.adding = false
-                creating = true
-            }
         }
         .feedback(self)
+    }
+
+    /// With no pings there is nothing to log, so the drawer offers to make the first one.
+    private var drawerCreate: (() -> Void)? {
+        guard pingCount == 0 else { return nil }
+        return { newPing() }
+    }
+
+    private func newPing() {
+        adding = false
+        creating = true
     }
 
     /// A pushed screen brings the tab bar back, so the drawer closes first.
@@ -91,6 +90,33 @@ struct PingsTab: View {
         let log = PingLog(pingID: ping.id, value: value, at: PingLog.instant(on: day))
         store.insert(log)
         added = log.id
+    }
+
+    /// The drawer gives the timeline back for typing: the note's row opens at the time a ping logged now would get, with
+    /// the cursor in it.
+    private func writeNote() {
+        let note = TimelineNote(text: "", at: PingLog.instant(on: day))
+        newNote = note
+        added = note.id
+        adding = false
+    }
+}
+
+/// The note Text started, kept across launches with what was typed in it (`persistDraft`), until it is written or
+/// dropped. An empty note is never stored.
+private struct PendingNote: Codable {
+    let id: UUID
+    let at: Date
+
+    private static let key = "pings.new-note"
+
+    static func load() -> TimelineNote? {
+        DraftStore.load(Self.self, key: key).map { TimelineNote(id: $0.id, text: "", at: $0.at) }
+    }
+
+    static func save(_ note: TimelineNote?) {
+        guard let note else { return DraftStore.clear(key) }
+        DraftStore.save(Self(id: note.id, at: note.notedAt), key: key)
     }
 }
 

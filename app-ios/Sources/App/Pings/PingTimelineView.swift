@@ -10,12 +10,12 @@ struct PingTimelinePage: View {
     let day: CalendarDay
     /// The logs whose rows are open as editors.
     @Binding var editing: Set<UUID>
-    /// The log the drawer just wrote, which the page scrolls to when it lands.
+    /// The note the drawer's Text started, drawn on its day until it is written or dropped.
+    @Binding var newNote: TimelineNote?
+    /// The log or note the drawer just wrote, which the page scrolls to when it lands.
     let added: UUID?
     /// How much of the screen's bottom the drawer covers, so the last row scrolls clear of it.
     let covered: CGFloat
-    /// Whether the note composer has the keyboard, so the latest row stays in view as the keyboard and the field grow.
-    let composing: Bool
     /// How many pings exist, since a day with nothing on it says so differently when there is nothing to log.
     let pingCount: Int
     let history: (Ping) -> Void
@@ -24,16 +24,17 @@ struct PingTimelinePage: View {
     @Observe private var timeline: PingTimeline
     @State private var rows = ViewMemo<PingTimeline, [PingTimelineRow]>()
     @State private var safeBottom: CGFloat = 0
+    @FocusState private var typing: UUID?
 
     init(
-        day: CalendarDay, editing: Binding<Set<UUID>>, added: UUID?, covered: CGFloat, composing: Bool, pingCount: Int,
+        day: CalendarDay, editing: Binding<Set<UUID>>, newNote: Binding<TimelineNote?>, added: UUID?, covered: CGFloat, pingCount: Int,
         history: @escaping (Ping) -> Void, create: @escaping () -> Void
     ) {
         self.day = day
         _editing = editing
+        _newNote = newNote
         self.added = added
         self.covered = covered
-        self.composing = composing
         self.pingCount = pingCount
         self.history = history
         self.create = create
@@ -41,6 +42,7 @@ struct PingTimelinePage: View {
     }
 
     var body: some View {
+        let timeline = withNewNote
         let rows = self.rows(timeline) { timeline.rows() }
         // A log that joins a group adds no row, so the scroll to it watches the logs, and the notes.
         let logs = rows.flatMap { row in
@@ -66,10 +68,10 @@ struct PingTimelinePage: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(spacing: 0) {
-                            PingTimelineList(rows: rows, day: day, editing: $editing, history: history)
+                            PingTimelineList(rows: rows, day: day, editing: $editing, newNote: $newNote, typing: $typing, history: history)
                                 .padding(.horizontal, Theme.margin)
                                 .padding(.top, 8)
-                            // What a scroll to the latest row aims at, so the row keeps some room over the composer.
+                            // What a scroll to the latest row aims at, so the row keeps some room under it.
                             Color.clear.frame(height: 16).id(Self.end)
                         }
                     }
@@ -84,31 +86,48 @@ struct PingTimelinePage: View {
                         .animation(.snappy, value: bottomInset)
                         .scrollIndicators(.hidden)
                         .scrollDismissesKeyboard(.interactively)
+                        // A tap on the page around the rows ends editing, as one on another row does.
+                        .contentShape(.rect)
+                        .onTapGesture { PingTimelineList.endEditing(typing: $typing, editing: $editing) }
                         .onChange(of: logs) { old, new in
-                            guard let added = added.map(PingLog.key), new.contains(added), !old.contains(added),
-                                  let row = rows.first(where: { $0.id == added || $0.entries.contains { $0.log.key == added } }) else { return }
-                            let target = row.id == rows.last?.id ? Self.end : row.id
-                            withAnimation(.snappy(duration: 0.3)) { proxy.scrollTo(target, anchor: .bottom) }
+                            guard let added = added.map(PingLog.key), new.contains(added), !old.contains(added) else { return }
+                            reveal(added, drawnAs: nil, in: rows, proxy)
                         }
-                        // The bottom anchor keeps the latest row in view only as the content grows; a bottom edge that
-                        // moves, as the drawer closes or the keyboard rises under the composer, left it covered.
-                        .onChange(of: covered) { old, new in
-                            if new == 0, old > 0 { latest(proxy) }
-                        }
-                        .onChange(of: safeBottom) {
-                            if composing { latest(proxy) }
+                        // The scroll view leaves the row being typed under the rising keyboard.
+                        .onChange(of: safeBottom) { old, new in
+                            guard new > old, let typing else { return }
+                            // An open group draws each log as its own row.
+                            reveal(PingLog.key(typing), drawnAs: PingLog.key(typing), in: rows, proxy)
                         }
                 }
             }
         }
         .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { safeBottom = $0 }
+        // Written, the new note is the stored one from here on.
+        .onChange(of: self.timeline.notes) { _, notes in
+            if let newNote, notes.contains(where: { $0.id == newNote.id }) { self.newNote = nil }
+        }
         .feedback(self)
     }
 
     private static let end = "timeline-end"
 
-    private func latest(_ proxy: ScrollViewProxy) {
-        withAnimation(.snappy(duration: 0.3)) { proxy.scrollTo(Self.end, anchor: .bottom) }
+    /// Scrolls the row that holds the log or note with `key` up to the bottom of the page, with room under it. A closed
+    /// group is drawn as its row; `drawnAs` names the drawn row when that is the log's own.
+    private func reveal(_ key: String, drawnAs: String?, in rows: [PingTimelineRow], _ proxy: ScrollViewProxy) {
+        guard let row = rows.first(where: { $0.id == key || $0.entries.contains { $0.log.key == key } }) else { return }
+        let target = row.id == rows.last?.id ? Self.end : drawnAs ?? row.id
+        withAnimation(.snappy(duration: 0.3)) { proxy.scrollTo(target, anchor: .bottom) }
+    }
+
+    /// The day as stored, with the note Text started when it is on this day and not written yet.
+    private var withNewNote: PingTimeline {
+        guard let newNote, CalendarDay(newNote.notedAt) == day, !timeline.notes.contains(where: { $0.id == newNote.id }) else {
+            return timeline
+        }
+        var timeline = timeline
+        timeline.notes.append(newNote)
+        return timeline
     }
 }
 
@@ -122,12 +141,13 @@ struct EmbeddedPingTimeline: View {
     @State private var timeline = PingTimeline()
     @State private var rows = ViewMemo<PingTimeline, [PingTimelineRow]>()
     @State private var editing: Set<UUID> = []
+    @FocusState private var typing: UUID?
 
     var body: some View {
         let rows = self.rows(timeline) { timeline.rows() }
         VStack(spacing: 0) {
             if !rows.isEmpty {
-                PingTimelineList(rows: rows, day: day, editing: $editing, history: history)
+                PingTimelineList(rows: rows, day: day, editing: $editing, newNote: .constant(nil), typing: $typing, history: history)
                     .feedback(self)
             }
         }
@@ -147,11 +167,14 @@ struct EmbeddedPingTimeline: View {
 
 /// The Pings timeline's vertical bar and rows, shared between `PingTimelinePage` and `EmbeddedPingTimeline`. A long
 /// press lifts a closed ping row, a drag slides it between the others, and the drop moves its logs to just after the row
-/// above it (`PingTimeline.dropTime`).
+/// above it (`PingTimeline.dropTime`). While a note is typed, a tap on another row only ends the typing.
 struct PingTimelineList: View {
     let rows: [PingTimelineRow]
     let day: CalendarDay
     @Binding var editing: Set<UUID>
+    @Binding var newNote: TimelineNote?
+    /// The log or note whose text has the keyboard.
+    var typing: FocusState<UUID?>.Binding
     let history: (Ping) -> Void
 
     @Environment(LocalStore.self) private var store
@@ -207,24 +230,46 @@ struct PingTimelineList: View {
         }
     }
 
+    /// Takes the keyboard away and closes every open row: the tap around the rows, or on another row while one is typed.
+    static func endEditing(typing: FocusState<UUID?>.Binding, editing: Binding<Set<UUID>>) {
+        typing.wrappedValue = nil
+        editing.wrappedValue = []
+    }
+
+    private func tapped(_ action: () -> Void) {
+        if typing.wrappedValue == nil { action() } else { Self.endEditing(typing: typing, editing: $editing) }
+    }
+
     @ViewBuilder private func rowView(_ row: PingTimelineRow) -> some View {
         let time = drag?.id == row.id ? drag?.time : nil
         switch row {
         case let .entry(entry):
             PingEntryRow(
-                entry: entry, isEditing: editing.contains(entry.id), gutter: gutter, movingTo: time,
-                toggle: { editing.formSymmetricDifference([entry.id]) }, history: { history(entry.ping) }
+                entry: entry, isEditing: editing.contains(entry.id), gutter: gutter, movingTo: time, typing: typing,
+                toggle: { editing.formSymmetricDifference([entry.id]) }, tap: { tapped { editing.formSymmetricDifference([entry.id]) } },
+                history: { history(entry.ping) }
             )
             .transition(.scale(scale: 0.85, anchor: .leading).combined(with: .opacity))
         case let .group(group):
-            PingGroupRow(group: group, gutter: gutter, movingTo: time) { editing.formUnion(group.entries.map(\.id)) }
-                .transition(.opacity)
+            PingGroupRow(group: group, gutter: gutter, movingTo: time, open: { editing.formUnion(group.entries.map(\.id)) }) {
+                tapped { editing.formUnion(group.entries.map(\.id)) }
+            }
+            .transition(.opacity)
         case let .marker(marker):
             TimelineMarkerRow(marker: marker, gutter: gutter)
         case let .note(note):
+            let isNew = newNote?.id == note.id
             TimelineNoteRow(
-                note: note, isEditing: editing.contains(note.id), gutter: gutter, movingTo: time,
-                toggle: { editing.formSymmetricDifference([note.id]) }
+                note: note, isNew: isNew, isEditing: isNew || editing.contains(note.id), gutter: gutter, movingTo: time, typing: typing,
+                toggle: { editing.formSymmetricDifference([note.id]) }, tap: { tapped { editing.formSymmetricDifference([note.id]) } },
+                move: { time in
+                    if newNote?.id == note.id { newNote?.notedAt = time } else { store.modify(TimelineNote.self, id: note.id) { $0.notedAt = time } }
+                },
+                drop: {
+                    if newNote?.id == note.id { newNote = nil } else { store.delete(TimelineNote.self, id: note.id) }
+                },
+                isPending: { newNote?.id == note.id },
+                discard: { if newNote?.id == note.id { newNote = nil } }
             )
             .transition(.scale(scale: 0.85, anchor: .leading).combined(with: .opacity))
         }
@@ -234,7 +279,7 @@ struct PingTimelineList: View {
     private func isMovable(_ row: PingTimelineRow) -> Bool {
         switch row {
         case let .entry(entry): !editing.contains(entry.id)
-        case let .note(note): !editing.contains(note.id)
+        case let .note(note): !editing.contains(note.id) && newNote?.id != note.id
         case .group: true
         case .marker: false
         }
@@ -424,7 +469,10 @@ private struct PingEntryRow: View {
     let gutter: CGFloat
     /// Where a drag would drop it, shown in place of its time while it moves.
     let movingTo: Date?
+    let typing: FocusState<UUID?>.Binding
     let toggle: () -> Void
+    /// A tap on the row, which only ends the typing while a note is typed.
+    let tap: () -> Void
     let history: () -> Void
 
     @Environment(LocalStore.self) private var store
@@ -454,7 +502,7 @@ private struct PingEntryRow: View {
                         }
                     }
                     HStack(spacing: 12) {
-                        PingNoteField(log: log, name: entry.ping.name)
+                        PingNoteField(log: log, name: entry.ping.name, typing: typing)
                         Button("History", action: history).chipButton().accessibilityLabel("\(entry.ping.name) history")
                     }
                     .padding(.bottom, 8)
@@ -466,7 +514,7 @@ private struct PingEntryRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(.rect)
-        .onTapGesture(perform: toggle)
+        .onTapGesture(perform: tap)
         .rowSwipeActions(trailing: [.destructive("Delete") { store.delete(PingLog.self, id: log.id) }], fullSwipe: true)
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: isEditing ? "Collapse" : "Edit", toggle)
@@ -503,6 +551,7 @@ private struct PingGroupRow: View {
     let gutter: CGFloat
     let movingTo: Date?
     let open: () -> Void
+    let tap: () -> Void
 
     var body: some View {
         let first = group.entries[0]
@@ -534,7 +583,7 @@ private struct PingGroupRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(.rect)
-        .onTapGesture(perform: open)
+        .onTapGesture(perform: tap)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(([time] + group.items.map { $0.count > 1 ? "\($0.ping.name) \($0.count) times" : $0.ping.name }).joined(separator: ", "))
         .accessibilityAddTraits(.isButton)
@@ -587,22 +636,24 @@ private struct TimelineTimeLabel: View {
 private struct PingNoteField: View {
     let log: PingLog
     let name: String
+    let typing: FocusState<UUID?>.Binding
 
     @Environment(LocalStore.self) private var store
     @State private var note: String
-    @FocusState private var focused: Bool
 
-    init(log: PingLog, name: String) {
+    init(log: PingLog, name: String, typing: FocusState<UUID?>.Binding) {
         self.log = log
         self.name = name
+        self.typing = typing
         _note = State(initialValue: log.note)
     }
 
     var body: some View {
+        let focused = typing.wrappedValue == log.id
         TextField("Note", text: $note, axis: .vertical)
             .font(AppFont.rowTitle)
             .lineLimit(1...4)
-            .focused($focused)
+            .focused(typing, equals: log.id)
             .accessibilityLabel("\(name) note")
             .onChange(of: log.note) { _, stored in
                 if !focused { note = stored }
@@ -624,30 +675,34 @@ private struct PingNoteField: View {
     }
 }
 
-/// A note typed in the composer, at its time with a hollow ring on the bar, since it belongs to no ping. A tap opens it
-/// for editing in place; emptied, it is deleted when it closes. It moves like a ping row: a tap on its time, a long press.
+/// A note on the timeline, at its time with a hollow ring on the bar, since it belongs to no ping. A tap opens it for
+/// editing in place; emptied, it is deleted when it closes. It moves like a ping row: a tap on its time, a long press. A
+/// new one, from the drawer's Text, opens with the cursor in it and is stored only once it has text.
 private struct TimelineNoteRow: View {
     let note: TimelineNote
+    let isNew: Bool
     let isEditing: Bool
     let gutter: CGFloat
     let movingTo: Date?
+    let typing: FocusState<UUID?>.Binding
     let toggle: () -> Void
-
-    @Environment(LocalStore.self) private var store
+    let tap: () -> Void
+    let move: (Date) -> Void
+    let drop: () -> Void
+    let isPending: () -> Bool
+    let discard: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
-            TimelineTimeLabel(at: note.notedAt, isEditing: isEditing, movingTo: movingTo) { time in
-                store.modify(TimelineNote.self, id: note.id) { $0.notedAt = time }
-            }
-            .frame(width: gutter, height: 44, alignment: .trailing)
+            TimelineTimeLabel(at: note.notedAt, isEditing: isEditing, movingTo: movingTo, move: move)
+                .frame(width: gutter, height: 44, alignment: .trailing)
             Circle().strokeBorder(Theme.textSecondary, lineWidth: 1.5).frame(width: 9, height: 9)
                 .padding(3).background(Theme.background, in: .circle)
                 .frame(width: PingTimelineMetrics.node, height: 44)
                 .accessibilityHidden(true)
             Group {
                 if isEditing {
-                    TimelineNoteField(note: note)
+                    TimelineNoteField(note: note, isNew: isNew, typing: typing, isPending: isPending, discard: discard)
                 } else {
                     Text(note.text).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -659,8 +714,8 @@ private struct TimelineNoteRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(.rect)
-        .onTapGesture(perform: toggle)
-        .rowSwipeActions(trailing: [.destructive("Delete") { store.delete(TimelineNote.self, id: note.id) }], fullSwipe: true)
+        .onTapGesture(perform: tap)
+        .rowSwipeActions(trailing: [.destructive("Delete", action: drop)], fullSwipe: true)
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: isEditing ? "Collapse" : "Edit", toggle)
         .feedback(self)
@@ -668,26 +723,40 @@ private struct TimelineNoteRow: View {
 }
 
 /// An open note's text, focused as it opens. It writes when the field loses focus or the row closes, not on every key,
-/// and keeps what is typed until then as a draft, so a killed app gives it back when the note opens again.
+/// and keeps what is typed until then as a draft, so a killed app gives it back when the note opens again. A new note
+/// left empty is dropped without ever being stored.
 private struct TimelineNoteField: View {
     let note: TimelineNote
+    let isNew: Bool
+    let typing: FocusState<UUID?>.Binding
+    /// Read when it saves: a new note swiped away is no longer pending, and its text is not written.
+    let isPending: () -> Bool
+    let discard: () -> Void
 
     @Environment(LocalStore.self) private var store
     @State private var text: String
-    @FocusState private var focused: Bool
+    /// Set once a new note is stored, since its row stays open until the stored note comes back.
+    @State private var written = false
 
-    init(note: TimelineNote) {
+    init(
+        note: TimelineNote, isNew: Bool, typing: FocusState<UUID?>.Binding, isPending: @escaping () -> Bool, discard: @escaping () -> Void
+    ) {
         self.note = note
+        self.isNew = isNew
+        self.typing = typing
+        self.isPending = isPending
+        self.discard = discard
         _text = State(initialValue: note.text)
     }
 
     var body: some View {
+        let focused = typing.wrappedValue == note.id
         TextField("Note", text: $text, axis: .vertical)
             .font(AppFont.rowTitle)
             .lineLimit(1...8)
-            .focused($focused)
+            .focused(typing, equals: note.id)
             .accessibilityLabel("Note")
-            .onAppear { focused = true }
+            .onAppear { typing.wrappedValue = note.id }
             .onChange(of: note.text) { _, stored in
                 if !focused { text = stored }
             }
@@ -703,6 +772,13 @@ private struct TimelineNoteField: View {
     private func save() {
         DraftStore.clear(draftKey)
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if isNew {
+            guard !written, isPending() else { return }
+            if text.isEmpty { return discard() }
+            written = true
+            store.insert(TimelineNote(id: note.id, text: text, at: note.notedAt))
+            return
+        }
         guard text != note.text else { return }
         if text.isEmpty {
             store.delete(TimelineNote.self, id: note.id)

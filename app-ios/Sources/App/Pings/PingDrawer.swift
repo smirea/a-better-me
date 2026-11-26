@@ -74,7 +74,7 @@ struct PingDrawer<Content: View>: View {
         // The controls report their height a frame after they are built, and again when a chip opens into its steps.
         .animation(.spring(duration: 0.3, bounce: 0.1), value: contentHeight)
         .frame(maxHeight: .infinity, alignment: .bottom)
-        // The keyboard covers the drawer while a note is typed, instead of lifting it over the timeline.
+        // The keyboard covers the drawer while a row's note is typed, instead of lifting it over the timeline.
         .ignoresSafeArea(.keyboard)
         .ignoresSafeArea(.container, edges: .bottom)
     }
@@ -111,15 +111,20 @@ private struct DrawerShape: Shape {
 
 /// The drawer's controls for one day: a chip per ping, in the pings' order. A boolean ping's chip logs it. A range
 /// ping's chip opens into its steps, and a step logs it. A chip counts its day: a boolean's logs, a range's latest step.
+/// Text, last, starts a note typed in its row on the timeline. With no pings, New Ping stands in for them.
 struct PingControls: View {
     let log: (Ping, Int) -> Void
+    let write: () -> Void
+    let create: (() -> Void)?
 
     @Observe private var statuses: [PingStatus]
     /// The range ping whose steps are showing.
     @State private var open: UUID?
 
-    init(day: CalendarDay, log: @escaping (Ping, Int) -> Void) {
+    init(day: CalendarDay, log: @escaping (Ping, Int) -> Void, write: @escaping () -> Void, create: (() -> Void)?) {
         self.log = log
+        self.write = write
+        self.create = create
         _statuses = Observe(PingStatus.on(day))
     }
 
@@ -143,6 +148,17 @@ struct PingControls: View {
                     chip(status) { open = ping.id }
                 }
             }
+            if let create {
+                Button(action: create) {
+                    chipLabel(icon: "plus", tint: Theme.textSecondary, name: "New Ping", count: 0)
+                }
+                .buttonStyle(.plain)
+            }
+            Button(action: write) {
+                chipLabel(icon: "character.cursor.ibeam", tint: Theme.textSecondary, name: "Text", count: 0)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Write a note")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .animation(.snappy(duration: 0.25), value: open)
@@ -152,23 +168,27 @@ struct PingControls: View {
     private func chip(_ status: PingStatus, action: @escaping () -> Void) -> some View {
         let count = status.ping.kind == .boolean ? status.count : status.step ?? 0
         return Button(action: action) {
-            HStack(spacing: 8) {
-                HStack(spacing: 6) {
-                    Image(systemName: status.ping.icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(status.ping.tint)
-                    Text(status.ping.name).font(AppFont.chip).lineLimit(1)
-                }
-                if count > 0 {
-                    Text("\(count)").font(AppFont.number(13)).foregroundStyle(Theme.textSecondary)
-                }
-            }
-            .foregroundStyle(Theme.textPrimary)
-            .padding(.horizontal, 14)
-            .frame(height: 44)
-            .background(Theme.surfaceRaised, in: .capsule)
-            .contentShape(.capsule)
+            chipLabel(icon: status.ping.icon, tint: status.ping.tint, name: status.ping.name, count: count)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Log \(status.ping.name)")
         .accessibilityValue(count == 0 ? "" : status.ping.kind == .boolean ? "\(count) today" : "Last \(count)")
+    }
+
+    private func chipLabel(icon: String, tint: Color, name: String, count: Int) -> some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(tint)
+                Text(name).font(AppFont.chip).lineLimit(1)
+            }
+            if count > 0 {
+                Text("\(count)").font(AppFont.number(13)).foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .foregroundStyle(Theme.textPrimary)
+        .padding(.horizontal, 14)
+        .frame(height: 44)
+        .background(Theme.surfaceRaised, in: .capsule)
+        .contentShape(.capsule)
     }
 }

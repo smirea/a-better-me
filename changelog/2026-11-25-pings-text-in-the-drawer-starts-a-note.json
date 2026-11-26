@@ -1,0 +1,10 @@
+{
+	"title": "Pings: Text in the + drawer starts a note you type right on the timeline",
+	"description": "The note bar at the bottom is gone, and a tap outside what you're typing hides the keyboard.",
+	"tasks": [
+		{
+			"id": "e3f38513-8d9b-427a-859f-57f69104b2d6",
+			"title": "1 Pings Feedback: move timeline note to add drawer"
+		}
+	]
+}

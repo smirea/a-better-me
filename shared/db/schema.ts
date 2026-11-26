@@ -437,7 +437,7 @@ const pingLogs = sqliteTable("ping_logs", {
 });
 
 /**
- * A free-text note on the Pings timeline at a moment of a day, typed in the composer at the bottom of the Pings tab. It
+ * A free-text note on the Pings timeline at a moment of a day, typed in its row after the Pings drawer's Text. It
  * belongs to no ping, so it stays out of the pings' counts, cards, and history.
  */
 const timelineNotes = sqliteTable("timeline_notes", {

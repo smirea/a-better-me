@@ -1,8 +1,8 @@
 import Foundation
 import GRDB
 
-/// A row of the synced `timeline_notes` table: free text on the Pings timeline at a moment of a day, typed in the
-/// composer at the bottom of the Pings tab. It belongs to no ping.
+/// A row of the synced `timeline_notes` table: free text on the Pings timeline at a moment of a day, typed in its row
+/// after the Pings drawer's Text. It belongs to no ping.
 struct TimelineNote: SyncedRecord {
     static let table = "timeline_notes"
 
