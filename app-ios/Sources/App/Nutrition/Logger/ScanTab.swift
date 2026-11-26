@@ -18,6 +18,7 @@ struct ScanTab: View {
     @State private var creating: NewFood?
     /// The scanner only reads while this tab is on screen, so a scan never pushes a second detail over the first.
     @State private var visible = false
+    @State private var gate = ScanGate()
     /// `DataScannerViewController.isAvailable` stays false until camera access is granted, and nothing else asks.
     @State private var cameraWorks = false
 
@@ -27,7 +28,7 @@ struct ScanTab: View {
                 // Removed under Create Food, not just stopped: `stopScanning()` isn't documented to end the camera
                 // session, and a second session interrupts the first, so Create Food's Camera must hold the only one.
                 if creating == nil {
-                    BarcodeScanner(running: visible, paused: looking || typing || problem != nil || choosing != nil) { barcode, photo in
+                    BarcodeScanner(running: visible, paused: gate.held != nil || typing) { barcode, photo in
                         lookup(barcode, photo: photo)
                     }
                     .ignoresSafeArea(edges: .bottom)
@@ -55,6 +56,7 @@ struct ScanTab: View {
         }
         .onAppear { visible = true }
         .onDisappear { visible = false }
+        .onChange(of: idle) { if idle { gate.release(at: .now) } }
         .task {
             guard DataScannerViewController.isSupported else { return }
             if AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
@@ -74,21 +76,38 @@ struct ScanTab: View {
         }
         .alert("Which store is it from?", isPresented: .isPresent($choosing), presenting: choosing) { choice in
             ForEach(choice.foods, id: \.id) { food in
-                Button("\(food.store ?? "No store") · \(food.name)") { open(LoggerPick(choice.barcode.portion(of: food))) }
+                Button("\(food.store ?? "No store") · \(food.name)") { show(LoggerPick(choice.barcode.portion(of: food))) }
             }
-            Button("New Food") { Task { await create(choice.barcode, photo: choice.photo) } }
+            Button("New Food") {
+                looking = true
+                Task {
+                    await create(choice.barcode, photo: choice.photo)
+                    looking = false
+                }
+            }
             Button("Cancel", role: .cancel) {}
         } message: { _ in
             Text("Stores number their own items, so this code names a food at each of these stores.")
         }
         .sheet(item: $creating) { new in
-            FoodEditor(draft: new.draft, photos: new.photos, onSave: { food in open(LoggerPick(new.barcode.portion(of: food))) })
+            FoodEditor(draft: new.draft, photos: new.photos, onSave: { food in show(LoggerPick(new.barcode.portion(of: food))) })
         }
         .feedback(self)
     }
 
-    private func lookup(_ text: String, photo: Task<UIImage?, Never>?) {
-        guard !looking else { return }
+    /// Nothing the scan opened is up: no lookup, question, alert, Create Food, or detail. Only then is its barcode done.
+    private var idle: Bool { visible && !looking && choosing == nil && creating == nil && problem == nil }
+
+    /// A detail covers the tab from the moment it is pushed, so the scanner stops now rather than once the push ends.
+    private func show(_ pick: LoggerPick) {
+        visible = false
+        open(pick)
+    }
+
+    /// Acts on a barcode the gate admits, starting the scanner's photo only then.
+    private func lookup(_ text: String, photo: (() -> Task<UIImage?, Never>)?) {
+        guard gate.admit(text.trimmingCharacters(in: .whitespaces), at: .now) else { return }
+        let photo = photo?()
         looking = true
         Task {
             let outcome = await session.lookup(barcode: text)
@@ -96,7 +115,7 @@ struct ScanTab: View {
             case let .found(portion):
                 looking = false
                 typed = ""
-                open(LoggerPick(portion))
+                show(LoggerPick(portion))
             case let .stores(foods, barcode):
                 looking = false
                 choosing = StoreChoice(foods: foods, barcode: barcode, photo: photo)
@@ -139,13 +158,13 @@ private struct NewFood: Identifiable {
 }
 
 /// VisionKit's `DataScannerViewController` reading retail barcodes, reporting the first one it recognizes while not
-/// paused, with a photo it starts taking at that moment: the package is still in front of the camera, and a store's
-/// label shows its nutrition facts beside the barcode. It holds the camera only while `running`, so a pushed
+/// paused, with a way to take a photo that the tab calls the moment it acts on the barcode: the package is still in
+/// front of the camera, and a store's label shows its nutrition facts beside the barcode. It holds the camera only while `running`, so a pushed
 /// detail stops it. Pausing keeps the camera, since a lookup or the store question still waits on the photo.
 private struct BarcodeScanner: UIViewControllerRepresentable {
     let running: Bool
     let paused: Bool
-    let found: (String, Task<UIImage?, Never>) -> Void
+    let found: (String, @escaping () -> Task<UIImage?, Never>) -> Void
 
     func makeUIViewController(context: Context) -> DataScannerViewController {
         let scanner = DataScannerViewController(
@@ -183,7 +202,7 @@ private struct BarcodeScanner: UIViewControllerRepresentable {
             guard parent.running, !parent.paused else { return }
             for case let .barcode(barcode) in addedItems {
                 if let payload = barcode.payloadStringValue {
-                    parent.found(payload, Task { try? await dataScanner.capturePhoto() })
+                    parent.found(payload) { Task { try? await dataScanner.capturePhoto() } }
                     return
                 }
             }

@@ -113,7 +113,8 @@ private struct LoggerContent: View {
     }
 
     @ViewBuilder private var tab: some View {
-        let detail: (LoggerPick) -> Void = { path.append(.food($0)) }
+        // A food's detail never stacks on its own: a second Add on the copy underneath would put it on the plate twice.
+        let detail: (LoggerPick) -> Void = { pick in if path.last != .food(pick) { path.append(.food(pick)) } }
         let open = settings.nutrition.logger.optimization == .context ? addAndShowPlate : detail
         switch session.tab {
         case .scan: ScanTab(session: session, open: detail).toolbar(.hidden, for: .navigationBar)

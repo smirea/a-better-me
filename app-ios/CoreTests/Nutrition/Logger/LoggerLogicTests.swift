@@ -230,3 +230,35 @@ struct LoggerStartTests {
         #expect(yesterday.time == LogTime(day: calendarDay("2026-10-25"), hour: 14))
     }
 }
+
+struct ScanGateTests {
+    private let start = Date(timeIntervalSinceReferenceDate: 0)
+
+    private func admit(_ gate: inout ScanGate, _ code: String, at now: Date) -> Bool {
+        gate.admit(code, at: now)
+    }
+
+    @Test func oneBarcodeIsHandledAtATime() {
+        var gate = ScanGate()
+        #expect(admit(&gate, "0123456789012", at: start))
+        #expect(!admit(&gate, "0123456789012", at: start))
+        #expect(!admit(&gate, "4006381333931", at: start))
+    }
+
+    @Test func theSameCodeWaitsOutTheCooldownAfterItsScreenCloses() {
+        var gate = ScanGate()
+        _ = gate.admit("0123456789012", at: start)
+        gate.release(at: start.addingTimeInterval(60))
+        #expect(!admit(&gate, "0123456789012", at: start.addingTimeInterval(61)))
+        #expect(admit(&gate, "4006381333931", at: start.addingTimeInterval(61)))
+        gate.release(at: start.addingTimeInterval(62))
+        #expect(admit(&gate, "0123456789012", at: start.addingTimeInterval(62)))
+    }
+
+    @Test func theSameCodeOpensAgainOnceTheCooldownPasses() {
+        var gate = ScanGate()
+        _ = gate.admit("0123456789012", at: start)
+        gate.release(at: start)
+        #expect(admit(&gate, "0123456789012", at: start.addingTimeInterval(ScanGate.cooldown)))
+    }
+}
