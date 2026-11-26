@@ -1,3 +1,4 @@
+import { cablesTaut, handsAlongLoads, leastEffort } from "./effort";
 import { Vector3 } from "three";
 import {
   anchorPoint,
@@ -47,6 +48,20 @@ export interface LoadAttachment {
   /** Fraction of the logged weight this point carries. */
   share: number;
   grip: "hang" | "press" | "rest";
+  /**
+   * A second hand on the same rigid thing: a barbell, a cable bar. The load then acts on the bar, midway between
+   * the two anchors, and the hands share it however keeps the bar balanced. That lets them push or pull along the
+   * bar as far as their grip holds, which is how a wide grip hangs from straight arms and a bench press spreads
+   * the bar.
+   */
+  with?: string;
+  /** How far toward the pulley the cable's eye sits from the line between the two hands, in metres. */
+  eye?: number;
+  /**
+   * The cable's length from the pulley to its eye with the weight stack on its pin. Shorter than this the cable is
+   * slack and pulls nothing, whatever weight is selected.
+   */
+  rest?: number;
   /** World-space cable pulley or band anchor point that pulls on this body anchor. */
   pulley?: Vec3;
   /** Fixed world-space force direction (normalized internally). Overrides gravity when set. */
@@ -195,6 +210,18 @@ export interface Built {
   extraStart: number[];
   goals: Goal[];
   keyGoals: { start: Goal[]; end: Goal[] };
+  /**
+   * Pose the rep by least muscle effort: the goals say only what the lifter touches, holds and has to reach, and
+   * every pose between is whatever costs the muscles least under the load while the task moves from the start key
+   * to the end key. Without it the poses are a blend of the two keys, pulled onto the goals.
+   */
+  effort?: boolean;
+  /**
+   * What the lifter holds still through an effort-posed rep, each as a number read off the pose: a torso's lean,
+   * a stance. Least effort picks the value, once for the whole rep, where a pose left to itself would drift to
+   * whatever is cheapest at each instant.
+   */
+  steady?: ((frame: Frame) => number)[];
   /** Pull toward the reference pose per `joint` or `joint.motion`, in residual units per radian. */
   stiffness: Record<string, number>;
   obstacles: Obstacle[];
@@ -292,6 +319,28 @@ export interface Generated {
 }
 
 const SAMPLES = 32;
+/** How many poses an effort-posed rep is solved at between its two keys. */
+const KNOTS = 12;
+/**
+ * How many times every knot is relaxed toward its neighbours at most, sweeping one way and then the other. The
+ * path closes about a twelfth of what is left each pass, so a pulldown settles in about 25.
+ */
+const RELAXATIONS = 30;
+/** The path has settled once a sweep each way moves no joint of any knot by more than this, in radians. */
+const SETTLED = 0.01;
+/** What a radian away from the knot before costs while the path is first grown, which only keeps it in one piece. */
+const PATH_CONTINUITY = 0.3;
+/** How many scattered postures an effort-posed key is also solved from, and how far each joint is scattered, in radians. */
+const KEY_STARTS = 8;
+const KEY_SCATTER = 0.25;
+/** How many times an effort-posed solve starts again from where it stalled. */
+const RESTARTS = 4;
+/** What a radian of bend in the path at a knot costs, against the effort of a muscle working flat out. */
+const PATH_SMOOTHNESS = 12;
+/** What a unit off its held value costs something the lifter keeps steady through the rep. */
+const STEADY_WEIGHT = 40;
+/** What a metre or a radian of miss on the task's progress costs at a knot. */
+const TASK_WEIGHT = 300;
 export const FPS = 30;
 
 function priorWeights(
@@ -349,6 +398,9 @@ function assertSpecInputs(spec: ExerciseSpec, built: Built, body: Body) {
   for (const load of built.loads) {
     if (!body.anchors[load.anchor]) {
       throw new Error(`${spec.id}: unknown load anchor "${load.anchor}".`);
+    }
+    if (load.with !== undefined && !body.anchors[load.with]) {
+      throw new Error(`${spec.id}: unknown load anchor "${load.with}".`);
     }
     if (!Number.isFinite(load.share) || load.share < 0) {
       throw new Error(`${spec.id}: invalid load share ${load.share} on ${load.anchor}.`);
@@ -464,19 +516,85 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
   };
 
   const free = priorWeights(body, built.stiffness, built.extras, 0);
-  const solveKey = (hints: PoseHints, goals: Goal[], extraSeed = built.extraStart, label = "key") => {
+  const seedOnly = new Float64Array(n + built.extras).fill(0.02);
+  const everyPose = built.effort
+    ? [
+        ...built.goals,
+        ...cablesTaut(body, built.loads),
+        ...handsAlongLoads(body, built.loads),
+        leastEffort(body, built, spec.defaultLoadKg),
+      ]
+    : built.goals;
+  // Muscle effort has creases where a muscle switches on or a contact lets go, and a solve can stall on one. Starting
+  // again from where it stalled gets it across, so an effort-posed solve repeats until it stops finding anything.
+  const settleFrom = (seed: Float64Array, options: Parameters<typeof solve>[2]) => {
+    let best = solve(body, seed, options);
+    for (let again = 0; built.effort && again < RESTARTS; again++) {
+      const next = solve(body, best.q, options);
+      const gained = best.cost - next.cost;
+      if (next.cost < best.cost) best = next;
+      if (gained < 1e-4 * (1 + best.cost)) break;
+    }
+    return best;
+  };
+  // A posture is a basin, and the nearest one is not always the cheapest: hanging back off a cable on the lower
+  // back and reaching forward to it on the lats are both places a solve can come to rest. Trying the neighbouring
+  // knots' postures as starting points lets the cheaper one spread along the path.
+  const settle = (seed: Float64Array, options: Parameters<typeof solve>[2], others: Float64Array[] = []) => {
+    let best = settleFrom(seed, options);
+    for (const other of others) {
+      // A start can be a posture some goal refuses outright, such as a bar turned end-on to an overhand grip.
+      let tried: ReturnType<typeof settleFrom>;
+      try {
+        tried = settleFrom(other, options);
+      } catch {
+        continue;
+      }
+      if (tried.cost < best.cost * (1 - 1e-3)) best = tried;
+    }
+    return best.q;
+  };
+  const solveKey = (
+    hints: PoseHints,
+    goals: Goal[],
+    extraSeed = built.extraStart,
+    label = "key",
+    seed?: Float64Array,
+  ) => {
     const prior = withExtras(makePose(body, hints), extraSeed);
-    const res = solve(body, prior, {
-      goals: [...built.goals, ...goals],
-      prior,
-      priorWeights: free,
-      selfPairs,
-      obstacles: built.obstacles,
-      movingObstacles,
-      iterations: 150,
-    });
-    assertFiniteArray(`${spec.id} ${label} pose`, res.q);
-    return res.q;
+    // An effort-posed key takes its hints as a place to start and nothing more, and starts from several postures
+    // scattered around them: the hinted one may sit in a costlier basin than its neighbour. The scatter is the
+    // same every run.
+    const scattered: Float64Array[] = [];
+    if (built.effort) {
+      let state = 0x9e3779b9;
+      const random = () => {
+        state = (state + 0x6d2b79f5) | 0;
+        let v = Math.imul(state ^ (state >>> 15), 1 | state);
+        v = (v + Math.imul(v ^ (v >>> 7), 61 | v)) ^ v;
+        return ((v ^ (v >>> 14)) >>> 0) / 4294967296;
+      };
+      for (let s = 0; s < KEY_STARTS; s++) {
+        const other = Float64Array.from(seed ?? prior);
+        for (let d = 3; d < n; d++) other[d] += (random() * 2 - 1) * (d < 6 ? KEY_SCATTER / 3 : KEY_SCATTER);
+        scattered.push(other);
+      }
+    }
+    const solved = settle(
+      seed ?? prior,
+      {
+        goals: [...everyPose, ...goals],
+        prior,
+        priorWeights: built.effort ? seedOnly : free,
+        selfPairs,
+        obstacles: built.obstacles,
+        movingObstacles,
+        iterations: 150,
+      },
+      scattered,
+    );
+    assertFiniteArray(`${spec.id} ${label} pose`, solved);
+    return solved;
   };
 
   let start: Float64Array;
@@ -616,7 +734,84 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
     const hasProgressSpan = !built.isometric && Math.abs(to - from) > 0.015;
 
     const samples: Float64Array[] = [];
-    for (let i = 0; i <= SAMPLES; i++) {
+    if (built.effort) {
+      // Each knot holds the task at its share of the way from the start to the end and is otherwise free to take
+      // the cheapest pose. Relaxing every knot toward the midpoint of its neighbours, forward then back, is what
+      // makes the path one motion: a knot alone would jump to a cheaper posture the moment the task allowed it.
+      const smooth = new Float64Array(n + built.extras).fill(PATH_SMOOTHNESS);
+      smooth.fill(200, n);
+      const taskAt = (k: number): Goal => {
+        const target = from + ((to - from) * k) / KNOTS;
+        return ({ frame, push }) => push(TASK_WEIGHT * (built.progress(frame) - target));
+      };
+      const loose = new Float64Array(n + built.extras).fill(PATH_CONTINUITY);
+      loose.fill(200, n);
+      const steady = built.steady ?? [];
+      const held = steady.map(() => 0);
+      const holdSteady: Goal = ({ frame, push }) =>
+        steady.forEach((read, i) => push(STEADY_WEIGHT * (read(frame) - held[i])));
+      const relax = (
+        k: number,
+        seed: Float64Array,
+        prior: Float64Array,
+        weights = smooth,
+        hold = true,
+        others: Float64Array[] = [],
+      ) => {
+        path(k / KNOTS, startExtras, endExtras).forEach((value, e) => (prior[n + e] = value));
+        const ends = k === 0 ? built.keyGoals.start : k === KNOTS ? built.keyGoals.end : [taskAt(k)];
+        const solved = settle(
+          seed,
+          {
+            goals: [...everyPose, ...ends, ...(hold ? [holdSteady] : [])],
+            prior,
+            priorWeights: weights,
+            selfPairs,
+            obstacles: built.obstacles,
+            movingObstacles,
+          },
+          others,
+        );
+        assertFiniteArray(`${spec.id} knot[${k}]`, solved);
+        return solved;
+      };
+      // Each knot starts from the one before it and is held to it only loosely, so the path grows out of the start
+      // pose in one piece and each knot finds its own cheapest posture. A blend of the two keys' joint angles
+      // would start the middle of the rep somewhere no lifter passes through.
+      samples.push(start);
+      for (let k = 1; k < KNOTS; k++)
+        samples.push(relax(k, samples[k - 1], Float64Array.from(samples[k - 1]), loose, false));
+      // The end key is solved again from where the path arrives, so the path and its end are the same posture.
+      end = solveKey(built.hints.end, built.keyGoals.end, built.extraStart, "end", samples[KNOTS - 1]);
+      samples.push(end);
+      let moved = [Infinity, Infinity];
+      for (let pass = 0; pass < RELAXATIONS && Math.max(...moved) > SETTLED; pass++) {
+        const before = samples.map((pose) => Float64Array.from(pose));
+        // What is held steady is held at its average over the path so far, which settles as the passes go on.
+        steady.forEach((read, i) => {
+          held[i] = samples.reduce((sum, pose) => sum + read(fk(body, pose, scratch)), 0) / samples.length;
+        });
+        for (let i = 0; i <= KNOTS; i++) {
+          const k = pass % 2 === 0 ? i : KNOTS - i;
+          // The two ends are the task itself: they answer to their own goals and to what is held steady, and the
+          // path between is what bends to meet them.
+          if (k === 0 || k === KNOTS) {
+            const inward = samples[k === 0 ? 1 : KNOTS - 1];
+            samples[k] = relax(k, samples[k], Float64Array.from(samples[k]), loose, true, pass < 2 ? [inward] : []);
+            continue;
+          }
+          const middle = Float64Array.from(samples[k - 1], (value, d) => (value + samples[k + 1][d]) / 2);
+          const came = samples[pass % 2 === 0 ? k - 1 : k + 1];
+          samples[k] = relax(k, samples[k], middle, smooth, true, pass < 2 ? [came] : []);
+        }
+        let most = 0;
+        samples.forEach((pose, k) => pose.forEach((value, d) => (most = Math.max(most, Math.abs(value - before[k][d])))));
+        moved = [moved[1], most];
+      }
+      start = samples[0];
+      end = samples[KNOTS];
+    }
+    for (let i = 0; !built.effort && i <= SAMPLES; i++) {
       const uTarget = i / SAMPLES;
       let u = uTarget;
       if (hasProgressSpan) {
@@ -644,14 +839,15 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
       samples.push(solved);
     }
 
+    const last = samples.length - 1;
     const poseAt = (u: number) => {
-      const x = Math.min(Math.max(u, 0), 1) * SAMPLES;
-      const i = Math.min(Math.floor(x), SAMPLES - 1);
+      const x = Math.min(Math.max(u, 0), 1) * last;
+      const i = Math.min(Math.floor(x), last - 1);
       const t = x - i;
       const p0 = samples[Math.max(i - 1, 0)];
       const p1 = samples[i];
       const p2 = samples[i + 1];
-      const p3 = samples[Math.min(i + 2, SAMPLES)];
+      const p3 = samples[Math.min(i + 2, last)];
       return Float64Array.from(p1, (_, d) => catmullRom(p0[d], p1[d], p2[d], p3[d], t));
     };
 

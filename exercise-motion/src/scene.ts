@@ -51,6 +51,10 @@ export interface SceneBodyPlan {
   extraStart?: number[];
   goals: Goal[];
   keyGoals: { start: Goal[]; end: Goal[] };
+  /** Pose the rep by least muscle effort (see `Built.effort`). */
+  effort?: boolean;
+  /** What the lifter holds still through an effort-posed rep (see `Built.steady`). */
+  steady?: ((frame: Frame) => number)[];
   stiffness: Record<string, number>;
   path?: (s: number, start: number[], end: number[]) => number[];
   progress: (frame: Frame) => number;
@@ -225,6 +229,8 @@ export function composeExercise(config: ComposeExerciseConfig): ExerciseSpec {
         extraStart: plan.extraStart ?? [],
         goals: [...plan.goals, ...stops],
         keyGoals: plan.keyGoals,
+        effort: plan.effort,
+        steady: plan.steady,
         stiffness: plan.stiffness,
         obstacles,
         path: plan.path,

@@ -1,5 +1,5 @@
 import { Quaternion, Vector3 } from "three";
-import { SIDES, sideSign, worldPoint, type Anchor, type Body } from "./body";
+import { SIDES, sideSign, worldPoint, type Anchor, type Angles, type Body, type Frame } from "./body";
 import { footContact, type Contact, type Kinematics, type Sequence } from "./exercise";
 import { solveBounded, type SparseColumn } from "./least-squares";
 import { clamp, rotVecFromQuat, type Vec3 } from "./math";
@@ -54,6 +54,8 @@ const ACTIVATION_TIME = { rise: 0.015, fall: 0.06 };
 const LOCKED = (3 * Math.PI) / 180;
 const UNLOCKED = (12 * Math.PI) / 180;
 const STOP_TORQUE = 150;
+/** How far a cable pays out past its resting length, in metres, before it carries the whole stack. */
+const SLACK = 0.02;
 /** A fixed handle takes a fifth of a push through the palm to keep hold of, and all of a pull along the fingers. */
 const PRESS_GRIP = 0.2;
 
@@ -80,11 +82,32 @@ export interface Analysis {
   /** Per frame, the joint motions whose torque the modelled muscles could not meet, as a fraction of their capacity. */
   unmet: { dof: string; fraction: number }[][];
   demands: Record<string, number>[];
+  /** Per frame, the rate at which the muscles do work, in watts: positive is the lifting half of the rep. */
+  power: number[];
   /** Per frame, what each contact point is pushed with, in newtons. */
   reactions: { anchor: string; force: Vec3 }[][];
 }
 
 const ACTUATORS = createActuators();
+
+/** What the forces on a lifter depend on besides the pose: the loads carried and what holds the lifter up. */
+export type Setup = Pick<Sequence, "loads" | "support">;
+
+/** One pose's forces, solved: how hard each muscle works and what every contact pushes with. */
+export interface Statics {
+  /** Per muscle in `MUSCLES` order, the left side then the right. */
+  activation: Float32Array;
+  /** Per torque generator, which is what a pose solve minimises. */
+  levels: Float64Array;
+  /** Per joint motion, the torque the muscles could not meet as a share of that motion's capacity. */
+  shortfall: Float64Array;
+  unmet: { dof: string; fraction: number }[];
+  demands: Record<string, number>;
+  /** The rate, in watts, at which the muscles do work: positive while they lift, negative while they lower. */
+  power: number;
+  reactions: { anchor: string; force: Vec3 }[];
+  support: FrameSupport | null;
+}
 
 /** One joint motion a muscle can turn: the world direction its torque is read along, and what it turns against. */
 interface Motion {
@@ -106,6 +129,8 @@ interface Push {
   apart: boolean;
   /** The limb a held weight rests against, which is pushed back as hard as it pushes: its joint, length and reach. */
   limb?: { joint: number; length: number; within: number };
+  /** One hand's push from a bar two hands share: which load, along which of the bar's own axes, and its balance rows. */
+  held?: { load: number; axis: number; sign: number; row: number };
   column: number;
   /** Direction in the world for a surface, or in the hand's own frame for a handle. */
   direction: Vector3;
@@ -124,7 +149,7 @@ interface Push {
 }
 
 /** The contacts that hold the body up when a spec lists none: the feet when standing, the hands when hanging. */
-export function contactsOf(sequence: Sequence): Contact[] {
+export function contactsOf(sequence: Setup): Contact[] {
   const { support } = sequence;
   if (support.contacts) return support.contacts;
   if (support.kind === "standing")
@@ -134,7 +159,7 @@ export function contactsOf(sequence: Sequence): Contact[] {
   return [];
 }
 
-const carriesItself = (sequence: Sequence) =>
+const carriesItself = (sequence: Setup) =>
   sequence.support.kind === "standing" ||
   sequence.support.kind === "hanging" ||
   sequence.support.kind === "planted";
@@ -255,6 +280,64 @@ export function analyze(
   loadKg = sequence.loadKg,
 ): Analysis {
   const frames = kin.frames.length;
+  const anchors = sequence.loads.map((load) => body.anchors[load.anchor]);
+  const points = kin.frames.map((frame) => [
+    ...body.segments.map((segment) => worldPoint(frame, segment.joint, segment.com)),
+    ...anchors.map((anchor) => worldPoint(frame, anchor.joint, anchor.local)),
+  ]);
+  const accel = accelerations(points, sequence.fps);
+  const spin = spins(kin, sequence.fps);
+  const solve = statics(body, sequence, loadKg);
+
+  const activation: Float32Array[] = [];
+  const stretch: Float32Array[] = [];
+  const tendon: Float32Array[] = [];
+  const support: (FrameSupport | null)[] = [];
+  const unmet: { dof: string; fraction: number }[][] = [];
+  const demands: Record<string, number>[] = [];
+  const power: number[] = [];
+  const reactions: { anchor: string; force: Vec3 }[][] = [];
+  for (let f = 0; f < frames; f++) {
+    const solved = solve(kin.frames[f], kin.angles[f], { accel: accel[f], spin: spin[f] });
+    activation.push(Float32Array.from(solved.activation));
+    unmet.push(solved.unmet);
+    demands.push(solved.demands);
+    power.push(solved.power);
+    reactions.push(solved.reactions);
+    support.push(solved.support);
+    const str = new Float32Array(MUSCLES.length * 2);
+    MUSCLES.forEach((muscle, m) => {
+      SIDES.forEach((side, s) => (str[m * 2 + s] = stretchOf(muscle, kin.angles[f], side)));
+    });
+    stretch.push(str);
+  }
+
+  smoothActivation(activation, sequence.fps);
+  activation.forEach((act, f) =>
+    tendon.push(Float32Array.from(act, (level, k) => level + passiveForce(stretch[f][k]))),
+  );
+
+  const peak = {} as Analysis["peak"];
+  MUSCLES.forEach((muscle, m) => {
+    const top = (rows: Float32Array[]) =>
+      Math.max(...rows.map((row) => Math.max(row[m * 2], row[m * 2 + 1])));
+    peak[muscle] = {
+      activation: top(activation),
+      stretch: top(stretch),
+      tendon: top(tendon),
+      strainPercent: top(tendon) * TENDON_STRAIN_AT_PEAK,
+    };
+  });
+  return { loadKg, activation, stretch, tendon, peak, support, unmet, demands, power, reactions };
+}
+
+/**
+ * Sets up the forces on a lifter for one exercise and returns the solve for a single pose: its joint torques, the
+ * contact forces that balance it and the muscle activations that hold it. `motion` adds what moving costs, each
+ * mass's acceleration and each joint's spin; without it the pose is held still. The solve remembers its last
+ * answer, so poses close to one another are cheap.
+ */
+export function statics(body: Body, sequence: Setup, loadKg: number) {
   const weight = body.mass * G;
   const ancestors = body.joints.map((joint) => {
     const chain: number[] = [];
@@ -266,16 +349,14 @@ export function analyze(
     ...body.segments.map((segment) => segment.mass),
     ...sequence.loads.map((load) => load.share * loadKg),
   ];
-  const points = kin.frames.map((frame) => [
-    ...body.segments.map((segment) => worldPoint(frame, segment.joint, segment.com)),
-    ...loadAnchors.map((anchor) => worldPoint(frame, anchor.joint, anchor.local)),
-  ]);
+  const locals = [
+    ...body.segments.map((segment) => segment.com),
+    ...loadAnchors.map((anchor) => anchor.local),
+  ];
   const joints = [
     ...body.segments.map((segment) => segment.joint),
     ...loadAnchors.map((anchor) => anchor.joint),
   ];
-  const accel = accelerations(points, sequence.fps);
-  const spin = spins(kin, sequence.fps);
   const passive = new Set(sequence.support.passive ?? []);
   const isPassive = (name: string) => passive.has(name) || passive.has(name.replace(/_[LR]$/, ""));
 
@@ -302,6 +383,13 @@ export function analyze(
   const balanceRow = torqueRows;
   let rowCount = torqueRows + (free ? 6 : 0);
   const pressRow = contacts.map((contact) => (contact.share === undefined ? -1 : rowCount++));
+  // A bar in two hands has to balance too: the forces on it add up to nothing, and so do their moments.
+  const barRow = sequence.loads.map((load) => (load.with === undefined ? -1 : (rowCount += 6) - 6));
+  const bars = sequence.loads.map(() => ({
+    eye: new Vector3(),
+    force: new Vector3(),
+    axes: [new Vector3(), new Vector3(), new Vector3()],
+  }));
 
   const pushes: Push[] = [];
   const addPush = (
@@ -371,6 +459,14 @@ export function analyze(
       within: lean.within,
     };
   }
+  sequence.loads.forEach((load, i) => {
+    if (load.with === undefined) return;
+    const grip = load.grip === "hang" ? 1 : load.grip === "press" ? PRESS_GRIP : 0;
+    for (const anchor of [load.anchor, load.with])
+      for (let axis = 0; axis < 3; axis++)
+        for (const sign of [1, -1])
+          pushes[addPush(anchor, new Vector3(), -1, 0, false, grip)].held = { load: i, axis, sign, row: barRow[i] };
+  });
   for (const [a, b] of sequence.support.bars ?? []) {
     addPush(a, new Vector3(), -1, 0, false, 0, b);
     addPush(a, new Vector3(), -1, 0, false, 0, b, true);
@@ -412,6 +508,7 @@ export function analyze(
     // Equal and opposite pushes between two parts of the body add up to nothing on the body as a whole.
     if (free && ends.length === 1) for (let i = 0; i < 6; i++) rows.push(balanceRow + i);
     if (push.contact >= 0 && pressRow[push.contact] >= 0) rows.push(pressRow[push.contact]);
+    if (push.held) for (let i = 0; i < 6; i++) rows.push(push.held.row + i);
     if (push.grip > 0) {
       const side = push.anchor.endsWith("_L") ? "L" : push.anchor.endsWith("_R") ? "R" : null;
       if (side) rows.push(rowIndex.get(`grip_${side}`)!);
@@ -438,15 +535,10 @@ export function analyze(
   const state = new Int8Array(n).fill(-1);
   const problem = { columns, target, weight: rowWeight, ridge, lo, hi };
 
-  const activation: Float32Array[] = [];
-  const stretch: Float32Array[] = [];
-  const tendon: Float32Array[] = [];
-  const support: (FrameSupport | null)[] = [];
-  const unmet: { dof: string; fraction: number }[][] = [];
-  const demandsOut: Record<string, number>[] = [];
-  const reactions: { anchor: string; force: Vec3 }[][] = [];
-
   const axes = rowNames.map(() => new Vector3());
+  const shortfall = new Float64Array(torqueRows);
+  const still = new Vector3();
+  const at = new Vector3();
   const rate = new Float64Array(torqueRows);
   const known = new Float64Array(torqueRows);
   const demand = new Float64Array(torqueRows);
@@ -464,16 +556,19 @@ export function analyze(
   const heights = contacts.map((contact) => new Float64Array(contact.anchors.length));
   const anchorPoints = contacts.map((contact) => contact.anchors.map(() => new Vector3()));
 
-  for (let f = 0; f < frames; f++) {
-    const frame = kin.frames[f];
-    const angles = kin.angles[f];
+  return (
+    frame: Frame,
+    angles: Angles,
+    motion?: { accel: Vector3[]; spin: Vector3[] },
+    options: { cocontract?: boolean } = {},
+  ): Statics => {
     const root = frame.pos[0];
     for (const list of motions)
-      for (const motion of list) {
-        axes[motion.row].copy(motion.local).applyQuaternion(frame.rot[motion.frame]);
-        rate[motion.row] = arm
-          .subVectors(spin[f][motion.joint], spin[f][motion.reference])
-          .dot(axes[motion.row]);
+      for (const turned of list) {
+        axes[turned.row].copy(turned.local).applyQuaternion(frame.rot[turned.frame]);
+        rate[turned.row] = motion
+          ? arm.subVectors(motion.spin[turned.joint], motion.spin[turned.reference]).dot(axes[turned.row])
+          : 0;
       }
 
     known.fill(0);
@@ -481,19 +576,45 @@ export function analyze(
     netMoment.set(0, 0, 0);
     masses.forEach((mass, i) => {
       const load = sequence.loads[i - body.segments.length];
-      const at = points[f][i];
+      const moving = motion?.accel[i] ?? still;
+      worldPoint(frame, joints[i], locals[i], at);
+      const bar = load?.with === undefined ? null : bars[i - body.segments.length];
+      if (bar && load) {
+        // The load acts on the bar between the hands, or at the cable's eye, which sits toward the pulley.
+        const other = body.anchors[load.with!];
+        worldPoint(frame, other.joint, other.local, far);
+        bar.axes[0].subVectors(far, at).normalize();
+        at.add(far).multiplyScalar(0.5);
+        if (load.pulley && load.eye) {
+          force.set(load.pulley[0], load.pulley[1], load.pulley[2]).sub(at).normalize();
+          at.addScaledVector(force, load.eye);
+        }
+      }
+      let taut = 1;
       if (load?.pulley) {
         force.set(load.pulley[0], load.pulley[1], load.pulley[2]).sub(at);
+        if (load.rest !== undefined) taut = clamp((force.length() - load.rest) / SLACK, 0, 1);
         if (force.lengthSq() > 1e-8) force.normalize();
         else force.set(0, -1, 0);
-        force.multiplyScalar(mass * G);
+        force.multiplyScalar(mass * G * taut);
       } else if (load?.direction) {
         force.set(load.direction[0], load.direction[1], load.direction[2]);
         if (force.lengthSq() > 1e-8) force.normalize();
         else force.set(0, -1, 0);
         force.multiplyScalar(mass * G);
       } else {
-        force.set(-accel[f][i].x, -G - accel[f][i].y, -accel[f][i].z).multiplyScalar(mass);
+        force.set(-moving.x, -G - moving.y, -moving.z).multiplyScalar(mass);
+      }
+      if (bar) {
+        // The hands carry it, each with whatever push along and across the bar balances it. Across is measured
+        // from the load's own line, so a bar hanging from its hands is held by one push per hand.
+        bar.eye.copy(at);
+        bar.force.copy(force);
+        const along = bar.axes[0];
+        bar.axes[1].copy(force.lengthSq() > 1e-8 ? force : far.set(0, -1, 0));
+        bar.axes[1].addScaledVector(along, -bar.axes[1].dot(along)).normalize();
+        bar.axes[2].crossVectors(along, bar.axes[1]);
+        return;
       }
       for (const j of ancestors[joints[i]]) {
         moment.crossVectors(arm.subVectors(at, frame.pos[j]), force);
@@ -533,6 +654,8 @@ export function analyze(
       if (push.counter) {
         worldPoint(frame, push.counter.joint, push.counter.local, direction).sub(point).normalize();
         if (push.apart) direction.negate();
+      } else if (push.held) {
+        direction.copy(bars[push.held.load].axes[push.held.axis]).multiplyScalar(push.held.sign);
       } else if (push.limb) {
         // Square to the limb, from its axis out to the hand, and only while the hand is alongside it and close.
         const { joint, length, within } = push.limb;
@@ -580,7 +703,23 @@ export function analyze(
       }
       if (push.contact >= 0 && pressRow[push.contact] >= 0)
         values[e++] = direction.dot(normals[push.contact]) / weight;
+      if (push.held) {
+        const bar = bars[push.held.load];
+        moment.crossVectors(arm.subVectors(point, bar.eye), direction);
+        values[e++] = direction.x / weight;
+        values[e++] = direction.y / weight;
+        values[e++] = direction.z / weight;
+        values[e++] = moment.x / (weight * LEVER);
+        values[e++] = moment.y / (weight * LEVER);
+        values[e++] = moment.z / (weight * LEVER);
+      }
       if (e < rows.length) values[e++] = -push.grip * direction.length();
+      if (push.held) {
+        // Along the bar a hand holds by friction, a share of what it carries; across it, as much as the load asks.
+        const carried = bars[push.held.load].force.length() / weight;
+        hi[push.column] = push.held.axis === 0 ? (FRICTION * carried) / 2 : 2 * carried;
+        continue;
+      }
       if (push.contact < 0) {
         hi[push.column] = (0.5 * masses[body.segments.length] * G) / weight;
         continue;
@@ -608,6 +747,13 @@ export function analyze(
     contacts.forEach((contact, c) => {
       if (pressRow[c] >= 0) target[pressRow[c]] = ((contact.share ?? 0) * loadKg * G) / weight;
     });
+    barRow.forEach((row, i) => {
+      if (row < 0) return;
+      target[row] = bars[i].force.x / weight;
+      target[row + 1] = bars[i].force.y / weight;
+      target[row + 2] = bars[i].force.z / weight;
+      target[row + 3] = target[row + 4] = target[row + 5] = 0;
+    });
 
     const settle = () => {
       demand.set(known);
@@ -633,25 +779,25 @@ export function analyze(
       for (const { actuator, entry } of opposers[row])
         if (columns[actuator].values[entry] * demand[row] < 0) lo[actuator] = Math.max(lo[actuator], level);
     }
-    solveBounded(problem, x, state);
+    if (options.cocontract !== false) solveBounded(problem, x, state);
     settle();
 
     const short: { dof: string; fraction: number }[] = [];
+    shortfall.fill(0);
     for (let row = 0; row < torqueRows; row++) {
       if (!held[row] || secondary[row]) continue;
       let supplied = 0;
       for (const { actuator, entry } of opposers[row]) supplied += x[actuator] * columns[actuator].values[entry];
-      const fraction = Math.abs(supplied - demand[row]) / rowScale[row];
+      shortfall[row] = (supplied - demand[row]) / rowScale[row];
+      const fraction = Math.abs(shortfall[row]);
       if (fraction > 0.06) short.push({ dof: rowNames[row], fraction });
     }
-    unmet.push(short);
-    demandsOut.push(Object.fromEntries(rowNames.map((name, row) => [name, demand[row]])));
 
     const pushed = new Map<string, Vector3>();
     let rail = 0;
     for (const push of pushes) {
       if (x[push.column] === 0) continue;
-      if (push.contact < 0 && !push.counter && !push.limb) rail += push.world.z * x[push.column];
+      if (push.contact < 0 && !push.counter && !push.limb && !push.held) rail += push.world.z * x[push.column];
       else
         pushed.set(
           push.anchor,
@@ -663,43 +809,25 @@ export function analyze(
           (pushed.get(`${push.anchor} across`) ?? new Vector3()).addScaledVector(push.world, -x[push.column]),
         );
     }
-    reactions.push([...pushed].map(([anchor, total]) => ({ anchor, force: [total.x, total.y, total.z] })));
-    support.push(
-      sequence.support.kind === "standing"
-        ? balance(net, netMoment, root, contacts, anchorPoints, heights, rail)
-        : null,
-    );
-
     const act = new Float32Array(MUSCLES.length * 2);
     ACTUATORS.forEach((actuator, i) => {
       const slot = MUSCLES.indexOf(actuator.muscle) * 2 + (actuator.side === "L" ? 0 : 1);
       act[slot] = Math.max(act[slot], x[i]);
     });
-    const str = new Float32Array(MUSCLES.length * 2);
-    MUSCLES.forEach((muscle, m) => {
-      SIDES.forEach((side, s) => (str[m * 2 + s] = stretchOf(muscle, angles, side)));
-    });
-    activation.push(act);
-    stretch.push(str);
-  }
-
-  smoothActivation(activation, sequence.fps);
-  activation.forEach((act, f) =>
-    tendon.push(Float32Array.from(act, (level, k) => level + passiveForce(stretch[f][k]))),
-  );
-
-  const peak = {} as Analysis["peak"];
-  MUSCLES.forEach((muscle, m) => {
-    const top = (rows: Float32Array[]) =>
-      Math.max(...rows.map((row) => Math.max(row[m * 2], row[m * 2 + 1])));
-    peak[muscle] = {
-      activation: top(activation),
-      stretch: top(stretch),
-      tendon: top(tendon),
-      strainPercent: top(tendon) * TENDON_STRAIN_AT_PEAK,
+    return {
+      activation: act,
+      levels: x.subarray(0, ACTUATORS.length),
+      shortfall,
+      unmet: short,
+      demands: Object.fromEntries(rowNames.map((name, row) => [name, demand[row]])),
+      power: demand.reduce((sum, torque, row) => sum + torque * rate[row], 0),
+      reactions: [...pushed].map(([anchor, total]) => ({ anchor, force: [total.x, total.y, total.z] as Vec3 })),
+      support:
+        sequence.support.kind === "standing"
+          ? balance(net, netMoment, root, contacts, anchorPoints, heights, rail)
+          : null,
     };
-  });
-  return { loadKg, activation, stretch, tendon, peak, support, unmet, demands: demandsOut, reactions };
+  };
 }
 
 /** First-order activation dynamics over the looping rep, so effort ramps the way a muscle can, not frame to frame. */

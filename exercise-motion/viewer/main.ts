@@ -114,8 +114,12 @@ glbLoader.setMeshoptDecoder(MeshoptDecoder);
 const params = new URLSearchParams(location.hash.slice(1));
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-const ENGAGE = new Color("#276ef1");
-const STRETCH = new Color("#f0883a");
+// Each ramp starts at the resting plate and climbs in both hue and lightness, so two muscles a fifth apart read as
+// different colours and not two shades of one blue.
+const ENGAGE_STOPS = ["#4a4a4a", "#34508f", "#276ef1", "#35c3ff", "#f1fdff"];
+const STRETCH_STOPS = ["#4a4a4a", "#7c4a2b", "#f0883a", "#ffcb7d", "#fff4dc"];
+const ENGAGE = ENGAGE_STOPS.map((stop) => new Color(stop));
+const STRETCH = STRETCH_STOPS.map((stop) => new Color(stop));
 const TABS = ["Muscles", "Tendons", "Review"] as const;
 const VIEWS = ["Front", "Back", "Side", "Angle", "Top"] as const;
 const MODES = ["Engagement", "Stretch"] as const;
@@ -789,8 +793,8 @@ function renderPanel() {
     .join("");
   $("legend").innerHTML =
     state.mode === "Engagement"
-      ? `<span>At rest</span><i style="background:linear-gradient(90deg,#5b5b60,#276ef1)"></i><span>Hardest this rep</span>`
-      : `<span>Slack</span><i style="background:linear-gradient(90deg,#5b5b60,#f0883a)"></i><span>End of range</span>`;
+      ? `<span>At rest</span><i style="background:linear-gradient(90deg,${ENGAGE_STOPS.join(",")})"></i><span>Hardest this rep</span>`
+      : `<span>Slack</span><i style="background:linear-gradient(90deg,${STRETCH_STOPS.join(",")})"></i><span>End of range</span>`;
   lastShown = -1;
 }
 
@@ -868,15 +872,14 @@ function draw(now: number) {
   frameA.value ??= newFrame(body);
   figure.pose(fk(body, pose.value, frameA.value));
   const shown = Math.round(state.frame) % count;
-  if (state.mode === "Engagement") {
-    for (let k = 0; k < engagement.length; k++) {
-      const a = analysis.activation[i][k];
-      engagement[k] = (a + (analysis.activation[j][k] - a) * t) / hardest;
-    }
-    figure.tint(engagement, ENGAGE);
-  } else {
-    figure.tint(analysis.stretch[shown], STRETCH);
+  // Blended between frames like the pose, so slow playback fades instead of stepping.
+  const rows = state.mode === "Engagement" ? analysis.activation : analysis.stretch;
+  const scale = state.mode === "Engagement" ? hardest : 1;
+  for (let k = 0; k < engagement.length; k++) {
+    const a = rows[i][k];
+    engagement[k] = (a + (rows[j][k] - a) * t) / scale;
   }
+  figure.tint(engagement, state.mode === "Engagement" ? ENGAGE : STRETCH);
   props.children.forEach((group, p) => {
     const a = sequence.propStates[i][p];
     const b = sequence.propStates[j][p];

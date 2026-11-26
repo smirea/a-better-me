@@ -364,9 +364,9 @@ def lat_pulldown():
     # Column with the stack.
     col_z = 0.50
     travel, stack_top = A.stack_tower(m, 0, col_z, -1, "stack", height=2.10, plates=15, part="column")
-    # The cable drops over the thigh rollers, in front of the lifter. Leaning back to bring the bar to the chest then
-    # puts the cable's line through the hips, so the pull hangs the torso instead of prying it backward.
-    pulley_z = -0.12
+    # The cable drops about a hand's breadth in front of the seated lifter's hips, as on the machine in the catalog's
+    # photos, so arms reaching overhead meet a cable that hangs plumb over the hips and pulls nothing forward.
+    pulley_z = -0.26
     m.beam((0, 2.17, col_z + 0.12), (0, 2.17, pulley_z - 0.04), 0.09, 0.09, part="boom")
     m.beam((0, 1.55, col_z - 0.13), (0, 2.12, col_z - 0.13), 0.06, 0.06)
     A.sheave(m, (0, 2.10, col_z), (1, 0, 0), 0.05)

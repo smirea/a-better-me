@@ -2,8 +2,8 @@ import { Vector3 } from "three";
 import { anchorPoint, clavicleRhythm, SIDES, worldPoint, type Body, type Frame } from "../body";
 import { everyFrame } from "../checks";
 import type { CheckContext, FormCheck } from "../exercise";
-import { carryProp, graspProp, holdGrasp, keepGraspSpan } from "../grasp";
-import { deg, rad } from "../math";
+import { carryProp, graspProp, holdGrasp } from "../grasp";
+import { clamp, deg, rad } from "../math";
 import {
   cableAttachment,
   cableEyeAt,
@@ -12,107 +12,81 @@ import {
   propHandles,
 } from "../machines";
 import { plantBothFeet, sitOnSeat } from "../postures";
-import { lockTorsoPitch } from "../authoring";
 import { composeExercise } from "../scene";
-import { limbAlongForce, lockAngle, mirrored, restOnPlane, type Goal } from "../solver";
+import { lockAngle, mirrored, restOnPlane, type Goal } from "../solver";
 
 const LOAD_KG = 50;
 /** Thigh rollers lowered onto the seated thighs. */
 const THIGH_PAD = -0.05;
 /**
- * Cable length at the top, pulley to the bar's eye. The stack rests on its pin there and rises as the bar comes down.
+ * Cable length, pulley to the bar's eye, with the stack on its pin. The resting bar hangs above a seated lifter's
+ * reach: you stand to take it and sit down with the stack already lifted, so at the top of a rep the arms can be
+ * as straight and as upright as the lifter likes with the cable still loaded.
  */
-const REST_CABLE = 0.44;
+const REST_CABLE = 0.15;
+/**
+ * Half the grip width: the hands sit on the straight part of the bar at one and a half times shoulder width, as in
+ * the catalog's photos and the grip studies call wide (Andersen et al., 2014), not out on the cranked ends.
+ */
+const GRIP = 0.31;
 /** How far the cranked bar's eye rides above the grips. */
-const EYE_ABOVE_GRIPS = 0.05;
+const EYE_ABOVE_GRIPS = 0.07;
 const bar = cableAttachment("bar", "prop-lat-bar");
 const handles = propHandles("prop-lat-bar");
 
-function pitchGoal(targetDeg: number, weight: number): Goal {
-  const target = rad(targetDeg);
-  return ({ q, push }) => push(weight * (q[3] - target));
+/**
+ * Where the bar finishes: the upper chest, a band on the front of the ribcage from just under the collarbones down
+ * to the top of the breastbone's body, in the thorax's frame. Where in the band is the lifter's choice.
+ */
+const UPPER_CHEST = [new Vector3(0, 0.225, 0.135), new Vector3(0, 0.265, 0.12)];
+const bandLow = new Vector3();
+const bandHigh = new Vector3();
+/** The point of the upper chest level with a height in the world. */
+function upperChest(body: Body, frame: Frame, height: number, out = new Vector3()) {
+  worldPoint(frame, body.index.thoracic, UPPER_CHEST[0], bandLow);
+  worldPoint(frame, body.index.thoracic, UPPER_CHEST[1], bandHigh);
+  return out.lerpVectors(bandLow, bandHigh, clamp((height - bandLow.y) / (bandHigh.y - bandLow.y), 0, 1));
 }
-
-/** Where the bar finishes: the top of the chest under the collarbones, in the thorax's frame. */
-const UPPER_CHEST = new Vector3(0, 0.225, 0.135);
-const upperChest = (body: Body, frame: Frame, out = new Vector3()) =>
-  worldPoint(frame, body.index.thoracic, UPPER_CHEST, out);
 
 /** Pulls both hands of the wide grip to the upper chest, the bar just clear of it. End key only. */
 function handsAtChest(body: Body, weight: number): Goal {
   const hand = new Vector3();
   const chest = new Vector3();
   return ({ frame, push }) => {
-    upperChest(body, frame, chest);
     for (const side of SIDES) {
       anchorPoint(body, frame, `grip_${side}`, hand);
+      upperChest(body, frame, hand.y, chest);
       push(weight * (hand.y - chest.y));
       push(weight * (hand.z - (chest.z + 0.02)));
     }
   };
 }
 
-/**
- * Overhead, the hands sit on the line from the pulley down to the base of the spine, so the lifter hangs back off
- * the cable with little for the trunk to hold: further forward and the cable pries the torso back, further back
- * and it folds it forward. Start key only.
- */
-function handsOnCableLine(body: Body, pulley: readonly number[], weight: number): Goal {
-  const hand = new Vector3();
+const torsoUp = new Vector3();
+
+/** How far the torso leans back, in radians. */
+function torsoLean(body: Body, frame: Frame) {
+  torsoUp.set(0, 1, 0).applyQuaternion(frame.rot[body.index.thoracic]);
+  return Math.atan2(-torsoUp.z, torsoUp.y);
+}
+
+/** Holds the torso's backward lean inside a range of degrees, and leaves it alone there. */
+function leanWithin(body: Body, lo: number, hi: number, weight: number): Goal {
   return ({ frame, push }) => {
-    const base = frame.pos[body.index.lumbar];
-    for (const side of SIDES) {
-      anchorPoint(body, frame, `grip_${side}`, hand);
-      const along = (hand.y - base.y) / (pulley[1] - base.y);
-      push(weight * (hand.z - (base.z + along * (pulley[2] - base.z))));
-    }
+    const lean = deg(torsoLean(body, frame));
+    push(weight * rad(Math.max(0, lo - lean) + Math.max(0, lean - hi)));
   };
 }
 
-/** The cable is just taut with the stack on its pin: the bar hangs a cable's length under the pulley. Start key only. */
-function cableTaut(body: Body, pulley: readonly number[], weight: number): Goal {
-  const left = new Vector3();
-  const right = new Vector3();
-  return ({ frame, push }) => {
-    anchorPoint(body, frame, "grip_L", left);
-    anchorPoint(body, frame, "grip_R", right);
-    // The bar is cranked: its eye sits above and just in front of the line between the hands.
-    const y = (left.y + right.y) / 2 + EYE_ABOVE_GRIPS - pulley[1];
-    const z = (left.z + right.z) / 2 - pulley[2];
-    push(weight * (Math.hypot(y, z) - REST_CABLE));
-  };
-}
-
-/** Keeps a hand from slipping behind the chest. Zero once the hand is in front of it. */
-function notBehindChest(body: Body, weight: number): Goal {
+/** The bar stays in front of the upper chest: it can touch it and never pass into it. */
+function barClearOfChest(body: Body, weight: number): Goal {
   const hand = new Vector3();
   const chest = new Vector3();
   return ({ frame, push }) => {
-    anchorPoint(body, frame, "chestFront", chest);
     for (const side of SIDES) {
       anchorPoint(body, frame, `grip_${side}`, hand);
-      push(weight * Math.min(0, hand.z - chest.z));
-    }
-  };
-}
-
-/**
- * Brings both hands to the upper chest in step with the rep, not with the elbow angle. Gating on the elbow
- * made the pull bistable: once the elbow passed the threshold the pull snapped the arm the rest of the way,
- * and the two sides disagreed because both were scaled by the left elbow. The extra (q past the body) is the
- * rep phase, held by the sample prior, so the pull grows smoothly and the same amount on both sides.
- */
-function pullDownToChest(body: Body, weight: number): Goal {
-  const hand = new Vector3();
-  const chest = new Vector3();
-  return ({ frame, q, push }) => {
-    const t = Math.min(1, Math.max(0, q[body.dofCount] ?? 0));
-    const bend = t * t * (3 - 2 * t);
-    upperChest(body, frame, chest);
-    for (const side of SIDES) {
-      anchorPoint(body, frame, `grip_${side}`, hand);
-      push(weight * bend * (hand.y - chest.y));
-      push(weight * 1.5 * bend * (hand.z - (chest.z + 0.02)));
+      upperChest(body, frame, hand.y, chest);
+      push(weight * Math.min(0, hand.z - (chest.z + 0.02)));
     }
   };
 }
@@ -130,9 +104,9 @@ function claviclesWithArms(weight: number): Goal {
 /** How far the gripped part of the bar finishes from the upper chest. The bar is cranked, so its middle rides higher. */
 function barToChest(context: CheckContext, index: number): number {
   const frame = context.frames[index];
-  const chest = upperChest(context.body, frame);
   const left = anchorPoint(context.body, frame, "grip_L");
   const right = anchorPoint(context.body, frame, "grip_R");
+  const chest = upperChest(context.body, frame, (left.y + right.y) / 2);
   return Math.hypot((left.y + right.y) / 2 - chest.y, (left.z + right.z) / 2 - chest.z);
 }
 
@@ -153,13 +127,13 @@ const checks: FormCheck[] = [
     id: "arms-up",
     label: "Arms overhead, elbows straight",
     cue: "From this position, your elbows should be straight, with your arms overhead and slightly forward (rather than completely vertical).",
-    evaluate: ({ angles, top }) => {
+    evaluate: ({ body, frames, angles, top }) => {
       const a = angles[top];
       const elbow = Math.max(deg(a["elbow_L.flex"]), deg(a["elbow_R.flex"]));
-      const elev = Math.min(deg(a["shoulder_L.elev"]), deg(a["shoulder_R.elev"]));
+      const forward = Math.max(...SIDES.map((side) => armForward(body, frames[top], side)));
       return {
-        pass: elbow <= 15 && elev >= 130,
-        measured: `elbows ${elbow.toFixed(0)}°, arms ${elev.toFixed(0)}° up at the top`,
+        pass: elbow <= 15 && forward >= 5 && forward <= ARMS_FORWARD,
+        measured: `elbows ${elbow.toFixed(0)}°, arms ${forward.toFixed(0)}° forward of straight up at the top`,
       };
     },
   },
@@ -225,10 +199,23 @@ function frameY(body: Body, frame: Frame, joint: string): number {
   return frame.pos[body.index[joint]].y;
 }
 
-/** How far the torso leans back, in degrees: slight, and held. */
+/** The slight backward lean the instructions ask for, in degrees. Where in it the torso sits is the lifter's choice. */
+const LEAN_RANGE = [7, 17];
 const LEAN = 10;
+/**
+ * The most the arms reach forward of straight up at the top, in degrees, seen from the side. The cue is about the
+ * room, not the ribcage: measured against a leaned-back torso, the same arms read lower and get dragged behind
+ * the cable.
+ */
+const ARMS_FORWARD = 30;
+
+/** How far forward of straight up an arm points, in degrees, seen from the side. */
+function armForward(body: Body, frame: Frame, side: "L" | "R") {
+  const shoulder = frame.pos[body.index[`shoulder_${side}`]];
+  const grip = anchorPoint(body, frame, `grip_${side}`);
+  return deg(Math.atan2(grip.z - shoulder.z, grip.y - shoulder.y));
+}
 const SEAT_Z = 0.18;
-const ACROSS = new Vector3(1, 0, 0);
 
 const up = {
   "root.pitch": -LEAN - 1,
@@ -268,8 +255,8 @@ export const spec = composeExercise({
     const padL = machine.surfaces!.thigh_pad_L;
     const padR = machine.surfaces!.thigh_pad_R;
     const pulley = machine.pulleys!.pulley.pos;
-    const gL = graspProp("L", "bar", handles.grip_L);
-    const gR = graspProp("R", "bar", handles.grip_R);
+    const gL = graspProp("L", "bar", handles.grip);
+    const gR = graspProp("R", "bar", handles.grip);
     const cable = cableTether(
       "cable",
       machine as unknown as Parameters<typeof cableTether>[1],
@@ -298,20 +285,7 @@ export const spec = composeExercise({
         ...sitOnSeat(body, seat.origin[1], seat.origin[2] + SEAT_Z, 0.006, 400),
         restOnPlane(body, "thighFront_L", new Vector3(...padL.origin), new Vector3(...padL.normal), 50, 0.004),
         restOnPlane(body, "thighFront_R", new Vector3(...padR.origin), new Vector3(...padR.normal), 50, 0.004),
-        pitchGoal(-LEAN - 1, 90),
-        lockTorsoPitch(body, -LEAN, 220),
-        // The elbows stay under the bar, so each forearm hangs in line with the cable and the pull goes to the
-        // lats and elbow flexors, not into holding the forearms up.
-        ...SIDES.map((side) =>
-          limbAlongForce(
-            body,
-            `elbow_${side}`,
-            `grip_${side}`,
-            (hand) => new Vector3(hand.x, pulley[1], pulley[2]).sub(hand),
-            30,
-            ACROSS,
-          ),
-        ),
+        leanWithin(body, LEAN_RANGE[0], LEAN_RANGE[1], 300),
         lockAngle(body, "hip_L.flex", 92, 12),
         lockAngle(body, "hip_R.flex", 92, 12),
         lockAngle(body, "knee_L.flex", 78, 10),
@@ -319,47 +293,33 @@ export const spec = composeExercise({
         lockAngle(body, "ankle_L.dorsi", 2, 14),
         lockAngle(body, "ankle_R.dorsi", 2, 14),
         mirrored(body, 40),
-        notBehindChest(body, 28),
-        pullDownToChest(body, 110),
+        barClearOfChest(body, 300),
         claviclesWithArms(36),
-        ...holdGrasp(body, gL, ctx.live, { style: "overhand", weight: 90, align: 16, wrist: 9 }),
-        ...holdGrasp(body, gR, ctx.live, { style: "overhand", weight: 90, align: 16, wrist: 9 }),
-        keepGraspSpan(body, gL, gR, bar, 240),
-        lockAngle(body, "lumbar.flex", -3, 60),
-        lockAngle(body, "thoracic.flex", -3, 60),
+        ...holdGrasp(body, gL, ctx.live, { style: "overhand", weight: 90, align: 16, wrist: 1, at: GRIP }),
+        ...holdGrasp(body, gR, ctx.live, { style: "overhand", weight: 90, align: 16, wrist: 1, at: -GRIP }),
+        lockAngle(body, "lumbar.flex", -3, 20),
+        lockAngle(body, "thoracic.flex", -3, 20),
         lockAngle(body, "neck.flex", 0, 6),
-        lockAngle(body, "clavicle_L.prot", -14, 40),
-        lockAngle(body, "clavicle_R.prot", -14, 40),
       ],
+      effort: true,
+      steady: [(frame) => torsoLean(body, frame)],
       keyGoals: {
         start: [
-          handsOnCableLine(body, pulley, 220),
-          cableTaut(body, pulley, 220),
-          lockAngle(body, "elbow_L.flex", 6, 16),
-          lockAngle(body, "elbow_R.flex", 6, 16),
+          // "Arms overhead and slightly forward".
+          ({ frame, push }) => {
+            for (const side of SIDES)
+              push(120 * rad(Math.max(0, armForward(body, frame, side) - ARMS_FORWARD)));
+          },
+          lockAngle(body, "elbow_L.flex", 5, 30),
+          lockAngle(body, "elbow_R.flex", 5, 30),
         ],
         end: [
-          handsAtChest(body, 160),
+          handsAtChest(body, 300),
         ],
       },
-      stiffness: {
-        default: 2,
-        root: 24,
-        hip: 16,
-        knee: 10,
-        ankle: 4,
-        lumbar: 24,
-        thoracic: 24,
-        neck: 6,
-        clavicle: 14,
-        shoulder: 40,
-        elbow: 40,
-        forearm: 6,
-        wrist: 16,
-      },
-      extras: 1,
-      extraStart: [0],
-      path: (s) => [s],
+      stiffness: { default: 0.3, root: 0.3 },
+      extras: 0,
+      extraStart: [],
       progress: (frame) => -anchorPoint(body, frame, "grip_L").y,
       ground: "pelvisBottom",
       props: [bar],
@@ -368,10 +328,17 @@ export const spec = composeExercise({
       tethers: [cable.def],
       tetherState: (frame, extras, propStates) => [cable.state(frame, extras, propStates)],
       loads: [
-        { anchor: "grip_L", share: 0.5, grip: "hang", pulley: [0.52, pulley[1], pulley[2]] },
-        { anchor: "grip_R", share: 0.5, grip: "hang", pulley: [-0.52, pulley[1], pulley[2]] },
+        {
+          anchor: "grip_L",
+          with: "grip_R",
+          share: 1,
+          grip: "hang",
+          pulley: [pulley[0], pulley[1], pulley[2]],
+          eye: EYE_ABOVE_GRIPS,
+          rest: REST_CABLE,
+        },
       ],
-      support: { kind: "seated", passive: ["hip", "knee", "ankle"], bars: [["grip_L", "grip_R"]] },
+      support: { kind: "seated", passive: ["hip", "knee", "ankle"] },
       required: [
         { label: "Seat", anchor: "pelvisBottom", part: "lat-pulldown.seat_pad" },
         { label: "Left thigh", anchor: "thighFront_L", prop: "lat-pulldown.thigh_pad" },
@@ -391,7 +358,7 @@ export const spec = composeExercise({
 
 function carry(body: Body, frame: Frame, pulley: readonly [number, number, number]) {
   return carryProp(body, frame, bar, [
-    graspProp("L", "bar", handles.grip_L),
-    graspProp("R", "bar", handles.grip_R),
+    graspProp("L", "bar", handles.grip),
+    graspProp("R", "bar", handles.grip),
   ], { toward: pulley });
 }

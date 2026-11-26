@@ -779,10 +779,16 @@ export class Figure {
     return box;
   }
 
-  tint(values: ArrayLike<number>, color: Color) {
+  /**
+   * Colours each muscle from a ramp of evenly spaced stops, 0 at the first and 1 at the last. It is continuous from
+   * zero: a muscle that starts to work fades in from the resting plate instead of appearing at a threshold.
+   */
+  tint(values: ArrayLike<number>, ramp: Color[]) {
+    const last = ramp.length - 1;
     for (let i = 0; i < this.colors.length - 1; i++) {
-      const value = Math.min(1, values[i]);
-      this.colors[i + 1].copy(PLATE).lerp(color, value < 0.03 ? 0 : 0.2 + 0.8 * value);
+      const at = Math.min(1, Math.max(0, values[i])) * last;
+      const stop = Math.min(last - 1, Math.floor(at));
+      this.colors[i + 1].copy(ramp[stop]).lerp(ramp[stop + 1], at - stop);
     }
   }
 }

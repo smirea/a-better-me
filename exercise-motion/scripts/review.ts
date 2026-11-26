@@ -14,7 +14,7 @@ for (const spec of EXERCISES.filter(
   console.log(`\n== ${spec.name} (${sequence.poses.length} frames, ${sequence.loadKg} kg)`);
   for (const issue of [
     ...validateMotion(body, sequence, kin),
-    ...validateLoad(sequence, analysis, listedMuscles(spec.catalogId)),
+    ...validateLoad(sequence, analysis, listedMuscles(spec)),
   ]) {
     console.log(
       `  ${issue.severity.toUpperCase()} [${issue.code}] ${issue.title}: ${issue.detail} (frames ${issue.frames.map((r) => r.join("-")).join(", ")})`,

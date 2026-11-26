@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { ExerciseSpec } from "../src/exercise";
+import { MEASURED } from "../src/measured";
 import type { Muscle } from "../src/muscles";
 
 export const MOTION_ROOT = join(import.meta.dir, "..");
@@ -53,11 +54,17 @@ export function loadAppCatalog(): AppCatalogExercise[] {
   return cachedExercises;
 }
 
-/** What the catalog says an exercise works, which the load validator holds the computed engagement against. */
-export function listedMuscles(catalogId: string) {
-  const entry = loadAppCatalog().find((exercise) => exercise.id === catalogId);
-  if (!entry) throw new Error(`Catalog id ${catalogId} is not in exercises.json`);
-  return { primary: entry.primaryMuscles, secondary: entry.secondaryMuscles };
+/**
+ * What an exercise works, which the load validator holds the computed engagement against: the catalog's list, plus
+ * any muscle that studies of the exercise found leading or clearly working (`src/measured.ts`).
+ */
+export function listedMuscles(spec: Pick<ExerciseSpec, "id" | "catalogId">) {
+  const entry = loadAppCatalog().find((exercise) => exercise.id === spec.catalogId);
+  if (!entry) throw new Error(`Catalog id ${spec.catalogId} is not in exercises.json`);
+  const measured = Object.entries(MEASURED[spec.id]?.muscles ?? {})
+    .filter(([, found]) => found.tier === "prime" || found.tier === "synergist")
+    .map(([muscle]) => muscle as Muscle);
+  return { primary: entry.primaryMuscles, secondary: [...new Set([...entry.secondaryMuscles, ...measured])] };
 }
 
 export function slugifyName(name: string): string {
