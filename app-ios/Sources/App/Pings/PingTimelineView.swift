@@ -268,6 +268,7 @@ struct PingTimelineList: View {
                 drop: {
                     if newNote?.id == note.id { newNote = nil } else { store.delete(TimelineNote.self, id: note.id) }
                 },
+                isPending: { newNote?.id == note.id },
                 discard: { if newNote?.id == note.id { newNote = nil } }
             )
             .transition(.scale(scale: 0.85, anchor: .leading).combined(with: .opacity))
@@ -688,6 +689,7 @@ private struct TimelineNoteRow: View {
     let tap: () -> Void
     let move: (Date) -> Void
     let drop: () -> Void
+    let isPending: () -> Bool
     let discard: () -> Void
 
     var body: some View {
@@ -700,7 +702,7 @@ private struct TimelineNoteRow: View {
                 .accessibilityHidden(true)
             Group {
                 if isEditing {
-                    TimelineNoteField(note: note, isNew: isNew, typing: typing, discard: discard)
+                    TimelineNoteField(note: note, isNew: isNew, typing: typing, isPending: isPending, discard: discard)
                 } else {
                     Text(note.text).font(AppFont.rowTitle).foregroundStyle(Theme.textPrimary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -727,6 +729,8 @@ private struct TimelineNoteField: View {
     let note: TimelineNote
     let isNew: Bool
     let typing: FocusState<UUID?>.Binding
+    /// Read when it saves: a new note swiped away is no longer pending, and its text is not written.
+    let isPending: () -> Bool
     let discard: () -> Void
 
     @Environment(LocalStore.self) private var store
@@ -734,10 +738,13 @@ private struct TimelineNoteField: View {
     /// Set once a new note is stored, since its row stays open until the stored note comes back.
     @State private var written = false
 
-    init(note: TimelineNote, isNew: Bool, typing: FocusState<UUID?>.Binding, discard: @escaping () -> Void) {
+    init(
+        note: TimelineNote, isNew: Bool, typing: FocusState<UUID?>.Binding, isPending: @escaping () -> Bool, discard: @escaping () -> Void
+    ) {
         self.note = note
         self.isNew = isNew
         self.typing = typing
+        self.isPending = isPending
         self.discard = discard
         _text = State(initialValue: note.text)
     }
@@ -766,7 +773,7 @@ private struct TimelineNoteField: View {
         DraftStore.clear(draftKey)
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if isNew {
-            guard !written else { return }
+            guard !written, isPending() else { return }
             if text.isEmpty { return discard() }
             written = true
             store.insert(TimelineNote(id: note.id, text: text, at: note.notedAt))

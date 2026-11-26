@@ -47,7 +47,7 @@ struct PingsTab: View {
             }
             .overlay {
                 PingDrawer(isOpen: $adding, covers: { drawerCover = $0 }) {
-                    PingControls(day: day, log: log, write: writeNote).id(day)
+                    PingControls(day: day, log: log, write: writeNote, create: drawerCreate).id(day)
                 }
             }
             // One bar at a time: the drawer takes the tab bar's place.
@@ -65,13 +65,19 @@ struct PingsTab: View {
             guard adding else { return }
             // The drawer belongs to the timeline, so "+" on a pushed screen comes back to it.
             path = []
-            // With no pings there is nothing to pick, so "+" makes the first one.
-            if pingCount == 0 {
-                self.adding = false
-                creating = true
-            }
         }
         .feedback(self)
+    }
+
+    /// With no pings there is nothing to log, so the drawer offers to make the first one.
+    private var drawerCreate: (() -> Void)? {
+        guard pingCount == 0 else { return nil }
+        return { newPing() }
+    }
+
+    private func newPing() {
+        adding = false
+        creating = true
     }
 
     /// A pushed screen brings the tab bar back, so the drawer closes first.

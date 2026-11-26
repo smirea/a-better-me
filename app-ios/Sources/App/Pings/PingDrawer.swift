@@ -111,18 +111,20 @@ private struct DrawerShape: Shape {
 
 /// The drawer's controls for one day: a chip per ping, in the pings' order. A boolean ping's chip logs it. A range
 /// ping's chip opens into its steps, and a step logs it. A chip counts its day: a boolean's logs, a range's latest step.
-/// Text, last, starts a note typed in its row on the timeline.
+/// Text, last, starts a note typed in its row on the timeline. With no pings, New Ping stands in for them.
 struct PingControls: View {
     let log: (Ping, Int) -> Void
     let write: () -> Void
+    let create: (() -> Void)?
 
     @Observe private var statuses: [PingStatus]
     /// The range ping whose steps are showing.
     @State private var open: UUID?
 
-    init(day: CalendarDay, log: @escaping (Ping, Int) -> Void, write: @escaping () -> Void) {
+    init(day: CalendarDay, log: @escaping (Ping, Int) -> Void, write: @escaping () -> Void, create: (() -> Void)?) {
         self.log = log
         self.write = write
+        self.create = create
         _statuses = Observe(PingStatus.on(day))
     }
 
@@ -145,6 +147,12 @@ struct PingControls: View {
                 } else {
                     chip(status) { open = ping.id }
                 }
+            }
+            if let create {
+                Button(action: create) {
+                    chipLabel(icon: "plus", tint: Theme.textSecondary, name: "New Ping", count: 0)
+                }
+                .buttonStyle(.plain)
             }
             Button(action: write) {
                 chipLabel(icon: "character.cursor.ibeam", tint: Theme.textSecondary, name: "Text", count: 0)
