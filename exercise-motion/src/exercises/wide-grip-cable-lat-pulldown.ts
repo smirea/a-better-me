@@ -3,7 +3,7 @@ import { anchorPoint, clavicleRhythm, SIDES, worldPoint, type Body, type Frame }
 import { everyFrame } from "../checks";
 import type { CheckContext, FormCheck } from "../exercise";
 import { carryProp, graspProp, holdGrasp } from "../grasp";
-import { deg, rad } from "../math";
+import { clamp, deg, rad } from "../math";
 import {
   cableAttachment,
   cableEyeAt,
@@ -34,19 +34,28 @@ const EYE_ABOVE_GRIPS = 0.07;
 const bar = cableAttachment("bar", "prop-lat-bar");
 const handles = propHandles("prop-lat-bar");
 
-/** Where the bar finishes: the top of the chest under the collarbones, in the thorax's frame. */
-const UPPER_CHEST = new Vector3(0, 0.225, 0.135);
-const upperChest = (body: Body, frame: Frame, out = new Vector3()) =>
-  worldPoint(frame, body.index.thoracic, UPPER_CHEST, out);
+/**
+ * Where the bar finishes: the upper chest, a band on the front of the ribcage from just under the collarbones down
+ * to the top of the breastbone's body, in the thorax's frame. Where in the band is the lifter's choice.
+ */
+const UPPER_CHEST = [new Vector3(0, 0.225, 0.135), new Vector3(0, 0.265, 0.12)];
+const bandLow = new Vector3();
+const bandHigh = new Vector3();
+/** The point of the upper chest level with a height in the world. */
+function upperChest(body: Body, frame: Frame, height: number, out = new Vector3()) {
+  worldPoint(frame, body.index.thoracic, UPPER_CHEST[0], bandLow);
+  worldPoint(frame, body.index.thoracic, UPPER_CHEST[1], bandHigh);
+  return out.lerpVectors(bandLow, bandHigh, clamp((height - bandLow.y) / (bandHigh.y - bandLow.y), 0, 1));
+}
 
 /** Pulls both hands of the wide grip to the upper chest, the bar just clear of it. End key only. */
 function handsAtChest(body: Body, weight: number): Goal {
   const hand = new Vector3();
   const chest = new Vector3();
   return ({ frame, push }) => {
-    upperChest(body, frame, chest);
     for (const side of SIDES) {
       anchorPoint(body, frame, `grip_${side}`, hand);
+      upperChest(body, frame, hand.y, chest);
       push(weight * (hand.y - chest.y));
       push(weight * (hand.z - (chest.z + 0.02)));
     }
@@ -74,9 +83,9 @@ function barClearOfChest(body: Body, weight: number): Goal {
   const hand = new Vector3();
   const chest = new Vector3();
   return ({ frame, push }) => {
-    upperChest(body, frame, chest);
     for (const side of SIDES) {
       anchorPoint(body, frame, `grip_${side}`, hand);
+      upperChest(body, frame, hand.y, chest);
       push(weight * Math.min(0, hand.z - (chest.z + 0.02)));
     }
   };
@@ -95,9 +104,9 @@ function claviclesWithArms(weight: number): Goal {
 /** How far the gripped part of the bar finishes from the upper chest. The bar is cranked, so its middle rides higher. */
 function barToChest(context: CheckContext, index: number): number {
   const frame = context.frames[index];
-  const chest = upperChest(context.body, frame);
   const left = anchorPoint(context.body, frame, "grip_L");
   const right = anchorPoint(context.body, frame, "grip_R");
+  const chest = upperChest(context.body, frame, (left.y + right.y) / 2);
   return Math.hypot((left.y + right.y) / 2 - chest.y, (left.z + right.z) / 2 - chest.z);
 }
 

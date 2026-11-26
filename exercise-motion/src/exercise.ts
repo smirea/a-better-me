@@ -321,8 +321,13 @@ export interface Generated {
 const SAMPLES = 32;
 /** How many poses an effort-posed rep is solved at between its two keys. */
 const KNOTS = 12;
-/** How many times every knot is relaxed toward its neighbours. */
-const RELAXATIONS = 10;
+/**
+ * How many times every knot is relaxed toward its neighbours at most, sweeping one way and then the other. The
+ * path closes about a twelfth of what is left each pass, so a pulldown settles in about 25.
+ */
+const RELAXATIONS = 30;
+/** The path has settled once a sweep each way moves no joint of any knot by more than this, in radians. */
+const SETTLED = 0.01;
 /** What a radian away from the knot before costs while the path is first grown, which only keeps it in one piece. */
 const PATH_CONTINUITY = 0.3;
 /** How many scattered postures an effort-posed key is also solved from, and how far each joint is scattered, in radians. */
@@ -779,7 +784,9 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
       // The end key is solved again from where the path arrives, so the path and its end are the same posture.
       end = solveKey(built.hints.end, built.keyGoals.end, built.extraStart, "end", samples[KNOTS - 1]);
       samples.push(end);
-      for (let pass = 0; pass < RELAXATIONS; pass++) {
+      let moved = [Infinity, Infinity];
+      for (let pass = 0; pass < RELAXATIONS && Math.max(...moved) > SETTLED; pass++) {
+        const before = samples.map((pose) => Float64Array.from(pose));
         // What is held steady is held at its average over the path so far, which settles as the passes go on.
         steady.forEach((read, i) => {
           held[i] = samples.reduce((sum, pose) => sum + read(fk(body, pose, scratch)), 0) / samples.length;
@@ -797,6 +804,9 @@ export function generate(spec: ExerciseSpec, body = createBody()): Generated {
           const came = samples[pass % 2 === 0 ? k - 1 : k + 1];
           samples[k] = relax(k, samples[k], middle, smooth, true, pass < 2 ? [came] : []);
         }
+        let most = 0;
+        samples.forEach((pose, k) => pose.forEach((value, d) => (most = Math.max(most, Math.abs(value - before[k][d])))));
+        moved = [moved[1], most];
       }
       start = samples[0];
       end = samples[KNOTS];

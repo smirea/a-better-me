@@ -21,6 +21,12 @@ export interface MeasuredMuscle {
   sources: (keyof typeof SOURCES)[];
   /** What makes the figure weaker than it looks: one study, another lift's data, one head of the group. */
   caveat?: string;
+  /**
+   * The studies measured one head that does a different job from the rest of the group (adductor longus, not the
+   * adductor magnus that extends the hip; the triceps' long head, which also pulls the arm down). Kept for the
+   * record and left out of the scoring.
+   */
+  oneHead?: true;
 }
 
 export interface MeasuredExercise {
@@ -89,6 +95,7 @@ export const MEASURED: Record<string, MeasuredExercise> = {
         lifting: [13, 23],
         sources: ["straub2024"],
         caveat: "Adductor longus only. Adductor magnus, the head that extends the hip, has not been measured.",
+        oneHead: true,
       },
       abs: { tier: "quiet", lifting: [3, 10], lowering: [0.39, 0.82], sources: ["park2022", "swinton2012"] },
     },
@@ -110,6 +117,7 @@ export const MEASURED: Record<string, MeasuredExercise> = {
         lifting: [7, 7],
         sources: ["martinFuentes2020LegPress"],
         caveat: "Adductor longus at a light load, one study. Adductor magnus has not been measured.",
+        oneHead: true,
       },
     },
   },
@@ -196,6 +204,7 @@ export const MEASURED: Record<string, MeasuredExercise> = {
         lowering: [0.73, 0.73],
         sources: ["signorile2002"],
         caveat: "Long head only, one study, read off a chart.",
+        oneHead: true,
       },
       rear_delts: {
         tier: "synergist",

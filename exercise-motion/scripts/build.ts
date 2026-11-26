@@ -12,7 +12,7 @@ import { FAULTS } from "../src/faults";
 import { resolveGlbPath, validateGlbMotion } from "../src/glb-collision";
 import { MUSCLES, type Muscle } from "../src/muscles";
 import { runChecks, validateLoad, validateMotion } from "../src/validate";
-import { loadAppCatalog, MOTION_ROOT, REPO_ROOT } from "./catalog-io";
+import { listedMuscles, loadAppCatalog, MOTION_ROOT, REPO_ROOT } from "./catalog-io";
 
 const dist = join(MOTION_ROOT, "dist");
 const libraryDir = join(dist, "library");
@@ -21,7 +21,7 @@ const cacheDir = join(MOTION_ROOT, ".cache", "motion-build");
 mkdirSync(seqDir, { recursive: true });
 mkdirSync(cacheDir, { recursive: true });
 
-// Compute one fingerprint over core engine sources so any engine edit invalidates cached sequences.
+// One fingerprint over the engine's sources, so any engine edit invalidates cached sequences.
 const engineHash = createHash("sha256");
 for (const dir of ["src", "src/machines"]) {
   for (const f of readdirSync(join(MOTION_ROOT, dir)).sort()) {
@@ -30,6 +30,8 @@ for (const dir of ["src", "src/machines"]) {
     }
   }
 }
+// What this script and the catalog reader decide is cached with each sequence too: its issues and its muscles.
+for (const f of ["build.ts", "catalog-io.ts"]) engineHash.update(readFileSync(join(import.meta.dir, f)));
 const ENGINE_SIG = engineHash.digest("hex").slice(0, 12);
 
 const args = process.argv.slice(2);
@@ -188,10 +190,7 @@ for (const spec of specsToBuild) {
     ...validateMotion(body, sequence, kin),
     ...(await validateGlbMotion(body, sequence, kin)),
   ];
-  const loadIssues = validateLoad(sequence, analysis, {
-    primary: entry.primaryMuscles,
-    secondary: entry.secondaryMuscles,
-  });
+  const loadIssues = validateLoad(sequence, analysis, listedMuscles(spec));
   const checks = runChecks(body, built, sequence, kin);
   const stretched = groupsOf(entry.selection?.stretchedMuscles ?? []);
 
