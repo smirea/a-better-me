@@ -1,0 +1,9 @@
+{
+	"title": "A barcode held in the scanner opens its food once, not as two screens logging it twice",
+	"tasks": [
+		{
+			"id": "7dd6f279-dfa1-47a5-b292-b039c42b83ab",
+			"title": "1 Nutrition Feedback: fix duplicate barcode scanner opens"
+		}
+	]
+}
