@@ -119,6 +119,11 @@ interface Motion {
   /** The joint this one's turning is measured against. */
   reference: number;
   gain: number;
+  /**
+   * The joint whose bone's long axis is taken out of this one's axis, so the row reads only the torque that swings
+   * the bone and leaves the torque that spins it about its own length to that motion's row.
+   */
+  shaft?: number;
 }
 
 interface Push {
@@ -218,7 +223,7 @@ function motionsOf(body: Body, rows: Map<string, number>, isPassive: (name: stri
   const motions: Motion[][] = body.joints.map(() => []);
   for (const joint of body.joints) {
     if (joint.kind === "root" || isPassive(joint.name)) continue;
-    const add = (motion: string, frame: number, local: Vec3, reference: number, gain = 1) => {
+    const add = (motion: string, frame: number, local: Vec3, reference: number, gain = 1, shaft?: number) => {
       const row = rows.get(`${joint.name}.${motion}`);
       if (row === undefined) return;
       motions[joint.index].push({
@@ -228,6 +233,7 @@ function motionsOf(body: Body, rows: Map<string, number>, isPassive: (name: stri
         local: new Vector3(local[0], local[1], local[2]),
         reference,
         gain,
+        shaft,
       });
     };
     if (joint.kind === "ball") {
@@ -237,10 +243,15 @@ function motionsOf(body: Body, rows: Map<string, number>, isPassive: (name: stri
         add("abd", joint.index, [0, 0, s], joint.parent);
         add("rot", joint.index, [0, s, 0], joint.parent);
       } else if (joint.name.startsWith("shoulder")) {
-        // Read against the thorax, not the moving collarbone, as the shoulder's angles are.
-        add("flex", body.index.thoracic, [-1, 0, 0], body.index.thoracic);
-        add("abd", body.index.thoracic, [0, 0, s], body.index.thoracic);
-        add("hadd", body.index.thoracic, [0, -s, 0], body.index.thoracic);
+        // Read against the thorax, not the moving collarbone, as the shoulder's angles are. Swinging the arm
+        // forward, sideways or across is read on the thorax's axes, and turning it about its own length on the
+        // upper arm's. Without the split the thorax's axes change meaning as the arm rises: about the chest's
+        // side-to-side axis a hanging arm swings forward, and an arm held out to the side only turns outward.
+        const thorax = body.index.thoracic;
+        add("flex", thorax, [-1, 0, 0], thorax, 1, joint.index);
+        add("abd", thorax, [0, 0, s], thorax, 1, joint.index);
+        add("hadd", thorax, [0, -s, 0], thorax, 1, joint.index);
+        add("irot", joint.index, [0, -s, 0], thorax);
       } else {
         add("flex", joint.parent, [1, 0, 0], joint.parent);
         add("bend", joint.parent, [0, 0, -1], joint.parent);
@@ -566,6 +577,10 @@ export function statics(body: Body, sequence: Setup, loadKg: number) {
     for (const list of motions)
       for (const turned of list) {
         axes[turned.row].copy(turned.local).applyQuaternion(frame.rot[turned.frame]);
+        if (turned.shaft !== undefined) {
+          arm.set(0, 1, 0).applyQuaternion(frame.rot[turned.shaft]);
+          axes[turned.row].addScaledVector(arm, -axes[turned.row].dot(arm));
+        }
         rate[turned.row] = motion
           ? arm.subVectors(motion.spin[turned.joint], motion.spin[turned.reference]).dot(axes[turned.row])
           : 0;
@@ -811,6 +826,7 @@ export function statics(body: Body, sequence: Setup, loadKg: number) {
     }
     const act = new Float32Array(MUSCLES.length * 2);
     ACTUATORS.forEach((actuator, i) => {
+      if (actuator.muscle === null) return;
       const slot = MUSCLES.indexOf(actuator.muscle) * 2 + (actuator.side === "L" ? 0 : 1);
       act[slot] = Math.max(act[slot], x[i]);
     });

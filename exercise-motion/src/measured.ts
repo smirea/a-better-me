@@ -106,9 +106,10 @@ export const MEASURED: Record<string, MeasuredExercise> = {
       quads: { tier: "prime", lifting: [31, 105], sources: ["martinFuentes2020LegPress", "stien2021"] },
       glutes: {
         tier: "synergist",
-        lifting: [39, 88],
-        sources: ["martinFuentes2020LegPress", "stien2021"],
-        caveat: "Two studies with different reference contractions: about three quarters of the vasti at 40% load.",
+        lifting: [88, 88],
+        sources: ["stien2021", "martinFuentes2020LegPress"],
+        caveat:
+          "One study in these units, on one leg at a six-rep maximum. On a 45° sled at 40% load the glutes ran at three quarters of the vasti, each against its own activity at a one-rep maximum.",
       },
       hamstrings: { tier: "moderate", lifting: [11, 37], sources: ["martinFuentes2020LegPress", "stien2021"] },
       calves: { tier: "moderate", lifting: [14, 40], sources: ["martinFuentes2020LegPress"] },

@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Document, NodeIO } from "@gltf-transform/core";
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from "three";
-import { analyze } from "./biomech";
-import { anchorPoint, createBody, type Body } from "./body";
+import { analyze, statics } from "./biomech";
+import { anchorPoint, angles, createBody, fk, makePose, newFrame, type Body } from "./body";
 import { compileParts, signedDistance, sphere, capsule } from "./equipment";
 import { generate, kinematics, type ExerciseSpec } from "./exercise";
 import { solveBounded } from "./least-squares";
@@ -184,6 +184,23 @@ describe("exercise-motion framework invariants", () => {
     const push = analysis.reactions[bottom].reduce((sum, reaction) => sum + reaction.force[1], 0);
     expect(push).toBeGreaterThan((body.mass + 40) * 9.81 * 0.98);
     expect(push).toBeLessThan((body.mass + 40) * 9.81 * 1.02);
+  });
+
+  test("turning an arm held out to the side outward is the rear delts' work, not the chest's", () => {
+    const body = sharedBody;
+    // Upper arm level and out to the side, forearm pointing forward, a weight in the hand trying to roll it down.
+    const pose = makePose(body, { "root.y": 0.947, "shoulder_L.elev": 90, "shoulder_L.plane": 0, "elbow_L.flex": 90 });
+    const solved = statics(
+      body,
+      {
+        loads: [{ anchor: "grip_L", share: 1, grip: "hang" }],
+        support: { kind: "seated", passive: ["hip", "knee", "ankle", "lumbar", "thoracic", "neck"] },
+      },
+      5,
+    )(fk(body, pose, newFrame(body)), angles(body, pose));
+    const left = (muscle: (typeof MUSCLES)[number]) => solved.activation[MUSCLES.indexOf(muscle) * 2];
+    expect(left("rear_delts")).toBeGreaterThan(0.3);
+    expect(left("chest")).toBeLessThan(0.1);
   });
 
   test("a muscle that switches on more than once on the way down and once on the way up is an error", () => {
