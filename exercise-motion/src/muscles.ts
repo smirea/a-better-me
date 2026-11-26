@@ -174,14 +174,16 @@ export function createActuators(): Actuator[] {
       ["thoracic.flex", -160],
       ["thoracic.bend", s * 45],
     ]);
-    add("abs", [["lumbar.flex", 65]]);
-    add("abs", [["thoracic.flex", 55]]);
+    // The abdominal wall is one sheet from ribs to pelvis, so it flexes the spine as strongly at the base of the
+    // ribcage as at the pelvis. Trunk flexion gets the same trained-over-untrained scaling as the legs.
+    add("abs", [["lumbar.flex", 85]]);
+    add("abs", [["thoracic.flex", 85]]);
     add("obliques", [
-      ["lumbar.flex", 35],
+      ["lumbar.flex", 45],
       ["lumbar.bend", s * 80],
     ]);
     add("obliques", [
-      ["thoracic.flex", 25],
+      ["thoracic.flex", 45],
       ["thoracic.bend", s * 55],
     ]);
     add("obliques", [
