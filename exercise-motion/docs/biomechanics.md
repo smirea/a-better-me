@@ -40,19 +40,19 @@ Dynamometer norms come from untrained people, so the lower body is scaled up to 
 
 A group whose studies measured one head with a different job from the rest (adductor longus, the long head of the triceps) is shown and not scored.
 
-Across the five exercises the model puts 82 of 86 pairs of muscles from different tiers in the measured order.
+Across the five exercises the model puts 81 of 86 pairs of muscles from different tiers in the measured order.
 
 | Exercise | Order agrees | Where the model differs from the studies |
 |---|---|---|
-| Barbell back squat, 60 kg | 16 of 17 pairs | Quads reach 91% at the bottom, which is too high for this load: see below. Obliques read 5% against 11 to 22% measured. |
+| Barbell back squat, 60 kg | 16 of 17 pairs | Quads reach 93% on the way up, which is too high for this load: see below. Obliques read 5% against 11 to 22% measured. |
 | 45° leg press, 100 kg | 4 of 5 | Glutes read 8% beside quads at 32%. The one study in the same units has them at 88% on one leg at a six-rep maximum; another has them at three quarters of the quads. |
 | Push-up | 42 of 44 | Lats read 4% against 11 to 14%. |
-| Dumbbell Romanian deadlift, 12 kg a hand | 11 of 11 | Lats read 14% against 53% in the one study that measured them, on a 70 kg barbell. |
+| Dumbbell Romanian deadlift, 12 kg a hand | 10 of 11 | Hamstrings, glutes and lower back all read 28 to 29%, where studies put hamstrings and lower back ahead of the glutes. Least effort bends the knees as far as "mildly" allows, which takes work off the hamstrings. |
 | Wide grip lat pulldown, 50 kg | 9 of 9 | Rear delts read 11% and chest 18% against 48% and 64% in one study. Lower back reads 1% against 20%. |
 
 Lowering reads at 0.6 to 0.75 of lifting for the prime movers, against 0.4 to 0.87 measured. A muscle the model holds still (the spine's) reads the same both ways, where the erectors measure 0.55 to 0.66 in a Romanian deadlift.
 
-**The squat's quads.** They read 91% at the bottom of a 60 kg squat, which cannot be right for a load a trained lifter doubles. Posed by least effort, the lifter carries 150 N·m at each knee (1.9 N·m per kilogram of bodyweight) and 115 at each hip. Studies at this load disagree about the knee, from 1.0 N·m/kg (Gullett et al., 2009, as tabulated by Cotter) to 2.5 ([Cotter et al., 2013](https://pmc.ncbi.nlm.nih.gov/articles/PMC4064719)), and national weightlifters carry more at the hip than the knee ([Wretenberg et al., 1996](https://pubmed.ncbi.nlm.nih.gov/8775157)). So either the posture is too upright, or the model's knee is too weak when deeply bent, where its strength curve is extended past what was tested. Making the hips or the back stronger, a cost that punishes the hardest-working muscle more, and a charge on sideways foot force each left the posture where it was. The hand-posed squat this replaced read 86%.
+**The squat's quads.** They read 93% on the way up in a 60 kg squat, which cannot be right for a load a trained lifter doubles. Posed by least effort, the lifter carries 150 N·m at each knee (1.9 N·m per kilogram of bodyweight) and 115 at each hip. Studies at this load disagree about the knee, from 1.0 N·m/kg (Gullett et al., 2009, as tabulated by Cotter) to 2.5 ([Cotter et al., 2013](https://pmc.ncbi.nlm.nih.gov/articles/PMC4064719)), and national weightlifters carry more at the hip than the knee ([Wretenberg et al., 1996](https://pubmed.ncbi.nlm.nih.gov/8775157)). So either the posture is too upright, or the model's knee is too weak when deeply bent, where its strength curve is extended past what was tested. Making the hips or the back stronger, a cost that punishes the hardest-working muscle more, and a charge on sideways foot force each left the posture where it was. The hand-posed squat this replaced read 86%.
 
 **The leg press's glutes.** The feet's push on the plate is solved for least muscle effort, and the cheapest push runs 8 cm from the hip and 27 cm from the knee wherever the feet sit: moving the heels 16 cm up the plate changes neither joint's torque, because each foot also presses about 85 N inward. That much sideways force is ordinary. Force plates under bodyweight squats record 5 to 17% of bodyweight a foot from narrow to wide, turned-out stances ([lacrosse players, 2026](https://www.sciencedirect.com/science/article/pii/S2667099226000058), from the abstract), and the model's squat gives 14%. Charging for it brought the glutes to three quarters of the quads, but it also made the adductors hold the legs together at 54% while the lifter stood at lockout, where friction does that for nothing, so it was taken out. What is left is how the model shares hip extension between glutes and adductors at a deeply bent hip, where it makes them equally strong.
 
