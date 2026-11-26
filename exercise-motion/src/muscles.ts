@@ -83,7 +83,8 @@ export const TENDONS: Record<Muscle, string> = {
 };
 
 export interface Actuator {
-  muscle: Muscle;
+  /** The group it shows as, or null for a muscle the app has no group for: it carries its torque and shows nowhere. */
+  muscle: Muscle | null;
   side: Side;
   /**
    * The torque in N·m this actuator adds to each joint motion at full activation, at the joint angle where it is
@@ -124,7 +125,7 @@ export function createActuators(): Actuator[] {
   const actuators: Actuator[] = [];
   for (const side of SIDES) {
     const s = sideSign(side);
-    const add = (muscle: Muscle, entries: [string, number, ((angles: Angles) => number)?][]) =>
+    const add = (muscle: Muscle | null, entries: [string, number, ((angles: Angles) => number)?][]) =>
       actuators.push({
         muscle,
         side,
@@ -166,6 +167,9 @@ export function createActuators(): Actuator[] {
     ]);
     add("glutes", [[j("hip", "flex"), -100]]);
     add("glutes", [[j("hip", "rot"), 50]]);
+    // The six small muscles under the glutes that turn the thigh outward, which the app has no group for. Without
+    // them the glutes alone hold the knees out in a squat.
+    add(null, [[j("hip", "rot"), 30]]);
     add("adductors", [[j("hip", "flex"), -100, curve(j("hip", "flex"), [[0, 0.13], [30, 0.5], [75, 1]])]]);
     add("adductors", [[j("hip", "abd"), -130]]);
     add("abductors", [[j("hip", "abd"), 120]]);
@@ -233,8 +237,7 @@ export function createActuators(): Actuator[] {
       [j("shoulder", "hadd"), 90],
       [j("clavicle", "prot"), 60],
     ]);
-    // With the upper arm out to the side, turning it about the chest's side-to-side axis is mostly rolling the
-    // humerus inward, which the pecs do far more strongly than they flex a hanging arm.
+    // The pecs swing a raised arm forward across the chest far more strongly than they lift a hanging one.
     add("chest", [
       [
         j("shoulder", "flex"),
@@ -248,11 +251,22 @@ export function createActuators(): Actuator[] {
     add("chest", [
       [j("shoulder", "abd"), -65, raised([[0, 0.75], [30, 0.95], [60, 1], [90, 0.8], [120, 0.5], [150, 0.3], [180, 0.15]])],
     ]);
+    // Turning the upper arm about its own length. Inward, subscapularis does about half and the pecs, the lats
+    // with teres major, and the front delts share the rest; outward it is infraspinatus, teres minor and the rear
+    // delts, which the app shows together. The totals (65 N·m in, 42 out) and the shares are estimates from each
+    // muscle's size and leverage, not read from a study. The app has no group for subscapularis.
+    add(null, [[j("shoulder", "irot"), 30]]);
+    add("chest", [[j("shoulder", "irot"), 15]]);
+    add("lats", [[j("shoulder", "irot"), 15]]);
+    add("front_delts", [[j("shoulder", "irot"), 5]]);
+    add("rear_delts", [[j("shoulder", "irot"), -42]]);
     add("lats", [[j("shoulder", "flex"), -110, lats(pullDown)]]);
     add("lats", [[j("shoulder", "abd"), -110, lats(pullIn)]]);
     add("lats", [[j("clavicle", "elev"), -50]]);
+    // Sized so that, with the pecs, a level arm lifts forward a fifth harder than the 77 N·m untrained men
+    // measure there (Aronis et al., 2026), and falling off overhead at the rate they measured.
     add("front_delts", [
-      [j("shoulder", "flex"), 55, raised([[0, 0.9], [30, 0.8], [60, 0.7], [90, 0.6], [120, 0.5], [150, 0.37], [180, 0.28]])],
+      [j("shoulder", "flex"), 75, raised([[0, 0.9], [30, 0.85], [60, 0.8], [90, 0.75], [120, 0.62], [150, 0.5], [180, 0.4]])],
     ]);
     add("front_delts", [[j("shoulder", "hadd"), 30]]);
     add("front_delts", [

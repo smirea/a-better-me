@@ -5,7 +5,7 @@ import { footContact, palmContact, type FormCheck } from "../exercise";
 import { deg } from "../math";
 import { checkFlatBack, checkNeutralNeck, plantBothToes, POSTURE_HINTS } from "../postures";
 import { composeExercise } from "../scene";
-import { keepAbove, lockAngle, mirrored, palmOnFloor, type Goal } from "../solver";
+import { angleWithin, keepAbove, lockAngle, mirrored, palmOnFloor, within } from "../solver";
 
 /**
  * Hands "mildly outside shoulder width": a palm's breadth outside the shoulder joint, which is about level with the
@@ -32,10 +32,6 @@ function elbowFlareDeg(body: Body, frame: Frame, side: Side): number {
   if (arm < 0.06 || torso < 0.05) return 0;
   const cos = Math.min(1, Math.max(-1, (ax * tx + az * tz) / (arm * torso)));
   return (Math.acos(cos) * 180) / Math.PI;
-}
-
-function flare(body: Body, side: Side, targetDeg: number, weight: number): Goal {
-  return ({ frame, push }) => push((weight * (elbowFlareDeg(body, frame, side) - targetDeg) * Math.PI) / 180);
 }
 
 /** How far the hip sits off the shoulder-to-knee line, in the side view. */
@@ -207,10 +203,8 @@ export const spec = composeExercise({
         lockAngle(body, "lumbar.flex", 0, 12),
         lockAngle(body, "thoracic.flex", 0, 8),
         lockAngle(body, "neck.flex", 2, 6),
-        lockAngle(body, "clavicle_L.elev", 8, 12),
-        lockAngle(body, "clavicle_R.elev", 8, 12),
-        lockAngle(body, "wrist_L.dev", -12, 10),
-        lockAngle(body, "wrist_R.dev", -12, 10),
+        angleWithin(body, "clavicle_L.elev", -5, 12, 40),
+        angleWithin(body, "clavicle_R.elev", -5, 12, 40),
         keepAbove(body, "chestFront", 0, 180),
         keepAbove(body, "elbowTip_L", 0.07, 28),
         keepAbove(body, "elbowTip_R", 0.07, 28),
@@ -222,52 +216,19 @@ export const spec = composeExercise({
             push(48 * Math.min(0, low - 0.004));
           }
         },
-        mirrored(body, 8),
+        mirrored(body, 40),
       ],
+      effort: true,
       keyGoals: {
-        start: [
-          lockAngle(body, "elbow_L.flex", 5, 24),
-          lockAngle(body, "elbow_R.flex", 5, 24),
-          lockAngle(body, "clavicle_L.prot", 0, 8),
-          lockAngle(body, "clavicle_R.prot", 0, 8),
-          // Arms straight down at the top: each shoulder stacked over its wrist.
-          ({ frame, push }) => {
-            for (const side of SIDES)
-              push(60 * (frame.pos[body.index[`shoulder_${side}`]].z - frame.pos[body.index[`wrist_${side}`]].z));
-          },
-        ],
+        start: [lockAngle(body, "elbow_L.flex", 5, 60), lockAngle(body, "elbow_R.flex", 5, 60)],
         end: [
-          lockAngle(body, "elbow_L.flex", 138, 10),
-          lockAngle(body, "elbow_R.flex", 138, 10),
-          lockAngle(body, "shoulder_L.elev", 45, 14),
-          lockAngle(body, "shoulder_R.elev", 45, 14),
-          lockAngle(body, "shoulder_L.plane", 10, 8),
-          lockAngle(body, "shoulder_R.plane", 10, 8),
-          lockAngle(body, "clavicle_L.prot", -12, 8),
-          lockAngle(body, "clavicle_R.prot", -12, 8),
-          flare(body, "L", 55, 8),
-          flare(body, "R", 55, 8),
-          ({ q, frame, push }) => {
-            push(14 * (q[3] - Math.PI / 2));
-            const chest = anchorPoint(body, frame, "chestFront").y;
-            push(60 * (chest - 0.006));
-          },
+          ...SIDES.map((side) => within(({ frame }) => elbowFlareDeg(body, frame, side), 45, 75, 2)),
+          angleWithin(body, "clavicle_L.prot", -28, -10, 40),
+          angleWithin(body, "clavicle_R.prot", -28, -10, 40),
+          ({ frame, push }) => push(300 * (anchorPoint(body, frame, "chestFront").y - 0.006)),
         ],
       },
-      stiffness: {
-        default: 1,
-        lumbar: 10,
-        thoracic: 8,
-        knee: 16,
-        hip: 12,
-        clavicle: 10,
-        neck: 6,
-        elbow: 24,
-        shoulder: 26,
-        wrist: 14,
-        toes: 6,
-        ankle: 8,
-      },
+      stiffness: { default: 0.3, root: 0.3 },
       progress: (frame) => -anchorPoint(body, frame, "chestFront").y,
       ground: "forefoot_L",
       grips: "flat-floor",
