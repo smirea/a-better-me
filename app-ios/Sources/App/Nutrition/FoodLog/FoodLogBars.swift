@@ -68,25 +68,25 @@ private struct NoticeBar: View {
 
 /// One row: Copy, Move, and what fits the selection, with the trash at the end. Copy or Move turns the row into its
 /// destinations, to Today and to Now, while every hour on any day pastes there too; the tab bar's ✕ steps back.
-/// Today is left out when every food is already on it, where it would only duplicate them in place.
+/// Today is left out when every food is already on it, where it would only duplicate them in place. The selected foods'
+/// icons float once at the right end of the actions' last row, clear of the trash.
 private struct SelectionBar: View {
     @Environment(FoodLogState.self) private var state
     @Environment(LocalStore.self) private var store
 
     var body: some View {
         let entries = state.selectedEntries
-        let icons = CarriedIcons(entries: entries)
         HStack(alignment: .top, spacing: 8) {
             FlowLayout {
                 Group {
                     if let action = state.action {
                         if !entries.allSatisfy({ $0.day == .today }) {
-                            Button { state.paste(action, to: .today, in: store) } label: { icons.label("\(action.title) to Today") }
+                            Button("\(action.title) to Today") { state.paste(action, to: .today, in: store) }
                         }
-                        Button { state.paste(action, to: .now, in: store) } label: { icons.label("\(action.title) to Now") }
+                        Button("\(action.title) to Now") { state.paste(action, to: .now, in: store) }
                     } else {
-                        Button { state.action = .copy } label: { icons.label("Copy") }
-                        Button { state.action = .move } label: { icons.label("Move") }
+                        Button("Copy") { state.action = .copy }
+                        Button("Move") { state.action = .move }
                         if entries.count > 1 {
                             Button("+ Recipe") { state.createRecipe() }
                                 .accessibilityLabel("Create Recipe")
@@ -103,8 +103,9 @@ private struct SelectionBar: View {
                     }
                 }
                 .chipButton()
+                CarriedIcons(entries: entries).flowTrailing()
             }
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
             if state.action == nil {
                 Button("Remove", systemImage: "trash") { state.remove(entries, in: store) }
                     .labelStyle(.iconOnly)
@@ -116,9 +117,8 @@ private struct SelectionBar: View {
     }
 }
 
-/// The foods a Copy or Move carries, as their icons stacked at the button's bottom right: up to three distinct ones,
-/// each tucked under the last.
-private struct CarriedIcons {
+/// The foods a Copy or Move carries, as up to three distinct icons, each tucked under the last.
+private struct CarriedIcons: View {
     let emojis: [String?]
     let sources: [FoodSource]
     let count: Int
@@ -139,19 +139,15 @@ private struct CarriedIcons {
         count = entries.count
     }
 
-    func label(_ title: String) -> some View {
-        HStack(alignment: .bottom, spacing: 6) {
-            Text(title)
-            HStack(spacing: -7) {
-                ForEach(emojis.indices, id: \.self) { index in
-                    FoodIcon(emoji: emojis[index], source: sources[index], size: 16)
-                        .zIndex(Double(-index))
-                }
+    var body: some View {
+        HStack(spacing: -7) {
+            ForEach(emojis.indices, id: \.self) { index in
+                FoodIcon(emoji: emojis[index], source: sources[index], size: 20)
+                    .zIndex(Double(-index))
             }
-            .offset(y: 4)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title), \(count) \(count == 1 ? "food" : "foods")")
+        .accessibilityLabel("\(count) \(count == 1 ? "food" : "foods") selected")
     }
 }
 
