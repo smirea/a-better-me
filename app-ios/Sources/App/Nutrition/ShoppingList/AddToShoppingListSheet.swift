@@ -54,15 +54,17 @@ struct AddToShoppingListSheet: View {
                             RowLabel(title: Text(list.name), detail: list.needed > 0 ? Text("\(list.needed) needed") : nil)
                         }
                     }
-                    option(.new) {
-                        if choice == .new {
+                    // Selected, the row is the field itself: inside a Button it read as a button and fought the caret.
+                    if choice == .new {
+                        HStack(spacing: 12) {
                             TextField("New list name", text: $newName)
                                 .font(AppFont.rowTitle)
                                 .focused($naming)
                                 .submitLabel(.done)
-                        } else {
-                            RowLabel(title: Text("New List"), systemImage: "plus")
+                            SelectionMark(isOn: true)
                         }
+                    } else {
+                        option(.new) { RowLabel(title: Text("New List"), systemImage: "plus") }
                     }
                 } else if problem == nil {
                     ProgressView().frame(maxWidth: .infinity)
