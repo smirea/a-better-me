@@ -1,9 +1,10 @@
 #!/usr/bin/env bun
 import { analyze } from "../src/biomech";
-import { generate, kinematics } from "../src/exercise";
+import { kinematics, type Generated } from "../src/exercise";
 import { EXERCISES } from "../src/exercises";
 import { MEASURED, TIERS, type Tier } from "../src/measured";
 import { MUSCLE_NAMES, MUSCLES, type Muscle } from "../src/muscles";
+import { generated } from "./motion-cache";
 
 /** A quiet muscle should stay under this share of everything it has. */
 const QUIET = 0.2;
@@ -16,7 +17,7 @@ const IDLE = 0.15;
 /** A frame counts as lifting or lowering once the muscles' power passes this share of its peak; the rest is held. */
 const MOVING = 0.05;
 
-export interface Comparison {
+interface Comparison {
   id: string;
   loadKg: number;
   rows: {
@@ -38,11 +39,9 @@ export interface Comparison {
   problems: string[];
 }
 
-export function compare(id: string): Comparison {
-  const spec = EXERCISES.find((exercise) => exercise.id === id);
+function compare({ body, sequence }: Omit<Generated, "keys">): Comparison {
+  const { id } = sequence;
   const measured = MEASURED[id];
-  if (!spec || !measured) throw new Error(`No measured activity for "${id}"`);
-  const { body, sequence } = generate(spec);
   const analysis = analyze(body, sequence, kinematics(body, sequence));
   const moving = MOVING * Math.max(...analysis.power.map(Math.abs));
   const mean = (m: number, lifting: boolean) => {
@@ -110,7 +109,12 @@ if (import.meta.main) {
   const args = process.argv.slice(2);
   const json = args.includes("--json");
   const ids = args.filter((arg) => !arg.startsWith("--"));
-  const results = (ids.length ? ids : Object.keys(MEASURED)).map(compare);
+  const specs = (ids.length ? ids : Object.keys(MEASURED)).map((id) => {
+    const spec = EXERCISES.find((exercise) => exercise.id === id);
+    if (!spec || !MEASURED[id]) throw new Error(`No measured activity for "${id}"`);
+    return spec;
+  });
+  const results = (await generated(specs)).map(compare);
   if (json) console.log(JSON.stringify(results));
   else
     for (const result of results) {

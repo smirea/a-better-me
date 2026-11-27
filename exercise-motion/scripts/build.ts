@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { cpus } from "node:os";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { availableParallelism } from "node:os";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import { analyze } from "../src/biomech";
@@ -13,26 +13,12 @@ import { resolveGlbPath, validateGlbMotion } from "../src/glb-collision";
 import { MUSCLES, type Muscle } from "../src/muscles";
 import { runChecks, validateLoad, validateMotion } from "../src/validate";
 import { listedMuscles, loadAppCatalog, MOTION_ROOT, REPO_ROOT } from "./catalog-io";
+import { cachePathFor, writeCache } from "./motion-cache";
 
 const dist = join(MOTION_ROOT, "dist");
 const libraryDir = join(dist, "library");
 const seqDir = join(libraryDir, "sequences");
-const cacheDir = join(MOTION_ROOT, ".cache", "motion-build");
 mkdirSync(seqDir, { recursive: true });
-mkdirSync(cacheDir, { recursive: true });
-
-// One fingerprint over the engine's sources, so any engine edit invalidates cached sequences.
-const engineHash = createHash("sha256");
-for (const dir of ["src", "src/machines"]) {
-  for (const f of readdirSync(join(MOTION_ROOT, dir)).sort()) {
-    if ((f.endsWith(".ts") && !f.endsWith(".test.ts")) || f.endsWith(".json")) {
-      engineHash.update(readFileSync(join(MOTION_ROOT, dir, f)));
-    }
-  }
-}
-// What this script and the catalog reader decide is cached with each sequence too: its issues and its muscles.
-for (const f of ["build.ts", "catalog-io.ts"]) engineHash.update(readFileSync(join(import.meta.dir, f)));
-const ENGINE_SIG = engineHash.digest("hex").slice(0, 12);
 
 const args = process.argv.slice(2);
 const noCache = args.includes("--no-cache");
@@ -56,42 +42,30 @@ if (singleId && specsToBuild.length === 0) {
   throw new Error(`Exercise "${singleId}" not found in EXERCISES.`);
 }
 
-const cachePathFor = (spec: ExerciseSpec): string | null => {
-  const srcPath = join(MOTION_ROOT, "src", "exercises", `${spec.id}.ts`);
-  if (!existsSync(srcPath)) return null;
-  const specSig = createHash("sha256")
-    .update(ENGINE_SIG)
-    .update(readFileSync(srcPath))
-    .digest("hex")
-    .slice(0, 16);
-  return join(cacheDir, `${spec.id}.${specSig}.json`);
-};
-
-// When building many uncached exercises, fan out across CPU cores to populate the SHA-256 cache in parallel.
-if (!cacheOnly && !singleId) {
-  const uncached = specsToBuild.filter((spec) => {
+// An effort-posed exercise takes tens of seconds on one core, so every uncached exercise past the first gets its own
+// process, as many at once as there are cores to spare, and the build below reads them all from the cache.
+const queue = specsToBuild
+  .filter((spec) => {
     const cp = cachePathFor(spec);
     return noCache || !cp || !existsSync(cp);
-  });
-  const workers = Math.min(8, Math.max(1, cpus().length - 1));
-  if (uncached.length > 16 && workers > 1) {
-    const chunkSize = Math.ceil(uncached.length / workers);
-    const procs: ReturnType<typeof Bun.spawn>[] = [];
-    for (let i = 0; i < uncached.length; i += chunkSize) {
-      const slice = uncached.slice(i, i + chunkSize).map((s) => s.id);
-      const flags = noCache ? ["--cache-only", "--no-cache", ...slice] : ["--cache-only", ...slice];
-      procs.push(
-        Bun.spawn(["bun", join(MOTION_ROOT, "scripts", "build.ts"), ...flags], {
-          stdout: "inherit",
-          stderr: "inherit",
-        }),
+  })
+  .map((spec) => spec.id);
+const workers = Math.min(queue.length, Math.max(1, availableParallelism() - 1));
+const prebuilt = queue.length > 1 && workers > 1;
+if (prebuilt) {
+  const work = async () => {
+    for (let id = queue.shift(); id; id = queue.shift()) {
+      const proc = Bun.spawn(
+        ["bun", import.meta.path, "--cache-only", ...(noCache ? ["--no-cache"] : []), id],
+        { stdout: "inherit", stderr: "inherit" },
       );
+      const code = await proc.exited;
+      if (code !== 0) throw new Error(`Building ${id} failed with exit code ${code}`);
     }
-    const codes = await Promise.all(procs.map((p) => p.exited));
-    const bad = codes.find((c) => c !== 0);
-    if (bad) throw new Error(`Parallel build worker failed with exit code ${bad}`);
-  }
+  };
+  await Promise.all(Array.from({ length: workers }, work));
 }
+if (cacheOnly && prebuilt) process.exit(0);
 
 interface BuiltItem {
   spec: ExerciseSpec;
@@ -137,6 +111,18 @@ interface BuiltItem {
   };
 }
 
+/** What one exercise's build leaves in the cache: everything the library and the report need from it. */
+interface Built {
+  data: BuiltItem["data"];
+  summary: BuiltItem["summary"];
+  motionIssues: number;
+  loadIssues: number;
+  report: string[];
+  flagged: boolean;
+}
+/** A long build reports only the exercises with something wrong. */
+const reported = (built: Built) => specsToBuild.length <= 25 || built.flagged;
+
 const builtItems: BuiltItem[] = [];
 /** A hash of everything the viewer shows for an exercise, so it reloads on any edit, not only when QA totals move. */
 const withRevision = (b: BuiltItem) => ({
@@ -163,14 +149,10 @@ for (const spec of specsToBuild) {
 
   const cachePath = cachePathFor(spec);
 
-  if ((!noCache || (!cacheOnly && specsToBuild.length > 16)) && cachePath && existsSync(cachePath)) {
-    const cached = JSON.parse(readFileSync(cachePath, "utf8")) as {
-      data: BuiltItem["data"];
-      summary: BuiltItem["summary"];
-      motionIssues: number;
-      loadIssues: number;
-    };
+  if ((!noCache || prebuilt) && cachePath && existsSync(cachePath)) {
+    const cached = JSON.parse(readFileSync(cachePath, "utf8")) as Built;
     cacheHits++;
+    if (reported(cached)) report.push(...cached.report);
     totalMotionIssues += cached.motionIssues;
     totalLoadIssues += cached.loadIssues;
     totalChecks += cached.summary.checksTotal;
@@ -280,47 +262,41 @@ for (const spec of specsToBuild) {
     checksTotal: checks.length,
   };
 
-  if (cachePath) {
-    writeFileSync(
-      cachePath,
-      JSON.stringify({
-        data: itemData,
-        summary,
-        motionIssues: issues.length,
-        loadIssues: loadIssues.length,
-      }),
+  const section: string[] = [];
+  const pct = (value: number) => `${(value * 100).toFixed(0)}%`;
+  section.push(`## ${spec.name}`, "");
+  section.push(`- Generated ${sequence.poses.length} frames in ${seconds.toFixed(2)} s.`);
+  section.push(
+    `- Motion issues flagged: ${issues.length}. Load issues at ${sequence.loadKg} kg: ${loadIssues.length}.`,
+  );
+  for (const issue of [...issues, ...loadIssues]) {
+    section.push(`  - ${issue.severity.toUpperCase()} [${issue.code}] ${issue.title}: ${issue.detail}`);
+  }
+  section.push(
+    `- Instruction checks: ${checks.filter((check) => check.pass).length} of ${checks.length} pass.`,
+  );
+  for (const check of checks.filter((item) => !item.pass))
+    section.push(`  - FAIL ${check.label}: ${check.measured}`);
+  section.push(
+    `- Muscles the app lists (${listed.join(", ")}): ${agreement.listedInTop} of ${agreement.listed} in top ${listed.length} (primary ${pct(agreement.primaryMean)}, secondary ${pct(agreement.secondaryMean)}, unlisted ${pct(agreement.otherMean)}).`,
+  );
+  if (faults.length) {
+    section.push(
+      `- Injected faults caught: ${faults.filter((fault) => fault.caught.length).length} of ${faults.length}.`,
     );
   }
-
+  section.push("");
+  const result: Built = {
+    data: itemData,
+    summary,
+    motionIssues: issues.length,
+    loadIssues: loadIssues.length,
+    report: section,
+    flagged: issues.length > 0 || loadIssues.length > 0 || checks.some((c) => !c.pass),
+  };
+  if (cachePath) writeCache(cachePath, result);
   builtItems.push({ spec, data: itemData, summary });
-
-  if (cacheOnly) continue;
-
-  if (specsToBuild.length <= 25 || issues.length > 0 || loadIssues.length > 0 || checks.some((c) => !c.pass)) {
-    const pct = (value: number) => `${(value * 100).toFixed(0)}%`;
-    report.push(`## ${spec.name}`, "");
-    report.push(`- Generated ${sequence.poses.length} frames in ${seconds.toFixed(2)} s.`);
-    report.push(
-      `- Motion issues flagged: ${issues.length}. Load issues at ${sequence.loadKg} kg: ${loadIssues.length}.`,
-    );
-    for (const issue of [...issues, ...loadIssues]) {
-      report.push(`  - ${issue.severity.toUpperCase()} [${issue.code}] ${issue.title}: ${issue.detail}`);
-    }
-    report.push(
-      `- Instruction checks: ${checks.filter((check) => check.pass).length} of ${checks.length} pass.`,
-    );
-    for (const check of checks.filter((item) => !item.pass))
-      report.push(`  - FAIL ${check.label}: ${check.measured}`);
-    report.push(
-      `- Muscles the app lists (${listed.join(", ")}): ${agreement.listedInTop} of ${agreement.listed} in top ${listed.length} (primary ${pct(agreement.primaryMean)}, secondary ${pct(agreement.secondaryMean)}, unlisted ${pct(agreement.otherMean)}).`,
-    );
-    if (faults.length) {
-      report.push(
-        `- Injected faults caught: ${faults.filter((fault) => fault.caught.length).length} of ${faults.length}.`,
-      );
-    }
-    report.push("");
-  }
+  if (reported(result)) report.push(...section);
 }
 
 if (cacheOnly) {
@@ -346,8 +322,8 @@ writeFileSync(
   join(libraryDir, "catalog.json"),
   JSON.stringify(builtItems.map(withRevision)),
 );
-copyFileSync(join(MOTION_ROOT, "viewer/assets/lifter.bin"), join(libraryDir, "lifter.bin"));
-copyFileSync(join(MOTION_ROOT, "viewer/assets/muscle-map.png"), join(libraryDir, "muscle-map.png"));
+writeFileSync(join(libraryDir, "lifter.bin"), readFileSync(join(MOTION_ROOT, "viewer/assets/lifter.bin")));
+writeFileSync(join(libraryDir, "muscle-map.png"), readFileSync(join(MOTION_ROOT, "viewer/assets/muscle-map.png")));
 
 const libHtml = fill(
   fill(

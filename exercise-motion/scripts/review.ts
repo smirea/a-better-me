@@ -1,14 +1,14 @@
 #!/usr/bin/env bun
 import { analyze } from "../src/biomech";
-import { generate, kinematics } from "../src/exercise";
+import { kinematics } from "../src/exercise";
 import { EXERCISES } from "../src/exercises";
 import { runChecks, validateLoad, validateMotion } from "../src/validate";
 import { listedMuscles } from "./catalog-io";
+import { generated } from "./motion-cache";
 
-for (const spec of EXERCISES.filter(
-  (exercise) => !process.argv[2] || exercise.id === process.argv[2],
-)) {
-  const { body, built, sequence } = generate(spec);
+const specs = EXERCISES.filter((exercise) => !process.argv[2] || exercise.id === process.argv[2]);
+for (const [i, { body, built, sequence }] of (await generated(specs)).entries()) {
+  const spec = specs[i];
   const kin = kinematics(body, sequence);
   const analysis = analyze(body, sequence, kin);
   console.log(`\n== ${spec.name} (${sequence.poses.length} frames, ${sequence.loadKg} kg)`);

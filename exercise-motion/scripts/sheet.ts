@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import { generate } from "../src/exercise";
 import { EXERCISES } from "../src/exercises";
 import { contactSheet } from "../src/sheet";
+import { generated } from "./motion-cache";
 
 const [id, out = `${id}.png`, viewList = "side,front"] = process.argv.slice(2);
 const spec = EXERCISES.find((exercise) => exercise.id === id);
@@ -12,7 +12,7 @@ if (!spec)
   );
 
 const started = performance.now();
-const { sequence } = generate(spec);
+const [{ sequence }] = await generated([spec]);
 console.log(
   `${spec.name}: ${sequence.poses.length} frames in ${((performance.now() - started) / 1000).toFixed(1)} s`,
 );

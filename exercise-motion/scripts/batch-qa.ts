@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { analyze } from "../src/biomech";
 import { anchorPoint, type Body } from "../src/body";
 import { compileParts, propParts, signedDistance } from "../src/equipment";
-import { generate, kinematics, type Kinematics, type Sequence } from "../src/exercise";
+import { kinematics, type Kinematics, type Sequence } from "../src/exercise";
 import { CYLINDER_GRIPS, graspHandleAt, gripCenter } from "../src/grasp";
 import { deg } from "../src/math";
 import { jointRanges } from "../src/solver";
@@ -13,6 +13,7 @@ import { validateGlbMotion } from "../src/glb-collision";
 import { contactSheet } from "../src/sheet";
 import { runChecks, validateLoad, validateMotion } from "../src/validate";
 import { listedMuscles, loadSpec } from "./catalog-io";
+import { generated, warm } from "./motion-cache";
 
 const MAJOR = ["hip_L.flex", "hip_R.flex", "knee_L.flex", "knee_R.flex", "ankle_L.dorsi", "ankle_R.dorsi", "lumbar.flex", "thoracic.flex", "neck.flex", "shoulder_L.elev", "shoulder_R.elev", "elbow_L.flex", "elbow_R.flex", "wrist_L.flex", "wrist_L.dev"];
 
@@ -72,10 +73,13 @@ async function main() {
   const tilePngs: string[] = [];
   let failed = 0;
 
+  // A spec that fails to build is reported in its own turn below, so warming the rest in parallel can't stop on it.
+  const loaded = await Promise.all(slugs.map((slug) => loadSpec(slug).catch(() => null)));
+  await warm(loaded.filter((spec) => spec !== null)).catch(() => {});
   for (const slug of slugs) {
     try {
       const spec = await loadSpec(slug);
-      const { body, built, sequence } = generate(spec);
+      const [{ body, built, sequence }] = await generated([spec]);
       const kin = kinematics(body, sequence);
       const analysis = analyze(body, sequence, kin);
       const glbIssues = await validateGlbMotion(body, sequence, kin);

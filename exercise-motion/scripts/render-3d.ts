@@ -4,11 +4,12 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { analyze } from "../src/biomech";
 import { groupsOf } from "../src/catalog";
-import { generate, kinematics } from "../src/exercise";
+import { kinematics } from "../src/exercise";
 import type { Muscle } from "../src/muscles";
 import { DEFAULT_SKIN_ID } from "../src/skin";
 import { runChecks } from "../src/validate";
 import { loadAppCatalog, loadSpec, MOTION_ROOT } from "./catalog-io";
+import { generated } from "./motion-cache";
 
 const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const EXTRA_GYM_MODELS = process.env.GYM_MODELS_DIR ?? "";
@@ -85,7 +86,7 @@ async function main() {
   const entry = catalog.find((e) => e.id === spec.catalogId);
   if (!entry) throw new Error(`Unknown catalogId ${spec.catalogId}`);
 
-  const { body, built, sequence } = generate(spec);
+  const [{ body, built, sequence }] = await generated([spec]);
   const kin = kinematics(body, sequence);
   const analysis = analyze(body, sequence, kin);
   const checks = runChecks(body, built, sequence, kin);
