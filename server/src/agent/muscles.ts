@@ -2,8 +2,7 @@ import { z } from "zod";
 import { CATALOG_EXERCISES, exerciseLookup, type Exercise } from "./catalog";
 import { muscleSets, statsByExercise } from "./metrics";
 import * as M from "./models";
-// @ts-expect-error TypeScript types a `.ts` import as the module; Bun and the Worker bundle import it as its text.
-import modelSource from "./muscle-model.ts" with { type: "text" };
+import modelSource from "./muscle-model.source";
 import {
   fatigue,
   MUSCLES,

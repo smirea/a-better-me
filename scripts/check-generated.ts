@@ -10,13 +10,17 @@ import { DATASET, generatorHash, OUT as USDA_FOODS } from "../app-ios/scripts/us
 import { ASSETS_DIR, buildAssets } from "../server/src/assets";
 import { foodNutrition, nutrientAmounts, schema } from "../shared/db/schema";
 import { trackedVersion } from "./assets";
-import { SWIFT_SCHEMA } from "./generate";
+import { MUSCLE_MODEL_SOURCE, muscleModelSource, SWIFT_SCHEMA } from "./generate";
 
 const root = join(import.meta.dir, "..");
 const problems: string[] = [];
 
 if (readFileSync(join(root, SWIFT_SCHEMA), "utf8") !== generate({ schema }).swift) {
   problems.push(`${SWIFT_SCHEMA} is stale. Run bun run generate.`);
+}
+
+if (readFileSync(join(root, MUSCLE_MODEL_SOURCE), "utf8") !== muscleModelSource()) {
+  problems.push(`${MUSCLE_MODEL_SOURCE} is stale. Run bun run generate.`);
 }
 
 if (trackedVersion() !== buildAssets(ASSETS_DIR).manifest.version) {
