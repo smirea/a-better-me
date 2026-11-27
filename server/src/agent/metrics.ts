@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type { Exercise } from "./catalog";
+import { muscleLoad } from "./muscle-model";
 import type * as M from "./models";
 
 /**
@@ -78,16 +79,20 @@ export function statsByExercise(blocks: M.Blocks, lookup: Lookup): ExerciseStats
 }
 
 /** `WorkoutMetrics.muscleSets` over logged sets: a primary muscle counts 1 per working set, a secondary 0.5. */
-export function muscleSets(stats: ExerciseStats[], lookup: Lookup) {
-  const sets: Record<string, number> = {};
-  for (const { exerciseID, workingSets } of stats) {
-    const exercise = lookup(exerciseID)!;
-    for (const muscle of exercise.primaryMuscles) sets[muscle] = (sets[muscle] ?? 0) + workingSets;
-    for (const muscle of exercise.secondaryMuscles)
-      sets[muscle] = (sets[muscle] ?? 0) + workingSets * 0.5;
-  }
-  return sets;
-}
+export const muscleSets = (stats: ExerciseStats[], lookup: Lookup) =>
+  muscleLoad(stats.map((e) => ({ effect: lookup(e.exerciseID)!, workingSets: e.workingSets })));
+
+/** `WorkoutMetrics.muscleSets(loggedOnly: false)`: the planned working sets of a template, logged or not. */
+export const plannedMuscleSets = (blocks: M.Blocks, lookup: Lookup) =>
+  muscleLoad(
+    blocks
+      .flatMap((block) => block.exercises)
+      .flatMap((item) => {
+        const effect = lookup(item.exerciseID);
+        const workingSets = item.sets.filter((set) => set.type !== "warmUp").length;
+        return effect ? [{ effect, workingSets }] : [];
+      }),
+  );
 
 type SessionLike = {
   startedAt: string;

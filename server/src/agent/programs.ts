@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { ApiError } from "../http";
 import type { Db, RowOf } from "./db";
+import { exerciseLookup } from "./catalog";
 import { assertExercises } from "./exercises";
+import { plannedMuscleSets } from "./metrics";
+import { scheduleRecovery, type Muscle, type MuscleMap } from "./muscle-model";
 import { assertGym } from "./gyms";
 import * as M from "./models";
 import { flag, route, where, type Condition, type Route } from "./route";
@@ -119,6 +122,70 @@ function upNext(row: ReturnType<typeof program>, sessions: SessionRow[]) {
     : null;
 }
 
+const HOURS_BETWEEN_DAYS = 24;
+
+/**
+ * Each cycle of a whole run as it trains, with its planned sets per muscle and how recovered each muscle is when its
+ * day comes, walking every cycle's days in a row.
+ */
+function muscleEffects(shaped: ReturnType<typeof program>, templates: TemplateRow[], db: Db) {
+  const lookup = exerciseLookup(db);
+  const blocksById = new Map(templates.map((t) => [t.id, t.blocks as M.Blocks]));
+  const total = shaped.cycles + (shaped.config.deload === "none" ? 0 : 1);
+  const plan = Array.from({ length: total }, (_, index) => {
+    const cycle = index + 1;
+    const { deload } = shaped.config;
+    return {
+      cycle,
+      deload:
+        (deload === "firstCycle" && cycle === 1) || (deload === "lastCycle" && cycle === total),
+      days: shaped.days.map((day) => {
+        const blocks = day.templateID ? blocksById.get(day.templateID) : undefined;
+        return {
+          dayId: day.id,
+          templateId: day.templateID ?? null,
+          muscleSets: blocks
+            ? plannedMuscleSets(blocksForCycle(shaped, blocks, cycle), lookup)
+            : {},
+        };
+      }),
+    };
+  });
+  const walked = scheduleRecovery(
+    plan.flatMap((cycle) => cycle.days.map((day) => day.muscleSets)),
+    HOURS_BETWEEN_DAYS,
+  );
+  return {
+    hoursBetweenDays: HOURS_BETWEEN_DAYS,
+    cycles: plan.map((cycle, index) => {
+      const muscleSets: MuscleMap = {};
+      for (const day of cycle.days)
+        for (const [muscle, sets] of Object.entries(day.muscleSets) as [Muscle, number][])
+          muscleSets[muscle] = (muscleSets[muscle] ?? 0) + sets;
+      const perWeek = 7 / cycle.days.length;
+      return {
+        ...cycle,
+        muscleSets,
+        weeklyMuscleSets: Object.fromEntries(
+          Object.entries(muscleSets).map(([muscle, sets]) => [muscle, round(sets * perWeek)]),
+        ),
+        days: cycle.days.map((day, dayIndex) => {
+          const { recoveryBefore, underRecovered } = walked[index * cycle.days.length + dayIndex]!;
+          return {
+            ...day,
+            recoveryBefore: Object.fromEntries(
+              Object.entries(recoveryBefore).map(([muscle, value]) => [muscle, round(value)]),
+            ),
+            underRecovered,
+          };
+        }),
+      };
+    }),
+  };
+}
+
+const round = (value: number) => Math.round(value * 100) / 100;
+
 export function programDetail(db: Db, row: ProgramRow) {
   const shaped = program(row);
   const ids = new Set(shaped.days.flatMap((day) => (day.templateID ? [day.templateID] : [])));
@@ -128,6 +195,7 @@ export function programDetail(db: Db, row: ProgramRow) {
   return {
     ...shaped,
     templates,
+    muscleEffects: muscleEffects(shaped, templates, db),
     upNext: upNext(shaped, db.all("workout_sessions", "program_id = ?", [row.id])),
   };
 }

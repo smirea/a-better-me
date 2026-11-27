@@ -1,0 +1,4 @@
+{
+	"title": "Agent API serves exercise muscles, the load and recovery formula, and program effects",
+	"description": "GET /muscle-effects lists each exercise's muscles with the TypeScript formula, programs carry muscleEffects, and GET /muscle-recovery reads the logged workouts."
+}
