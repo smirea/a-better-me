@@ -1,32 +1,18 @@
 import Feedback
 import SwiftUI
 
-/// A recipe's numbers at the top of its page, Prepare, the editor, and Alter, in the summary's columns.
+/// A recipe's numbers at the top of its page, Prepare, the editor, and Alter: a food page's `MacroHeader` in the
+/// summary's columns, with what amount they are for under it.
 struct MacroSummary: View {
     let amounts: NutrientAmounts
     var caption: String?
     @Environment(\.summaryNutrients) private var columns
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                ForEach(columns, id: \.self) { id in
-                    let nutrient = NutrientRegistry.nutrient(id)
-                    VStack(spacing: 2) {
-                        Text(NutritionFormat.amount(amounts.amount(of: id) ?? 0))
-                            .font(AppFont.number(id == .energy ? 26 : 18))
-                            .foregroundStyle(Theme.textPrimary)
-                        Text(nutrient?.name ?? "")
-                            .font(AppFont.rowDetail)
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .accessibilityElement(children: .combine)
-                }
-            }
+        VStack(alignment: .leading, spacing: 6) {
+            MacroHeader(amounts: amounts, columns: columns)
             if let caption {
                 Text(caption).font(AppFont.rowDetail).foregroundStyle(Theme.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
             }
         }
         .padding(.vertical, 4)
@@ -34,40 +20,51 @@ struct MacroSummary: View {
     }
 }
 
-/// Every nutrient as a full Nutrition Facts table (`NutrientList`), an unreported one as "–". The recipe page, Prepare,
-/// and the recipe editor show it under `MacroSummary`.
-struct NutrientBreakdown: View {
+/// A recipe's Nutrition Facts table (`NutrientList`): its significant nutrients, then every other one, an unreported
+/// one as "–", behind the table's closing switch. The recipe page, Prepare, and the recipe editor show it.
+struct NutrientBreakdown<Actions: View>: View {
     let amounts: NutrientAmounts
+    @ViewBuilder var actions: Actions
 
     var body: some View {
-        NutrientList(title: "Nutrients", rows: NutrientListRow.all) { nutrient in
+        NutrientList(title: "Nutrients", amounts: amounts, listsUnreported: true) { nutrient in
+            let amount = amounts.amount(of: nutrient.id)
             LabeledContent(nutrient.name) {
-                Text(amounts.amount(of: nutrient.id).map { NutritionFormat.amount($0, nutrient.unit) } ?? "–")
+                Text(amount.map { NutritionFormat.amount($0, nutrient.unit) } ?? "–")
+                    .foregroundStyle(amount == nil ? Theme.textTertiary : Theme.textSecondary)
                     .monospacedDigit()
             }
             .font(AppFont.body(15))
+        } actions: {
+            actions
         }
     }
 }
 
-/// Flat `ScrollView`/`LazyVStack` variant of `NutrientBreakdown`, drawing directly on `Theme.background`.
-struct FlatNutrientBreakdown: View {
-    let amounts: NutrientAmounts
-    var collapsed: Binding<Bool>? = nil
+extension NutrientBreakdown where Actions == EmptyView {
+    init(amounts: NutrientAmounts) {
+        self.init(amounts: amounts) { EmptyView() }
+    }
+}
+
+/// What a recipe's nutrient table counts: one serving or the whole recipe. The recipe page and Prepare share the
+/// owner's last choice.
+enum RecipeNutrientsScope: String {
+    case serving, recipe
+
+    static let storageKey = "recipe.nutrientsScope"
+}
+
+/// The Nutrients header's Serving | Recipe switch.
+struct RecipeNutrientsScopePicker: View {
+    @Binding var scope: RecipeNutrientsScope
 
     var body: some View {
-        FlatNutrientList(title: "Nutrients", rows: NutrientListRow.all, collapsed: collapsed) { nutrient in
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(nutrient.name)
-                    .font(AppFont.body(15))
-                    .foregroundStyle(Theme.textPrimary)
-                Spacer(minLength: 8)
-                Text(amounts.amount(of: nutrient.id).map { NutritionFormat.amount($0, nutrient.unit) } ?? "–")
-                    .font(AppFont.body(15))
-                    .foregroundStyle(amounts.amount(of: nutrient.id) == nil ? Theme.textTertiary : Theme.textSecondary)
-                    .monospacedDigit()
-            }
-            .accessibilityElement(children: .combine)
+        Picker("Nutrients Per", selection: $scope) {
+            Text("Serving").tag(RecipeNutrientsScope.serving)
+            Text("Recipe").tag(RecipeNutrientsScope.recipe)
         }
+        .pickerStyle(.segmented)
+        .fixedSize()
     }
 }

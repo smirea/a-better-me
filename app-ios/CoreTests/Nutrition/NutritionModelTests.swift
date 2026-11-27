@@ -33,6 +33,20 @@ struct NutritionModelTests {
         #expect(Set(listed) == Set(NutrientRegistry.all.map(\.id)))
     }
 
+    @Test func aFoodsTableHidesAmountsUnderPointTwoOfAUnitOrTwoPercentOfAVitaminsTargetUntilAskedForAll() {
+        let amounts: NutrientAmounts = [.energy: 0, .fat: 0, "621": 0.1, "606": 0.2, "601": 0.1, "312": 0.1, "301": 0.1, "418": 0.1]
+        func listed(_ rows: [NutrientListRow]) -> Set<NutrientID> {
+            Set(rows.compactMap { if case let .nutrient(nutrient, _, _) = $0 { nutrient.id } else { nil } })
+        }
+        let significant = NutrientListRow.rows(for: amounts, all: false, listsUnreported: false)
+        #expect(listed(significant.rows) == [.energy, .fat, "606", "312", "418"])
+        #expect(significant.hidden == 3)
+        #expect(listed(NutrientListRow.rows(for: amounts, all: true, listsUnreported: false).rows) == Set(amounts.keys))
+        let recipe = NutrientListRow.rows(for: amounts, all: false, listsUnreported: true)
+        #expect(recipe.hidden == NutrientRegistry.all.count - 5)
+        #expect(listed(NutrientListRow.rows(for: amounts, all: true, listsUnreported: true).rows).count == NutrientRegistry.all.count)
+    }
+
     @Test func netCarbsAreDerivedUnlessReported() {
         #expect(yogurt.nutrition.nutrients.amount(of: .netCarbs) == 10)
         #expect(([.carbs: 12, .fiber: 2, .netCarbs: 7] as NutrientAmounts).amount(of: .netCarbs) == 7)
