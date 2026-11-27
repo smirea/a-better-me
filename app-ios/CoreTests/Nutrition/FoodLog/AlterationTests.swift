@@ -100,7 +100,7 @@ struct AlterationTests {
         let entry = logged().altered(to: altered())
         try await store.write { [entry] db in try entry.insert(db) }.value
 
-        _ = store.relocate([entry], .copy, to: .days([monday.adding(days: 1)]))
+        _ = store.relocate([entry], .copy, to: .hour(monday.adding(days: 1), hour: 9))
         try await store.write { _ in }.value
         let copy = try #require(try store.readBlocking(FoodEntry.on(monday.adding(days: 1)).fetch).first)
         #expect(copy.id != entry.id)

@@ -99,9 +99,9 @@ struct MealSectionTests {
         let early = entry(minute: 11 * 60 + 50, section: "lunch")
         let old = entry(minute: 11 * 60 + 50)
 
-        let tomorrow = FoodLog.relocations([early, old], to: .tomorrow, now: now, calendar: utc)
-        #expect(tomorrow.flatMap { relocation in [early, old].map { relocation.section(for: $0, in: sections) } } == ["lunch", "am-snack"])
-        let atNine = FoodLog.relocations([early], to: .dateTime(monday, minute: 9 * 60), now: now, calendar: utc)
+        let today = FoodLog.relocations([early, old], to: .today, now: now, calendar: utc)
+        #expect(today.flatMap { relocation in [early, old].map { relocation.section(for: $0, in: sections) } } == ["lunch", "am-snack"])
+        let atNine = FoodLog.relocations([early], to: .hour(monday, hour: 9), now: now, calendar: utc)
         #expect(atNine.map { $0.section(for: early, in: sections) } == ["breakfast"])
         let toLunch = FoodLog.relocations([old], to: .section(monday, sections[2], minute: 810), now: now, calendar: utc)
         #expect(toLunch == [Relocation(ids: [old.id], day: monday, minute: 810, section: .chosen("lunch"))])

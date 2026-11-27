@@ -33,12 +33,11 @@ struct FoodLogStateTests {
         let breakfast = [entry(minute: 482), entry(minute: 485, quantity: 2)]
         try await log(breakfast)
         let state = FoodLogState()
-        state.day = monday
-        state.hold(.copy, breakfast)
+        state.copy(breakfast)
 
-        state.paste(to: .hour(monday, hour: 16), in: store)
+        state.paste(.copy, to: .hour(monday, hour: 16), in: store)
         #expect(!state.selecting)
-        #expect(state.pending == nil)
+        #expect(state.action == nil)
         #expect(state.notice?.message == "Copied 2 foods to Mon, Mar 3 at 4 PM")
         #expect(try await entries(on: monday).map(\.minute) == [482, 485, 960, 960])
         #expect(try await entries(on: monday).map(\.serving.quantity) == [1, 2, 1, 2])
@@ -48,22 +47,18 @@ struct FoodLogStateTests {
         #expect(try await entries(on: monday).map(\.id) == breakfast.map(\.id))
     }
 
-    @Test func aSelectionEndsWithItsDayButAPendingCopyOrMoveCarriesTheFoodsToAnother() async throws {
+    @Test func aSelectionAndItsCopyOrMoveOutliveAChangeOfDay() {
         let breakfast = [entry(minute: 482), entry(minute: 485)]
         let state = FoodLogState()
         state.day = monday
-        state.selectHour(breakfast.map(\.id))
+        state.selectHour(breakfast)
         state.day = monday.adding(days: 1)
-        #expect(!state.selecting)
+        #expect(state.selectedEntries == breakfast)
 
-        state.day = monday
-        state.selectHour(breakfast.map(\.id))
-        state.hold(.copy, breakfast)
+        state.action = .move
         state.day = monday.adding(days: 2)
-        #expect(state.pending?.entries == breakfast)
-        #expect(state.selecting)
-        #expect(!state.showsCircles(on: monday.adding(days: 2)))
-        #expect(state.showsCircles(on: monday))
+        #expect(state.action == .move)
+        #expect(state.selectedEntries == breakfast)
     }
 
     @Test func aMovePastedOnAnotherDayLeavesItsDayOnceAndUndoReturnsIt() async throws {
@@ -71,40 +66,64 @@ struct FoodLogStateTests {
         try await log(breakfast)
         let wednesday = monday.adding(days: 2)
         let state = FoodLogState()
-        state.day = monday
-        state.hold(.move, breakfast)
+        state.select(breakfast)
+        state.action = .move
         state.day = wednesday
 
-        state.paste(to: .hour(wednesday, hour: 12), in: store)
+        state.paste(.move, to: .hour(wednesday, hour: 12), in: store)
         #expect(try await entries(on: monday).isEmpty)
         #expect(try await entries(on: wednesday).map(\.id) == breakfast.map(\.id))
-        #expect(state.pending == nil)
+        #expect(!state.selecting)
 
         state.undo(in: store)
         #expect(try await entries(on: monday).map(\.minute) == [482, 485])
         #expect(try await entries(on: wednesday).isEmpty)
     }
 
-    @Test func aPendingCopyOrMoveHoldsItsSelectionStill() {
-        let breakfast = [entry(minute: 482), entry(minute: 485)]
+    @Test func stepBackLeavesCopyOrMoveForTheSelectionThenEndsIt() {
         let state = FoodLogState()
-        state.hold(.copy, [breakfast[0]])
-        state.select(breakfast[1].id)
-        state.selectHour([breakfast[1].id])
-        #expect(state.selection == [breakfast[0].id])
+        state.select([entry(minute: 482)])
+        state.action = .move
+        state.day = monday.adding(days: 1)
+        state.stepBack()
+        #expect(state.selecting && state.action == nil)
+
+        state.stepBack()
+        #expect(!state.selecting)
     }
 
-    @Test func backingOutOfTheTargetsOnAnotherDayEndsTheSelection() {
+    @Test func deselectingTheLastEntryEndsSelectMode() {
+        let breakfast = [entry(minute: 482), entry(minute: 485)]
         let state = FoodLogState()
-        state.day = monday
-        state.hold(.move, [entry(minute: 482)])
-        state.back()
-        #expect(state.selecting && state.pending == nil)
+        state.copy(breakfast)
+        state.toggle(breakfast[0])
+        #expect(state.action == .copy)
+        state.selectHour([breakfast[1]])
+        #expect(!state.selecting && state.action == nil)
+    }
 
-        state.hold(.move, [entry(minute: 482)])
-        state.day = monday.adding(days: 1)
-        state.back()
-        #expect(!state.selecting && state.pending == nil)
+    @Test func anEntryRemovedFromItsDayLeavesTheSelection() {
+        let breakfast = [entry(minute: 482), entry(minute: 485)]
+        let other = FoodEntry(breakfast[0].portion, day: monday.adding(days: 1), minute: 600)
+        let state = FoodLogState()
+        state.select(breakfast + [other])
+        state.shown([breakfast[1]], on: monday)
+        #expect(state.selectedEntries == [breakfast[1], other])
+    }
+
+    @Test func removingFoodsConfirmsAndUndoLogsThemBack() async throws {
+        let breakfast = [entry(minute: 482), entry(minute: 485, quantity: 2)]
+        try await log(breakfast)
+        let state = FoodLogState()
+        state.select(breakfast)
+
+        state.remove(state.selectedEntries, in: store)
+        #expect(!state.selecting)
+        #expect(try await entries(on: monday).isEmpty)
+
+        state.undo(in: store)
+        #expect(try await entries(on: monday).map(\.minute) == [482, 485])
+        #expect(try await entries(on: monday).map(\.serving.quantity) == [1, 2])
     }
 
     @Test func undoingAMovePutsEachEntryBackAtItsOwnTime() async throws {
@@ -112,7 +131,8 @@ struct FoodLogStateTests {
         try await log(breakfast)
         let state = FoodLogState()
 
-        state.relocate(breakfast, .move, to: .dateTime(monday.adding(days: 1), minute: 1080), in: store)
+        state.select(breakfast)
+        state.paste(.move, to: .hour(monday.adding(days: 1), hour: 18), in: store)
         #expect(try await entries(on: monday).isEmpty)
         #expect(try await entries(on: monday.adding(days: 1)).map(\.minute) == [1080, 1080])
 
@@ -126,8 +146,9 @@ struct FoodLogStateTests {
         try await log(breakfast)
         let state = FoodLogState()
 
-        state.relocate(breakfast, .move, to: .hour(monday, hour: 12), in: store)
-        _ = store.relocate([breakfast[1]], .move, to: .dateTime(monday, minute: 780))
+        state.select(breakfast)
+        state.paste(.move, to: .hour(monday, hour: 12), in: store)
+        _ = store.relocate([breakfast[1]], .move, to: .hour(monday, hour: 13))
         state.undo(in: store)
         #expect(try await entries(on: monday).map(\.minute) == [482, 780])
     }
@@ -135,13 +156,14 @@ struct FoodLogStateTests {
     @Test func undoingAMoveRestoresTheTimeTheMoveReplacedNotTheSelectedOne() async throws {
         let snack = entry(minute: 600)
         try await log([snack])
-        _ = store.relocate([snack], .move, to: .dateTime(monday, minute: 630))
+        _ = store.relocate([snack], .move, to: .hour(monday, hour: 11))
         let state = FoodLogState()
 
-        state.relocate([snack], .move, to: .hour(monday, hour: 15), in: store)
+        state.select([snack])
+        state.paste(.move, to: .hour(monday, hour: 15), in: store)
         #expect(try await entries(on: monday).map(\.minute) == [900])
         state.undo(in: store)
-        #expect(try await entries(on: monday).map(\.minute) == [630])
+        #expect(try await entries(on: monday).map(\.minute) == [660])
     }
 
     @Test func aCopyOfAnEntryDeletedBeforeTheWriteIsSkipped() async throws {

@@ -1,0 +1,10 @@
+{
+	"title": "Selected foods stay selected across days, copy or move onto any hour, + becomes a red ✕",
+	"description": "One row of Copy, Move, + Recipe, and a trash with Undo; Copy and Move turn it into to Today and to Now, with the foods' icons on each button.",
+	"tasks": [
+		{
+			"id": "270904c3-c72c-42e3-8afd-6054511d9608",
+			"title": "6 A Better Me Feedback: redesign selection mode ux and actions"
+		}
+	]
+}

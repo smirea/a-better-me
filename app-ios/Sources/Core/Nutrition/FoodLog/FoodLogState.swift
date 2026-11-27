@@ -30,14 +30,6 @@ final class FoodLogState {
         var title: String { self == .copy ? "Copy" : "Move" }
     }
 
-    /// Selected entries waiting for a paste target: the bar lists targets, and every hour's or section's + pastes.
-    /// It outlives a change of day, so the owner pastes onto another day as onto `source`, where the entries were picked.
-    struct Pending: Hashable {
-        var action: Action
-        var entries: [FoodEntry]
-        var source: CalendarDay
-    }
-
     /// "Copied 3 foods to Today" over the bottom bar, with Undo when it can be taken back.
     struct Notice: Identifiable, Equatable {
         let id = UUID()
@@ -54,20 +46,22 @@ final class FoodLogState {
         let entries: [FoodEntry]
     }
 
-    /// The app's one shown day, which the Workout and Pings tabs read and write too (`RootView`). A selection belongs to
-    /// the day it was made on, so leaving that day, from any tab, ends it. A pending copy or move keeps going: it
-    /// carries the entries.
-    var day = CalendarDay.today {
+    /// The app's one shown day, which the Workout and Pings tabs read and write too (`RootView`). Changing it leaves a
+    /// selection, and a copy or move, exactly as they were.
+    var day = CalendarDay.today
+    /// The selected entries, from any days, as they were when picked or last seen on the shown day. A selection is
+    /// select mode: deselecting the last entry ends it, and its Copy or Move.
+    private(set) var selected: [UUID: FoodEntry] = [:] {
         didSet {
-            guard day != oldValue else { return }
-            if selecting, pending == nil { endSelection() }
+            if selecting == selected.isEmpty { selecting = !selected.isEmpty }
+            if selected.isEmpty, action != nil { action = nil }
         }
     }
-    /// The shown day's entries in timeline order, so the bars never read the database.
-    var entries: [FoodEntry] = []
-    var selecting = false
-    var selection: Set<UUID> = []
-    var pending: Pending?
+    /// Stored apart from `selected`, so the tab bar's "+" re-renders when select mode starts or ends, not on each toggle.
+    private(set) var selecting = false
+    /// Copy or Move, once picked: the bar lists destinations and every hour or section, on any day, pastes the
+    /// selection there.
+    var action: Action?
     var logRequest: LogFoodRequest? {
         didSet {
             if oldValue != nil, logRequest == nil { expectAdditions() }
@@ -92,68 +86,61 @@ final class FoodLogState {
     /// Entries a sync brings leave the page where it is.
     @ObservationIgnored private(set) var revealsAdditionsUntil = Date.distantPast
 
-    var selectedEntries: [FoodEntry] { entries.filter { selection.contains($0.id) } }
+    func isSelected(_ id: UUID) -> Bool { selected[id] != nil }
 
-    /// The check circles show on the selection's own day only, so another day's foods never read as selected.
-    func showsCircles(on day: CalendarDay) -> Bool {
-        guard selecting else { return false }
-        guard let pending else { return true }
-        return pending.source == day
-    }
-
-    /// Copy or Move: the entries wait for a paste target, and the selection holds still until it is picked.
-    func hold(_ action: Action, _ entries: [FoodEntry]) {
-        selecting = true
-        selection = Set(entries.map(\.id))
-        pending = Pending(action: action, entries: entries, source: day)
-    }
-
-    /// The paste bar's back: to the selection, unless the owner has since left its day, which ends it as leaving the
-    /// day always does.
-    func back() {
-        guard let pending else { return }
-        if pending.source == day {
-            self.pending = nil
-        } else {
-            endSelection()
-        }
-    }
-
-    func select(_ id: UUID) {
-        guard pending == nil else { return }
-        if selecting {
-            if selection.remove(id) == nil { selection.insert(id) }
-        } else {
-            selecting = true
-            selection = [id]
-        }
+    /// In timeline order across days, so a recipe lists its ingredients as they were eaten.
+    var selectedEntries: [FoodEntry] {
+        selected.values.sorted { ($0.day, $0.minute, $0.id.uuidString) < ($1.day, $1.minute, $1.id.uuidString) }
     }
 
     /// A tile's tap: outside select mode it opens the entry editor, inside it toggles the entry.
     func tap(_ entry: FoodEntry) {
-        if selecting { select(entry.id) } else { editing = entry }
+        if selecting { toggle(entry) } else { editing = entry }
     }
 
-    /// A long press: select mode with the entry selected, never toggling it off.
-    func startSelection(at id: UUID) {
-        guard pending == nil else { return }
-        selecting = true
-        selection.insert(id)
+    func toggle(_ entry: FoodEntry) {
+        if selected.removeValue(forKey: entry.id) == nil { selected[entry.id] = entry }
     }
 
-    func selectHour(_ ids: [UUID]) {
-        guard !ids.isEmpty, pending == nil else { return }
-        if selecting {
-            selection = FoodLog.toggling(ids, in: selection)
-        } else {
-            selecting = true
-            selection = Set(ids)
+    /// A long press, or Select All: the entries join the selection, never toggling one off.
+    func select(_ entries: [FoodEntry]) {
+        for entry in entries {
+            selected[entry.id] = entry
         }
     }
 
-    /// A tile's Copy swipe: that entry alone, waiting for a paste target.
-    func copy(_ entry: FoodEntry) {
-        hold(.copy, [entry])
+    /// An hour's or section's pill: its entries join the selection, or leave it when all of them are in.
+    func selectHour(_ entries: [FoodEntry]) {
+        if !entries.isEmpty, entries.allSatisfy({ isSelected($0.id) }) {
+            for entry in entries {
+                selected[entry.id] = nil
+            }
+        } else {
+            select(entries)
+        }
+    }
+
+    /// A tile's Copy swipe, or Copy Day: those entries alone, with every hour a paste target.
+    func copy(_ entries: [FoodEntry]) {
+        selected = [:]
+        select(entries)
+        action = entries.isEmpty ? nil : .copy
+    }
+
+    /// The ✕ the tab bar's + turns into: from Copy or Move's destinations back to the selection, then out of select
+    /// mode.
+    func stepBack() {
+        if action != nil { action = nil } else { endSelection() }
+    }
+
+    /// Keeps the selection true to the shown day's entries: an entry edited meanwhile is carried as it is now, and one
+    /// removed (by the editor, a sync, the agent API) leaves the selection.
+    func shown(_ entries: [FoodEntry], on day: CalendarDay) {
+        guard selecting else { return }
+        let current = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0) })
+        for (id, entry) in selected where entry.day == day && current[id] != entry {
+            selected[id] = current[id]
+        }
     }
 
     func createRecipe() {
@@ -193,16 +180,24 @@ final class FoodLogState {
         }
     }
 
-    func relocate(_ entries: [FoodEntry], _ action: Action, to target: PasteTarget, in store: LocalStore) {
+    /// Copies or moves the selection to `target`, confirms it with Undo, and ends select mode: Copy or Move's
+    /// destinations, a paste row, or Premove's arrows.
+    func paste(_ action: Action, to target: PasteTarget, in store: LocalStore) {
+        let entries = selectedEntries
+        guard !entries.isEmpty else { return }
         expectAdditions()
         let undo = store.relocate(entries, action, to: target)
         notice = Notice(message: FoodLog.confirmation(action, count: entries.count, to: target), undo: undo)
         endSelection()
     }
 
-    func paste(to target: PasteTarget, in store: LocalStore) {
-        guard let pending else { return }
-        relocate(pending.entries, pending.action, to: target, in: store)
+    /// The trash, or a tile's Remove swipe: no question asked, since the notice's Undo logs them back.
+    func remove(_ entries: [FoodEntry], in store: LocalStore) {
+        store.deleteEntries(entries.map(\.id))
+        notice = Notice(message: "Removed \(entries.count == 1 ? "1 food" : "\(entries.count) foods")", undo: .relog(entries))
+        for entry in entries {
+            selected[entry.id] = nil
+        }
     }
 
     func undo(in store: LocalStore) {
@@ -232,9 +227,7 @@ final class FoodLogState {
     }
 
     func endSelection() {
-        selecting = false
-        selection = []
-        pending = nil
+        selected = [:]
     }
 
     func requestLog(minute: Int? = nil, section: MealSection? = nil, start: LoggerTab = .search) {
@@ -272,7 +265,8 @@ final class MoveRecord: Sendable {
     let moves = Mutex<[MovedEntry]>([])
 }
 
-/// What takes a copy or move back: removing the copies, or returning the moved entries to where they were.
+/// What takes a copy, move, or removal back: removing the copies, returning the moved entries to where they were, or
+/// logging the removed ones back.
 enum LogUndo {
     case remove([UUID])
     case restore(MoveRecord)
@@ -281,6 +275,8 @@ enum LogUndo {
     case unreplace(added: UUID, removed: [FoodEntry], recipe: UUID? = nil)
     /// Takes back a meal line's Create whose foods changed before they could be replaced.
     case deleteRecipe(UUID)
+    /// Logs removed entries back, under new ids as `unreplace` does.
+    case relog([FoodEntry])
 }
 
 extension LocalStore {
@@ -357,6 +353,12 @@ extension LocalStore {
             deleteEntries(ids)
         case let .deleteRecipe(id):
             deleteRecipe(id)
+        case let .relog(entries):
+            write { db in
+                for entry in entries {
+                    try entry.copy(day: entry.day, minute: entry.minute, section: entry.section).insert(db)
+                }
+            }
         case let .restore(record):
             write { db in
                 for move in record.moves.withLock({ $0 }) {

@@ -34,9 +34,8 @@ struct RootView: View {
     @State private var tab = AppTab.dashboard
     @State private var dashboardPath = NavigationPath()
     @State private var sheet: RootSheet?
-    /// Here rather than in the tab, so "+" can open the scanner on the day the Food Log shows. Its `day` is the app's
-    /// one shown day: Nutrition, Workout, and Pings all read and write it, so the Food Log's rules for a day change (a
-    /// bare selection ends, a pending copy or move follows) run whichever tab moved it.
+    /// Here rather than in the tab, so "+" can open the scanner on the day the Food Log shows, or end its selection. Its
+    /// `day` is the app's one shown day: Nutrition, Workout, and Pings all read and write it.
     @State private var foodLog = FoodLogState()
     /// The day that was today when the app last came forward, so a return on a new day moves the shown day with it.
     @State private var today = CalendarDay.today
@@ -44,13 +43,21 @@ struct RootView: View {
     @State private var inbox = QuickActionInbox.shared
 
     var body: some View {
+        // While the Food Log has a selection, "+" is its red ✕: back from Copy or Move's destinations, then out of select mode.
+        let stepsBack = tab == .nutrition && foodLog.selecting
         TabView(selection: $tab) {
             // The tab bar's selection keeps the accent, so each tab's content restores the app's white tint.
             Tab("Dashboard", systemImage: "square.grid.2x2", value: .dashboard) { DashboardTab(path: $dashboardPath).tint(Theme.textPrimary) }
             Tab("Nutrition", systemImage: "fork.knife", value: .nutrition) { FoodLogTab(state: foodLog).tint(Theme.textPrimary) }
             Tab("Workout", systemImage: "dumbbell", value: .workout) { WorkoutTab(day: $foodLog.day).tint(Theme.textPrimary) }
             Tab("Pings", systemImage: "hand.tap", value: .pings) { PingsTab(day: $foodLog.day, adding: $addingPings).tint(Theme.textPrimary) }
-            Tab("New", systemImage: "plus", value: .add, role: .prominent) { Color.clear }
+            if stepsBack {
+                Tab(value: .add, role: .prominent) { Color.clear } label: {
+                    Label { Text(foodLog.action == nil ? "End Selection" : "Back to Selection") } icon: { Image(uiImage: Self.stepBackIcon) }
+                }
+            } else {
+                Tab("New", systemImage: "plus", value: .add, role: .prominent) { Color.clear }
+            }
         }
         .tint(Theme.accent)
         .tabViewBottomAccessory(isEnabled: activeSessionID != nil) { ActiveSessionBar() }
@@ -60,6 +67,7 @@ struct RootView: View {
             guard current == .add else { return }
             tab = previous
             switch previous {
+            case .nutrition where foodLog.selecting: foodLog.stepBack()
             case .nutrition: foodLog.requestLog(start: .scan)
             case .workout: sheet = .add(.workout)
             case .dashboard, .add: sheet = .add(.choose)
@@ -117,6 +125,10 @@ struct RootView: View {
         }
         .environment(\.summaryNutrients, summaryNutrients)
     }
+
+    /// Tab bar items draw their icons as templates in the bar's own colors, so the red is baked into the image.
+    private static let stepBackIcon = UIImage(systemName: "xmark", withConfiguration: UIImage.SymbolConfiguration(weight: .semibold))!
+        .withTintColor(UIColor(Theme.destructive), renderingMode: .alwaysOriginal)
 
     private func open(_ action: QuickAction) async {
         // Tabs present their own sheets (the logger, the calendar, editors) from state the root can't reach, so the

@@ -108,13 +108,9 @@ struct FoodLogMathTests {
         #expect(FoodLog.relocations(entries, to: .now, now: now, calendar: calendar) == [
             Relocation(ids: [lunch.id, breakfast.id, coffee.id], day: monday, minute: 1085),
         ])
-        #expect(FoodLog.relocations(entries, to: .tomorrow, now: now, calendar: calendar) == [
-            Relocation(ids: [breakfast.id, coffee.id], day: calendarDay("2026-10-27"), minute: 480, section: .keep),
-            Relocation(ids: [lunch.id], day: calendarDay("2026-10-27"), minute: 750, section: .keep),
-        ])
-        #expect(FoodLog.relocations([lunch], to: .days([calendarDay("2026-11-02"), calendarDay("2026-10-30")]), now: now, calendar: calendar) == [
-            Relocation(ids: [lunch.id], day: calendarDay("2026-10-30"), minute: 750, section: .keep),
-            Relocation(ids: [lunch.id], day: calendarDay("2026-11-02"), minute: 750, section: .keep),
+        #expect(FoodLog.relocations(entries, to: .today, now: now, calendar: calendar) == [
+            Relocation(ids: [breakfast.id, coffee.id], day: monday, minute: 480, section: .keep),
+            Relocation(ids: [lunch.id], day: monday, minute: 750, section: .keep),
         ])
         #expect(FoodLog.relocations([lunch], to: .hour(monday, hour: 15), now: now, calendar: calendar) == [
             Relocation(ids: [lunch.id], day: monday, minute: 900),

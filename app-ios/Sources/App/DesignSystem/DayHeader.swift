@@ -120,11 +120,9 @@ struct DayStrip<Pill: View>: View {
     }
 }
 
-/// The days as horizontal pages: swiping moves a day, as MacroFactor's timeline does. `held` keeps the page, as the
-/// Food Log's select mode does.
+/// The days as horizontal pages: swiping moves a day, as MacroFactor's timeline does.
 struct DayPager<Page: View>: View {
     @Binding var day: CalendarDay
-    var held = false
     @ViewBuilder let page: (CalendarDay) -> Page
 
     @State private var origin = CalendarDay.today
@@ -142,7 +140,6 @@ struct DayPager<Page: View>: View {
         .scrollTargetBehavior(.paging)
         .scrollPosition(id: $position)
         .scrollIndicators(.hidden)
-        .scrollDisabled(held)
         .onAppear { position = origin.days(to: day) }
         .onChange(of: position) { _, position in
             guard let position else { return }

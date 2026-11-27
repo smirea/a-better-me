@@ -52,7 +52,7 @@ extension NutritionData: FeedbackRepresentable {
 extension FoodLogState: FeedbackRepresentable {
     nonisolated var feedbackValue: Any {
         MainActor.assumeIsolated {
-            (day: day, entries: entries.count, selecting: selecting, selection: selection.count, pending: pending?.action.title)
+            (day: day, selected: selected.count, action: action?.title)
         }
     }
 }
