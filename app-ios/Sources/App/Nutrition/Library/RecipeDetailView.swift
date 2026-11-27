@@ -9,7 +9,7 @@ extension Recipe {
 }
 
 /// A recipe's page in the library: per-serving nutrition, the ingredients, and the steps, flat. Favorite is the toolbar's
-/// heart, and Prepare, Edit, Duplicate, and Delete sit in its Recipe Options menu.
+/// heart, and Prepare, Add to Shopping List, Edit, Duplicate, and Delete sit in its Recipe Options menu.
 struct RecipeDetailView: View {
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -21,6 +21,7 @@ struct RecipeDetailView: View {
     @State private var favorite: UUID?
     @State private var preparing = false
     @AppStorage(RecipeNutrientsScope.storageKey) private var nutrientsScope = RecipeNutrientsScope.serving
+    @State private var shopping = false
 
     init(recipeID: UUID) {
         _recipe = Observe(Recipe.one(recipeID))
@@ -78,6 +79,7 @@ struct RecipeDetailView: View {
         .toolbar { toolbar(recipe, portion: portion) }
         .sheet(item: $sheet) { $0.editor }
         .navigationDestination(isPresented: $preparing) { RecipePrepareView(recipe: recipe) }
+        .sheet(isPresented: $shopping) { AddToShoppingListSheet(recipe: recipe, ingredients: recipe.ingredients) }
         .sensoryFeedback(.success, trigger: favorite) { _, new in new != nil }
         .alert("Delete Recipe", isPresented: $confirmingDelete) {
             Button("Delete", role: .destructive) {
@@ -106,6 +108,9 @@ struct RecipeDetailView: View {
             .foregroundStyle(favorite != nil ? Theme.favorite : Theme.textPrimary)
             Menu("Recipe Options", systemImage: "ellipsis") {
                 Button("Prepare", systemImage: "frying.pan") { preparing = true }
+                if !recipe.ingredients.isEmpty {
+                    Button("Add to Shopping List", systemImage: "cart.badge.plus") { shopping = true }
+                }
                 Button("Edit", systemImage: "pencil") { sheet = LibraryEditorSheet(.editRecipe(recipe)) }
                 Button("Duplicate", systemImage: "plus.square.on.square") {
                     sheet = LibraryEditorSheet(.newRecipe(RecipeDraft(recipe).duplicate()))
@@ -137,6 +142,7 @@ struct RecipePrepareView: View {
     let recipe: Recipe
     @State private var servings: Double
     @AppStorage(RecipeNutrientsScope.storageKey) private var nutrientsScope = RecipeNutrientsScope.serving
+    @State private var shopping = false
 
     init(recipe: Recipe) {
         self.recipe = recipe
@@ -169,6 +175,16 @@ struct RecipePrepareView: View {
         .listSectionSpacing(.compact)
         .contentMargins(.top, 0, for: .scrollContent)
         .detailTitle(recipe.name)
+        .toolbar {
+            if !recipe.ingredients.isEmpty {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Add to Shopping List", systemImage: "cart.badge.plus") { shopping = true }
+                }
+            }
+        }
+        .sheet(isPresented: $shopping) {
+            AddToShoppingListSheet(recipe: recipe, ingredients: RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: servings))
+        }
         .feedback(self)
     }
 }
