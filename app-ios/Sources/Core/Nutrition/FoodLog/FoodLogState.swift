@@ -193,8 +193,7 @@ final class FoodLogState {
 
     /// The trash, or a tile's Remove swipe: no question asked, since the notice's Undo logs them back.
     func remove(_ entries: [FoodEntry], in store: LocalStore) {
-        store.deleteEntries(entries.map(\.id))
-        notice = Notice(message: "Removed \(entries.count == 1 ? "1 food" : "\(entries.count) foods")", undo: .relog(entries))
+        notice = Notice(message: "Removed \(entries.count == 1 ? "1 food" : "\(entries.count) foods")", undo: store.remove(entries.map(\.id)))
         for entry in entries {
             selected[entry.id] = nil
         }
@@ -265,6 +264,12 @@ final class MoveRecord: Sendable {
     let moves = Mutex<[MovedEntry]>([])
 }
 
+/// The entries a removal deleted, as its write found them, so its undo never brings back a stale selection or an entry
+/// that was already gone.
+final class RemovalRecord: Sendable {
+    let entries = Mutex<[FoodEntry]>([])
+}
+
 /// What takes a copy, move, or removal back: removing the copies, returning the moved entries to where they were, or
 /// logging the removed ones back.
 enum LogUndo {
@@ -275,8 +280,8 @@ enum LogUndo {
     case unreplace(added: UUID, removed: [FoodEntry], recipe: UUID? = nil)
     /// Takes back a meal line's Create whose foods changed before they could be replaced.
     case deleteRecipe(UUID)
-    /// Logs removed entries back, under new ids as `unreplace` does.
-    case relog([FoodEntry])
+    /// Logs removed entries back as the removal found them, under new ids as `unreplace` does.
+    case relog(RemovalRecord)
 }
 
 extension LocalStore {
@@ -321,6 +326,17 @@ extension LocalStore {
         }
     }
 
+    /// Deletes the entries and returns the undo that logs back what was deleted.
+    func remove(_ ids: [UUID]) -> LogUndo {
+        let record = RemovalRecord()
+        write { db in
+            let removed = try FoodEntry.fetchAll(db, keys: ids.map(FoodEntry.key))
+            _ = try FoodEntry.deleteAll(db, keys: ids.map(FoodEntry.key))
+            record.entries.withLock { $0 = removed }
+        }
+        return .relog(record)
+    }
+
     /// Swaps `entries` for `replacement` in one transaction, unless one of them changed or went since it was selected
     /// (another device, the agent API), so a stale selection never comes back inside the recipe or through Undo.
     /// Resolves whether it swapped. A section-less replacement takes the section its minute falls in, as `log` does.
@@ -353,9 +369,9 @@ extension LocalStore {
             deleteEntries(ids)
         case let .deleteRecipe(id):
             deleteRecipe(id)
-        case let .relog(entries):
+        case let .relog(record):
             write { db in
-                for entry in entries {
+                for entry in record.entries.withLock({ $0 }) {
                     try entry.copy(day: entry.day, minute: entry.minute, section: entry.section).insert(db)
                 }
             }

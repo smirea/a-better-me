@@ -111,18 +111,20 @@ struct FoodLogStateTests {
         #expect(state.selectedEntries == [breakfast[1], other])
     }
 
-    @Test func removingFoodsConfirmsAndUndoLogsThemBack() async throws {
-        let breakfast = [entry(minute: 482), entry(minute: 485, quantity: 2)]
+    @Test func undoingARemovalLogsBackWhatItRemovedNotTheSelection() async throws {
+        let breakfast = [entry(minute: 482), entry(minute: 485, quantity: 2), entry(minute: 490)]
         try await log(breakfast)
         let state = FoodLogState()
         state.select(breakfast)
+        _ = store.relocate([breakfast[1]], .move, to: .hour(monday, hour: 9))
+        store.deleteEntries([breakfast[2].id])
 
         state.remove(state.selectedEntries, in: store)
         #expect(!state.selecting)
         #expect(try await entries(on: monday).isEmpty)
 
         state.undo(in: store)
-        #expect(try await entries(on: monday).map(\.minute) == [482, 485])
+        #expect(try await entries(on: monday).map(\.minute) == [482, 540])
         #expect(try await entries(on: monday).map(\.serving.quantity) == [1, 2])
     }
 
