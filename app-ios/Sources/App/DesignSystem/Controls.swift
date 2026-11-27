@@ -187,7 +187,8 @@ struct Chip: View {
 }
 
 /// Rows of its children, leading-aligned, that wrap when the next one would not fit, so a bar of actions never hides
-/// one off-screen. A child wider than the row is offered the row's width.
+/// one off-screen. A child wider than the row is offered the row's width. A child marked `flowTrailing()` keeps its
+/// place in the flow but sits at its row's trailing end, so the layout then fills the width it is offered.
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8
 
@@ -203,33 +204,48 @@ struct FlowLayout: Layout {
     }
 
     private func frames(_ subviews: Subviews, width: CGFloat) -> [CGRect] {
-        var rows: [[CGSize]] = [[]]
+        var rows: [[(size: CGSize, trailing: Bool)]] = [[]]
         var x: CGFloat = 0
-        let sizes = subviews.map { subview in
+        for subview in subviews {
             let ideal = subview.sizeThatFits(.unspecified)
-            return ideal.width > width ? subview.sizeThatFits(ProposedViewSize(width: width, height: nil)) : ideal
-        }
-        for size in sizes {
+            let size = ideal.width > width ? subview.sizeThatFits(ProposedViewSize(width: width, height: nil)) : ideal
             if !rows[rows.count - 1].isEmpty, x + size.width > width {
                 rows.append([])
                 x = 0
             }
-            rows[rows.count - 1].append(size)
+            rows[rows.count - 1].append((size, subview[FlowTrailing.self]))
             x += size.width + spacing
         }
         var frames: [CGRect] = []
         var y: CGFloat = 0
         for row in rows where !row.isEmpty {
-            let height = row.map(\.height).max() ?? 0
-            var x: CGFloat = 0
-            for size in row {
-                frames.append(CGRect(x: x, y: y + (height - size.height) / 2, width: size.width, height: size.height))
-                x += size.width + spacing
+            let height = row.map(\.size.height).max() ?? 0
+            let trailingWidth = row.filter(\.trailing).map { $0.size.width + spacing }.reduce(0, +)
+            let leadingEnd = row.filter { !$0.trailing }.map { $0.size.width + spacing }.reduce(0, +)
+            var leading: CGFloat = 0
+            var trailing = width.isFinite ? max(width - trailingWidth + spacing, leadingEnd) : leadingEnd
+            for item in row {
+                let rowY = y + (height - item.size.height) / 2
+                if item.trailing {
+                    frames.append(CGRect(origin: CGPoint(x: trailing, y: rowY), size: item.size))
+                    trailing += item.size.width + spacing
+                } else {
+                    frames.append(CGRect(origin: CGPoint(x: leading, y: rowY), size: item.size))
+                    leading += item.size.width + spacing
+                }
             }
             y += height + spacing
         }
         return frames
     }
+}
+
+private struct FlowTrailing: LayoutValueKey {
+    static let defaultValue = false
+}
+
+extension View {
+    func flowTrailing() -> some View { layoutValue(key: FlowTrailing.self, value: true) }
 }
 
 struct RoundIconButton: View {
