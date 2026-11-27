@@ -1,0 +1,10 @@
+{
+	"title": "Recipe pages: food-page macros, a Serving/Recipe switch, and tiny nutrients hidden",
+	"description": "Nutrient tables hide amounts under 0.2 g (or 2% of a vitamin's daily target) behind a switch at their end, on every food page.",
+	"tasks": [
+		{
+			"id": "21023d3e-2734-4e69-bab3-266a7d676002",
+			"title": "5 DCC Cheesecake Feedback: update macro summary and nutrient details"
+		}
+	]
+}

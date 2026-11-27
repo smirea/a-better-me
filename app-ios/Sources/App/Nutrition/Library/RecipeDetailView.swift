@@ -20,6 +20,7 @@ struct RecipeDetailView: View {
     /// The favorite this page saved, which a second tap removes.
     @State private var favorite: UUID?
     @State private var preparing = false
+    @AppStorage(RecipeNutrientsScope.storageKey) private var nutrientsScope = RecipeNutrientsScope.serving
 
     init(recipeID: UUID) {
         _recipe = Observe(Recipe.one(recipeID))
@@ -65,10 +66,14 @@ struct RecipeDetailView: View {
             if !recipe.steps.isEmpty {
                 StepsSection(steps: recipe.steps)
             }
-            NutrientBreakdown(amounts: portion.amounts)
+            NutrientBreakdown(amounts: nutrientsScope == .serving ? recipe.nutrition.nutrients : RecipeMath.total(recipe.ingredients)) {
+                RecipeNutrientsScopePicker(scope: $nutrientsScope)
+            }
         }
         .flatList()
         .nutrientTableList()
+        .listSectionSpacing(.compact)
+        .contentMargins(.top, 0, for: .scrollContent)
         .detailTitle(recipe.name)
         .toolbar { toolbar(recipe, portion: portion) }
         .sheet(item: $sheet) { $0.editor }
@@ -126,11 +131,12 @@ private struct StepsSection: View {
     }
 }
 
-/// Prepare: MacroFactor's cooking view. The recipe summary per serving and in total, then the ingredients scaled to
-/// the servings being cooked and the numbered steps.
+/// Prepare: MacroFactor's cooking view. The recipe summary per serving, then the ingredients scaled to the servings
+/// being cooked, the numbered steps, and the nutrients per serving or for everything being cooked.
 struct RecipePrepareView: View {
     let recipe: Recipe
     @State private var servings: Double
+    @AppStorage(RecipeNutrientsScope.storageKey) private var nutrientsScope = RecipeNutrientsScope.serving
 
     init(recipe: Recipe) {
         self.recipe = recipe
@@ -140,11 +146,9 @@ struct RecipePrepareView: View {
     var body: some View {
         let perServing = recipe.nutrition.nutrients
         let scaled = RecipeMath.scaled(recipe.ingredients, from: recipe.servings, to: servings)
-        let total = RecipeMath.total(scaled)
         Form {
             ThemedSection {
                 MacroSummary(amounts: perServing, caption: "Per serving")
-                MacroSummary(amounts: total, caption: "Total")
             }
             IngredientsSection(scaled) {
                 Stepper(value: $servings, in: 0.5...100, step: 0.5) {
@@ -156,10 +160,14 @@ struct RecipePrepareView: View {
             if !recipe.steps.isEmpty {
                 StepsSection(steps: recipe.steps)
             }
-            NutrientBreakdown(amounts: perServing)
+            NutrientBreakdown(amounts: nutrientsScope == .serving ? perServing : RecipeMath.total(scaled)) {
+                RecipeNutrientsScopePicker(scope: $nutrientsScope)
+            }
         }
         .flatList()
         .nutrientTableList()
+        .listSectionSpacing(.compact)
+        .contentMargins(.top, 0, for: .scrollContent)
         .detailTitle(recipe.name)
         .feedback(self)
     }

@@ -28,39 +28,6 @@ struct IngredientsSection<Leading: View>: View {
     }
 }
 
-/// Flat `ScrollView`/`LazyVStack` variant of `IngredientsSection`, drawing rows directly on `Theme.background` with
-/// hairline dividers instead of a `Theme.surface` card.
-struct FlatIngredientsSection<Leading: View>: View {
-    let ingredients: [IngredientAlteration]
-    @ViewBuilder var leading: Leading
-
-    init(_ ingredients: [IngredientAlteration], @ViewBuilder leading: () -> Leading = { EmptyView() }) {
-        self.ingredients = ingredients
-        self.leading = leading()
-    }
-
-    init(_ ingredients: [RecipeIngredient], @ViewBuilder leading: () -> Leading = { EmptyView() }) {
-        self.init(ingredients.map(IngredientAlteration.init(kept:)), leading: leading)
-    }
-
-    var body: some View {
-        if !ingredients.isEmpty {
-            FlatSection("Ingredients", spacing: 8) {
-                VStack(alignment: .leading, spacing: 0) {
-                    leading
-                    ForEach(Array(ingredients.enumerated()), id: \.element.id) { index, line in
-                        if index > 0 {
-                            Divider().overlay(Theme.separator)
-                        }
-                        AlteredIngredientRow(line: line)
-                            .padding(.vertical, 8)
-                    }
-                }
-            }
-        }
-    }
-}
-
 private struct IngredientRows: View {
     let ingredients: [IngredientAlteration]
 

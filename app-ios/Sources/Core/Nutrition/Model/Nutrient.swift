@@ -48,10 +48,12 @@ extension Dictionary where Key == NutrientID, Value == Double {
     func kcal(from id: NutrientID) -> Double { (self[id] ?? 0) * (id.kcalPerGram ?? 0) }
 
     /// A macro's share of the calories protein, fat, and carbs supply, so the shares sum to 100% as MacroFactor's chips
-    /// do, even when a label's energy disagrees with its macros. Nil when none of the three is reported.
+    /// do, even when a label's energy disagrees with its macros. Net carbs count as carbs, so a summary showing them
+    /// gets their part of the carbs' share. Nil when none of the three is reported.
     func macroShare(_ id: NutrientID) -> Double? {
         let total = [NutrientID.protein, .fat, .carbs].map(kcal(from:)).reduce(0, +)
-        return total > 0 ? kcal(from: id) / total : nil
+        guard total > 0 else { return nil }
+        return id == .netCarbs ? (amount(of: .netCarbs) ?? 0) * (NutrientID.carbs.kcalPerGram ?? 0) / total : kcal(from: id) / total
     }
 
     /// Once either side reports net carbs, the sum carries them explicitly, so the side that does not report them

@@ -24,6 +24,35 @@ enum NutrientListRow: Hashable, Identifiable {
     /// Every nutrient, for a list that shows each whether or not it was reported.
     static let all = rows { _ in true }
     static let macros = rows { NutrientID.summaryChoices.contains($0.id) }
+
+    /// A food's table: its significant nutrients, or with `all` every one it reports and, when `listsUnreported`, the
+    /// rest as well. `hidden` counts what `all` adds, which the table offers to show.
+    static func rows(for amounts: NutrientAmounts, all: Bool, listsUnreported: Bool) -> (rows: [NutrientListRow], hidden: Int) {
+        var hidden = 0
+        let rows = rows { nutrient in
+            let amount = amounts.amount(of: nutrient.id)
+            let significant = amount.map { !nutrient.isInsignificant($0) } ?? false
+            let offered = amount != nil || listsUnreported
+            if offered, !significant { hidden += 1 }
+            return significant || (all && offered)
+        }
+        return (rows, hidden)
+    }
+}
+
+extension Nutrient {
+    /// Too little to matter, so a food's table hides it until asked (the owner, 2026-11-27: "hide very small serving
+    /// sizes under .2 g"). Calories and the three macros always matter. A vitamin or mineral with a daily target is
+    /// insignificant under 2% of the lower adult target, the FDA's line for "not a significant source", since 0.2 mg
+    /// of copper is a fifth of a day's while 0.2 mg of calcium is nothing. Anything else is insignificant under 0.2 of
+    /// its unit.
+    func isInsignificant(_ amount: Double) -> Bool {
+        if NutrientID.macros.contains(id) { return false }
+        if unit == .mg || unit == .mcg, let target = [defaults?.male.target, defaults?.female.target].compactMap(\.self).min() {
+            return amount < target * 0.02
+        }
+        return amount < 0.2
+    }
 }
 
 /// A nutrient table's sections, read like a Nutrition Facts label: calories and the macros with what they contain,

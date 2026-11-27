@@ -30,7 +30,6 @@ struct EntryEditor: View {
     @FocusState private var naming: Bool
     @State private var choosingIcon = false
     @State private var updating: FoodUpdate?
-    @State private var nutrientRows = ViewMemo<NutrientAmounts, [NutrientListRow]>()
 
     init(entry: FoodEntry) {
         self.entry = entry
@@ -67,7 +66,6 @@ struct EntryEditor: View {
     var body: some View {
         let amounts = self.amounts
         let targets = owner.on(CalendarDay(time))
-        let reported = food.nutrition.nutrients
         NavigationStack {
             Form {
                 Section {
@@ -114,7 +112,7 @@ struct EntryEditor: View {
                 }
                 ImpactGauges(amounts: amounts, day: CalendarDay(time), excluding: entry.id).id(CalendarDay(time))
                 IngredientsSection(FoodLog.ingredients(serving, of: entry, recipe: recipe))
-                NutrientList(title: "Nutrients", rows: nutrientRows(reported) { NutrientListRow.rows { reported.amount(of: $0.id) != nil } }) { nutrient in
+                NutrientList(title: "Nutrients", amounts: amounts) { nutrient in
                     NutrientRow(nutrient: nutrient, value: amounts.amount(of: nutrient.id) ?? 0, range: targets.range(nutrient.id))
                 }
             }

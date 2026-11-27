@@ -26,7 +26,6 @@ struct FoodDetailView: View {
     @State private var recipeSheet: LibraryEditorSheet?
     @State private var preparing: Recipe?
     @State private var choosingIcon = false
-    @State private var nutrientRows = ViewMemo<NutrientAmounts, [NutrientListRow]>()
 
     init(session: LoggerSession, editing: UUID?, pick: LoggerPick, ramble: RambleEdit? = nil) {
         self.session = session
@@ -47,7 +46,6 @@ struct FoodDetailView: View {
 
     var body: some View {
         let amounts = self.amounts
-        let reported = food.nutrition.nutrients
         List {
             ThemedSection {
                 header
@@ -59,7 +57,7 @@ struct FoodDetailView: View {
             } else if let recipe {
                 IngredientsSection(FoodLog.ingredients(serving, of: recipe))
             }
-            NutrientList(title: "Nutrients", rows: nutrientRows(reported) { NutrientListRow.rows { reported.amount(of: $0.id) != nil } }) { nutrient in
+            NutrientList(title: "Nutrients", amounts: amounts) { nutrient in
                 LabeledContent(nutrient.name, value: NutritionFormat.amount(amounts.amount(of: nutrient.id) ?? 0, nutrient.unit))
             }
         }

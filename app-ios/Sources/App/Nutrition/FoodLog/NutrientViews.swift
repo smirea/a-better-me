@@ -142,20 +142,22 @@ struct NutrientRow: View {
     }
 }
 
-/// Calories, protein, fat, and carbs in four even columns, each macro labeled with its share of the calories the three
-/// supply (`macroShare`).
+/// Calories and the macros in even columns, each macro labeled with its share of the calories protein, fat, and carbs
+/// supply (`macroShare`). A food's page shows calories, protein, fat, and carbs; a recipe's (`MacroSummary`) the
+/// summary's columns, where fiber has no share.
 struct MacroHeader: View {
     let amounts: NutrientAmounts
+    var columns = NutrientID.macros
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            ForEach(NutrientID.macros, id: \.self) { id in
+            ForEach(columns, id: \.self) { id in
                 VStack(alignment: .leading, spacing: 2) {
                     let unit = Text(id == .energy ? "" : " g").font(AppFont.caption(13)).foregroundStyle(Theme.textSecondary)
-                    Text("\(Text(NutritionFormat.amount(amounts[id] ?? 0, of: id)).font(AppFont.number(22)))\(unit)")
+                    Text("\(Text(NutritionFormat.amount(amounts.amount(of: id) ?? 0, of: id)).font(AppFont.number(22)))\(unit)")
                     HStack(spacing: 4) {
                         Text(id.title).foregroundStyle(Theme.textSecondary)
-                        if id != .energy {
+                        if id != .energy, id != .fiber {
                             Text(amounts.macroShare(id).map { "\(($0 * 100).wholeText)%" } ?? "–").foregroundStyle(id.color)
                         }
                     }
@@ -279,19 +281,90 @@ enum NutrientSection: String, CaseIterable, Identifiable {
 }
 
 /// Every nutrient section in one card, as a compact Nutrition Facts label: no rules between nutrients, one under each
-/// section, and a nested nutrient indented under what holds it. `rows` comes from `NutrientListRow.rows`, derived once
-/// per input, never per render.
-struct NutrientList<Row: View>: View {
+/// section, and a nested nutrient indented under what holds it. Given a food's `amounts`, it lists only the
+/// significant ones (`Nutrient.isInsignificant`) and ends in a switch that shows the rest, remembered across foods;
+/// `listsUnreported` counts the nutrients the food doesn't report among the rest, as a recipe's "–". Its rows are
+/// derived once per input, never per render.
+struct NutrientList<Row: View, Actions: View>: View {
+    private enum Source {
+        case rows([NutrientListRow])
+        case food(NutrientAmounts, listsUnreported: Bool)
+    }
+
+    private struct FoodKey: Equatable {
+        let amounts: NutrientAmounts
+        let listsUnreported: Bool
+        let all: Bool
+    }
+
     var title: String?
-    let rows: [NutrientListRow]
-    @ViewBuilder let row: (Nutrient) -> Row
+    private let source: Source
+    private let row: (Nutrient) -> Row
+    private let actions: Actions
+    @AppStorage("nutrients.showInsignificant") private var showsInsignificant = false
+    @State private var table = ViewMemo<FoodKey, (rows: [NutrientListRow], hidden: Int)>()
+
+    init(
+        title: String? = nil, amounts: NutrientAmounts, listsUnreported: Bool = false,
+        @ViewBuilder row: @escaping (Nutrient) -> Row, @ViewBuilder actions: () -> Actions
+    ) {
+        self.title = title
+        source = .food(amounts, listsUnreported: listsUnreported)
+        self.row = row
+        self.actions = actions()
+    }
 
     var body: some View {
+        let (rows, hidden): ([NutrientListRow], Int) = switch source {
+        case .rows(let rows): (rows, 0)
+        case let .food(amounts, listsUnreported):
+            table(FoodKey(amounts: amounts, listsUnreported: listsUnreported, all: showsInsignificant)) {
+                NutrientListRow.rows(for: amounts, all: showsInsignificant, listsUnreported: listsUnreported)
+            }
+        }
         ThemedSection(title) {
             ForEach(rows) { item in
                 NutrientListItem(item: item, row: row)
             }
+            if hidden > 0 {
+                InsignificantNutrientsToggle(isOn: $showsInsignificant, count: hidden)
+            }
+        } actions: {
+            actions
         }
+    }
+}
+
+extension NutrientList where Actions == EmptyView {
+    /// A table of exactly `rows`, from `NutrientListRow.rows`, as the Nutrition Overview lists every nutrient against
+    /// its target whatever the amount.
+    init(title: String? = nil, rows: [NutrientListRow], @ViewBuilder row: @escaping (Nutrient) -> Row) {
+        self.title = title
+        source = .rows(rows)
+        self.row = row
+        actions = EmptyView()
+    }
+
+    init(title: String? = nil, amounts: NutrientAmounts, listsUnreported: Bool = false, @ViewBuilder row: @escaping (Nutrient) -> Row) {
+        self.init(title: title, amounts: amounts, listsUnreported: listsUnreported, row: row) { EmptyView() }
+    }
+}
+
+/// The switch closing a food's nutrient table, with how many nutrients it hides.
+private struct InsignificantNutrientsToggle: View {
+    @Binding var isOn: Bool
+    let count: Int
+    @Environment(\.flatSections) private var flat
+
+    var body: some View {
+        Toggle(isOn: $isOn.animation(.snappy)) {
+            Text("Insignificant Nutrients \(Text("\(count)").foregroundStyle(Theme.textTertiary))")
+                .font(AppFont.body(15))
+        }
+        .tint(Theme.accent)
+        .listRowInsets(EdgeInsets(top: 10, leading: flat ? Theme.margin : 16, bottom: 5, trailing: flat ? Theme.margin : 16))
+        .listRowSeparator(.hidden)
+        .feedback("Insignificant Nutrients")
     }
 }
 
@@ -328,49 +401,5 @@ private struct NutrientListItem<Row: View>: View {
         .listRowInsets(EdgeInsets(top: 5, leading: flat ? Theme.margin : 16, bottom: 5, trailing: flat ? Theme.margin : 16))
         // No rule closes a group: it would sit right above the next group's label.
         .listRowSeparator(.hidden)
-    }
-}
-
-/// Flat `ScrollView`/`LazyVStack` variant of `NutrientList`: renders a compact Nutrition Facts table directly on
-/// `Theme.background`, with section dividers between sections, indented nested rows, and optional `Collapse` / `Expand`.
-struct FlatNutrientList<Row: View>: View {
-    var title: String? = "Nutrients"
-    let rows: [NutrientListRow]
-    var collapsed: Binding<Bool>? = nil
-    @ViewBuilder let row: (Nutrient) -> Row
-
-    private static var indent: CGFloat { 16 }
-
-    var body: some View {
-        let isCollapsed = collapsed?.wrappedValue ?? false
-        FlatSection(title, spacing: 8) {
-            if let collapsed {
-                Button(isCollapsed ? "Expand" : "Collapse") {
-                    withAnimation(.snappy) { collapsed.wrappedValue.toggle() }
-                }
-                .underline()
-            }
-        } content: {
-            if !isCollapsed {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(rows) { item in
-                        switch item {
-                        case .label(let section):
-                            Text(section.rawValue)
-                                .font(AppFont.headline(14))
-                                .foregroundStyle(Theme.textSecondary)
-                                .padding(.top, 10)
-                                .padding(.bottom, 4)
-                                .accessibilityAddTraits(.isHeader)
-                        case let .nutrient(nutrient, depth, _):
-                            row(nutrient)
-                                .padding(.leading, CGFloat(depth) * Self.indent)
-                                .padding(.vertical, 5)
-                        }
-                    }
-                }
-            }
-        }
-        .feedback("Nutrients")
     }
 }
