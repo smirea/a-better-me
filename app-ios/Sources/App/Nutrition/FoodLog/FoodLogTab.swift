@@ -8,7 +8,7 @@ struct FoodLogTab: View {
 
     var body: some View {
         NavigationStack(path: $state.path) {
-            DayPager(day: $state.day, held: state.selecting && state.pending == nil) { DayPage(day: $0) }
+            DayPager(day: $state.day) { DayPage(day: $0) }
                 // The pages still scroll under the bottom bars, but not under the status bar once the header row has
                 // slid away.
                 .mask { Rectangle().ignoresSafeArea(edges: .bottom) }
@@ -16,9 +16,6 @@ struct FoodLogTab: View {
                 .background(Theme.background)
                 .background { ShownDayEntries(day: state.day).id(state.day) }
                 .safeAreaInset(edge: .bottom, spacing: 0) { FoodLogBottomBar() }
-                // Selecting or pasting puts its own bar of actions at the bottom, so the tab bar steps aside for it.
-                .toolbarVisibility(state.selecting || state.pending != nil ? .hidden : .automatic, for: .tabBar)
-                .animation(.snappy, value: state.selecting || state.pending != nil)
                 // The header row replaces the bar; the title still names the day for VoiceOver and pushed screens' back button.
                 .navigationTitle(NutritionFormat.dayTitle(state.day))
                 .toolbarVisibility(.hidden, for: .navigationBar)

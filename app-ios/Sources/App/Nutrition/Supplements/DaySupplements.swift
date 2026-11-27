@@ -69,7 +69,7 @@ struct DaySupplementsRow: View {
         // Opaque, so the Time display's hour line stops above the supplements instead of showing between them.
         .background(Theme.background)
         .id(Self.scrollID)
-        .disabled(state.selecting || state.pending != nil)
+        .disabled(state.selecting)
         .feedback(self)
     }
 

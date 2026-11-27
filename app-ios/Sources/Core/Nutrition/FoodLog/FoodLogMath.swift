@@ -160,14 +160,11 @@ struct MacroLine: Hashable, Identifiable {
     }
 }
 
-/// Where a copy or move lands. `today` and `tomorrow` keep each entry's own time and section; the rest set one time
-/// for all, and a section's paste puts them all in it.
+/// Where a copy or move lands. `today` keeps each entry's own time and section; the rest set one time for all, and a
+/// section's paste puts them all in it.
 enum PasteTarget: Hashable {
     case now
     case today
-    case tomorrow
-    case days([CalendarDay])
-    case dateTime(CalendarDay, minute: Int)
     case hour(CalendarDay, hour: Int)
     case section(CalendarDay, MealSection, minute: Int)
 }
@@ -331,23 +328,13 @@ enum FoodLog {
         case .now:
             return [Relocation(ids: ids, day: today, minute: now.minuteOfDay(in: calendar))]
         case .today:
-            return keepingTimes(entries, on: today)
-        case .tomorrow:
-            return keepingTimes(entries, on: today.adding(days: 1))
-        case let .days(days):
-            return days.sorted().flatMap { keepingTimes(entries, on: $0) }
-        case let .dateTime(day, minute):
-            return [Relocation(ids: ids, day: day, minute: minute)]
+            return Dictionary(grouping: entries, by: \.minute).keys.sorted().map { minute in
+                Relocation(ids: entries.filter { $0.minute == minute }.map(\.id), day: today, minute: minute, section: .keep)
+            }
         case let .hour(day, hour):
             return [Relocation(ids: ids, day: day, minute: hour * 60)]
         case let .section(day, section, minute):
             return [Relocation(ids: ids, day: day, minute: minute, section: .chosen(section.id))]
-        }
-    }
-
-    private static func keepingTimes(_ entries: [FoodEntry], on day: CalendarDay) -> [Relocation] {
-        Dictionary(grouping: entries, by: \.minute).keys.sorted().map { minute in
-            Relocation(ids: entries.filter { $0.minute == minute }.map(\.id), day: day, minute: minute, section: .keep)
         }
     }
 
@@ -358,18 +345,10 @@ enum FoodLog {
         let place = switch target {
         case .now: "Today at \(NutritionFormat.moment(now.minuteOfDay(in: calendar)))"
         case .today: "Today"
-        case .tomorrow: "Tomorrow"
-        case let .days(days) where days.count == 1: NutritionFormat.dayTitle(days[0], today: today)
-        case let .days(days): "\(days.count) days"
-        case let .dateTime(day, minute): "\(NutritionFormat.dayTitle(day, today: today)) at \(NutritionFormat.moment(minute))"
         case let .hour(day, hour): "\(NutritionFormat.dayTitle(day, today: today)) at \(NutritionFormat.moment(hour * 60))"
         case let .section(day, section, _): "\(section.name), \(NutritionFormat.dayTitle(day, today: today))"
         }
         return "\(verb) \(foods) to \(place)"
-    }
-
-    static func toggling(_ hour: [UUID], in selection: Set<UUID>) -> Set<UUID> {
-        selection.isSuperset(of: hour) ? selection.subtracting(hour) : selection.union(hour)
     }
 
     /// A recipe logged at `serving`, as its ingredients at the amounts eaten: half a serving of a one-serving recipe

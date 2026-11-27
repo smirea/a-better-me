@@ -180,20 +180,21 @@ private struct HeaderSnap: ScrollTargetBehavior {
     }
 }
 
-/// Observes the shown day's entries for the bars. It sits outside the pager so a page never reads `state.day`, which
-/// would re-render every loaded page on each swipe.
+/// Observes the shown day's entries for the selection (`FoodLogState.shown`). It sits outside the pager so a page never
+/// reads `state.day`, which would re-render every loaded page on each swipe.
 struct ShownDayEntries: View {
+    let day: CalendarDay
+
     @Environment(FoodLogState.self) private var state
     @Observe private var entries: [FoodEntry]
 
     init(day: CalendarDay) {
+        self.day = day
         _entries = Observe(FoodEntry.on(day))
     }
 
     var body: some View {
-        Color.clear.onChange(of: entries, initial: true) {
-            if state.entries != entries { state.entries = entries }
-        }
+        Color.clear.onChange(of: entries, initial: true) { state.shown(entries, on: day) }
     }
 }
 
@@ -257,13 +258,13 @@ private struct SlotRow: View {
     private var slotRow: some View {
         Group {
             let label = group.slot.label
-            if let pending = state.pending {
-                Button { state.paste(to: target, in: store) } label: {
+            if let action = state.action {
+                Button { state.paste(action, to: target, in: store) } label: {
                     let arrow = Image(systemName: "arrow.left").hourIcon(isPrimary: true).frame(width: 32, height: 40)
                     row(pill: pill(label, isActive: false), control: arrow).contentShape(.rect)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("\(pending.action.title) to \(label)")
+                .accessibilityLabel("\(action.title) to \(label)")
             } else {
                 row(pill: interactivePill(label), control: control(label))
             }
@@ -283,17 +284,16 @@ private struct SlotRow: View {
 
     private func emptySectionButton(_ label: String) -> some View {
         Group {
-            if let pending = state.pending {
-                Button { state.paste(to: target, in: store) } label: {
-                    widestLabel(Label("\(pending.action.title) Here", systemImage: "arrow.down"))
+            if let action = state.action {
+                Button { state.paste(action, to: target, in: store) } label: {
+                    widestLabel(Label("\(action.title) Here", systemImage: "arrow.down"))
                 }
-                .accessibilityLabel("\(pending.action.title) into \(label)")
-            } else if premove, state.selecting, state.pending == nil {
-                Button { state.relocate(state.selectedEntries, .move, to: target, in: store) } label: {
+                .accessibilityLabel("\(action.title) into \(label)")
+            } else if premove, state.selecting {
+                Button { state.paste(.move, to: target, in: store) } label: {
                     widestLabel(Label("Move Here", systemImage: "arrow.down"))
                 }
                 .accessibilityLabel("Move into \(label)")
-                .disabled(state.selection.isEmpty)
             } else {
                 Button { requestLog() } label: { widestLabel(Text("Log \(label)")) }
                     .disabled(state.selecting)
@@ -376,7 +376,7 @@ private struct SlotRow: View {
     /// A pending Copy or Move turns the whole row into the paste button, so there the tag is not a button of its own.
     @ViewBuilder
     private func ratingTag(_ score: MealRating.Score, showsText: Bool) -> some View {
-        if state.pending != nil {
+        if state.action != nil {
             MealRatingTag(score, showsText: showsText)
         } else {
             MealRatingButton(title: group.slot.label, score: score, formula: rating.formula, showsText: showsText) { explainsRating = true }
@@ -401,21 +401,21 @@ private struct SlotRow: View {
     }
 
     private func interactivePill(_ label: String) -> some View {
-        let ids = group.rows.map(\.entry.id)
-        let isSelected = state.selecting && !ids.isEmpty && ids.allSatisfy(state.selection.contains)
+        let entries = group.rows.map(\.entry)
+        let isSelected = !entries.isEmpty && entries.allSatisfy { state.isSelected($0.id) }
         let addsHere = addsOnLongPress && !state.selecting
         return pill(label, isActive: isSelected)
             .frame(height: 40)
             .contentShape(.rect)
             .gesture(LongPressGesture(minimumDuration: 0.35).exclusively(before: TapGesture()).onEnded { gesture in
-                if case .first = gesture, addsHere { requestLog() } else { state.selectHour(ids) }
+                if case .first = gesture, addsHere { requestLog() } else { state.selectHour(entries) }
             })
             .accessibilityElement()
             .accessibilityLabel(label)
-            .accessibilityValue(ids.isEmpty ? "No foods" : "\(ids.count) \(ids.count == 1 ? "food" : "foods")")
+            .accessibilityValue(entries.isEmpty ? "No foods" : "\(entries.count) \(entries.count == 1 ? "food" : "foods")")
             .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-            .accessibilityHint(ids.isEmpty ? "" : "Selects these foods")
-            .accessibilityAction { state.selectHour(ids) }
+            .accessibilityHint(entries.isEmpty ? "" : "Selects these foods")
+            .accessibilityAction { state.selectHour(entries) }
             .accessibilityActions {
                 if addsHere {
                     Button("Add food at \(label)") { requestLog() }
@@ -425,12 +425,9 @@ private struct SlotRow: View {
 
     @ViewBuilder
     private func control(_ label: String) -> some View {
-        if premove, state.selecting, state.pending == nil {
-            Button("Move to \(label)", systemImage: "arrow.left") {
-                state.relocate(state.selectedEntries, .move, to: target, in: store)
-            }
-            .buttonStyle(HourIconStyle(isPrimary: true))
-            .disabled(state.selection.isEmpty)
+        if premove, state.selecting {
+            Button("Move to \(label)", systemImage: "arrow.left") { state.paste(.move, to: target, in: store) }
+                .buttonStyle(HourIconStyle(isPrimary: true))
         } else if !addsOnLongPress {
             Button("Add food at \(label)", systemImage: "plus") { requestLog() }
                 .buttonStyle(HourIconStyle(isPrimary: false))
@@ -488,10 +485,9 @@ private struct HourTotals: View {
 }
 
 /// A food tile with its time on the timeline's line, and in select mode a check circle floating half over its left
-/// edge, on the selection's day only (`FoodLogState.showsCircles`). Tapping the
-/// tile opens its editor, or toggles it in select mode. A long press starts select mode on it: the bar holds the
-/// selection's actions, so there is no context menu. Swiping
-/// a tile left reveals Remove and Copy, as MacroFactor's does; it has no full swipe, because a left swipe that misses
+/// edge, on every day, since a selection gathers foods from any. Tapping the tile opens its editor, or toggles it in
+/// select mode. A long press selects it: the bar holds the selection's actions, so there is no context menu. Swiping a
+/// tile left reveals Remove and Copy, as MacroFactor's does; it has no full swipe, because a left swipe that misses
 /// the blank space was meant to page. Swiping a logged recipe right reveals Alter.
 private struct EntryRow: View {
     let row: TimelineRow
@@ -508,8 +504,8 @@ private struct EntryRow: View {
 
     var body: some View {
         let entry = row.entry
-        let isSelected = state.selection.contains(entry.id)
-        let showsCircle = state.showsCircles(on: entry.day)
+        let isSelected = state.isSelected(entry.id)
+        let showsCircle = state.selecting
         HStack(spacing: 0) {
             Color.clear.frame(width: column.tileInset).overlay(alignment: .leading) {
                 if showsTime, row.showsTime {
@@ -543,13 +539,13 @@ private struct EntryRow: View {
                     SwipeAction(title: "Alter", systemImage: "slider.horizontal.3") { state.altering = entry },
                 ],
                 trailing: state.selecting ? [] : [
-                    .destructive("Remove") { store.deleteEntries([entry.id]) },
-                    SwipeAction(title: "Copy", systemImage: "doc.on.doc") { state.copy(entry) },
+                    .destructive("Remove") { state.remove([entry], in: store) },
+                    SwipeAction(title: "Copy", systemImage: "doc.on.doc") { state.copy([entry]) },
                 ]
             )
             .accessibilityAddTraits(isSelected ? .isSelected : [])
             .accessibilityAction { state.tap(entry) }
-            .accessibilityAction(named: isSelected ? "Deselect" : "Select") { state.select(entry.id) }
+            .accessibilityAction(named: isSelected ? "Deselect" : "Select") { state.toggle(entry) }
             .accessibilityAction(named: "Edit") { state.editing = entry }
             .accessibilityActions {
                 if ingredients != nil {
@@ -574,7 +570,7 @@ private struct EntryRow: View {
         // A tap gesture recognizes on release however long the hold, so separate tap and long-press gestures both fired.
         .gesture(LongPressGesture(minimumDuration: 0.35).exclusively(before: TapGesture()).onEnded { gesture in
             switch gesture {
-            case .first: state.startSelection(at: entry.id)
+            case .first: state.select([entry])
             case .second: state.tap(entry)
             }
         })

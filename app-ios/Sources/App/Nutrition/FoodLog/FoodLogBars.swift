@@ -1,22 +1,19 @@
 import Feedback
 import SwiftUI
 
-/// The bar under the timeline in select mode, with the selection's actions, or a copy or move's targets, and the notice
-/// of what was just copied or moved. Its height is the timeline's bottom inset, so the last row scrolls clear of it.
+/// The selection's row of actions over the tab bar, and the notice of what was just copied, moved, or removed. Its height
+/// is the timeline's bottom inset, so the last row scrolls clear of it.
 struct FoodLogBottomBar: View {
     @Environment(FoodLogState.self) private var state
 
     var body: some View {
-        let acting = state.selecting || state.pending != nil
         GlassEffectContainer {
             VStack(alignment: .leading, spacing: 8) {
                 if let notice = state.notice {
                     NoticeBar(notice: notice)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                if let pending = state.pending {
-                    PasteBar(pending: pending)
-                } else if state.selecting {
+                if state.selecting {
                     SelectionBar()
                 }
             }
@@ -27,15 +24,16 @@ struct FoodLogBottomBar: View {
         // The day pages scroll inside the pager, out of reach of a bar's scroll edge effect, so the timeline fades
         // out here instead; hour pills showing through the glass buttons made the selection's actions hard to read.
         .background {
-            if acting {
+            if state.selecting {
                 LinearGradient(colors: [Theme.background.opacity(0), Theme.background], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.2))
                     .padding(.top, -24)
                     .ignoresSafeArea(edges: .bottom)
                     .allowsHitTesting(false)
             }
         }
-        .sensoryFeedback(.selection, trigger: state.selection)
+        .sensoryFeedback(.selection, trigger: state.selected.count)
         .animation(.snappy, value: state.notice)
+        .animation(.snappy, value: state.selecting)
         .feedback(self)
     }
 }
@@ -68,235 +66,92 @@ private struct NoticeBar: View {
     }
 }
 
-/// The selection's actions. The first row ends select mode and copies the selection straight to today, keeping each
-/// entry's time, or to now, the one-tap copies the owner asked for when catching a past day up into today; the second
-/// row holds the rest. Today drops Copy: Today, which would only duplicate the foods in place.
+/// One row: Copy, Move, and what fits the selection, with the trash at the end. Copy or Move turns the row into its
+/// destinations, to Today and to Now, while every hour on any day pastes there too; the tab bar's ✕ steps back.
+/// Today is left out when every food is already on it, where it would only duplicate them in place.
 private struct SelectionBar: View {
-    private enum Prompt: Identifiable {
-        case timestamp
-
-        var id: Self { self }
-    }
-
     @Environment(FoodLogState.self) private var state
     @Environment(LocalStore.self) private var store
-    @Observe(AppSettings.current) private var settings
-    @State private var confirmingRemove = false
-    @State private var prompt: Prompt?
 
     var body: some View {
-        let count = state.selection.count
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                BarTitle(systemImage: "xmark", accessibilityLabel: "End selection, \(count) \(count == 1 ? "food" : "foods") selected") { state.endSelection() }
-                Group {
-                    if state.day != .today {
-                        Button("Copy: Today") { copy(to: .today) }
-                    }
-                    Button("Copy: Now") { copy(to: .now) }
-                }
-                .chipButton()
-                .disabled(count == 0)
-            }
+        let entries = state.selectedEntries
+        let icons = CarriedIcons(entries: entries)
+        HStack(alignment: .top, spacing: 8) {
             FlowLayout {
                 Group {
-                    Button("Copy") { state.hold(.copy, state.selectedEntries) }
-                    Button("Move") { state.hold(.move, state.selectedEntries) }
-                    if count > 1 {
-                        Button("+ Recipe") { state.createRecipe() }
-                            .accessibilityLabel("Create Recipe")
-                    }
-                    if count == 1, let entry = state.selectedEntries.first {
-                        Button("Edit") { state.editing = entry }
-                        if entry.food.source == .recipe {
-                            Button("Explode") {
-                                state.explode(entry.id, in: store)
-                                state.endSelection()
+                    if let action = state.action {
+                        if !entries.allSatisfy({ $0.day == .today }) {
+                            Button { state.paste(action, to: .today, in: store) } label: { icons.label("\(action.title) to Today") }
+                        }
+                        Button { state.paste(action, to: .now, in: store) } label: { icons.label("\(action.title) to Now") }
+                    } else {
+                        Button { state.action = .copy } label: { icons.label("Copy") }
+                        Button { state.action = .move } label: { icons.label("Move") }
+                        if entries.count > 1 {
+                            Button("+ Recipe") { state.createRecipe() }
+                                .accessibilityLabel("Create Recipe")
+                        }
+                        if entries.count == 1, let entry = entries.first {
+                            Button("Edit") { state.editing = entry }
+                            if entry.food.source == .recipe {
+                                Button("Explode") {
+                                    state.explode(entry.id, in: store)
+                                    state.endSelection()
+                                }
                             }
                         }
                     }
-                    Button("Remove") { confirmingRemove = true }
-                    if settings.nutrition.timeline.display == .time {
-                        Button("Modify Timestamp") { prompt = .timestamp }
-                    }
                 }
                 .chipButton()
-                .disabled(count == 0)
             }
-        }
-        .alert("Remove Foods", isPresented: $confirmingRemove) {
-            Button("Remove", role: .destructive) {
-                store.deleteEntries(Array(state.selection))
-                state.endSelection()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("\(count) food \(count == 1 ? "entry" : "entries") will be removed from the timeline.")
-        }
-        .sheet(item: $prompt) { _ in
-            let entries = state.selectedEntries
-            TimePrompt(title: "Modify Timestamp", day: state.day, minute: entries.first?.minute ?? 720, showsDate: false) { day, minute in
-                state.relocate(entries, .move, to: .dateTime(day, minute: minute), in: store)
+            Spacer(minLength: 0)
+            if state.action == nil {
+                Button("Remove", systemImage: "trash") { state.remove(entries, in: store) }
+                    .labelStyle(.iconOnly)
+                    .chipButton()
+                    .buttonBorderShape(.circle)
             }
         }
         .feedback(self)
     }
-
-    private func copy(to target: PasteTarget) {
-        state.relocate(state.selectedEntries, .copy, to: target, in: store)
-    }
 }
 
-/// Copy or Move's targets, which stay up while the owner changes days. Every hour's or section's + is a paste arrow on
-/// whichever day is shown meanwhile (`SlotRow`); To Now, To Today, and To Tomorrow name the same days from any.
-private struct PasteBar: View {
-    private enum Prompt: Identifiable {
-        case dateTime, dates
+/// The foods a Copy or Move carries, as their icons stacked at the button's bottom right: up to three distinct ones,
+/// each tucked under the last.
+private struct CarriedIcons {
+    let emojis: [String?]
+    let sources: [FoodSource]
+    let count: Int
 
-        var id: Self { self }
-    }
-
-    let pending: FoodLogState.Pending
-
-    @Environment(FoodLogState.self) private var state
-    @Environment(LocalStore.self) private var store
-    @State private var prompt: Prompt?
-
-    var body: some View {
-        let title = pending.action.title
-        FlowLayout {
-            BarTitle(title: title, count: pending.entries.count, systemImage: "chevron.left", accessibilityLabel: "Back") { state.back() }
-            Group {
-                Button("To Now") { paste(.now) }
-                Button("To Today") { paste(.today) }
-                Button("To Tomorrow") { paste(.tomorrow) }
-                if pending.action == .copy {
-                    Button("To Dates") { prompt = .dates }
-                }
-                Button("To Date & Time") { prompt = .dateTime }
-            }
-            .chipButton()
+    init(entries: [FoodEntry]) {
+        var seen: Set<String> = []
+        var emojis: [String?] = []
+        var sources: [FoodSource] = []
+        for entry in entries {
+            let emoji = FoodIconChoice.emoji(icon: entry.food.icon, name: entry.food.name)
+            guard seen.insert(emoji ?? entry.food.source.rawValue).inserted else { continue }
+            emojis.append(emoji)
+            sources.append(entry.food.source)
+            if emojis.count == 3 { break }
         }
-        .sheet(item: $prompt) { prompt in
-            switch prompt {
-            case .dateTime:
-                TimePrompt(title: "\(title) to Date & Time", day: state.day, minute: pending.entries.first?.minute ?? 720, showsDate: true) { day, minute in
-                    paste(.dateTime(day, minute: minute))
-                }
-            case .dates:
-                DatesPrompt { paste(.days($0)) }
-            }
-        }
-        .feedback(self)
+        self.emojis = emojis
+        self.sources = sources
+        count = entries.count
     }
 
-    private func paste(_ target: PasteTarget) {
-        state.paste(to: target, in: store)
-    }
-}
-
-/// The bar's leading button: the paste bar's back, with what is pending under it, or the selection's bare ✕.
-private struct BarTitle: View {
-    var title: String?
-    var count = 0
-    let systemImage: String
-    let accessibilityLabel: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(Theme.onPrimary)
-                    .frame(width: 26, height: 26)
-                    .background(Theme.textPrimary, in: Circle())
-                if let title {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(title).font(AppFont.headline(13))
-                        Text("\(count) \(count == 1 ? "Food" : "Foods")").font(AppFont.caption(11)).foregroundStyle(Theme.textSecondary)
-                    }
+    func label(_ title: String) -> some View {
+        HStack(alignment: .bottom, spacing: 6) {
+            Text(title)
+            HStack(spacing: -7) {
+                ForEach(emojis.indices, id: \.self) { index in
+                    FoodIcon(emoji: emojis[index], source: sources[index], size: 16)
+                        .zIndex(Double(-index))
                 }
             }
+            .offset(y: 4)
         }
-        .buttonBorderShape(title == nil ? .circle : .capsule)
-        .chipButton()
-        .accessibilityLabel(accessibilityLabel)
-    }
-}
-
-/// A time, and optionally a day, for Modify Timestamp and To Date & Time.
-private struct TimePrompt: View {
-    let title: String
-    let showsDate: Bool
-    let onDone: (CalendarDay, Int) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var date: Date
-
-    init(title: String, day: CalendarDay, minute: Int, showsDate: Bool, onDone: @escaping (CalendarDay, Int) -> Void) {
-        self.title = title
-        self.showsDate = showsDate
-        self.onDone = onDone
-        _date = State(initialValue: day.date(atMinute: minute))
-    }
-
-    var body: some View {
-        NavigationStack {
-            VStack {
-                if showsDate {
-                    DatePicker("Date", selection: $date, displayedComponents: .date).datePickerStyle(.graphical)
-                }
-                if showsDate {
-                    DatePicker("Time", selection: $date, displayedComponents: .hourAndMinute)
-                } else {
-                    DatePicker("Time", selection: $date, displayedComponents: .hourAndMinute)
-                        .datePickerStyle(.wheel)
-                        .labelsHidden()
-                }
-            }
-            .padding(.horizontal, Theme.margin)
-            .detailTitle(title)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(role: .confirm) {
-                        onDone(CalendarDay(date), date.minuteOfDay())
-                        dismiss()
-                    }
-                }
-            }
-        }
-        .presentationDetents(showsDate ? [.large] : [.height(320)])
-        .feedback(self)
-    }
-}
-
-/// To Dates: several days at once, each copy keeping its time.
-private struct DatesPrompt: View {
-    let onDone: ([CalendarDay]) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var dates: Set<DateComponents> = []
-
-    var body: some View {
-        NavigationStack {
-            MultiDatePicker("Dates", selection: $dates)
-                .padding(.horizontal, Theme.margin)
-                .detailTitle("Copy to Dates")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(role: .confirm) {
-                            onDone(dates.compactMap { Calendar.current.date(from: $0) }.map { CalendarDay($0) })
-                            dismiss()
-                        }
-                        .disabled(dates.isEmpty)
-                    }
-                }
-        }
-        .presentationDetents([.large])
-        .feedback(self)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title), \(count) \(count == 1 ? "food" : "foods")")
     }
 }
 
@@ -321,12 +176,9 @@ struct DayMenu: View {
             Button("Nutrition Overview", systemImage: "list.bullet.rectangle") { state.path.append(FoodLogRoute.overview(day)) }
             Button("Strategy", systemImage: "chart.line.uptrend.xyaxis") { state.path.append(FoodLogRoute.strategy) }
             Button("Supplements", systemImage: "pills") { state.path.append(SupplementRoute.library) }
-            Button("Copy Day", systemImage: "doc.on.doc") { state.hold(.copy, entries) }
+            Button("Copy Day", systemImage: "doc.on.doc") { state.copy(entries) }
             .disabled(entries.isEmpty)
-            Button("Select All", systemImage: "checkmark.circle") {
-                state.selecting = true
-                state.selection = Set(entries.map(\.id))
-            }
+            Button("Select All", systemImage: "checkmark.circle") { state.select(entries) }
             .disabled(entries.isEmpty)
             Button("Clear Day", systemImage: "trash", role: .destructive) { confirmingClear = true }
                 .disabled(entries.isEmpty)
