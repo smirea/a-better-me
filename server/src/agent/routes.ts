@@ -4,6 +4,7 @@ import { planOn } from "./engine";
 import { exerciseRoutes } from "./exercises";
 import { gymRoutes } from "./gyms";
 import { expenditureFor, insightRoutes } from "./insights";
+import { muscleRoutes } from "./muscles";
 import { logDays, nutritionRoutes } from "./nutrition";
 import { programDetail, programRoutes } from "./programs";
 import type { Route } from "./route";
@@ -16,6 +17,7 @@ export const agentRoutes = (keys: { geminiApiKey: string | null }): Route[] => [
   ...exerciseRoutes,
   ...workoutRoutes,
   ...programRoutes,
+  ...muscleRoutes,
   ...gymRoutes,
   ...settingsRoutes,
   ...bodyRoutes,

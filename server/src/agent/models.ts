@@ -20,6 +20,7 @@ import {
   nutrientID,
   serving,
 } from "../../../shared/db/schema";
+import { MUSCLES } from "./muscle-model";
 
 /**
  * The agent API's request and response shapes. The JSON trees mirror the Swift `Codable` models in
@@ -44,31 +45,7 @@ const count = z.int().min(0);
 const kg = z.number().min(0);
 
 const SET_TYPES = ["standard", "warmUp", "drop", "myo", "failure"] as const;
-export const MUSCLES = [
-  "chest",
-  "front_delts",
-  "side_delts",
-  "rear_delts",
-  "lats",
-  "upper_back",
-  "upper_traps",
-  "lower_back",
-  "neck",
-  "biceps",
-  "triceps",
-  "forearms",
-  "abs",
-  "obliques",
-  "serratus",
-  "glutes",
-  "quads",
-  "hamstrings",
-  "adductors",
-  "abductors",
-  "hip_flexors",
-  "calves",
-  "tibs",
-] as const;
+export { MUSCLES };
 const METRICS = [
   "weight",
   "assistanceWeight",
@@ -376,7 +353,51 @@ export const Program = z
     description: "A cycle of days, each a template or a rest day, repeated `cycles` times.",
   });
 
+const MuscleFractions = z.record(z.string(), z.number()).meta({
+  description: "Per muscle, 0 (at capacity) to 1 (fresh). GET /muscle-effects has the formula.",
+});
+const ProgramMuscleEffects = z
+  .object({
+    hoursBetweenDays: z.number().meta({
+      description:
+        "Every program day, rest days included, is one calendar day, trained at the same hour.",
+    }),
+    cycles: z.array(
+      z.object({
+        cycle: z.int(),
+        deload: z.boolean(),
+        muscleSets: MuscleSets.meta({ description: "The cycle's planned working sets per muscle." }),
+        weeklyMuscleSets: MuscleSets.meta({
+          description: "`muscleSets` over seven days: times 7, divided by the number of days.",
+        }),
+        days: z.array(
+          z.object({
+            dayId: z.string(),
+            templateId: z.string().nullable().meta({ description: "Null for a rest day." }),
+            muscleSets: MuscleSets.meta({
+              description:
+                "Planned working sets per muscle, the numbers behind the app's program day body map.",
+            }),
+            recoveryBefore: MuscleFractions.meta({
+              description:
+                "How recovered each muscle the day trains is when the day starts, carrying every earlier day of the run from fresh muscles at cycle 1, day 1.",
+            }),
+            underRecovered: z
+              .array(z.enum(MUSCLES))
+              .meta({ description: "The day's muscles below the ready threshold (0.8)." }),
+          }),
+        ),
+      }),
+    ),
+  })
+  .meta({
+    id: "ProgramMuscleEffects",
+    description:
+      "What the program does to each muscle over a whole run: every cycle as it trains, cycle targets applied and the deload derived. Computed on read with the formula GET /muscle-effects serves.",
+  });
+
 export const ProgramDetail = Program.extend({
+  muscleEffects: ProgramMuscleEffects,
   templates: z.array(Template).meta({ description: "The days' templates." }),
   upNext: z
     .object({
@@ -1599,4 +1620,53 @@ export const GarminActivity = z
   .meta({
     id: "GarminActivity",
     description: "One recorded Garmin activity with its 1-second heart rate stream.",
+  });
+
+export const MuscleEffects = z
+  .object({
+    muscles: z.array(
+      z.object({
+        id: z.enum(MUSCLES),
+        name: z.string(),
+        lowerBody: z.boolean(),
+        recoveryHalfLifeHours: z.number(),
+      }),
+    ),
+    formula: z.object({
+      summary: z.string(),
+      language: z.literal("typescript"),
+      source: z.string().meta({
+        description:
+          "The module the server runs, verbatim and dependency-free: `muscleLoad`, `bodyMapFill`, `fatigue`, `recovery`, and `scheduleRecovery`, with their constants.",
+      }),
+    }),
+    exercises: z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        custom: z.boolean(),
+        primaryMuscles: z.array(z.enum(MUSCLES)),
+        secondaryMuscles: z.array(z.enum(MUSCLES)),
+      }),
+    ),
+  })
+  .meta({
+    id: "MuscleEffects",
+    description:
+      "Each exercise's muscles, and the formula that turns sets of them into load and recovery.",
+  });
+
+export const MuscleRecovery = z
+  .object({
+    at: z.string(),
+    recovery: MuscleFractions,
+    fatigueSets: MuscleSets.meta({
+      description: "Sets of fatigue left per muscle; recovery is 1 minus this over the capacity (10).",
+    }),
+    underRecovered: z.array(z.enum(MUSCLES)),
+  })
+  .meta({
+    id: "MuscleRecovery",
+    description:
+      "Every muscle's recovery from the logged working sets of finished workouts, each counted at the workout's end.",
   });
