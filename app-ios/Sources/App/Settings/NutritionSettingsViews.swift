@@ -405,24 +405,26 @@ private struct EnergyField: View {
     }
 }
 
-/// Settings > Food Log > Sections, shown with the Sections display: each section's name, and between two sections the
-/// time one ends and the next begins. Foods keep the section they were logged into, so editing these never moves them.
+/// Settings > Food Log > Sections, shown with the Sections display: a row per section, its name and the time it starts.
+/// Foods keep the section they were logged into, so editing these never moves them.
 private struct MealSectionsEditor: View {
     let sections: [MealSection]
 
     @Environment(LocalStore.self) private var store
 
     var body: some View {
-        ThemedSection("Sections", info: "The time between two sections is when one ends and the next begins. Foods keep the section they were logged into when these change.") {
+        ThemedSection("Sections", info: "Each section runs from its time to the next one's, and the last one through the night until the first starts. Foods keep the section they were logged into when these change.") {
             ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-                if index > 0 { boundary(index) }
-                SectionNameField(name: section.name) { name in edit { MealSectionsEditing.renaming(index, to: name, in: $0) } }
-                    .swipeActions(edge: .leading) { moves(index) }
-                    .swipeActions(edge: .trailing) { remove(index) }
-                    .contextMenu {
-                        moves(index)
-                        remove(index)
-                    }
+                HStack {
+                    SectionNameField(name: section.name) { name in edit { MealSectionsEditing.renaming(index, to: name, in: $0) } }
+                    start(index)
+                }
+                .swipeActions(edge: .leading) { moves(index) }
+                .swipeActions(edge: .trailing) { remove(index) }
+                .contextMenu {
+                    moves(index)
+                    remove(index)
+                }
             }
             Button("Add Section", systemImage: "plus") {
                 edit { MealSectionsEditing.adding(MealSectionsEditing.newName(in: $0), to: $0) ?? $0 }
@@ -431,7 +433,7 @@ private struct MealSectionsEditor: View {
         }
     }
 
-    private func boundary(_ index: Int) -> some View {
+    private func start(_ index: Int) -> some View {
         let bounds = MealSectionsEditing.startBounds(of: index, in: sections)
         let day = CalendarDay.today
         return DatePicker(
@@ -442,8 +444,10 @@ private struct MealSectionsEditor: View {
             in: day.date(atMinute: bounds.lowerBound)...day.date(atMinute: bounds.upperBound),
             displayedComponents: .hourAndMinute
         ) {
-            Label("\(sections[index].name) starts", systemImage: "clock").foregroundStyle(Theme.textSecondary)
+            Text("\(sections[index].name) starts")
         }
+        .labelsHidden()
+        .fixedSize()
     }
 
     @ViewBuilder

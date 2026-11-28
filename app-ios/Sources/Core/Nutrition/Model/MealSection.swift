@@ -2,16 +2,17 @@ import Foundation
 import GRDB
 
 /// One of the owner's meal sections: Breakfast, AM Snack, Lunch, PM Snack, and Dinner by default. Sections tile the
-/// day in order, each from its `start` to the next one's, so every minute falls in exactly one.
+/// day in order, each from its `start` to the next one's, and the last runs on through midnight to the first one's
+/// start, so every minute falls in exactly one: a 1 AM snack before a 5 AM Breakfast is the night's Dinner.
 struct MealSection: Codable, Hashable, Identifiable, Sendable {
     /// Stable across renames, so an entry logged into "Lunch" stays there when the owner calls it "Midday".
     var id: String
     var name: String
-    /// Minutes since midnight. The first section starts at 0 and the rest strictly increase.
+    /// Minutes since midnight, each later than the one before.
     var start: Int
 
     static let defaults = [
-        MealSection(id: "breakfast", name: "Breakfast", start: 0),
+        MealSection(id: "breakfast", name: "Breakfast", start: 5 * 60),
         MealSection(id: "am-snack", name: "AM Snack", start: 10 * 60),
         MealSection(id: "lunch", name: "Lunch", start: 12 * 60),
         MealSection(id: "pm-snack", name: "PM Snack", start: 15 * 60),
@@ -20,9 +21,9 @@ struct MealSection: Codable, Hashable, Identifiable, Sendable {
 }
 
 extension [MealSection] {
-    /// The section `minute` falls in.
+    /// The section `minute` falls in; a minute before the first section's start is still the last one's.
     func section(at minute: Int) -> MealSection {
-        last { $0.start <= minute } ?? self[0]
+        last { $0.start <= minute } ?? self[count - 1]
     }
 
     /// Where an entry shows: the section it was logged into while that section exists, else the one its minute falls
@@ -36,7 +37,8 @@ extension [MealSection] {
         section(of: entry.section, minute: entry.minute)
     }
 
-    /// The minutes a section covers: from its start to the next section's, the last one to midnight.
+    /// The minutes a section covers from its start: to the next section's, the last one to midnight. The last one also
+    /// covers the minutes before the first one starts, which `section(at:)` counts.
     func range(of section: MealSection) -> Range<Int> {
         guard let index = firstIndex(where: { $0.id == section.id }) else { return section.start..<section.start + 1 }
         return self[index].start..<(index + 1 < count ? self[index + 1].start : 24 * 60)
@@ -55,7 +57,7 @@ extension [MealSection] {
     /// The minute a section's + logs at on `day`: now when today's clock is inside it, else its typical minute.
     func logMinute(for section: MealSection, on day: CalendarDay, now: Date, calendar: Calendar = .current) -> Int {
         let minute = now.minuteOfDay(in: calendar)
-        if day == CalendarDay(now, in: calendar), range(of: section).contains(minute) { return minute }
+        if day == CalendarDay(now, in: calendar), self.section(at: minute).id == section.id { return minute }
         return typicalMinute(of: section)
     }
 
@@ -68,24 +70,22 @@ extension [MealSection] {
     }
 }
 
-/// The sections editor's rules (Settings > Food Log). Every edit keeps the sections tiling the day: the first starts at
-/// midnight and each start is later than the one before.
+/// The sections editor's rules (Settings > Food Log). Every edit keeps each start later than the one before.
 enum MealSectionsEditing {
     /// Sets where section `index` starts, kept a minute after the previous start and a minute before the next.
     static func settingStart(_ minute: Int, of index: Int, in sections: [MealSection]) -> [MealSection] {
-        guard sections.indices.contains(index), index > 0 else { return sections }
+        guard sections.indices.contains(index) else { return sections }
         var sections = sections
-        let low = sections[index - 1].start + 1
-        let high = index + 1 < sections.count ? sections[index + 1].start - 1 : 24 * 60 - 1
-        sections[index].start = Swift.min(high, Swift.max(low, minute))
+        let bounds = startBounds(of: index, in: sections)
+        sections[index].start = Swift.min(bounds.upperBound, Swift.max(bounds.lowerBound, minute))
         return sections
     }
 
     /// The minutes section `index` may start at.
     static func startBounds(of index: Int, in sections: [MealSection]) -> ClosedRange<Int> {
-        guard index > 0, sections.indices.contains(index) else { return 0...0 }
+        let low = index > 0 ? sections[index - 1].start + 1 : 0
         let high = index + 1 < sections.count ? sections[index + 1].start - 1 : 24 * 60 - 1
-        return (sections[index - 1].start + 1)...high
+        return low...high
     }
 
     static func renaming(_ index: Int, to name: String, in sections: [MealSection]) -> [MealSection] {
@@ -105,13 +105,12 @@ enum MealSectionsEditing {
         return sections + [MealSection(id: id, name: name, start: start)]
     }
 
-    /// Removes a section; the one before takes over its time, or for the first, the next one starts at midnight.
-    /// The last section stays.
+    /// Removes a section; the one before takes over its time, which for the first is the last, running on to the new
+    /// first one's start. One section always stays.
     static func removing(_ index: Int, from sections: [MealSection]) -> [MealSection] {
         guard sections.count > 1, sections.indices.contains(index) else { return sections }
         var sections = sections
         sections.remove(at: index)
-        sections[0].start = 0
         return sections
     }
 

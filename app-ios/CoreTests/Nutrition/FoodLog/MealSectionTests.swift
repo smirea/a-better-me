@@ -12,11 +12,11 @@ struct MealSectionTests {
         FoodEntry(FoodPortion(yogurt), day: monday, minute: minute, section: section, at: Date(timeIntervalSince1970: 1_800_000_000 + seconds))
     }
 
-    @Test func aMinuteFallsInTheLastSectionStartedByThen() {
-        #expect([0, 599, 600, 719, 720, 1019, 1020, 1439].map { sections.section(at: $0).id } == [
-            "breakfast", "breakfast", "am-snack", "am-snack", "lunch", "pm-snack", "dinner", "dinner",
+    @Test func aMinuteFallsInTheLastSectionStartedByThenAndBeforeTheFirstInTheLast() {
+        #expect([0, 299, 300, 599, 600, 719, 720, 1019, 1020, 1439].map { sections.section(at: $0).id } == [
+            "dinner", "dinner", "breakfast", "breakfast", "am-snack", "am-snack", "lunch", "pm-snack", "dinner", "dinner",
         ])
-        #expect(sections.range(of: sections[0]) == 0..<600)
+        #expect(sections.range(of: sections[0]) == 300..<600)
         #expect(sections.range(of: sections[4]) == 1020..<1440)
     }
 
@@ -32,6 +32,9 @@ struct MealSectionTests {
         #expect(sections.logMinute(for: sections[2], on: monday, now: noon, calendar: utc) == 12 * 60 + 40)
         #expect(sections.logMinute(for: sections[0], on: monday, now: noon, calendar: utc) == 480)
         #expect(sections.logMinute(for: sections[2], on: monday.adding(days: -1), now: noon, calendar: utc) == 810)
+        let night = monday.date(atMinute: 2 * 60, in: utc)
+        #expect(sections.logMinute(for: sections[4], on: monday, now: night, calendar: utc) == 2 * 60)
+        #expect(sections.logMinute(for: sections[0], on: monday, now: night, calendar: utc) == 480)
         let one = [MealSection(id: "all", name: "All Day", start: 0)]
         #expect(one.typicalMinute(of: one[0]) == 720)
     }
@@ -49,11 +52,13 @@ struct MealSectionTests {
         #expect(MealSectionsEditing.settingStart(11 * 60, of: 2, in: sections)[2].start == 11 * 60)
         #expect(MealSectionsEditing.settingStart(8 * 60, of: 2, in: sections)[2].start == 601)
         #expect(MealSectionsEditing.settingStart(23 * 60, of: 4, in: sections)[4].start == 23 * 60)
-        #expect(MealSectionsEditing.settingStart(5, of: 0, in: sections) == sections)
+        #expect(MealSectionsEditing.settingStart(6 * 60, of: 0, in: sections)[0].start == 6 * 60)
+        #expect(MealSectionsEditing.settingStart(11 * 60, of: 0, in: sections)[0].start == 599)
+        #expect(MealSectionsEditing.startBounds(of: 0, in: sections) == 0...599)
         #expect(MealSectionsEditing.startBounds(of: 4, in: sections) == 901...1439)
     }
 
-    @Test func editingKeepsTheSectionsTilingTheDay() {
+    @Test func editingKeepsEachStartAfterTheOneBefore() {
         let renamed = MealSectionsEditing.renaming(2, to: "  Midday ", in: sections)
         #expect(renamed[2] == MealSection(id: "lunch", name: "Midday", start: 720))
         #expect(MealSectionsEditing.renaming(2, to: " ", in: sections) == sections)
@@ -65,8 +70,8 @@ struct MealSectionTests {
 
         let withoutBreakfast = MealSectionsEditing.removing(0, from: sections)
         #expect(withoutBreakfast.map(\.id) == ["am-snack", "lunch", "pm-snack", "dinner"])
-        #expect(withoutBreakfast[0].start == 0)
-        #expect(MealSectionsEditing.removing(2, from: sections).map(\.start) == [0, 600, 900, 1020])
+        #expect(withoutBreakfast[0].start == 600)
+        #expect(MealSectionsEditing.removing(2, from: sections).map(\.start) == [300, 600, 900, 1020])
         #expect(MealSectionsEditing.removing(0, from: [sections[0]]) == [sections[0]])
 
         let moved = MealSectionsEditing.moving(2, by: -1, in: sections)

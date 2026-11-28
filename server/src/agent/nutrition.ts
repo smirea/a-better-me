@@ -69,6 +69,11 @@ export function mealSections(db: Db) {
   return parsed.success ? parsed.data : M.DEFAULT_MEAL_SECTIONS;
 }
 
+/** The section `minute` falls in, as `[MealSection].section(at:)`: the last started by then, and before the first
+ * one's start the last, which runs on through midnight. */
+const sectionAt = (sections: { id: string; start: number }[], minute: number) =>
+  sections.findLast((section) => section.start <= minute) ?? sections.at(-1)!;
+
 /** Where each section starts, which is all that decides the section a minute falls in. */
 const timing = (sections: { id: string; start: number }[]) =>
   sections.map((section) => `${section.id}@${section.start}`).join();
@@ -87,7 +92,7 @@ export function stampSections(db: Db, next: { id: string; start: number }[]) {
     )
     .map((row) =>
       db.patch("food_entries", row.id, {
-        section: sections.findLast((section) => section.start <= row.minute)!.id,
+        section: sectionAt(sections, row.minute).id,
       }),
     );
 }
@@ -96,7 +101,7 @@ export function stampSections(db: Db, next: { id: string; start: number }[]) {
  * as `LocalStore.log` assigns it. */
 function entrySection(db: Db, minute: number, asked: string | undefined) {
   const sections = mealSections(db);
-  if (asked === undefined) return sections.findLast((section) => section.start <= minute)!.id;
+  if (asked === undefined) return sectionAt(sections, minute).id;
   if (!sections.some((section) => section.id === asked)) {
     const ids = sections.map((section) => section.id).join(", ");
     throw new ApiError(422, `No meal section ${asked}; settings.nutrition.mealSections has ${ids}`);
