@@ -46,6 +46,12 @@ struct NutritionStoreTests {
         #expect(try read(FoodEntry.on(monday)).map(\.section) == ["breakfast", "lunch", "am-snack", "breakfast"])
         #expect(try read(FoodEntry.on(monday)).last.map { Instant.text($0.updatedAt) } == Instant.text(legacy.updatedAt))
         #expect(try read(AppSettings.current).nutrition.mealSections.map(\.name).first == "Morning")
+
+        let night = FoodEntry(FoodPortion(yogurt), day: monday, minute: 60)
+        store.write { try night.insert($0) }
+        store.updateMealSections { MealSectionsEditing.settingStart(0, of: 0, in: $0) }
+        try await settled()
+        #expect(try read(FoodEntry.on(monday)).first?.section == "dinner")
     }
 
     @Test func aRecipeReplacesItsSelectionUnlessTheSelectionChanged() async throws {

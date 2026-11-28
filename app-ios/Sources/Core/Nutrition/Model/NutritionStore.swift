@@ -264,10 +264,11 @@ extension LocalStore {
         let ids = sections.map(\.id)
         let cases = sections.reversed().map { _ in "WHEN minute >= ? THEN ?" }.joined(separator: " ")
         var arguments: [any DatabaseValueConvertible] = sections.reversed().flatMap { [$0.start, $0.id] as [any DatabaseValueConvertible] }
+        arguments.append(sections[sections.count - 1].id)
         arguments += ids
         try db.execute(
             sql: """
-                UPDATE food_entries SET section = CASE \(cases) END
+                UPDATE food_entries SET section = CASE \(cases) ELSE ? END
                 WHERE section IS NULL OR section NOT IN (\(databaseQuestionMarks(count: ids.count)))
                 """,
             arguments: StatementArguments(arguments)
