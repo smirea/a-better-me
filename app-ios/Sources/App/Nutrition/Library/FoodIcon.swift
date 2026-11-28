@@ -1,31 +1,35 @@
 import Feedback
 import SwiftUI
 
-/// A food's icon everywhere it shows: its emoji (`FoodIconChoice.emoji`), else a symbol for where the food came from on
-/// a round tile.
+/// A food's icon everywhere it shows: its picture (a package photo the owner picked) in a circle, else its emoji
+/// (`FoodIconChoice.emoji`), else a symbol for where the food came from on a round tile.
 struct FoodIcon: View {
     let emoji: String?
     let source: FoodSource
+    var picture: UUID?
     var size: CGFloat = 28
 
     init(food: FoodSnapshot, size: CGFloat = 28) {
-        self.init(icon: food.icon, name: food.name, source: food.source, size: size)
+        self.init(icon: food.icon, name: food.name, source: food.source, image: food.image, size: size)
     }
 
-    init(icon: String?, name: String? = nil, source: FoodSource, size: CGFloat = 28) {
-        self.init(emoji: FoodIconChoice.emoji(icon: icon, name: name), source: source, size: size)
+    init(icon: String?, name: String? = nil, source: FoodSource, image: String? = nil, size: CGFloat = 28) {
+        self.init(emoji: FoodIconChoice.emoji(icon: icon, name: name), source: source, image: image, size: size)
     }
 
     /// An emoji already resolved by `FoodIconChoice.emoji`, for a row that resolves it once outside `body`.
-    init(emoji: String?, source: FoodSource, size: CGFloat = 28) {
+    init(emoji: String?, source: FoodSource, image: String? = nil, size: CGFloat = 28) {
         self.emoji = emoji
         self.source = source
+        picture = image.flatMap(UUID.init(uuidString:))
         self.size = size
     }
 
     var body: some View {
         Group {
-            if let emoji {
+            if let picture {
+                SupplementPicture(image: picture, name: "", cornerRadius: size / 2)
+            } else if let emoji {
                 Text(emoji).font(.system(size: size * 0.78))
             } else {
                 Image(systemName: symbol)

@@ -203,6 +203,10 @@ export const foods = sqliteTable("foods", {
    * wherever the replaced one would appear.
    */
   replaces: text("replaces"),
+  /** The ingredients statement as the package prints it. */
+  ingredients: text("ingredients"),
+  /** The picture id (`docs/decisions/images.md`) of the package photo that stands in for the food's icon. */
+  image: text("image"),
 });
 
 export const recipes = sqliteTable("recipes", {
@@ -627,6 +631,8 @@ export const foodSnapshot = z.object({
   name: z.string().min(1),
   brand: z.string().optional(),
   icon: z.string().optional(),
+  /** The food's picture id, drawn in place of its icon. */
+  image: z.string().min(1).optional(),
   nutrition: foodNutrition,
 });
 const minute = z.int().min(0).max(1439);
@@ -712,7 +718,12 @@ export const schema = defineSchema({
       bodyFatPercent: z.number().min(0).max(100),
     },
     api_tokens: { tokenHash: z.string().regex(/^[0-9a-f]{64}$/) },
-    foods: { source: z.enum(FOOD_ROW_SOURCES), name: z.string().min(1), nutrition: foodNutrition },
+    foods: {
+      source: z.enum(FOOD_ROW_SOURCES),
+      name: z.string().min(1),
+      nutrition: foodNutrition,
+      image: z.string().min(1),
+    },
     recipes: {
       name: z.string().min(1),
       ingredients: z.array(recipeIngredient),

@@ -47,11 +47,18 @@ test("a picture is deleted only once no row has listed it for two days, and one 
   expect(await stored()).toEqual([ID]);
 });
 
-test("the sweep reads the listed pictures from the supplements a dump holds, and refuses a dump without them", () => {
-  expect(listedImages({ supplements: [{ images: `["${ID}"]` }, { images: "[]" }] })).toEqual(
-    new Set([ID]),
-  );
-  expect(() => listedImages({})).toThrow();
+test("the sweep keeps the pictures supplements, foods, and the log's food snapshots list, and refuses a dump without one of them", () => {
+  const THIRD = "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9";
+  const snapshot = (image?: string) => ({ name: "Swerve", source: "custom", nutrition: {}, ...(image && { image }) });
+  const dump = {
+    supplements: [{ images: `["${ID}"]` }, { images: "[]" }],
+    foods: [{ image: OTHER }, { image: null }],
+    food_entries: [{ food: JSON.stringify(snapshot(THIRD)), alterations: null }],
+    food_favorites: [{ food: JSON.stringify(snapshot()), alterations: null }],
+    recipes: [{ ingredients: JSON.stringify([{ id: "a", food: snapshot(OTHER) }]) }],
+  };
+  expect(listedImages(dump)).toEqual(new Set([ID, OTHER, THIRD]));
+  expect(() => listedImages({ ...dump, foods: undefined } as never)).toThrow();
 });
 
 test("the move stores every old row in the bucket under its id before the table and its change log go", async () => {

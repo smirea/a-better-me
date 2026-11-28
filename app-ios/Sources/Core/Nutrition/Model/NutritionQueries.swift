@@ -69,6 +69,10 @@ extension Food {
         try Food.filter(Column("archived") == false).fetchAll(db)
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
+
+    static func one(_ id: String) -> DatabaseQuery<Food?> {
+        DatabaseQuery(nil) { try Food.fetchOne($0, key: id) }
+    }
 }
 
 extension Recipe {

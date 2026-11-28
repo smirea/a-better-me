@@ -54,7 +54,8 @@ if (undecodable.length > 0) {
   );
 }
 
-const registry: { id: string; unit: string }[] = JSON.parse(
+/** `app` marks a nutrient MacroFactor lacks, such as the sugar alcohols, which its table cannot vouch for. */
+const registry: { id: string; unit: string; app?: boolean }[] = JSON.parse(
   readFileSync(join(root, "app-ios/Sources/CoreResources/Nutrition/nutrients.json"), "utf8"),
 );
 const research = readFileSync(join(root, "docs/research/macrofactor/nutrients.md"), "utf8")
@@ -66,7 +67,7 @@ const units = Object.fromEntries(
   ),
 );
 const mismatched = [
-  ...registry.filter(({ id, unit }) => units[id] !== unit).map(({ id }) => id),
+  ...registry.filter(({ id, unit, app }) => !app && units[id] !== unit).map(({ id }) => id),
   ...Object.keys(units).filter((id) => !registry.some((nutrient) => nutrient.id === id)),
 ];
 if (mismatched.length > 0) {

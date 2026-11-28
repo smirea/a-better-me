@@ -189,8 +189,8 @@ const granola = stableId("food", "Test Granola", 0);
 const bowl = stableId("recipe", "Test Bowl", 0);
 
 describe("import-macrofactor", () => {
-  test("every export nutrient column maps to a registry id, one to one", () => {
-    const ids = new Set(registry.map((nutrient) => nutrient.id));
+  test("every export nutrient column maps to one of MacroFactor's registry ids, one to one", () => {
+    const ids = new Set(registry.filter((nutrient) => !("app" in nutrient)).map((nutrient) => nutrient.id));
     expect(Object.values(NUTRIENT_COLUMNS).filter((id) => !ids.has(id))).toEqual([]);
     expect(new Set(Object.values(NUTRIENT_COLUMNS)).size).toBe(ids.size);
   });

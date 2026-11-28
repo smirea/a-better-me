@@ -1,7 +1,8 @@
 import Foundation
 
 /// A nutrient registry id: `k`, `p`, `f`, `c`, `nc`, or a USDA nutrient number such as `291`, MacroFactor's own keys,
-/// so USDA FoodData Central imports without a mapping. `nutrients.json` lists them (docs/decisions/nutrition.md).
+/// so USDA FoodData Central imports without a mapping. The sugar alcohols and allulose, which MacroFactor and SR Legacy
+/// lack, have two-letter ids of the app's own. `nutrients.json` lists them (docs/decisions/nutrition.md).
 struct NutrientID: RawRepresentable, Hashable, Codable, CodingKeyRepresentable, Sendable, ExpressibleByStringLiteral {
     let rawValue: String
 
@@ -12,9 +13,14 @@ struct NutrientID: RawRepresentable, Hashable, Codable, CodingKeyRepresentable, 
     static let protein: NutrientID = "p"
     static let fat: NutrientID = "f"
     static let carbs: NutrientID = "c"
-    /// Carbs minus fiber. Reported by a few labels; `amount(of:)` derives it for every other food.
+    /// Carbs minus fiber, sugar alcohols, and allulose. Reported by a few labels; `amount(of:)` derives it for every
+    /// other food.
     static let netCarbs: NutrientID = "nc"
     static let fiber: NutrientID = "291"
+    static let sugarAlcohols: NutrientID = "sa"
+    /// The sugar alcohols a label may break out, which `sugarAlcohols` totals.
+    static let polyols: [NutrientID] = ["er", "xy", "ma", "so"]
+    static let allulose: NutrientID = "au"
     static let alcohol: NutrientID = "221"
 
     /// Calories, then protein, fat, and carbs: the order every summary, header, and macro line uses.
@@ -63,13 +69,26 @@ extension Dictionary where Key == NutrientID, Value == Double {
         if lhs[.netCarbs] != nil || rhs[.netCarbs] != nil {
             sum[.netCarbs] = (lhs.amount(of: .netCarbs) ?? 0) + (rhs.amount(of: .netCarbs) ?? 0)
         }
+        // A side that lists only single sugar alcohols still deducts them once its total is summed with another's.
+        if lhs.sugarAlcoholTotal != nil || rhs.sugarAlcoholTotal != nil {
+            sum[.sugarAlcohols] = (lhs.sugarAlcoholTotal ?? 0) + (rhs.sugarAlcoholTotal ?? 0)
+        }
         return sum
     }
 
-    /// The amount of `id`, with net carbs derived from carbs and fiber when the food does not report it.
+    /// The sugar alcohols' total, else the single ones listed summed; nil when the food reports none.
+    var sugarAlcoholTotal: Double? {
+        if let total = self[.sugarAlcohols] { return total }
+        let listed = NutrientID.polyols.compactMap { self[$0] }
+        return listed.isEmpty ? nil : listed.reduce(0, +)
+    }
+
+    /// The amount of `id`, with net carbs derived when the food does not report it: carbs less what the body barely
+    /// takes up, fiber, sugar alcohols (their total, else the ones listed), and allulose, as MacroFactor and keto
+    /// labels count them.
     func amount(of id: NutrientID) -> Double? {
         if id == .netCarbs, self[.netCarbs] == nil, let carbs = self[.carbs] {
-            return Swift.max(0, carbs - (self[.fiber] ?? 0))
+            return Swift.max(0, carbs - (self[.fiber] ?? 0) - (sugarAlcoholTotal ?? 0) - (self[.allulose] ?? 0))
         }
         return self[id]
     }

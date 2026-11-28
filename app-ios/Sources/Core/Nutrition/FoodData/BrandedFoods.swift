@@ -21,9 +21,14 @@ struct FoodDatabaseClient: BrandedFoodSource {
         let name: String
         let brand: String?
         let barcode: String
+        let ingredients: String?
         let nutrition: FoodNutrition
 
-        var food: Food { Food(.openFoodFacts(barcode: barcode), name: name, brand: brand, nutrition: nutrition) }
+        var food: Food {
+            var food = Food(.openFoodFacts(barcode: barcode), name: name, brand: brand, nutrition: nutrition)
+            food.ingredients = ingredients
+            return food
+        }
     }
 
     func food(barcode: String) async throws -> Food? {

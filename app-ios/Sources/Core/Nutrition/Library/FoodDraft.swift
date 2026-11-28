@@ -20,7 +20,7 @@ struct FoodDraft: Codable, Equatable, Sendable {
     }
 
     enum Field: Hashable, Sendable {
-        case name, brand, store, barcode, servingWeight, servingQuantity, servingName
+        case name, brand, store, barcode, servingWeight, servingQuantity, servingName, ingredients
         case measureQuantity(UUID), measureName(UUID), measureSize(UUID)
         case nutrient(NutrientID)
     }
@@ -32,10 +32,14 @@ struct FoodDraft: Codable, Equatable, Sendable {
         var barcode: String?
         var store: String?
         var icon: String?
+        var image: String?
+        var ingredients: String?
         var nutrition: FoodNutrition
     }
 
     var icon: String?
+    /// The picture id of the package photo picked to stand in for the icon.
+    var image: String?
     var name = ""
     var brand = ""
     var barcode = ""
@@ -49,6 +53,7 @@ struct FoodDraft: Codable, Equatable, Sendable {
     /// Energy is typed in this unit and stored in kcal.
     var energyUnit = NutritionSettings.EnergyUnit.kcal
     var nutrients: [NutrientID: String] = [:]
+    var ingredients = ""
 
     init() {}
 
@@ -57,6 +62,8 @@ struct FoodDraft: Codable, Equatable, Sendable {
     /// when the food's base serving differs (an imported food may default to 1 container of 1.5 base servings).
     init(_ food: Food) {
         icon = food.icon
+        image = food.image
+        ingredients = food.ingredients ?? ""
         name = food.name
         brand = food.brand ?? ""
         barcode = food.barcode ?? ""
@@ -178,11 +185,11 @@ struct FoodDraft: Codable, Equatable, Sendable {
 
         guard issues.isEmpty else { return (nil, issues) }
         let nutrition = FoodNutrition(nutrients: amounts, baseGrams: size.grams, baseMilliliters: size.milliliters, measures: all)
-        return (Valid(name: name, brand: Self.optional(brand), barcode: Self.optional(barcode).map { ScannedBarcode($0)?.code ?? $0 }, store: Self.optional(store), icon: icon, nutrition: nutrition), [:])
+        return (Valid(name: name, brand: Self.optional(brand), barcode: Self.optional(barcode).map { ScannedBarcode($0)?.code ?? $0 }, store: Self.optional(store), icon: icon, image: image, ingredients: Self.optional(ingredients), nutrition: nutrition), [:])
     }
 
     private static func optional(_ text: String) -> String? {
-        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
 }
@@ -194,6 +201,8 @@ extension FoodDraft.Valid {
         food.barcode = barcode
         food.store = store
         food.icon = icon
+        food.image = image
+        food.ingredients = ingredients
         food.nutrition = nutrition
     }
 

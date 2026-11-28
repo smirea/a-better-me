@@ -18,6 +18,7 @@ export const FoodLabel = z
     name: z.string().min(1).optional(),
     brand: z.string().min(1).optional(),
     store: z.string().min(1).optional(),
+    ingredients: z.string().min(1).optional(),
     nutrition: foodNutrition.optional(),
   })
   .meta({ id: "FoodLabel" });
@@ -32,6 +33,12 @@ const NUTRIENTS: [key: string, id: string][] = [
   ["dietary_fiber_g", "291"],
   ["total_sugars_g", "269"],
   ["added_sugars_g", "539"],
+  ["sugar_alcohols_g", "sa"],
+  ["erythritol_g", "er"],
+  ["xylitol_g", "xy"],
+  ["maltitol_g", "ma"],
+  ["sorbitol_g", "so"],
+  ["allulose_g", "au"],
   ["saturated_fat_g", "606"],
   ["trans_fat_g", "693"],
   ["monounsaturated_fat_g", "645"],
@@ -63,6 +70,7 @@ const ModelLabel = z.object({
   name: z.string().nullish(),
   brand: z.string().nullish(),
   store: z.string().nullish(),
+  ingredients: z.string().nullish(),
   serving: z
     .object({
       quantity: z.number().positive(),
@@ -82,8 +90,9 @@ const PROMPT = `You read food packaging for a calorie tracker. The photos all sh
 - "brand" is the brand printed on the package. A store's own prepared food (a deli or bakery label packed for the store) has the store as its brand.
 - "store" is the store the label says the food was packed for or sold at ("Packed for Whole Foods Market"), as its everyday name ("Whole Foods Market"). Null for a manufacturer's package that names no store.
 - "serving" is the serving the nutrition panel describes: its quantity and unit as printed ("1 ea", "2/3 cup", "1 bar", "100 g"; a per-100 g panel is quantity 100, unit "g"), and its weight in grams or volume in milliliters when the panel or the package gives it. When the package holds one serving and only the net weight is printed, the serving weighs the net weight.
+- "ingredients" is the ingredients statement, copied word for word as printed after "Ingredients:" without that word, with its parentheses and "Contains" line; null when no photo shows it.
 - "servingsPerContainer" as printed; null when not printed.
-- "nutrients" are the amounts per serving, in the unit each key names, read from the panel's amount column. Use a % Daily Value only for a nutrient that has no amount printed, converting with the FDA's 2020 Daily Values. Null for a nutrient the photos don't show.
+- "nutrients" are the amounts per serving, in the unit each key names, read from the panel's amount column. "sugar_alcohols_g" is the panel's Sugar Alcohol line; a single sugar alcohol (erythritol, xylitol, maltitol, sorbitol) or allulose goes in its own key only when the panel prints its amount. Use a % Daily Value only for a nutrient that has no amount printed, converting with the FDA's 2020 Daily Values. Null for a nutrient the photos don't show.
 - Leave everything null that no photo shows. Never guess nutrition for a food whose panel is not in the photos.`;
 
 const nullable = (type: string) => ({ type, nullable: true });
@@ -95,6 +104,7 @@ const RESPONSE_SCHEMA = {
     name: { type: "STRING" },
     brand: nullable("STRING"),
     store: nullable("STRING"),
+    ingredients: nullable("STRING"),
     serving: {
       type: "OBJECT",
       nullable: true,
@@ -117,7 +127,15 @@ const RESPONSE_SCHEMA = {
   },
   // Required because Gemini once left the name out of a label it read everything else from.
   required: ["name"],
-  propertyOrdering: ["name", "brand", "store", "serving", "servingsPerContainer", "nutrients"],
+  propertyOrdering: [
+    "name",
+    "brand",
+    "store",
+    "ingredients",
+    "serving",
+    "servingsPerContainer",
+    "nutrients",
+  ],
 };
 
 const text = (value: string | null | undefined) => value?.trim() || undefined;
@@ -183,10 +201,12 @@ export async function readFoodLabel(
   const name = text(label.name);
   const brand = text(label.brand);
   const store = text(label.store);
+  const ingredients = text(label.ingredients);
   const facts = nutrition(label);
   if (name) result.name = name;
   if (brand) result.brand = brand;
   if (store) result.store = store;
+  if (ingredients) result.ingredients = ingredients;
   if (facts) result.nutrition = facts;
   return result;
 }

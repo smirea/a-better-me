@@ -73,7 +73,8 @@ enum NutrientTableSection: String, CaseIterable, Hashable {
                 (.fat, 0), ("606", 1), ("693", 1), ("646", 1), ("645", 1), ("901", 1), ("851", 2), ("629", 2), ("621", 2), ("902", 1),
                 ("601", 0),
                 ("307", 0),
-                (.carbs, 0), (.fiber, 1), ("269", 1), ("539", 2), ("209", 1), (.netCarbs, 1),
+                (.carbs, 0), (.fiber, 1), ("269", 1), ("539", 2), (.sugarAlcohols, 1), ("er", 2), ("xy", 2), ("ma", 2), ("so", 2), (.allulose, 1),
+                ("209", 1), (.netCarbs, 1),
                 (.protein, 0), ("507", 1), ("512", 1), ("503", 1), ("504", 1), ("505", 1), ("506", 1), ("508", 1), ("502", 1), ("501", 1), ("509", 1), ("510", 1),
             ]
         case .vitamins:
@@ -84,4 +85,11 @@ enum NutrientTableSection: String, CaseIterable, Hashable {
             [(.alcohol, 0), ("262", 0), ("255", 0)]
         }
     }
+
+    private static let depths: [NutrientID: Int] = Dictionary(
+        allCases.flatMap { $0.lines.map { ($0.id, $0.depth) } }, uniquingKeysWith: { first, _ in first }
+    )
+
+    /// How deep the table nests a nutrient under what holds it: 0 for a macro, 2 for sugars added or erythritol.
+    static func depth(of id: NutrientID) -> Int { depths[id] ?? 0 }
 }

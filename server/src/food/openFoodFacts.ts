@@ -16,6 +16,8 @@ const FIELDS = [
   "serving_quantity_unit",
   "product_quantity_unit",
   "quantity",
+  "ingredients_text",
+  "ingredients_text_en",
 ].join(",");
 const TIMEOUT_MS = 8000;
 
@@ -27,6 +29,7 @@ export const BrandedFood = z
     name: z.string().min(1),
     brand: z.string().optional(),
     barcode: z.string(),
+    ingredients: z.string().optional(),
     nutrition: foodNutrition,
   })
   .meta({ id: "BrandedFood" });
@@ -44,6 +47,11 @@ const NUTRIMENTS: [key: string, id: string, scale: number][] = [
   ["sugars", "269", 1],
   ["added-sugars", "539", 1],
   ["starch", "209", 1],
+  ["polyols", "sa", 1],
+  ["erythritol", "er", 1],
+  ["xylitol", "xy", 1],
+  ["maltitol", "ma", 1],
+  ["sorbitol", "so", 1],
   ["saturated-fat", "606", 1],
   ["monounsaturated-fat", "645", 1],
   ["polyunsaturated-fat", "646", 1],
@@ -95,6 +103,9 @@ type Product = {
   product_quantity_unit?: string;
   /** The label's net quantity as printed: "28 oz", "3 x 28 oz", "500 ml". The search index has no parsed field. */
   quantity?: string;
+  /** In the product's main language; `ingredients_text_en` is the English one when contributors gave it. */
+  ingredients_text?: string;
+  ingredients_text_en?: string;
 };
 
 /** Six significant digits are more than any label has, and they hide float noise from the unit conversions. */
@@ -171,12 +182,14 @@ export function normalize(product: Product): BrandedFood | null {
   )
     .map((text) => text.trim())
     .find(Boolean);
+  const ingredients = (product.ingredients_text_en || product.ingredients_text)?.trim();
   return {
     id: `off-${barcode}`,
     source: "open_food_facts",
     name,
     ...(brand && { brand }),
     barcode,
+    ...(ingredients && { ingredients }),
     nutrition: {
       nutrients: amounts,
       ...(byVolume ? { baseMilliliters: 100 } : { baseGrams: 100 }),

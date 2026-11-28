@@ -1,6 +1,6 @@
 # Pictures
 
-A row lists a picture's id and syncs like any other value. The picture's bytes never sync and never enter a database. Supplements' pictures are the only ones today; progress photos would use the same path ([Nutrition](nutrition.md#cut-or-deferred)). The design follows procrastimate's task attachments (`~/code/procrastimate/docs/decisions/images.md`), cut down to one owner, one size, and no files.
+A row lists a picture's id and syncs like any other value. The picture's bytes never sync and never enter a database. Supplements' pictures and a food's picked package photo (`foods.image`, and `image` on every snapshot of the food in the log, favorites, and recipe ingredients) use it; progress photos would use the same path ([Nutrition](nutrition.md#cut-or-deferred)). The design follows procrastimate's task attachments (`~/code/procrastimate/docs/decisions/images.md`), cut down to one owner, one size, and no files.
 
 ## Why the bytes left the database
 
@@ -9,7 +9,7 @@ A row lists a picture's id and syncs like any other value. The picture's bytes n
 
 ## Data
 
-- **A row lists ids.** `supplements.images` is the ids of a supplement's pictures, in order, lowercase UUIDs the app makes. The id is also the bucket key and the cache key, because a picture's bytes never change: a changed picture is a new id.
+- **A row lists ids.** `supplements.images` is the ids of a supplement's pictures, in order, and `foods.image` a food's one picture, lowercase UUIDs the app makes. The id is also the bucket key and the cache key, because a picture's bytes never change: a changed picture is a new id.
 - **One size.** A picture is a JPEG no longer than 1024 px on its long side, 60 to 230 KB ([Nutrition](nutrition.md#supplements)). Every screen decodes it at the size it draws, so there is no thumbnail to store.
 
 ## Storage
@@ -29,7 +29,7 @@ A row lists a picture's id and syncs like any other value. The picture's bytes n
 ## Deleting
 
 - **Removing a picture takes its id off the row.** There is no delete route. The phone drops its own files at once.
-- **A daily sweep collects the bytes.** After the backup, the `0 9 * * *` cron lists the bucket and reads the ids the dumped `supplements` rows list. A picture no row lists is marked in `orphans.json` in the bucket, and deleted once it has stayed unlisted for two days, which covers an upload whose edit has not synced yet. A picture listed again loses its mark. A dump without a `supplements` table fails the sweep instead of reading as "nothing is listed".
+- **A daily sweep collects the bytes.** After the backup, the `0 9 * * *` cron lists the bucket and reads the ids the dumped rows list: `supplements.images`, `foods.image`, and every `image` inside the food snapshots of `food_entries`, `food_favorites`, and `recipes`, since a log keeps a food's picture after the food changes or goes. A picture no row lists is marked in `orphans.json` in the bucket, and deleted once it has stayed unlisted for two days, which covers an upload whose edit has not synced yet. A picture listed again loses its mark. A dump without one of those tables fails the sweep instead of reading as "nothing is listed".
 
 ## The move
 

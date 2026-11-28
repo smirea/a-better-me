@@ -263,6 +263,10 @@ enum NutrientSection: String, CaseIterable, Identifiable {
 
     var nutrients: [Nutrient] { Self.table[self] ?? [] }
 
+    /// The food editor folds the breakdowns of a macro and the long vitamin and mineral lists. Calories & Macros is the
+    /// form's point, and Other's three rows (alcohol, caffeine, water) are shorter than the header that would hide them.
+    var collapses: Bool { self != .macros && self != .other }
+
     private static let macroSection: [NutrientID] = NutrientID.macros + [.fiber, .netCarbs]
 
     private static let table: [NutrientSection: [Nutrient]] = Dictionary(uniqueKeysWithValues: allCases.map { section in

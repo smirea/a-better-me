@@ -682,7 +682,7 @@ const nonnegative = z.number().min(0);
 export const NutrientAmounts = nutrientAmounts.meta({
   id: "NutrientAmounts",
   description:
-    "Sparse amounts keyed by nutrient id: `k` (kcal), `p`, `f`, `c`, and `nc` (net carbs) in grams, and USDA nutrient numbers such as `291` (fiber) in the registry unit. A missing id means not reported.",
+    "Sparse amounts keyed by nutrient id: `k` (kcal), `p`, `f`, `c`, and `nc` (net carbs) in grams, USDA nutrient numbers such as `291` (fiber) in the registry unit, and the app's own `sa` (sugar alcohols), `er`, `xy`, `ma`, `so` (erythritol, xylitol, maltitol, sorbitol), and `au` (allulose) in grams. A missing id means not reported.",
 });
 export const Serving = serving.meta({
   id: "Serving",
@@ -710,6 +710,10 @@ export const Food = z
     store: z.string().nullable(),
     replaces: z.string().nullable(),
     icon: z.string().nullable(),
+    ingredients: z.string().nullable(),
+    image: z.string().nullable().meta({
+      description: "The id of the package photo drawn in place of the icon. Bot tokens cannot read pictures.",
+    }),
     nutrition: FoodNutrition,
     archived: z.boolean(),
     createdAt: z.string(),
@@ -735,6 +739,10 @@ const foodFields = {
       "On a custom food that corrects a USDA or Open Food Facts food, the corrected food's id (or `<name>|<brand>` for a snapshot without one). The app shows this food wherever that one would appear.",
   }),
   icon: z.string().nullable().meta({ description: "A food icon name; null for the default." }),
+  ingredients: z
+    .string()
+    .nullable()
+    .meta({ description: "The ingredients statement as the package prints it." }),
   nutrition: FoodNutrition,
   archived: z.boolean(),
 };
@@ -751,6 +759,7 @@ export const FoodCreate = z
     store: foodFields.store.default(null),
     replaces: foodFields.replaces.default(null),
     icon: foodFields.icon.default(null),
+    ingredients: foodFields.ingredients.default(null),
     archived: foodFields.archived.default(false),
   })
   .meta({ id: "FoodCreate" });

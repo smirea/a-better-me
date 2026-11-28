@@ -5,6 +5,7 @@ struct FoodLabel: Codable, Hashable, Sendable {
     var name: String?
     var brand: String?
     var store: String?
+    var ingredients: String?
     var nutrition: FoodNutrition?
 }
 
@@ -63,6 +64,7 @@ extension FoodDraft {
         if let name = label.name { read.name = name }
         if let brand = label.brand { read.brand = brand }
         if let store = label.store { read.store = store }
+        if let ingredients = label.ingredients { read.ingredients = ingredients }
         if let nutrition = label.nutrition {
             var food = Food(name: read.name, nutrition: nutrition)
             food.icon = icon
@@ -80,13 +82,14 @@ extension FoodDraft {
     }
 
     /// Takes a new read of the photos, except where the owner changed a field since `baseline`, the draft as the last
-    /// read (or the editor's opening) left it. The serving moves as one, since its fields only mean something together;
+    /// read (or the editor's opening) left it. Name, brand, store, and ingredients each move alone. The serving moves as one, since its fields only mean something together;
     /// each nutrient moves alone, so fixing calories by hand keeps that fix through a read of one more photo, and energy
     /// moves with its unit, so a kcal read never lands in a field switched to kJ.
     mutating func merge(_ read: FoodDraft, over baseline: FoodDraft) {
         if name == baseline.name { name = read.name }
         if brand == baseline.brand { brand = read.brand }
         if store == baseline.store { store = read.store }
+        if ingredients == baseline.ingredients { ingredients = read.ingredients }
         if servingFields == baseline.servingFields {
             basis = read.basis
             servingWeight = read.servingWeight

@@ -145,6 +145,8 @@ struct FoodSnapshot: Hashable, Codable, Sendable {
     var name: String
     var brand: String?
     var icon: String?
+    /// The food's picture id (`PictureFiles`), drawn in place of the icon.
+    var image: String?
     var nutrition: FoodNutrition
 
     func amounts(_ serving: Serving) -> NutrientAmounts { nutrition.nutrients.scaled(by: serving.servings) }
@@ -207,6 +209,10 @@ struct Food: Stamped {
     /// for wherever that one would appear (`CurrentFoods`).
     var replaces: String?
     var icon: String?
+    /// The id of the package photo the owner picked to stand in for the icon (`PictureFiles`), lowercase.
+    var image: String?
+    /// The ingredients statement as the package prints it.
+    var ingredients: String?
     var nutrition: FoodNutrition
     var isArchived = false
     var createdAt: Date
@@ -238,7 +244,7 @@ struct Food: Stamped {
     }
 
     var snapshot: FoodSnapshot {
-        FoodSnapshot(foodID: id, source: source, name: name, brand: brand, icon: icon, nutrition: nutrition)
+        FoodSnapshot(foodID: id, source: source, name: name, brand: brand, icon: icon, image: image, nutrition: nutrition)
     }
 
     init(row: Row) throws {
@@ -250,6 +256,8 @@ struct Food: Stamped {
         store = row["store"]
         replaces = row["replaces"]
         icon = row["icon"]
+        image = row["image"]
+        ingredients = row["ingredients"]
         nutrition = try row.json("nutrition")
         isArchived = row.flag("archived")
         createdAt = try row.instant("created_at")
@@ -265,6 +273,8 @@ struct Food: Stamped {
         container["store"] = store
         container["replaces"] = replaces
         container["icon"] = icon
+        container["image"] = image
+        container["ingredients"] = ingredients
         container["nutrition"] = try RowJSON.text(nutrition)
         container["archived"] = isArchived ? 1 : 0
         container["created_at"] = Instant.text(createdAt)
