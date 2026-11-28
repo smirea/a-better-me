@@ -69,18 +69,19 @@ extension FoodIcon {
     }
 }
 
-/// Choose Icon: every icon by category, with a search over the names.
+/// Choose Icon: every icon by category, with a search over their names, categories, and keywords.
 struct FoodIconPicker: View {
     @Binding var selection: String?
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
+    @State private var position = ScrollPosition(edge: .top)
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 52), spacing: 8)], spacing: 8, pinnedViews: .sectionHeaders) {
                     ForEach(FoodIconChoice.Category.allCases) { category in
-                        let icons = FoodIconChoice.all.filter { $0.category == category && matches($0) }
+                        let icons = FoodIconChoice.all.filter { $0.category == category && $0.matches(query) }
                         if !icons.isEmpty {
                             Section {
                                 ForEach(icons) { icon in
@@ -105,6 +106,9 @@ struct FoodIconPicker: View {
                 }
                 .padding(.horizontal, Theme.margin)
             }
+            .scrollPosition($position)
+            // A search shrinks the grid under the offset the full list was scrolled to, which leaves it blank.
+            .onChange(of: query) { position.scrollTo(edge: .top) }
             .background(Theme.background)
             .searchable(text: $query, prompt: "Search icons")
             .detailTitle("Choose Icon")
@@ -118,10 +122,6 @@ struct FoodIconPicker: View {
             }
         }
         .feedback(self)
-    }
-
-    private func matches(_ icon: FoodIconChoice) -> Bool {
-        query.isEmpty || icon.name.replacing("-", with: " ").localizedCaseInsensitiveContains(query)
     }
 
     private func choose(_ name: String?) {
