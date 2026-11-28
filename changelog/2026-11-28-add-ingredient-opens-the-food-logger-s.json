@@ -1,0 +1,10 @@
+{
+	"title": "Add Ingredient opens the food logger's drawer, from a glass Add button",
+	"description": "Scan, Photo, Ramble, Search, Quick Add, and Library all add ingredients to the recipe, and to Alter, without logging anything.",
+	"tasks": [
+		{
+			"id": "31c6c127-9c1b-4d61-a0ec-da7e874f2290",
+			"title": "1 Create Recipe Feedback: glass add ingredient button and drawer"
+		}
+	]
+}

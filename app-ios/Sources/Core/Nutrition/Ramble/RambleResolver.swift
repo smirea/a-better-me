@@ -419,7 +419,8 @@ enum RambleServing {
         guard amount > 0 else { return fallback }
         let unit = unit.trimmingCharacters(in: .whitespaces).lowercased()
         let all = nutrition.allMeasures
-        if unit.isEmpty { return counted(nutrition, food: food, count: amount) }
+        // "2 eggs" can come back with "eggs" as its unit, which is a count of the food, not a measure.
+        if unit.isEmpty || Set(FoodText.terms(food)).isSuperset(of: FoodText.terms(unit)) { return counted(nutrition, food: food, count: amount) }
         if let weight = grams[unit] {
             if let measure = all.first(where: { $0.name == weight.measure }) { return Serving(measure: measure, quantity: amount * weight.factor) }
             // Water's density stands in for a food measured only by volume (milk per 100 mL): 200 g is 200 mL, where the

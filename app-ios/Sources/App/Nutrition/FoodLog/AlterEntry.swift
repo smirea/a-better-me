@@ -54,7 +54,9 @@ struct AlterEntry: View {
                 }
             }
             .sheet(isPresented: $adding) {
-                IngredientSearch(recipeID: entry.food.foodID.flatMap(UUID.init(uuidString:))) { draft.add($0) }
+                LoggerSheet(start: LoggerStart(), destination: .ingredients(
+                    draft.ingredientList, recipe: entry.food.foodID, update: { draft.setIngredients($0) }
+                ))
             }
         }
         .interactiveDismissDisabled(opened != nil && draft != opened)
@@ -113,6 +115,8 @@ struct AlterEntry: View {
             }
         } actions: {
             Button("Add") { adding = true }
+                .chipButton()
+                .underline(false)
                 .disabled(opened == nil)
                 .accessibilityLabel("Add Food")
         }

@@ -97,9 +97,9 @@ struct FoodLogSettingsView: View {
                 SettingChoice(
                     title: "Logger Banner", systemImage: "rectangle.topthird.inset.filled", selection: store.binding(settings, \.nutrition.logger.nutritionDisplay),
                     options: [
-                        SettingOption(value: .plateOnly, title: "Plate Only"),
-                        SettingOption(value: .dayAndPlate, title: "Day & Plate"),
-                        SettingOption(value: .remainingAfterPlate, title: "Remaining After Plate"),
+                        SettingOption(value: .plateOnly, title: "New Food Only"),
+                        SettingOption(value: .dayAndPlate, title: "Day & New Food"),
+                        SettingOption(value: .remainingAfterPlate, title: "Remaining After New Food"),
                     ]
                 )
                 SettingChoice(
@@ -116,7 +116,7 @@ struct FoodLogSettingsView: View {
                     title: "Optimization", systemImage: "hare", selection: store.binding(settings, \.nutrition.logger.optimization),
                     options: [
                         SettingOption(value: .speed, title: "Speed", detail: "Tapping a search result opens the food with the keypad"),
-                        SettingOption(value: .context, title: "Context", detail: "Tapping a search result closes search and shows the plate"),
+                        SettingOption(value: .context, title: "Context", detail: "Tapping a search result logs it and shows the meal"),
                     ]
                 )
             }

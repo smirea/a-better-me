@@ -72,9 +72,9 @@ struct ServingChoicesTests {
     }
 }
 
-struct PlateTests {
+struct IngredientListTests {
     @Test func totalsEveryItemAtItsServing() {
-        var plate = Plate()
+        var plate = IngredientList()
         let first = plate.add(LoggerPick(FoodPortion(banana)))
         plate.add(LoggerPick(FoodPortion(.quickAdd([.energy: 250, .protein: 20]))))
         #expect(plate.totals[.energy] == 89 * 1.18 + 250)

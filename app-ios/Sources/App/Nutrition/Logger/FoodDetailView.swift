@@ -5,14 +5,14 @@ import SwiftUI
 /// macros with each macro's share of calories, the icon a tap re-icons, then the impact on the day's targets, every nutrient the
 /// food reports, and the quantity keypad pinned under them. A recipe adds Prepare, Edit, and Duplicate, as the
 /// library's recipe page does, and its ingredients at the typed amount above the nutrients. The owner's own food adds Edit,
-/// which opens Edit Food, and a food with a printed ingredients statement shows it above the nutrients. A plate item opens here too, with Update and Remove. The logger's banner stays above it with its close button, so the
+/// which opens Edit Food, and a food with a printed ingredients statement shows it above the nutrients. A food of the meal opens here too, with Update and Remove. The logger's banner stays above it with its close button, so the
 /// detail has no navigation bar of its own; a Ramble row's detail, which has no banner, keeps the back button.
 struct FoodDetailView: View {
     let session: LoggerSession
-    /// The plate item being edited, nil for a food not yet on the plate.
+    /// The logged entry or ingredient being edited, nil for a food not yet added.
     let editing: UUID?
     let pick: LoggerPick
-    /// A Ramble row: Update hands the serving back instead of touching the plate.
+    /// A Ramble row: Update hands the serving back instead of logging.
     var ramble: RambleEdit?
     @Environment(\.dismiss) private var dismiss
     @Observe(AppSettings.current) private var settings
@@ -61,8 +61,10 @@ struct FoodDetailView: View {
             ThemedSection {
                 header
             }
-            let day = ramble?.day ?? session.time.day
-            ImpactGauges(amounts: amounts, day: day, adding: ramble?.others ?? restOfPlate).id(day)
+            if !session.addsIngredients {
+                let day = ramble?.day ?? session.time.day
+                ImpactGauges(amounts: amounts, day: day, adding: ramble?.others ?? [:], excluding: editing).id(day)
+            }
             if let alterations = pick.alterations {
                 IngredientsSection(alterations.map { $0.scaled(by: serving.servings) })
             } else if let recipe {
@@ -105,8 +107,8 @@ struct FoodDetailView: View {
         .feedback(self)
     }
 
-    /// The edited food at the same unit, whose grams per serving may have changed. A plate item keeps the snapshot it
-    /// took, as an edit never reaches the plate.
+    /// The edited food at the same unit, whose grams per serving may have changed. A logged food keeps the snapshot it
+    /// took, as an edit never reaches the log.
     private func foodEdited(_ saved: Food) {
         guard editing == nil else { return }
         food = saved.snapshot
@@ -166,7 +168,7 @@ struct FoodDetailView: View {
                     }
                     if let editing {
                         Button("Remove", systemImage: "trash") {
-                            session.plate.remove(editing)
+                            session.remove([editing])
                             dismiss()
                         }
                     }
@@ -183,29 +185,22 @@ struct FoodDetailView: View {
         Task { await session.setIcon(icon, of: food, uncached: pick.uncached) }
     }
 
-    /// The plate without the item being edited, which the gauges count as the food itself.
-    private var restOfPlate: NutrientAmounts {
-        var plate = session.plate
-        if let editing { plate.remove(editing) }
-        return plate.totals
-    }
-
     private func confirm() {
-        putOnPlate()
+        add()
         dismiss()
     }
 
-    /// A food not yet on the plate shows in the banner as if it were.
+    /// A food not yet added shows in the banner as if it were.
     private func preview() {
         if editing == nil, ramble == nil { session.pending = portion }
     }
 
-    private func putOnPlate() {
+    private func add() {
         session.pending = nil
         if let ramble {
             _ = ramble.update(serving)
         } else if let editing {
-            session.plate.setServing(serving, of: editing)
+            session.setServing(serving, of: editing)
         } else {
             session.add(LoggerPick(portion, uncached: pick.uncached, alterations: pick.alterations))
         }
@@ -220,7 +215,7 @@ struct RambleEdit {
     let others: NutrientAmounts
 }
 
-/// A recipe's Prepare, Edit, and Duplicate in the logger. Duplicate offers Create & Add onto the plate, and an edit
+/// A recipe's Prepare, Edit, and Duplicate in the logger. Duplicate offers Create & Add, which logs it, and an edit
 /// hands the detail the recipe's new snapshot. The detail presents what they open, outside its list.
 private struct RecipeActions: View {
     let recipe: Recipe

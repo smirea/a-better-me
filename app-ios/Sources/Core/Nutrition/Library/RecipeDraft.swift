@@ -245,3 +245,29 @@ extension RecipeDraft.Valid {
         return recipe
     }
 }
+
+extension RecipeDraft.Ingredient {
+    /// The ingredient as the logger lists it, under the same id.
+    var listItem: IngredientList.Item {
+        IngredientList.Item(id: id, pick: LoggerPick(FoodPortion(value.food, serving: value.serving)))
+    }
+
+    /// A new ingredient for a logger item, under the item's id.
+    init(_ item: IngredientList.Item) {
+        var value = RecipeIngredient(item.pick.portion)
+        value.id = item.id
+        self.init(value)
+    }
+}
+
+extension RecipeDraft {
+    /// The logger's list applied back, in its order. An ingredient whose food and serving the logger left alone keeps
+    /// its quantity as typed.
+    mutating func setIngredients(_ list: IngredientList) {
+        let current = Dictionary(ingredients.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        ingredients = list.items.map { item in
+            if let kept = current[item.id], kept.listItem == item { return kept }
+            return Ingredient(item)
+        }
+    }
+}

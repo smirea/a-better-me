@@ -156,6 +156,11 @@ struct RambleResolverTests {
             NutritionFormat.serving(RambleServing.serving(amount: 2, unit: "", food: food, of: nutrition, history: nil))
         }
         #expect([serving("apricots", apricots), serving("shallots", shallots), serving("rice", rice)] == ["2 apricot", "2 medium", "2 cup"])
+        // The model also names the food as its own unit ("2 eggs" of eggs); the cup's "(4.86 large eggs)" is no egg.
+        let eggs = FoodNutrition(nutrients: [.energy: 143], baseGrams: 100, measures: [
+            Measure(name: "large", quantity: 1, servings: 0.5), Measure(name: "cup (4.86 large eggs)", quantity: 1, servings: 2.43),
+        ])
+        #expect(NutritionFormat.serving(RambleServing.serving(amount: 2, unit: "eggs", food: "eggs", of: eggs, history: nil)) == "2 large")
     }
 
     @Test func aCountedContainerIsThePackageInTheSpeakersWord() {

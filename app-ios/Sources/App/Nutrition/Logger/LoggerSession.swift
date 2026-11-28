@@ -13,32 +13,48 @@ enum BarcodeOutcome: Hashable, Sendable {
     case unreachable
 }
 
-/// What a meal photo put on the plate, and the foods it named that nothing in the search matched.
+/// What a meal photo added, and the foods it named that nothing in the search matched.
 struct PhotoOutcome: Hashable, Sendable {
     var added: Int
     var unmatched: [String]
 }
 
 /// What the Photo tab still has to tell the owner. It lives in the session, not the tab, so switching tabs while
-/// Gemini answers neither loses the unmatched foods nor pushes the plate over another tab.
+/// Gemini answers neither loses the unmatched foods nor pushes the meal over another tab.
 enum PhotoNotice: Hashable, Sendable {
-    /// Foods went on the plate; the ones nothing matched are named before the plate shows.
+    /// Foods were added; the ones nothing matched are named before the meal shows.
     case added(unmatched: [String])
     case failed(String)
 }
 
-/// The logger sheet's state: the search, the plate, and the time it logs at. The views are thin over it, so the flows
-/// (multi-add, logging the plate, a barcode lookup) are tested without a screen.
+/// Where an add goes, at once: the Food Log at the chosen time, or a recipe's ingredients. `ingredients` starts from
+/// the recipe's list as it stands and hears every change to it; `recipe` is the food id of the recipe being edited,
+/// which cannot contain itself.
+enum LoggerDestination {
+    case foodLog
+    case ingredients(IngredientList, recipe: String?, update: @MainActor (IngredientList) -> Void)
+}
+
+/// What was just added, with Undo: "Logged Banana to Lunch", "Added 3 ingredients".
+struct LoggerNotice: Identifiable, Equatable {
+    let id = UUID()
+    let message: String
+    let added: [UUID]
+}
+
+/// The logger sheet's state: the search, the time it logs at, and in a recipe its ingredients. Every add goes straight
+/// to the destination; nothing waits to be logged together. The views are thin over it.
 @MainActor @Observable
 final class LoggerSession {
     let store: LocalStore
     @ObservationIgnored let search: FoodSearch
     @ObservationIgnored let recognizer: any MealRecognizer
+    @ObservationIgnored let destination: LoggerDestination
     /// Lives here, not in the tab, so switching tabs mid-ramble keeps its rows.
     let ramble: RambleCapture
     var tab: LoggerTab
-    /// The time chip's choice, or the hour the logger was opened at. Nil follows the clock, so a plate logged after
-    /// the hour turns lands in the new hour instead of before the foods logged since.
+    /// The time chip's choice, or the hour the logger was opened at. Nil follows the clock, so a food logged after the
+    /// hour turns lands in the new hour instead of before the foods logged since.
     private var chosenTime: LogTime?
     var time: LogTime {
         get { chosenTime ?? .now() }
@@ -49,7 +65,8 @@ final class LoggerSession {
             if self.section != section, !query.isEmpty { setQuery(query, branded: branded) }
         }
     }
-    var plate = Plate()
+    /// The recipe's ingredients, empty in the Food Log. Every change reaches the recipe's draft at once.
+    private(set) var ingredients = IngredientList()
     /// The food detail's serving before it is added, or the Quick Add being typed, so the banner shows what adding it
     /// would leave.
     var pending: FoodPortion?
@@ -60,12 +77,16 @@ final class LoggerSession {
     private(set) var isSearchingBranded = false
     private(set) var isFindingFoods = false
     var photoNotice: PhotoNotice?
-    /// Counts logged plates; the sheet closes on a change.
-    private(set) var logged = 0
+    var notice: LoggerNotice?
     @ObservationIgnored private var remote: Task<Void, Never>?
     /// `FoodSearch` is not observable, so reading this is how `picks` redraws after a reload that leaves `results` as
     /// it was, such as hiding a Pick.
     private var searchReloads = 0
+
+    /// Picking ingredients: nothing is logged, so the time chip and the day's totals have nothing to say.
+    var addsIngredients: Bool {
+        if case .ingredients = destination { true } else { false }
+    }
 
     var sections: [MealSection] { search.library.sections }
     var showsSections: Bool { search.library.display == .sections }
@@ -89,12 +110,14 @@ final class LoggerSession {
     }
 
     init(
-        store: LocalStore, search: FoodSearch, start: LoggerStart, recognizer: any MealRecognizer = MealPhotoClient.live,
-        listener: any RambleLiveConnecting = RambleLiveClient.live
+        store: LocalStore, search: FoodSearch, start: LoggerStart, destination: LoggerDestination = .foodLog,
+        recognizer: any MealRecognizer = MealPhotoClient.live, listener: any RambleLiveConnecting = RambleLiveClient.live
     ) {
         self.store = store
         self.search = search
         self.recognizer = recognizer
+        self.destination = destination
+        if case let .ingredients(list, _, _) = destination { ingredients = list }
         ramble = RambleCapture(store: store, index: { search.index }, listener: listener)
         tab = start.tab
         chosenTime = start.time
@@ -132,45 +155,91 @@ final class LoggerSession {
         await remote?.value
     }
 
-    @discardableResult
-    func add(_ pick: LoggerPick) -> UUID {
-        plate.add(pick)
+    /// Logs the food at the chosen day and hour, or makes it an ingredient.
+    func add(_ pick: LoggerPick) {
+        add([pick])
     }
 
-    /// Logs the plate at the chosen day and hour as one transaction, caching each USDA or Open Food Facts food first so
-    /// it joins the history, and empties the plate.
-    func logPlate(at date: Date = .now) {
-        guard !plate.isEmpty else { return }
-        for item in plate.items {
-            if let food = item.pick.uncached { store.saveFood(food) }
+    /// Several foods in one transaction (a photo's), at the chosen day and hour.
+    func add(_ picks: [LoggerPick], at date: Date = .now) {
+        deliver(picks) {
+            let time = chosenTime ?? .now(date)
+            let minute = time.minute(at: date)
+            return picks.map { $0.entry(day: time.day, minute: minute, section: time.section?.id) }
         }
-        let time = chosenTime ?? .now(date)
-        let minute = time.minute(at: date)
-        store.log(plate.items.map { $0.pick.entry(day: time.day, minute: minute, section: time.section?.id) })
-        plate = Plate()
-        pending = nil
-        logged += 1
     }
 
-    /// The plate or a ramble holds foods that closing would lose.
-    var hasUnlogged: Bool { !plate.isEmpty || !ramble.isEmpty }
+    /// Caches each USDA or Open Food Facts food first, so it joins the history and an ingredient's food works offline,
+    /// then logs `entries` or adds the picks to the recipe, and offers Undo.
+    private func deliver(_ picks: [LoggerPick], entries: () -> [FoodEntry]) {
+        pending = nil
+        for pick in picks {
+            if let food = pick.uncached { store.saveFood(food) }
+        }
+        let added: [UUID]
+        switch destination {
+        case .foodLog:
+            let logged = entries()
+            store.log(logged)
+            added = logged.map(\.id)
+        case let .ingredients(_, recipe, _):
+            let kept = picks.filter { recipe == nil || $0.portion.food.foodID != recipe }
+            var ids: [UUID] = []
+            changeIngredients { list in ids = kept.map { list.add($0) } }
+            added = ids
+        }
+        guard !added.isEmpty else { return }
+        let what = picks.count == 1 ? picks[0].portion.food.displayName : "\(picks.count) \(addsIngredients ? "ingredients" : "foods")"
+        notice = LoggerNotice(message: addsIngredients ? "Added \(what)" : "Logged \(what) to \(mealName)", added: added)
+    }
 
-    /// Logs every ramble row at its own day and minute in one transaction, caching USDA and Open Food Facts foods first,
-    /// as `logPlate` does.
-    /// Waits for the ramble to settle first, so a log never takes rows a final read or a resolution is about to change.
-    func logRamble() async {
+    private func changeIngredients(_ change: (inout IngredientList) -> Void) {
+        change(&ingredients)
+        if case let .ingredients(_, _, update) = destination { update(ingredients) }
+    }
+
+    /// The meal an add lands in, as the top button names it: the section, with its day when that isn't today.
+    var mealName: String {
+        addsIngredients ? "Ingredients" : LogTime(day: time.day, hour: time.hour, section: section).label()
+    }
+
+    /// Takes logged entries or ingredients away: the meal's remove, and Undo.
+    func remove(_ ids: [UUID]) {
+        switch destination {
+        case .foodLog: store.deleteEntries(ids)
+        case .ingredients: changeIngredients { list in ids.forEach { list.remove($0) } }
+        }
+    }
+
+    func undo(_ notice: LoggerNotice) {
+        remove(notice.added)
+        if self.notice == notice { self.notice = nil }
+    }
+
+    /// A new amount for a logged entry or an ingredient.
+    func setServing(_ serving: Serving, of id: UUID) {
+        switch destination {
+        case .foodLog: store.edit(FoodEntry.self, id: id) { $0.serving = serving }
+        case .ingredients: changeIngredients { $0.setServing(serving, of: id) }
+        }
+    }
+
+    /// A ramble holds foods that closing would lose.
+    var hasUnlogged: Bool { !ramble.isEmpty }
+
+    /// Logs every ramble row at its own day and minute in one transaction, or adds them to the recipe. Waits for the
+    /// ramble to settle first, so an add never takes rows a final read or a resolution is about to change. Returns
+    /// whether anything was added.
+    func addRamble() async -> Bool {
         let capture = ramble.generation
         await ramble.settled()
         // Exit while it settled cancels the capture; nothing it held is logged then.
-        guard ramble.generation == capture else { return }
+        guard ramble.generation == capture else { return false }
         let planned = ramble.planned
-        guard !planned.isEmpty else { return }
-        for item in planned {
-            if let food = item.pick.uncached { store.saveFood(food) }
-        }
-        store.log(planned.map(\.entry))
+        guard !planned.isEmpty else { return false }
+        deliver(planned.map(\.pick)) { planned.map(\.entry) }
         ramble.reset()
-        logged += 1
+        return true
     }
 
     /// Re-reads the owner's side of the search once the log's writes land.
@@ -200,11 +269,11 @@ final class LoggerSession {
     }
 
     /// The owner's icon for a food (`LocalStore.setIcon`). A search result is cached first, so the icon has a food to live
-    /// on, and the plate's portions of the food take it too.
+    /// on, and the recipe's ingredients of the food take it too.
     func setIcon(_ icon: String?, of food: FoodSnapshot, uncached: Food?) async {
         if let uncached { store.saveFood(uncached) }
         store.setIcon(icon, of: food)
-        plate.setIcon(icon, of: food)
+        if addsIngredients { changeIngredients { $0.setIcon(icon, of: food) } }
         await reloadSearch()
     }
 
@@ -219,7 +288,7 @@ final class LoggerSession {
         await reloadSearch()
     }
 
-    /// Puts the foods a meal photo shows on the plate: each name the server's model gives is matched against the
+    /// Adds the foods a meal photo shows, in one transaction: each name the server's model gives is matched against the
     /// local search (history first, then the owner's foods and USDA) and weighed at the model's grams, or left at the
     /// food's default serving when it has no weight. Throws when the server cannot be reached or refuses the photo.
     func addPhoto(jpeg: Data, note: String?) async throws -> PhotoOutcome {
@@ -228,6 +297,7 @@ final class LoggerSession {
         let index = search.index
         let matches = try await Task.detached { try foods.map { ($0, try index.match($0.search)) } }.value
         var outcome = PhotoOutcome(added: 0, unmatched: [])
+        var picks: [LoggerPick] = []
         for (food, result) in matches {
             guard let result else {
                 outcome.unmatched.append(food.name)
@@ -237,9 +307,10 @@ final class LoggerSession {
             if let grams = pick.portion.food.nutrition.allMeasures.first(where: { $0.name == SizeUnit.g.rawValue }) {
                 pick.portion.serving = Serving(measure: grams, quantity: food.grams)
             }
-            plate.add(pick)
+            picks.append(pick)
             outcome.added += 1
         }
+        if !picks.isEmpty { add(picks) }
         return outcome
     }
 
