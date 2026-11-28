@@ -25,7 +25,7 @@ struct AddToPlateButton: View {
     }
 }
 
-/// The logger's one action everywhere: log what is on the plate.
+/// The logger's one action everywhere: log what is on the plate, or hand it back as a recipe's ingredients.
 struct LogFoodsButton: View {
     let session: LoggerSession
     /// Runs before logging, so a tab can put its own food on the plate first (Quick Add's form).
@@ -34,10 +34,11 @@ struct LogFoodsButton: View {
     var hasPending = false
 
     var body: some View {
-        Button("Log Foods") {
+        Button(session.addsIngredients ? "Add" : "Log Foods") {
             prepare()
             session.logPlate()
         }
+        .accessibilityLabel(session.addsIngredients ? "Add Ingredients" : "Log Foods")
         .font(AppFont.headline(15))
         .prominentButton()
         .disabled(session.plate.isEmpty && !hasPending)

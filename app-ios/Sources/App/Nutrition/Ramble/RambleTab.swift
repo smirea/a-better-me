@@ -31,7 +31,8 @@ struct RambleTab: View {
     var body: some View {
         VStack(spacing: 0) {
             RambleSummary(
-                day: session.time.day, planned: capture.shownPlanned, missing: capture.notFound, close: close, switchTo: switchTo
+                day: session.time.day, planned: capture.shownPlanned, missing: capture.notFound, plateOnly: session.addsIngredients,
+                close: close, switchTo: switchTo
             )
             .id(session.time.day)
             ScrollViewReader { proxy in
@@ -40,7 +41,7 @@ struct RambleTab: View {
                         if capture.rows.isEmpty, capture.words.words.isEmpty, capture.phase != .review {
                             hints.transition(.opacity)
                         }
-                        let headers = Self.headers(capture.rows.filter { $0.parent == nil })
+                        let headers = session.addsIngredients ? [:] : Self.headers(capture.rows.filter { $0.parent == nil })
                         ForEach(capture.lines) { line in
                             let row = line.row
                             if row.parent == nil, let header = headers[row.key] {
@@ -290,13 +291,15 @@ private struct RambleSummary: View {
     let planned: [RamblePlanned]
     /// Foods said but not found, which the totals leave out.
     let missing: Int
+    /// Picking a recipe's ingredients: the ramble's foods alone, whatever day they were said for.
+    let plateOnly: Bool
     let close: () -> Void
     let switchTo: (LoggerTab) -> Void
     @State private var pulse = 0.0
 
     var body: some View {
         // A row for another day ("yesterday I had…") logs there, so this day's totals leave it out.
-        let plate = planned.filter { $0.day == day }.reduce(into: NutrientAmounts()) { $0 = $0 + $1.pick.portion.amounts }
+        let plate = planned.filter { plateOnly || $0.day == day }.reduce(into: NutrientAmounts()) { $0 = $0 + $1.pick.portion.amounts }
         let kcal = Int(planned.reduce(0) { $0 + ($1.pick.portion.amounts[.energy] ?? 0) }.rounded())
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
@@ -320,7 +323,7 @@ private struct RambleSummary: View {
                 .buttonBorderShape(.circle)
                 .accessibilityLabel("Other ways to log")
             }
-            PlateDayTotals(day: day, plate: plate)
+            PlateDayTotals(day: day, plate: plate, plateOnly: plateOnly)
                 .scaleEffect(1 + 0.04 * pulse)
         }
         .padding(.horizontal, Theme.margin)

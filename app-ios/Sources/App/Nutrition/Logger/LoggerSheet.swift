@@ -11,9 +11,11 @@ enum LoggerRoute: Hashable {
 
 /// MacroFactor's logger (research spec §5): one full-height sheet with the banner (exit, time chip, what the plate
 /// leaves of the day, the plate) over the Scan, Photo, Search, Quick Add, and Library tabs. Describe is not built
-/// (docs/decisions/nutrition.md). Logging the plate closes it.
+/// (docs/decisions/nutrition.md). Logging the plate closes it. With an `.ingredients` destination the same sheet picks a
+/// recipe's ingredients: its Add hands the plate or the ramble back, and nothing is logged.
 struct LoggerSheet: View {
     let start: LoggerStart
+    var destination = LoggerDestination.foodLog
     @Environment(LocalStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var session: LoggerSession?
@@ -36,7 +38,7 @@ struct LoggerSheet: View {
             guard session == nil else { return }
             if let library = start.library { UserDefaults.standard.set(library.rawValue, forKey: FoodLibraryTab.storageKey) }
             do {
-                session = LoggerSession(store: store, search: try await FoodSearch.load(store: store), start: start)
+                session = LoggerSession(store: store, search: try await FoodSearch.load(store: store), start: start, destination: destination)
             } catch {
                 failure = String(describing: error)
             }
@@ -163,16 +165,18 @@ private struct LoggerBanner: View {
             GlassEffectContainer {
                 HStack(spacing: 10) {
                     RoundIconButton("Close", systemImage: "xmark", action: exit)
-                    Button(action: chooseTime) {
-                        Text(timeLabel).font(AppFont.headline(14))
+                    if !session.addsIngredients {
+                        Button(action: chooseTime) {
+                            Text(timeLabel).font(AppFont.headline(14))
+                        }
+                        .chipButton()
+                        .accessibilityLabel("Log time, \(timeLabel)")
                     }
-                    .chipButton()
-                    .accessibilityLabel("Log time, \(timeLabel)")
                     Spacer(minLength: 0)
                     plateButton
                 }
             }
-            PlateDayTotals(day: session.time.day, plate: session.plateWithPending)
+            PlateDayTotals(day: session.time.day, plate: session.plateWithPending, plateOnly: session.addsIngredients)
         }
         .padding(.horizontal, Theme.margin)
         .padding(.top, 14)

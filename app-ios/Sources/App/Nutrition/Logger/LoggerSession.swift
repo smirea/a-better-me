@@ -27,6 +27,13 @@ enum PhotoNotice: Hashable, Sendable {
     case failed(String)
 }
 
+/// Where the logger's foods go: into the Food Log at the chosen time, or back to a recipe being built, as its
+/// ingredients at the amounts picked.
+enum LoggerDestination {
+    case foodLog
+    case ingredients(@MainActor ([FoodPortion]) -> Void)
+}
+
 /// The logger sheet's state: the search, the plate, and the time it logs at. The views are thin over it, so the flows
 /// (multi-add, logging the plate, a barcode lookup) are tested without a screen.
 @MainActor @Observable
@@ -34,6 +41,7 @@ final class LoggerSession {
     let store: LocalStore
     @ObservationIgnored let search: FoodSearch
     @ObservationIgnored let recognizer: any MealRecognizer
+    @ObservationIgnored let destination: LoggerDestination
     /// Lives here, not in the tab, so switching tabs mid-ramble keeps its rows.
     let ramble: RambleCapture
     var tab: LoggerTab
@@ -67,6 +75,11 @@ final class LoggerSession {
     /// it was, such as hiding a Pick.
     private var searchReloads = 0
 
+    /// Picking ingredients: nothing is logged, so the time chip and the day's totals have nothing to say.
+    var addsIngredients: Bool {
+        if case .ingredients = destination { true } else { false }
+    }
+
     var sections: [MealSection] { search.library.sections }
     var showsSections: Bool { search.library.display == .sections }
 
@@ -89,12 +102,13 @@ final class LoggerSession {
     }
 
     init(
-        store: LocalStore, search: FoodSearch, start: LoggerStart, recognizer: any MealRecognizer = MealPhotoClient.live,
-        listener: any RambleLiveConnecting = RambleLiveClient.live
+        store: LocalStore, search: FoodSearch, start: LoggerStart, destination: LoggerDestination = .foodLog,
+        recognizer: any MealRecognizer = MealPhotoClient.live, listener: any RambleLiveConnecting = RambleLiveClient.live
     ) {
         self.store = store
         self.search = search
         self.recognizer = recognizer
+        self.destination = destination
         ramble = RambleCapture(store: store, index: { search.index }, listener: listener)
         tab = start.tab
         chosenTime = start.time
@@ -137,27 +151,38 @@ final class LoggerSession {
         plate.add(pick)
     }
 
-    /// Logs the plate at the chosen day and hour as one transaction, caching each USDA or Open Food Facts food first so
-    /// it joins the history, and empties the plate.
+    /// Logs the plate at the chosen day and hour as one transaction, or hands it to the destination, and empties it.
     func logPlate(at date: Date = .now) {
         guard !plate.isEmpty else { return }
-        for item in plate.items {
-            if let food = item.pick.uncached { store.saveFood(food) }
+        let picks = plate.items.map(\.pick)
+        deliver(picks) {
+            let time = chosenTime ?? .now(date)
+            let minute = time.minute(at: date)
+            return picks.map { $0.entry(day: time.day, minute: minute, section: time.section?.id) }
         }
-        let time = chosenTime ?? .now(date)
-        let minute = time.minute(at: date)
-        store.log(plate.items.map { $0.pick.entry(day: time.day, minute: minute, section: time.section?.id) })
         plate = Plate()
         pending = nil
+    }
+
+    /// Caches each USDA or Open Food Facts food first, so it joins the history and an ingredient's food works offline,
+    /// then logs `entries` or hands the portions to the destination. `logged` closes the sheet.
+    private func deliver(_ picks: [LoggerPick], entries: () -> [FoodEntry]) {
+        for pick in picks {
+            if let food = pick.uncached { store.saveFood(food) }
+        }
+        switch destination {
+        case .foodLog: store.log(entries())
+        case let .ingredients(add): add(picks.map(\.portion))
+        }
         logged += 1
     }
 
     /// The plate or a ramble holds foods that closing would lose.
     var hasUnlogged: Bool { !plate.isEmpty || !ramble.isEmpty }
 
-    /// Logs every ramble row at its own day and minute in one transaction, caching USDA and Open Food Facts foods first,
-    /// as `logPlate` does.
-    /// Waits for the ramble to settle first, so a log never takes rows a final read or a resolution is about to change.
+    /// Logs every ramble row at its own day and minute in one transaction, or hands them to the destination, as
+    /// `logPlate` does. Waits for the ramble to settle first, so a log never takes rows a final read or a resolution is
+    /// about to change.
     func logRamble() async {
         let capture = ramble.generation
         await ramble.settled()
@@ -165,12 +190,8 @@ final class LoggerSession {
         guard ramble.generation == capture else { return }
         let planned = ramble.planned
         guard !planned.isEmpty else { return }
-        for item in planned {
-            if let food = item.pick.uncached { store.saveFood(food) }
-        }
-        store.log(planned.map(\.entry))
+        deliver(planned.map(\.pick)) { planned.map(\.entry) }
         ramble.reset()
-        logged += 1
     }
 
     /// Re-reads the owner's side of the search once the log's writes land.

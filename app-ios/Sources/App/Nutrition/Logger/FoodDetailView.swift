@@ -61,8 +61,10 @@ struct FoodDetailView: View {
             ThemedSection {
                 header
             }
-            let day = ramble?.day ?? session.time.day
-            ImpactGauges(amounts: amounts, day: day, adding: ramble?.others ?? restOfPlate).id(day)
+            if !session.addsIngredients {
+                let day = ramble?.day ?? session.time.day
+                ImpactGauges(amounts: amounts, day: day, adding: ramble?.others ?? restOfPlate).id(day)
+            }
             if let alterations = pick.alterations {
                 IngredientsSection(alterations.map { $0.scaled(by: serving.servings) })
             } else if let recipe {

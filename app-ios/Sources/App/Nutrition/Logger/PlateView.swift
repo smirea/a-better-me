@@ -11,6 +11,8 @@ struct PlateView: View {
     @Observe<[FoodEntry]> private var entries: [FoodEntry]
     @Observe<NutritionDay> private var dayRow: NutritionDay
     @AppStorage("plate.withDay") private var withDay = false
+    /// A recipe's ingredients are never logged, so they never count with the day.
+    private var showsDay: Bool { withDay && !session.addsIngredients }
     @AppStorage("plate.allNutrients") private var allNutrients = false
     @State private var editing: UUID?
     @Environment(\.summaryNutrients) private var columns
@@ -27,7 +29,7 @@ struct PlateView: View {
         let plate = session.plate.totals
         let day = dayRow.totals(entries)
         let lines = targets.on(session.time.day).summary(
-            withDay ? day : [:], plate: plate, columns: columns, showOverages: settings.nutrition.showOverages
+            showsDay ? day : [:], plate: plate, columns: columns, showOverages: settings.nutrition.showOverages
         )
         List {
             Section {
@@ -63,12 +65,14 @@ struct PlateView: View {
                 HStack {
                     SectionTitle("Nutrition")
                     Spacer()
-                    Picker("Nutrition", selection: $withDay) {
-                        Text("Plate").tag(false)
-                        Text("Day").tag(true)
+                    if !session.addsIngredients {
+                        Picker("Nutrition", selection: $withDay) {
+                            Text("Plate").tag(false)
+                            Text("Day").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .fixedSize()
                     }
-                    .pickerStyle(.segmented)
-                    .fixedSize()
                 }
                 .textCase(nil)
                 .listRowInsets(EdgeInsets(top: 16, leading: Theme.margin, bottom: 8, trailing: Theme.margin))
@@ -76,7 +80,7 @@ struct PlateView: View {
             ThemedSection {
                 Toggle("All Nutrients", isOn: $allNutrients).tint(Theme.accent)
                 if allNutrients {
-                    let total = withDay ? day + plate : plate
+                    let total = showsDay ? day + plate : plate
                     ForEach(NutrientSection.allCases.flatMap(\.nutrients).filter { !columns.contains($0.id) && total.amount(of: $0.id) != nil }) { nutrient in
                         LabeledContent(nutrient.name, value: NutritionFormat.amount(total.amount(of: nutrient.id) ?? 0, nutrient.unit))
                     }
@@ -134,12 +138,12 @@ struct PlateView: View {
 
     private func tile(_ line: MacroLine) -> some View {
         let unit = line.nutrient == .energy ? "cal" : "g"
-        let caption = withDay ? "\(line.text(.eaten)) \(unit) with plate" : "\(line.total.wholeText) \(unit) in plate"
+        let caption = showsDay ? "\(line.text(.eaten)) \(unit) with plate" : "\(line.total.wholeText) \(unit) in plate"
         return VStack(alignment: .leading, spacing: 6) {
             Text(line.nutrient.title).font(AppFont.rowTitle)
             Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
             // The plate alone against no target would fill the whole track, so the track stays empty, as it did.
-            TargetBar(fill: (withDay || line.target != nil ? line.fill(.eaten) : nil) ?? MacroLine.Fill(eaten: 0, plate: 0), color: line.nutrient.color, dimsEaten: withDay)
+            TargetBar(fill: (showsDay || line.target != nil ? line.fill(.eaten) : nil) ?? MacroLine.Fill(eaten: 0, plate: 0), color: line.nutrient.color, dimsEaten: showsDay)
                 .padding(.top, 6)
         }
         .padding(.vertical, 8)

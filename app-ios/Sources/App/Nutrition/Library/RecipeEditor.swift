@@ -3,7 +3,8 @@ import SwiftUI
 
 /// Create Recipe and Edit Recipe: MacroFactor's "Build your recipe" and "Preparation" steps (§6.2) in one Form,
 /// with the derived nutrition per serving or for the whole recipe as the ingredients change. `onCreate` hears about a
-/// new recipe, and `onCreateAndAdd` adds the logger's "Create & Add".
+/// new recipe, and `onCreateAndAdd` adds the logger's "Create & Add". Add Ingredient opens the logger itself, whose Add
+/// hands its plate or ramble back as ingredients.
 struct RecipeEditor: View {
     private let recipeID: UUID?
     private let onCreate: ((Recipe) -> Void)?
@@ -16,7 +17,7 @@ struct RecipeEditor: View {
     @State private var draft: RecipeDraft
     @State private var showErrors = false
     @State private var choosingIcon = false
-    @State private var search: IngredientSearchRequest?
+    @State private var ingredientSheet: IngredientSheet?
     @State private var confirmingDelete = false
     @State private var perServing = true
     @State private var showAllNutrients = false
@@ -76,12 +77,16 @@ struct RecipeEditor: View {
                 }
             }
             .sheet(isPresented: $choosingIcon) { FoodIconPicker(selection: $draft.icon) }
-            .sheet(item: $search) { request in
-                switch request {
+            .sheet(item: $ingredientSheet) { sheet in
+                switch sheet {
                 case .add:
-                    IngredientSearch(recipeID: recipeID) { draft.ingredients.append(RecipeDraft.Ingredient(RecipeIngredient($0))) }
+                    LoggerSheet(start: LoggerStart(), destination: .ingredients { portions in
+                        // A recipe cannot contain itself.
+                        let own = recipeID.map(Recipe.key)
+                        draft.ingredients += portions.filter { own == nil || $0.food.foodID != own }.map { RecipeDraft.Ingredient(RecipeIngredient($0)) }
+                    })
                 case let .swap(id, food):
-                    IngredientSearch(recipeID: recipeID, swapping: food) { portion in
+                    IngredientSwap(recipeID: recipeID, swapping: food) { portion in
                         guard let index = draft.ingredients.firstIndex(where: { $0.id == id }) else { return }
                         draft.ingredients[index].replace(with: portion)
                     }
@@ -149,14 +154,16 @@ struct RecipeEditor: View {
                 .swipeActions {
                     Button("Delete", systemImage: "trash") { draft.ingredients.removeAll { $0.id == ingredient.id } }
                         .tint(Theme.destructive)
-                    Button("Swap", systemImage: "arrow.left.arrow.right") { search = .swap(ingredient.id, ingredient.value.food) }
+                    Button("Swap", systemImage: "arrow.left.arrow.right") { ingredientSheet = .swap(ingredient.id, ingredient.value.food) }
                         .tint(Theme.surfaceRaised)
                 }
             }
             .onMove { draft.ingredients.move(fromOffsets: $0, toOffset: $1) }
             FieldIssue(issues[.ingredients])
         } actions: {
-            Button("Add") { search = .add }
+            Button("Add") { ingredientSheet = .add }
+                .chipButton()
+                .underline(false)
                 .accessibilityLabel("Add Ingredient")
         }
     }
@@ -277,8 +284,8 @@ extension RecipeDraft {
     }
 }
 
-/// Which search the recipe editor's sheet shows: Add Ingredient, or Swap for the ingredient with this id.
-private enum IngredientSearchRequest: Identifiable {
+/// What the recipe editor's ingredient sheet shows: the logger for Add Ingredient, or Swap for the ingredient with this id.
+private enum IngredientSheet: Identifiable {
     case add
     case swap(UUID, FoodSnapshot)
 
