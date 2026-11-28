@@ -69,7 +69,18 @@ extension Dictionary where Key == NutrientID, Value == Double {
         if lhs[.netCarbs] != nil || rhs[.netCarbs] != nil {
             sum[.netCarbs] = (lhs.amount(of: .netCarbs) ?? 0) + (rhs.amount(of: .netCarbs) ?? 0)
         }
+        // A side that lists only single sugar alcohols still deducts them once its total is summed with another's.
+        if lhs.sugarAlcoholTotal != nil || rhs.sugarAlcoholTotal != nil {
+            sum[.sugarAlcohols] = (lhs.sugarAlcoholTotal ?? 0) + (rhs.sugarAlcoholTotal ?? 0)
+        }
         return sum
+    }
+
+    /// The sugar alcohols' total, else the single ones listed summed; nil when the food reports none.
+    var sugarAlcoholTotal: Double? {
+        if let total = self[.sugarAlcohols] { return total }
+        let listed = NutrientID.polyols.compactMap { self[$0] }
+        return listed.isEmpty ? nil : listed.reduce(0, +)
     }
 
     /// The amount of `id`, with net carbs derived when the food does not report it: carbs less what the body barely
@@ -77,8 +88,7 @@ extension Dictionary where Key == NutrientID, Value == Double {
     /// labels count them.
     func amount(of id: NutrientID) -> Double? {
         if id == .netCarbs, self[.netCarbs] == nil, let carbs = self[.carbs] {
-            let polyols = self[.sugarAlcohols] ?? NutrientID.polyols.compactMap { self[$0] }.reduce(0, +)
-            return Swift.max(0, carbs - (self[.fiber] ?? 0) - polyols - (self[.allulose] ?? 0))
+            return Swift.max(0, carbs - (self[.fiber] ?? 0) - (sugarAlcoholTotal ?? 0) - (self[.allulose] ?? 0))
         }
         return self[id]
     }

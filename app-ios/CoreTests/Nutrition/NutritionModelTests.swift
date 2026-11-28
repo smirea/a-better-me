@@ -60,6 +60,8 @@ struct NutritionModelTests {
         #expect(([.carbs: 8, .sugarAlcohols: 8] as NutrientAmounts).amount(of: .netCarbs) == 0)
         #expect(([.carbs: 20, .fiber: 2, .sugarAlcohols: 5, "er": 9, .allulose: 3] as NutrientAmounts).amount(of: .netCarbs) == 10)
         #expect(([.carbs: 20, "er": 4, "ma": 6] as NutrientAmounts).amount(of: .netCarbs) == 10)
+        let summed = ([.carbs: 20, .sugarAlcohols: 10] as NutrientAmounts) + [.carbs: 20, "er": 10]
+        #expect(summed.amount(of: .netCarbs) == 20)
     }
 
     @Test func aRecipeIsItsIngredientsDividedIntoItsServings() {

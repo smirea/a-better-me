@@ -109,7 +109,7 @@ struct FoodEditor: View {
                 expandFilledSections()
             }
             .task {
-                guard let id = editing?.image.flatMap(UUID.init(uuidString:)), !photos.photos.contains(where: { $0.id == id }),
+                guard let id = opened.image.flatMap(UUID.init(uuidString:)), !photos.photos.contains(where: { $0.id == id }),
                       let jpeg = await PictureFiles.shared.data(id), let photo = PhotoUpload(id: id, jpeg: jpeg) else { return }
                 photos.restore([photo])
             }
@@ -144,7 +144,7 @@ struct FoodEditor: View {
                         .accessibilityLabel("Picture")
                 } else {
                     // A picture this device has not loaded yet is the stored one; a restored draft's lost photo is none.
-                    FoodIcon(icon: draft.icon, name: draft.name, source: .custom, image: draft.image == editing?.image ? draft.image : nil, size: 36)
+                    FoodIcon(icon: draft.icon, name: draft.name, source: .custom, image: draft.image == opened.image ? draft.image : nil, size: 36)
                         .editsIcon { choosingIcon = true }
                 }
                 TextField("Food Name", text: $draft.name)
@@ -278,7 +278,8 @@ struct FoodEditor: View {
     private func save(adding: Bool) {
         showErrors = true
         guard var valid = draft.valid else { return }
-        if valid.image != editing?.image {
+        // The picture the editor opened with is stored already: the food's own, or a duplicate's.
+        if valid.image != opened.image {
             // A new picture's bytes are queued before the row names it (docs/decisions/images.md). A draft restored after
             // its photos were lost has nothing to queue, so it keeps the icon.
             if let photo = pickedPhoto {
@@ -286,10 +287,10 @@ struct FoodEditor: View {
                     try PictureFiles.shared.add(NewPicture(id: photo.id, jpeg: photo.jpeg))
                 } catch {
                     LocalStore.log.error("Queueing a food's picture failed: \(String(describing: error))")
-                    valid.image = editing?.image
+                    valid.image = opened.image
                 }
             } else if valid.image != nil {
-                valid.image = editing?.image
+                valid.image = opened.image
             }
         }
         if var food = editing {

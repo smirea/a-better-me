@@ -32,13 +32,20 @@ const servings = (serving: Serving) =>
   (serving.measure.servings * serving.quantity) / serving.measure.quantity;
 const scaled = (amounts: Amounts, factor: number) =>
   Object.fromEntries(Object.entries(amounts).map(([key, value]) => [key, value * factor]));
-/** `NutrientAmounts.amount(of: .netCarbs)`: carbs less fiber, sugar alcohols (their total, else the ones listed), and allulose. */
+/** `NutrientAmounts.sugarAlcoholTotal`: the total, else the single sugar alcohols listed summed. */
+const sugarAlcohols = (amounts: Amounts) => {
+  if (amounts.sa !== undefined) return amounts.sa;
+  const listed = ["er", "xy", "ma", "so"].flatMap((id) => amounts[id] ?? []);
+  return listed.length ? listed.reduce((sum, value) => sum + value, 0) : undefined;
+};
+/** `NutrientAmounts.amount(of: .netCarbs)`: carbs less fiber, sugar alcohols, and allulose. */
 const netCarbs = (amounts: Amounts) => {
   if (amounts.nc !== undefined) return amounts.nc;
   if (amounts.c === undefined) return undefined;
-  const polyols =
-    amounts.sa ?? ["er", "xy", "ma", "so"].reduce((sum, id) => sum + (amounts[id] ?? 0), 0);
-  return Math.max(0, amounts.c - (amounts["291"] ?? 0) - polyols - (amounts.au ?? 0));
+  return Math.max(
+    0,
+    amounts.c - (amounts["291"] ?? 0) - (sugarAlcohols(amounts) ?? 0) - (amounts.au ?? 0),
+  );
 };
 
 /** `NutrientAmounts +`: once either side reports net carbs, the sum carries them, the other side's derived. */
@@ -47,6 +54,8 @@ function add(left: Amounts, right: Amounts): Amounts {
   for (const [key, value] of Object.entries(right)) sum[key] = (sum[key] ?? 0) + value;
   if (left.nc !== undefined || right.nc !== undefined)
     sum.nc = (netCarbs(left) ?? 0) + (netCarbs(right) ?? 0);
+  if (sugarAlcohols(left) !== undefined || sugarAlcohols(right) !== undefined)
+    sum.sa = (sugarAlcohols(left) ?? 0) + (sugarAlcohols(right) ?? 0);
   return sum;
 }
 
