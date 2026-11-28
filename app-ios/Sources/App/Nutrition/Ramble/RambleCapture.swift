@@ -4,7 +4,7 @@ import Observation
 import os
 
 /// One Ramble in the logger: the mic, the transcript, the model's outline kept current while it is spoken, and the
-/// rows resolved from it. Nothing is logged until `LoggerSession.logRamble`. Talking again after a stop continues the
+/// rows resolved from it. Nothing is logged until `LoggerSession.addRamble`. Talking again after a stop continues the
 /// same transcript, so the model keeps reading the whole ramble and rows keep their positions.
 @MainActor @Observable
 final class RambleCapture {

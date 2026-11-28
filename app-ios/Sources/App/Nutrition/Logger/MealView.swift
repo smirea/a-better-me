@@ -1,55 +1,66 @@
 import Feedback
 import SwiftUI
 
-/// Your Plate (`log-04-your-plate.jpg`): each food with its quantity chip, the plate's nutrition alone or with the
-/// day's as four tiles, every nutrient on request, and Log Foods. A row opens its food detail; its chip edits the
-/// amount in place with the quantity keypad, as MacroFactor's does.
-struct PlateView: View {
+/// The meal the logger adds to (`log-04-your-plate.jpg`): every food already logged in this day's section, or the
+/// recipe's ingredients, each with its quantity chip, their nutrition alone or with the day's as four tiles, and every
+/// nutrient on request. A row opens its food detail; its chip edits the amount in place with the quantity keypad, as
+/// MacroFactor's does; a swipe removes it.
+struct MealView: View {
     let session: LoggerSession
-    let open: (UUID) -> Void
+    let open: (IngredientList.Item) -> Void
     private var targets = OwnerTargets()
     @Observe<[FoodEntry]> private var entries: [FoodEntry]
     @Observe<NutritionDay> private var dayRow: NutritionDay
     @AppStorage("plate.withDay") private var withDay = false
-    /// A recipe's ingredients are never logged, so they never count with the day.
-    private var showsDay: Bool { withDay && !session.addsIngredients }
     @AppStorage("plate.allNutrients") private var allNutrients = false
     @State private var editing: UUID?
     @Environment(\.summaryNutrients) private var columns
     private var settings: AppSettings { targets.settings }
+    /// A recipe's ingredients are never logged, so they never count with the day.
+    private var showsDay: Bool { withDay && !session.addsIngredients }
 
-    init(session: LoggerSession, open: @escaping (UUID) -> Void) {
+    init(session: LoggerSession, open: @escaping (IngredientList.Item) -> Void) {
         self.session = session
         self.open = open
         _entries = Observe(FoodEntry.on(session.time.day))
         _dayRow = Observe(NutritionDay.one(session.time.day))
     }
 
+    /// The meal's foods: the section's entries in the order they were eaten, or the ingredients.
+    private var items: [IngredientList.Item] {
+        if session.addsIngredients { return session.ingredients.items }
+        let section = session.section.id
+        return entries.filter { $0.section == section }.sorted { $0.minute < $1.minute }.map { entry in
+            IngredientList.Item(id: entry.id, pick: LoggerPick(FoodPortion(entry.food, serving: entry.serving), alterations: entry.alterations))
+        }
+    }
+
     var body: some View {
-        let plate = session.plate.totals
-        let day = dayRow.totals(entries)
+        let items = self.items
+        let meal = items.reduce(into: NutrientAmounts()) { $0 = $0 + $1.pick.portion.amounts }
+        let ids = Set(items.map(\.id))
+        let rest = dayRow.totals(entries.filter { !ids.contains($0.id) })
         let lines = targets.on(session.time.day).summary(
-            showsDay ? day : [:], plate: plate, columns: columns, showOverages: settings.nutrition.showOverages
+            showsDay ? rest : [:], plate: meal, columns: columns, showOverages: settings.nutrition.showOverages
         )
         List {
             Section {
-                ForEach(session.plate.items) { item in
+                ForEach(items) { item in
                     row(item)
                 }
                 .onDelete { offsets in
-                    for id in offsets.map({ session.plate.items[$0].id }) {
-                        session.plate.remove(id)
-                        if editing == id { editing = nil }
-                    }
+                    let removed = offsets.map { items[$0].id }
+                    if let editing, removed.contains(editing) { self.editing = nil }
+                    session.remove(removed)
                 }
             } header: {
                 HStack {
                     Spacer()
-                    MealRatingBadge(title: "Your Plate", amounts: plate)
+                    MealRatingBadge(title: session.mealName, amounts: meal)
                 }
                 .listRowInsets(EdgeInsets(top: 8, leading: Theme.margin, bottom: 4, trailing: Theme.margin))
             }
-            .listRowBackground(Theme.background.feedback("Your Plate Row"))
+            .listRowBackground(Theme.background.feedback("Meal Row"))
             .listRowInsets(EdgeInsets(top: 8, leading: Theme.margin, bottom: 8, trailing: Theme.margin))
             Section {
                 Grid(horizontalSpacing: 8, verticalSpacing: 8) {
@@ -67,7 +78,7 @@ struct PlateView: View {
                     Spacer()
                     if !session.addsIngredients {
                         Picker("Nutrition", selection: $withDay) {
-                            Text("Plate").tag(false)
+                            Text("Meal").tag(false)
                             Text("Day").tag(true)
                         }
                         .pickerStyle(.segmented)
@@ -80,7 +91,7 @@ struct PlateView: View {
             ThemedSection {
                 Toggle("All Nutrients", isOn: $allNutrients).tint(Theme.accent)
                 if allNutrients {
-                    let total = showsDay ? day + plate : plate
+                    let total = showsDay ? rest + meal : meal
                     ForEach(NutrientSection.allCases.flatMap(\.nutrients).filter { !columns.contains($0.id) && total.amount(of: $0.id) != nil }) { nutrient in
                         LabeledContent(nutrient.name, value: NutritionFormat.amount(total.amount(of: nutrient.id) ?? 0, nutrient.unit))
                     }
@@ -89,34 +100,31 @@ struct PlateView: View {
         }
         .flatList()
         .overlay {
-            if session.plate.isEmpty {
-                ContentUnavailableView("Your plate is empty", systemImage: "fork.knife", description: Text("Add foods from any tab."))
+            if items.isEmpty {
+                if session.addsIngredients {
+                    ContentUnavailableView("No ingredients yet", systemImage: "fork.knife", description: Text("Add foods from any tab."))
+                } else {
+                    ContentUnavailableView("Nothing in \(session.mealName) yet", systemImage: "fork.knife", description: Text("Foods you add from any tab are logged here."))
+                }
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if let editing, let item = session.plate.item(editing) {
-                PlateServingEditor(session: session, item: item, done: { self.editing = nil })
+            if let editing, let item = items.first(where: { $0.id == editing }) {
+                MealServingEditor(session: session, item: item, done: { self.editing = nil })
                     .id(editing)
-            } else {
-                HStack {
-                    Spacer()
-                    LogFoodsButton(session: session).controlSize(.large)
-                }
-                .padding(.horizontal, Theme.margin)
-                .padding(.bottom, 8)
             }
         }
         .animation(.snappy, value: editing)
-        .detailTitle("Your Plate")
+        .detailTitle(session.mealName)
         .feedback(self)
     }
 
-    private func row(_ item: Plate.Item) -> some View {
+    private func row(_ item: IngredientList.Item) -> some View {
         let portion = item.pick.portion
         return HStack(spacing: 12) {
             Button {
                 editing = nil
-                open(item.id)
+                open(item)
             } label: {
                 HStack(spacing: 12) {
                     FoodIcon(food: portion.food)
@@ -138,11 +146,11 @@ struct PlateView: View {
 
     private func tile(_ line: MacroLine) -> some View {
         let unit = line.nutrient == .energy ? "cal" : "g"
-        let caption = showsDay ? "\(line.text(.eaten)) \(unit) with plate" : "\(line.total.wholeText) \(unit) in plate"
+        let caption = showsDay ? "\(line.text(.eaten)) \(unit) with the day" : "\(line.total.wholeText) \(unit)"
         return VStack(alignment: .leading, spacing: 6) {
             Text(line.nutrient.title).font(AppFont.rowTitle)
             Text(caption).font(AppFont.caption()).foregroundStyle(Theme.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
-            // The plate alone against no target would fill the whole track, so the track stays empty, as it did.
+            // The meal alone against no target would fill the whole track, so the track stays empty, as it did.
             TargetBar(fill: (showsDay || line.target != nil ? line.fill(.eaten) : nil) ?? MacroLine.Fill(eaten: 0, plate: 0), color: line.nutrient.color, dimsEaten: showsDay)
                 .padding(.top, 6)
         }
@@ -152,7 +160,7 @@ struct PlateView: View {
     }
 }
 
-/// A plate row's amount, "100" over "g", which edits it.
+/// A meal row's amount, "100" over "g", which edits it.
 private struct QuantityChip: View {
     let serving: Serving
     let isActive: Bool
@@ -169,16 +177,16 @@ private struct QuantityChip: View {
     }
 }
 
-/// The quantity keypad over the plate for one item: Update sets its amount.
-private struct PlateServingEditor: View {
+/// The quantity keypad over the meal for one food: Update sets its amount.
+private struct MealServingEditor: View {
     let session: LoggerSession
-    let item: Plate.Item
+    let item: IngredientList.Item
     let done: () -> Void
     @Observe(AppSettings.current) private var settings
     @State private var measure: Measure
     @State private var quantity: QuantityText
 
-    init(session: LoggerSession, item: Plate.Item, done: @escaping () -> Void) {
+    init(session: LoggerSession, item: IngredientList.Item, done: @escaping () -> Void) {
         self.session = session
         self.item = item
         self.done = done
@@ -197,7 +205,7 @@ private struct PlateServingEditor: View {
             confirmTitle: "Update",
             choose: { measure = $0 },
             confirm: {
-                session.plate.setServing(serving, of: item.id)
+                session.setServing(serving, of: item.id)
                 done()
             }
         )

@@ -4,11 +4,11 @@ import SwiftUI
 import UIKit
 
 /// Photo: a meal photo, taken or picked, and an optional note go to the server's Gemini model, which names each food
-/// and weighs it. The foods land on the plate, matched against the logger's own search, so every one can be checked or
-/// changed before Log Foods (docs/decisions/nutrition.md).
+/// and weighs it. The foods are matched against the logger's own search and added at once, and the meal opens so every
+/// one can be checked, changed, or removed (docs/decisions/nutrition.md).
 struct PhotoTab: View {
     let session: LoggerSession
-    let showPlate: () -> Void
+    let showMeal: () -> Void
     @State private var photo: PhotoUpload?
     @State private var note = ""
     @State private var choosing = false
@@ -30,7 +30,7 @@ struct PhotoTab: View {
                     ContentUnavailableView {
                         Label("Photograph your meal", systemImage: "camera")
                     } description: {
-                        Text("Gemini names each food and estimates its weight. You check them on your plate before logging.")
+                        Text("Gemini names each food and estimates its weight. They're added at once, and the meal opens to check them.")
                     }
                 }
                 HStack(spacing: 10) {
@@ -56,14 +56,9 @@ struct PhotoTab: View {
             }
         }
         .pinnedActions {
-            HStack(spacing: 10) {
-                Button("Find Foods", action: findFoods)
-                    .primaryPill()
-                    .disabled(photo == nil || session.isFindingFoods)
-                LogFoodsButton(session: session)
-                    .controlSize(.large)
-                    .disabled(session.isFindingFoods)
-            }
+            Button("Find Foods", action: findFoods)
+                .primaryPill()
+                .disabled(photo == nil || session.isFindingFoods)
         }
         .photosPicker(isPresented: $choosing, selection: $picked, matching: .images)
         .onChange(of: picked) {
@@ -81,7 +76,7 @@ struct PhotoTab: View {
                 let foodsAdded = if case .added = session.photoNotice { true } else { false }
                 session.photoNotice = nil
                 unreadable = false
-                if foodsAdded { clearAndShowPlate() }
+                if foodsAdded { clearAndShowMeal() }
             }
         } message: {
             Text(alert ?? "")
@@ -99,17 +94,17 @@ struct PhotoTab: View {
         }
     }
 
-    /// Foods that all matched go straight to the plate; unmatched ones wait for the alert's OK.
+    /// Foods that all matched show in the meal at once; unmatched ones wait for the alert's OK.
     private func showAddedFoods() {
         guard session.photoNotice == .added(unmatched: []) else { return }
         session.photoNotice = nil
-        clearAndShowPlate()
+        clearAndShowMeal()
     }
 
-    private func clearAndShowPlate() {
+    private func clearAndShowMeal() {
         photo = nil
         note = ""
-        showPlate()
+        showMeal()
     }
 
     /// Shrinks the photo off the main actor; the full-size original never stays in memory.

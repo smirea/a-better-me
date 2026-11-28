@@ -51,9 +51,6 @@ struct ScanTab: View {
             RoundIconButton("Manual Barcode", systemImage: "keyboard") { typing = true }
                 .padding(16)
         }
-        .overlay(alignment: .bottomTrailing) {
-            LogFoodsButton(session: session).controlSize(.large).padding(16)
-        }
         .onAppear { visible = true }
         .onDisappear { visible = false }
         .onChange(of: idle) { if idle { gate.release(at: .now) } }

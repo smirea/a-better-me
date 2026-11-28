@@ -1,7 +1,6 @@
 import Foundation
 
-/// A food picked in the logger, before or on the plate: the snapshot at a serving, plus the USDA or Open Food Facts
-/// food a log must cache first (`FoodSearch.cache`), nil for the owner's own foods and foods already cached.
+/// A food picked in the logger: the snapshot at a serving, plus the USDA or Open Food Facts food a log must cache first (`FoodSearch.cache`), nil for the owner's own foods and foods already cached.
 struct LoggerPick: Hashable, Sendable {
     var portion: FoodPortion
     var uncached: Food?
@@ -28,15 +27,19 @@ struct LoggerPick: Hashable, Sendable {
     }
 }
 
-/// Several foods picked before logging them together. Screen state only: `LocalStore.log` writes the plate in one
-/// transaction and the plate is gone.
-struct Plate: Hashable, Sendable {
+/// A recipe's ingredients as the logger adds to them, changes, and removes them (`LoggerDestination.ingredients`). The
+/// Food Log needs no list of its own: an add there is logged at once.
+struct IngredientList: Hashable, Sendable {
     struct Item: Identifiable, Hashable, Sendable {
         let id: UUID
         var pick: LoggerPick
     }
 
-    private(set) var items: [Item] = []
+    private(set) var items: [Item]
+
+    init(_ items: [Item] = []) {
+        self.items = items
+    }
 
     var isEmpty: Bool { items.isEmpty }
     var totals: NutrientAmounts { items.reduce(into: NutrientAmounts()) { $0 = $0 + $1.pick.portion.amounts } }
@@ -67,9 +70,9 @@ struct Plate: Hashable, Sendable {
     func item(_ id: UUID) -> Item? { items.first { $0.id == id } }
 }
 
-/// When the plate is logged: a calendar day and an hour, MacroFactor's hour-granular time chip. The minute comes from
-/// the clock when logging, so foods logged one after another keep their order. A section's + or the section picker also
-/// names the meal section, which the plate logs into whatever the minute.
+/// When an add is logged: a calendar day and an hour, MacroFactor's hour-granular time chip. The minute comes from the
+/// clock when logging, so foods logged one after another keep their order. A section's + or the section picker also
+/// names the meal section, which an add logs into whatever the minute.
 struct LogTime: Hashable, Sendable {
     var day: CalendarDay
     var hour: Int {

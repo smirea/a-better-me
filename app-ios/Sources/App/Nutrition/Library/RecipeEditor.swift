@@ -3,8 +3,8 @@ import SwiftUI
 
 /// Create Recipe and Edit Recipe: MacroFactor's "Build your recipe" and "Preparation" steps (§6.2) in one Form,
 /// with the derived nutrition per serving or for the whole recipe as the ingredients change. `onCreate` hears about a
-/// new recipe, and `onCreateAndAdd` adds the logger's "Create & Add". Add Ingredient opens the logger itself, whose Add
-/// hands its plate or ramble back as ingredients.
+/// new recipe, and `onCreateAndAdd` adds the logger's "Create & Add". Add Ingredient opens the logger itself, where
+/// every add is an ingredient at once.
 struct RecipeEditor: View {
     private let recipeID: UUID?
     private let onCreate: ((Recipe) -> Void)?
@@ -80,11 +80,9 @@ struct RecipeEditor: View {
             .sheet(item: $ingredientSheet) { sheet in
                 switch sheet {
                 case .add:
-                    LoggerSheet(start: LoggerStart(), destination: .ingredients { portions in
-                        // A recipe cannot contain itself.
-                        let own = recipeID.map(Recipe.key)
-                        draft.ingredients += portions.filter { own == nil || $0.food.foodID != own }.map { RecipeDraft.Ingredient(RecipeIngredient($0)) }
-                    })
+                    LoggerSheet(start: LoggerStart(), destination: .ingredients(
+                        IngredientList(draft.ingredients.map(\.listItem)), recipe: recipeID.map(Recipe.key), update: { draft.setIngredients($0) }
+                    ))
                 case let .swap(id, food):
                     IngredientSwap(recipeID: recipeID, swapping: food) { portion in
                         guard let index = draft.ingredients.firstIndex(where: { $0.id == id }) else { return }

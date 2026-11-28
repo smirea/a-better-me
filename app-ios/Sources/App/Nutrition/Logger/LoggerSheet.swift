@@ -3,16 +3,17 @@ import SwiftUI
 
 enum LoggerRoute: Hashable {
     case food(LoggerPick)
-    case plateItem(UUID)
-    case plate
+    /// A logged entry of the meal, or an ingredient, as it was when its detail opened.
+    case mealItem(IngredientList.Item)
+    case meal
     /// The row as it was when its detail opened, so an edit never lands on a food a later read put in its place.
     case rambleRow(RambleRow)
 }
 
-/// MacroFactor's logger (research spec §5): one full-height sheet with the banner (exit, time chip, what the plate
-/// leaves of the day, the plate) over the Scan, Photo, Search, Quick Add, and Library tabs. Describe is not built
-/// (docs/decisions/nutrition.md). Logging the plate closes it. With an `.ingredients` destination the same sheet picks a
-/// recipe's ingredients: its Add hands the plate or the ramble back, and nothing is logged.
+/// MacroFactor's logger (research spec §5): one full-height sheet with the banner (exit, time chip, the day's totals,
+/// the meal) over the Scan, Photo, Ramble, Search, Quick Add, and Library tabs. Describe is not built
+/// (docs/decisions/nutrition.md). Every add logs at once and the sheet stays open for the next food. With an
+/// `.ingredients` destination the same sheet adds a recipe's ingredients instead, and nothing is logged.
 struct LoggerSheet: View {
     let start: LoggerStart
     var destination = LoggerDestination.foodLog
@@ -60,12 +61,12 @@ private struct LoggerContent: View {
         let rambling = session.tab == .ramble && path.allSatisfy { if case .rambleRow = $0 { true } else { false } }
         VStack(spacing: 0) {
             if !rambling {
-                LoggerBanner(session: session, exit: exit, chooseTime: { choosingTime = true }, openPlate: openPlate)
+                LoggerBanner(session: session, exit: exit, chooseTime: { choosingTime = true }, openMeal: openMeal)
                     .id(session.time.day)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
             // Above the stack, so the Library's own navigation bar (title, sort, create, filter) sits under the tabs;
-            // a pushed detail or the plate covers them, as in MacroFactor.
+            // a pushed detail or the meal covers them, as in MacroFactor.
             if path.isEmpty, !rambling {
                 Picker("Logger tab", selection: $session.tab) {
                     ForEach(LoggerTab.allCases, id: \.self) { tab in
@@ -83,9 +84,8 @@ private struct LoggerContent: View {
                     .navigationDestination(for: LoggerRoute.self) { route in
                     switch route {
                     case let .food(pick): FoodDetailView(session: session, editing: nil, pick: pick)
-                    case let .plateItem(id):
-                        if let item = session.plate.item(id) { FoodDetailView(session: session, editing: id, pick: item.pick) }
-                    case .plate: PlateView(session: session, open: { path.append(.plateItem($0)) }).id(session.time.day)
+                    case let .mealItem(item): FoodDetailView(session: session, editing: item.id, pick: item.pick)
+                    case .meal: MealView(session: session, open: { path.append(.mealItem($0)) }).id(session.time.day)
                     case let .rambleRow(row):
                         if case let .food(food) = row.content {
                             FoodDetailView(session: session, editing: nil, pick: food.pick, ramble: RambleEdit(
@@ -98,13 +98,22 @@ private struct LoggerContent: View {
                 }
             }
         }
-        .onChange(of: session.logged) { close() }
+        .overlay(alignment: .bottom) {
+            if let notice = session.notice {
+                LoggerNoticeBar(session: session, notice: notice)
+                    .padding(.horizontal, Theme.margin)
+                    .padding(.bottom, 72)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.snappy, value: session.notice)
+        .sensoryFeedback(.success, trigger: session.notice?.id) { _, new in new != nil }
         .onDisappear { session.ramble.cancel() }
-        .alert("Exit the Plate?", isPresented: $confirmingExit) {
+        .alert("Exit Ramble?", isPresented: $confirmingExit) {
             Button("Exit", role: .destructive, action: close)
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text(session.plate.isEmpty ? "The foods from your ramble will be cleared." : "Foods you added to your plate will be cleared.")
+            Text("The foods from your ramble will be cleared.")
         }
         .sheet(isPresented: $choosingTime) {
             switch settings.nutrition.logger.timeSelection {
@@ -115,15 +124,15 @@ private struct LoggerContent: View {
     }
 
     @ViewBuilder private var tab: some View {
-        // A food's detail never stacks on its own: a second Add on the copy underneath would put it on the plate twice.
+        // A food's detail never stacks on its own: a second Add on the copy underneath would log it twice.
         let detail: (LoggerPick) -> Void = { pick in if path.last != .food(pick) { path.append(.food(pick)) } }
-        let open = settings.nutrition.logger.optimization == .context ? addAndShowPlate : detail
+        let open = settings.nutrition.logger.optimization == .context ? addAndShowMeal : detail
         switch session.tab {
         case .scan: ScanTab(session: session, open: detail).toolbar(.hidden, for: .navigationBar)
-        case .photo: PhotoTab(session: session, showPlate: openPlate).toolbar(.hidden, for: .navigationBar)
+        case .photo: PhotoTab(session: session, showMeal: openMeal).toolbar(.hidden, for: .navigationBar)
         case .ramble:
             RambleTab(
-                session: session, open: { path.append(.rambleRow($0)) }, close: exit,
+                session: session, open: { path.append(.rambleRow($0)) }, close: exit, added: openMeal,
                 switchTo: { tab in withAnimation(.snappy) { session.tab = tab } },
                 search: { name in
                     session.setQuery(name, branded: settings.nutrition.searchBranded)
@@ -142,23 +151,51 @@ private struct LoggerContent: View {
         if session.hasUnlogged { confirmingExit = true } else { close() }
     }
 
-    /// Optimize for context: a tapped result goes on the plate, and the plate shows.
-    private func addAndShowPlate(_ pick: LoggerPick) {
+    /// Optimize for context: a tapped result is logged, and the meal shows.
+    private func addAndShowMeal(_ pick: LoggerPick) {
         session.add(pick)
-        openPlate()
+        openMeal()
     }
 
-    private func openPlate() {
-        if path.last != .plate { path.append(.plate) }
+    private func openMeal() {
+        // A field still editing under the push comes back focused on Back, and its keyboard then covers the tab's bar
+        // and the Undo notice. The meal button is outside the tab, so it ends the editing itself.
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        if path.last != .meal { path.append(.meal) }
     }
 }
 
-/// The logger's top band: exit, the time chip, and the plate over the day's totals with the plate counted in.
+/// "Logged Banana to Lunch · Undo", over the tab's bottom bar until the next add or a few seconds pass.
+private struct LoggerNoticeBar: View {
+    let session: LoggerSession
+    let notice: LoggerNotice
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(notice.message).font(AppFont.chip).lineLimit(2)
+            Spacer(minLength: 0)
+            Button("Undo") { withAnimation(.snappy) { session.undo(notice) } }
+                .font(AppFont.headline(14))
+                .buttonStyle(.plain)
+                .accessibilityLabel("Undo, \(notice.message)")
+        }
+        .padding(.horizontal, 18)
+        .frame(minHeight: 44)
+        .glassEffect(.regular, in: .capsule)
+        .task(id: notice.id) {
+            try? await Task.sleep(for: .seconds(4))
+            if session.notice == notice { session.notice = nil }
+        }
+        .feedback(self)
+    }
+}
+
+/// The logger's top band: exit, the time chip, and the meal over the day's totals with what is being added counted in.
 private struct LoggerBanner: View {
     let session: LoggerSession
     let exit: () -> Void
     let chooseTime: () -> Void
-    let openPlate: () -> Void
+    let openMeal: () -> Void
 
     var body: some View {
         VStack(spacing: 10) {
@@ -173,43 +210,56 @@ private struct LoggerBanner: View {
                         .accessibilityLabel("Log time, \(timeLabel)")
                     }
                     Spacer(minLength: 0)
-                    plateButton
+                    MealButton(session: session, open: openMeal)
                 }
             }
-            PlateDayTotals(day: session.time.day, plate: session.plateWithPending, plateOnly: session.addsIngredients)
+            PlateDayTotals(day: session.time.day, plate: session.adding, plateOnly: session.addsIngredients)
         }
         .padding(.horizontal, Theme.margin)
         .padding(.top, 14)
         .padding(.bottom, 6)
-        .animation(.snappy, value: session.plate.items.count)
         .feedback(self)
     }
 
     private var timeLabel: String { session.time.label(sections: session.showsSections ? session.sections : nil) }
+}
 
-    /// White once the plate holds a food, so the way to review and log it stands out.
-    @ViewBuilder private var plateButton: some View {
-        let button = Button(action: openPlate) {
+/// The meal the logger adds to, and its count: what this day's section holds, or the recipe's ingredients. It opens
+/// the meal, where each one is changed or removed.
+private struct MealButton: View {
+    let session: LoggerSession
+    let open: () -> Void
+    @Observe<[FoodEntry]> private var entries: [FoodEntry]
+
+    init(session: LoggerSession, open: @escaping () -> Void) {
+        self.session = session
+        self.open = open
+        _entries = Observe(FoodEntry.on(session.time.day))
+    }
+
+    var body: some View {
+        let count = session.addsIngredients ? session.ingredients.items.count : entries.filter { $0.section == session.section.id }.count
+        Button(action: open) {
             HStack(spacing: 6) {
                 Image(systemName: "fork.knife")
-                if !session.plate.isEmpty {
-                    Text("\(session.plate.items.count)").font(AppFont.headline(15)).contentTransition(.numericText())
+                if count > 0 {
+                    Text("\(count)").font(AppFont.headline(15)).contentTransition(.numericText())
                 }
             }
         }
-        .accessibilityLabel("Your Plate, \(session.plate.items.count) foods")
-        if session.plate.isEmpty {
-            button.chipButton()
-        } else {
-            button.prominentButton().buttonBorderShape(.capsule)
-        }
+        .chipButton()
+        .animation(.snappy, value: count)
+        .accessibilityLabel("\(session.mealName), \(count == 1 ? "1 food" : "\(count) foods")")
+        .feedback(self)
     }
 }
 
 extension LoggerSession {
-    /// The plate as the banner counts it: with the food detail's amount or the Quick Add being typed.
-    var plateWithPending: NutrientAmounts {
-        pending.map { plate.totals + $0.amounts } ?? plate.totals
+    /// What the banner counts on top of the day: the food detail's amount or the Quick Add being typed, and in a recipe
+    /// its ingredients.
+    var adding: NutrientAmounts {
+        let base = addsIngredients ? ingredients.totals : NutrientAmounts()
+        return pending.map { base + $0.amounts } ?? base
     }
 }
 
@@ -225,7 +275,7 @@ extension FoodLibraryView.Item {
 }
 
 /// "Select Date and Time": a wheel of days and an hour, or a meal section in the Sections display. The minute comes from
-/// the clock when the plate is logged.
+/// the clock when a food is logged.
 private struct LogTimePicker: View {
     let session: LoggerSession
     @Environment(\.dismiss) private var dismiss
@@ -273,15 +323,7 @@ private struct LogTimePicker: View {
                 } label: {
                     Text("Select Date and Time")
                 }
-                .secondaryPill()
-                Button {
-                    session.time = chosen
-                    session.logPlate()
-                } label: {
-                    Text("Log to Date and Time")
-                }
                 .primaryPill()
-                .disabled(session.plate.isEmpty)
             }
             .padding(.horizontal, Theme.margin)
             .detailTitle("Select Date and Time")
@@ -291,7 +333,7 @@ private struct LogTimePicker: View {
                 }
             }
         }
-        .presentationDetents([.height(380)])
+        .presentationDetents([.height(320)])
         .presentationBackground(Theme.surface)
         .feedback(self)
     }

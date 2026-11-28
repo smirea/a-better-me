@@ -2,12 +2,13 @@ import Feedback
 import SwiftUI
 
 /// Search (`log-02-search-results.jpg`): the hour's Picks and Latest when the field is empty, otherwise the groups
-/// `FoodSearch` returns, in MacroFactor's compact rows, with the field and Log Foods at the bottom.
+/// `FoodSearch` returns, in MacroFactor's compact rows, with the field at the bottom.
 struct SearchTab: View {
     let session: LoggerSession
     let open: (LoggerPick) -> Void
     @Observe(AppSettings.current) private var settings
     @State private var text = ""
+    @State private var opened = false
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -44,7 +45,7 @@ struct SearchTab: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            LoggerBottomBar(session: session, text: $text) {
+            LoggerBottomBar(text: $text) {
                 TextField("Search for a food", text: $text)
                     .focused($focused)
                     .submitLabel(.search)
@@ -53,13 +54,15 @@ struct SearchTab: View {
         }
         .onAppear {
             text = session.query
-            if session.plate.isEmpty { focused = true }
+            // Only on opening: coming back from a food's detail or the meal keeps the list in view.
+            if !opened { focused = true }
+            opened = true
         }
         .onChange(of: text) { session.setQuery(text, branded: settings.nutrition.searchBranded) }
         .feedback(self)
     }
 
-    /// Swiping a row right adds it to the plate, MacroFactor's Multi-Add. Swiping a Pick left takes it out of that
+    /// Swiping a row right adds it, MacroFactor's Multi-Add. Swiping a Pick left takes it out of that
     /// hour's Picks, and swiping a history row left takes it out of the history until it is logged again.
     private func rows(_ results: [FoodSearchResult], _ terms: [String]) -> some View {
         ForEach(results) { result in
@@ -71,12 +74,12 @@ struct SearchTab: View {
                     FoodRow(food: result.portion.food, serving: result.portion.serving, matching: terms)
                 }
                 .buttonStyle(.plain)
-                AddToPlateButton(food: result.portion.food) { session.add(LoggerPick(result)) }
+                AddFoodButton(food: result.portion.food) { session.add(LoggerPick(result)) }
             }
             .listRowInsets(EdgeInsets(top: 2, leading: Theme.margin, bottom: 2, trailing: 8))
             .listRowBackground(Color.clear)
             .swipeActions(edge: .leading) {
-                Button("Add to Plate", systemImage: "plus") { session.add(LoggerPick(result)) }.tint(Theme.accent)
+                Button("Add", systemImage: "plus") { session.add(LoggerPick(result)) }.tint(Theme.accent)
             }
             .swipeActions(edge: .trailing) {
                 switch result.group {
@@ -127,9 +130,8 @@ extension FoodSearchGroup {
     }
 }
 
-/// A tab's bottom bar: its field in a glass capsule, with a clear button while `text` holds something, and Log Foods.
+/// A tab's bottom bar: its field in a glass capsule, with a clear button while `text` holds something.
 struct LoggerBottomBar<Field: View>: View {
-    let session: LoggerSession
     var text: Binding<String>?
     @ViewBuilder let field: () -> Field
 
@@ -152,8 +154,6 @@ struct LoggerBottomBar<Field: View>: View {
                 .padding(.trailing, text?.wrappedValue.isEmpty == false ? 2 : 16)
                 .frame(height: 48)
                 .glassEffect(.regular.interactive(), in: .capsule)
-                LogFoodsButton(session: session)
-                    .controlSize(.large)
             }
         }
         .padding(.horizontal, Theme.margin)
@@ -163,14 +163,13 @@ struct LoggerBottomBar<Field: View>: View {
 }
 
 /// Quick Add (`log-06-quick-add.jpg`): energy in kcal or kJ with the macro sum under it, the macros and alcohol in grams,
-/// and an optional name. Quick Add puts it on the plate as one serving; Log Foods logs the plate with it. The banner
-/// counts what is typed, as it counts a food detail's amount. While the keyboard is up its bar walks the fields and
-/// carries Quick Add, and the bottom buttons step aside so they never cover a field.
+/// and an optional name. Add logs it as one serving. The banner counts what is typed, as it counts a food detail's
+/// amount. While the keyboard is up its bar walks the fields and carries Add, and the bottom button steps aside so it
+/// never covers a field.
 struct QuickAddTab: View {
     let session: LoggerSession
     @Observe(AppSettings.current) private var settings
     @State private var draft = QuickAddDraft()
-    @State private var added = 0
     @State private var unitChosen = false
     @FocusState private var focus: QuickAddDraft.Field?
 
@@ -204,26 +203,18 @@ struct QuickAddTab: View {
         .flatList()
         .scrollDismissesKeyboard(.interactively)
         .focusToolbar(QuickAddDraft.focusOrder, focus: $focus) {
-            Button("Quick Add", action: quickAdd)
+            Button("Add", action: quickAdd)
                 .disabled(draft.portion == nil)
         }
         .safeAreaInset(edge: .bottom) {
             if focus == nil {
-                HStack(spacing: 10) {
-                    Button("Quick Add", action: quickAdd)
-                        .secondaryPill()
-                        .disabled(draft.portion == nil)
-                    LogFoodsButton(session: session, prepare: {
-                        if let portion = draft.portion { session.add(LoggerPick(portion)) }
-                    }, hasPending: draft.portion != nil)
-                    .buttonSizing(.flexible)
-                    .controlSize(.large)
-                }
-                .padding(.horizontal, Theme.margin)
-                .padding(.bottom, 8)
+                Button("Add", action: quickAdd)
+                    .primaryPill()
+                    .disabled(draft.portion == nil)
+                    .padding(.horizontal, Theme.margin)
+                    .padding(.bottom, 8)
             }
         }
-        .sensoryFeedback(.success, trigger: added)
         .onChange(of: draft) { session.pending = draft.portion }
         .onAppear {
             session.pending = draft.portion
@@ -239,7 +230,6 @@ struct QuickAddTab: View {
     private func quickAdd() {
         guard let portion = draft.portion else { return }
         session.add(LoggerPick(portion))
-        added += 1
         draft = QuickAddDraft(unit: draft.unit)
         focus = nil
     }

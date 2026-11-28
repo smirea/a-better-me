@@ -35,12 +35,14 @@ struct AlterationTests {
         FoodEntry(FoodPortion(recipe.snapshot, serving: Serving(measure: recipe.nutrition.measures[0], quantity: servings)), day: monday, minute: 600)
     }
 
-    /// Beef up from 200 g to 250 g a serving, the tomato out, basil in.
+    /// Beef up from 200 g to 250 g a serving, the tomato out, basil in from the logger.
     func altered() -> [IngredientAlteration] {
         var draft = AlterDraft(.unaltered(recipe))
         draft.rows[0].ingredient.type("250")
         draft.remove(draft.rows[1].id)
-        draft.add(portion(basil, 20))
+        var list = draft.ingredientList
+        list.add(LoggerPick(portion(basil, 20)))
+        draft.setIngredients(list)
         return draft.alterations
     }
 
@@ -121,9 +123,18 @@ struct AlterationTests {
         draft.restore(draft.rows[1].id)
         #expect(draft.alterations[1].change == .kept)
 
-        draft.add(portion(basil, 5))
-        draft.remove(draft.rows[2].id)
+        // The logger's list drops what it no longer holds the way Remove does.
+        var list = draft.ingredientList
+        let added = list.add(LoggerPick(portion(basil, 5)))
+        draft.setIngredients(list)
+        #expect(draft.rows.count == 3)
+        list.remove(added)
+        list.remove(draft.rows[1].id)
+        draft.setIngredients(list)
         #expect(draft.rows.count == 2)
+        #expect(draft.rows[1].isRemoved)
+        #expect(draft.ingredientList.items.map(\.id) == [draft.rows[0].id])
+        draft.restore(draft.rows[1].id)
 
         draft.rows[0].ingredient.type("")
         #expect(!draft.isValid)

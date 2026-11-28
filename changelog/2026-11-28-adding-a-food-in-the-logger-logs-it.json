@@ -1,0 +1,10 @@
+{
+	"title": "Adding a food in the logger logs it right away, and the top button shows the meal",
+	"description": "No more plate or Log Foods: each add lands in the current meal with Undo, and the meal button lists what is there to change or remove.",
+	"tasks": [
+		{
+			"id": "734575a8-e352-408e-8362-aa6d1c5f9f79",
+			"title": "1 Nutrition Feedback: update plate button text and function"
+		}
+	]
+}

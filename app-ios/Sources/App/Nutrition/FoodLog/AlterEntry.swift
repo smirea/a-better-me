@@ -54,10 +54,9 @@ struct AlterEntry: View {
                 }
             }
             .sheet(isPresented: $adding) {
-                LoggerSheet(start: LoggerStart(), destination: .ingredients { portions in
-                    let own = entry.food.foodID
-                    for portion in portions where own == nil || portion.food.foodID != own { draft.add(portion) }
-                })
+                LoggerSheet(start: LoggerStart(), destination: .ingredients(
+                    draft.ingredientList, recipe: entry.food.foodID, update: { draft.setIngredients($0) }
+                ))
             }
         }
         .interactiveDismissDisabled(opened != nil && draft != opened)

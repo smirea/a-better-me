@@ -12,6 +12,8 @@ struct RambleTab: View {
     /// Opens a food row's detail, with the serving keyboard.
     let open: (RambleRow) -> Void
     let close: () -> Void
+    /// Shows what Add put in the meal.
+    let added: () -> Void
     /// Leaves Ramble for another way to log.
     let switchTo: (LoggerTab) -> Void
     /// Leaves for Search with a food the ramble found no match for.
@@ -24,6 +26,9 @@ struct RambleTab: View {
     @State private var fresh: [Int: UUID] = [:]
     /// The row lifted into focus, by key, with its other matches under it.
     @State private var focused: Int?
+    /// Listening starts when the tab opens, not each time it shows again: Back from the meal after Add found the
+    /// capture idle and turned the mic back on.
+    @State private var opened = false
 
     private var capture: RambleCapture { session.ramble }
     private var live: Bool { capture.phase == .listening || capture.phase == .finishing }
@@ -127,6 +132,8 @@ struct RambleTab: View {
         .sensoryFeedback(.selection, trigger: focused)
         .sensoryFeedback(.success, trigger: saved)
         .task {
+            guard !opened else { return }
+            opened = true
             if capture.phase == .idle { await capture.start() }
         }
         .onDisappear {
@@ -219,7 +226,7 @@ struct RambleTab: View {
                     let count = capture.planned.count
                     Button {
                         saved += 1
-                        Task { await session.logRamble() }
+                        Task { if await session.addRamble() { added() } }
                     } label: {
                         Text(count == 1 ? "Add 1 Food" : "Add \(count) Foods")
                             .font(AppFont.headline(16))

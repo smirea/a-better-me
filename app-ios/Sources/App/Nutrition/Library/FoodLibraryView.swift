@@ -2,7 +2,7 @@ import Feedback
 import SwiftUI
 
 /// A create or edit sheet for a food or recipe. `created` hears which kind a new item was, and `add`, the logger's
-/// plate, gives a new food or recipe the editor's Create & Add.
+/// add, gives a new food or recipe the editor's Create & Add.
 struct LibraryEditorSheet: Identifiable {
     enum Kind {
         case newFood(FoodDraft), editFood(Food), newRecipe(RecipeDraft), editRecipe(Recipe)
@@ -33,7 +33,7 @@ struct LibraryEditorSheet: Identifiable {
 
 /// MacroFactor's Library: Recipes | Foods | Favorites, each filtered by the search field. + creates what the segment
 /// lists, and offers both on Favorites. Settings pushes it as is. The logger embeds it with its `session`, for each
-/// row's + onto the plate, the editors' Create & Add, and the filter beside Log Foods, and `onOpen` for its own food
+/// row's +, the editors' Create & Add, and the filter at the bottom, and `onOpen` for its own food
 /// detail. Without `onOpen`, a food opens its editor and a recipe its detail page. Creating a food or recipe shows its
 /// segment.
 struct FoodLibraryView: View {
@@ -78,7 +78,7 @@ struct FoodLibraryView: View {
         .flatPlainList()
         .overlay { emptyState }
         .scrollDismissesKeyboard(.immediately)
-        .modifier(FilterField(session: session, query: $query, prompt: "Filter \(tab.rawValue.lowercased())"))
+        .modifier(FilterField(inLogger: session != nil, query: $query, prompt: "Filter \(tab.rawValue.lowercased())"))
         .detailTitle("Foods & Recipes")
         .toolbar {
             // The picker takes the title's place, so the bar holds the segments, sort, and create on one row.
@@ -187,21 +187,21 @@ struct FoodLibraryView: View {
         }
     }
 
-    /// In the logger a row also swipes right onto the plate, as Search's rows do.
+    /// In the logger a row also swipes right to add it, as Search's rows do.
     private func row(_ food: FoodSnapshot, serving: Serving?, alterations: [IngredientAlteration]? = nil, open: @escaping () -> Void) -> some View {
         let pick = LoggerPick(FoodPortion(food, serving: serving ?? FoodPortion(food).serving), alterations: alterations)
         return HStack {
             Button(action: open) { FoodRow(food: food, serving: pick.portion.serving) }
                 .buttonStyle(.plain)
             if let onAdd {
-                AddToPlateButton(food: food) { onAdd(pick) }
+                AddFoodButton(food: food) { onAdd(pick) }
             }
         }
         .listRowInsets(EdgeInsets(top: 2, leading: Theme.margin, bottom: 2, trailing: onAdd == nil ? Theme.margin : 8))
         .listRowBackground(Color.clear)
         .swipeActions(edge: .leading) {
             if let onAdd {
-                Button("Add to Plate", systemImage: "plus") { onAdd(pick) }.tint(Theme.accent)
+                Button("Add", systemImage: "plus") { onAdd(pick) }.tint(Theme.accent)
             }
         }
     }
@@ -267,17 +267,17 @@ struct FoodLibraryView: View {
     }
 }
 
-/// The logger's Library filters from its bottom bar, beside Log Foods, as Search does; Settings keeps the system field
+/// The logger's Library filters from its bottom bar, as Search does; Settings keeps the system field
 /// under the navigation bar.
 private struct FilterField: ViewModifier {
-    let session: LoggerSession?
+    let inLogger: Bool
     @Binding var query: String
     let prompt: String
 
     func body(content: Content) -> some View {
-        if let session {
+        if inLogger {
             content.safeAreaInset(edge: .bottom) {
-                LoggerBottomBar(session: session, text: $query) {
+                LoggerBottomBar(text: $query) {
                     TextField(prompt, text: $query).autocorrectionDisabled()
                 }
             }
