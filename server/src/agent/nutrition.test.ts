@@ -476,7 +476,6 @@ describe("nutrition agent API", () => {
 
     for (const bad of [
       [],
-      [{ id: "a", name: "A", start: 60 }],
       [sections[0], { ...sections[1], start: 0 }],
       [sections[0], sections[0]],
     ]) {
@@ -493,5 +492,10 @@ describe("nutrition agent API", () => {
     const rows = await phone("food_entries");
     expect(rows.find((entry) => entry.id === brunch.id)!.section).toBe("breakfast");
     expect(rows.find((entry) => entry.id === moved.id)!.section).toBe("dinner");
+
+    await ok("PATCH", "/settings", {
+      nutrition: { mealSections: [{ ...breakfast!, start: 300 }, dinner] },
+    });
+    expect((await log({ minute: 60 })).section).toBe("dinner");
   });
 });

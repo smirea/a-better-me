@@ -1124,7 +1124,7 @@ export const NutrientGoalPut = z
 const hour = z.int().min(0).max(23);
 /** Mirrors `MealSection.defaults`. */
 export const DEFAULT_MEAL_SECTIONS = [
-  { id: "breakfast", name: "Breakfast", start: 0 },
+  { id: "breakfast", name: "Breakfast", start: 300 },
   { id: "am-snack", name: "AM Snack", start: 600 },
   { id: "lunch", name: "Lunch", start: 720 },
   { id: "pm-snack", name: "PM Snack", start: 900 },
@@ -1133,9 +1133,6 @@ export const DEFAULT_MEAL_SECTIONS = [
 export const MealSections = z
   .array(z.object({ id: z.string().min(1), name: z.string().min(1), start: minute }))
   .min(1)
-  .refine((sections) => sections[0]?.start === 0, {
-    message: "The first section starts at midnight (0).",
-  })
   .refine(
     (sections) =>
       sections.every((section, index) => index === 0 || section.start > sections[index - 1]!.start),
@@ -1148,7 +1145,7 @@ export const MealSections = z
   })
   .meta({
     description:
-      "The meal sections in time order, each from its `start` (minutes since midnight) to the next one's; the first starts at 0. Ids stay when a section is renamed, since entries store them.",
+      "The meal sections in time order, each from its `start` (minutes since midnight) to the next one's, and the last through midnight to the first one's, so a minute before the first start is the last section's. Ids stay when a section is renamed, since entries store them.",
   });
 /** Mirrors `NutritionSettings` in the iOS app; a key the app does not know is ignored there. */
 const NutritionSettingsPatch = z

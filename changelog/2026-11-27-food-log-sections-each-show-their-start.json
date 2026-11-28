@@ -1,0 +1,10 @@
+{
+	"title": "Food Log sections each show their start time on their own row, Breakfast included",
+	"description": "Times before the first section's start count as the last section, so a 1 AM snack is the night's Dinner.",
+	"tasks": [
+		{
+			"id": "b9397dfd-8627-4c11-8e65-2b4b8959ae9a",
+			"title": "2 Food Log Feedback: remove labels and align time pickers"
+		}
+	]
+}
