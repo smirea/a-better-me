@@ -80,10 +80,12 @@ extension PhotoReader where Label == FoodLabel {
 }
 
 /// Photos of the package at the top of an editor: thumbnails, the camera, and the library (several at once).
-/// `nothingRead` is the label of photos that show nothing to fill in.
+/// `nothingRead` is the label of photos that show nothing to fill in. With `chosen`, tapping a thumbnail picks it as the
+/// item's picture, marked with a ring and a check, and tapping it again unpicks it.
 struct PhotosSection<Label: Equatable & Sendable>: View {
     let reader: PhotoReader<Label>
     let nothingRead: Label
+    var chosen: Binding<PhotoUpload.ID?>?
     @State private var choosing = false
     @State private var picked: [PhotosPickerItem] = []
     @State private var loading = false
@@ -94,12 +96,7 @@ struct PhotosSection<Label: Equatable & Sendable>: View {
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
                         ForEach(reader.photos) { photo in
-                            Image(uiImage: photo.preview)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 72, height: 72)
-                                .clipShape(.rect(cornerRadius: 10))
-                                .accessibilityLabel("Photo")
+                            thumbnail(photo)
                                 .overlay(alignment: .topTrailing) {
                                     Button("Remove Photo", systemImage: "xmark.circle.fill") { reader.remove(photo.id) }
                                         .labelStyle(.iconOnly)
@@ -135,6 +132,41 @@ struct PhotosSection<Label: Equatable & Sendable>: View {
                 }
             }
             .feedback(self)
+        }
+    }
+
+    @ViewBuilder private func thumbnail(_ photo: PhotoUpload) -> some View {
+        let image = Image(uiImage: photo.preview)
+            .resizable()
+            .scaledToFill()
+            .frame(width: 72, height: 72)
+            .clipShape(.rect(cornerRadius: 10))
+        if let chosen {
+            let isPicked = chosen.wrappedValue == photo.id
+            Button {
+                chosen.wrappedValue = isPicked ? nil : photo.id
+            } label: {
+                image
+                    .overlay {
+                        if isPicked { RoundedRectangle(cornerRadius: 10).strokeBorder(Theme.textPrimary, lineWidth: 3) }
+                    }
+                    .overlay(alignment: .bottomLeading) {
+                        if isPicked {
+                            Image(systemName: "checkmark.circle.fill")
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(Theme.background, Theme.textPrimary)
+                                .font(.system(size: 18))
+                                .padding(4)
+                        }
+                    }
+            }
+            .buttonStyle(.plain)
+            .sensoryFeedback(.selection, trigger: isPicked)
+            .accessibilityLabel("Photo")
+            .accessibilityAddTraits(isPicked ? .isSelected : [])
+            .accessibilityHint(isPicked ? "Goes back to the icon" : "Shows it as the picture")
+        } else {
+            image.accessibilityLabel("Photo")
         }
     }
 

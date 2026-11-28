@@ -4,7 +4,8 @@ import SwiftUI
 /// The food detail (`log-03-food-detail.jpg`): a card with the icon, the name, Favorite, the serving's calories and
 /// macros with each macro's share of calories, the icon a tap re-icons, then the impact on the day's targets, every nutrient the
 /// food reports, and the quantity keypad pinned under them. A recipe adds Prepare, Edit, and Duplicate, as the
-/// library's recipe page does, and its ingredients at the typed amount above the nutrients. A plate item opens here too, with Update and Remove. The logger's banner stays above it with its close button, so the
+/// library's recipe page does, and its ingredients at the typed amount above the nutrients. The owner's own food adds Edit,
+/// which opens Edit Food, and a food with a printed ingredients statement shows it above the nutrients. A plate item opens here too, with Update and Remove. The logger's banner stays above it with its close button, so the
 /// detail has no navigation bar of its own; a Ramble row's detail, which has no banner, keeps the back button.
 struct FoodDetailView: View {
     let session: LoggerSession
@@ -23,6 +24,9 @@ struct FoodDetailView: View {
     @State private var food: FoodSnapshot
     /// The recipe the pick is from, as it is now; nil for any other food, or once deleted.
     @Observe private var recipe: Recipe?
+    /// The stored food the pick is, as it is now: its ingredients, and Edit for the owner's own.
+    @Observe private var stored: Food?
+    @State private var editingFood: Food?
     @State private var recipeSheet: LibraryEditorSheet?
     @State private var preparing: Recipe?
     @State private var choosingIcon = false
@@ -38,7 +42,14 @@ struct FoodDetailView: View {
         // An altered recipe lists its own changes; its recipe as stored is the one it was not eaten as.
         let recipeID = pick.portion.food.source == .recipe && pick.alterations == nil ? pick.portion.food.foodID.flatMap(UUID.init(uuidString:)) : nil
         _recipe = Observe(recipeID.map(Recipe.one) ?? DatabaseQuery(nil) { _ in nil })
+        let foodID = [.custom, .usda, .openFoodFacts].contains(pick.portion.food.source) ? pick.portion.food.foodID : nil
+        _stored = Observe(foodID.map(Food.one) ?? DatabaseQuery(nil) { _ in nil })
     }
+
+    /// The owner's food the pick is, which Edit opens. USDA and Open Food Facts foods are corrected with Update instead.
+    private var ownFood: Food? { stored?.source == .custom ? stored : nil }
+
+    private var ingredients: String? { (stored ?? pick.uncached)?.ingredients }
 
     private var serving: Serving { Serving(measure: measure, quantity: quantity.value ?? 0) }
     private var portion: FoodPortion { FoodPortion(food, serving: serving) }
@@ -56,6 +67,11 @@ struct FoodDetailView: View {
                 IngredientsSection(alterations.map { $0.scaled(by: serving.servings) })
             } else if let recipe {
                 IngredientsSection(FoodLog.ingredients(serving, of: recipe))
+            }
+            if let ingredients {
+                ThemedSection("Ingredients") {
+                    Text(ingredients).font(AppFont.body(15)).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
+                }
             }
             NutrientList(title: "Nutrients", amounts: amounts) { nutrient in
                 LabeledContent(nutrient.name, value: NutritionFormat.amount(amounts.amount(of: nutrient.id) ?? 0, nutrient.unit))
@@ -79,6 +95,7 @@ struct FoodDetailView: View {
         .onChange(of: portion, preview)
         .onDisappear { session.pending = nil }
         .sheet(item: $recipeSheet) { $0.editor }
+        .sheet(item: $editingFood) { FoodEditor(food: $0, onSave: foodEdited) }
         .sheet(isPresented: $choosingIcon) {
             FoodIconPicker(selection: Binding(get: { food.icon }, set: setIcon))
         }
@@ -86,6 +103,14 @@ struct FoodDetailView: View {
             if let preparing { RecipePrepareView(recipe: preparing) }
         }
         .feedback(self)
+    }
+
+    /// The edited food at the same unit, whose grams per serving may have changed. A plate item keeps the snapshot it
+    /// took, as an edit never reaches the plate.
+    private func foodEdited(_ saved: Food) {
+        guard editing == nil else { return }
+        food = saved.snapshot
+        measure = saved.nutrition.allMeasures.first { $0.name == measure.name } ?? saved.nutrition.measures[0]
     }
 
     /// The same unit of the edited recipe, whose grams per serving may have changed, at the typed quantity.
@@ -131,8 +156,11 @@ struct FoodDetailView: View {
                 .sensoryFeedback(.success, trigger: favorite) { _, new in new != nil }
             }
             MacroHeader(amounts: amounts)
-            if recipe != nil || editing != nil {
+            if recipe != nil || ownFood != nil || editing != nil {
                 FlowLayout {
+                    if let ownFood {
+                        Button("Edit", systemImage: "pencil") { editingFood = ownFood }
+                    }
                     if let recipe {
                         RecipeActions(recipe: recipe, session: session, prepare: { preparing = $0 }, present: { recipeSheet = $0 }, edited: recipeEdited)
                     }

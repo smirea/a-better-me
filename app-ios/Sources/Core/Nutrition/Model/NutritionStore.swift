@@ -86,14 +86,16 @@ extension LocalStore {
         }
     }
 
-    /// A snapshot taken before its food's icon was inferred, picked, or cleared (a plate item, a recipe draft, a Ramble
-    /// row) takes the food's icon as it is saved, since `setInferredIcon` and `setIcon` reach only the snapshots stored
-    /// by then. A cached food's icon is the snapshot's, even none after Default; a food no longer stored leaves it as is.
+    /// A snapshot taken before its food's icon or picture was inferred, picked, or cleared (a plate item, a recipe draft,
+    /// a Ramble row) takes the food's as it is saved, since `setInferredIcon`, `setIcon`, and `setSnapshotPictures`
+    /// reach only the snapshots stored by then. A cached food's icon and picture are the snapshot's, even none after
+    /// Default; a food no longer stored leaves it as is.
     nonisolated static func withFoodIcon(_ food: FoodSnapshot, in db: Database) throws -> FoodSnapshot {
         guard let id = food.foodID, [.custom, .usda, .openFoodFacts].contains(food.source),
-              let row = try Row.fetchOne(db, sql: "SELECT icon FROM foods WHERE id = ?", arguments: [id]) else { return food }
+              let row = try Row.fetchOne(db, sql: "SELECT icon, image FROM foods WHERE id = ?", arguments: [id]) else { return food }
         var filled = food
         filled.icon = row["icon"]
+        filled.image = row["image"]
         return filled
     }
 
@@ -136,29 +138,41 @@ extension LocalStore {
         }
     }
 
-    /// Sets the icon on the log's entries, the favorites, and the recipe ingredients that are snapshots of `food`
-    /// (`FoodSearchResult.key`): only those without one unless `replacing`. `updated_at` stays, so Latest keeps its order.
+    /// The picture a food's editor saved on it, nil for none, on every snapshot of the food: like the owner's icon, it
+    /// carries no nutrition and replaces whatever the snapshots held. The food row itself is the editor's write.
+    func setSnapshotPictures(_ image: String?, of food: FoodSnapshot) {
+        write { try Self.setSnapshots(\.image, json: "image", to: image, of: food, replacing: true, in: $0) }
+    }
+
     nonisolated private static func setSnapshotIcons(_ icon: String?, of food: FoodSnapshot, replacing: Bool, in db: Database) throws {
+        try setSnapshots(\.icon, json: "icon", to: icon, of: food, replacing: replacing, in: db)
+    }
+
+    /// Sets `field` on the log's entries, the favorites, and the recipe ingredients that are snapshots of `food`
+    /// (`FoodSearchResult.key`): only those without one unless `replacing`. `updated_at` stays, so Latest keeps its order.
+    nonisolated private static func setSnapshots(
+        _ field: WritableKeyPath<FoodSnapshot, String?>, json: String, to value: String?, of food: FoodSnapshot, replacing: Bool, in db: Database
+    ) throws {
         let key = FoodSearchResult.key(food)
         func matching(_ path: String) -> String {
-            "\(FoodSearchResult.keySQL(path)) = ?" + (replacing ? " AND json_extract(\(path), '$.icon') IS NOT ?" : " AND json_extract(\(path), '$.icon') IS NULL")
+            "\(FoodSearchResult.keySQL(path)) = ?" + (replacing ? " AND json_extract(\(path), '$.\(json)') IS NOT ?" : " AND json_extract(\(path), '$.\(json)') IS NULL")
         }
-        let arguments: StatementArguments = replacing ? [key, icon] : [key]
+        let arguments: StatementArguments = replacing ? [key, value] : [key]
         for entry in try FoodEntry.fetchAll(db, sql: "SELECT * FROM food_entries WHERE \(matching("food"))", arguments: arguments) {
             var changed = entry
-            changed.food.icon = icon
+            changed.food[keyPath: field] = value
             try changed.updateChanges(db, from: entry)
         }
         for favorite in try FoodFavorite.fetchAll(db, sql: "SELECT * FROM food_favorites WHERE \(matching("food"))", arguments: arguments) {
             var changed = favorite
-            changed.food.icon = icon
+            changed.food[keyPath: field] = value
             try changed.updateChanges(db, from: favorite)
         }
         let ingredients = "SELECT * FROM recipes WHERE EXISTS (SELECT 1 FROM json_each(recipes.ingredients) WHERE \(matching("json_extract(value, '$.food')")))"
         for recipe in try Recipe.fetchAll(db, sql: ingredients, arguments: arguments) {
             var changed = recipe
             for index in changed.ingredients.indices where FoodSearchResult.key(changed.ingredients[index].food) == key {
-                if replacing || changed.ingredients[index].food.icon == nil { changed.ingredients[index].food.icon = icon }
+                if replacing || changed.ingredients[index].food[keyPath: field] == nil { changed.ingredients[index].food[keyPath: field] = value }
             }
             try changed.updateChanges(db, from: recipe)
         }

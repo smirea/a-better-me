@@ -32,9 +32,14 @@ const servings = (serving: Serving) =>
   (serving.measure.servings * serving.quantity) / serving.measure.quantity;
 const scaled = (amounts: Amounts, factor: number) =>
   Object.fromEntries(Object.entries(amounts).map(([key, value]) => [key, value * factor]));
-const netCarbs = (amounts: Amounts) =>
-  amounts.nc ??
-  (amounts.c === undefined ? undefined : Math.max(0, amounts.c - (amounts["291"] ?? 0)));
+/** `NutrientAmounts.amount(of: .netCarbs)`: carbs less fiber, sugar alcohols (their total, else the ones listed), and allulose. */
+const netCarbs = (amounts: Amounts) => {
+  if (amounts.nc !== undefined) return amounts.nc;
+  if (amounts.c === undefined) return undefined;
+  const polyols =
+    amounts.sa ?? ["er", "xy", "ma", "so"].reduce((sum, id) => sum + (amounts[id] ?? 0), 0);
+  return Math.max(0, amounts.c - (amounts["291"] ?? 0) - polyols - (amounts.au ?? 0));
+};
 
 /** `NutrientAmounts +`: once either side reports net carbs, the sum carries them, the other side's derived. */
 function add(left: Amounts, right: Amounts): Amounts {
@@ -246,6 +251,7 @@ export const nutritionRoutes: Route[] = [
         throw new ApiError(400, `A ${body.source} food's id is ${shape}`);
       const row: RowOf<"foods"> = {
         ...body,
+        image: null,
         id: fresh(db, "foods", body.id),
         createdAt: now,
         updatedAt: now,

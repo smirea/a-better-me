@@ -95,11 +95,40 @@ export async function sweepImages(
   return stale;
 }
 
-/** The picture ids the dumped tables list, for the sweep. A table that should list them and is missing is a bug, not an empty set. */
+/** The JSON columns that hold food snapshots, whose `image` keeps a food's picture for the log after the food changes. */
+const SNAPSHOT_COLUMNS = {
+  food_entries: ["food", "alterations"],
+  food_favorites: ["food", "alterations"],
+  recipes: ["ingredients"],
+} as const;
+
+/**
+ * The picture ids the dumped tables list, for the sweep: supplements' pictures, foods', and every food snapshot's
+ * `image`, however deep. A table that should list them and is missing is a bug, not an empty set.
+ */
 export function listedImages(tables: Record<string, unknown[]>): Set<string> {
-  const supplements = tables.supplements as { images: string }[] | undefined;
-  if (!supplements) throw new Error("The dump has no supplements table");
-  return new Set(supplements.flatMap((row) => JSON.parse(row.images) as string[]));
+  const rows = (table: string) => {
+    const found = tables[table] as Record<string, unknown>[] | undefined;
+    if (!found) throw new Error(`The dump has no ${table} table`);
+    return found;
+  };
+  const listed = new Set(rows("supplements").flatMap((row) => JSON.parse(String(row.images)) as string[]));
+  for (const row of rows("foods")) if (typeof row.image === "string") listed.add(row.image);
+  const collect = (value: unknown): void => {
+    if (Array.isArray(value)) return value.forEach(collect);
+    if (!value || typeof value !== "object") return;
+    for (const [key, inner] of Object.entries(value)) {
+      if (key === "image" && typeof inner === "string") listed.add(inner);
+      else collect(inner);
+    }
+  };
+  for (const [table, columns] of Object.entries(SNAPSHOT_COLUMNS))
+    for (const row of rows(table))
+      for (const column of columns) {
+        const json = row[column];
+        if (typeof json === "string") collect(JSON.parse(json));
+      }
+  return listed;
 }
 
 /** How many rows one call moves. A Worker request on the free plan gets about 50 calls to the bucket. */

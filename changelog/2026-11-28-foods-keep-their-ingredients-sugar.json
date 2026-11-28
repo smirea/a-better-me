@@ -1,0 +1,26 @@
+{
+	"title": "Foods keep their ingredients, sugar alcohols, and a package photo as their picture",
+	"description": "Create Food reads the ingredients and sugar alcohols off the label, Other's rows sit inline, a tapped photo becomes the food's picture, and your own foods have Edit on their detail.",
+	"tasks": [
+		{
+			"id": "1ac4a690-f92d-4b43-b5d6-d03e5f92d182",
+			"title": "1 Create Food Feedback: add ingredient input and image parsing"
+		},
+		{
+			"id": "a8a3caee-aec9-4272-8438-2bc88c96584a",
+			"title": "1 Create Food Feedback: inline other buttons"
+		},
+		{
+			"id": "10904ed3-564b-4568-a131-df8b3f048536",
+			"title": "1 Create Food Feedback: add and nest sugar alcohols on row"
+		},
+		{
+			"id": "0d66f2af-720e-465e-af63-3442a3b47ef5",
+			"title": "1 Create Food Feedback: make photos selectable as main product image"
+		},
+		{
+			"id": "3060b204-1e1f-41ac-8e3b-d9b0acbc86a2",
+			"title": "1 Nutrition Feedback: add edit button to confectioners swerve header"
+		}
+	]
+}

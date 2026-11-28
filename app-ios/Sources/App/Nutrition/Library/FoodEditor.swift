@@ -61,11 +61,18 @@ struct FoodEditor: View {
             Form {
                 PhotosSection(
                     reader: photos,
-                    nothingRead: FoodLabel()
+                    nothingRead: FoodLabel(),
+                    chosen: Binding { draft.image.flatMap(UUID.init(uuidString:)) } set: { draft.image = $0?.uuidString.lowercased() }
                 )
                 identity(issues)
                 serving(issues)
                 otherServings(issues)
+                ThemedSection("Ingredients") {
+                    TextField("As listed on the package", text: $draft.ingredients, axis: .vertical)
+                        .lineLimit(2...)
+                        .focused($focus, equals: .ingredients)
+                        .accessibilityLabel("Ingredients")
+                }
                 ForEach(NutrientSection.allCases) { nutrients($0, issues: issues) }
                 if editing != nil {
                     ThemedSection {
@@ -101,6 +108,15 @@ struct FoodEditor: View {
                 baseline = read
                 expandFilledSections()
             }
+            .task {
+                guard let id = editing?.image.flatMap(UUID.init(uuidString:)), !photos.photos.contains(where: { $0.id == id }),
+                      let jpeg = await PictureFiles.shared.data(id), let photo = PhotoUpload(id: id, jpeg: jpeg) else { return }
+                photos.restore([photo])
+            }
+            .onChange(of: photos.photos.map(\.id)) { old, new in
+                // Removing the picked photo unpicks it.
+                if let picked = draft.image.flatMap(UUID.init(uuidString:)), old.contains(picked), !new.contains(picked) { draft.image = nil }
+            }
             .onDisappear { photos.cancel() }
             .sheet(isPresented: $choosingIcon) { FoodIconPicker(selection: $draft.icon) }
             .alert("Delete Custom Food", isPresented: $confirmingDelete) {
@@ -123,7 +139,14 @@ struct FoodEditor: View {
     private func identity(_ issues: [FoodDraft.Field: String]) -> some View {
         ThemedSection("Food") {
             HStack(spacing: 12) {
-                FoodIcon(icon: draft.icon, name: draft.name, source: .custom, size: 36).editsIcon { choosingIcon = true }
+                if let preview = pickedPhoto?.preview {
+                    Image(uiImage: preview).resizable().scaledToFill().frame(width: 36, height: 36).clipShape(.circle)
+                        .accessibilityLabel("Picture")
+                } else {
+                    // A picture this device has not loaded yet is the stored one; a restored draft's lost photo is none.
+                    FoodIcon(icon: draft.icon, name: draft.name, source: .custom, image: draft.image == editing?.image ? draft.image : nil, size: 36)
+                        .editsIcon { choosingIcon = true }
+                }
                 TextField("Food Name", text: $draft.name)
                     .focused($focus, equals: .name)
                     .accessibilityLabel("Food Name")
@@ -208,13 +231,21 @@ struct FoodEditor: View {
         }
     }
 
+    private var pickedPhoto: PhotoUpload? {
+        photos.photos.first { $0.id.uuidString.lowercased() == draft.image }
+    }
+
     @ViewBuilder
     private func nutrients(_ section: NutrientSection, issues: [FoodDraft.Field: String]) -> some View {
         let rows = ForEach(section.nutrients) { nutrient in
-            NutrientInputRow(nutrient: nutrient, text: nutrientText(nutrient.id), energyUnit: $draft.energyUnit, isMacro: NutrientID.macros.contains(nutrient.id), focus: $focus)
+            NutrientInputRow(
+                nutrient: nutrient, text: nutrientText(nutrient.id), energyUnit: $draft.energyUnit, isMacro: NutrientID.macros.contains(nutrient.id),
+                // A breakdown's rows sit one level under their macro, so only what nests deeper (sugars added) indents.
+                depth: section == .macros ? 0 : max(0, NutrientTableSection.depth(of: nutrient.id) - 1), focus: $focus
+            )
             FieldIssue(issues[.nutrient(nutrient.id)])
         }
-        if section == .macros {
+        if !section.collapses {
             ThemedSection(section.rawValue) {
                 rows
             }
@@ -246,11 +277,26 @@ struct FoodEditor: View {
 
     private func save(adding: Bool) {
         showErrors = true
-        guard let valid = draft.valid else { return }
+        guard var valid = draft.valid else { return }
+        if valid.image != editing?.image {
+            // A new picture's bytes are queued before the row names it (docs/decisions/images.md). A draft restored after
+            // its photos were lost has nothing to queue, so it keeps the icon.
+            if let photo = pickedPhoto {
+                do {
+                    try PictureFiles.shared.add(NewPicture(id: photo.id, jpeg: photo.jpeg))
+                } catch {
+                    LocalStore.log.error("Queueing a food's picture failed: \(String(describing: error))")
+                    valid.image = editing?.image
+                }
+            } else if valid.image != nil {
+                valid.image = editing?.image
+            }
+        }
         if var food = editing {
             valid.write(into: &food)
             store.correctFood(food)
             if valid.icon != opened.icon { store.setIcon(valid.icon, of: food.snapshot) }
+            if valid.image != editing?.image { store.setSnapshotPictures(valid.image, of: food.snapshot) }
             onSave?(food)
         } else {
             var food = valid.newFood()
@@ -270,11 +316,12 @@ private struct NutrientInputRow: View {
     @Binding var text: String
     @Binding var energyUnit: NutritionSettings.EnergyUnit
     let isMacro: Bool
+    let depth: Int
     let focus: FocusState<FoodDraft.Field?>.Binding
 
     var body: some View {
         HStack {
-            Text(nutrient.name).font(AppFont.body(15))
+            Text(nutrient.name).font(AppFont.body(15)).padding(.leading, CGFloat(depth) * 16)
             Spacer()
             TextField(isMacro ? "recommended" : "optional", text: $text)
                 .keyboardType(.decimalPad)
@@ -301,8 +348,8 @@ extension FoodDraft {
     func focusOrder(expanded: Set<NutrientSection>) -> FocusOrder<Field> {
         let serving: [Field] = basis == .serving ? [.servingWeight, .servingQuantity, .servingName] : []
         let measures = measures.flatMap { [Field.measureQuantity($0.id), .measureName($0.id), .measureSize($0.id)] }
-        let nutrients = NutrientSection.allCases.filter { $0 == .macros || expanded.contains($0) }.flatMap { $0.nutrients.map { Field.nutrient($0.id) } }
-        return FocusOrder([.name, .brand, .store, .barcode] + serving + measures + nutrients)
+        let nutrients = NutrientSection.allCases.filter { !$0.collapses || expanded.contains($0) }.flatMap { $0.nutrients.map { Field.nutrient($0.id) } }
+        return FocusOrder([.name, .brand, .store, .barcode] + serving + measures + [.ingredients] + nutrients)
     }
 }
 

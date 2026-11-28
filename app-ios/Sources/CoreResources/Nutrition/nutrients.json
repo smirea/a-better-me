@@ -207,6 +207,60 @@
 		"symbol": "laurel.leading"
 	},
 	{
+		"id": "sa",
+		"name": "Sugar Alcohols",
+		"short": "polyols",
+		"unit": "g",
+		"group": "carbohydrates",
+		"symbol": "laurel.leading",
+		"app": true
+	},
+	{
+		"id": "er",
+		"name": "Erythritol",
+		"short": "erythritol",
+		"unit": "g",
+		"group": "carbohydrates",
+		"symbol": "laurel.leading",
+		"app": true
+	},
+	{
+		"id": "xy",
+		"name": "Xylitol",
+		"short": "xylitol",
+		"unit": "g",
+		"group": "carbohydrates",
+		"symbol": "laurel.leading",
+		"app": true
+	},
+	{
+		"id": "ma",
+		"name": "Maltitol",
+		"short": "maltitol",
+		"unit": "g",
+		"group": "carbohydrates",
+		"symbol": "laurel.leading",
+		"app": true
+	},
+	{
+		"id": "so",
+		"name": "Sorbitol",
+		"short": "sorbitol",
+		"unit": "g",
+		"group": "carbohydrates",
+		"symbol": "laurel.leading",
+		"app": true
+	},
+	{
+		"id": "au",
+		"name": "Allulose",
+		"short": "allulose",
+		"unit": "g",
+		"group": "carbohydrates",
+		"symbol": "laurel.leading",
+		"app": true
+	},
+	{
 		"id": "f",
 		"name": "Fat",
 		"short": "fat",
