@@ -160,7 +160,8 @@ struct PhotosSection<Label: Equatable & Sendable>: View {
                         }
                     }
             }
-            .buttonStyle(.plain)
+            // A Form row hands taps to borderless buttons; a plain one beside the row's other buttons never fired.
+            .buttonStyle(.borderless)
             .sensoryFeedback(.selection, trigger: isPicked)
             .accessibilityLabel("Photo")
             .accessibilityAddTraits(isPicked ? .isSelected : [])
