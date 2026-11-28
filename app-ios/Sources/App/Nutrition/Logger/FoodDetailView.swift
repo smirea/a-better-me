@@ -5,13 +5,15 @@ import SwiftUI
 /// macros with each macro's share of calories, the icon a tap re-icons, then the impact on the day's targets, every nutrient the
 /// food reports, and the quantity keypad pinned under them. A recipe adds Prepare, Edit, and Duplicate, as the
 /// library's recipe page does, and its ingredients at the typed amount above the nutrients. The owner's own food adds Edit,
-/// which opens Edit Food, and a food with a printed ingredients statement shows it above the nutrients. A food of the meal opens here too, with Update and Remove. The logger's banner stays above it with its close button, so the
-/// detail has no navigation bar of its own; a Ramble row's detail, which has no banner, keeps the back button.
+/// which opens Edit Food, and a food with a printed ingredients statement shows it above the nutrients. A food of the meal opens here too, with Update and Remove. The logger's banner stays above it with its Back button, so the
+/// detail has no navigation bar of its own; a Ramble row's detail, which has no banner, keeps the system one. Prepare
+/// pushes onto the logger's stack, so the banner's Back pops it too.
 struct FoodDetailView: View {
     let session: LoggerSession
     /// The logged entry or ingredient being edited, nil for a food not yet added.
     let editing: UUID?
     let pick: LoggerPick
+    let prepare: (Recipe) -> Void
     /// A Ramble row: Update hands the serving back instead of logging.
     var ramble: RambleEdit?
     @Environment(\.dismiss) private var dismiss
@@ -28,13 +30,13 @@ struct FoodDetailView: View {
     @Observe private var stored: Food?
     @State private var editingFood: Food?
     @State private var recipeSheet: LibraryEditorSheet?
-    @State private var preparing: Recipe?
     @State private var choosingIcon = false
 
-    init(session: LoggerSession, editing: UUID?, pick: LoggerPick, ramble: RambleEdit? = nil) {
+    init(session: LoggerSession, editing: UUID?, pick: LoggerPick, prepare: @escaping (Recipe) -> Void, ramble: RambleEdit? = nil) {
         self.session = session
         self.editing = editing
         self.pick = pick
+        self.prepare = prepare
         self.ramble = ramble
         _measure = State(initialValue: pick.portion.serving.measure)
         _quantity = State(initialValue: QuantityText(pick.portion.serving.quantity))
@@ -101,9 +103,6 @@ struct FoodDetailView: View {
         .sheet(isPresented: $choosingIcon) {
             FoodIconPicker(selection: Binding(get: { food.icon }, set: setIcon))
         }
-        .navigationDestination(isPresented: .isPresent($preparing)) {
-            if let preparing { RecipePrepareView(recipe: preparing) }
-        }
         .feedback(self)
     }
 
@@ -164,7 +163,7 @@ struct FoodDetailView: View {
                         Button("Edit", systemImage: "pencil") { editingFood = ownFood }
                     }
                     if let recipe {
-                        RecipeActions(recipe: recipe, session: session, prepare: { preparing = $0 }, present: { recipeSheet = $0 }, edited: recipeEdited)
+                        RecipeActions(recipe: recipe, session: session, prepare: prepare, present: { recipeSheet = $0 }, edited: recipeEdited)
                     }
                     if let editing {
                         Button("Remove", systemImage: "trash") {

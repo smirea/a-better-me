@@ -33,9 +33,9 @@ struct LibraryEditorSheet: Identifiable {
 
 /// MacroFactor's Library: Recipes | Foods | Favorites, each filtered by the search field. + creates what the segment
 /// lists, and offers both on Favorites. Settings pushes it as is. The logger embeds it with its `session`, for each
-/// row's +, the editors' Create & Add, and the filter at the bottom, and `onOpen` for its own food
-/// detail. Without `onOpen`, a food opens its editor and a recipe its detail page. Creating a food or recipe shows its
-/// segment.
+/// row's +, the editors' Create & Add, and the filter at the bottom, `onOpen` for its own food detail, and `onPrepare`
+/// to push Prepare onto its stack, where the banner's Back pops it. Without `onOpen`, a food opens its editor and a
+/// recipe its detail page. Creating a food or recipe shows its segment.
 struct FoodLibraryView: View {
     typealias Tab = FoodLibraryTab
 
@@ -45,6 +45,7 @@ struct FoodLibraryView: View {
 
     private let session: LoggerSession?
     private let onOpen: ((Item) -> Void)?
+    private let onPrepare: ((Recipe) -> Void)?
     @Environment(LocalStore.self) private var store
     @Observe(Food.library) private var foods
     @Observe(Recipe.library) private var recipes
@@ -58,9 +59,10 @@ struct FoodLibraryView: View {
     @State private var pendingDelete: Item?
     @State private var favorited = false
 
-    init(session: LoggerSession? = nil, onOpen: ((Item) -> Void)? = nil) {
+    init(session: LoggerSession? = nil, onOpen: ((Item) -> Void)? = nil, onPrepare: ((Recipe) -> Void)? = nil) {
         self.session = session
         self.onOpen = onOpen
+        self.onPrepare = onPrepare
     }
 
     private var onAdd: ((LoggerPick) -> Void)? { session.map { session in { session.add($0) } } }
@@ -165,7 +167,7 @@ struct FoodLibraryView: View {
             }
             .swipeActions {
                 deleteButton(.recipe(recipe))
-                Button("Prepare", systemImage: "frying.pan") { preparedRecipe = recipe.id }.tint(Theme.surfaceRaised)
+                Button("Prepare", systemImage: "frying.pan") { if let onPrepare { onPrepare(recipe) } else { preparedRecipe = recipe.id } }.tint(Theme.surfaceRaised)
                 editButton(.editRecipe(recipe))
             }
             .contextMenu {
