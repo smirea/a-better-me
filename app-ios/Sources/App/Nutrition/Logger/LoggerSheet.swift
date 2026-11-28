@@ -8,6 +8,7 @@ enum LoggerRoute: Hashable {
     case meal
     /// The row as it was when its detail opened, so an edit never lands on a food a later read put in its place.
     case rambleRow(RambleRow)
+    case prepare(Recipe)
 }
 
 /// MacroFactor's logger (research spec §5): one full-height sheet with the banner (exit, time chip, the day's totals,
@@ -58,10 +59,11 @@ private struct LoggerContent: View {
 
     var body: some View {
         // Ramble takes the whole screen: its own band holds close, its macros, and the other ways to log.
-        let rambling = session.tab == .ramble && path.allSatisfy { if case .rambleRow = $0 { true } else { false } }
+        let rambling = session.tab == .ramble && path.allSatisfy(\.isRambleRow)
+        let back: (() -> Void)? = path.isEmpty ? nil : { path.removeLast() }
         VStack(spacing: 0) {
             if !rambling {
-                LoggerBanner(session: session, exit: exit, chooseTime: { choosingTime = true }, openMeal: openMeal)
+                LoggerBanner(session: session, back: back, exit: exit, chooseTime: { choosingTime = true }, openMeal: openMeal)
                     .id(session.time.day)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
@@ -81,21 +83,13 @@ private struct LoggerContent: View {
                 tab
                     .frame(maxHeight: .infinity)
                     .background(Theme.background)
+                    .keepsSwipeBack()
                     .navigationDestination(for: LoggerRoute.self) { route in
-                    switch route {
-                    case let .food(pick): FoodDetailView(session: session, editing: nil, pick: pick)
-                    case let .mealItem(item): FoodDetailView(session: session, editing: item.id, pick: item.pick)
-                    case .meal: MealView(session: session, open: { path.append(.mealItem($0)) }).id(session.time.day)
-                    case let .rambleRow(row):
-                        if case let .food(food) = row.content {
-                            FoodDetailView(session: session, editing: nil, pick: food.pick, ramble: RambleEdit(
-                                update: { session.ramble.setServing($0, of: row) },
-                                day: row.day,
-                                others: session.ramble.others(than: row)
-                            ))
-                        }
+                        destination(route)
+                            // The banner's Back pops a pushed screen, so its own bar has none. A Ramble row's detail has
+                            // no banner above it and keeps the system one.
+                            .navigationBarBackButtonHidden(!route.isRambleRow)
                     }
-                }
             }
         }
         .overlay(alignment: .bottom) {
@@ -123,6 +117,24 @@ private struct LoggerContent: View {
         }
     }
 
+    @ViewBuilder private func destination(_ route: LoggerRoute) -> some View {
+        let prepare: (Recipe) -> Void = { path.append(.prepare($0)) }
+        switch route {
+        case let .food(pick): FoodDetailView(session: session, editing: nil, pick: pick, prepare: prepare)
+        case let .mealItem(item): FoodDetailView(session: session, editing: item.id, pick: item.pick, prepare: prepare)
+        case .meal: MealView(session: session, open: { path.append(.mealItem($0)) }).id(session.time.day)
+        case let .rambleRow(row):
+            if case let .food(food) = row.content {
+                FoodDetailView(session: session, editing: nil, pick: food.pick, prepare: prepare, ramble: RambleEdit(
+                    update: { session.ramble.setServing($0, of: row) },
+                    day: row.day,
+                    others: session.ramble.others(than: row)
+                ))
+            }
+        case let .prepare(recipe): RecipePrepareView(recipe: recipe)
+        }
+    }
+
     @ViewBuilder private var tab: some View {
         // A food's detail never stacks on its own: a second Add on the copy underneath would log it twice.
         let detail: (LoggerPick) -> Void = { pick in if path.last != .food(pick) { path.append(.food(pick)) } }
@@ -143,7 +155,7 @@ private struct LoggerContent: View {
         case .search: SearchTab(session: session, open: open).toolbar(.hidden, for: .navigationBar)
         case .quickAdd: QuickAddTab(session: session).toolbar(.hidden, for: .navigationBar)
         case .library:
-            FoodLibraryView(session: session, onOpen: { open($0.pick) })
+            FoodLibraryView(session: session, onOpen: { open($0.pick) }, onPrepare: { path.append(.prepare($0)) })
         }
     }
 
@@ -190,9 +202,11 @@ private struct LoggerNoticeBar: View {
     }
 }
 
-/// The logger's top band: exit, the time chip, and the meal over the day's totals with what is being added counted in.
+/// The logger's top band: exit, or Back while a screen is pushed over the tabs, the time chip, and the meal over the
+/// day's totals with what is being added counted in.
 private struct LoggerBanner: View {
     let session: LoggerSession
+    let back: (() -> Void)?
     let exit: () -> Void
     let chooseTime: () -> Void
     let openMeal: () -> Void
@@ -201,7 +215,11 @@ private struct LoggerBanner: View {
         VStack(spacing: 10) {
             GlassEffectContainer {
                 HStack(spacing: 10) {
-                    RoundIconButton("Close", systemImage: "xmark", action: exit)
+                    if let back {
+                        RoundIconButton("Back", systemImage: "chevron.backward", action: back)
+                    } else {
+                        RoundIconButton("Close", systemImage: "xmark", action: exit)
+                    }
                     if !session.addsIngredients {
                         Button(action: chooseTime) {
                             Text(timeLabel).font(AppFont.headline(14))
@@ -252,6 +270,10 @@ private struct MealButton: View {
         .accessibilityLabel("\(session.mealName), \(count == 1 ? "1 food" : "\(count) foods")")
         .feedback(self)
     }
+}
+
+private extension LoggerRoute {
+    var isRambleRow: Bool { if case .rambleRow = self { true } else { false } }
 }
 
 extension LoggerSession {

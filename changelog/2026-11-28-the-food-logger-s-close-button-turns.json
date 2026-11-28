@@ -1,0 +1,10 @@
+{
+	"title": "The food logger's close button turns into Back while a food, the meal, or Prepare is open",
+	"description": "Back pops one screen and keeps your search; swiping back works on those screens too.",
+	"tasks": [
+		{
+			"id": "500891cb-7a15-409d-939e-c0ecb1be0632",
+			"title": "1 Nutrition Feedback: change x to back button on loggerbanner"
+		}
+	]
+}
